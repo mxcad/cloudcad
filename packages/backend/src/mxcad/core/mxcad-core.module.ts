@@ -27,6 +27,7 @@ import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from '../node/mxcad-node.module';
 import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.module';
 import { MxcadSaveModule } from '../save/mxcad-save.module';
+import { MxcadUploadModule } from '../upload/mxcad-upload.module';
 import { MxCadService } from './mxcad.service';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
 import { MxCadController } from './mxcad.controller';
@@ -64,6 +65,7 @@ import { SaveController } from '../save/save.controller';
     MxcadNodeModule,
     MxcadExternalRefModule,
     MxcadSaveModule,
+    MxcadUploadModule,
   ],
   controllers: [MxCadController, ThumbnailController, SaveController],
   providers: [

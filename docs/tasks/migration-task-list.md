@@ -203,7 +203,8 @@
 | T4.1 FileSystemManager | ✅ 完成 | refactor/circular-deps |
 | T4.2 LibraryManager | ✅ 完成 | refactor/circular-deps |
 | T4.3 CADEditorDirect | ✅ 完成 | refactor/circular-deps |
-| T5.1-5.3 清理 services | ⚠️ 部分完成 | refactor/circular-deps |
+| T5.1-5.3 清理 services | ✅ 完成 | refactor/circular-deps |
+| Batch 6 验证 & 清理 | ✅ 完成 | refactor/circular-deps |
 
 ## 阻塞项
 
@@ -224,13 +225,3 @@
 - `saveDrawingAs` / `saveBlockAs`
 
 **解决方案**: 后端添加对应的 library CRUD 端点后，SDK 会自动生成，届时可移除 `libraryApi`。
-
-### 测试文件中的 @/services 引用
-以下测试文件仍 mock `@/services` 模块：
-- `useFileSystemCRUD.spec.ts` — mock `projectApi`, `nodeApi`, `projectTrashApi`, `trashApi`
-- `useFileSystemData.spec.tsx` — mock `projectApi`
-- `FileSystemManager.spec.tsx` — mock `projectApi`, `versionControlApi`
-- `useProjectPermission.spec.ts` — mock `projectPermissionApi`
-- `mxcadSave.spec.ts` — mock `filesApi`
-
-测试 mock 需要在服务文件实际删除后更新为 mock `@/api-sdk`。

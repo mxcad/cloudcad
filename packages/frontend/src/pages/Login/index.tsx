@@ -14,6 +14,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { CheckCircle, AlertCircle, Cpu, Boxes, ShieldCheck, Mail, Phone } from 'lucide-react';
 import { useLoginForm } from './hooks/useLoginForm';
+import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 import { loginStyles } from './LoginStyles';
 import { LoginHeader } from './components/LoginHeader';
 import { AccountLoginForm } from './components/AccountLoginForm';
@@ -63,15 +64,26 @@ export const Login: React.FC = () => {
             localStorage.setItem('wechat_auth_result', JSON.stringify(result));
             window.close();
           } else {
-            if (result.error) {
-              alert(`微信登录失败：${result.error}`);
-            } else if (result.needRegister) {
-              sessionStorage.setItem('wechatTempToken', result.tempToken);
+            const action = classifyWechatAuthResult(result);
+            if (action?.type === 'error') {
+              alert(`微信登录失败：${action.message}`);
+            } else if (action?.type === 'need_register') {
+              sessionStorage.setItem('wechatTempToken', action.tempToken);
               navigate('/register?wechat=1');
-            } else if (result.accessToken) {
-              localStorage.setItem('accessToken', result.accessToken);
-              localStorage.setItem('refreshToken', result.refreshToken);
-              localStorage.setItem('user', JSON.stringify(result.user));
+            } else if (action?.type === 'bind_email') {
+              sessionStorage.setItem('wechatTempToken', action.tempToken);
+              navigate('/verify-email', {
+                state: { tempToken: action.tempToken, mode: 'bind' },
+              });
+            } else if (action?.type === 'bind_phone') {
+              sessionStorage.setItem('wechatTempToken', action.tempToken);
+              navigate('/verify-phone', {
+                state: { tempToken: action.tempToken, mode: 'bind' },
+              });
+            } else if (action?.type === 'login') {
+              localStorage.setItem('accessToken', action.accessToken);
+              localStorage.setItem('refreshToken', action.refreshToken);
+              localStorage.setItem('user', JSON.stringify(action.user));
               window.location.href = '/';
             }
           }

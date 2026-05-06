@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Login } from './index';
+import { Login } from '../index';
 import * as useLoginFormModule from '../hooks/useLoginForm';
 
 vi.mock('../hooks/useLoginForm');

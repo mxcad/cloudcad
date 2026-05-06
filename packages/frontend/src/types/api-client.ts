@@ -490,95 +490,11 @@ declare namespace Components {
              */
             chunks: number;
         }
-        export interface CheckChunkExistDto {
-            /**
-             * 文件 MD5 哈希值
-             * example:
-             * 25e89b5adf19984330f4e68b0f99db64
-             */
-            fileHash: string;
-            /**
-             * 原始文件名
-             * example:
-             * drawing.dwg
-             */
-            filename: string;
-            /**
-             * 节点ID（项目根目录或文件夹的 FileSystemNode ID）
-             * example:
-             * clx1234567890
-             */
-            nodeId: string;
-            /**
-             * 分片索引
-             * example:
-             * 0
-             */
-            chunk: number;
-            /**
-             * 总分片数量
-             * example:
-             * 10
-             */
-            chunks: number;
-            /**
-             * 分片大小（字节）
-             * example:
-             * 1048576
-             */
-            size: number;
-        }
         export interface CheckChunkResponseDto {
             /**
              * 分片是否存在
              */
             exist: boolean;
-        }
-        export interface CheckDuplicateFileDto {
-            /**
-             * 文件 MD5 哈希值
-             * example:
-             * 25e89b5adf19984330f4e68b0f99db64
-             */
-            fileHash: string;
-            /**
-             * 原始文件名
-             * example:
-             * drawing.dwg
-             */
-            filename: string;
-            /**
-             * 目标目录节点 ID
-             * example:
-             * clx1234567890
-             */
-            nodeId: string;
-            /**
-             * 当前打开的文件节点 ID（可选，用于排除当前文件）
-             * example:
-             * clx9876543210
-             */
-            currentFileId?: string;
-        }
-        export interface CheckDuplicateFileResponseDto {
-            /**
-             * 是否存在重复文件
-             * example:
-             * false
-             */
-            isDuplicate: boolean;
-            /**
-             * 重复文件节点 ID（如果存在）
-             * example:
-             * clx1234567890
-             */
-            existingNodeId: string | null;
-            /**
-             * 重复文件名称（如果存在）
-             * example:
-             * drawing.dwg
-             */
-            existingFileName: string | null;
         }
         export interface CheckFileDto {
             /**
@@ -658,11 +574,43 @@ declare namespace Components {
              */
             exists: boolean;
         }
-        export interface ChunkExistResponseDto {
+        export interface CopyNodeDto {
             /**
-             * 分片是否已存在
+             * 目标父节点ID
              */
-            exists: boolean;
+            targetParentId: string;
+        }
+        export interface CreateFolderDto {
+            /**
+             * 文件夹名称
+             * example:
+             * 设计图纸
+             */
+            name: string;
+            /**
+             * 父文件夹 ID
+             * example:
+             * clx123abc
+             */
+            parentId?: string;
+            /**
+             * 如果同名文件夹已存在则跳过创建
+             * example:
+             * false
+             */
+            skipIfExists?: boolean;
+        }
+        export interface CreateProjectDto {
+            /**
+             * 项目名称
+             * example:
+             * CAD图纸项目
+             */
+            name: string;
+            /**
+             * 项目描述
+             */
+            description?: string;
         }
         export interface CreateProjectRoleDto {
             /**
@@ -1079,6 +1027,7 @@ declare namespace Components {
              */
             supportPhone?: string | null;
         }
+        export type LibraryType = "drawing" | "block";
         export interface LoginDto {
             /**
              * 邮箱、用户名或手机号
@@ -1126,6 +1075,12 @@ declare namespace Components {
              * 原始文件名
              */
             fileName: string;
+        }
+        export interface MoveNodeDto {
+            /**
+             * 目标父节点ID
+             */
+            targetParentId: string;
         }
         export interface NodeListResponseDto {
             /**
@@ -1349,6 +1304,8 @@ declare namespace Components {
              */
             memberCount?: number;
         }
+        export type ProjectFilter = "all" | "owned" | "joined";
+        export type ProjectFilterType = "all" | "owned" | "joined";
         export interface ProjectListResponseDto {
             /**
              * 节点列表
@@ -1477,6 +1434,7 @@ declare namespace Components {
              */
             createdAt: string; // date-time
         }
+        export type ProjectStatus = "ACTIVE" | "ARCHIVED" | "DELETED";
         /**
          * 项目状态
          */
@@ -1807,9 +1765,9 @@ declare namespace Components {
              */
             file: string; // binary
             /**
-             * 保存类型: personal-我的图纸, project-项目
+             * 保存类型: personal-我的图纸, project-项目, library-资源库
              */
-            targetType: "personal" | "project";
+            targetType: "personal" | "project" | "library";
             /**
              * 目标父节点ID
              */
@@ -1830,6 +1788,10 @@ declare namespace Components {
              * 文件名（不含扩展名）
              */
             fileName?: string;
+            /**
+             * 资源库类型（targetType为library时必填）
+             */
+            libraryType?: "drawing" | "block";
         }
         export interface SaveMxwebAsResponseDto {
             /**
@@ -1889,6 +1851,8 @@ declare namespace Components {
              */
             path: string;
         }
+        export type SearchScope = "project" | "project_files" | "all_projects" | "library";
+        export type SearchType = "all" | "file" | "folder";
         export interface SendVerificationApiResponseDto {
             code: SendVerificationResponseDto;
             message: string;
@@ -2053,6 +2017,20 @@ declare namespace Components {
              */
             ids?: string[];
         }
+        export interface UpdateNodeDto {
+            /**
+             * 节点名称
+             */
+            name?: string;
+            /**
+             * 描述
+             */
+            description?: string;
+            /**
+             * 状态
+             */
+            status?: "ACTIVE" | "ARCHIVED" | "DELETED";
+        }
         export interface UpdateProjectRoleDto {
             /**
              * 角色名称
@@ -2121,6 +2099,20 @@ declare namespace Components {
             value: {
                 [key: string]: any;
             };
+        }
+        export interface UpdateStorageQuotaDto {
+            /**
+             * 节点 ID（用户个人空间根节点、项目根节点或公共资源库节点）
+             * example:
+             * cm3xk8z0r000008l6g8qj9z5x
+             */
+            nodeId: string;
+            /**
+             * 配额大小（GB），0 表示使用系统默认值
+             * example:
+             * 100
+             */
+            quota: number;
         }
         export interface UpdateUserDto {
             /**
@@ -2261,66 +2253,6 @@ declare namespace Components {
              * false
              */
             updatePreloading?: boolean;
-        }
-        export interface UploadFileResponseDto {
-            /**
-             * 上传文件的节点 ID
-             */
-            nodeId?: string;
-            /**
-             * 是否为图纸文件
-             */
-            tz?: boolean;
-        }
-        export interface UploadFilesDto {
-            /**
-             * 上传的文件
-             */
-            file?: string; // binary
-            /**
-             * 文件 MD5 哈希值
-             */
-            hash: string;
-            /**
-             * 原始文件名
-             */
-            name: string;
-            /**
-             * 文件总大小（字节）
-             */
-            size: number;
-            /**
-             * 分片索引（分片上传时必填）
-             */
-            chunk?: number;
-            /**
-             * 总分片数量（分片上传时必填）
-             */
-            chunks?: number;
-            /**
-             * 节点ID（项目根目录或文件夹的 FileSystemNode ID）
-             */
-            nodeId?: string;
-            /**
-             * 源图纸节点 ID（外部参照上传时使用）
-             */
-            srcDwgNodeId?: string;
-            /**
-             * 文件ID（前端传递的标识符）
-             */
-            id?: string;
-            /**
-             * 文件类型（如 dwg、dxf）
-             */
-            type?: string;
-            /**
-             * 文件最后修改日期
-             */
-            lastModifiedDate?: string;
-            /**
-             * 冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名，默认）
-             */
-            conflictStrategy?: "skip" | "overwrite" | "rename";
         }
         export interface UploadFontDto {
             /**
@@ -3527,6 +3459,7 @@ declare namespace Paths {
         export interface PathParameters {
             nodeId: Parameters.NodeId;
         }
+        export type RequestBody = Components.Schemas.CopyNodeDto;
         namespace Responses {
             export type $201 = Components.Schemas.FileSystemNodeDto;
             export interface $404 {
@@ -3540,6 +3473,7 @@ declare namespace Paths {
         export interface PathParameters {
             parentId: Parameters.ParentId;
         }
+        export type RequestBody = Components.Schemas.CreateFolderDto;
         namespace Responses {
             export type $201 = Components.Schemas.FileSystemNodeDto;
             export interface $400 {
@@ -3554,6 +3488,7 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerCreateProject {
+        export type RequestBody = Components.Schemas.CreateProjectDto;
         namespace Responses {
             export type $201 = Components.Schemas.ProjectDto;
             export interface $400 {
@@ -3635,10 +3570,38 @@ declare namespace Paths {
     }
     namespace FileSystemControllerGetChildren {
         namespace Parameters {
+            /**
+             * example:
+             * .dwg
+             */
+            export type Extension = string;
+            export type FileStatus = Components.Schemas.FileStatus;
+            export type IncludeDeleted = boolean;
+            export type Limit = number;
             export type NodeId = string;
+            export type NodeType = "folder" | "file";
+            export type Page = number;
+            export type Search = string;
+            export type SortBy = string;
+            export type SortOrder = "asc" | "desc";
         }
         export interface PathParameters {
             nodeId: Parameters.NodeId;
+        }
+        export interface QueryParameters {
+            search?: Parameters.Search;
+            nodeType?: Parameters.NodeType;
+            extension?: /**
+             * example:
+             * .dwg
+             */
+            Parameters.Extension;
+            fileStatus?: Parameters.FileStatus;
+            page?: Parameters.Page;
+            limit?: Parameters.Limit;
+            sortBy?: Parameters.SortBy;
+            sortOrder?: Parameters.SortOrder;
+            includeDeleted?: Parameters.IncludeDeleted;
         }
         namespace Responses {
             export type $200 = Components.Schemas.NodeListResponseDto;
@@ -3695,6 +3658,24 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerGetProjects {
+        namespace Parameters {
+            export type Filter = Components.Schemas.ProjectFilterType;
+            export type Limit = number;
+            export type Page = number;
+            export type ProjectStatus = Components.Schemas.ProjectStatus;
+            export type Search = string;
+            export type SortBy = string;
+            export type SortOrder = "asc" | "desc";
+        }
+        export interface QueryParameters {
+            search?: Parameters.Search;
+            projectStatus?: Parameters.ProjectStatus;
+            page?: Parameters.Page;
+            limit?: Parameters.Limit;
+            sortBy?: Parameters.SortBy;
+            sortOrder?: Parameters.SortOrder;
+            filter?: Parameters.Filter;
+        }
         namespace Responses {
             export type $200 = Components.Schemas.ProjectListResponseDto;
         }
@@ -3778,6 +3759,7 @@ declare namespace Paths {
         export interface PathParameters {
             nodeId: Parameters.NodeId;
         }
+        export type RequestBody = Components.Schemas.MoveNodeDto;
         namespace Responses {
             export type $200 = Components.Schemas.FileSystemNodeDto;
             export interface $404 {
@@ -3827,6 +3809,42 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerSearch {
+        namespace Parameters {
+            /**
+             * example:
+             * .dwg
+             */
+            export type Extension = string;
+            export type FileStatus = Components.Schemas.FileStatus;
+            export type Filter = Components.Schemas.ProjectFilter;
+            export type Keyword = string;
+            export type LibraryKey = Components.Schemas.LibraryType;
+            export type Limit = number;
+            export type Page = number;
+            export type ProjectId = string;
+            export type Scope = Components.Schemas.SearchScope;
+            export type SortBy = string;
+            export type SortOrder = "asc" | "desc";
+            export type Type = Components.Schemas.SearchType;
+        }
+        export interface QueryParameters {
+            keyword: Parameters.Keyword;
+            scope?: Parameters.Scope;
+            type?: Parameters.Type;
+            filter?: Parameters.Filter;
+            projectId?: Parameters.ProjectId;
+            libraryKey?: Parameters.LibraryKey;
+            extension?: /**
+             * example:
+             * .dwg
+             */
+            Parameters.Extension;
+            fileStatus?: Parameters.FileStatus;
+            page?: Parameters.Page;
+            limit?: Parameters.Limit;
+            sortBy?: Parameters.SortBy;
+            sortOrder?: Parameters.SortOrder;
+        }
         namespace Responses {
             export type $200 = Components.Schemas.NodeListResponseDto;
             export interface $400 {
@@ -3840,6 +3858,7 @@ declare namespace Paths {
         export interface PathParameters {
             nodeId: Parameters.NodeId;
         }
+        export type RequestBody = Components.Schemas.UpdateNodeDto;
         namespace Responses {
             export type $200 = Components.Schemas.FileSystemNodeDto;
             export interface $404 {
@@ -3868,6 +3887,7 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerUpdateStorageQuota {
+        export type RequestBody = Components.Schemas.UpdateStorageQuotaDto;
         namespace Responses {
             export type $200 = Components.Schemas.FileSystemNodeDto;
             export interface $400 {
@@ -4312,16 +4332,28 @@ declare namespace Paths {
             }
         }
     }
-    namespace MxCadControllerCheckChunkExist {
-        export type RequestBody = Components.Schemas.CheckChunkExistDto;
+    namespace LibraryControllerSaveBlockNode {
+        namespace Parameters {
+            export type NodeId = string;
+        }
+        export interface PathParameters {
+            nodeId: Parameters.NodeId;
+        }
         namespace Responses {
-            export type $200 = Components.Schemas.ChunkExistResponseDto;
+            export interface $200 {
+            }
         }
     }
-    namespace MxCadControllerCheckDuplicateFile {
-        export type RequestBody = Components.Schemas.CheckDuplicateFileDto;
+    namespace LibraryControllerSaveDrawingNode {
+        namespace Parameters {
+            export type NodeId = string;
+        }
+        export interface PathParameters {
+            nodeId: Parameters.NodeId;
+        }
         namespace Responses {
-            export type $200 = Components.Schemas.CheckDuplicateFileResponseDto;
+            export interface $200 {
+            }
         }
     }
     namespace MxCadControllerCheckExternalReference {
@@ -4351,21 +4383,6 @@ declare namespace Paths {
         export type RequestBody = Components.Schemas.CheckFileExistDto;
         namespace Responses {
             export type $200 = Components.Schemas.FileExistResponseDto;
-        }
-    }
-    namespace MxCadControllerCheckThumbnail {
-        namespace Parameters {
-            export type NodeId = string;
-        }
-        export interface PathParameters {
-            nodeId: Parameters.NodeId;
-        }
-        namespace Responses {
-            export type $200 = Components.Schemas.CheckThumbnailResponseDto;
-            export interface $400 {
-            }
-            export interface $404 {
-            }
         }
     }
     namespace MxCadControllerGetFile {
@@ -4489,26 +4506,6 @@ declare namespace Paths {
             }
         }
     }
-    namespace MxCadControllerSaveMxwebAs {
-        export type RequestBody = Components.Schemas.SaveMxwebAsDto;
-        namespace Responses {
-            export type $200 = Components.Schemas.SaveMxwebAsResponseDto;
-            export interface $400 {
-            }
-        }
-    }
-    namespace MxCadControllerSaveMxwebToNode {
-        namespace Parameters {
-            export type NodeId = string;
-        }
-        export interface PathParameters {
-            nodeId: Parameters.NodeId;
-        }
-        export type RequestBody = Components.Schemas.SaveMxwebDto;
-        namespace Responses {
-            export type $200 = Components.Schemas.SaveMxwebResponseDto;
-        }
-    }
     namespace MxCadControllerUploadExtReferenceDwg {
         namespace Parameters {
             export type NodeId = string;
@@ -4558,28 +4555,6 @@ declare namespace Paths {
             export interface $403 {
             }
             export interface $404 {
-            }
-        }
-    }
-    namespace MxCadControllerUploadFile {
-        export type RequestBody = Components.Schemas.UploadFilesDto;
-        namespace Responses {
-            export type $200 = Components.Schemas.UploadFileResponseDto;
-        }
-    }
-    namespace MxCadControllerUploadThumbnail {
-        namespace Parameters {
-            export type NodeId = string;
-        }
-        export interface PathParameters {
-            nodeId: Parameters.NodeId;
-        }
-        export type RequestBody = Components.Schemas.UploadThumbnailDto;
-        namespace Responses {
-            export type $200 = Components.Schemas.UploadThumbnailResponseDto;
-            export interface $400 {
-            }
-            export interface $500 {
             }
         }
     }
@@ -4892,6 +4867,57 @@ declare namespace Paths {
                  * true
                  */
                 success?: boolean;
+            }
+        }
+    }
+    namespace SaveControllerSaveMxwebAs {
+        export type RequestBody = Components.Schemas.SaveMxwebAsDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.SaveMxwebAsResponseDto;
+            export interface $400 {
+            }
+        }
+    }
+    namespace SaveControllerSaveMxwebToNode {
+        namespace Parameters {
+            export type NodeId = string;
+        }
+        export interface PathParameters {
+            nodeId: Parameters.NodeId;
+        }
+        export type RequestBody = Components.Schemas.SaveMxwebDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.SaveMxwebResponseDto;
+        }
+    }
+    namespace ThumbnailControllerCheckThumbnail {
+        namespace Parameters {
+            export type NodeId = string;
+        }
+        export interface PathParameters {
+            nodeId: Parameters.NodeId;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.CheckThumbnailResponseDto;
+            export interface $400 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace ThumbnailControllerUploadThumbnail {
+        namespace Parameters {
+            export type NodeId = string;
+        }
+        export interface PathParameters {
+            nodeId: Parameters.NodeId;
+        }
+        export type RequestBody = Components.Schemas.UploadThumbnailDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.UploadThumbnailResponseDto;
+            export interface $400 {
+            }
+            export interface $500 {
             }
         }
     }
@@ -5904,7 +5930,7 @@ export interface OperationMethods {
    * FileSystemController_getProjects - 获取项目列表
    */
   'FileSystemController_getProjects'(
-    parameters?: Parameters<UnknownParamsObject> | null,
+    parameters?: Parameters<Paths.FileSystemControllerGetProjects.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetProjects.Responses.$200>
@@ -5913,7 +5939,7 @@ export interface OperationMethods {
    */
   'FileSystemController_createProject'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerCreateProject.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCreateProject.Responses.$201>
   /**
@@ -5977,7 +6003,7 @@ export interface OperationMethods {
    */
   'FileSystemController_createFolder'(
     parameters?: Parameters<Paths.FileSystemControllerCreateFolder.PathParameters> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerCreateFolder.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCreateFolder.Responses.$201>
   /**
@@ -6009,7 +6035,7 @@ export interface OperationMethods {
    */
   'FileSystemController_updateNode'(
     parameters?: Parameters<Paths.FileSystemControllerUpdateNode.PathParameters> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerUpdateNode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerUpdateNode.Responses.$200>
   /**
@@ -6024,7 +6050,7 @@ export interface OperationMethods {
    * FileSystemController_getChildren - 获取子节点列表
    */
   'FileSystemController_getChildren'(
-    parameters?: Parameters<Paths.FileSystemControllerGetChildren.PathParameters> | null,
+    parameters?: Parameters<Paths.FileSystemControllerGetChildren.QueryParameters & Paths.FileSystemControllerGetChildren.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetChildren.Responses.$200>
@@ -6033,7 +6059,7 @@ export interface OperationMethods {
    */
   'FileSystemController_moveNode'(
     parameters?: Parameters<Paths.FileSystemControllerMoveNode.PathParameters> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerMoveNode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerMoveNode.Responses.$200>
   /**
@@ -6041,7 +6067,7 @@ export interface OperationMethods {
    */
   'FileSystemController_copyNode'(
     parameters?: Parameters<Paths.FileSystemControllerCopyNode.PathParameters> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerCopyNode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCopyNode.Responses.$201>
   /**
@@ -6057,7 +6083,7 @@ export interface OperationMethods {
    */
   'FileSystemController_updateStorageQuota'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerUpdateStorageQuota.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerUpdateStorageQuota.Responses.$200>
   /**
@@ -6159,7 +6185,7 @@ export interface OperationMethods {
    * - all_projects: 搜索所有有权限访问的项目中的文件
    */
   'FileSystemController_search'(
-    parameters?: Parameters<UnknownParamsObject> | null,
+    parameters?: Parameters<Paths.FileSystemControllerSearch.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerSearch.Responses.$200>
@@ -6220,14 +6246,6 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FontsControllerDownloadFont.Responses.$200>
   /**
-   * MxCadController_checkChunkExist
-   */
-  'MxCadController_checkChunkExist'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: Paths.MxCadControllerCheckChunkExist.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerCheckChunkExist.Responses.$200>
-  /**
    * MxCadController_checkFileExist
    */
   'MxCadController_checkFileExist'(
@@ -6235,14 +6253,6 @@ export interface OperationMethods {
     data?: Paths.MxCadControllerCheckFileExist.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerCheckFileExist.Responses.$200>
-  /**
-   * MxCadController_checkDuplicateFile - 检查目录中是否存在重复文件
-   */
-  'MxCadController_checkDuplicateFile'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: Paths.MxCadControllerCheckDuplicateFile.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerCheckDuplicateFile.Responses.$200>
   /**
    * MxCadController_getPreloadingData
    */
@@ -6267,30 +6277,6 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerRefreshExternalReferences.Responses.$200>
-  /**
-   * MxCadController_uploadFile
-   */
-  'MxCadController_uploadFile'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: Paths.MxCadControllerUploadFile.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerUploadFile.Responses.$200>
-  /**
-   * MxCadController_saveMxwebToNode
-   */
-  'MxCadController_saveMxwebToNode'(
-    parameters?: Parameters<Paths.MxCadControllerSaveMxwebToNode.PathParameters> | null,
-    data?: Paths.MxCadControllerSaveMxwebToNode.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerSaveMxwebToNode.Responses.$200>
-  /**
-   * MxCadController_saveMxwebAs
-   */
-  'MxCadController_saveMxwebAs'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: Paths.MxCadControllerSaveMxwebAs.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerSaveMxwebAs.Responses.$200>
   /**
    * MxCadController_uploadExtReferenceDwg
    */
@@ -6340,22 +6326,6 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetFileHead.Responses.$200>
   /**
-   * MxCadController_checkThumbnail
-   */
-  'MxCadController_checkThumbnail'(
-    parameters?: Parameters<Paths.MxCadControllerCheckThumbnail.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerCheckThumbnail.Responses.$200>
-  /**
-   * MxCadController_uploadThumbnail
-   */
-  'MxCadController_uploadThumbnail'(
-    parameters?: Parameters<Paths.MxCadControllerUploadThumbnail.PathParameters> | null,
-    data?: Paths.MxCadControllerUploadThumbnail.RequestBody,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.MxCadControllerUploadThumbnail.Responses.$200>
-  /**
    * MxCadController_getNonCadFile
    */
   'MxCadController_getNonCadFile'(
@@ -6363,6 +6333,38 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetNonCadFile.Responses.$200>
+  /**
+   * ThumbnailController_checkThumbnail
+   */
+  'ThumbnailController_checkThumbnail'(
+    parameters?: Parameters<Paths.ThumbnailControllerCheckThumbnail.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ThumbnailControllerCheckThumbnail.Responses.$200>
+  /**
+   * ThumbnailController_uploadThumbnail
+   */
+  'ThumbnailController_uploadThumbnail'(
+    parameters?: Parameters<Paths.ThumbnailControllerUploadThumbnail.PathParameters> | null,
+    data?: Paths.ThumbnailControllerUploadThumbnail.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ThumbnailControllerUploadThumbnail.Responses.$200>
+  /**
+   * SaveController_saveMxwebToNode
+   */
+  'SaveController_saveMxwebToNode'(
+    parameters?: Parameters<Paths.SaveControllerSaveMxwebToNode.PathParameters> | null,
+    data?: Paths.SaveControllerSaveMxwebToNode.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.SaveControllerSaveMxwebToNode.Responses.$200>
+  /**
+   * SaveController_saveMxwebAs
+   */
+  'SaveController_saveMxwebAs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.SaveControllerSaveMxwebAs.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.SaveControllerSaveMxwebAs.Responses.$200>
   /**
    * AdminController_getAdminStats - 获取管理员统计信息
    */
@@ -6548,6 +6550,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingThumbnail.Responses.$200>
   /**
+   * LibraryController_saveDrawingNode - 覆盖保存图纸库文件
+   */
+  'LibraryController_saveDrawingNode'(
+    parameters?: Parameters<Paths.LibraryControllerSaveDrawingNode.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.LibraryControllerSaveDrawingNode.Responses.$200>
+  /**
    * LibraryController_getBlockLibrary - 获取图块库详情
    */
   'LibraryController_getBlockLibrary'(
@@ -6603,10 +6613,18 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockThumbnail.Responses.$200>
+  /**
+   * LibraryController_saveBlockNode - 覆盖保存图块库文件
+   */
+  'LibraryController_saveBlockNode'(
+    parameters?: Parameters<Paths.LibraryControllerSaveBlockNode.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.LibraryControllerSaveBlockNode.Responses.$200>
 }
 
 export interface PathsDictionary {
-  ['/api/v1/cache-monitor/summary']: {
+  ['/cache-monitor/summary']: {
     /**
      * CacheMonitorController_getSummary - 获取缓存监控摘要
      */
@@ -6616,7 +6634,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetSummary.Responses.$200>
   }
-  ['/api/v1/cache-monitor/health']: {
+  ['/cache-monitor/health']: {
     /**
      * CacheMonitorController_getHealthStatus - 获取缓存健康状态
      */
@@ -6626,7 +6644,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetHealthStatus.Responses.$200>
   }
-  ['/api/v1/cache-monitor/performance']: {
+  ['/cache-monitor/performance']: {
     /**
      * CacheMonitorController_getPerformanceMetrics - 获取缓存性能指标
      */
@@ -6636,7 +6654,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetPerformanceMetrics.Responses.$200>
   }
-  ['/api/v1/cache-monitor/hot-data']: {
+  ['/cache-monitor/hot-data']: {
     /**
      * CacheMonitorController_getHotData - 获取热点数据
      */
@@ -6646,7 +6664,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetHotData.Responses.$200>
   }
-  ['/api/v1/cache-monitor/performance-trend']: {
+  ['/cache-monitor/performance-trend']: {
     /**
      * CacheMonitorController_getPerformanceTrend - 获取性能趋势
      */
@@ -6656,7 +6674,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetPerformanceTrend.Responses.$200>
   }
-  ['/api/v1/cache-monitor/size-trend']: {
+  ['/cache-monitor/size-trend']: {
     /**
      * CacheMonitorController_getSizeTrend - 获取缓存大小趋势
      */
@@ -6666,7 +6684,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetSizeTrend.Responses.$200>
   }
-  ['/api/v1/cache-monitor/warnings']: {
+  ['/cache-monitor/warnings']: {
     /**
      * CacheMonitorController_getWarnings - 获取缓存警告
      */
@@ -6676,7 +6694,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetWarnings.Responses.$200>
   }
-  ['/api/v1/cache-monitor/value']: {
+  ['/cache-monitor/value']: {
     /**
      * CacheMonitorController_getValue - 获取缓存值
      */
@@ -6694,7 +6712,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerDeleteValue.Responses.$200>
   }
-  ['/api/v1/cache-monitor/values']: {
+  ['/cache-monitor/values']: {
     /**
      * CacheMonitorController_deleteValues - 批量删除缓存
      */
@@ -6704,7 +6722,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerDeleteValues.Responses.$200>
   }
-  ['/api/v1/cache-monitor/refresh']: {
+  ['/cache-monitor/refresh']: {
     /**
      * CacheMonitorController_refresh - 刷新缓存
      */
@@ -6714,7 +6732,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerRefresh.Responses.$200>
   }
-  ['/api/v1/cache-monitor/cleanup']: {
+  ['/cache-monitor/cleanup']: {
     /**
      * CacheMonitorController_cleanup - 清理缓存
      */
@@ -6724,7 +6742,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerCleanup.Responses.$200>
   }
-  ['/api/v1/cache-monitor/warmup/config']: {
+  ['/cache-monitor/warmup/config']: {
     /**
      * CacheMonitorController_getWarmupConfig - 获取预热配置
      */
@@ -6742,7 +6760,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerUpdateWarmupConfig.Responses.$200>
   }
-  ['/api/v1/cache-monitor/warmup/trigger']: {
+  ['/cache-monitor/warmup/trigger']: {
     /**
      * CacheMonitorController_triggerWarmup - 触发预热
      */
@@ -6752,7 +6770,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerTriggerWarmup.Responses.$200>
   }
-  ['/api/v1/cache-monitor/warmup/history']: {
+  ['/cache-monitor/warmup/history']: {
     /**
      * CacheMonitorController_getWarmupHistory - 获取预热历史
      */
@@ -6770,7 +6788,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerClearWarmupHistory.Responses.$200>
   }
-  ['/api/v1/cache-monitor/warmup/stats']: {
+  ['/cache-monitor/warmup/stats']: {
     /**
      * CacheMonitorController_getWarmupStats - 获取预热统计
      */
@@ -6780,7 +6798,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetWarmupStats.Responses.$200>
   }
-  ['/api/v1/auth/register']: {
+  ['/auth/register']: {
     /**
      * AuthController_register - 用户注册
      */
@@ -6790,7 +6808,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRegister.Responses.$201>
   }
-  ['/api/v1/auth/login']: {
+  ['/auth/login']: {
     /**
      * AuthController_login - 用户登录
      */
@@ -6800,7 +6818,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerLogin.Responses.$200>
   }
-  ['/api/v1/auth/refresh']: {
+  ['/auth/refresh']: {
     /**
      * AuthController_refreshToken - 刷新Token
      */
@@ -6810,7 +6828,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRefreshToken.Responses.$200>
   }
-  ['/api/v1/auth/logout']: {
+  ['/auth/logout']: {
     /**
      * AuthController_logout - 用户登出
      */
@@ -6820,7 +6838,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerLogout.Responses.$200>
   }
-  ['/api/v1/auth/profile']: {
+  ['/auth/profile']: {
     /**
      * AuthController_getProfile - 获取用户信息
      */
@@ -6830,7 +6848,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerGetProfile.Responses.$200>
   }
-  ['/api/v1/auth/send-verification']: {
+  ['/auth/send-verification']: {
     /**
      * AuthController_sendVerification - 发送邮箱验证码
      */
@@ -6840,7 +6858,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendVerification.Responses.$200>
   }
-  ['/api/v1/auth/verify-email']: {
+  ['/auth/verify-email']: {
     /**
      * AuthController_verifyEmail - 验证邮箱
      */
@@ -6850,7 +6868,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyEmail.Responses.$200>
   }
-  ['/api/v1/auth/verify-email-and-register-phone']: {
+  ['/auth/verify-email-and-register-phone']: {
     /**
      * AuthController_verifyEmailAndRegisterPhone - 验证邮箱并完成手机号注册
      */
@@ -6860,7 +6878,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyEmailAndRegisterPhone.Responses.$201>
   }
-  ['/api/v1/auth/resend-verification']: {
+  ['/auth/resend-verification']: {
     /**
      * AuthController_resendVerification - 重发验证码
      */
@@ -6870,7 +6888,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerResendVerification.Responses.$200>
   }
-  ['/api/v1/auth/bind-email-and-login']: {
+  ['/auth/bind-email-and-login']: {
     /**
      * AuthController_bindEmailAndLogin - 绑定邮箱并登录（用于已注册但没有邮箱的用户）
      */
@@ -6880,7 +6898,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindEmailAndLogin.Responses.$200>
   }
-  ['/api/v1/auth/bind-phone-and-login']: {
+  ['/auth/bind-phone-and-login']: {
     /**
      * AuthController_bindPhoneAndLogin - 绑定手机号并登录（用于已注册但没有手机号的用户）
      */
@@ -6890,7 +6908,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindPhoneAndLogin.Responses.$200>
   }
-  ['/api/v1/auth/verify-phone']: {
+  ['/auth/verify-phone']: {
     /**
      * AuthController_verifyPhone - 验证手机号（用于已注册但手机号未验证的用户）
      */
@@ -6900,7 +6918,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyPhone.Responses.$200>
   }
-  ['/api/v1/auth/forgot-password']: {
+  ['/auth/forgot-password']: {
     /**
      * AuthController_forgotPassword - 忘记密码
      */
@@ -6910,7 +6928,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerForgotPassword.Responses.$200>
   }
-  ['/api/v1/auth/reset-password']: {
+  ['/auth/reset-password']: {
     /**
      * AuthController_resetPassword - 重置密码
      */
@@ -6920,7 +6938,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerResetPassword.Responses.$200>
   }
-  ['/api/v1/auth/bind-email']: {
+  ['/auth/bind-email']: {
     /**
      * AuthController_sendBindEmailCode - 发送绑定邮箱验证码
      */
@@ -6930,7 +6948,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
   }
-  ['/api/v1/auth/verify-bind-email']: {
+  ['/auth/verify-bind-email']: {
     /**
      * AuthController_verifyBindEmail - 验证并绑定邮箱
      */
@@ -6940,7 +6958,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyBindEmail.Responses.$200>
   }
-  ['/api/v1/auth/send-unbind-email-code']: {
+  ['/auth/send-unbind-email-code']: {
     /**
      * AuthController_sendUnbindEmailCode - 发送解绑邮箱验证码（验证原邮箱）
      */
@@ -6950,7 +6968,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendUnbindEmailCode.Responses.$200>
   }
-  ['/api/v1/auth/verify-unbind-email-code']: {
+  ['/auth/verify-unbind-email-code']: {
     /**
      * AuthController_verifyUnbindEmailCode - 验证解绑邮箱验证码
      */
@@ -6960,7 +6978,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyUnbindEmailCode.Responses.$200>
   }
-  ['/api/v1/auth/rebind-email']: {
+  ['/auth/rebind-email']: {
     /**
      * AuthController_rebindEmail - 换绑邮箱（需要先验证原邮箱）
      */
@@ -6970,7 +6988,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRebindEmail.Responses.$200>
   }
-  ['/api/v1/auth/send-sms-code']: {
+  ['/auth/send-sms-code']: {
     /**
      * AuthController_sendSmsCode - 发送短信验证码
      */
@@ -6980,7 +6998,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendSmsCode.Responses.$200>
   }
-  ['/api/v1/auth/verify-sms-code']: {
+  ['/auth/verify-sms-code']: {
     /**
      * AuthController_verifySmsCode - 验证短信验证码
      */
@@ -6990,7 +7008,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifySmsCode.Responses.$200>
   }
-  ['/api/v1/auth/register-phone']: {
+  ['/auth/register-phone']: {
     /**
      * AuthController_registerByPhone - 手机号注册
      */
@@ -7000,7 +7018,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRegisterByPhone.Responses.$201>
   }
-  ['/api/v1/auth/login-phone']: {
+  ['/auth/login-phone']: {
     /**
      * AuthController_loginByPhone - 手机号验证码登录
      */
@@ -7010,7 +7028,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerLoginByPhone.Responses.$200>
   }
-  ['/api/v1/auth/bind-phone']: {
+  ['/auth/bind-phone']: {
     /**
      * AuthController_bindPhone - 绑定手机号
      */
@@ -7020,7 +7038,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindPhone.Responses.$200>
   }
-  ['/api/v1/auth/send-unbind-phone-code']: {
+  ['/auth/send-unbind-phone-code']: {
     /**
      * AuthController_sendUnbindPhoneCode - 发送解绑手机号验证码（验证原手机号）
      */
@@ -7030,7 +7048,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendUnbindPhoneCode.Responses.$200>
   }
-  ['/api/v1/auth/verify-unbind-phone-code']: {
+  ['/auth/verify-unbind-phone-code']: {
     /**
      * AuthController_verifyUnbindPhoneCode - 验证解绑手机号验证码
      */
@@ -7040,7 +7058,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyUnbindPhoneCode.Responses.$200>
   }
-  ['/api/v1/auth/rebind-phone']: {
+  ['/auth/rebind-phone']: {
     /**
      * AuthController_rebindPhone - 换绑手机号（需要先验证原手机号）
      */
@@ -7050,7 +7068,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRebindPhone.Responses.$200>
   }
-  ['/api/v1/auth/check-field']: {
+  ['/auth/check-field']: {
     /**
      * AuthController_checkFieldUniqueness - 检查字段唯一性（用户名、邮箱、手机号）
      */
@@ -7060,7 +7078,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerCheckFieldUniqueness.Responses.$200>
   }
-  ['/api/v1/auth/wechat/login']: {
+  ['/auth/wechat/login']: {
     /**
      * AuthController_getWechatAuthUrl - 获取微信授权 URL
      */
@@ -7070,7 +7088,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerGetWechatAuthUrl.Responses.$200>
   }
-  ['/api/v1/auth/wechat/callback']: {
+  ['/auth/wechat/callback']: {
     /**
      * AuthController_wechatCallback - 微信授权回调
      */
@@ -7080,7 +7098,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerWechatCallback.Responses.$200>
   }
-  ['/api/v1/auth/wechat/bind']: {
+  ['/auth/wechat/bind']: {
     /**
      * AuthController_bindWechat - 绑定微信到当前账号
      */
@@ -7090,7 +7108,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindWechat.Responses.$200>
   }
-  ['/api/v1/auth/wechat/unbind']: {
+  ['/auth/wechat/unbind']: {
     /**
      * AuthController_unbindWechat - 解绑微信
      */
@@ -7100,7 +7118,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerUnbindWechat.Responses.$200>
   }
-  ['/api/v1/user-cleanup/stats']: {
+  ['/user-cleanup/stats']: {
     /**
      * UserCleanupController_getStats - 获取待清理用户统计
      */
@@ -7110,7 +7128,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserCleanupControllerGetStats.Responses.$200>
   }
-  ['/api/v1/user-cleanup/trigger']: {
+  ['/user-cleanup/trigger']: {
     /**
      * UserCleanupController_triggerCleanup - 手动触发用户数据清理
      */
@@ -7120,7 +7138,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserCleanupControllerTriggerCleanup.Responses.$200>
   }
-  ['/api/v1/runtime-config/public']: {
+  ['/runtime-config/public']: {
     /**
      * RuntimeConfigController_getPublicConfigs - 获取公开配置（前端初始化使用）
      */
@@ -7130,7 +7148,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
   }
-  ['/api/v1/runtime-config']: {
+  ['/runtime-config']: {
     /**
      * RuntimeConfigController_getAllConfigs - 获取所有运行时配置
      */
@@ -7140,7 +7158,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
   }
-  ['/api/v1/runtime-config/definitions']: {
+  ['/runtime-config/definitions']: {
     /**
      * RuntimeConfigController_getDefinitions - 获取配置项定义
      */
@@ -7150,7 +7168,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
   }
-  ['/api/v1/runtime-config/{key}']: {
+  ['/runtime-config/{key}']: {
     /**
      * RuntimeConfigController_getConfig - 获取单个配置项
      */
@@ -7168,7 +7186,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerUpdateConfig.Responses.$200>
   }
-  ['/api/v1/runtime-config/{key}/reset']: {
+  ['/runtime-config/{key}/reset']: {
     /**
      * RuntimeConfigController_resetConfig - 重置配置为默认值
      */
@@ -7178,7 +7196,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   }
-  ['/api/v1/users']: {
+  ['/users']: {
     /**
      * UsersController_create - 创建用户
      */
@@ -7196,7 +7214,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerFindAll.Responses.$200>
   }
-  ['/api/v1/users/search/by-email']: {
+  ['/users/search/by-email']: {
     /**
      * UsersController_searchByEmail - 根据邮箱搜索用户
      */
@@ -7206,7 +7224,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerSearchByEmail.Responses.$200>
   }
-  ['/api/v1/users/search']: {
+  ['/users/search']: {
     /**
      * UsersController_searchUsers - 搜索用户（用于添加项目成员）
      */
@@ -7216,7 +7234,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerSearchUsers.Responses.$200>
   }
-  ['/api/v1/users/profile/me']: {
+  ['/users/profile/me']: {
     /**
      * UsersController_getProfile - 获取当前用户信息
      */
@@ -7234,7 +7252,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerUpdateProfile.Responses.$200>
   }
-  ['/api/v1/users/stats/me']: {
+  ['/users/stats/me']: {
     /**
      * UsersController_getDashboardStats - 获取当前用户仪表盘统计数据
      */
@@ -7244,7 +7262,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerGetDashboardStats.Responses.$200>
   }
-  ['/api/v1/users/{id}']: {
+  ['/users/{id}']: {
     /**
      * UsersController_findOne - 根据 ID 获取用户
      */
@@ -7270,7 +7288,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerRemove.Responses.$200>
   }
-  ['/api/v1/users/{id}/restore']: {
+  ['/users/{id}/restore']: {
     /**
      * UsersController_restore - 恢复已注销的用户账户
      */
@@ -7280,7 +7298,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerRestore.Responses.$200>
   }
-  ['/api/v1/users/{id}/delete-immediately']: {
+  ['/users/{id}/delete-immediately']: {
     /**
      * UsersController_deleteImmediately - 立即注销指定用户账户（软删除 + 立即清理）
      */
@@ -7290,7 +7308,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerDeleteImmediately.Responses.$200>
   }
-  ['/api/v1/users/deactivate-account']: {
+  ['/users/deactivate-account']: {
     /**
      * UsersController_deactivateAccount - 注销用户账户
      */
@@ -7300,7 +7318,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerDeactivateAccount.Responses.$200>
   }
-  ['/api/v1/users/me/restore']: {
+  ['/users/me/restore']: {
     /**
      * UsersController_restoreAccount - 恢复已注销账户（冷静期内）
      */
@@ -7310,7 +7328,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerRestoreAccount.Responses.$200>
   }
-  ['/api/v1/users/change-password']: {
+  ['/users/change-password']: {
     /**
      * UsersController_changePassword - 修改密码
      */
@@ -7320,7 +7338,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerChangePassword.Responses.$200>
   }
-  ['/api/v1/roles']: {
+  ['/roles']: {
     /**
      * RolesController_findAll - 获取所有角色
      */
@@ -7338,7 +7356,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerCreate.Responses.$201>
   }
-  ['/api/v1/roles/{id}']: {
+  ['/roles/{id}']: {
     /**
      * RolesController_findOne - 根据 ID 获取角色
      */
@@ -7364,7 +7382,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerRemove.Responses.$200>
   }
-  ['/api/v1/roles/{id}/permissions']: {
+  ['/roles/{id}/permissions']: {
     /**
      * RolesController_getRolePermissions - 获取角色的所有权限
      */
@@ -7390,7 +7408,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerRemovePermissions.Responses.$200>
   }
-  ['/api/v1/roles/project-roles/all']: {
+  ['/roles/project-roles/all']: {
     /**
      * RolesController_getAllProjectRoles - 获取所有项目角色
      */
@@ -7400,7 +7418,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetAllProjectRoles.Responses.$200>
   }
-  ['/api/v1/roles/project-roles/system']: {
+  ['/roles/project-roles/system']: {
     /**
      * RolesController_getSystemProjectRoles - 获取系统默认项目角色
      */
@@ -7410,7 +7428,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetSystemProjectRoles.Responses.$200>
   }
-  ['/api/v1/roles/project-roles/project/{projectId}']: {
+  ['/roles/project-roles/project/{projectId}']: {
     /**
      * RolesController_getProjectRolesByProject - 获取特定项目的角色列表
      */
@@ -7420,7 +7438,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetProjectRolesByProject.Responses.$200>
   }
-  ['/api/v1/roles/project-roles/{id}/permissions']: {
+  ['/roles/project-roles/{id}/permissions']: {
     /**
      * RolesController_getProjectRolePermissions - 获取项目角色的所有权限
      */
@@ -7446,7 +7464,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerRemoveProjectRolePermissions.Responses.$200>
   }
-  ['/api/v1/roles/project-roles']: {
+  ['/roles/project-roles']: {
     /**
      * RolesController_createProjectRole - 创建项目角色
      */
@@ -7456,7 +7474,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerCreateProjectRole.Responses.$201>
   }
-  ['/api/v1/roles/project-roles/{id}']: {
+  ['/roles/project-roles/{id}']: {
     /**
      * RolesController_updateProjectRole - 更新项目角色
      */
@@ -7474,7 +7492,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerDeleteProjectRole.Responses.$200>
   }
-  ['/api/v1/audit/logs']: {
+  ['/audit/logs']: {
     /**
      * AuditLogController_findAll - 查询审计日志
      */
@@ -7484,7 +7502,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerFindAll.Responses.$200>
   }
-  ['/api/v1/audit/logs/{id}']: {
+  ['/audit/logs/{id}']: {
     /**
      * AuditLogController_findOne - 获取审计日志详情
      */
@@ -7494,7 +7512,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerFindOne.Responses.$200>
   }
-  ['/api/v1/audit/statistics']: {
+  ['/audit/statistics']: {
     /**
      * AuditLogController_getStatistics - 获取审计统计信息
      */
@@ -7504,7 +7522,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerGetStatistics.Responses.$200>
   }
-  ['/api/v1/audit/cleanup']: {
+  ['/audit/cleanup']: {
     /**
      * AuditLogController_cleanupOldLogs - 清理旧审计日志
      */
@@ -7514,25 +7532,25 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
   }
-  ['/api/v1/file-system/projects']: {
+  ['/file-system/projects']: {
     /**
      * FileSystemController_createProject - 创建项目
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerCreateProject.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCreateProject.Responses.$201>
     /**
      * FileSystemController_getProjects - 获取项目列表
      */
     'get'(
-      parameters?: Parameters<UnknownParamsObject> | null,
+      parameters?: Parameters<Paths.FileSystemControllerGetProjects.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProjects.Responses.$200>
   }
-  ['/api/v1/file-system/personal-space']: {
+  ['/file-system/personal-space']: {
     /**
      * FileSystemController_getPersonalSpace - 获取当前用户的私人空间
      */
@@ -7542,7 +7560,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   }
-  ['/api/v1/file-system/projects/{projectId}']: {
+  ['/file-system/projects/{projectId}']: {
     /**
      * FileSystemController_getProject - 获取项目详情
      */
@@ -7552,7 +7570,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProject.Responses.$200>
   }
-  ['/api/v1/file-system/trash']: {
+  ['/file-system/trash']: {
     /**
      * FileSystemController_getTrash - 获取回收站列表
      */
@@ -7570,7 +7588,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerClearTrash.Responses.$200>
   }
-  ['/api/v1/file-system/trash/restore']: {
+  ['/file-system/trash/restore']: {
     /**
      * FileSystemController_restoreTrashItems - 恢复回收站项目
      */
@@ -7580,7 +7598,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRestoreTrashItems.Responses.$200>
   }
-  ['/api/v1/file-system/trash/items']: {
+  ['/file-system/trash/items']: {
     /**
      * FileSystemController_permanentlyDeleteTrashItems - 永久删除回收站项目
      */
@@ -7590,7 +7608,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerPermanentlyDeleteTrashItems.Responses.$200>
   }
-  ['/api/v1/file-system/nodes']: {
+  ['/file-system/nodes']: {
     /**
      * FileSystemController_createNode - 创建节点（文件或文件夹）
      */
@@ -7600,17 +7618,17 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCreateNode.Responses.$201>
   }
-  ['/api/v1/file-system/nodes/{parentId}/folders']: {
+  ['/file-system/nodes/{parentId}/folders']: {
     /**
      * FileSystemController_createFolder - 创建文件夹
      */
     'post'(
       parameters?: Parameters<Paths.FileSystemControllerCreateFolder.PathParameters> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerCreateFolder.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCreateFolder.Responses.$201>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/root']: {
+  ['/file-system/nodes/{nodeId}/root']: {
     /**
      * FileSystemController_getRootNode - 获取节点的根节点
      */
@@ -7620,7 +7638,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetRootNode.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/restore']: {
+  ['/file-system/nodes/{nodeId}/restore']: {
     /**
      * FileSystemController_restoreNode - 恢复单个节点
      */
@@ -7630,7 +7648,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRestoreNode.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}']: {
+  ['/file-system/nodes/{nodeId}']: {
     /**
      * FileSystemController_getNode - 获取节点详情
      */
@@ -7644,7 +7662,7 @@ export interface PathsDictionary {
      */
     'patch'(
       parameters?: Parameters<Paths.FileSystemControllerUpdateNode.PathParameters> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerUpdateNode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerUpdateNode.Responses.$200>
     /**
@@ -7656,37 +7674,37 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDeleteNode.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/children']: {
+  ['/file-system/nodes/{nodeId}/children']: {
     /**
      * FileSystemController_getChildren - 获取子节点列表
      */
     'get'(
-      parameters?: Parameters<Paths.FileSystemControllerGetChildren.PathParameters> | null,
+      parameters?: Parameters<Paths.FileSystemControllerGetChildren.QueryParameters & Paths.FileSystemControllerGetChildren.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetChildren.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/move']: {
+  ['/file-system/nodes/{nodeId}/move']: {
     /**
      * FileSystemController_moveNode - 移动节点
      */
     'post'(
       parameters?: Parameters<Paths.FileSystemControllerMoveNode.PathParameters> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerMoveNode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerMoveNode.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/copy']: {
+  ['/file-system/nodes/{nodeId}/copy']: {
     /**
      * FileSystemController_copyNode - 复制节点
      */
     'post'(
       parameters?: Parameters<Paths.FileSystemControllerCopyNode.PathParameters> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerCopyNode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCopyNode.Responses.$201>
   }
-  ['/api/v1/file-system/quota']: {
+  ['/file-system/quota']: {
     /**
      * FileSystemController_getStorageQuota - 获取存储配额信息
      */
@@ -7696,17 +7714,17 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetStorageQuota.Responses.$200>
   }
-  ['/api/v1/file-system/quota/update']: {
+  ['/file-system/quota/update']: {
     /**
      * FileSystemController_updateStorageQuota - 更新节点存储配额
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerUpdateStorageQuota.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerUpdateStorageQuota.Responses.$200>
   }
-  ['/api/v1/file-system/projects/{projectId}/members']: {
+  ['/file-system/projects/{projectId}/members']: {
     /**
      * FileSystemController_getProjectMembers - 获取项目成员列表
      */
@@ -7724,7 +7742,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerAddProjectMember.Responses.$201>
   }
-  ['/api/v1/file-system/projects/{projectId}/members/{userId}']: {
+  ['/file-system/projects/{projectId}/members/{userId}']: {
     /**
      * FileSystemController_updateProjectMember - 更新项目成员角色
      */
@@ -7742,7 +7760,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRemoveProjectMember.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/thumbnail']: {
+  ['/file-system/nodes/{nodeId}/thumbnail']: {
     /**
      * FileSystemController_getThumbnail - 获取文件节点缩略图
      */
@@ -7752,7 +7770,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetThumbnail.Responses.$200 | Paths.FileSystemControllerGetThumbnail.Responses.$204>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/download']: {
+  ['/file-system/nodes/{nodeId}/download']: {
     /**
      * FileSystemController_downloadNodeOptions - 下载接口 OPTIONS 预检
      */
@@ -7770,7 +7788,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDownloadNode.Responses.$200>
   }
-  ['/api/v1/file-system/nodes/{nodeId}/download-with-format']: {
+  ['/file-system/nodes/{nodeId}/download-with-format']: {
     /**
      * FileSystemController_downloadNodeWithFormat - 下载节点（支持多格式转换）
      * 
@@ -7782,7 +7800,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDownloadNodeWithFormat.Responses.$200>
   }
-  ['/api/v1/file-system/projects/{projectId}/permissions']: {
+  ['/file-system/projects/{projectId}/permissions']: {
     /**
      * FileSystemController_getUserProjectPermissions - 获取用户在项目中的权限列表
      */
@@ -7792,7 +7810,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetUserProjectPermissions.Responses.$200>
   }
-  ['/api/v1/file-system/projects/{projectId}/permissions/check']: {
+  ['/file-system/projects/{projectId}/permissions/check']: {
     /**
      * FileSystemController_checkProjectPermission - 检查用户是否具有特定权限
      */
@@ -7802,7 +7820,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCheckProjectPermission.Responses.$200>
   }
-  ['/api/v1/file-system/projects/{projectId}/role']: {
+  ['/file-system/projects/{projectId}/role']: {
     /**
      * FileSystemController_getUserProjectRole - 获取用户在项目中的角色
      */
@@ -7812,7 +7830,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetUserProjectRole.Responses.$200>
   }
-  ['/api/v1/file-system/search']: {
+  ['/file-system/search']: {
     /**
      * FileSystemController_search - 统一搜索接口
      * 
@@ -7822,12 +7840,12 @@ export interface PathsDictionary {
      * - all_projects: 搜索所有有权限访问的项目中的文件
      */
     'get'(
-      parameters?: Parameters<UnknownParamsObject> | null,
+      parameters?: Parameters<Paths.FileSystemControllerSearch.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerSearch.Responses.$200>
   }
-  ['/api/v1/version-control/history']: {
+  ['/version-control/history']: {
     /**
      * VersionControlController_getFileHistory - 获取节点的 SVN 提交历史
      */
@@ -7837,7 +7855,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.VersionControlControllerGetFileHistory.Responses.$200>
   }
-  ['/api/v1/version-control/file/{revision}']: {
+  ['/version-control/file/{revision}']: {
     /**
      * VersionControlController_getFileContentAtRevision - 获取指定版本的文件内容
      */
@@ -7847,7 +7865,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.VersionControlControllerGetFileContentAtRevision.Responses.$200>
   }
-  ['/api/v1/font-management']: {
+  ['/font-management']: {
     /**
      * FontsController_getFonts - 获取字体列表
      * 
@@ -7859,7 +7877,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerGetFonts.Responses.$200>
   }
-  ['/api/v1/font-management/upload']: {
+  ['/font-management/upload']: {
     /**
      * FontsController_uploadFont - 上传字体文件
      * 
@@ -7871,7 +7889,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerUploadFont.Responses.$201>
   }
-  ['/api/v1/font-management/{fileName}']: {
+  ['/font-management/{fileName}']: {
     /**
      * FontsController_deleteFont - 删除字体文件
      * 
@@ -7883,7 +7901,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerDeleteFont.Responses.$200>
   }
-  ['/api/v1/font-management/download/{fileName}']: {
+  ['/font-management/download/{fileName}']: {
     /**
      * FontsController_downloadFont - 下载字体文件
      * 
@@ -7895,17 +7913,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerDownloadFont.Responses.$200>
   }
-  ['/api/v1/mxcad/files/chunkisExist']: {
-    /**
-     * MxCadController_checkChunkExist
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: Paths.MxCadControllerCheckChunkExist.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerCheckChunkExist.Responses.$200>
-  }
-  ['/api/v1/mxcad/files/fileisExist']: {
+  ['/mxcad/files/fileisExist']: {
     /**
      * MxCadController_checkFileExist
      */
@@ -7915,17 +7923,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerCheckFileExist.Responses.$200>
   }
-  ['/api/v1/mxcad/files/checkDuplicate']: {
-    /**
-     * MxCadController_checkDuplicateFile - 检查目录中是否存在重复文件
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: Paths.MxCadControllerCheckDuplicateFile.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerCheckDuplicateFile.Responses.$200>
-  }
-  ['/api/v1/mxcad/file/{nodeId}/preloading']: {
+  ['/mxcad/file/{nodeId}/preloading']: {
     /**
      * MxCadController_getPreloadingData
      */
@@ -7935,7 +7933,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetPreloadingData.Responses.$200>
   }
-  ['/api/v1/mxcad/file/{nodeId}/check-reference']: {
+  ['/mxcad/file/{nodeId}/check-reference']: {
     /**
      * MxCadController_checkExternalReference
      */
@@ -7945,7 +7943,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerCheckExternalReference.Responses.$200>
   }
-  ['/api/v1/mxcad/file/{nodeId}/refresh-external-references']: {
+  ['/mxcad/file/{nodeId}/refresh-external-references']: {
     /**
      * MxCadController_refreshExternalReferences
      */
@@ -7955,37 +7953,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerRefreshExternalReferences.Responses.$200>
   }
-  ['/api/v1/mxcad/files/uploadFiles']: {
-    /**
-     * MxCadController_uploadFile
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: Paths.MxCadControllerUploadFile.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerUploadFile.Responses.$200>
-  }
-  ['/api/v1/mxcad/savemxweb/{nodeId}']: {
-    /**
-     * MxCadController_saveMxwebToNode
-     */
-    'post'(
-      parameters?: Parameters<Paths.MxCadControllerSaveMxwebToNode.PathParameters> | null,
-      data?: Paths.MxCadControllerSaveMxwebToNode.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerSaveMxwebToNode.Responses.$200>
-  }
-  ['/api/v1/mxcad/save-as']: {
-    /**
-     * MxCadController_saveMxwebAs
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: Paths.MxCadControllerSaveMxwebAs.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerSaveMxwebAs.Responses.$200>
-  }
-  ['/api/v1/mxcad/up_ext_reference_dwg/{nodeId}']: {
+  ['/mxcad/up_ext_reference_dwg/{nodeId}']: {
     /**
      * MxCadController_uploadExtReferenceDwg
      */
@@ -7995,7 +7963,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerUploadExtReferenceDwg.Responses.$200>
   }
-  ['/api/v1/mxcad/up_ext_reference_image']: {
+  ['/mxcad/up_ext_reference_image']: {
     /**
      * MxCadController_uploadExtReferenceImage
      */
@@ -8005,7 +7973,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerUploadExtReferenceImage.Responses.$200>
   }
-  ['/api/v1/mxcad/filesData/{path}']: {
+  ['/mxcad/filesData/{path}']: {
     /**
      * MxCadController_getFilesDataFile
      */
@@ -8023,7 +7991,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetFilesDataFileHead.Responses.$200>
   }
-  ['/api/v1/mxcad/file/{path}']: {
+  ['/mxcad/file/{path}']: {
     /**
      * MxCadController_getFile
      */
@@ -8041,25 +8009,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetFileHead.Responses.$200>
   }
-  ['/api/v1/mxcad/thumbnail/{nodeId}']: {
-    /**
-     * MxCadController_checkThumbnail
-     */
-    'get'(
-      parameters?: Parameters<Paths.MxCadControllerCheckThumbnail.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerCheckThumbnail.Responses.$200>
-    /**
-     * MxCadController_uploadThumbnail
-     */
-    'post'(
-      parameters?: Parameters<Paths.MxCadControllerUploadThumbnail.PathParameters> | null,
-      data?: Paths.MxCadControllerUploadThumbnail.RequestBody,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.MxCadControllerUploadThumbnail.Responses.$200>
-  }
-  ['/api/v1/mxcad/files/{storageKey}']: {
+  ['/mxcad/files/{storageKey}']: {
     /**
      * MxCadController_getNonCadFile
      */
@@ -8069,7 +8019,45 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetNonCadFile.Responses.$200>
   }
-  ['/api/v1/admin/stats']: {
+  ['/mxcad/thumbnail/{nodeId}']: {
+    /**
+     * ThumbnailController_checkThumbnail
+     */
+    'get'(
+      parameters?: Parameters<Paths.ThumbnailControllerCheckThumbnail.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ThumbnailControllerCheckThumbnail.Responses.$200>
+    /**
+     * ThumbnailController_uploadThumbnail
+     */
+    'post'(
+      parameters?: Parameters<Paths.ThumbnailControllerUploadThumbnail.PathParameters> | null,
+      data?: Paths.ThumbnailControllerUploadThumbnail.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ThumbnailControllerUploadThumbnail.Responses.$200>
+  }
+  ['/mxcad/savemxweb/{nodeId}']: {
+    /**
+     * SaveController_saveMxwebToNode
+     */
+    'post'(
+      parameters?: Parameters<Paths.SaveControllerSaveMxwebToNode.PathParameters> | null,
+      data?: Paths.SaveControllerSaveMxwebToNode.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.SaveControllerSaveMxwebToNode.Responses.$200>
+  }
+  ['/mxcad/save-as']: {
+    /**
+     * SaveController_saveMxwebAs
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.SaveControllerSaveMxwebAs.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.SaveControllerSaveMxwebAs.Responses.$200>
+  }
+  ['/admin/stats']: {
     /**
      * AdminController_getAdminStats - 获取管理员统计信息
      */
@@ -8079,7 +8067,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerGetAdminStats.Responses.$200>
   }
-  ['/api/v1/admin/storage/cleanup']: {
+  ['/admin/storage/cleanup']: {
     /**
      * AdminController_cleanupStorage - 手动触发存储清理
      */
@@ -8089,7 +8077,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerCleanupStorage.Responses.$200>
   }
-  ['/api/v1/admin/storage/cleanup/stats']: {
+  ['/admin/storage/cleanup/stats']: {
     /**
      * AdminController_getCleanupStats - 获取待清理存储统计
      */
@@ -8099,7 +8087,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerGetCleanupStats.Responses.$200>
   }
-  ['/api/v1/health/live']: {
+  ['/health/live']: {
     /**
      * HealthController_liveness - 存活检查（Docker 健康检查）
      */
@@ -8109,7 +8097,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
   }
-  ['/api/v1/health']: {
+  ['/health']: {
     /**
      * HealthController_publicHealth - 服务健康检查（公开）
      */
@@ -8119,7 +8107,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerPublicHealth.Responses.$200>
   }
-  ['/api/v1/health/full']: {
+  ['/health/full']: {
     /**
      * HealthController_check - 系统健康检查（详细）
      */
@@ -8129,7 +8117,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheck.Responses.$200>
   }
-  ['/api/v1/health/db']: {
+  ['/health/db']: {
     /**
      * HealthController_checkDatabase - 数据库健康检查
      */
@@ -8139,7 +8127,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheckDatabase.Responses.$200>
   }
-  ['/api/v1/health/storage']: {
+  ['/health/storage']: {
     /**
      * HealthController_checkStorage - 存储服务健康检查
      */
@@ -8149,7 +8137,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheckStorage.Responses.$200>
   }
-  ['/api/v1/public-file/chunk/check']: {
+  ['/public-file/chunk/check']: {
     /**
      * PublicFileController_checkChunk - 检查分片是否存在
      */
@@ -8159,7 +8147,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerCheckChunk.Responses.$200>
   }
-  ['/api/v1/public-file/file/check']: {
+  ['/public-file/file/check']: {
     /**
      * PublicFileController_checkFile - 检查文件是否已存在（秒传检查）
      */
@@ -8169,7 +8157,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerCheckFile.Responses.$200>
   }
-  ['/api/v1/public-file/chunk/upload']: {
+  ['/public-file/chunk/upload']: {
     /**
      * PublicFileController_uploadChunk - 上传分片
      */
@@ -8179,7 +8167,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerUploadChunk.Responses.$200>
   }
-  ['/api/v1/public-file/chunk/merge']: {
+  ['/public-file/chunk/merge']: {
     /**
      * PublicFileController_mergeChunks - 合并分片并获取文件访问信息
      */
@@ -8189,7 +8177,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerMergeChunks.Responses.$200>
   }
-  ['/api/v1/public-file/access/{hash}/{filename}']: {
+  ['/public-file/access/{hash}/{filename}']: {
     /**
      * PublicFileController_accessFile - 通过文件哈希访问目录下的文件
      */
@@ -8199,7 +8187,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
   }
-  ['/api/v1/public-file/ext-reference/upload']: {
+  ['/public-file/ext-reference/upload']: {
     /**
      * PublicFileController_uploadExtReference - 上传外部参照文件（公开接口）
      */
@@ -8209,7 +8197,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerUploadExtReference.Responses.$200>
   }
-  ['/api/v1/public-file/ext-reference/check']: {
+  ['/public-file/ext-reference/check']: {
     /**
      * PublicFileController_checkExtReference - 检查外部参照文件是否存在
      */
@@ -8219,7 +8207,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerCheckExtReference.Responses.$200>
   }
-  ['/api/v1/public-file/preloading/{hash}']: {
+  ['/public-file/preloading/{hash}']: {
     /**
      * PublicFileController_getPreloadingData - 获取预加载数据（包含外部参照信息）
      */
@@ -8229,7 +8217,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerGetPreloadingData.Responses.$200>
   }
-  ['/api/v1/library/drawing']: {
+  ['/library/drawing']: {
     /**
      * LibraryController_getDrawingLibrary - 获取图纸库详情
      */
@@ -8239,7 +8227,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingLibrary.Responses.$200>
   }
-  ['/api/v1/library/drawing/children/{nodeId}']: {
+  ['/library/drawing/children/{nodeId}']: {
     /**
      * LibraryController_getDrawingChildren - 获取图纸库子节点列表
      */
@@ -8249,7 +8237,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingChildren.Responses.$200>
   }
-  ['/api/v1/library/drawing/all-files/{nodeId}']: {
+  ['/library/drawing/all-files/{nodeId}']: {
     /**
      * LibraryController_getDrawingAllFiles - 递归获取图纸库节点下的所有文件
      */
@@ -8259,7 +8247,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingAllFiles.Responses.$200>
   }
-  ['/api/v1/library/drawing/filesData/{path}']: {
+  ['/library/drawing/filesData/{path}']: {
     /**
      * LibraryController_getDrawingFile - 获取图纸库文件（统一入口）
      */
@@ -8269,7 +8257,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
   }
-  ['/api/v1/library/drawing/nodes/{nodeId}']: {
+  ['/library/drawing/nodes/{nodeId}']: {
     /**
      * LibraryController_getDrawingNode - 获取图纸库节点详情
      */
@@ -8279,7 +8267,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingNode.Responses.$200>
   }
-  ['/api/v1/library/drawing/nodes/{nodeId}/download']: {
+  ['/library/drawing/nodes/{nodeId}/download']: {
     /**
      * LibraryController_downloadDrawingNode - 下载图纸库文件
      */
@@ -8289,7 +8277,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDownloadDrawingNode.Responses.$200>
   }
-  ['/api/v1/library/drawing/nodes/{nodeId}/thumbnail']: {
+  ['/library/drawing/nodes/{nodeId}/thumbnail']: {
     /**
      * LibraryController_getDrawingThumbnail - 获取图纸库文件缩略图
      */
@@ -8299,7 +8287,17 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingThumbnail.Responses.$200>
   }
-  ['/api/v1/library/block']: {
+  ['/library/drawing/save/{nodeId}']: {
+    /**
+     * LibraryController_saveDrawingNode - 覆盖保存图纸库文件
+     */
+    'post'(
+      parameters?: Parameters<Paths.LibraryControllerSaveDrawingNode.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.LibraryControllerSaveDrawingNode.Responses.$200>
+  }
+  ['/library/block']: {
     /**
      * LibraryController_getBlockLibrary - 获取图块库详情
      */
@@ -8309,7 +8307,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockLibrary.Responses.$200>
   }
-  ['/api/v1/library/block/children/{nodeId}']: {
+  ['/library/block/children/{nodeId}']: {
     /**
      * LibraryController_getBlockChildren - 获取图块库子节点列表
      */
@@ -8319,7 +8317,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockChildren.Responses.$200>
   }
-  ['/api/v1/library/block/all-files/{nodeId}']: {
+  ['/library/block/all-files/{nodeId}']: {
     /**
      * LibraryController_getBlockAllFiles - 递归获取图块库节点下的所有文件
      */
@@ -8329,7 +8327,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockAllFiles.Responses.$200>
   }
-  ['/api/v1/library/block/filesData/{path}']: {
+  ['/library/block/filesData/{path}']: {
     /**
      * LibraryController_getBlockFile - 获取图块库文件（统一入口）
      */
@@ -8339,7 +8337,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
   }
-  ['/api/v1/library/block/nodes/{nodeId}']: {
+  ['/library/block/nodes/{nodeId}']: {
     /**
      * LibraryController_getBlockNode - 获取图块库节点详情
      */
@@ -8349,7 +8347,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockNode.Responses.$200>
   }
-  ['/api/v1/library/block/nodes/{nodeId}/download']: {
+  ['/library/block/nodes/{nodeId}/download']: {
     /**
      * LibraryController_downloadBlockNode - 下载图块库文件
      */
@@ -8359,7 +8357,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDownloadBlockNode.Responses.$200>
   }
-  ['/api/v1/library/block/nodes/{nodeId}/thumbnail']: {
+  ['/library/block/nodes/{nodeId}/thumbnail']: {
     /**
      * LibraryController_getBlockThumbnail - 获取图块库文件缩略图
      */
@@ -8368,6 +8366,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockThumbnail.Responses.$200>
+  }
+  ['/library/block/save/{nodeId}']: {
+    /**
+     * LibraryController_saveBlockNode - 覆盖保存图块库文件
+     */
+    'post'(
+      parameters?: Parameters<Paths.LibraryControllerSaveBlockNode.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.LibraryControllerSaveBlockNode.Responses.$200>
   }
 }
 
@@ -8392,16 +8400,15 @@ export type ChangePasswordApiResponseDto = Components.Schemas.ChangePasswordApiR
 export type ChangePasswordDto = Components.Schemas.ChangePasswordDto;
 export type ChangePasswordResponseDto = Components.Schemas.ChangePasswordResponseDto;
 export type CheckChunkDto = Components.Schemas.CheckChunkDto;
-export type CheckChunkExistDto = Components.Schemas.CheckChunkExistDto;
 export type CheckChunkResponseDto = Components.Schemas.CheckChunkResponseDto;
-export type CheckDuplicateFileDto = Components.Schemas.CheckDuplicateFileDto;
-export type CheckDuplicateFileResponseDto = Components.Schemas.CheckDuplicateFileResponseDto;
 export type CheckFileDto = Components.Schemas.CheckFileDto;
 export type CheckFileExistDto = Components.Schemas.CheckFileExistDto;
 export type CheckFileResponseDto = Components.Schemas.CheckFileResponseDto;
 export type CheckReferenceResponseDto = Components.Schemas.CheckReferenceResponseDto;
 export type CheckThumbnailResponseDto = Components.Schemas.CheckThumbnailResponseDto;
-export type ChunkExistResponseDto = Components.Schemas.ChunkExistResponseDto;
+export type CopyNodeDto = Components.Schemas.CopyNodeDto;
+export type CreateFolderDto = Components.Schemas.CreateFolderDto;
+export type CreateProjectDto = Components.Schemas.CreateProjectDto;
 export type CreateProjectRoleDto = Components.Schemas.CreateProjectRoleDto;
 export type CreateRoleDto = Components.Schemas.CreateRoleDto;
 export type CreateUserDto = Components.Schemas.CreateUserDto;
@@ -8419,9 +8426,11 @@ export type FontUploadTarget = Components.Schemas.FontUploadTarget;
 export type ForgotPasswordApiResponseDto = Components.Schemas.ForgotPasswordApiResponseDto;
 export type ForgotPasswordDto = Components.Schemas.ForgotPasswordDto;
 export type ForgotPasswordResponseDto = Components.Schemas.ForgotPasswordResponseDto;
+export type LibraryType = Components.Schemas.LibraryType;
 export type LoginDto = Components.Schemas.LoginDto;
 export type MergeChunksDto = Components.Schemas.MergeChunksDto;
 export type MergeCompleteResponseDto = Components.Schemas.MergeCompleteResponseDto;
+export type MoveNodeDto = Components.Schemas.MoveNodeDto;
 export type NodeListResponseDto = Components.Schemas.NodeListResponseDto;
 export type NodeTreeResponseDto = Components.Schemas.NodeTreeResponseDto;
 export type OperationSuccessDto = Components.Schemas.OperationSuccessDto;
@@ -8431,12 +8440,15 @@ export type PermissionCheckResponseDto = Components.Schemas.PermissionCheckRespo
 export type PermissionsDto = Components.Schemas.PermissionsDto;
 export type PreloadingDataDto = Components.Schemas.PreloadingDataDto;
 export type ProjectDto = Components.Schemas.ProjectDto;
+export type ProjectFilter = Components.Schemas.ProjectFilter;
+export type ProjectFilterType = Components.Schemas.ProjectFilterType;
 export type ProjectListResponseDto = Components.Schemas.ProjectListResponseDto;
 export type ProjectMemberDto = Components.Schemas.ProjectMemberDto;
 export type ProjectPermission = Components.Schemas.ProjectPermission;
 export type ProjectPermissionEnum = Components.Schemas.ProjectPermissionEnum;
 export type ProjectRoleDto = Components.Schemas.ProjectRoleDto;
 export type ProjectRolePermissionDto = Components.Schemas.ProjectRolePermissionDto;
+export type ProjectStatus = Components.Schemas.ProjectStatus;
 export type ProjectStatusEnum = Components.Schemas.ProjectStatusEnum;
 export type ProjectUserPermissionsDto = Components.Schemas.ProjectUserPermissionsDto;
 export type RefreshExternalReferencesResponseDto = Components.Schemas.RefreshExternalReferencesResponseDto;
@@ -8456,6 +8468,8 @@ export type SaveMxwebAsDto = Components.Schemas.SaveMxwebAsDto;
 export type SaveMxwebAsResponseDto = Components.Schemas.SaveMxwebAsResponseDto;
 export type SaveMxwebDto = Components.Schemas.SaveMxwebDto;
 export type SaveMxwebResponseDto = Components.Schemas.SaveMxwebResponseDto;
+export type SearchScope = Components.Schemas.SearchScope;
+export type SearchType = Components.Schemas.SearchType;
 export type SendVerificationApiResponseDto = Components.Schemas.SendVerificationApiResponseDto;
 export type SendVerificationResponseDto = Components.Schemas.SendVerificationResponseDto;
 export type SizeTrendDto = Components.Schemas.SizeTrendDto;
@@ -8467,17 +8481,17 @@ export type SvnLogResponseDto = Components.Schemas.SvnLogResponseDto;
 export type SystemPermission = Components.Schemas.SystemPermission;
 export type TrashListResponseDto = Components.Schemas.TrashListResponseDto;
 export type TriggerWarmupDto = Components.Schemas.TriggerWarmupDto;
+export type UpdateNodeDto = Components.Schemas.UpdateNodeDto;
 export type UpdateProjectRoleDto = Components.Schemas.UpdateProjectRoleDto;
 export type UpdateRoleDto = Components.Schemas.UpdateRoleDto;
 export type UpdateRuntimeConfigDto = Components.Schemas.UpdateRuntimeConfigDto;
+export type UpdateStorageQuotaDto = Components.Schemas.UpdateStorageQuotaDto;
 export type UpdateUserDto = Components.Schemas.UpdateUserDto;
 export type UpdateWarmupConfigDto = Components.Schemas.UpdateWarmupConfigDto;
 export type UploadChunkDto = Components.Schemas.UploadChunkDto;
 export type UploadChunkResponseDto = Components.Schemas.UploadChunkResponseDto;
 export type UploadExtReferenceDto = Components.Schemas.UploadExtReferenceDto;
 export type UploadExtReferenceFileDto = Components.Schemas.UploadExtReferenceFileDto;
-export type UploadFileResponseDto = Components.Schemas.UploadFileResponseDto;
-export type UploadFilesDto = Components.Schemas.UploadFilesDto;
 export type UploadFontDto = Components.Schemas.UploadFontDto;
 export type UploadThumbnailDataDto = Components.Schemas.UploadThumbnailDataDto;
 export type UploadThumbnailDto = Components.Schemas.UploadThumbnailDto;

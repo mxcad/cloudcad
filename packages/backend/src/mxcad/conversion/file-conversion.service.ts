@@ -38,8 +38,8 @@ export class FileConversionService implements IFileConversionService {
 		private readonly configService: ConfigService,
 		private readonly processRunner: ProcessRunnerService,
 	) {
-		// 获取 MxCAD 配置
-		const mxcadConfig = this.configService.get("mxcad", { infer: true });
+		// 获取 MxCAD 转换配置
+		const conversionConfig = this.configService.get("conversion", { infer: true });
 
 		// 获取上传并发配置
 		const uploadConfig = this.configService.get("upload", { infer: true });
@@ -65,7 +65,7 @@ export class FileConversionService implements IFileConversionService {
 		const projectRoot = path.join(process.cwd(), "..", "..");
 
 		this.mxCadAssemblyPath =
-			mxcadConfig.assemblyPath ||
+			conversionConfig?.binPath ||
 			(isLinux
 				? path.join(projectRoot, "runtime", "linux", "mxcad", "mxcadassembly")
 				: path.join(
@@ -81,8 +81,8 @@ export class FileConversionService implements IFileConversionService {
 			? path.join(projectRoot, "runtime", "linux", "mxcad")
 			: "";
 
-		this.mxCadFileExt = mxcadConfig.fileExt || ".mxweb";
-		this.compression = mxcadConfig.compression !== false;
+		this.mxCadFileExt = conversionConfig?.fileExt || ".mxweb";
+		this.compression = conversionConfig?.compression !== false;
 	}
 
 	/**

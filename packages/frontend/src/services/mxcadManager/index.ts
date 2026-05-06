@@ -55,8 +55,7 @@ import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
 
 import { MxCADView } from 'mxcad-app';
 import { mxCadControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckDuplicateFile, mxCadControllerCheckThumbnail, mxCadControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
-import { filesApi } from '../filesApi';
-import { projectApi } from '../projectApi';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { publicFileApi } from '../publicFileApi';
 import { MxFun } from 'mxdraw';
 import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
@@ -584,7 +583,7 @@ const getFilePicker = (): HTMLInputElement => {
  */
 async function getUploadTargetNodeId(): Promise<string> {
   // 1. 获取私人空间
-  const personalSpaceResponse = await projectApi.getPersonalSpace();
+  const personalSpaceResponse = await fileSystemControllerGetPersonalSpace();
   const personalSpace = personalSpaceResponse.data;
 
   if (!personalSpace?.id) {
@@ -626,7 +625,7 @@ async function getProjectId(
     projectId = currentFileInfo.projectId;
   } else if (fileInfo.parentId) {
     try {
-      const rootResponse = await filesApi.getRoot(newNodeId);
+      const rootResponse = await fileSystemControllerGetRootNode({ path: { nodeId: newNodeId } }) as any;
       if (rootResponse.data?.id) {
         projectId = rootResponse.data.id;
       }
@@ -684,7 +683,7 @@ async function waitForFileReady(
   parentId: string;
 } | null> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const fileInfoResponse = await filesApi.get(nodeId);
+    const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId } }) as any;
     const fileInfo = fileInfoResponse.data;
 
     if (fileInfo.fileHash && fileInfo.path) {
@@ -1623,7 +1622,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   await mxCadControllerSaveMxwebToNode({ path: { nodeId: fileId }, body: formData as any });
 
   try {
-    const fileInfoResponse = await filesApi.get(fileId);
+    const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as any;
     const fileInfo = fileInfoResponse.data;
 
     // 保存成功后更新乐观锁时间戳
@@ -1750,12 +1749,12 @@ async function saveLibraryFile() {
   });
 
   try {
-    const { libraryApi } = await import('../../services/libraryApi');
     const isDrawing = libraryKey === 'drawing';
 
     setLoadingMessage('正在上传到服务器...');
-    
-    // 上传到服务器（使用专门的图书馆保存接口）
+
+    // 上传到服务器（使用图书馆覆盖保存接口）
+    const { libraryApi } = await import('../../services/libraryApi');
     if (isDrawing) {
       await libraryApi.saveDrawing(fileId, savedFile.blob);
     } else {
@@ -2697,7 +2696,7 @@ async function getPersonalSpaceId(): Promise<string | null> {
   try {
     // 安全修复：不再使用 localStorage 缓存，避免跨用户数据泄露
     // 直接从 API 获取当前用户的私人空间 ID
-    const response = await projectApi.getPersonalSpace();
+    const response = await fileSystemControllerGetPersonalSpace();
     const personalSpaceId = response.data?.id || null;
 
     return personalSpaceId;

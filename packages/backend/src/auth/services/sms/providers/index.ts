@@ -26,7 +26,7 @@ import { TencentSmsProvider } from './tencent.provider';
  */
 @Injectable()
 export class SmsProviderFactory {
-  private static readonly logger = new Logger(SmsProviderFactory.name);
+  private static readonly logger = new Logger('SmsProviderFactory');
 
   /**
    * 创建短信服务商实例

@@ -546,6 +546,8 @@ export class AccountBindingService {
       phoneExists: false,
     };
 
+    if (!dto) return result;
+
     if (dto.username) {
       const user = await this.prisma.user.findUnique({
         where: { username: dto.username },

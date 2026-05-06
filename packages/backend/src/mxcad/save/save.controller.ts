@@ -40,6 +40,8 @@ import { MxCadService } from '../core/mxcad.service';
 import { SaveAsService } from './save-as.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
+import { PermissionService } from '../../common/services/permission.service';
+import { SystemPermission } from '../../common/enums/permissions.enum';
 import { MxCadRequest } from '../types/request.types';
 import { SaveMxwebDto } from '../dto/save-mxweb.dto';
 import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
@@ -56,6 +58,7 @@ export class SaveController {
     private readonly saveAsService: SaveAsService,
     private readonly fileTreeService: FileTreeService,
     private readonly permissionService: FileSystemPermissionService,
+    private readonly systemPermissionService: PermissionService,
   ) {}
 
   @Post('savemxweb/:nodeId')
@@ -140,6 +143,10 @@ export class SaveController {
       throw new BadRequestException('保存到项目时必须提供projectId');
     }
 
+    if (dto.targetType === 'library' && !dto.libraryType) {
+      throw new BadRequestException('保存到资源库时必须提供libraryType');
+    }
+
     const targetParentNode =
       await this.mxCadService.findNodeByIdWithDeletedAt(dto.targetParentId, {
         id: true,
@@ -176,6 +183,20 @@ export class SaveController {
         );
         throw new BadRequestException('您没有权限保存到此位置');
       }
+    } else if (dto.targetType === 'library') {
+      const requiredPermission = dto.libraryType === 'drawing'
+        ? SystemPermission.LIBRARY_DRAWING_MANAGE
+        : SystemPermission.LIBRARY_BLOCK_MANAGE;
+      const hasPermission = await this.systemPermissionService.checkSystemPermission(
+        userId,
+        requiredPermission,
+      );
+      if (!hasPermission) {
+        this.logger.warn(
+          `[saveMxwebAs] 用户 ${userId} 没有${dto.libraryType === 'drawing' ? '图纸库' : '图块库'}管理权限`,
+        );
+        throw new BadRequestException('您没有资源库管理权限');
+      }
     } else {
       if (dto.projectId) {
         const hasPermission =
@@ -206,6 +227,7 @@ export class SaveController {
       userName,
       commitMessage: dto.commitMessage,
       fileName: dto.fileName,
+      libraryType: dto.libraryType,
     });
 
     if (!result.success) {

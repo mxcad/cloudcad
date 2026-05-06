@@ -7,17 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, useParams, useSearchParams } from 'react-router-dom';
 import { FileSystemManager } from './FileSystemManager';
-import { projectApi } from '@/services/projectApi';
-import { versionControlApi } from '@/services/versionControlApi';
 import { useFileSystem } from '@/hooks/file-system';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 
 // Mock dependencies
-vi.mock('@/services/projectApi');
-vi.mock('@/services/nodeApi');
-vi.mock('@/services/versionControlApi');
 vi.mock('@/hooks/file-system');
 vi.mock('@/hooks/useProjectManagement');
 vi.mock('@/contexts/AuthContext');

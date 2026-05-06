@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/api/v1/cache-monitor/summary": {
+    "/cache-monitor/summary": {
       "get": {
         "operationId": "CacheMonitorController_getSummary",
         "parameters": [],
@@ -28,7 +28,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/health": {
+    "/cache-monitor/health": {
       "get": {
         "operationId": "CacheMonitorController_getHealthStatus",
         "parameters": [],
@@ -48,7 +48,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/performance": {
+    "/cache-monitor/performance": {
       "get": {
         "operationId": "CacheMonitorController_getPerformanceMetrics",
         "parameters": [],
@@ -68,7 +68,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/hot-data": {
+    "/cache-monitor/hot-data": {
       "get": {
         "operationId": "CacheMonitorController_getHotData",
         "parameters": [
@@ -97,7 +97,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/performance-trend": {
+    "/cache-monitor/performance-trend": {
       "get": {
         "operationId": "CacheMonitorController_getPerformanceTrend",
         "parameters": [
@@ -148,7 +148,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/size-trend": {
+    "/cache-monitor/size-trend": {
       "get": {
         "operationId": "CacheMonitorController_getSizeTrend",
         "parameters": [
@@ -184,7 +184,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/warnings": {
+    "/cache-monitor/warnings": {
       "get": {
         "operationId": "CacheMonitorController_getWarnings",
         "parameters": [],
@@ -211,7 +211,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/value": {
+    "/cache-monitor/value": {
       "get": {
         "operationId": "CacheMonitorController_getValue",
         "parameters": [
@@ -267,7 +267,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/values": {
+    "/cache-monitor/values": {
       "delete": {
         "operationId": "CacheMonitorController_deleteValues",
         "parameters": [],
@@ -297,7 +297,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/refresh": {
+    "/cache-monitor/refresh": {
       "post": {
         "operationId": "CacheMonitorController_refresh",
         "parameters": [],
@@ -327,7 +327,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/cleanup": {
+    "/cache-monitor/cleanup": {
       "post": {
         "operationId": "CacheMonitorController_cleanup",
         "parameters": [],
@@ -357,7 +357,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/warmup/config": {
+    "/cache-monitor/warmup/config": {
       "get": {
         "operationId": "CacheMonitorController_getWarmupConfig",
         "parameters": [],
@@ -405,7 +405,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/warmup/trigger": {
+    "/cache-monitor/warmup/trigger": {
       "post": {
         "operationId": "CacheMonitorController_triggerWarmup",
         "parameters": [],
@@ -442,7 +442,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/warmup/history": {
+    "/cache-monitor/warmup/history": {
       "get": {
         "operationId": "CacheMonitorController_getWarmupHistory",
         "parameters": [],
@@ -490,7 +490,7 @@
         ]
       }
     },
-    "/api/v1/cache-monitor/warmup/stats": {
+    "/cache-monitor/warmup/stats": {
       "get": {
         "operationId": "CacheMonitorController_getWarmupStats",
         "parameters": [],
@@ -517,7 +517,7 @@
         ]
       }
     },
-    "/api/v1/auth/register": {
+    "/auth/register": {
       "post": {
         "operationId": "AuthController_register",
         "parameters": [],
@@ -555,7 +555,7 @@
         ]
       }
     },
-    "/api/v1/auth/login": {
+    "/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -590,7 +590,7 @@
         ]
       }
     },
-    "/api/v1/auth/refresh": {
+    "/auth/refresh": {
       "post": {
         "operationId": "AuthController_refreshToken",
         "parameters": [],
@@ -625,7 +625,7 @@
         ]
       }
     },
-    "/api/v1/auth/logout": {
+    "/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -645,7 +645,7 @@
         ]
       }
     },
-    "/api/v1/auth/profile": {
+    "/auth/profile": {
       "get": {
         "operationId": "AuthController_getProfile",
         "parameters": [],
@@ -675,7 +675,7 @@
         ]
       }
     },
-    "/api/v1/auth/send-verification": {
+    "/auth/send-verification": {
       "post": {
         "operationId": "AuthController_sendVerification",
         "parameters": [],
@@ -700,7 +700,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-email": {
+    "/auth/verify-email": {
       "post": {
         "operationId": "AuthController_verifyEmail",
         "parameters": [],
@@ -735,7 +735,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-email-and-register-phone": {
+    "/auth/verify-email-and-register-phone": {
       "post": {
         "operationId": "AuthController_verifyEmailAndRegisterPhone",
         "parameters": [],
@@ -763,7 +763,7 @@
         ]
       }
     },
-    "/api/v1/auth/resend-verification": {
+    "/auth/resend-verification": {
       "post": {
         "operationId": "AuthController_resendVerification",
         "parameters": [],
@@ -788,7 +788,7 @@
         ]
       }
     },
-    "/api/v1/auth/bind-email-and-login": {
+    "/auth/bind-email-and-login": {
       "post": {
         "operationId": "AuthController_bindEmailAndLogin",
         "parameters": [],
@@ -813,7 +813,7 @@
         ]
       }
     },
-    "/api/v1/auth/bind-phone-and-login": {
+    "/auth/bind-phone-and-login": {
       "post": {
         "operationId": "AuthController_bindPhoneAndLogin",
         "parameters": [],
@@ -838,7 +838,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-phone": {
+    "/auth/verify-phone": {
       "post": {
         "operationId": "AuthController_verifyPhone",
         "parameters": [],
@@ -863,7 +863,7 @@
         ]
       }
     },
-    "/api/v1/auth/forgot-password": {
+    "/auth/forgot-password": {
       "post": {
         "operationId": "AuthController_forgotPassword",
         "parameters": [],
@@ -901,7 +901,7 @@
         ]
       }
     },
-    "/api/v1/auth/reset-password": {
+    "/auth/reset-password": {
       "post": {
         "operationId": "AuthController_resetPassword",
         "parameters": [],
@@ -939,7 +939,7 @@
         ]
       }
     },
-    "/api/v1/auth/bind-email": {
+    "/auth/bind-email": {
       "post": {
         "operationId": "AuthController_sendBindEmailCode",
         "parameters": [],
@@ -972,7 +972,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-bind-email": {
+    "/auth/verify-bind-email": {
       "post": {
         "operationId": "AuthController_verifyBindEmail",
         "parameters": [],
@@ -1018,7 +1018,7 @@
         ]
       }
     },
-    "/api/v1/auth/send-unbind-email-code": {
+    "/auth/send-unbind-email-code": {
       "post": {
         "operationId": "AuthController_sendUnbindEmailCode",
         "parameters": [],
@@ -1051,7 +1051,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-unbind-email-code": {
+    "/auth/verify-unbind-email-code": {
       "post": {
         "operationId": "AuthController_verifyUnbindEmailCode",
         "parameters": [],
@@ -1088,7 +1088,7 @@
         ]
       }
     },
-    "/api/v1/auth/rebind-email": {
+    "/auth/rebind-email": {
       "post": {
         "operationId": "AuthController_rebindEmail",
         "parameters": [],
@@ -1124,7 +1124,7 @@
         ]
       }
     },
-    "/api/v1/auth/send-sms-code": {
+    "/auth/send-sms-code": {
       "post": {
         "operationId": "AuthController_sendSmsCode",
         "parameters": [],
@@ -1152,7 +1152,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-sms-code": {
+    "/auth/verify-sms-code": {
       "post": {
         "operationId": "AuthController_verifySmsCode",
         "parameters": [],
@@ -1180,7 +1180,7 @@
         ]
       }
     },
-    "/api/v1/auth/register-phone": {
+    "/auth/register-phone": {
       "post": {
         "operationId": "AuthController_registerByPhone",
         "parameters": [],
@@ -1208,7 +1208,7 @@
         ]
       }
     },
-    "/api/v1/auth/login-phone": {
+    "/auth/login-phone": {
       "post": {
         "operationId": "AuthController_loginByPhone",
         "parameters": [],
@@ -1236,7 +1236,7 @@
         ]
       }
     },
-    "/api/v1/auth/bind-phone": {
+    "/auth/bind-phone": {
       "post": {
         "operationId": "AuthController_bindPhone",
         "parameters": [],
@@ -1272,7 +1272,7 @@
         ]
       }
     },
-    "/api/v1/auth/send-unbind-phone-code": {
+    "/auth/send-unbind-phone-code": {
       "post": {
         "operationId": "AuthController_sendUnbindPhoneCode",
         "parameters": [],
@@ -1305,7 +1305,7 @@
         ]
       }
     },
-    "/api/v1/auth/verify-unbind-phone-code": {
+    "/auth/verify-unbind-phone-code": {
       "post": {
         "operationId": "AuthController_verifyUnbindPhoneCode",
         "parameters": [],
@@ -1342,7 +1342,7 @@
         ]
       }
     },
-    "/api/v1/auth/rebind-phone": {
+    "/auth/rebind-phone": {
       "post": {
         "operationId": "AuthController_rebindPhone",
         "parameters": [],
@@ -1378,7 +1378,7 @@
         ]
       }
     },
-    "/api/v1/auth/check-field": {
+    "/auth/check-field": {
       "post": {
         "operationId": "AuthController_checkFieldUniqueness",
         "parameters": [],
@@ -1404,7 +1404,7 @@
         ]
       }
     },
-    "/api/v1/auth/wechat/login": {
+    "/auth/wechat/login": {
       "get": {
         "operationId": "AuthController_getWechatAuthUrl",
         "parameters": [
@@ -1454,7 +1454,7 @@
         ]
       }
     },
-    "/api/v1/auth/wechat/callback": {
+    "/auth/wechat/callback": {
       "get": {
         "operationId": "AuthController_wechatCallback",
         "parameters": [],
@@ -1472,7 +1472,7 @@
         ]
       }
     },
-    "/api/v1/auth/wechat/bind": {
+    "/auth/wechat/bind": {
       "post": {
         "operationId": "AuthController_bindWechat",
         "parameters": [],
@@ -1508,7 +1508,7 @@
         ]
       }
     },
-    "/api/v1/auth/wechat/unbind": {
+    "/auth/wechat/unbind": {
       "post": {
         "operationId": "AuthController_unbindWechat",
         "parameters": [],
@@ -1541,7 +1541,7 @@
         ]
       }
     },
-    "/api/v1/user-cleanup/stats": {
+    "/user-cleanup/stats": {
       "get": {
         "operationId": "UserCleanupController_getStats",
         "parameters": [],
@@ -1568,7 +1568,7 @@
         ]
       }
     },
-    "/api/v1/user-cleanup/trigger": {
+    "/user-cleanup/trigger": {
       "post": {
         "operationId": "UserCleanupController_triggerCleanup",
         "parameters": [],
@@ -1605,7 +1605,7 @@
         ]
       }
     },
-    "/api/v1/runtime-config/public": {
+    "/runtime-config/public": {
       "get": {
         "operationId": "RuntimeConfigController_getPublicConfigs",
         "parameters": [],
@@ -1627,7 +1627,7 @@
         ]
       }
     },
-    "/api/v1/runtime-config": {
+    "/runtime-config": {
       "get": {
         "operationId": "RuntimeConfigController_getAllConfigs",
         "parameters": [],
@@ -1657,7 +1657,7 @@
         ]
       }
     },
-    "/api/v1/runtime-config/definitions": {
+    "/runtime-config/definitions": {
       "get": {
         "operationId": "RuntimeConfigController_getDefinitions",
         "parameters": [],
@@ -1687,7 +1687,7 @@
         ]
       }
     },
-    "/api/v1/runtime-config/{key}": {
+    "/runtime-config/{key}": {
       "get": {
         "operationId": "RuntimeConfigController_getConfig",
         "parameters": [
@@ -1775,7 +1775,7 @@
         ]
       }
     },
-    "/api/v1/runtime-config/{key}/reset": {
+    "/runtime-config/{key}/reset": {
       "post": {
         "operationId": "RuntimeConfigController_resetConfig",
         "parameters": [
@@ -1818,7 +1818,7 @@
         ]
       }
     },
-    "/api/v1/users": {
+    "/users": {
       "post": {
         "operationId": "UsersController_create",
         "parameters": [],
@@ -1970,7 +1970,7 @@
         ]
       }
     },
-    "/api/v1/users/search/by-email": {
+    "/users/search/by-email": {
       "get": {
         "operationId": "UsersController_searchByEmail",
         "parameters": [
@@ -2009,7 +2009,7 @@
         ]
       }
     },
-    "/api/v1/users/search": {
+    "/users/search": {
       "get": {
         "operationId": "UsersController_searchUsers",
         "parameters": [
@@ -2120,7 +2120,7 @@
         ]
       }
     },
-    "/api/v1/users/profile/me": {
+    "/users/profile/me": {
       "get": {
         "operationId": "UsersController_getProfile",
         "parameters": [],
@@ -2185,7 +2185,7 @@
         ]
       }
     },
-    "/api/v1/users/stats/me": {
+    "/users/stats/me": {
       "get": {
         "operationId": "UsersController_getDashboardStats",
         "parameters": [],
@@ -2212,7 +2212,7 @@
         ]
       }
     },
-    "/api/v1/users/{id}": {
+    "/users/{id}": {
       "get": {
         "operationId": "UsersController_findOne",
         "parameters": [
@@ -2328,7 +2328,7 @@
         ]
       }
     },
-    "/api/v1/users/{id}/restore": {
+    "/users/{id}/restore": {
       "post": {
         "operationId": "UsersController_restore",
         "parameters": [
@@ -2360,7 +2360,7 @@
         ]
       }
     },
-    "/api/v1/users/{id}/delete-immediately": {
+    "/users/{id}/delete-immediately": {
       "post": {
         "operationId": "UsersController_deleteImmediately",
         "parameters": [
@@ -2395,7 +2395,7 @@
         ]
       }
     },
-    "/api/v1/users/deactivate-account": {
+    "/users/deactivate-account": {
       "post": {
         "operationId": "UsersController_deactivateAccount",
         "parameters": [],
@@ -2438,7 +2438,7 @@
         ]
       }
     },
-    "/api/v1/users/me/restore": {
+    "/users/me/restore": {
       "post": {
         "operationId": "UsersController_restoreAccount",
         "parameters": [],
@@ -2481,7 +2481,7 @@
         ]
       }
     },
-    "/api/v1/users/change-password": {
+    "/users/change-password": {
       "post": {
         "operationId": "UsersController_changePassword",
         "parameters": [],
@@ -2527,7 +2527,7 @@
         ]
       }
     },
-    "/api/v1/roles": {
+    "/roles": {
       "get": {
         "operationId": "RolesController_findAll",
         "parameters": [],
@@ -2592,7 +2592,7 @@
         ]
       }
     },
-    "/api/v1/roles/{id}": {
+    "/roles/{id}": {
       "get": {
         "operationId": "RolesController_findOne",
         "parameters": [
@@ -2699,7 +2699,7 @@
         ]
       }
     },
-    "/api/v1/roles/{id}/permissions": {
+    "/roles/{id}/permissions": {
       "get": {
         "operationId": "RolesController_getRolePermissions",
         "parameters": [
@@ -2806,7 +2806,7 @@
         ]
       }
     },
-    "/api/v1/roles/project-roles/all": {
+    "/roles/project-roles/all": {
       "get": {
         "operationId": "RolesController_getAllProjectRoles",
         "parameters": [],
@@ -2836,7 +2836,7 @@
         ]
       }
     },
-    "/api/v1/roles/project-roles/system": {
+    "/roles/project-roles/system": {
       "get": {
         "operationId": "RolesController_getSystemProjectRoles",
         "parameters": [],
@@ -2866,7 +2866,7 @@
         ]
       }
     },
-    "/api/v1/roles/project-roles/project/{projectId}": {
+    "/roles/project-roles/project/{projectId}": {
       "get": {
         "operationId": "RolesController_getProjectRolesByProject",
         "parameters": [
@@ -2905,7 +2905,7 @@
         ]
       }
     },
-    "/api/v1/roles/project-roles/{id}/permissions": {
+    "/roles/project-roles/{id}/permissions": {
       "get": {
         "operationId": "RolesController_getProjectRolePermissions",
         "parameters": [
@@ -3018,7 +3018,7 @@
         ]
       }
     },
-    "/api/v1/roles/project-roles": {
+    "/roles/project-roles": {
       "post": {
         "operationId": "RolesController_createProjectRole",
         "parameters": [],
@@ -3055,7 +3055,7 @@
         ]
       }
     },
-    "/api/v1/roles/project-roles/{id}": {
+    "/roles/project-roles/{id}": {
       "patch": {
         "operationId": "RolesController_updateProjectRole",
         "parameters": [
@@ -3128,7 +3128,7 @@
         ]
       }
     },
-    "/api/v1/audit/logs": {
+    "/audit/logs": {
       "get": {
         "operationId": "AuditLogController_findAll",
         "parameters": [
@@ -3232,7 +3232,7 @@
         ]
       }
     },
-    "/api/v1/audit/logs/{id}": {
+    "/audit/logs/{id}": {
       "get": {
         "operationId": "AuditLogController_findOne",
         "parameters": [
@@ -3261,7 +3261,7 @@
         ]
       }
     },
-    "/api/v1/audit/statistics": {
+    "/audit/statistics": {
       "get": {
         "operationId": "AuditLogController_getStatistics",
         "parameters": [
@@ -3309,7 +3309,7 @@
         ]
       }
     },
-    "/api/v1/audit/cleanup": {
+    "/audit/cleanup": {
       "post": {
         "operationId": "AuditLogController_cleanupOldLogs",
         "parameters": [],
@@ -3329,10 +3329,20 @@
         ]
       }
     },
-    "/api/v1/file-system/projects": {
+    "/file-system/projects": {
       "post": {
         "operationId": "FileSystemController_createProject",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "项目创建成功",
@@ -3363,7 +3373,82 @@
       },
       "get": {
         "operationId": "FileSystemController_getProjects",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectStatus",
+            "required": false,
+            "in": "query",
+            "description": "项目状态",
+            "schema": {
+              "$ref": "#/components/schemas/ProjectStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "default": "updatedAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "项目过滤类型：all-全部，owned-我创建的，joined-我加入的",
+            "schema": {
+              "$ref": "#/components/schemas/ProjectFilterType"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "获取项目列表成功",
@@ -3387,7 +3472,7 @@
         ]
       }
     },
-    "/api/v1/file-system/personal-space": {
+    "/file-system/personal-space": {
       "get": {
         "operationId": "FileSystemController_getPersonalSpace",
         "parameters": [],
@@ -3414,7 +3499,7 @@
         ]
       }
     },
-    "/api/v1/file-system/projects/{projectId}": {
+    "/file-system/projects/{projectId}": {
       "get": {
         "operationId": "FileSystemController_getProject",
         "parameters": [
@@ -3453,7 +3538,7 @@
         ]
       }
     },
-    "/api/v1/file-system/trash": {
+    "/file-system/trash": {
       "get": {
         "operationId": "FileSystemController_getTrash",
         "parameters": [],
@@ -3505,7 +3590,7 @@
         ]
       }
     },
-    "/api/v1/file-system/trash/restore": {
+    "/file-system/trash/restore": {
       "post": {
         "operationId": "FileSystemController_restoreTrashItems",
         "parameters": [],
@@ -3532,7 +3617,7 @@
         ]
       }
     },
-    "/api/v1/file-system/trash/items": {
+    "/file-system/trash/items": {
       "delete": {
         "operationId": "FileSystemController_permanentlyDeleteTrashItems",
         "parameters": [],
@@ -3559,7 +3644,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes": {
+    "/file-system/nodes": {
       "post": {
         "operationId": "FileSystemController_createNode",
         "parameters": [],
@@ -3589,7 +3674,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{parentId}/folders": {
+    "/file-system/nodes/{parentId}/folders": {
       "post": {
         "operationId": "FileSystemController_createFolder",
         "parameters": [
@@ -3602,6 +3687,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "文件夹创建成功",
@@ -3628,7 +3723,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/root": {
+    "/file-system/nodes/{nodeId}/root": {
       "get": {
         "operationId": "FileSystemController_getRootNode",
         "parameters": [
@@ -3667,7 +3762,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/restore": {
+    "/file-system/nodes/{nodeId}/restore": {
       "post": {
         "operationId": "FileSystemController_restoreNode",
         "parameters": [
@@ -3706,7 +3801,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}": {
+    "/file-system/nodes/{nodeId}": {
       "get": {
         "operationId": "FileSystemController_getNode",
         "parameters": [
@@ -3756,6 +3851,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "更新节点成功",
@@ -3827,7 +3932,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/children": {
+    "/file-system/nodes/{nodeId}/children": {
       "get": {
         "operationId": "FileSystemController_getChildren",
         "parameters": [
@@ -3837,6 +3942,102 @@
             "in": "path",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nodeType",
+            "required": false,
+            "in": "query",
+            "description": "节点类型",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "folder",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已删除的节点（用于回收站）",
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -3866,7 +4067,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/move": {
+    "/file-system/nodes/{nodeId}/move": {
       "post": {
         "operationId": "FileSystemController_moveNode",
         "parameters": [
@@ -3879,6 +4080,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "移动节点成功",
@@ -3905,7 +4116,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/copy": {
+    "/file-system/nodes/{nodeId}/copy": {
       "post": {
         "operationId": "FileSystemController_copyNode",
         "parameters": [
@@ -3918,6 +4129,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyNodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "复制节点成功",
@@ -3944,7 +4165,7 @@
         ]
       }
     },
-    "/api/v1/file-system/quota": {
+    "/file-system/quota": {
       "get": {
         "operationId": "FileSystemController_getStorageQuota",
         "parameters": [
@@ -3980,10 +4201,20 @@
         ]
       }
     },
-    "/api/v1/file-system/quota/update": {
+    "/file-system/quota/update": {
       "post": {
         "operationId": "FileSystemController_updateStorageQuota",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStorageQuotaDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "更新配额成功",
@@ -4019,7 +4250,7 @@
         ]
       }
     },
-    "/api/v1/file-system/projects/{projectId}/members": {
+    "/file-system/projects/{projectId}/members": {
       "get": {
         "operationId": "FileSystemController_getProjectMembers",
         "parameters": [
@@ -4113,7 +4344,7 @@
         ]
       }
     },
-    "/api/v1/file-system/projects/{projectId}/members/{userId}": {
+    "/file-system/projects/{projectId}/members/{userId}": {
       "patch": {
         "operationId": "FileSystemController_updateProjectMember",
         "parameters": [
@@ -4220,7 +4451,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/thumbnail": {
+    "/file-system/nodes/{nodeId}/thumbnail": {
       "get": {
         "operationId": "FileSystemController_getThumbnail",
         "parameters": [
@@ -4261,7 +4492,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/download": {
+    "/file-system/nodes/{nodeId}/download": {
       "options": {
         "operationId": "FileSystemController_downloadNodeOptions",
         "parameters": [],
@@ -4317,7 +4548,7 @@
         ]
       }
     },
-    "/api/v1/file-system/nodes/{nodeId}/download-with-format": {
+    "/file-system/nodes/{nodeId}/download-with-format": {
       "get": {
         "description": "支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。",
         "operationId": "FileSystemController_downloadNodeWithFormat",
@@ -4389,7 +4620,7 @@
         ]
       }
     },
-    "/api/v1/file-system/projects/{projectId}/permissions": {
+    "/file-system/projects/{projectId}/permissions": {
       "get": {
         "operationId": "FileSystemController_getUserProjectPermissions",
         "parameters": [
@@ -4425,7 +4656,7 @@
         ]
       }
     },
-    "/api/v1/file-system/projects/{projectId}/permissions/check": {
+    "/file-system/projects/{projectId}/permissions/check": {
       "get": {
         "operationId": "FileSystemController_checkProjectPermission",
         "parameters": [
@@ -4470,7 +4701,7 @@
         ]
       }
     },
-    "/api/v1/file-system/projects/{projectId}/role": {
+    "/file-system/projects/{projectId}/role": {
       "get": {
         "operationId": "FileSystemController_getUserProjectRole",
         "parameters": [
@@ -4499,11 +4730,132 @@
         ]
       }
     },
-    "/api/v1/file-system/search": {
+    "/file-system/search": {
       "get": {
         "description": "支持多种搜索范围：\n- project: 搜索项目列表\n- project_files: 搜索指定项目内的文件（需提供 projectId）\n- all_projects: 搜索所有有权限访问的项目中的文件",
         "operationId": "FileSystemController_search",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "description": "搜索关键词",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "搜索范围",
+            "schema": {
+              "$ref": "#/components/schemas/SearchScope"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "搜索类型",
+            "schema": {
+              "$ref": "#/components/schemas/SearchType"
+            }
+          },
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "项目过滤类型（scope=project 时使用）",
+            "schema": {
+              "$ref": "#/components/schemas/ProjectFilter"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "description": "目标项目 ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "libraryKey",
+            "required": false,
+            "in": "query",
+            "description": "资源库类型（scope=library 时使用）",
+            "schema": {
+              "$ref": "#/components/schemas/LibraryType"
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名过滤",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "default": "updatedAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "搜索成功",
@@ -4530,7 +4882,7 @@
         ]
       }
     },
-    "/api/v1/version-control/history": {
+    "/version-control/history": {
       "get": {
         "operationId": "VersionControlController_getFileHistory",
         "parameters": [
@@ -4589,7 +4941,7 @@
         ]
       }
     },
-    "/api/v1/version-control/file/{revision}": {
+    "/version-control/file/{revision}": {
       "get": {
         "operationId": "VersionControlController_getFileContentAtRevision",
         "parameters": [
@@ -4648,7 +5000,7 @@
         ]
       }
     },
-    "/api/v1/font-management": {
+    "/font-management": {
       "get": {
         "description": "获取所有字体文件，前端负责分页、筛选和排序",
         "operationId": "FontsController_getFonts",
@@ -4683,7 +5035,7 @@
         ]
       }
     },
-    "/api/v1/font-management/upload": {
+    "/font-management/upload": {
       "post": {
         "description": "上传字体文件到指定目录",
         "operationId": "FontsController_uploadFont",
@@ -4714,7 +5066,7 @@
         ]
       }
     },
-    "/api/v1/font-management/{fileName}": {
+    "/font-management/{fileName}": {
       "delete": {
         "description": "从指定目录删除字体文件",
         "operationId": "FontsController_deleteFont",
@@ -4753,7 +5105,7 @@
         ]
       }
     },
-    "/api/v1/font-management/download/{fileName}": {
+    "/font-management/download/{fileName}": {
       "get": {
         "description": "下载指定位置的字体文件",
         "operationId": "FontsController_downloadFont",
@@ -4796,38 +5148,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/files/chunkisExist": {
-      "post": {
-        "operationId": "MxCadController_checkChunkExist",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckChunkExistDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "检查分片是否存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChunkExistResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
-      }
-    },
-    "/api/v1/mxcad/files/fileisExist": {
+    "/mxcad/files/fileisExist": {
       "post": {
         "operationId": "MxCadController_checkFileExist",
         "parameters": [],
@@ -4858,39 +5179,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/files/checkDuplicate": {
-      "post": {
-        "operationId": "MxCadController_checkDuplicateFile",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckDuplicateFileDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "返回重复检查结果",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckDuplicateFileResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "检查目录中是否存在重复文件",
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
-      }
-    },
-    "/api/v1/mxcad/file/{nodeId}/preloading": {
+    "/mxcad/file/{nodeId}/preloading": {
       "get": {
         "operationId": "MxCadController_getPreloadingData",
         "parameters": [
@@ -4923,7 +5212,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/file/{nodeId}/check-reference": {
+    "/mxcad/file/{nodeId}/check-reference": {
       "post": {
         "operationId": "MxCadController_checkExternalReference",
         "parameters": [
@@ -4973,7 +5262,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/file/{nodeId}/refresh-external-references": {
+    "/mxcad/file/{nodeId}/refresh-external-references": {
       "post": {
         "operationId": "MxCadController_refreshExternalReferences",
         "parameters": [
@@ -5006,112 +5295,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/files/uploadFiles": {
-      "post": {
-        "operationId": "MxCadController_uploadFile",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/UploadFilesDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "上传文件成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
-      }
-    },
-    "/api/v1/mxcad/savemxweb/{nodeId}": {
-      "post": {
-        "operationId": "MxCadController_saveMxwebToNode",
-        "parameters": [
-          {
-            "name": "nodeId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveMxwebDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "保存 mxweb 文件到指定节点",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SaveMxwebResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
-      }
-    },
-    "/api/v1/mxcad/save-as": {
-      "post": {
-        "operationId": "MxCadController_saveMxwebAs",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveMxwebAsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "保存mxweb文件为新文件",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SaveMxwebAsResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          }
-        },
-        "tags": [
-          "MxCAD 文件上传与转换"
-        ]
-      }
-    },
-    "/api/v1/mxcad/up_ext_reference_dwg/{nodeId}": {
+    "/mxcad/up_ext_reference_dwg/{nodeId}": {
       "post": {
         "operationId": "MxCadController_uploadExtReferenceDwg",
         "parameters": [
@@ -5170,7 +5354,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/up_ext_reference_image": {
+    "/mxcad/up_ext_reference_image": {
       "post": {
         "operationId": "MxCadController_uploadExtReferenceImage",
         "parameters": [],
@@ -5220,7 +5404,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/filesData/{path}": {
+    "/mxcad/filesData/{path}": {
       "get": {
         "operationId": "MxCadController_getFilesDataFile",
         "parameters": [],
@@ -5308,7 +5492,7 @@
         ]
       }
     },
-    "/api/v1/mxcad/file/{path}": {
+    "/mxcad/file/{path}": {
       "get": {
         "operationId": "MxCadController_getFile",
         "parameters": [],
@@ -5388,9 +5572,51 @@
         ]
       }
     },
-    "/api/v1/mxcad/thumbnail/{nodeId}": {
+    "/mxcad/files/{storageKey}": {
       "get": {
-        "operationId": "MxCadController_checkThumbnail",
+        "operationId": "MxCadController_getNonCadFile",
+        "parameters": [
+          {
+            "name": "storageKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取文件",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "文件不存在"
+          },
+          "500": {
+            "description": "服务器内部错误"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
+    "/mxcad/thumbnail/{nodeId}": {
+      "get": {
+        "operationId": "ThumbnailController_checkThumbnail",
         "parameters": [
           {
             "name": "nodeId",
@@ -5425,11 +5651,11 @@
           }
         ],
         "tags": [
-          "MxCAD 文件上传与转换"
+          "MxCAD 缩略图"
         ]
       },
       "post": {
-        "operationId": "MxCadController_uploadThumbnail",
+        "operationId": "ThumbnailController_uploadThumbnail",
         "parameters": [
           {
             "name": "nodeId",
@@ -5474,16 +5700,16 @@
           }
         ],
         "tags": [
-          "MxCAD 文件上传与转换"
+          "MxCAD 缩略图"
         ]
       }
     },
-    "/api/v1/mxcad/files/{storageKey}": {
-      "get": {
-        "operationId": "MxCadController_getNonCadFile",
+    "/mxcad/savemxweb/{nodeId}": {
+      "post": {
+        "operationId": "SaveController_saveMxwebToNode",
         "parameters": [
           {
-            "name": "storageKey",
+            "name": "nodeId",
             "required": true,
             "in": "path",
             "schema": {
@@ -5491,36 +5717,68 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMxwebDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "成功获取文件",
+            "description": "保存 mxweb 文件到指定节点",
             "content": {
-              "application/octet-stream": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "binary"
+                  "$ref": "#/components/schemas/SaveMxwebResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MxCAD 图纸保存"
+        ]
+      }
+    },
+    "/mxcad/save-as": {
+      "post": {
+        "operationId": "SaveController_saveMxwebAs",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMxwebAsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存mxweb文件为新文件",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveMxwebAsResponseDto"
                 }
               }
             }
           },
-          "404": {
-            "description": "文件不存在"
-          },
-          "500": {
-            "description": "服务器内部错误"
+          "400": {
+            "description": "请求参数错误"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "tags": [
-          "MxCAD 文件上传与转换"
+          "MxCAD 图纸保存"
         ]
       }
     },
-    "/api/v1/admin/stats": {
+    "/admin/stats": {
       "get": {
         "operationId": "AdminController_getAdminStats",
         "parameters": [],
@@ -5547,7 +5805,7 @@
         ]
       }
     },
-    "/api/v1/admin/storage/cleanup": {
+    "/admin/storage/cleanup": {
       "post": {
         "operationId": "AdminController_cleanupStorage",
         "parameters": [
@@ -5577,7 +5835,7 @@
         ]
       }
     },
-    "/api/v1/admin/storage/cleanup/stats": {
+    "/admin/storage/cleanup/stats": {
       "get": {
         "operationId": "AdminController_getCleanupStats",
         "parameters": [],
@@ -5597,7 +5855,7 @@
         ]
       }
     },
-    "/api/v1/health/live": {
+    "/health/live": {
       "get": {
         "operationId": "HealthController_liveness",
         "parameters": [],
@@ -5612,7 +5870,7 @@
         ]
       }
     },
-    "/api/v1/health": {
+    "/health": {
       "get": {
         "operationId": "HealthController_publicHealth",
         "parameters": [],
@@ -5627,7 +5885,7 @@
         ]
       }
     },
-    "/api/v1/health/full": {
+    "/health/full": {
       "get": {
         "operationId": "HealthController_check",
         "parameters": [],
@@ -5796,7 +6054,7 @@
         ]
       }
     },
-    "/api/v1/health/db": {
+    "/health/db": {
       "get": {
         "operationId": "HealthController_checkDatabase",
         "parameters": [],
@@ -5814,7 +6072,7 @@
         ]
       }
     },
-    "/api/v1/health/storage": {
+    "/health/storage": {
       "get": {
         "operationId": "HealthController_checkStorage",
         "parameters": [],
@@ -5832,7 +6090,7 @@
         ]
       }
     },
-    "/api/v1/public-file/chunk/check": {
+    "/public-file/chunk/check": {
       "post": {
         "operationId": "PublicFileController_checkChunk",
         "parameters": [],
@@ -5864,7 +6122,7 @@
         ]
       }
     },
-    "/api/v1/public-file/file/check": {
+    "/public-file/file/check": {
       "post": {
         "operationId": "PublicFileController_checkFile",
         "parameters": [],
@@ -5896,7 +6154,7 @@
         ]
       }
     },
-    "/api/v1/public-file/chunk/upload": {
+    "/public-file/chunk/upload": {
       "post": {
         "operationId": "PublicFileController_uploadChunk",
         "parameters": [],
@@ -5928,7 +6186,7 @@
         ]
       }
     },
-    "/api/v1/public-file/chunk/merge": {
+    "/public-file/chunk/merge": {
       "post": {
         "operationId": "PublicFileController_mergeChunks",
         "parameters": [],
@@ -5960,7 +6218,7 @@
         ]
       }
     },
-    "/api/v1/public-file/access/{hash}/{filename}": {
+    "/public-file/access/{hash}/{filename}": {
       "get": {
         "operationId": "PublicFileController_accessFile",
         "parameters": [
@@ -5998,7 +6256,7 @@
         ]
       }
     },
-    "/api/v1/public-file/ext-reference/upload": {
+    "/public-file/ext-reference/upload": {
       "post": {
         "operationId": "PublicFileController_uploadExtReference",
         "parameters": [],
@@ -6045,7 +6303,7 @@
         ]
       }
     },
-    "/api/v1/public-file/ext-reference/check": {
+    "/public-file/ext-reference/check": {
       "get": {
         "operationId": "PublicFileController_checkExtReference",
         "parameters": [
@@ -6091,7 +6349,7 @@
         ]
       }
     },
-    "/api/v1/public-file/preloading/{hash}": {
+    "/public-file/preloading/{hash}": {
       "get": {
         "operationId": "PublicFileController_getPreloadingData",
         "parameters": [
@@ -6118,7 +6376,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing": {
+    "/library/drawing": {
       "get": {
         "operationId": "LibraryController_getDrawingLibrary",
         "parameters": [],
@@ -6141,7 +6399,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing/children/{nodeId}": {
+    "/library/drawing/children/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingChildren",
         "parameters": [
@@ -6269,7 +6527,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing/all-files/{nodeId}": {
+    "/library/drawing/all-files/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingAllFiles",
         "parameters": [
@@ -6397,7 +6655,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing/filesData/{path}": {
+    "/library/drawing/filesData/{path}": {
       "get": {
         "operationId": "LibraryController_getDrawingFile",
         "parameters": [
@@ -6428,7 +6686,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing/nodes/{nodeId}": {
+    "/library/drawing/nodes/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingNode",
         "parameters": [
@@ -6460,7 +6718,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing/nodes/{nodeId}/download": {
+    "/library/drawing/nodes/{nodeId}/download": {
       "get": {
         "operationId": "LibraryController_downloadDrawingNode",
         "parameters": [
@@ -6497,7 +6755,7 @@
         ]
       }
     },
-    "/api/v1/library/drawing/nodes/{nodeId}/thumbnail": {
+    "/library/drawing/nodes/{nodeId}/thumbnail": {
       "get": {
         "operationId": "LibraryController_getDrawingThumbnail",
         "parameters": [
@@ -6522,7 +6780,37 @@
         ]
       }
     },
-    "/api/v1/library/block": {
+    "/library/drawing/save/{nodeId}": {
+      "post": {
+        "operationId": "LibraryController_saveDrawingNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "保存成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "覆盖保存图纸库文件",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/library/block": {
       "get": {
         "operationId": "LibraryController_getBlockLibrary",
         "parameters": [],
@@ -6545,7 +6833,7 @@
         ]
       }
     },
-    "/api/v1/library/block/children/{nodeId}": {
+    "/library/block/children/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getBlockChildren",
         "parameters": [
@@ -6673,7 +6961,7 @@
         ]
       }
     },
-    "/api/v1/library/block/all-files/{nodeId}": {
+    "/library/block/all-files/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getBlockAllFiles",
         "parameters": [
@@ -6801,7 +7089,7 @@
         ]
       }
     },
-    "/api/v1/library/block/filesData/{path}": {
+    "/library/block/filesData/{path}": {
       "get": {
         "operationId": "LibraryController_getBlockFile",
         "parameters": [
@@ -6832,7 +7120,7 @@
         ]
       }
     },
-    "/api/v1/library/block/nodes/{nodeId}": {
+    "/library/block/nodes/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getBlockNode",
         "parameters": [
@@ -6864,7 +7152,7 @@
         ]
       }
     },
-    "/api/v1/library/block/nodes/{nodeId}/download": {
+    "/library/block/nodes/{nodeId}/download": {
       "get": {
         "operationId": "LibraryController_downloadBlockNode",
         "parameters": [
@@ -6901,7 +7189,7 @@
         ]
       }
     },
-    "/api/v1/library/block/nodes/{nodeId}/thumbnail": {
+    "/library/block/nodes/{nodeId}/thumbnail": {
       "get": {
         "operationId": "LibraryController_getBlockThumbnail",
         "parameters": [
@@ -6920,6 +7208,36 @@
           }
         },
         "summary": "获取图块库文件缩略图",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/library/block/save/{nodeId}": {
+      "post": {
+        "operationId": "LibraryController_saveBlockNode",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "保存成功"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "覆盖保存图块库文件",
         "tags": [
           "library",
           "公共资源库"
@@ -9077,6 +9395,23 @@
           "permissions"
         ]
       },
+      "CreateProjectDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "项目名称",
+            "example": "CAD图纸项目"
+          },
+          "description": {
+            "type": "string",
+            "description": "项目描述"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "ProjectStatusEnum": {
         "type": "string",
         "enum": [
@@ -9140,6 +9475,22 @@
           "ownerId",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ProjectStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "ARCHIVED",
+          "DELETED"
+        ]
+      },
+      "ProjectFilterType": {
+        "type": "string",
+        "enum": [
+          "all",
+          "owned",
+          "joined"
         ]
       },
       "FileStatusEnum": {
@@ -9381,6 +9732,30 @@
           "success"
         ]
       },
+      "CreateFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "文件夹名称",
+            "example": "设计图纸"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "父文件夹 ID",
+            "example": "clx123abc"
+          },
+          "skipIfExists": {
+            "type": "boolean",
+            "description": "如果同名文件夹已存在则跳过创建",
+            "example": false,
+            "default": false
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "NodeTreeResponseDto": {
         "type": "object",
         "properties": {
@@ -9485,6 +9860,16 @@
           "ownerId"
         ]
       },
+      "FileStatus": {
+        "type": "string",
+        "enum": [
+          "UPLOADING",
+          "PROCESSING",
+          "COMPLETED",
+          "FAILED",
+          "DELETED"
+        ]
+      },
       "NodeListResponseDto": {
         "type": "object",
         "properties": {
@@ -9518,6 +9903,71 @@
           "page",
           "limit",
           "totalPages"
+        ]
+      },
+      "UpdateNodeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "节点名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "描述"
+          },
+          "status": {
+            "type": "string",
+            "description": "状态",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED",
+              "DELETED"
+            ]
+          }
+        }
+      },
+      "MoveNodeDto": {
+        "type": "object",
+        "properties": {
+          "targetParentId": {
+            "type": "string",
+            "description": "目标父节点ID"
+          }
+        },
+        "required": [
+          "targetParentId"
+        ]
+      },
+      "CopyNodeDto": {
+        "type": "object",
+        "properties": {
+          "targetParentId": {
+            "type": "string",
+            "description": "目标父节点ID"
+          }
+        },
+        "required": [
+          "targetParentId"
+        ]
+      },
+      "UpdateStorageQuotaDto": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "节点 ID（用户个人空间根节点、项目根节点或公共资源库节点）",
+            "example": "cm3xk8z0r000008l6g8qj9z5x"
+          },
+          "quota": {
+            "type": "number",
+            "description": "配额大小（GB），0 表示使用系统默认值",
+            "example": 100
+          }
+        },
+        "required": [
+          "nodeId",
+          "quota"
         ]
       },
       "ProjectMemberDto": {
@@ -9625,6 +10075,38 @@
           "userId",
           "permission",
           "hasPermission"
+        ]
+      },
+      "SearchScope": {
+        "type": "string",
+        "enum": [
+          "project",
+          "project_files",
+          "all_projects",
+          "library"
+        ]
+      },
+      "SearchType": {
+        "type": "string",
+        "enum": [
+          "all",
+          "file",
+          "folder"
+        ]
+      },
+      "ProjectFilter": {
+        "type": "string",
+        "enum": [
+          "all",
+          "owned",
+          "joined"
+        ]
+      },
+      "LibraryType": {
+        "type": "string",
+        "enum": [
+          "drawing",
+          "block"
         ]
       },
       "SvnLogPathDto": {
@@ -9783,61 +10265,6 @@
           "target"
         ]
       },
-      "CheckChunkExistDto": {
-        "type": "object",
-        "properties": {
-          "fileHash": {
-            "type": "string",
-            "description": "文件 MD5 哈希值",
-            "example": "25e89b5adf19984330f4e68b0f99db64"
-          },
-          "filename": {
-            "type": "string",
-            "description": "原始文件名",
-            "example": "drawing.dwg"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "节点ID（项目根目录或文件夹的 FileSystemNode ID）",
-            "example": "clx1234567890"
-          },
-          "chunk": {
-            "type": "number",
-            "description": "分片索引",
-            "example": 0
-          },
-          "chunks": {
-            "type": "number",
-            "description": "总分片数量",
-            "example": 10
-          },
-          "size": {
-            "type": "number",
-            "description": "分片大小（字节）",
-            "example": 1048576
-          }
-        },
-        "required": [
-          "fileHash",
-          "filename",
-          "nodeId",
-          "chunk",
-          "chunks",
-          "size"
-        ]
-      },
-      "ChunkExistResponseDto": {
-        "type": "object",
-        "properties": {
-          "exists": {
-            "type": "boolean",
-            "description": "分片是否已存在"
-          }
-        },
-        "required": [
-          "exists"
-        ]
-      },
       "CheckFileExistDto": {
         "type": "object",
         "properties": {
@@ -9893,63 +10320,6 @@
         },
         "required": [
           "exists"
-        ]
-      },
-      "CheckDuplicateFileDto": {
-        "type": "object",
-        "properties": {
-          "fileHash": {
-            "type": "string",
-            "description": "文件 MD5 哈希值",
-            "example": "25e89b5adf19984330f4e68b0f99db64"
-          },
-          "filename": {
-            "type": "string",
-            "description": "原始文件名",
-            "example": "drawing.dwg"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "目标目录节点 ID",
-            "example": "clx1234567890"
-          },
-          "currentFileId": {
-            "type": "string",
-            "description": "当前打开的文件节点 ID（可选，用于排除当前文件）",
-            "example": "clx9876543210"
-          }
-        },
-        "required": [
-          "fileHash",
-          "filename",
-          "nodeId"
-        ]
-      },
-      "CheckDuplicateFileResponseDto": {
-        "type": "object",
-        "properties": {
-          "isDuplicate": {
-            "type": "boolean",
-            "description": "是否存在重复文件",
-            "example": false
-          },
-          "existingNodeId": {
-            "type": "string",
-            "description": "重复文件节点 ID（如果存在）",
-            "example": "clx1234567890",
-            "nullable": true
-          },
-          "existingFileName": {
-            "type": "string",
-            "description": "重复文件名称（如果存在）",
-            "example": "drawing.dwg",
-            "nullable": true
-          }
-        },
-        "required": [
-          "isDuplicate",
-          "existingNodeId",
-          "existingFileName"
         ]
       },
       "PreloadingDataDto": {
@@ -10039,213 +10409,6 @@
         "required": [
           "code",
           "message"
-        ]
-      },
-      "UploadFilesDto": {
-        "type": "object",
-        "properties": {
-          "file": {
-            "type": "string",
-            "description": "上传的文件",
-            "format": "binary"
-          },
-          "hash": {
-            "type": "string",
-            "description": "文件 MD5 哈希值"
-          },
-          "name": {
-            "type": "string",
-            "description": "原始文件名"
-          },
-          "size": {
-            "type": "number",
-            "description": "文件总大小（字节）"
-          },
-          "chunk": {
-            "type": "number",
-            "description": "分片索引（分片上传时必填）"
-          },
-          "chunks": {
-            "type": "number",
-            "description": "总分片数量（分片上传时必填）"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "节点ID（项目根目录或文件夹的 FileSystemNode ID）"
-          },
-          "srcDwgNodeId": {
-            "type": "string",
-            "description": "源图纸节点 ID（外部参照上传时使用）"
-          },
-          "id": {
-            "type": "string",
-            "description": "文件ID（前端传递的标识符）"
-          },
-          "type": {
-            "type": "string",
-            "description": "文件类型（如 dwg、dxf）"
-          },
-          "lastModifiedDate": {
-            "type": "string",
-            "description": "文件最后修改日期"
-          },
-          "conflictStrategy": {
-            "type": "string",
-            "description": "冲突策略：skip（跳过）/ overwrite（覆盖）/ rename（重命名，默认）",
-            "enum": [
-              "skip",
-              "overwrite",
-              "rename"
-            ]
-          }
-        },
-        "required": [
-          "hash",
-          "name",
-          "size"
-        ]
-      },
-      "UploadFileResponseDto": {
-        "type": "object",
-        "properties": {
-          "nodeId": {
-            "type": "string",
-            "description": "上传文件的节点 ID"
-          },
-          "tz": {
-            "type": "boolean",
-            "description": "是否为图纸文件"
-          }
-        }
-      },
-      "SaveMxwebDto": {
-        "type": "object",
-        "properties": {
-          "file": {
-            "type": "string",
-            "description": "mxweb 文件",
-            "format": "binary"
-          },
-          "commitMessage": {
-            "type": "string",
-            "description": "提交信息",
-            "example": "保存图纸修改"
-          },
-          "expectedTimestamp": {
-            "type": "string",
-            "description": "乐观锁时间戳（覆盖保存时必须提供，首次保存时不需要）",
-            "example": "2026-05-02T08:30:00.000Z"
-          }
-        },
-        "required": [
-          "file"
-        ]
-      },
-      "SaveMxwebResponseDto": {
-        "type": "object",
-        "properties": {
-          "nodeId": {
-            "type": "string",
-            "description": "节点 ID"
-          },
-          "path": {
-            "type": "string",
-            "description": "文件路径"
-          }
-        },
-        "required": [
-          "nodeId",
-          "path"
-        ]
-      },
-      "SaveMxwebAsDto": {
-        "type": "object",
-        "properties": {
-          "file": {
-            "type": "string",
-            "description": "mxweb 文件",
-            "format": "binary"
-          },
-          "targetType": {
-            "type": "string",
-            "description": "保存类型: personal-我的图纸, project-项目",
-            "enum": [
-              "personal",
-              "project"
-            ]
-          },
-          "targetParentId": {
-            "type": "string",
-            "description": "目标父节点ID"
-          },
-          "projectId": {
-            "type": "string",
-            "description": "项目ID（targetType为project时必填）"
-          },
-          "format": {
-            "type": "string",
-            "description": "保存格式: dwg, dxf",
-            "enum": [
-              "dwg",
-              "dxf"
-            ],
-            "default": "dwg"
-          },
-          "commitMessage": {
-            "type": "string",
-            "description": "提交信息"
-          },
-          "fileName": {
-            "type": "string",
-            "description": "文件名（不含扩展名）"
-          }
-        },
-        "required": [
-          "file",
-          "targetType",
-          "targetParentId",
-          "format"
-        ]
-      },
-      "SaveMxwebAsResponseDto": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "是否成功"
-          },
-          "message": {
-            "type": "string",
-            "description": "消息"
-          },
-          "nodeId": {
-            "type": "string",
-            "description": "新文件节点ID"
-          },
-          "fileName": {
-            "type": "string",
-            "description": "文件名"
-          },
-          "path": {
-            "type": "string",
-            "description": "文件路径"
-          },
-          "projectId": {
-            "type": "string",
-            "description": "项目ID"
-          },
-          "parentId": {
-            "type": "string",
-            "description": "父节点ID"
-          }
-        },
-        "required": [
-          "success",
-          "message",
-          "nodeId",
-          "fileName",
-          "path",
-          "parentId"
         ]
       },
       "UploadExtReferenceFileDto": {
@@ -10357,6 +10520,145 @@
           "code",
           "message",
           "data"
+        ]
+      },
+      "SaveMxwebDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "mxweb 文件",
+            "format": "binary"
+          },
+          "commitMessage": {
+            "type": "string",
+            "description": "提交信息",
+            "example": "保存图纸修改"
+          },
+          "expectedTimestamp": {
+            "type": "string",
+            "description": "乐观锁时间戳（覆盖保存时必须提供，首次保存时不需要）",
+            "example": "2026-05-02T08:30:00.000Z"
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "SaveMxwebResponseDto": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "节点 ID"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件路径"
+          }
+        },
+        "required": [
+          "nodeId",
+          "path"
+        ]
+      },
+      "SaveMxwebAsDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "mxweb 文件",
+            "format": "binary"
+          },
+          "targetType": {
+            "type": "string",
+            "description": "保存类型: personal-我的图纸, project-项目, library-资源库",
+            "enum": [
+              "personal",
+              "project",
+              "library"
+            ]
+          },
+          "targetParentId": {
+            "type": "string",
+            "description": "目标父节点ID"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目ID（targetType为project时必填）"
+          },
+          "format": {
+            "type": "string",
+            "description": "保存格式: dwg, dxf",
+            "enum": [
+              "dwg",
+              "dxf"
+            ],
+            "default": "dwg"
+          },
+          "commitMessage": {
+            "type": "string",
+            "description": "提交信息"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名（不含扩展名）"
+          },
+          "libraryType": {
+            "type": "string",
+            "description": "资源库类型（targetType为library时必填）",
+            "enum": [
+              "drawing",
+              "block"
+            ]
+          }
+        },
+        "required": [
+          "file",
+          "targetType",
+          "targetParentId",
+          "format"
+        ]
+      },
+      "SaveMxwebAsResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "消息"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "新文件节点ID"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "path": {
+            "type": "string",
+            "description": "文件路径"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "项目ID"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "父节点ID"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "nodeId",
+          "fileName",
+          "path",
+          "parentId"
         ]
       },
       "AdminStatsResponseDto": {
@@ -10567,16 +10869,6 @@
         "required": [
           "srcFileHash",
           "extRefFile"
-        ]
-      },
-      "FileStatus": {
-        "type": "string",
-        "enum": [
-          "UPLOADING",
-          "PROCESSING",
-          "COMPLETED",
-          "FAILED",
-          "DELETED"
         ]
       },
       "SystemPermission": {

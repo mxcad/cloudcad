@@ -7,12 +7,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useFileSystemData } from './useFileSystemData';
-import { projectApi } from '@/services/projectApi';
+import {
+  fileSystemControllerGetProjects,
+  fileSystemControllerGetTrash,
+  fileSystemControllerSearch,
+  fileSystemControllerGetRootNode,
+  fileSystemControllerGetNode,
+  fileSystemControllerGetChildren,
+} from '@/api-sdk';
 
-vi.mock('@/services/projectApi');
-vi.mock('@/services/nodeApi');
-vi.mock('@/services/searchApi');
-vi.mock('@/services/projectTrashApi');
+vi.mock('@/api-sdk', () => ({
+  fileSystemControllerGetProjects: vi.fn(),
+  fileSystemControllerGetTrash: vi.fn(),
+  fileSystemControllerSearch: vi.fn(),
+  fileSystemControllerGetRootNode: vi.fn(),
+  fileSystemControllerGetNode: vi.fn(),
+  fileSystemControllerGetChildren: vi.fn(),
+}));
 
 describe('useFileSystemData', () => {
   beforeEach(() => {
@@ -38,7 +49,7 @@ describe('useFileSystemData', () => {
   );
 
   it('should return expected shape with loading state', async () => {
-    vi.mocked(projectApi.list).mockResolvedValue({
+    vi.mocked(fileSystemControllerGetProjects).mockResolvedValue({
       data: { nodes: [], total: 0, page: 1, limit: 20, totalPages: 0 },
     } as any);
 
@@ -69,7 +80,7 @@ describe('useFileSystemData', () => {
   });
 
   it('should call loadData without crashing', async () => {
-    vi.mocked(projectApi.list).mockResolvedValue({
+    vi.mocked(fileSystemControllerGetProjects).mockResolvedValue({
       data: { nodes: [], total: 0, page: 1, limit: 20, totalPages: 0 },
     } as any);
 
@@ -79,6 +90,6 @@ describe('useFileSystemData', () => {
 
     await result.current.loadData();
 
-    expect(projectApi.list).toHaveBeenCalled();
+    expect(fileSystemControllerGetProjects).toHaveBeenCalled();
   });
 });

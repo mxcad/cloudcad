@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fileSystemControllerGetProjects, mxCadControllerSaveMxwebAs } from '@/api-sdk';
-import { libraryApi } from '../../../services/libraryApi';
 import { handleError } from '@/utils/errorHandler';
 
 interface ProjectWithPermission {
@@ -102,24 +101,17 @@ export const useSaveAs = ({
 
       // 公开资源库另存为
       if (targetType === 'library') {
-        const libResult = libraryType === 'drawing'
-          ? await libraryApi.saveDrawingAs(mxwebBlob, selectedParentId, fileName.trim(), () => {})
-          : await libraryApi.saveBlockAs(mxwebBlob, selectedParentId, fileName.trim(), () => {});
+        const formData = new FormData();
+        formData.append('file', mxwebBlob);
+        formData.append('targetType', 'library');
+        formData.append('targetParentId', selectedParentId);
+        formData.append('libraryType', libraryType || 'drawing');
+        formData.append('fileName', fileName.trim());
 
-        const libSaveResult = libResult as unknown as {
-          nodeId: string;
-          fileName: string;
-          path: string;
-          parentId: string;
-        };
+        const result = await mxCadControllerSaveMxwebAs({ body: formData as any });
+        const saveResult = result.data as SaveAsResult;
 
-        return {
-          success: true,
-          nodeId: libSaveResult.nodeId,
-          fileName: libSaveResult.fileName,
-          path: libSaveResult.path,
-          parentId: libSaveResult.parentId,
-        };
+        return saveResult;
       }
 
       // 我的图纸/项目另存为

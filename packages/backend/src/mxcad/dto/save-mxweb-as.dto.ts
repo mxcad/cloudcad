@@ -23,11 +23,11 @@ export class SaveMxwebAsDto {
   file?: Express.Multer.File;
 
   @ApiProperty({
-    description: '保存类型: personal-我的图纸, project-项目',
-    enum: ['personal', 'project'],
+    description: '保存类型: personal-我的图纸, project-项目, library-资源库',
+    enum: ['personal', 'project', 'library'],
   })
-  @IsIn(['personal', 'project'])
-  targetType: 'personal' | 'project';
+  @IsIn(['personal', 'project', 'library'])
+  targetType: 'personal' | 'project' | 'library';
 
   @ApiProperty({
     description: '目标父节点ID',
@@ -67,4 +67,13 @@ export class SaveMxwebAsDto {
   @IsString()
   @IsOptional()
   fileName?: string;
+
+  @ApiProperty({
+    description: '资源库类型（targetType为library时必填）',
+    enum: ['drawing', 'block'],
+    required: false,
+  })
+  @IsIn(['drawing', 'block'])
+  @IsOptional()
+  libraryType?: 'drawing' | 'block';
 }

@@ -13,6 +13,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Query,
   Request,
@@ -21,6 +22,10 @@ import {
   Res,
   UseInterceptors,
   Inject,
+  UploadedFile,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -28,7 +33,9 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { LibraryService } from './library.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -38,13 +45,13 @@ import { Public } from '../auth/decorators/public.decorator';
 import { FileSystemService } from '../file-system/file-system.service';
 import { FileDownloadHandlerService } from '../file-system/file-download/file-download-handler.service';
 import { MxcadFileHandlerService } from '../mxcad/core/mxcad-file-handler.service';
+import { MxCadService } from '../mxcad/core/mxcad.service';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import {
   FileSystemNodeDto,
   NodeListResponseDto,
 } from '../file-system/dto/file-system-response.dto';
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
-import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
 import {
   IPublicLibraryProvider,
   PUBLIC_LIBRARY_PROVIDER_DRAWING,
@@ -62,7 +69,6 @@ import {
  */
 @ApiTags('library', '公共资源库')
 @Controller('library')
-@UseInterceptors(StorageQuotaInterceptor)
 export class LibraryController {
   private readonly logger = new Logger(LibraryController.name);
 
@@ -71,6 +77,7 @@ export class LibraryController {
     private readonly fileSystemService: FileSystemService,
     private readonly fileDownloadHandler: FileDownloadHandlerService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
+    private readonly mxCadService: MxCadService,
     @Inject(PUBLIC_LIBRARY_PROVIDER_DRAWING)
     private readonly drawingLibraryProvider: IPublicLibraryProvider,
     @Inject(PUBLIC_LIBRARY_PROVIDER_BLOCK)
@@ -213,6 +220,28 @@ export class LibraryController {
   async getDrawingThumbnail(@Param('nodeId') nodeId: string, @Request() req) {
     const mockUserId = 'system';
     return this.fileSystemService.checkFileAccess(nodeId, mockUserId);
+  }
+
+  // ========== 图纸库写接口 ==========
+
+  /**
+   * 覆盖保存图纸库文件（需要图纸库管理权限）
+   */
+  @Post('drawing/save/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '覆盖保存图纸库文件' })
+  @ApiResponse({ status: 200, description: '保存成功' })
+  async saveDrawingNode(
+    @Param('nodeId') nodeId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    return this.saveLibraryNode(nodeId, file, req);
   }
 
   // ========== 图块库接口（只读） ==========
@@ -366,5 +395,50 @@ export class LibraryController {
   async getBlockThumbnail(@Param('nodeId') nodeId: string, @Request() req) {
     const mockUserId = 'system';
     return this.fileSystemService.checkFileAccess(nodeId, mockUserId);
+  }
+
+  // ========== 图块库写接口 ==========
+
+  /**
+   * 覆盖保存图块库文件（需要图块库管理权限）
+   */
+  @Post('block/save/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '覆盖保存图块库文件' })
+  @ApiResponse({ status: 200, description: '保存成功' })
+  async saveBlockNode(
+    @Param('nodeId') nodeId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    return this.saveLibraryNode(nodeId, file, req);
+  }
+
+  // ========== 公共方法 ==========
+
+  private async saveLibraryNode(
+    nodeId: string,
+    file: Express.Multer.File,
+    req: any,
+  ) {
+    const result = await this.mxCadService.saveMxwebFile(
+      nodeId,
+      file,
+      req.user.id,
+      req.user.username || req.user.nickname || req.user.email,
+      '覆盖保存资源库文件',
+      true, // skipBinGeneration
+    );
+
+    if (!result.success) {
+      throw new BadRequestException(result.message);
+    }
+
+    return { nodeId, path: result.path };
   }
 }

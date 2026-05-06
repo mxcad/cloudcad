@@ -7,15 +7,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useFileSystemCRUD } from './useFileSystemCRUD';
-import { projectApi } from '@/services/projectApi';
-import { nodeApi } from '@/services/nodeApi';
-import { projectTrashApi } from '@/services/projectTrashApi';
-import { trashApi } from '@/services/trashApi';
 
-vi.mock('@/services/projectApi');
-vi.mock('@/services/nodeApi');
-vi.mock('@/services/projectTrashApi');
-vi.mock('@/services/trashApi');
+vi.mock('@/api-sdk', () => ({
+  fileSystemControllerCreateProject: vi.fn(),
+  fileSystemControllerCreateFolder: vi.fn(),
+  fileSystemControllerUpdateNode: vi.fn(),
+  fileSystemControllerDeleteNode: vi.fn(),
+  fileSystemControllerRestoreNode: vi.fn(),
+  fileSystemControllerRestoreTrashItems: vi.fn(),
+  fileSystemControllerClearTrash: vi.fn(),
+}));
 
 describe('useFileSystemCRUD', () => {
   beforeEach(() => {

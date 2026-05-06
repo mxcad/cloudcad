@@ -30,6 +30,9 @@ _避免_: 文件夹（folder 是另一种节点类型）
   - 保存时直接原位覆盖（因为是个人专属，不需要权限检查的兜底逻辑）
   - 路由和交互表现与项目相同
 - **资源库（Library）**：公共图纸库（drawing）或图块库（block）。保存需库管理权限，无权限时弹出"另存为"。
+  - 无版本管理（不提交 SVN）
+  - 保存时直接覆盖 mxweb，不做 dwg/dxf 转换（转换仅在下载/导出时按需执行）
+  - 资源库的所有写操作（save、save-as、CRUD）走 `LibraryController` 独立端点
 
 ## 用户工作流
 
@@ -66,6 +69,17 @@ CloudCAD 和 mxcad-app 的关系：
   | `mxcad`     | 操作图纸内部一切的低层 API（获取文件名、监听修改事件、等）                                                             |
 
 <br />
+
+## 保存流程
+
+平台只有 mxweb 是核心流通格式。dwg/dxf 仅在下载/导出时按需转换。
+
+| 场景 | 后端路由 | 行为 |
+|------|---------|------|
+| 覆盖保存（个人/项目） | `POST /mxcad/savemxweb/:nodeId` | 写 mxweb → SVN 提交 → 生成 bin |
+| 覆盖保存（资源库） | `POST /library/drawing/save/:nodeId` | 写 mxweb → 跳过 SVN → 跳过 bin |
+| 另存为（个人/项目） | `POST /mxcad/save-as` (targetType=personal/project) | 创建节点 → 拷贝 mxweb → SVN 提交（不转换格式） |
+| 另存为（资源库） | `POST /mxcad/save-as` (targetType=library) | 创建节点 → 拷贝 mxweb → 跳过 SVN（不转换格式） |
 
 ## Flagged ambiguities
 

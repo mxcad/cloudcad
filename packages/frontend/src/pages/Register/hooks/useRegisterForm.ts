@@ -22,6 +22,7 @@ interface UseRegisterFormOptions {
   smsEnabled: boolean;
   requirePhoneVerification: boolean;
   isWechatRegister: boolean;
+  phoneForm: { phone: string; code: string };
 }
 
 export interface UseRegisterFormReturn {
@@ -68,6 +69,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
     smsEnabled,
     requirePhoneVerification,
     isWechatRegister,
+    phoneForm,
   } = options;
 
   const navigate = useNavigate();
@@ -137,7 +139,12 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
     if (values.username || values.email) {
       try {
-        const result = await authControllerCheckFieldUniqueness();
+        const result = await authControllerCheckFieldUniqueness({
+          body: {
+            username: values.username || undefined,
+            email: values.email || undefined,
+          },
+        });
         const checkResult = result as {
           usernameExists?: boolean;
           emailExists?: boolean;
@@ -152,7 +159,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
     setExternalErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [getValues, mailEnabled, requireEmailVerification]);
+  }, [getValues, mailEnabled, requireEmailVerification, smsEnabled, requirePhoneVerification]);
 
   // ── Step navigation ────────────────────────────
   const handleNext = useCallback(
@@ -267,7 +274,28 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
             return;
           }
 
-          await authControllerRegisterByPhone();
+          const registerResult = await authControllerRegisterByPhone({
+            body: {
+              phone: phoneForm.phone,
+              code: phoneForm.code,
+              username: values.username,
+              password: values.password,
+              nickname: values.nickname || undefined,
+            },
+          });
+
+          const authData = registerResult as unknown as {
+            accessToken?: string;
+            refreshToken?: string;
+            user?: Record<string, unknown>;
+          };
+
+          if (authData.accessToken) {
+            localStorage.setItem('accessToken', authData.accessToken);
+            localStorage.setItem('refreshToken', authData.refreshToken || '');
+            localStorage.setItem('user', JSON.stringify(authData.user));
+          }
+
           if (isWechatRegister) {
             sessionStorage.removeItem('wechatTempToken');
           }
@@ -325,6 +353,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
       isWechatRegister,
       navigate,
       registerUser,
+      phoneForm,
     ],
   );
 

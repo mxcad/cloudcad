@@ -13,13 +13,6 @@ vi.mock('@/api-sdk', () => ({
   mxCadControllerCheckThumbnail: vi.fn(),
 }));
 
-// Mock services
-vi.mock('@/services/filesApi', () => ({
-  filesApi: {
-    get: vi.fn(),
-  },
-}));
-
 // Mock utils
 vi.mock('@/utils/hashUtils', () => ({
   calculateFileHash: vi.fn(),
@@ -53,7 +46,7 @@ import {
   showSaveConfirmDialog,
 } from '../mxcadSave';
 import { mxCadControllerSaveMxwebToNode } from '@/api-sdk';
-import { filesApi } from '@/services/filesApi';
+
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
 

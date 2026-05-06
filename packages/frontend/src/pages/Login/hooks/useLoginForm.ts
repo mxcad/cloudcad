@@ -171,7 +171,9 @@ export function useLoginForm(): UseLoginFormReturn {
     setError(null);
 
     try {
-      const { data: response } = await authControllerSendSmsCode();
+      const { data: response } = await authControllerSendSmsCode({
+        body: { phone: phoneValue },
+      });
       if ((response as Record<string, unknown>)?.success) {
         setSuccess('验证码已发送');
         setCountdown(60);

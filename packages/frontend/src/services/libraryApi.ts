@@ -17,11 +17,13 @@ import {
   libraryControllerGetDrawingAllFiles,
   libraryControllerGetDrawingNode,
   libraryControllerDownloadDrawingNode,
+  libraryControllerSaveDrawingNode,
   libraryControllerGetBlockLibrary,
   libraryControllerGetBlockChildren,
   libraryControllerGetBlockAllFiles,
   libraryControllerGetBlockNode,
   libraryControllerDownloadBlockNode,
+  libraryControllerSaveBlockNode,
   mxCadControllerCheckFileExist,
   mxCadControllerCheckChunkExist,
   mxCadControllerUploadFile,
@@ -247,8 +249,9 @@ export const libraryApi = {
         type: 'application/octet-stream',
       })
     );
-    return client.post(`${LIBRARY_API}/drawing/save/${nodeId}`, {
-      body: formData,
+    return libraryControllerSaveDrawingNode({
+      path: { nodeId },
+      body: formData as never,
     });
   },
 
@@ -284,8 +287,9 @@ export const libraryApi = {
         type: 'application/octet-stream',
       })
     );
-    return client.post(`${LIBRARY_API}/block/save/${nodeId}`, {
-      body: formData,
+    return libraryControllerSaveBlockNode({
+      path: { nodeId },
+      body: formData as never,
     });
   },
 

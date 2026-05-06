@@ -19,6 +19,7 @@ import {
 } from '@/api-sdk';
 import type { UserDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/api-sdk/client-setup';
+import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 
 type User = UserDtoType;
 
@@ -357,20 +358,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // 清理 localStorage
           localStorage.removeItem('wechat_auth_result');
 
-          if (result.error) {
-            console.error('微信登录失败:', result.error);
-            setError(result.error);
-          } else if (result.accessToken) {
-            // 登录成功
-            localStorage.setItem('accessToken', result.accessToken);
-            localStorage.setItem('refreshToken', result.refreshToken);
-            localStorage.setItem('user', JSON.stringify(result.user));
-            setToken(result.accessToken);
-            setUser(result.user);
-          } else if (result.needRegister) {
-            // 需要注册
-            sessionStorage.setItem('wechatTempToken', result.tempToken);
+          const action = classifyWechatAuthResult(result);
+          if (action?.type === 'error') {
+            console.error('微信登录失败:', action.message);
+            setError(action.message);
+          } else if (action?.type === 'login') {
+            localStorage.setItem('accessToken', action.accessToken);
+            localStorage.setItem('refreshToken', action.refreshToken);
+            localStorage.setItem('user', JSON.stringify(action.user));
+            setToken(action.accessToken);
+            setUser(action.user as User);
+          } else if (action?.type === 'need_register') {
+            sessionStorage.setItem('wechatTempToken', action.tempToken);
             window.location.href = '/register?wechat=1';
+          } else if (action?.type === 'bind_email') {
+            sessionStorage.setItem('wechatTempToken', action.tempToken);
+            window.location.href = '/verify-email';
+          } else if (action?.type === 'bind_phone') {
+            sessionStorage.setItem('wechatTempToken', action.tempToken);
+            window.location.href = '/verify-phone';
           }
         } catch (err) {
           console.error('解析微信登录结果失败', err);

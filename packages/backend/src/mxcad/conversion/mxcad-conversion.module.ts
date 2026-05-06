@@ -12,19 +12,20 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ConversionModule } from '../../conversion/conversion.module';
 import { FileConversionService } from './file-conversion.service';
 
 /**
  * Mxcad 文件转换子模块
  *
  * 职责: CAD 文件格式转换（DWG/DXF → MxWeb）。
- * 本模块只依赖 ConfigModule，不依赖其他业务模块。
+ * 依赖 ConversionModule 获取 ProcessRunnerService。
  *
  * 包含的服务:
  * - FileConversionService: DWG→MxWeb 格式转换，支持并发限流
  */
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, ConversionModule],
   providers: [FileConversionService],
   exports: [FileConversionService],
 })
