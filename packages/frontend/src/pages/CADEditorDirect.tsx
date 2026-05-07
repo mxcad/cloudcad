@@ -21,6 +21,7 @@ import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { MxFun } from 'mxdraw';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
@@ -1213,6 +1214,7 @@ export const CADEditorDirect: React.FC = () => {
   };
 
   return (
+    <ErrorBoundary>
     <div
       className="fixed inset-0"
       style={{
@@ -1321,6 +1323,7 @@ export const CADEditorDirect: React.FC = () => {
         onClose={externalReferenceUpload.close}
       />
       </div>
+      </ErrorBoundary>
     );
   };
 
