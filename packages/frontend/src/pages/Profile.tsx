@@ -31,7 +31,8 @@ import {
   AlertCircle,
   Crown,
 } from 'lucide-react';
-import { ProfileInfoTab, ProfilePasswordTab, ProfileEmailTab, ProfilePhoneTab, ProfileWechatTab, ProfileDeactivateTab } from './components';
+import { ProfileInfoTab, ProfilePasswordTab, ProfileEmailTab, ProfilePhoneTab, ProfileWechatTab, ProfileDeactivateTab } from './Profile';
+import './Profile/Profile.css';
 
 type TabType =
   | 'info'
@@ -986,7 +987,7 @@ export const Profile: React.FC = () => {
           )}
 
           <div className="content-area">
-            {activeTab === 'info' && <ProfileInfoTab user={user as Parameters<typeof ProfileInfoTab>[0]['user']} />}
+            {activeTab === 'info' && <ProfileInfoTab user={user} />}
 
             {activeTab === 'password' && (
               <ProfilePasswordTab
@@ -997,11 +998,10 @@ export const Profile: React.FC = () => {
                 passwordStrength={passwordStrength}
                 loading={loading}
 
-  
                 onPasswordChange={handlePasswordChange}
                 onPasswordSubmit={handlePasswordSubmit}
-                onTogglePassword={(field: any) =>
-                  setShowPassword((p) => ({ ...p, [field]: !(p as any)[field] }))
+                onTogglePassword={(field: string) =>
+                  setShowPassword((p) => ({ ...p, [field]: !(p as Record<string, boolean>)[field] }))
                 }
                 onFocusField={setFocusedField}
                 onNavigate={navigate}
@@ -1010,7 +1010,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'email' && (
               <ProfileEmailTab
-                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
+                user={user}
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
@@ -1036,7 +1036,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'phone' && smsEnabled && (
               <ProfilePhoneTab
-                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
+                user={user}
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
@@ -1044,8 +1044,7 @@ export const Profile: React.FC = () => {
                 countdown={countdown}
                 sendingCode={sendingCode}
                 loading={loading}
- 
-     
+
                 focusedField={focusedField}
                 onPhoneChange={handlePhoneChange}
                 onSendPhoneCode={handleSendPhoneCode}
@@ -1061,10 +1060,9 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'wechat' && wechatEnabled && (
               <ProfileWechatTab
-                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
+                user={user}
                 loading={loading}
-    
- 
+
                 onBind={wechatBindOpen}
                 onUnbind={handleUnbindWechat}
               />
@@ -1072,13 +1070,13 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'deactivate' && (
               <ProfileDeactivateTab
-                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
+                user={user}
                 deactivateForm={deactivateForm}
                 showPassword={showPassword}
                 deactivateLoading={deactivateLoading}
                 deactivateCountdown={deactivateCountdown}
                 loading={loading}
-                onVerificationMethodChange={(method: any) =>
+                onVerificationMethodChange={(method: string) =>
                   setDeactivateForm((f) => ({
                     ...f,
                     verificationMethod: method,
@@ -1088,19 +1086,19 @@ export const Profile: React.FC = () => {
                     wechatConfirm: '',
                   }))
                 }
-                onPasswordChange={(password: any) =>
+                onPasswordChange={(password: string) =>
                   setDeactivateForm((f) => ({ ...f, password }))
                 }
-                onPhoneCodeChange={(phoneCode: any) =>
+                onPhoneCodeChange={(phoneCode: string) =>
                   setDeactivateForm((f) => ({ ...f, phoneCode }))
                 }
-                onEmailCodeChange={(emailCode: any) =>
+                onEmailCodeChange={(emailCode: string) =>
                   setDeactivateForm((f) => ({ ...f, emailCode }))
                 }
-                onConfirmedChange={(confirmed: any) =>
+                onConfirmedChange={(confirmed: boolean) =>
                   setDeactivateForm((f) => ({ ...f, confirmed }))
                 }
-                onImmediateChange={(immediate: any) =>
+                onImmediateChange={(immediate: boolean) =>
                   setDeactivateForm((f) => ({ ...f, immediate }))
                 }
                 onSendPhoneCode={handleSendDeactivatePhoneCode}
@@ -1113,8 +1111,8 @@ export const Profile: React.FC = () => {
                   setSuccess('微信验证成功');
                 }}
                 onDeactivate={handleDeactivate}
-                onTogglePassword={(field: any) =>
-                  setShowPassword((p) => ({ ...p, [field]: !(p as any)[field] }))
+                onTogglePassword={(field: string) =>
+                  setShowPassword((p) => ({ ...p, [field]: !(p as Record<string, boolean>)[field] }))
                 }
                 onShowConfirm={showConfirm}
                 onLogout={logout}

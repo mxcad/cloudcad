@@ -29,7 +29,6 @@ export const usePhoneBind = () => {
   const verifyUnbindPhone = useMutation({
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindPhoneCode({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
         body: { code: params.code },
       });
       if (result.error) throw result.error;
@@ -40,7 +39,6 @@ export const usePhoneBind = () => {
   const bindPhone = useMutation({
     mutationFn: async (params: { phone: string; code: string }) => {
       const result = await authControllerBindPhone({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
         body: { phone: params.phone, code: params.code },
       });
       if (result.error) throw result.error;
@@ -51,7 +49,6 @@ export const usePhoneBind = () => {
   const rebindPhone = useMutation({
     mutationFn: async (params: { phone: string; code: string; token: string }) => {
       const result = await authControllerRebindPhone({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
         body: { phone: params.phone, code: params.code, token: params.token },
       });
       if (result.error) throw result.error;

@@ -73,7 +73,7 @@ export function useUserCRUD() {
     roles: [] as Array<{ id: string; name: string; isSystem?: boolean }>,
     mailEnabled: false,
     smsEnabled: false,
-    createUser: async (data: Record<string, unknown>) => {
+    createUser: async (data: CreateUserDto) => {
       await createMutation.mutateAsync(data);
     },
     updateUser: async (id: string, data: UpdateUserDto) => {

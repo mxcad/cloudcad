@@ -200,14 +200,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               onDragLeave={onDragLeave}
               onDrop={onDrop}
               isDropTarget={dropTargetId === node.id}
-              // @ts-expect-error - pre-existing component prop type
-              onEdit={extraProps.onEdit}
-              // @ts-expect-error - pre-existing component prop type
-              onDeleteNode={extraProps.onDeleteNode}
-              // @ts-expect-error - pre-existing component prop type
-              onShowMembers={extraProps.onShowMembers}
-              // @ts-expect-error - pre-existing component prop type
-              onShowRoles={extraProps.onShowRoles}
               {...extraProps}
             />
           );

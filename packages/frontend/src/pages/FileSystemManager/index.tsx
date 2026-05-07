@@ -752,18 +752,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         onConfirm={handleConfirmMoveOrCopy}
       />
 
-      {/* @ts-ignore - pre-existing component prop type */}
       <KeyboardShortcuts
         onUploadExternalReference={handleUploadExternalReference}
-        // @ts-expect-error - pre-existing component prop type
-        currentNode={currentNode}
+        selectedNode={currentNode}
       />
 
-      {/* @ts-ignore - pre-existing component prop type */}
       <DownloadFormatModal
         isOpen={showDownloadFormatModal}
-        // @ts-expect-error - pre-existing component prop type
-        node={downloadingNode}
+        fileName={downloadingNode?.name ?? ''}
         onClose={() => {
           setShowDownloadFormatModal(false);
           setDownloadingNode(null);
@@ -771,7 +767,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         onDownload={handleDownloadWithFormat}
       />
 
-      {/* @ts-ignore - pre-existing component prop type */}
       <VersionHistoryModal
         isOpen={showVersionHistoryModal}
         node={versionHistoryNode}
@@ -779,8 +774,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         loading={versionHistoryLoading}
         error={versionHistoryError}
         onClose={closeVersionHistory}
-        // @ts-expect-error - pre-existing component prop type
-        onOpenHistoricalVersion={handleOpenHistoricalVersion}
+        onOpenVersion={handleOpenHistoricalVersion}
       />
     </>
   );

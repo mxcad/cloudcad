@@ -8,7 +8,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 import type { AuthApiResponseDto } from '../api-sdk';
-import type { AuthApiResponseDto } from '../api-sdk';
 
 // Lucide 图标
 import { Phone } from 'lucide-react';

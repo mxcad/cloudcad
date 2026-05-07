@@ -8,7 +8,6 @@ export const useWechatBind = () => {
   const bindWechat = useMutation({
     mutationFn: async (params: { code: string; state: string }) => {
       const result = await authControllerBindWechat({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { code: string; state: string }
         body: { code: params.code, state: params.state },
       });
       if (result.error) throw result.error;
