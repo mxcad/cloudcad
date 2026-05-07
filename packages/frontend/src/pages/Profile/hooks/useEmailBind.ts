@@ -22,7 +22,6 @@ export const useEmailBind = () => {
   const verifyBindEmail = useMutation({
     mutationFn: async (params: { email: string; code: string }) => {
       const result = await authControllerVerifyBindEmail({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
         body: { email: params.email, code: params.code },
       });
       if (result.error) throw result.error;

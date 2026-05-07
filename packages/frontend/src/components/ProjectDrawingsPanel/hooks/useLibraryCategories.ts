@@ -275,7 +275,7 @@ export function useLibraryCategories(
                     limit: PAGE_SIZE,
                   } });
 
-            const files = (response as any)?.nodes || [];
+            const files = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
             // Note: These values need to be consumed by the caller
             // We don't set nodes here - that's done by the caller via the callback pattern
           } catch (error: unknown) {

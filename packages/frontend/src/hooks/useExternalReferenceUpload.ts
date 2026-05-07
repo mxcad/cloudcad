@@ -12,6 +12,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference, mxCadControllerUploadExtReferenceImage, mxCadControllerUploadExtReferenceDwg } from '@/api-sdk';
 import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference, publicFileControllerUploadExtReference } from '@/api-sdk';
+import type { UploadExtReferenceDto, UploadExtReferenceFileDto } from '@/api-sdk';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -150,7 +151,7 @@ export const useExternalReferenceUpload = (
         let result = null;
         if (isLoggedIn) {
           // 已登录用户使用 SDK
-          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } });
+          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } as unknown as undefined });
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
           // 未登录用户使用 SDK
@@ -409,14 +410,14 @@ export const useExternalReferenceUpload = (
             formData.append('file', fileInfo.source);
             formData.append('ext_ref_file', fileInfo.name);
             if (config.nodeId) formData.append('nodeId', config.nodeId);
-            await mxCadControllerUploadExtReferenceImage({ body: formData });
+            await mxCadControllerUploadExtReferenceImage({ body: formData as unknown as UploadExtReferenceFileDto });
           } else {
             // 图片外部参照：使用公开上传接口（未登录用户）
             const formData = new FormData();
             formData.append('file', fileInfo.source);
             formData.append('srcFileHash', id);
             formData.append('extRefFile', fileInfo.name);
-            await publicFileControllerUploadExtReference({ body: formData as unknown as Record<string, unknown> });
+            await publicFileControllerUploadExtReference({ body: formData as unknown as UploadExtReferenceDto });
           }
         } else {
           if (isLoggedIn) {
@@ -424,14 +425,14 @@ export const useExternalReferenceUpload = (
             const formData = new FormData();
             formData.append('file', fileInfo.source);
             formData.append('ext_ref_file', fileInfo.name);
-            await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as unknown as Record<string, unknown> });
+            await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as unknown as UploadExtReferenceFileDto });
           } else {
             // DWG 外部参照：使用公开上传接口（未登录用户）
             const formData = new FormData();
             formData.append('file', fileInfo.source);
             formData.append('srcFileHash', id);
             formData.append('extRefFile', fileInfo.name);
-            await publicFileControllerUploadExtReference({ body: formData as unknown as Record<string, unknown> });
+            await publicFileControllerUploadExtReference({ body: formData as unknown as UploadExtReferenceDto });
           }
         }
 

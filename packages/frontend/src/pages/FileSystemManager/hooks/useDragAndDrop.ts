@@ -70,9 +70,9 @@ export function useDragAndDrop({
 
       try {
         if (isCopy) {
-          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } } as any);
+          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } } as Parameters<typeof fileSystemControllerCopyNode>[0]);
         } else {
-          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } } as any);
+          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } } as Parameters<typeof fileSystemControllerMoveNode>[0]);
         }
         handleRefresh();
       } catch (error: unknown) {

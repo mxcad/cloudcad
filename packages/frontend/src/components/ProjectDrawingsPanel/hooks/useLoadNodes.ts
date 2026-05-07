@@ -97,7 +97,7 @@ export function useLoadNodes(
         } else {
           const { data: response } = await fileSystemControllerGetChildren({
             path: { nodeId },
-            query: { page, limit: PAGE_SIZE, search: search || undefined } as any,
+            query: { page, limit: PAGE_SIZE, search: search || undefined } as Record<string, unknown>,
           });
           nodeList = (response?.nodes || []).map(toFileSystemNode);
           totalCount = response?.total || 0;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fileSystemControllerGetProjects, saveControllerSaveMxwebAs } from '@/api-sdk';
+import type { FileSystemNodeDto, SaveMxwebAsDto } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 
 interface ProjectWithPermission {
@@ -54,7 +55,7 @@ export const useSaveAs = ({
       const result = await fileSystemControllerGetProjects({ query: { filter: 'all' } });
       if (result.error) throw result.error;
       const allProjects = result.data?.nodes || [];
-      return allProjects.map((project: ProjectDto) => ({
+      return allProjects.map((project: FileSystemNodeDto) => ({
         id: project.id,
         name: project.name,
         hasUploadPermission: true,

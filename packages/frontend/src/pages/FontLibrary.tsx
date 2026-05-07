@@ -908,7 +908,7 @@ function UploadFontModal({
       formData.append('file', file);
       formData.append('target', target);
       // FormData is required for file upload, but API client types expect JSON body
-      await fontsControllerUploadFont({ body: formData as unknown as Record<string, string> });
+      await fontsControllerUploadFont({ body: formData as unknown as Parameters<typeof fontsControllerUploadFont>[0]['body'] });
       showToast('上传成功', 'success');
       onSuccess();
     } catch (error) {

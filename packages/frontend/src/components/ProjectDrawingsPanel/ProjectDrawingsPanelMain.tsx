@@ -104,7 +104,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     versionHistoryNode, versionHistoryEntries,
     versionHistoryLoading, versionHistoryError,
     handleShowVersionHistory, handleOpenHistoricalVersion,
-  } = useVersionHistory(isLibraryMode ? null : (/* selectedProjectId from below */ '' as any));
+  } = useVersionHistory(isLibraryMode ? null : (/* selectedProjectId from below */ '' as unknown as string));
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -280,11 +280,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           const response = libraryType === 'drawing'
             ? await libraryControllerGetDrawingAllFiles({ path: { nodeId: libraryRootId }, query: { page: 1, limit: PAGE_SIZE } })
             : await libraryControllerGetBlockAllFiles({ path: { nodeId: libraryRootId }, query: { page: 1, limit: PAGE_SIZE } });
-          const files = (response as any)?.nodes || [];
+          const files = (response as { nodes?: FileSystemNode[] })?.nodes || [];
           setNodes(files);
-          setTotal((response as any)?.total || 0);
-          setTotalPages((response as any)?.totalPages || Math.ceil(((response as any)?.total || 0) / PAGE_SIZE) || 1);
-          setHasMore(1 < ((response as any)?.totalPages || 1));
+          setTotal((response as { total?: number })?.total || 0);
+          setTotalPages((response as { totalPages?: number })?.totalPages || Math.ceil(((response as { total?: number })?.total || 0) / PAGE_SIZE) || 1);
+          setHasMore(1 < ((response as { totalPages?: number })?.totalPages || 1));
           setCurrentPage(1);
         } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 加载列表数据失败'); } finally { setLoading(false); }
       };
@@ -465,7 +465,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handleSubmitProject = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     handleUpdateProjectSubmit(async (id, data) => {
-      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as any });
+      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as Parameters<typeof fileSystemControllerUpdateNode>[0] });
     });
   }, [handleUpdateProjectSubmit]);
 

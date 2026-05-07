@@ -280,7 +280,7 @@ export const SystemMonitorPage: React.FC = () => {
               description="本地文件系统"
               icon={HardDrive}
               status={systemHealth?.storage.status || 'down'}
-              message={systemHealth?.storage.message || '检测中...'}
+              message={String(systemHealth?.storage.message || '检测中...')}
               timestamp={systemHealth?.storage.timestamp}
               loading={loading && !systemHealth}
               isDark={isDark}

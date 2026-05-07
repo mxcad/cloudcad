@@ -16,6 +16,7 @@ import {
   fileSystemControllerCheckProjectPermission,
   fileSystemControllerGetUserProjectRole,
 } from '@/api-sdk';
+import type { ProjectPermissionEnum } from '@/api-sdk';
 
 /**
  * 缓存项接口
@@ -207,7 +208,7 @@ export const useProjectPermission = () => {
       try {
         const response = await fileSystemControllerCheckProjectPermission({
           path: { projectId },
-          query: { permission },
+          query: { permission: permission as ProjectPermissionEnum },
         });
         const hasPermission = response.data?.hasPermission || false;
 
@@ -356,7 +357,7 @@ export const useProjectPermission = () => {
       try {
         const response = await fileSystemControllerCheckProjectPermission({
           path: { projectId },
-          query: { permission },
+          query: { permission: permission as ProjectPermissionEnum },
         });
         const hasPermission = response.data?.hasPermission || false;
 

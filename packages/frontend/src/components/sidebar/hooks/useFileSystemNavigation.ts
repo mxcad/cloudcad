@@ -40,7 +40,7 @@ export const useFileSystemNavigation = (isAuthenticated: boolean) => {
   // 获取根节点
   const getRootNode = useCallback(async (nodeId: string) => {
     const result = await fileSystemControllerGetRootNode({ path: { nodeId } });
-    return (result as { data: unknown }).data;
+    return (result as unknown as { data: { id?: string } | undefined }).data;
   }, []);
 
   // 打开图纸

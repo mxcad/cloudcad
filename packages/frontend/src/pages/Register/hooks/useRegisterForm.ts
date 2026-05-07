@@ -52,6 +52,7 @@ export interface UseRegisterFormReturn {
   handleNext: (phoneForm: { phone: string; code: string }) => Promise<void>;
   handleBack: () => void;
   handleFormSubmit: (e: React.FormEvent) => Promise<void>;
+  setPhoneForm: (phoneForm: { phone: string; code: string }) => void;
 }
 
 // ──────────────────────────────────────────────

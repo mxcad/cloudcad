@@ -199,10 +199,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         body: {
           userId: selectedUser.id,
           projectRoleId: newRoleId,
-        } as unknown as Record<string, never>,
+        } as unknown as undefined,
       });
 
-      const { id, email, username, nickname, avatar, projectRoleId, projectRoleName, joinedAt } = memberData.data;
+      const data = memberData.data!;
+      const { id, email, username, nickname, avatar, projectRoleId, projectRoleName, joinedAt } = data;
       const newMember: Member = {
         id,
         userId: id,
@@ -256,10 +257,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const handleUpdateRole = async (userId: string, projectRoleId: string) => {
     setErrorMessage('');
     try {
-      // @ts-expect-error Generated API type marks body as never
       await fileSystemControllerUpdateProjectMember({
         path: { projectId, userId },
-        body: { projectRoleId },
+        body: { projectRoleId } as unknown as undefined,
       });
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
@@ -287,10 +287,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setTransferring(true);
     setErrorMessage('');
     try {
-      // @ts-expect-error Generated API type marks body as never
       await fileSystemControllerUpdateProjectMember({
         path: { projectId, userId: transferTarget.userId },
-        body: { roleName: 'PROJECT_OWNER' },
+        body: { roleName: 'PROJECT_OWNER' } as unknown as undefined,
       });
 
       // 刷新成员列表

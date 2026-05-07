@@ -424,7 +424,7 @@ export function useDirectoryImport() {
           const file = fileList[i];
           if (!file) continue;
 
-          const rawPath = (file as FileWithWebkitPath).webkitRelativePath || file.name;
+          const rawPath = file.webkitRelativePath || file.name;
 
           // 'content' 模式：跳过第一层目录前缀，只导入内容
           // 'folder' 模式：保留整个目录结构作为子目录
