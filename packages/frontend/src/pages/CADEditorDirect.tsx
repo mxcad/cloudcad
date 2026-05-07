@@ -1183,11 +1183,12 @@ export const CADEditorDirect: React.FC = () => {
   ) => {
     try {
       setDownloading(true);
-      const { data: blobData } = await fileSystemControllerDownloadNodeWithFormat({
+      const { response } = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
         query: { format, ...pdfOptions },
-        responseStyle: 'blob',
-      } as Parameters<typeof fileSystemControllerDownloadNodeWithFormat>[0]);
+      });
+      if (!response) throw new Error('下载失败：服务器无响应');
+      const blobData = await response.blob();
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);
