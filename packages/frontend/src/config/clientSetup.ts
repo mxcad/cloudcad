@@ -5,6 +5,7 @@
 
 import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
+import { getValidToken, isValidToken } from '@/utils/tokenUtils';
 
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
 const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
@@ -25,7 +26,7 @@ client.setConfig({
 
 // ── 2. Bearer Token (request interceptor) ────────────────────
 client.interceptors.request.use((request) => {
-  const token = localStorage.getItem('accessToken');
+  const token = getValidToken();
   if (token) {
     request.headers.set('Authorization', `Bearer ${token}`);
   }
@@ -64,9 +65,9 @@ async function tryRefreshToken(): Promise<boolean> {
       });
       const body = await res.json();
       const inner = body?.data || body;
-      if (inner?.accessToken && typeof inner.accessToken === 'string' && inner.accessToken.trim().length > 0) {
+      if (inner?.accessToken && isValidToken(inner.accessToken)) {
         localStorage.setItem('accessToken', inner.accessToken);
-        if (inner.refreshToken && typeof inner.refreshToken === 'string' && inner.refreshToken.trim().length > 0) {
+        if (inner.refreshToken && isValidToken(inner.refreshToken)) {
           localStorage.setItem('refreshToken', inner.refreshToken);
         }
         // Notify React state if callback registered
@@ -88,6 +89,7 @@ async function tryRefreshToken(): Promise<boolean> {
 }
 
 let isRedirecting = false;
+let redirectTimer: number | null = null;
 
 function clearAuthAndRedirect() {
   if (isRedirecting) return;
@@ -96,6 +98,27 @@ function clearAuthAndRedirect() {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   window.location.href = '/login';
+}
+
+function handleTokenRefreshFailure() {
+  if (isRedirecting) return;
+  isRedirecting = true;
+
+  // Show alert to user
+  alert('Login session expired. Please log in again.');
+
+  // Clear any pending redirect
+  if (redirectTimer !== null) {
+    clearTimeout(redirectTimer);
+  }
+
+  // Delay redirect to allow user to see the alert
+  redirectTimer = window.setTimeout(() => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }, 2000);
 }
 
 const nativeFetch = globalThis.fetch.bind(globalThis);
@@ -113,7 +136,7 @@ client.setConfig({
           const refreshed = await tryRefreshToken();
           if (refreshed) {
             const headers = new Headers(init?.headers);
-            headers.set('Authorization', `Bearer ${localStorage.getItem('accessToken')}`);
+            headers.set('Authorization', `Bearer ${getValidToken()}`);
             response = await nativeFetch(input, { ...init, headers });
           } else {
             clearAuthAndRedirect();
