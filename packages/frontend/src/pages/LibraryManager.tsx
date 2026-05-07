@@ -125,70 +125,57 @@ export const LibraryManager: React.FC = () => {
       ? hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE)
       : hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE);
 
-  // UI 状态
-  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [renamingNode, setRenamingNode] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [renameName, setRenameName] = useState('');
-  const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
-  const [moveSourceNode, setMoveSourceNode] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [copySourceNode, setCopySourceNode] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-
-  // 下载格式模态框状态
-  const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
-  const [downloadingNodeId, setDownloadingNodeId] = useState<string | null>(
-    null
-  );
-  const [downloadingFileName, setDownloadingFileName] = useState<string | null>(
-    null
-  );
-
-  // 存储配额状态
-  const [quotaModalOpen, setQuotaModalOpen] = useState(false);
-  const [quotaLoading, setQuotaLoading] = useState(false);
-  const [libraryQuota, setLibraryQuota] = useState<number>(100);
-  const [defaultLibraryQuota, setDefaultLibraryQuota] = useState<number>(100);
-  const [libraryStorageInfo, setLibraryStorageInfo] = useState<any>(null);
-
   // 使用全局通知
   const { showToast } = useNotification();
 
-  // 显示确认对话框（适配 useLibraryOperations 的接口）
-  const showConfirm = useCallback(
-    (
-      title: string,
-      message: string,
-      onConfirm: () => Promise<void> | void,
-      _type?: 'danger' | 'warning' | 'info' | 'success',
-      _confirmText?: string
-    ) => {
-      setConfirmDialog({
-        isOpen: true,
-        title,
-        message,
-        onConfirm: async () => {
-          await onConfirm();
-          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
-        },
-      });
-    },
-    []
-  );
+  // UI 状态 - useLibraryModals hook
+  const {
+    isCreateFolderModalOpen,
+    openCreateFolderModal,
+    closeCreateFolderModal,
+    isRenameModalOpen,
+    renamingNode,
+    renameName,
+    openRenameModal,
+    closeRenameModal,
+    setRenameName,
+    showSelectFolderModal,
+    moveSourceNode,
+    copySourceNode,
+    openMoveModal,
+    openCopyModal,
+    openBatchMoveModal,
+    openBatchCopyModal,
+    closeSelectFolderModal,
+    confirmDialog,
+    showConfirm,
+    closeConfirmDialog,
+    showDownloadFormatModal,
+    downloadingNodeId,
+    downloadingFileName,
+    openDownloadFormatModal,
+    closeDownloadFormatModal,
+  } = useLibraryModals();
+
+  // 存储配额状态 - useLibraryQuota hook
+  const {
+    quotaModalOpen,
+    quotaLoading,
+    libraryQuota,
+    defaultLibraryQuota,
+    libraryStorageInfo,
+    openQuotaModal,
+    closeQuotaModal,
+    setLibraryQuota,
+    saveLibraryQuota,
+  } = useLibraryQuota({
+    libraryId,
+    libraryType,
+    showToast,
+  });
+
+  // 批量导入对话框状态
+  const [showDirectoryImport, setShowDirectoryImport] = React.useState(false);
 
   // 图书馆操作 Hooks（复用公开资源库的操作函数）
   const libraryOperations = useLibraryOperations({
@@ -200,9 +187,6 @@ export const LibraryManager: React.FC = () => {
 
   // 上传组件 ref - 完全复用项目管理的 MxCadUppyUploader
   const uploaderRef = useRef<MxCadUppyUploaderRef>(null);
-
-  // 批量导入对话框状态
-  const [showDirectoryImport, setShowDirectoryImport] = useState(false);
 
   // 打开文件到 CAD 编辑器
   const handleOpenInEditor = useCallback(
@@ -252,10 +236,9 @@ export const LibraryManager: React.FC = () => {
         format,
         pdfOptions
       );
-      setShowDownloadFormatModal(false);
-      setDownloadingNodeId(null);
+      closeDownloadFormatModal();
     },
-    [downloadingNodeId, nodes, libraryOperations]
+    [downloadingNodeId, nodes, libraryOperations, closeDownloadFormatModal]
   );
 
   // 创建文件夹
@@ -264,13 +247,13 @@ export const LibraryManager: React.FC = () => {
       try {
         const parentId = currentNode?.id || libraryId || undefined;
         await createFolder(name, parentId);
-        setIsCreateFolderModalOpen(false);
+        closeCreateFolderModal();
         showToast('文件夹创建成功', 'success');
       } catch (err: any) {
         showToast(err.message || '创建失败', 'error');
       }
     },
-    [createFolder, currentNode, libraryId, showToast]
+    [createFolder, currentNode, libraryId, showToast, closeCreateFolderModal]
   );
 
   // 删除确认（公共资源库直接永久删除，不走回收站）
@@ -311,87 +294,12 @@ export const LibraryManager: React.FC = () => {
     [libraryOperations]
   );
 
-  // 存储配额相关方法
-  const openQuotaModal = useCallback(async () => {
-    setQuotaModalOpen(true);
-    setQuotaLoading(true);
-
-    try {
-      // 获取默认配额（GB）
-      const { data: configs } = await runtimeConfigControllerGetPublicConfigs();
-      const defaultVal = configs?.libraryStorageQuota || 100;
-      setDefaultLibraryQuota(defaultVal);
-
-      // 获取公共资源库的存储信息
-      if (libraryId) {
-        const { data: storageInfo } = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
-
-        if (storageInfo) {
-          setLibraryStorageInfo(storageInfo);
-          // total 是字节，转换为 GB
-          const totalGB = Math.round(
-            (storageInfo.total || defaultVal * 1024 * 1024 * 1024) /
-              (1024 * 1024 * 1024)
-          );
-          setLibraryQuota(totalGB);
-        }
-      } else {
-        // 没有库 ID 时使用默认值
-        setLibraryQuota(defaultVal);
-      }
-    } catch (error) {
-      console.error('获取库配额失败:', error);
-      showToast('获取库配额失败', 'error');
-    } finally {
-      setQuotaLoading(false);
-    }
-  }, [libraryId, showToast]);
-
-  const saveLibraryQuota = useCallback(async () => {
-    if (!libraryId) {
-      showToast('无法获取库节点 ID', 'error');
-      return;
-    }
-
-    setQuotaLoading(true);
-    try {
-      // 调用后端 API 更新库节点配额（GB）
-      await fileSystemControllerUpdateStorageQuota({ body: { nodeId: libraryId, quota: libraryQuota } as any });
-
-      showToast(`库配额已更新为 ${libraryQuota} GB`, 'success');
-      setQuotaModalOpen(false);
-
-      // 刷新库配额信息
-      const { data: storageInfo } = await fileSystemControllerGetStorageQuota({ query: { nodeId: libraryId } });
-      if (storageInfo) {
-        setLibraryStorageInfo(storageInfo);
-      }
-    } catch (error: any) {
-      console.error('保存库配额失败:', error);
-      showToast(error.response?.data?.message || '保存配额失败', 'error');
-    } finally {
-      setQuotaLoading(false);
-    }
-  }, [libraryId, libraryQuota, showToast]);
-
   // 重命名节点
   const handleRename = useCallback(
     (node: { id: string; name: string; isFolder?: boolean }) => {
-      setRenamingNode(node);
-      // 如果是文件，去除扩展名
-      if (!node.isFolder && node.name) {
-        const lastDotIndex = node.name.lastIndexOf('.');
-        const nameWithoutExtension =
-          lastDotIndex !== -1
-            ? node.name.substring(0, lastDotIndex)
-            : node.name;
-        setRenameName(nameWithoutExtension);
-      } else {
-        setRenameName(node.name);
-      }
-      setIsRenameModalOpen(true);
+      openRenameModal(node);
     },
-    []
+    [openRenameModal]
   );
 
   // 执行重命名
@@ -402,32 +310,24 @@ export const LibraryManager: React.FC = () => {
         await libraryOperations.handleRename(
           renamingNode.id,
           newName.trim(),
-          () => {
-            setIsRenameModalOpen(false);
-            setRenamingNode(null);
-            setRenameName('');
-          }
+          () => closeRenameModal()
         );
       } catch (err: any) {
         // 错误已在 libraryOperations 中处理
       }
     },
-    [renamingNode, libraryOperations]
+    [renamingNode, libraryOperations, closeRenameModal]
   );
 
   // 移动节点
   const handleMove = useCallback((node: { id: string; name: string }) => {
-    setMoveSourceNode(node);
-    setCopySourceNode(null);
-    setShowSelectFolderModal(true);
-  }, []);
+    openMoveModal(node);
+  }, [openMoveModal]);
 
   // 复制节点
   const handleCopy = useCallback((node: { id: string; name: string }) => {
-    setCopySourceNode(node);
-    setMoveSourceNode(null);
-    setShowSelectFolderModal(true);
-  }, []);
+    openCopyModal(node);
+  }, [openCopyModal]);
 
   // 选择文件夹确认（移动/复制）
   const handleSelectFolderConfirm = useCallback(
@@ -454,9 +354,7 @@ export const LibraryManager: React.FC = () => {
           await libraryOperations.handleCopy(copySourceNode.id, targetParentId);
         }
 
-        setShowSelectFolderModal(false);
-        setMoveSourceNode(null);
-        setCopySourceNode(null);
+        closeSelectFolderModal();
       } catch (err: any) {
         // 错误已在 libraryOperations 中处理
       }
@@ -467,6 +365,7 @@ export const LibraryManager: React.FC = () => {
       selectedNodes,
       clearSelection,
       libraryOperations,
+      closeSelectFolderModal,
     ]
   );
 
@@ -475,7 +374,7 @@ export const LibraryManager: React.FC = () => {
     // 搜索时重置到第一页
     setCurrentPage(1);
     // useLibrary 会自动监听 searchTerm 变化并重新加载
-  }, []);
+  }, [setCurrentPage]);
 
   // 库类型切换
   const handleSwitchLibrary = useCallback(
@@ -537,7 +436,7 @@ export const LibraryManager: React.FC = () => {
             {canManage && (
               <div className="flex items-center gap-2">
                 <Button
-                  onClick={() => setIsCreateFolderModalOpen(true)}
+                  onClick={openCreateFolderModal}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
@@ -774,7 +673,7 @@ export const LibraryManager: React.FC = () => {
               {canManage && (
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => setIsCreateFolderModalOpen(true)}
+                    onClick={openCreateFolderModal}
                     variant="outline"
                     size="sm"
                   >
@@ -816,9 +715,7 @@ export const LibraryManager: React.FC = () => {
                   }}
                   onDownload={(node) => {
                     if (!node.isFolder) {
-                      setDownloadingNodeId(node.id);
-                      setDownloadingFileName(node.name);
-                      setShowDownloadFormatModal(true);
+                      openDownloadFormatModal(node.id, node.name);
                     }
                   }}
                   onDelete={() => handleDeleteConfirm(node.id, node.name)}
@@ -874,14 +771,7 @@ export const LibraryManager: React.FC = () => {
             {canManage && (
               <>
                 <button
-                  onClick={() => {
-                    setMoveSourceNode({
-                      id: 'batch',
-                      name: `${selectedNodes.size} 个项目`,
-                    });
-                    setCopySourceNode(null);
-                    setShowSelectFolderModal(true);
-                  }}
+                  onClick={() => openBatchMoveModal(selectedNodes.size)}
                   className="text-sm font-medium transition-colors"
                   style={{ color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => {
@@ -894,14 +784,7 @@ export const LibraryManager: React.FC = () => {
                   移动
                 </button>
                 <button
-                  onClick={() => {
-                    setCopySourceNode({
-                      id: 'batch',
-                      name: `${selectedNodes.size} 个项目`,
-                    });
-                    setMoveSourceNode(null);
-                    setShowSelectFolderModal(true);
-                  }}
+                  onClick={() => openBatchCopyModal(selectedNodes.size)}
                   className="text-sm font-medium transition-colors"
                   style={{ color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => {
@@ -917,11 +800,10 @@ export const LibraryManager: React.FC = () => {
                   onClick={() => {
                     const nodeIds = Array.from(selectedNodes);
                     const count = nodeIds.length;
-                    setConfirmDialog({
-                      isOpen: true,
-                      title: '确认删除',
-                      message: `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`,
-                      onConfirm: async () => {
+                    showConfirm(
+                      '确认删除',
+                      `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`,
+                      async () => {
                         try {
                           for (const nodeId of nodeIds) {
                             const apiMethod =
@@ -937,8 +819,8 @@ export const LibraryManager: React.FC = () => {
                           console.error('批量删除失败:', error);
                           showToast('批量删除失败', 'error');
                         }
-                      },
-                    });
+                      }
+                    );
                   }}
                   className="text-sm font-medium transition-colors"
                   style={{ color: 'var(--error)' }}
@@ -973,7 +855,7 @@ export const LibraryManager: React.FC = () => {
       {/* 弹窗 */}
       <Modal
         isOpen={isCreateFolderModalOpen}
-        onClose={() => setIsCreateFolderModalOpen(false)}
+        onClose={closeCreateFolderModal}
         title="新建文件夹"
       >
         <form
@@ -1007,7 +889,7 @@ export const LibraryManager: React.FC = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsCreateFolderModalOpen(false)}
+                onClick={closeCreateFolderModal}
               >
                 取消
               </Button>
@@ -1025,9 +907,7 @@ export const LibraryManager: React.FC = () => {
         title={confirmDialog.title}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() =>
-          setConfirmDialog((prev) => ({ ...prev, isOpen: false }))
-        }
+        onCancel={closeConfirmDialog}
       />
 
       {/* 重命名模态框 */}
@@ -1036,11 +916,7 @@ export const LibraryManager: React.FC = () => {
         editingNode={renamingNode as any}
         newName={renameName}
         loading={false}
-        onClose={() => {
-          setIsRenameModalOpen(false);
-          setRenamingNode(null);
-          setRenameName('');
-        }}
+        onClose={closeRenameModal}
         onNameChange={setRenameName}
         onRename={() => handleRenameSubmit(renameName)}
       />
@@ -1051,22 +927,14 @@ export const LibraryManager: React.FC = () => {
         libraryType={libraryType}
         currentNodeId={moveSourceNode?.id || copySourceNode?.id || ''}
         onConfirm={handleSelectFolderConfirm}
-        onClose={() => {
-          setShowSelectFolderModal(false);
-          setMoveSourceNode(null);
-          setCopySourceNode(null);
-        }}
+        onClose={closeSelectFolderModal}
       />
 
       {/* 下载格式选择弹窗 */}
       <DownloadFormatModal
         isOpen={showDownloadFormatModal}
         fileName={downloadingFileName || ''}
-        onClose={() => {
-          setShowDownloadFormatModal(false);
-          setDownloadingNodeId(null);
-          setDownloadingFileName(null);
-        }}
+        onClose={closeDownloadFormatModal}
         onDownload={handleDownloadWithFormat}
       />
 
@@ -1085,14 +953,14 @@ export const LibraryManager: React.FC = () => {
       {/* 存储配额配置模态框 */}
       <Modal
         isOpen={quotaModalOpen}
-        onClose={() => setQuotaModalOpen(false)}
+        onClose={closeQuotaModal}
         title="配置公共资源库存储配额"
         maxWidth="max-w-md"
         footer={
           <div className="modal-footer">
             <Button
               variant="ghost"
-              onClick={() => setQuotaModalOpen(false)}
+              onClick={closeQuotaModal}
               disabled={quotaLoading}
             >
               取消

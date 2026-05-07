@@ -126,8 +126,8 @@ export const RoleManagement = () => {
 
   const loadCurrentUser = async () => {
     try {
-      const { data: response } = await authControllerGetProfile();
-      setCurrentUser(response as unknown as UserDto);
+      const response = await authControllerGetProfile();
+      setCurrentUser(response.data);
     } catch (error) {
       console.error('加载用户信息失败:', error);
     }
@@ -135,8 +135,8 @@ export const RoleManagement = () => {
 
   const loadSystemRoles = async () => {
     try {
-      const { data: response } = await rolesControllerFindAll();
-      setSystemRoles(response as unknown as SystemRole[]);
+      const response = await rolesControllerFindAll();
+      setSystemRoles(response.data);
     } catch (error) {
       console.error('加载系统角色失败:', error);
     }
@@ -144,8 +144,8 @@ export const RoleManagement = () => {
 
   const loadProjectRoles = async () => {
     try {
-      const { data: response } = await rolesControllerGetSystemProjectRoles();
-      setProjectRoles(response as unknown as ProjectRole[]);
+      const response = await rolesControllerGetSystemProjectRoles();
+      setProjectRoles(response.data);
     } catch (error) {
       console.error('加载项目角色失败:', error);
     }

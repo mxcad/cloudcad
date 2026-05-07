@@ -28,6 +28,7 @@ import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { BrandProvider } from './contexts/BrandContext';
 import { useMxCADPreload } from './hooks/useMxCADPreload';
+import { getValidToken } from './utils/tokenUtils';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割

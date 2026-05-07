@@ -666,7 +666,7 @@ export function useDirectoryImport() {
                 : await libraryControllerCreateBlockFolder({ body: { name: child.name, parentId: currentParentId, skipIfExists: true } });
 
               // result 已是解包后的数据
-              const folderData = result as unknown as FileSystemNodeDto;
+              const folderData: FileSystemNodeDto | undefined = result.data;
               if (folderData?.id) {
                 const isNewFolder =
                   folderData.createdAt === folderData.updatedAt;
