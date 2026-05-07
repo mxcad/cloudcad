@@ -36,7 +36,7 @@ export async function checkDuplicateFile(
 ): Promise<DuplicateCheckResult> {
   try {
     const duplicateCheck = await mxCadControllerCheckFileExist({
-      body: { fileHash, filename, nodeId },
+      body: { fileHash, filename, nodeId, fileSize: 0 },
     });
 
     return {

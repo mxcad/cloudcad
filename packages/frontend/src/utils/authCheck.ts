@@ -21,11 +21,13 @@
  * 检查用户是否已登录
  * @returns boolean 是否已登录
  */
+import { isValidToken } from './tokenUtils';
+
 export function isAuthenticated(): boolean {
   try {
     const token = localStorage.getItem('accessToken');
     const user = localStorage.getItem('user');
-    return !!(token && user);
+    return isValidToken(token) && !!user;
   } catch {
     return false;
   }
@@ -70,9 +72,11 @@ export function getCurrentUser(): { id: string; email?: string; username?: strin
  * 获取认证 Token
  * @returns Token 字符串，未登录返回 null
  */
+import { getValidToken } from './tokenUtils';
+
 export function getAuthToken(): string | null {
   try {
-    return localStorage.getItem('accessToken');
+    return getValidToken();
   } catch {
     return null;
   }

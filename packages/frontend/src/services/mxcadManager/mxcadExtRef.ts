@@ -36,7 +36,7 @@ export async function uploadExtReferenceImage(
     formData.append('file', params.file, params.fileName);
 
     const result = await mxCadControllerUploadExtReferenceImage({
-      path: { nodeId: params.nodeId },
+      query: { nodeId: params.nodeId },
       body: formData,
     });
 

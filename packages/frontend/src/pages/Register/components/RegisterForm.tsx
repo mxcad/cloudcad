@@ -16,7 +16,6 @@ interface RegisterFormProps {
   smsEnabled: boolean;
   requirePhoneVerification: boolean;
   isWechatRegister: boolean;
-  wechatTempToken: string | null;
   prefillPhone: string;
   prefillCode: string;
 }
@@ -27,11 +26,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   smsEnabled,
   requirePhoneVerification,
   isWechatRegister,
-  wechatTempToken,
   prefillPhone,
   prefillCode,
 }) => {
   const navigate = useNavigate();
+
+  const phone = usePhoneVerification({ setFieldErrors: form.setExternalErrors });
 
   const form = useRegisterForm({
     mailEnabled,
@@ -39,9 +39,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     smsEnabled,
     requirePhoneVerification,
     isWechatRegister,
+    phoneForm: phone.phoneForm,
   });
-
-  const phone = usePhoneVerification({ setFieldErrors: form.setExternalErrors });
 
   // Pre-fill phone from login redirect
   useEffect(() => {
@@ -59,7 +58,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   };
 
   const onSubmit = (e: React.FormEvent) => {
-    form.handleSubmit(e, phone.phoneForm, wechatTempToken);
+    form.handleSubmit(e);
   };
 
   // Helper: spread register props + chain onBlur for focusedField tracking

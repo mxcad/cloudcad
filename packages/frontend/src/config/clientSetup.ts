@@ -64,9 +64,11 @@ async function tryRefreshToken(): Promise<boolean> {
       });
       const body = await res.json();
       const inner = body?.data || body;
-      if (inner?.accessToken) {
+      if (inner?.accessToken && typeof inner.accessToken === 'string' && inner.accessToken.trim().length > 0) {
         localStorage.setItem('accessToken', inner.accessToken);
-        if (inner.refreshToken) localStorage.setItem('refreshToken', inner.refreshToken);
+        if (inner.refreshToken && typeof inner.refreshToken === 'string' && inner.refreshToken.trim().length > 0) {
+          localStorage.setItem('refreshToken', inner.refreshToken);
+        }
         // Notify React state if callback registered
         if (tokenRefreshCallback) {
           tokenRefreshCallback(inner.accessToken);
@@ -85,7 +87,11 @@ async function tryRefreshToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+let isRedirecting = false;
+
 function clearAuthAndRedirect() {
+  if (isRedirecting) return;
+  isRedirecting = true;
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
@@ -102,21 +108,24 @@ client.setConfig({
     if (response.status === 401) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (!url.includes('/auth/login') && !url.includes('/auth/profile')) {
-        const refreshed = await tryRefreshToken();
-        if (refreshed) {
-          const headers = new Headers(init?.headers);
-          headers.set('Authorization', `Bearer ${localStorage.getItem('accessToken')}`);
-          response = await nativeFetch(input, { ...init, headers });
+        const method = (init?.method || 'GET').toUpperCase();
+        if (method === 'GET' || method === 'HEAD') {
+          const refreshed = await tryRefreshToken();
+          if (refreshed) {
+            const headers = new Headers(init?.headers);
+            headers.set('Authorization', `Bearer ${localStorage.getItem('accessToken')}`);
+            response = await nativeFetch(input, { ...init, headers });
+          } else {
+            clearAuthAndRedirect();
+          }
         } else {
           clearAuthAndRedirect();
         }
       }
 
-      // Profile 401: clear auth silently
+      // Profile 401: redirect to login
       if (url.includes('/auth/profile')) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        clearAuthAndRedirect();
       }
     }
 
