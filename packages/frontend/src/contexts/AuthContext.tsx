@@ -135,9 +135,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (account: string, password: string) => {
     console.log('[AuthContext] 开始登录:', account);
     try {
-      const responseData = await authControllerLogin({
+      const response = await authControllerLogin({
         body: { account, password },
-      }) as unknown as AuthResponseData;
+      });
+      const responseData = response.data as AuthResponseData;
       console.log('[AuthContext] 登录响应:', responseData);
 
       const {
