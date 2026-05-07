@@ -127,7 +127,8 @@ export const RoleManagement = () => {
   const loadCurrentUser = async () => {
     try {
       const response = await authControllerGetProfile();
-      setCurrentUser(response.data ?? null);
+      const data = (response as { data?: unknown })?.data;
+      setCurrentUser((data as UserDto) ?? null);
     } catch (error) {
       console.error('加载用户信息失败:', error);
     }
@@ -145,7 +146,19 @@ export const RoleManagement = () => {
   const loadProjectRoles = async () => {
     try {
       const response = await rolesControllerGetSystemProjectRoles();
-      setProjectRoles(response.data ?? []);
+      const roles = response.data ?? [];
+      setProjectRoles(
+        roles.map((dto) => ({
+          id: dto.id,
+          name: dto.name,
+          description: dto.description,
+          isSystem: dto.isSystem,
+          permissions: dto.permissions.map((p) => p.permission),
+          createdAt: dto.createdAt,
+          updatedAt: dto.updatedAt,
+          _count: { members: Number(dto._count?.members ?? 0) },
+        })),
+      );
     } catch (error) {
       console.error('加载项目角色失败:', error);
     }
