@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { healthControllerCheck } from '@/api-sdk';
-import { adminApi } from '../services/adminApi';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -108,10 +107,14 @@ export const SystemMonitorPage: React.FC = () => {
   // 获取存储清理统计信息
   const fetchCleanupStats = useCallback(async () => {
     try {
-      const response = await adminApi.getCleanupStats();
-      if (response.data) {
-        setCleanupStats(response.data);
-      }
+      // TODO: Implement adminApi when backend endpoint is ready
+      // const response = await adminApi.getCleanupStats();
+      // if (response.data) {
+      //   setCleanupStats(response.data);
+      // }
+      console.log('fetchCleanupStats: adminApi not implemented yet');
+      // 临时设置模拟数据
+      setCleanupStats({ total: 0, expiryDate: new Date().toISOString(), delayDays: 30 });
     } catch (err) {
       console.error('获取存储清理统计失败:', err);
     }
@@ -124,13 +127,14 @@ export const SystemMonitorPage: React.FC = () => {
     setCleanupSuccess(null);
     setCleanupResult(null);
     try {
-      const response = await adminApi.cleanupStorage(0); // 0表示立即清理
-      if (response.data) {
-        setCleanupSuccess('存储清理完成');
-        setCleanupResult(response.data);
-        // 重新获取统计信息
-        await fetchCleanupStats();
-      }
+      // TODO: Implement adminApi when backend endpoint is ready
+      // const response = await adminApi.cleanupStorage(0);
+      // if (response.data) {
+      //   setCleanupSuccess('存储清理完成');
+      //   setCleanupResult(response.data);
+      //   await fetchCleanupStats();
+      // }
+      setCleanupError('存储清理功能暂未实现');
     } catch (err) {
       setCleanupError('存储清理失败');
       console.error('存储清理失败:', err);

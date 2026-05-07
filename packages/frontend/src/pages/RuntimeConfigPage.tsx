@@ -80,8 +80,12 @@ export const RuntimeConfigPage: React.FC = () => {
   const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
-      const configs = await runtimeConfigControllerGetAllConfigs().then(r => r.data);
-      setConfigs(configs);
+      const configs = (await runtimeConfigControllerGetAllConfigs().then(r => r.data)) as RuntimeConfigResponseDto[] | undefined;
+      if (configs && Array.isArray(configs)) {
+        setConfigs(configs);
+      } else {
+        setConfigs([]);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '获取配置失败';
       showToast(message, 'error');
@@ -125,7 +129,7 @@ export const RuntimeConfigPage: React.FC = () => {
       setSaving((prev) => new Set(prev).add(key));
       await runtimeConfigControllerUpdateConfig({
         path: { key },
-        body: { value } as UpdateRuntimeConfigDto,
+        body: { value },
       }).then(r => r.data);
       showToast('配置已保存', 'success');
       setEditedValues((prev) => {

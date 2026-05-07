@@ -81,8 +81,11 @@ export const useSaveAs = ({
   // 项目切换时自动选择第一个项目
   useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
-      setSelectedProjectId(projects[0].id);
-      setSelectedParentId(projects[0].id);
+      const firstProject = projects[0];
+      if (firstProject) {
+        setSelectedProjectId(firstProject.id);
+        setSelectedParentId(firstProject.id);
+      }
     }
   }, [projects, selectedProjectId]);
 

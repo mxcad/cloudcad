@@ -56,6 +56,7 @@ export const ForgotPassword: React.FC = () => {
     supportPhone?: string;
   } | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const {
     register,
@@ -103,7 +104,7 @@ export const ForgotPassword: React.FC = () => {
   const switchContactType = (type: 'email' | 'phone') => {
     setContactType(type);
     setValue('contactType', type);
-    setError(null);
+    setLocalError(null);
   };
 
   // 邮件服务未启用 - 客服联系页面
