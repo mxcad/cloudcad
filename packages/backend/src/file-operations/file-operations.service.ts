@@ -436,7 +436,7 @@ export class FileOperationsService {
               : 'LIBRARY_BLOCK_MANAGE';
           const hasPermission = await this.permissionService.checkSystemPermission(
             userId,
-            requiredPermission as any
+            requiredPermission
           );
           if (!hasPermission) {
             throw new ForbiddenException('没有访问该资源库的权限');
