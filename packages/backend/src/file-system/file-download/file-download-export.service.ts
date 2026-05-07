@@ -418,7 +418,8 @@ export class FileDownloadExportService {
       try {
         stream = await this.getFileStream(filePath);
         const sanitizedFileName = this.sanitizeFileName(filename);
-        archive.append(stream as any, { name: sanitizedFileName });
+        // @ts-expect-error - NodeJS.ReadableStream and archiver's ReadableStream type mismatch, but runtime compatible
+        archive.append(stream, { name: sanitizedFileName });
 
         stream.on('close', () => {
           this.logger.debug(`文件流已关闭: ${filename}`);
