@@ -7,6 +7,8 @@ import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import type { AuthApiResponseDto } from '../api-sdk';
+import type { AuthApiResponseDto } from '../api-sdk';
 
 // Lucide 图标
 import { Phone } from 'lucide-react';
@@ -109,11 +111,9 @@ export const PhoneVerification: React.FC = () => {
     try {
       if (bindMode) {
         // 绑定模式：调用绑定手机号接口，返回 token 后存储并通过刷新更新 AuthContext
-        // bindPhoneAndLogin returns AuthApiResponseDto (unwrapped by SDK)
-        const responseData = (await bindPhoneAndLogin()) as Record<string, unknown> | undefined;
-        const accessToken = (responseData ?? {}).accessToken as string;
-        const refreshToken = (responseData ?? {}).refreshToken as string;
-        const userData = (responseData ?? {}).user;
+        const response = await bindPhoneAndLogin();
+        if (!response) throw new Error('绑定手机号失败');
+        const { accessToken, refreshToken, user: userData } = response.data;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(userData));

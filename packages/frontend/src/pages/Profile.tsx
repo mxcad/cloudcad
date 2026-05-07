@@ -986,7 +986,7 @@ export const Profile: React.FC = () => {
           )}
 
           <div className="content-area">
-            {activeTab === 'info' && <ProfileInfoTab user={user as any} />}
+            {activeTab === 'info' && <ProfileInfoTab user={user as Parameters<typeof ProfileInfoTab>[0]['user']} />}
 
             {activeTab === 'password' && (
               <ProfilePasswordTab
@@ -1010,7 +1010,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'email' && (
               <ProfileEmailTab
-                user={user as any}
+                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
@@ -1036,7 +1036,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'phone' && smsEnabled && (
               <ProfilePhoneTab
-                user={user as any}
+                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
@@ -1061,7 +1061,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'wechat' && wechatEnabled && (
               <ProfileWechatTab
-                user={user as any}
+                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
                 loading={loading}
     
  
@@ -1072,7 +1072,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'deactivate' && (
               <ProfileDeactivateTab
-                user={user as any}
+                user={user as Parameters<typeof ProfileEmailTab>[0]['user']}
                 deactivateForm={deactivateForm}
                 showPassword={showPassword}
                 deactivateLoading={deactivateLoading}

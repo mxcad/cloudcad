@@ -300,7 +300,7 @@ export const CADEditorDirect: React.FC = () => {
       // 使用 Vue watch 监听 Vuetify 主题变化
       watch(
         () => vuetify.theme.global.name.value,
-        (themeName: any) => {
+        (themeName: unknown) => {
           const isDark = themeName === 'dark';
 
           // 派发事件通知 React ThemeContext
@@ -516,7 +516,7 @@ export const CADEditorDirect: React.FC = () => {
         } else {
           // 项目文件：需要登录
           try {
-            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as any;
+            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as unknown as { data: unknown };
             file = fileNode as typeof file;
           } catch (error) {
             console.error('获取文件信息失败:', error);
@@ -1173,9 +1173,9 @@ export const CADEditorDirect: React.FC = () => {
       setDownloading(true);
       const { data: blobData } = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
-        query: { format, ...(pdfOptions as any) },
+        query: { format, ...pdfOptions },
         responseStyle: 'blob',
-      } as any);
+      } as Parameters<typeof fileSystemControllerDownloadNodeWithFormat>[0]);
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);

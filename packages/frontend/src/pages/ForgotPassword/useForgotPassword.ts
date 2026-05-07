@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { authControllerForgotPassword } from '@/api-sdk';
+import type { ForgotPasswordResponseDto } from '@/api-sdk';
 
 interface ForgotPasswordResult {
   mailEnabled: boolean;
@@ -27,8 +28,9 @@ export function useForgotPassword() {
           validateContact: '',
         },
       });
-      const responseData = (result.data ?? {}) as ForgotPasswordResult;
-      return responseData;
+      const apiResponse = result.data;
+      if (!apiResponse?.data) return null;
+      return apiResponse.data;
     } catch (err) {
       const message =
         (err as Error & { response?: { data?: { message?: string } } })

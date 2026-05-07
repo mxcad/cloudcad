@@ -914,7 +914,7 @@ export const LibraryManager: React.FC = () => {
       {/* 重命名模态框 */}
       <RenameModal
         isOpen={isRenameModalOpen}
-        editingNode={renamingNode as FileSystemNode}
+        editingNode={renamingNode}
         newName={renameName}
         loading={false}
         onClose={closeRenameModal}
