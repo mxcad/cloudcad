@@ -21,11 +21,11 @@
  * 检查用户是否已登录
  * @returns boolean 是否已登录
  */
-import { isValidToken } from './tokenUtils';
+import { isValidToken, getValidToken } from './tokenUtils';
 
 export function isAuthenticated(): boolean {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = getValidToken();
     const user = localStorage.getItem('user');
     return isValidToken(token) && !!user;
   } catch {

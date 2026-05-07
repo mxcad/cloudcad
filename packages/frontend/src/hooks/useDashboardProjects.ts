@@ -7,8 +7,6 @@ import {
 } from '@/api-sdk';
 import type {
   FileSystemNodeDto,
-  ProjectListResponseDto,
-  NodeListResponseDto,
 } from '@/api-sdk';
 
 const PROJECTS_KEY = ['dashboard', 'projects'] as const;
@@ -25,15 +23,15 @@ export function useDashboardProjects() {
   const projectsQuery = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: async () => {
-      const result = await fileSystemControllerGetProjects({ query: {} } as any);
+      const result = await fileSystemControllerGetProjects({ query: {} });
       if (result.error) throw result.error;
-      const data = result.data as any;
+      const data = result.data;
       const sorted = (data?.nodes || [])
-        .filter((p: FileSystemNodeDto) => (p as any).status !== 'DELETED')
+        .filter((p: FileSystemNodeDto) => p.status !== 'DELETED')
         .sort(
           (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
-            new Date((b as any).updatedAt).getTime() -
-            new Date((a as any).updatedAt).getTime()
+            new Date(b.updatedAt).getTime() -
+            new Date(a.updatedAt).getTime()
         );
       return { nodes: sorted, raw: data };
     },
@@ -45,7 +43,7 @@ export function useDashboardProjects() {
     queryFn: async () => {
       const result = await fileSystemControllerGetPersonalSpace();
       if (result.error) throw result.error;
-      return result.data as FileSystemNodeDto | null;
+      return result.data ?? null;
     },
     throwOnError: false,
   });
@@ -59,10 +57,10 @@ export function useDashboardProjects() {
       const result = await fileSystemControllerGetChildren({
         path: { nodeId: personalSpaceId! },
         query: { limit: 10 },
-      } as any);
+      });
       if (result.error) throw result.error;
-      const data = result.data as NodeListResponseDto;
-      return data?.nodes || [];
+      const data = result.data;
+      return data?.nodes ?? [];
     },
     enabled: !!personalSpaceId,
     throwOnError: false,
@@ -75,10 +73,10 @@ export function useDashboardProjects() {
         body: {
           name: payload.name.trim(),
           description: payload.description?.trim() || undefined,
-        } as any,
+        },
       });
       if (result.error) throw result.error;
-      return result.data as FileSystemNodeDto;
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
@@ -86,8 +84,8 @@ export function useDashboardProjects() {
   });
 
   return {
-    projects: projectsQuery.data?.nodes || [],
-    personalFiles: (personalFilesQuery.data as FileSystemNodeDto[]) || [],
+    projects: projectsQuery.data?.nodes ?? [],
+    personalFiles: personalFilesQuery.data ?? [],
     loading:
       projectsQuery.isLoading ||
       personalSpaceQuery.isLoading ||

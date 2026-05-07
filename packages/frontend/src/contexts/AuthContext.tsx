@@ -20,6 +20,7 @@ import {
 import type { UserDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
+import { isValidToken, getValidToken } from '@/utils/tokenUtils';
 
 type User = UserDtoType;
 
@@ -70,16 +71,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 同步初始化，避免闪烁
   const getInitialAuthState = () => {
     try {
-      const storedToken = localStorage.getItem('accessToken');
+      const storedToken = getValidToken();
       const storedUser = localStorage.getItem('user');
-
-      if (storedToken && storedUser) {
+      const isValid = isValidToken(storedToken);
+      if (isValid && storedUser) {
         return {
           token: storedToken,
           user: JSON.parse(storedUser),
           loading: true, // will be set to false after token validation
         };
       }
+      // 清除无效 token
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
     } catch (error) {
       // 静默：初始化认证状态失败
     }
