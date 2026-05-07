@@ -195,8 +195,15 @@ export const UserManagement = () => {
     return !errors.username && !errors.email && !errors.password;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (_data: {
+    username: string;
+    email: string;
+    phone: string;
+    password: string;
+    roleId: string;
+    nickname: string;
+    status?: string;
+  }) => {
     if (!validateForm()) return;
     try {
       if (editingUser) {
