@@ -334,7 +334,7 @@ export const useExternalReferenceUpload = (
         const newFiles = [...prevFiles];
         selectedFiles.forEach((file) => {
           const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) { (existingFile as any).source = file;
+          if (existingFile) { Object.assign(existingFile, { source: file });
             existingFile.uploadState = 'notSelected';
           } else {
             console.warn(`未找到匹配的缺失文件: ${file.name}`);
@@ -416,7 +416,7 @@ export const useExternalReferenceUpload = (
             formData.append('file', fileInfo.source);
             formData.append('srcFileHash', id);
             formData.append('extRefFile', fileInfo.name);
-            await publicFileControllerUploadExtReference({ body: formData as any });
+            await publicFileControllerUploadExtReference({ body: formData as unknown as Record<string, unknown> });
           }
         } else {
           if (isLoggedIn) {
@@ -424,14 +424,14 @@ export const useExternalReferenceUpload = (
             const formData = new FormData();
             formData.append('file', fileInfo.source);
             formData.append('ext_ref_file', fileInfo.name);
-            await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as any });
+            await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as unknown as Record<string, unknown> });
           } else {
             // DWG 外部参照：使用公开上传接口（未登录用户）
             const formData = new FormData();
             formData.append('file', fileInfo.source);
             formData.append('srcFileHash', id);
             formData.append('extRefFile', fileInfo.name);
-            await publicFileControllerUploadExtReference({ body: formData as any });
+            await publicFileControllerUploadExtReference({ body: formData as unknown as Record<string, unknown> });
           }
         }
 
@@ -533,7 +533,7 @@ export const useExternalReferenceUpload = (
         const newFiles = [...prevFiles];
         selectedFiles.forEach((file) => {
           const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) { (existingFile as any).source = file;
+          if (existingFile) { Object.assign(existingFile, { source: file });
             existingFile.uploadState = 'notSelected';
           } else {
             console.warn(`未找到匹配的缺失文件: ${file.name}`);

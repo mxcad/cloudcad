@@ -30,8 +30,9 @@ export const useAccountDeactivate = () => {
   const resendVerification = useMutation({
     mutationFn: async (params: { email: string }) => {
       const result = await authControllerResendVerification({
+        // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
         body: { email: params.email },
-      } as Parameters<typeof authControllerResendVerification>[0]);
+      });
       if (result.error) throw result.error;
       return result;
     },

@@ -206,9 +206,9 @@ export const UserManagement = () => {
           roleId: formData.roleId,
           nickname: formData.nickname,
           status: formData.status,
-        } as UpdateUserDto;
+        } as UpdateUserDto & { password?: string };
         if (formData.password) {
-          (updateData as any).password = formData.password;
+          updateData.password = formData.password;
         }
         await updateUser(editingUser.id, updateData);
         showSuccess('用户更新成功');

@@ -366,7 +366,7 @@ export const useFileSystemData = ({
       fileSystemControllerGetRootNode({
         path: { nodeId: effectiveNodeId },
       })
-        .then((rootNode: any) => {
+        .then((rootNode: { personalSpaceKey?: string } | undefined) => {
           if (rootNode?.personalSpaceKey) {
             if (urlNodeId) {
               navigate(`/personal-space/${urlNodeId}`);
