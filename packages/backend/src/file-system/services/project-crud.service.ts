@@ -25,7 +25,7 @@ import { CreateProjectDto } from '../dto/create-project.dto';
 import { CreateFolderDto } from '../dto/create-folder.dto';
 import { UpdateNodeDto } from '../dto/update-node.dto';
 import { QueryProjectsDto } from '../dto/query-projects.dto';
-import { FileOperationsService } from './file-operations.service';
+import { FileOperationsService } from '../../file-operations/file-operations.service';
 import { FileTreeService } from './file-tree.service';
 import { NodeListResponseDto, FileSystemNodeDto } from '../dto/file-system-response.dto';
 import * as path from 'path';
