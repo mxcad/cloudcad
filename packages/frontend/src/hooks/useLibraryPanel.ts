@@ -139,6 +139,11 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
 
           const libraryResponse = await libraryApiMethod();
           const library = libraryResponse.data;
+          if (!library) {
+            setError('获取资源库信息失败');
+            setLoading(false);
+            return;
+          }
           libId = library.id;
           setLibraryId(libId);
         }
@@ -160,7 +165,7 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
         });
 
         const childrenData = response.data;
-        setNodes(childrenData.nodes || []);
+        setNodes(childrenData?.nodes || []);
       } catch (err) {
         if (isAbortError(err)) return;
 
@@ -318,8 +323,13 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
         const response = await apiMethod({ path: { nodeId: node.id } });
         const fileData = response.data;
 
+        if (!fileData) {
+          showToast?.('获取文件信息失败', 'error');
+          return;
+        }
+
         // 调用回调打开文件
-        onFileOpen?.(fileData);
+        onFileOpen?.(fileData as FileSystemNode);
         showToast?.(`已打开：${fileData.name}`, 'success');
       } catch (err) {
         if (isAbortError(err)) return;
@@ -338,10 +348,14 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
       try {
         // 使用 SDK 下载文件
         const response = libraryType === 'drawing'
-          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id }, responseType: 'blob' })
-          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id }, responseType: 'blob' });
+          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id }, responseStyle: 'blob' })
+          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id }, responseStyle: 'blob' });
 
         // 处理下载
+        if (!response.data) {
+          showToast?.('下载失败：文件内容为空', 'error');
+          return;
+        }
         const blob = new Blob([response.data as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
