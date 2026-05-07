@@ -139,16 +139,16 @@ client.setConfig({
             headers.set('Authorization', `Bearer ${getValidToken()}`);
             response = await nativeFetch(input, { ...init, headers });
           } else {
-            clearAuthAndRedirect();
+            handleTokenRefreshFailure();
           }
         } else {
-          clearAuthAndRedirect();
+          handleTokenRefreshFailure();
         }
       }
 
       // Profile 401: redirect to login
       if (url.includes('/auth/profile')) {
-        clearAuthAndRedirect();
+        handleTokenRefreshFailure();
       }
     }
 
