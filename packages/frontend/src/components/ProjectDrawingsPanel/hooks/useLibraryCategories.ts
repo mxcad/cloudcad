@@ -68,7 +68,7 @@ export function useLibraryCategories(
                 limit: 100,
               } });
 
-        const folders = response?.nodes || [];
+        const folders = (response as any)?.nodes || [];
 
         const items: CategoryItem[] = [
           { id: 'all', name: '全部', hasChildren: level === 0 },
@@ -129,7 +129,7 @@ export function useLibraryCategories(
                 limit: 100,
               } });
 
-        const folders = response?.nodes || [];
+        const folders = (response as any)?.nodes || [];
 
         const items: CategoryItem[] = [
           { id: 'all', name: '全部', hasChildren: level === 0 },
@@ -227,7 +227,7 @@ export function useLibraryCategories(
           libraryType === 'drawing'
             ? await libraryControllerGetDrawingLibrary()
             : await libraryControllerGetBlockLibrary();
-        const libraryNode = response as { id?: string; name?: string };
+        const libraryNode = response as any as { id?: string; name?: string };
         if (libraryNode?.id) {
           setLibraryRootId(libraryNode.id);
 
@@ -275,7 +275,7 @@ export function useLibraryCategories(
                     limit: PAGE_SIZE,
                   } });
 
-            const files = response?.nodes || [];
+            const files = (response as any)?.nodes || [];
             // Note: These values need to be consumed by the caller
             // We don't set nodes here - that's done by the caller via the callback pattern
           } catch (error: unknown) {
@@ -296,7 +296,7 @@ export function useLibraryCategories(
                   limit: 100,
                 } });
 
-          const folders = response?.nodes || [];
+          const folders = (response as any)?.nodes || [];
           childCategories = [
             { id: 'all', name: '全部', hasChildren: level < 1 },
             ...folders.map((folder: FileSystemNode) => ({
