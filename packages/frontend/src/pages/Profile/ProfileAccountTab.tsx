@@ -368,7 +368,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                         onSetDeactivateForm((f) => ({ ...f }));
                         return;
                       }
-                      await authControllerResendVerification({ body: { email: user.email } } as Parameters<typeof authControllerResendVerification>[0]);
+                      await authControllerResendVerification({ body: { email: user.email } } as unknown as Parameters<typeof authControllerResendVerification>[0]);
                       onSetDeactivateCountdown(60);
                       const timer = setInterval(() => {
                         onSetDeactivateCountdown((c) => {
