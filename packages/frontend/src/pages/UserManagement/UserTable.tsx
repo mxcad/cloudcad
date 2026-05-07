@@ -14,10 +14,10 @@ interface UserTableProps {
   }>;
   mailEnabled: boolean;
   smsEnabled: boolean;
-  onEdit: (user: any) => void;
+  onEdit: (user: UserTableProps['users'][number]) => void;
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
-  onOpenQuota: (user: any) => void;
+  onOpenQuota: (user: UserTableProps['users'][number]) => void;
   userTab: 'active' | 'deleted';
   loading: boolean;
 }

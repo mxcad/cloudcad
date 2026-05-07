@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: EditUserModalProps['formData']) => void;
   roles: Array<{ id: string; name: string; isSystem?: boolean }>;
   mailEnabled: boolean;
   loading: boolean;

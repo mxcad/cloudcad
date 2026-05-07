@@ -7,7 +7,7 @@ import {
   usersControllerDeleteImmediately,
   usersControllerRestore,
 } from '@/api-sdk';
-import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
+import type { UserResponseDto, UpdateUserDto, CreateUserDto } from '@/api-sdk';
 
 const USERS_KEY = ['users'] as const;
 
@@ -28,7 +28,7 @@ export function useUserCRUD() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => usersControllerCreate({ body: data }),
+    mutationFn: (data: CreateUserDto) => usersControllerCreate({ body: data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
   });
 
