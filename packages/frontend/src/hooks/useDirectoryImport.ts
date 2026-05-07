@@ -683,8 +683,8 @@ export function useDirectoryImport() {
                   ? await libraryControllerGetDrawingChildren({ path: { nodeId: currentParentId } })
                   : await libraryControllerGetBlockChildren({ path: { nodeId: currentParentId } });
                 const nodeList =
-                  (childrenResponse as any).data?.nodes ||
-                  (childrenResponse as any).nodes ||
+                  childrenResponse.data?.nodes ||
+                  childrenResponse.data?.nodes ||
                   [];
                 const existingFolder = nodeList.find(
                   (n: FileSystemNodeDto) =>
@@ -705,8 +705,8 @@ export function useDirectoryImport() {
                   ? await libraryControllerGetDrawingChildren({ path: { nodeId: currentParentId } })
                   : await libraryControllerGetBlockChildren({ path: { nodeId: currentParentId } });
                 const nodeList =
-                  (childrenResponse as any).data?.nodes ||
-                  (childrenResponse as any).nodes ||
+                  childrenResponse.data?.nodes ||
+                  childrenResponse.data?.nodes ||
                   [];
                 const existingFolder = nodeList.find(
                   (n: FileSystemNodeDto) =>

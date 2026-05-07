@@ -54,15 +54,15 @@ export function useMoveCopy({
           const nodeIds = Array.from(selectedNodes) as string[];
           for (const nodeId of nodeIds) {
             if (moveSourceNode) {
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } } as any);
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } });
             } else {
-              await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } } as any);
+              await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
             }
           }
         } else if (moveSourceNode) {
-          await fileSystemControllerMoveNode({ path: { nodeId: moveSourceNode.id }, body: { targetParentId } } as any);
+          await fileSystemControllerMoveNode({ path: { nodeId: moveSourceNode.id }, body: { targetParentId } });
         } else if (copySourceNode) {
-          await fileSystemControllerCopyNode({ path: { nodeId: copySourceNode.id }, body: { targetParentId } } as any);
+          await fileSystemControllerCopyNode({ path: { nodeId: copySourceNode.id }, body: { targetParentId } });
         }
         handleRefresh();
         closeMoveCopy();

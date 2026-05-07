@@ -292,7 +292,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       const { data: blobData } = await fontsControllerDownloadFont({
         path: { fileName: fontName },
         query: { location: activeTab },
-        responseStyle: 'blob' as any,
+        responseStyle: 'blob' // responseStyle expects 'blob' for binary downloads,
       });
       const url = window.URL.createObjectURL(blobData as Blob | MediaSource);
       const link = document.createElement('a');
@@ -903,6 +903,7 @@ function UploadFontModal({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('target', target);
+      // FormData is required for file upload, but API expects JSON; cast needed
       await fontsControllerUploadFont({ body: formData as any });
       showToast('上传成功', 'success');
       onSuccess();

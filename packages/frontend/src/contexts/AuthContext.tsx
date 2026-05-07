@@ -102,10 +102,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(initialState.loading);
   const [error, setError] = useState<string | null>(null);
 
-  // 异步验证 token - 只在 token 存在且用户信息存在时执行
+  // 异步验证 token - token 存在时获取用户信息
   useEffect(() => {
     const validateToken = async () => {
-      if (token && user) {
+      if (token) {
         setLoading(true);
         try {
           const userData = await authControllerGetProfile() as User;

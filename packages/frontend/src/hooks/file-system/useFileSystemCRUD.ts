@@ -119,7 +119,7 @@ export const useFileSystemCRUD = ({
     try {
       await fileSystemControllerCreateFolder({
         path: { parentId: parentNodeId },
-        body: { name: folderName.trim() } as any,
+        body: { name: folderName.trim() },
       });
       showToast('文件夹创建成功', 'success');
       setFolderName('');
@@ -157,7 +157,7 @@ export const useFileSystemCRUD = ({
       }
 
       // TODO: Replace with SDK when backend adds renameNode endpoint
-      await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName } as any });
+      await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName } });
       showToast('重命名成功', 'success');
       setFolderName('');
       setShowRenameModal(false);
@@ -321,7 +321,7 @@ export const useFileSystemCRUD = ({
       `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
       async () => {
         try {
-          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) } as any });
+          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) } });
           showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
           clearSelection();
           loadData();
@@ -358,7 +358,7 @@ export const useFileSystemCRUD = ({
     async (name: string, description?: string) => {
       try {
         await fileSystemControllerCreateProject({
-          body: { name: name.trim(), description: description?.trim() } as any,
+          body: { name: name.trim(), description: description?.trim() },
         });
         showToast('项目创建成功', 'success');
         loadData();
@@ -438,7 +438,7 @@ export const useFileSystemCRUD = ({
           try {
             if (node.isRoot) {
               // TODO: Replace with SDK when backend adds restoreProject endpoint
-              await fileSystemControllerRestoreTrashItems({ body: { itemIds: [node.id] } as any });
+              await fileSystemControllerRestoreTrashItems({ body: { itemIds: [node.id] } });
             } else {
               await fileSystemControllerRestoreNode({ path: { nodeId: node.id } });
             }

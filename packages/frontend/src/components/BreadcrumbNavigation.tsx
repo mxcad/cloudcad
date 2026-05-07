@@ -26,7 +26,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
         const isLast = index === breadcrumbs.length - 1;
 
         return (
-          <React.Fragment key={crumb.id}>
+          <React.Fragment key={crumb.id || `crumb-${index}`}>
             {/* 分隔符 - 除了第一项 */}
             {index > 0 && (
               <ChevronRightIcon

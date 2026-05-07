@@ -65,7 +65,7 @@ export function useVersionHistory({
           },
         });
         if (result.error) throw result.error;
-        const data = result.data as any;
+        const data = result.data;
         if (data?.success) {
           setVersionHistoryEntries(data.entries || []);
         } else {

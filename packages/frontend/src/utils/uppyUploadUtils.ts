@@ -110,7 +110,7 @@ export const uploadFileWithUppy = async (
     },
   });
 
-  const existData = existResponse.data as any;
+  const existData = existResponse.data;
   if (existData?.exists && existData?.nodeId) {
     return {
       file,
