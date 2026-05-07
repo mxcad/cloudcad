@@ -106,14 +106,22 @@ export function usePhoneVerification({ setFieldErrors }: PhoneVerificationOption
       const { authControllerCheckFieldUniqueness, authControllerSendSmsCode } = await import('@/api-sdk');
 
       // 先检查手机号是否已被注册
-      const checkResult = await authControllerCheckFieldUniqueness();
+      const checkResult = await authControllerCheckFieldUniqueness({
+        body: {
+          phone: phoneForm.phone,
+        },
+      });
       if ((checkResult as { phoneExists?: boolean })?.phoneExists) {
         setFieldErrors((prev) => ({ ...prev, phone: '该手机号已被注册' }));
         return;
       }
 
       // 手机号可用，发送验证码
-      const { data: response } = await authControllerSendSmsCode();
+      const { data: response } = await authControllerSendSmsCode({
+        body: {
+          phone: phoneForm.phone,
+        },
+      });
       if ((response as { success?: boolean })?.success) {
         setCountdown(60);
       } else {

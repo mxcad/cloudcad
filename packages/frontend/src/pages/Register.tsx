@@ -264,7 +264,7 @@ export const Register: React.FC = () => {
           )}
 
           {/* 表单内容 */}
-          <form className="register-form" onSubmit={(e) => handleFormSubmit(e, phoneForm, wechatTempToken)}>
+          <form className="register-form" onSubmit={(e) => handleFormSubmit(e)}>
             {/* 步骤 1：基本信息 */}
             {currentStep === 1 && (
               <div className="form-step animate-fade-in">

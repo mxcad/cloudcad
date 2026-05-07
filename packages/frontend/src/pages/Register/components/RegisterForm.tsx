@@ -58,7 +58,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   };
 
   const onSubmit = (e: React.FormEvent) => {
-    form.handleSubmit(e);
+    form.handleFormSubmit(e);
   };
 
   // Helper: spread register props + chain onBlur for focusedField tracking

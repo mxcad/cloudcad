@@ -51,11 +51,7 @@ export interface UseRegisterFormReturn {
   // Actions
   handleNext: (phoneForm: { phone: string; code: string }) => Promise<void>;
   handleBack: () => void;
-  handleFormSubmit: (
-    e: React.FormEvent,
-    phoneForm: { phone: string; code: string },
-    wechatTempToken: string | null,
-  ) => Promise<void>;
+  handleFormSubmit: (e: React.FormEvent) => Promise<void>;
 }
 
 // ──────────────────────────────────────────────
@@ -109,11 +105,11 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
   // ── Combined field errors (zod + external) ─────
   const fieldErrors: Record<string, string> = { ...externalErrors };
-  if (formState.errors.username) fieldErrors.username = formState.errors.username.message;
-  if (formState.errors.nickname) fieldErrors.nickname = formState.errors.nickname.message;
-  if (formState.errors.email) fieldErrors.email = formState.errors.email.message;
-  if (formState.errors.password) fieldErrors.password = formState.errors.password.message;
-  if (formState.errors.confirmPassword) fieldErrors.confirmPassword = formState.errors.confirmPassword.message;
+  if (formState.errors.username) fieldErrors.username = formState.errors.username.message || '';
+  if (formState.errors.nickname) fieldErrors.nickname = formState.errors.nickname.message || '';
+  if (formState.errors.email) fieldErrors.email = formState.errors.email.message || '';
+  if (formState.errors.password) fieldErrors.password = formState.errors.password.message || '';
+  if (formState.errors.confirmPassword) fieldErrors.confirmPassword = formState.errors.confirmPassword.message || '';
 
   // ── Step 1 validation (Zod + async uniqueness) ─
   const validateStep1 = useCallback(async (): Promise<boolean> => {
@@ -201,11 +197,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
   // ── Final submit ───────────────────────────────
   const handleFormSubmit = useCallback(
-    async (
-      e: React.FormEvent,
-      phoneForm: { phone: string; code: string },
-      wechatTempToken: string | null,
-    ) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
 
       const values = getValues();
@@ -252,10 +244,15 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
       setLoading(true);
       setError(null);
 
+      // Get current phone form from options
+      const currentPhoneForm = options.phoneForm;
+      // Get wechat temp token from session storage
+      const wechatTempToken = sessionStorage.getItem('wechatTempToken');
+
       try {
         if (
-          phoneForm.phone &&
-          phoneForm.code &&
+          currentPhoneForm.phone &&
+          currentPhoneForm.code &&
           smsEnabled &&
           requirePhoneVerification
         ) {
@@ -263,8 +260,8 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
             navigate('/verify-email', {
               state: {
                 email: values.email,
-                phone: phoneForm.phone,
-                code: phoneForm.code,
+                phone: currentPhoneForm.phone,
+                code: currentPhoneForm.code,
                 username: values.username,
                 password: values.password,
                 nickname: values.nickname,
@@ -276,8 +273,8 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
           const registerResult = await authControllerRegisterByPhone({
             body: {
-              phone: phoneForm.phone,
-              code: phoneForm.code,
+              phone: currentPhoneForm.phone,
+              code: currentPhoneForm.code,
               username: values.username,
               password: values.password,
               nickname: values.nickname || undefined,
@@ -353,7 +350,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
       isWechatRegister,
       navigate,
       registerUser,
-      phoneForm,
+      options.phoneForm,
     ],
   );
 
