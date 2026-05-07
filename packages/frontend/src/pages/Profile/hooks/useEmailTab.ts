@@ -26,12 +26,15 @@ export const useEmailTab = () => {
   const verification = useVerificationCode({
     onSend: async (email: string, isForNewEmail = false) => {
       if (isForNewEmail) {
+        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; isRebind?: boolean }
         await authControllerSendBindEmailCode({ body: { email, isRebind: true } });
       } else {
+        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string }
         await authControllerSendBindEmailCode({ body: { email } });
       }
     },
     onVerify: async (email: string, code: string) => {
+      // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
       return await authControllerVerifyBindEmail({ body: { email, code } });
     },
   });
@@ -51,6 +54,7 @@ export const useEmailTab = () => {
       return;
     }
     try {
+      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string }
       await authControllerSendBindEmailCode({ body: { email: form.email } } );
       setStep('verify');
       setSuccess('验证码已发送到您的邮箱');
@@ -70,6 +74,7 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     try {
+      // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
       await authControllerVerifyBindEmail({ body: { email: form.email, code: form.code } } );
       setSuccess('邮箱绑定成功');
       setStep('input');
@@ -118,6 +123,7 @@ export const useEmailTab = () => {
       return;
     }
     try {
+      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { code: string }
       const response = (await authControllerVerifyUnbindEmailCode({
         body: { code: form.code },
       })).data as { success?: boolean; message?: string; token?: string };
@@ -148,6 +154,7 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     try {
+      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; isRebind?: boolean }
       await authControllerSendBindEmailCode({ body: { email: form.email, isRebind: true } });
       setSuccess('验证码已发送');
       verification.resetCountdown();
@@ -183,6 +190,7 @@ export const useEmailTab = () => {
       return;
     }
     try {
+      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; code: string; token: string }
       const response = (await authControllerRebindEmail({
         body: { email: form.email, code: form.code, token: verifyToken },
       })).data as { success?: boolean; message?: string };

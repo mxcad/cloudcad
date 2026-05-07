@@ -54,7 +54,7 @@ export const useSaveAs = ({
       const result = await fileSystemControllerGetProjects({ query: { filter: 'all' } });
       if (result.error) throw result.error;
       const allProjects = result.data?.nodes || [];
-      return allProjects.map((project: any) => ({
+      return allProjects.map((project: ProjectDto) => ({
         id: project.id,
         name: project.name,
         hasUploadPermission: true,
@@ -111,7 +111,7 @@ export const useSaveAs = ({
         formData.append('libraryType', libraryType || 'drawing');
         formData.append('fileName', fileName.trim());
 
-        const result = await saveControllerSaveMxwebAs({ body: formData });
+        const result = await saveControllerSaveMxwebAs({ body: formData as unknown as SaveMxwebAsDto });
         const saveResult = result.data as SaveAsResult;
 
         return saveResult;
@@ -129,7 +129,7 @@ export const useSaveAs = ({
       formData.append('commitMessage', `Save as: ${fileName}.${format}`);
       formData.append('fileName', fileName.trim());
 
-      const result = await saveControllerSaveMxwebAs({ body: formData });
+      const result = await saveControllerSaveMxwebAs({ body: formData as unknown as SaveMxwebAsDto });
       const saveResult = result.data as SaveAsResult;
 
       return saveResult;
@@ -177,8 +177,8 @@ export const useSaveAs = ({
       });
 
       return result;
-    } catch (err: any) {
-      setError(err.message || '保存失败，请稍后重试');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '保存失败，请稍后重试');
       return null;
     }
   }, [fileName, selectedParentId, targetType, selectedProjectId, libraryType, format, getFolderPickerProjectId, saveMutation]);

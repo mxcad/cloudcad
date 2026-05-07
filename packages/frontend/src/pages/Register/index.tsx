@@ -106,7 +106,6 @@ export const Register: React.FC = () => {
             smsEnabled={smsEnabled}
             requirePhoneVerification={requirePhoneVerification}
             isWechatRegister={isWechatRegister}
-            wechatTempToken={wechatTempToken}
             prefillPhone={prefillPhone}
             prefillCode={prefillCode}
           />

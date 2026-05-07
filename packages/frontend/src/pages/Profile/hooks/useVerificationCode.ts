@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface UseVerificationCodeOptions {
-  onSend: (...args: any[]) => Promise<any>;
-  onVerify?: (...args: any[]) => Promise<any>;
+  onSend: (...args: unknown[]) => Promise<unknown>;
+  onVerify?: (...args: unknown[]) => Promise<unknown>;
   countdownKey?: string;
   initialCountdown?: number;
 }
@@ -46,7 +46,7 @@ export const useVerificationCode = ({
     };
   }, [countdown > 0]);
 
-  const sendCode = useCallback(async (...args: any[]) => {
+  const sendCode = useCallback(async (...args: unknown[]) => {
     setSendingCode(true);
     try {
       await onSend(...args);
@@ -59,7 +59,7 @@ export const useVerificationCode = ({
     }
   }, [onSend, initialCountdown]);
 
-  const verifyCode = useCallback(async (...args: any[]) => {
+  const verifyCode = useCallback(async (...args: unknown[]) => {
     if (!onVerify) {
       throw new Error('onVerify function not provided');
     }

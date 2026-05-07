@@ -31,7 +31,6 @@ import {
   AlertCircle,
   Crown,
 } from 'lucide-react';
-// @ts-expect-error - These components are exported from './components' but types are incomplete
 import { ProfileInfoTab, ProfilePasswordTab, ProfileEmailTab, ProfilePhoneTab, ProfileWechatTab, ProfileDeactivateTab } from './components';
 
 type TabType =
@@ -823,8 +822,8 @@ export const Profile: React.FC = () => {
         setError('手机号不存在');
         return;
       }
-      const phone = user.phone ?? '';
-      await sendSmsCode({ phone });
+      const phone = (user.phone ?? '') as string;
+      await sendSmsCode(phone);
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
         setDeactivateCountdown((c) => {
@@ -851,8 +850,8 @@ export const Profile: React.FC = () => {
         setError('邮箱不存在');
         return;
       }
-      const email = user.email ?? '';
-      await resendVerification({ email });
+      const email = (user.email ?? '') as string;
+      await resendVerification(email);
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
         setDeactivateCountdown((c) => {
