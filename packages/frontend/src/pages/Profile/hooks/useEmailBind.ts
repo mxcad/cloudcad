@@ -11,7 +11,7 @@ export const useEmailBind = () => {
   const sendBindCode = useMutation({
     mutationFn: async (params: { email: string; isRebind?: boolean }) => {
       const result = await authControllerSendBindEmailCode({
-        body: { email: params.email, isRebind: params.isRebind } as unknown as never,
+        body: { email: params.email, isRebind: params.isRebind },
       });
       if (result.error) throw result.error;
       return result;
@@ -39,7 +39,7 @@ export const useEmailBind = () => {
   const verifyUnbindEmail = useMutation({
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindEmailCode({
-        body: { code: params.code } as unknown as never,
+        body: { code: params.code },
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string; token?: string };
@@ -49,7 +49,7 @@ export const useEmailBind = () => {
   const rebindEmail = useMutation({
     mutationFn: async (params: { email: string; code: string; token: string }) => {
       const result = await authControllerRebindEmail({
-        body: { email: params.email, code: params.code, token: params.token } as unknown as never,
+        body: { email: params.email, code: params.code, token: params.token },
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
