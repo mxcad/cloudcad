@@ -92,13 +92,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 异步验证 token - 只在 token 存在且用户信息存在时执行
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
     const validateToken = async () => {
       if (token && user) {
         setLoading(true);
+
+        // 安全超时：10秒后强制结束loading，防止API挂起导致永久卡死
+        timeoutId = setTimeout(() => {
+          setLoading(false);
+        }, 10000);
+
         try {
-          const userData = await authControllerGetProfile() as unknown as User;
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
+          const response = await authControllerGetProfile();
+          if (response.data) {
+            const userData = response.data as unknown as User;
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+          } else if (response.error) {
+            // API返回了错误，但token可能仍有效，保留用户信息
+            console.warn('[AuthContext] Token验证返回错误:', response.error);
+            setLoading(false);
+          }
         } catch (error) {
           const fetchError = error as { status?: number };
           if (fetchError.status === 401) {
@@ -108,13 +123,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setToken(null);
             setUser(null);
           }
+          // 非401错误：保留当前token和用户信息，不强制登出
         } finally {
+          clearTimeout(timeoutId);
           setLoading(false);
         }
       }
     };
 
     validateToken();
+
+    return () => clearTimeout(timeoutId);
   }, [token]); // 依赖 token，当 token 变化时重新验证
 
   // Register callback so SDK can notify React state after silent token refresh
