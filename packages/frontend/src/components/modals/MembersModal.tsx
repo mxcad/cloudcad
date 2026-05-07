@@ -199,7 +199,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         body: {
           userId: selectedUser.id,
           projectRoleId: newRoleId,
-        } as unknown as undefined,
+        },
       });
 
       const data = memberData.data!;
@@ -259,7 +259,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       await fileSystemControllerUpdateProjectMember({
         path: { projectId, userId },
-        body: { projectRoleId } as unknown as undefined,
+        body: { projectRoleId },
       });
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
@@ -289,7 +289,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       await fileSystemControllerUpdateProjectMember({
         path: { projectId, userId: transferTarget.userId },
-        body: { roleName: 'PROJECT_OWNER' } as unknown as undefined,
+        body: { roleName: 'PROJECT_OWNER' },
       });
 
       // 刷新成员列表
