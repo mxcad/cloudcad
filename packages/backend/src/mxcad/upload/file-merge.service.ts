@@ -414,13 +414,13 @@ export class FileMergeService {
           }
         } catch (error) {
           await this.cacheManager.delete('file-upload', mergeKey);
-          this.logger.error('mergeConvertFile error', error);
+          this.logger.error(`mergeConvertFile error for file ${fileName}, hash ${fileMd5}:`, error);
           if (newNodeId) {
             try {
               await this.fileSystemServiceMain.deleteNode(newNodeId, true);
             } catch (deleteError) {
               this.logger.error(
-                `[mergeConvertFile] 删除节点失败: ${deleteError.message}`
+                `[mergeConvertFile] Failed to delete node ${newNodeId} after error: ${deleteError.message}`
               );
             }
           }
