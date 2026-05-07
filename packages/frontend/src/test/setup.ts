@@ -22,7 +22,7 @@ afterAll(() => server.close());
 
 global.ResizeObserver = vi.fn(() => ({
   observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn(),
-})) as any;
+})) as unknown as typeof ResizeObserver;
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -36,4 +36,4 @@ Object.defineProperty(window, 'matchMedia', {
 
 global.IntersectionObserver = vi.fn(() => ({
   observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn(),
-})) as any;
+})) as unknown as typeof IntersectionObserver;

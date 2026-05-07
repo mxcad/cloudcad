@@ -79,7 +79,7 @@ export class ExternalRefService {
       const externalRefDir = path.join(sourceNodeDir, externalRefDirName);
 
       if (!(await this.fileSystemService.exists(externalRefDir))) {
-        await fsPromises.mkdir(externalRefDir, { recursive: true } as any);
+        await fsPromises.mkdir(externalRefDir, { recursive: true });
       }
 
       const targetFile = path.join(externalRefDir, `${extRefFileName}.mxweb`);
@@ -125,7 +125,7 @@ export class ExternalRefService {
       const externalRefDir = path.join(sourceNodeDir, externalRefDirName);
 
       if (!(await this.fileSystemService.exists(externalRefDir))) {
-        await fsPromises.mkdir(externalRefDir, { recursive: true } as any);
+        await fsPromises.mkdir(externalRefDir, { recursive: true });
       }
 
       const targetImageFile = path.join(externalRefDir, extRefFileName);

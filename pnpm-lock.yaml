@@ -190,7 +190,7 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0(@swc/core@1.15.33)(chokidar@4.0.3)
       '@swc/core':
-        specifier: ^1.15.24
+        specifier: ^1.15.33
         version: 1.15.33
       '@types/archiver':
         specifier: ^7.0.0

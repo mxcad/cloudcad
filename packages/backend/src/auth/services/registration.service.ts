@@ -89,7 +89,12 @@ export class RegistrationService {
       try {
         const payload = this.jwtService.verify(wechatTempToken, {
           secret: this.configService.get<string>('JWT_SECRET'),
-        }) as any;
+        }) as {
+          type: string;
+          wechatId?: string;
+          nickname?: string;
+          avatar?: string;
+        };
 
         if (payload.type === 'wechat_temp' && payload.wechatId) {
           wechatData = {
@@ -214,7 +219,7 @@ export class RegistrationService {
     return {
       message: '验证码已发送到您的邮箱，请查收并完成验证',
       email: email,
-    } as unknown as AuthResponseDto;
+    } as unknown as AuthResponseDto; // жіЁеҶҢжөҒзЁӢиҝ”еӣһйӘҢиҜҒж¶ҲжҒҜпјҢйқһе®Ңж•ҙ token е“Қеә�
   }
 
   async verifyEmailAndActivate(

@@ -428,7 +428,7 @@ export class SearchService {
     // 如果未指定（搜索所有资源库），需要拥有两个权限中的一个
     if (libraryKey === 'drawing') {
       const hasPermission = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_DRAWING_MANAGE as any,
+        userId, SystemPermission.LIBRARY_DRAWING_MANAGE,
       );
       if (!hasPermission) {
         this.logger.warn(`用户 ${userId} 无图纸库搜索权限`);
@@ -436,7 +436,7 @@ export class SearchService {
       }
     } else if (libraryKey === 'block') {
       const hasPermission = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_BLOCK_MANAGE as any,
+        userId, SystemPermission.LIBRARY_BLOCK_MANAGE,
       );
       if (!hasPermission) {
         this.logger.warn(`用户 ${userId} 无图块库搜索权限`);
@@ -445,10 +445,10 @@ export class SearchService {
     } else {
       // 未指定 libraryKey — 搜索所有资源库，需至少拥有一个权限
       const hasDrawingAccess = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_DRAWING_MANAGE as any,
+        userId, SystemPermission.LIBRARY_DRAWING_MANAGE,
       );
       const hasBlockAccess = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_BLOCK_MANAGE as any,
+        userId, SystemPermission.LIBRARY_BLOCK_MANAGE,
       );
       if (!hasDrawingAccess && !hasBlockAccess) {
         this.logger.warn(`用户 ${userId} 无任何资源库搜索权限`);

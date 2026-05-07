@@ -348,6 +348,7 @@ export class LocalAuthProvider implements IAuthProvider {
         return {
           accessToken: '',
           refreshToken: '',
+          // 临时返回 null，等待后续绑定邮箱/手机号后实际用户信息会填充
           user: null as any,
           requireEmailBinding: false,
           requirePhoneBinding: false,
