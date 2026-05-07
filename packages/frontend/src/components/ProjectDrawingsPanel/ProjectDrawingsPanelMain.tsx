@@ -104,7 +104,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     versionHistoryNode, versionHistoryEntries,
     versionHistoryLoading, versionHistoryError,
     handleShowVersionHistory, handleOpenHistoricalVersion,
-  } = useVersionHistory(isLibraryMode ? null : (/* selectedProjectId from below */ '' as any));
+  } = useVersionHistory(isLibraryMode ? null : selectedProjectId);
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -465,7 +465,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handleSubmitProject = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     handleUpdateProjectSubmit(async (id, data) => {
-      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as any });
+      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } });
     });
   }, [handleUpdateProjectSubmit]);
 

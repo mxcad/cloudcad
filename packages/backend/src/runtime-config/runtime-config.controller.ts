@@ -19,6 +19,7 @@ import {
   Post,
   UseGuards,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,6 +28,8 @@ import {
   ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { RuntimeConfigService } from './runtime-config.service';
 import {
   UpdateRuntimeConfigDto,
@@ -49,6 +52,10 @@ export class RuntimeConfigController {
    */
   @Public()
   @Get('public')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('runtime-config-public')
+  @CacheTTL(300)
   @ApiOperation({ summary: '获取公开配置（前端初始化使用）' })
   @ApiResponse({
     status: 200,

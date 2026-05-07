@@ -22,7 +22,7 @@ export const useFolderChildren = () => {
         let children: FileSystemNode[] = [];
 
         if (childrenResponse?.nodes) {
-          children = childrenResponse.nodes as unknown as FileSystemNode[];
+          children = (childrenResponse.nodes || []) as FileSystemNode[];
         }
 
         const folders: FolderNode[] = children

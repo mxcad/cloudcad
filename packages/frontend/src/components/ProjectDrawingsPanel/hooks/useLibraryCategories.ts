@@ -68,7 +68,7 @@ export function useLibraryCategories(
                 limit: 100,
               } });
 
-        const folders = (response as any)?.nodes || [];
+        const folders = response?.nodes || [];
 
         const items: CategoryItem[] = [
           { id: 'all', name: '全部', hasChildren: level === 0 },
@@ -129,7 +129,7 @@ export function useLibraryCategories(
                 limit: 100,
               } });
 
-        const folders = (response as any)?.nodes || [];
+        const folders = response?.nodes || [];
 
         const items: CategoryItem[] = [
           { id: 'all', name: '全部', hasChildren: level === 0 },
@@ -296,7 +296,7 @@ export function useLibraryCategories(
                   limit: 100,
                 } });
 
-          const folders = (response as any)?.nodes || [];
+          const folders = response?.nodes || [];
           childCategories = [
             { id: 'all', name: '全部', hasChildren: level < 1 },
             ...folders.map((folder: FileSystemNode) => ({

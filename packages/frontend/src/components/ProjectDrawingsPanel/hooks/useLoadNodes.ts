@@ -166,7 +166,7 @@ export function useLoadNodes(
 
       while (currentId && depth < MAX_DEPTH) {
         try {
-          const { data: node } = await fileSystemControllerGetNode({ path: { nodeId: currentId } }) as unknown as { data: { id: string; name: string; parentId?: string | null } | undefined };
+          const { data: node } = (await fileSystemControllerGetNode({ path: { nodeId: currentId } })) as { data: { id: string; name: string; parentId?: string | null } | undefined };
           if (node) {
             path.unshift({ id: node.id, name: node.name });
             currentId = node.parentId || null;
