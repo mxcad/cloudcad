@@ -382,7 +382,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
       isOpen={open}
       onClose={handleCloseModal}
       title={`批量导入 - ${libraryType === 'drawing' ? '图纸库' : '图块库'}`}
-      size="md"
+      maxWidth="max-w-md"
       footer={
         <div className="flex justify-end gap-2">
           {step === 'preview' && (

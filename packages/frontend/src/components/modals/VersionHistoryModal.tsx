@@ -65,7 +65,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`版本历史 - ${node?.name || '文件'}`}
-      size="md"
+      maxWidth="max-w-md"
       footer={
         <Button variant="ghost" onClick={onClose}>
           关闭

@@ -236,7 +236,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="引导中心"
-      size="full"
+      maxWidth="max-w-4xl"
       zIndex={TOUR_CENTER_Z_INDEX}
     >
       {/* 搜索和统计 */}

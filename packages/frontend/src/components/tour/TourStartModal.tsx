@@ -61,7 +61,7 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
       isOpen={isOpen}
       onClose={onDismiss}
       title=""
-      size="lg"
+      maxWidth="max-w-lg"
       zIndex={START_MODAL_Z_INDEX}
     >
       <div className="text-center">
