@@ -20,7 +20,6 @@ import {
 import type { UserDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
-import { isValidToken, getValidToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken, setWechatTempToken, getWechatTempToken, removeWechatTempToken } from '@/utils/tokenUtils';
 
 type User = UserDtoType;
 
@@ -71,20 +70,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 同步初始化，避免闪烁
   const getInitialAuthState = () => {
     try {
-      const storedToken = getValidToken();
+      const storedToken = localStorage.getItem('accessToken');
       const storedUser = localStorage.getItem('user');
-      const isValid = isValidToken(storedToken);
-      if (isValid && storedUser) {
+
+      if (storedToken && storedUser) {
         return {
           token: storedToken,
           user: JSON.parse(storedUser),
           loading: true, // will be set to false after token validation
         };
       }
-      // 清除无效 token
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
     } catch (error) {
       // 静默：初始化认证状态失败
     }
@@ -102,20 +97,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(initialState.loading);
   const [error, setError] = useState<string | null>(null);
 
-  // 异步验证 token - token 存在时获取用户信息
+  // 异步验证 token - 只在 token 存在且用户信息存在时执行
   useEffect(() => {
     const validateToken = async () => {
-      if (token) {
+      if (token && user) {
         setLoading(true);
         try {
-          const userData = await authControllerGetProfile() as User;
+          const userData = await authControllerGetProfile() as unknown as User;
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
           const fetchError = error as { status?: number };
           if (fetchError.status === 401) {
-            removeAccessToken();
-            removeRefreshToken();
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
             setToken(null);
             setUser(null);
@@ -143,7 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authControllerLogin({
         body: { account, password },
       });
-      const responseData = response.data as AuthResponseData;
+      const responseData = response.data;
       console.log('[AuthContext] 登录响应:', responseData);
 
       const {
@@ -185,9 +180,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginByPhone = useCallback(async (phone: string, code: string) => {
     console.log('[AuthContext] 开始手机号登录:', phone);
     try {
-      const responseData = await authControllerLoginByPhone({
+      const response = await authControllerLoginByPhone({
         body: { phone, code },
-      }) as AuthResponseData;
+      });
+      const responseData = response.data as AuthResponseData;
       console.log('[AuthContext] 手机登录响应:', responseData);
 
       const {
@@ -225,10 +221,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       nickname?: string;
       wechatTempToken?: string;
     }): Promise<{ message: string; email?: string }> => {
-      const response = await authControllerRegister({
+      const responseData = await authControllerRegister({
         body: data,
-      });
-      const responseData = response.data as Record<string, unknown>;
+      } as unknown as Record<string, unknown>);
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
       if (responseData.message && !responseData.accessToken) {
@@ -243,7 +238,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = responseData as AuthResponseData;
+      } = responseData as unknown as AuthResponseData;
 
       // 自动登录，保存 token
       localStorage.setItem('accessToken', accessToken);
@@ -258,10 +253,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
   const verifyEmailAndLogin = useCallback(
     async (email: string, code: string) => {
-      const response = await authControllerVerifyEmail({
+      const responseData = await authControllerVerifyEmail({
         body: { email, code },
-      });
-      const responseData = response.data as AuthResponseData;
+      }) as unknown as AuthResponseData;
 
       // 验证成功，返回 token，自动登录
       const {
@@ -283,10 +277,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const verifyPhoneAndLogin = useCallback(
     async (phone: string, code: string) => {
-      const response = await authControllerVerifyPhone({
+      const responseData = await authControllerVerifyPhone({
         body: { phone, code },
-      });
-      const responseData = response.data as AuthResponseData;
+      } as unknown as AuthResponseData);
       const {
         accessToken,
         refreshToken,
@@ -350,8 +343,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await authControllerGetProfile();
-      const userData = response.data as User;
+      const userData = await authControllerGetProfile() as unknown as User;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
@@ -373,19 +365,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error('微信登录失败:', action.message);
             setError(action.message);
           } else if (action?.type === 'login') {
-            setAccessToken(action.accessToken);
-            setRefreshToken(action.refreshToken);
+            localStorage.setItem('accessToken', action.accessToken);
+            localStorage.setItem('refreshToken', action.refreshToken);
             localStorage.setItem('user', JSON.stringify(action.user));
             setToken(action.accessToken);
             setUser(action.user as User);
           } else if (action?.type === 'need_register') {
-            setWechatTempToken(action.tempToken);
+            sessionStorage.setItem('wechatTempToken', action.tempToken);
             window.location.href = '/register?wechat=1';
           } else if (action?.type === 'bind_email') {
-            setWechatTempToken(action.tempToken);
+            sessionStorage.setItem('wechatTempToken', action.tempToken);
             window.location.href = '/verify-email';
           } else if (action?.type === 'bind_phone') {
-            setWechatTempToken(action.tempToken);
+            sessionStorage.setItem('wechatTempToken', action.tempToken);
             window.location.href = '/verify-phone';
           }
         } catch (err) {
@@ -408,8 +400,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isPopup: 'true',
           purpose: 'login',
         },
-      });
-      const { authUrl } = response.data as { authUrl: string };
+      }) as unknown as { authUrl: string };
+      const { authUrl } = response;
 
       console.log('[AuthContext] 微信授权 URL:', authUrl);
 
