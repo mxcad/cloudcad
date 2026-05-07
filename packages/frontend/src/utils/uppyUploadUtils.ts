@@ -197,7 +197,9 @@ export const uploadFileWithUppy = async (
         reject(new UppyUploadError(message, file.name));
       }
       uppy.clear();
-      uppy.close();
+      // @ts-ignore - close exists at runtime despite missing type definitions
+      uppy.cancelAll?.();
+      uppy.close?.();
     });
 
     uppy.on('upload-error', (_file: any, err: any) => {
@@ -214,7 +216,9 @@ export const uploadFileWithUppy = async (
         ),
       );
       uppy.clear();
-      uppy.close();
+      // @ts-ignore - close exists at runtime despite missing type definitions
+      uppy.cancelAll?.();
+      uppy.close?.();
     });
 
     uppy.addFile({
@@ -305,7 +309,9 @@ export const uploadFilePublic = async (options: {
         reject(new UppyUploadError(message, file.name));
       }
       uppy.clear();
-      uppy.close();
+      // @ts-ignore - close exists at runtime despite missing type definitions
+      uppy.cancelAll?.();
+      uppy.close?.();
     });
 
     uppy.on('upload-error', (_file: any, err: any) => {
@@ -322,7 +328,9 @@ export const uploadFilePublic = async (options: {
         ),
       );
       uppy.clear();
-      uppy.close();
+      // @ts-ignore - close exists at runtime despite missing type definitions
+      uppy.cancelAll?.();
+      uppy.close?.();
     });
 
     uppy.addFile({

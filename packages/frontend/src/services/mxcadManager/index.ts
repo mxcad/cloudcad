@@ -1875,7 +1875,7 @@ class MxCADContainerManager {
         top: 0;
         left: 300px;
         right: 0;
-        bottom: 0;
+        height: 100vh;
         visibility: hidden;
         z-index: -1;
         pointer-events: none;
