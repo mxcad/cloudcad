@@ -36,6 +36,7 @@ import {
   GridIcon,
   ListIcon,
 } from '../components/FileIcons';
+import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
 import { formatFileSize } from '../utils/fileUtils';
@@ -914,7 +915,7 @@ export const LibraryManager: React.FC = () => {
       {/* 重命名模态框 */}
       <RenameModal
         isOpen={isRenameModalOpen}
-        editingNode={renamingNode}
+        editingNode={renamingNode as unknown as FileSystemNode | null}
         newName={renameName}
         loading={false}
         onClose={closeRenameModal}
