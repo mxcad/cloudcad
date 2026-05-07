@@ -393,7 +393,7 @@ export const UserManagement = () => {
               <option value="">所有角色</option>
               {roles.map((role) => (
                 <option key={role.id} value={role.id}>
-                  {getRoleDisplayName(role.name, role.isSystem)}
+                  {getRoleDisplayName(role.name, role.isSystem ?? false)}
                 </option>
               ))}
             </select>

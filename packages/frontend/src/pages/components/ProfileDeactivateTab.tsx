@@ -147,7 +147,7 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
             <select
               value={deactivateForm.verificationMethod}
               onChange={(e) =>
-                onVerificationMethodChange(e.target.value as string)
+                onVerificationMethodChange(e.target.value as 'password' | 'phone' | 'email' | 'wechat' | '')
               }
               className="verification-select"
             >
