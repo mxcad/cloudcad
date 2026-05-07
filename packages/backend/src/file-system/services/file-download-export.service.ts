@@ -102,7 +102,7 @@ export class FileDownloadExportService {
     try {
       return await this.storage.getFileStream(filePath);
     } catch (error) {
-      this.logger.error(`获取文件流失败: ${error.message}`, error.stack);
+      this.logger.error(`获取文件流失败: ${error.message}, 文件路径: ${filePath}`, error.stack);
       throw error;
     }
   }
