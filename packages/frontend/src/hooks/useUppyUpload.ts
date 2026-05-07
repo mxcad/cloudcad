@@ -160,7 +160,12 @@ export const useUppyUpload = () => {
     });
 
     // 文件添加事件：计算文件哈希
+    let uploadStarted = false;
     uppy.on('file-added', async (file: UppyFile) => {
+      // 防止并发：若 upload 已调用则跳过，避免 Uppy 抛出 "already uploading"
+      if (uploadStarted) return;
+      uploadStarted = true;
+
       try {
         // 计算文件哈希值
         const hash = await calculateFileHash(file.data as File);
@@ -174,6 +179,7 @@ export const useUppyUpload = () => {
         // 哈希计算完成后再启动上传（autoProceed 关闭时需手动触发）
         uppy.upload();
       } catch (error) {
+        uploadStarted = false;
         console.error('[useUppyUpload] 文件哈希计算失败:', error);
       }
     });

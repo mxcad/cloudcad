@@ -48,14 +48,14 @@ export class RateLimitGuard implements CanActivate {
 
   // 配置：公开接口限制（更严格）
   private readonly publicLimit = {
-    windowMs: 60000, // 1分钟
-    maxRequests: 30, // 最多30次请求
+    windowMs: 600000, // 1分钟
+    maxRequests: 6000, // 最多3000次请求
   };
 
   // 配置：认证接口限制（更宽松）
   private readonly authenticatedLimit = {
     windowMs: 60000, // 1分钟
-    maxRequests: 150, // 最多150次请求
+    maxRequests: 1500, // 最多1500次请求
   };
 
   // 定期清理旧记录的定时器（防止内存泄漏）

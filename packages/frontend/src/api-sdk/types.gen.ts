@@ -293,7 +293,7 @@ export type UserDto = {
     hasPassword?: boolean;
 };
 
-export type AuthResponseDto = {
+export type AuthApiResponseDto = {
     /**
      * 访问Token
      */
@@ -306,25 +306,6 @@ export type AuthResponseDto = {
      * 用户信息
      */
     user: UserDto;
-};
-
-export type AuthApiResponseDto = {
-    /**
-     * 响应状态码
-     */
-    code: 'SUCCESS' | 'ERROR';
-    /**
-     * 响应消息
-     */
-    message: string;
-    /**
-     * 认证响应数据
-     */
-    data: AuthResponseDto;
-    /**
-     * 响应时间戳
-     */
-    timestamp: string;
 };
 
 export type LoginDto = {

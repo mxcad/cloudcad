@@ -239,13 +239,7 @@ export class AuthResponseDto {
   user: UserDto;
 }
 
-export class AuthApiResponseDto extends ApiResponseDto<AuthResponseDto> {
-  @ApiProperty({
-    description: '认证响应数据',
-    type: () => AuthResponseDto,
-  })
-  declare data: AuthResponseDto;
-}
+export class AuthApiResponseDto extends AuthResponseDto {}
 
 export class CheckFieldUniquenessDto {
   @ApiPropertyOptional({

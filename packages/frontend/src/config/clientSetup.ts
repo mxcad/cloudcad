@@ -160,6 +160,10 @@ client.setConfig({
         const refreshed = await tryRefreshToken();
         if (refreshed) {
           const token = getValidToken();
+          if (!token) {
+            handleTokenRefreshFailure();
+            return response;
+          }
           const headers = new Headers(init?.headers);
           headers.set('Authorization', `Bearer ${token}`);
           headers.set('X-CSRF-Token', token);

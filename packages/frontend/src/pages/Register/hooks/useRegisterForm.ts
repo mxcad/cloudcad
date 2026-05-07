@@ -375,6 +375,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
     handleNext,
     handleBack,
     handleFormSubmit,
+    setPhoneForm: () => {},
   };
 }
 

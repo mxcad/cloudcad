@@ -8,7 +8,7 @@ import type {
 import type { Client as CoreClient, Config as CoreConfig } from '../core/types.gen';
 import type { Middleware } from './utils.gen';
 
-export type ResponseStyle = 'data' | 'fields' | 'blob';
+export type ResponseStyle = 'data' | 'fields';
 
 export interface Config<T extends ClientOptions = ClientOptions>
   extends Omit<RequestInit, 'body' | 'headers' | 'method'>, CoreConfig {

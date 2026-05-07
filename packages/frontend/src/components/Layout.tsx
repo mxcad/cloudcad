@@ -173,6 +173,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const getRoleDisplayName = useCallback((roleName: string): string => {
     const roleMap: Record<string, string> = {
       ADMIN: '系统管理员',
+      USER_MANAGER: '用户管理员',
+      FONT_MANAGER: '字体管理员',
       USER: '普通用户',
       MANAGER: '项目经理',
       GUEST: '访客',
@@ -624,9 +626,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     className="text-xs truncate"
                     style={{ color: 'var(--text-muted)' }}
                   >
-                    {user?.role?.name
-                      ? getRoleDisplayName(user.role.name)
-                      : '加载中...'}
+                    {loading
+                      ? '加载中...'
+                      : user?.role?.name
+                        ? getRoleDisplayName(user.role.name)
+                        : '未知角色'}
                   </p>
                 </div>
 

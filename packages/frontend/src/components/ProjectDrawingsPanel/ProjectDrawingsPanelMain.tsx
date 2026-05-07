@@ -26,6 +26,7 @@ import {
 import { libraryControllerGetDrawingAllFiles, libraryControllerGetBlockAllFiles } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
+import type { ProjectDto, UpdateNodeDto } from '@/api-sdk';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { SystemPermission } from '@/constants/permissions';
@@ -465,7 +466,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handleSubmitProject = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     handleUpdateProjectSubmit(async (id, data) => {
-      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as Parameters<typeof fileSystemControllerUpdateNode>[0] });
+      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as unknown as UpdateNodeDto });
     });
   }, [handleUpdateProjectSubmit]);
 

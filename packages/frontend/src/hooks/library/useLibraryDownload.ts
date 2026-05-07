@@ -10,6 +10,7 @@ import {
 } from '@/api-sdk';
 import { handleApiError } from '../../utils/errorHandler';
 import type { LibraryType } from './useLibraryQuery';
+import type { ResponseStyle } from '@/api-sdk/client/types.gen';
 
 interface UseLibraryDownloadOptions {
   libraryType: LibraryType;
@@ -27,11 +28,11 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
         const response = await (libraryType === 'drawing'
           ? libraryControllerDownloadDrawingNode({
               path: { nodeId },
-              responseStyle: 'blob'
+              responseStyle: 'blob' as ResponseStyle
             })
           : libraryControllerDownloadBlockNode({
               path: { nodeId },
-              responseStyle: 'blob'
+              responseStyle: 'blob' as ResponseStyle
             }));
 
         if (response.error) throw response.error;
@@ -43,7 +44,7 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
 
         // 处理下载逻辑（后端返回文件流）
         const url = window.URL.createObjectURL(
-          new Blob([response.data])
+          new Blob([response.data as unknown as BlobPart])
         );
         const link = document.createElement('a');
         link.href = url;

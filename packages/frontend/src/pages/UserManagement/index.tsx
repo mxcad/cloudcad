@@ -449,7 +449,7 @@ export const UserManagement = () => {
           users={users}
           mailEnabled={mailEnabled}
           smsEnabled={smsEnabled}
-          onEdit={handleOpenEdit}
+          onEdit={handleOpenEdit as any}
           onDelete={handleDelete}
           onRestore={handleRestore}
           onOpenQuota={() => {}}

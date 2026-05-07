@@ -874,7 +874,7 @@ export const Profile: React.FC = () => {
   };
 
   return (
-    <div className="profile-page" data-theme={isDark ? 'dark' : 'light'}>
+    <div className="min-h-screen p-6 profile-page" data-theme={isDark ? 'dark' : 'light'}>
       <button className="back-button" onClick={() => navigate(-1)}>
         <ArrowLeft size={18} />
         <span>返回</span>

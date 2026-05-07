@@ -153,13 +153,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       const apiResponse = response.data!;
       console.log('[AuthContext] 登录响应:', apiResponse);
-
-      const authData = apiResponse.data;
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = authData;
+      } = apiResponse;
+   
       console.log(
         '[AuthContext] Access Token:',
         accessToken ? `${accessToken.substring(0, 20)}...` : 'missing'
@@ -364,7 +363,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
-      const userData = await authControllerGetProfile() as unknown as User;
+      const response = await authControllerGetProfile() as unknown as { data: User };
+      const userData = response.data;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
