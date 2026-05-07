@@ -158,7 +158,7 @@ export const useFileSystemNavigation = ({
           isFolder: node.isFolder,
         });
 
-        const { data: blobData } = await fileSystemControllerDownloadNode({ path: { nodeId: node.id }, responseStyle: 'blob' // 'blob' is required for binary file download });
+        const { data: blobData } = await fileSystemControllerDownloadNode({ path: { nodeId: node.id }, responseStyle: 'blb' }); // 'blob' is required for binary file download
         const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
