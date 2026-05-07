@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
@@ -21,15 +21,13 @@ import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
 import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryOperations } from '../hooks/library/useLibraryOperations';
+import { useLibraryModals } from '../hooks/library/useLibraryModals';
+import { useLibraryPagination } from '../hooks/library/useLibraryPagination';
+import { useLibraryQuota } from '../hooks/library/useLibraryQuota';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 // TODO: Replace with SDK when backend adds delete endpoints
 import { deleteDrawingNode, deleteBlockNode } from '../utils/libraryApi';
-import {
-  fileSystemControllerGetStorageQuota,
-  fileSystemControllerUpdateStorageQuota,
-} from '@/api-sdk';
-import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 import MxCadUppyUploader, { MxCadUppyUploaderRef } from '../components/MxCadUppyUploader';
 import {
   EmptyFolderIcon,
@@ -39,7 +37,6 @@ import {
   ListIcon,
 } from '../components/FileIcons';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useFileSystemStore } from '../stores/fileSystemStore';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
 import { formatFileSize } from '../utils/fileUtils';
 import { HardDrive, Save, Loader2 } from 'lucide-react';
@@ -69,33 +66,18 @@ export const LibraryManager: React.FC = () => {
 
   useDocumentTitle(libraryType === 'drawing' ? '图纸库' : '图块库');
 
-  // 分页状态 - 从 store 读取 pageSize 实现持久化
-  const { pageSize: storePageSize, setPageSize: setStorePageSize } =
-    useFileSystemStore();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(storePageSize);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-
-  // 回调函数使用 useCallback 包裹，避免无限重渲染
-  const handlePageChange = useCallback((page: number) => {
-    setCurrentPage(page);
-  }, []);
-
-  const handleTotalPagesChange = useCallback((pages: number) => {
-    setTotalPages(pages);
-  }, []);
-
-  const handleTotalChange = useCallback((total: number) => {
-    setTotal(total);
-  }, []);
-
-  // 同步 pageSize 到 store
-  useEffect(() => {
-    if (pageSize !== storePageSize) {
-      setStorePageSize(pageSize);
-    }
-  }, [pageSize, storePageSize, setStorePageSize]);
+  // 分页状态 - useLibraryPagination hook
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    total,
+    setCurrentPage,
+    setPageSize,
+    handlePageChange,
+    handleTotalPagesChange,
+    handleTotalChange,
+  } = useLibraryPagination();
 
   const {
     libraryId,
@@ -336,7 +318,7 @@ export const LibraryManager: React.FC = () => {
 
     try {
       // 获取默认配额（GB）
-      const { data: configs } = await runtimeConfigControllerGetPublicConfigs() as unknown as { data: Record<string, number> | undefined };
+      const { data: configs } = await runtimeConfigControllerGetPublicConfigs();
       const defaultVal = configs?.libraryStorageQuota || 100;
       setDefaultLibraryQuota(defaultVal);
 

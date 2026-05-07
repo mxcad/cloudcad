@@ -509,16 +509,16 @@ export const CADEditorDirect: React.FC = () => {
 
         // 如果 URL 参数指定了 libraryKey，直接使用
         if (libraryKeyParam === 'drawing') {
-          const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
-          file = nodeResponse.data as typeof file;
+          const { data: nodeData } = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
+          file = nodeData;
         } else if (libraryKeyParam === 'block') {
-          const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
-          file = nodeResponse.data as typeof file;
+          const { data: nodeData } = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
+          file = nodeData;
         } else {
           // 项目文件：需要登录
           try {
-            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as any;
-            file = fileNode as typeof file;
+            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
+            file = fileNode;
           } catch (error) {
             console.error('获取文件信息失败:', error);
             const axiosError = error as { response?: { status?: number } };

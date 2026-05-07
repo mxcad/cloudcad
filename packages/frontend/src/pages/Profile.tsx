@@ -823,7 +823,8 @@ export const Profile: React.FC = () => {
         setError('手机号不存在');
         return;
       }
-      await sendSmsCode({ phone: (user.phone as any) as string });
+      const phone = user.phone ?? '';
+      await sendSmsCode({ phone });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
         setDeactivateCountdown((c) => {
@@ -850,7 +851,8 @@ export const Profile: React.FC = () => {
         setError('邮箱不存在');
         return;
       }
-      await resendVerification({ email: (user.email as any) as string });
+      const email = user.email ?? '';
+      await resendVerification({ email });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
         setDeactivateCountdown((c) => {
