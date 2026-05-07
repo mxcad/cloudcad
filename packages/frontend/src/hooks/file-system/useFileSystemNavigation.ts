@@ -158,7 +158,7 @@ export const useFileSystemNavigation = ({
           isFolder: node.isFolder,
         });
 
-        const { data: blobData } = await fileSystemControllerDownloadNode({ path: { nodeId: node.id }, responseStyle: 'blob' as any });
+        const { data: blobData } = await fileSystemControllerDownloadNode({ path: { nodeId: node.id }, responseStyle: 'blob' // 'blob' is required for binary file download });
         const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -219,8 +219,8 @@ export const useFileSystemNavigation = ({
 
         const { data: blobData } = await fileSystemControllerDownloadNodeWithFormat({
           path: { nodeId: downloadingNode.id },
-          query: { format, ...(pdfOptions as any) },
-          responseStyle: 'blob' as any,
+          query: { format, ...pdfOptions },
+          responseStyle: 'blob' // 'blob' is required for binary file download,
         });
 
         const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
