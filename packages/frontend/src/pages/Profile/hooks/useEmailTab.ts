@@ -32,9 +32,9 @@ export const useEmailTab = () => {
         return authControllerSendBindEmailCode({ body: { email } as unknown as Record<string, never> });
       }
     },
-    // @ts-expect-error Callback signature mismatch — useVerificationCode expects (...args: unknown[]) => Promise<unknown>
-    onVerify: async (email: string, code: string) => {
-      return await authControllerVerifyBindEmail({ body: { email, code } });
+    onVerify: (...args: unknown[]) => {
+      const [email, code] = args;
+      return authControllerVerifyBindEmail({ body: { email, code } as unknown as Record<string, never> });
     },
   });
 
@@ -53,8 +53,7 @@ export const useEmailTab = () => {
       return;
     }
     try {
-      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string }
-      await authControllerSendBindEmailCode({ body: { email: form.email } } );
+      await authControllerSendBindEmailCode({ body: { email: form.email } as unknown as Record<string, never> } );
       setStep('verify');
       setSuccess('验证码已发送到您的邮箱');
     } catch (err) {
@@ -122,8 +121,7 @@ export const useEmailTab = () => {
     }
     try {
       const response = (await authControllerVerifyUnbindEmailCode({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { code: string }
-        body: { code: form.code },
+        body: { code: form.code } as unknown as Record<string,never>,
       })).data as { success?: boolean; message?: string; token?: string };
       if (response?.success) {
         setSuccess('原邮箱验证通过');
@@ -152,8 +150,7 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     try {
-      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; isRebind?: boolean }
-      await authControllerSendBindEmailCode({ body: { email: form.email, isRebind: true } });
+      await authControllerSendBindEmailCode({ body: { email: form.email, isRebind: true } as unknown as Record<string, never> });
       setSuccess('验证码已发送');
       verification.resetCountdown();
       setStep('verifyNew');
@@ -189,8 +186,7 @@ export const useEmailTab = () => {
     }
     try {
       const response = (await authControllerRebindEmail({
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; code: string; token: string }
-        body: { email: form.email, code: form.code, token: verifyToken },
+        body: { email: form.email, code: form.code, token: verifyToken } as unknown as Record<string,never>,
       })).data as { success?: boolean; message?: string };
       if (response?.success) {
         setSuccess('邮箱换绑成功');
