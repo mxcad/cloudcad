@@ -6,6 +6,7 @@
 import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import { mxCadControllerCheckFileExist } from '@/api-sdk';
+import { getValidToken } from '@/utils/tokenUtils';
 
 /**
  * 上传配置
@@ -125,7 +126,7 @@ export const uploadFileWithUppy = async (
 
   // 2. Tus 上传
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  const token = localStorage.getItem('accessToken');
+  const token = getValidToken();
 
   return new Promise<UppyUploadResult>((resolve, reject) => {
     const uppy = new Uppy({

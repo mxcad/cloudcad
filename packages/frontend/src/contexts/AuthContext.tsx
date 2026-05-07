@@ -220,9 +220,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       nickname?: string;
       wechatTempToken?: string;
     }): Promise<{ message: string; email?: string }> => {
-      const responseData = await authControllerRegister({
+      const response = await authControllerRegister({
         body: data,
-      } as any) as unknown as Record<string, unknown>;
+      });
+      const responseData = response.data as Record<string, unknown>;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
       if (responseData.message && !responseData.accessToken) {

@@ -67,6 +67,7 @@ import { globalShowToast } from '../../contexts/NotificationContext';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../../utils/loadingUtils';
+import { getValidToken } from '@/utils/tokenUtils';
 
 
 // ==================== 辅助函数 ====================
@@ -1085,7 +1086,7 @@ async function handleFileSelection(
 
     // 检查目录中是否存在重复文件
     const duplicateCheck = await mxCadControllerCheckFileExist({
-      body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId },
+      body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId, fileSize: file.size },
     });
 
     if (duplicateCheck.data?.isDuplicate && duplicateCheck.data?.existingNodeId) {
@@ -2101,7 +2102,7 @@ class MxCADInstanceManager {
 
         try {
           // 检查用户是否已登录，未登录则不生成和上传缩略图
-          const token = localStorage.getItem('accessToken');
+          const token = getValidToken();
           const user = localStorage.getItem('user');
           const isLoggedIn = !!(token && user);
 
@@ -2159,7 +2160,7 @@ class MxCADInstanceManager {
    */
   private buildViewOptions(openFile?: string) {
     const containerManager = MxCADContainerManager.getInstance();
-    const token = localStorage.getItem('accessToken');
+    const token = getValidToken();
     
     // 构建外部参照文件解析函数
     const resolveExtReferenceUrl = (fileName: string) => {
@@ -2295,7 +2296,7 @@ class MxCADInstanceManager {
         return;
       }
 
-      const token = localStorage.getItem('accessToken');
+      const token = getValidToken();
       for (
         let attempt = 0;
         attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
@@ -2367,7 +2368,7 @@ class MxCADInstanceManager {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = getValidToken();
 
       for (
         let attempt = 0;

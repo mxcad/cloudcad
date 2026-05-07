@@ -7,6 +7,7 @@ import { useRef, useCallback, useMemo } from 'react';
 import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import { calculateFileHash } from '../utils/hashUtils';
+import { getValidToken } from '@/utils/tokenUtils';
 
 // 导出 LoadFileParam 接口，保持和 useMxCadUploadNative 的兼容性
 export interface LoadFileParam {
@@ -74,7 +75,7 @@ export const useUppyUpload = () => {
    * 获取认证 Token
    */
   const getAuthToken = useCallback((): string | null => {
-    return localStorage.getItem('accessToken');
+    return getValidToken();
   }, []);
 
   /**
