@@ -130,7 +130,7 @@ export const RuntimeConfigPage: React.FC = () => {
       setSaving((prev) => new Set(prev).add(key));
       await runtimeConfigControllerUpdateConfig({
         path: { key },
-        body: { value },
+        body: { value: typeof value === 'object' ? value : { [key]: value } },
       }).then(r => r.data);
       showToast('配置已保存', 'success');
       setEditedValues((prev) => {
