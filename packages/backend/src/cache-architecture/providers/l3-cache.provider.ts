@@ -76,8 +76,8 @@ export class L3CacheProvider<T = unknown> implements IL3CacheManager<T> {
             accessCount: { increment: 1 },
           },
         })
-        .catch(() => {
-          // 忽略错误
+        .catch((err) => {
+          this.logger.warn(`Failed to update access info for cache key ${key}: ${err.message}`);
         });
 
       return JSON.parse(entry.value) as K;
