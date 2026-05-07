@@ -27,14 +27,19 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
         const response = await (libraryType === 'drawing'
           ? libraryControllerDownloadDrawingNode({
               path: { nodeId },
-              responseType: 'arraybuffer'
+              responseStyle: 'blob'
             })
           : libraryControllerDownloadBlockNode({
               path: { nodeId },
-              responseType: 'arraybuffer'
+              responseStyle: 'blob'
             }));
 
         if (response.error) throw response.error;
+
+        if (!response.data) {
+          handleApiError(new Error('服务器返回数据为空'), '下载文件失败');
+          return;
+        }
 
         // 处理下载逻辑（后端返回文件流）
         const url = window.URL.createObjectURL(
