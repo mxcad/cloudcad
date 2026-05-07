@@ -103,8 +103,8 @@ export function useLibraryOperations({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryControllerDownloadDrawingNode({ path: { nodeId } }, undefined, { responseType: 'blob' })
-            : await libraryControllerDownloadBlockNode({ path: { nodeId } }, undefined, { responseType: 'blob' });
+            ? await libraryControllerDownloadDrawingNode({ path: { nodeId }, responseType: 'blob' })
+            : await libraryControllerDownloadBlockNode({ path: { nodeId }, responseType: 'blob' });
 
         const blob = new Blob([response.data as unknown as BlobPart]);
         const url = window.URL.createObjectURL(blob);
@@ -140,8 +140,8 @@ export function useLibraryOperations({
       try {
         const response =
           libraryType === 'drawing'
-            ? await libraryControllerDownloadDrawingNode({ path: { nodeId } }, undefined, { responseType: 'blob' })
-            : await libraryControllerDownloadBlockNode({ path: { nodeId } }, undefined, { responseType: 'blob' });
+            ? await libraryControllerDownloadDrawingNode({ path: { nodeId }, responseType: 'blob' })
+            : await libraryControllerDownloadBlockNode({ path: { nodeId }, responseType: 'blob' });
 
         const blob = new Blob([response.data as unknown as BlobPart]);
         const url = window.URL.createObjectURL(blob);

@@ -8,11 +8,13 @@ import { client } from '@/api-sdk/client.gen';
 const LIBRARY_API = '/api/v1/library';
 
 export const deleteDrawingNode = (nodeId: string, permanently: boolean = true) =>
-  client.delete(`${LIBRARY_API}/drawing/nodes/${nodeId}`, {
+  client.delete({
+    url: `${LIBRARY_API}/drawing/nodes/${nodeId}`,
     query: { permanently },
   });
 
 export const deleteBlockNode = (nodeId: string, permanently: boolean = true) =>
-  client.delete(`${LIBRARY_API}/block/nodes/${nodeId}`, {
+  client.delete({
+    url: `${LIBRARY_API}/block/nodes/${nodeId}`,
     query: { permanently },
   });

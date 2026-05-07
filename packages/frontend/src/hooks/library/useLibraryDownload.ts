@@ -25,22 +25,20 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
     async (nodeId: string) => {
       try {
         const response = await (libraryType === 'drawing'
-          ? libraryControllerDownloadDrawingNode(
-              { path: { nodeId } },
-              undefined,
-              { responseType: 'arraybuffer' }
-            )
-          : libraryControllerDownloadBlockNode(
-              { path: { nodeId } },
-              undefined,
-              { responseType: 'arraybuffer' }
-            ));
+          ? libraryControllerDownloadDrawingNode({
+              path: { nodeId },
+              responseType: 'arraybuffer'
+            })
+          : libraryControllerDownloadBlockNode({
+              path: { nodeId },
+              responseType: 'arraybuffer'
+            }));
 
         if (response.error) throw response.error;
 
         // 处理下载逻辑（后端返回文件流）
         const url = window.URL.createObjectURL(
-          new Blob([response.data as unknown as Blob])
+          new Blob([response.data])
         );
         const link = document.createElement('a');
         link.href = url;
