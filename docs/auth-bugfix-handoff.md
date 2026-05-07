@@ -171,9 +171,13 @@ const { data: response } = await authControllerSendSmsCode({
 ## 待完成的修复工作
 
 ### 前端（Bug 5 + Bug 6）
-1. ❌ `useLoginForm.ts:174`：`authControllerSendSmsCode()` 传递 `{ body: { phone: phoneValue } }`
-2. ❌ `Login/index.tsx:66-76`：增加 `requireEmailBinding` / `requirePhoneBinding` 处理
-3. ❌ `AuthContext.tsx:352-383`：增加 `requireEmailBinding` / `requirePhoneBinding` 处理
+1. ✅ `useLoginForm.ts:174`：已正确传递 `{ body: { phone: phoneValue } }`
+2. ✅ `Login/index.tsx:66-82`：已正确处理 `requireEmailBinding` / `requirePhoneBinding`（通过 `classifyWechatAuthResult` 返回 `bind_email`/`bind_phone` 并跳转）
+3. ✅ `AuthContext.tsx:352-383`：已正确处理 `requireEmailBinding` / `requirePhoneBinding`（通过 storage 事件监听器跳转）
+
+**修复说明**：
+- Bug 6 已在 `useLoginForm.ts` 中正确实现
+- Bug 5 依赖 `classifyWechatAuthResult`（`wechat-auth-result.ts`）对 `requireEmailBinding`/`requirePhoneBinding` 的识别，两个调用点均已正确处理
 
 ---
 

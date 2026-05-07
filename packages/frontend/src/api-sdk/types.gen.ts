@@ -1750,7 +1750,7 @@ export type ProjectMemberDto = {
     joinedAt: string;
 };
 
-export type CadDownloadFormat = string;
+export type CadDownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
 
 export type ProjectUserPermissionsDto = {
     /**
@@ -5740,6 +5740,8 @@ export type HealthControllerCheckData = {
 
 export type HealthControllerCheckErrors = {
     /**
+     * 服务不可用
+     *
      * The Health Check is not successful
      */
     503: {
@@ -5769,6 +5771,8 @@ export type HealthControllerCheckError = HealthControllerCheckErrors[keyof Healt
 
 export type HealthControllerCheckResponses = {
     /**
+     * 系统正常运行
+     *
      * The Health Check is successful
      */
     200: {

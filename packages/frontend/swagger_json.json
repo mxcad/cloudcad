@@ -5931,7 +5931,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "The Health Check is successful",
+            "description": "系统正常运行\n\nThe Health Check is successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -6005,7 +6005,7 @@
             }
           },
           "503": {
-            "description": "The Health Check is not successful",
+            "description": "服务不可用\n\nThe Health Check is not successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -10477,7 +10477,13 @@
         ]
       },
       "CadDownloadFormat": {
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "dwg",
+          "dxf",
+          "mxweb",
+          "pdf"
+        ]
       },
       "ProjectUserPermissionsDto": {
         "type": "object",
