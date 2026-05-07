@@ -96,7 +96,7 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
       });
 
       console.log('[useWechatAuth] 跳转授权页面, purpose:', purpose);
-      const { authUrl } = response as unknown as { authUrl: string };
+      const { authUrl } = response.data as { authUrl: string };
       window.location.href = authUrl;
     } catch (err) {
       console.error('[useWechatAuth] 获取授权链接失败:', err);

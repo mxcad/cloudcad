@@ -10,7 +10,7 @@ export function useDashboardStats() {
     queryFn: async () => {
       const result = await usersControllerGetDashboardStats();
       if (result.error) throw result.error;
-      return result.data as UserDashboardStatsDto;
+      return result.data;
     },
   });
 

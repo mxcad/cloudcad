@@ -14,21 +14,13 @@ export function useEmailVerification() {
   const bindEmailAndLogin = async () => {
     const result = await authControllerBindEmailAndLogin();
     if (result.error) throw result.error;
-    return result.data as unknown as {
-      accessToken: string;
-      refreshToken: string;
-      user: unknown;
-    };
+    return result.data;
   };
 
   const verifyEmailAndRegisterPhone = async () => {
     const result = await authControllerVerifyEmailAndRegisterPhone();
     if (result.error) throw result.error;
-    return result.data as unknown as {
-      accessToken: string;
-      refreshToken: string;
-      user: unknown;
-    };
+    return result.data;
   };
 
   return { resendVerification, bindEmailAndLogin, verifyEmailAndRegisterPhone };

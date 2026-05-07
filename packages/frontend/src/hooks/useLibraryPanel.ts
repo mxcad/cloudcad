@@ -138,7 +138,7 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
               : libraryControllerGetBlockLibrary;
 
           const libraryResponse = await libraryApiMethod();
-          const library = libraryResponse.data as { id: string; name: string };
+          const library = libraryResponse.data;
           libId = library.id;
           setLibraryId(libId);
         }
@@ -159,7 +159,7 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
           },
         });
 
-        const childrenData = response.data as { nodes: FileSystemNode[] };
+        const childrenData = response.data;
         setNodes(childrenData.nodes || []);
       } catch (err) {
         if (isAbortError(err)) return;
@@ -316,7 +316,7 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
             : libraryControllerGetBlockNode;
 
         const response = await apiMethod({ path: { nodeId: node.id } });
-        const fileData = response.data as FileSystemNode;
+        const fileData = response.data;
 
         // 调用回调打开文件
         onFileOpen?.(fileData);
@@ -342,7 +342,7 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
           : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id } }, undefined, { responseType: 'blob' });
 
         // 处理下载
-        const blob = new Blob([response.data as unknown as BlobPart]);
+        const blob = new Blob([response.data as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
