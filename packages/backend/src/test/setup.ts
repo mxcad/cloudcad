@@ -243,7 +243,7 @@ jest.mock("../conversion", () => {
 });
 
 // Mock @nestjs-modules/mailer handlebars adapter (pulls in native @css-inline/css-inline)
-jest.mock("@nestjs-modules/mailer/dist/adapters/handlebars.adapter", () => ({
+jest.mock("@nestjs-modules/mailer/adapters/handlebars.adapter", () => ({
 	HandlebarsAdapter: jest.fn().mockImplementation(() => ({
 		compile: jest
 			.fn()
