@@ -249,8 +249,9 @@ export const LibraryManager: React.FC = () => {
         await createFolder(name, parentId);
         closeCreateFolderModal();
         showToast('文件夹创建成功', 'success');
-      } catch (err: any) {
-        showToast(err.message || '创建失败', 'error');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : '创建失败';
+        showToast(message, 'error');
       }
     },
     [createFolder, currentNode, libraryId, showToast, closeCreateFolderModal]
@@ -312,7 +313,7 @@ export const LibraryManager: React.FC = () => {
           newName.trim(),
           () => closeRenameModal()
         );
-      } catch (err: any) {
+      } catch (_err: unknown) {
         // 错误已在 libraryOperations 中处理
       }
     },
@@ -355,7 +356,7 @@ export const LibraryManager: React.FC = () => {
         }
 
         closeSelectFolderModal();
-      } catch (err: any) {
+      } catch (_err: unknown) {
         // 错误已在 libraryOperations 中处理
       }
     },
