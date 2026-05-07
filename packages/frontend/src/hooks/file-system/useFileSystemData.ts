@@ -375,7 +375,9 @@ export const useFileSystemData = ({
             }
           }
         })
-        .catch(() => {});
+        .catch((error) => {
+          console.error('Failed to fetch root node for personal space redirection:', error);
+        });
     }
   }, [
     nodeQuery.data,
