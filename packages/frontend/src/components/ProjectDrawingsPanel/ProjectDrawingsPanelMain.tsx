@@ -139,7 +139,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     const loadProjects = async () => {
       try {
         const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as Record<string, unknown> });
-        const projectList = (response as { nodes?: ProjectDto[] })?.nodes || [];
+        const projectList = (response as unknown as { nodes?: ProjectDto[] })?.nodes || [];
         setProjects(projectList.map((p: ProjectDto): FileSystemNode => ({
           id: p.id, name: p.name, isFolder: true, isRoot: true,
           updatedAt: p.updatedAt, parentId: undefined,
