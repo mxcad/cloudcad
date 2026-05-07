@@ -67,7 +67,6 @@ import { globalShowToast } from '../../contexts/NotificationContext';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../../utils/loadingUtils';
-import { getValidToken } from '@/utils/tokenUtils';
 
 
 // ==================== 辅助函数 ====================
@@ -674,6 +673,8 @@ async function waitForFileReady(
     const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId } });
     const fileInfo = fileInfoResponse.data;
 
+    if (!fileInfo) return null;
+
     if (fileInfo.fileHash && fileInfo.path) {
       return {
         fileHash: fileInfo.fileHash,
@@ -767,7 +768,7 @@ export async function openLibraryDrawing(
       const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId } });
       const node = nodeResponse.data;
       if (!node) {
-        throw new Error('无法获取图纸库节点信息');
+        throw new Error('无法获取图纸库文件信息');
       }
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
@@ -855,7 +856,7 @@ export async function openLibraryBlock(
       const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId } });
       const node = nodeResponse.data;
       if (!node) {
-        throw new Error('无法获取图块库节点信息');
+        throw new Error('无法获取图块库文件信息');
       }
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
@@ -1095,10 +1096,7 @@ async function handleFileSelection(
       body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId, fileSize: file.size },
     });
 
-    const isDuplicate = duplicateCheck.data?.isDuplicate ?? false;
-    const existingNodeId = duplicateCheck.data?.existingNodeId ?? null;
-
-    if (isDuplicate && existingNodeId) {
+    if (duplicateCheck.data?.exists && duplicateCheck.data?.nodeId) {
       // 隐藏加载动画
       hideGlobalLoading();
 
@@ -1109,7 +1107,7 @@ async function handleFileSelection(
         // 用户选择打开已有文件
         showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
         await openUploadedFile(
-          existingNodeId,
+          duplicateCheck.data?.nodeId,
           uploadTargetNodeId
         );
         hideGlobalLoading();
@@ -1567,6 +1565,8 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
     const fileInfo = fileInfoResponse.data;
 
+    if (!fileInfo) return;
+
     // 保存成功后更新乐观锁时间戳
     if (fileInfo.updatedAt && currentFileInfo) {
       currentFileInfo = { ...currentFileInfo, updatedAt: fileInfo.updatedAt };
@@ -1634,13 +1634,12 @@ async function saveLibraryFile() {
           ? await libraryControllerGetDrawingNode({ path: { nodeId: fileId } })
           : await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
       const node = nodeResponse.data;
-      if (!node || !node.path) {
-        throw new Error('无法获取节点路径');
-      }
-      nodePath = node.path;
+      if (node) {
+        nodePath = node.path;
 
-      if (nodePath && currentFileInfo) {
-        currentFileInfo = { ...currentFileInfo, path: nodePath };
+        if (nodePath && currentFileInfo) {
+          currentFileInfo = { ...currentFileInfo, path: nodePath };
+        }
       }
     } catch (error) {
       handleError(error, 'mxcadManager: saveLibraryFile getNodePath');
@@ -1884,11 +1883,11 @@ class MxCADContainerManager {
       container.id = CSS_CLASSES.GLOBAL_CONTAINER;
       // 初始状态：隐藏，使用 visibility + z-index 方案保护 WebGL 上下文
       container.style.cssText = `
-        position: fixed;
+        position: absolute;
         top: 0;
         left: 300px;
         right: 0;
-        height: 100vh;
+        bottom: 0;
         visibility: hidden;
         z-index: -1;
         pointer-events: none;
@@ -2114,7 +2113,7 @@ class MxCADInstanceManager {
 
         try {
           // 检查用户是否已登录，未登录则不生成和上传缩略图
-          const token = getValidToken();
+          const token = localStorage.getItem('accessToken');
           const user = localStorage.getItem('user');
           const isLoggedIn = !!(token && user);
 
@@ -2172,7 +2171,7 @@ class MxCADInstanceManager {
    */
   private buildViewOptions(openFile?: string) {
     const containerManager = MxCADContainerManager.getInstance();
-    const token = getValidToken();
+    const token = localStorage.getItem('accessToken');
     
     // 构建外部参照文件解析函数
     const resolveExtReferenceUrl = (fileName: string) => {
@@ -2308,7 +2307,7 @@ class MxCADInstanceManager {
         return;
       }
 
-      const token = getValidToken();
+      const token = localStorage.getItem('accessToken');
       for (
         let attempt = 0;
         attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
@@ -2380,7 +2379,7 @@ class MxCADInstanceManager {
     }
 
     try {
-      const token = getValidToken();
+      const token = localStorage.getItem('accessToken');
 
       for (
         let attempt = 0;
@@ -2588,15 +2587,12 @@ export async function processPendingImages(): Promise<void> {
   }
 
   // 过滤掉已删除的图片
-  // 定义实体接口
-  interface EntityWithIsErased {
-    isErased(): boolean;
-  }
-
   const validImages = pendingImages.filter(img => {
     try {
-      const entity = img.entity as EntityWithIsErased;
-      return !entity.isErased();
+      if (img.entity && typeof img.entity === 'object' && 'isErased' in img.entity) {
+        return !(img.entity as { isErased(): boolean }).isErased();
+      }
+      return true;
     } catch {
       return true;
     }
@@ -2621,10 +2617,10 @@ export async function processPendingImages(): Promise<void> {
 
       // 上传到外部参照目录（带 updatePreloading=true 更新 preloading.json）
       await mxCadControllerUploadExtReferenceImage({
-        query: { nodeId: currentInfo.fileId },
         body: {
           file,
           ext_ref_file: img.fileName,
+          nodeId: currentInfo.fileId,
           updatePreloading: true,
         },
       });
