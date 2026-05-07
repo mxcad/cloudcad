@@ -279,16 +279,21 @@ export const useLibrary = (
     refresh,
     setSearchTerm,
     setViewMode,
-    createFolder: (name: string, parentId?: string) =>
-      mutations.createFolder({ name, parentId }),
-    deleteNode: (nodeId: string, permanently?: boolean) =>
-      mutations.deleteNode({ nodeId, permanently }),
-    renameNode: (nodeId: string, name: string) =>
-      mutations.renameNode({ nodeId, name }),
-    moveNode: (nodeId: string, targetParentId: string) =>
-      mutations.moveNode({ nodeId, targetParentId }),
-    copyNode: (nodeId: string, targetParentId: string) =>
-      mutations.copyNode({ nodeId, targetParentId }),
+    createFolder: async (name: string, parentId?: string) => {
+      await mutations.createFolder({ name, parentId });
+    },
+    deleteNode: async (nodeId: string, permanently?: boolean) => {
+      await mutations.deleteNode({ nodeId, permanently });
+    },
+    renameNode: async (nodeId: string, name: string) => {
+      await mutations.renameNode({ nodeId, name });
+    },
+    moveNode: async (nodeId: string, targetParentId: string) => {
+      await mutations.moveNode({ nodeId, targetParentId });
+    },
+    copyNode: async (nodeId: string, targetParentId: string) => {
+      await mutations.copyNode({ nodeId, targetParentId });
+    },
     downloadNode,
     clearError,
     // Selection Actions
