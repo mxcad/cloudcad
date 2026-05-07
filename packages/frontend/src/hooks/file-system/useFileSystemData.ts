@@ -111,8 +111,8 @@ export const useFileSystemData = ({
     queryFn: async () => {
       const response = await fileSystemControllerGetNode({
         path: { nodeId: effectiveNodeId },
-      }) as any;
-      return toFileSystemNode(response);
+      });
+      return toFileSystemNode(response as Parameters<typeof toFileSystemNode>[0]);
     },
     enabled:
       !!effectiveNodeId && !isProjectRootMode && !isTrash && !hasSearch,
@@ -130,10 +130,10 @@ export const useFileSystemData = ({
             filter: projectFilter,
             page: pagination.page,
             limit: pagination.limit,
-          } as any,
-        }) as any;
+          } as Record<string, unknown>,
+        });
 
-        const projectData = response;
+        const projectData = response as Record<string, unknown>;
         if (projectData?.nodes) {
           return {
             nodes: projectData.nodes.map(projectToNode),
@@ -147,7 +147,7 @@ export const useFileSystemData = ({
         // Legacy format: array of ProjectDto
         const allProjects = (
           Array.isArray(response) ? response : []
-        ) as ProjectDto[];
+        ) as unknown as ProjectDto[];
         return {
           nodes: allProjects.map((p) => projectToNode(p)),
           total: allProjects.length,
@@ -163,8 +163,8 @@ export const useFileSystemData = ({
           page: pagination.page,
           limit: pagination.limit,
           search: searchQuery || undefined,
-        } as any,
-      }) as any;
+        } as Record<string, unknown>,
+      });
 
       const childrenData = (response?.nodes || []).map(toFileSystemNode);
       if (response?.total !== undefined) {

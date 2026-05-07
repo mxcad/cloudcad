@@ -70,7 +70,7 @@ export function useUserCRUD() {
     isLoading,
     error,
     // TODO: extract to useSystemConfig hook in next slice
-    roles: [] as unknown[],
+    roles: [] as Array<{ id: string; name: string; isSystem?: boolean }>,
     mailEnabled: false,
     smsEnabled: false,
     createUser: async (data: Record<string, unknown>) => {

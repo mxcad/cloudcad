@@ -35,7 +35,7 @@ describe('mxcadCheck', () => {
     it('returns false when no duplicate exists', async () => {
       const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({
-        data: { isDuplicate: false, existingNodeId: null },
+        data: { exists: false, nodeId: null },
       });
 
       const result = await checkDuplicateFile('abc123', 'test.dwg', 'node-1');
@@ -46,7 +46,7 @@ describe('mxcadCheck', () => {
     it('returns true and existingNodeId when duplicate exists', async () => {
       const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({
-        data: { isDuplicate: true, existingNodeId: 'existing-node-42' },
+        data: { exists: true, nodeId: 'existing-node-42' },
       });
 
       const result = await checkDuplicateFile('def456', 'existing.dwg', 'node-2');
@@ -75,7 +75,7 @@ describe('mxcadCheck', () => {
     it('passes correct parameters to the API', async () => {
       const mockCheck = mxCadControllerCheckFileExist as ReturnType<typeof vi.fn>;
       mockCheck.mockResolvedValue({
-        data: { isDuplicate: false },
+        data: { exists: false },
       });
 
       await checkDuplicateFile('hash-abc', 'myfile.dwg', 'target-node-99');
@@ -86,6 +86,7 @@ describe('mxcadCheck', () => {
           fileHash: 'hash-abc',
           filename: 'myfile.dwg',
           nodeId: 'target-node-99',
+          fileSize: 0,
         },
       });
     });
