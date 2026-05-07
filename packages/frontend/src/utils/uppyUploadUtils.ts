@@ -36,7 +36,6 @@ interface UppyCompletePayload {
  *  but is missing from the @uppy/core type definitions. */
 interface UppyWithClose extends Uppy {
   close?: () => void;
-  cancelAll?: () => void;
   on(event: string, callback: (...args: unknown[]) => void): this;
 }
 

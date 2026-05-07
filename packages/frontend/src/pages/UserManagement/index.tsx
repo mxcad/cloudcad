@@ -147,7 +147,7 @@ export const UserManagement = () => {
 
   const handleOpenCreate = () => {
     setEditingUser(null);
-    const defaultRole = roles.find((r: RoleDto) => r.name === 'USER');
+    const defaultRole = roles.find((r) => r.name === 'USER');
     setFormData({
       username: '',
       email: '',
@@ -391,7 +391,7 @@ export const UserManagement = () => {
               className="filter-select"
             >
               <option value="">所有角色</option>
-              {roles.map((role: RoleDto) => (
+              {roles.map((role) => (
                 <option key={role.id} value={role.id}>
                   {getRoleDisplayName(role.name, role.isSystem)}
                 </option>

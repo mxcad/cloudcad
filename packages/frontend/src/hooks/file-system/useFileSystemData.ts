@@ -226,8 +226,8 @@ export const useFileSystemData = ({
           projectId: searchProjectId,
           page: pagination.page,
           limit: pagination.limit,
-        } as any,
-      }) as any;
+        } as Record<string, unknown>,
+      });
 
       const searchData = response;
       if (searchData?.nodes) {
@@ -258,8 +258,8 @@ export const useFileSystemData = ({
         query: {
           page: pagination.page,
           limit: pagination.limit,
-        } as any,
-      }) as any;
+        } as Record<string, unknown>,
+      });
 
       const trashData = response;
       const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);

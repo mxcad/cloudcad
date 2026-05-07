@@ -200,6 +200,7 @@ export const useUppyUpload = () => {
     uppy.on('complete', (result: UppyCompleteResult) => {
       if (result.successful && result.successful.length > 0) {
         const file = result.successful[0];
+        if (!file) return;
 
         // 构建成功回调参数
         const successParam: LoadFileParam = {
@@ -217,7 +218,9 @@ export const useUppyUpload = () => {
 
         config.onSuccess?.(successParam);
       } else if (result.failed && result.failed.length > 0) {
-        const uploadError = result.failed[0].error;
+        const failedItem = result.failed[0];
+        if (!failedItem) return;
+        const uploadError = failedItem.error;
         const errorMessage = uploadError instanceof Error
           ? uploadError.message
           : typeof uploadError === 'string'
