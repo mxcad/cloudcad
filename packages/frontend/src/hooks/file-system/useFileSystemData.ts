@@ -308,8 +308,8 @@ export const useFileSystemData = ({
             try {
               const parentResponse = await fileSystemControllerGetNode({
                 path: { nodeId: traversalNode.parentId },
-              }) as any;
-              traversalNode = toFileSystemNode(parentResponse);
+              });
+              traversalNode = toFileSystemNode(parentResponse as Parameters<typeof toFileSystemNode>[0]);
             } catch (error: unknown) {
               handleError(error, '获取父节点失败，停止构建面包屑');
               break;

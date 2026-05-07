@@ -89,10 +89,11 @@ export function useLoadNodes(
                   limit: PAGE_SIZE,
                   search: search || undefined,
                 } });
-          nodeList = (response as any)?.nodes || [];
-          totalCount = (response as any)?.total || 0;
+          const libResponse = response as { nodes?: FileSystemNode[]; total?: number; totalPages?: number };
+          nodeList = libResponse.nodes || [];
+          totalCount = libResponse.total || 0;
           totalPageCount =
-            (response as any)?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
+            libResponse.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
         } else {
           const { data: response } = await fileSystemControllerGetChildren({
             path: { nodeId },

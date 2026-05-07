@@ -34,11 +34,12 @@ client.setConfig({
   },
 });
 
-// ── 2. Bearer Token (request interceptor) ────────────────────
+// ── 2. Bearer Token + CSRF (request interceptor) ──────────────
 client.interceptors.request.use((request) => {
   const token = getValidToken();
   if (token) {
     request.headers.set('Authorization', `Bearer ${token}`);
+    request.headers.set('X-CSRF-Token', token);
   }
   if (request.headers.get('Content-Type') === 'null') {
     request.headers.delete('Content-Type');
@@ -158,8 +159,10 @@ client.setConfig({
       if (!isAuthEndpoint) {
         const refreshed = await tryRefreshToken();
         if (refreshed) {
+          const token = getValidToken();
           const headers = new Headers(init?.headers);
-          headers.set('Authorization', `Bearer ${getValidToken()}`);
+          headers.set('Authorization', `Bearer ${token}`);
+          headers.set('X-CSRF-Token', token);
           const retryInit = persistedInit ? { ...persistedInit, headers } : { ...init, headers };
           response = await nativeFetch(input, retryInit);
         } else {

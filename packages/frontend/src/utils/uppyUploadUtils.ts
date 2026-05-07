@@ -36,7 +36,7 @@ interface UppyCompletePayload {
  *  but is missing from the @uppy/core type definitions. */
 interface UppyWithClose extends Uppy {
   close?: () => void;
-  on(event: string, callback: (...args: unknown[]) => void): this;
+  on(event: string, callback: Function): this;
 }
 
 /**
@@ -205,7 +205,7 @@ export const uploadFileWithUppy = async (
       }
     });
 
-    uppy.on('complete', (result: UppyCompletePayload) => {
+    (uppy as unknown as UppyWithClose).on('complete', (result: UppyCompletePayload) => {
       const successful = result.successful?.[0];
       if (successful) {
         resolve({
@@ -321,7 +321,7 @@ export const uploadFilePublic = async (options: {
       }
     });
 
-    uppy.on('complete', (result: UppyCompletePayload) => {
+    (uppy as unknown as UppyWithClose).on('complete', (result: UppyCompletePayload) => {
       const successful = result.successful?.[0];
       if (successful) {
         resolve({
