@@ -20,11 +20,9 @@ async function preloadCADDependencies(): Promise<void> {
   try {
     console.log('[MxCAD Preload] 开始预加载 CAD 引擎...');
 
-    // 1. 预加载 mxcad-app 样式（轻量）
-    // @ts-expect-error - mxcad-app 没有类型定义
-    await import('mxcad-app/style');
-
-    // 2. 预加载 mxcadManager（包含 mxcad-app 核心和 mxdraw）
+    // 预加载 mxcadManager（包含 mxcad-app 核心和 mxdraw）
+    // 注意：不要手动 import('mxcad-app/style')，mxcad-app 会自动加载样式。
+    // 手动导入会导致全局样式冲突，破坏 mxdraw WebGL 渲染。
     await import('../services/mxcadManager');
 
     isPreloaded = true;

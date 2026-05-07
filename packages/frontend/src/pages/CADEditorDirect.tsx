@@ -255,8 +255,6 @@ export const CADEditorDirect: React.FC = () => {
   }, [urlProjectId]);
 
   const loadMxCADDependencies = async () => {
-    // @ts-expect-error - mxcad-app 没有类型定义
-    await import('mxcad-app/style');
     const { mxcadManager } = await import('../services/mxcadManager');
     return { mxcadManager };
   };
@@ -823,10 +821,6 @@ export const CADEditorDirect: React.FC = () => {
           return;
         }
 
-        // 加载 MxCAD 依赖
-        // @ts-expect-error - mxcad-app 没有类型定义
-        await import('mxcad-app/style');
-
         // 设置导航函数
         const { setNavigateFunction } =
           await import('../services/mxcadManager');
@@ -1255,15 +1249,8 @@ export const CADEditorDirect: React.FC = () => {
       )}
 
       {!loading && !error && isActive && (
-        <div
-          className="flex w-full h-screen relative"
-          style={{
-            // 设置与侧边栏一致的背景色，避免拖拽时露出空白
-            // 深色主题使用 --sidebar-bg (#3A4352)，亮色主题使用 --bg-secondary (#ffffff)
-            background: 'var(--sidebar-bg, var(--bg-secondary))',
-          }}
-        >
-          {/* 侧边栏容器 - 始终渲染 */}
+        <div className="flex w-full h-screen relative">
+          {/* 侧边栏容器 - 始终渲染，自带背景色 */}
           <SidebarContainer
             projectId={
               isHomeMode ? personalSpaceId || '' : currentProjectId || ''
@@ -1271,8 +1258,19 @@ export const CADEditorDirect: React.FC = () => {
             onInsertFile={handleInsertFile}
           />
 
-          {/* CAD编辑器内容区域 */}
-          <div className="flex-1 relative">
+          {/* CAD编辑器内容区域 - 必须透明以让 MxCAD canvas (z-index 9998) 可见 */}
+          <div className="flex-1 relative" style={{ background: 'transparent' }}>
+            {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
+
+            {/* 下载格式选择弹窗 */}
+            <DownloadFormatModal
+              isOpen={showDownloadFormatModal}
+              fileName={downloadingFileName}
+              onClose={() => setShowDownloadFormatModal(false)}
+              onDownload={handleDownloadWithFormat}
+              loading={downloading}
+            />
+          </div>
             {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
 
             {/* 下载格式选择弹窗 */}
