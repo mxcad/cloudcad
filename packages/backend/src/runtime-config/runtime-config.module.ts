@@ -11,10 +11,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { RuntimeConfigService } from './runtime-config.service';
 import { RuntimeConfigController } from './runtime-config.controller';
 
 @Module({
+  imports: [CacheModule.register()],
   controllers: [RuntimeConfigController],
   providers: [RuntimeConfigService],
   exports: [RuntimeConfigService],

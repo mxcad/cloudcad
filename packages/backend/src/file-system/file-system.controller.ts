@@ -44,6 +44,7 @@ import type { Request as ExpressRequest, Response } from "express";
 import * as fs from "fs";
 import * as path from "path";
 import { CsrfProtected } from "../auth/decorators/csrf-protected.decorator";
+import { OptionalAuth } from "../auth/decorators/optional-auth.decorator";
 import { Public } from "../auth/decorators/public.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RequirePermissions } from "../common/decorators/require-permissions.decorator";
@@ -524,8 +525,7 @@ export class FileSystemController {
 	}
 
 	@Get("nodes/:nodeId/thumbnail")
-	@Public()
-	@UseGuards(JwtAuthGuard)
+	@OptionalAuth()
 	@ApiOperation({ summary: "获取文件节点缩略图" })
 	@ApiProduces("image/jpeg")
 	@ApiResponse({ status: 200, description: "获取缩略图成功" })
