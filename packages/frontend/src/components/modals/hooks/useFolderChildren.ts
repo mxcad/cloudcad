@@ -21,8 +21,8 @@ export const useFolderChildren = () => {
 
         let children: FileSystemNode[] = [];
 
-        if (childrenResponse?.nodes) {
-          children = (childrenResponse.nodes || []) as FileSystemNode[];
+        if (childrenResponse?.data?.nodes) {
+          children = (childrenResponse.data.nodes || []) as FileSystemNode[];
         }
 
         const folders: FolderNode[] = children
