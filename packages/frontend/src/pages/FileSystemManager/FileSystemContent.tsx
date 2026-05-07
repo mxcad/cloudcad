@@ -200,7 +200,12 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               onDragLeave={onDragLeave}
               onDrop={onDrop}
               isDropTarget={dropTargetId === node.id}
-              {...extraProps}
+              canUpload={extraProps.canUpload}
+              canEdit={extraProps.canEdit}
+              canDelete={extraProps.canDelete}
+              canDownload={extraProps.canDownload}
+              canViewVersionHistory={extraProps.canViewVersionHistory}
+              canManageExternalReference={extraProps.canManageExternalReference}
             />
           );
         })}
