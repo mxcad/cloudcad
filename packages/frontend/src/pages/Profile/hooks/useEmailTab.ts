@@ -24,14 +24,12 @@ export const useEmailTab = () => {
   const [verifyToken, setVerifyToken] = useState('');
 
   const verification = useVerificationCode({
-    // @ts-expect-error Callback signature mismatch — useVerificationCode expects (...args: unknown[]) => Promise<unknown>
-    onSend: async (email: string, isForNewEmail = false) => {
+    onSend: (...args: unknown[]) => {
+      const [email, isForNewEmail] = args;
       if (isForNewEmail) {
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; isRebind?: boolean }
-        await authControllerSendBindEmailCode({ body: { email, isRebind: true } });
+        return authControllerSendBindEmailCode({ body: { email, isRebind: true } as unknown as Record<string, never> });
       } else {
-        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string }
-        await authControllerSendBindEmailCode({ body: { email } });
+        return authControllerSendBindEmailCode({ body: { email } as unknown as Record<string, never> });
       }
     },
     // @ts-expect-error Callback signature mismatch — useVerificationCode expects (...args: unknown[]) => Promise<unknown>

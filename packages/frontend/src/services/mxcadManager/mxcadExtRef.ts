@@ -43,8 +43,6 @@ export async function uploadExtReferenceImage(
 
     return {
       success: true,
-      // @ts-expect-error - response $200 type only has code/message, but backend may return nodeId in data
-      nodeId: result.data?.nodeId,
     };
   } catch (error) {
     handleError(error, 'mxcadExtRef: uploadExtReferenceImage');
