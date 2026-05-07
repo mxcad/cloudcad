@@ -62,9 +62,7 @@ export function useLibraryQuota({
 
     try {
       // 获取默认配额（GB）
-      const { data: configs } = (await runtimeConfigControllerGetPublicConfigs()) as unknown as {
-        data: Record<string, number> | undefined;
-      };
+      const configs = await runtimeConfigControllerGetPublicConfigs() as Record<string, number> | undefined;
       const defaultVal = configs?.libraryStorageQuota || 100;
       setDefaultLibraryQuota(defaultVal);
 
@@ -109,7 +107,7 @@ export function useLibraryQuota({
     try {
       // 调用后端 API 更新库节点配额（GB）
       await fileSystemControllerUpdateStorageQuota({
-        body: { nodeId: libraryId, quota: libraryQuota } as any,
+        body: { nodeId: libraryId, quota: libraryQuota },
       });
 
       showToast(`库配额已更新为 ${libraryQuota} GB`, 'success');
