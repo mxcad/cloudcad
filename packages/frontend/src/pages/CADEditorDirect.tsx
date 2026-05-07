@@ -23,7 +23,6 @@ import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
-import { MxFun } from 'mxdraw';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
@@ -256,8 +255,6 @@ export const CADEditorDirect: React.FC = () => {
   }, [urlProjectId]);
 
   const loadMxCADDependencies = async () => {
-    // @ts-expect-error - mxcad-app 没有类型定义
-    await import('mxcad-app/style');
     const { mxcadManager } = await import('../services/mxcadManager');
     return { mxcadManager };
   };
@@ -823,10 +820,6 @@ export const CADEditorDirect: React.FC = () => {
           setLoading(false);
           return;
         }
-
-        // 加载 MxCAD 依赖
-        // @ts-expect-error - mxcad-app 没有类型定义
-        await import('mxcad-app/style');
 
         // 设置导航函数
         const { setNavigateFunction } =

@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { NavigateFunction } from 'react-router-dom';
+
 import { handleError } from '@/utils/errorHandler';
 
 interface UseHomeInitializerOptions {
@@ -55,7 +55,7 @@ export function useHomeInitializer(
 
     onLoadingChange(true);
     onErrorChange(null);
-
+  
     try {
       const { mxcadManager } = await import('@/services/mxcadManager');
 
@@ -66,9 +66,6 @@ export function useHomeInitializer(
         onLoadingChange(false);
         return;
       }
-
-      // @ts-expect-error - mxcad-app has no type definitions
-      await import('mxcad-app/style');
 
       const { setNavigateFunction } = await import('@/services/mxcadManager');
       setNavigateFunction(navigate);

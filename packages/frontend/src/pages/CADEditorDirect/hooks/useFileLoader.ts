@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { NavigateFunction } from 'react-router-dom';
+
 import { SystemPermission, type Permission } from '@/constants/permissions';
 import {
   fileSystemControllerGetNode,
@@ -14,7 +14,7 @@ import {
   libraryControllerGetBlockNode,
 } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
-import { parseCADEditorRoute } from '../cadEditorUtils';
+
 
 interface FileInfo {
   fileHash?: string;
@@ -267,8 +267,6 @@ export function useFileLoader(options: UseFileLoaderOptions) {
 
       // First-time initialization
       const loadMxCADDependencies = async () => {
-        // @ts-expect-error - mxcad-app has no type definitions
-        await import('mxcad-app/style');
         return { mxcadManager };
       };
 
