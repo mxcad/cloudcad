@@ -207,8 +207,8 @@ export const CADEditorDirect: React.FC = () => {
   // 获取私人空间 ID
   useEffect(() => {
     if (!isAuthenticated) return;
-    (fileSystemControllerGetPersonalSpace() as any)
-      .then((res: any) => {
+    fileSystemControllerGetPersonalSpace()
+      .then((res) => {
         if (res?.data?.id) {
           setPersonalSpaceId(res.data.id);
           // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
@@ -285,7 +285,7 @@ export const CADEditorDirect: React.FC = () => {
       const vuetify = await mxcadApp.getVuetify();
 
       // 动态导入 Vue 的 watch 函数
-      const { watch } = await import('vue') as any;
+      const { watch } = await import('vue');
 
       // 从 localStorage 读取用户设置的主题
       const storedTheme = localStorage.getItem('mx-user-dark');
@@ -1122,7 +1122,7 @@ export const CADEditorDirect: React.FC = () => {
     // 文件编辑模式：已有打开的文件
     try {
       // 获取目标文件信息（要打开的文件）
-      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as unknown as { data: { deletedAt?: string | null } };
+      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as { data: { deletedAt?: string | null } };
 
       // 检查目标文件是否在回收站中
       if (targetFile.deletedAt) {
@@ -1133,7 +1133,7 @@ export const CADEditorDirect: React.FC = () => {
       const currentFileId = currentFileIdRef.current;
       if (!currentFileId) return;
 
-      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as unknown as { data: { parentId?: string | null; id?: string; isRoot?: boolean } };
+      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as { data: { parentId?: string | null; id?: string; isRoot?: boolean } };
 
       // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
       let uploadTargetNodeId = currentFile.parentId || '';
@@ -1174,9 +1174,9 @@ export const CADEditorDirect: React.FC = () => {
       setDownloading(true);
       const { data: blobData } = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
-        query: { format, ...(pdfOptions as any) },
+        query: { format, ...pdfOptions },
         responseStyle: 'blob',
-      } as any);
+      });
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);
