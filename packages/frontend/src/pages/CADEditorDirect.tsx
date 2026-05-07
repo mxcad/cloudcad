@@ -77,8 +77,10 @@ export const CADEditorDirect: React.FC = () => {
   const [isActive, setIsActive] = useState(() => {
     return !!fileId || isHomeMode;
   });
-  // 无论主页还是文件模式，初始都显示 loading，避免侧边栏闪烁
-  const [loading, setLoading] = useState(true);
+  // 主页模式（无 fileId）初始不显示 loading，文件模式初始显示 loading
+  // 注意：必须与旧版 useFileLoader hook 的初始值保持一致，
+  // 否则主页模式 loading 遮罩会在 Strict Mode 下覆盖 canvas 导致白屏
+  const [loading, setLoading] = useState(() => !!fileId);
   const [error, setError] = useState<string | null>(null);
   
   // 存储当前文件的 hash（用于未登录用户的外部参照上传）
@@ -639,6 +641,12 @@ export const CADEditorDirect: React.FC = () => {
               mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?t=${cacheTimestamp}`;
             }
             setCacheTimestamp(cacheTimestamp); // 设置缓存时间戳，用于清理旧缓存
+          } else {
+            // 既无版本参数也无 updatedAt，无法构造文件 URL
+            // 恢复旧版 useFileLoader getFileUrl 的保护逻辑
+            setError('无法构造文件访问URL');
+            setLoading(false);
+            return;
           }
         }
 
@@ -794,18 +802,23 @@ export const CADEditorDirect: React.FC = () => {
     };
   }, [externalReferenceUpload]);
 
+  // 主页模式初始化守卫 — 使用组件级 ref 替代全局 window 属性
+  // 原因：React Strict Mode 会双挂载组件。全局 window 属性在第一次挂载时被设为 true，
+  // 第二次挂载（cleanup 后重新挂载）时仍为 true，导致 initHome 被跳过，loading 永久为 true，
+  // 不透明遮罩覆盖 canvas — 用户看到的"不出东西"现象。
+  const homeInitStartedRef = useRef(false);
+
   // 主页模式初始化（/ 路由，初始化空白编辑器）
   useEffect(() => {
     if (!isHomeMode || !isActive) return;
 
-    // 防止重复初始化
-    const initKey = 'mxcad_home_init_started';
-    if ((window as unknown as { [key: string]: boolean })[initKey]) {
+    // 使用组件级 ref 防止重复初始化（同一挂载周期内的防护）
+    if (homeInitStartedRef.current) {
       return;
     }
 
     // 立即标记开始，避免 setTimeout 期间重复触发
-    (window as unknown as { [key: string]: boolean })[initKey] = true;
+    homeInitStartedRef.current = true;
 
     setError(null);
 
@@ -846,14 +859,19 @@ export const CADEditorDirect: React.FC = () => {
         setLoading(false);
       } catch (err) {
         console.error('初始化 CAD 编辑器失败:', err);
-        // 重置标记，允许重试
-        (window as unknown as { [key: string]: boolean })[initKey] = false;
+        // 重置组件级 ref，允许重试（替代旧版 window 全局属性）
+        homeInitStartedRef.current = false;
         setError('CAD 编辑器初始化失败，请刷新页面重试');
         setLoading(false);
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // cleanup 时重置守卫 ref，确保 React Strict Mode
+      // 双挂载（unmount → remount）时能重新初始化
+      homeInitStartedRef.current = false;
+    };
   }, [isHomeMode, isActive]);
 
   // 监听保存/另存为事件，未登录时显示登录提示
@@ -1271,18 +1289,7 @@ export const CADEditorDirect: React.FC = () => {
               loading={downloading}
             />
           </div>
-            {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
-
-            {/* 下载格式选择弹窗 */}
-            <DownloadFormatModal
-              isOpen={showDownloadFormatModal}
-              fileName={downloadingFileName}
-              onClose={() => setShowDownloadFormatModal(false)}
-              onDownload={handleDownloadWithFormat}
-              loading={downloading}
-            />
           </div>
-        </div>
       )}
 
       {/* 登录提示弹窗 - 主页模式 */}
@@ -1294,19 +1301,19 @@ export const CADEditorDirect: React.FC = () => {
       />
 
       {/* 另存为弹窗 */}
-        {showSaveAsModal && saveAsBlob && (
-          <SaveAsModal
-            isOpen={showSaveAsModal}
-            currentFileName={saveAsFileName}
-            mxwebBlob={saveAsBlob}
-            personalSpaceId={saveAsPersonalSpaceId}
-            onClose={() => {
-              setShowSaveAsModal(false);
-              setSaveAsBlob(null);
-            }}
-            onSuccess={handleSaveAsSuccess}
-          />
-        )}
+      {showSaveAsModal && saveAsBlob && (
+        <SaveAsModal
+          isOpen={showSaveAsModal}
+          currentFileName={saveAsFileName}
+          mxwebBlob={saveAsBlob}
+          personalSpaceId={saveAsPersonalSpaceId}
+          onClose={() => {
+            setShowSaveAsModal(false);
+            setSaveAsBlob(null);
+          }}
+          onSuccess={handleSaveAsSuccess}
+        />
+      )}
 
       {/* 外部参照上传弹窗 */}
       <ExternalReferenceModal
@@ -1318,8 +1325,8 @@ export const CADEditorDirect: React.FC = () => {
         onSkip={externalReferenceUpload.skip}
         onClose={externalReferenceUpload.close}
       />
-      </div>
-    );
-  };
+    </div>
+  );
+};
 
 export default CADEditorDirect;
