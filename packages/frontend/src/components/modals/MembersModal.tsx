@@ -194,13 +194,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       // 添加成员
-      // @ts-expect-error Generated API type marks body as never
       const memberData = await fileSystemControllerAddProjectMember({
         path: { projectId },
         body: {
           userId: selectedUser.id,
           projectRoleId: newRoleId,
-        },
+        } as unknown as Record<string, never>,
       });
 
       const { id, email, username, nickname, avatar, projectRoleId, projectRoleName, joinedAt } = memberData.data;

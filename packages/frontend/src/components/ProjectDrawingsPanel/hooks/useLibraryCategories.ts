@@ -68,7 +68,7 @@ export function useLibraryCategories(
                 limit: 100,
               } });
 
-        const folders = (response as any)?.nodes || [];
+        const folders = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
 
         const items: CategoryItem[] = [
           { id: 'all', name: '全部', hasChildren: level === 0 },
@@ -129,7 +129,7 @@ export function useLibraryCategories(
                 limit: 100,
               } });
 
-        const folders = (response as any)?.nodes || [];
+        const folders = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
 
         const items: CategoryItem[] = [
           { id: 'all', name: '全部', hasChildren: level === 0 },
@@ -143,7 +143,7 @@ export function useLibraryCategories(
         const currentLevel: CategoryLevel = { level, items };
 
         if (level < 2 && folders.length > 0) {
-          const childPromises = folders.map((folder: any) =>
+          const childPromises = folders.map((folder: FileSystemNode) =>
             loadAllCategories(folder.id, level + 1)
           );
           (await Promise.all(childPromises)).filter(Boolean) as CategoryLevel[];
@@ -227,7 +227,7 @@ export function useLibraryCategories(
           libraryType === 'drawing'
             ? await libraryControllerGetDrawingLibrary()
             : await libraryControllerGetBlockLibrary();
-        const libraryNode = response as any as { id?: string; name?: string };
+        const libraryNode = response.data as { id?: string; name?: string } | undefined;
         if (libraryNode?.id) {
           setLibraryRootId(libraryNode.id);
 
@@ -296,7 +296,7 @@ export function useLibraryCategories(
                   limit: 100,
                 } });
 
-          const folders = (response as any)?.nodes || [];
+          const folders = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
           childCategories = [
             { id: 'all', name: '全部', hasChildren: level < 1 },
             ...folders.map((folder: FileSystemNode) => ({

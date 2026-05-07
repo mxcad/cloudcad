@@ -206,8 +206,8 @@ export const CADEditorDirect: React.FC = () => {
   // 获取私人空间 ID
   useEffect(() => {
     if (!isAuthenticated) return;
-    (fileSystemControllerGetPersonalSpace() as any)
-      .then((res: any) => {
+    fileSystemControllerGetPersonalSpace()
+      .then((res) => {
         if (res?.data?.id) {
           setPersonalSpaceId(res.data.id);
           // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
@@ -284,7 +284,7 @@ export const CADEditorDirect: React.FC = () => {
       const vuetify = await mxcadApp.getVuetify();
 
       // 动态导入 Vue 的 watch 函数
-      const { watch } = await import('vue') as any;
+      const { watch } = await import('vue') as { watch: (source: () => unknown, cb: (value: unknown) => void) => void };
 
       // 从 localStorage 读取用户设置的主题
       const storedTheme = localStorage.getItem('mx-user-dark');

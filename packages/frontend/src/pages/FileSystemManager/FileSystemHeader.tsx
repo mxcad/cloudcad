@@ -230,7 +230,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             className="min-w-0 flex-1 overflow-x-auto no-scrollbar"
           >
             <BreadcrumbNavigation
-              breadcrumbs={breadcrumbs as any}
+              breadcrumbs={breadcrumbs as unknown as Parameters<typeof BreadcrumbNavigation>[0]['breadcrumbs']}
               onNavigate={handleBreadcrumbNav}
             />
           </div>

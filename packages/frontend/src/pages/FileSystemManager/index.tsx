@@ -385,11 +385,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           await fileSystemControllerUpdateNode({
             path: { nodeId: id },
             body: { name: data.name ?? undefined, description: data.description },
-          } as any);
+          } as Parameters<typeof fileSystemControllerUpdateNode>[0]);
         });
       } else {
         handleCreateProjectSubmit(async (name, description) => {
-          await fileSystemControllerCreateProject({ body: { name, description } } as any);
+          await fileSystemControllerCreateProject({ body: { name, description } } as Parameters<typeof fileSystemControllerCreateProject>[0]);
         });
       }
     },

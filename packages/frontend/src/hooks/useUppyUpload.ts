@@ -102,6 +102,7 @@ export class MxCadUploadError extends Error {
 export const useUppyUpload = () => {
   const uppyRef = useRef<Uppy | null>(null);
   const currentConfigRef = useRef<MxCadUploadConfig>({});
+  const isUploadingRef = useRef(false);
 
   /**
    * 获取 API Base URL
@@ -127,7 +128,7 @@ export const useUppyUpload = () => {
     
     const uppy = new Uppy({
       debug: false,
-      autoProceed: true,
+      autoProceed: false,
       allowMultipleUploads: false,
       restrictions: {
         maxFileSize: 100 * 1024 * 1024, // 100MB
@@ -169,6 +170,9 @@ export const useUppyUpload = () => {
         });
         // 触发 onFileQueued 回调
         config.onFileQueued?.(file.data as File);
+
+        // 哈希计算完成后再启动上传（autoProceed 关闭时需手动触发）
+        uppy.upload();
       } catch (error) {
         console.error('[useUppyUpload] 文件哈希计算失败:', error);
       }
@@ -232,6 +236,7 @@ export const useUppyUpload = () => {
 
       // 清理 Uppy 实例（@uppy/core 类型定义缺少 close 方法，使用扩展类型）
       (uppy as UppyExtended).close();
+      isUploadingRef.current = false;
     });
 
     // 上传失败事件
@@ -243,6 +248,7 @@ export const useUppyUpload = () => {
           : '上传失败';
 
       config.onError?.(`文件 ${file.name} 上传失败: ${errorMessage}`);
+      isUploadingRef.current = false;
     });
 
     return uppy;
@@ -252,7 +258,18 @@ export const useUppyUpload = () => {
    * 触发文件选择
    */
   const selectFiles = useCallback((config: MxCadUploadConfig) => {
+    // 防止并发：如果已有上传在进行中，忽略新的文件选择
+    if (isUploadingRef.current) return;
+
     currentConfigRef.current = config;
+
+    // 销毁旧实例（防止残留上传与新实例冲突）
+    if (uppyRef.current) {
+      (uppyRef.current as UppyExtended).close();
+      uppyRef.current = null;
+    }
+
+    isUploadingRef.current = true;
 
     // 创建 Uppy 实例
     const uppy = createUppyInstance(config);
@@ -279,10 +296,7 @@ export const useUppyUpload = () => {
           });
         });
 
-        // 手动开始上传（因为 autoProceed 可能不立即生效）
-        setTimeout(() => {
-          uppy.upload();
-        }, 100);
+        // autoProceed 已关闭，upload 由 file-added 事件中的哈希计算完成后触发
       }
 
       // 清理
@@ -301,6 +315,7 @@ export const useUppyUpload = () => {
       (uppyRef.current as UppyExtended).close();
       uppyRef.current = null;
     }
+    isUploadingRef.current = false;
   }, []);
 
   return {
