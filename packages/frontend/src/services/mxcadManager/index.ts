@@ -52,7 +52,7 @@ import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
 
 
 // ==================== 外部依赖 ====================
-// @ts-ignore 这是被允许的，因为mxcad-app 目前引入方式比较特殊，且 style 只是为了确保样式被打包工具正确处理
+// @ts-expect-error - mxcad-app 是未类型化的第三方库，其 style 模块没有 TS 类型定义
 import "mxcad-app/style"
 import { MxCADView } from 'mxcad-app';
 import { saveControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
