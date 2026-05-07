@@ -755,14 +755,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       {/* @ts-ignore - pre-existing component prop type */}
       <KeyboardShortcuts
         onUploadExternalReference={handleUploadExternalReference}
-        // @ts-ignore - pre-existing component prop type
+        // @ts-expect-error - pre-existing component prop type
         currentNode={currentNode}
       />
 
       {/* @ts-ignore - pre-existing component prop type */}
       <DownloadFormatModal
         isOpen={showDownloadFormatModal}
-        // @ts-ignore - pre-existing component prop type
+        // @ts-expect-error - pre-existing component prop type
         node={downloadingNode}
         onClose={() => {
           setShowDownloadFormatModal(false);
@@ -779,7 +779,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         loading={versionHistoryLoading}
         error={versionHistoryError}
         onClose={closeVersionHistory}
-        // @ts-ignore - pre-existing component prop type
+        // @ts-expect-error - pre-existing component prop type
         onOpenHistoricalVersion={handleOpenHistoricalVersion}
       />
     </>

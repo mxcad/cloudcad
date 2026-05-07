@@ -278,7 +278,7 @@ export function useDirectoryImport() {
         const file = files[i];
         if (!file) continue;
 
-        // @ts-ignore - webkitRelativePath 是标准属性
+        // @ts-expect-error - webkitRelativePath is a standard browser property not in TypeScript lib
         const rawPath = (file as any).webkitRelativePath || file.name;
 
         // 'content' 模式：跳过第一层目录前缀，只导入内容
@@ -383,7 +383,7 @@ export function useDirectoryImport() {
 
       // 获取根目录名称（从第一个文件的路径提取）
       const firstFile = files[0];
-      // @ts-ignore - webkitRelativePath 是标准属性
+      // @ts-expect-error - webkitRelativePath is a standard browser property not in TypeScript lib
       const firstPath = (firstFile as any).webkitRelativePath || firstFile.name;
       let rootName = 'root';
 
@@ -415,7 +415,7 @@ export function useDirectoryImport() {
           const file = fileList[i];
           if (!file) continue;
 
-          // @ts-ignore - webkitRelativePath 是标准属性
+          // @ts-expect-error - webkitRelativePath is a standard browser property not in TypeScript lib
           const rawPath = (file as any).webkitRelativePath || file.name;
 
           // 'content' 模式：跳过第一层目录前缀，只导入内容

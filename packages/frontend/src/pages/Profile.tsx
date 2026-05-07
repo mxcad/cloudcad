@@ -31,7 +31,7 @@ import {
   AlertCircle,
   Crown,
 } from 'lucide-react';
-// @ts-ignore
+// @ts-expect-error - These components are exported from './components' but types are incomplete
 import { ProfileInfoTab, ProfilePasswordTab, ProfileEmailTab, ProfilePhoneTab, ProfileWechatTab, ProfileDeactivateTab } from './components';
 
 type TabType =
