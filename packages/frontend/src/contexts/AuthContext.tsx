@@ -253,9 +253,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
   const verifyEmailAndLogin = useCallback(
     async (email: string, code: string) => {
-      const responseData = await authControllerVerifyEmail({
+      const response = await authControllerVerifyEmail({
         body: { email, code },
-      }) as unknown as AuthResponseData;
+      });
+      const responseData = response.data as AuthResponseData;
 
       // 验证成功，返回 token，自动登录
       const {
@@ -277,9 +278,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const verifyPhoneAndLogin = useCallback(
     async (phone: string, code: string) => {
-      const responseData = await authControllerVerifyPhone({
+      const response = await authControllerVerifyPhone({
         body: { phone, code },
-      } as any) as unknown as AuthResponseData;
+      });
+      const responseData = response.data as AuthResponseData;
       const {
         accessToken,
         refreshToken,
@@ -343,7 +345,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
-      const userData = await authControllerGetProfile() as unknown as User;
+      const response = await authControllerGetProfile();
+      const userData = response.data as User;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
@@ -400,8 +403,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isPopup: 'true',
           purpose: 'login',
         },
-      }) as unknown as { authUrl: string };
-      const { authUrl } = response;
+      });
+      const { authUrl } = response.data as { authUrl: string };
 
       console.log('[AuthContext] 微信授权 URL:', authUrl);
 
