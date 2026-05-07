@@ -65,10 +65,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadMembers = useCallback(async () => {
     setErrorMessage('');
     try {
-      const data = await fileSystemControllerGetProjectMembers({ path: { projectId } });
+      const response = await fileSystemControllerGetProjectMembers({ path: { projectId } });
       // 映射 id 为 userId 以保持兼容性
       const membersWithUserId = (
-        (data || []) as ProjectMemberDto[]
+        (response.data || []) as ProjectMemberDto[]
       ).map((m) => ({ ...m, userId: m.id }));
       setMembers(membersWithUserId as Member[]);
     } catch (error) {
@@ -79,7 +79,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadProjectRoles = useCallback(async () => {
     try {
       const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } });
-      const allRoles = (response as { id: string; name: string }[]) || [];
+      const allRoles = (response.data as { id: string; name: string }[]) || [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
       const addMemberRoles = allRoles.filter(
@@ -117,7 +117,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       try {
         const response = await usersControllerSearchUsers({ query: { search: query, limit: 10 } });
         // response.data 是 UserListResponseDto，包含 users 数组
-        const users = (response?.users || []) as UserSearchResult[];
+        const users = (response.data?.users || []) as UserSearchResult[];
 
         // 过滤掉已经是成员的用户
         const memberUserIds = members.map((m) => m.id);
@@ -199,18 +199,19 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const memberData = await fileSystemControllerAddProjectMember({ path: { projectId }, body: {
         userId: selectedUser.id,
         projectRoleId: newRoleId,
-      } });
+      } } as unknown as { path: { projectId: string }; body: { userId: string; projectRoleId: string } });
 
+      const responseData = memberData.data!;
       const newMember: Member = {
-        id: memberData.id,
-        userId: memberData.id,
-        email: memberData.email,
-        username: memberData.username,
-        nickname: memberData.nickname,
-        avatar: memberData.avatar,
-        projectRoleId: memberData.projectRoleId,
-        projectRoleName: memberData.projectRoleName,
-        joinedAt: memberData.joinedAt
+        id: responseData.id,
+        userId: responseData.id,
+        email: responseData.email,
+        username: responseData.username,
+        nickname: responseData.nickname,
+        avatar: responseData.avatar,
+        projectRoleId: responseData.projectRoleId,
+        projectRoleName: responseData.projectRoleName,
+        joinedAt: responseData.joinedAt
       };
       setMembers((prev) => [...prev, newMember]);
 
@@ -256,7 +257,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       await fileSystemControllerUpdateProjectMember({ path: { projectId, userId }, body: {
         projectRoleId,
-      } });
+      } } as unknown as { path: { projectId: string; userId: string }; body: { projectRoleId: string } });
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
@@ -283,7 +284,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setTransferring(true);
     setErrorMessage('');
     try {
-      await fileSystemControllerUpdateProjectMember({ path: { projectId, userId: transferTarget.userId }, body: { roleName: 'PROJECT_OWNER' } });
+      await fileSystemControllerUpdateProjectMember({ path: { projectId, userId: transferTarget.userId }, body: { roleName: 'PROJECT_OWNER' } } as unknown as { path: { projectId: string; userId: string }; body: { roleName: string } });
 
       // 刷新成员列表
       await loadMembers();
