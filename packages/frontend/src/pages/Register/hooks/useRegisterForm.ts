@@ -125,7 +125,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
     if (!step1Result.success) {
       for (const issue of step1Result.error.issues) {
         const key = issue.path[0] as string;
-        if (!errors[key]) errors[key] = issue.message;
+        if (!errors[key]) errors[key] = issue.message || '';
       }
     }
 
@@ -135,13 +135,13 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
 
     if (values.username || values.email) {
       try {
-        const result = await authControllerCheckFieldUniqueness({
+        const response = await authControllerCheckFieldUniqueness({
           body: {
             username: values.username || undefined,
             email: values.email || undefined,
           },
         });
-        const checkResult = result as {
+        const checkResult = response.data as {
           usernameExists?: boolean;
           emailExists?: boolean;
           phoneExists?: boolean;
@@ -211,7 +211,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
         const step2Errors: Record<string, string> = {};
         for (const issue of step2Result.error.issues) {
           const key = issue.path[0] as string;
-          if (!step2Errors[key]) step2Errors[key] = issue.message;
+          if (!step2Errors[key]) step2Errors[key] = issue.message || '';
         }
         setExternalErrors(step2Errors);
         const labels: Record<string, string> = {
@@ -271,7 +271,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
             return;
           }
 
-          const registerResult = await authControllerRegisterByPhone({
+          const response = await authControllerRegisterByPhone({
             body: {
               phone: currentPhoneForm.phone,
               code: currentPhoneForm.code,
@@ -281,7 +281,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
             },
           });
 
-          const authData = registerResult as unknown as {
+          const authData = response.data as {
             accessToken?: string;
             refreshToken?: string;
             user?: Record<string, unknown>;
