@@ -27,7 +27,7 @@ export function useDashboardProjects() {
     queryFn: async () => {
       const result = await fileSystemControllerGetProjects({ query: {} } as any);
       if (result.error) throw result.error;
-      const data = result.data as ProjectListResponseDto;
+      const data = result.data as any;
       const sorted = (data?.nodes || [])
         .filter((p: FileSystemNodeDto) => (p as any).status !== 'DELETED')
         .sort(

@@ -77,12 +77,12 @@ export function useAuditLogList(params: AuditLogQueryParams) {
  * 查询审计统计信息
  */
 export function useAuditLogStats() {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: AUDIT_LOG_STATS_KEY,
+  const { data, isLoading, error, refetch } = useQuery<Partial<AuditLogStatistics>>({
+    queryKey: [AUDIT_LOG_STATS_KEY],
     queryFn: async () => {
       const result = await auditLogControllerGetStatistics();
       if (result.error) throw result.error;
-      return (result.data ?? {}) as Partial<AuditLogStatistics>;
+      return result.data ?? {};
     },
   });
 
