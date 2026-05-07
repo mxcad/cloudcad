@@ -168,7 +168,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               ? isRebind
                 ? onRebindPhone
                 : onBindPhone
-              : ((() => {}) as any)
+              : ((() => {}) as unknown as React.FormEventHandler<HTMLFormElement>)
           }
           className="phone-form"
         >

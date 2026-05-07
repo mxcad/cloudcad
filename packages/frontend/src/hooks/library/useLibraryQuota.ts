@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback } from 'react';
+import type { StorageInfoDto } from '@/types/api-client';
 import {
   fileSystemControllerGetStorageQuota,
   fileSystemControllerUpdateStorageQuota,

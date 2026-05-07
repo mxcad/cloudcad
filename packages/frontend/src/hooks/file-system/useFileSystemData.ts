@@ -149,7 +149,7 @@ export const useFileSystemData = ({
           Array.isArray(response) ? response : []
         ) as ProjectDto[];
         return {
-          nodes: allProjects.map((p) => projectToNode(p as any)),
+          nodes: allProjects.map((p) => projectToNode(p)),
           total: allProjects.length,
           page: pagination.page,
           limit: pagination.limit,

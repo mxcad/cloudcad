@@ -31,6 +31,46 @@ export interface LoadFileParam {
   nodeId?: string;
 }
 
+/**
+ * Uppy 文件对象（精简自 @uppy/core 的 UppyFile）
+ */
+interface UppyFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  data: File | Blob;
+  meta: Record<string, unknown>;
+  source?: string;
+  isRemote?: boolean;
+  remote?: { body?: { xhr?: XMLHttpRequest } };
+}
+
+/**
+ * Uppy 上传结果
+ */
+interface UppyCompleteResult {
+  successful: UppyFile[];
+  failed: Array<{ error: unknown }>;
+}
+
+/**
+ * Uppy 进度信息
+ */
+interface UppyProgress {
+  bytesTotal: number;
+  bytesUploaded: number;
+}
+
+/**
+ * Uppy 扩展事件 — 补充 @uppy/core 类型定义中缺失的事件
+ */
+interface UppyExtended extends Uppy {
+  on(event: 'upload-started', callback: () => void): this;
+  on(event: 'total-progress', callback: (progress: UppyProgress) => void): this;
+  close(): void;
+}
+
 export interface MxCadUploadConfig {
   nodeId?: string;
   onBeginUpload?: () => void;
@@ -106,20 +146,20 @@ export const useUppyUpload = () => {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       // 元数据配置
-      metadata: ((file: any) => {
+      metadata: (file: UppyFile) => {
         const fileMeta = file.meta || {};
         return {
           filename: file.name,
-          fileHash: fileMeta.fileHash || '',
+          fileHash: (fileMeta.fileHash as string) || '',
           fileSize: String(file.size),
           nodeId: config.nodeId || '',
           fileType: file.type,
         };
-      }) as any,
+      },
     });
 
     // 文件添加事件：计算文件哈希
-    uppy.on('file-added', async (file: any) => {
+    uppy.on('file-added', async (file: UppyFile) => {
       try {
         // 计算文件哈希值
         const hash = await calculateFileHash(file.data as File);
@@ -134,13 +174,13 @@ export const useUppyUpload = () => {
       }
     });
 
-    // 上传开始事件
-    (uppy as any).on('upload-started', () => {
+    // 上传开始事件（@uppy/core 类型定义缺少此事件，使用扩展类型）
+    (uppy as UppyExtended).on('upload-started', () => {
       config.onBeginUpload?.();
     });
 
-    // 上传进度事件
-    (uppy as any).on('total-progress', (progress: any) => {
+    // 上传进度事件（@uppy/core 类型定义缺少此事件，使用扩展类型）
+    (uppy as UppyExtended).on('total-progress', (progress: UppyProgress) => {
       if (progress && typeof progress.bytesTotal === 'number' && progress.bytesTotal > 0) {
         const percentage = Math.round((progress.bytesUploaded / progress.bytesTotal) * 100);
         config.onProgress?.(percentage);
@@ -149,7 +189,7 @@ export const useUppyUpload = () => {
 
     // 从 Tus 响应头中提取 nodeId
     let uploadedNodeId: string | undefined;
-    uppy.on('upload-success', (_file: any, resp: any) => {
+    uppy.on('upload-success', (_file: UppyFile, resp: { body?: { xhr?: XMLHttpRequest } }) => {
       const xhr = resp?.body?.xhr;
       if (xhr) {
         uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
@@ -157,18 +197,18 @@ export const useUppyUpload = () => {
     });
 
     // 上传完成事件
-    uppy.on('complete', (result: any) => {
+    uppy.on('complete', (result: UppyCompleteResult) => {
       if (result.successful && result.successful.length > 0) {
         const file = result.successful[0];
 
         // 构建成功回调参数
         const successParam: LoadFileParam = {
           file: file.data as File,
-          id: file.meta?.fileHash || file.id,
+          id: (file.meta?.fileHash as string) || file.id,
           name: file.name,
           size: file.size,
           type: file.type,
-          hash: file.meta?.fileHash || '',
+          hash: (file.meta?.fileHash as string) || '',
           isUseServerExistingFile: false,
           isInstantUpload: false,
           // uploadedNodeId 来自 Tus 响应头 X-Node-Id；上传失败时 fallback 到目标文件夹 nodeId
@@ -177,28 +217,28 @@ export const useUppyUpload = () => {
 
         config.onSuccess?.(successParam);
       } else if (result.failed && result.failed.length > 0) {
-        const error = result.failed[0].error;
-        const errorMessage = error instanceof Error 
-          ? error.message 
-          : typeof error === 'string' 
-            ? error 
+        const uploadError = result.failed[0].error;
+        const errorMessage = uploadError instanceof Error
+          ? uploadError.message
+          : typeof uploadError === 'string'
+            ? uploadError
             : '上传失败';
-        
+
         config.onError?.(errorMessage);
       }
 
-      // 清理 Uppy 实例
-      (uppy as any).close();
+      // 清理 Uppy 实例（@uppy/core 类型定义缺少 close 方法，使用扩展类型）
+      (uppy as UppyExtended).close();
     });
 
     // 上传失败事件
-    uppy.on('upload-error', (file: any, error: any) => {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : typeof error === 'string' 
-          ? error 
+    uppy.on('upload-error', (file: UppyFile, uploadError: unknown) => {
+      const errorMessage = uploadError instanceof Error
+        ? uploadError.message
+        : typeof uploadError === 'string'
+          ? uploadError
           : '上传失败';
-      
+
       config.onError?.(`文件 ${file.name} 上传失败: ${errorMessage}`);
     });
 
@@ -255,7 +295,7 @@ export const useUppyUpload = () => {
    */
   const destroy = useCallback(() => {
     if (uppyRef.current) {
-      (uppyRef.current as any).close();
+      (uppyRef.current as UppyExtended).close();
       uppyRef.current = null;
     }
   }, []);

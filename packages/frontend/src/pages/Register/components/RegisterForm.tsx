@@ -31,16 +31,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const phone = usePhoneVerification({ setFieldErrors: form.setExternalErrors });
-
   const form = useRegisterForm({
     mailEnabled,
     requireEmailVerification,
     smsEnabled,
     requirePhoneVerification,
     isWechatRegister,
-    phoneForm: phone.phoneForm,
+    phoneForm: { phone: '', code: '' },
   });
+
+  const phone = usePhoneVerification({ setFieldErrors: form.setExternalErrors });
+
+  // Update register form's phoneForm reference after phone hook is ready
+  form.setPhoneForm(phone.phoneForm);
 
   // Pre-fill phone from login redirect
   useEffect(() => {

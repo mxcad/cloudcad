@@ -17,6 +17,7 @@
  */
 
 import { mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
+import type { UploadExtReferenceFileDto } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
 import type { ExtRefUploadParams, ExtRefUploadResult } from './mxcadTypes';
@@ -36,9 +37,8 @@ export async function uploadExtReferenceImage(
     formData.append('file', params.file, params.fileName);
     formData.append('ext_ref_file', params.fileName);
 
-    // @ts-expect-error - generated Swagger type doesn't handle multipart/form-data; body fields mapped via FormData
     const result = await mxCadControllerUploadExtReferenceImage({
-      body: formData,
+      body: formData as unknown as UploadExtReferenceFileDto,
     });
 
     return {

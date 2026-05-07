@@ -18,6 +18,7 @@
  */
 
 import { thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail } from '@/api-sdk';
+import type { UploadThumbnailDto } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 
 /**
@@ -54,7 +55,7 @@ export async function uploadThumbnail(
     const formData = new FormData();
     formData.append('file', blob, 'thumbnail.png');
 
-    await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: formData });
+    await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: formData as unknown as UploadThumbnailDto });
     return true;
   } catch (error) {
     handleError(error, 'mxcadThumbnail: uploadThumbnail');

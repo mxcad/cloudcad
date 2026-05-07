@@ -10,8 +10,8 @@ export function usePhoneVerification() {
     return result.data;
   };
 
-  const sendSmsCode = async (phone: string, type: string) => {
-    const result = await authControllerSendSmsCode({ body: { phone, type } });
+  const sendSmsCode = async (phone: string) => {
+    const result = await authControllerSendSmsCode({ body: { phone } });
     if (result.error) throw result.error;
     return result.data;
   };

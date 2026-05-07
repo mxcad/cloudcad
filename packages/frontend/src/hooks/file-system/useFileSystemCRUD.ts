@@ -375,7 +375,7 @@ export const useFileSystemCRUD = ({
     async (id: string, data: { name?: string; description?: string }) => {
       try {
         // TODO: Replace with SDK when backend adds updateProject endpoint
-        await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data as any });
+        await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data });
         showToast('项目更新成功', 'success');
         loadData();
       } catch (error) {

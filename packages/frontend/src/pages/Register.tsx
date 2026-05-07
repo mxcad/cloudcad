@@ -72,15 +72,6 @@ export const Register: React.FC = () => {
 
   // ── Form hooks ──────────────────────────────────
   const {
-    phoneForm,
-    setPhoneForm,
-    countdown,
-    sendingCode,
-    handlePhoneChange,
-    handleSendCode,
-  } = usePhoneVerification({ setFieldErrors: setExternalErrors });
-
-  const {
     register,
     watch,
     currentStep,
@@ -104,8 +95,17 @@ export const Register: React.FC = () => {
     smsEnabled,
     requirePhoneVerification,
     isWechatRegister,
-    phoneForm,
+    phoneForm: { phone: '', code: '' },
   });
+
+  const {
+    phoneForm,
+    setPhoneForm,
+    countdown,
+    sendingCode,
+    handlePhoneChange,
+    handleSendCode,
+  } = usePhoneVerification({ setFieldErrors: setExternalErrors });
 
   // Watch password for strength indicator
   const passwordValue = watch('password');

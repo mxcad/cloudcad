@@ -80,9 +80,9 @@ async function fetchPublicConfigs(): Promise<Record<string, string | number | bo
   // 发起新请求
   fetchPromise = (async () => {
     try {
-      const data = await runtimeConfigControllerGetPublicConfigs();
+      const result = await runtimeConfigControllerGetPublicConfigs();
       lastFetchTime = Date.now();
-      return data as any as Record<string, string | number | boolean>;
+      return (result.data ?? {}) as Record<string, string | number | boolean>;
     } finally {
       // 延迟清除 promise，避免短时间内的重复请求
       setTimeout(() => {

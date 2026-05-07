@@ -303,7 +303,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     mxcadManager.showMxCAD(false);
 
     // 保存当前路径，登录后返回
-    const navigate = (window as any).__mxcadNavigate__;
+    const navigate = (window as { __mxcadNavigate__?: (path: string) => void }).__mxcadNavigate__;
     if (navigate) {
       navigate('/login');
     } else {

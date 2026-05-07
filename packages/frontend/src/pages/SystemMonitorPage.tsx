@@ -268,7 +268,7 @@ export const SystemMonitorPage: React.FC = () => {
               description="主数据库连接状态"
               icon={Database}
               status={systemHealth?.database.status || 'down'}
-              message={systemHealth?.database.message || '检测中...'}
+              message={safeMessage(systemHealth?.database.message, '检测中...')}
               timestamp={systemHealth?.database.timestamp}
               loading={loading && !systemHealth}
               isDark={isDark}

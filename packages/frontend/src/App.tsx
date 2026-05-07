@@ -19,7 +19,6 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { LoadingOverlay } from './components/ui/LoadingOverlay';
 import { useAuth } from './contexts/AuthContext';
 import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
 import { TourProvider } from './contexts/TourContext';
@@ -28,7 +27,6 @@ import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { BrandProvider } from './contexts/BrandContext';
 import { useMxCADPreload } from './hooks/useMxCADPreload';
-import { getValidToken } from './utils/tokenUtils';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -157,8 +155,6 @@ function AppContent() {
 
   return (
     <div className="layout-container">
-      {/* 全局加载遮罩 - 覆盖所有内容 */}
-      <LoadingOverlay />
       {/* 全局 CAD 编辑器覆盖层 — 仅 CAD 路由挂载，保护 WebGL 上下文 */}
       <CADEditorRouteGuard />
 

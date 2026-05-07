@@ -112,6 +112,6 @@ const AppInitializer: React.FC = () => {
 };
 
 // 避免 HMR 时重复 createRoot
-const root = (window as any).__cloudCAD_root ?? ReactDOM.createRoot(rootElement);
-(window as any).__cloudCAD_root = root;
+const root: ReactDOM.Root = (window as Record<string, unknown>).__cloudCAD_root as ReactDOM.Root ?? ReactDOM.createRoot(rootElement);
+(window as Record<string, unknown>).__cloudCAD_root = root;
 root.render(<AppInitializer />);

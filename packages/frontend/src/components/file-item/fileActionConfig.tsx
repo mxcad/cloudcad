@@ -39,7 +39,7 @@ export interface FileAction {
   visibilityCheck?: (props: FileActionCheckProps) => boolean;
   /** 操作是否为危险操作 */
   isDestructive?: boolean;
-  props?: Record<string, any>; // 其他可能需要的属性
+  props?: Record<string, unknown>; // 其他可能需要的属性
 }
 
 /**

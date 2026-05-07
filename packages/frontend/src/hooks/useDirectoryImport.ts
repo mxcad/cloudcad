@@ -50,6 +50,13 @@ interface FileTreeNode {
 }
 
 /**
+ * 扩展 File 类型，支持 webkitRelativePath（浏览器目录上传 API）
+ */
+interface FileWithWebkitPath extends File {
+  webkitRelativePath?: string;
+}
+
+/**
  * 已选择的目录
  */
 export interface SelectedDirectory {
@@ -278,8 +285,7 @@ export function useDirectoryImport() {
         const file = files[i];
         if (!file) continue;
 
-        // @ts-expect-error - webkitRelativePath is a standard browser property not in TypeScript lib
-        const rawPath = (file as any).webkitRelativePath || file.name;
+        const rawPath = (file as FileWithWebkitPath).webkitRelativePath || file.name;
 
         // 'content' 模式：跳过第一层目录前缀，只导入内容
         // 'folder' 模式：保留整个目录结构作为子目录
@@ -383,8 +389,7 @@ export function useDirectoryImport() {
 
       // 获取根目录名称（从第一个文件的路径提取）
       const firstFile = files[0];
-      // @ts-expect-error - webkitRelativePath is a standard browser property not in TypeScript lib
-      const firstPath = (firstFile as any).webkitRelativePath || firstFile.name;
+      const firstPath = (firstFile as FileWithWebkitPath).webkitRelativePath || firstFile.name;
       let rootName = 'root';
 
       if (firstPath && firstPath.includes('/')) {
@@ -415,8 +420,7 @@ export function useDirectoryImport() {
           const file = fileList[i];
           if (!file) continue;
 
-          // @ts-expect-error - webkitRelativePath is a standard browser property not in TypeScript lib
-          const rawPath = (file as any).webkitRelativePath || file.name;
+          const rawPath = (file as FileWithWebkitPath).webkitRelativePath || file.name;
 
           // 'content' 模式：跳过第一层目录前缀，只导入内容
           // 'folder' 模式：保留整个目录结构作为子目录

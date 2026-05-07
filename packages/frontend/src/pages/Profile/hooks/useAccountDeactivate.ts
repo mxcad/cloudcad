@@ -31,7 +31,7 @@ export const useAccountDeactivate = () => {
     mutationFn: async (params: { email: string }) => {
       const result = await authControllerResendVerification({
         body: { email: params.email },
-      } as any);
+      } as Parameters<typeof authControllerResendVerification>[0]);
       if (result.error) throw result.error;
       return result;
     },

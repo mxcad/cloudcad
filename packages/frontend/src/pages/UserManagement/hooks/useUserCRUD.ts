@@ -70,10 +70,10 @@ export function useUserCRUD() {
     isLoading,
     error,
     // TODO: extract to useSystemConfig hook in next slice
-    roles: [] as any[],
+    roles: [] as unknown[],
     mailEnabled: false,
     smsEnabled: false,
-    createUser: async (data: any) => {
+    createUser: async (data: Record<string, unknown>) => {
       await createMutation.mutateAsync(data);
     },
     updateUser: async (id: string, data: UpdateUserDto) => {

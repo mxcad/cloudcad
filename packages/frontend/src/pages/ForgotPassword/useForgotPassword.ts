@@ -12,7 +12,7 @@ export function useForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = useCallback(async (data: {
+  const submit = useCallback(async (params: {
     email?: string;
     phone?: string;
   }): Promise<ForgotPasswordResult | null> => {
@@ -22,13 +22,13 @@ export function useForgotPassword() {
     try {
       const result = await authControllerForgotPassword({
         body: {
-          email: data.email,
-          phone: data.phone,
+          email: params.email,
+          phone: params.phone,
           validateContact: '',
         },
       });
-      const data = result.data as ForgotPasswordResult;
-      return data;
+      const responseData = (result.data ?? {}) as ForgotPasswordResult;
+      return responseData;
     } catch (err) {
       const message =
         (err as Error & { response?: { data?: { message?: string } } })

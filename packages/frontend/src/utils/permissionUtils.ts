@@ -22,7 +22,7 @@ export type Role = string | undefined | null;
 
 export interface User {
   id: string;
-  email?: string | null | { [key: string]: any };
+  email?: string | null | { [key: string]: unknown };
   role?: {
     name?: Role;
   };

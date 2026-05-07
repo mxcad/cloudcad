@@ -109,11 +109,11 @@ export const PhoneVerification: React.FC = () => {
     try {
       if (bindMode) {
         // 绑定模式：调用绑定手机号接口，返回 token 后存储并通过刷新更新 AuthContext
-        const response = await bindPhoneAndLogin();
-        const { data: responseData } = response;
-        const { accessToken, refreshToken, user: userData } = responseData as {
-          accessToken: string; refreshToken: string; user: unknown;
-        };
+        // bindPhoneAndLogin returns AuthApiResponseDto (unwrapped by SDK)
+        const responseData = (await bindPhoneAndLogin()) as Record<string, unknown> | undefined;
+        const accessToken = (responseData ?? {}).accessToken as string;
+        const refreshToken = (responseData ?? {}).refreshToken as string;
+        const userData = (responseData ?? {}).user;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -160,7 +160,7 @@ export const PhoneVerification: React.FC = () => {
     setResendSuccess(false);
 
     try {
-      await sendSmsCode();
+      await sendSmsCode(phone);
       setResendSuccess(true);
       setCodeSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);

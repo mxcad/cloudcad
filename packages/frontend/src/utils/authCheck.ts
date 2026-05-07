@@ -72,7 +72,6 @@ export function getCurrentUser(): { id: string; email?: string; username?: strin
  * 获取认证 Token
  * @returns Token 字符串，未登录返回 null
  */
-import { getValidToken } from './tokenUtils';
 
 export function getAuthToken(): string | null {
   try {

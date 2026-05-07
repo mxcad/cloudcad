@@ -119,8 +119,8 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       } else {
         setError(result?.message || '保存失败');
       }
-    } catch (err: any) {
-      setError(err.message || '保存失败，请稍后重试');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '保存失败，请稍后重试');
     }
   };
 

@@ -292,7 +292,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       const { data: blobData } = await fontsControllerDownloadFont({
         path: { fileName: fontName },
         query: { location: activeTab },
-        responseStyle: 'blob' // responseStyle expects 'blob' for binary downloads,
+        responseStyle: 'blob' as const,
       });
       const url = window.URL.createObjectURL(blobData as Blob | MediaSource);
       const link = document.createElement('a');

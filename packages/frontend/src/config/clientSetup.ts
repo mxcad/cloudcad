@@ -22,9 +22,7 @@ client.setConfig({
       // 当 code 存在且不为 0 时，视为业务错误，抛出异常
       if (typeof code === 'number' && code !== 0) {
         const message = String(typedData.message || '业务处理失败');
-        const error = new Error(message) as any;
-        error.code = code;
-        error.data = typedData;
+        const error: Error & { code?: number; data?: unknown } = Object.assign(new Error(message), { code, data: typedData });
         throw error;
       }
       // 成功时解包 data 字段
@@ -181,8 +179,8 @@ client.interceptors.error.use(async (error, _response, _request, _options) => {
   if (error && typeof error === 'object') {
     const e = error as Record<string, unknown>;
     if (e.status === 403) {
-      (error as any).isPermissionError = true;
-      (error as any).statusCode = 403;
+      (error as Record<string, unknown>).isPermissionError = true;
+      (error as Record<string, unknown>).statusCode = 403;
     }
   }
   return error;

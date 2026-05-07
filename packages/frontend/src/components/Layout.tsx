@@ -185,7 +185,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     if (user && !loading) {
       setStorageLoading(true);
       fileSystemControllerGetStorageQuota({ query: { nodeId: '' } })
-        .then((result: any) => {
+        .then((result: { data?: StorageInfoDto }) => {
           const data = result?.data as StorageInfoDto | undefined;
           if (data) {
             setStorageInfo(data);

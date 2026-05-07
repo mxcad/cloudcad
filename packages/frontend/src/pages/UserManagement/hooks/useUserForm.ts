@@ -32,7 +32,7 @@ export function useUserForm({ mailEnabled, isEditing, editingUser, onSubmit }: U
         password: '',
         roleId: editingUser.role?.id || '',
         nickname: editingUser.nickname || '',
-        status: (editingUser.status as any) || 'ACTIVE',
+        status: (editingUser.status as string) || 'ACTIVE',
       });
     } else {
       form.reset({
