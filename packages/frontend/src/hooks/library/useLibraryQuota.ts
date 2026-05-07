@@ -30,7 +30,7 @@ interface UseLibraryQuotaReturn {
   /** 默认配额度（GB） */
   defaultLibraryQuota: number;
   /** 库存储信息 */
-  libraryStorageInfo: any;
+  libraryStorageInfo: StorageInfoDto | null;
   /** 打开配额弹窗并加载数据 */
   openQuotaModal: () => Promise<void>;
   /** 关闭配额弹窗 */
@@ -55,7 +55,7 @@ export function useLibraryQuota({
   const [quotaLoading, setQuotaLoading] = useState(false);
   const [libraryQuota, setLibraryQuota] = useState<number>(100);
   const [defaultLibraryQuota, setDefaultLibraryQuota] = useState<number>(100);
-  const [libraryStorageInfo, setLibraryStorageInfo] = useState<any>(null);
+  const [libraryStorageInfo, setLibraryStorageInfo] = useState<StorageInfoDto | null>(null);
 
   const openQuotaModal = useCallback(async () => {
     setQuotaModalOpen(true);
@@ -122,9 +122,12 @@ export function useLibraryQuota({
       if (storageInfo) {
         setLibraryStorageInfo(storageInfo);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存库配额失败:', error);
-      showToast(error.response?.data?.message || '保存配额失败', 'error');
+      const message = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      showToast(message || '保存配额失败', 'error');
     } finally {
       setQuotaLoading(false);
     }
