@@ -114,8 +114,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
           const fetchError = error as { status?: number };
           if (fetchError.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            removeAccessToken();
+            removeRefreshToken();
             localStorage.removeItem('user');
             setToken(null);
             setUser(null);
@@ -373,19 +373,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error('微信登录失败:', action.message);
             setError(action.message);
           } else if (action?.type === 'login') {
-            localStorage.setItem('accessToken', action.accessToken);
-            localStorage.setItem('refreshToken', action.refreshToken);
+            setAccessToken(action.accessToken);
+            setRefreshToken(action.refreshToken);
             localStorage.setItem('user', JSON.stringify(action.user));
             setToken(action.accessToken);
             setUser(action.user as User);
           } else if (action?.type === 'need_register') {
-            sessionStorage.setItem('wechatTempToken', action.tempToken);
+            setWechatTempToken(action.tempToken);
             window.location.href = '/register?wechat=1';
           } else if (action?.type === 'bind_email') {
-            sessionStorage.setItem('wechatTempToken', action.tempToken);
+            setWechatTempToken(action.tempToken);
             window.location.href = '/verify-email';
           } else if (action?.type === 'bind_phone') {
-            sessionStorage.setItem('wechatTempToken', action.tempToken);
+            setWechatTempToken(action.tempToken);
             window.location.href = '/verify-phone';
           }
         } catch (err) {
