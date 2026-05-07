@@ -9,11 +9,35 @@ import { mxCadControllerCheckFileExist } from '@/api-sdk';
 import { getValidToken } from '@/utils/tokenUtils';
 
 /**
- * Extended Uppy type that includes close(), which exists at runtime
- * but is missing from the @uppy/core type definitions.
+ * Uppy 事件负载类型——细分各种事件的回调参数，
+ * 替代泛型 `any`，使类型检查更精确。
  */
+
+/** upload-success 事件：Uppy 上传成功时触发 */
+interface UppyUploadSuccessPayload {
+  body?: {
+    xhr?: XMLHttpRequest & { getResponseHeader?: (name: string) => string | null };
+  };
+}
+
+/** total-progress 事件：上传进度更新 */
+interface UppyTotalProgressPayload {
+  bytesTotal: number;
+  bytesUploaded: number;
+}
+
+/** complete 事件：上传完成 */
+interface UppyCompletePayload {
+  successful?: Array<Record<string, unknown>>;
+  failed?: Array<{ error?: Error | string }>;
+}
+
+/** Extended Uppy type that includes close(), which exists at runtime
+ *  but is missing from the @uppy/core type definitions. */
 interface UppyWithClose extends Uppy {
   close?: () => void;
+  cancelAll?: () => void;
+  on(event: string, callback: (...args: unknown[]) => void): this;
 }
 
 /**
@@ -166,14 +190,14 @@ export const uploadFileWithUppy = async (
 
     // 从 Tus 响应头中提取 nodeId
     let uploadedNodeId: string | undefined;
-    uppy.on('upload-success', (_file: any, resp: any) => {
+    uppy.on('upload-success', (_file: unknown, resp: UppyUploadSuccessPayload) => {
       const xhr = resp?.body?.xhr;
       if (xhr) {
         uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
       }
     });
 
-    (uppy as any).on('total-progress', (progress: any) => {
+    (uppy as unknown as UppyWithClose).on('total-progress', (progress: UppyTotalProgressPayload) => {
       if (progress?.bytesTotal > 0) {
         const percentage = Math.round(
           (progress.bytesUploaded / progress.bytesTotal) * 100,
@@ -182,7 +206,7 @@ export const uploadFileWithUppy = async (
       }
     });
 
-    uppy.on('complete', (result: any) => {
+    uppy.on('complete', (result: UppyCompletePayload) => {
       const successful = result.successful?.[0];
       if (successful) {
         resolve({
@@ -205,12 +229,12 @@ export const uploadFileWithUppy = async (
               : '上传失败';
         reject(new UppyUploadError(message, file.name));
       }
-      uppy.clear();
-      uppy.cancelAll?.();
+      (uppy as unknown as UppyWithClose).clear();
+      (uppy as unknown as UppyWithClose).cancelAll?.();
       (uppy as unknown as UppyWithClose).close?.();
     });
 
-    uppy.on('upload-error', (_file: any, err: any) => {
+    uppy.on('upload-error', (_file: unknown, err: Error | string) => {
       const message =
         err instanceof Error
           ? err.message
@@ -281,7 +305,7 @@ export const uploadFilePublic = async (options: {
     // 从 Tus 响应头中提取 hash 和 fileName
     let uploadedHash: string | undefined;
     let uploadedFileName: string | undefined;
-    uppy.on('upload-success', (_file: any, resp: any) => {
+    uppy.on('upload-success', (_file: unknown, resp: UppyUploadSuccessPayload) => {
       const xhr = resp?.body?.xhr;
       if (xhr) {
         uploadedHash = xhr.getResponseHeader?.('X-File-Hash') || undefined;
@@ -289,7 +313,7 @@ export const uploadFilePublic = async (options: {
       }
     });
 
-    (uppy as any).on('total-progress', (progress: any) => {
+    (uppy as unknown as UppyWithClose).on('total-progress', (progress: UppyTotalProgressPayload) => {
       if (progress?.bytesTotal > 0) {
         const percentage = Math.round(
           (progress.bytesUploaded / progress.bytesTotal) * 100,
@@ -298,7 +322,7 @@ export const uploadFilePublic = async (options: {
       }
     });
 
-    uppy.on('complete', (result: any) => {
+    uppy.on('complete', (result: UppyCompletePayload) => {
       const successful = result.successful?.[0];
       if (successful) {
         resolve({
@@ -315,12 +339,12 @@ export const uploadFilePublic = async (options: {
               : '上传失败';
         reject(new UppyUploadError(message, file.name));
       }
-      uppy.clear();
-      uppy.cancelAll?.();
+      (uppy as unknown as UppyWithClose).clear();
+      (uppy as unknown as UppyWithClose).cancelAll?.();
       (uppy as unknown as UppyWithClose).close?.();
     });
 
-    uppy.on('upload-error', (_file: any, err: any) => {
+    uppy.on('upload-error', (_file: unknown, err: Error | string) => {
       const message =
         err instanceof Error
           ? err.message
