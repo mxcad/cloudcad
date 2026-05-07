@@ -1871,7 +1871,7 @@ class MxCADContainerManager {
       container.id = CSS_CLASSES.GLOBAL_CONTAINER;
       // 初始状态：隐藏，使用 visibility + z-index 方案保护 WebGL 上下文
       container.style.cssText = `
-        position: absolute;
+        position: fixed;
         top: 0;
         left: 300px;
         right: 0;
