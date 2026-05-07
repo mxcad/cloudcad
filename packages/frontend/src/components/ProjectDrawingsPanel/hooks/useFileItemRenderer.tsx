@@ -77,8 +77,8 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           let latestUpdatedAt = blockNode.updatedAt;
           try {
             const response = await libraryControllerGetBlockNode({ path: { nodeId: blockNode.id } });
-            if (response.data?.updatedAt) {
-              latestUpdatedAt = response.data.updatedAt;
+            if ((response as any).data?.updatedAt) {
+              latestUpdatedAt = (response as any).data.updatedAt;
             }
           } catch { /* ignore */ }
           const filesPath = `/api/v1/library/block/filesData/${blockNode.path}`;

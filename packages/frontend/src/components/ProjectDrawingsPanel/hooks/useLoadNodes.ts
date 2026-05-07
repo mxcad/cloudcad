@@ -89,14 +89,14 @@ export function useLoadNodes(
                   limit: PAGE_SIZE,
                   search: search || undefined,
                 } });
-          nodeList = response?.nodes || [];
-          totalCount = response?.total || 0;
+          nodeList = (response as any)?.nodes || [];
+          totalCount = (response as any)?.total || 0;
           totalPageCount =
-            response?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
+            (response as any)?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
         } else {
           const { data: response } = await fileSystemControllerGetChildren({
             path: { nodeId },
-            query: { page, limit: PAGE_SIZE, search: search || undefined },
+            query: { page, limit: PAGE_SIZE, search: search || undefined } as any,
           });
           nodeList = (response?.nodes || []).map(toFileSystemNode);
           totalCount = response?.total || 0;
@@ -166,7 +166,7 @@ export function useLoadNodes(
 
       while (currentId && depth < MAX_DEPTH) {
         try {
-          const { data: node } = (await fileSystemControllerGetNode({ path: { nodeId: currentId } })) as { data: { id: string; name: string; parentId?: string | null } | undefined };
+          const { data: node } = await fileSystemControllerGetNode({ path: { nodeId: currentId } }) as unknown as { data: { id: string; name: string; parentId?: string | null } | undefined };
           if (node) {
             path.unshift({ id: node.id, name: node.name });
             currentId = node.parentId || null;

@@ -207,7 +207,7 @@ export const useProjectPermission = () => {
       try {
         const response = await fileSystemControllerCheckProjectPermission({
           path: { projectId },
-          query: { permission: permission as any },
+          query: { permission },
         });
         const hasPermission = response.data?.hasPermission || false;
 
@@ -356,7 +356,7 @@ export const useProjectPermission = () => {
       try {
         const response = await fileSystemControllerCheckProjectPermission({
           path: { projectId },
-          query: { permission: permission as any },
+          query: { permission },
         });
         const hasPermission = response.data?.hasPermission || false;
 

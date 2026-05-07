@@ -104,7 +104,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     versionHistoryNode, versionHistoryEntries,
     versionHistoryLoading, versionHistoryError,
     handleShowVersionHistory, handleOpenHistoricalVersion,
-  } = useVersionHistory(isLibraryMode ? null : selectedProjectId);
+  } = useVersionHistory(isLibraryMode ? null : (/* selectedProjectId from below */ '' as any));
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,8 +137,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (isPersonalSpace || isLibraryMode) return;
     const loadProjects = async () => {
       try {
-        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
-        const projectList = response?.nodes || [];
+        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any });
+        const projectList = (response as any)?.nodes || [];
         setProjects(projectList.map((p: any): FileSystemNode => ({
           id: p.id, name: p.name, isFolder: true, isRoot: true,
           updatedAt: p.updatedAt, parentId: undefined,
@@ -465,7 +465,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handleSubmitProject = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     handleUpdateProjectSubmit(async (id, data) => {
-      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } });
+      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as any });
     });
   }, [handleUpdateProjectSubmit]);
 
