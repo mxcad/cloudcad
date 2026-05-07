@@ -185,7 +185,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         title="项目角色管理"
-        maxWidth="max-w-4xl"
+        className="max-w-4xl"
         footer={
           <Button variant="ghost" onClick={onClose} data-tour="modal-close-btn">
             关闭

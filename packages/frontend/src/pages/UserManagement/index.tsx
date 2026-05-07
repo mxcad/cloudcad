@@ -498,7 +498,7 @@ export const UserManagement = () => {
         isOpen={quotaModalOpen}
         onClose={() => setQuotaModalOpen(false)}
         title="配置存储配额"
-        maxWidth="max-w-md"
+        className="max-w-md"
         footer={
           <div className="modal-footer">
             <Button variant="ghost" onClick={() => setQuotaModalOpen(false)} disabled={quotaLoading}>取消</Button>
@@ -539,7 +539,7 @@ export const UserManagement = () => {
         isOpen={cleanupModalOpen}
         onClose={() => setCleanupModalOpen(false)}
         title="清理已注销用户数据"
-        maxWidth="max-w-md"
+        className="max-w-md"
         footer={
           <div className="modal-footer">
             <Button variant="ghost" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>取消</Button>

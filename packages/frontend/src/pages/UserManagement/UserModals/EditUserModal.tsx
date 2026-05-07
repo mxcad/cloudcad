@@ -46,7 +46,7 @@ export function EditUserModal({
       isOpen={isOpen}
       onClose={onClose}
       title="编辑用户"
-      maxWidth="max-w-lg"
+      className="max-w-lg"
       footer={
         <div className="modal-footer">
           <Button variant="ghost" onClick={onClose} disabled={loading}>取消</Button>

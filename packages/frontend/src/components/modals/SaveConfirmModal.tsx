@@ -49,7 +49,7 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="保存文件"
-      maxWidth="max-w-lg"
+      className="max-w-lg"
       footer={
         <>
           <Button variant="ghost" onClick={handleClose} disabled={loading}>

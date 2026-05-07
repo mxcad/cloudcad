@@ -955,7 +955,7 @@ export const LibraryManager: React.FC = () => {
         isOpen={quotaModalOpen}
         onClose={closeQuotaModal}
         title="配置公共资源库存储配额"
-        maxWidth="max-w-md"
+        className="max-w-md"
         footer={
           <div className="modal-footer">
             <Button

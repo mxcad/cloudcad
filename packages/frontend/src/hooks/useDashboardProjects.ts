@@ -22,18 +22,16 @@ export function useDashboardProjects() {
   // 1. 项目列表
   const projectsQuery = useQuery({
     queryKey: PROJECTS_KEY,
-    queryFn: async () => {
+    queryFn: async (): Promise<FileSystemNodeDto[]> => {
       const result = await fileSystemControllerGetProjects({ query: {} });
       if (result.error) throw result.error;
-      const data = result.data;
-      const sorted = (data?.nodes || [])
+      const nodes = result.data?.nodes || [];
+      return nodes
         .filter((p: FileSystemNodeDto) => p.status !== 'DELETED')
         .sort(
           (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
-            new Date(b.updatedAt).getTime() -
-            new Date(a.updatedAt).getTime()
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
-      return { nodes: sorted, raw: data };
     },
   });
 
@@ -84,7 +82,7 @@ export function useDashboardProjects() {
   });
 
   return {
-    projects: projectsQuery.data?.nodes ?? [],
+    projects: projectsQuery.data ?? [],
     personalFiles: personalFilesQuery.data ?? [],
     loading:
       projectsQuery.isLoading ||

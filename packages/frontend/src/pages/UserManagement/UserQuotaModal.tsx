@@ -31,7 +31,7 @@ export function UserQuotaModal({
       isOpen={isOpen}
       onClose={onClose}
       title="配置存储配额"
-      maxWidth="max-w-md"
+      className="max-w-md"
       footer={
         <div className="modal-footer">
           <Button variant="ghost" onClick={onClose} disabled={loading}>取消</Button>

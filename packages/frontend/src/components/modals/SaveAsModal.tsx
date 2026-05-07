@@ -137,7 +137,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
         isOpen={isOpen && !showFolderPicker}
         onClose={handleClose}
         title="另存为"
-        maxWidth="max-w-md"
+        className="max-w-md"
         footer={
           <>
             <Button variant="ghost" onClick={handleClose} disabled={saving}>

@@ -208,7 +208,7 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      maxWidth="max-w-5xl"
+      className="max-w-5xl"
       footer={
         <div className="config-modal-footer">
           <Button variant="ghost" onClick={onClose} disabled={loading}>
