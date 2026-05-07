@@ -9,6 +9,14 @@ import { mxCadControllerCheckFileExist } from '@/api-sdk';
 import { getValidToken } from '@/utils/tokenUtils';
 
 /**
+ * Extended Uppy type that includes close(), which exists at runtime
+ * but is missing from the @uppy/core type definitions.
+ */
+interface UppyWithClose extends Uppy {
+  close?: () => void;
+}
+
+/**
  * 上传配置
  */
 export interface UppyUploadOptions {
@@ -198,9 +206,8 @@ export const uploadFileWithUppy = async (
         reject(new UppyUploadError(message, file.name));
       }
       uppy.clear();
-      // @ts-expect-error - close exists at runtime despite missing type definitions
       uppy.cancelAll?.();
-      uppy.close?.();
+      (uppy as unknown as UppyWithClose).close?.();
     });
 
     uppy.on('upload-error', (_file: any, err: any) => {
@@ -217,9 +224,8 @@ export const uploadFileWithUppy = async (
         ),
       );
       uppy.clear();
-      // @ts-expect-error - close exists at runtime despite missing type definitions
       uppy.cancelAll?.();
-      uppy.close?.();
+      (uppy as unknown as UppyWithClose).close?.();
     });
 
     uppy.addFile({
@@ -310,9 +316,8 @@ export const uploadFilePublic = async (options: {
         reject(new UppyUploadError(message, file.name));
       }
       uppy.clear();
-      // @ts-expect-error - close exists at runtime despite missing type definitions
       uppy.cancelAll?.();
-      uppy.close?.();
+      (uppy as unknown as UppyWithClose).close?.();
     });
 
     uppy.on('upload-error', (_file: any, err: any) => {
@@ -329,9 +334,8 @@ export const uploadFilePublic = async (options: {
         ),
       );
       uppy.clear();
-      // @ts-expect-error - close exists at runtime despite missing type definitions
       uppy.cancelAll?.();
-      uppy.close?.();
+      (uppy as unknown as UppyWithClose).close?.();
     });
 
     uppy.addFile({
