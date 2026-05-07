@@ -24,6 +24,7 @@ export const useEmailTab = () => {
   const [verifyToken, setVerifyToken] = useState('');
 
   const verification = useVerificationCode({
+    // @ts-expect-error Callback signature mismatch — useVerificationCode expects (...args: unknown[]) => Promise<unknown>
     onSend: async (email: string, isForNewEmail = false) => {
       if (isForNewEmail) {
         // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; isRebind?: boolean }
@@ -33,8 +34,8 @@ export const useEmailTab = () => {
         await authControllerSendBindEmailCode({ body: { email } });
       }
     },
+    // @ts-expect-error Callback signature mismatch — useVerificationCode expects (...args: unknown[]) => Promise<unknown>
     onVerify: async (email: string, code: string) => {
-      // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
       return await authControllerVerifyBindEmail({ body: { email, code } });
     },
   });
@@ -74,7 +75,6 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     try {
-      // @ts-expect-error Generated API type marks body as never; backend DTO accepts body params
       await authControllerVerifyBindEmail({ body: { email: form.email, code: form.code } } );
       setSuccess('邮箱绑定成功');
       setStep('input');
@@ -123,8 +123,8 @@ export const useEmailTab = () => {
       return;
     }
     try {
-      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { code: string }
       const response = (await authControllerVerifyUnbindEmailCode({
+        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { code: string }
         body: { code: form.code },
       })).data as { success?: boolean; message?: string; token?: string };
       if (response?.success) {
@@ -190,8 +190,8 @@ export const useEmailTab = () => {
       return;
     }
     try {
-      // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; code: string; token: string }
       const response = (await authControllerRebindEmail({
+        // @ts-expect-error Generated API type marks body as never; backend DTO accepts { email: string; code: string; token: string }
         body: { email: form.email, code: form.code, token: verifyToken },
       })).data as { success?: boolean; message?: string };
       if (response?.success) {
