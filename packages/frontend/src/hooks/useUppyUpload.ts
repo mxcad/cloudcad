@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback } from 'react';
 import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import { calculateFileHash } from '../utils/hashUtils';
