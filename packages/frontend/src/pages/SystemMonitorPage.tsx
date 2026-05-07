@@ -18,10 +18,17 @@ import { Clock } from 'lucide-react';
 import { Shield } from 'lucide-react';
 import { Info } from 'lucide-react';
 
+// 辅助函数：安全地将 message 转为字符串
+function safeMessage(msg: unknown, fallback: string): string {
+  if (typeof msg === 'string') return msg;
+  if (msg && typeof msg === 'object') return JSON.stringify(msg);
+  return fallback;
+}
+
 // 健康状态接口
 interface HealthStatus {
   status: 'up' | 'down';
-  message: string;
+  message: string | Record<string, unknown>;
   timestamp: string;
 }
 
@@ -80,14 +87,14 @@ export const SystemMonitorPage: React.FC = () => {
         setSystemHealth({
           database: {
             status: databaseInfo?.status === 'up' ? 'up' : 'down',
-            message: databaseInfo?.message || 
-              (databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
+            message: safeMessage(databaseInfo?.message,
+              databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
             timestamp,
           },
           storage: {
             status: storageInfo?.status === 'up' ? 'up' : 'down',
-            message: storageInfo?.message || 
-              (storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
+            message: safeMessage(storageInfo?.message,
+              storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
             timestamp,
           },
         });

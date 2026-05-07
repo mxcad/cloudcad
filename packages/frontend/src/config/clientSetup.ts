@@ -21,7 +21,7 @@ client.setConfig({
       const code = typedData.code;
       // 当 code 存在且不为 0 时，视为业务错误，抛出异常
       if (typeof code === 'number' && code !== 0) {
-        const message = typedData.message || '业务处理失败';
+        const message = String(typedData.message || '业务处理失败');
         const error = new Error(message) as any;
         error.code = code;
         error.data = typedData;
