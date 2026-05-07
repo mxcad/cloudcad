@@ -115,15 +115,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setLoading(false);
           }
         } catch (error) {
-          const fetchError = error as { status?: number };
-          if (fetchError.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            setToken(null);
-            setUser(null);
-          }
-          // 非401错误：保留当前token和用户信息，不强制登出
+          const fetchError = error as { status?: number; message?: string };
+          console.error('[AuthContext] Token 验证失败:', fetchError.status, fetchError.message);
+          // Clear auth state on any error during token validation.
+          // Without this, a network timeout or server error would leave
+          // loading=true indefinitely, permanently blocking the app.
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
         } finally {
           clearTimeout(timeoutId);
           setLoading(false);

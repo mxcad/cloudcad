@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import '@/api-sdk';
 import { fetchBrandConfig } from './constants/appConfig';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // MSW 浏览器 worker：仅在测试环境（VITE_MSW=true）下启动
 if (import.meta.env.VITE_MSW === 'true') {
@@ -99,15 +100,17 @@ const AppInitializer: React.FC = () => {
 
   console.log('[CloudCAD] 初始化完成，渲染应用');
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </NotificationProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </NotificationProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
