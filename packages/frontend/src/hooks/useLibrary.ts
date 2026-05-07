@@ -279,11 +279,16 @@ export const useLibrary = (
     refresh,
     setSearchTerm,
     setViewMode,
-    createFolder: mutations.createFolder,
-    deleteNode: mutations.deleteNode,
-    renameNode: mutations.renameNode,
-    moveNode: mutations.moveNode,
-    copyNode: mutations.copyNode,
+    createFolder: (name: string, parentId?: string) =>
+      mutations.createFolder({ name, parentId }),
+    deleteNode: (nodeId: string, permanently?: boolean) =>
+      mutations.deleteNode({ nodeId, permanently }),
+    renameNode: (nodeId: string, name: string) =>
+      mutations.renameNode({ nodeId, name }),
+    moveNode: (nodeId: string, targetParentId: string) =>
+      mutations.moveNode({ nodeId, targetParentId }),
+    copyNode: (nodeId: string, targetParentId: string) =>
+      mutations.copyNode({ nodeId, targetParentId }),
     downloadNode,
     clearError,
     // Selection Actions
