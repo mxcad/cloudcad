@@ -21,8 +21,8 @@ import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
-import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
+
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
 
@@ -206,8 +206,8 @@ export const CADEditorDirect: React.FC = () => {
   // 获取私人空间 ID
   useEffect(() => {
     if (!isAuthenticated) return;
-    fileSystemControllerGetPersonalSpace()
-      .then((res) => {
+    (fileSystemControllerGetPersonalSpace() as any)
+      .then((res: any) => {
         if (res?.data?.id) {
           setPersonalSpaceId(res.data.id);
           // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
@@ -255,6 +255,8 @@ export const CADEditorDirect: React.FC = () => {
   }, [urlProjectId]);
 
   const loadMxCADDependencies = async () => {
+    // @ts-expect-error - mxcad-app 没有类型定义
+    await import('mxcad-app/style');
     const { mxcadManager } = await import('../services/mxcadManager');
     return { mxcadManager };
   };
@@ -282,7 +284,7 @@ export const CADEditorDirect: React.FC = () => {
       const vuetify = await mxcadApp.getVuetify();
 
       // 动态导入 Vue 的 watch 函数
-      const { watch } = await import('vue');
+      const { watch } = await import('vue') as any;
 
       // 从 localStorage 读取用户设置的主题
       const storedTheme = localStorage.getItem('mx-user-dark');
@@ -506,16 +508,16 @@ export const CADEditorDirect: React.FC = () => {
 
         // 如果 URL 参数指定了 libraryKey，直接使用
         if (libraryKeyParam === 'drawing') {
-          const { data: nodeData } = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
-          file = nodeData;
+          const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
+          file = nodeResponse.data as typeof file;
         } else if (libraryKeyParam === 'block') {
-          const { data: nodeData } = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
-          file = nodeData;
+          const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
+          file = nodeResponse.data as typeof file;
         } else {
           // 项目文件：需要登录
           try {
-            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
-            file = fileNode;
+            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as any;
+            file = fileNode as typeof file;
           } catch (error) {
             console.error('获取文件信息失败:', error);
             const axiosError = error as { response?: { status?: number } };
@@ -821,6 +823,10 @@ export const CADEditorDirect: React.FC = () => {
           return;
         }
 
+        // 加载 MxCAD 依赖
+        // @ts-expect-error - mxcad-app 没有类型定义
+        await import('mxcad-app/style');
+
         // 设置导航函数
         const { setNavigateFunction } =
           await import('../services/mxcadManager');
@@ -1115,7 +1121,7 @@ export const CADEditorDirect: React.FC = () => {
     // 文件编辑模式：已有打开的文件
     try {
       // 获取目标文件信息（要打开的文件）
-      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as { data: { deletedAt?: string | null } };
+      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as unknown as { data: { deletedAt?: string | null } };
 
       // 检查目标文件是否在回收站中
       if (targetFile.deletedAt) {
@@ -1126,7 +1132,7 @@ export const CADEditorDirect: React.FC = () => {
       const currentFileId = currentFileIdRef.current;
       if (!currentFileId) return;
 
-      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as { data: { parentId?: string | null; id?: string; isRoot?: boolean } };
+      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as unknown as { data: { parentId?: string | null; id?: string; isRoot?: boolean } };
 
       // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
       let uploadTargetNodeId = currentFile.parentId || '';
@@ -1167,9 +1173,9 @@ export const CADEditorDirect: React.FC = () => {
       setDownloading(true);
       const { data: blobData } = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
-        query: { format, ...pdfOptions },
+        query: { format, ...(pdfOptions as any) },
         responseStyle: 'blob',
-      });
+      } as any);
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);
@@ -1207,7 +1213,6 @@ export const CADEditorDirect: React.FC = () => {
   };
 
   return (
-    <ErrorBoundary>
     <div
       className="fixed inset-0"
       style={{
@@ -1316,7 +1321,6 @@ export const CADEditorDirect: React.FC = () => {
         onClose={externalReferenceUpload.close}
       />
       </div>
-      </ErrorBoundary>
     );
   };
 
