@@ -27,7 +27,7 @@ export function useDashboardProjects() {
       if (result.error) throw result.error;
       const nodes = result.data?.nodes || [];
       return nodes
-        .filter((p: FileSystemNodeDto) => p.status !== 'DELETED')
+        .filter((p: FileSystemNodeDto) => p.fileStatus !== 'DELETED')
         .sort(
           (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
