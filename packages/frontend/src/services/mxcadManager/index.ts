@@ -766,6 +766,9 @@ export async function openLibraryDrawing(
     if (!finalFileName || !finalNodePath) {
       const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId } });
       const node = nodeResponse.data;
+      if (!node) {
+        throw new Error('无法获取图纸库节点信息');
+      }
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
       finalUpdatedAt = finalUpdatedAt || node.updatedAt;
@@ -851,6 +854,9 @@ export async function openLibraryBlock(
     if (!finalFileName || !finalNodePath) {
       const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId } });
       const node = nodeResponse.data;
+      if (!node) {
+        throw new Error('无法获取图块库节点信息');
+      }
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
       finalUpdatedAt = finalUpdatedAt || node.updatedAt;
@@ -1089,7 +1095,10 @@ async function handleFileSelection(
       body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId, fileSize: file.size },
     });
 
-    if (duplicateCheck.data?.isDuplicate && duplicateCheck.data?.existingNodeId) {
+    const isDuplicate = duplicateCheck.data?.isDuplicate ?? false;
+    const existingNodeId = duplicateCheck.data?.existingNodeId ?? null;
+
+    if (isDuplicate && existingNodeId) {
       // 隐藏加载动画
       hideGlobalLoading();
 
@@ -1100,7 +1109,7 @@ async function handleFileSelection(
         // 用户选择打开已有文件
         showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
         await openUploadedFile(
-          duplicateCheck.data?.existingNodeId,
+          existingNodeId,
           uploadTargetNodeId
         );
         hideGlobalLoading();
@@ -1625,6 +1634,9 @@ async function saveLibraryFile() {
           ? await libraryControllerGetDrawingNode({ path: { nodeId: fileId } })
           : await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
       const node = nodeResponse.data;
+      if (!node || !node.path) {
+        throw new Error('无法获取节点路径');
+      }
       nodePath = node.path;
 
       if (nodePath && currentFileInfo) {
@@ -2576,9 +2588,15 @@ export async function processPendingImages(): Promise<void> {
   }
 
   // 过滤掉已删除的图片
+  // 定义实体接口
+  interface EntityWithIsErased {
+    isErased(): boolean;
+  }
+
   const validImages = pendingImages.filter(img => {
     try {
-      return !img.entity.isErased();
+      const entity = img.entity as EntityWithIsErased;
+      return !entity.isErased();
     } catch {
       return true;
     }
@@ -2603,10 +2621,10 @@ export async function processPendingImages(): Promise<void> {
 
       // 上传到外部参照目录（带 updatePreloading=true 更新 preloading.json）
       await mxCadControllerUploadExtReferenceImage({
+        query: { nodeId: currentInfo.fileId },
         body: {
           file,
           ext_ref_file: img.fileName,
-          nodeId: currentInfo.fileId,
           updatePreloading: true,
         },
       });
