@@ -14,6 +14,8 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /** z-index 层级，默认 10002（高于 Toast 的 10001）。CAD 编辑器环境下可能需要更高值 */
   zIndex?: number;
+  /** 额外的 CSS 类名，应用于模态框内容容器 */
+  className?: string;
 }
 
 const sizeToMaxWidth: Record<string, string> = {
@@ -51,6 +53,7 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth,
   size,
   zIndex = 9999,
+  className,
 }) => {
   const effectiveMaxWidth =
     maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
@@ -81,7 +84,7 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* 模态框内容 */}
       <div
-        className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col`}
+        className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col${className ? ` ${className}` : ''}`}
         style={{
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border-default)',
