@@ -378,7 +378,7 @@ export const CADEditorDirect: React.FC = () => {
           path: { nodeId: downloadingNodeId },
           query: { format, ...((pdfOptions as Record<string, unknown>) || {}) },
           responseStyle: 'blob',
-        } as any)) as { data: Blob };
+        })) as { data: Blob };
 
         const blob = blobData instanceof Blob ? blobData : new Blob([blobData]);
         const url = window.URL.createObjectURL(blob);

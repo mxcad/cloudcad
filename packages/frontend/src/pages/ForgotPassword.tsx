@@ -56,6 +56,7 @@ export const ForgotPassword: React.FC = () => {
     supportPhone?: string;
   } | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const {

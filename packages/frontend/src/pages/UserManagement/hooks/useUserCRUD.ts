@@ -23,7 +23,7 @@ export function useUserCRUD() {
     queryFn: async () => {
       const result = await usersControllerFindAll({ query: {} });
       if (result.error) throw result.error;
-      return (result.data as any)?.users || [];
+      return result.data?.users || [];
     },
   });
 

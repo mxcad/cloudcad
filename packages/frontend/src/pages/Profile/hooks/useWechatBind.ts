@@ -9,9 +9,9 @@ export const useWechatBind = () => {
     mutationFn: async (params: { code: string; state: string }) => {
       const result = await authControllerBindWechat({
         body: { code: params.code, state: params.state },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 
@@ -19,7 +19,7 @@ export const useWechatBind = () => {
     mutationFn: async () => {
       const result = await authControllerUnbindWechat();
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 

@@ -150,7 +150,7 @@ export const useExternalReferenceUpload = (
         let result = null;
         if (isLoggedIn) {
           // 已登录用户使用 SDK
-          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } as any });
+          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } });
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
           // 未登录用户使用 SDK
@@ -409,7 +409,7 @@ export const useExternalReferenceUpload = (
             formData.append('file', fileInfo.source);
             formData.append('ext_ref_file', fileInfo.name);
             if (config.nodeId) formData.append('nodeId', config.nodeId);
-            await mxCadControllerUploadExtReferenceImage({ body: formData as any });
+            await mxCadControllerUploadExtReferenceImage({ body: formData });
           } else {
             // 图片外部参照：使用公开上传接口（未登录用户）
             const formData = new FormData();

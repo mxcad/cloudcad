@@ -12,9 +12,9 @@ export const usePhoneBind = () => {
     mutationFn: async (params: { phone: string }) => {
       const result = await authControllerSendSmsCode({
         body: { phone: params.phone },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 
@@ -22,7 +22,7 @@ export const usePhoneBind = () => {
     mutationFn: async () => {
       const result = await authControllerSendUnbindPhoneCode();
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 
@@ -30,9 +30,9 @@ export const usePhoneBind = () => {
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindPhoneCode({
         body: { code: params.code },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string; token?: string };
+      return result.data as { success?: boolean; message?: string; token?: string };
     },
   });
 
@@ -40,9 +40,9 @@ export const usePhoneBind = () => {
     mutationFn: async (params: { phone: string; code: string }) => {
       const result = await authControllerBindPhone({
         body: { phone: params.phone, code: params.code },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 
@@ -50,9 +50,9 @@ export const usePhoneBind = () => {
     mutationFn: async (params: { phone: string; code: string; token: string }) => {
       const result = await authControllerRebindPhone({
         body: { phone: params.phone, code: params.code, token: params.token },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 

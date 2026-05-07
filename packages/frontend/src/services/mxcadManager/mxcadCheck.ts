@@ -32,11 +32,12 @@ export type { DuplicateCheckResult } from './mxcadTypes';
 export async function checkDuplicateFile(
   fileHash: string,
   filename: string,
-  nodeId: string
+  nodeId: string,
+  fileSize: number
 ): Promise<DuplicateCheckResult> {
   try {
     const duplicateCheck = await mxCadControllerCheckFileExist({
-      body: { fileHash, filename, nodeId, fileSize: 0 },
+      body: { fileHash, filename, nodeId, fileSize },
     });
 
     return {

@@ -12,7 +12,7 @@ export const useEmailBind = () => {
     mutationFn: async (params: { email: string; isRebind?: boolean }) => {
       const result = await authControllerSendBindEmailCode({
         body: { email: params.email, isRebind: params.isRebind },
-      } as any);
+      });
       if (result.error) throw result.error;
       return result;
     },
@@ -22,7 +22,7 @@ export const useEmailBind = () => {
     mutationFn: async (params: { email: string; code: string }) => {
       const result = await authControllerVerifyBindEmail({
         body: { email: params.email, code: params.code },
-      } as any);
+      });
       if (result.error) throw result.error;
       return result;
     },
@@ -32,7 +32,7 @@ export const useEmailBind = () => {
     mutationFn: async () => {
       const result = await authControllerSendUnbindEmailCode();
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 
@@ -40,9 +40,9 @@ export const useEmailBind = () => {
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindEmailCode({
         body: { code: params.code },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string; token?: string };
+      return result.data as { success?: boolean; message?: string; token?: string };
     },
   });
 
@@ -50,9 +50,9 @@ export const useEmailBind = () => {
     mutationFn: async (params: { email: string; code: string; token: string }) => {
       const result = await authControllerRebindEmail({
         body: { email: params.email, code: params.code, token: params.token },
-      } as any);
+      });
       if (result.error) throw result.error;
-      return result as unknown as { success?: boolean; message?: string };
+      return result.data as { success?: boolean; message?: string };
     },
   });
 

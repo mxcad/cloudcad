@@ -80,9 +80,10 @@ export const RuntimeConfigPage: React.FC = () => {
   const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
-      const configs = (await runtimeConfigControllerGetAllConfigs().then(r => r.data)) as RuntimeConfigResponseDto[] | undefined;
-      if (configs && Array.isArray(configs)) {
-        setConfigs(configs);
+      const response = await runtimeConfigControllerGetAllConfigs();
+      const configsData = response.data;
+      if (configsData && Array.isArray(configsData)) {
+        setConfigs(configsData);
       } else {
         setConfigs([]);
       }

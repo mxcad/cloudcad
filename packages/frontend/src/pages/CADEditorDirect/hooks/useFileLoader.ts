@@ -116,15 +116,17 @@ export function useFileLoader(options: UseFileLoaderOptions) {
       let file: FileInfo | undefined;
 
       if (libraryKeyParam === 'drawing') {
-        const result = await libraryControllerGetDrawingNode({
+        const response = await libraryControllerGetDrawingNode({
           path: { nodeId: fileId },
         });
+        const result = response.data;
         if (result.error) throw result.error;
         file = result.data as FileInfo;
       } else if (libraryKeyParam === 'block') {
-        const result = await libraryControllerGetBlockNode({
+        const response = await libraryControllerGetBlockNode({
           path: { nodeId: fileId },
         });
+        const result = response.data;
         if (result.error) throw result.error;
         file = result.data as FileInfo;
       } else {

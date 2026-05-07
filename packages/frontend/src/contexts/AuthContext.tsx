@@ -20,7 +20,7 @@ import {
 import type { UserDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
-import { isValidToken, getValidToken } from '@/utils/tokenUtils';
+import { isValidToken, getValidToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken, setWechatTempToken, getWechatTempToken, removeWechatTempToken } from '@/utils/tokenUtils';
 
 type User = UserDtoType;
 
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token && user) {
         setLoading(true);
         try {
-          const userData = await authControllerGetProfile() as unknown as User;
+          const userData = await authControllerGetProfile() as User;
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const responseData = await authControllerLoginByPhone({
         body: { phone, code },
-      } as any) as unknown as AuthResponseData;
+      }) as AuthResponseData;
       console.log('[AuthContext] 手机登录响应:', responseData);
 
       const {
@@ -243,7 +243,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = responseData as unknown as AuthResponseData;
+      } = responseData as AuthResponseData;
 
       // 自动登录，保存 token
       localStorage.setItem('accessToken', accessToken);

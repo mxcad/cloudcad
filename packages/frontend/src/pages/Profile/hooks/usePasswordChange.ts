@@ -14,7 +14,7 @@ export const usePasswordChange = () => {
           oldPassword: params.oldPassword,
           newPassword: params.newPassword,
         },
-      } as any);
+      });
       if (result.error) throw result.error;
       return result;
     },

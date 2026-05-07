@@ -27,7 +27,7 @@ export function useForgotPassword() {
           validateContact: '',
         },
       });
-      return result as unknown as ForgotPasswordResult;
+      return result as ForgotPasswordResult;
     } catch (err) {
       const message =
         (err as Error & { response?: { data?: { message?: string } } })

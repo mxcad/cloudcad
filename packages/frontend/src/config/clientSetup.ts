@@ -5,7 +5,7 @@
 
 import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
-import { getValidToken, isValidToken } from '@/utils/tokenUtils';
+import { getValidToken, isValidToken, getRefreshToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken } from '@/utils/tokenUtils';
 
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
 const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
@@ -64,7 +64,7 @@ async function tryRefreshToken(): Promise<boolean> {
     return refreshPromise;
   }
 
-  const token = localStorage.getItem('refreshToken');
+  const token = getRefreshToken();
   if (!token) return false;
 
   isRefreshing = true;
@@ -78,9 +78,9 @@ async function tryRefreshToken(): Promise<boolean> {
       const body = await res.json();
       const inner = body?.data || body;
       if (inner?.accessToken && isValidToken(inner.accessToken)) {
-        localStorage.setItem('accessToken', inner.accessToken);
+        setAccessToken(inner.accessToken);
         if (inner.refreshToken && isValidToken(inner.refreshToken)) {
-          localStorage.setItem('refreshToken', inner.refreshToken);
+          setRefreshToken(inner.refreshToken);
         }
         // Notify React state if callback registered
         if (tokenRefreshCallback) {
@@ -106,8 +106,8 @@ let redirectTimer: number | null = null;
 function clearAuthAndRedirect() {
   if (isRedirecting) return;
   isRedirecting = true;
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
+  removeAccessToken();
+  removeRefreshToken();
   localStorage.removeItem('user');
   window.location.href = '/login';
 }
