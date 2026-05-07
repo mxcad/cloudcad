@@ -67,9 +67,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       const response = await fileSystemControllerGetProjectMembers({ path: { projectId } });
       // 映射 id 为 userId 以保持兼容性
-      const membersWithUserId = (
-        (response.data || []) as ProjectMemberDto[]
-      ).map((m) => ({ ...m, userId: m.id }));
+      const membersWithUserId = (response.data ?? []).map((m) => ({ ...m, userId: m.id }));
       setMembers(membersWithUserId as Member[]);
     } catch (error) {
       setErrorMessage('加载成员列表失败');
@@ -79,7 +77,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadProjectRoles = useCallback(async () => {
     try {
       const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } });
-      const allRoles = (response.data as { id: string; name: string }[]) || [];
+      const allRoles = response.data ?? [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
       const addMemberRoles = allRoles.filter(
@@ -117,7 +115,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       try {
         const response = await usersControllerSearchUsers({ query: { search: query, limit: 10 } });
         // response.data 是 UserListResponseDto，包含 users 数组
-        const users = (response.data?.users || []) as UserSearchResult[];
+        const users = response.data?.users ?? [];
 
         // 过滤掉已经是成员的用户
         const memberUserIds = members.map((m) => m.id);
@@ -196,22 +194,26 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       // 添加成员
-      const memberData = await fileSystemControllerAddProjectMember({ path: { projectId }, body: {
-        userId: selectedUser.id,
-        projectRoleId: newRoleId,
-      } } as unknown as { path: { projectId: string }; body: { userId: string; projectRoleId: string } });
+      // @ts-expect-error Generated API type marks body as never
+      const memberData = await fileSystemControllerAddProjectMember({
+        path: { projectId },
+        body: {
+          userId: selectedUser.id,
+          projectRoleId: newRoleId,
+        },
+      });
 
-      const responseData = memberData.data!;
+      const { id, email, username, nickname, avatar, projectRoleId, projectRoleName, joinedAt } = memberData.data;
       const newMember: Member = {
-        id: responseData.id,
-        userId: responseData.id,
-        email: responseData.email,
-        username: responseData.username,
-        nickname: responseData.nickname,
-        avatar: responseData.avatar,
-        projectRoleId: responseData.projectRoleId,
-        projectRoleName: responseData.projectRoleName,
-        joinedAt: responseData.joinedAt
+        id,
+        userId: id,
+        email,
+        username,
+        nickname,
+        avatar,
+        projectRoleId,
+        projectRoleName,
+        joinedAt,
       };
       setMembers((prev) => [...prev, newMember]);
 
@@ -255,9 +257,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const handleUpdateRole = async (userId: string, projectRoleId: string) => {
     setErrorMessage('');
     try {
-      await fileSystemControllerUpdateProjectMember({ path: { projectId, userId }, body: {
-        projectRoleId,
-      } } as unknown as { path: { projectId: string; userId: string }; body: { projectRoleId: string } });
+      // @ts-expect-error Generated API type marks body as never
+      await fileSystemControllerUpdateProjectMember({
+        path: { projectId, userId },
+        body: { projectRoleId },
+      });
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
@@ -284,7 +288,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setTransferring(true);
     setErrorMessage('');
     try {
-      await fileSystemControllerUpdateProjectMember({ path: { projectId, userId: transferTarget.userId }, body: { roleName: 'PROJECT_OWNER' } } as unknown as { path: { projectId: string; userId: string }; body: { roleName: string } });
+      // @ts-expect-error Generated API type marks body as never
+      await fileSystemControllerUpdateProjectMember({
+        path: { projectId, userId: transferTarget.userId },
+        body: { roleName: 'PROJECT_OWNER' },
+      });
 
       // 刷新成员列表
       await loadMembers();
