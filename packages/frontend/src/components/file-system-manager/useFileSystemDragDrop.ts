@@ -69,9 +69,9 @@ export const useFileSystemDragDrop = () => {
 
       try {
         if (isCopy) {
-          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } as any });
+          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } });
         } else {
-          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } as any });
+          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } });
         }
         onRefresh();
       } catch (error) {

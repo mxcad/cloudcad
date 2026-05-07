@@ -122,7 +122,7 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
     setError(null);
 
     try {
-      const response = await versionControlControllerGetFileHistory({ query: { projectId, filePath, limit: 20 } }) as any;
+      const response = await versionControlControllerGetFileHistory({ query: { projectId, filePath, limit: 20 } });
       if (response?.success) {
         setEntries(response.entries || []);
       } else {

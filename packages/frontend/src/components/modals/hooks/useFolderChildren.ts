@@ -17,7 +17,7 @@ export const useFolderChildren = () => {
       try {
         const childrenResponse = await fileSystemControllerGetChildren({
           path: { nodeId },
-        }) as any;
+        });
 
         let children: FileSystemNode[] = [];
 

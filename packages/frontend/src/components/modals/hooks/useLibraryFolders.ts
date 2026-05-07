@@ -36,7 +36,7 @@ export const useLibraryFolders = (libraryType: LibraryType) => {
   const getLibrary = useCallback(async (): Promise<LibraryMeta> => {
     const result = await getLibraryApi();
     if (result.error) throw result.error;
-    const data = result as any as { id: string; name: string };
+    const data = result as { id: string; name: string };
     return { id: data.id, name: data.name };
   }, [getLibraryApi]);
 
@@ -54,8 +54,8 @@ export const useLibraryFolders = (libraryType: LibraryType) => {
 
         let children: FileSystemNode[] = [];
 
-        if (result && (result as any).nodes) {
-          children = (result as any).nodes as unknown as FileSystemNode[];
+        if (result && result.nodes) {
+          children = result.nodes as FileSystemNode[];
         }
 
         const folders: FolderNode[] = children

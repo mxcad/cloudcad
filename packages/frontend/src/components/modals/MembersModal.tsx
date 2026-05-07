@@ -65,7 +65,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadMembers = useCallback(async () => {
     setErrorMessage('');
     try {
-      const data = await fileSystemControllerGetProjectMembers({ path: { projectId } }) as any;
+      const data = await fileSystemControllerGetProjectMembers({ path: { projectId } });
       // 映射 id 为 userId 以保持兼容性
       const membersWithUserId = (
         (data || []) as ProjectMemberDto[]
@@ -78,7 +78,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
   const loadProjectRoles = useCallback(async () => {
     try {
-      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } }) as any;
+      const response = await rolesControllerGetProjectRolesByProject({ path: { projectId } });
       const allRoles = (response as { id: string; name: string }[]) || [];
 
       // 添加成员时可用的角色（排除 PROJECT_OWNER）
@@ -115,7 +115,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
       setSearching(true);
       try {
-        const response = await usersControllerSearchUsers({ query: { search: query, limit: 10 } }) as any;
+        const response = await usersControllerSearchUsers({ query: { search: query, limit: 10 } });
         // response.data 是 UserListResponseDto，包含 users 数组
         const users = (response?.users || []) as UserSearchResult[];
 
@@ -199,7 +199,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const memberData = await fileSystemControllerAddProjectMember({ path: { projectId }, body: {
         userId: selectedUser.id,
         projectRoleId: newRoleId,
-      } } as any) as any;
+      } });
 
       const newMember: Member = {
         id: memberData.id,
@@ -237,7 +237,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const handleRemoveMember = async (userId: string) => {
     setErrorMessage('');
     try {
-      await fileSystemControllerRemoveProjectMember({ path: { projectId, userId } } as any);
+      await fileSystemControllerRemoveProjectMember({ path: { projectId, userId } });
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
     } catch (error) {
       if (
@@ -256,7 +256,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       await fileSystemControllerUpdateProjectMember({ path: { projectId, userId }, body: {
         projectRoleId,
-      } } as any);
+      } });
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
@@ -283,7 +283,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setTransferring(true);
     setErrorMessage('');
     try {
-      await fileSystemControllerUpdateProjectMember({ path: { projectId, userId: transferTarget.userId }, body: { roleName: 'PROJECT_OWNER' } as any });
+      await fileSystemControllerUpdateProjectMember({ path: { projectId, userId: transferTarget.userId }, body: { roleName: 'PROJECT_OWNER' } });
 
       // 刷新成员列表
       await loadMembers();

@@ -137,8 +137,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (isPersonalSpace || isLibraryMode) return;
     const loadProjects = async () => {
       try {
-        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as any });
-        const projectList = (response as any)?.nodes || [];
+        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
+        const projectList = response?.nodes || [];
         setProjects(projectList.map((p: any): FileSystemNode => ({
           id: p.id, name: p.name, isFolder: true, isRoot: true,
           updatedAt: p.updatedAt, parentId: undefined,

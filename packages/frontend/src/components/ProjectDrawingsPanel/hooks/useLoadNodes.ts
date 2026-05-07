@@ -89,14 +89,14 @@ export function useLoadNodes(
                   limit: PAGE_SIZE,
                   search: search || undefined,
                 } });
-          nodeList = (response as any)?.nodes || [];
-          totalCount = (response as any)?.total || 0;
+          nodeList = response?.nodes || [];
+          totalCount = response?.total || 0;
           totalPageCount =
-            (response as any)?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
+            response?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
         } else {
           const { data: response } = await fileSystemControllerGetChildren({
             path: { nodeId },
-            query: { page, limit: PAGE_SIZE, search: search || undefined } as any,
+            query: { page, limit: PAGE_SIZE, search: search || undefined },
           });
           nodeList = (response?.nodes || []).map(toFileSystemNode);
           totalCount = response?.total || 0;

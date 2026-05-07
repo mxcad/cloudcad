@@ -15,7 +15,7 @@ export const useFileSystemNavigation = (isAuthenticated: boolean) => {
     queryFn: async () => {
       const result = await fileSystemControllerGetPersonalSpace();
       if (result.error) throw result.error;
-      const data = result.data as any;
+      const data = result.data;
       return data?.id || null;
     },
     enabled: isAuthenticated,
@@ -24,23 +24,14 @@ export const useFileSystemNavigation = (isAuthenticated: boolean) => {
 
   // 获取节点信息
   const getNode = useCallback(async (nodeId: string) => {
-    const result = await fileSystemControllerGetNode({ path: { nodeId } }) as unknown as {
-      data: {
-        fileHash?: string;
-        path?: string;
-        parentId?: string | null;
-        id?: string;
-        isRoot?: boolean;
-        name?: string;
-      };
-    };
+    const result = await fileSystemControllerGetNode({ path: { nodeId } });
     return result.data;
   }, []);
 
   // 获取根节点
   const getRootNode = useCallback(async (nodeId: string) => {
     const result = await fileSystemControllerGetRootNode({ path: { nodeId } });
-    return (result as any).data;
+    return result.data;
   }, []);
 
   // 打开图纸

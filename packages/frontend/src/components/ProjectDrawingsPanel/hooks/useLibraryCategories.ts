@@ -227,7 +227,7 @@ export function useLibraryCategories(
           libraryType === 'drawing'
             ? await libraryControllerGetDrawingLibrary()
             : await libraryControllerGetBlockLibrary();
-        const libraryNode = response as any as { id?: string; name?: string };
+        const libraryNode = response as { id?: string; name?: string };
         if (libraryNode?.id) {
           setLibraryRootId(libraryNode.id);
 
@@ -275,7 +275,7 @@ export function useLibraryCategories(
                     limit: PAGE_SIZE,
                   } });
 
-            const files = (response as any)?.nodes || [];
+            const files = response?.nodes || [];
             // Note: These values need to be consumed by the caller
             // We don't set nodes here - that's done by the caller via the callback pattern
           } catch (error: unknown) {

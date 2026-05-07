@@ -51,9 +51,9 @@ export const useSaveAs = ({
   const { data: projects = [] } = useQuery<ProjectWithPermission[]>({
     queryKey: ['projects', 'all'],
     queryFn: async () => {
-      const result = await fileSystemControllerGetProjects({ query: { filter: 'all' } as any });
+      const result = await fileSystemControllerGetProjects({ query: { filter: 'all' } });
       if (result.error) throw result.error;
-      const allProjects = (result.data as any)?.nodes || [];
+      const allProjects = result.data?.nodes || [];
       return allProjects.map((project: any) => ({
         id: project.id,
         name: project.name,
@@ -111,7 +111,7 @@ export const useSaveAs = ({
         formData.append('libraryType', libraryType || 'drawing');
         formData.append('fileName', fileName.trim());
 
-        const result = await saveControllerSaveMxwebAs({ body: formData as any });
+        const result = await saveControllerSaveMxwebAs({ body: formData });
         const saveResult = result.data as SaveAsResult;
 
         return saveResult;
@@ -129,7 +129,7 @@ export const useSaveAs = ({
       formData.append('commitMessage', `Save as: ${fileName}.${format}`);
       formData.append('fileName', fileName.trim());
 
-      const result = await saveControllerSaveMxwebAs({ body: formData as any });
+      const result = await saveControllerSaveMxwebAs({ body: formData });
       const saveResult = result.data as SaveAsResult;
 
       return saveResult;

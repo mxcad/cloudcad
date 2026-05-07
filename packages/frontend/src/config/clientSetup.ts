@@ -15,10 +15,22 @@ client.setConfig({
     if (
       data &&
       typeof data === 'object' &&
-      'data' in data &&
       'code' in data
     ) {
-      return (data as Record<string, unknown>).data;
+      const typedData = data as Record<string, unknown>;
+      const code = typedData.code;
+      // 当 code 存在且不为 0 时，视为业务错误，抛出异常
+      if (typeof code === 'number' && code !== 0) {
+        const message = typedData.message || '业务处理失败';
+        const error = new Error(message) as any;
+        error.code = code;
+        error.data = typedData;
+        throw error;
+      }
+      // 成功时解包 data 字段
+      if ('data' in typedData) {
+        return typedData.data;
+      }
     }
     return data;
   },
@@ -123,31 +135,39 @@ function handleTokenRefreshFailure() {
 
 const nativeFetch = globalThis.fetch.bind(globalThis);
 
+// 辅助函数：保存请求体副本，避免重试时 body 被消耗
+function persistBody(init?: RequestInit): RequestInit | undefined {
+  if (!init) return init;
+  const { body, ...rest } = init;
+  if (body && typeof body === 'string') {
+    return { ...rest, body };
+  }
+  // 对于其他类型（FormData, Blob 等），暂不支持克隆，直接返回原 init
+  // 这种情况下重试可能失败，但至少保证原始请求正常发送
+  return init;
+}
+
 client.setConfig({
   fetch: async (input, init) => {
+    // 首次请求前，保存 body 副本（用于可能的重试）
+    const persistedInit = persistBody(init);
     let response = await nativeFetch(input, init);
 
-    // 401 → try refresh and retry once
+    // 401 → 尝试刷新 token 并重试（支持所有 HTTP 方法）
     if (response.status === 401) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      if (!url.includes('/auth/login') && !url.includes('/auth/profile')) {
-        const method = (init?.method || 'GET').toUpperCase();
-        if (method === 'GET' || method === 'HEAD') {
-          const refreshed = await tryRefreshToken();
-          if (refreshed) {
-            const headers = new Headers(init?.headers);
-            headers.set('Authorization', `Bearer ${getValidToken()}`);
-            response = await nativeFetch(input, { ...init, headers });
-          } else {
-            handleTokenRefreshFailure();
-          }
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/profile');
+      if (!isAuthEndpoint) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+          const headers = new Headers(init?.headers);
+          headers.set('Authorization', `Bearer ${getValidToken()}`);
+          const retryInit = persistedInit ? { ...persistedInit, headers } : { ...init, headers };
+          response = await nativeFetch(input, retryInit);
         } else {
           handleTokenRefreshFailure();
         }
-      }
-
-      // Profile 401: redirect to login
-      if (url.includes('/auth/profile')) {
+      } else if (url.includes('/auth/profile')) {
         handleTokenRefreshFailure();
       }
     }
