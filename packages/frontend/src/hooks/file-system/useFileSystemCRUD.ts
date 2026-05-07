@@ -321,7 +321,7 @@ export const useFileSystemCRUD = ({
       `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
       async () => {
         try {
-          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) } });
+          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) } } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
           showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
           clearSelection();
           loadData();
@@ -438,7 +438,7 @@ export const useFileSystemCRUD = ({
           try {
             if (node.isRoot) {
               // TODO: Replace with SDK when backend adds restoreProject endpoint
-              await fileSystemControllerRestoreTrashItems({ body: { itemIds: [node.id] } });
+              await fileSystemControllerRestoreTrashItems({ body: { itemIds: [node.id] } } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
             } else {
               await fileSystemControllerRestoreNode({ path: { nodeId: node.id } });
             }

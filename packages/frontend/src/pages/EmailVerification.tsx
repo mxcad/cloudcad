@@ -130,8 +130,7 @@ export const EmailVerification: React.FC = () => {
       if (bindMode) {
         // 绑定模式：调用绑定邮箱接口，返回 token 后存储并通过刷新更新 AuthContext
         const response = await bindEmailAndLogin();
-        const { data: responseData } = response;
-        const { accessToken, refreshToken, user: userData } = responseData as {
+        const { accessToken, refreshToken, user: userData } = response as {
           accessToken: string; refreshToken: string; user: unknown;
         };
         localStorage.setItem('accessToken', accessToken);
@@ -145,8 +144,7 @@ export const EmailVerification: React.FC = () => {
         // NOTE: verifyEmailAndRegisterPhone SDK type has body?: never;
         // old params: { email, code, phone, phoneCode, username, password, nickname }
         const response = await verifyEmailAndRegisterPhone();
-        const { data: responseData } = response;
-        const { accessToken, refreshToken, user: userData } = responseData as {
+        const { accessToken, refreshToken, user: userData } = response as {
           accessToken: string; refreshToken: string; user: unknown;
         };
         localStorage.setItem('accessToken', accessToken);
