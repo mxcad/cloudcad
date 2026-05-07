@@ -123,10 +123,10 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
 
     try {
       const response = await versionControlControllerGetFileHistory({ query: { projectId, filePath, limit: 20 } });
-      if (response?.success) {
-        setEntries(response.entries || []);
+      if (response.data && !response.error) {
+        setEntries(response.data?.entries || []);
       } else {
-        setError(response?.message || '加载版本历史失败');
+        setError(response.error ? String(response.error) : '加载版本历史失败');
       }
     } catch (err) {
       setError('加载版本历史失败');
