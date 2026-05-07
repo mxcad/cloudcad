@@ -112,7 +112,7 @@ export const useFileSystemData = ({
       const response = await fileSystemControllerGetNode({
         path: { nodeId: effectiveNodeId },
       });
-      return toFileSystemNode(response as Parameters<typeof toFileSystemNode>[0]);
+      return toFileSystemNode(response.data as unknown as Parameters<typeof toFileSystemNode>[0]);
     },
     enabled:
       !!effectiveNodeId && !isProjectRootMode && !isTrash && !hasSearch,
@@ -130,26 +130,30 @@ export const useFileSystemData = ({
             filter: projectFilter,
             page: pagination.page,
             limit: pagination.limit,
-          } as Record<string, unknown>,
+          },
         });
 
-        const projectData = response as Record<string, unknown>;
-        if (projectData?.nodes) {
+        const rawData = response.data as unknown as Record<string, unknown> | undefined;
+        if (rawData && 'nodes' in rawData && Array.isArray(rawData.nodes)) {
           return {
-            nodes: projectData.nodes.map(projectToNode),
-            total: projectData.total,
-            page: projectData.page,
-            limit: projectData.limit,
-            totalPages: projectData.totalPages,
+            nodes: (rawData.nodes as Array<unknown>).map(
+              (n) => projectToNode(n as unknown as Parameters<typeof projectToNode>[0])
+            ),
+            total: rawData.total as number,
+            page: rawData.page as number,
+            limit: rawData.limit as number,
+            totalPages: rawData.totalPages as number,
           };
         }
 
         // Legacy format: array of ProjectDto
         const allProjects = (
-          Array.isArray(response) ? response : []
+          Array.isArray(response.data) ? response.data : []
         ) as unknown as ProjectDto[];
         return {
-          nodes: allProjects.map((p) => projectToNode(p)),
+          nodes: allProjects.map(
+            (p) => projectToNode(p as unknown as Parameters<typeof projectToNode>[0])
+          ),
           total: allProjects.length,
           page: pagination.page,
           limit: pagination.limit,
@@ -163,25 +167,26 @@ export const useFileSystemData = ({
           page: pagination.page,
           limit: pagination.limit,
           search: searchQuery || undefined,
-        } as Record<string, unknown>,
+        },
       });
 
-      const childrenData = (response?.nodes || []).map(toFileSystemNode);
-      if (response?.total !== undefined) {
+      const data = response.data;
+      if (data) {
+        const childrenData = data.nodes.map(toFileSystemNode);
         return {
           nodes: childrenData,
-          total: response.total,
-          page: response.page,
-          limit: response.limit,
-          totalPages: response.totalPages,
+          total: data.total,
+          page: data.page,
+          limit: data.limit,
+          totalPages: data.totalPages,
         };
       }
       return {
-        nodes: childrenData,
-        total: childrenData.length,
+        nodes: [],
+        total: 0,
         page: pagination.page,
         limit: pagination.limit,
-        totalPages: Math.ceil(childrenData.length / pagination.limit),
+        totalPages: 0,
       };
     },
     enabled:
@@ -221,22 +226,22 @@ export const useFileSystemData = ({
       const response = await fileSystemControllerSearch({
         query: {
           keyword: searchQuery,
-          scope: searchScope,
+          scope: searchScope as 'project' | 'project_files',
           filter: searchFilter,
           projectId: searchProjectId,
           page: pagination.page,
           limit: pagination.limit,
-        } as Record<string, unknown>,
+        },
       });
 
-      const searchData = response;
-      if (searchData?.nodes) {
+      const data = response.data;
+      if (data) {
         return {
-          nodes: searchData.nodes.map(toFileSystemNode),
-          total: searchData.total,
-          page: searchData.page,
-          limit: searchData.limit,
-          totalPages: searchData.totalPages,
+          nodes: data.nodes.map(toFileSystemNode),
+          total: data.total,
+          page: data.page,
+          limit: data.limit,
+          totalPages: data.totalPages,
         };
       }
       return {
@@ -254,31 +259,25 @@ export const useFileSystemData = ({
   const trashQuery = useQuery({
     queryKey: [...queryKeys.fileSystem.trash, { page: pagination.page, limit: pagination.limit }] as const,
     queryFn: async () => {
-      const response = await fileSystemControllerGetTrash({
-        query: {
-          page: pagination.page,
-          limit: pagination.limit,
-        } as Record<string, unknown>,
-      });
+      const response = await fileSystemControllerGetTrash();
 
-      const trashData = response;
-      const trashNodes = (trashData?.nodes || []).map(toFileSystemNode);
-
-      if (trashData?.total !== undefined) {
+      const data = response.data;
+      if (data) {
+        const trashNodes = data.nodes.map(toFileSystemNode);
         return {
           nodes: trashNodes,
-          total: trashData.total,
-          page: trashData.page,
-          limit: trashData.limit,
-          totalPages: trashData.totalPages,
+          total: data.total,
+          page: data.page,
+          limit: data.limit,
+          totalPages: data.totalPages,
         };
       }
       return {
-        nodes: trashNodes,
-        total: trashNodes.length,
+        nodes: [],
+        total: 0,
         page: pagination.page,
         limit: pagination.limit,
-        totalPages: Math.ceil(trashNodes.length / pagination.limit),
+        totalPages: 0,
       };
     },
     enabled: isTrash,
@@ -309,7 +308,7 @@ export const useFileSystemData = ({
               const parentResponse = await fileSystemControllerGetNode({
                 path: { nodeId: traversalNode.parentId },
               });
-              traversalNode = toFileSystemNode(parentResponse as Parameters<typeof toFileSystemNode>[0]);
+              traversalNode = toFileSystemNode(parentResponse.data as unknown as Parameters<typeof toFileSystemNode>[0]);
             } catch (error: unknown) {
               handleError(error, '获取父节点失败，停止构建面包屑');
               break;
@@ -366,7 +365,8 @@ export const useFileSystemData = ({
       fileSystemControllerGetRootNode({
         path: { nodeId: effectiveNodeId },
       })
-        .then((rootNode: { personalSpaceKey?: string } | undefined) => {
+        .then((response) => {
+          const rootNode = response.data as unknown as { personalSpaceKey?: string } | undefined;
           if (rootNode?.personalSpaceKey) {
             if (urlNodeId) {
               navigate(`/personal-space/${urlNodeId}`);
