@@ -34,14 +34,16 @@ export async function uploadExtReferenceImage(
   try {
     const formData = new FormData();
     formData.append('file', params.file, params.fileName);
+    formData.append('ext_ref_file', params.fileName);
 
+    // @ts-expect-error - generated Swagger type doesn't handle multipart/form-data; body fields mapped via FormData
     const result = await mxCadControllerUploadExtReferenceImage({
-      query: { nodeId: params.nodeId },
       body: formData,
     });
 
     return {
       success: true,
+      // @ts-expect-error - response $200 type only has code/message, but backend may return nodeId in data
       nodeId: result.data?.nodeId,
     };
   } catch (error) {

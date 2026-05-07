@@ -6,7 +6,6 @@
  */
 import { useEffect, useRef } from 'react';
 
-
 // 预加载状态（全局单例，避免重复预加载）
 let preloadPromise: Promise<void> | null = null;
 let isPreloaded = false;
@@ -19,7 +18,16 @@ async function preloadCADDependencies(): Promise<void> {
   if (isPreloaded) return;
 
   try {
-    // isPreloaded = true;
+    console.log('[MxCAD Preload] 开始预加载 CAD 引擎...');
+
+    // 1. 预加载 mxcad-app 样式（轻量）
+    // @ts-expect-error - mxcad-app 没有类型定义
+    await import('mxcad-app/style');
+
+    // 2. 预加载 mxcadManager（包含 mxcad-app 核心和 mxdraw）
+    await import('../services/mxcadManager');
+
+    isPreloaded = true;
     console.log('[MxCAD Preload] CAD 引擎预加载完成');
   } catch (error) {
     console.warn('[MxCAD Preload] 预加载失败:', error);
@@ -49,7 +57,7 @@ function isCADRoute(): boolean {
 function scheduleIdlePreload(): void {
   const doSchedule = () => {
     if ('requestIdleCallback' in window) {
-      (window as Window).requestIdleCallback(
+      window.requestIdleCallback(
         () => {
           if (!isPreloaded && !preloadPromise) {
             preloadPromise = preloadCADDependencies();
@@ -93,6 +101,6 @@ export function useMxCADPreload() {
     if (hasScheduledRef.current) return;
     hasScheduledRef.current = true;
 
-    // scheduleIdlePreload();
+    scheduleIdlePreload();
   }, []);
 }
