@@ -99,13 +99,17 @@ export default function FontLibrary(props: FontLibraryProps) {
     setLoading(true);
     try {
       const { data: fontsApiResult } = await fontsControllerGetFonts({ query: { location: activeTab } });
-      let fontsData: any = fontsApiResult;
-      if (fontsData && typeof fontsData === 'object' && !Array.isArray(fontsData) && 'data' in fontsData) {
-        fontsData = (fontsData as any).data || [];
+      const raw: unknown = fontsApiResult;
+      let fontList: FontInfo[] = [];
+      if (raw && typeof raw === 'object' && !Array.isArray(raw) && 'data' in raw) {
+        const wrapped = (raw as Record<string, unknown>).data;
+        fontList = Array.isArray(wrapped) ? (wrapped as FontInfo[]) : [];
+      } else if (Array.isArray(raw)) {
+        fontList = raw as FontInfo[];
       }
 
-      console.log('解析后的字体数据:', fontsData, '数量:', Array.isArray(fontsData) ? fontsData.length : 0);
-      setAllFonts(Array.isArray(fontsData) ? fontsData : []);
+      console.log('解析后的字体数据:', fontList, '数量:', fontList.length);
+      setAllFonts(fontList);
     } catch (error) {
       console.error('获取字体列表失败:', error);
       setAllFonts([]);
@@ -903,8 +907,8 @@ function UploadFontModal({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('target', target);
-      // FormData is required for file upload, but API expects JSON; cast needed
-      await fontsControllerUploadFont({ body: formData as any });
+      // FormData is required for file upload, but API client types expect JSON body
+      await fontsControllerUploadFont({ body: formData as unknown as Record<string, string> });
       showToast('上传成功', 'success');
       onSuccess();
     } catch (error) {
