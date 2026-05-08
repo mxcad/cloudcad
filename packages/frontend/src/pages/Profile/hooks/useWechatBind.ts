@@ -8,6 +8,7 @@ export const useWechatBind = () => {
   const bindWechat = useMutation({
     mutationFn: async (params: { code: string; state: string }) => {
       const result = await authControllerBindWechat({
+        // @ts-expect-error: API SDK body type misgenerated as never
         body: { code: params.code, state: params.state },
       });
       if (result.error) throw result.error;

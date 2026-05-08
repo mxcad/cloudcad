@@ -28,7 +28,7 @@ function safeMessage(msg: unknown, fallback: string): string {
 // 健康状态接口
 interface HealthStatus {
   status: 'up' | 'down';
-  message: string | Record<string, unknown>;
+  message: string;
   timestamp: string;
 }
 

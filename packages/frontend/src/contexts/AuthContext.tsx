@@ -195,7 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await authControllerLoginByPhone({
         body: { phone, code },
-      } as unknown as Parameters<typeof authControllerLoginByPhone>[0]);
+      });
       const apiResponse = response.data!;
       const authData = apiResponse.data;
       console.log('[AuthContext] 手机登录响应:', authData);
@@ -237,7 +237,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }): Promise<{ message: string; email?: string }> => {
       const response = await authControllerRegister({
         body: data,
-      } as unknown as Parameters<typeof authControllerRegister>[0]);
+      });
       const apiResponse = response.data!;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
@@ -297,7 +297,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     async (phone: string, code: string) => {
       const response = await authControllerVerifyPhone({
         body: { phone, code },
-      } as unknown as Parameters<typeof authControllerVerifyPhone>[0]);
+      });
       const apiResponse = response.data!;
       const responseData = apiResponse.data;
       const {

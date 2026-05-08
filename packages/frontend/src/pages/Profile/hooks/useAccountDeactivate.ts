@@ -30,6 +30,7 @@ export const useAccountDeactivate = () => {
   const resendVerification = useMutation({
     mutationFn: async (params: { email: string }) => {
       const result = await authControllerResendVerification({
+        // @ts-expect-error: API SDK body type misgenerated as never
         body: { email: params.email },
       });
       if (result.error) throw result.error;
