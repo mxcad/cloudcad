@@ -20,6 +20,7 @@ import { SmsVerificationService } from './sms';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { AuthTokenService } from './auth-token.service';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { UserForToken } from '../interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -35,7 +36,7 @@ export class PasswordService {
     private tokenBlacklistService: TokenBlacklistService
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string): Promise<Omit<UserForToken, 'password'> | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: {
