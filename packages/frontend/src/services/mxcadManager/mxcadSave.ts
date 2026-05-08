@@ -18,6 +18,7 @@
 
 import { saveControllerSaveMxwebToNode } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
+import { escapeHtml } from '@/utils/sanitize';
 import type { SaveMxwebParams } from './mxcadTypes';
 
 export type { SaveMxwebParams } from './mxcadTypes';
@@ -81,7 +82,7 @@ export function showSaveConfirmDialog(): Promise<string | null> {
     // 获取当前主题
     const currentTheme =
       document.documentElement.getAttribute('data-theme') || 'light';
-    const isDark = currentTheme === 'dark';
+    const isDark = escapeHtml(currentTheme) === 'dark';
 
     const dialog = document.createElement('div');
     dialog.id = dialogId;

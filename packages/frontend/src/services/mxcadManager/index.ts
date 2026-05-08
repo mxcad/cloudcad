@@ -174,7 +174,7 @@ export function showUnsavedChangesDialog(): Promise<
     // 获取当前主题
     const currentTheme =
       document.documentElement.getAttribute('data-theme') || 'light';
-    const isDark = currentTheme === 'dark';
+    const isDark = escapeHtml(currentTheme) === 'dark';
 
     dialog = document.createElement('div');
     dialog.id = dialogId;
