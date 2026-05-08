@@ -1505,7 +1505,11 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     }
   }
 
-  const { fileId, name } = currentFileInfo!;
+  if (!currentFileInfo) {
+    globalShowToast('保存失败：文件信息丢失', 'error');
+    return;
+  }
+  const { fileId, name } = currentFileInfo;
   const commitMessage = await _showSaveConfirmDialog();
   if (commitMessage === null) {
     return;
@@ -1619,7 +1623,11 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
  * 保存公共资源库文件（图纸库/图块库）
  */
 async function saveLibraryFile() {
-  let { fileId, name, libraryKey, path: nodePath } = currentFileInfo!;
+  if (!currentFileInfo) {
+    globalShowToast('保存失败：文件信息丢失', 'error');
+    return;
+  }
+  let { fileId, name, libraryKey, path: nodePath } = currentFileInfo;
 
   if (!libraryKey) {
     globalShowToast('保存失败：未知的资源库类型', 'error');
@@ -1971,14 +1979,20 @@ class MxCADInstanceManager {
       if (initialFileUrl) {
         await this.openFile(initialFileUrl);
       }
-      return this.mxcadView!;
+      if (!this.mxcadView) {
+        throw new Error('MxCADView 初始化失败，实例为空');
+      }
+      return this.mxcadView;
     }
 
     this.initPromise = this.createInstance(initialFileUrl);
     await this.initPromise;
     this.initPromise = null;
 
-    return this.mxcadView!;
+    if (!this.mxcadView) {
+      throw new Error('MxCADView 初始化失败，实例为空');
+    }
+    return this.mxcadView;
   }
 
   /**
@@ -2307,6 +2321,14 @@ class MxCADInstanceManager {
         return;
       }
 
+      const view = this.mxcadView;
+      const mxcad = view?.mxcad;
+      if (!mxcad) {
+        cleanup();
+        reject(new Error('mxcad 对象不可用'));
+        return;
+      }
+
       const token = localStorage.getItem('accessToken');
       for (
         let attempt = 0;
@@ -2314,7 +2336,7 @@ class MxCADInstanceManager {
         attempt++
       ) {
         try {
-          this.mxcadView!.mxcad!.openWebFile(
+          mxcad.openWebFile(
             fileUrl,
             undefined,
             true,
