@@ -14,7 +14,12 @@ import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/app.config';
 import { FileUtils } from '../common/utils/file-utils';
@@ -102,11 +107,23 @@ export class VersionControlService implements OnModuleInit {
   private initPromise: Promise<void> | null = null;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    // 使用 NestJS 标准配置方式获取路径（configuration.ts 已解析为绝对路径）
-    this.svnRepoPath = this.configService.get('svnRepoPath', { infer: true })!;
-    this.filesDataPath = this.configService.get('filesDataPath', {
+    const svnRepoPath = this.configService.get('svnRepoPath', { infer: true });
+    if (!svnRepoPath) {
+      throw new InternalServerErrorException(
+        '缺少 svnRepoPath 配置，请检查版本控制模块的环境变量',
+      );
+    }
+    this.svnRepoPath = svnRepoPath;
+
+    const filesDataPath = this.configService.get('filesDataPath', {
       infer: true,
-    })!;
+    });
+    if (!filesDataPath) {
+      throw new InternalServerErrorException(
+        '缺少 filesDataPath 配置，请检查版本控制模块的环境变量',
+      );
+    }
+    this.filesDataPath = filesDataPath;
     this.svnIgnorePatterns =
       this.configService.get('svn', { infer: true })?.ignorePatterns || [];
 
