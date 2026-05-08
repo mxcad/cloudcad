@@ -27,6 +27,7 @@ import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { BrandProvider } from './contexts/BrandContext';
 import { useMxCADPreload } from './hooks/useMxCADPreload';
+import NoPermissionPage from './components/ui/NoPermissionPage';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -117,7 +118,7 @@ const PermissionRoute: React.FC<{
     : hasPermission(permission);
 
   if (!hasAccess) {
-    return <Navigate to="/projects" replace />;
+    return <NoPermissionPage />;
   }
 
   return <>{children}</>;
