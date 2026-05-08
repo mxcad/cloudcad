@@ -2,11 +2,14 @@
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UserManagement } from './index';
 import * as useUserCRUDModule from './hooks/useUserCRUD';
 import * as useUserSearchModule from './hooks/useUserSearch';
+
+type UseUserCRUDReturn = ReturnType<typeof useUserCRUDModule.useUserCRUD>;
+type UseUserSearchReturn = ReturnType<typeof useUserSearchModule.useUserSearch>;
 
 vi.mock('./hooks/useUserCRUD');
 vi.mock('./hooks/useUserSearch');
@@ -45,6 +48,9 @@ const mockUsers = [
     nickname: 'Test User 1',
     status: 'ACTIVE',
     role: { id: 'role1', name: 'USER', isSystem: true },
+    hasPassword: true,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
   },
   {
     id: '2',
@@ -53,6 +59,9 @@ const mockUsers = [
     nickname: 'Test User 2',
     status: 'ACTIVE',
     role: { id: 'role1', name: 'USER', isSystem: true },
+    hasPassword: true,
+    createdAt: '2025-01-02T00:00:00.000Z',
+    updatedAt: '2025-01-02T00:00:00.000Z',
   },
 ];
 
@@ -68,6 +77,7 @@ describe('UserManagement', () => {
     const mockCRUDReturn = {
       users: mockUsers,
       loading: false,
+      isLoading: false,
       error: null,
       createUser: vi.fn(),
       updateUser: vi.fn(),
@@ -96,8 +106,12 @@ describe('UserManagement', () => {
       setUserTab: vi.fn(),
     };
 
-    vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue(mockCRUDReturn);
-    vi.mocked(useUserSearchModule.useUserSearch).mockReturnValue(mockSearchReturn);
+    vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue(
+      mockCRUDReturn as UseUserCRUDReturn,
+    );
+    vi.mocked(useUserSearchModule.useUserSearch).mockReturnValue(
+      mockSearchReturn as UseUserSearchReturn,
+    );
   });
 
   describe('Render smoke test', () => {
@@ -150,43 +164,43 @@ describe('UserManagement', () => {
       const searchInput = screen.getByPlaceholderText('搜索用户（邮箱、用户名、昵称）');
       fireEvent.change(searchInput, { target: { value: 'test' } });
 
-      const mockUseUserSearch = useUserSearchModule.useUserSearch as ReturnType<typeof vi.fn>;
+      const mockUseUserSearch = vi.mocked(useUserSearchModule.useUserSearch) as unknown as Mock<UseUserSearchReturn>;
       expect(mockUseUserSearch).toHaveBeenCalled();
     });
   });
 
   describe('useUserCRUD hook interface', () => {
     it('exposes createUser function', () => {
-      const mockUseUserCRUD = useUserCRUDModule.useUserCRUD as ReturnType<typeof vi.fn>;
-      const mockReturn = mockUseUserCRUD();
+      const mockUseUserCRUD = vi.mocked(useUserCRUDModule.useUserCRUD);
+      const mockReturn = mockUseUserCRUD() as UseUserCRUDReturn;
       expect(mockReturn.createUser).toBeDefined();
     });
 
     it('exposes updateUser function', () => {
-      const mockUseUserCRUD = useUserCRUDModule.useUserCRUD as ReturnType<typeof vi.fn>;
-      const mockReturn = mockUseUserCRUD();
+      const mockUseUserCRUD = vi.mocked(useUserCRUDModule.useUserCRUD);
+      const mockReturn = mockUseUserCRUD() as UseUserCRUDReturn;
       expect(mockReturn.updateUser).toBeDefined();
     });
 
     it('exposes deleteUser function', () => {
-      const mockUseUserCRUD = useUserCRUDModule.useUserCRUD as ReturnType<typeof vi.fn>;
-      const mockReturn = mockUseUserCRUD();
+      const mockUseUserCRUD = vi.mocked(useUserCRUDModule.useUserCRUD);
+      const mockReturn = mockUseUserCRUD() as UseUserCRUDReturn;
       expect(mockReturn.deleteUser).toBeDefined();
     });
   });
 
   describe('useUserSearch hook interface', () => {
     it('exposes pagination state', () => {
-      const mockUseUserSearch = useUserSearchModule.useUserSearch as ReturnType<typeof vi.fn>;
-      const mockReturn = mockUseUserSearch();
+      const mockUseUserSearch = vi.mocked(useUserSearchModule.useUserSearch);
+      const mockReturn = mockUseUserSearch() as UseUserSearchReturn;
       expect(mockReturn.currentPage).toBe(1);
       expect(mockReturn.pageSize).toBe(20);
       expect(mockReturn.totalUsers).toBe(2);
     });
 
     it('exposes search state', () => {
-      const mockUseUserSearch = useUserSearchModule.useUserSearch as ReturnType<typeof vi.fn>;
-      const mockReturn = mockUseUserSearch();
+      const mockUseUserSearch = vi.mocked(useUserSearchModule.useUserSearch);
+      const mockReturn = mockUseUserSearch() as UseUserSearchReturn;
       expect(mockReturn.searchQuery).toBe('');
       expect(mockReturn.setSearchQuery).toBeDefined();
     });

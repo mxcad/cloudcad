@@ -1,23 +1,25 @@
 import { User } from 'lucide-react';
 import { TruncateText } from '@/components/ui/TruncateText';
 
+export interface UserTableUser {
+  id: string;
+  username: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  status?: string;
+  role?: { id?: string; name: string; isSystem?: boolean };
+}
+
 interface UserTableProps {
-  users: Array<{
-    id: string;
-    username: string;
-    nickname?: string;
-    email?: string;
-    phone?: string;
-    avatar?: string;
-    status?: string;
-    role?: { name: string; isSystem?: boolean };
-  }>;
+  users: Array<UserTableUser>;
   mailEnabled: boolean;
   smsEnabled: boolean;
-  onEdit: (user: UserTableProps['users'][number]) => void;
+  onEdit: (user: UserTableUser) => void;
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
-  onOpenQuota: (user: UserTableProps['users'][number]) => void;
+  onOpenQuota: (user: UserTableUser) => void;
   userTab: 'active' | 'deleted';
   loading: boolean;
 }

@@ -21,7 +21,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 import { useUserCRUD } from './hooks/useUserCRUD';
 import { useUserSearch } from './hooks/useUserSearch';
-import { UserTable } from './UserTable';
+import { UserTable, type UserTableUser } from './UserTable';
 import { CreateUserModal } from './UserModals/CreateUserModal';
 import { EditUserModal } from './UserModals/EditUserModal';
 import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
@@ -161,8 +161,8 @@ export const UserManagement = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (user: UserResponseDto) => {
-    setEditingUser(user);
+  const handleOpenEdit = (user: UserTableUser) => {
+      setEditingUser(user as UserResponseDto);
     setFormData({
       username: user.username,
       email: user.email || '',
@@ -456,7 +456,7 @@ export const UserManagement = () => {
           users={users}
           mailEnabled={mailEnabled}
           smsEnabled={smsEnabled}
-          onEdit={handleOpenEdit as any}
+          onEdit={handleOpenEdit}
           onDelete={handleDelete}
           onRestore={handleRestore}
           onOpenQuota={() => {}}
