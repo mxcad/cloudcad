@@ -80,6 +80,41 @@ export class CacheMonitorController {
   }
 
   /**
+   * 获取缓存统计信息
+   */
+  @Get('stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取缓存统计信息' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功获取统计信息' })
+  async getStats(@Query() query: CacheStatsQueryDto) {
+    const stats = await this.cacheMonitorService.getStats();
+
+    let result: Record<string, unknown> = stats;
+
+    if (query.level) {
+      result = stats.levels[query.level] as Record<string, unknown>;
+    }
+
+    if (query.includeHotData) {
+      const hotData = await this.cacheMonitorService.getHotData(
+        query.hotDataLimit ?? 100
+      );
+      result = { ...result, hotData };
+    }
+
+    if (query.includePerformance) {
+      const performanceMetrics =
+        await this.cacheMonitorService.getPerformanceMetrics();
+      result = {
+        ...result,
+        performanceMetrics: Object.fromEntries(performanceMetrics),
+      };
+    }
+
+    return result;
+  }
+
+  /**
    * 获取缓存健康状态
    */
   @Get('health')
@@ -193,6 +228,18 @@ export class CacheMonitorController {
   }
 
   /**
+   * 设置缓存值
+   */
+  @Post('value')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '设置缓存值' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功设置缓存值' })
+  async setValue(@Body() dto: CacheOperationDto) {
+    await this.cacheService.set(dto.key, dto.value, dto.ttl);
+    return { success: true, message: '缓存设置成功' };
+  }
+
+  /**
    * 删除缓存
    */
   @Delete('value')
@@ -202,6 +249,18 @@ export class CacheMonitorController {
   async deleteValue(@Query('key') key: string) {
     await this.cacheService.delete(key);
     return { success: true, message: '缓存删除成功' };
+  }
+
+  /**
+   * 根据模式删除缓存
+   */
+  @Delete('pattern')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '根据模式删除缓存' })
+  @ApiResponse({ status: HttpStatus.OK, description: '成功删除缓存' })
+  async deleteByPattern(@Query('pattern') pattern: string) {
+    const count = await this.cacheService.deleteByPattern(pattern);
+    return { success: true, message: `成功删除 ${count} 条缓存` };
   }
 
   /**
