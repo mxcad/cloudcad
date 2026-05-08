@@ -105,7 +105,8 @@ export class DatabaseService
       const timeout = this.configService.get('database', {
         infer: true,
       })!.connectionTimeoutMillis;
-      const timeoutPromise = new Promise<never>((_, reject) =>
+      // 超时 Promise：仅用于 Promise.race 超时控制，永远只 reject 不 resolve
+      const timeoutPromise = new Promise<void>((_, reject) =>
         setTimeout(
           () => reject(new Error(`数据库连接超时 (${timeout}ms)`)),
           timeout

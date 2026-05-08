@@ -72,7 +72,8 @@ export class L2CacheProvider<T = unknown>
     try {
       // 添加 5 秒超时控制
       const connectPromise = this.client.connect();
-      const timeoutPromise = new Promise<never>((_, reject) =>
+      // 超时 Promise：仅用于 Promise.race 超时控制，永远只 reject 不 resolve
+      const timeoutPromise = new Promise<void>((_, reject) =>
         setTimeout(() => reject(new Error('Redis 连接超时 (5000ms)')), 5000)
       );
 
