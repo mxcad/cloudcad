@@ -9,6 +9,7 @@ import { Disk } from 'flydrive';
 // @ts-expect-error flydrive 使用 exports 字段，moduleResolution:node 无法解析但运行时正常
 import { FSDriver } from 'flydrive/drivers/fs';
 import type { Readable } from 'node:stream';
+import * as path from 'path';
 import type { IStorageProvider } from './interfaces/storage-provider.interface';
 
 /**
@@ -58,9 +59,27 @@ export class FlydriveStorageProvider implements IStorageProvider {
 
   async getMetaData(key: string): Promise<{ contentLength: number; contentType: string; lastModified: Date; etag: string }> {
     const meta = await this.disk.getMetaData(key);
+    let contentType = meta.contentType || 'application/octet-stream';
+
+    // Override MIME type for CAD and image files based on extension
+    const ext = path.extname(key).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.dwg': 'application/acad',
+      '.dxf': 'application/dxf',
+      '.mxweb': 'application/x-mxweb',
+      '.pdf': 'application/pdf',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+    };
+
+    if (ext in mimeMap) {
+      contentType = mimeMap[ext];
+    }
+
     return {
       contentLength: meta.contentLength || 0,
-      contentType: meta.contentType || 'application/octet-stream',
+      contentType,
       lastModified: meta.lastModified || new Date(),
       etag: meta.etag || '',
     };
