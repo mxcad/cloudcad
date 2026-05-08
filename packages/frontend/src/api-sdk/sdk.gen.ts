@@ -257,7 +257,14 @@ export const authControllerGetProfile = <ThrowOnError extends boolean = false>(o
 /**
  * 发送邮箱验证码
  */
-export const authControllerSendVerification = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerSendVerificationData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerSendVerificationResponses, AuthControllerSendVerificationErrors, ThrowOnError>({ url: '/api/v1/auth/send-verification', ...options });
+export const authControllerSendVerification = <ThrowOnError extends boolean = false>(options: Options<AuthControllerSendVerificationData, ThrowOnError>) => (options.client ?? client).post<AuthControllerSendVerificationResponses, AuthControllerSendVerificationErrors, ThrowOnError>({
+    url: '/api/v1/auth/send-verification',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 验证邮箱
@@ -274,27 +281,62 @@ export const authControllerVerifyEmail = <ThrowOnError extends boolean = false>(
 /**
  * 验证邮箱并完成手机号注册
  */
-export const authControllerVerifyEmailAndRegisterPhone = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerVerifyEmailAndRegisterPhoneData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerVerifyEmailAndRegisterPhoneResponses, AuthControllerVerifyEmailAndRegisterPhoneErrors, ThrowOnError>({ url: '/api/v1/auth/verify-email-and-register-phone', ...options });
+export const authControllerVerifyEmailAndRegisterPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyEmailAndRegisterPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyEmailAndRegisterPhoneResponses, AuthControllerVerifyEmailAndRegisterPhoneErrors, ThrowOnError>({
+    url: '/api/v1/auth/verify-email-and-register-phone',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 重发验证码
  */
-export const authControllerResendVerification = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerResendVerificationData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerResendVerificationResponses, AuthControllerResendVerificationErrors, ThrowOnError>({ url: '/api/v1/auth/resend-verification', ...options });
+export const authControllerResendVerification = <ThrowOnError extends boolean = false>(options: Options<AuthControllerResendVerificationData, ThrowOnError>) => (options.client ?? client).post<AuthControllerResendVerificationResponses, AuthControllerResendVerificationErrors, ThrowOnError>({
+    url: '/api/v1/auth/resend-verification',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 绑定邮箱并登录（用于已注册但没有邮箱的用户）
  */
-export const authControllerBindEmailAndLogin = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerBindEmailAndLoginData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerBindEmailAndLoginResponses, AuthControllerBindEmailAndLoginErrors, ThrowOnError>({ url: '/api/v1/auth/bind-email-and-login', ...options });
+export const authControllerBindEmailAndLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindEmailAndLoginData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindEmailAndLoginResponses, AuthControllerBindEmailAndLoginErrors, ThrowOnError>({
+    url: '/api/v1/auth/bind-email-and-login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 绑定手机号并登录（用于已注册但没有手机号的用户）
  */
-export const authControllerBindPhoneAndLogin = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerBindPhoneAndLoginData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerBindPhoneAndLoginResponses, AuthControllerBindPhoneAndLoginErrors, ThrowOnError>({ url: '/api/v1/auth/bind-phone-and-login', ...options });
+export const authControllerBindPhoneAndLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindPhoneAndLoginData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindPhoneAndLoginResponses, AuthControllerBindPhoneAndLoginErrors, ThrowOnError>({
+    url: '/api/v1/auth/bind-phone-and-login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 验证手机号（用于已注册但手机号未验证的用户）
  */
-export const authControllerVerifyPhone = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerVerifyPhoneData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerVerifyPhoneResponses, AuthControllerVerifyPhoneErrors, ThrowOnError>({ url: '/api/v1/auth/verify-phone', ...options });
+export const authControllerVerifyPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyPhoneResponses, AuthControllerVerifyPhoneErrors, ThrowOnError>({
+    url: '/api/v1/auth/verify-phone',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 忘记密码
@@ -323,10 +365,14 @@ export const authControllerResetPassword = <ThrowOnError extends boolean = false
 /**
  * 发送绑定邮箱验证码
  */
-export const authControllerSendBindEmailCode = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerSendBindEmailCodeData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerSendBindEmailCodeResponses, AuthControllerSendBindEmailCodeErrors, ThrowOnError>({
+export const authControllerSendBindEmailCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerSendBindEmailCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerSendBindEmailCodeResponses, AuthControllerSendBindEmailCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/bind-email',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -354,19 +400,27 @@ export const authControllerSendUnbindEmailCode = <ThrowOnError extends boolean =
 /**
  * 验证解绑邮箱验证码
  */
-export const authControllerVerifyUnbindEmailCode = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerVerifyUnbindEmailCodeData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerVerifyUnbindEmailCodeResponses, AuthControllerVerifyUnbindEmailCodeErrors, ThrowOnError>({
+export const authControllerVerifyUnbindEmailCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyUnbindEmailCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyUnbindEmailCodeResponses, AuthControllerVerifyUnbindEmailCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/verify-unbind-email-code',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
  * 换绑邮箱（需要先验证原邮箱）
  */
-export const authControllerRebindEmail = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerRebindEmailData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerRebindEmailResponses, AuthControllerRebindEmailErrors, ThrowOnError>({
+export const authControllerRebindEmail = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRebindEmailData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRebindEmailResponses, AuthControllerRebindEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/rebind-email',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -408,15 +462,26 @@ export const authControllerRegisterByPhone = <ThrowOnError extends boolean = fal
 /**
  * 手机号验证码登录
  */
-export const authControllerLoginByPhone = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerLoginByPhoneData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerLoginByPhoneResponses, AuthControllerLoginByPhoneErrors, ThrowOnError>({ url: '/api/v1/auth/login-phone', ...options });
+export const authControllerLoginByPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginByPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerLoginByPhoneResponses, AuthControllerLoginByPhoneErrors, ThrowOnError>({
+    url: '/api/v1/auth/login-phone',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 绑定手机号
  */
-export const authControllerBindPhone = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerBindPhoneData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerBindPhoneResponses, AuthControllerBindPhoneErrors, ThrowOnError>({
+export const authControllerBindPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindPhoneResponses, AuthControllerBindPhoneErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/bind-phone',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -431,19 +496,27 @@ export const authControllerSendUnbindPhoneCode = <ThrowOnError extends boolean =
 /**
  * 验证解绑手机号验证码
  */
-export const authControllerVerifyUnbindPhoneCode = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerVerifyUnbindPhoneCodeData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerVerifyUnbindPhoneCodeResponses, AuthControllerVerifyUnbindPhoneCodeErrors, ThrowOnError>({
+export const authControllerVerifyUnbindPhoneCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyUnbindPhoneCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyUnbindPhoneCodeResponses, AuthControllerVerifyUnbindPhoneCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/verify-unbind-phone-code',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
  * 换绑手机号（需要先验证原手机号）
  */
-export const authControllerRebindPhone = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerRebindPhoneData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerRebindPhoneResponses, AuthControllerRebindPhoneErrors, ThrowOnError>({
+export const authControllerRebindPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRebindPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRebindPhoneResponses, AuthControllerRebindPhoneErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/rebind-phone',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -471,10 +544,14 @@ export const authControllerWechatCallback = <ThrowOnError extends boolean = fals
 /**
  * 绑定微信到当前账号
  */
-export const authControllerBindWechat = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerBindWechatData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerBindWechatResponses, AuthControllerBindWechatErrors, ThrowOnError>({
+export const authControllerBindWechat = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindWechatData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindWechatResponses, AuthControllerBindWechatErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/wechat/bind',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -995,28 +1072,40 @@ export const fileSystemControllerGetTrash = <ThrowOnError extends boolean = fals
 /**
  * 恢复回收站项目
  */
-export const fileSystemControllerRestoreTrashItems = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerRestoreTrashItemsData, ThrowOnError>) => (options?.client ?? client).post<FileSystemControllerRestoreTrashItemsResponses, unknown, ThrowOnError>({
+export const fileSystemControllerRestoreTrashItems = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerRestoreTrashItemsData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerRestoreTrashItemsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/file-system/trash/restore',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
  * 永久删除回收站项目
  */
-export const fileSystemControllerPermanentlyDeleteTrashItems = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerPermanentlyDeleteTrashItemsData, ThrowOnError>) => (options?.client ?? client).delete<FileSystemControllerPermanentlyDeleteTrashItemsResponses, unknown, ThrowOnError>({
+export const fileSystemControllerPermanentlyDeleteTrashItems = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerPermanentlyDeleteTrashItemsData, ThrowOnError>) => (options.client ?? client).delete<FileSystemControllerPermanentlyDeleteTrashItemsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/file-system/trash/items',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
  * 创建节点（文件或文件夹）
  */
-export const fileSystemControllerCreateNode = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerCreateNodeData, ThrowOnError>) => (options?.client ?? client).post<FileSystemControllerCreateNodeResponses, FileSystemControllerCreateNodeErrors, ThrowOnError>({
+export const fileSystemControllerCreateNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerCreateNodeData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerCreateNodeResponses, FileSystemControllerCreateNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/file-system/nodes',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -1153,7 +1242,11 @@ export const fileSystemControllerGetProjectMembers = <ThrowOnError extends boole
 export const fileSystemControllerAddProjectMember = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerAddProjectMemberData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerAddProjectMemberResponses, FileSystemControllerAddProjectMemberErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/file-system/projects/{projectId}/members',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -1171,7 +1264,11 @@ export const fileSystemControllerRemoveProjectMember = <ThrowOnError extends boo
 export const fileSystemControllerUpdateProjectMember = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerUpdateProjectMemberData, ThrowOnError>) => (options.client ?? client).patch<FileSystemControllerUpdateProjectMemberResponses, FileSystemControllerUpdateProjectMemberErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/file-system/projects/{projectId}/members/{userId}',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

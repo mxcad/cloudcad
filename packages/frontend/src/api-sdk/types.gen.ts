@@ -236,9 +236,7 @@ export type UserDto = {
     /**
      * 用户邮箱（可能未绑定）
      */
-    email?: {
-        [key: string]: unknown;
-    } | null;
+    email?: string | null;
     /**
      * 用户名
      */
@@ -329,7 +327,7 @@ export type RefreshTokenDto = {
 /**
  * 用户状态
  */
-export type UserStatusEnum = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 
 export type UserRoleDto = {
     /**
@@ -374,7 +372,7 @@ export type UserProfileResponseDto = {
     /**
      * 用户状态
      */
-    status: UserStatusEnum;
+    status: UserStatus;
     /**
      * 用户角色
      */
@@ -391,6 +389,13 @@ export type UserProfileResponseDto = {
      * 更新时间
      */
     updatedAt: string;
+};
+
+export type SendVerificationDto = {
+    /**
+     * 邮箱地址
+     */
+    email: string;
 };
 
 export type SendVerificationResponseDto = {
@@ -414,6 +419,85 @@ export type VerifyEmailDto = {
     email: string;
     /**
      * 6位数字验证码
+     */
+    code: string;
+};
+
+export type VerifyEmailAndRegisterPhoneDto = {
+    /**
+     * 邮箱地址
+     */
+    email: string;
+    /**
+     * 邮箱验证码（6位数字）
+     */
+    code: string;
+    /**
+     * 手机号（中国大陆，可带 +86 前缀）
+     */
+    phone: string;
+    /**
+     * 手机验证码（6位数字）
+     */
+    phoneCode: string;
+    /**
+     * 用户名
+     */
+    username: string;
+    /**
+     * 密码
+     */
+    password: string;
+    /**
+     * 昵称
+     */
+    nickname?: string;
+};
+
+export type ResendVerificationDto = {
+    /**
+     * 邮箱地址
+     */
+    email: string;
+};
+
+export type BindEmailAndLoginDto = {
+    /**
+     * 临时令牌
+     */
+    tempToken: string;
+    /**
+     * 邮箱地址
+     */
+    email: string;
+    /**
+     * 邮箱验证码
+     */
+    code: string;
+};
+
+export type BindPhoneAndLoginDto = {
+    /**
+     * 临时令牌
+     */
+    tempToken: string;
+    /**
+     * 手机号（中国大陆，可带 +86 前缀）
+     */
+    phone: string;
+    /**
+     * 验证码
+     */
+    code: string;
+};
+
+export type VerifySmsCodeDto = {
+    /**
+     * 手机号（中国大陆，可带 +86 前缀）
+     */
+    phone: string;
+    /**
+     * 验证码（6位数字）
      */
     code: string;
 };
@@ -528,6 +612,17 @@ export type ResetPasswordApiResponseDto = {
     timestamp: string;
 };
 
+export type BindEmailDto = {
+    /**
+     * 要绑定的邮箱地址
+     */
+    email: string;
+    /**
+     * 是否为重新绑定（换绑）
+     */
+    isRebind?: boolean;
+};
+
 export type BindEmailResponseDto = {
     /**
      * 消息
@@ -565,22 +660,33 @@ export type VerifyBindEmailDto = {
     code: string;
 };
 
+export type VerifyUnbindCodeDto = {
+    /**
+     * 验证码（6位数字）
+     */
+    code: string;
+};
+
+export type RebindEmailDto = {
+    /**
+     * 新邮箱地址
+     */
+    email: string;
+    /**
+     * 新邮箱验证码
+     */
+    code: string;
+    /**
+     * 解绑原邮箱的验证令牌
+     */
+    token: string;
+};
+
 export type SendSmsCodeDto = {
     /**
      * 手机号（中国大陆，可带 +86 前缀）
      */
     phone: string;
-};
-
-export type VerifySmsCodeDto = {
-    /**
-     * 手机号（中国大陆，可带 +86 前缀）
-     */
-    phone: string;
-    /**
-     * 验证码（6位数字）
-     */
-    code: string;
 };
 
 export type RegisterByPhoneDto = {
@@ -606,6 +712,43 @@ export type RegisterByPhoneDto = {
     nickname?: string;
 };
 
+export type LoginByPhoneDto = {
+    /**
+     * 手机号（中国大陆，可带 +86 前缀）
+     */
+    phone: string;
+    /**
+     * 验证码（6位数字）
+     */
+    code: string;
+};
+
+export type BindPhoneDto = {
+    /**
+     * 手机号（中国大陆，可带 +86 前缀）
+     */
+    phone: string;
+    /**
+     * 验证码（6位数字）
+     */
+    code: string;
+};
+
+export type RebindPhoneDto = {
+    /**
+     * 新手机号（中国大陆，可带 +86 前缀）
+     */
+    phone: string;
+    /**
+     * 新手机号验证码
+     */
+    code: string;
+    /**
+     * 解绑原手机号的验证令牌
+     */
+    token: string;
+};
+
 export type CheckFieldUniquenessDto = {
     /**
      * 用户名
@@ -619,6 +762,17 @@ export type CheckFieldUniquenessDto = {
      * 手机号
      */
     phone?: string;
+};
+
+export type BindWechatDto = {
+    /**
+     * 微信授权回调返回的 code
+     */
+    code: string;
+    /**
+     * 微信授权 state 参数（包含 csrf token）
+     */
+    state: string;
 };
 
 export type UserCleanupStatsResponseDto = {
@@ -799,6 +953,11 @@ export type CreateUserDto = {
      */
     provider?: string;
 };
+
+/**
+ * 用户状态
+ */
+export type UserStatusEnum = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 
 export type UserResponseDto = {
     /**
@@ -991,7 +1150,7 @@ export type UpdateUserDto = {
     /**
      * 用户状态
      */
-    status?: UserStatusEnum;
+    status?: UserStatus;
 };
 
 export type DeactivateAccountDto = {
@@ -1729,6 +1888,17 @@ export type ProjectMemberDto = {
      * 加入时间
      */
     joinedAt: string;
+};
+
+export type AddProjectMemberDto = {
+    /**
+     * 用户ID
+     */
+    userId: string;
+    /**
+     * 项目角色ID
+     */
+    projectRoleId: string;
 };
 
 export type CadDownloadFormat = string;
@@ -2554,7 +2724,7 @@ export type AuthControllerGetProfileResponses = {
 export type AuthControllerGetProfileResponse = AuthControllerGetProfileResponses[keyof AuthControllerGetProfileResponses];
 
 export type AuthControllerSendVerificationData = {
-    body?: never;
+    body: SendVerificationDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/send-verification';
@@ -2600,7 +2770,7 @@ export type AuthControllerVerifyEmailResponses = {
 export type AuthControllerVerifyEmailResponse = AuthControllerVerifyEmailResponses[keyof AuthControllerVerifyEmailResponses];
 
 export type AuthControllerVerifyEmailAndRegisterPhoneData = {
-    body?: never;
+    body: VerifyEmailAndRegisterPhoneDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/verify-email-and-register-phone';
@@ -2627,7 +2797,7 @@ export type AuthControllerVerifyEmailAndRegisterPhoneResponses = {
 export type AuthControllerVerifyEmailAndRegisterPhoneResponse = AuthControllerVerifyEmailAndRegisterPhoneResponses[keyof AuthControllerVerifyEmailAndRegisterPhoneResponses];
 
 export type AuthControllerResendVerificationData = {
-    body?: never;
+    body: ResendVerificationDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/resend-verification';
@@ -2650,7 +2820,7 @@ export type AuthControllerResendVerificationResponses = {
 export type AuthControllerResendVerificationResponse = AuthControllerResendVerificationResponses[keyof AuthControllerResendVerificationResponses];
 
 export type AuthControllerBindEmailAndLoginData = {
-    body?: never;
+    body: BindEmailAndLoginDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/bind-email-and-login';
@@ -2673,7 +2843,7 @@ export type AuthControllerBindEmailAndLoginResponses = {
 export type AuthControllerBindEmailAndLoginResponse = AuthControllerBindEmailAndLoginResponses[keyof AuthControllerBindEmailAndLoginResponses];
 
 export type AuthControllerBindPhoneAndLoginData = {
-    body?: never;
+    body: BindPhoneAndLoginDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/bind-phone-and-login';
@@ -2696,7 +2866,7 @@ export type AuthControllerBindPhoneAndLoginResponses = {
 export type AuthControllerBindPhoneAndLoginResponse = AuthControllerBindPhoneAndLoginResponses[keyof AuthControllerBindPhoneAndLoginResponses];
 
 export type AuthControllerVerifyPhoneData = {
-    body?: never;
+    body: VerifySmsCodeDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/verify-phone';
@@ -2773,7 +2943,7 @@ export type AuthControllerResetPasswordResponses = {
 export type AuthControllerResetPasswordResponse = AuthControllerResetPasswordResponses[keyof AuthControllerResetPasswordResponses];
 
 export type AuthControllerSendBindEmailCodeData = {
-    body?: never;
+    body: BindEmailDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/bind-email';
@@ -2852,7 +3022,7 @@ export type AuthControllerSendUnbindEmailCodeResponses = {
 };
 
 export type AuthControllerVerifyUnbindEmailCodeData = {
-    body?: never;
+    body: VerifyUnbindCodeDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/verify-unbind-email-code';
@@ -2877,7 +3047,7 @@ export type AuthControllerVerifyUnbindEmailCodeResponses = {
 };
 
 export type AuthControllerRebindEmailData = {
-    body?: never;
+    body: RebindEmailDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/rebind-email';
@@ -2971,7 +3141,7 @@ export type AuthControllerRegisterByPhoneResponses = {
 export type AuthControllerRegisterByPhoneResponse = AuthControllerRegisterByPhoneResponses[keyof AuthControllerRegisterByPhoneResponses];
 
 export type AuthControllerLoginByPhoneData = {
-    body?: never;
+    body: LoginByPhoneDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/login-phone';
@@ -2998,7 +3168,7 @@ export type AuthControllerLoginByPhoneResponses = {
 export type AuthControllerLoginByPhoneResponse = AuthControllerLoginByPhoneResponses[keyof AuthControllerLoginByPhoneResponses];
 
 export type AuthControllerBindPhoneData = {
-    body?: never;
+    body: BindPhoneDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/bind-phone';
@@ -3044,7 +3214,7 @@ export type AuthControllerSendUnbindPhoneCodeResponses = {
 };
 
 export type AuthControllerVerifyUnbindPhoneCodeData = {
-    body?: never;
+    body: VerifyUnbindCodeDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/verify-unbind-phone-code';
@@ -3069,7 +3239,7 @@ export type AuthControllerVerifyUnbindPhoneCodeResponses = {
 };
 
 export type AuthControllerRebindPhoneData = {
-    body?: never;
+    body: RebindPhoneDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/rebind-phone';
@@ -3147,7 +3317,7 @@ export type AuthControllerWechatCallbackResponses = {
 };
 
 export type AuthControllerBindWechatData = {
-    body?: never;
+    body: BindWechatDto;
     path?: never;
     query?: never;
     url: '/api/v1/auth/wechat/bind';
@@ -4296,7 +4466,12 @@ export type FileSystemControllerGetTrashResponses = {
 export type FileSystemControllerGetTrashResponse = FileSystemControllerGetTrashResponses[keyof FileSystemControllerGetTrashResponses];
 
 export type FileSystemControllerRestoreTrashItemsData = {
-    body?: never;
+    body: {
+        /**
+         * 要恢复的回收站项ID列表
+         */
+        itemIds: Array<string>;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/file-system/trash/restore';
@@ -4312,7 +4487,12 @@ export type FileSystemControllerRestoreTrashItemsResponses = {
 export type FileSystemControllerRestoreTrashItemsResponse = FileSystemControllerRestoreTrashItemsResponses[keyof FileSystemControllerRestoreTrashItemsResponses];
 
 export type FileSystemControllerPermanentlyDeleteTrashItemsData = {
-    body?: never;
+    body: {
+        /**
+         * 要永久删除的回收站项ID列表
+         */
+        itemIds: Array<string>;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/file-system/trash/items';
@@ -4328,7 +4508,20 @@ export type FileSystemControllerPermanentlyDeleteTrashItemsResponses = {
 export type FileSystemControllerPermanentlyDeleteTrashItemsResponse = FileSystemControllerPermanentlyDeleteTrashItemsResponses[keyof FileSystemControllerPermanentlyDeleteTrashItemsResponses];
 
 export type FileSystemControllerCreateNodeData = {
-    body?: never;
+    body: {
+        /**
+         * 节点名称
+         */
+        name: string;
+        /**
+         * 父节点ID（可选）
+         */
+        parentId?: string;
+        /**
+         * 节点描述（可选）
+         */
+        description?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/file-system/nodes';
@@ -4701,7 +4894,7 @@ export type FileSystemControllerGetProjectMembersResponses = {
 export type FileSystemControllerGetProjectMembersResponse = FileSystemControllerGetProjectMembersResponses[keyof FileSystemControllerGetProjectMembersResponses];
 
 export type FileSystemControllerAddProjectMemberData = {
-    body?: never;
+    body: AddProjectMemberDto;
     path: {
         projectId: string;
     };
@@ -4772,7 +4965,20 @@ export type FileSystemControllerRemoveProjectMemberResponses = {
 export type FileSystemControllerRemoveProjectMemberResponse = FileSystemControllerRemoveProjectMemberResponses[keyof FileSystemControllerRemoveProjectMemberResponses];
 
 export type FileSystemControllerUpdateProjectMemberData = {
-    body?: never;
+    body: {
+        /**
+         * 项目角色ID
+         */
+        projectRoleId?: string;
+        /**
+         * 角色ID（兼容旧字段）
+         */
+        roleId?: string;
+        /**
+         * 角色名称
+         */
+        roleName?: string;
+    };
     path: {
         projectId: string;
         userId: string;

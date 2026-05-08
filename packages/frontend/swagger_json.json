@@ -8233,7 +8233,7 @@
             "example": "123e4567-e89b-12d3-a456-426614174000"
           },
           "email": {
-            "type": "object",
+            "type": "string",
             "description": "用户邮箱（可能未绑定）",
             "example": "user@example.com",
             "nullable": true
@@ -8398,7 +8398,7 @@
           "refreshToken"
         ]
       },
-      "UserStatusEnum": {
+      "UserStatus": {
         "type": "string",
         "enum": [
           "ACTIVE",
@@ -8460,7 +8460,7 @@
             "description": "用户状态",
             "allOf": [
               {
-                "$ref": "#/components/schemas/UserStatusEnum"
+                "$ref": "#/components/schemas/UserStatus"
               }
             ]
           },
@@ -9462,6 +9462,15 @@
           "password"
         ]
       },
+      "UserStatusEnum": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "INACTIVE",
+          "SUSPENDED"
+        ],
+        "description": "用户状态"
+      },
       "UserResponseDto": {
         "type": "object",
         "properties": {
@@ -9741,7 +9750,7 @@
             "description": "用户状态",
             "allOf": [
               {
-                "$ref": "#/components/schemas/UserStatusEnum"
+                "$ref": "#/components/schemas/UserStatus"
               }
             ]
           }

@@ -15,7 +15,7 @@ import {
 } from './utils.gen';
 
 type ReqInit = Omit<RequestInit, 'body' | 'headers'> & {
-  body?: BodyInit | null;
+  body?: any;
   headers: ReturnType<typeof mergeHeaders>;
 };
 
@@ -121,7 +121,7 @@ export const createClient = (config: Config = {}): Client => {
             : opts.parseAs) ?? 'json';
 
         if (response.status === 204 || response.headers.get('Content-Length') === '0') {
-          let emptyData: unknown;
+          let emptyData: any;
           switch (parseAs) {
             case 'arrayBuffer':
             case 'blob':
@@ -139,15 +139,15 @@ export const createClient = (config: Config = {}): Client => {
               emptyData = {};
               break;
           }
-          return (opts.responseStyle === 'data'
+          return opts.responseStyle === 'data'
             ? emptyData
             : {
                 data: emptyData,
                 ...result,
-              }) as never;
+              };
         }
 
-        let data: unknown;
+        let data: any;
         switch (parseAs) {
           case 'arrayBuffer':
           case 'blob':
@@ -181,12 +181,12 @@ export const createClient = (config: Config = {}): Client => {
           }
         }
 
-        return (opts.responseStyle === 'data'
+        return opts.responseStyle === 'data'
           ? data
           : {
               data,
               ...result,
-            }) as never;
+            };
       }
 
       const textError = await response.text();
