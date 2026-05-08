@@ -79,9 +79,9 @@ export class HealthController {
     };
   }
 
-  @Get()
+  @Get('public')
   @Public()
-  @ApiOperation({ summary: '服务健康检查（公开）' })
+  @ApiOperation({ summary: '公开健康检查（轻量级）' })
   @ApiResponse({ status: 200, description: '服务正常运行' })
   async publicHealth() {
     let databaseStatus: 'up' | 'down' = 'up';
@@ -124,6 +124,35 @@ export class HealthController {
       error: {},
       details: {},
     };
+  }
+
+  @Get()
+  @HealthCheck()
+  @ApiOperation({ summary: '系统健康检查（详细）' })
+  @ApiResponse({ status: 200, description: '系统正常运行' })
+  @ApiResponse({ status: 503, description: '服务不可用' })
+  @RequirePermissions([SystemPermission.SYSTEM_MONITOR])
+  async checkFull(): Promise<HealthCheckResult> {
+    return this.health.check([
+      async () => {
+        const result = await this.databaseService.healthCheck();
+        return {
+          database: {
+            status: result.status === 'healthy' ? 'up' : 'down',
+            message: result.message,
+          },
+        };
+      },
+      async () => {
+        const result = await this.storageService.healthCheck();
+        return {
+          storage: {
+            status: result.status === 'healthy' ? 'up' : 'down',
+            message: result.message,
+          },
+        };
+      },
+    ]);
   }
 
   @Get('full')
