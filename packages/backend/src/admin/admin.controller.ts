@@ -28,10 +28,11 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { StorageCleanupService } from '../common/services/storage-cleanup.service';
 import { PermissionService } from '../common/services/permission.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
+import { StorageCleanupService } from '../common/services/storage-cleanup.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import {
   AdminStatsResponseDto,
@@ -44,7 +45,7 @@ import {
 @ApiTags('管理员')
 @ApiBearerAuth()
 @Controller('admin')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AdminController {
   constructor(
@@ -53,9 +54,6 @@ export class AdminController {
     private readonly storageCleanupService: StorageCleanupService
   ) {}
 
-  // TODO: 统计功能待实现，当前返回占位数据。
-  // 实现时需要查询用户数、项目数、存储使用量等真实统计指标，
-  // 并同步更新 AdminStatsResponseDto 添加对应字段。
   @Get('stats')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取管理员统计信息' })
@@ -127,7 +125,7 @@ export class AdminController {
     type: UserPermissionsResponseDto,
   })
   async getUserPermissions(@Param('userId') userId: string) {
-    // 获取用户信息用于权限查询
+    // 这里需要获取用户信息，实际应用中应该从用户服务获取
     const mockUser = {
       id: userId,
       email: 'test@example.com',
