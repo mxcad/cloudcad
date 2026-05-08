@@ -208,7 +208,8 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      className="max-w-5xl"
+      maxWidth="max-w-6xl"
+      contentClassName="config-modal-scroll"
       footer={
         <div className="config-modal-footer">
           <Button variant="ghost" onClick={onClose} disabled={loading}>
@@ -291,30 +292,6 @@ const permissionStyles = `
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-    max-height: 600px;
-    overflow-y: auto;
-    padding-right: var(--space-2);
-    padding-bottom: var(--space-4);
-  }
-
-  /* 自定义滚动条 */
-  .permission-assignment-container::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .permission-assignment-container::-webkit-scrollbar-track {
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-full);
-  }
-
-  .permission-assignment-container::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: var(--radius-full);
-    transition: background 0.2s ease;
-  }
-
-  .permission-assignment-container::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-400);
   }
 
   /* 权限分组 */
@@ -354,6 +331,7 @@ const permissionStyles = `
     position: sticky;
     top: 0;
     z-index: 1;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
 
   .group-label {
@@ -381,22 +359,10 @@ const permissionStyles = `
 
   .group-items {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-3);
     padding: var(--space-4);
     min-height: fit-content;
-  }
-
-  @media (max-width: 1200px) {
-    .group-items {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  @media (max-width: 900px) {
-    .group-items {
-      grid-template-columns: repeat(2, 1fr);
-    }
   }
 
   /* 权限项 */
@@ -410,7 +376,7 @@ const permissionStyles = `
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-default);
     background: var(--bg-primary);
-    min-height: 48px;
+    min-height: 44px;
     box-sizing: border-box;
   }
 
@@ -478,6 +444,8 @@ const permissionStyles = `
     font-size: 0.875rem;
     color: var(--text-secondary);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: color 0.2s ease;
     flex: 1;
     min-width: 0;
@@ -505,13 +473,6 @@ const permissionStyles = `
     50% { opacity: 0.6; }
   }
 
-  /* 响应式 - 适配各种屏幕尺寸 */
-  @media (max-width: 1200px) {
-    .group-items {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
   @media (max-width: 900px) {
     .group-items {
       grid-template-columns: repeat(2, 1fr);
@@ -519,24 +480,15 @@ const permissionStyles = `
   }
 
   @media (max-width: 640px) {
-    .permission-assignment-container {
-      max-height: 70vh;
-      padding-right: var(--space-1);
-    }
-
     .group-items {
       grid-template-columns: 1fr;
       gap: var(--space-2);
-      padding: var(--space-2);
+      padding: var(--space-3);
     }
 
     .permission-item {
       padding: var(--space-3);
       min-height: 44px;
-    }
-
-    .permission-label {
-      font-size: 0.9375rem;
     }
 
     .group-header {
@@ -547,28 +499,31 @@ const permissionStyles = `
       font-size: 0.8125rem;
     }
   }
-
-  /* 小屏手机适配 */
-  @media (max-width: 375px) {
-    .permission-item {
-      padding: var(--space-2) var(--space-3);
-    }
-
-    .permission-label {
-      font-size: 0.875rem;
-    }
-  }
 `;
 
 // 配置弹窗样式
 const configModalStyles = `
+  .config-modal-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
   .config-modal-content {
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
-    min-height: 500px;
-    max-height: calc(90vh - 200px);
+    max-height: calc(100vh - 200px);
     overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* 第一个子元素补偿上方 padding，使 sticky 头能正确贴顶 */
+  .config-modal-content > :first-child {
+    margin-top: var(--space-6);
+  }
+
+  .config-modal-content > :last-child {
+    margin-bottom: var(--space-6);
   }
 
   .config-modal-footer {
@@ -587,6 +542,7 @@ const configModalStyles = `
     background: var(--bg-tertiary);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-default);
+    flex-shrink: 0;
   }
 
   .section-label {
@@ -603,49 +559,6 @@ const configModalStyles = `
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-4);
-  }
-
-  @media (max-width: 640px) {
-    .form-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .config-modal-content {
-      min-height: auto;
-      max-height: calc(100vh - 120px);
-      gap: var(--space-4);
-    }
-
-    .basic-info-section {
-      padding: var(--space-3);
-    }
-
-    .permissions-section {
-      padding: var(--space-3);
-      min-height: auto;
-    }
-
-    .config-modal-footer {
-      flex-direction: column-reverse;
-      gap: var(--space-2);
-    }
-
-    .config-modal-footer button {
-      width: 100%;
-    }
-
-    /* 移动端 Modal 适配 - 覆盖 max-w-5xl */
-    [class*="max-w-5xl"] {
-      max-width: 100vw !important;
-      margin: 0 var(--space-2) !important;
-    }
-  }
-
-  /* 小屏手机进一步调整 */
-  @media (max-width: 375px) {
-    [class*="max-w-5xl"] {
-      margin: 0 var(--space-1) !important;
-    }
   }
 
   .form-field {
@@ -719,8 +632,6 @@ const configModalStyles = `
     background: var(--bg-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-xl);
-    overflow: visible;
-    min-height: 300px;
   }
 
   .permissions-header {
@@ -729,6 +640,7 @@ const configModalStyles = `
     justify-content: space-between;
     padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
   }
 
   .permissions-count {
@@ -753,6 +665,40 @@ const configModalStyles = `
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  /* 移动端适配 */
+  @media (max-width: 768px) {
+    .config-modal-content {
+      max-height: calc(100vh - 120px);
+      gap: var(--space-4);
+    }
+
+    .config-modal-content > :first-child {
+      margin-top: var(--space-4);
+    }
+
+    .config-modal-content > :last-child {
+      margin-bottom: var(--space-4);
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .basic-info-section,
+    .permissions-section {
+      padding: var(--space-3);
+    }
+
+    .config-modal-footer {
+      flex-direction: column-reverse;
+      gap: var(--space-2);
+    }
+
+    .config-modal-footer button {
+      width: 100%;
+    }
   }
 `;
 

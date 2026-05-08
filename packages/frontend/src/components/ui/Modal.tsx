@@ -16,6 +16,8 @@ interface ModalProps {
   zIndex?: number;
   /** 额外的 CSS 类名，应用于模态框内容容器 */
   className?: string;
+  /** 额外的 CSS 类名，应用于内容滚动区域 */
+  contentClassName?: string;
 }
 
 const sizeToMaxWidth: Record<string, string> = {
@@ -54,9 +56,16 @@ export const Modal: React.FC<ModalProps> = ({
   size,
   zIndex = 9999,
   className,
+  contentClassName,
 }) => {
-  const effectiveMaxWidth =
-    maxWidth || (size ? sizeToMaxWidth[size] : 'max-w-md');
+  const defaultMaxWidth = 'max-w-md';
+  const hasCustomWidth =
+    maxWidth ||
+    size ||
+    (className && /max-w-/.test(className));
+  const effectiveMaxWidth = hasCustomWidth
+    ? (maxWidth || (size ? sizeToMaxWidth[size] : ''))
+    : defaultMaxWidth;
   const effectiveMaxHeight = size ? sizeToMaxHeight[size] : 'max-h-[70vh]';
 
   if (!isOpen) return null;
@@ -129,7 +138,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* 内容区域 */}
         <div
-          className="p-6 overflow-y-auto flex-1"
+          className={`${contentClassName ? `${contentClassName} overflow-y-auto flex-1` : 'p-6 overflow-y-auto flex-1'}`}
           style={{ color: 'var(--text-secondary)' }}
         >
           {children}
