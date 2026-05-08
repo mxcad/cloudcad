@@ -52,6 +52,7 @@ export class LoginService {
 
     const user = await this.prisma.user.findFirst({
       where: {
+        deletedAt: null,
         OR: [
           { email: account },
           { username: account },

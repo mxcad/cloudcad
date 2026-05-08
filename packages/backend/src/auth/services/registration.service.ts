@@ -74,7 +74,7 @@ export class RegistrationService {
     }
 
     const existingUserByUsername = await this.prisma.user.findUnique({
-      where: { username },
+      where: { username, deletedAt: null },
     });
     if (existingUserByUsername) {
       throw new ConflictException('用户名已被使用');
@@ -104,7 +104,7 @@ export class RegistrationService {
           };
 
           const existingWechatUser = await this.prisma.user.findUnique({
-            where: { wechatId: wechatData.wechatId },
+            where: { wechatId: wechatData.wechatId, deletedAt: null },
           });
           if (existingWechatUser) {
             throw new ConflictException('该微信已绑定其他账号');
@@ -279,7 +279,7 @@ export class RegistrationService {
 
     // 场景2：已有用户验证邮箱 - 用户已注册但邮箱未验证
     const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email, deletedAt: null },
       include: {
         role: {
           select: {

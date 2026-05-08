@@ -176,7 +176,7 @@ export class AuthTokenService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: payload.sub, deletedAt: null },
       select: {
         id: true,
         email: true,

@@ -22,7 +22,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
-import { IsMatch } from '../../common/decorators/validation.decorators';
+import { IsMatch } from '../../common/decorators/validation.decorator';
 
 export class ForgotPasswordDto {
   @ApiPropertyOptional({ description: '邮箱地址', example: 'user@example.com' })

@@ -83,7 +83,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // 快速查询：仅检查用户是否存在和状态
     const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: payload.sub, deletedAt: null },
       select: {
         id: true,
         email: true,

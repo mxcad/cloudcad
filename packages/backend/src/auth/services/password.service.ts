@@ -38,7 +38,7 @@ export class PasswordService {
 
   async validateUser(email: string, password: string): Promise<Omit<UserForToken, 'password'> | null> {
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -130,7 +130,7 @@ export class PasswordService {
       }
 
       const user = await this.prisma.user.findUnique({
-        where: { email },
+        where: { email, deletedAt: null },
       });
 
       if (!user) {
@@ -172,7 +172,7 @@ export class PasswordService {
       }
 
       const user = await this.prisma.user.findUnique({
-        where: { phone },
+        where: { phone, deletedAt: null },
       });
 
       if (!user) {
@@ -215,7 +215,7 @@ export class PasswordService {
         throw new UnauthorizedException(result.message);
       }
       user = await this.prisma.user.findUnique({
-        where: { email },
+        where: { email, deletedAt: null },
       });
     } else if (phone) {
       const result = await this.smsVerificationService.verifyCode(phone, code);
@@ -224,7 +224,7 @@ export class PasswordService {
         throw new UnauthorizedException(result.message);
       }
       user = await this.prisma.user.findUnique({
-        where: { phone },
+        where: { phone, deletedAt: null },
       });
     }
 

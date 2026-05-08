@@ -79,7 +79,7 @@ export class LocalAuthProvider implements IAuthProvider {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     let user = await this.prisma.user.findUnique({
-      where: { phone: formattedPhone },
+      where: { phone: formattedPhone, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -141,7 +141,7 @@ export class LocalAuthProvider implements IAuthProvider {
         );
 
         user = await this.prisma.user.findUnique({
-          where: { id: newUser.id },
+          where: { id: newUser.id, deletedAt: null },
           select: {
             id: true,
             email: true,
@@ -225,7 +225,7 @@ export class LocalAuthProvider implements IAuthProvider {
     );
 
     let user = await this.prisma.user.findUnique({
-      where: { wechatId: wechatUser.openid },
+      where: { wechatId: wechatUser.openid, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -435,7 +435,7 @@ export class LocalAuthProvider implements IAuthProvider {
     const result = await this.authTokenService.refreshToken(token);
 
     const user = await this.prisma.user.findUnique({
-      where: { id: result.user.id },
+      where: { id: result.user.id, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -478,7 +478,7 @@ export class LocalAuthProvider implements IAuthProvider {
 
   async getUserInfo(userId: string): Promise<UserDto> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         email: true,
