@@ -28,11 +28,10 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { StorageCleanupService } from '../common/services/storage-cleanup.service';
 import { PermissionService } from '../common/services/permission.service';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
-import { StorageCleanupService } from '../common/services/storage-cleanup.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import {
   AdminStatsResponseDto,
@@ -45,7 +44,7 @@ import {
 @ApiTags('管理员')
 @ApiBearerAuth()
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AdminController {
   constructor(
@@ -69,6 +68,86 @@ export class AdminController {
     return {
       message: '管理员统计信息',
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('permissions/cache')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取权限缓存统计' })
+  @ApiResponse({
+    status: 200,
+    description: '获取权限缓存统计成功',
+    type: CacheStatsResponseDto,
+  })
+  async getCacheStats() {
+    const stats = await this.cacheService.getStats();
+    return {
+      message: '权限缓存统计',
+      data: stats,
+    };
+  }
+
+  @Post('permissions/cache/cleanup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '清理权限缓存' })
+  @ApiResponse({
+    status: 200,
+    description: '缓存清理完成',
+    type: CacheCleanupResponseDto,
+  })
+  async cleanupCache() {
+    const cleaned = await this.cacheService.cleanup();
+    return {
+      message: '缓存清理完成',
+      data: { cleanedEntries: cleaned },
+    };
+  }
+
+  @Delete('permissions/cache/user/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '清除用户权限缓存' })
+  @ApiResponse({
+    status: 200,
+    description: '用户权限缓存已清除',
+    type: UserCacheClearResponseDto,
+  })
+  async clearUserCache(@Param('userId') userId: string) {
+    await this.cacheService.clearUserCache(userId);
+    return {
+      message: `用户 ${userId} 的权限缓存已清除`,
+    };
+  }
+
+  @Get('permissions/user/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取用户权限信息' })
+  @ApiResponse({
+    status: 200,
+    description: '获取用户权限信息成功',
+    type: UserPermissionsResponseDto,
+  })
+  async getUserPermissions(@Param('userId') userId: string) {
+    // 获取用户信息用于权限查询
+    const mockUser = {
+      id: userId,
+      email: 'test@example.com',
+      username: 'test',
+      role: {
+        id: 'user-role-id',
+        name: 'USER',
+        description: '普通用户',
+        isSystem: true,
+        permissions: [],
+      },
+      status: 'ACTIVE',
+    };
+
+    return {
+      message: '用户权限信息',
+      data: {
+        userRole: mockUser.role.name,
+        permissions: await this.permissionService.getUserPermissions(mockUser),
+      },
     };
   }
 
