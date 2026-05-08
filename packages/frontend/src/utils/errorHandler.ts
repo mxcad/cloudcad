@@ -45,9 +45,13 @@ export const getErrorMessage = (error: unknown): string => {
       return String((error as { message: string }).message);
     }
 
-    // 尝试转换为字符串
+    // 尝试转换为字符串（空对象返回有意义的默认消息）
     try {
-      return JSON.stringify(error);
+      const str = JSON.stringify(error);
+      if (str === '{}') {
+        return '请求失败，请检查网络或联系管理员';
+      }
+      return str;
     } catch {
       return '未知错误';
     }
