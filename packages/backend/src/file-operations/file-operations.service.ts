@@ -912,7 +912,7 @@ export class FileOperationsService {
     targetParentId: string,
     newName: string,
     ownerId: string
-  ): Promise<any> {
+  ): Promise<Prisma.FileSystemNode> {
     const sourceNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: sourceNodeId },
       include: {

@@ -226,7 +226,10 @@ export class FileDownloadExportService {
       const mxwebExists = await fsPromises
         .access(mxwebFullPath)
         .then(() => true)
-        .catch(() => false);
+        .catch((err) => {
+          this.logger.warn(`MXWEB文件存在性检查失败: ${mxwebFullPath}, error: ${err instanceof Error ? err.message : String(err)}`);
+          return false;
+        });
 
       if (!mxwebExists) {
         throw new NotFoundException('MXWEB 文件不存在，请确认文件已转换完成');
@@ -289,7 +292,10 @@ export class FileDownloadExportService {
           const targetExists = await fsPromises
             .access(targetFullPath)
             .then(() => true)
-            .catch(() => false);
+            .catch((err) => {
+              this.logger.warn(`转换文件存在性检查失败: ${targetFullPath}, error: ${err instanceof Error ? err.message : String(err)}`);
+              return false;
+            });
 
           if (!targetExists) {
             throw new NotFoundException(

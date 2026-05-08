@@ -334,7 +334,7 @@ export class CacheVersionService implements OnModuleInit {
   > {
     try {
       const pattern = `${this.VERSION_PREFIX}${type}:*`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
 
       const versions: Array<{
         key: string;
@@ -440,5 +440,23 @@ export class CacheVersionService implements OnModuleInit {
       end
     `;
     await this.redis.eval(script, 1, lockKey, lockValue);
+  }
+
+  /**
+   * 使用 SCAN 游标迭代查找匹配的键，避免 KEYS 阻塞 Redis
+   */
+  private async scanKeys(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = '0';
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+      );
+      cursor = newCursor;
+      keys.push(...foundKeys);
+    } while (cursor !== '0');
+    return keys;
   }
 }

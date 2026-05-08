@@ -184,12 +184,10 @@ export class LocalStorageProvider implements StorageProvider {
       const absolutePath = this.getAbsolutePath(key);
       await fsPromises.access(absolutePath, fs.constants.F_OK);
       return true;
-    } catch {
+    } catch (error) {
+      this.logger.warn(`fileExists check failed for key: ${key}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
-    }
-  }
-
-  async getFileStream(key: string): Promise<NodeJS.ReadableStream> {
+    }(key: string): Promise<NodeJS.ReadableStream> {
     try {
       const absolutePath = this.getAbsolutePath(key);
 
@@ -295,14 +293,10 @@ export class LocalStorageProvider implements StorageProvider {
       const absolutePath = this.getAbsolutePath(dirKey);
       const stats = await fsPromises.stat(absolutePath);
       return stats.isDirectory();
-    } catch {
+    } catch (error) {
+      this.logger.warn(`directoryExists check failed for dirKey: ${dirKey}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
-  }
-
-  /**
-   * 创建目录
-   */
   async createDirectory(dirKey: string): Promise<void> {
     try {
       const absolutePath = this.getAbsolutePath(dirKey);

@@ -386,7 +386,11 @@ export class ProjectMemberService {
             },
           },
         });
-      } catch {
+      } catch (error) {
+        this.logger.error(
+          `删除项目成员失败: projectId=${projectId}, userId=${userId}, error: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined
+        );
         throw new NotFoundException('成员不存在');
       }
 

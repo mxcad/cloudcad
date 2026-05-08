@@ -52,7 +52,8 @@ export class StorageCheckService {
     try {
       await fs.access(filePath, fs.constants.F_OK);
       return true;
-    } catch {
+    } catch (error) {
+      this.logger.warn(`本地文件检查失败: ${filePath}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
