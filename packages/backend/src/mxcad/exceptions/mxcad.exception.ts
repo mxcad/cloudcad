@@ -20,7 +20,7 @@ export class MxCadException extends HttpException {
   constructor(
     public readonly ret: string,
     message?: string,
-    status: HttpStatus = HttpStatus.OK
+    status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR
   ) {
     super({ ret, message }, status);
   }
@@ -31,7 +31,7 @@ export class MxCadException extends HttpException {
  */
 export class MxCadParamException extends MxCadException {
   constructor(message: string = '参数错误') {
-    super('errorparam', message);
+    super('errorparam', message, HttpStatus.BAD_REQUEST);
   }
 }
 
@@ -49,7 +49,7 @@ export class MxCadConvertException extends MxCadException {
  */
 export class MxCadFileExistsException extends MxCadException {
   constructor(message: string = '文件已存在') {
-    super('fileAlreadyExist', message);
+    super('fileAlreadyExist', message, HttpStatus.CONFLICT);
   }
 }
 
@@ -58,7 +58,7 @@ export class MxCadFileExistsException extends MxCadException {
  */
 export class MxCadChunkExistsException extends MxCadException {
   constructor(message: string = '分片已存在') {
-    super('chunkAlreadyExist', message);
+    super('chunkAlreadyExist', message, HttpStatus.CONFLICT);
   }
 }
 
