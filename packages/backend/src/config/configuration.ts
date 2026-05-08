@@ -88,7 +88,7 @@ export default (): AppConfig => {
 	const isProduction = nodeEnv === "production";
 
 	if (isProduction) {
-		const requiredVars = ["JWT_SECRET"];
+		const requiredVars = ["JWT_SECRET", "DB_PASSWORD", "SESSION_SECRET"];
 		const missingVars = requiredVars.filter(v => !process.env[v] || process.env[v]!.trim() === "");
 		if (missingVars.length > 0) {
 			throw new Error(`生产环境缺少必需的环境变量: ${missingVars.join(", ")}`);
