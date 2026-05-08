@@ -47,13 +47,17 @@ export class ConcurrencyManager {
       return null;
     }
 
-    let resolve: () => void;
+    let resolve: (() => void) | undefined;
     const promise = new Promise<void>((r) => {
       resolve = r;
     });
 
+    if (!resolve) {
+      throw new Error('ConcurrencyManager: resolve callback 未初始化');
+    }
+
     const lockState: LockState = {
-      resolve: resolve!,
+      resolve,
       promise,
       acquiredAt: Date.now(),
     };
@@ -86,7 +90,8 @@ export class ConcurrencyManager {
     try {
       const result = await Promise.race([
         task(),
-        new Promise<never>((_, reject) =>
+        // 超时 Promise：仅用于 Promise.race 超时控制，永远只 reject 不 resolve
+        new Promise<T>((_, reject) =>
           setTimeout(
             () => reject(new Error(`任务超时 (${timeout}ms)`)),
             timeout
