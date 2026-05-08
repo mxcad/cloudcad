@@ -139,7 +139,7 @@ export const useUppyUpload = () => {
 
     // 安装 Tus 插件
     uppy.use(Tus, {
-      endpoint: `${apiBaseUrl}/api/v1/files`,
+      endpoint: `${apiBaseUrl}/v1/files`,
       chunkSize: 5 * 1024 * 1024, // 5MB，和后端保持一致
       retryDelays: [0, 1000, 3000, 5000],
       // 添加认证 header

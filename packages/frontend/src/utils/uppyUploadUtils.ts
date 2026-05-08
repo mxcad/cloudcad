@@ -171,7 +171,7 @@ export const uploadFileWithUppy = async (
     });
 
     uppy.use(Tus, {
-      endpoint: `${apiBaseUrl}/api/v1/files`,
+      endpoint: `${apiBaseUrl}/v1/files`,
       chunkSize: 5 * 1024 * 1024,
       retryDelays: [0, 1000, 3000, 5000],
       headers: {
@@ -290,7 +290,7 @@ export const uploadFilePublic = async (options: {
     });
 
     uppy.use(Tus, {
-      endpoint: `${apiBaseUrl}/api/v1/files`,
+      endpoint: `${apiBaseUrl}/v1/files`,
       chunkSize: 5 * 1024 * 1024,
       retryDelays: [0, 1000, 3000, 5000],
       metadata: {

@@ -262,8 +262,7 @@ export class FileSystemService {
    * 获取用户回收站列表
    */
   async getTrashItems(userId: string) {
-    // getTrashItems 方法尚未迁移到子服务，暂时保留原实现
-    throw new NotImplementedException('getTrashItems 方法尚未实现到子服务中');
+    return this.projectCrudService.getUserDeletedProjects(userId);
   }
 
   /**

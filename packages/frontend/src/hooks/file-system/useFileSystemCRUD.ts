@@ -120,6 +120,7 @@ export const useFileSystemCRUD = ({
       await fileSystemControllerCreateFolder({
         path: { parentId: parentNodeId },
         body: { name: folderName.trim() },
+        throwOnError: true,
       });
       showToast('文件夹创建成功', 'success');
       setFolderName('');
