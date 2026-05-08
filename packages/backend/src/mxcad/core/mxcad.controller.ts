@@ -1696,7 +1696,9 @@ export class MxCadController {
    * @param nodeId 节点 ID
    * @returns 项目根目录节点或 null
    */
-  private async getProjectRootByNodeId(nodeId: string): Promise<any> {
+  private async getProjectRootByNodeId(
+    nodeId: string,
+  ): Promise<Pick<FileSystemNode, 'id' | 'isRoot' | 'parentId'> | null> {
     return this.mxCadService.getProjectRootByNodeId(nodeId);
   }
 

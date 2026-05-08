@@ -150,7 +150,9 @@ export class MxCadRequestContextBuilder {
     return this.mxCadService.findFileNodeByHash(fileHash, projectId);
   }
 
-  async getProjectRootByNodeId(nodeId: string) {
+  async getProjectRootByNodeId(
+    nodeId: string,
+  ): Promise<Pick<FileSystemNode, 'id' | 'isRoot' | 'parentId'> | null> {
     return this.mxCadService.getProjectRootByNodeId(nodeId);
   }
 

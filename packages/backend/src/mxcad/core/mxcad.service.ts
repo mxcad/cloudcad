@@ -852,7 +852,9 @@ export class MxCadService {
   /**
    * 根据节点 ID 查找项目根目录
    */
-  async getProjectRootByNodeId(nodeId: string): Promise<any> {
+  async getProjectRootByNodeId(
+    nodeId: string,
+  ): Promise<Pick<FileSystemNode, 'id' | 'isRoot' | 'parentId'> | null> {
     try {
       const currentNode = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
