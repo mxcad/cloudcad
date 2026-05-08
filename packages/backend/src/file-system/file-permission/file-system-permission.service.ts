@@ -96,7 +96,7 @@ export class FileSystemPermissionService {
   async getNodeAccessRole(
     userId: string,
     nodeId: string
-  ): Promise<string | null> {
+  ): Promise<ProjectRole | null> {
     // 1. 获取节点信息
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
@@ -175,7 +175,7 @@ export class FileSystemPermissionService {
     roles: ProjectRole[]
   ): Promise<boolean> {
     const role = await this.getNodeAccessRole(userId, nodeId);
-    return role ? roles.includes(role as ProjectRole) : false;
+    return role ? roles.includes(role) : false;
   }
 
   /**

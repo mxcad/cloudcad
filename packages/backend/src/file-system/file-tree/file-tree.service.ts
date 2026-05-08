@@ -409,14 +409,6 @@ export class FileTreeService {
         limit,
         totalPages: Math.ceil(total / safeLimit),
       };
-
-      return {
-        nodes,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / safeLimit),
-      };
     } catch (error) {
       this.logger.error(`查询子节点失败: ${error.message}`, error.stack);
       throw error;
@@ -440,7 +432,7 @@ export class FileTreeService {
     const rows = await this.prisma.$queryRaw<CategoryRow[]>`
       WITH RECURSIVE category_tree AS (
         SELECT id, name, "parentId", 0::integer as level
-        FROM "FileSystemNode"
+        FROM "file_system_nodes"
         WHERE "parentId" = ${libraryRootId}
           AND "deletedAt" IS NULL
           AND "isFolder" = true
@@ -448,7 +440,7 @@ export class FileTreeService {
         UNION ALL
 
         SELECT fn.id, fn.name, fn."parentId", ct.level + 1
-        FROM "FileSystemNode" fn
+        FROM "file_system_nodes" fn
         INNER JOIN category_tree ct ON fn."parentId" = ct.id
         WHERE fn."deletedAt" IS NULL
           AND fn."isFolder" = true

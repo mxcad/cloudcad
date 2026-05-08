@@ -241,7 +241,13 @@ export class SearchService {
     if (type === SearchType.FILE) where.isFolder = false;
     else if (type === SearchType.FOLDER) where.isFolder = true;
     if (extension) where.extension = extension;
-    if (fileStatus) where.fileStatus = fileStatus as FileStatus;
+    if (fileStatus) {
+      const validStatuses = Object.values(FileStatus) as string[];
+      if (!validStatuses.includes(fileStatus)) {
+        throw new BadRequestException(`无效的文件状态: ${fileStatus}`);
+      }
+      where.fileStatus = fileStatus as FileStatus;
+    }
 
     const [nodes, total] = await Promise.all([
       this.prisma.fileSystemNode.findMany({
