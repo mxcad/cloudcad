@@ -6,6 +6,7 @@ import {
   authControllerBindPhone,
   authControllerRebindPhone,
 } from '@/api-sdk';
+import type { VerifyUnbindCodeDto, BindPhoneDto, RebindPhoneDto } from '@/api-sdk/types.gen';
 
 export const usePhoneBind = () => {
   const sendSmsCode = useMutation({
@@ -29,8 +30,7 @@ export const usePhoneBind = () => {
   const verifyUnbindPhone = useMutation({
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindPhoneCode({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { code: params.code },
+        body: { code: params.code } satisfies VerifyUnbindCodeDto,
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string; token?: string };
@@ -40,8 +40,7 @@ export const usePhoneBind = () => {
   const bindPhone = useMutation({
     mutationFn: async (params: { phone: string; code: string }) => {
       const result = await authControllerBindPhone({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { phone: params.phone, code: params.code },
+        body: { phone: params.phone, code: params.code } satisfies BindPhoneDto,
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
@@ -51,8 +50,7 @@ export const usePhoneBind = () => {
   const rebindPhone = useMutation({
     mutationFn: async (params: { phone: string; code: string; token: string }) => {
       const result = await authControllerRebindPhone({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { phone: params.phone, code: params.code, token: params.token },
+        body: { phone: params.phone, code: params.code, token: params.token } satisfies RebindPhoneDto,
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
