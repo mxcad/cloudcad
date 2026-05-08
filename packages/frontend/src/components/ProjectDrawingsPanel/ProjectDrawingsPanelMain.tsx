@@ -105,7 +105,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     versionHistoryNode, versionHistoryEntries,
     versionHistoryLoading, versionHistoryError,
     handleShowVersionHistory, handleOpenHistoricalVersion,
-  } = useVersionHistory(isLibraryMode ? null : (/* selectedProjectId from below */ '' as unknown as string));
+  } = useVersionHistory(isLibraryMode ? null : null);
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,12 +138,12 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (isPersonalSpace || isLibraryMode) return;
     const loadProjects = async () => {
       try {
-        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } as Record<string, unknown> });
-        const projectList = (response as unknown as { nodes?: ProjectDto[] })?.nodes || [];
-        setProjects(projectList.map((p: ProjectDto): FileSystemNode => ({
+        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
+        const projectList = response?.nodes || [];
+        setProjects(projectList.map((p): FileSystemNode => ({
           id: p.id, name: p.name, isFolder: true, isRoot: true,
           updatedAt: p.updatedAt, parentId: undefined,
-          createdAt: p.createdAt || '', path: '', ownerId: p.ownerId || '',
+          createdAt: p.createdAt, path: p.path || '', ownerId: p.ownerId || '',
         })));
       } catch (error: unknown) {
         handleError(error, 'ProjectDrawingsPanel: 加载项目列表失败');
@@ -272,7 +272,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Library mode: load on categories loaded
   useEffect(() => {
-    if (!isLibraryMode || !categoriesLoaded || !libraryRootId || listInitializedRef.current) return;
+    if (!isLibraryMode || !libraryRootId || listInitializedRef.current) return;
     listInitializedRef.current = true;
     const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1];
     if (currentCategoryId === 'all') {
@@ -466,7 +466,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handleSubmitProject = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     handleUpdateProjectSubmit(async (id, data) => {
-      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } as unknown as UpdateNodeDto });
+      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } });
     });
   }, [handleUpdateProjectSubmit]);
 

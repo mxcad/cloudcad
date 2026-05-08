@@ -24,23 +24,14 @@ export const useFileSystemNavigation = (isAuthenticated: boolean) => {
 
   // 获取节点信息
   const getNode = useCallback(async (nodeId: string) => {
-    const result = await fileSystemControllerGetNode({ path: { nodeId } }) as unknown as {
-      data: {
-        fileHash?: string;
-        path?: string;
-        parentId?: string | null;
-        id?: string;
-        isRoot?: boolean;
-        name?: string;
-      };
-    };
+    const result = await fileSystemControllerGetNode({ path: { nodeId } });
     return result.data;
   }, []);
 
   // 获取根节点
   const getRootNode = useCallback(async (nodeId: string) => {
     const result = await fileSystemControllerGetRootNode({ path: { nodeId } });
-    return (result as unknown as { data: { id?: string } | undefined }).data;
+    return result.data;
   }, []);
 
   // 打开图纸

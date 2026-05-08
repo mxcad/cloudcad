@@ -38,10 +38,16 @@ export class FileLockService {
     // 从 filesDataPath 派生锁目录
     const filesDataPath = this.configService.get('filesDataPath', {
       infer: true,
-    })!;
+    });
+    if (!filesDataPath) {
+      throw new InternalServerErrorException('filesDataPath configuration is missing');
+    }
     this.lockDir = path.join(filesDataPath, '.lock');
     // 从 fileLock 配置获取锁参数
-    const fileLockConfig = this.configService.get('fileLock', { infer: true })!;
+    const fileLockConfig = this.configService.get('fileLock', { infer: true });
+    if (!fileLockConfig) {
+      throw new InternalServerErrorException('FileLock configuration is missing');
+    }
     this.lockTimeout = fileLockConfig.timeout;
     this.lockRetryInterval = fileLockConfig.retryInterval;
     this.maxRetries = fileLockConfig.maxRetries;
