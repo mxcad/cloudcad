@@ -26,6 +26,7 @@ import { PassThrough } from 'stream';
 
 // 延迟导入 MxCadService，避免循环依赖
 import type { MxCadService } from '../../mxcad/core/mxcad.service';
+import type { ConvertServerFileParam } from '../../mxcad/types/mxcad-context.types';
 
 @Injectable()
 export class FileDownloadExportService {
@@ -240,7 +241,7 @@ export class FileDownloadExportService {
           }
           const targetFilename = `${path.basename(originalFilename, ext)}${targetExt}`;
 
-          const conversionOptions: any = {
+          const conversionOptions: ConvertServerFileParam = {
             srcpath: this.storageManager.getFullPath(mxwebPath).replace(/\\/g, '/'),
             src_file_md5: node.fileHash || '',
             outname: targetFilename,
@@ -434,8 +435,8 @@ export class FileDownloadExportService {
         this.logger.warn(
           `添加文件到压缩包失败: ${node.name} - ${error.message}`
         );
-        if (stream && typeof (stream as any).destroy === 'function') {
-          (stream as any).destroy();
+        if (stream && typeof (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy === 'function') {
+          (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy();
         }
         throw error;
       }
