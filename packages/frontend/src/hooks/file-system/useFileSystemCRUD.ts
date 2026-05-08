@@ -158,7 +158,7 @@ export const useFileSystemCRUD = ({
       }
 
       // TODO: Replace with SDK when backend adds renameNode endpoint
-      await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName } });
+      await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName }, throwOnError: true });
       showToast('重命名成功', 'success');
       setFolderName('');
       setShowRenameModal(false);
@@ -206,15 +206,15 @@ export const useFileSystemCRUD = ({
           // TODO: Replace with SDK when backend adds deleteProject / deleteNode with permanently param
           if (permanently) {
             if (node.isRoot) {
-              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: true } });
+              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: true }, throwOnError: true });
             } else {
-              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: true } });
+              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: true }, throwOnError: true });
             }
           } else {
             if (node.isRoot) {
-              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: false } });
+              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: false }, throwOnError: true });
             } else {
-              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: false } });
+              await fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently: false }, throwOnError: true });
             }
           }
 
@@ -269,9 +269,9 @@ export const useFileSystemCRUD = ({
                 const node = nodes.find((n) => n.id === nodeId);
                 // TODO: Replace with SDK when backend adds deleteProject
                 if (node?.isRoot) {
-                  return fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently } });
+                  return fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently }, throwOnError: true });
                 }
-                return fileSystemControllerDeleteNode({ path: { nodeId: nodeId }, query: { permanently } });
+                return fileSystemControllerDeleteNode({ path: { nodeId: nodeId }, query: { permanently }, throwOnError: true });
               })
             );
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
@@ -322,7 +322,7 @@ export const useFileSystemCRUD = ({
       `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
       async () => {
         try {
-          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) } } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
           showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
           clearSelection();
           loadData();
@@ -360,6 +360,7 @@ export const useFileSystemCRUD = ({
       try {
         await fileSystemControllerCreateProject({
           body: { name: name.trim(), description: description?.trim() },
+          throwOnError: true,
         });
         showToast('项目创建成功', 'success');
         loadData();
@@ -376,7 +377,7 @@ export const useFileSystemCRUD = ({
     async (id: string, data: { name?: string; description?: string }) => {
       try {
         // TODO: Replace with SDK when backend adds updateProject endpoint
-        await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data });
+        await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data, throwOnError: true });
         showToast('项目更新成功', 'success');
         loadData();
       } catch (error) {
@@ -439,9 +440,9 @@ export const useFileSystemCRUD = ({
           try {
             if (node.isRoot) {
               // TODO: Replace with SDK when backend adds restoreProject endpoint
-              await fileSystemControllerRestoreTrashItems({ body: { itemIds: [node.id] } } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+              await fileSystemControllerRestoreTrashItems({ body: { itemIds: [node.id] }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
             } else {
-              await fileSystemControllerRestoreNode({ path: { nodeId: node.id } });
+              await fileSystemControllerRestoreNode({ path: { nodeId: node.id }, throwOnError: true });
             }
             showToast(`已恢复 "${node.name}"`, 'success');
             loadData();
@@ -469,7 +470,7 @@ export const useFileSystemCRUD = ({
       async () => {
         try {
           // TODO: clearTrash in SDK has no projectId parameter — revisit filtering
-          await fileSystemControllerClearTrash();
+          await fileSystemControllerClearTrash({ throwOnError: true });
           showToast('项目回收站已清空', 'success');
           loadData();
         } catch (error) {
@@ -488,7 +489,7 @@ export const useFileSystemCRUD = ({
       '确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。',
       async () => {
         try {
-          await fileSystemControllerClearTrash();
+          await fileSystemControllerClearTrash({ throwOnError: true });
           showToast('回收站已清空', 'success');
           loadData();
         } catch (error) {

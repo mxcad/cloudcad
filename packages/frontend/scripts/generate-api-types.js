@@ -8,7 +8,7 @@
  * 使用：pnpm generate:api-types
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,17 +32,18 @@ if (!fs.existsSync(SWAGGER_FILE)) {
 const swaggerData = JSON.parse(fs.readFileSync(SWAGGER_FILE, 'utf8'));
 
 // 运行 openapicmd typegen
-// bypass .cmd wrapper — call node directly with --no-experimental-detect-module
-// to prevent Node 22+ from treating openapicmd (CJS) as ESM due to dynamic import()
-const nodeBin = process.execPath;
+// 绕过 .cmd 包装器，直接 node + run.js，清空 NODE_OPTIONS 避免 ESM 污染
 const openapiEntry = path.join(__dirname, '../node_modules/openapicmd/bin/run.js');
 
 try {
-  const output = execSync(
-    `"${nodeBin}" --no-experimental-detect-module "${openapiEntry}" typegen "${SWAGGER_FILE}"`,
+  const output = execFileSync(
+    'node',
+    [openapiEntry, 'typegen', SWAGGER_FILE],
     {
       encoding: 'utf8',
       maxBuffer: 50 * 1024 * 1024,
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, NODE_OPTIONS: '' },
     },
   );
 

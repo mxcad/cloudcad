@@ -26,6 +26,8 @@ interface ProjectListViewProps {
   onEditProject: (project: FileSystemNode) => void;
   onShowMembers: (project: FileSystemNode) => void;
   onShowRoles: (project: FileSystemNode) => void;
+  onDeleteProject?: (project: FileSystemNode) => void;
+  onCreateProject?: () => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -38,6 +40,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onEditProject,
   onShowMembers,
   onShowRoles,
+  onDeleteProject,
+  onCreateProject,
 }) => {
   const filteredProjects = searchQuery
     ? projects.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -49,6 +53,14 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       <div className={styles.sectionTitle}>
         <FolderOpen size={16} />
         <span>我的项目 ({projects.length})</span>
+        {onCreateProject && (
+          <button
+            onClick={onCreateProject}
+            className="ml-auto px-3 py-1 text-sm rounded-lg bg-[var(--primary-500)] text-white hover:bg-[var(--primary-600)] transition-colors"
+          >
+            + 创建项目
+          </button>
+        )}
       </div>
 
       {/* 项目过滤 Tab */}
@@ -94,7 +106,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 onSelect={() => {}}
                 onEnter={onEnterProject}
                 onDownload={() => {}}
-                onDelete={() => {}}
+                onDelete={projectPerms?.canDelete && onDeleteProject ? () => onDeleteProject(project) : undefined}
                 onRename={() => {}}
                 onEdit={projectPerms?.canEdit ? () => onEditProject(project) : undefined}
                 onShowMembers={

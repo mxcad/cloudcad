@@ -58,8 +58,8 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
     }
 
     return (
-      <div 
-        className="relative group flex items-center justify-center"
+      <div
+        className="relative group/thumb flex items-center justify-center"
         style={{ width: size, height: size }}
       >
         <img
@@ -87,7 +87,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
               e.stopPropagation();
               onPreview(previewSrc);
             }}
-            className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all duration-200 opacity-0 group-hover:opacity-100"
+            className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/20 transition-all duration-200 opacity-0 group-hover/thumb:opacity-100"
             title="查看原图"
           >
             <div className="p-2 bg-white/90 rounded-full shadow-lg">

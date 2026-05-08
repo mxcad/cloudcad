@@ -194,7 +194,7 @@ export class FileSystemController {
   }
 
 	@Post("trash/restore")
-	@RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+	@RequirePermissions([SystemPermission.PROJECT_CREATE])
 	@CsrfProtected()
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "恢复回收站项目" })

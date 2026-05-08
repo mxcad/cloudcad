@@ -38,6 +38,8 @@ import { PermissionCacheService } from '../common/services/permission-cache.serv
 @Injectable()
 export class RolesService {
   private readonly logger = new Logger(RolesService.name);
+  /** 角色列表内存缓存 */
+  private rolesCache: RoleDto[] | null = null;
 
   constructor(
     private readonly prisma: DatabaseService,
@@ -45,9 +47,20 @@ export class RolesService {
   ) {}
 
   /**
-   * 获取所有角色
+   * 清除角色列表内存缓存
+   */
+  private clearRolesCache(): void {
+    this.rolesCache = null;
+  }
+
+  /**
+   * 获取所有角色（带内存缓存）
    */
   async findAll(): Promise<RoleDto[]> {
+    if (this.rolesCache) {
+      return this.rolesCache;
+    }
+
     const roles = await this.prisma.role.findMany({
       include: {
         permissions: {
@@ -59,7 +72,8 @@ export class RolesService {
       orderBy: [{ category: 'asc' }, { level: 'desc' }, { createdAt: 'asc' }],
     });
 
-    return roles.map((role) => this.mapToRoleDto(role));
+    this.rolesCache = roles.map((role) => this.mapToRoleDto(role));
+    return this.rolesCache;
   }
 
   /**
@@ -135,6 +149,8 @@ export class RolesService {
 
     this.logger.log(`创建角色成功: ${role.name} (${role.id})`);
 
+    // 清除内存缓存，确保下次 findAll() 重新查询
+    this.clearRolesCache();
     // 清理所有用户的角色缓存（因为新角色可能影响权限检查）
     this.cacheService.cleanup();
 
@@ -209,6 +225,8 @@ export class RolesService {
 
     this.logger.log(`更新角色成功: ${updatedRole.name} (${updatedRole.id})`);
 
+    // 清除内存缓存，确保下次 findAll() 重新查询
+    this.clearRolesCache();
     // 如果修改了权限，立即清除该角色的所有用户缓存
     if (updateRoleDto.permissions) {
       await this.cacheService.clearRoleCache(role.name);
@@ -259,6 +277,8 @@ export class RolesService {
 
     this.logger.log(`删除角色成功: ${role.name} (${role.id})`);
 
+    // 清除内存缓存，确保下次 findAll() 重新查询
+    this.clearRolesCache();
     // 清理所有用户的角色缓存
     this.cacheService.cleanup();
   }
@@ -301,6 +321,8 @@ export class RolesService {
       `为角色添加权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
     );
 
+    // 清除内存缓存
+    this.clearRolesCache();
     // 立即清除该角色的所有用户缓存
     await this.cacheService.clearRoleCache(role.name);
     this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
@@ -342,6 +364,8 @@ export class RolesService {
       `从角色移除权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
     );
 
+    // 清除内存缓存
+    this.clearRolesCache();
     // 立即清除该角色的所有用户缓存
     await this.cacheService.clearRoleCache(role.name);
     this.logger.log(`已清除角色 ${role.name} 的权限缓存`);

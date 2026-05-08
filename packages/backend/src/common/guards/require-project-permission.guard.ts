@@ -149,13 +149,15 @@ export class RequireProjectPermissionGuard implements CanActivate {
   private extractNodeId(request: {
     params?: { nodeId?: string; parentId?: string };
     query?: { nodeId?: string; parentId?: string };
-    body?: { nodeId?: string; parentId?: string };
+    body?: { nodeId?: string; parentId?: string; itemIds?: string[] };
   }): string | null {
     return (
       request.params?.nodeId ||
       request.params?.parentId ||
       request.body?.nodeId ||
       request.body?.parentId ||
+      // 批量操作（如 trash/restore、trash/items）使用 itemIds 数组的第一个元素
+      request.body?.itemIds?.[0] ||
       request.query?.nodeId ||
       request.query?.parentId ||
       null
@@ -192,7 +194,7 @@ export class RequireProjectPermissionGuard implements CanActivate {
   private async extractProjectId(request: {
     params?: { projectId?: string; nodeId?: string; parentId?: string };
     query?: { projectId?: string; nodeId?: string; parentId?: string };
-    body?: { projectId?: string; nodeId?: string; parentId?: string };
+    body?: { projectId?: string; nodeId?: string; parentId?: string; itemIds?: string[] };
   }): Promise<string | null> {
     // 从路由参数中获取
     if (request.params?.projectId) {
@@ -215,6 +217,8 @@ export class RequireProjectPermissionGuard implements CanActivate {
       request.params?.parentId ||
       request.body?.nodeId ||
       request.body?.parentId ||
+      // 批量操作（如 trash/restore、trash/items）使用 itemIds 数组的第一个元素
+      request.body?.itemIds?.[0] ||
       request.query?.nodeId ||
       request.query?.parentId;
 
