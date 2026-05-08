@@ -293,12 +293,19 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 下载字体
   const handleDownload = async (fontName: string) => {
     try {
-      const { response } = await fontsControllerDownloadFont({
+      const { data, response } = await fontsControllerDownloadFont({
         path: { fileName: fontName },
         query: { location: activeTab },
       });
-      if (!response) throw new Error('下载失败：服务器无响应');
-      const blob = await response.blob();
+      // 适配多种响应格式：优先使用 response.data（Axios），其次 data 字段，最后直接使用 data
+      let blob: Blob;
+      if (response && (response as any).data instanceof Blob) {
+        blob = (response as any).data;
+      } else if (data instanceof Blob) {
+        blob = data;
+      } else {
+        throw new Error('无法获取字体文件数据');
+      }
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
