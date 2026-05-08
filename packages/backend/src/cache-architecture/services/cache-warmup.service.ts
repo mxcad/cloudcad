@@ -316,7 +316,7 @@ export class CacheWarmupService implements OnModuleInit {
   async warmupUser(userId: string): Promise<void> {
     try {
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: {
           id: true,
           role: true,

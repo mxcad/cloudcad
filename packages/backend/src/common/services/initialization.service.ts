@@ -465,6 +465,7 @@ export class InitializationService implements OnModuleInit {
 
       // 查找所有用户
       const allUsers = await this.prisma.user.findMany({
+        where: { deletedAt: null },
         select: {
           id: true,
           username: true,
@@ -562,7 +563,7 @@ export class InitializationService implements OnModuleInit {
 
       // 查找第一个管理员用户
       const adminUser = await this.prisma.user.findFirst({
-        where: { roleId: adminRole.id },
+        where: { roleId: adminRole.id, deletedAt: null },
       });
 
       if (!adminUser) {

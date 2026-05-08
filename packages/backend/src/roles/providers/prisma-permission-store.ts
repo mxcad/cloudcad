@@ -37,7 +37,7 @@ export class PrismaPermissionStore implements IPermissionStore {
       }
 
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: {
           role: {
             select: {
@@ -206,7 +206,7 @@ export class PrismaPermissionStore implements IPermissionStore {
     await this.cacheService.clearUserCache(userId);
 
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: { role: { select: { name: true } } },
     });
 

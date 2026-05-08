@@ -123,7 +123,7 @@ export class LocalAuthProvider implements IAuthProvider {
         let username = baseUsername;
         let suffix = 1;
 
-        while (await this.prisma.user.findUnique({ where: { username } })) {
+        while (await this.prisma.user.findUnique({ where: { username, deletedAt: null } })) {
           username = `${baseUsername}_${suffix}`;
           suffix++;
         }
@@ -277,7 +277,7 @@ export class LocalAuthProvider implements IAuthProvider {
       if (wechatAutoRegister && allowRegister) {
         let username = `wechat_${wechatUser.openid.slice(0, 8)}`;
         let counter = 0;
-        while (await this.prisma.user.findUnique({ where: { username } })) {
+        while (await this.prisma.user.findUnique({ where: { username, deletedAt: null } })) {
           counter++;
           username = `wechat_${wechatUser.openid.slice(0, 8)}_${counter}`;
         }

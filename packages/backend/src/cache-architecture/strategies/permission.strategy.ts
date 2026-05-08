@@ -35,6 +35,7 @@ export class PermissionStrategy implements IWarmupStrategy {
       const activeUsers = await this.prisma.user.findMany({
         where: {
           status: 'ACTIVE',
+          deletedAt: null,
         },
         orderBy: {
           updatedAt: 'desc',

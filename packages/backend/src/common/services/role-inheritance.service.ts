@@ -319,7 +319,7 @@ export class RoleInheritanceService implements OnModuleInit {
   ): Promise<boolean> {
     try {
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: {
           role: {
             select: {
@@ -584,7 +584,7 @@ export class RoleInheritanceService implements OnModuleInit {
   private async clearAllActiveUsersCache(): Promise<void> {
     try {
       const activeUsers = await this.prisma.user.findMany({
-        where: { status: 'ACTIVE' },
+        where: { status: 'ACTIVE', deletedAt: null },
         select: { id: true },
       });
 

@@ -60,7 +60,7 @@ export class AccountBindingService {
 
     if (!isRebind) {
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: { email: true },
       });
 
@@ -107,7 +107,7 @@ export class AccountBindingService {
 
     if (!isRebind) {
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: { email: true },
       });
 
@@ -133,7 +133,7 @@ export class AccountBindingService {
     }
 
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       data: {
         email,
         emailVerified: true,
@@ -173,14 +173,14 @@ export class AccountBindingService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: { phone: true },
     });
 
     const isReplacing = !!user?.phone;
 
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       data: {
         phone: formattedPhone,
         phoneVerified: true,
@@ -207,7 +207,7 @@ export class AccountBindingService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: { phone: true },
     });
 
@@ -241,7 +241,7 @@ export class AccountBindingService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: { phone: true },
     });
 
@@ -315,7 +315,7 @@ export class AccountBindingService {
     }
 
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       data: {
         phone: formattedPhone,
         phoneVerified: true,
@@ -347,7 +347,7 @@ export class AccountBindingService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: { email: true },
     });
 
@@ -384,7 +384,7 @@ export class AccountBindingService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: { email: true },
     });
 
@@ -470,7 +470,7 @@ export class AccountBindingService {
     }
 
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       data: {
         wechatId: openid,
         provider: 'WECHAT',
@@ -487,7 +487,7 @@ export class AccountBindingService {
 
   async unbindWechat(userId: string): Promise<WechatUnbindResponseDto> {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -516,7 +516,7 @@ export class AccountBindingService {
     }
 
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, deletedAt: null },
       data: {
         wechatId: null,
         provider: hasEmail || hasPhone || hasPassword ? 'LOCAL' : 'WECHAT',

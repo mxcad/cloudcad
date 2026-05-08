@@ -144,7 +144,7 @@ export class AuthFacadeService {
     }
 
     const existingUserByUsername = await this.prisma.user.findUnique({
-      where: { username },
+      where: { username, deletedAt: null },
     });
     if (existingUserByUsername) {
       throw new ConflictException('用户名已被使用');
@@ -347,7 +347,7 @@ export class AuthFacadeService {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     const user = await this.prisma.user.findFirst({
-      where: { phone: formattedPhone },
+      where: { phone: formattedPhone, deletedAt: null },
       include: {
         role: {
           select: {
@@ -506,7 +506,7 @@ export class AuthFacadeService {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     const existingUser = await this.prisma.user.findFirst({
-      where: { phone: formattedPhone },
+      where: { phone: formattedPhone, deletedAt: null },
     });
     if (existingUser && existingUser.id !== userId) {
       throw new ConflictException('该手机号已被其他账号绑定');
@@ -594,7 +594,7 @@ export class AuthFacadeService {
     }
 
     const existingUserByUsername = await this.prisma.user.findUnique({
-      where: { username },
+      where: { username, deletedAt: null },
     });
     if (existingUserByUsername) {
       throw new ConflictException('用户名已被使用');

@@ -400,7 +400,7 @@ export class PermissionService {
     try {
       // 从数据库获取用户的 IP 白名单
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: { email: true }, // 暂时没有 IP 白名单字段，后续可以添加
       });
 
@@ -424,7 +424,7 @@ export class PermissionService {
     try {
       // 从数据库获取用户的设备限制配置
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userId, deletedAt: null },
         select: { email: true }, // 暂时没有设备限制字段，后续可以添加
       });
 
