@@ -92,7 +92,6 @@ export const LibraryManager: React.FC = () => {
     isFolderMode,
     setLibraryType,
     enterNode,
-    enterParent,
     refresh,
     setSearchTerm,
     setViewMode,

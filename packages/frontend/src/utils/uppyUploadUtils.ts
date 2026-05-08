@@ -177,6 +177,12 @@ export const uploadFileWithUppy = async (
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      onBeforeRequest: (req) => {
+        const freshToken = getValidToken();
+        if (freshToken) {
+          req.setHeader('Authorization', `Bearer ${freshToken}`);
+        }
+      },
       metadata: {
         filename: file.name,
         fileHash: hash,
@@ -190,9 +196,13 @@ export const uploadFileWithUppy = async (
     // 从 Tus 响应头中提取 nodeId
     let uploadedNodeId: string | undefined;
     uppy.on('upload-success', (_file: unknown, resp: UppyUploadSuccessPayload) => {
-      const xhr = resp?.body?.xhr;
-      if (xhr) {
-        uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
+      try {
+        const xhr = resp?.body?.xhr;
+        if (xhr) {
+          uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
+        }
+      } catch {
+        // 浏览器可能拒绝读取未暴露的响应头
       }
     });
 
@@ -305,10 +315,14 @@ export const uploadFilePublic = async (options: {
     let uploadedHash: string | undefined;
     let uploadedFileName: string | undefined;
     uppy.on('upload-success', (_file: unknown, resp: UppyUploadSuccessPayload) => {
-      const xhr = resp?.body?.xhr;
-      if (xhr) {
-        uploadedHash = xhr.getResponseHeader?.('X-File-Hash') || undefined;
-        uploadedFileName = xhr.getResponseHeader?.('X-File-Name') || undefined;
+      try {
+        const xhr = resp?.body?.xhr;
+        if (xhr) {
+          uploadedHash = xhr.getResponseHeader?.('X-File-Hash') || undefined;
+          uploadedFileName = xhr.getResponseHeader?.('X-File-Name') || undefined;
+        }
+      } catch {
+        // 浏览器可能拒绝读取未暴露的响应头
       }
     });
 

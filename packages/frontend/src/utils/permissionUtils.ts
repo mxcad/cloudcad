@@ -129,7 +129,6 @@ export const canEditNode = async (
       query: { permission: 'PROJECT_UPDATE' },
     });
 
-    console.log('[canEditNode] response:', JSON.stringify(response, null, 2));
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
     handleError(error, '检查编辑权限失败');

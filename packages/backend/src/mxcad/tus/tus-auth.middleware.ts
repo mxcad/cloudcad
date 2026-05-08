@@ -64,9 +64,9 @@ export class TusAuthMiddleware implements NestMiddleware {
       this.logger.debug('匿名上传（无 Token 且无 Session）');
       next();
     } catch (error) {
-      // Token 存在但无效 → 拒绝请求（不是匿名，是伪造/过期凭证）
-      this.logger.warn(`Token 无效，拒绝上传: ${(error as Error).message}`);
-      res.status(401).json({ message: '无效的认证凭证' });
+      // Token 存在但无效 → 降级为匿名上传，不拒绝请求
+      this.logger.warn(`Token 无效，降级为匿名上传: ${(error as Error).message}`);
+      next();
     }
   }
 }

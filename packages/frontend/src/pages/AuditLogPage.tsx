@@ -17,6 +17,7 @@ const AuditAction = {
   ROLE_DELETE: 'ROLE_DELETE',
   USER_LOGIN: 'USER_LOGIN',
   USER_LOGOUT: 'USER_LOGOUT',
+  PROJECT_CREATE: 'PROJECT_CREATE',
   PROJECT_DELETE: 'PROJECT_DELETE',
   FILE_UPLOAD: 'FILE_UPLOAD',
   FILE_DOWNLOAD: 'FILE_DOWNLOAD',
@@ -32,6 +33,7 @@ type AuditActionType = (typeof AuditAction)[keyof typeof AuditAction];
 
 // 资源类型
 const ResourceType = {
+  SYSTEM: 'SYSTEM',
   USER: 'USER',
   ROLE: 'ROLE',
   PERMISSION: 'PERMISSION',
@@ -51,6 +53,7 @@ const ACTION_NAME_MAP: Record<string, string> = {
   ROLE_DELETE: '删除角色',
   USER_LOGIN: '用户登录',
   USER_LOGOUT: '用户登出',
+  PROJECT_CREATE: '创建项目',
   PROJECT_DELETE: '删除项目',
   FILE_UPLOAD: '上传文件',
   FILE_DOWNLOAD: '下载文件',
@@ -64,6 +67,7 @@ const ACTION_NAME_MAP: Record<string, string> = {
 
 // 资源类型中文映射
 const RESOURCE_TYPE_MAP: Record<string, string> = {
+  SYSTEM: '系统',
   USER: '用户',
   ROLE: '角色',
   PERMISSION: '权限',

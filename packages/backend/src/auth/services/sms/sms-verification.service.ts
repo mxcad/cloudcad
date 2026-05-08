@@ -256,7 +256,6 @@ export class SmsVerificationService {
 
     // 增加每日发送计数（有效期到当天结束）
     const secondsUntilMidnight = this.getSecondsUntilMidnight();
-    await this.redis.multi();
     const currentDailyCount = await this.redis.incr(dailyCountKey);
     if (currentDailyCount === 1) {
       await this.redis.expire(dailyCountKey, secondsUntilMidnight);
@@ -368,12 +367,12 @@ export class SmsVerificationService {
       };
     }
 
+    // 获取验证码剩余有效期（删除之前查询，否则返回 -2）
+    const ttl = await this.redis.ttl(codeKey);
+
     // 验证成功后删除验证码和验证次数记录
     await this.redis.del(codeKey);
     await this.redis.del(attemptsKey);
-
-    // 获取验证码剩余有效期
-    const ttl = await this.redis.ttl(codeKey);
 
     this.logger.log(`验证码验证成功: ${formattedPhone}`);
     return {

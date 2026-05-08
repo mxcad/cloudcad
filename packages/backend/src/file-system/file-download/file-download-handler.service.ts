@@ -15,7 +15,6 @@ import {
   Logger,
   NotFoundException,
   ForbiddenException,
-  Optional,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FileSystemService } from '../file-system.service';
@@ -30,7 +29,7 @@ import { FileSystemService } from '../file-system.service';
 export class FileDownloadHandlerService {
   private readonly logger = new Logger(FileDownloadHandlerService.name);
 
-  constructor(@Optional() private readonly fileSystemService?: FileSystemService) {}
+  constructor(private readonly fileSystemService: FileSystemService) {}
 
   /**
    * 统一处理下载响应

@@ -28,6 +28,13 @@ interface UseFileItemRendererOptions {
   handleOpenRename: (node: FileSystemNode) => void;
   handleLibraryOpenRename: (node: FileSystemNode) => void;
   handleShowVersionHistory: (node: FileSystemNode) => Promise<void>;
+  handleMove?: (node: FileSystemNode) => void;
+  handleCopy?: (node: FileSystemNode) => void;
+  handleDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
+  handleDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
+  handleDragLeave?: () => void;
+  handleDrop?: (e: React.DragEvent, node: FileSystemNode) => void;
+  dropTargetId?: string | null;
   showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   user: { id: string } | null;
   hasPermission: (permission: SystemPermission) => boolean;
@@ -43,7 +50,9 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
     nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
     projectPermissions, onDrawingOpen, handleEnterFolder, handleDownload,
     handleDelete, handleOpenRename, handleLibraryOpenRename,
-    handleShowVersionHistory, showToast, user, hasPermission,
+    handleShowVersionHistory, handleMove, handleCopy,
+    handleDragStart, handleDragOver, handleDragLeave, handleDrop, dropTargetId,
+    showToast, user, hasPermission,
     setDownloadingNode, setShowDownloadFormatModal, libraryOperations,
   } = options;
 
@@ -135,14 +144,23 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           onDownload={isLibraryMode ? handleLibraryDownload : handleDownload}
           onDelete={isLibraryMode ? handleLibraryDelete : handleDelete}
           onRename={isLibraryMode ? handleLibraryOpenRename : handleOpenRename}
-          onShowVersionHistory={isLibraryMode ? undefined : handleShowVersionHistory}
+          onShowVersionHistory={isLibraryMode ? undefined : (!node.isFolder && !node.isRoot && (node.extension === '.dwg' || node.extension === '.dxf') ? handleShowVersionHistory : undefined)}
+          onMove={!isLibraryMode && !node.isRoot ? handleMove : undefined}
+          onCopy={!isLibraryMode && !node.isRoot ? handleCopy : undefined}
+          onDragStart={!isLibraryMode ? handleDragStart : undefined}
+          onDragOver={!isLibraryMode ? handleDragOver : undefined}
+          onDragLeave={!isLibraryMode ? handleDragLeave : undefined}
+          onDrop={!isLibraryMode ? handleDrop : undefined}
+          isDropTarget={!isLibraryMode ? dropTargetId === node.id : false}
         />
       );
     },
     [nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
      projectPermissions, onDrawingOpen, handleEnterFolder, handleDownload,
      handleDelete, handleOpenRename, handleLibraryOpenRename,
-     handleShowVersionHistory, showToast, user, hasPermission,
+     handleShowVersionHistory, handleMove, handleCopy,
+     handleDragStart, handleDragOver, handleDragLeave, handleDrop, dropTargetId,
+     showToast, user, hasPermission,
      setDownloadingNode, setShowDownloadFormatModal, libraryOperations]
   );
 

@@ -98,14 +98,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     handleCategorySelect, listInitializedRef,
   } = useLibraryCategories(isLibraryMode, libraryType);
 
-  // Version history
-  const {
-    showVersionHistoryModal, setShowVersionHistoryModal,
-    versionHistoryNode, versionHistoryEntries,
-    versionHistoryLoading, versionHistoryError,
-    handleShowVersionHistory, handleOpenHistoricalVersion,
-  } = useVersionHistory(isLibraryMode ? null : null);
-
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
   const [isRenameLoading, setIsRenameLoading] = useState(false);
@@ -441,41 +433,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   // Permissions
   const { permissions: projectPermissions } = useProjectPermissions(selectedProjectId);
 
-  // Version history (now using selectedProjectId)
-  const vh = useVersionHistory(selectedProjectId);
-
-  // File item renderer
-  const { renderFileItem } = useFileItemRenderer({
-    nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
-    projectPermissions, onDrawingOpen, handleEnterFolder,
-    handleDownload, handleDelete, handleOpenRename, handleLibraryOpenRename,
-    handleShowVersionHistory: vh.handleShowVersionHistory,
-    showToast, user, hasPermission: hasPermission as (perm: SystemPermission) => boolean,
-    setDownloadingNode, setShowDownloadFormatModal, libraryOperations,
-  });
-
-  // Handlers for project view
-  const handleShowMembers = useCallback((node: FileSystemNode) => { setEditingProject(node); setIsMembersModalOpen(true); }, []);
-  const handleShowRoles = useCallback((node: FileSystemNode) => { setEditingProject(node); setIsProjectRolesModalOpen(true); }, []);
-  const handleEditProject = useCallback((node: FileSystemNode) => { openEditProjectModal(node); }, [openEditProjectModal]);
-  const handleSubmitProject = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    handleUpdateProjectSubmit(async (id, data) => {
-      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } });
-    });
-  }, [handleUpdateProjectSubmit]);
-
-  // Rename submit
-  const handleRenameSubmit = useCallback(async () => {
-    if (!editingNode || !folderName.trim()) return;
-    setIsRenameLoading(true);
-    try {
-      if (isLibraryMode) {
-        await libraryOperations.handleRename(editingNode.id, folderName.trim(), () => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); });
-      } else await handleRename();
-    } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 重命名失败'); showToast('重命名失败', 'error'); } finally { setIsRenameLoading(false); }
-  }, [editingNode, folderName, isLibraryMode, libraryOperations, handleRename, showToast]);
-
   // Move/Copy handlers
   const handleMove = useCallback((node: FileSystemNode) => {
     setMoveSourceNode(node);
@@ -546,6 +503,43 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     } finally { setDraggedNodes([]); }
   }, [draggedNodes, refreshNodes, showToast]);
 
+  // Version history (now using selectedProjectId)
+  const vh = useVersionHistory(selectedProjectId);
+
+  // File item renderer
+  const { renderFileItem } = useFileItemRenderer({
+    nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
+    projectPermissions, onDrawingOpen, handleEnterFolder,
+    handleDownload, handleDelete, handleOpenRename, handleLibraryOpenRename,
+    handleShowVersionHistory: vh.handleShowVersionHistory,
+    handleMove, handleCopy,
+    handleDragStart, handleDragOver, handleDragLeave, handleDrop, dropTargetId,
+    showToast, user, hasPermission: hasPermission as (perm: SystemPermission) => boolean,
+    setDownloadingNode, setShowDownloadFormatModal, libraryOperations,
+  });
+
+  // Handlers for project view
+  const handleShowMembers = useCallback((node: FileSystemNode) => { setEditingProject(node); setIsMembersModalOpen(true); }, []);
+  const handleShowRoles = useCallback((node: FileSystemNode) => { setEditingProject(node); setIsProjectRolesModalOpen(true); }, []);
+  const handleEditProject = useCallback((node: FileSystemNode) => { openEditProjectModal(node); }, [openEditProjectModal]);
+  const handleSubmitProject = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    handleUpdateProjectSubmit(async (id, data) => {
+      await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: { name: data.name ?? undefined, description: data.description } });
+    });
+  }, [handleUpdateProjectSubmit]);
+
+  // Rename submit
+  const handleRenameSubmit = useCallback(async () => {
+    if (!editingNode || !folderName.trim()) return;
+    setIsRenameLoading(true);
+    try {
+      if (isLibraryMode) {
+        await libraryOperations.handleRename(editingNode.id, folderName.trim(), () => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); });
+      } else await handleRename();
+    } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 重命名失败'); showToast('重命名失败', 'error'); } finally { setIsRenameLoading(false); }
+  }, [editingNode, folderName, isLibraryMode, libraryOperations, handleRename, showToast]);
+
   // Project list view
   if (!isPersonalSpace && !isLibraryMode && !selectedProjectId && !loading) {
     return (
@@ -569,6 +563,14 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         <MembersModal isOpen={isMembersModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsMembersModalOpen(false); setEditingProject(null); }} />
         <ProjectRolesModal isOpen={isProjectRolesModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsProjectRolesModalOpen(false); setEditingProject(null); }} />
         <ProjectModal isOpen={isProjectModalOpen} onClose={closeProjectModal} editingProject={editingProject} formData={projectFormData} onFormDataChange={setProjectFormData} onSubmit={handleSubmitProject} loading={projectLoading} />
+        <SelectFolderModal
+          isOpen={showSelectFolderModal}
+          currentNodeId={moveSourceNode?.id || copySourceNode?.id || ''}
+          projectId={selectedProjectId || undefined}
+          onClose={() => { setShowSelectFolderModal(false); setMoveSourceNode(null); setCopySourceNode(null); }}
+          onConfirm={handleConfirmMoveOrCopy}
+          confirmButtonText={moveSourceNode ? '移动到此' : '复制到此'}
+        />
         <ToastContainer toasts={toasts} onRemove={removeToast} />
       </>
     );
@@ -606,6 +608,14 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       <MembersModal isOpen={isMembersModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsMembersModalOpen(false); setEditingProject(null); }} />
       <ProjectRolesModal isOpen={isProjectRolesModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsProjectRolesModalOpen(false); setEditingProject(null); }} />
       <ProjectModal isOpen={isProjectModalOpen} onClose={closeProjectModal} editingProject={editingProject} formData={projectFormData} onFormDataChange={setProjectFormData} onSubmit={handleSubmitProject} loading={projectLoading} />
+      <SelectFolderModal
+        isOpen={showSelectFolderModal}
+        currentNodeId={moveSourceNode?.id || copySourceNode?.id || ''}
+        projectId={selectedProjectId || undefined}
+        onClose={() => { setShowSelectFolderModal(false); setMoveSourceNode(null); setCopySourceNode(null); }}
+        onConfirm={handleConfirmMoveOrCopy}
+        confirmButtonText={moveSourceNode ? '移动到此' : '复制到此'}
+      />
     </div>
   );
 };

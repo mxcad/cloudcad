@@ -1,26 +1,23 @@
 import { AlertCircle } from 'lucide-react';
-import { User } from 'lucide-react';
-import { Search } from 'lucide-react';
-import { ChevronLeft } from 'lucide-react';
-import { ChevronRight } from 'lucide-react';
 import { UserPlus } from 'lucide-react';
 import { CheckCircle2 } from 'lucide-react';
 import { XCircle } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
-import { HardDrive, Save } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { usePermission } from '@/hooks/usePermission';
-import { SystemPermission, getRoleDisplayName } from '@/constants/permissions';
+import { SystemPermission } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 import { useUserCRUD } from './hooks/useUserCRUD';
 import { useUserSearch } from './hooks/useUserSearch';
 import { UserTable, type UserTableUser } from './UserTable';
+import { UserSearchBar } from './UserSearchBar';
+import { UserQuotaModal } from './UserQuotaModal';
 import { CreateUserModal } from './UserModals/CreateUserModal';
 import { EditUserModal } from './UserModals/EditUserModal';
 import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
@@ -396,78 +393,23 @@ export const UserManagement = () => {
         </div>
       )}
 
-      <div className="filters-card">
-        <div className="filters-grid">
-          <div className="search-input-wrapper">
-            <Search className="search-icon" size={20} />
-            <input
-              type="text"
-              placeholder="搜索用户（邮箱、用户名、昵称）"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="search-input"
-            />
-          </div>
-
-          <div className="filter-select-wrapper">
-            <select
-              value={roleFilter}
-              onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-              className="filter-select"
-            >
-              <option value="">所有角色</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {getRoleDisplayName(role.name, role.isSystem ?? false)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-select-wrapper">
-            <select
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [field, order] = e.target.value.split('-');
-                if (field) setSortBy(field);
-                setSortOrder(order as 'asc' | 'desc');
-                setCurrentPage(1);
-              }}
-              className="filter-select"
-            >
-              <option value="createdAt-desc">创建时间（降序）</option>
-              <option value="createdAt-asc">创建时间（升序）</option>
-              <option value="username-asc">用户名（升序）</option>
-              <option value="username-desc">用户名（降序）</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="pagination-info">
-          <span className="pagination-text">
-            共 <strong>{totalUsers}</strong> 位用户，每页 {pageSize} 条
-          </span>
-          <div className="pagination-controls">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1 || loading}
-              className="pagination-btn"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="pagination-current">
-              {currentPage} / {totalPages || 1}
-            </span>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages || 1, currentPage + 1))}
-              disabled={currentPage >= totalPages || loading}
-              className="pagination-btn"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <UserSearchBar
+        searchQuery={searchQuery}
+        onSearchChange={(q) => { setSearchQuery(q); setCurrentPage(1); }}
+        roleFilter={roleFilter}
+        onRoleFilterChange={(r) => { setRoleFilter(r); setCurrentPage(1); }}
+        roles={roles}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        sortOrder={sortOrder}
+        onSortOrderChange={setSortOrder}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalUsers={totalUsers}
+        pageSize={pageSize}
+        loading={loading}
+        onPageChange={setCurrentPage}
+      />
 
       <div className="users-table-card">
         <UserTable
@@ -519,62 +461,28 @@ export const UserManagement = () => {
         onDeleteImmediatelyChange={setDeleteImmediately}
       />
 
-      <Modal
+      <UserQuotaModal
         isOpen={quotaModalOpen}
         onClose={() => setQuotaModalOpen(false)}
-        title="配置存储配额"
-        className="max-w-md"
-        footer={
-          <div className="modal-footer">
-            <Button variant="ghost" onClick={() => setQuotaModalOpen(false)} disabled={quotaLoading}>取消</Button>
-            <Button
-              onClick={async () => {
-                if (!quotaNodeId) return;
-                setQuotaLoading(true);
-                try {
-                  await updateStorageQuota(quotaNodeId, userQuota);
-                  showSuccess('配额更新成功');
-                  setQuotaModalOpen(false);
-                } catch {
-                  // Error handled by hook
-                } finally {
-                  setQuotaLoading(false);
-                }
-              }}
-              disabled={quotaLoading || !quotaNodeId}
-              className="submit-btn"
-            >
-              {quotaLoading ? <><Loader2 size={18} className="animate-spin" />保存中...</> : <><Save size={16} className="mr-1" />保存</>}
-            </Button>
-          </div>
-        }
-      >
-        <div className="quota-config-content">
-          <div className="quota-user-info">
-            <div className="user-avatar-sm">
-              {quotaUser?.avatar ? <img src={quotaUser.avatar} alt="" /> : <User size={20} />}
-            </div>
-            <div className="user-info-text">
-              <p className="user-name">{quotaUser?.nickname || quotaUser?.username || '用户'}</p>
-              <p className="user-username">@{quotaUser?.username}</p>
-            </div>
-          </div>
-          <div className="quota-form">
-            <label className="quota-label"><HardDrive size={16} /><span>个人空间存储配额</span></label>
-            <div className="quota-input-wrapper">
-              <input
-                type="number"
-                value={userQuota}
-                onChange={(e) => { const gb = parseInt(e.target.value, 10); if (!isNaN(gb) && gb >= 0) setUserQuota(gb); }}
-                className="quota-input"
-                min="0"
-              />
-              <span className="quota-unit">GB</span>
-            </div>
-            <p className="quota-hint">默认配额：{defaultQuota} GB</p>
-          </div>
-        </div>
-      </Modal>
+        onSave={async () => {
+          if (!quotaNodeId) return;
+          setQuotaLoading(true);
+          try {
+            await updateStorageQuota(quotaNodeId, userQuota);
+            showSuccess('配额更新成功');
+            setQuotaModalOpen(false);
+          } catch {
+            // Error handled by hook
+          } finally {
+            setQuotaLoading(false);
+          }
+        }}
+        loading={quotaLoading}
+        user={quotaUser}
+        quota={userQuota}
+        defaultQuota={defaultQuota}
+        onQuotaChange={setUserQuota}
+      />
 
       <Modal
         isOpen={cleanupModalOpen}

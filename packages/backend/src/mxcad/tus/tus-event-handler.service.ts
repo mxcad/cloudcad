@@ -9,6 +9,8 @@ import { FileStore } from '@tus/file-store';
 import { FileSystemService } from '../infra/file-system.service';
 import { FileMergeService } from '../upload/file-merge.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
+import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AppConfig } from '../../config/app.config';
@@ -36,6 +38,7 @@ export class TusEventHandler {
     private readonly fileSystemService: FileSystemService,
     private readonly fileMergeService: FileMergeService,
     private readonly fileConversionService: FileConversionService,
+    private readonly filePermissionService: FileSystemPermissionService,
   ) {
     this.logger.log('TusEventHandler 已初始化');
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true }) || path.join(process.cwd(), 'uploads');
@@ -115,6 +118,19 @@ export class TusEventHandler {
           }
         }
 
+        return {};
+      }
+
+      // 已登录用户：检查目标节点的写权限
+      const hasPermission = await this.filePermissionService.checkNodePermission(
+        userId,
+        nodeId,
+        ProjectPermission.FILE_CREATE,
+      );
+      if (!hasPermission) {
+        this.logger.warn(
+          `权限不足：用户 ${userId} 无权在节点 ${nodeId} 创建文件`,
+        );
         return {};
       }
 

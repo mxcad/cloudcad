@@ -72,6 +72,12 @@ function createUppy(config: MxCadUploadConfig, onDone: () => void): Uppy {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
+    onBeforeRequest: (req) => {
+      const freshToken = getValidToken();
+      if (freshToken) {
+        req.setHeader('Authorization', `Bearer ${freshToken}`);
+      }
+    },
     metadata: {
       filename: '',
       fileHash: '',
@@ -121,10 +127,14 @@ function createUppy(config: MxCadUploadConfig, onDone: () => void): Uppy {
 
   let uploadedNodeId: string | undefined;
   uppy.on('upload-success', (_file, response) => {
-    const body = response?.body as unknown as { xhr?: XMLHttpRequest } | undefined;
-    const xhr = body?.xhr;
-    if (xhr) {
-      uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
+    try {
+      const body = response?.body as unknown as { xhr?: XMLHttpRequest } | undefined;
+      const xhr = body?.xhr;
+      if (xhr) {
+        uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
+      }
+    } catch {
+      // 浏览器可能拒绝读取未暴露的响应头
     }
   });
 

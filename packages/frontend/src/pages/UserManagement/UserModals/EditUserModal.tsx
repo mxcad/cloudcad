@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
+import { getRoleDisplayName } from '@/constants/permissions';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export function EditUserModal({
             className="form-select"
           >
             {roles.map((role) => (
-              <option key={role.id} value={role.id}>{role.name}</option>
+              <option key={role.id} value={role.id}>{getRoleDisplayName(role.name, role.isSystem ?? false)}</option>
             ))}
           </select>
         </div>

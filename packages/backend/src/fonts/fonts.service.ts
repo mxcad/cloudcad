@@ -396,13 +396,14 @@ export class FontsService {
               });
             }
           }
-        } catch (fileError) {
+        } catch (fileError: unknown) {
           // 单个文件读取失败时记录日志但继续处理其他文件
-          if (fileError.code === 'EPERM' || fileError.code === 'EACCES') {
+          const err = fileError as NodeJS.ErrnoException;
+          if (err?.code === 'EPERM' || err?.code === 'EACCES') {
             this.logger.warn(`无法访问字体文件(可能正被使用): ${file}`);
           } else {
             this.logger.warn(
-              `读取字体文件信息失败: ${file}, ${fileError.message}`
+              `读取字体文件信息失败: ${file}, ${err?.message ?? String(fileError)}`
             );
           }
           continue;

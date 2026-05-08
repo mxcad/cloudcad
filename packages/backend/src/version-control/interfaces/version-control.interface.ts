@@ -33,12 +33,8 @@ export interface IVersionControl {
     filePath: string,
     revision: string | number
   ): Promise<FileContentResult>;
-  rollbackToRevision(
-    path: string,
-    revision: string | number,
-    message?: string
-  ): Promise<CommitResult>;
 }
+
 
 export interface CommitResult {
   success: boolean;

@@ -387,11 +387,6 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const availableActions = getAvailableActions(actionProps);
 
-  if (isRoot) {
-    console.log('[FileItem] actionProps:', JSON.stringify(actionProps, null, 2));
-    console.log('[FileItem] availableActions:', availableActions.map(a => a.type));
-  }
-
   // 响应式操作按钮：监听列表项宽度，空间不足时切换为菜单按钮模式
   useEffect(() => {
     if (viewMode !== 'list') return;

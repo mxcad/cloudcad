@@ -23,7 +23,7 @@
  * - StorageInfoService: 存储信息查询
  */
 
-import { Injectable, Logger, NotImplementedException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateFolderDto } from './dto/create-folder.dto';
@@ -259,8 +259,7 @@ export class FileSystemService {
       path: string;
     }
   ) {
-    // uploadFile 方法尚未迁移到子服务，暂时保留原实现
-    throw new NotImplementedException('uploadFile 方法尚未实现到子服务中');
+    return this.fileOperationsService.uploadFile(userId, parentId, file);
   }
 
   // ==================== 回收站管理 ====================

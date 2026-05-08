@@ -114,7 +114,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
       }),
       listDirectoryAtRevision: jest.fn().mockResolvedValue({ success: true, message: 'List successful', files: [] }),
       getFileContentAtRevision: jest.fn().mockResolvedValue({ success: true, message: 'Get content successful', content: Buffer.from('mock mxweb content') }),
-      rollbackToRevision: jest.fn().mockResolvedValue({ success: true, message: 'Rollback successful' }),
+
     } as unknown as jest.Mocked<IVersionControl>;
 
     mockFileSystemService = {
@@ -413,32 +413,6 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
 
       expect(result.success).toBe(true);
       expect(mockVersionControl.commitNodeDirectory).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Scenario 8: Version Rollback - Rollback to Previous Version', () => {
-    it('should successfully rollback to a previous revision', async () => {
-      mockVersionControl.rollbackToRevision.mockResolvedValue({
-        success: true,
-        message: 'Rollback to revision 1 successful',
-      });
-
-      const rollbackResult = await mockVersionControl.rollbackToRevision(
-        'test-project/file-node',
-        1,
-        'Rollback to version 1',
-        mockUserId,
-        mockUserName,
-      );
-
-      expect(rollbackResult.success).toBe(true);
-      expect(mockVersionControl.rollbackToRevision).toHaveBeenCalledWith(
-        'test-project/file-node',
-        1,
-        'Rollback to version 1',
-        mockUserId,
-        mockUserName,
-      );
     });
   });
 

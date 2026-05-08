@@ -11,6 +11,7 @@ import { MxcadCoreModule } from '../core/mxcad-core.module';
 import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadUploadModule } from '../upload/mxcad-upload.module';
 import { FileSystemModule } from '../../file-system/file-system.module';
+import { FilePermissionModule } from '../../file-system/file-permission/file-permission.module';
 import { TusService } from './tus.service';
 import { TusEventHandler } from './tus-event-handler.service';
 import { TusAuthMiddleware } from './tus-auth.middleware';
@@ -39,6 +40,7 @@ import { AppConfig } from '../../config/app.config';
     MxcadConversionModule,
     MxcadUploadModule,
     forwardRef(() => FileSystemModule),
+    FilePermissionModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService<AppConfig>) => ({

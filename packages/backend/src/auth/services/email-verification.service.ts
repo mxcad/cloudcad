@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class EmailVerificationService {
@@ -48,7 +49,6 @@ export class EmailVerificationService {
 
   async generateVerificationToken(email: string): Promise<string> {
     // 生成6位数字验证码（使用加密安全的随机数生成器）
-    const crypto = await import('crypto');
     const code = (100000 + crypto.randomInt(900000)).toString();
 
     // 存储到 Redis，配置的过期时间

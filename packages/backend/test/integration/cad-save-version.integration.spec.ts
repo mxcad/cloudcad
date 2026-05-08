@@ -122,7 +122,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
       }),
       listDirectoryAtRevision: jest.fn().mockResolvedValue({ success: true, message: '获取成功', files: [] }),
       getFileContentAtRevision: jest.fn().mockResolvedValue({ success: true, message: '获取成功', content: Buffer.from('') }),
-      rollbackToRevision: jest.fn().mockResolvedValue({ success: true, message: '回滚成功' }),
+
     } as unknown as jest.Mocked<IVersionControl>;
 
     const mockFileSystemService = {

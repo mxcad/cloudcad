@@ -201,7 +201,11 @@ export const RuntimeConfigPage: React.FC = () => {
     if (edited !== undefined) {
       return edited;
     }
-    return item.value as unknown as string | number | boolean;
+    const val = item.value;
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+      return val;
+    }
+    return String(val);
   };
 
   const isSensitiveKey = (key: string): boolean => {

@@ -11,49 +11,48 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import {
-	BadRequestException,
-	Body,
-	Controller,
-	Delete,
-	ForbiddenException,
-	Get,
-	HttpCode,
-	HttpStatus,
-	Logger,
-	NotFoundException,
-	Options,
-	Param,
-	Patch,
-	Post,
-	Query,
-	Request,
-	Res,
-	UnauthorizedException,
-	UseGuards,
-	UseInterceptors,
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  NotFoundException,
+  Options,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
 import {
-	ApiBearerAuth,
-	ApiBody,
-	ApiOperation,
-	ApiProduces,
-	ApiQuery,
-	ApiResponse,
-	ApiTags,
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiProduces,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from "@nestjs/swagger";
 import type { Request as ExpressRequest, Response } from "express";
 import * as fs from "fs";
 import * as path from "path";
 import { CsrfProtected } from "../auth/decorators/csrf-protected.decorator";
 import { OptionalAuth } from "../auth/decorators/optional-auth.decorator";
-import { Public } from "../auth/decorators/public.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RequirePermissions } from "../common/decorators/require-permissions.decorator";
 import { RequireProjectPermission } from "../common/decorators/require-project-permission.decorator";
 import { StorageInfoDto } from "../common/dto/storage-info.dto";
 import {
-	ProjectPermission,
-	SystemPermission,
+  ProjectPermission,
+  SystemPermission,
 } from "../common/enums/permissions.enum";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { RequireProjectPermissionGuard } from "../common/guards/require-project-permission.guard";
@@ -61,10 +60,10 @@ import { StorageQuotaInterceptor } from "../common/interceptors/storage-quota.in
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { PermissionService } from "../common/services/permission.service";
 import {
-	findThumbnail,
-	findThumbnailSync,
-	getMimeType,
-	THUMBNAIL_FORMATS,
+  findThumbnail,
+  findThumbnailSync,
+  getMimeType,
+  THUMBNAIL_FORMATS,
 } from "../mxcad/infra/thumbnail-utils";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { ProjectPermissionService } from "../roles/project-permission.service";
@@ -74,22 +73,22 @@ import { CreateNodeDto } from "./dto/create-node.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { AddProjectMemberDto } from "./dto/add-project-member.dto";
 import {
-	CadDownloadFormat,
-	type DownloadNodeQueryDto,
+  CadDownloadFormat,
+  type DownloadNodeQueryDto,
 } from "./dto/download-node.dto";
 import {
-	BatchOperationResponseDto,
-	FileSystemNodeDto,
-	NodeListResponseDto,
-	NodeTreeResponseDto,
-	OperationSuccessDto,
-	PermissionCheckResponseDto,
-	ProjectDto,
-	ProjectListResponseDto,
-	ProjectMemberDto,
-	ProjectTrashResponseDto,
-	ProjectUserPermissionsDto,
-	TrashListResponseDto,
+  BatchOperationResponseDto,
+  FileSystemNodeDto,
+  NodeListResponseDto,
+  NodeTreeResponseDto,
+  OperationSuccessDto,
+  PermissionCheckResponseDto,
+  ProjectDto,
+  ProjectListResponseDto,
+  ProjectMemberDto,
+  ProjectTrashResponseDto,
+  ProjectUserPermissionsDto,
+  TrashListResponseDto,
 } from "./dto/file-system-response.dto";
 import { MoveNodeDto } from "./dto/move-node.dto";
 import { QueryChildrenDto } from "./dto/query-children.dto";
@@ -113,50 +112,66 @@ import { SearchService } from "./search/search.service";
 @ApiTags("文件系统")
 @ApiBearerAuth()
 export class FileSystemController {
-	private readonly logger = new Logger(FileSystemController.name);
+  private readonly logger = new Logger(FileSystemController.name);
 
-	constructor(
-		private readonly fileSystemService: FileSystemService,
-		private readonly fileTreeService: FileTreeService,
-		private readonly searchService: SearchService,
-		private readonly projectPermissionService: ProjectPermissionService,
-		private readonly systemPermissionService: PermissionService,
-		private readonly fileDownloadHandler: FileDownloadHandlerService,
-	) {}
+  constructor(
+    private readonly fileSystemService: FileSystemService,
+    private readonly fileTreeService: FileTreeService,
+    private readonly searchService: SearchService,
+    private readonly projectPermissionService: ProjectPermissionService,
+    private readonly systemPermissionService: PermissionService,
+    private readonly fileDownloadHandler: FileDownloadHandlerService,
+  ) {}
 
-	@Post("projects")
-	@RequirePermissions([SystemPermission.PROJECT_CREATE])
-	@CsrfProtected()
-	@ApiOperation({ summary: "创建项目" })
-	@ApiResponse({
-		status: 201,
-		description: "项目创建成功",
-		type: ProjectDto,
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	@ApiResponse({ status: 403, description: "无权限创建项目" })
-	async createProject(
-		@Request() req: ExpressRequest & { user: { id: string } },
-		@Body() dto: CreateProjectDto,
-	) {
-		return this.fileSystemService.createProject(req.user.id, dto);
-	}
+  // ==================== 项目 CRUD ====================
 
-	@Get("projects")
-	@ApiOperation({ summary: "获取项目列表" })
-	@ApiResponse({
-		status: 200,
-		description: "获取项目列表成功",
-		type: ProjectListResponseDto,
-	})
-	async getProjects(
-		@Request() req: ExpressRequest & { user: { id: string } },
-		@Query() query?: QueryProjectsDto,
-	) {
-		return this.fileSystemService.getUserProjects(req.user.id, query);
-	}
+  @Post("projects")
+  @RequirePermissions([SystemPermission.PROJECT_CREATE])
+  @CsrfProtected()
+  @ApiOperation({ summary: "创建项目" })
+  @ApiResponse({
+    status: 201,
+    description: "项目创建成功",
+    type: ProjectDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 403, description: "无权限创建项目" })
+  async createProject(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Body() dto: CreateProjectDto,
+  ) {
+    return this.fileSystemService.createProject(req.user.id, dto);
+  }
 
-	@Get('personal-space')
+  @Get("projects")
+  @ApiOperation({ summary: "获取项目列表" })
+  @ApiResponse({
+    status: 200,
+    description: "获取项目列表成功",
+    type: ProjectListResponseDto,
+  })
+  async getProjects(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Query() query?: QueryProjectsDto,
+  ) {
+    return this.fileSystemService.getUserProjects(req.user.id, query);
+  }
+
+  @Get("projects/trash")
+  @ApiOperation({ summary: "获取已删除项目列表" })
+  @ApiResponse({
+    status: 200,
+    description: "获取已删除项目列表成功",
+    type: ProjectListResponseDto,
+  })
+  async getDeletedProjects(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Query() query?: QueryProjectsDto,
+  ) {
+    return this.fileSystemService.getUserDeletedProjects(req.user.id, query);
+  }
+
+  @Get('personal-space')
   @ApiOperation({ summary: '获取当前用户的私人空间' })
   @ApiResponse({
     status: 200,
@@ -169,7 +184,7 @@ export class FileSystemController {
     return this.fileSystemService.getPersonalSpace(req.user.id);
   }
 
-	@Get('projects/:projectId')
+  @Get('projects/:projectId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取项目详情' })
   @ApiResponse({
@@ -182,7 +197,47 @@ export class FileSystemController {
     return this.fileSystemService.getProject(projectId);
   }
 
-	@Get('trash')
+  @Patch('projects/:projectId')
+  @RequireProjectPermission(ProjectPermission.PROJECT_UPDATE)
+  @CsrfProtected()
+  @ApiOperation({ summary: '更新项目信息' })
+  @ApiResponse({
+    status: 200,
+    description: '更新项目信息成功',
+    type: ProjectDto,
+  })
+  @ApiResponse({ status: 404, description: '项目不存在' })
+  async updateProject(
+    @Param('projectId') projectId: string,
+    @Body() dto: UpdateNodeDto,
+  ) {
+    return this.fileSystemService.updateProject(projectId, dto);
+  }
+
+  @Delete('projects/:projectId')
+  @RequireProjectPermission(ProjectPermission.PROJECT_DELETE)
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '删除项目' })
+  @ApiResponse({
+    status: 200,
+    description: '删除项目成功',
+    type: OperationSuccessDto,
+  })
+  @ApiResponse({ status: 404, description: '项目不存在' })
+  async deleteProject(
+    @Param('projectId') projectId: string,
+    @Query('permanently') permanently?: boolean,
+  ) {
+    return this.fileSystemService.deleteProject(
+      projectId,
+      permanently ?? false,
+    );
+  }
+
+  // ==================== 回收站管理 ====================
+
+  @Get('trash')
   @ApiOperation({ summary: '获取回收站列表' })
   @ApiResponse({
     status: 200,
@@ -193,33 +248,33 @@ export class FileSystemController {
     return this.fileSystemService.getTrashItems(req.user.id);
   }
 
-	@Post("trash/restore")
-	@RequirePermissions([SystemPermission.PROJECT_CREATE])
-	@CsrfProtected()
-	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: "恢复回收站项目" })
-	@ApiBody({
-		schema: {
-			type: "object",
-			properties: {
-				itemIds: { type: "array", items: { type: "string" }, description: "要恢复的回收站项ID列表" },
-			},
-			required: ["itemIds"],
-		},
-	})
-	@ApiResponse({
-		status: 200,
-		description: "恢复项目成功",
-		type: BatchOperationResponseDto,
-	})
-	async restoreTrashItems(
-		@Body() body: { itemIds: string[] },
-		@Request() req: ExpressRequest & { user: { id: string } },
-	) {
-		return this.fileSystemService.restoreTrashItems(body.itemIds, req.user.id);
-	}
+  @Post("trash/restore")
+  @RequirePermissions([SystemPermission.PROJECT_CREATE])
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "恢复回收站项目" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        itemIds: { type: "array", items: { type: "string" }, description: "要恢复的回收站项ID列表" },
+      },
+      required: ["itemIds"],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: "恢复项目成功",
+    type: BatchOperationResponseDto,
+  })
+  async restoreTrashItems(
+    @Body() body: { itemIds: string[] },
+    @Request() req: ExpressRequest & { user: { id: string } },
+  ) {
+    return this.fileSystemService.restoreTrashItems(body.itemIds, req.user.id);
+  }
 
-	@Delete('trash/items')
+  @Delete('trash/items')
   @RequirePermissions([SystemPermission.PROJECT_CREATE])
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
@@ -242,7 +297,7 @@ export class FileSystemController {
     return this.fileSystemService.permanentlyDeleteTrashItems(body.itemIds);
   }
 
-	@Delete('trash')
+  @Delete('trash')
   @RequirePermissions([SystemPermission.PROJECT_CREATE])
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
@@ -273,56 +328,75 @@ export class FileSystemController {
     return this.fileSystemService.getProjectTrash(projectId, req.user.id, query);
   }
 
-	@Post("nodes")
-	@RequireProjectPermission(ProjectPermission.FILE_CREATE)
-	@CsrfProtected()
-	@ApiOperation({ summary: "创建节点（文件或文件夹）" })
-	@ApiResponse({
-		status: 201,
-		description: "节点创建成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiBody({
-		schema: {
-			type: "object",
-			properties: {
-				name: { type: "string", description: "节点名称" },
-				parentId: { type: "string", description: "父节点ID（可选）" },
-				description: { type: "string", description: "节点描述（可选）" },
-			},
-			required: ["name"],
-		},
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	async createNode(
-		@Request() req: ExpressRequest & { user: { id: string } },
-		@Body() dto: CreateNodeDto,
-	) {
-		return this.fileSystemService.createNode(req.user.id, dto.name, {
-			parentId: dto.parentId,
-			description: dto.description,
-		});
-	}
+  @Delete('projects/:projectId/trash')
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '清空项目回收站' })
+  @ApiResponse({
+    status: 200,
+    description: '项目回收站已清空',
+    type: OperationSuccessDto,
+  })
+  async clearProjectTrash(
+    @Request() req,
+    @Param('projectId') projectId: string,
+  ) {
+    return this.fileSystemService.clearProjectTrash(projectId, req.user.id);
+  }
 
-	@Post("nodes/:parentId/folders")
-	@RequireProjectPermission(ProjectPermission.FILE_CREATE)
-	@CsrfProtected()
-	@ApiOperation({ summary: "创建文件夹" })
-	@ApiResponse({
-		status: 201,
-		description: "文件夹创建成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	async createFolder(
-		@Request() req: ExpressRequest & { user: { id: string } },
-		@Param('parentId') parentId: string,
-		@Body() dto: CreateFolderDto,
-	) {
-		return this.fileSystemService.createFolder(req.user.id, parentId, dto);
-	}
+  // ==================== 节点操作 ====================
 
-	@Get('nodes/:nodeId/root')
+  @Post("nodes")
+  @RequireProjectPermission(ProjectPermission.FILE_CREATE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "创建节点（文件或文件夹）" })
+  @ApiResponse({
+    status: 201,
+    description: "节点创建成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "节点名称" },
+        parentId: { type: "string", description: "父节点ID（可选）" },
+        description: { type: "string", description: "节点描述（可选）" },
+      },
+      required: ["name"],
+    },
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  async createNode(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Body() dto: CreateNodeDto,
+  ) {
+    return this.fileSystemService.createNode(req.user.id, dto.name, {
+      parentId: dto.parentId,
+      description: dto.description,
+    });
+  }
+
+  @Post("nodes/:parentId/folders")
+  @RequireProjectPermission(ProjectPermission.FILE_CREATE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "创建文件夹" })
+  @ApiResponse({
+    status: 201,
+    description: "文件夹创建成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  async createFolder(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Param('parentId') parentId: string,
+    @Body() dto: CreateFolderDto,
+  ) {
+    return this.fileSystemService.createFolder(req.user.id, parentId, dto);
+  }
+
+  @Get('nodes/:nodeId/root')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取节点的根节点' })
   @ApiResponse({ status: 200, description: '获取根节点成功', type: FileSystemNodeDto })
@@ -331,25 +405,25 @@ export class FileSystemController {
     return this.fileSystemService.getRootNode(nodeId);
   }
 
-	@Post("nodes/:nodeId/restore")
-	@RequirePermissions([SystemPermission.PROJECT_CREATE])
-	@CsrfProtected()
-	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: "恢复单个节点" })
-	@ApiResponse({
-		status: 200,
-		description: "节点恢复成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async restoreNode(
-		@Param('nodeId') nodeId: string,
-		@Request() req: ExpressRequest & { user: { id: string } },
-	) {
-		return this.fileSystemService.restoreNode(nodeId, req.user.id);
-	}
+  @Post("nodes/:nodeId/restore")
+  @RequirePermissions([SystemPermission.PROJECT_CREATE])
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "恢复单个节点" })
+  @ApiResponse({
+    status: 200,
+    description: "节点恢复成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async restoreNode(
+    @Param('nodeId') nodeId: string,
+    @Request() req: ExpressRequest & { user: { id: string } },
+  ) {
+    return this.fileSystemService.restoreNode(nodeId, req.user.id);
+  }
 
-	@Get('nodes/:nodeId')
+  @Get('nodes/:nodeId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取节点详情' })
   @ApiResponse({
@@ -362,121 +436,177 @@ export class FileSystemController {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
-	@Get("nodes/:nodeId/children")
-	@RequireProjectPermission(ProjectPermission.FILE_OPEN)
-	@ApiOperation({ summary: "获取子节点列表" })
-	@ApiResponse({
-		status: 200,
-		description: "获取子节点列表成功",
-		type: NodeListResponseDto,
-	})
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async getChildren(
-		@Param('nodeId') nodeId: string,
-		@Request() req,
-		@Query() query?: QueryChildrenDto,
-	) {
-		return this.fileSystemService.getChildren(nodeId, req.user.id, query);
-	}
+  @Get("nodes/:nodeId/children")
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @ApiOperation({ summary: "获取子节点列表" })
+  @ApiResponse({
+    status: 200,
+    description: "获取子节点列表成功",
+    type: NodeListResponseDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async getChildren(
+    @Param('nodeId') nodeId: string,
+    @Request() req,
+    @Query() query?: QueryChildrenDto,
+  ) {
+    return this.fileSystemService.getChildren(nodeId, req.user.id, query);
+  }
 
-	@Patch("nodes/:nodeId")
-	@RequireProjectPermission(ProjectPermission.FILE_EDIT)
-	@CsrfProtected()
-	@ApiOperation({ summary: "更新节点" })
-	@ApiResponse({
-		status: 200,
-		description: "更新节点成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async updateNode(
-		@Param('nodeId') nodeId: string,
-		@Body() dto: UpdateNodeDto,
-	) {
-		return this.fileSystemService.updateNode(nodeId, dto);
-	}
+  @Patch("nodes/:nodeId")
+  @RequireProjectPermission(ProjectPermission.FILE_EDIT)
+  @CsrfProtected()
+  @ApiOperation({ summary: "更新节点" })
+  @ApiResponse({
+    status: 200,
+    description: "更新节点成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async updateNode(
+    @Param('nodeId') nodeId: string,
+    @Body() dto: UpdateNodeDto,
+  ) {
+    return this.fileSystemService.updateNode(nodeId, dto);
+  }
 
-	@Delete("nodes/:nodeId")
-	@RequireProjectPermission(ProjectPermission.FILE_DELETE)
-	@CsrfProtected()
-	@HttpCode(HttpStatus.OK)
-	@ApiOperation({ summary: "删除节点" })
-	@ApiResponse({
-		status: 200,
-		description: "删除节点成功",
-		type: OperationSuccessDto,
-	})
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async deleteNode(
-		@Param('nodeId') nodeId: string,
-		@Body() body?: { permanently?: boolean },
-		@Query('permanently') permanentlyQuery?: boolean,
-	) {
-		const permanently = body?.permanently ?? permanentlyQuery ?? false;
-		return this.fileSystemService.deleteNode(nodeId, permanently);
-	}
+  @Delete("nodes/:nodeId")
+  @RequireProjectPermission(ProjectPermission.FILE_DELETE)
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "删除节点" })
+  @ApiResponse({
+    status: 200,
+    description: "删除节点成功",
+    type: OperationSuccessDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async deleteNode(
+    @Param('nodeId') nodeId: string,
+    @Body() body?: { permanently?: boolean },
+    @Query('permanently') permanentlyQuery?: boolean,
+  ) {
+    const permanently = body?.permanently ?? permanentlyQuery ?? false;
+    return this.fileSystemService.deleteNode(nodeId, permanently);
+  }
 
-	@Post("nodes/:nodeId/move")
-	@RequireProjectPermission(ProjectPermission.FILE_MOVE)
-	@CsrfProtected()
-	@ApiOperation({ summary: "移动节点" })
-	@ApiResponse({
-		status: 200,
-		description: "移动节点成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
-		return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
-	}
+  @Post("nodes/:nodeId/move")
+  @RequireProjectPermission(ProjectPermission.FILE_MOVE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "移动节点" })
+  @ApiResponse({
+    status: 200,
+    description: "移动节点成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
+    return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
+  }
 
-	@Post("nodes/:nodeId/copy")
-	@RequireProjectPermission(ProjectPermission.FILE_COPY)
-	@CsrfProtected()
-	@ApiOperation({ summary: "复制节点" })
-	@ApiResponse({
-		status: 201,
-		description: "复制节点成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
-		return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
-	}
+  @Post("nodes/:nodeId/copy")
+  @RequireProjectPermission(ProjectPermission.FILE_COPY)
+  @CsrfProtected()
+  @ApiOperation({ summary: "复制节点" })
+  @ApiResponse({
+    status: 201,
+    description: "复制节点成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
+    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
+  }
 
-	@Get("quota")
-	@ApiOperation({ summary: "获取存储配额信息" })
-	@ApiResponse({
-		status: 200,
-		description: "获取配额信息成功",
-		type: StorageInfoDto,
-	})
-	async getStorageQuota(@Request() req, @Query('nodeId') nodeId?: string, @Query('userId') userId?: string) {
-		if (nodeId) {
-			return this.fileSystemService.getNodeStorageQuota(req.user.id, nodeId);
-		}
-		const targetUserId = userId || req.user.id;
-		return this.fileSystemService.getUserStorageInfo(targetUserId);
-	}
+  // ==================== 文件上传 ====================
 
-	@Post("quota/update")
-	@RequirePermissions([SystemPermission.STORAGE_QUOTA])
-	@CsrfProtected()
-	@ApiOperation({ summary: "更新节点存储配额" })
-	@ApiResponse({
-		status: 200,
-		description: "更新配额成功",
-		type: FileSystemNodeDto,
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	@ApiResponse({ status: 401, description: "未登录" })
-	@ApiResponse({ status: 403, description: "无权限更新配额" })
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	async updateStorageQuota(@Request() req, @Body() dto: UpdateStorageQuotaDto) {
-		return this.fileSystemService.updateNodeStorageQuota(dto.nodeId, dto.quota);
-	}
+  @Post("files/upload")
+  @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
+  @CsrfProtected()
+  @ApiOperation({ summary: "上传文件" })
+  @ApiResponse({
+    status: 201,
+    description: "文件上传成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误或文件类型不支持" })
+  async uploadFile(
+    @Request() req,
+    @Body() dto: { parentId: string; fileName: string; fileContent?: string },
+  ) {
+    const { parentId, fileName, fileContent } = dto;
+    if (!fileName) {
+      throw new BadRequestException("缺少文件名称");
+    }
 
-	@Get('projects/:projectId/members')
+    if (!parentId) {
+      throw new BadRequestException("缺少父节点ID");
+    }
+
+    const parentNode = await this.fileSystemService.getNode(parentId);
+    if (!parentNode) {
+      throw new NotFoundException("父节点不存在");
+    }
+
+    if (!parentNode.isFolder) {
+      throw new BadRequestException("只能上传文件到文件夹");
+    }
+
+    let buffer: Buffer;
+    if (fileContent) {
+      buffer = Buffer.from(fileContent, "base64");
+    } else {
+      buffer = Buffer.from(`文件内容: ${fileName}`, "utf-8");
+    }
+
+    const mockFile = {
+      originalname: fileName,
+      filename: `${Date.now()}-${fileName}`,
+      mimetype: this.getMimeType(fileName),
+      size: buffer.length,
+      buffer: buffer,
+    } as Express.Multer.File;
+
+    return this.fileSystemService.uploadFile(req.user.id, parentId, mockFile);
+  }
+
+  // ==================== 配额管理 ====================
+
+  @Get("quota")
+  @ApiOperation({ summary: "获取存储配额信息" })
+  @ApiResponse({
+    status: 200,
+    description: "获取配额信息成功",
+    type: StorageInfoDto,
+  })
+  async getStorageQuota(@Request() req, @Query('nodeId') nodeId?: string, @Query('userId') userId?: string) {
+    if (nodeId) {
+      return this.fileSystemService.getNodeStorageQuota(req.user.id, nodeId);
+    }
+    const targetUserId = userId || req.user.id;
+    return this.fileSystemService.getUserStorageInfo(targetUserId);
+  }
+
+  @Post("quota/update")
+  @RequirePermissions([SystemPermission.STORAGE_QUOTA])
+  @CsrfProtected()
+  @ApiOperation({ summary: "更新节点存储配额" })
+  @ApiResponse({
+    status: 200,
+    description: "更新配额成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限更新配额" })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async updateStorageQuota(@Request() req, @Body() dto: UpdateStorageQuotaDto) {
+    return this.fileSystemService.updateNodeStorageQuota(dto.nodeId, dto.quota);
+  }
+
+  // ==================== 项目成员管理 ====================
+
+  @Get('projects/:projectId/members')
   @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
   @ApiOperation({ summary: '获取项目成员列表' })
   @ApiResponse({
@@ -491,500 +621,619 @@ export class FileSystemController {
     return this.fileSystemService.getProjectMembers(projectId);
   }
 
-	@Post("projects/:projectId/members")
-	@RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
-	@CsrfProtected()
-	@ApiOperation({ summary: "添加项目成员" })
-	@ApiResponse({
-		status: 201,
-		description: "添加成员成功",
-		type: ProjectMemberDto,
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	@ApiResponse({ status: 401, description: "未登录" })
-	@ApiResponse({ status: 403, description: "无权限添加成员" })
-	@ApiResponse({ status: 404, description: "项目或用户不存在" })
-	async addProjectMember(
-		@Param('projectId') projectId: string,
-		@Body() dto: AddProjectMemberDto,
-		@Request() req,
-	) {
-		const { userId, projectRoleId } = dto;
-		return this.fileSystemService.addProjectMember(
-			projectId,
-			userId,
-			projectRoleId,
-			req.user.id,
-		);
-	}
+  @Post("projects/:projectId/members")
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "添加项目成员" })
+  @ApiResponse({
+    status: 201,
+    description: "添加成员成功",
+    type: ProjectMemberDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限添加成员" })
+  @ApiResponse({ status: 404, description: "项目或用户不存在" })
+  async addProjectMember(
+    @Param('projectId') projectId: string,
+    @Body() dto: AddProjectMemberDto,
+    @Request() req,
+  ) {
+    const { userId, projectRoleId } = dto;
+    return this.fileSystemService.addProjectMember(
+      projectId,
+      userId,
+      projectRoleId,
+      req.user.id,
+    );
+  }
 
-	@Patch("projects/:projectId/members/:userId")
-	@RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
-	@CsrfProtected()
-	@ApiOperation({ summary: "更新项目成员角色" })
-	@ApiResponse({
-		status: 200,
-		description: "更新成员角色成功",
-		type: ProjectMemberDto,
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	@ApiResponse({ status: 401, description: "未登录" })
-	@ApiResponse({ status: 403, description: "无权限修改成员角色" })
-	@ApiBody({
-		schema: {
-			type: "object",
-			properties: {
-				projectRoleId: { type: "string", description: "项目角色ID" },
-				roleId: { type: "string", description: "角色ID（兼容旧字段）" },
-				roleName: { type: "string", description: "角色名称" },
-			},
-		},
-	})
-	@ApiResponse({ status: 404, description: "项目或成员不存在" })
-	async updateProjectMember(
-		@Param('projectId') projectId: string,
-		@Param('userId') userId: string,
-		@Body() dto: UpdateProjectMemberDto & { roleId?: string },
-		@Request() req,
-	) {
-		const projectRoleId = dto.projectRoleId || dto.roleId;
-		if (!projectRoleId) {
-			throw new BadRequestException("projectRoleId 或 roleId 不能为空");
-		}
-		return this.fileSystemService.updateProjectMember(
-			projectId,
-			userId,
-			projectRoleId,
-			req.user.id,
-		);
-	}
+  @Patch("projects/:projectId/members/:userId")
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
+  @CsrfProtected()
+  @ApiOperation({ summary: "更新项目成员角色" })
+  @ApiResponse({
+    status: 200,
+    description: "更新成员角色成功",
+    type: ProjectMemberDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限修改成员角色" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        projectRoleId: { type: "string", description: "项目角色ID" },
+        roleId: { type: "string", description: "角色ID（兼容旧字段）" },
+        roleName: { type: "string", description: "角色名称" },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: "项目或成员不存在" })
+  async updateProjectMember(
+    @Param('projectId') projectId: string,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateProjectMemberDto & { roleId?: string },
+    @Request() req,
+  ) {
+    const projectRoleId = dto.projectRoleId || dto.roleId;
+    if (!projectRoleId) {
+      throw new BadRequestException("projectRoleId 或 roleId 不能为空");
+    }
+    return this.fileSystemService.updateProjectMember(
+      projectId,
+      userId,
+      projectRoleId,
+      req.user.id,
+    );
+  }
 
-	@Delete("projects/:projectId/members/:userId")
-	@RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
-	@CsrfProtected()
-	@ApiOperation({ summary: "移除项目成员" })
-	@ApiResponse({
-		status: 200,
-		description: "移除成员成功",
-		type: OperationSuccessDto,
-	})
-	@ApiResponse({ status: 401, description: "未登录" })
-	@ApiResponse({ status: 403, description: "无权限移除成员" })
-	@ApiResponse({ status: 404, description: "项目或成员不存在" })
-	@HttpCode(HttpStatus.OK)
-	async removeProjectMember(
-		@Param('projectId') projectId: string,
-		@Param('userId') userId: string,
-		@Request() req,
-	) {
-		return this.fileSystemService.removeProjectMember(
-			projectId,
-			userId,
-			req.user.id,
-		);
-	}
+  @Delete("projects/:projectId/members/:userId")
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "移除项目成员" })
+  @ApiResponse({
+    status: 200,
+    description: "移除成员成功",
+    type: OperationSuccessDto,
+  })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限移除成员" })
+  @ApiResponse({ status: 404, description: "项目或成员不存在" })
+  @HttpCode(HttpStatus.OK)
+  async removeProjectMember(
+    @Param('projectId') projectId: string,
+    @Param('userId') userId: string,
+    @Request() req,
+  ) {
+    return this.fileSystemService.removeProjectMember(
+      projectId,
+      userId,
+      req.user.id,
+    );
+  }
 
-	@Get("nodes/:nodeId/thumbnail")
-	@OptionalAuth()
-	@ApiOperation({ summary: "获取文件节点缩略图" })
-	@ApiProduces("image/jpeg")
-	@ApiResponse({ status: 200, description: "获取缩略图成功" })
-	@ApiResponse({ status: 204, description: "缩略图不存在" })
-	@ApiResponse({ status: 401, description: "未登录（项目文件需要登录）" })
-	@ApiResponse({ status: 403, description: "无权限访问该文件" })
-	@ApiResponse({ status: 404, description: "文件节点不存在" })
-	async getThumbnail(
-		@Param('nodeId') nodeId: string,
-		@Request() req: ExpressRequest,
-		@Res() res: Response,
-	) {
-		const userId = (req.user as { id?: string })?.id;
+  @Post("projects/:projectId/transfer")
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "转移项目所有权" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        newOwnerId: { type: "string", description: "新所有者用户ID" },
+      },
+      required: ["newOwnerId"],
+    },
+  })
+  @ApiResponse({ status: 200, description: "转移所有权成功" })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限转移项目所有权" })
+  @ApiResponse({ status: 404, description: "项目或用户不存在" })
+  async transferProject(
+    @Param('projectId') projectId: string,
+    @Body() body: { newOwnerId: string },
+    @Request() req,
+  ) {
+    return this.fileSystemService.transferProjectOwnership(
+      projectId,
+      body.newOwnerId,
+      req.user.id,
+    );
+  }
 
-		const node = await this.fileSystemService.getNode(nodeId);
-		if (!node) {
-			throw new NotFoundException("文件节点不存在");
-		}
+  @Post("projects/:projectId/members/batch")
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "批量添加项目成员" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        members: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              userId: { type: "string", description: "用户ID" },
+              projectRoleId: { type: "string", description: "项目角色ID" },
+            },
+          },
+          description: "要添加的成员列表",
+        },
+      },
+      required: ["members"],
+    },
+  })
+  @ApiResponse({ status: 201, description: "批量添加成员成功" })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限添加成员" })
+  @ApiResponse({ status: 404, description: "项目不存在" })
+  async addProjectMembersBatch(
+    @Param('projectId') projectId: string,
+    @Body() body: { members: Array<{ userId: string; projectRoleId: string }> },
+    @Request() req,
+  ) {
+    return this.fileSystemService.batchAddProjectMembers(
+      projectId,
+      body.members,
+      req.user.id,
+    );
+  }
 
-		const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
-		const isLibraryNode = libraryKey !== null;
+  @Patch("projects/:projectId/members/batch")
+  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_ASSIGN)
+  @CsrfProtected()
+  @ApiOperation({ summary: "批量更新项目成员角色" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        members: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              userId: { type: "string", description: "用户ID" },
+              projectRoleId: { type: "string", description: "项目角色ID" },
+            },
+          },
+          description: "要更新的成员列表",
+        },
+      },
+      required: ["members"],
+    },
+  })
+  @ApiResponse({ status: 200, description: "批量更新成员角色成功" })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限修改成员角色" })
+  @ApiResponse({ status: 404, description: "项目或成员不存在" })
+  async updateProjectMembersBatch(
+    @Param('projectId') projectId: string,
+    @Body() body: { members: Array<{ userId: string; projectRoleId: string }> },
+    @Request() req,
+  ) {
+    return this.fileSystemService.batchUpdateProjectMembers(
+      projectId,
+      body.members,
+      req.user.id,
+    );
+  }
 
-		if (!userId) {
-			if (isLibraryNode) {
-			} else {
-				throw new UnauthorizedException("未登录");
-			}
-		} else {
-			if (isLibraryNode) {
-				const requiredPermission =
-					libraryKey === "drawing"
-						? SystemPermission.LIBRARY_DRAWING_MANAGE
-						: SystemPermission.LIBRARY_BLOCK_MANAGE;
+  // ==================== 缩略图 ====================
 
-				const hasPermission =
-					await this.systemPermissionService.checkSystemPermission(
-						userId,
-						requiredPermission as any,
-					);
+  @Get("nodes/:nodeId/thumbnail")
+  @OptionalAuth()
+  @ApiOperation({ summary: "获取文件节点缩略图" })
+  @ApiProduces("image/jpeg")
+  @ApiResponse({ status: 200, description: "获取缩略图成功" })
+  @ApiResponse({ status: 204, description: "缩略图不存在" })
+  @ApiResponse({ status: 401, description: "未登录（项目文件需要登录）" })
+  @ApiResponse({ status: 403, description: "无权限访问该文件" })
+  @ApiResponse({ status: 404, description: "文件节点不存在" })
+  async getThumbnail(
+    @Param('nodeId') nodeId: string,
+    @Request() req: ExpressRequest,
+    @Res() res: Response,
+  ) {
+    const userId = (req.user as { id?: string })?.id;
 
-				if (!hasPermission) {
-					throw new ForbiddenException("无权限访问该资源库");
-				}
-			} else {
-				const hasAccess = await this.fileSystemService.checkFileAccess(
-					nodeId,
-					userId,
-				);
-				if (!hasAccess) {
-					throw new ForbiddenException("无权限访问该文件");
-				}
-			}
-		}
+    const node = await this.fileSystemService.getNode(nodeId);
+    if (!node) {
+      throw new NotFoundException("文件节点不存在");
+    }
 
-		if (node.isFolder || !node.path) {
-			throw new NotFoundException("文件节点不存在");
-		}
+    const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
+    const isLibraryNode = libraryKey !== null;
 
-		const nodeFullPath = this.fileSystemService.getFullPath(node.path);
-		const nodeDir = path.dirname(nodeFullPath);
-		const thumbnail = findThumbnailSync(nodeDir);
+    if (!userId) {
+      if (isLibraryNode) {
+        // 资源库允许未登录用户查看缩略图
+      } else {
+        throw new UnauthorizedException("未登录");
+      }
+    } else {
+      // 使用统一的文件访问权限检查（适用于资源库和项目文件）
+      const hasAccess = await this.fileSystemService.checkFileAccess(
+        nodeId,
+        userId,
+      );
+      if (!hasAccess) {
+        throw new ForbiddenException("无权限访问该文件");
+      }
+    }
 
-		if (!thumbnail) {
-			return res.status(204).end();
-		}
+    if (node.isFolder || !node.path) {
+      throw new NotFoundException("文件节点不存在");
+    }
 
-		const thumbnailPath = thumbnail.path;
+    const nodeFullPath = this.fileSystemService.getFullPath(node.path);
+    const nodeDir = path.dirname(nodeFullPath);
+    const thumbnail = findThumbnailSync(nodeDir);
 
-		const stats = fs.statSync(thumbnailPath);
-		if (stats.isDirectory()) {
-			this.logger.warn(`缩略图路径是目录而非文件: ${thumbnailPath}`);
-			return res.status(204).end();
-		}
+    if (!thumbnail) {
+      return res.status(204).end();
+    }
 
-		const fileStream = fs.createReadStream(thumbnailPath);
+    const thumbnailPath = thumbnail.path;
 
-		res.setHeader("Content-Type", thumbnail.mimeType);
-		res.setHeader("Cache-Control", "public, max-age=3600");
+    const stats = fs.statSync(thumbnailPath);
+    if (stats.isDirectory()) {
+      this.logger.warn(`缩略图路径是目录而非文件: ${thumbnailPath}`);
+      return res.status(204).end();
+    }
 
-		fileStream.pipe(res);
+    const fileStream = fs.createReadStream(thumbnailPath);
 
-		fileStream.on("error", (error) => {
-			this.logger.error(`读取缩略图失败: ${error.message}`, error.stack);
-			if (!res.headersSent) {
-				res.status(500).json({ message: "读取缩略图失败" });
-			}
-		});
-	}
+    res.setHeader("Content-Type", thumbnail.mimeType);
+    res.setHeader("Cache-Control", "public, max-age=3600");
 
-	@Options("nodes/:nodeId/download")
-	@ApiOperation({ summary: "下载接口 OPTIONS 预检" })
-	async downloadNodeOptions(
-		@Request() req: ExpressRequest,
-		@Res() res: Response,
-	) {
-		const origin = req.headers.origin || "*";
-		res.setHeader("Access-Control-Allow-Origin", origin);
-		res.setHeader("Access-Control-Allow-Credentials", "true");
-		res.setHeader(
-			"Access-Control-Allow-Methods",
-			"GET, POST, PUT, DELETE, OPTIONS",
-		);
-		res.setHeader(
-			"Access-Control-Allow-Headers",
-			"Content-Type, Authorization",
-		);
-		res.setHeader("Access-Control-Max-Age", "86400");
-		res.status(204).end();
-	}
+    fileStream.pipe(res);
 
-	@Get("nodes/:nodeId/download")
-	@ApiOperation({ summary: "下载节点（文件或目录）" })
-	@ApiProduces("application/octet-stream")
-	@ApiResponse({ status: 200, description: "下载成功" })
-	@ApiResponse({ status: 401, description: "未登录" })
-	@ApiResponse({ status: 403, description: "无权限访问该节点" })
-	@ApiResponse({ status: 404, description: "节点不存在" })
-	@RequireProjectPermission(ProjectPermission.FILE_DOWNLOAD)
-	async downloadNode(
-		@Param('nodeId') nodeId: string,
-		@Request() req: ExpressRequest,
-		@Res() res: Response,
-	) {
-		const userId = (req.user as { id: string }).id;
-		const clientIp = req.ip || req.connection.remoteAddress;
+    fileStream.on("error", (error) => {
+      this.logger.error(`读取缩略图失败: ${error.message}`, error.stack);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "读取缩略图失败" });
+      }
+    });
+  }
 
-		await this.fileDownloadHandler.handleDownload(nodeId, userId, res, {
-			clientIp,
-		});
-	}
+  // ==================== 文件下载 ====================
 
-	@Get("nodes/:nodeId/download-with-format")
-	@ApiOperation({
-		summary: "下载节点（支持多格式转换）",
-		description:
-			"支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。",
-	})
-	@ApiQuery({
-		name: "format",
-		enum: Object.values(CadDownloadFormat),
-		enumName: "CadDownloadFormat",
-		required: false,
-		description:
-			"下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）",
-	})
-	@ApiQuery({
-		name: "width",
-		required: false,
-		description: "PDF 输出宽度（像素），仅当 format=pdf 时有效，默认：2000",
-	})
-	@ApiQuery({
-		name: "height",
-		required: false,
-		description: "PDF 输出高度（像素），仅当 format=pdf 时有效，默认：2000",
-	})
-	@ApiQuery({
-		name: "colorPolicy",
-		required: false,
-		description:
-			"PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono",
-	})
-	@ApiProduces("application/octet-stream")
-	@ApiResponse({ status: 200, description: "下载成功" })
-	@ApiResponse({ status: 400, description: "参数错误或转换失败" })
-	@ApiResponse({ status: 401, description: "未登录" })
-	@ApiResponse({ status: 403, description: "无权访问该节点" })
-	@ApiResponse({ status: 404, description: "节点不存在或文件不存在" })
-	async downloadNodeWithFormat(
-		@Param('nodeId') nodeId: string,
-		@Request() req: ExpressRequest,
-		@Res() res: Response,
-		@Query() query: DownloadNodeQueryDto,
-	) {
-		const userId =
-			(req.user as { id?: string })?.id ||
-			(req.session as { userId?: string })?.userId;
-		const clientIp =
-			req.ip || (req.connection as { remoteAddress?: string })?.remoteAddress;
+  @Options("nodes/:nodeId/download")
+  @ApiOperation({ summary: "下载接口 OPTIONS 预检" })
+  async downloadNodeOptions(
+    @Request() req: ExpressRequest,
+    @Res() res: Response,
+  ) {
+    const origin = req.headers.origin || "*";
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
+    res.setHeader("Access-Control-Max-Age", "86400");
+    res.status(204).end();
+  }
 
-		if (!userId) {
-			throw new UnauthorizedException("未登录");
-		}
+  @Get("nodes/:nodeId/download")
+  @ApiOperation({ summary: "下载节点（文件或目录）" })
+  @ApiProduces("application/octet-stream")
+  @ApiResponse({ status: 200, description: "下载成功" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权限访问该节点" })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  @RequireProjectPermission(ProjectPermission.FILE_DOWNLOAD)
+  async downloadNode(
+    @Param('nodeId') nodeId: string,
+    @Request() req: ExpressRequest,
+    @Res() res: Response,
+  ) {
+    const userId = (req.user as { id: string }).id;
+    const clientIp = req.ip || req.connection.remoteAddress;
 
-		try {
-			const format = query.format || CadDownloadFormat.MXWEB;
+    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, {
+      clientIp,
+    });
+  }
 
-			const pdfParams =
-				format === CadDownloadFormat.PDF
-					? {
-							width: query.width || "2000",
-							height: query.height || "2000",
-							colorPolicy: query.colorPolicy || "mono",
-						}
-					: undefined;
+  @Get("nodes/:nodeId/download-with-format")
+  @ApiOperation({
+    summary: "下载节点（支持多格式转换）",
+    description:
+      "支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。",
+  })
+  @ApiQuery({
+    name: "format",
+    enum: Object.values(CadDownloadFormat),
+    enumName: "CadDownloadFormat",
+    required: false,
+    description:
+      "下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）",
+  })
+  @ApiQuery({
+    name: "width",
+    required: false,
+    description: "PDF 输出宽度（像素），仅当 format=pdf 时有效，默认：2000",
+  })
+  @ApiQuery({
+    name: "height",
+    required: false,
+    description: "PDF 输出高度（像素），仅当 format=pdf 时有效，默认：2000",
+  })
+  @ApiQuery({
+    name: "colorPolicy",
+    required: false,
+    description:
+      "PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono",
+  })
+  @ApiProduces("application/octet-stream")
+  @ApiResponse({ status: 200, description: "下载成功" })
+  @ApiResponse({ status: 400, description: "参数错误或转换失败" })
+  @ApiResponse({ status: 401, description: "未登录" })
+  @ApiResponse({ status: 403, description: "无权访问该节点" })
+  @ApiResponse({ status: 404, description: "节点不存在或文件不存在" })
+  async downloadNodeWithFormat(
+    @Param('nodeId') nodeId: string,
+    @Request() req: ExpressRequest,
+    @Res() res: Response,
+    @Query() query: DownloadNodeQueryDto,
+  ) {
+    const userId =
+      (req.user as { id?: string })?.id ||
+      (req.session as { userId?: string })?.userId;
+    const clientIp =
+      req.ip || (req.connection as { remoteAddress?: string })?.remoteAddress;
 
-			const { stream, filename, mimeType } =
-				await this.fileSystemService.downloadNodeWithFormat(
-					nodeId,
-					userId,
-					format,
-					pdfParams,
-				);
+    if (!userId) {
+      throw new UnauthorizedException("未登录");
+    }
 
-			const origin = req.headers.origin || "*";
-			res.setHeader("Access-Control-Allow-Origin", origin);
-			res.setHeader("Access-Control-Allow-Credentials", "true");
-			res.setHeader(
-				"Access-Control-Allow-Methods",
-				"GET, POST, PUT, DELETE, OPTIONS",
-			);
-			res.setHeader(
-				"Access-Control-Allow-Headers",
-				"Content-Type, Authorization",
-			);
+    try {
+      const format = query.format || CadDownloadFormat.MXWEB;
 
-			this.logger.log(`[下载] CORS 头已设置: ${origin}`);
+      const pdfParams =
+        format === CadDownloadFormat.PDF
+          ? {
+              width: query.width || "2000",
+              height: query.height || "2000",
+              colorPolicy: query.colorPolicy || "mono",
+            }
+          : undefined;
 
-			res.setHeader("Content-Type", mimeType);
+      const { stream, filename, mimeType } =
+        await this.fileSystemService.downloadNodeWithFormat(
+          nodeId,
+          userId,
+          format,
+          pdfParams,
+        );
 
-			const encodedFilename = encodeURIComponent(filename);
-			const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, "_");
-			res.setHeader(
-				"Content-Disposition",
-				`attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`,
-			);
+      const origin = req.headers.origin || "*";
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+      );
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization",
+      );
 
-			const node = await this.fileSystemService.getNode(nodeId);
-			if (node && !node.isFolder && (node.fileHash || node.id)) {
-				const etag = `"${node.fileHash || node.id}_${format}"`;
-				res.setHeader("ETag", etag);
+      this.logger.log(`[下载] CORS 头已设置: ${origin}`);
 
-				if (req.headers["if-none-match"] === etag) {
-					if (
-						stream &&
-						typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
-							.destroy === "function"
-					) {
-						(
-							stream as NodeJS.ReadableStream & { destroy: () => void }
-						).destroy();
-					}
-					return res.status(304).end();
-				}
+      res.setHeader("Content-Type", mimeType);
 
-				res.setHeader("Cache-Control", "public, max-age=3600");
-			} else {
-				res.setHeader("Cache-Control", "no-cache");
-			}
+      const encodedFilename = encodeURIComponent(filename);
+      const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, "_");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`,
+      );
 
-			this.logger.log(
-				`多格式下载开始: ${filename} (格式: ${format}) (${nodeId}) by user ${userId} from IP ${clientIp}`,
-			);
+      const node = await this.fileSystemService.getNode(nodeId);
+      if (node && !node.isFolder && (node.fileHash || node.id)) {
+        const etag = `"${node.fileHash || node.id}_${format}"`;
+        res.setHeader("ETag", etag);
 
-			stream.pipe(res);
+        if (req.headers["if-none-match"] === etag) {
+          if (
+            stream &&
+            typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
+              .destroy === "function"
+          ) {
+            (
+              stream as NodeJS.ReadableStream & { destroy: () => void }
+            ).destroy();
+          }
+          return res.status(304).end();
+        }
 
-			stream.on("error", (error) => {
-				this.logger.error(`文件流传输错误: ${error.message}`, error.stack);
+        res.setHeader("Cache-Control", "public, max-age=3600");
+      } else {
+        res.setHeader("Cache-Control", "no-cache");
+      }
 
-				if (
-					stream &&
-					typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
-						.destroy === "function"
-				) {
-					(stream as NodeJS.ReadableStream & { destroy: () => void }).destroy();
-				}
+      this.logger.log(
+        `多格式下载开始: ${filename} (格式: ${format}) (${nodeId}) by user ${userId} from IP ${clientIp}`,
+      );
 
-				if (!res.headersSent) {
-					res.status(500).json({ message: "文件下载失败" });
-				} else if (!res.writableEnded) {
-					res.end();
-				}
-			});
+      stream.pipe(res);
 
-			stream.on("finish", () => {
-				this.logger.log(
-					`多格式下载完成: ${filename} (格式: ${format}) (${nodeId}) by user ${userId}`,
-				);
-			});
-		} catch (error) {
-			this.logger.error(
-				`多格式下载失败: ${nodeId} by user ${userId} - ${error.message}`,
-				error.stack,
-			);
+      stream.on("error", (error) => {
+        this.logger.error(`文件流传输错误: ${error.message}`, error.stack);
 
-			if (!res.headersSent) {
-				const status =
-					error instanceof NotFoundException
-						? 404
-						: error instanceof ForbiddenException
-							? 403
-							: error instanceof BadRequestException
-								? 400
-								: 500;
-				res.status(status).json({
-					message: error.message || "文件下载失败",
-				});
-			}
-		}
-	}
+        if (
+          stream &&
+          typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
+            .destroy === "function"
+        ) {
+          (stream as NodeJS.ReadableStream & { destroy: () => void }).destroy();
+        }
 
-	@Get("projects/:projectId/permissions")
-	@RequireProjectPermission(ProjectPermission.FILE_OPEN)
-	@ApiOperation({ summary: "获取用户在项目中的权限列表" })
-	@ApiResponse({
-		status: 200,
-		description: "成功获取用户权限列表",
-		type: ProjectUserPermissionsDto,
-	})
-	async getUserProjectPermissions(
-		@Request() req,
-		@Param('projectId') projectId: string,
-	) {
-		const permissions = await this.projectPermissionService.getUserPermissions(
-			req.user.id,
-			projectId,
-		);
-		return {
-			projectId,
-			userId: req.user.id,
-			permissions,
-		};
-	}
+        if (!res.headersSent) {
+          res.status(500).json({ message: "文件下载失败" });
+        } else if (!res.writableEnded) {
+          res.end();
+        }
+      });
 
-	@Get("projects/:projectId/permissions/check")
-	@RequireProjectPermission(ProjectPermission.FILE_OPEN)
-	@ApiOperation({ summary: "检查用户是否具有特定权限" })
-	@ApiQuery({
-		name: "permission",
-		enum: Object.values(ProjectPermission),
-		enumName: "ProjectPermissionEnum",
-		description: "要检查的权限",
-	})
-	@ApiResponse({
-		status: 200,
-		description: "权限检查结果",
-		type: PermissionCheckResponseDto,
-	})
-	async checkProjectPermission(
-		@Request() req,
-		@Param('projectId') projectId: string,
-		@Query('permission') permission: ProjectPermission,
-	) {
-		if (!permission) {
-			throw new BadRequestException("缺少 permission 参数");
-		}
+      stream.on("finish", () => {
+        this.logger.log(
+          `多格式下载完成: ${filename} (格式: ${format}) (${nodeId}) by user ${userId}`,
+        );
+      });
+    } catch (error) {
+      this.logger.error(
+        `多格式下载失败: ${nodeId} by user ${userId} - ${error.message}`,
+        error.stack,
+      );
 
-		const hasPermission = await this.projectPermissionService.checkPermission(
-			req.user.id,
-			projectId,
-			permission as ProjectPermission,
-		);
+      if (!res.headersSent) {
+        const status =
+          error instanceof NotFoundException
+            ? 404
+            : error instanceof ForbiddenException
+              ? 403
+              : error instanceof BadRequestException
+                ? 400
+                : 500;
+        res.status(status).json({
+          message: error.message || "文件下载失败",
+        });
+      }
+    }
+  }
 
-		return {
-			projectId,
-			userId: req.user.id,
-			permission,
-			hasPermission,
-		};
-	}
+  // ==================== 权限检查 ====================
 
-	@Get("projects/:projectId/role")
-	@RequireProjectPermission(ProjectPermission.FILE_OPEN)
-	@ApiOperation({ summary: "获取用户在项目中的角色" })
-	@ApiResponse({ status: 200, description: "成功获取用户角色" })
-	async getUserProjectRole(
-		@Request() req,
-		@Param('projectId') projectId: string,
-	) {
-		const role = await this.projectPermissionService.getUserRole(
-			req.user.id,
-			projectId,
-		);
+  @Get("projects/:projectId/permissions")
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @ApiOperation({ summary: "获取用户在项目中的权限列表" })
+  @ApiResponse({
+    status: 200,
+    description: "成功获取用户权限列表",
+    type: ProjectUserPermissionsDto,
+  })
+  async getUserProjectPermissions(
+    @Request() req,
+    @Param('projectId') projectId: string,
+  ) {
+    const permissions = await this.projectPermissionService.getUserPermissions(
+      req.user.id,
+      projectId,
+    );
+    return {
+      projectId,
+      userId: req.user.id,
+      permissions,
+    };
+  }
 
-		return {
-			projectId,
-			userId: req.user.id,
-			role,
-		};
-	}
+  @Get("projects/:projectId/permissions/check")
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @ApiOperation({ summary: "检查用户是否具有特定权限" })
+  @ApiQuery({
+    name: "permission",
+    enum: Object.values(ProjectPermission),
+    enumName: "ProjectPermissionEnum",
+    description: "要检查的权限",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "权限检查结果",
+    type: PermissionCheckResponseDto,
+  })
+  async checkProjectPermission(
+    @Request() req,
+    @Param('projectId') projectId: string,
+    @Query('permission') permission: ProjectPermission,
+  ) {
+    if (!permission) {
+      throw new BadRequestException("缺少 permission 参数");
+    }
 
-	@Get("search")
-	@ApiOperation({
-		summary: "统一搜索接口",
-		description: `支持多种搜索范围：
+    const hasPermission = await this.projectPermissionService.checkPermission(
+      req.user.id,
+      projectId,
+      permission as ProjectPermission,
+    );
+
+    return {
+      projectId,
+      userId: req.user.id,
+      permission,
+      hasPermission,
+    };
+  }
+
+  @Get("projects/:projectId/role")
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @ApiOperation({ summary: "获取用户在项目中的角色" })
+  @ApiResponse({ status: 200, description: "成功获取用户角色" })
+  async getUserProjectRole(
+    @Request() req,
+    @Param('projectId') projectId: string,
+  ) {
+    const role = await this.projectPermissionService.getUserRole(
+      req.user.id,
+      projectId,
+    );
+
+    return {
+      projectId,
+      userId: req.user.id,
+      role,
+    };
+  }
+
+  // ==================== 搜索 ====================
+
+  @Get("search")
+  @ApiOperation({
+    summary: "统一搜索接口",
+    description: `支持多种搜索范围：
 - project: 搜索项目列表
 - project_files: 搜索指定项目内的文件（需提供 projectId）
 - all_projects: 搜索所有有权限访问的项目中的文件`,
-	})
-	@ApiResponse({
-		status: 200,
-		description: "搜索成功",
-		type: NodeListResponseDto,
-	})
-	@ApiResponse({ status: 400, description: "请求参数错误" })
-	async search(@Request() req, @Query() dto: SearchDto) {
-		this.logger.log(
-			`[统一搜索] 用户ID: ${req.user.id}, 关键词: ${dto.keyword}, 范围: ${dto.scope}, 项目ID: ${dto.projectId}`,
-		);
+  })
+  @ApiResponse({
+    status: 200,
+    description: "搜索成功",
+    type: NodeListResponseDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  async search(@Request() req, @Query() dto: SearchDto) {
+    this.logger.log(
+      `[统一搜索] 用户ID: ${req.user.id}, 关键词: ${dto.keyword}, 范围: ${dto.scope}, 项目ID: ${dto.projectId}`,
+    );
 
-		return this.searchService.search(req.user.id, dto);
-	}
+    return this.searchService.search(req.user.id, dto);
+  }
+
+  // ==================== Helper ====================
+
+  private getMimeType(fileName: string): string {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      dwg: "application/acad",
+      dxf: "application/dxf",
+      pdf: "application/pdf",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      txt: "text/plain",
+    };
+    return mimeTypes[ext || ""] || "application/octet-stream";
+  }
 }
