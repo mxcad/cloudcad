@@ -22,7 +22,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { LoginDto, RegisterDto, AuthResponseDto, UserDto } from '../dto/auth.dto';
-import { WechatLoginResponseDto } from '../dto/wechat.dto';
+import { WechatLoginResponseDto, WechatLoginUserDto } from '../dto/wechat.dto';
 import { SmsVerificationService } from '../services/sms';
 import { WechatService } from '../services/wechat.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
@@ -171,7 +171,7 @@ export class LocalAuthProvider implements IAuthProvider {
           code: 'PHONE_NOT_REGISTERED',
           message: '手机号未注册，请先注册',
           phone: formattedPhone,
-        } as any);
+        });
       }
     }
 
@@ -349,7 +349,7 @@ export class LocalAuthProvider implements IAuthProvider {
           accessToken: '',
           refreshToken: '',
           // 临时返回 null，等待后续绑定邮箱/手机号后实际用户信息会填充
-          user: null as any,
+          user: null as unknown as WechatLoginUserDto,
           requireEmailBinding: false,
           requirePhoneBinding: false,
           needRegister: true,

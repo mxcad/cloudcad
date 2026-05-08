@@ -15,9 +15,10 @@ import {
 import {
   FileStatus,
   FileSystemNode as PrismaFileSystemNode,
+  Prisma,
 } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
-import { StorageManager } from '../../common/services/storage-manager.service';
+import { StorageManager, NodeStorageInfo } from '../../common/services/storage-manager.service';
 import { StorageService } from '../../storage/storage.service';
 import { QueryChildrenDto } from '../dto/query-children.dto';
 import { StorageInfoService } from '../storage-quota/storage-info.service';
@@ -136,7 +137,7 @@ export class FileTreeService {
 
       this.logger.log(`[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`);
 
-      let storageInfo: any = null;
+      let storageInfo: NodeStorageInfo | null = null;
 
       if (!skipFileCopy) {
         storageInfo = await this.storageManager.allocateNodeStorage(
@@ -333,7 +334,7 @@ export class FileTreeService {
     const safeLimit = Number(limit) || 50;
     const skip = (safePage - 1) * safeLimit;
 
-    const where: any = {
+    const where: Prisma.FileSystemNodeWhereInput = {
       parentId: nodeId,
       deletedAt: includeDeleted ? undefined : null,
     };
@@ -680,7 +681,7 @@ export class FileTreeService {
 
       // 构建查询条件
       const skip = (safePage - 1) * safeLimit;
-      const where: any = {
+      const where: Prisma.FileSystemNodeWhereInput = {
         id: { in: allFileIds },
         deletedAt: includeDeleted ? undefined : null,
         isFolder: false, // 只返回文件
