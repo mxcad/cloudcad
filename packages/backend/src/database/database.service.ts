@@ -30,10 +30,7 @@ export class DatabaseService
   private readonly slowQueryThresholdMs: number;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    const dbConfig = configService.get<{
-      username: string; password: string; host: string; port: number;
-      database: string; maxConnections: number; idleTimeoutMillis: number; connectionTimeoutMillis: number;
-    }>('database');
+    const dbConfig = configService.get<DatabaseConfig>('database');
     if (!dbConfig) {
       throw new Error('无法获取数据库配置，请检查 .env 文件或环境变量');
     }
