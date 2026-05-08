@@ -181,6 +181,13 @@ export class FileSystemService {
   }
 
   /**
+   * 获取分类树（递归 CTE，单次查询获取全部三级分类）
+   */
+  async getCategoryTree(nodeId: string) {
+    return this.fileTreeService.getCategoryTree(nodeId);
+  }
+
+  /**
    * 获取节点详情
    */
   async getNode(nodeId: string) {

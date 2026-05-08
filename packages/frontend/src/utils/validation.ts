@@ -3,14 +3,6 @@
  * DO NOT EDIT — run `pnpm generate:api-types` to regenerate
  */
 
-interface ValidationRule {
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  isEmail?: boolean;
-}
-
 export const ValidationRules = {
   email: {
     isEmail: true
@@ -39,7 +31,7 @@ const ERROR_MESSAGES: Record<string, Record<string, string>> = {
 };
 
 export function validateField(field: keyof typeof ValidationRules, value: string): string | null {
-  const rules = ValidationRules[field] as ValidationRule;
+  const rules = ValidationRules[field] as any;
   if (!rules) return null;
   const messages = ERROR_MESSAGES[field] || {};
   if (rules.required && !value) return messages.required || field + "不能为空";

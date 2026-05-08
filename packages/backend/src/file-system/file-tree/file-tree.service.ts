@@ -423,6 +423,74 @@ export class FileTreeService {
     }
   }
 
+  /**
+   * 获取分类树（递归 CTE，单次查询获取全部三级分类）
+   *
+   * 使用 PostgreSQL WITH RECURSIVE CTE 一次性获取 libraryRootId 下所有文件夹，
+   * 深度最多 3 层（level 0/1/2），避免前端多次 API 调用造成的渐进加载延迟。
+   *
+   * @param libraryRootId 资源库根节点 ID
+   * @returns 按层级组织的分类树
+   */
+  async getCategoryTree(libraryRootId: string): Promise<{
+    categories: { level: number; items: { id: string; name: string; hasChildren: boolean }[] }[]
+  }> {
+    type CategoryRow = { id: string; name: string; parentId: string; level: number };
+
+    const rows = await this.prisma.$queryRaw<CategoryRow[]>`
+      WITH RECURSIVE category_tree AS (
+        SELECT id, name, "parentId", 0::integer as level
+        FROM "FileSystemNode"
+        WHERE "parentId" = ${libraryRootId}
+          AND "deletedAt" IS NULL
+          AND "isFolder" = true
+
+        UNION ALL
+
+        SELECT fn.id, fn.name, fn."parentId", ct.level + 1
+        FROM "FileSystemNode" fn
+        INNER JOIN category_tree ct ON fn."parentId" = ct.id
+        WHERE fn."deletedAt" IS NULL
+          AND fn."isFolder" = true
+          AND ct.level < 2
+      )
+      SELECT id, name, "parentId", level FROM category_tree
+      ORDER BY level, name
+    `;
+
+    const level0Items: { id: string; name: string; hasChildren: boolean }[] = [
+      { id: 'all', name: '全部', hasChildren: true },
+    ];
+    const level1Items: { id: string; name: string; hasChildren: boolean }[] = [
+      { id: 'all', name: '全部', hasChildren: true },
+    ];
+    const level2Items: { id: string; name: string; hasChildren: boolean }[] = [
+      { id: 'all', name: '全部', hasChildren: false },
+    ];
+
+    for (const row of rows) {
+      if (row.level === 0) {
+        level0Items.push({ id: row.id, name: row.name, hasChildren: true });
+      } else if (row.level === 1) {
+        level1Items.push({ id: row.id, name: row.name, hasChildren: true });
+      } else if (row.level === 2) {
+        level2Items.push({ id: row.id, name: row.name, hasChildren: true });
+      }
+    }
+
+    const categories: { level: number; items: typeof level0Items }[] = [
+      { level: 0, items: level0Items },
+    ];
+    if (level1Items.length > 1) {
+      categories.push({ level: 1, items: level1Items });
+    }
+    if (level2Items.length > 1) {
+      categories.push({ level: 2, items: level2Items });
+    }
+
+    return { categories };
+  }
+
   async updateNodePath(nodeId: string, path: string) {
     try {
       const node = await this.prisma.fileSystemNode.update({

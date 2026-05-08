@@ -1687,6 +1687,31 @@ export type OperationSuccessDto = {
     success: boolean;
 };
 
+export type FileStatus = 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'DELETED';
+
+export type ProjectTrashResponseDto = {
+    /**
+     * 节点列表
+     */
+    nodes: Array<FileSystemNodeDto>;
+    /**
+     * 总数
+     */
+    total: number;
+    /**
+     * 当前页码
+     */
+    page: number;
+    /**
+     * 每页数量
+     */
+    limit: number;
+    /**
+     * 总页数
+     */
+    totalPages: number;
+};
+
 export type CreateFolderDto = {
     /**
      * 文件夹名称
@@ -1784,8 +1809,6 @@ export type NodeTreeResponseDto = {
      */
     children?: Array<FileSystemNodeDto>;
 };
-
-export type FileStatus = 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'DELETED';
 
 export type NodeListResponseDto = {
     /**
@@ -4502,6 +4525,68 @@ export type FileSystemControllerPermanentlyDeleteTrashItemsResponses = {
 
 export type FileSystemControllerPermanentlyDeleteTrashItemsResponse = FileSystemControllerPermanentlyDeleteTrashItemsResponses[keyof FileSystemControllerPermanentlyDeleteTrashItemsResponses];
 
+export type FileSystemControllerGetProjectTrashData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: {
+        /**
+         * 搜索关键词（匹配名称或描述）
+         */
+        search?: string;
+        /**
+         * 节点类型
+         */
+        nodeType?: 'folder' | 'file';
+        /**
+         * 文件扩展名
+         */
+        extension?: string;
+        /**
+         * 文件状态
+         */
+        fileStatus?: FileStatus;
+        /**
+         * 页码
+         */
+        page?: number;
+        /**
+         * 每页数量
+         */
+        limit?: number;
+        /**
+         * 排序字段
+         */
+        sortBy?: string;
+        /**
+         * 排序方向
+         */
+        sortOrder?: 'asc' | 'desc';
+        /**
+         * 是否包含已删除的节点（用于回收站）
+         */
+        includeDeleted?: boolean;
+    };
+    url: '/api/v1/file-system/projects/{projectId}/trash';
+};
+
+export type FileSystemControllerGetProjectTrashErrors = {
+    /**
+     * 项目不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerGetProjectTrashResponses = {
+    /**
+     * 获取项目回收站列表成功
+     */
+    200: ProjectTrashResponseDto;
+};
+
+export type FileSystemControllerGetProjectTrashResponse = FileSystemControllerGetProjectTrashResponses[keyof FileSystemControllerGetProjectTrashResponses];
+
 export type FileSystemControllerCreateNodeData = {
     body: {
         /**
@@ -6143,6 +6228,20 @@ export type LibraryControllerGetDrawingLibraryResponses = {
 
 export type LibraryControllerGetDrawingLibraryResponse = LibraryControllerGetDrawingLibraryResponses[keyof LibraryControllerGetDrawingLibraryResponses];
 
+export type LibraryControllerGetDrawingCategoriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/drawing/categories';
+};
+
+export type LibraryControllerGetDrawingCategoriesResponses = {
+    /**
+     * 获取成功
+     */
+    200: unknown;
+};
+
 export type LibraryControllerGetDrawingChildrenData = {
     body?: never;
     path: {
@@ -6442,6 +6541,20 @@ export type LibraryControllerGetBlockLibraryResponses = {
 };
 
 export type LibraryControllerGetBlockLibraryResponse = LibraryControllerGetBlockLibraryResponses[keyof LibraryControllerGetBlockLibraryResponses];
+
+export type LibraryControllerGetBlockCategoriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/block/categories';
+};
+
+export type LibraryControllerGetBlockCategoriesResponses = {
+    /**
+     * 获取成功
+     */
+    200: unknown;
+};
 
 export type LibraryControllerGetBlockChildrenData = {
     body?: never;

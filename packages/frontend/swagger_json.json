@@ -3868,6 +3868,141 @@
         ]
       }
     },
+    "/api/v1/file-system/projects/{projectId}/trash": {
+      "get": {
+        "operationId": "FileSystemController_getProjectTrash",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "搜索关键词（匹配名称或描述）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nodeType",
+            "required": false,
+            "in": "query",
+            "description": "节点类型",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "folder",
+                "file"
+              ]
+            }
+          },
+          {
+            "name": "extension",
+            "required": false,
+            "in": "query",
+            "description": "文件扩展名",
+            "schema": {
+              "example": ".dwg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileStatus",
+            "required": false,
+            "in": "query",
+            "description": "文件状态",
+            "schema": {
+              "$ref": "#/components/schemas/FileStatus"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "排序字段",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "排序方向",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "是否包含已删除的节点（用于回收站）",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取项目回收站列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTrashResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "项目不存在"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取项目回收站列表",
+        "tags": [
+          "文件系统"
+        ]
+      }
+    },
     "/api/v1/file-system/nodes": {
       "post": {
         "operationId": "FileSystemController_createNode",
@@ -6556,6 +6691,22 @@
         ]
       }
     },
+    "/api/v1/library/drawing/categories": {
+      "get": {
+        "operationId": "LibraryController_getDrawingCategories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        },
+        "summary": "获取图纸库全部三级分类（一次请求）",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
     "/api/v1/library/drawing/children/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingChildren",
@@ -7207,6 +7358,22 @@
           }
         },
         "summary": "获取图块库详情",
+        "tags": [
+          "library",
+          "公共资源库"
+        ]
+      }
+    },
+    "/api/v1/library/block/categories": {
+      "get": {
+        "operationId": "LibraryController_getBlockCategories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        },
+        "summary": "获取图块库全部三级分类（一次请求）",
         "tags": [
           "library",
           "公共资源库"
@@ -10672,6 +10839,51 @@
           "success"
         ]
       },
+      "FileStatus": {
+        "type": "string",
+        "enum": [
+          "UPLOADING",
+          "PROCESSING",
+          "COMPLETED",
+          "FAILED",
+          "DELETED"
+        ]
+      },
+      "ProjectTrashResponseDto": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "description": "节点列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileSystemNodeDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "总数"
+          },
+          "page": {
+            "type": "number",
+            "description": "当前页码"
+          },
+          "limit": {
+            "type": "number",
+            "description": "每页数量"
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "总页数"
+          }
+        },
+        "required": [
+          "nodes",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
       "CreateFolderDto": {
         "type": "object",
         "properties": {
@@ -10798,16 +11010,6 @@
           "createdAt",
           "updatedAt",
           "ownerId"
-        ]
-      },
-      "FileStatus": {
-        "type": "string",
-        "enum": [
-          "UPLOADING",
-          "PROCESSING",
-          "COMPLETED",
-          "FAILED",
-          "DELETED"
         ]
       },
       "NodeListResponseDto": {

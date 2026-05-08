@@ -181,6 +181,26 @@ declare namespace Components {
              */
             errors?: string[];
         }
+        export interface BindEmailAndLoginDto {
+            /**
+             * 临时令牌
+             * example:
+             * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            tempToken: string;
+            /**
+             * 邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
+            /**
+             * 邮箱验证码
+             * example:
+             * 123456
+             */
+            code: string;
+        }
         export interface BindEmailApiResponseDto {
             /**
              * 响应状态码
@@ -210,11 +230,73 @@ declare namespace Components {
              */
             timestamp: string;
         }
+        export interface BindEmailDto {
+            /**
+             * 要绑定的邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
+            /**
+             * 是否为重新绑定（换绑）
+             * example:
+             * false
+             */
+            isRebind?: boolean;
+        }
         export interface BindEmailResponseDto {
             /**
              * 消息
              */
             message: string;
+        }
+        export interface BindPhoneAndLoginDto {
+            /**
+             * 临时令牌
+             * example:
+             * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            tempToken: string;
+            /**
+             * 手机号（中国大陆，可带 +86 前缀）
+             * example:
+             * 13800138000
+             */
+            phone: string;
+            /**
+             * 验证码
+             * example:
+             * 123456
+             */
+            code: string;
+        }
+        export interface BindPhoneDto {
+            /**
+             * 手机号（中国大陆，可带 +86 前缀）
+             * example:
+             * 13800138000
+             */
+            phone: string; // ^(\+86)?1[3-9]\d{9}$
+            /**
+             * 验证码（6位数字）
+             * example:
+             * 123456
+             */
+            code: string;
+        }
+        export interface BindWechatDto {
+            /**
+             * 微信授权回调返回的 code
+             * example:
+             * 081x7J0w3Q4e1Z2B5L1w3FVKJT0x7J0Z
+             */
+            code: string;
+            /**
+             * 微信授权 state 参数（包含 csrf token）
+             * example:
+             * eyJjc3JmIjoiYWJjZGVmIiwib3JpZ2luIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwIn0=
+             */
+            state: string;
         }
         export interface Buffer {
         }
@@ -872,6 +954,20 @@ declare namespace Components {
             supportPhone?: string | null;
         }
         export type LibraryType = "drawing" | "block";
+        export interface LoginByPhoneDto {
+            /**
+             * 手机号（中国大陆，可带 +86 前缀）
+             * example:
+             * 13800138000
+             */
+            phone: string; // ^(\+86)?1[3-9]\d{9}$
+            /**
+             * 验证码（6位数字）
+             * example:
+             * 123456
+             */
+            code: string;
+        }
         export interface LoginDto {
             /**
              * 邮箱、用户名或手机号
@@ -1249,6 +1345,28 @@ declare namespace Components {
          * 项目状态
          */
         export type ProjectStatusEnum = "ACTIVE" | "ARCHIVED" | "DELETED";
+        export interface ProjectTrashResponseDto {
+            /**
+             * 节点列表
+             */
+            nodes: FileSystemNodeDto[];
+            /**
+             * 总数
+             */
+            total: number;
+            /**
+             * 当前页码
+             */
+            page: number;
+            /**
+             * 每页数量
+             */
+            limit: number;
+            /**
+             * 总页数
+             */
+            totalPages: number;
+        }
         export interface ProjectUserPermissionsDto {
             /**
              * 项目 ID
@@ -1262,6 +1380,46 @@ declare namespace Components {
              * 权限列表
              */
             permissions: string[];
+        }
+        export interface RebindEmailDto {
+            /**
+             * 新邮箱地址
+             * example:
+             * newuser@example.com
+             */
+            email: string;
+            /**
+             * 新邮箱验证码
+             * example:
+             * 123456
+             */
+            code: string;
+            /**
+             * 解绑原邮箱的验证令牌
+             * example:
+             * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            token: string;
+        }
+        export interface RebindPhoneDto {
+            /**
+             * 新手机号（中国大陆，可带 +86 前缀）
+             * example:
+             * 13900139000
+             */
+            phone: string;
+            /**
+             * 新手机号验证码
+             * example:
+             * 123456
+             */
+            code: string;
+            /**
+             * 解绑原手机号的验证令牌
+             * example:
+             * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            token: string;
         }
         export interface RefreshExternalReferencesResponseDto {
             /**
@@ -1365,6 +1523,14 @@ declare namespace Components {
              * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
              */
             wechatTempToken?: string;
+        }
+        export interface ResendVerificationDto {
+            /**
+             * 邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
         }
         export interface ResetPasswordApiResponseDto {
             /**
@@ -1714,6 +1880,14 @@ declare namespace Components {
             message: string;
             data: SendVerificationResponseDto;
             timestamp: string;
+        }
+        export interface SendVerificationDto {
+            /**
+             * 邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
         }
         export interface SendVerificationResponseDto {
             /**
@@ -2538,7 +2712,7 @@ declare namespace Components {
         /**
          * 用户状态
          */
-        export type UserStatusEnum = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+        export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
         export interface VerifyBindEmailDto {
             /**
              * 邮箱地址
@@ -2552,6 +2726,50 @@ declare namespace Components {
              * 123456
              */
             code: string;
+        }
+        export interface VerifyEmailAndRegisterPhoneDto {
+            /**
+             * 邮箱地址
+             * example:
+             * user@example.com
+             */
+            email: string;
+            /**
+             * 邮箱验证码（6位数字）
+             * example:
+             * 123456
+             */
+            code: string;
+            /**
+             * 手机号（中国大陆，可带 +86 前缀）
+             * example:
+             * 13800138000
+             */
+            phone: string;
+            /**
+             * 手机验证码（6位数字）
+             * example:
+             * 123456
+             */
+            phoneCode: string;
+            /**
+             * 用户名
+             * example:
+             * username
+             */
+            username: string;
+            /**
+             * 密码
+             * example:
+             * Password123!
+             */
+            password: string;
+            /**
+             * 昵称
+             * example:
+             * 用户昵称
+             */
+            nickname?: string;
         }
         export interface VerifyEmailDto {
             /**
@@ -2574,6 +2792,14 @@ declare namespace Components {
              * 13800138000
              */
             phone: string; // ^(\+86)?1[3-9]\d{9}$
+            /**
+             * 验证码（6位数字）
+             * example:
+             * 123456
+             */
+            code: string;
+        }
+        export interface VerifyUnbindCodeDto {
             /**
              * 验证码（6位数字）
              * example:
@@ -2749,6 +2975,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerBindEmailAndLogin {
+        export type RequestBody = Components.Schemas.BindEmailAndLoginDto;
         namespace Responses {
             export type $200 = Components.Schemas.AuthApiResponseDto;
             export interface $400 {
@@ -2756,6 +2983,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerBindPhone {
+        export type RequestBody = Components.Schemas.BindPhoneDto;
         namespace Responses {
             /**
              * example:
@@ -2772,6 +3000,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerBindPhoneAndLogin {
+        export type RequestBody = Components.Schemas.BindPhoneAndLoginDto;
         namespace Responses {
             export type $200 = Components.Schemas.AuthApiResponseDto;
             export interface $400 {
@@ -2779,6 +3008,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerBindWechat {
+        export type RequestBody = Components.Schemas.BindWechatDto;
         namespace Responses {
             /**
              * example:
@@ -2856,6 +3086,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerLoginByPhone {
+        export type RequestBody = Components.Schemas.LoginByPhoneDto;
         namespace Responses {
             export type $200 = Components.Schemas.AuthApiResponseDto;
             export interface $400 {
@@ -2871,6 +3102,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerRebindEmail {
+        export type RequestBody = Components.Schemas.RebindEmailDto;
         namespace Responses {
             /**
              * example:
@@ -2887,6 +3119,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerRebindPhone {
+        export type RequestBody = Components.Schemas.RebindPhoneDto;
         namespace Responses {
             /**
              * example:
@@ -2931,6 +3164,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerResendVerification {
+        export type RequestBody = Components.Schemas.ResendVerificationDto;
         namespace Responses {
             export type $200 = Components.Schemas.SendVerificationApiResponseDto;
             export interface $400 {
@@ -2948,6 +3182,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerSendBindEmailCode {
+        export type RequestBody = Components.Schemas.BindEmailDto;
         namespace Responses {
             export type $200 = Components.Schemas.BindEmailApiResponseDto;
             export interface $400 {
@@ -3000,6 +3235,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerSendVerification {
+        export type RequestBody = Components.Schemas.SendVerificationDto;
         namespace Responses {
             export type $200 = Components.Schemas.SendVerificationApiResponseDto;
             export interface $400 {
@@ -3041,6 +3277,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerVerifyEmailAndRegisterPhone {
+        export type RequestBody = Components.Schemas.VerifyEmailAndRegisterPhoneDto;
         namespace Responses {
             export type $201 = Components.Schemas.AuthApiResponseDto;
             export interface $400 {
@@ -3050,6 +3287,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerVerifyPhone {
+        export type RequestBody = Components.Schemas.VerifySmsCodeDto;
         namespace Responses {
             export type $200 = Components.Schemas.AuthApiResponseDto;
             export interface $400 {
@@ -3072,6 +3310,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerVerifyUnbindEmailCode {
+        export type RequestBody = Components.Schemas.VerifyUnbindCodeDto;
         namespace Responses {
             /**
              * example:
@@ -3089,6 +3328,7 @@ declare namespace Paths {
         }
     }
     namespace AuthControllerVerifyUnbindPhoneCode {
+        export type RequestBody = Components.Schemas.VerifyUnbindCodeDto;
         namespace Responses {
             /**
              * example:
@@ -3320,6 +3560,20 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerCreateNode {
+        export interface RequestBody {
+            /**
+             * 节点名称
+             */
+            name: string;
+            /**
+             * 父节点ID（可选）
+             */
+            parentId?: string;
+            /**
+             * 节点描述（可选）
+             */
+            description?: string;
+        }
         namespace Responses {
             export type $201 = Components.Schemas.FileSystemNodeDto;
             export interface $400 {
@@ -3496,6 +3750,47 @@ declare namespace Paths {
             }
         }
     }
+    namespace FileSystemControllerGetProjectTrash {
+        namespace Parameters {
+            /**
+             * example:
+             * .dwg
+             */
+            export type Extension = string;
+            export type FileStatus = Components.Schemas.FileStatus;
+            export type IncludeDeleted = boolean;
+            export type Limit = number;
+            export type NodeType = "folder" | "file";
+            export type Page = number;
+            export type ProjectId = string;
+            export type Search = string;
+            export type SortBy = string;
+            export type SortOrder = "asc" | "desc";
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
+        }
+        export interface QueryParameters {
+            search?: Parameters.Search;
+            nodeType?: Parameters.NodeType;
+            extension?: /**
+             * example:
+             * .dwg
+             */
+            Parameters.Extension;
+            fileStatus?: Parameters.FileStatus;
+            page?: Parameters.Page;
+            limit?: Parameters.Limit;
+            sortBy?: Parameters.SortBy;
+            sortOrder?: Parameters.SortOrder;
+            includeDeleted?: Parameters.IncludeDeleted;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.ProjectTrashResponseDto;
+            export interface $404 {
+            }
+        }
+    }
     namespace FileSystemControllerGetProjects {
         namespace Parameters {
             export type Filter = Components.Schemas.ProjectFilterType;
@@ -3606,6 +3901,12 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerPermanentlyDeleteTrashItems {
+        export interface RequestBody {
+            /**
+             * 要永久删除的回收站项ID列表
+             */
+            itemIds: string[];
+        }
         namespace Responses {
             export type $200 = Components.Schemas.BatchOperationResponseDto;
         }
@@ -3643,6 +3944,12 @@ declare namespace Paths {
         }
     }
     namespace FileSystemControllerRestoreTrashItems {
+        export interface RequestBody {
+            /**
+             * 要恢复的回收站项ID列表
+             */
+            itemIds: string[];
+        }
         namespace Responses {
             export type $200 = Components.Schemas.BatchOperationResponseDto;
         }
@@ -3712,6 +4019,20 @@ declare namespace Paths {
         export interface PathParameters {
             projectId: Parameters.ProjectId;
             userId: Parameters.UserId;
+        }
+        export interface RequestBody {
+            /**
+             * 项目角色ID
+             */
+            projectRoleId?: string;
+            /**
+             * 角色ID（兼容旧字段）
+             */
+            roleId?: string;
+            /**
+             * 角色名称
+             */
+            roleName?: string;
         }
         namespace Responses {
             export type $200 = Components.Schemas.ProjectMemberDto;
@@ -4050,6 +4371,12 @@ declare namespace Paths {
             export type $200 = Components.Schemas.NodeListResponseDto;
         }
     }
+    namespace LibraryControllerGetBlockCategories {
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
     namespace LibraryControllerGetBlockChildren {
         namespace Parameters {
             /**
@@ -4162,6 +4489,12 @@ declare namespace Paths {
         }
         namespace Responses {
             export type $200 = Components.Schemas.NodeListResponseDto;
+        }
+    }
+    namespace LibraryControllerGetDrawingCategories {
+        namespace Responses {
+            export interface $200 {
+            }
         }
     }
     namespace LibraryControllerGetDrawingChildren {
@@ -5296,7 +5629,7 @@ export interface OperationMethods {
    */
   'AuthController_sendVerification'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerSendVerification.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerSendVerification.Responses.$200>
   /**
@@ -5312,7 +5645,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyEmailAndRegisterPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerVerifyEmailAndRegisterPhone.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyEmailAndRegisterPhone.Responses.$201>
   /**
@@ -5320,7 +5653,7 @@ export interface OperationMethods {
    */
   'AuthController_resendVerification'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerResendVerification.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerResendVerification.Responses.$200>
   /**
@@ -5328,7 +5661,7 @@ export interface OperationMethods {
    */
   'AuthController_bindEmailAndLogin'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerBindEmailAndLogin.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindEmailAndLogin.Responses.$200>
   /**
@@ -5336,7 +5669,7 @@ export interface OperationMethods {
    */
   'AuthController_bindPhoneAndLogin'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerBindPhoneAndLogin.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindPhoneAndLogin.Responses.$200>
   /**
@@ -5344,7 +5677,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerVerifyPhone.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyPhone.Responses.$200>
   /**
@@ -5368,7 +5701,7 @@ export interface OperationMethods {
    */
   'AuthController_sendBindEmailCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerSendBindEmailCode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
   /**
@@ -5392,7 +5725,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyUnbindEmailCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerVerifyUnbindEmailCode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyUnbindEmailCode.Responses.$200>
   /**
@@ -5400,7 +5733,7 @@ export interface OperationMethods {
    */
   'AuthController_rebindEmail'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerRebindEmail.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerRebindEmail.Responses.$200>
   /**
@@ -5432,7 +5765,7 @@ export interface OperationMethods {
    */
   'AuthController_loginByPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerLoginByPhone.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerLoginByPhone.Responses.$200>
   /**
@@ -5440,7 +5773,7 @@ export interface OperationMethods {
    */
   'AuthController_bindPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerBindPhone.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindPhone.Responses.$200>
   /**
@@ -5456,7 +5789,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyUnbindPhoneCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerVerifyUnbindPhoneCode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyUnbindPhoneCode.Responses.$200>
   /**
@@ -5464,7 +5797,7 @@ export interface OperationMethods {
    */
   'AuthController_rebindPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerRebindPhone.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerRebindPhone.Responses.$200>
   /**
@@ -5496,7 +5829,7 @@ export interface OperationMethods {
    */
   'AuthController_bindWechat'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.AuthControllerBindWechat.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindWechat.Responses.$200>
   /**
@@ -5912,7 +6245,7 @@ export interface OperationMethods {
    */
   'FileSystemController_restoreTrashItems'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerRestoreTrashItems.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerRestoreTrashItems.Responses.$200>
   /**
@@ -5920,15 +6253,23 @@ export interface OperationMethods {
    */
   'FileSystemController_permanentlyDeleteTrashItems'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerPermanentlyDeleteTrashItems.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerPermanentlyDeleteTrashItems.Responses.$200>
+  /**
+   * FileSystemController_getProjectTrash - 获取项目回收站列表
+   */
+  'FileSystemController_getProjectTrash'(
+    parameters?: Parameters<Paths.FileSystemControllerGetProjectTrash.QueryParameters & Paths.FileSystemControllerGetProjectTrash.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerGetProjectTrash.Responses.$200>
   /**
    * FileSystemController_createNode - 创建节点（文件或文件夹）
    */
   'FileSystemController_createNode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerCreateNode.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCreateNode.Responses.$201>
   /**
@@ -6040,7 +6381,7 @@ export interface OperationMethods {
    */
   'FileSystemController_updateProjectMember'(
     parameters?: Parameters<Paths.FileSystemControllerUpdateProjectMember.PathParameters> | null,
-    data?: any,
+    data?: Paths.FileSystemControllerUpdateProjectMember.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerUpdateProjectMember.Responses.$200>
   /**
@@ -6403,6 +6744,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingLibrary.Responses.$200>
   /**
+   * LibraryController_getDrawingCategories - 获取图纸库全部三级分类（一次请求）
+   */
+  'LibraryController_getDrawingCategories'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.LibraryControllerGetDrawingCategories.Responses.$200>
+  /**
    * LibraryController_getDrawingChildren - 获取图纸库子节点列表
    */
   'LibraryController_getDrawingChildren'(
@@ -6506,6 +6855,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockLibrary.Responses.$200>
+  /**
+   * LibraryController_getBlockCategories - 获取图块库全部三级分类（一次请求）
+   */
+  'LibraryController_getBlockCategories'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.LibraryControllerGetBlockCategories.Responses.$200>
   /**
    * LibraryController_getBlockChildren - 获取图块库子节点列表
    */
@@ -6835,7 +7192,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerSendVerification.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendVerification.Responses.$200>
   }
@@ -6855,7 +7212,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerVerifyEmailAndRegisterPhone.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyEmailAndRegisterPhone.Responses.$201>
   }
@@ -6865,7 +7222,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerResendVerification.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerResendVerification.Responses.$200>
   }
@@ -6875,7 +7232,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerBindEmailAndLogin.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindEmailAndLogin.Responses.$200>
   }
@@ -6885,7 +7242,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerBindPhoneAndLogin.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindPhoneAndLogin.Responses.$200>
   }
@@ -6895,7 +7252,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerVerifyPhone.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyPhone.Responses.$200>
   }
@@ -6925,7 +7282,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerSendBindEmailCode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
   }
@@ -6955,7 +7312,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerVerifyUnbindEmailCode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyUnbindEmailCode.Responses.$200>
   }
@@ -6965,7 +7322,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerRebindEmail.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRebindEmail.Responses.$200>
   }
@@ -7005,7 +7362,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerLoginByPhone.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerLoginByPhone.Responses.$200>
   }
@@ -7015,7 +7372,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerBindPhone.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindPhone.Responses.$200>
   }
@@ -7035,7 +7392,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerVerifyUnbindPhoneCode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyUnbindPhoneCode.Responses.$200>
   }
@@ -7045,7 +7402,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerRebindPhone.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRebindPhone.Responses.$200>
   }
@@ -7085,7 +7442,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.AuthControllerBindWechat.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindWechat.Responses.$200>
   }
@@ -7575,7 +7932,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerRestoreTrashItems.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRestoreTrashItems.Responses.$200>
   }
@@ -7585,9 +7942,19 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerPermanentlyDeleteTrashItems.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerPermanentlyDeleteTrashItems.Responses.$200>
+  }
+  ['/api/v1/file-system/projects/{projectId}/trash']: {
+    /**
+     * FileSystemController_getProjectTrash - 获取项目回收站列表
+     */
+    'get'(
+      parameters?: Parameters<Paths.FileSystemControllerGetProjectTrash.QueryParameters & Paths.FileSystemControllerGetProjectTrash.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerGetProjectTrash.Responses.$200>
   }
   ['/api/v1/file-system/nodes']: {
     /**
@@ -7595,7 +7962,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerCreateNode.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCreateNode.Responses.$201>
   }
@@ -7729,7 +8096,7 @@ export interface PathsDictionary {
      */
     'patch'(
       parameters?: Parameters<Paths.FileSystemControllerUpdateProjectMember.PathParameters> | null,
-      data?: any,
+      data?: Paths.FileSystemControllerUpdateProjectMember.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerUpdateProjectMember.Responses.$200>
     /**
@@ -8168,6 +8535,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingLibrary.Responses.$200>
   }
+  ['/api/v1/library/drawing/categories']: {
+    /**
+     * LibraryController_getDrawingCategories - 获取图纸库全部三级分类（一次请求）
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.LibraryControllerGetDrawingCategories.Responses.$200>
+  }
   ['/api/v1/library/drawing/children/{nodeId}']: {
     /**
      * LibraryController_getDrawingChildren - 获取图纸库子节点列表
@@ -8293,6 +8670,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockLibrary.Responses.$200>
+  }
+  ['/api/v1/library/block/categories']: {
+    /**
+     * LibraryController_getBlockCategories - 获取图块库全部三级分类（一次请求）
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.LibraryControllerGetBlockCategories.Responses.$200>
   }
   ['/api/v1/library/block/children/{nodeId}']: {
     /**
@@ -8421,8 +8808,13 @@ export type AllPermissionsEnum = Components.Schemas.AllPermissionsEnum;
 export type AuthApiResponseDto = Components.Schemas.AuthApiResponseDto;
 export type BatchCacheOperationDto = Components.Schemas.BatchCacheOperationDto;
 export type BatchOperationResponseDto = Components.Schemas.BatchOperationResponseDto;
+export type BindEmailAndLoginDto = Components.Schemas.BindEmailAndLoginDto;
 export type BindEmailApiResponseDto = Components.Schemas.BindEmailApiResponseDto;
+export type BindEmailDto = Components.Schemas.BindEmailDto;
 export type BindEmailResponseDto = Components.Schemas.BindEmailResponseDto;
+export type BindPhoneAndLoginDto = Components.Schemas.BindPhoneAndLoginDto;
+export type BindPhoneDto = Components.Schemas.BindPhoneDto;
+export type BindWechatDto = Components.Schemas.BindWechatDto;
 export type Buffer = Components.Schemas.Buffer;
 export type CacheCleanupDto = Components.Schemas.CacheCleanupDto;
 export type CacheMonitoringSummaryDto = Components.Schemas.CacheMonitoringSummaryDto;
@@ -8458,6 +8850,7 @@ export type ForgotPasswordApiResponseDto = Components.Schemas.ForgotPasswordApiR
 export type ForgotPasswordDto = Components.Schemas.ForgotPasswordDto;
 export type ForgotPasswordResponseDto = Components.Schemas.ForgotPasswordResponseDto;
 export type LibraryType = Components.Schemas.LibraryType;
+export type LoginByPhoneDto = Components.Schemas.LoginByPhoneDto;
 export type LoginDto = Components.Schemas.LoginDto;
 export type MoveNodeDto = Components.Schemas.MoveNodeDto;
 export type NodeListResponseDto = Components.Schemas.NodeListResponseDto;
@@ -8479,11 +8872,15 @@ export type ProjectRoleDto = Components.Schemas.ProjectRoleDto;
 export type ProjectRolePermissionDto = Components.Schemas.ProjectRolePermissionDto;
 export type ProjectStatus = Components.Schemas.ProjectStatus;
 export type ProjectStatusEnum = Components.Schemas.ProjectStatusEnum;
+export type ProjectTrashResponseDto = Components.Schemas.ProjectTrashResponseDto;
 export type ProjectUserPermissionsDto = Components.Schemas.ProjectUserPermissionsDto;
+export type RebindEmailDto = Components.Schemas.RebindEmailDto;
+export type RebindPhoneDto = Components.Schemas.RebindPhoneDto;
 export type RefreshExternalReferencesResponseDto = Components.Schemas.RefreshExternalReferencesResponseDto;
 export type RefreshTokenDto = Components.Schemas.RefreshTokenDto;
 export type RegisterByPhoneDto = Components.Schemas.RegisterByPhoneDto;
 export type RegisterDto = Components.Schemas.RegisterDto;
+export type ResendVerificationDto = Components.Schemas.ResendVerificationDto;
 export type ResetPasswordApiResponseDto = Components.Schemas.ResetPasswordApiResponseDto;
 export type ResetPasswordDto = Components.Schemas.ResetPasswordDto;
 export type ResetPasswordResponseDto = Components.Schemas.ResetPasswordResponseDto;
@@ -8503,6 +8900,7 @@ export type SearchScope = Components.Schemas.SearchScope;
 export type SearchType = Components.Schemas.SearchType;
 export type SendSmsCodeDto = Components.Schemas.SendSmsCodeDto;
 export type SendVerificationApiResponseDto = Components.Schemas.SendVerificationApiResponseDto;
+export type SendVerificationDto = Components.Schemas.SendVerificationDto;
 export type SendVerificationResponseDto = Components.Schemas.SendVerificationResponseDto;
 export type SizeTrendDto = Components.Schemas.SizeTrendDto;
 export type StorageInfoDto = Components.Schemas.StorageInfoDto;
@@ -8536,10 +8934,12 @@ export type UserProfileResponseDto = Components.Schemas.UserProfileResponseDto;
 export type UserResponseDto = Components.Schemas.UserResponseDto;
 export type UserRoleDto = Components.Schemas.UserRoleDto;
 export type UserSearchResultDto = Components.Schemas.UserSearchResultDto;
-export type UserStatusEnum = Components.Schemas.UserStatusEnum;
+export type UserStatus = Components.Schemas.UserStatus;
 export type VerifyBindEmailDto = Components.Schemas.VerifyBindEmailDto;
+export type VerifyEmailAndRegisterPhoneDto = Components.Schemas.VerifyEmailAndRegisterPhoneDto;
 export type VerifyEmailDto = Components.Schemas.VerifyEmailDto;
 export type VerifySmsCodeDto = Components.Schemas.VerifySmsCodeDto;
+export type VerifyUnbindCodeDto = Components.Schemas.VerifyUnbindCodeDto;
 export type WarmupHistoryDto = Components.Schemas.WarmupHistoryDto;
 export type WarmupResponseDto = Components.Schemas.WarmupResponseDto;
 export type WarmupStatsDto = Components.Schemas.WarmupStatsDto;

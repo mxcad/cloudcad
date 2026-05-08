@@ -3,20 +3,24 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * useLibraryCategories - 资源库分类加载 Hook（方案 B：单次 API 调用）
+ *
+ * 使用新的 /library/drawing/categories 和 /library/block/categories 端点，
+ * 一次请求获取全部三级分类树。后端通过 PostgreSQL 递归 CTE 在单次数据库查询
+ * 中完成所有层级的检索，前端不再需要多次 API 调用和渐进式加载。
+ */
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   libraryControllerGetDrawingLibrary,
-  libraryControllerGetDrawingChildren,
-  libraryControllerGetDrawingAllFiles,
+  libraryControllerGetDrawingCategories,
   libraryControllerGetBlockLibrary,
-  libraryControllerGetBlockChildren,
-  libraryControllerGetBlockAllFiles,
+  libraryControllerGetBlockCategories,
 } from '@/api-sdk';
-import { FileSystemNode } from '@/types/filesystem';
 import { handleError } from '@/utils/errorHandler';
-import { PAGE_SIZE } from '@/components/ProjectDrawingsPanel/constants';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
-import { CategoryLevel, CategoryItem } from '@/components/CategoryTabs';
+import { CategoryLevel } from '@/components/CategoryTabs';
 
 export interface UseLibraryCategoriesReturn {
   libraryRootId: string | null;
@@ -53,213 +57,43 @@ export function useLibraryCategories(
 
   const listInitializedRef = useRef(false);
 
-  // 加载分类数据
-  const loadCategories = useCallback(
-    async (parentId: string, level: number) => {
-      try {
-        const response =
-          libraryType === 'drawing'
-            ? await libraryControllerGetDrawingChildren({ path: { nodeId: parentId }, query: {
-                nodeType: 'folder',
-                limit: 100,
-              } })
-            : await libraryControllerGetBlockChildren({ path: { nodeId: parentId }, query: {
-                nodeType: 'folder',
-                limit: 100,
-              } });
-
-        const folders = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
-
-        const items: CategoryItem[] = [
-          { id: 'all', name: '全部', hasChildren: level === 0 },
-          ...folders.map((folder: FileSystemNode) => ({
-            id: folder.id,
-            name: folder.name,
-            hasChildren: true,
-          })),
-        ];
-
-        setCategories((prev) => {
-          const newCategories = [...prev];
-          if (level < newCategories.length) {
-            const existing = newCategories[level];
-            if (!existing || existing.items.length <= 1 || items.length > existing.items.length) {
-              newCategories[level] = { level, items };
-            }
-          } else {
-            newCategories.push({ level, items });
-          }
-          if (level <= 1) {
-            return newCategories;
-          }
-          return newCategories.slice(0, level + 1);
-        });
-
-        if (folders.length > 0 && level < 2) {
-          folders.forEach((folder: FileSystemNode) => {
-            loadCategories(folder.id, level + 1).catch(() => {
-              // 忽略预加载错误
-            });
-          });
-        }
-      } catch (error: unknown) {
-        handleError(error, `useLibraryCategories: 加载第 ${level} 级分类失败`);
-      }
-    },
-    [libraryType]
-  );
-
-  // 图书馆模式：获取库根节点并递归加载所有层级分类
+  // 图书馆模式：并行获取库根节点和全部三级分类（一次请求）
   useEffect(() => {
     if (!isLibraryMode) return;
 
     setCategories([]);
     setCategoriesLoaded(false);
 
-    const loadAllCategories = async (parentId: string, level: number): Promise<CategoryLevel | null> => {
+    const fetchAll = async () => {
       try {
-        const response =
+        // 并行获取根节点（需要其 ID 用于"全部"文件加载）和分类树
+        const [rootResponse, categoriesResponse] = await Promise.all([
           libraryType === 'drawing'
-            ? await libraryControllerGetDrawingChildren({ path: { nodeId: parentId }, query: {
-                nodeType: 'folder',
-                limit: 100,
-              } })
-            : await libraryControllerGetBlockChildren({ path: { nodeId: parentId }, query: {
-                nodeType: 'folder',
-                limit: 100,
-              } });
-
-        const folders = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
-
-        const items: CategoryItem[] = [
-          { id: 'all', name: '全部', hasChildren: level === 0 },
-          ...folders.map((folder: FileSystemNode) => ({
-            id: folder.id,
-            name: folder.name,
-            hasChildren: true,
-          })),
-        ];
-
-        const currentLevel: CategoryLevel = { level, items };
-
-        if (level < 2 && folders.length > 0) {
-          const childPromises = folders.map((folder: FileSystemNode) =>
-            loadAllCategories(folder.id, level + 1)
-          );
-          (await Promise.all(childPromises)).filter(Boolean) as CategoryLevel[];
-        }
-
-        return currentLevel;
-      } catch (error: unknown) {
-        handleError(error, `useLibraryCategories: 加载第 ${level} 级分类失败`);
-        return null;
-      }
-    };
-
-    const loadAllLevels = async (rootId: string): Promise<CategoryLevel[]> => {
-      const levels: CategoryLevel[] = [];
-
-      const level0 = await loadAllCategories(rootId, 0);
-      if (level0) {
-        levels[0] = level0;
-
-        const level1Folders = level0.items.filter(item => item.id !== 'all');
-        if (level1Folders.length > 0) {
-          const level1ItemsMap = new Map<string, CategoryItem[]>();
-          level1ItemsMap.set('all', [{ id: 'all', name: '全部', hasChildren: true }]);
-
-          const level1Promises = level1Folders.map(async (folder) => {
-            const level1 = await loadAllCategories(folder.id, 1);
-            if (level1) {
-              level1ItemsMap.set(folder.id, level1.items);
-            }
-          });
-          await Promise.all(level1Promises);
-
-          const allLevel1Items: CategoryItem[] = [{ id: 'all', name: '全部', hasChildren: true }];
-          const seenIds = new Set(['all']);
-          level1ItemsMap.forEach((items) => {
-            items.forEach(item => {
-              if (!seenIds.has(item.id)) {
-                seenIds.add(item.id);
-                allLevel1Items.push(item);
-              }
-            });
-          });
-
-          levels[1] = { level: 1, items: allLevel1Items };
-
-          const level2Folders = allLevel1Items.filter(item => item.id !== 'all');
-          if (level2Folders.length > 0) {
-            const level2ItemsMap = new Map<string, CategoryItem[]>();
-            level2ItemsMap.set('all', [{ id: 'all', name: '全部', hasChildren: false }]);
-
-            const level2Promises = level2Folders.map(async (folder) => {
-              const level2 = await loadAllCategories(folder.id, 2);
-              if (level2) {
-                level2ItemsMap.set(folder.id, level2.items);
-              }
-            });
-            await Promise.all(level2Promises);
-
-            const allLevel2Items: CategoryItem[] = [{ id: 'all', name: '全部', hasChildren: false }];
-            const seenLevel2Ids = new Set(['all']);
-            level2ItemsMap.forEach((items) => {
-              items.forEach(item => {
-                if (!seenLevel2Ids.has(item.id)) {
-                  seenLevel2Ids.add(item.id);
-                  allLevel2Items.push(item);
-                }
-              });
-            });
-
-            levels[2] = { level: 2, items: allLevel2Items };
-          }
-        }
-      }
-
-      return levels;
-    };
-
-    const fetchLibraryRoot = async () => {
-      try {
-        const response =
+            ? libraryControllerGetDrawingLibrary()
+            : libraryControllerGetBlockLibrary(),
           libraryType === 'drawing'
-            ? await libraryControllerGetDrawingLibrary()
-            : await libraryControllerGetBlockLibrary();
-        const libraryNode = response.data as { id?: string; name?: string } | undefined;
+            ? libraryControllerGetDrawingCategories()
+            : libraryControllerGetBlockCategories(),
+        ]);
+
+        const libraryNode = rootResponse.data as { id?: string } | undefined;
         if (libraryNode?.id) {
           setLibraryRootId(libraryNode.id);
-
-          try {
-            const level0 = await loadAllCategories(libraryNode.id, 0);
-            if (level0) {
-              setCategories([level0]);
-            }
-            setCategoriesLoaded(true);
-            // 后台预加载更深层级分类（不阻塞首屏渲染）
-            const bgLoadDeeperLevels = async () => {
-              try {
-                const allLevels = await loadAllLevels(libraryNode.id);
-                setCategories(allLevels);
-              } catch {
-                // 后台加载失败不阻塞主流程
-              }
-            };
-            bgLoadDeeperLevels();
-          } catch (error: unknown) {
-            handleError(error, 'useLibraryCategories: 加载分类失败');
-            setCategoriesLoaded(true);
-          }
         }
+
+        const catData = categoriesResponse.data as { categories?: CategoryLevel[] } | undefined;
+        if (catData?.categories && catData.categories.length > 0) {
+          setCategories(catData.categories);
+        }
+        setCategoriesLoaded(true);
       } catch (error: unknown) {
-        handleError(error, `useLibraryCategories: 获取${libraryType === 'drawing' ? '图纸' : '图块'}库根节点失败`);
+        handleError(error, `useLibraryCategories: 加载${libraryType === 'drawing' ? '图纸' : '图块'}库分类失败`);
         setCategoriesLoaded(true);
       }
     };
 
-    fetchLibraryRoot();
-  }, [libraryType]);
+    fetchAll();
+  }, [isLibraryMode, libraryType]);
 
   const handleCategorySelect = useCallback(
     async (level: number, categoryId: string) => {
@@ -272,68 +106,8 @@ export function useLibraryCategories(
       }
 
       setSelectedCategoryPath(newPath);
-
-      if (categoryId === 'all') {
-        if (libraryRootId) {
-          try {
-            const response =
-              libraryType === 'drawing'
-                ? await libraryControllerGetDrawingAllFiles({ path: { nodeId: libraryRootId }, query: {
-                    page: 1,
-                    limit: PAGE_SIZE,
-                  } })
-                : await libraryControllerGetBlockAllFiles({ path: { nodeId: libraryRootId }, query: {
-                    page: 1,
-                    limit: PAGE_SIZE,
-                  } });
-
-            const files = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
-            // Note: These values need to be consumed by the caller
-            // We don't set nodes here - that's done by the caller via the callback pattern
-          } catch (error: unknown) {
-            handleError(error, 'useLibraryCategories: 获取所有文件失败');
-          }
-        }
-      } else {
-        let childCategories: CategoryItem[] = [{ id: 'all', name: '全部', hasChildren: level < 1 }];
-        try {
-          const response =
-            libraryType === 'drawing'
-              ? await libraryControllerGetDrawingChildren({ path: { nodeId: categoryId }, query: {
-                  nodeType: 'folder',
-                  limit: 100,
-                } })
-              : await libraryControllerGetBlockChildren({ path: { nodeId: categoryId }, query: {
-                  nodeType: 'folder',
-                  limit: 100,
-                } });
-
-          const folders = (response.data as { nodes?: FileSystemNode[] })?.nodes || [];
-          childCategories = [
-            { id: 'all', name: '全部', hasChildren: level < 1 },
-            ...folders.map((folder: FileSystemNode) => ({
-              id: folder.id,
-              name: folder.name,
-              hasChildren: true,
-            })),
-          ];
-        } catch (error: unknown) {
-          handleError(error, 'useLibraryCategories: 加载子分类失败');
-        }
-
-        setCategories(prev => {
-          const newCategories = [...prev];
-          const nextLevel = level + 1;
-          if (nextLevel < newCategories.length) {
-            newCategories[nextLevel] = { level: nextLevel, items: childCategories };
-          } else {
-            newCategories.push({ level: nextLevel, items: childCategories });
-          }
-          return newCategories.slice(0, nextLevel + 1);
-        });
-      }
     },
-    [libraryRootId, libraryType, selectedCategoryPath]
+    [libraryType, selectedCategoryPath]
   );
 
   return {

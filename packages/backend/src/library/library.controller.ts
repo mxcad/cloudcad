@@ -113,6 +113,24 @@ export class LibraryController {
   }
 
   /**
+   * 获取图纸库全部三级分类（一次请求返回完整分类树）
+   *
+   * 使用递归 CTE 在数据库层面一次查询全部层级，避免前端多次 API 调用。
+   * 分类深度最多 3 层（一级 / 二级 / 三级）。
+   */
+  @Get('drawing/categories')
+  @Public()
+  @ApiOperation({ summary: '获取图纸库全部三级分类（一次请求）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+  })
+  async getDrawingCategories() {
+    const rootId = await this.drawingLibraryProvider.getLibraryId();
+    return this.fileSystemService.getCategoryTree(rootId);
+  }
+
+  /**
    * 获取图纸库子节点列表
    */
   @Get('drawing/children/:nodeId')
@@ -365,6 +383,24 @@ export class LibraryController {
   })
   async getBlockLibrary() {
     return this.blockLibraryProvider.getRootNode();
+  }
+
+  /**
+   * 获取图块库全部三级分类（一次请求返回完整分类树）
+   *
+   * 使用递归 CTE 在数据库层面一次查询全部层级，避免前端多次 API 调用。
+   * 分类深度最多 3 层（一级 / 二级 / 三级）。
+   */
+  @Get('block/categories')
+  @Public()
+  @ApiOperation({ summary: '获取图块库全部三级分类（一次请求）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+  })
+  async getBlockCategories() {
+    const rootId = await this.blockLibraryProvider.getLibraryId();
+    return this.fileSystemService.getCategoryTree(rootId);
   }
 
   /**
