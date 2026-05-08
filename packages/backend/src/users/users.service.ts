@@ -971,7 +971,8 @@ export class UsersService implements IUserService {
         code
       );
       return result.valid;
-    } catch {
+    } catch (error) {
+      this.logger.warn(`邮箱验证码校验失败: ${email}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
