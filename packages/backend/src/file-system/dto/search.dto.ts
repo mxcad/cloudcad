@@ -13,7 +13,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
-import { FileStatus } from '@prisma/client';
+import { FileStatus } from '../../common/enums/file-status.enum';
 
 export enum SearchScope {
   PROJECT = 'project',

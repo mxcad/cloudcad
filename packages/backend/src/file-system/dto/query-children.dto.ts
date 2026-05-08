@@ -13,7 +13,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { FileStatus } from '@prisma/client';
+import { FileStatus } from '../../common/enums/file-status.enum';
 
 export class QueryChildrenDto {
   @ApiProperty({ description: '搜索关键词（匹配名称或描述）', required: false })

@@ -11,7 +11,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from "@nestjs/swagger";
-import { FileStatus, ProjectStatus } from "@prisma/client";
+import { FileStatus } from "../../common/enums/file-status.enum";
+import { ProjectStatus } from "../../common/enums/project-status.enum";
 
 /**
  * 文件系统节点 DTO

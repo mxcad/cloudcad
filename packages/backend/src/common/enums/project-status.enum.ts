@@ -10,26 +10,14 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, Length, IsIn } from 'class-validator';
-import { ProjectStatus } from '../../common/enums/project-status.enum';
-
-export class UpdateNodeDto {
-  @ApiProperty({ description: '节点名称', required: false })
-  @IsOptional()
-  @IsString()
-  @Length(1, 100)
-  name?: string;
-
-  @ApiProperty({ description: '描述', required: false })
-  @IsOptional()
-  @IsString()
-  @Length(0, 500)
-  description?: string;
-
-  @ApiProperty({ description: '状态', required: false, enum: ProjectStatus })
-  @IsOptional()
-  @IsString()
-  @IsIn(Object.values(ProjectStatus))
-  status?: string;
+/**
+ * 项目状态 API 枚举（独立于 Prisma）
+ *
+ * 与 schema.prisma 的 ProjectStatus 枚举值保持一致，
+ * 专用于 @ApiProperty 装饰器和 DTO 字段类型。
+ */
+export enum ProjectStatus {
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  DELETED = 'DELETED',
 }
