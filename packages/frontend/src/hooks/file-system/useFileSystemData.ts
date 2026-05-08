@@ -27,11 +27,14 @@ import {
   projectToNode,
   toFileSystemNode,
 } from '@/types/filesystem';
-import type { ProjectDto } from '@/types/api-client';
+import type { FileSystemNodeDto, ProjectDto } from '@/types/api-client';
 import { PaginationMeta } from '@/components/ui/Pagination';
 import { handleError } from '@/utils/errorHandler';
 import { queryKeys } from '@/lib/queryKeys';
 import type { ProjectFilterType } from '@/types/project';
+
+/** 从 API 响应包装中提取 data 属性类型 */
+type UnwrapApiResponse<T> = T extends { data: infer D } ? D : T;
 
 interface UseFileSystemDataProps {
   urlProjectId: string | undefined;
@@ -112,7 +115,7 @@ export const useFileSystemData = ({
       const response = await fileSystemControllerGetNode({
         path: { nodeId: effectiveNodeId },
       });
-      return toFileSystemNode(response.data as unknown as Parameters<typeof toFileSystemNode>[0]);
+      return toFileSystemNode(response.data as FileSystemNodeDto);
     },
     enabled:
       !!effectiveNodeId && !isProjectRootMode && !isTrash && !hasSearch,
@@ -133,26 +136,24 @@ export const useFileSystemData = ({
           },
         });
 
-        const rawData = response.data as unknown as Record<string, unknown> | undefined;
-        if (rawData && 'nodes' in rawData && Array.isArray(rawData.nodes)) {
+        const data = response.data;
+        if (data && 'nodes' in data && Array.isArray(data.nodes)) {
           return {
-            nodes: (rawData.nodes as Array<unknown>).map(
-              (n) => projectToNode(n as unknown as Parameters<typeof projectToNode>[0])
-            ),
-            total: rawData.total as number,
-            page: rawData.page as number,
-            limit: rawData.limit as number,
-            totalPages: rawData.totalPages as number,
+            nodes: data.nodes.map((n) => projectToNode(n)),
+            total: data.total,
+            page: data.page,
+            limit: data.limit,
+            totalPages: data.totalPages,
           };
         }
 
         // Legacy format: array of ProjectDto
         const allProjects = (
           Array.isArray(response.data) ? response.data : []
-        ) as unknown as ProjectDto[];
+        ) as ProjectDto[];
         return {
           nodes: allProjects.map(
-            (p) => projectToNode(p as unknown as Parameters<typeof projectToNode>[0])
+            (p) => projectToNode(p as FileSystemNodeDto)
           ),
           total: allProjects.length,
           page: pagination.page,
@@ -308,7 +309,7 @@ export const useFileSystemData = ({
               const parentResponse = await fileSystemControllerGetNode({
                 path: { nodeId: traversalNode.parentId },
               });
-              traversalNode = toFileSystemNode(parentResponse.data as unknown as Parameters<typeof toFileSystemNode>[0]);
+              traversalNode = toFileSystemNode(parentResponse.data as FileSystemNodeDto);
             } catch (error: unknown) {
               handleError(error, '获取父节点失败，停止构建面包屑');
               break;
@@ -366,7 +367,7 @@ export const useFileSystemData = ({
         path: { nodeId: effectiveNodeId },
       })
         .then((response) => {
-          const rootNode = response.data as unknown as { personalSpaceKey?: string } | undefined;
+          const rootNode = response.data;
           if (rootNode?.personalSpaceKey) {
             if (urlNodeId) {
               navigate(`/personal-space/${urlNodeId}`);
