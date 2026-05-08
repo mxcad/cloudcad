@@ -476,6 +476,9 @@ export const CADEditorDirect: React.FC = () => {
   useEffect(() => {
     if (!fileId || !isActive) return;
 
+    // 如果已登录但尚未获取到 personalSpaceId，等待 personalSpaceId 就绪后重新触发加载
+    if (isAuthenticated && !personalSpaceId) return;
+
     let cancelled = false;
 
     const loadFile = async () => {
@@ -746,7 +749,7 @@ export const CADEditorDirect: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [fileId, isActive, versionParam, navigate, externalReferenceUpload, isAuthenticated]);
+  }, [fileId, isActive, versionParam, navigate, externalReferenceUpload, isAuthenticated, personalSpaceId]);
   
   // 监听公开文件上传事件，上传完成后检查外部参照
   useEffect(() => {
