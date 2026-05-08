@@ -31,7 +31,12 @@ import {
   AlertCircle,
   Crown,
 } from 'lucide-react';
-import { ProfileInfoTab, ProfilePasswordTab, ProfileEmailTab, ProfilePhoneTab, ProfileWechatTab, ProfileDeactivateTab } from './Profile';
+import { ProfileInfoTab } from './components/ProfileInfoTab';
+import { ProfilePasswordTab } from './Profile/ProfilePasswordTab';
+import { ProfileEmailTab } from './Profile/ProfileEmailTab';
+import { ProfilePhoneTab } from './Profile/ProfilePhoneTab';
+import { ProfileWechatTab } from './Profile/ProfileWechatTab';
+import { ProfileDeactivateTab } from './components/ProfileDeactivateTab';
 import './Profile/Profile.css';
 
 type TabType =
@@ -823,7 +828,7 @@ export const Profile: React.FC = () => {
         setError('手机号不存在');
         return;
       }
-      const phone = `${user.phone ?? ''}`;
+      const phone = (user.phone as unknown as string) ?? '';
       await sendSmsCode({ phone });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
@@ -851,7 +856,7 @@ export const Profile: React.FC = () => {
         setError('邮箱不存在');
         return;
       }
-      const email = `${user.email ?? ''}`;
+      const email = (user.email as unknown as string) ?? '';
       await resendVerification({ email });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
@@ -991,7 +996,6 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'password' && (
               <ProfilePasswordTab
-                user={user}
                 passwordForm={passwordForm}
                 showPassword={showPassword}
                 focusedField={focusedField}
@@ -1010,7 +1014,6 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'email' && (
               <ProfileEmailTab
-                user={user}
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
@@ -1036,7 +1039,6 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'phone' && smsEnabled && (
               <ProfilePhoneTab
-                user={user}
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
@@ -1060,7 +1062,6 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'wechat' && wechatEnabled && (
               <ProfileWechatTab
-                user={user}
                 loading={loading}
 
                 onBind={wechatBindOpen}
@@ -1076,7 +1077,7 @@ export const Profile: React.FC = () => {
                 deactivateLoading={deactivateLoading}
                 deactivateCountdown={deactivateCountdown}
                 loading={loading}
-                onVerificationMethodChange={(method: string) =>
+                onVerificationMethodChange={(method: '' | 'password' | 'phone' | 'email' | 'wechat') =>
                   setDeactivateForm((f) => ({
                     ...f,
                     verificationMethod: method,
