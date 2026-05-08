@@ -16,8 +16,6 @@ import { CommonModule } from '../common/common.module';
 import { PolicyEngineService } from './services/policy-engine.service';
 import { PolicyConfigService } from './services/policy-config.service';
 import { PolicyFactoryService } from './services/policy-factory.service';
-import { PolicyConfigController } from './controllers/policy-config.controller';
-
 /**
  * 策略引擎模块
  *
@@ -25,7 +23,7 @@ import { PolicyConfigController } from './controllers/policy-config.controller';
  */
 @Module({
   imports: [DatabaseModule, forwardRef(() => CommonModule)],
-  controllers: [PolicyConfigController],
+  controllers: [],
   providers: [PolicyFactoryService, PolicyEngineService, PolicyConfigService],
   exports: [PolicyFactoryService, PolicyEngineService, PolicyConfigService],
 })

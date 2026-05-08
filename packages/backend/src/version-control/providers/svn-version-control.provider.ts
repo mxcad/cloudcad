@@ -771,7 +771,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         message ||
         JSON.stringify({
           type: 'rollback',
-          path,
+          filePath,
           revision,
           timestamp: new Date().toISOString(),
         });
@@ -784,14 +784,14 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         null
       );
 
-      this.logger.log(`回滚成功: ${path} to r${revision}`);
+      this.logger.log(`回滚成功: ${filePath} to r${revision}`);
       return {
         success: true,
         message: '回滚成功',
         data: result,
       };
     } catch (error) {
-      this.logger.error(`回滚失败: ${path} to r${revision}, 错误: ${error.message}`);
+      this.logger.error(`回滚失败: ${filePath} to r${revision}, 错误: ${error.message}`);
       return {
         success: false,
         message: `回滚失败: ${error.message}`,

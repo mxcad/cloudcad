@@ -17,6 +17,7 @@ import * as path from 'path';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/app.config';
+import { FileUtils } from '../common/utils/file-utils';
 import {
   svnCheckout,
   svnAdd,
@@ -360,6 +361,9 @@ export class VersionControlService implements OnModuleInit {
   ): Promise<SvnOperationResult> {
     await this.ensureInitialized();
 
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(nodeDirectory, this.filesDataPath);
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -551,6 +555,9 @@ export class VersionControlService implements OnModuleInit {
     nodeDirectory: string
   ): Promise<SvnOperationResult> {
     await this.ensureInitialized();
+
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(nodeDirectory, this.filesDataPath);
 
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过删除');

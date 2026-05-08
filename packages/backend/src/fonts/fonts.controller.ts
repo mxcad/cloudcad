@@ -78,12 +78,7 @@ export class FontsController {
   async getFonts(@Query('location') location?: 'backend' | 'frontend') {
     try {
       const result = await this.fontsService.getFonts(location);
-      return {
-        code: 'SUCCESS',
-        message: '获取字体列表成功',
-        data: result,
-        timestamp: new Date().toISOString(),
-      };
+      return result;
     } catch (error) {
       this.logger.error(`获取字体列表失败: ${error.message}`, error.stack);
       throw error;
@@ -120,13 +115,7 @@ export class FontsController {
       const target = uploadFontDto.target || FontUploadTarget.BOTH;
 
       const result = await this.fontsService.uploadFont(file, target);
-
-      return {
-        code: 'SUCCESS',
-        message: result.message,
-        data: result.font,
-        timestamp: new Date().toISOString(),
-      };
+      return { message: result.message, font: result.font };
     } catch (error) {
       this.logger.error(`上传字体失败: ${error.message}`, error.stack);
       throw error;
@@ -158,12 +147,7 @@ export class FontsController {
       const target = deleteFontDto.target || FontUploadTarget.BOTH;
 
       const result = await this.fontsService.deleteFont(fileName, target);
-
-      return {
-        code: 'SUCCESS',
-        message: result.message,
-        timestamp: new Date().toISOString(),
-      };
+      return { message: result.message };
     } catch (error) {
       this.logger.error(`删除字体失败: ${error.message}`, error.stack);
       throw error;

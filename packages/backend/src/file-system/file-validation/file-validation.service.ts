@@ -23,7 +23,7 @@ export interface FileTypeConfig {
   mimeType: string;
   maxSize: number;
   enabled: boolean;
-  magicNumbers?: number[]; // 文件魔数（Magic Number）
+  magicNumbers?: number[][]; // 文件魔数（Magic Number），支持多模式匹配
 }
 
 @Injectable()
@@ -55,21 +55,29 @@ export class FileValidationService {
         mimeType: 'application/acad',
         maxSize: 0, // 将在运行时动态获取
         enabled: true,
-        magicNumbers: [0x41, 0x43, 0x31, 0x30], // DWG 文件魔数
+        magicNumbers: [
+          [0x41, 0x43, 0x31, 0x30, 0x32, 0x31], // AC1021 (AutoCAD 2007-2009)
+          [0x41, 0x43, 0x31, 0x30, 0x32, 0x34], // AC1024 (AutoCAD 2010-2012)
+          [0x41, 0x43, 0x31, 0x30, 0x32, 0x37], // AC1027 (AutoCAD 2013-2017)
+          [0x41, 0x43, 0x31, 0x30, 0x33, 0x32], // AC1032 (AutoCAD 2018+)
+        ],
       },
       {
         extension: '.dxf',
         mimeType: 'application/dxf',
         maxSize: 0, // 将在运行时动态获取
         enabled: true,
-        magicNumbers: [0x30, 0x0d, 0x0a], // DXF 文件通常以数字开头
+        magicNumbers: [
+          [0x30, 0x0d, 0x0a, 0x53, 0x45, 0x43], // "0\r\nSEC" (SECTION标记)
+          [0x20, 0x20, 0x30, 0x0d, 0x0a], // "  0\r\n" (空格前缀情况)
+        ],
       },
       {
         extension: '.pdf',
         mimeType: 'application/pdf',
         maxSize: 50 * 1024 * 1024,
         enabled: false,
-        magicNumbers: [0x25, 0x50, 0x44, 0x46], // PDF 文件魔数 (%PDF)
+        magicNumbers: [[0x25, 0x50, 0x44, 0x46]], // PDF 文件魔数 (%PDF)
       },
     ];
   }
@@ -174,19 +182,23 @@ export class FileValidationService {
       }
 
       // 读取文件前 64 字节进行深度验证
-      const buffer = readFileSync(filePath, { encoding: null }) as Buffer;
+      const buffer = readFileSync(filePath).slice(0, 1024) as Buffer;
       const fileHeader = Array.from(buffer.slice(0, 64));
 
-      // 检查魔数是否匹配
-      const magicNumbers = config.magicNumbers;
-      const isMatch = this.validateMagicNumberDeep(fileHeader, magicNumbers);
+      // 检查魔数是否匹配（支持多组候选魔数，任一组匹配即通过）
+      const magicNumberSets = config.magicNumbers;
+      const isMatch = magicNumberSets.some((candidate) =>
+        this.validateMagicNumberDeep(fileHeader, candidate)
+      );
 
       if (!isMatch) {
-        const expected = magicNumbers
-          .map((b) => '0x' + b.toString(16).padStart(2, '0'))
-          .join(' ');
+        const expected = magicNumberSets
+          .map((set) =>
+            set.map((b) => '0x' + b.toString(16).padStart(2, '0')).join(' ')
+          )
+          .join(' | ');
         const actual = fileHeader
-          .slice(0, magicNumbers.length)
+          .slice(0, 16)
           .map((b) => '0x' + b.toString(16).padStart(2, '0'))
           .join(' ');
         this.logger.error(
@@ -224,33 +236,7 @@ export class FileValidationService {
     magicNumbers: number[]
   ): boolean {
     // 精确匹配：文件头与魔数完全匹配
-    if (magicNumbers.every((byte, index) => fileHeader[index] === byte)) {
-      return true;
-    }
-
-    // DWG 文件特殊处理：检查多个可能的魔数位置
-    // DWG 文件可能有不同的版本，魔数可能出现在不同位置
-    if (magicNumbers.length >= 4) {
-      // 检查前 16 字节中是否包含魔数
-      for (let offset = 0; offset < 16; offset++) {
-        let match = true;
-        for (
-          let i = 0;
-          i < magicNumbers.length && offset + i < fileHeader.length;
-          i++
-        ) {
-          if (fileHeader[offset + i] !== magicNumbers[i]) {
-            match = false;
-            break;
-          }
-        }
-        if (match) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return magicNumbers.every((byte, index) => fileHeader[index] === byte);
   }
 
   /**
@@ -338,13 +324,13 @@ export class FileValidationService {
       Math.min(100, buffer.length)
     );
 
-    // 检查是否包含 DXF 特定的标记
-    const dxfMarkers = ['0', 'SECTION', '2', 'HEADER', 'ENDSEC'];
-    const hasDxfMarkers = dxfMarkers.some((marker) =>
-      headerText.includes(marker)
-    );
+    // 检查是否包含 DXF 核心结构标记（必须同时包含 '0'、'SECTION'、'HEADER'）
+    const hasDxfStructure =
+      headerText.includes('0') &&
+      headerText.includes('SECTION') &&
+      headerText.includes('HEADER');
 
-    if (!hasDxfMarkers) {
+    if (!hasDxfStructure) {
       throw new BadRequestException('DXF 文件缺少必需的 DXF 标记，可能已损坏');
     }
   }

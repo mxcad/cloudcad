@@ -38,7 +38,6 @@
     "db:audit-permissions": "pnpm tsx scripts/audit-permissions.ts"
   },
   "dependencies": {
-    "2": "^3.0.0",
     "@alicloud/dysmsapi20170525": "^4.5.0",
     "@alicloud/openapi-client": "^0.4.15",
     "@alicloud/tea-util": "^1.4.11",
