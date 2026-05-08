@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { UserStatus } from '@prisma/client';
+import { UserStatus } from '../../common/enums/user-status.enum';
 import {
   IsEmail,
   IsEnum,
@@ -67,7 +67,7 @@ export class UpdateUserDto {
   @ApiProperty({
     description: '用户状态',
     enum: Object.values(UserStatus),
-    enumName: 'UserStatusEnum',
+    enumName: 'UserStatus',
     required: false,
   })
   @IsOptional()

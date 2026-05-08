@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserStatus } from '@prisma/client';
+import { UserStatus } from '../../common/enums/user-status.enum';
 import { StorageInfoDto } from '../../common/dto/storage-info.dto';
 
 /**
@@ -56,7 +56,7 @@ export class UserResponseDto {
   @ApiProperty({
     description: '用户状态',
     enum: Object.values(UserStatus),
-    enumName: 'UserStatusEnum',
+    enumName: 'UserStatus',
   })
   status: UserStatus;
 
@@ -145,7 +145,7 @@ export class UserProfileResponseDto {
   @ApiProperty({
     description: '用户状态',
     enum: Object.values(UserStatus),
-    enumName: 'UserStatusEnum',
+    enumName: 'UserStatus',
   })
   status: UserStatus;
 
