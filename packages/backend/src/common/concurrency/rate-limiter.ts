@@ -120,8 +120,11 @@ export class RateLimiter {
       return;
     }
 
-    // 取出下一个任务
-    const taskState = this.queue.shift()!;
+    // 取出下一个任务（前面已检查 queue.length > 0）
+    const taskState = this.queue.shift();
+    if (!taskState) {
+      return;
+    }
     taskState.startedAt = Date.now();
 
     // 添加到运行中

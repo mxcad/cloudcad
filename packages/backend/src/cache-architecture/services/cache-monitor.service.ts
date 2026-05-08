@@ -217,14 +217,16 @@ export class CacheMonitorService {
     const sortedMinutes = Array.from(aggregated.keys()).sort();
     const timestamps = sortedMinutes;
     const avgResponseTimes = sortedMinutes.map((minute) => {
-      const point = aggregated.get(minute)!;
+      const point = aggregated.get(minute);
+      if (!point) return 0;
       return (
         point.responseTimes.reduce((sum, time) => sum + time, 0) /
         point.responseTimes.length
       );
     });
     const errorRates = sortedMinutes.map((minute) => {
-      const point = aggregated.get(minute)!;
+      const point = aggregated.get(minute);
+      if (!point) return 0;
       return (point.errors / point.responseTimes.length) * 100;
     });
 
