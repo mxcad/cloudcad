@@ -240,14 +240,15 @@ export class FileOperationsService {
         // 3. 在事务中执行数据库操作（快速完成）
         await this.prisma.$transaction(
           async (tx) => {
-            // 更新子文件节点状态
-            for (const file of filesToDelete) {
-              if (file.path) {
-                await tx.fileSystemNode.update({
-                  where: { id: file.nodeId },
-                  data: { deletedFromStorage: new Date() },
-                });
-              }
+            // 更新子文件节点状态（用 updateMany 避免并发删除导致记录不存在）
+            const fileNodeIds = filesToDelete
+              .filter((f) => f.path)
+              .map((f) => f.nodeId);
+            if (fileNodeIds.length > 0) {
+              await tx.fileSystemNode.updateMany({
+                where: { id: { in: fileNodeIds } },
+                data: { deletedFromStorage: new Date() },
+              });
             }
 
             // 批量删除子节点
@@ -259,7 +260,7 @@ export class FileOperationsService {
 
             // 更新并删除主节点
             if (!node.isFolder && node.path) {
-              await tx.fileSystemNode.update({
+              await tx.fileSystemNode.updateMany({
                 where: { id: nodeId },
                 data: { deletedFromStorage: new Date() },
               });
@@ -454,6 +455,25 @@ export class FileOperationsService {
               throw new ForbiddenException('没有访问目标父节点的权限');
             }
           }
+        }
+      }
+
+      // 如果是恢复项目根节点，需要级联恢复所有被级联删除的子节点
+      if (node.isRoot) {
+        const childNodeIds: string[] = [];
+        await this.collectChildNodes(nodeId, childNodeIds);
+
+        if (childNodeIds.length > 0) {
+          await this.prisma.fileSystemNode.updateMany({
+            where: { id: { in: childNodeIds } },
+            data: {
+              deletedAt: null,
+              deletedByCascade: false,
+            },
+          });
+          this.logger.log(
+            `${nodeType}恢复: 级联恢复了 ${childNodeIds.length} 个子节点`
+          );
         }
       }
 
@@ -674,14 +694,15 @@ export class FileOperationsService {
       // 3. 在事务中执行数据库操作（快速完成）
       await this.prisma.$transaction(
         async (tx) => {
-          // 更新子文件节点状态
-          for (const file of filesToDelete) {
-            if (file.path) {
-              await tx.fileSystemNode.update({
-                where: { id: file.nodeId },
-                data: { deletedFromStorage: new Date() },
-              });
-            }
+          // 更新子文件节点状态（用 updateMany 避免并发删除导致记录不存在）
+          const fileNodeIds = filesToDelete
+            .filter((f) => f.path)
+            .map((f) => f.nodeId);
+          if (fileNodeIds.length > 0) {
+            await tx.fileSystemNode.updateMany({
+              where: { id: { in: fileNodeIds } },
+              data: { deletedFromStorage: new Date() },
+            });
           }
 
           // 批量删除子节点
@@ -1320,14 +1341,15 @@ export class FileOperationsService {
       // 3. 在事务中执行数据库操作（快速完成）
       await this.prisma.$transaction(
         async (tx) => {
-          // 更新子文件节点状态
-          for (const file of filesToDelete) {
-            if (file.path) {
-              await tx.fileSystemNode.update({
-                where: { id: file.nodeId },
-                data: { deletedFromStorage: new Date() },
-              });
-            }
+          // 更新子文件节点状态（用 updateMany 避免并发删除导致记录不存在）
+          const fileNodeIds = filesToDelete
+            .filter((f) => f.path)
+            .map((f) => f.nodeId);
+          if (fileNodeIds.length > 0) {
+            await tx.fileSystemNode.updateMany({
+              where: { id: { in: fileNodeIds } },
+              data: { deletedFromStorage: new Date() },
+            });
           }
 
           // 批量删除子节点
@@ -1339,7 +1361,7 @@ export class FileOperationsService {
 
           // 更新并删除主节点
           if (!project.isFolder && project.path) {
-            await tx.fileSystemNode.update({
+            await tx.fileSystemNode.updateMany({
               where: { id: projectId },
               data: { deletedFromStorage: new Date() },
             });
@@ -1434,14 +1456,15 @@ export class FileOperationsService {
       // 3. 在事务中执行数据库操作（快速完成）
       await this.prisma.$transaction(
         async (tx) => {
-          // 更新子文件节点状态
-          for (const file of filesToDelete) {
-            if (file.path) {
-              await tx.fileSystemNode.update({
-                where: { id: file.nodeId },
-                data: { deletedFromStorage: new Date() },
-              });
-            }
+          // 更新子文件节点状态（用 updateMany 避免并发删除导致记录不存在）
+          const fileNodeIds = filesToDelete
+            .filter((f) => f.path)
+            .map((f) => f.nodeId);
+          if (fileNodeIds.length > 0) {
+            await tx.fileSystemNode.updateMany({
+              where: { id: { in: fileNodeIds } },
+              data: { deletedFromStorage: new Date() },
+            });
           }
 
           // 批量删除子节点
@@ -1453,7 +1476,7 @@ export class FileOperationsService {
 
           // 更新并删除主节点
           if (!node.isFolder && node.path) {
-            await tx.fileSystemNode.update({
+            await tx.fileSystemNode.updateMany({
               where: { id: nodeId },
               data: { deletedFromStorage: new Date() },
             });

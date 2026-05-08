@@ -16,6 +16,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ProjectPermissionService } from '../../roles/project-permission.service';
@@ -113,6 +114,11 @@ export class RequireProjectPermissionGuard implements CanActivate {
       // 不是公开资源库节点：直接用 nodeId 查 projectId
       // 这解决了 multipart/form-data 请求中 body 未解析的问题
       projectId = await this.extractProjectIdFromNode(nodeId);
+
+      // 节点不存在（可能已被并发删除），直接返回 404
+      if (!projectId) {
+        throw new NotFoundException('请求的资源不存在');
+      }
     }
 
     // 如果上面的方式没拿到 projectId，尝试从请求中获取
@@ -268,9 +274,11 @@ export class RequireProjectPermissionGuard implements CanActivate {
 
       return null;
     } catch (error) {
-      this.logger.warn(`提取项目ID失败, 节点ID: ${node.id}, error: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(`提取项目ID失败, 节点ID: ${nodeId}, error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
+  }
+
   private async checkPermissions(
     userId: string,
     projectId: string,
