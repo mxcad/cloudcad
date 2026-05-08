@@ -50,6 +50,10 @@ export class PublicLibraryService implements IPublicLibraryProvider {
     return library.id;
   }
 
+  /**
+   * 获取公共资源库根节点（含直接子节点列表）
+   * @returns FileSystemNode 节点对象（含 children 数组），未找到时返回 null
+   */
   async getRootNode() {
     const libraryId = await this.getLibraryId();
 
@@ -66,14 +70,22 @@ export class PublicLibraryService implements IPublicLibraryProvider {
     });
   }
 
-  async createFolder(dto: CreateFolderDto): Promise<any> {
+  /**
+   * 在公共资源库中创建文件夹
+   * @returns 新创建的 FileSystemNode 文件夹节点
+   */
+  async createFolder(dto: CreateFolderDto): Promise<unknown> {
     const libraryId = await this.getLibraryId();
     const parentId = dto.parentId || libraryId;
 
     return this.fileSystemService.createFolder('system', parentId, dto);
   }
 
-  async deleteNode(nodeId: string): Promise<any> {
+  /**
+   * 删除公共资源库中的节点（永久删除）
+   * @returns 删除操作的执行结果
+   */
+  async deleteNode(nodeId: string): Promise<unknown> {
     return this.fileSystemService.deleteNode(nodeId, true);
   }
 }
