@@ -18,6 +18,7 @@ import * as path from 'path';
 export { StorageQuotaType };
 
 export interface StorageQuotaInfo {
+  nodeId?: string;
   type: StorageQuotaType;
   used: number;
   total: number;
@@ -173,6 +174,7 @@ export class StorageInfoService {
       totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
 
     return {
+      nodeId,
       type,
       used: totalUsed,
       total: totalLimit,
