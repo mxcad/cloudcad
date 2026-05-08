@@ -5,7 +5,19 @@ import type { ExternalReferenceFile } from '../../types/filesystem';
 
 // Mock Modal component
 vi.mock('../ui/Modal', () => ({
-  Modal: ({ isOpen, onClose, children, title, footer }: any) => {
+  Modal: ({
+    isOpen,
+    onClose,
+    children,
+    title,
+    footer,
+  }: {
+    isOpen?: boolean;
+    onClose?: () => void;
+    children?: React.ReactNode;
+    title?: React.ReactNode;
+    footer?: React.ReactNode;
+  }) => {
     if (!isOpen) return null;
     return (
       <div data-testid="modal">
@@ -19,7 +31,17 @@ vi.mock('../ui/Modal', () => ({
 
 // Mock Button component
 vi.mock('../ui/Button', () => ({
-  Button: ({ children, onClick, variant, disabled }: any) => (
+  Button: ({
+    children,
+    onClick,
+    variant,
+    disabled,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    variant?: string;
+    disabled?: boolean;
+  }) => (
     <button
       data-testid={`button-${variant || 'default'}`}
       onClick={onClick}
@@ -32,7 +54,7 @@ vi.mock('../ui/Button', () => ({
 
 // Mock Tooltip component
 vi.mock('../ui/Tooltip', () => ({
-  Tooltip: ({ children }: any) => <>{children}</>,
+  Tooltip: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock TruncateText/FileNameText component

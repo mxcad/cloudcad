@@ -51,7 +51,29 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
   });
 
   // Helper: 生成测试节点
-  function makeNode(overrides: any = {}) {
+  type TestFileSystemNode = {
+    id: string;
+    name: string;
+    description: string | null;
+    isFolder: boolean;
+    isRoot: boolean;
+    parentId: string;
+    path: string | null;
+    size: number;
+    mimeType: string;
+    fileHash: string;
+    fileStatus: string;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    ownerId: string;
+    personalSpaceKey: string | null;
+    libraryKey: string | null;
+    projectId: string;
+    _count: { children: number; projectMembers: number };
+  };
+
+  function makeNode(overrides: Partial<TestFileSystemNode> = {}) {
     return {
       id: 'n1',
       name: 'file.dwg',

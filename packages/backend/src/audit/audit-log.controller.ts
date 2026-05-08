@@ -35,6 +35,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
+import { AuthenticatedRequest } from '../common/types/request.types';
 
 @ApiTags('audit')
 @Controller('audit')
@@ -131,7 +132,7 @@ export class AuditLogController {
     status: HttpStatus.OK,
     description: '成功清理旧审计日志',
   })
-  async cleanupOldLogs(@Request() req: any, @Body() body: { daysToKeep: number }) {
+  async cleanupOldLogs(@Request() req: AuthenticatedRequest, @Body() body: { daysToKeep: number }) {
     const userId = req.user?.id || 'unknown';
     const deletedCount = await this.auditLogService.cleanupOldLogs(
       body.daysToKeep,

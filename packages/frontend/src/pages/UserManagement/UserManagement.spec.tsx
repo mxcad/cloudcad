@@ -2,8 +2,6 @@
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
-// @ts-nocheck
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UserManagement } from './index';
@@ -20,13 +18,23 @@ vi.mock('@/contexts/ThemeContext', () => ({
 }));
 vi.mock('@/hooks/useDocumentTitle');
 vi.mock('@/components/ui/Button', () => ({
-  Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  Button: ({
+    children,
+    ...props
+  }: { children?: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
 }));
 vi.mock('@/components/ui/Modal', () => ({
-  Modal: ({ children, isOpen, ...props }: any) => isOpen ? <div {...props}>{children}</div> : null,
+  Modal: ({
+    children,
+    isOpen,
+    ...props
+  }: { children?: React.ReactNode; isOpen?: boolean } & React.HTMLAttributes<HTMLDivElement>) =>
+    isOpen ? <div {...props}>{children}</div> : null,
 }));
 vi.mock('@/components/ui/TruncateText', () => ({
-  TruncateText: ({ children }: any) => <span>{children}</span>,
+  TruncateText: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
 
 const mockUsers = [

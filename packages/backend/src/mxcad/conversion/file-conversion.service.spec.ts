@@ -17,16 +17,26 @@ const mockProcessRunner = {
 
 // Replaces the old child_process.exec dispatch pattern.
 // Controls mockProcessRunner.run() with the same callback-based API.
+interface ErrorWithOutput extends Error {
+	stdout?: string;
+	stderr?: string;
+	code?: number;
+}
+
 function setExec(
 	_pattern: string,
 	fn: (cmd: string) => { error: Error | null; stdout: string; stderr: string },
 ) {
 	const result = fn("dummy");
 	if (result.error) {
-		const errWithOutput: any = new Error(result.error.message);
-		errWithOutput.stdout = result.stdout;
-		errWithOutput.stderr = result.stderr;
-		if ((result.error as any).code) errWithOutput.code = (result.error as any).code;
+		const errWithOutput: ErrorWithOutput = Object.assign(
+			new Error(result.error.message),
+			{
+				stdout: result.stdout,
+				stderr: result.stderr,
+				code: (result.error as ErrorWithOutput).code,
+			},
+		);
 		mockProcessRunner.run.mockRejectedValueOnce(errWithOutput);
 	} else {
 		mockProcessRunner.run.mockResolvedValueOnce({ stdout: result.stdout, stderr: result.stderr });
@@ -44,7 +54,7 @@ describe("FileConversionService", () => {
 		mockProcessRunner.isRunning.mockReturnValue(false);
 
 		const mockConfigService = {
-			get: jest.fn((key: string, options?: any) => {
+			get: jest.fn((key: string, options?: Record<string, unknown>) => {
 				if (key === "mxcad")
 					return {
 						assemblyPath: "/fake/mxcadassembly.exe",

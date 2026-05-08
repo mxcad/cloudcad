@@ -18,6 +18,40 @@ import { DatabaseModule } from '../database/database.module';
 import { FileSystemModule } from '../file-system/file-system.module';
 import { UsersModule } from '../users/users.module';
 
+// ---------- shared test data shapes ----------
+interface MockUser {
+  id: string; email: string; username: string; nickname: string;
+  avatar: string | null; role: string; status: string;
+  createdAt: Date; updatedAt: Date;
+}
+interface MockProject {
+  id: string; name: string; description: string; creatorId: string;
+  createdAt: Date; updatedAt: Date;
+}
+interface MockFile {
+  id: string; name: string; size: number; mimeType: string;
+  projectId: string; creatorId: string;
+  createdAt: Date; updatedAt: Date;
+}
+interface MockProjectMember {
+  userId: string; projectId: string; role: string; createdAt: Date;
+}
+interface MockFileAccess {
+  userId: string; fileId: string; role: string; createdAt: Date;
+}
+interface CreateUserData {
+  email: string; username: string; password: string; nickname: string; role: string;
+}
+interface CreateProjectData {
+  name: string; description: string;
+}
+interface CreateFileData {
+  name: string; size: number; mimeType: string;
+}
+interface UpdateUserData {
+  nickname: string; avatar: string;
+}
+
 export const createTestModule = async (): Promise<TestingModule> => {
   return Test.createTestingModule({
     imports: [
@@ -34,7 +68,7 @@ export const createTestModule = async (): Promise<TestingModule> => {
   }).compile();
 };
 
-export const createMockUser = (overrides: any = {}) => ({
+export const createMockUser = (overrides: Partial<MockUser> = {}): MockUser => ({
   id: 'test-user-id',
   email: 'test@example.com',
   username: 'testuser',
@@ -47,7 +81,7 @@ export const createMockUser = (overrides: any = {}) => ({
   ...overrides,
 });
 
-export const createMockProject = (overrides: any = {}) => ({
+export const createMockProject = (overrides: Partial<MockProject> = {}): MockProject => ({
   id: 'test-project-id',
   name: 'Test Project',
   description: 'Test project description',
@@ -57,7 +91,7 @@ export const createMockProject = (overrides: any = {}) => ({
   ...overrides,
 });
 
-export const createMockFile = (overrides: any = {}) => ({
+export const createMockFile = (overrides: Partial<MockFile> = {}): MockFile => ({
   id: 'test-file-id',
   name: 'test-file.dwg',
   size: 1024,
@@ -69,7 +103,7 @@ export const createMockFile = (overrides: any = {}) => ({
   ...overrides,
 });
 
-export const createMockProjectMember = (overrides: any = {}) => ({
+export const createMockProjectMember = (overrides: Partial<MockProjectMember> = {}): MockProjectMember => ({
   userId: 'test-user-id',
   projectId: 'test-project-id',
   role: 'MEMBER',
@@ -77,7 +111,7 @@ export const createMockProjectMember = (overrides: any = {}) => ({
   ...overrides,
 });
 
-export const createMockFileAccess = (overrides: any = {}) => ({
+export const createMockFileAccess = (overrides: Partial<MockFileAccess> = {}): MockFileAccess => ({
   userId: 'test-user-id',
   fileId: 'test-file-id',
   role: 'VIEWER',
@@ -246,10 +280,10 @@ export const cleanupTestDatabase = async () => {
 };
 
 export const createTestExecutionContext = (
-  user?: any,
-  params?: any,
-  query?: any,
-  body?: any
+  user?: Record<string, unknown>,
+  params?: Record<string, unknown>,
+  query?: Record<string, unknown>,
+  body?: Record<string, unknown>,
 ) => ({
   switchToHttp: jest.fn().mockReturnValue({
     getRequest: jest.fn().mockReturnValue({
@@ -263,7 +297,10 @@ export const createTestExecutionContext = (
   getClass: jest.fn(),
 });
 
-export const expectValidUserResponse = (response: any, expectedUser: any) => {
+export const expectValidUserResponse = (
+  response: Record<string, unknown>,
+  expectedUser: Record<string, unknown> | null,
+) => {
   expect(response).toHaveProperty('id');
   expect(response).toHaveProperty('email');
   expect(response).toHaveProperty('username');
@@ -280,14 +317,14 @@ export const expectValidUserResponse = (response: any, expectedUser: any) => {
   }
 };
 
-export const expectValidAuthResponse = (response: any) => {
+export const expectValidAuthResponse = (response: Record<string, unknown>) => {
   expect(response).toHaveProperty('accessToken');
   expect(response).toHaveProperty('refreshToken');
   expect(response).toHaveProperty('user');
   expectValidUserResponse(response.user, null);
 };
 
-export const expectPaginatedResponse = (response: any) => {
+export const expectPaginatedResponse = (response: Record<string, unknown>) => {
   expect(response).toHaveProperty('data');
   expect(response).toHaveProperty('pagination');
   expect(Array.isArray(response.data)).toBe(true);
@@ -298,16 +335,16 @@ export const expectPaginatedResponse = (response: any) => {
 };
 
 export const expectErrorResponse = (
-  response: any,
+  response: Record<string, unknown>,
   statusCode: number,
-  message: string
+  message: string,
 ) => {
   expect(response.statusCode).toBe(statusCode);
   expect(response.message).toContain(message);
 };
 
 // Test data factories
-export const createTestUserData = (overrides: any = {}) => ({
+export const createTestUserData = (overrides: Partial<CreateUserData> = {}): CreateUserData => ({
   email: 'test@example.com',
   username: 'testuser',
   password: 'password123',
@@ -316,13 +353,13 @@ export const createTestUserData = (overrides: any = {}) => ({
   ...overrides,
 });
 
-export const createTestProjectData = (overrides: any = {}) => ({
+export const createTestProjectData = (overrides: Partial<CreateProjectData> = {}): CreateProjectData => ({
   name: 'Test Project',
   description: 'Test project description',
   ...overrides,
 });
 
-export const createTestFileData = (overrides: any = {}) => ({
+export const createTestFileData = (overrides: Partial<CreateFileData> = {}): CreateFileData => ({
   name: 'test-file.dwg',
   size: 1024,
   mimeType: 'application/dwg',
@@ -334,7 +371,7 @@ export const createTestLoginData = (account: string, password: string) => ({
   password,
 });
 
-export const createTestUpdateUserData = (overrides: any = {}) => ({
+export const createTestUpdateUserData = (overrides: Partial<UpdateUserData> = {}): UpdateUserData => ({
   nickname: 'Updated Nickname',
   avatar: 'updated-avatar-url',
   ...overrides,

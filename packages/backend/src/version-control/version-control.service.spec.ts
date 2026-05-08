@@ -30,8 +30,8 @@ jest.mock('fs', () => {
 // ----------------------------------------------------------------
 const svnBehaviors: Record<string, Function> = {};
 
-function svnDispatcher(...args: any[]) {
-  const name = (svnDispatcher as any)._name!;
+function svnDispatcher(...args: unknown[]) {
+  const name = (svnDispatcher as Record<string, unknown>)._name as string;
   const cb = args[args.length - 1];
   const handler = svnBehaviors[name];
   if (handler) return handler(...args);
@@ -44,14 +44,14 @@ function installSvn(name: string, fn: Function) {
 }
 
 function svnOk(result: string) {
-  return (...args: any[]) => {
+  return (...args: unknown[]) => {
     const cb = args[args.length - 1];
     if (typeof cb === 'function') cb(null, result);
   };
 }
 
 function svnFail(msg: string) {
-  return (...args: any[]) => {
+  return (...args: unknown[]) => {
     const cb = args[args.length - 1];
     if (typeof cb === 'function') cb(new Error(msg), '');
   };
@@ -64,7 +64,7 @@ jest.mock('@cloudcad/svn-version-tool', () => {
   ];
   const obj: Record<string, Function> = {};
   for (const name of names) {
-    obj[name] = (...args: any[]) => {
+    obj[name] = (...args: unknown[]) => {
       const handler = svnBehaviors[name];
       if (handler) return handler(...args);
       const cb = args[args.length - 1];
@@ -94,13 +94,13 @@ resetSvnDefaults();
 // ----------------------------------------------------------------
 // ConfigService mock — plain object, survives resetAllMocks
 // ----------------------------------------------------------------
-const mockConfig: Record<string, any> = {
+const mockConfig: Record<string, unknown> = {
   svnRepoPath: '/fake/svn/repo',
   filesDataPath: '/fake/filesData',
   svn: { ignorePatterns: ['*.tmp', '*.log'] },
 };
 const mockConfigService = {
-  get: (key: string, opts?: any) => {
+  get: (key: string, opts?: Record<string, unknown>) => {
     if (opts?.infer && mockConfig[key] !== undefined) return mockConfig[key];
     return mockConfig[key];
   },

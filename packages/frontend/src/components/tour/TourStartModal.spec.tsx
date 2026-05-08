@@ -17,7 +17,19 @@ import { TourStartModal } from './TourStartModal';
 // Mock Modal 组件
 // ============================================
 vi.mock('../ui/Modal', () => ({
-  Modal: ({ isOpen, onClose, children, size, zIndex }: any) => {
+  Modal: ({
+    isOpen,
+    onClose,
+    children,
+    size,
+    zIndex,
+  }: {
+    isOpen?: boolean;
+    onClose?: () => void;
+    children?: React.ReactNode;
+    size?: string;
+    zIndex?: string;
+  }) => {
     if (!isOpen) return null;
     return (
       <div
@@ -36,7 +48,15 @@ vi.mock('../ui/Modal', () => ({
 // Mock Button 组件
 // ============================================
 vi.mock('../ui/Button', () => ({
-  Button: ({ children, onClick, variant }: any) => (
+  Button: ({
+    children,
+    onClick,
+    variant,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+    variant?: string;
+  }) => (
     <button
       data-testid={`button-${variant}`}
       onClick={onClick}

@@ -34,16 +34,27 @@ vi.mock('react-router-dom', async () => {
 
 // Mock components
 vi.mock('@/components/ui/Button', () => ({
-  Button: ({ children, ...props }: any) => (
+  Button: ({
+    children,
+    ...props
+  }: { children?: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
 }));
 vi.mock('@/components/ui/Modal', () => ({
-  Modal: ({ children, isOpen, ...props }: any) =>
+  Modal: ({
+    children,
+    isOpen,
+    ...props
+  }: { children?: React.ReactNode; isOpen?: boolean } & React.HTMLAttributes<HTMLDivElement>) =>
     isOpen ? <div {...props}>{children}</div> : null,
 }));
 vi.mock('@/components/ui/ConfirmDialog', () => ({
-  ConfirmDialog: ({ children, isOpen, ...props }: any) =>
+  ConfirmDialog: ({
+    children,
+    isOpen,
+    ...props
+  }: { children?: React.ReactNode; isOpen?: boolean } & React.HTMLAttributes<HTMLDivElement>) =>
     isOpen ? <div {...props}>{children}</div> : null,
 }));
 
@@ -91,15 +102,15 @@ describe('FileSystemManager', () => {
     vi.clearAllMocks();
 
     // Mock useParams
-    (useParams as any).mockReturnValue({ projectId: undefined });
+    vi.mocked(useParams).mockReturnValue({ projectId: undefined });
 
     // Mock useAuth
-    (useAuth as any).mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue({
       user: { id: '1', email: 'test@test.com' },
-    });
+    } as ReturnType<typeof useAuth>);
 
     // Mock useFileSystemStore
-    (useFileSystemStore as any).mockReturnValue({
+    vi.mocked(useFileSystemStore).mockReturnValue({
       personalSpaceId: null,
       personalSpaceIdLoading: false,
       setPersonalSpaceId: vi.fn(),
@@ -107,7 +118,7 @@ describe('FileSystemManager', () => {
     });
 
     // Mock useFileSystem
-    (useFileSystem as any).mockReturnValue({
+    vi.mocked(useFileSystem).mockReturnValue({
       nodes: [],
       currentNode: null,
       breadcrumbs: [],
@@ -177,7 +188,7 @@ describe('FileSystemManager', () => {
     });
 
     // Mock useProjectManagement
-    (useProjectManagement as any).mockReturnValue({
+    vi.mocked(useProjectManagement).mockReturnValue({
       isModalOpen: false,
       editingProject: null,
       setEditingProject: vi.fn(),

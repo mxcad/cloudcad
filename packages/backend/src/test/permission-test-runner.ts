@@ -294,7 +294,7 @@ export class PermissionTestRunner {
   private async runCacheTest(
     userId: string,
     testCase: PermissionTestCase
-  ): Promise<{ passed: boolean; details: any }> {
+  ): Promise<{ passed: boolean; details: Record<string, unknown> }> {
     const isFirstCheck = testCase.name.includes('缓存命中');
     const isClearCache = testCase.name.includes('缓存失效');
 
