@@ -30,7 +30,6 @@ import {
   libraryControllerCopyBlockNode,
 } from '@/api-sdk';
 import { sanitizeFileName } from '../../utils/fileUtils';
-import type { ResponseStyle } from '@/api-sdk/client/types.gen';
 
 export type LibraryType = 'drawing' | 'block';
 
@@ -102,12 +101,12 @@ export function useLibraryOperations({
   const handleDownload = useCallback(
     async (nodeId: string) => {
       try {
-        const response =
+        const { data: blobData } =
           libraryType === 'drawing'
-            ? await libraryControllerDownloadDrawingNode({ path: { nodeId }, responseStyle: 'blob' as ResponseStyle as ResponseStyle })
-            : await libraryControllerDownloadBlockNode({ path: { nodeId }, responseStyle: 'blob' as ResponseStyle as ResponseStyle });
+            ? await libraryControllerDownloadDrawingNode({ path: { nodeId }, parseAs: 'blob' })
+            : await libraryControllerDownloadBlockNode({ path: { nodeId }, parseAs: 'blob' });
 
-        const blob = new Blob([response.data as unknown as BlobPart]);
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;

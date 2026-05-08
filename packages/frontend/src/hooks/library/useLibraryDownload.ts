@@ -10,7 +10,6 @@ import {
 } from '@/api-sdk';
 import { handleApiError } from '../../utils/errorHandler';
 import type { LibraryType } from './useLibraryQuery';
-import type { ResponseStyle } from '@/api-sdk/client/types.gen';
 
 interface UseLibraryDownloadOptions {
   libraryType: LibraryType;
@@ -25,27 +24,25 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
   const downloadNode = useCallback(
     async (nodeId: string) => {
       try {
-        const response = await (libraryType === 'drawing'
+        const { data: blobData, error: responseError } = await (libraryType === 'drawing'
           ? libraryControllerDownloadDrawingNode({
               path: { nodeId },
-              responseStyle: 'blob' as ResponseStyle
+              parseAs: 'blob'
             })
           : libraryControllerDownloadBlockNode({
               path: { nodeId },
-              responseStyle: 'blob' as ResponseStyle
+              parseAs: 'blob'
             }));
 
-        if (response.error) throw response.error;
+        if (responseError) throw responseError;
 
-        if (!response.data) {
+        if (!blobData) {
           handleApiError(new Error('服务器返回数据为空'), '下载文件失败');
           return;
         }
 
         // 处理下载逻辑（后端返回文件流）
-        const url = window.URL.createObjectURL(
-          new Blob([response.data as unknown as BlobPart])
-        );
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
         const link = document.createElement('a');
         link.href = url;
         link.setAttribute('download', 'file');

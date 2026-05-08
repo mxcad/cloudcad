@@ -954,11 +954,6 @@ export type CreateUserDto = {
     provider?: string;
 };
 
-/**
- * 用户状态
- */
-export type UserStatusEnum = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-
 export type UserResponseDto = {
     /**
      * 用户 ID
@@ -987,7 +982,7 @@ export type UserResponseDto = {
     /**
      * 用户状态
      */
-    status: UserStatusEnum;
+    status: UserStatus;
     /**
      * 用户角色
      */

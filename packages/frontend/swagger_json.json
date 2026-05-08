@@ -9462,15 +9462,6 @@
           "password"
         ]
       },
-      "UserStatusEnum": {
-        "type": "string",
-        "enum": [
-          "ACTIVE",
-          "INACTIVE",
-          "SUSPENDED"
-        ],
-        "description": "用户状态"
-      },
       "UserResponseDto": {
         "type": "object",
         "properties": {
@@ -9502,7 +9493,7 @@
             "description": "用户状态",
             "allOf": [
               {
-                "$ref": "#/components/schemas/UserStatusEnum"
+                "$ref": "#/components/schemas/UserStatus"
               }
             ]
           },
