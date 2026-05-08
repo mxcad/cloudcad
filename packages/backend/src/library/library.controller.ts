@@ -30,6 +30,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   AuthenticatedRequest,
 } from '../common/types/request.types';

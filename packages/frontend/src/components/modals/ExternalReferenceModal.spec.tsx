@@ -59,7 +59,7 @@ vi.mock('../ui/Tooltip', () => ({
 
 // Mock TruncateText/FileNameText component
 vi.mock('../ui/TruncateText', () => ({
-  FileNameText: ({ children }: any) => <span data-testid="file-name">{children}</span>,
+  FileNameText: ({ children }: { children: React.ReactNode }) => <span data-testid="file-name">{children}</span>,
 }));
 
 // Mock lucide-react icons

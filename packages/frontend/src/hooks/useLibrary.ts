@@ -279,19 +279,19 @@ export const useLibrary = (
     refresh,
     setSearchTerm,
     setViewMode,
-    createFolder: async (name: string, parentId?: string) => {
+    createFolder: async (name: string, parentId?: string): Promise<void> => {
       await mutations.createFolder({ name, parentId });
     },
-    deleteNode: async (nodeId: string, permanently?: boolean) => {
+    deleteNode: async (nodeId: string, permanently?: boolean): Promise<void> => {
       await mutations.deleteNode({ nodeId, permanently });
     },
-    renameNode: async (nodeId: string, name: string) => {
+    renameNode: async (nodeId: string, name: string): Promise<void> => {
       await mutations.renameNode({ nodeId, name });
     },
-    moveNode: async (nodeId: string, targetParentId: string) => {
+    moveNode: async (nodeId: string, targetParentId: string): Promise<void> => {
       await mutations.moveNode({ nodeId, targetParentId });
     },
-    copyNode: async (nodeId: string, targetParentId: string) => {
+    copyNode: async (nodeId: string, targetParentId: string): Promise<void> => {
       await mutations.copyNode({ nodeId, targetParentId });
     },
     downloadNode,

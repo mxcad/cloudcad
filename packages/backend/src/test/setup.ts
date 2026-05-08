@@ -317,7 +317,7 @@ jest.mock("ioredis", () => ({
 }));
 
 global.createMockResponse = () => {
-	const res: any = {};
+	const res: Record<string, unknown> & { status: jest.Mock; json: jest.Mock; send: jest.Mock; redirect: jest.Mock } = {} as any;
 	res.status = jest.fn().mockReturnValue(res);
 	res.json = jest.fn().mockReturnValue(res);
 	res.send = jest.fn().mockReturnValue(res);
@@ -337,7 +337,7 @@ global.generateEmail = () => `test-${global.generateId()}@example.com`;
 global.generateUsername = () => `testuser-${global.generateId()}`;
 
 // Test data generators
-global.createTestUser = (overrides: any = {}) => ({
+global.createTestUser = (overrides: Record<string, unknown> = {}) => ({
 	id: global.generateId(),
 	email: global.generateEmail(),
 	username: global.generateUsername(),
@@ -350,7 +350,7 @@ global.createTestUser = (overrides: any = {}) => ({
 	...overrides,
 });
 
-global.createTestProject = (overrides: any = {}) => ({
+global.createTestProject = (overrides: Record<string, unknown> = {}) => ({
 	id: global.generateId(),
 	name: "Test Project",
 	description: "Test project description",
@@ -360,7 +360,7 @@ global.createTestProject = (overrides: any = {}) => ({
 	...overrides,
 });
 
-global.createTestFile = (overrides: any = {}) => ({
+global.createTestFile = (overrides: Record<string, unknown> = {}) => ({
 	id: global.generateId(),
 	name: "test-file.dwg",
 	size: 1024,

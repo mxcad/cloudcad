@@ -15,9 +15,18 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
-import { Request } from 'express';
 import { QuotaEnforcementService } from '../../file-system/storage-quota/quota-enforcement.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
+
+/**
+ * 拦截器处理的上传请求类型（Multer 扩展后的 Express Request）
+ */
+type MulterRequest = Request & {
+  file?: Express.Multer.File;
+  files?:
+    | Express.Multer.File[]
+    | Record<string, Express.Multer.File[]>;
+};
 
 /**
  * 存储配额拦截器
@@ -109,7 +118,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
    * 从请求中提取文件大小
    * 支持多种上传方式：Multer 单文件/多文件、Base64、分片上传等
    */
-  private extractFileSize(request: any): number | null {
+  private extractFileSize(request: MulterRequest): number | null {
     // 1. Multer 单文件上传
     if (request.file?.size) {
       return request.file.size;
@@ -118,7 +127,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
     // 2. Multer 多文件上传（数组形式）
     if (request.files && Array.isArray(request.files)) {
       return request.files.reduce(
-        (sum: number, file: any) => sum + (file?.size || 0),
+        (sum: number, file: Express.Multer.File) => sum + (file?.size || 0),
         0
       );
     }
@@ -129,7 +138,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
       for (const field of Object.values(request.files)) {
         if (Array.isArray(field)) {
           totalSize += field.reduce(
-            (sum: number, file: any) => sum + (file?.size || 0),
+            (sum: number, file: Express.Multer.File) => sum + (file?.size || 0),
             0
           );
         }
@@ -181,7 +190,7 @@ export class StorageQuotaInterceptor implements NestInterceptor {
    * 从请求中提取父节点 ID
    * 支持多种参数名称和位置（body、query、params）
    */
-  private extractParentNodeId(request: any): string | null {
+  private extractParentNodeId(request: MulterRequest): string | null {
     // 1. 从 body 获取
     const bodyKeys = [
       'parentId',

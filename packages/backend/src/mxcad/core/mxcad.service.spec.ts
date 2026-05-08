@@ -103,7 +103,7 @@ describe("MxCadService", () => {
 	};
 
 	const mockConfigService = {
-		get: jest.fn((key: string, opts?: any) => {
+		get: jest.fn((key: string, opts?: Record<string, unknown>) => {
 			if (key === "mxcadUploadPath") return "/fake/upload";
 			if (key === "nodeEnv") return "test";
 			if (opts?.infer) {

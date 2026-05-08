@@ -120,15 +120,15 @@ describe('VersionControlService', () => {
     }).compile();
 
     service = module.get<VersionControlService>(VersionControlService);
-    (service as any).isInitialized = true;
-    (service as any).initPromise = Promise.resolve();
+    (service as Record<string, unknown>).isInitialized = true;
+    (service as Record<string, unknown>).initPromise = Promise.resolve();
   });
 
   // ==================== isReady ====================
   describe('isReady', () => {
     it('returns true when initialized', () => { expect(service.isReady()).toBe(true); });
     it('returns false when not initialized', () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect(service.isReady()).toBe(false);
     });
   });
@@ -139,7 +139,7 @@ describe('VersionControlService', () => {
       await expect(service.ensureInitialized()).resolves.toBeUndefined();
     });
     it('awaits initPromise when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       await expect(service.ensureInitialized()).resolves.toBeUndefined();
     });
   });
@@ -147,7 +147,7 @@ describe('VersionControlService', () => {
   // ==================== commitNodeDirectory ====================
   describe('commitNodeDirectory', () => {
     it('fails when SVN not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       const r = await service.commitNodeDirectory('/dir', 'msg');
       expect(r.success).toBe(false);
       expect(r.message).toContain('未初始化');
@@ -172,7 +172,7 @@ describe('VersionControlService', () => {
   // ==================== commitFiles ====================
   describe('commitFiles', () => {
     it('fails when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect((await service.commitFiles(['f'], 'm')).success).toBe(false);
     });
     it('succeeds with empty file list', async () => {
@@ -188,7 +188,7 @@ describe('VersionControlService', () => {
   // ==================== deleteNodeDirectory ====================
   describe('deleteNodeDirectory', () => {
     it('fails when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect((await service.deleteNodeDirectory('/d')).success).toBe(false);
     });
     it('succeeds when initialized', async () => {
@@ -203,7 +203,7 @@ describe('VersionControlService', () => {
   // ==================== commitWorkingCopy ====================
   describe('commitWorkingCopy', () => {
     it('fails when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect((await service.commitWorkingCopy('m')).success).toBe(false);
     });
     it('succeeds when initialized', async () => {
@@ -218,7 +218,7 @@ describe('VersionControlService', () => {
   // ==================== getFileHistory ====================
   describe('getFileHistory', () => {
     it('fails when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect((await service.getFileHistory('p/f.dwg')).success).toBe(false);
     });
     it('parses SVN log XML', async () => {
@@ -259,7 +259,7 @@ describe('VersionControlService', () => {
   // ==================== listDirectoryAtRevision ====================
   describe('listDirectoryAtRevision', () => {
     it('fails when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect((await service.listDirectoryAtRevision('/d', 1)).success).toBe(false);
     });
     it('lists files', async () => {
@@ -282,7 +282,7 @@ describe('VersionControlService', () => {
   // ==================== getFileContentAtRevision ====================
   describe('getFileContentAtRevision', () => {
     it('fails when not initialized', async () => {
-      (service as any).isInitialized = false;
+      (service as Record<string, unknown>).isInitialized = false;
       expect((await service.getFileContentAtRevision('/f', 1)).success).toBe(false);
     });
     it('gets content', async () => {
@@ -317,11 +317,11 @@ describe('VersionControlService', () => {
     it('retries on locked error and succeeds', async () => {
       let calls = 0;
       const op = () => { calls++; if (calls === 1) throw new Error('E155004: Locked'); return 'ok'; };
-      expect(await (service as any).executeWithLockRetry(op, 't')).toBe('ok');
+      expect(await (service as Record<string, unknown>).executeWithLockRetry(op, 't')).toBe('ok');
       expect(calls).toBe(2);
     });
     it('throws non-lock errors directly', async () => {
-      await expect((service as any).executeWithLockRetry(() => { throw new Error('Other'); }, 't')).rejects.toThrow('Other');
+      await expect((service as Record<string, unknown>).executeWithLockRetry(() => { throw new Error('Other'); }, 't')).rejects.toThrow('Other');
     });
   });
 

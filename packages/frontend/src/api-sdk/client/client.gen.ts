@@ -15,7 +15,7 @@ import {
 } from './utils.gen';
 
 type ReqInit = Omit<RequestInit, 'body' | 'headers'> & {
-  body?: unknown;
+  body?: BodyInit | null;
   headers: ReturnType<typeof mergeHeaders>;
 };
 
@@ -139,12 +139,12 @@ export const createClient = (config: Config = {}): Client => {
               emptyData = {};
               break;
           }
-          return opts.responseStyle === 'data'
+          return (opts.responseStyle === 'data'
             ? emptyData
             : {
                 data: emptyData,
                 ...result,
-              };
+              }) as never;
         }
 
         let data: unknown;
@@ -181,12 +181,12 @@ export const createClient = (config: Config = {}): Client => {
           }
         }
 
-        return opts.responseStyle === 'data'
+        return (opts.responseStyle === 'data'
           ? data
           : {
               data,
               ...result,
-            };
+            }) as never;
       }
 
       const textError = await response.text();

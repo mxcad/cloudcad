@@ -27,12 +27,12 @@ import { ProjectCrudService } from "./project-crud.service";
 
 describe("ProjectCrudService", () => {
 	let service: ProjectCrudService;
-	let prisma: any;
-	let storageManager: any;
-	let permissionService: any;
-	let personalSpaceService: any;
-	let fileOperationsService: any;
-	let fileTreeService: any;
+	let prisma: Record<string, Record<string, jest.Mock> | jest.Mock>;
+	let storageManager: Record<string, jest.Mock>;
+	let permissionService: Record<string, jest.Mock>;
+	let personalSpaceService: Record<string, jest.Mock>;
+	let fileOperationsService: Record<string, jest.Mock>;
+	let fileTreeService: Record<string, jest.Mock>;
 
 	beforeEach(async () => {
 		const mockPrisma = {

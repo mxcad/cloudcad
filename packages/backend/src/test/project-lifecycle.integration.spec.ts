@@ -21,8 +21,8 @@ describe('项目生命周期集成测试', () => {
   let prisma: PrismaClient;
   let projectRolesService: ProjectRolesService;
   
-  let testUser: any;
-  let testAdmin: any;
+  let testUser: Record<string, unknown>;
+  let testAdmin: Record<string, unknown>;
   let authToken: string;
   let adminAuthToken: string;
 
@@ -375,7 +375,7 @@ describe('项目生命周期集成测试', () => {
         .expect(200);
 
       const activeProjects = listResponse.body.nodes;
-      const deletedProject = activeProjects.find((p: any) => p.id === projectId);
+      const deletedProject = activeProjects.find((p: Record<string, unknown>) => p.id === projectId);
       expect(deletedProject).toBeUndefined();
     });
   });
@@ -423,7 +423,7 @@ describe('项目生命周期集成测试', () => {
       expect(membersResponse.body.length).toBeGreaterThan(0);
       
       const creatorMember = membersResponse.body.find(
-        (m: any) => m.user && m.user.id === testUser.id
+        (m: Record<string, unknown>) => m.user && (m.user as Record<string, unknown>).id === testUser.id
       );
       expect(creatorMember).toBeDefined();
     });

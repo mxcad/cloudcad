@@ -25,12 +25,12 @@ import { FileOperationsService } from "./file-operations.service";
 
 describe("FileOperationsService", () => {
 	let service: FileOperationsService;
-	let prisma: any;
-	let storageManager: any;
-	let configService: any;
-	let versionControlService: any;
-	let storageInfoService: any;
-	let fileTreeService: any;
+	let prisma: Record<string, Record<string, jest.Mock> | jest.Mock>;
+	let storageManager: Record<string, jest.Mock>;
+	let configService: Record<string, jest.Mock>;
+	let versionControlService: Record<string, jest.Mock>;
+	let storageInfoService: Record<string, jest.Mock>;
+	let fileTreeService: Record<string, jest.Mock>;
 
 	beforeEach(async () => {
 		const mockPrisma = {

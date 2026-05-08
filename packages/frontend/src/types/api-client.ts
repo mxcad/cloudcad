@@ -3941,7 +3941,7 @@ declare namespace Paths {
                  */
                 info?: {
                     [name: string]: {
-                        [name: string]: any;
+                        [name: string]: unknown;
                         status: string;
                     };
                 } | null;
@@ -3951,7 +3951,7 @@ declare namespace Paths {
                  */
                 error?: {
                     [name: string]: {
-                        [name: string]: any;
+                        [name: string]: unknown;
                         status: string;
                     };
                 } | null;
@@ -3965,7 +3965,7 @@ declare namespace Paths {
                  */
                 details?: {
                     [name: string]: {
-                        [name: string]: any;
+                        [name: string]: unknown;
                         status: string;
                     };
                 };
@@ -3986,7 +3986,7 @@ declare namespace Paths {
                  */
                 info?: {
                     [name: string]: {
-                        [name: string]: any;
+                        [name: string]: unknown;
                         status: string;
                     };
                 } | null;
@@ -4001,7 +4001,7 @@ declare namespace Paths {
                  */
                 error?: {
                     [name: string]: {
-                        [name: string]: any;
+                        [name: string]: unknown;
                         status: string;
                     };
                 } | null;
@@ -4019,7 +4019,7 @@ declare namespace Paths {
                  */
                 details?: {
                     [name: string]: {
-                        [name: string]: any;
+                        [name: string]: unknown;
                         status: string;
                     };
                 };

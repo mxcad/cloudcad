@@ -61,7 +61,7 @@ describe("SearchService", () => {
 	});
 
 	// Helper: minimal node shape returned by Prisma
-	function makeNode(overrides: any = {}) {
+	function makeNode(overrides: Record<string, unknown> = {}) {
 		return {
 			id: "n1",
 			name: "file.dwg",
