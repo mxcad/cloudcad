@@ -15,7 +15,7 @@ import {
 } from './utils.gen';
 
 type ReqInit = Omit<RequestInit, 'body' | 'headers'> & {
-  body?: any;
+  body?: unknown;
   headers: ReturnType<typeof mergeHeaders>;
 };
 
@@ -121,7 +121,7 @@ export const createClient = (config: Config = {}): Client => {
             : opts.parseAs) ?? 'json';
 
         if (response.status === 204 || response.headers.get('Content-Length') === '0') {
-          let emptyData: any;
+          let emptyData: unknown;
           switch (parseAs) {
             case 'arrayBuffer':
             case 'blob':
@@ -147,7 +147,7 @@ export const createClient = (config: Config = {}): Client => {
               };
         }
 
-        let data: any;
+        let data: unknown;
         switch (parseAs) {
           case 'arrayBuffer':
           case 'blob':

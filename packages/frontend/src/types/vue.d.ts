@@ -1,3 +1,7 @@
 declare module 'vue' {
-  export function watch(source: any, callback: any, options?: any): any;
+  export function watch<T>(
+    source: T,
+    callback: (value: T, oldValue: T) => void,
+    options?: { immediate?: boolean; deep?: boolean },
+  ): () => void;
 }

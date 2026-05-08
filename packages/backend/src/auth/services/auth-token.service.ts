@@ -22,6 +22,7 @@ import {
   JwtAccessPayload,
   JwtRefreshPayload,
   UserForToken,
+  SessionRequest,
 } from '../interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -218,7 +219,7 @@ export class AuthTokenService {
     };
   }
 
-  async logout(userId: string, accessToken?: string, req?: any): Promise<void> {
+  async logout(userId: string, accessToken?: string, req?: SessionRequest): Promise<void> {
     try {
       await this.deleteAllRefreshTokens(userId);
       this.logger.log(`用户退出登录，已删除刷新令牌：${userId}`);

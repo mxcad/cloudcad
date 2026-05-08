@@ -67,7 +67,7 @@ declare namespace Components {
                      * user@example.com
                      */
                     email?: {
-                        [key: string]: any;
+                        [key: string]: unknown;
                     } | null;
                     /**
                      * 用户名
@@ -127,7 +127,7 @@ declare namespace Components {
                      * 13800138000
                      */
                     phone?: {
-                        [key: string]: any;
+                        [key: string]: unknown;
                     } | null;
                     /**
                      * 手机号是否已验证
@@ -141,7 +141,7 @@ declare namespace Components {
                      * oXYZ123...
                      */
                     wechatId?: {
-                        [key: string]: any;
+                        [key: string]: unknown;
                     } | null;
                     /**
                      * 登录方式 (LOCAL | WECHAT)
@@ -193,7 +193,7 @@ declare namespace Components {
                  * user@example.com
                  */
                 email?: {
-                    [key: string]: any;
+                    [key: string]: unknown;
                 } | null;
                 /**
                  * 用户名
@@ -253,7 +253,7 @@ declare namespace Components {
                  * 13800138000
                  */
                 phone?: {
-                    [key: string]: any;
+                    [key: string]: unknown;
                 } | null;
                 /**
                  * 手机号是否已验证
@@ -267,7 +267,7 @@ declare namespace Components {
                  * oXYZ123...
                  */
                 wechatId?: {
-                    [key: string]: any;
+                    [key: string]: unknown;
                 } | null;
                 /**
                  * 登录方式 (LOCAL | WECHAT)
@@ -365,19 +365,19 @@ declare namespace Components {
              * 缓存统计
              */
             stats: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 健康状态
              */
             healthStatus: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 性能指标
              */
             performanceMetrics: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 热点数据
@@ -1341,13 +1341,13 @@ declare namespace Components {
              * 成员数量
              */
             _count?: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 关联的项目
              */
             project?: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 创建时间
@@ -1674,7 +1674,7 @@ declare namespace Components {
              * false
              */
             defaultValue: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 是否公开给前端
@@ -1696,7 +1696,7 @@ declare namespace Components {
              * false
              */
             value: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
             /**
              * 值类型
@@ -2085,7 +2085,7 @@ declare namespace Components {
              * false
              */
             value: {
-                [key: string]: any;
+                [key: string]: unknown;
             };
         }
         export interface UpdateStorageQuotaDto {
@@ -2396,7 +2396,7 @@ declare namespace Components {
              * user@example.com
              */
             email?: {
-                [key: string]: any;
+                [key: string]: unknown;
             } | null;
             /**
              * 用户名
@@ -2456,7 +2456,7 @@ declare namespace Components {
              * 13800138000
              */
             phone?: {
-                [key: string]: any;
+                [key: string]: unknown;
             } | null;
             /**
              * 手机号是否已验证
@@ -2470,7 +2470,7 @@ declare namespace Components {
              * oXYZ123...
              */
             wechatId?: {
-                [key: string]: any;
+                [key: string]: unknown;
             } | null;
             /**
              * 登录方式 (LOCAL | WECHAT)
@@ -5245,7 +5245,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getSummary'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetSummary.Responses.$200>
   /**
@@ -5253,7 +5253,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getHealthStatus'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetHealthStatus.Responses.$200>
   /**
@@ -5261,7 +5261,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getPerformanceMetrics'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetPerformanceMetrics.Responses.$200>
   /**
@@ -5269,7 +5269,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getHotData'(
     parameters?: Parameters<Paths.CacheMonitorControllerGetHotData.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetHotData.Responses.$200>
   /**
@@ -5277,7 +5277,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getPerformanceTrend'(
     parameters?: Parameters<Paths.CacheMonitorControllerGetPerformanceTrend.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetPerformanceTrend.Responses.$200>
   /**
@@ -5285,7 +5285,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getSizeTrend'(
     parameters?: Parameters<Paths.CacheMonitorControllerGetSizeTrend.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetSizeTrend.Responses.$200>
   /**
@@ -5293,7 +5293,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getWarnings'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetWarnings.Responses.$200>
   /**
@@ -5301,7 +5301,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getValue'(
     parameters?: Parameters<Paths.CacheMonitorControllerGetValue.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetValue.Responses.$200>
   /**
@@ -5309,7 +5309,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_deleteValue'(
     parameters?: Parameters<Paths.CacheMonitorControllerDeleteValue.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerDeleteValue.Responses.$200>
   /**
@@ -5341,7 +5341,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getWarmupConfig'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetWarmupConfig.Responses.$200>
   /**
@@ -5365,7 +5365,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getWarmupHistory'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetWarmupHistory.Responses.$200>
   /**
@@ -5373,7 +5373,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_clearWarmupHistory'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerClearWarmupHistory.Responses.$200>
   /**
@@ -5381,7 +5381,7 @@ export interface OperationMethods {
    */
   'CacheMonitorController_getWarmupStats'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetWarmupStats.Responses.$200>
   /**
@@ -5413,7 +5413,7 @@ export interface OperationMethods {
    */
   'AuthController_logout'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerLogout.Responses.$200>
   /**
@@ -5421,7 +5421,7 @@ export interface OperationMethods {
    */
   'AuthController_getProfile'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerGetProfile.Responses.$200>
   /**
@@ -5429,7 +5429,7 @@ export interface OperationMethods {
    */
   'AuthController_sendVerification'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerSendVerification.Responses.$200>
   /**
@@ -5445,7 +5445,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyEmailAndRegisterPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyEmailAndRegisterPhone.Responses.$201>
   /**
@@ -5453,7 +5453,7 @@ export interface OperationMethods {
    */
   'AuthController_resendVerification'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerResendVerification.Responses.$200>
   /**
@@ -5461,7 +5461,7 @@ export interface OperationMethods {
    */
   'AuthController_bindEmailAndLogin'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindEmailAndLogin.Responses.$200>
   /**
@@ -5469,7 +5469,7 @@ export interface OperationMethods {
    */
   'AuthController_bindPhoneAndLogin'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindPhoneAndLogin.Responses.$200>
   /**
@@ -5477,7 +5477,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyPhone.Responses.$200>
   /**
@@ -5501,7 +5501,7 @@ export interface OperationMethods {
    */
   'AuthController_sendBindEmailCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
   /**
@@ -5517,7 +5517,7 @@ export interface OperationMethods {
    */
   'AuthController_sendUnbindEmailCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerSendUnbindEmailCode.Responses.$200>
   /**
@@ -5525,7 +5525,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyUnbindEmailCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyUnbindEmailCode.Responses.$200>
   /**
@@ -5533,7 +5533,7 @@ export interface OperationMethods {
    */
   'AuthController_rebindEmail'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerRebindEmail.Responses.$200>
   /**
@@ -5565,7 +5565,7 @@ export interface OperationMethods {
    */
   'AuthController_loginByPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerLoginByPhone.Responses.$200>
   /**
@@ -5573,7 +5573,7 @@ export interface OperationMethods {
    */
   'AuthController_bindPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindPhone.Responses.$200>
   /**
@@ -5581,7 +5581,7 @@ export interface OperationMethods {
    */
   'AuthController_sendUnbindPhoneCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerSendUnbindPhoneCode.Responses.$200>
   /**
@@ -5589,7 +5589,7 @@ export interface OperationMethods {
    */
   'AuthController_verifyUnbindPhoneCode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerVerifyUnbindPhoneCode.Responses.$200>
   /**
@@ -5597,7 +5597,7 @@ export interface OperationMethods {
    */
   'AuthController_rebindPhone'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerRebindPhone.Responses.$200>
   /**
@@ -5613,7 +5613,7 @@ export interface OperationMethods {
    */
   'AuthController_getWechatAuthUrl'(
     parameters?: Parameters<Paths.AuthControllerGetWechatAuthUrl.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerGetWechatAuthUrl.Responses.$200>
   /**
@@ -5621,7 +5621,7 @@ export interface OperationMethods {
    */
   'AuthController_wechatCallback'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerWechatCallback.Responses.$200>
   /**
@@ -5629,7 +5629,7 @@ export interface OperationMethods {
    */
   'AuthController_bindWechat'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerBindWechat.Responses.$200>
   /**
@@ -5637,7 +5637,7 @@ export interface OperationMethods {
    */
   'AuthController_unbindWechat'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuthControllerUnbindWechat.Responses.$200>
   /**
@@ -5645,7 +5645,7 @@ export interface OperationMethods {
    */
   'UserCleanupController_getStats'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UserCleanupControllerGetStats.Responses.$200>
   /**
@@ -5661,7 +5661,7 @@ export interface OperationMethods {
    */
   'RuntimeConfigController_getPublicConfigs'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
   /**
@@ -5669,7 +5669,7 @@ export interface OperationMethods {
    */
   'RuntimeConfigController_getAllConfigs'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
   /**
@@ -5677,7 +5677,7 @@ export interface OperationMethods {
    */
   'RuntimeConfigController_getDefinitions'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
   /**
@@ -5685,7 +5685,7 @@ export interface OperationMethods {
    */
   'RuntimeConfigController_getConfig'(
     parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
   /**
@@ -5701,7 +5701,7 @@ export interface OperationMethods {
    */
   'RuntimeConfigController_resetConfig'(
     parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   /**
@@ -5709,7 +5709,7 @@ export interface OperationMethods {
    */
   'UsersController_findAll'(
     parameters?: Parameters<Paths.UsersControllerFindAll.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerFindAll.Responses.$200>
   /**
@@ -5725,7 +5725,7 @@ export interface OperationMethods {
    */
   'UsersController_searchByEmail'(
     parameters?: Parameters<Paths.UsersControllerSearchByEmail.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerSearchByEmail.Responses.$200>
   /**
@@ -5733,7 +5733,7 @@ export interface OperationMethods {
    */
   'UsersController_searchUsers'(
     parameters?: Parameters<Paths.UsersControllerSearchUsers.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerSearchUsers.Responses.$200>
   /**
@@ -5741,7 +5741,7 @@ export interface OperationMethods {
    */
   'UsersController_getProfile'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerGetProfile.Responses.$200>
   /**
@@ -5757,7 +5757,7 @@ export interface OperationMethods {
    */
   'UsersController_getDashboardStats'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerGetDashboardStats.Responses.$200>
   /**
@@ -5765,7 +5765,7 @@ export interface OperationMethods {
    */
   'UsersController_findOne'(
     parameters?: Parameters<Paths.UsersControllerFindOne.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerFindOne.Responses.$200>
   /**
@@ -5781,7 +5781,7 @@ export interface OperationMethods {
    */
   'UsersController_remove'(
     parameters?: Parameters<Paths.UsersControllerRemove.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerRemove.Responses.$200>
   /**
@@ -5789,7 +5789,7 @@ export interface OperationMethods {
    */
   'UsersController_restore'(
     parameters?: Parameters<Paths.UsersControllerRestore.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerRestore.Responses.$200>
   /**
@@ -5797,7 +5797,7 @@ export interface OperationMethods {
    */
   'UsersController_deleteImmediately'(
     parameters?: Parameters<Paths.UsersControllerDeleteImmediately.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerDeleteImmediately.Responses.$200>
   /**
@@ -5829,7 +5829,7 @@ export interface OperationMethods {
    */
   'RolesController_findAll'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerFindAll.Responses.$200>
   /**
@@ -5845,7 +5845,7 @@ export interface OperationMethods {
    */
   'RolesController_findOne'(
     parameters?: Parameters<Paths.RolesControllerFindOne.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerFindOne.Responses.$200>
   /**
@@ -5861,7 +5861,7 @@ export interface OperationMethods {
    */
   'RolesController_remove'(
     parameters?: Parameters<Paths.RolesControllerRemove.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerRemove.Responses.$200>
   /**
@@ -5869,7 +5869,7 @@ export interface OperationMethods {
    */
   'RolesController_getRolePermissions'(
     parameters?: Parameters<Paths.RolesControllerGetRolePermissions.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerGetRolePermissions.Responses.$200>
   /**
@@ -5877,7 +5877,7 @@ export interface OperationMethods {
    */
   'RolesController_addPermissions'(
     parameters?: Parameters<Paths.RolesControllerAddPermissions.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerAddPermissions.Responses.$200>
   /**
@@ -5885,7 +5885,7 @@ export interface OperationMethods {
    */
   'RolesController_removePermissions'(
     parameters?: Parameters<Paths.RolesControllerRemovePermissions.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerRemovePermissions.Responses.$200>
   /**
@@ -5893,7 +5893,7 @@ export interface OperationMethods {
    */
   'RolesController_getAllProjectRoles'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerGetAllProjectRoles.Responses.$200>
   /**
@@ -5901,7 +5901,7 @@ export interface OperationMethods {
    */
   'RolesController_getSystemProjectRoles'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerGetSystemProjectRoles.Responses.$200>
   /**
@@ -5909,7 +5909,7 @@ export interface OperationMethods {
    */
   'RolesController_getProjectRolesByProject'(
     parameters?: Parameters<Paths.RolesControllerGetProjectRolesByProject.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerGetProjectRolesByProject.Responses.$200>
   /**
@@ -5917,7 +5917,7 @@ export interface OperationMethods {
    */
   'RolesController_getProjectRolePermissions'(
     parameters?: Parameters<Paths.RolesControllerGetProjectRolePermissions.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerGetProjectRolePermissions.Responses.$200>
   /**
@@ -5957,7 +5957,7 @@ export interface OperationMethods {
    */
   'RolesController_deleteProjectRole'(
     parameters?: Parameters<Paths.RolesControllerDeleteProjectRole.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.RolesControllerDeleteProjectRole.Responses.$200>
   /**
@@ -5965,7 +5965,7 @@ export interface OperationMethods {
    */
   'AuditLogController_findAll'(
     parameters?: Parameters<Paths.AuditLogControllerFindAll.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuditLogControllerFindAll.Responses.$200>
   /**
@@ -5973,7 +5973,7 @@ export interface OperationMethods {
    */
   'AuditLogController_findOne'(
     parameters?: Parameters<Paths.AuditLogControllerFindOne.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuditLogControllerFindOne.Responses.$200>
   /**
@@ -5981,7 +5981,7 @@ export interface OperationMethods {
    */
   'AuditLogController_getStatistics'(
     parameters?: Parameters<Paths.AuditLogControllerGetStatistics.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuditLogControllerGetStatistics.Responses.$200>
   /**
@@ -5989,7 +5989,7 @@ export interface OperationMethods {
    */
   'AuditLogController_cleanupOldLogs'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
   /**
@@ -5997,7 +5997,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getProjects'(
     parameters?: Parameters<Paths.FileSystemControllerGetProjects.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetProjects.Responses.$200>
   /**
@@ -6013,7 +6013,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getPersonalSpace'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   /**
@@ -6021,7 +6021,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getProject'(
     parameters?: Parameters<Paths.FileSystemControllerGetProject.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetProject.Responses.$200>
   /**
@@ -6029,7 +6029,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getTrash'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetTrash.Responses.$200>
   /**
@@ -6037,7 +6037,7 @@ export interface OperationMethods {
    */
   'FileSystemController_clearTrash'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerClearTrash.Responses.$200>
   /**
@@ -6045,7 +6045,7 @@ export interface OperationMethods {
    */
   'FileSystemController_restoreTrashItems'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerRestoreTrashItems.Responses.$200>
   /**
@@ -6053,7 +6053,7 @@ export interface OperationMethods {
    */
   'FileSystemController_permanentlyDeleteTrashItems'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerPermanentlyDeleteTrashItems.Responses.$200>
   /**
@@ -6061,7 +6061,7 @@ export interface OperationMethods {
    */
   'FileSystemController_createNode'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCreateNode.Responses.$201>
   /**
@@ -6077,7 +6077,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getRootNode'(
     parameters?: Parameters<Paths.FileSystemControllerGetRootNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetRootNode.Responses.$200>
   /**
@@ -6085,7 +6085,7 @@ export interface OperationMethods {
    */
   'FileSystemController_restoreNode'(
     parameters?: Parameters<Paths.FileSystemControllerRestoreNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerRestoreNode.Responses.$200>
   /**
@@ -6093,7 +6093,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getNode'(
     parameters?: Parameters<Paths.FileSystemControllerGetNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetNode.Responses.$200>
   /**
@@ -6109,7 +6109,7 @@ export interface OperationMethods {
    */
   'FileSystemController_deleteNode'(
     parameters?: Parameters<Paths.FileSystemControllerDeleteNode.QueryParameters & Paths.FileSystemControllerDeleteNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerDeleteNode.Responses.$200>
   /**
@@ -6117,7 +6117,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getChildren'(
     parameters?: Parameters<Paths.FileSystemControllerGetChildren.QueryParameters & Paths.FileSystemControllerGetChildren.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetChildren.Responses.$200>
   /**
@@ -6141,7 +6141,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getStorageQuota'(
     parameters?: Parameters<Paths.FileSystemControllerGetStorageQuota.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetStorageQuota.Responses.$200>
   /**
@@ -6157,7 +6157,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getProjectMembers'(
     parameters?: Parameters<Paths.FileSystemControllerGetProjectMembers.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetProjectMembers.Responses.$200>
   /**
@@ -6165,7 +6165,7 @@ export interface OperationMethods {
    */
   'FileSystemController_addProjectMember'(
     parameters?: Parameters<Paths.FileSystemControllerAddProjectMember.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerAddProjectMember.Responses.$201>
   /**
@@ -6173,7 +6173,7 @@ export interface OperationMethods {
    */
   'FileSystemController_updateProjectMember'(
     parameters?: Parameters<Paths.FileSystemControllerUpdateProjectMember.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerUpdateProjectMember.Responses.$200>
   /**
@@ -6181,7 +6181,7 @@ export interface OperationMethods {
    */
   'FileSystemController_removeProjectMember'(
     parameters?: Parameters<Paths.FileSystemControllerRemoveProjectMember.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerRemoveProjectMember.Responses.$200>
   /**
@@ -6189,7 +6189,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getThumbnail'(
     parameters?: Parameters<Paths.FileSystemControllerGetThumbnail.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetThumbnail.Responses.$200 | Paths.FileSystemControllerGetThumbnail.Responses.$204>
   /**
@@ -6197,7 +6197,7 @@ export interface OperationMethods {
    */
   'FileSystemController_downloadNode'(
     parameters?: Parameters<Paths.FileSystemControllerDownloadNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerDownloadNode.Responses.$200>
   /**
@@ -6205,7 +6205,7 @@ export interface OperationMethods {
    */
   'FileSystemController_downloadNodeOptions'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerDownloadNodeOptions.Responses.$200>
   /**
@@ -6215,7 +6215,7 @@ export interface OperationMethods {
    */
   'FileSystemController_downloadNodeWithFormat'(
     parameters?: Parameters<Paths.FileSystemControllerDownloadNodeWithFormat.QueryParameters & Paths.FileSystemControllerDownloadNodeWithFormat.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerDownloadNodeWithFormat.Responses.$200>
   /**
@@ -6223,7 +6223,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getUserProjectPermissions'(
     parameters?: Parameters<Paths.FileSystemControllerGetUserProjectPermissions.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetUserProjectPermissions.Responses.$200>
   /**
@@ -6231,7 +6231,7 @@ export interface OperationMethods {
    */
   'FileSystemController_checkProjectPermission'(
     parameters?: Parameters<Paths.FileSystemControllerCheckProjectPermission.QueryParameters & Paths.FileSystemControllerCheckProjectPermission.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCheckProjectPermission.Responses.$200>
   /**
@@ -6239,7 +6239,7 @@ export interface OperationMethods {
    */
   'FileSystemController_getUserProjectRole'(
     parameters?: Parameters<Paths.FileSystemControllerGetUserProjectRole.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetUserProjectRole.Responses.$200>
   /**
@@ -6252,7 +6252,7 @@ export interface OperationMethods {
    */
   'FileSystemController_search'(
     parameters?: Parameters<Paths.FileSystemControllerSearch.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerSearch.Responses.$200>
   /**
@@ -6260,7 +6260,7 @@ export interface OperationMethods {
    */
   'VersionControlController_getFileHistory'(
     parameters?: Parameters<Paths.VersionControlControllerGetFileHistory.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.VersionControlControllerGetFileHistory.Responses.$200>
   /**
@@ -6268,7 +6268,7 @@ export interface OperationMethods {
    */
   'VersionControlController_getFileContentAtRevision'(
     parameters?: Parameters<Paths.VersionControlControllerGetFileContentAtRevision.QueryParameters & Paths.VersionControlControllerGetFileContentAtRevision.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.VersionControlControllerGetFileContentAtRevision.Responses.$200>
   /**
@@ -6278,7 +6278,7 @@ export interface OperationMethods {
    */
   'FontsController_getFonts'(
     parameters?: Parameters<Paths.FontsControllerGetFonts.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FontsControllerGetFonts.Responses.$200>
   /**
@@ -6298,7 +6298,7 @@ export interface OperationMethods {
    */
   'FontsController_deleteFont'(
     parameters?: Parameters<Paths.FontsControllerDeleteFont.QueryParameters & Paths.FontsControllerDeleteFont.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FontsControllerDeleteFont.Responses.$200>
   /**
@@ -6308,7 +6308,7 @@ export interface OperationMethods {
    */
   'FontsController_downloadFont'(
     parameters?: Parameters<Paths.FontsControllerDownloadFont.QueryParameters & Paths.FontsControllerDownloadFont.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FontsControllerDownloadFont.Responses.$200>
   /**
@@ -6324,7 +6324,7 @@ export interface OperationMethods {
    */
   'MxCadController_getPreloadingData'(
     parameters?: Parameters<Paths.MxCadControllerGetPreloadingData.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetPreloadingData.Responses.$200>
   /**
@@ -6332,7 +6332,7 @@ export interface OperationMethods {
    */
   'MxCadController_checkExternalReference'(
     parameters?: Parameters<Paths.MxCadControllerCheckExternalReference.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerCheckExternalReference.Responses.$200>
   /**
@@ -6340,7 +6340,7 @@ export interface OperationMethods {
    */
   'MxCadController_refreshExternalReferences'(
     parameters?: Parameters<Paths.MxCadControllerRefreshExternalReferences.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerRefreshExternalReferences.Responses.$200>
   /**
@@ -6364,7 +6364,7 @@ export interface OperationMethods {
    */
   'MxCadController_getFilesDataFile'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetFilesDataFile.Responses.$200>
   /**
@@ -6372,7 +6372,7 @@ export interface OperationMethods {
    */
   'MxCadController_getFilesDataFileHead'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetFilesDataFileHead.Responses.$200>
   /**
@@ -6380,7 +6380,7 @@ export interface OperationMethods {
    */
   'MxCadController_getFile'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetFile.Responses.$200>
   /**
@@ -6388,7 +6388,7 @@ export interface OperationMethods {
    */
   'MxCadController_getFileHead'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetFileHead.Responses.$200>
   /**
@@ -6396,7 +6396,7 @@ export interface OperationMethods {
    */
   'MxCadController_getNonCadFile'(
     parameters?: Parameters<Paths.MxCadControllerGetNonCadFile.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.MxCadControllerGetNonCadFile.Responses.$200>
   /**
@@ -6404,7 +6404,7 @@ export interface OperationMethods {
    */
   'ThumbnailController_checkThumbnail'(
     parameters?: Parameters<Paths.ThumbnailControllerCheckThumbnail.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ThumbnailControllerCheckThumbnail.Responses.$200>
   /**
@@ -6436,7 +6436,7 @@ export interface OperationMethods {
    */
   'AdminController_getAdminStats'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminControllerGetAdminStats.Responses.$200>
   /**
@@ -6444,7 +6444,7 @@ export interface OperationMethods {
    */
   'AdminController_cleanupStorage'(
     parameters?: Parameters<Paths.AdminControllerCleanupStorage.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminControllerCleanupStorage.Responses.$200>
   /**
@@ -6452,7 +6452,7 @@ export interface OperationMethods {
    */
   'AdminController_getCleanupStats'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminControllerGetCleanupStats.Responses.$200>
   /**
@@ -6460,7 +6460,7 @@ export interface OperationMethods {
    */
   'HealthController_liveness'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
   /**
@@ -6468,7 +6468,7 @@ export interface OperationMethods {
    */
   'HealthController_publicHealth'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerPublicHealth.Responses.$200>
   /**
@@ -6476,7 +6476,7 @@ export interface OperationMethods {
    */
   'HealthController_check'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerCheck.Responses.$200>
   /**
@@ -6484,7 +6484,7 @@ export interface OperationMethods {
    */
   'HealthController_checkDatabase'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerCheckDatabase.Responses.$200>
   /**
@@ -6492,7 +6492,7 @@ export interface OperationMethods {
    */
   'HealthController_checkStorage'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerCheckStorage.Responses.$200>
   /**
@@ -6500,7 +6500,7 @@ export interface OperationMethods {
    */
   'PublicFileController_accessFile'(
     parameters?: Parameters<Paths.PublicFileControllerAccessFile.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<any>
   /**
@@ -6516,7 +6516,7 @@ export interface OperationMethods {
    */
   'PublicFileController_checkExtReference'(
     parameters?: Parameters<Paths.PublicFileControllerCheckExtReference.QueryParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.PublicFileControllerCheckExtReference.Responses.$200>
   /**
@@ -6524,7 +6524,7 @@ export interface OperationMethods {
    */
   'PublicFileController_getPreloadingData'(
     parameters?: Parameters<Paths.PublicFileControllerGetPreloadingData.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.PublicFileControllerGetPreloadingData.Responses.$200>
   /**
@@ -6532,7 +6532,7 @@ export interface OperationMethods {
    */
   'LibraryController_getDrawingLibrary'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingLibrary.Responses.$200>
   /**
@@ -6540,7 +6540,7 @@ export interface OperationMethods {
    */
   'LibraryController_getDrawingChildren'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingChildren.QueryParameters & Paths.LibraryControllerGetDrawingChildren.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingChildren.Responses.$200>
   /**
@@ -6548,7 +6548,7 @@ export interface OperationMethods {
    */
   'LibraryController_getDrawingAllFiles'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingAllFiles.QueryParameters & Paths.LibraryControllerGetDrawingAllFiles.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingAllFiles.Responses.$200>
   /**
@@ -6556,7 +6556,7 @@ export interface OperationMethods {
    */
   'LibraryController_getDrawingFile'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingFile.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<any>
   /**
@@ -6564,7 +6564,7 @@ export interface OperationMethods {
    */
   'LibraryController_getDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingNode.Responses.$200>
   /**
@@ -6580,7 +6580,7 @@ export interface OperationMethods {
    */
   'LibraryController_deleteDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerDeleteDrawingNode.QueryParameters & Paths.LibraryControllerDeleteDrawingNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDeleteDrawingNode.Responses.$200>
   /**
@@ -6588,7 +6588,7 @@ export interface OperationMethods {
    */
   'LibraryController_downloadDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerDownloadDrawingNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDownloadDrawingNode.Responses.$200>
   /**
@@ -6596,7 +6596,7 @@ export interface OperationMethods {
    */
   'LibraryController_getDrawingThumbnail'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingThumbnail.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingThumbnail.Responses.$200>
   /**
@@ -6636,7 +6636,7 @@ export interface OperationMethods {
    */
   'LibraryController_getBlockLibrary'(
     parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockLibrary.Responses.$200>
   /**
@@ -6644,7 +6644,7 @@ export interface OperationMethods {
    */
   'LibraryController_getBlockChildren'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockChildren.QueryParameters & Paths.LibraryControllerGetBlockChildren.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockChildren.Responses.$200>
   /**
@@ -6652,7 +6652,7 @@ export interface OperationMethods {
    */
   'LibraryController_getBlockAllFiles'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockAllFiles.QueryParameters & Paths.LibraryControllerGetBlockAllFiles.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockAllFiles.Responses.$200>
   /**
@@ -6660,7 +6660,7 @@ export interface OperationMethods {
    */
   'LibraryController_getBlockFile'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockFile.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<any>
   /**
@@ -6668,7 +6668,7 @@ export interface OperationMethods {
    */
   'LibraryController_getBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockNode.Responses.$200>
   /**
@@ -6684,7 +6684,7 @@ export interface OperationMethods {
    */
   'LibraryController_deleteBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerDeleteBlockNode.QueryParameters & Paths.LibraryControllerDeleteBlockNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDeleteBlockNode.Responses.$200>
   /**
@@ -6692,7 +6692,7 @@ export interface OperationMethods {
    */
   'LibraryController_downloadBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerDownloadBlockNode.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDownloadBlockNode.Responses.$200>
   /**
@@ -6700,7 +6700,7 @@ export interface OperationMethods {
    */
   'LibraryController_getBlockThumbnail'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockThumbnail.PathParameters> | null,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockThumbnail.Responses.$200>
   /**
@@ -6744,7 +6744,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetSummary.Responses.$200>
   }
@@ -6754,7 +6754,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetHealthStatus.Responses.$200>
   }
@@ -6764,7 +6764,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetPerformanceMetrics.Responses.$200>
   }
@@ -6774,7 +6774,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.CacheMonitorControllerGetHotData.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetHotData.Responses.$200>
   }
@@ -6784,7 +6784,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.CacheMonitorControllerGetPerformanceTrend.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetPerformanceTrend.Responses.$200>
   }
@@ -6794,7 +6794,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.CacheMonitorControllerGetSizeTrend.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetSizeTrend.Responses.$200>
   }
@@ -6804,7 +6804,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetWarnings.Responses.$200>
   }
@@ -6814,7 +6814,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.CacheMonitorControllerGetValue.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetValue.Responses.$200>
     /**
@@ -6822,7 +6822,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.CacheMonitorControllerDeleteValue.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerDeleteValue.Responses.$200>
   }
@@ -6862,7 +6862,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetWarmupConfig.Responses.$200>
     /**
@@ -6890,7 +6890,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetWarmupHistory.Responses.$200>
     /**
@@ -6898,7 +6898,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerClearWarmupHistory.Responses.$200>
   }
@@ -6908,7 +6908,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetWarmupStats.Responses.$200>
   }
@@ -6948,7 +6948,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerLogout.Responses.$200>
   }
@@ -6958,7 +6958,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerGetProfile.Responses.$200>
   }
@@ -6968,7 +6968,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendVerification.Responses.$200>
   }
@@ -6988,7 +6988,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyEmailAndRegisterPhone.Responses.$201>
   }
@@ -6998,7 +6998,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerResendVerification.Responses.$200>
   }
@@ -7008,7 +7008,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindEmailAndLogin.Responses.$200>
   }
@@ -7018,7 +7018,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindPhoneAndLogin.Responses.$200>
   }
@@ -7028,7 +7028,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyPhone.Responses.$200>
   }
@@ -7058,7 +7058,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendBindEmailCode.Responses.$200>
   }
@@ -7078,7 +7078,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendUnbindEmailCode.Responses.$200>
   }
@@ -7088,7 +7088,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyUnbindEmailCode.Responses.$200>
   }
@@ -7098,7 +7098,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRebindEmail.Responses.$200>
   }
@@ -7138,7 +7138,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerLoginByPhone.Responses.$200>
   }
@@ -7148,7 +7148,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindPhone.Responses.$200>
   }
@@ -7158,7 +7158,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerSendUnbindPhoneCode.Responses.$200>
   }
@@ -7168,7 +7168,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerVerifyUnbindPhoneCode.Responses.$200>
   }
@@ -7178,7 +7178,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerRebindPhone.Responses.$200>
   }
@@ -7198,7 +7198,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.AuthControllerGetWechatAuthUrl.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerGetWechatAuthUrl.Responses.$200>
   }
@@ -7208,7 +7208,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerWechatCallback.Responses.$200>
   }
@@ -7218,7 +7218,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerBindWechat.Responses.$200>
   }
@@ -7228,7 +7228,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuthControllerUnbindWechat.Responses.$200>
   }
@@ -7238,7 +7238,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserCleanupControllerGetStats.Responses.$200>
   }
@@ -7258,7 +7258,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetPublicConfigs.Responses.$200>
   }
@@ -7268,7 +7268,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetAllConfigs.Responses.$200>
   }
@@ -7278,7 +7278,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetDefinitions.Responses.$200>
   }
@@ -7288,7 +7288,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.RuntimeConfigControllerGetConfig.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerGetConfig.Responses.$200>
     /**
@@ -7306,7 +7306,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.RuntimeConfigControllerResetConfig.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RuntimeConfigControllerResetConfig.Responses.$201>
   }
@@ -7324,7 +7324,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.UsersControllerFindAll.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerFindAll.Responses.$200>
   }
@@ -7334,7 +7334,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.UsersControllerSearchByEmail.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerSearchByEmail.Responses.$200>
   }
@@ -7344,7 +7344,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.UsersControllerSearchUsers.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerSearchUsers.Responses.$200>
   }
@@ -7354,7 +7354,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerGetProfile.Responses.$200>
     /**
@@ -7372,7 +7372,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerGetDashboardStats.Responses.$200>
   }
@@ -7382,7 +7382,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.UsersControllerFindOne.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerFindOne.Responses.$200>
     /**
@@ -7398,7 +7398,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.UsersControllerRemove.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerRemove.Responses.$200>
   }
@@ -7408,7 +7408,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.UsersControllerRestore.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerRestore.Responses.$200>
   }
@@ -7418,7 +7418,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.UsersControllerDeleteImmediately.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerDeleteImmediately.Responses.$200>
   }
@@ -7458,7 +7458,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerFindAll.Responses.$200>
     /**
@@ -7476,7 +7476,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.RolesControllerFindOne.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerFindOne.Responses.$200>
     /**
@@ -7492,7 +7492,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.RolesControllerRemove.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerRemove.Responses.$200>
   }
@@ -7502,7 +7502,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.RolesControllerGetRolePermissions.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetRolePermissions.Responses.$200>
     /**
@@ -7510,7 +7510,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.RolesControllerAddPermissions.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerAddPermissions.Responses.$200>
     /**
@@ -7518,7 +7518,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.RolesControllerRemovePermissions.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerRemovePermissions.Responses.$200>
   }
@@ -7528,7 +7528,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetAllProjectRoles.Responses.$200>
   }
@@ -7538,7 +7538,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetSystemProjectRoles.Responses.$200>
   }
@@ -7548,7 +7548,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.RolesControllerGetProjectRolesByProject.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetProjectRolesByProject.Responses.$200>
   }
@@ -7558,7 +7558,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.RolesControllerGetProjectRolePermissions.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerGetProjectRolePermissions.Responses.$200>
     /**
@@ -7602,7 +7602,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.RolesControllerDeleteProjectRole.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.RolesControllerDeleteProjectRole.Responses.$200>
   }
@@ -7612,7 +7612,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.AuditLogControllerFindAll.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerFindAll.Responses.$200>
   }
@@ -7622,7 +7622,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.AuditLogControllerFindOne.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerFindOne.Responses.$200>
   }
@@ -7632,7 +7632,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.AuditLogControllerGetStatistics.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerGetStatistics.Responses.$200>
   }
@@ -7642,7 +7642,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AuditLogControllerCleanupOldLogs.Responses.$200>
   }
@@ -7660,7 +7660,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetProjects.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProjects.Responses.$200>
   }
@@ -7670,7 +7670,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   }
@@ -7680,7 +7680,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetProject.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProject.Responses.$200>
   }
@@ -7690,7 +7690,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetTrash.Responses.$200>
     /**
@@ -7698,7 +7698,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerClearTrash.Responses.$200>
   }
@@ -7708,7 +7708,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRestoreTrashItems.Responses.$200>
   }
@@ -7718,7 +7718,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerPermanentlyDeleteTrashItems.Responses.$200>
   }
@@ -7728,7 +7728,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCreateNode.Responses.$201>
   }
@@ -7748,7 +7748,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetRootNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetRootNode.Responses.$200>
   }
@@ -7758,7 +7758,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.FileSystemControllerRestoreNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRestoreNode.Responses.$200>
   }
@@ -7768,7 +7768,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetNode.Responses.$200>
     /**
@@ -7784,7 +7784,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.FileSystemControllerDeleteNode.QueryParameters & Paths.FileSystemControllerDeleteNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDeleteNode.Responses.$200>
   }
@@ -7794,7 +7794,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetChildren.QueryParameters & Paths.FileSystemControllerGetChildren.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetChildren.Responses.$200>
   }
@@ -7824,7 +7824,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetStorageQuota.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetStorageQuota.Responses.$200>
   }
@@ -7844,7 +7844,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetProjectMembers.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProjectMembers.Responses.$200>
     /**
@@ -7852,7 +7852,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.FileSystemControllerAddProjectMember.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerAddProjectMember.Responses.$201>
   }
@@ -7862,7 +7862,7 @@ export interface PathsDictionary {
      */
     'patch'(
       parameters?: Parameters<Paths.FileSystemControllerUpdateProjectMember.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerUpdateProjectMember.Responses.$200>
     /**
@@ -7870,7 +7870,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.FileSystemControllerRemoveProjectMember.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRemoveProjectMember.Responses.$200>
   }
@@ -7880,7 +7880,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetThumbnail.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetThumbnail.Responses.$200 | Paths.FileSystemControllerGetThumbnail.Responses.$204>
   }
@@ -7890,7 +7890,7 @@ export interface PathsDictionary {
      */
     'options'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDownloadNodeOptions.Responses.$200>
     /**
@@ -7898,7 +7898,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerDownloadNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDownloadNode.Responses.$200>
   }
@@ -7910,7 +7910,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerDownloadNodeWithFormat.QueryParameters & Paths.FileSystemControllerDownloadNodeWithFormat.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerDownloadNodeWithFormat.Responses.$200>
   }
@@ -7920,7 +7920,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetUserProjectPermissions.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetUserProjectPermissions.Responses.$200>
   }
@@ -7930,7 +7930,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerCheckProjectPermission.QueryParameters & Paths.FileSystemControllerCheckProjectPermission.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerCheckProjectPermission.Responses.$200>
   }
@@ -7940,7 +7940,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerGetUserProjectRole.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetUserProjectRole.Responses.$200>
   }
@@ -7955,7 +7955,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FileSystemControllerSearch.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerSearch.Responses.$200>
   }
@@ -7965,7 +7965,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.VersionControlControllerGetFileHistory.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.VersionControlControllerGetFileHistory.Responses.$200>
   }
@@ -7975,7 +7975,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.VersionControlControllerGetFileContentAtRevision.QueryParameters & Paths.VersionControlControllerGetFileContentAtRevision.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.VersionControlControllerGetFileContentAtRevision.Responses.$200>
   }
@@ -7987,7 +7987,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FontsControllerGetFonts.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerGetFonts.Responses.$200>
   }
@@ -8011,7 +8011,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.FontsControllerDeleteFont.QueryParameters & Paths.FontsControllerDeleteFont.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerDeleteFont.Responses.$200>
   }
@@ -8023,7 +8023,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.FontsControllerDownloadFont.QueryParameters & Paths.FontsControllerDownloadFont.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FontsControllerDownloadFont.Responses.$200>
   }
@@ -8043,7 +8043,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.MxCadControllerGetPreloadingData.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetPreloadingData.Responses.$200>
   }
@@ -8053,7 +8053,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.MxCadControllerCheckExternalReference.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerCheckExternalReference.Responses.$200>
   }
@@ -8063,7 +8063,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.MxCadControllerRefreshExternalReferences.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerRefreshExternalReferences.Responses.$200>
   }
@@ -8093,7 +8093,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetFilesDataFile.Responses.$200>
     /**
@@ -8101,7 +8101,7 @@ export interface PathsDictionary {
      */
     'head'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetFilesDataFileHead.Responses.$200>
   }
@@ -8111,7 +8111,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetFile.Responses.$200>
     /**
@@ -8119,7 +8119,7 @@ export interface PathsDictionary {
      */
     'head'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetFileHead.Responses.$200>
   }
@@ -8129,7 +8129,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.MxCadControllerGetNonCadFile.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.MxCadControllerGetNonCadFile.Responses.$200>
   }
@@ -8139,7 +8139,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.ThumbnailControllerCheckThumbnail.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ThumbnailControllerCheckThumbnail.Responses.$200>
     /**
@@ -8177,7 +8177,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerGetAdminStats.Responses.$200>
   }
@@ -8187,7 +8187,7 @@ export interface PathsDictionary {
      */
     'post'(
       parameters?: Parameters<Paths.AdminControllerCleanupStorage.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerCleanupStorage.Responses.$200>
   }
@@ -8197,7 +8197,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerGetCleanupStats.Responses.$200>
   }
@@ -8207,7 +8207,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
   }
@@ -8217,7 +8217,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerPublicHealth.Responses.$200>
   }
@@ -8227,7 +8227,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheck.Responses.$200>
   }
@@ -8237,7 +8237,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheckDatabase.Responses.$200>
   }
@@ -8247,7 +8247,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheckStorage.Responses.$200>
   }
@@ -8257,7 +8257,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.PublicFileControllerAccessFile.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
   }
@@ -8277,7 +8277,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.PublicFileControllerCheckExtReference.QueryParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerCheckExtReference.Responses.$200>
   }
@@ -8287,7 +8287,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.PublicFileControllerGetPreloadingData.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.PublicFileControllerGetPreloadingData.Responses.$200>
   }
@@ -8297,7 +8297,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingLibrary.Responses.$200>
   }
@@ -8307,7 +8307,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingChildren.QueryParameters & Paths.LibraryControllerGetDrawingChildren.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingChildren.Responses.$200>
   }
@@ -8317,7 +8317,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingAllFiles.QueryParameters & Paths.LibraryControllerGetDrawingAllFiles.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingAllFiles.Responses.$200>
   }
@@ -8327,7 +8327,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingFile.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
   }
@@ -8337,7 +8337,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingNode.Responses.$200>
     /**
@@ -8345,7 +8345,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.LibraryControllerDeleteDrawingNode.QueryParameters & Paths.LibraryControllerDeleteDrawingNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDeleteDrawingNode.Responses.$200>
     /**
@@ -8363,7 +8363,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerDownloadDrawingNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDownloadDrawingNode.Responses.$200>
   }
@@ -8373,7 +8373,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingThumbnail.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingThumbnail.Responses.$200>
   }
@@ -8423,7 +8423,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockLibrary.Responses.$200>
   }
@@ -8433,7 +8433,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockChildren.QueryParameters & Paths.LibraryControllerGetBlockChildren.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockChildren.Responses.$200>
   }
@@ -8443,7 +8443,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockAllFiles.QueryParameters & Paths.LibraryControllerGetBlockAllFiles.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockAllFiles.Responses.$200>
   }
@@ -8453,7 +8453,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockFile.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
   }
@@ -8463,7 +8463,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockNode.Responses.$200>
     /**
@@ -8471,7 +8471,7 @@ export interface PathsDictionary {
      */
     'delete'(
       parameters?: Parameters<Paths.LibraryControllerDeleteBlockNode.QueryParameters & Paths.LibraryControllerDeleteBlockNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDeleteBlockNode.Responses.$200>
     /**
@@ -8489,7 +8489,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerDownloadBlockNode.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDownloadBlockNode.Responses.$200>
   }
@@ -8499,7 +8499,7 @@ export interface PathsDictionary {
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockThumbnail.PathParameters> | null,
-      data?: any,
+      data?: unknown,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockThumbnail.Responses.$200>
   }

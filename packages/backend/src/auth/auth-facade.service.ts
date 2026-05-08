@@ -38,6 +38,7 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import {
   SessionRequest,
+  UserForToken,
 } from './interfaces/jwt-payload.interface';
 
 import { RegistrationService } from './services/registration.service';
@@ -187,7 +188,7 @@ export class AuthFacadeService {
     return this.authProvider.refreshToken(refreshToken);
   }
 
-  async logout(userId: string, accessToken?: string, req?: any): Promise<void> {
+  async logout(userId: string, accessToken?: string, req?: SessionRequest): Promise<void> {
     return this.authTokenService.logout(userId, accessToken, req);
   }
 
@@ -195,14 +196,14 @@ export class AuthFacadeService {
     return this.authTokenService.revokeToken(token);
   }
 
-  async generateTokens(user: any): Promise<{
+  async generateTokens(user: UserForToken): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
     return this.authTokenService.generateTokens(user);
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(email: string, password: string): Promise<Omit<UserForToken, 'password'> | null> {
     return this.passwordService.validateUser(email, password);
   }
 

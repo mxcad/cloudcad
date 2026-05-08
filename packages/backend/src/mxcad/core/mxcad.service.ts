@@ -27,7 +27,7 @@ import {
   VERSION_CONTROL_TOKEN,
 } from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
-import { FileSystemNode, Prisma } from '@prisma/client';
+import { FileSystemNode, Prisma, User } from '@prisma/client';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { ConversionOptions } from '../interfaces/file-conversion.interface';
 import {
@@ -737,7 +737,7 @@ export class MxCadService {
   /**
    * 根据 ID 查找文件系统节点（包含 deletedAt = null 过滤）
    */
-  async findNodeByIdWithDeletedAt(id: string, select?: any): Promise<any> {
+  async findNodeByIdWithDeletedAt(id: string, select?: Prisma.FileSystemNodeSelect) {
     return this.prisma.fileSystemNode.findFirst({
       where: { id, deletedAt: null },
       ...(select ? { select } : {}),
@@ -747,7 +747,7 @@ export class MxCadService {
   /**
    * 根据 ID 查找文件系统节点（不含 deletedAt 过滤）
    */
-  async findNodeById(id: string, select?: any): Promise<any> {
+  async findNodeById(id: string, select?: Prisma.FileSystemNodeSelect) {
     return this.prisma.fileSystemNode.findUnique({
       where: { id },
       ...(select ? { select } : {}),
@@ -757,7 +757,7 @@ export class MxCadService {
   /**
    * 查找非文件夹文件节点（未删除）
    */
-  async findFileNodeByIdNotDeleted(id: string, select?: any): Promise<any> {
+  async findFileNodeByIdNotDeleted(id: string, select?: Prisma.FileSystemNodeSelect) {
     return this.prisma.fileSystemNode.findFirst({
       where: { id, isFolder: false, deletedAt: null },
       ...(select ? { select } : {}),
@@ -767,7 +767,7 @@ export class MxCadService {
   /**
    * 根据 ID 查找用户
    */
-  async findUserById(id: string, select?: any): Promise<any> {
+  async findUserById(id: string, select?: Prisma.UserSelect) {
     return this.prisma.user.findUnique({
       where: { id },
       ...(select ? { select } : {}),
@@ -777,7 +777,7 @@ export class MxCadService {
   /**
    * 获取父节点下的所有子节点
    */
-  async findChildrenByParentId(parentId: string, select?: any): Promise<any[]> {
+  async findChildrenByParentId(parentId: string, select?: Prisma.FileSystemNodeSelect) {
     return this.prisma.fileSystemNode.findMany({
       where: { parentId, deletedAt: null },
       ...(select ? { select } : {}),

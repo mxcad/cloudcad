@@ -75,7 +75,7 @@ export class SearchService {
     const { keyword, filter, skip, limit, sortBy, sortOrder } = params;
     const safeLimit = Number(limit) || 50;
 
-    let ownerCondition: any;
+    let ownerCondition: Prisma.FileSystemNodeWhereInput;
     switch (filter) {
       case 'owned':
         ownerCondition = { ownerId: userId };

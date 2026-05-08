@@ -610,7 +610,7 @@ export class FileMergeService {
             await this.fileSystemServiceMain.getChildren(parentId);
           const existingNodes = childrenResult.nodes || [];
           const existingFile = existingNodes.find(
-            (node: any) =>
+            (node: { isFolder: boolean; name: string }) =>
               !node.isFolder &&
               node.name.toLowerCase() === filename.toLowerCase()
           );

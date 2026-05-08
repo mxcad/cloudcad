@@ -30,7 +30,9 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
-import { Response } from 'express';
+import {
+  AuthenticatedRequest,
+} from '../common/types/request.types';
 import {
   ApiTags,
   ApiOperation,
@@ -430,7 +432,7 @@ export class LibraryController {
   async getBlockFile(
     @Param('path') filePath: string[],
     @Res() res: Response,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ) {
     const filename = filePath.join('/');
 
@@ -622,7 +624,7 @@ export class LibraryController {
   private async saveLibraryNode(
     nodeId: string,
     file: Express.Multer.File,
-    req: any,
+    req: AuthenticatedRequest,
   ) {
     const result = await this.mxCadService.saveMxwebFile(
       nodeId,

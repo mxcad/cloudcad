@@ -301,7 +301,7 @@ export class FileOperationsService {
       nodesToUpdate.push(nodeId);
 
       await this.prisma.$transaction(async (tx) => {
-        const updateData: any = {
+        const updateData: Prisma.FileSystemNodeUpdateInput = {
           deletedAt: new Date(),
           deletedByCascade: false,
         };
@@ -457,7 +457,7 @@ export class FileOperationsService {
         }
       }
 
-      const updateData: any = {
+      const updateData: Prisma.FileSystemNodeUpdateInput = {
         deletedAt: null,
         deletedByCascade: false,
       };
@@ -587,7 +587,7 @@ export class FileOperationsService {
     const safeLimit = Number(limit) || 50;
     const skip = (safePage - 1) * safeLimit;
 
-    const where: any = {
+    const where: Prisma.FileSystemNodeWhereInput = {
       deletedAt: { not: null },
     };
 

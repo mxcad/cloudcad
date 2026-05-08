@@ -16,6 +16,7 @@ import {
 import {
   ProjectStatus,
   FileSystemNode as PrismaFileSystemNode,
+  Prisma,
 } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
@@ -197,7 +198,7 @@ export class ProjectCrudService {
     const limitNum = Number(limit) || 20;
     const skip = (pageNum - 1) * limitNum;
 
-    let ownerCondition: any;
+    let ownerCondition: Prisma.FileSystemNodeWhereInput;
 
     switch (filter) {
       case 'owned':
@@ -219,7 +220,7 @@ export class ProjectCrudService {
         break;
     }
 
-    const where: any = {
+    const where: Prisma.FileSystemNodeWhereInput = {
       isRoot: true,
       deletedAt: null,
       personalSpaceKey: null,
@@ -303,7 +304,7 @@ export class ProjectCrudService {
     const limitNum = Number(limit) || 20;
     const skip = (pageNum - 1) * limitNum;
 
-    const where: any = {
+    const where: Prisma.FileSystemNodeWhereInput = {
       isRoot: true,
       deletedAt: { not: null },
       personalSpaceKey: null,
