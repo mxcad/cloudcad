@@ -10,10 +10,10 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Controller, Post, Get, Req, Res, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Req, Res, Body, Logger, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
-import { Public } from './decorators/public.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 // 扩展 Session 类型
 declare module 'express-session' {
@@ -27,7 +27,7 @@ declare module 'express-session' {
   }
 }
 
-@Public()
+@UseGuards(JwtAuthGuard)
 @Controller('session')
 export class SessionController {
   private readonly logger = new Logger(SessionController.name);
