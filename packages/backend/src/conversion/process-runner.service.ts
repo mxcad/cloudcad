@@ -177,7 +177,14 @@ export class ProcessRunnerService {
       }
     }
 
-    throw lastError!;
+    if (lastError) {
+      throw lastError;
+    }
+    throw new ProcessError(
+      `执行失败: ${binaryPath} (所有 ${maxRetries + 1} 次尝试均未捕获到错误)`,
+      binaryPath,
+      0,
+    );
   }
 
   /**
@@ -381,7 +388,10 @@ export class ProcessRunnerService {
     // 从后往前找第一个合法的 JSON
     for (let i = lines.length - 1; i >= 0; i--) {
       try {
-        return JSON.parse(lines[i]!) as T;
+        const line = lines[i];
+        if (line !== undefined) {
+          return JSON.parse(line) as T;
+        }
       } catch {
         continue;
       }

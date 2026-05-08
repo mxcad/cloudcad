@@ -17,7 +17,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../config/app.config';
+import type { AppConfig, DatabaseConfig } from '../config/app.config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 

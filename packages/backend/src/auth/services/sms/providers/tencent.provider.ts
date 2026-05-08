@@ -160,7 +160,8 @@ export class TencentSmsProvider implements SmsProvider {
     try {
       // 简单检查配置是否正确
       return !!(this.appId && this.signName && this.templateId);
-    } catch {
+    } catch (error) {
+      this.logger.warn(`腾讯云短信健康检查失败: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }

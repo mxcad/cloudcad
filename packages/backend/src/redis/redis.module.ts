@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, InternalServerErrorException } from '@nestjs/common';
 import { RedisModule as NestRedisModule } from '@nestjs-modules/ioredis';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/app.config';
@@ -20,7 +20,10 @@ import type { AppConfig } from '../config/app.config';
   imports: [
     NestRedisModule.forRootAsync({
       useFactory: (configService: ConfigService<AppConfig>) => {
-        const redisConfig = configService.get('redis', { infer: true })!;
+        const redisConfig = configService.get('redis', { infer: true });
+        if (!redisConfig) {
+          throw new InternalServerErrorException('Redis configuration is missing');
+        }
         return {
           type: 'single',
           options: {
