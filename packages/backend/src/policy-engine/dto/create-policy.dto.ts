@@ -21,7 +21,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { PolicyType } from '../enums/policy-type.enum';
-import { Permission as PrismaPermission } from '@prisma/client';
+import { SystemPermission } from '../../common/enums/system-permission.enum';
 
 /**
  * 创建策略 DTO
@@ -64,15 +64,15 @@ export class CreatePolicyDto {
 
   @ApiProperty({
     description: '关联的权限',
-    enum: Object.values(PrismaPermission),
-    enumName: 'PrismaPermission',
+    enum: Object.values(SystemPermission),
+    enumName: 'SystemPermission',
     isArray: true,
-    example: [PrismaPermission.SYSTEM_USER_DELETE],
+    example: [SystemPermission.SYSTEM_USER_DELETE],
   })
-  @IsEnum(PrismaPermission, { each: true })
+  @IsEnum(SystemPermission, { each: true })
   @IsArray()
   @IsNotEmpty()
-  permissions: PrismaPermission[];
+  permissions: SystemPermission[];
 
   @ApiPropertyOptional({
     description: '是否启用',

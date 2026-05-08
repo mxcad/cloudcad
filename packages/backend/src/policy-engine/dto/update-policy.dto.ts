@@ -21,7 +21,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { PolicyType } from '../enums/policy-type.enum';
-import { Permission as PrismaPermission } from '@prisma/client';
+import { SystemPermission } from '../../common/enums/system-permission.enum';
 import { CreatePolicyDto } from './create-policy.dto';
 
 /**
@@ -61,13 +61,13 @@ export class UpdatePolicyDto extends PartialType(
 
   @ApiPropertyOptional({
     description: '关联的权限',
-    enum: PrismaPermission,
+    enum: SystemPermission,
     isArray: true,
   })
   @IsOptional()
-  @IsEnum(PrismaPermission, { each: true })
+  @IsEnum(SystemPermission, { each: true })
   @IsArray()
-  permissions?: PrismaPermission[];
+  permissions?: SystemPermission[];
 
   @ApiPropertyOptional({
     description: '是否启用',

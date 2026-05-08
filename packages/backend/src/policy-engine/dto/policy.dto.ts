@@ -19,7 +19,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { PolicyType } from '../enums/policy-type.enum';
-import { Permission as PrismaPermission } from '@prisma/client';
+import { SystemPermission } from '../../common/enums/system-permission.enum';
 
 /**
  * 策略配置 DTO（简化负载）
@@ -67,12 +67,12 @@ export class PolicyResponseDto {
 
   @ApiProperty({
     description: '关联的权限',
-    enum: Object.values(PrismaPermission),
-    enumName: 'PrismaPermission',
+    enum: Object.values(SystemPermission),
+    enumName: 'SystemPermission',
     isArray: true,
   })
-  @IsEnum(PrismaPermission, { each: true })
-  permissions: PrismaPermission[];
+  @IsEnum(SystemPermission, { each: true })
+  permissions: SystemPermission[];
 
   @ApiProperty({ description: '是否启用' })
   @IsBoolean()
