@@ -102,17 +102,18 @@ export class AuthTokenService {
 
       const expiresAt = new Date(payload.exp * 1000);
 
-      await this.prisma.refreshToken.deleteMany({
-        where: { userId },
-      });
-
-      await this.prisma.refreshToken.create({
-        data: {
-          token,
-          userId,
-          expiresAt,
-        },
-      });
+      await this.prisma.$transaction([
+        this.prisma.refreshToken.deleteMany({
+          where: { userId },
+        }),
+        this.prisma.refreshToken.create({
+          data: {
+            token,
+            userId,
+            expiresAt,
+          },
+        }),
+      ]);
     } catch (error) {
       if (
         error instanceof Error &&

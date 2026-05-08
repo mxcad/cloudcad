@@ -37,6 +37,21 @@ async function bootstrap() {
   const bootstrapStartTime = Date.now();
   logger.log('🚀 开始启动后端服务...');
 
+  // 全局未捕获异常兜底处理（防止进程静默崩溃）
+  process.on('unhandledRejection', (reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    const stack = reason instanceof Error ? reason.stack : undefined;
+    logger.error(`未处理的 Promise 拒绝: ${message}`, stack);
+    process.exit(1);
+  });
+
+  process.on('uncaughtException', (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    logger.error(`未捕获的异常: ${message}`, stack);
+    process.exit(1);
+  });
+
   // 设置控制台编码为 UTF-8，解决 Windows 中文乱码问题
   if (process.platform === 'win32' && process.stdout?.setEncoding) {
     process.stdout.setEncoding('utf8');
