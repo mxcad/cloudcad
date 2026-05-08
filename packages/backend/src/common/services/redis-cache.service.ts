@@ -108,7 +108,7 @@ export class RedisCacheService {
   async clearUserCache(userId: string): Promise<void> {
     try {
       const pattern = `${this.KEY_PREFIX}user:${userId}*`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
 
       if (keys.length > 0) {
         await this.redis.del(...keys);
@@ -125,7 +125,7 @@ export class RedisCacheService {
   async clearNodeCache(nodeId: string): Promise<void> {
     try {
       const pattern = `${this.KEY_PREFIX}node:*:${nodeId}`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
 
       if (keys.length > 0) {
         await this.redis.del(...keys);
@@ -237,7 +237,7 @@ export class RedisCacheService {
   }> {
     try {
       const pattern = `${this.KEY_PREFIX}*`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
       const info = await this.redis.info('memory');
 
       // 解析内存使用信息
@@ -263,7 +263,7 @@ export class RedisCacheService {
   async clearAll(): Promise<void> {
     try {
       const pattern = `${this.KEY_PREFIX}*`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
 
       if (keys.length > 0) {
         await this.redis.del(...keys);
@@ -272,5 +272,23 @@ export class RedisCacheService {
     } catch (error) {
       this.logger.error(`清理所有缓存失败: ${error.message}`, error.stack);
     }
+  }
+
+  /**
+   * 使用 SCAN 游标迭代查找匹配的键，避免 KEYS 阻塞 Redis
+   */
+  private async scanKeys(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = '0';
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+      );
+      cursor = newCursor;
+      keys.push(...foundKeys);
+    } while (cursor !== '0');
+    return keys;
   }
 }

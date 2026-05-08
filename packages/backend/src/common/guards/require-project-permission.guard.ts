@@ -263,14 +263,10 @@ export class RequireProjectPermissionGuard implements CanActivate {
       }
 
       return null;
-    } catch {
+    } catch (error) {
+      this.logger.warn(`提取项目ID失败, 节点ID: ${node.id}, error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
-  }
-
-  /**
-   * 检查权限
-   */
   private async checkPermissions(
     userId: string,
     projectId: string,

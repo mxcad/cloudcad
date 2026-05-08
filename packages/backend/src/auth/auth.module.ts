@@ -8,7 +8,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { Module, InternalServerErrorException } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -54,7 +54,10 @@ import { LocalAuthProvider } from './providers/local-auth.provider';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<AppConfig>) => {
-        const mailConfig = configService.get('mail', { infer: true })!;
+        const mailConfig = configService.get('mail', { infer: true });
+        if (!mailConfig) {
+          throw new InternalServerErrorException('Mail configuration is missing');
+        }
         return {
           transport: {
             host: mailConfig.host,

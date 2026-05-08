@@ -147,7 +147,7 @@ export class TokenBlacklistService implements OnModuleInit {
   async cleanupExpiredTokens(): Promise<void> {
     try {
       const pattern = this.blacklistPrefix + '*';
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.scanKeys(pattern);
 
       if (keys.length > 0) {
         // Redis的EXPIRE会自动清理过期键，这里只是记录统计信息
@@ -166,8 +166,8 @@ export class TokenBlacklistService implements OnModuleInit {
     blacklistedUsers: number;
   }> {
     try {
-      const tokenCount = await this.redis.keys(this.blacklistPrefix + '*');
-      const userCount = await this.redis.keys('user:blacklist:*');
+      const tokenCount = await this.scanKeys(this.blacklistPrefix + '*');
+      const userCount = await this.scanKeys('user:blacklist:*');
 
       return {
         totalTokens: tokenCount.length,
@@ -226,5 +226,23 @@ export class TokenBlacklistService implements OnModuleInit {
     if (this.redis) {
       await this.redis.quit();
     }
+  }
+
+  /**
+   * 使用 SCAN 游标迭代查找匹配的键，避免 KEYS 阻塞 Redis
+   */
+  private async scanKeys(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = '0';
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+      );
+      cursor = newCursor;
+      keys.push(...foundKeys);
+    } while (cursor !== '0');
+    return keys;
   }
 }
