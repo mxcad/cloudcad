@@ -17,5 +17,5 @@ export class AddProjectMemberDto {
   userId: string;
 
   @ApiProperty({ description: '项目角色ID' })
-  roleId: string;
+  projectRoleId: string;
 }

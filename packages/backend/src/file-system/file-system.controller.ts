@@ -34,6 +34,7 @@ import {
 } from "@nestjs/common";
 import {
 	ApiBearerAuth,
+	ApiBody,
 	ApiOperation,
 	ApiProduces,
 	ApiQuery,
@@ -70,6 +71,7 @@ import { ProjectPermissionService } from "../roles/project-permission.service";
 import { CopyNodeDto } from "./dto/copy-node.dto";
 import { CreateFolderDto } from "./dto/create-folder.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
+import { AddProjectMemberDto } from "./dto/add-project-member.dto";
 import {
 	CadDownloadFormat,
 	type DownloadNodeQueryDto,
@@ -195,6 +197,15 @@ export class FileSystemController {
 	@CsrfProtected()
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "恢复回收站项目" })
+	@ApiBody({
+		schema: {
+			type: "object",
+			properties: {
+				itemIds: { type: "array", items: { type: "string" }, description: "要恢复的回收站项ID列表" },
+			},
+			required: ["itemIds"],
+		},
+	})
 	@ApiResponse({
 		status: 200,
 		description: "恢复项目成功",
@@ -212,6 +223,15 @@ export class FileSystemController {
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '永久删除回收站项目' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        itemIds: { type: 'array', items: { type: 'string' }, description: '要永久删除的回收站项ID列表' },
+      },
+      required: ['itemIds'],
+    },
+  })
   @ApiResponse({
     status: 200,
     description: '永久删除项目成功',
@@ -243,6 +263,17 @@ export class FileSystemController {
 		status: 201,
 		description: "节点创建成功",
 		type: FileSystemNodeDto,
+	})
+	@ApiBody({
+		schema: {
+			type: "object",
+			properties: {
+				name: { type: "string", description: "节点名称" },
+				parentId: { type: "string", description: "父节点ID（可选）" },
+				description: { type: "string", description: "节点描述（可选）" },
+			},
+			required: ["name"],
+		},
 	})
 	@ApiResponse({ status: 400, description: "请求参数错误" })
 	async createNode(
@@ -456,10 +487,10 @@ export class FileSystemController {
 	@ApiResponse({ status: 404, description: "项目或用户不存在" })
 	async addProjectMember(
 		@Param('projectId') projectId: string,
-		@Body() body: { userId: string; projectRoleId: string },
+		@Body() dto: AddProjectMemberDto,
 		@Request() req,
 	) {
-		const { userId, projectRoleId } = body;
+		const { userId, projectRoleId } = dto;
 		return this.fileSystemService.addProjectMember(
 			projectId,
 			userId,
@@ -480,6 +511,16 @@ export class FileSystemController {
 	@ApiResponse({ status: 400, description: "请求参数错误" })
 	@ApiResponse({ status: 401, description: "未登录" })
 	@ApiResponse({ status: 403, description: "无权限修改成员角色" })
+	@ApiBody({
+		schema: {
+			type: "object",
+			properties: {
+				projectRoleId: { type: "string", description: "项目角色ID" },
+				roleId: { type: "string", description: "角色ID（兼容旧字段）" },
+				roleName: { type: "string", description: "角色名称" },
+			},
+		},
+	})
 	@ApiResponse({ status: 404, description: "项目或成员不存在" })
 	async updateProjectMember(
 		@Param('projectId') projectId: string,
