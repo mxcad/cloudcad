@@ -24,6 +24,9 @@ import { FileSystemNodeService } from "../node/filesystem-node.service";
 import { MxCadService } from "./mxcad.service";
 import * as os from 'os';
 import * as path from 'path';
+import { Request } from 'express';
+import { MxCadContext, ConvertServerFileParam } from '../types/mxcad-context.types';
+import { ExternalReferenceStats } from '../types/external-reference.types';
 
 jest.mock("fs", () => {
 	const actual = jest.requireActual("fs");
@@ -153,7 +156,7 @@ describe("MxCadService", () => {
 	// ==================== convertServerFile ====================
 	describe("convertServerFile", () => {
 		it("returns error for null param", async () => {
-			const r = await service.convertServerFile(null as any);
+			const r = await service.convertServerFile(null as unknown as ConvertServerFileParam);
 			expect(r).toEqual({ code: 12, message: "param error" });
 		});
 
@@ -204,7 +207,7 @@ describe("MxCadService", () => {
 			const r = await service.convertServerFile({
 				srcpath: "/f.dwg",
 				src_file_md5: "abc",
-			} as any);
+			} as Partial<ConvertServerFileParam>);
 			expect(r).toEqual({ code: 0 });
 		});
 
@@ -257,7 +260,7 @@ describe("MxCadService", () => {
 				userId: "u1",
 				userRole: "USER",
 			});
-			const r = await service.inferContextForMxCadApp("abc", {} as any);
+			const r = await service.inferContextForMxCadApp("abc", {} as Partial<Request>);
 			expect(r).toEqual({ nodeId: "n1", userId: "u1", userRole: "USER" });
 		});
 	});
@@ -274,7 +277,7 @@ describe("MxCadService", () => {
 				"abc",
 				"f.dwg",
 				100,
-				{ userId: "u1", nodeId: "n1" } as any,
+				{ userId: "u1", nodeId: "n1" } as Partial<MxCadContext>,
 			);
 			expect(r.ret).toBe("ok");
 		});
@@ -317,7 +320,7 @@ describe("MxCadService", () => {
 				totalCount: 0,
 				references: [],
 			};
-			await service.updateExternalReferenceInfo("n1", stats as any);
+			await service.updateExternalReferenceInfo("n1", stats as ExternalReferenceStats);
 			expect(mockExtRefUpdateService.updateInfo).toHaveBeenCalledWith(
 				"n1",
 				stats,
@@ -340,7 +343,7 @@ describe("MxCadService", () => {
 				"src",
 				"ref.png",
 				path.join(os.tmpdir(), "f.png"),
-				{} as any,
+				{} as Partial<MxCadContext>,
 			);
 			expect(mockExternalRefService.handleExternalReferenceImage).toHaveBeenCalled();
 		});
@@ -488,13 +491,13 @@ describe("MxCadService", () => {
 		} as Express.Multer.File;
 
 		it("fails when file is missing", async () => {
-			const r = await service.saveMxwebFile("n1", null as any);
+			const r = await service.saveMxwebFile("n1", null as unknown as Express.Multer.File);
 			expect(r.success).toBe(false);
 			expect(r.message).toContain("缺少文件");
 		});
 
 		it("fails when file has no path", async () => {
-			const r = await service.saveMxwebFile("n1", { path: null } as any);
+			const r = await service.saveMxwebFile("n1", { path: null } as unknown as Express.Multer.File);
 			expect(r.success).toBe(false);
 		});
 
@@ -518,7 +521,7 @@ describe("MxCadService", () => {
 			const r = await service.saveMxwebFile("n1", {
 				path: path.join(os.tmpdir(), "f.txt"),
 				originalname: "f.txt",
-			} as any);
+			} as Express.Multer.File);
 			expect(r.success).toBe(false);
 			expect(r.message).toContain("仅支持 .mxweb");
 		});
