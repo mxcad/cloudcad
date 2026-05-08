@@ -19,7 +19,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { ProjectPermission as PrismaProjectPermission } from '@prisma/client';
+import { Prisma, ProjectPermission as PrismaProjectPermission, ProjectRole as PrismaProjectRole } from '@prisma/client';
 import {
   ProjectRole,
   ProjectPermission,
@@ -38,6 +38,22 @@ export interface UpdateProjectRoleDto {
   description?: string;
   permissions?: string[]; // 接受 string[]，内部转换为 ProjectPermission[]
 }
+
+// Prisma include 返回类型
+type ProjectRoleWithPermissions = Prisma.ProjectRoleGetPayload<{
+  include: {
+    permissions: true;
+    _count: { select: { members: true } };
+  };
+}>;
+
+type ProjectRoleWithProject = Prisma.ProjectRoleGetPayload<{
+  include: {
+    project: { select: { id: true; name: true } };
+    permissions: true;
+    _count: { select: { members: true } };
+  };
+}>;
 
 /**
  * 项目角色服务
@@ -89,7 +105,7 @@ export class ProjectRolesService {
   /**
    * 创建项目角色
    */
-  async create(dto: CreateProjectRoleDto, userId?: string): Promise<any> {
+  async create(dto: CreateProjectRoleDto, userId?: string): Promise<PrismaProjectRole> {
     try {
       // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
@@ -143,7 +159,7 @@ export class ProjectRolesService {
     roleId: string,
     dto: UpdateProjectRoleDto,
     userId?: string
-  ): Promise<any> {
+  ): Promise<PrismaProjectRole> {
     try {
       const role = await this.prisma.projectRole.findUnique({
         where: { id: roleId },
@@ -238,7 +254,7 @@ export class ProjectRolesService {
   /**
    * 获取所有项目角色
    */
-  async findAll(): Promise<any[]> {
+  async findAll(): Promise<ProjectRoleWithProject[]> {
     try {
       const roles = await this.prisma.projectRole.findMany({
         include: {
@@ -263,7 +279,7 @@ export class ProjectRolesService {
   /**
    * 获取项目角色详情
    */
-  async findOne(roleId: string): Promise<any> {
+  async findOne(roleId: string): Promise<ProjectRoleWithPermissions> {
     try {
       const role = await this.prisma.projectRole.findUnique({
         where: { id: roleId },
@@ -292,7 +308,7 @@ export class ProjectRolesService {
   /**
    * 获取特定项目的角色列表
    */
-  async findByProject(projectId: string): Promise<any[]> {
+  async findByProject(projectId: string): Promise<ProjectRoleWithPermissions[]> {
     try {
       const roles = await this.prisma.projectRole.findMany({
         where: {
@@ -320,7 +336,7 @@ export class ProjectRolesService {
   /**
    * 获取系统默认项目角色列表（仅返回 isSystem=true 的角色）
    */
-  async findSystemRoles(): Promise<any[]> {
+  async findSystemRoles(): Promise<ProjectRoleWithPermissions[]> {
     try {
       const roles = await this.prisma.projectRole.findMany({
         where: {
