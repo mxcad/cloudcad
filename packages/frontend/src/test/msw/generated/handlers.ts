@@ -4,7 +4,6 @@
  */
 /* eslint-disable */
 /* tslint:disable */
-// @ts-nocheck
 import { HttpResponse, http } from "msw";
 import { faker } from "@faker-js/faker";
 
@@ -41,7 +40,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -73,7 +72,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -110,7 +109,7 @@ export const handlers = [
           await getFileSystemControllerPermanentlyDeleteTrashItems200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -137,7 +136,7 @@ export const handlers = [
     const resultArray = [
       [undefined, { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -162,7 +161,7 @@ export const handlers = [
 
     const resultArray = [
       [await getAuthControllerGetWechatAuthUrl200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/auth/wechat/login`) % resultArray.length];
@@ -186,7 +185,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -219,7 +218,7 @@ export const handlers = [
           await getCacheMonitorControllerGetWarmupHistory200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -250,7 +249,7 @@ export const handlers = [
           await getCacheMonitorControllerGetWarmupStats200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -281,7 +280,7 @@ export const handlers = [
           await getPublicFileControllerCheckExtReference200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -311,7 +310,7 @@ export const handlers = [
         await getRolesControllerGetAllProjectRoles200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -341,7 +340,7 @@ export const handlers = [
           await getRolesControllerGetSystemProjectRoles200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -367,7 +366,7 @@ export const handlers = [
 
     const resultArray = [
       [await getUsersControllerGetProfile200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/users/profile/me`) % resultArray.length];
@@ -391,7 +390,7 @@ export const handlers = [
     const resultArray = [
       [await getUsersControllerSearchByEmail200Response(), { status: 200 }],
       [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -416,7 +415,7 @@ export const handlers = [
 
     const resultArray = [
       [await getUsersControllerGetDashboardStats200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/users/stats/me`) % resultArray.length];
@@ -440,7 +439,7 @@ export const handlers = [
     const resultArray = [
       [await getUsersControllerUpdateProfile200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`patch /api/v1/users/profile/me`) % resultArray.length];
@@ -462,7 +461,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -491,7 +490,7 @@ export const handlers = [
       [await getAuthControllerBindWechat200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/wechat/bind`) % resultArray.length];
@@ -515,7 +514,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerUnbindWechat200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/wechat/unbind`) % resultArray.length];
@@ -539,7 +538,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -572,7 +571,7 @@ export const handlers = [
           await getCacheMonitorControllerTriggerWarmup200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -607,7 +606,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -638,7 +637,7 @@ export const handlers = [
           await getFileSystemControllerRestoreTrashItems200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -669,7 +668,7 @@ export const handlers = [
           await getMxCadControllerCheckDuplicateFile200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -697,7 +696,7 @@ export const handlers = [
 
       const resultArray = [
         [await getMxCadControllerCheckChunkExist200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -725,7 +724,7 @@ export const handlers = [
 
       const resultArray = [
         [await getMxCadControllerCheckFileExist200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -753,7 +752,7 @@ export const handlers = [
 
       const resultArray = [
         [await getMxCadControllerUploadFile200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -781,7 +780,7 @@ export const handlers = [
 
       const resultArray = [
         [await getPublicFileControllerCheckChunk200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -812,7 +811,7 @@ export const handlers = [
           await getPublicFileControllerMergeChunks200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -843,7 +842,7 @@ export const handlers = [
           await getPublicFileControllerUploadChunk200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -875,7 +874,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -902,7 +901,7 @@ export const handlers = [
 
     const resultArray = [
       [await getPublicFileControllerCheckFile200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -929,7 +928,7 @@ export const handlers = [
       [await getUsersControllerRestoreAccount200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 401 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/users/me/restore`) % resultArray.length];
@@ -951,7 +950,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -977,7 +976,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1004,7 +1003,7 @@ export const handlers = [
 
     const resultArray = [
       [await getFileSystemControllerClearTrash200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1029,7 +1028,7 @@ export const handlers = [
 
     const resultArray = [
       [await getAdminControllerGetAdminStats200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/admin/stats`) % resultArray.length];
@@ -1051,7 +1050,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1075,7 +1074,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1101,7 +1100,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerGetProfile200Response(), { status: 200 }],
       [undefined, { status: 401 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/auth/profile`) % resultArray.length];
@@ -1123,7 +1122,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1149,7 +1148,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1177,7 +1176,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -1210,7 +1209,7 @@ export const handlers = [
           await getCacheMonitorControllerGetPerformanceTrend200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -1242,7 +1241,7 @@ export const handlers = [
           await getCacheMonitorControllerGetSizeTrend200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -1268,7 +1267,7 @@ export const handlers = [
 
     const resultArray = [
       [await getCacheMonitorControllerGetSummary200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1292,7 +1291,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1320,7 +1319,7 @@ export const handlers = [
         await getCacheMonitorControllerGetWarnings200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1350,7 +1349,7 @@ export const handlers = [
           await getFileSystemControllerGetPersonalSpace200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -1376,7 +1375,7 @@ export const handlers = [
 
     const resultArray = [
       [await getFileSystemControllerGetProjects200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1404,7 +1403,7 @@ export const handlers = [
         await getFileSystemControllerGetStorageQuota200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/file-system/quota`) % resultArray.length];
@@ -1428,7 +1427,7 @@ export const handlers = [
     const resultArray = [
       [await getFileSystemControllerSearch200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/file-system/search`) % resultArray.length];
@@ -1451,7 +1450,7 @@ export const handlers = [
 
     const resultArray = [
       [await getFileSystemControllerGetTrash200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/file-system/trash`) % resultArray.length];
@@ -1475,7 +1474,7 @@ export const handlers = [
     const resultArray = [
       [undefined, { status: 200 }],
       [undefined, { status: 503 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/health/db`) % resultArray.length];
@@ -1499,7 +1498,7 @@ export const handlers = [
     const resultArray = [
       [await getHealthControllerCheck200Response(), { status: 200 }],
       [await getHealthControllerCheck503Response(), { status: 503 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/health/full`) % resultArray.length];
@@ -1521,7 +1520,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1547,7 +1546,7 @@ export const handlers = [
     const resultArray = [
       [undefined, { status: 200 }],
       [undefined, { status: 503 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/health/storage`) % resultArray.length];
@@ -1570,7 +1569,7 @@ export const handlers = [
 
     const resultArray = [
       [await getLibraryControllerGetBlockLibrary200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/library/block`) % resultArray.length];
@@ -1596,7 +1595,7 @@ export const handlers = [
         await getLibraryControllerGetDrawingLibrary200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/library/drawing`) % resultArray.length];
@@ -1624,7 +1623,7 @@ export const handlers = [
           await getRuntimeConfigControllerGetDefinitions200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -1653,7 +1652,7 @@ export const handlers = [
         await getRuntimeConfigControllerGetPublicConfigs200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1678,7 +1677,7 @@ export const handlers = [
 
     const resultArray = [
       [await getUserCleanupControllerGetStats200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/user-cleanup/stats`) % resultArray.length];
@@ -1701,7 +1700,7 @@ export const handlers = [
 
     const resultArray = [
       [await getUsersControllerSearchUsers200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/users/search`) % resultArray.length];
@@ -1730,7 +1729,7 @@ export const handlers = [
       [undefined, { status: 400 }],
       [undefined, { status: 401 }],
       [undefined, { status: 403 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1754,7 +1753,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -1781,7 +1780,7 @@ export const handlers = [
       [await getAuthControllerSendBindEmailCode200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/bind-email`) % resultArray.length];
@@ -1810,7 +1809,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -1838,7 +1837,7 @@ export const handlers = [
       [await getAuthControllerBindPhone200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/bind-phone`) % resultArray.length];
@@ -1867,7 +1866,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -1896,7 +1895,7 @@ export const handlers = [
         await getAuthControllerCheckFieldUniqueness200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/check-field`) % resultArray.length];
@@ -1921,7 +1920,7 @@ export const handlers = [
       [await getAuthControllerForgotPassword200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 401 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -1947,7 +1946,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerLogin200Response(), { status: 200 }],
       [undefined, { status: 401 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/login`) % resultArray.length];
@@ -1972,7 +1971,7 @@ export const handlers = [
       [await getAuthControllerLoginByPhone200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 412 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/login-phone`) % resultArray.length];
@@ -1994,7 +1993,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -2021,7 +2020,7 @@ export const handlers = [
       [await getAuthControllerRebindEmail200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/rebind-email`) % resultArray.length];
@@ -2046,7 +2045,7 @@ export const handlers = [
       [await getAuthControllerRebindPhone200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/rebind-phone`) % resultArray.length];
@@ -2070,7 +2069,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerRefreshToken200Response(), { status: 200 }],
       [undefined, { status: 401 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/refresh`) % resultArray.length];
@@ -2095,7 +2094,7 @@ export const handlers = [
       [await getAuthControllerRegister201Response(), { status: 201 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/register`) % resultArray.length];
@@ -2120,7 +2119,7 @@ export const handlers = [
       [await getAuthControllerRegisterByPhone201Response(), { status: 201 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2151,7 +2150,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2179,7 +2178,7 @@ export const handlers = [
       [await getAuthControllerResetPassword200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 401 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2205,7 +2204,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerSendSmsCode200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/send-sms-code`) % resultArray.length];
@@ -2234,7 +2233,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2266,7 +2265,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2293,7 +2292,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerSendVerification200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2321,7 +2320,7 @@ export const handlers = [
       [undefined, { status: 400 }],
       [undefined, { status: 401 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2347,7 +2346,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerVerifyEmail200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/verify-email`) % resultArray.length];
@@ -2377,7 +2376,7 @@ export const handlers = [
         ],
         [undefined, { status: 400 }],
         [undefined, { status: 409 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2405,7 +2404,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerVerifyPhone200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/auth/verify-phone`) % resultArray.length];
@@ -2429,7 +2428,7 @@ export const handlers = [
     const resultArray = [
       [await getAuthControllerVerifySmsCode200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2461,7 +2460,7 @@ export const handlers = [
         ],
         [undefined, { status: 400 }],
         [undefined, { status: 401 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2495,7 +2494,7 @@ export const handlers = [
         ],
         [undefined, { status: 400 }],
         [undefined, { status: 401 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2521,7 +2520,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -2547,7 +2546,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -2575,7 +2574,7 @@ export const handlers = [
     const resultArray = [
       [await getFileSystemControllerCreateNode201Response(), { status: 201 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/file-system/nodes`) % resultArray.length];
@@ -2603,7 +2602,7 @@ export const handlers = [
       ],
       [undefined, { status: 400 }],
       [undefined, { status: 403 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2627,7 +2626,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 201 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -2655,7 +2654,7 @@ export const handlers = [
     const resultArray = [
       [await getMxCadControllerSaveMxwebAs200Response(), { status: 200 }],
       [undefined, { status: 400 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/mxcad/save-as`) % resultArray.length];
@@ -2686,7 +2685,7 @@ export const handlers = [
         [undefined, { status: 400 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2712,7 +2711,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRolesControllerCreateProjectRole201Response(), { status: 201 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2740,7 +2739,7 @@ export const handlers = [
         await getUserCleanupControllerTriggerCleanup200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2768,7 +2767,7 @@ export const handlers = [
       [undefined, { status: 400 }],
       [undefined, { status: 401 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2800,7 +2799,7 @@ export const handlers = [
         ],
         [undefined, { status: 400 }],
         [undefined, { status: 401 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -2825,7 +2824,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -2849,7 +2848,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -2874,7 +2873,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRolesControllerFindAll200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/roles`) % resultArray.length];
@@ -2900,7 +2899,7 @@ export const handlers = [
         await getRuntimeConfigControllerGetAllConfigs200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/runtime-config`) % resultArray.length];
@@ -2923,7 +2922,7 @@ export const handlers = [
 
     const resultArray = [
       [await getUsersControllerFindAll200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/users`) % resultArray.length];
@@ -2946,7 +2945,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRolesControllerCreate201Response(), { status: 201 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/roles`) % resultArray.length];
@@ -2971,7 +2970,7 @@ export const handlers = [
       [await getUsersControllerCreate201Response(), { status: 201 }],
       [undefined, { status: 400 }],
       [undefined, { status: 409 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/users`) % resultArray.length];
@@ -2999,7 +2998,7 @@ export const handlers = [
           await getFileSystemControllerCheckProjectPermission200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3032,7 +3031,7 @@ export const handlers = [
           await getLibraryControllerDownloadBlockNode200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3060,7 +3059,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -3094,7 +3093,7 @@ export const handlers = [
           await getLibraryControllerDownloadDrawingNode200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3122,7 +3121,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -3155,7 +3154,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -3190,7 +3189,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3222,7 +3221,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3255,7 +3254,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3288,7 +3287,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3321,7 +3320,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3356,7 +3355,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3388,7 +3387,7 @@ export const handlers = [
           await getFileSystemControllerGetUserProjectPermissions200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3416,7 +3415,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -3450,7 +3449,7 @@ export const handlers = [
           await getLibraryControllerGetBlockAllFiles200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3482,7 +3481,7 @@ export const handlers = [
           await getLibraryControllerGetBlockChildren200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3511,7 +3510,7 @@ export const handlers = [
 
       const resultArray = [
         [await getLibraryControllerGetBlockFile200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3539,7 +3538,7 @@ export const handlers = [
 
       const resultArray = [
         [await getLibraryControllerGetBlockNode200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3570,7 +3569,7 @@ export const handlers = [
           await getLibraryControllerGetDrawingAllFiles200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3602,7 +3601,7 @@ export const handlers = [
           await getLibraryControllerGetDrawingChildren200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3634,7 +3633,7 @@ export const handlers = [
           await getLibraryControllerGetDrawingFile200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3666,7 +3665,7 @@ export const handlers = [
           await getLibraryControllerGetDrawingNode200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3698,7 +3697,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3729,7 +3728,7 @@ export const handlers = [
           await getRolesControllerGetProjectRolePermissions200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3761,7 +3760,7 @@ export const handlers = [
           await getRolesControllerGetProjectRolesByProject200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3792,7 +3791,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -3824,7 +3823,7 @@ export const handlers = [
       const resultArray = [
         [await getFileSystemControllerCopyNode201Response(), { status: 201 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3854,7 +3853,7 @@ export const handlers = [
       const resultArray = [
         [await getFileSystemControllerMoveNode200Response(), { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3887,7 +3886,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3920,7 +3919,7 @@ export const handlers = [
           { status: 201 },
         ],
         [undefined, { status: 400 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3956,7 +3955,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -3992,7 +3991,7 @@ export const handlers = [
           await getMxCadControllerCheckExternalReference400Response(),
           { status: 400 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4025,7 +4024,7 @@ export const handlers = [
           { status: 200 },
         ],
         [undefined, { status: 500 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4053,7 +4052,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -4088,7 +4087,7 @@ export const handlers = [
       const resultArray = [
         [await getFileSystemControllerDeleteNode200Response(), { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4122,7 +4121,7 @@ export const handlers = [
           await getRolesControllerRemovePermissions200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4152,7 +4151,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -4179,7 +4178,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -4207,7 +4206,7 @@ export const handlers = [
       const resultArray = [
         [await getFileSystemControllerGetNode200Response(), { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4236,7 +4235,7 @@ export const handlers = [
       const resultArray = [
         [await getFileSystemControllerGetProject200Response(), { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4264,7 +4263,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -4295,7 +4294,7 @@ export const handlers = [
       [await getMxCadControllerGetFile200Response(), { status: 200 }],
       [await getMxCadControllerGetFile404Response(), { status: 404 }],
       [await getMxCadControllerGetFile500Response(), { status: 500 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/mxcad/file/:path`) % resultArray.length];
@@ -4320,7 +4319,7 @@ export const handlers = [
       [await getMxCadControllerGetNonCadFile200Response(), { status: 200 }],
       [undefined, { status: 404 }],
       [undefined, { status: 500 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -4348,7 +4347,7 @@ export const handlers = [
       [undefined, { status: 401 }],
       [await getMxCadControllerGetFilesDataFile404Response(), { status: 404 }],
       [await getMxCadControllerGetFilesDataFile500Response(), { status: 500 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -4375,7 +4374,7 @@ export const handlers = [
       [await getMxCadControllerCheckThumbnail200Response(), { status: 200 }],
       [undefined, { status: 400 }],
       [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -4403,7 +4402,7 @@ export const handlers = [
       const resultArray = [
         [undefined, { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4432,7 +4431,7 @@ export const handlers = [
         await getRolesControllerGetRolePermissions200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -4465,7 +4464,7 @@ export const handlers = [
         [undefined, { status: 400 }],
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4494,7 +4493,7 @@ export const handlers = [
       [undefined, { status: 200 }],
       [undefined, { status: 404 }],
       [undefined, { status: 500 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`head /api/v1/mxcad/file/:path`) % resultArray.length];
@@ -4519,7 +4518,7 @@ export const handlers = [
       [undefined, { status: 200 }],
       [undefined, { status: 404 }],
       [undefined, { status: 500 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -4547,7 +4546,7 @@ export const handlers = [
       const resultArray = [
         [await getFileSystemControllerUpdateNode200Response(), { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4578,7 +4577,7 @@ export const handlers = [
           await getRolesControllerUpdateProjectRole200Response(),
           { status: 200 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4606,7 +4605,7 @@ export const handlers = [
 
       const resultArray = [
         [await getMxCadControllerSaveMxwebToNode200Response(), { status: 200 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4636,7 +4635,7 @@ export const handlers = [
         [await getMxCadControllerUploadThumbnail200Response(), { status: 200 }],
         [undefined, { status: 400 }],
         [undefined, { status: 500 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4670,7 +4669,7 @@ export const handlers = [
         [undefined, { status: 400 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4697,7 +4696,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRolesControllerAddPermissions200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -4727,7 +4726,7 @@ export const handlers = [
           await getRuntimeConfigControllerResetConfig201Response(),
           { status: 201 },
         ],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4757,7 +4756,7 @@ export const handlers = [
         [undefined, { status: 200 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -4784,7 +4783,7 @@ export const handlers = [
     const resultArray = [
       [undefined, { status: 200 }],
       [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/users/:id/restore`) % resultArray.length];
@@ -4811,7 +4810,7 @@ export const handlers = [
       }
 
       const resultArray = [[undefined, { status: 200 }]] as [
-        any,
+        unknown,
         { status: number },
       ][];
 
@@ -4838,7 +4837,7 @@ export const handlers = [
     }
 
     const resultArray = [[undefined, { status: 200 }]] as [
-      any,
+      unknown,
       { status: number },
     ][];
 
@@ -4864,7 +4863,7 @@ export const handlers = [
     const resultArray = [
       [undefined, { status: 200 }],
       [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`delete /api/v1/users/:id`) % resultArray.length];
@@ -4887,7 +4886,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRolesControllerFindOne200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/roles/:id`) % resultArray.length];
@@ -4910,7 +4909,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRuntimeConfigControllerGetConfig200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/runtime-config/:key`) % resultArray.length];
@@ -4934,7 +4933,7 @@ export const handlers = [
     const resultArray = [
       [await getUsersControllerFindOne200Response(), { status: 200 }],
       [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`get /api/v1/users/:id`) % resultArray.length];
@@ -4957,7 +4956,7 @@ export const handlers = [
 
     const resultArray = [
       [await getRolesControllerUpdate200Response(), { status: 200 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`patch /api/v1/roles/:id`) % resultArray.length];
@@ -4981,7 +4980,7 @@ export const handlers = [
     const resultArray = [
       [await getUsersControllerUpdate200Response(), { status: 200 }],
       [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`patch /api/v1/users/:id`) % resultArray.length];
@@ -5007,7 +5006,7 @@ export const handlers = [
         await getRuntimeConfigControllerUpdateConfig200Response(),
         { status: 200 },
       ],
-    ] as [any, { status: number }][];
+    ] as [unknown, { status: number }][];
 
     const [body, init] =
       resultArray[next(`put /api/v1/runtime-config/:key`) % resultArray.length];
@@ -5041,7 +5040,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -5078,7 +5077,7 @@ export const handlers = [
         [undefined, { status: 401 }],
         [undefined, { status: 403 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -5109,7 +5108,7 @@ export const handlers = [
       const resultArray = [
         [await getPublicFileControllerAccessFile200Response(), { status: 200 }],
         [undefined, { status: 404 }],
-      ] as [any, { status: number }][];
+      ] as [unknown, { status: number }][];
 
       const [body, init] =
         resultArray[
