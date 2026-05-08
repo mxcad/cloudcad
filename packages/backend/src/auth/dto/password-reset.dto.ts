@@ -167,6 +167,14 @@ export class BindEmailDto {
   @IsEmail({}, { message: '邮箱格式不正确' })
   @IsNotEmpty({ message: '邮箱不能为空' })
   email: string;
+
+  @ApiPropertyOptional({
+    description: '是否为重新绑定（换绑）',
+    example: false,
+  })
+  @IsOptional()
+  @IsNotEmpty()
+  isRebind?: boolean;
 }
 
 export class VerifyBindEmailDto {

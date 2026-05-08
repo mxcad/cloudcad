@@ -9,6 +9,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 /**
  * 微信用户信息 DTO
@@ -139,4 +140,25 @@ export class WechatUnbindResponseDto {
 
   @ApiProperty({ description: '消息' })
   message: string;
+}
+
+/**
+ * 绑定微信 DTO
+ */
+export class BindWechatDto {
+  @ApiProperty({
+    description: '微信授权回调返回的 code',
+    example: '081x7J0w3Q4e1Z2B5L1w3FVKJT0x7J0Z',
+  })
+  @IsString({ message: 'code 必须是字符串' })
+  @IsNotEmpty({ message: 'code 不能为空' })
+  code: string;
+
+  @ApiProperty({
+    description: '微信授权 state 参数（包含 csrf token）',
+    example: 'eyJjc3JmIjoiYWJjZGVmIiwib3JpZ2luIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwIn0=',
+  })
+  @IsString({ message: 'state 必须是字符串' })
+  @IsNotEmpty({ message: 'state 不能为空' })
+  state: string;
 }

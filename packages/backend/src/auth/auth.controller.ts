@@ -29,7 +29,6 @@ import type { AuthenticatedRequest } from '../common/types/request.types';
 import type { SessionRequest } from './interfaces/jwt-payload.interface';
 import {
   ApiBearerAuth,
-  ApiBody,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -249,32 +248,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码无效或已过期' })
   @ApiResponse({ status: 409, description: '手机号、邮箱或用户名已存在' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', description: '邮箱地址' },
-        code: { type: 'string', description: '邮箱验证码' },
-        phone: { type: 'string', description: '手机号' },
-        phoneCode: { type: 'string', description: '短信验证码' },
-        username: { type: 'string', description: '用户名' },
-        password: { type: 'string', description: '密码' },
-        nickname: { type: 'string', description: '昵称（可选）' },
-      },
-      required: ['email', 'code', 'phone', 'phoneCode', 'username', 'password'],
-    },
-  })
   async verifyEmailAndRegisterPhone(
-    @Body()
-    dto: {
-      email: string;
-      code: string;
-      phone: string;
-      phoneCode: string;
-      username: string;
-      password: string;
-      nickname?: string;
-    },
+    @Body() dto: VerifyEmailAndRegisterPhoneDto,
     @Req() req: SessionRequest,
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
@@ -306,17 +281,8 @@ export class AuthController {
     type: SendVerificationApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误或发送过于频繁' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', description: '邮箱地址' },
-      },
-      required: ['email'],
-    },
-  })
   async resendVerification(
-    @Body() dto: { email: string }
+    @Body() dto: ResendVerificationDto
   ): Promise<SendVerificationResponseDto> {
     await this.emailVerificationService.resendVerificationEmail(dto.email);
     return { message: '验证邮件已重新发送' };
@@ -332,19 +298,8 @@ export class AuthController {
     type: AuthApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '验证码无效或令牌过期' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        tempToken: { type: 'string', description: '临时令牌' },
-        email: { type: 'string', description: '邮箱地址' },
-        code: { type: 'string', description: '邮箱验证码' },
-      },
-      required: ['tempToken', 'email', 'code'],
-    },
-  })
   async bindEmailAndLogin(
-    @Body() dto: { tempToken: string; email: string; code: string },
+    @Body() dto: BindEmailAndLoginDto,
     @Req() req: SessionRequest,
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
@@ -368,19 +323,8 @@ export class AuthController {
     type: AuthApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '验证码无效或令牌过期' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        tempToken: { type: 'string', description: '临时令牌' },
-        phone: { type: 'string', description: '手机号' },
-        code: { type: 'string', description: '短信验证码' },
-      },
-      required: ['tempToken', 'phone', 'code'],
-    },
-  })
   async bindPhoneAndLogin(
-    @Body() dto: { tempToken: string; phone: string; code: string },
+    @Body() dto: BindPhoneAndLoginDto,
     @Req() req: SessionRequest,
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
@@ -404,18 +348,8 @@ export class AuthController {
     type: AuthApiResponseDto,
   })
   @ApiResponse({ status: 400, description: '验证码无效或已过期' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        phone: { type: 'string', description: '手机号' },
-        code: { type: 'string', description: '短信验证码' },
-      },
-      required: ['phone', 'code'],
-    },
-  })
   async verifyPhone(
-    @Body() dto: { phone: string; code: string },
+    @Body() dto: VerifySmsCodeDto,
     @Req() req: SessionRequest,
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
@@ -473,20 +407,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '邮件服务未启用或已绑定邮箱' })
   @ApiResponse({ status: 409, description: '邮箱已被其他用户绑定' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', description: '邮箱地址' },
-        isRebind: { type: 'boolean', description: '是否为换绑操作（可选）' },
-      },
-      required: ['email'],
-    },
-  })
   @ApiBearerAuth()
   async sendBindEmailCode(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: BindEmailDto & { isRebind?: boolean }
+    @Body() dto: BindEmailDto
   ): Promise<BindEmailResponseDto> {
     return this.authService.sendBindEmailCode(
       req.user.id,
@@ -544,19 +468,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码错误或已过期' })
   @ApiResponse({ status: 401, description: '未绑定邮箱' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'string', description: '邮箱验证码' },
-      },
-      required: ['code'],
-    },
-  })
   @ApiBearerAuth()
   async verifyUnbindEmailCode(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: { code: string }
+    @Body() dto: VerifyUnbindCodeDto
   ): Promise<{ success: boolean; message: string; token: string }> {
     return this.authService.verifyUnbindEmailCode(req.user.id, dto.code);
   }
@@ -573,21 +488,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码错误或未验证原邮箱' })
   @ApiResponse({ status: 409, description: '新邮箱已被其他用户绑定' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', description: '新邮箱地址' },
-        code: { type: 'string', description: '新邮箱验证码' },
-        token: { type: 'string', description: '旧邮箱验证通过的token' },
-      },
-      required: ['email', 'code', 'token'],
-    },
-  })
   @ApiBearerAuth()
   async rebindEmail(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: { email: string; code: string; token: string }
+    @Body() dto: RebindEmailDto
   ): Promise<{ success: boolean; message: string }> {
     return this.authService.rebindEmail(
       req.user.id,
@@ -681,18 +585,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码错误' })
   @ApiResponse({ status: 412, description: '手机号未注册，需要跳转注册页' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        phone: { type: 'string', description: '手机号' },
-        code: { type: 'string', description: '短信验证码' },
-      },
-      required: ['phone', 'code'],
-    },
-  })
   async loginByPhone(
-    @Body() dto: { phone: string; code: string },
+    @Body() dto: LoginByPhoneDto,
     @Req() req: SessionRequest,
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
@@ -713,20 +607,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码错误或已绑定手机号' })
   @ApiResponse({ status: 409, description: '手机号已被其他用户绑定' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        phone: { type: 'string', description: '手机号' },
-        code: { type: 'string', description: '短信验证码' },
-      },
-      required: ['phone', 'code'],
-    },
-  })
   @ApiBearerAuth()
   async bindPhone(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: { phone: string; code: string }
+    @Body() dto: BindPhoneDto
   ): Promise<{ success: boolean; message: string }> {
     return this.authService.bindPhone(req.user.id, dto.phone, dto.code);
   }
@@ -761,19 +645,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码错误或已过期' })
   @ApiResponse({ status: 401, description: '未绑定手机号' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'string', description: '短信验证码' },
-      },
-      required: ['code'],
-    },
-  })
   @ApiBearerAuth()
   async verifyUnbindPhoneCode(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: { code: string }
+    @Body() dto: VerifyUnbindCodeDto
   ): Promise<{ success: boolean; message: string; token: string }> {
     return this.authService.verifyUnbindPhoneCode(req.user.id, dto.code);
   }
@@ -790,21 +665,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '验证码错误或未验证原手机号' })
   @ApiResponse({ status: 409, description: '新手机号已被其他用户绑定' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        phone: { type: 'string', description: '新手机号' },
-        code: { type: 'string', description: '新手机号验证码' },
-        token: { type: 'string', description: '旧手机号验证通过的token' },
-      },
-      required: ['phone', 'code', 'token'],
-    },
-  })
   @ApiBearerAuth()
   async rebindPhone(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: { phone: string; code: string; token: string }
+    @Body() dto: RebindPhoneDto
   ): Promise<{ success: boolean; message: string }> {
     return this.authService.rebindPhone(
       req.user.id,
@@ -973,20 +837,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: '绑定失败' })
   @ApiResponse({ status: 409, description: '该微信已绑定其他账号' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'string', description: '微信授权code' },
-        state: { type: 'string', description: '微信授权state' },
-      },
-      required: ['code', 'state'],
-    },
-  })
   @ApiBearerAuth()
   async bindWechat(
     @Request() req: AuthenticatedRequest,
-    @Body() dto: { code: string; state: string }
+    @Body() dto: BindWechatDto
   ): Promise<WechatBindResponseDto> {
     return this.authService.bindWechat(req.user.id, dto.code, dto.state);
   }
