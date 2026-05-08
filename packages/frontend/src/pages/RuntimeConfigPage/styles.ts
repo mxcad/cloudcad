@@ -329,7 +329,7 @@ export const runtimeConfigStyles = `
   }
 
   .input-wrapper {
-    min-width: 200px;
+    flex: 1;
   }
 
   /* ===== 输入控件 ===== */
@@ -426,8 +426,8 @@ export const runtimeConfigStyles = `
 
   /* ===== 开关控件 ===== */
   .toggle-switch {
-    width: 52px;
-    height: 28px;
+    width: 36px;
+    height: 20px;
     background: var(--bg-tertiary);
     border-radius: var(--radius-full);
     position: relative;
@@ -458,8 +458,8 @@ export const runtimeConfigStyles = `
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     background: white;
     border-radius: 50%;
     transition: transform 0.2s ease;
@@ -467,7 +467,7 @@ export const runtimeConfigStyles = `
   }
 
   .toggle-switch.active .toggle-handle {
-    transform: translateX(24px);
+    transform: translateX(16px);
   }
 
   /* ===== 操作按钮 ===== */

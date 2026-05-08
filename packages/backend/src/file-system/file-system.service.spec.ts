@@ -355,13 +355,43 @@ describe('FileSystemService', () => {
     });
   });
 
+  // ==================== Trash operations ====================
+  describe('trash operations', () => {
+    it('getTrashItems delegates to getUserDeletedProjects', async () => {
+      mockProjectCrud.getUserDeletedProjects.mockResolvedValue({ nodes: [], total: 0 });
+      await service.getTrashItems('u1');
+      expect(mockProjectCrud.getUserDeletedProjects).toHaveBeenCalledWith('u1');
+    });
+
+    it('getProjectTrash delegates to fileOperationsService', async () => {
+      mockFileOps.getProjectTrash.mockResolvedValue({ nodes: [], total: 0 });
+      await service.getProjectTrash('p1', 'u1');
+      expect(mockFileOps.getProjectTrash).toHaveBeenCalledWith('p1', 'u1', undefined);
+    });
+
+    it('restoreTrashItems delegates to fileOperationsService', async () => {
+      mockFileOps.restoreTrashItems.mockResolvedValue({ successCount: 1, failedCount: 0, successIds: ['n1'], failedIds: [] });
+      await service.restoreTrashItems(['n1'], 'u1');
+      expect(mockFileOps.restoreTrashItems).toHaveBeenCalledWith(['n1'], 'u1');
+    });
+
+    it('permanentlyDeleteTrashItems delegates to fileOperationsService', async () => {
+      mockFileOps.permanentlyDeleteTrashItems.mockResolvedValue({ successCount: 1, failedCount: 0, successIds: ['n1'], failedIds: [] });
+      await service.permanentlyDeleteTrashItems(['n1']);
+      expect(mockFileOps.permanentlyDeleteTrashItems).toHaveBeenCalledWith(['n1']);
+    });
+
+    it('clearTrash delegates to fileOperationsService', async () => {
+      mockFileOps.clearTrash.mockResolvedValue({ message: '已清空' });
+      await service.clearTrash('u1');
+      expect(mockFileOps.clearTrash).toHaveBeenCalledWith('u1');
+    });
+  });
+
   // ==================== Unimplemented methods ====================
   describe('unimplemented methods', () => {
     it('uploadFile throws not implemented', async () => {
       await expect(service.uploadFile('u1', 'p1', {} as any)).rejects.toThrow('尚未实现');
-    });
-    it('getTrashItems throws not implemented', async () => {
-      await expect(service.getTrashItems('u1')).rejects.toThrow('尚未实现');
     });
   });
 });

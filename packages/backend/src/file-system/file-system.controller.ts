@@ -220,7 +220,7 @@ export class FileSystemController {
 	}
 
 	@Delete('trash/items')
-  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+  @RequirePermissions([SystemPermission.PROJECT_CREATE])
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '永久删除回收站项目' })
@@ -243,7 +243,7 @@ export class FileSystemController {
   }
 
 	@Delete('trash')
-  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+  @RequirePermissions([SystemPermission.PROJECT_CREATE])
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '清空回收站' })
@@ -254,6 +254,23 @@ export class FileSystemController {
   })
   async clearTrash(@Request() req) {
     return this.fileSystemService.clearTrash(req.user.id);
+  }
+
+  @Get('projects/:projectId/trash')
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @ApiOperation({ summary: '获取项目回收站列表' })
+  @ApiResponse({
+    status: 200,
+    description: '获取项目回收站列表成功',
+    type: ProjectTrashResponseDto,
+  })
+  @ApiResponse({ status: 404, description: '项目不存在' })
+  async getProjectTrash(
+    @Param('projectId') projectId: string,
+    @Request() req,
+    @Query() query?: QueryChildrenDto,
+  ) {
+    return this.fileSystemService.getProjectTrash(projectId, req.user.id, query);
   }
 
 	@Post("nodes")
@@ -315,7 +332,7 @@ export class FileSystemController {
   }
 
 	@Post("nodes/:nodeId/restore")
-	@RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
+	@RequirePermissions([SystemPermission.PROJECT_CREATE])
 	@CsrfProtected()
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "恢复单个节点" })
@@ -434,11 +451,12 @@ export class FileSystemController {
 		description: "获取配额信息成功",
 		type: StorageInfoDto,
 	})
-	async getStorageQuota(@Request() req, @Query('nodeId') nodeId?: string) {
+	async getStorageQuota(@Request() req, @Query('nodeId') nodeId?: string, @Query('userId') userId?: string) {
 		if (nodeId) {
 			return this.fileSystemService.getNodeStorageQuota(req.user.id, nodeId);
 		}
-		return this.fileSystemService.getUserStorageInfo(req.user.id);
+		const targetUserId = userId || req.user.id;
+		return this.fileSystemService.getUserStorageInfo(targetUserId);
 	}
 
 	@Post("quota/update")

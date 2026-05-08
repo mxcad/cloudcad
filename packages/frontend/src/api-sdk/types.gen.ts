@@ -1069,6 +1069,10 @@ export type StorageQuotaTypeEnum = 'PERSONAL' | 'PROJECT' | 'LIBRARY';
 
 export type StorageInfoDto = {
     /**
+     * 节点 ID
+     */
+    nodeId: string;
+    /**
      * 配额类型
      */
     type: StorageQuotaTypeEnum;
@@ -4892,6 +4896,7 @@ export type FileSystemControllerGetStorageQuotaData = {
     path?: never;
     query: {
         nodeId: string;
+        userId: string;
     };
     url: '/api/v1/file-system/quota';
 };

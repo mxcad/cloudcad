@@ -114,23 +114,27 @@ async function bootstrap() {
     prefix: 'mxcad:sess:',
   });
 
-  // 配置 Session 中间件
-  server.use(
-    session({
-      store: redisStore,
-      secret: config.session.secret,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: config.session.cookieSecure,
-        maxAge: config.session.maxAge,
-        httpOnly: true,
-        sameSite: config.session.cookieSameSite,
-        domain: config.session.cookieDomain,
-      },
-      name: config.session.name,
-    })
-  );
+  // 配置 Session 中间件（跳过 TUS 上传路径，避免 srvx 适配器与 express-session 冲突）
+  const sessionMiddleware = session({
+    store: redisStore,
+    secret: config.session.secret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: config.session.cookieSecure,
+      maxAge: config.session.maxAge,
+      httpOnly: true,
+      sameSite: config.session.cookieSameSite,
+      domain: config.session.cookieDomain,
+    },
+    name: config.session.name,
+  });
+  server.use((req, res, next) => {
+    if (req.path.startsWith('/api/v1/files')) {
+      return next();
+    }
+    sessionMiddleware(req, res, next);
+  });
   logger.log(
     `Session cookie secure: ${config.session.cookieSecure} (NODE_ENV=${config.nodeEnv})`
   );
@@ -205,6 +209,7 @@ async function bootstrap() {
       'Upload-Offset',
       'X-CSRF-Token',
     ],
+    exposedHeaders: ['X-Node-Id'],
   });
 
   // 全局设置 CORP 响应头，支持 MxCAD-App 的 SharedArrayBuffer 跨域访问

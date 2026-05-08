@@ -48,6 +48,12 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   const params = useParams<{ projectId: string; nodeId?: string }>();
 
   const handleBackClick = () => {
+    // 如果在回收站视图，先退出回收站视图
+    if (isTrashView || isProjectTrashView) {
+      onToggleTrashView();
+      return;
+    }
+
     if (isPersonalSpaceMode) {
       isAtRoot ? navigate('/personal-space') : onGoBack();
     } else {

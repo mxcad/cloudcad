@@ -12,7 +12,6 @@ interface UseUserSearchReturn {
   currentPage: number;
   setCurrentPage: (page: number) => void;
   pageSize: number;
-  totalUsers: number;
   userTab: 'active' | 'deleted';
   setUserTab: (tab: 'active' | 'deleted') => void;
 }
@@ -24,7 +23,6 @@ export function useUserSearch(): UseUserSearchReturn {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
-  const [totalUsers, setTotalUsers] = useState(0);
   const [userTab, setUserTab] = useState<'active' | 'deleted'>('active');
 
   return {
@@ -39,7 +37,6 @@ export function useUserSearch(): UseUserSearchReturn {
     currentPage,
     setCurrentPage,
     pageSize,
-    totalUsers,
     userTab,
     setUserTab,
   };

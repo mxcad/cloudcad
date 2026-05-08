@@ -216,6 +216,21 @@
     animation: slide-in-right var(--transition-base) ease-out;
   }
 
+  @keyframes slide-in-top {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in-top {
+    animation: slide-in-top var(--transition-base) ease-out;
+  }
+
   .animate-pulse-soft {
     animation: pulse-soft 2s ease-in-out infinite;
   }

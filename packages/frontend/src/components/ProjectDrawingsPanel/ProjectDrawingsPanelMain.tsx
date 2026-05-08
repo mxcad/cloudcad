@@ -14,7 +14,7 @@
  */
 
 import React, {
-  useState, useMemo, useEffect, useCallback,
+  useState, useMemo, useEffect, useCallback, useRef,
 } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { MxFun } from 'mxdraw';
@@ -23,7 +23,6 @@ import {
   fileSystemControllerGetNode,
   fileSystemControllerUpdateNode,
 } from '@/api-sdk';
-import { libraryControllerGetDrawingAllFiles, libraryControllerGetBlockAllFiles } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
@@ -42,14 +41,16 @@ import { RenameModal } from '@/components/modals/RenameModal';
 import { MembersModal } from '@/components/modals/MembersModal';
 import { ProjectRolesModal } from '@/components/modals/ProjectRolesModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
+import { SelectFolderModal } from '@/components/modals/SelectFolderModal';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { handleError } from '@/utils/errorHandler';
 import { CategoryTabs } from '@/components/CategoryTabs';
+import { ProjectPermission } from '@/constants/permissions';
 import styles from '@/components/sidebar/sidebar.module.css';
 import type { ProjectFilterType } from '@/types/project';
 
 import type { LibraryType, BreadcrumbItem, ProjectDrawingsPanelProps } from './types';
-import { PAGE_SIZE, isDrawingFile, API_BASE } from './constants';
+import { isDrawingFile, API_BASE } from './constants';
 import { useLoadNodes } from './hooks/useLoadNodes';
 import { useLibraryCategories } from './hooks/useLibraryCategories';
 import { useVersionHistory } from './hooks/useVersionHistory';
@@ -83,12 +84,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Node loader hook
   const {
-    nodes, setNodes, loading, setLoading, total, setTotal,
-    totalPages, setTotalPages, hasMore, setHasMore,
+    nodes, loading, total, totalPages, hasMore,
     currentPage, setCurrentPage,
     loadNodes, buildBreadcrumbPath,
     loadNodesRef, buildBreadcrumbPathRef,
-    activeRequestId,
+    activeRequestId, reset: resetNodes,
   } = useLoadNodes(isLibraryMode, libraryType);
 
   // Library categories
@@ -119,6 +119,15 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isProjectRolesModalOpen, setIsProjectRolesModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<FileSystemNode | null>(null);
+
+  // Move/Copy state
+  const [showSelectFolderModal, setShowSelectFolderModal] = useState(false);
+  const [moveSourceNode, setMoveSourceNode] = useState<FileSystemNode | null>(null);
+  const [copySourceNode, setCopySourceNode] = useState<FileSystemNode | null>(null);
+
+  // Drag-and-drop state
+  const [draggedNodes, setDraggedNodes] = useState<FileSystemNode[]>([]);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   // UI hook
   const { toasts, confirmDialog, showToast, removeToast, showConfirm: showConfirmUI, closeConfirm } = useFileSystemUI();
@@ -247,13 +256,14 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const {
     isModalOpen: isProjectModalOpen, editingProject: projectBeingEdited,
     formData: projectFormData, loading: projectLoading,
+    openCreateModal: openCreateProjectModal,
     openEditModal: openEditProjectModal, closeModal: closeProjectModal,
     setFormData: setProjectFormData, handleUpdate: handleUpdateProjectSubmit,
   } = useProjectManagement({ onProjectUpdated: refreshNodes, onProjectDeleted: refreshNodes, showToast });
 
   // Initialize: load project root
   useEffect(() => {
-    if (!selectedProjectId) { setNodes([]); setBreadcrumb([]); return; }
+    if (!selectedProjectId) { resetNodes(); setBreadcrumb([]); return; }
     const initProject = async () => {
       try {
         const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
@@ -275,20 +285,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     listInitializedRef.current = true;
     const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1];
     if (currentCategoryId === 'all') {
-      const loadAll = async () => {
-        try {
-          const response = libraryType === 'drawing'
-            ? await libraryControllerGetDrawingAllFiles({ path: { nodeId: libraryRootId }, query: { page: 1, limit: PAGE_SIZE } })
-            : await libraryControllerGetBlockAllFiles({ path: { nodeId: libraryRootId }, query: { page: 1, limit: PAGE_SIZE } });
-          const files = (response as { nodes?: FileSystemNode[] })?.nodes || [];
-          setNodes(files);
-          setTotal((response as { total?: number })?.total || 0);
-          setTotalPages((response as { totalPages?: number })?.totalPages || Math.ceil(((response as { total?: number })?.total || 0) / PAGE_SIZE) || 1);
-          setHasMore(1 < ((response as { totalPages?: number })?.totalPages || 1));
-          setCurrentPage(1);
-        } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 加载列表数据失败'); } finally { setLoading(false); }
-      };
-      loadAll();
+      loadNodes(libraryRootId, 1);
     } else if (currentCategoryId) {
       loadNodes(currentCategoryId, 1, '', false);
     }
@@ -297,9 +294,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   // Reset on libraryType change
   useEffect(() => {
     listInitializedRef.current = false;
-    setNodes([]); setBreadcrumb([]); setCurrentPage(1);
-    setSearchQuery(''); setHasMore(false);
-    activeRequestId.current = 0;
+    resetNodes(); setBreadcrumb([]);
+    setSearchQuery('');
   }, [libraryType]);
 
   // parentId navigation
@@ -308,7 +304,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       if (!initialParentId || initialParentId.trim() === '' || isPersonalSpace) return;
       if (personalSpaceId) {
         const path = await buildBreadcrumbPathRef.current(initialParentId);
-        if (path[0]?.id === personalSpaceId) { setSelectedProjectId(null); setBreadcrumb([]); setNodes([]); return; }
+        if (path[0]?.id === personalSpaceId) { setSelectedProjectId(null); setBreadcrumb([]); resetNodes(); return; }
       }
       try {
         const path = await buildBreadcrumbPathRef.current(initialParentId);
@@ -339,7 +335,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       const lastItem = newBreadcrumb[newBreadcrumb.length - 1];
       if (lastItem) loadNodes(lastItem.id);
     } else if (breadcrumb.length === 1 && !isPersonalSpace) {
-      setSelectedProjectId(null); setBreadcrumb([]); setNodes([]);
+      setSelectedProjectId(null); setBreadcrumb([]); resetNodes();
     }
     setSearchQuery(''); setCurrentPage(1);
   }, [breadcrumb, isPersonalSpace, loadNodes]);
@@ -351,7 +347,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   }, []);
 
   const handleBackToProjects = useCallback(() => {
-    setSelectedProjectId(null); setBreadcrumb([]); setNodes([]);
+    setSelectedProjectId(null); setBreadcrumb([]); resetNodes();
     setSearchQuery(''); setCurrentPage(1);
   }, []);
 
@@ -437,7 +433,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     const loadDir = direction === 'prev' ? 'up' : direction === 'jump' ? 'jump' : 'down';
     setNextLoadDirection(loadDir as 'up' | 'down' | 'jump');
     setCurrentPage(page);
-    if (direction === 'jump') { setNodes([]); setHasMore(page < totalPages); loadNodes(nodeId, page, searchQuery, false); }
+    if (direction === 'jump') { resetNodes(); loadNodes(nodeId, page, searchQuery, false); }
     else if (direction === 'next') loadNodes(nodeId, page, searchQuery, true);
     else loadNodes(nodeId, page, searchQuery, 'prepend');
   }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, totalPages, searchQuery, loadNodes]);
@@ -480,6 +476,76 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 重命名失败'); showToast('重命名失败', 'error'); } finally { setIsRenameLoading(false); }
   }, [editingNode, folderName, isLibraryMode, libraryOperations, handleRename, showToast]);
 
+  // Move/Copy handlers
+  const handleMove = useCallback((node: FileSystemNode) => {
+    setMoveSourceNode(node);
+    setCopySourceNode(null);
+    setShowSelectFolderModal(true);
+  }, []);
+
+  const handleCopy = useCallback((node: FileSystemNode) => {
+    setCopySourceNode(node);
+    setMoveSourceNode(null);
+    setShowSelectFolderModal(true);
+  }, []);
+
+  const handleConfirmMoveOrCopy = useCallback(async (targetParentId: string) => {
+    const { fileSystemControllerMoveNode, fileSystemControllerCopyNode } = await import('@/api-sdk');
+    try {
+      if (moveSourceNode) {
+        await fileSystemControllerMoveNode({ path: { nodeId: moveSourceNode.id }, body: { targetParentId } });
+      } else if (copySourceNode) {
+        await fileSystemControllerCopyNode({ path: { nodeId: copySourceNode.id }, body: { targetParentId } });
+      }
+      refreshNodes();
+      setShowSelectFolderModal(false);
+      setMoveSourceNode(null);
+      setCopySourceNode(null);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '操作失败，请重试';
+      showToast(errorMessage, 'error');
+    }
+  }, [moveSourceNode, copySourceNode, refreshNodes, showToast]);
+
+  // Drag-and-drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, node: FileSystemNode) => {
+    if (node.isRoot) { e.preventDefault(); return; }
+    e.dataTransfer.setData('text/plain', node.id);
+    e.dataTransfer.effectAllowed = 'copyMove';
+    setDraggedNodes([node]);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, node: FileSystemNode) => {
+    e.preventDefault();
+    if (node.isFolder && node.id !== draggedNodes[0]?.id) {
+      e.dataTransfer.dropEffect = e.ctrlKey || e.metaKey ? 'copy' : 'move';
+      setDropTargetId(node.id);
+    }
+  }, [draggedNodes]);
+
+  const handleDragLeave = useCallback(() => { setDropTargetId(null); }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetNode: FileSystemNode) => {
+    e.preventDefault();
+    setDropTargetId(null);
+    if (!targetNode.isFolder || draggedNodes.length === 0) return;
+    const draggedNode = draggedNodes[0];
+    if (!draggedNode || draggedNode.id === targetNode.id) return;
+    const isCopy = e.ctrlKey || e.metaKey;
+    const { fileSystemControllerMoveNode, fileSystemControllerCopyNode } = await import('@/api-sdk');
+    try {
+      if (isCopy) {
+        await fileSystemControllerCopyNode({ path: { nodeId: draggedNode.id }, body: { targetParentId: targetNode.id } });
+      } else {
+        await fileSystemControllerMoveNode({ path: { nodeId: draggedNode.id }, body: { targetParentId: targetNode.id } });
+      }
+      refreshNodes();
+    } catch (error: unknown) {
+      handleError(error, '拖拽操作失败');
+      showToast('操作失败，请重试', 'error');
+    } finally { setDraggedNodes([]); }
+  }, [draggedNodes, refreshNodes, showToast]);
+
   // Project list view
   if (!isPersonalSpace && !isLibraryMode && !selectedProjectId && !loading) {
     return (
@@ -489,6 +555,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           onProjectFilterChange={setProjectFilter} nodePermissions={nodePermissions}
           onEnterProject={handleEnterProject} onEditProject={handleEditProject}
           onShowMembers={handleShowMembers} onShowRoles={handleShowRoles}
+          onDeleteProject={(project) => {
+            const perms = nodePermissions.get(project.id);
+            if (perms?.canDelete) {
+              showConfirm('删除项目', `确定要删除项目"${project.name}"吗？删除后将移至回收站。`, async () => {
+                await handleDelete(project, false);
+                refreshNodes();
+              }, 'danger', '删除');
+            }
+          }}
+          onRefresh={refreshNodes}
         />
         <MembersModal isOpen={isMembersModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsMembersModalOpen(false); setEditingProject(null); }} />
         <ProjectRolesModal isOpen={isProjectRolesModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsProjectRolesModalOpen(false); setEditingProject(null); }} />

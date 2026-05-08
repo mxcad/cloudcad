@@ -4562,6 +4562,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -9797,6 +9805,10 @@
       "StorageInfoDto": {
         "type": "object",
         "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "节点 ID"
+          },
           "type": {
             "description": "配额类型",
             "allOf": [
@@ -9823,6 +9835,7 @@
           }
         },
         "required": [
+          "nodeId",
           "type",
           "used",
           "total",

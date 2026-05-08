@@ -1,0 +1,132 @@
+src/components/modals/hooks/useSaveAs.ts(114,87): error TS2304: Cannot find name 'SaveMxwebAsDto'.
+src/components/modals/hooks/useSaveAs.ts(132,85): error TS2304: Cannot find name 'SaveMxwebAsDto'.
+src/components/modals/MembersModal.tsx(199,92): error TS2322: Type '{ userId: string; projectRoleId: string; }' is not assignable to type 'undefined'.
+src/components/modals/MembersModal.tsx(205,13): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(206,17): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(207,16): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(208,19): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(209,19): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(210,17): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(211,24): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(212,26): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(213,19): error TS18048: 'memberData.data' is possibly 'undefined'.
+src/components/modals/MembersModal.tsx(257,84): error TS2322: Type '{ projectRoleId: string; }' is not assignable to type 'undefined'.
+src/components/modals/MembersModal.tsx(286,107): error TS2322: Type '{ roleName: string; }' is not assignable to type 'undefined'.
+src/contexts/AuthContext.tsx(145,9): error TS2339: Property 'accessToken' does not exist on type 'AuthApiResponseDto | undefined'.
+src/contexts/AuthContext.tsx(146,9): error TS2339: Property 'refreshToken' does not exist on type 'AuthApiResponseDto | undefined'.
+src/contexts/AuthContext.tsx(147,9): error TS2339: Property 'user' does not exist on type 'AuthApiResponseDto | undefined'.
+src/contexts/AuthContext.tsx(184,9): error TS2322: Type '{ phone: string; code: string; }' is not assignable to type 'undefined'.
+src/contexts/AuthContext.tsx(186,28): error TS2352: Conversion of type 'AuthApiResponseDto | undefined' to type 'AuthResponseData' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'AuthApiResponseDto' is missing the following properties from type 'AuthResponseData': accessToken, refreshToken, user
+src/hooks/library/useLibraryDownload.ts(30,15): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/library/useLibraryDownload.ts(34,15): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/library/useLibraryDownload.ts(46,21): error TS2322: Type 'FileContentResponseDto' is not assignable to type 'BlobPart'.
+src/hooks/library/useLibraryOperations.ts(106,78): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/library/useLibraryOperations.ts(107,76): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/library/useLibraryOperations.ts(143,78): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/library/useLibraryOperations.ts(144,76): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/library/useLibraryQuota.ts(66,23): error TS2352: Conversion of type '({ data: undefined; error: unknown; } | { data: { [key: string]: unknown; }; error: undefined; }) & { request?: Request | undefined; response?: Response | undefined; }' to type 'Record<string, number> | undefined' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ data: { [key: string]: unknown; }; error: undefined; } & { request?: Request | undefined; response?: Response | undefined; }' is not comparable to type 'Record<string, number> | undefined'.
+    Type '{ data: { [key: string]: unknown; }; error: undefined; } & { request?: Request | undefined; response?: Response | undefined; }' is not comparable to type 'Record<string, number>'.
+      Property 'data' is incompatible with index signature.
+        Type '{ [key: string]: unknown; }' is not comparable to type 'number'.
+src/hooks/useDashboardProjects.ts(30,45): error TS2339: Property 'status' does not exist on type 'FileSystemNodeDto'.
+src/hooks/useDirectoryImport.ts(55,11): error TS2430: Interface 'FileWithWebkitPath' incorrectly extends interface 'File'.
+  Types of property 'webkitRelativePath' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/hooks/useDirectoryImport.ts(392,81): error TS18048: 'firstFile' is possibly 'undefined'.
+src/hooks/useDirectoryImport.ts(396,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/useExternalReferenceUpload.ts(153,97): error TS2322: Type '{ fileName: string; }' is not assignable to type 'undefined'.
+src/hooks/useExternalReferenceUpload.ts(412,60): error TS2739: Type 'FormData' is missing the following properties from type 'UploadExtReferenceFileDto': file, ext_ref_file
+src/hooks/useLibrary.ts(282,5): error TS2322: Type '(name: string, parentId?: string) => Promise<FileSystemNodeDto | undefined>' is not assignable to type '(name: string, parentId?: string | undefined) => Promise<void>'.
+  Type 'Promise<FileSystemNodeDto | undefined>' is not assignable to type 'Promise<void>'.
+    Type 'FileSystemNodeDto | undefined' is not assignable to type 'void'.
+      Type 'FileSystemNodeDto' is not assignable to type 'void'.
+src/hooks/useLibrary.ts(284,5): error TS2322: Type '(nodeId: string, permanently?: boolean) => Promise<unknown>' is not assignable to type '(nodeId: string, permanently?: boolean | undefined) => Promise<void>'.
+  Type 'Promise<unknown>' is not assignable to type 'Promise<void>'.
+    Type 'unknown' is not assignable to type 'void'.
+src/hooks/useLibrary.ts(286,5): error TS2322: Type '(nodeId: string, name: string) => Promise<FileSystemNodeDto | undefined>' is not assignable to type '(nodeId: string, name: string) => Promise<void>'.
+  Type 'Promise<FileSystemNodeDto | undefined>' is not assignable to type 'Promise<void>'.
+    Type 'FileSystemNodeDto | undefined' is not assignable to type 'void'.
+      Type 'FileSystemNodeDto' is not assignable to type 'void'.
+src/hooks/useLibrary.ts(288,5): error TS2322: Type '(nodeId: string, targetParentId: string) => Promise<FileSystemNodeDto | undefined>' is not assignable to type '(nodeId: string, targetParentId: string) => Promise<void>'.
+  Type 'Promise<FileSystemNodeDto | undefined>' is not assignable to type 'Promise<void>'.
+    Type 'FileSystemNodeDto | undefined' is not assignable to type 'void'.
+      Type 'FileSystemNodeDto' is not assignable to type 'void'.
+src/hooks/useLibrary.ts(290,5): error TS2322: Type '(nodeId: string, targetParentId: string) => Promise<FileSystemNodeDto | undefined>' is not assignable to type '(nodeId: string, targetParentId: string) => Promise<void>'.
+  Type 'Promise<FileSystemNodeDto | undefined>' is not assignable to type 'Promise<void>'.
+    Type 'FileSystemNodeDto | undefined' is not assignable to type 'void'.
+      Type 'FileSystemNodeDto' is not assignable to type 'void'.
+src/hooks/useLibraryPanel.ts(351,85): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/useLibraryPanel.ts(352,83): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/hooks/useLibraryPanel.ts(359,32): error TS2352: Conversion of type 'FileContentResponseDto' to type 'BlobPart' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/hooks/useProjectPermission.ts(210,20): error TS2322: Type 'string' is not assignable to type 'ProjectPermissionEnum'.
+src/hooks/useProjectPermission.ts(359,20): error TS2322: Type 'string' is not assignable to type 'ProjectPermissionEnum'.
+src/index.tsx(115,30): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+src/index.tsx(116,2): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+src/pages/EmailVerification.tsx(133,63): error TS2352: Conversion of type 'AuthApiResponseDto | undefined' to type '{ accessToken: string; refreshToken: string; user: unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'AuthApiResponseDto' is missing the following properties from type '{ accessToken: string; refreshToken: string; user: unknown; }': accessToken, refreshToken, user
+src/pages/EmailVerification.tsx(147,63): error TS2352: Conversion of type 'AuthApiResponseDto | undefined' to type '{ accessToken: string; refreshToken: string; user: unknown; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'AuthApiResponseDto' is missing the following properties from type '{ accessToken: string; refreshToken: string; user: unknown; }': accessToken, refreshToken, user
+src/pages/FontLibrary.tsx(295,9): error TS2322: Type '"blob"' is not assignable to type 'ResponseStyle | undefined'.
+src/pages/ForgotPassword/useForgotPassword.ts(25,18): error TS2448: Block-scoped variable 'data' used before its declaration.
+src/pages/ForgotPassword/useForgotPassword.ts(25,18): error TS2454: Variable 'data' is used before being assigned.
+src/pages/ForgotPassword/useForgotPassword.ts(25,23): error TS2339: Property 'email' does not exist on type 'ForgotPasswordResult'.
+src/pages/ForgotPassword/useForgotPassword.ts(26,18): error TS2448: Block-scoped variable 'data' used before its declaration.
+src/pages/ForgotPassword/useForgotPassword.ts(26,18): error TS2454: Variable 'data' is used before being assigned.
+src/pages/ForgotPassword/useForgotPassword.ts(26,23): error TS2339: Property 'phone' does not exist on type 'ForgotPasswordResult'.
+src/pages/ForgotPassword/useForgotPassword.ts(30,20): error TS2352: Conversion of type 'ForgotPasswordApiResponseDto | undefined' to type 'ForgotPasswordResult' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'ForgotPasswordApiResponseDto' is missing the following properties from type 'ForgotPasswordResult': mailEnabled, smsEnabled
+src/pages/PhoneVerification.tsx(113,17): error TS2339: Property 'data' does not exist on type 'AuthApiResponseDto | undefined'.
+src/pages/PhoneVerification.tsx(163,13): error TS2554: Expected 2 arguments, but got 0.
+src/pages/Profile.tsx(825,21): error TS2352: Conversion of type '{ [key: string]: unknown; }' to type 'string' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/pages/Profile.tsx(826,25): error TS2345: Argument of type 'string' is not assignable to parameter of type '{ phone: string; }'.
+src/pages/Profile.tsx(853,21): error TS2352: Conversion of type '{ [key: string]: unknown; }' to type 'string' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/pages/Profile.tsx(854,32): error TS2345: Argument of type 'string' is not assignable to parameter of type '{ email: string; }'.
+src/pages/Profile/hooks/useEmailBind.ts(14,9): error TS2322: Type '{ email: string; isRebind?: boolean | undefined; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/useEmailBind.ts(42,9): error TS2322: Type '{ code: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/useEmailBind.ts(52,9): error TS2322: Type '{ email: string; code: string; token: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/useEmailTab.ts(27,5): error TS2322: Type '(email: string, isForNewEmail?: unknown) => Promise<void>' is not assignable to type '(...args: unknown[]) => Promise<unknown>'.
+  Types of parameters 'email' and 'args' are incompatible.
+    Type 'unknown' is not assignable to type 'string'.
+src/pages/Profile/hooks/useEmailTab.ts(36,5): error TS2322: Type '(email: string, code: string) => Promise<({ data: BindEmailApiResponseDto; error: undefined; } | { data: undefined; error: unknown; }) & { request?: Request; response?: Response; }>' is not assignable to type '(...args: unknown[]) => Promise<unknown>'.
+  Types of parameters 'email' and 'args' are incompatible.
+    Type 'unknown' is not assignable to type 'string'.
+src/pages/Profile/hooks/useEmailTab.ts(124,7): error TS2578: Unused '@ts-expect-error' directive.
+src/pages/Profile/hooks/useEmailTab.ts(126,9): error TS2322: Type '{ code: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/useEmailTab.ts(191,7): error TS2578: Unused '@ts-expect-error' directive.
+src/pages/Profile/hooks/useEmailTab.ts(193,9): error TS2322: Type '{ email: string; code: string; token: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/usePhoneBind.ts(32,9): error TS2322: Type '{ code: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/usePhoneBind.ts(42,9): error TS2322: Type '{ phone: string; code: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/usePhoneBind.ts(52,9): error TS2322: Type '{ phone: string; code: string; token: string; }' is not assignable to type 'undefined'.
+src/pages/Profile/hooks/useWechatBind.ts(11,9): error TS2322: Type '{ code: string; state: string; }' is not assignable to type 'undefined'.
+src/pages/Register.tsx(81,46): error TS2448: Block-scoped variable 'setExternalErrors' used before its declaration.
+src/pages/Register.tsx(81,46): error TS2454: Variable 'setExternalErrors' is used before being assigned.
+src/pages/Register/components/RegisterForm.tsx(34,56): error TS2448: Block-scoped variable 'form' used before its declaration.
+src/pages/Register/components/RegisterForm.tsx(34,56): error TS2454: Variable 'form' is used before being assigned.
+src/pages/RoleManagement.tsx(148,23): error TS2345: Argument of type 'ProjectRoleDto[]' is not assignable to parameter of type 'SetStateAction<ProjectRole[]>'.
+  Type 'ProjectRoleDto[]' is not assignable to type 'ProjectRole[]'.
+    Type 'ProjectRoleDto' is not assignable to type 'ProjectRole'.
+      Types of property 'permissions' are incompatible.
+        Type 'ProjectRolePermissionDto[]' is not assignable to type 'string[]'.
+          Type 'ProjectRolePermissionDto' is not assignable to type 'string'.
+src/pages/SystemMonitorPage.tsx(271,15): error TS2322: Type 'string | Record<string, unknown>' is not assignable to type 'string'.
+  Type 'Record<string, unknown>' is not assignable to type 'string'.
+src/pages/SystemMonitorPage.tsx(283,15): error TS2322: Type 'string | Record<string, unknown>' is not assignable to type 'string'.
+  Type 'Record<string, unknown>' is not assignable to type 'string'.
+src/services/mxcadManager/mxcadCheck.ts(39,7): error TS2741: Property 'fileSize' is missing in type '{ fileHash: string; filename: string; nodeId: string; }' but required in type 'CheckFileExistDto'.
+src/services/mxcadManager/mxcadCheck.ts(43,43): error TS2339: Property 'isDuplicate' does not exist on type 'FileExistResponseDto'.
+src/services/mxcadManager/mxcadCheck.ts(44,44): error TS2339: Property 'existingNodeId' does not exist on type 'FileExistResponseDto'.
+src/services/mxcadManager/mxcadExtRef.ts(39,7): error TS2322: Type '{ nodeId: string; }' is not assignable to type 'undefined'.
+src/services/mxcadManager/mxcadExtRef.ts(40,7): error TS2739: Type 'FormData' is missing the following properties from type 'UploadExtReferenceFileDto': file, ext_ref_file
+src/services/mxcadManager/mxcadExtRef.ts(45,28): error TS2339: Property 'nodeId' does not exist on type '{ code?: number | undefined; message?: string | undefined; }'.
+src/services/mxcadManager/mxcadThumbnail.ts(57,66): error TS2741: Property 'file' is missing in type 'FormData' but required in type 'UploadThumbnailDto'.
+src/utils/uppyUploadUtils.ts(176,43): error TS2345: Argument of type '"total-progress"' is not assignable to parameter of type 'keyof UppyEventMap<M, B>'.
+src/utils/uppyUploadUtils.ts(292,43): error TS2345: Argument of type '"total-progress"' is not assignable to parameter of type 'keyof UppyEventMap<M, B>'.
+src/utils/validation.ts(38,26): error TS2365: Operator '<' cannot be applied to types 'number' and '{}'.
+src/utils/validation.ts(39,26): error TS2365: Operator '>' cannot be applied to types 'number' and '{}'.
+src/utils/validation.ts(40,39): error TS2339: Property 'test' does not exist on type '{}'.

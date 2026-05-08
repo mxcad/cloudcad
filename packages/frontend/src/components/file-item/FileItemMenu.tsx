@@ -120,7 +120,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     onCopy: !!onCopy,
     onRestore: !!onRestore,
     onPermanentlyDelete: !!onPermanentlyDelete,
-    onDeleteNode: !!onDelete,
+    onDeleteNode: isRoot ? canDelete !== false : !!onDelete,
   });
 
   // 点击外部关闭菜单

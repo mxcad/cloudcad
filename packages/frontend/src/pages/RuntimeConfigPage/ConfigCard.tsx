@@ -96,16 +96,18 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                 </div>
 
                 <div className="config-controls">
-                  <div className="input-wrapper">
-                    <ConfigInput
-                      item={item}
-                      editedValues={editedValues}
-                      canManageConfig={canManageConfig}
-                      hiddenValues={hiddenValues}
-                      onValueChange={onValueChange}
-                      onToggleVisibility={onToggleVisibility}
-                    />
-                  </div>
+                  {item.type !== 'boolean' && (
+                    <div className="input-wrapper">
+                      <ConfigInput
+                        item={item}
+                        editedValues={editedValues}
+                        canManageConfig={canManageConfig}
+                        hiddenValues={hiddenValues}
+                        onValueChange={onValueChange}
+                        onToggleVisibility={onToggleVisibility}
+                      />
+                    </div>
+                  )}
 
                   <div className="action-buttons">
                     <button
@@ -121,6 +123,17 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                         <Save size={16} />
                       )}
                     </button>
+
+                    {item.type === 'boolean' && (
+                      <ConfigInput
+                        item={item}
+                        editedValues={editedValues}
+                        canManageConfig={canManageConfig}
+                        hiddenValues={hiddenValues}
+                        onValueChange={onValueChange}
+                        onToggleVisibility={onToggleVisibility}
+                      />
+                    )}
 
                     <button
                       type="button"

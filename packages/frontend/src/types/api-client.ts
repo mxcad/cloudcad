@@ -1913,6 +1913,10 @@ declare namespace Components {
         }
         export interface StorageInfoDto {
             /**
+             * 节点 ID
+             */
+            nodeId: string;
+            /**
              * 配额类型
              */
             type: "PERSONAL" | "PROJECT" | "LIBRARY";
@@ -2403,6 +2407,10 @@ declare namespace Components {
              * 存储空间信息
              */
             storage: {
+                /**
+                 * 节点 ID
+                 */
+                nodeId: string;
                 /**
                  * 配额类型
                  */
@@ -3830,9 +3838,11 @@ declare namespace Paths {
     namespace FileSystemControllerGetStorageQuota {
         namespace Parameters {
             export type NodeId = string;
+            export type UserId = string;
         }
         export interface QueryParameters {
             nodeId: Parameters.NodeId;
+            userId: Parameters.UserId;
         }
         namespace Responses {
             export type $200 = Components.Schemas.StorageInfoDto;

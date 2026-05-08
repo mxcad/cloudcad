@@ -28,6 +28,7 @@ interface ProjectListViewProps {
   onShowRoles: (project: FileSystemNode) => void;
   onDeleteProject?: (project: FileSystemNode) => void;
   onCreateProject?: () => void;
+  onRefresh?: () => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -42,6 +43,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onShowRoles,
   onDeleteProject,
   onCreateProject,
+  onRefresh,
 }) => {
   const filteredProjects = searchQuery
     ? projects.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -108,6 +110,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 onDownload={() => {}}
                 onDelete={projectPerms?.canDelete && onDeleteProject ? () => onDeleteProject(project) : undefined}
                 onRename={() => {}}
+                onRefresh={onRefresh}
                 onEdit={projectPerms?.canEdit ? () => onEditProject(project) : undefined}
                 onShowMembers={
                   projectPerms?.canManageMembers

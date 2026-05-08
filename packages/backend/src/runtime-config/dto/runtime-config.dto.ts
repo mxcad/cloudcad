@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsDefined } from 'class-validator';
 
 /**
  * 更新运行时配置 DTO
@@ -22,7 +22,7 @@ export class UpdateRuntimeConfigDto {
     type: Object,
     example: false,
   })
-  @IsNotEmpty({ message: '配置值不能为空' })
+  @IsDefined({ message: '配置值不能为空' })
   value: string | number | boolean;
 }
 

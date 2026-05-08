@@ -130,7 +130,7 @@ export const RuntimeConfigPage: React.FC = () => {
       setSaving((prev) => new Set(prev).add(key));
       await runtimeConfigControllerUpdateConfig({
         path: { key },
-        body: { value: { value } },
+        body: { value },
       }).then(r => r.data);
       showToast('配置已保存', 'success');
       setEditedValues((prev) => {
@@ -427,9 +427,13 @@ export const RuntimeConfigPage: React.FC = () => {
                         </div>
 
                         <div className="config-controls">
-                          <div className="input-wrapper">{renderConfigInput(item)}</div>
+                          {item.type !== 'boolean' && (
+                            <div className="input-wrapper">{renderConfigInput(item)}</div>
+                          )}
 
                           <div className="action-buttons">
+                            {item.type === 'boolean' && renderConfigInput(item)}
+
                             <button
                               type="button"
                               onClick={() => handleSave(item.key)}
@@ -815,7 +819,7 @@ const styles = `
   }
 
   .input-wrapper {
-    min-width: 200px;
+    flex: 1;
   }
 
   /* ===== 输入控件 ===== */
@@ -912,8 +916,8 @@ const styles = `
 
   /* ===== 开关控件 ===== */
   .toggle-switch {
-    width: 52px;
-    height: 28px;
+    width: 36px;
+    height: 20px;
     background: var(--bg-tertiary);
     border-radius: var(--radius-full);
     position: relative;
@@ -944,8 +948,8 @@ const styles = `
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     background: white;
     border-radius: 50%;
     transition: transform 0.2s ease;
@@ -953,7 +957,7 @@ const styles = `
   }
 
   .toggle-switch.active .toggle-handle {
-    transform: translateX(24px);
+    transform: translateX(16px);
   }
 
   /* ===== 操作按钮 ===== */

@@ -381,30 +381,15 @@ export const FileItem: React.FC<FileItemProps> = ({
     onCopy: !!onCopy,
     onRestore: !!onRestore,
     onPermanentlyDelete: !!onPermanentlyDelete,
-    // 对于项目根节点，使用 onDeleteNode；对于普通节点，使用 onDelete
-    onDeleteNode: !!onDeleteNode || !!onDelete,
+    // 对于项目根节点，使用 onDeleteNode（已由权限检查控制）；对于普通节点，使用 onDelete
+    onDeleteNode: isRoot ? !!onDeleteNode : (!!onDeleteNode || !!onDelete),
   };
-
-  // 调试信息：检查项目节点的操作参数
-  if (isRoot) {
-    console.log(
-      '[FileItem] 项目节点操作参数:',
-      node.id,
-      node.name,
-      actionProps
-    );
-  }
 
   const availableActions = getAvailableActions(actionProps);
 
-  // 调试信息：检查可用操作
   if (isRoot) {
-    console.log(
-      '[FileItem] 项目节点可用操作:',
-      node.id,
-      node.name,
-      availableActions.map((a) => a.type)
-    );
+    console.log('[FileItem] actionProps:', JSON.stringify(actionProps, null, 2));
+    console.log('[FileItem] availableActions:', availableActions.map(a => a.type));
   }
 
   // 响应式操作按钮：监听列表项宽度，空间不足时切换为菜单按钮模式

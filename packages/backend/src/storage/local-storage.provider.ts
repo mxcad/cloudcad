@@ -187,7 +187,10 @@ export class LocalStorageProvider implements StorageProvider {
     } catch (error) {
       this.logger.warn(`fileExists check failed for key: ${key}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
-    }(key: string): Promise<NodeJS.ReadableStream> {
+    }
+  }
+
+  async getFileStream(key: string): Promise<NodeJS.ReadableStream> {
     try {
       const absolutePath = this.getAbsolutePath(key);
 
@@ -297,6 +300,8 @@ export class LocalStorageProvider implements StorageProvider {
       this.logger.warn(`directoryExists check failed for dirKey: ${dirKey}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
+  }
+
   async createDirectory(dirKey: string): Promise<void> {
     try {
       const absolutePath = this.getAbsolutePath(dirKey);

@@ -132,15 +132,20 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   }, [breadcrumbs]);
 
   const handleBackButton = () => {
+    // 如果在回收站视图，先退出回收站视图
+    if (isTrashView) {
+      onToggleTrashView();
+      return;
+    }
+    if (isProjectTrashView) {
+      onToggleProjectTrashView();
+      return;
+    }
+
     if (isPersonalSpaceMode) {
       if (isAtRoot) {
         onSetSearchTerm('');
         navigate('/personal-space');
-        return;
-      }
-      if (isTrashView) {
-        // isTrashView setIs handled by parent
-        onGoBack();
         return;
       }
       onSetSearchTerm('');
@@ -151,10 +156,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
     if (isAtRoot) {
       onSetSearchTerm('');
       navigate('/projects');
-      return;
-    }
-    if (isTrashView) {
-      onGoBack();
       return;
     }
     onSetSearchTerm('');
@@ -279,7 +280,8 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             <>
               {canCreateProject &&
                 !isPersonalSpaceMode &&
-                !isProjectTrashView && (
+                !isProjectTrashView &&
+                projectFilter !== 'joined' && (
                   <Button
                     variant="ghost"
                     size="sm"

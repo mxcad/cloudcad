@@ -151,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authControllerLogin({
         body: { account, password },
       });
+      if (response.error) throw response.error;
       const apiResponse = response.data!;
       console.log('[AuthContext] 登录响应:', apiResponse);
       const {
@@ -196,15 +197,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authControllerLoginByPhone({
         body: { phone, code },
       });
+      if (response.error) throw response.error;
       const apiResponse = response.data!;
-      const authData = apiResponse.data;
-      console.log('[AuthContext] 手机登录响应:', authData);
+      console.log('[AuthContext] 手机登录响应:', apiResponse);
 
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = authData;
+      } = apiResponse;
 
       // 存储到本地存储
       localStorage.setItem('accessToken', accessToken);
@@ -238,11 +239,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authControllerRegister({
         body: data,
       });
+      if (response.error) throw response.error;
       const apiResponse = response.data!;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
-      const authData = apiResponse.data;
-      if (apiResponse.message && !authData.accessToken) {
+      if (apiResponse.message && !apiResponse.accessToken) {
         return {
           message: apiResponse.message,
           email: (apiResponse as unknown as Record<string, unknown>).email as string | undefined,
@@ -254,7 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = authData;
+      } = apiResponse;
 
       // 自动登录，保存 token
       localStorage.setItem('accessToken', accessToken);
@@ -272,15 +273,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authControllerVerifyEmail({
         body: { email, code },
       });
+      if (response.error) throw response.error;
       const apiResponse = response.data!;
-      const responseData = apiResponse.data;
 
       // 验证成功，返回 token，自动登录
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = responseData;
+      } = apiResponse;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
@@ -288,7 +289,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
-      return responseData;
+      return apiResponse;
     },
     []
   );
@@ -298,13 +299,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authControllerVerifyPhone({
         body: { phone, code },
       });
+      if (response.error) throw response.error;
       const apiResponse = response.data!;
-      const responseData = apiResponse.data;
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = responseData;
+      } = apiResponse;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
@@ -312,7 +313,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
-      return responseData;
+      return apiResponse;
     },
     []
   );
@@ -363,8 +364,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await authControllerGetProfile() as unknown as { data: User };
-      const userData = response.data;
+      const response = await authControllerGetProfile();
+      if (response.error) throw response.error;
+      const userData = response.data as unknown as User;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
@@ -422,6 +424,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           purpose: 'login',
         },
       });
+      if (response.error) throw response.error;
       const wechatData = response.data as unknown as { authUrl: string };
       const { authUrl } = wechatData;
 

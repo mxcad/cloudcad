@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { FileStore } from '@tus/file-store';
 import { FileSystemService } from '../infra/file-system.service';
 import { FileMergeService } from '../upload/file-merge.service';
+import { FileConversionService } from '../conversion/file-conversion.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AppConfig } from '../../config/app.config';
@@ -34,6 +35,7 @@ export class TusEventHandler {
     private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemService: FileSystemService,
     private readonly fileMergeService: FileMergeService,
+    private readonly fileConversionService: FileConversionService,
   ) {
     this.logger.log('TusEventHandler 已初始化');
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true }) || path.join(process.cwd(), 'uploads');
@@ -64,10 +66,10 @@ export class TusEventHandler {
       // 从 FileStore 获取实际的文件路径
       const tempPath = this.configService.get('mxcadTempPath', { infer: true }) as string;
       const store = new FileStore({ directory: tempPath });
-      
+
       // 尝试获取实际的文件路径
       let actualFilePath = filePath;
-      
+
       // 尝试构造 tus file store 的路径
       const possibleTusPath = path.join(tempPath, uploadId);
       if (!actualFilePath || !fs.existsSync(actualFilePath)) {
@@ -91,8 +93,28 @@ export class TusEventHandler {
         this.logger.log(`文件已复制到: ${targetFilePath}`);
       }
 
+      // 匿名用户：只转换文件，不创建节点
       if (!userId || !nodeId) {
-        this.logger.warn('缺少 userId 或 nodeId，无法继续处理文件转换和节点创建');
+        this.logger.log('匿名上传：缺少 userId 或 nodeId，仅进行文件转换');
+
+        if (targetFilePath && this.fileConversionService.needsConversion(filename)) {
+          try {
+            const { isOk } = await this.fileConversionService.convertFile({
+              srcPath: targetFilePath,
+              fileHash: fileHash || uploadId,
+              createPreloadingData: true,
+            });
+
+            if (isOk) {
+              this.logger.log(`匿名上传文件转换成功: ${filename}`);
+            } else {
+              this.logger.warn(`匿名上传文件转换失败: ${filename}`);
+            }
+          } catch (convertError) {
+            this.logger.warn(`匿名上传文件转换异常: ${(convertError as Error).message}`);
+          }
+        }
+
         return {};
       }
 

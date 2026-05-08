@@ -44,6 +44,15 @@ interface FileSystemContentProps {
   onPageSizeChange: (size: number) => void;
   onDeleteProject?: (nodeId: string, nodeName: string) => void;
   onPermanentlyDeleteProject?: (nodeId: string, nodeName: string) => void;
+  /** 外部文件拖拽上传的事件处理器 */
+  fileDropHandlers?: {
+    onDragEnter: (e: React.DragEvent) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDragLeave: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent) => void;
+  };
+  /** 是否显示拖拽上传提示 */
+  isFileDragOver?: boolean;
 }
 
 export const FileSystemContent: React.FC<FileSystemContentProps> = ({
@@ -81,6 +90,8 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onPageSizeChange,
   onDeleteProject,
   onPermanentlyDeleteProject,
+  fileDropHandlers,
+  isFileDragOver,
 }) => {
   // 获取节点权限信息
   const getNodePermissionProps = (node: FileSystemNode) => {
@@ -115,7 +126,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     if (node.isRoot && permissions.canEdit && onEdit) {
       onEditHandler = onEdit;
     }
-    if (node.isRoot && permissions.canDelete && onDeleteNode) {
+    if (node.isRoot && permissions.canDelete) {
       onDeleteHandler = () => {
         if (isProjectTrashView && onPermanentlyDeleteProject) {
           onPermanentlyDeleteProject(node.id, node.name);
@@ -143,16 +154,30 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   return (
     <>
       <div
-        data-view-mode={viewMode}
-        className={
-          viewMode === 'grid'
-            ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
-            : 'divide-y'
-        }
-        style={
-          viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
-        }
+        {...fileDropHandlers}
+        className={`relative ${isFileDragOver ? 'ring-2 ring-green-500 ring-inset bg-green-50/10' : ''}`}
+        style={{ minHeight: 200 }}
       >
+        {/* 拖拽上传提示覆盖层 */}
+        {isFileDragOver && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-500/10 border-2 border-dashed border-green-500 rounded-lg pointer-events-none">
+            <div className="text-green-600 font-medium text-lg">
+              释放文件以上传到当前目录
+            </div>
+          </div>
+        )}
+
+        <div
+          data-view-mode={viewMode}
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
+              : 'divide-y'
+          }
+          style={
+            viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
+          }
+        >
         {nodes.map((node) => {
           const extraProps = getNodePermissionProps(node);
 
@@ -209,6 +234,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
             />
           );
         })}
+        </div>
       </div>
 
       {/* 分页组件 */}

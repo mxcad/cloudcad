@@ -260,9 +260,16 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   const prevParamsRef = useRef<UseFileSystemProps | null>(null);
 
   // 切换回收站视图
+  // 在项目内部时切换项目回收站，在项目列表时切换全局回收站
   const handleToggleTrashView = useCallback(() => {
-    setIsTrashView(!isTrashView);
-  }, [isTrashView, setIsTrashView]);
+    if (isFolderMode || isPersonalSpaceMode) {
+      // 在项目/私人空间内部，切换项目回收站
+      setIsProjectTrashView(!isProjectTrashView);
+    } else {
+      // 在项目列表级别，切换全局回收站
+      setIsTrashView(!isTrashView);
+    }
+  }, [isTrashView, setIsTrashView, isProjectTrashView, setIsProjectTrashView, isFolderMode, isPersonalSpaceMode]);
 
   // 监听 isTrashView 变化
   const prevIsTrashViewRef = useRef(isTrashView);

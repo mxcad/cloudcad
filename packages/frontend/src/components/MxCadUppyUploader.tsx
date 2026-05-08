@@ -3,13 +3,9 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { forwardRef, useImperativeHandle, useCallback } from 'react';
 import { useUppyUpload, LoadFileParam } from '../hooks/useUppyUpload';
 import { useAuth } from '../contexts/AuthContext';
-import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
-import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
-import { useUIStore } from '../stores/uiStore';
-import { openUploadedFile } from '../services/mxcadManager';
 
 interface MxCadUppyUploaderProps {
   /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
@@ -18,18 +14,18 @@ interface MxCadUppyUploaderProps {
   onSuccess?: (param: LoadFileParam) => void;
   /** 上传失败回调 */
   onError?: (error: string) => void;
-  /** 是否显示进度条 */
-  showProgress?: boolean;
   /** 按钮文字 */
   buttonText?: string;
   /** 按钮样式类 */
   buttonClassName?: string;
-  /** 外部参照上传成功回调 */
+  /** 外部参照上传成功回调（保留兼容，上传后由外部处理） */
   onExternalReferenceSuccess?: () => void;
-  /** 外部参照跳过上传回调 */
+  /** 外部参照跳过上传回调（保留兼容） */
   onExternalReferenceSkip?: () => void;
-  /** 是否启用外部参照检查，默认true。批量导入时应设置为false */
+  /** 是否启用外部参照检查（保留兼容） */
   enableExternalReferenceCheck?: boolean;
+  /** 是否显示进度条（保留兼容，当前由全局 loading 处理） */
+  showProgress?: boolean;
 }
 
 export interface MxCadUppyUploaderRef {
@@ -37,25 +33,9 @@ export interface MxCadUppyUploaderRef {
 }
 
 /**
- * 消息转义函数，防止 XSS 攻击
- */
-const escapeHtml = (unsafe: string): string => {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-};
-
-/**
- * MxCAD 文件上传组件（使用 Uppy + Tus 协议）
+ * MxCAD 文件上传组件（按钮触发，隐藏 input）
  *
- * 功能特性：
- * - 使用标准 Tus 协议进行分片上传
- * - 支持断点续传
- * - 支持外部参照检测
- * - API 与 MxCadUploader 保持兼容
+ * 纯触发器，不包含 UI。拖拽上传由 useFileDropUpload 处理。
  */
 export const MxCadUppyUploader = forwardRef<MxCadUppyUploaderRef, MxCadUppyUploaderProps>(
   (
@@ -63,123 +43,33 @@ export const MxCadUppyUploader = forwardRef<MxCadUppyUploaderRef, MxCadUppyUploa
       nodeId,
       onSuccess,
       onError,
-      showProgress = true,
       buttonText = '上传 CAD 文件',
       buttonClassName = '',
-      onExternalReferenceSuccess,
-      onExternalReferenceSkip,
-      enableExternalReferenceCheck = true,
+      onExternalReferenceSuccess: _onExternalReferenceSuccess,
+      onExternalReferenceSkip: _onExternalReferenceSkip,
+      enableExternalReferenceCheck: _enableExternalReferenceCheck,
+      showProgress: _showProgress,
     },
     ref
   ) => {
     const { isAuthenticated } = useAuth();
-    const { setGlobalLoading, setLoadingMessage, setLoadingProgress } = useUIStore();
-    const [showToast, setShowToast] = useState(false);
-    const [message, setMessage] = useState('');
-    const [currentNodeId, setCurrentNodeId] = useState('');
-
     const { selectFiles } = useUppyUpload();
 
-    // 外部参照上传 Hook
-    const externalReferenceUpload = useExternalReferenceUpload({
-      nodeId: currentNodeId,
-      onSuccess: () => {
-        onExternalReferenceSuccess?.();
-      },
-      onError: (error) => {
-        setMessage(`外部参照上传失败: ${error}`);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 5000);
-      },
-      onSkip: () => {
-        onExternalReferenceSkip?.();
-      },
-    });
-
     const handleSelectFiles = useCallback(() => {
-      // 每次上传前都获取最新的 nodeId
-      const currentNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
-
-      // 检查用户是否已登录
       if (!isAuthenticated) {
-        setMessage('请先登录后再上传文件');
-        setShowToast(true);
         onError?.('用户未登录');
-
-        // 5秒后隐藏提示
-        setTimeout(() => setShowToast(false), 5000);
         return;
       }
 
+      const currentNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
+
       selectFiles({
         nodeId: currentNodeId || undefined,
-        onSuccess: async (param: LoadFileParam) => {
-          // 保存节点 ID
-          param.nodeId && setCurrentNodeId(param.nodeId);
-
-          try {
-            // 调用 openUploadedFile 完成文件转换和打开流程
-            // 这里会显示 "文件转换中" 和 "正在打开文件..." 的 loading 状态
-            await openUploadedFile(param.nodeId!, currentNodeId || '');
-
-            setMessage('文件上传成功！');
-            setShowToast(true);
-            onSuccess?.(param);
-
-            // 根据开关决定是否检查外部参照
-            if (enableExternalReferenceCheck) {
-              // 检查外部参照（传入 nodeId 确保不为空）
-              // shouldRetry = true，因为上传后需要等待后端生成 preloading.json
-              // forceOpen = false，上传后如果没有外部参照不弹框
-              await externalReferenceUpload.checkMissingReferences(param.nodeId!, true, false);
-            }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '文件打开失败';
-            setMessage(`文件打开失败: ${errorMessage}`);
-            setShowToast(true);
-            onError?.(errorMessage);
-          } finally {
-            // 在整个流程（上传+转换+打开）完成后才隐藏 loading
-            setGlobalLoading(false);
-            // 3秒后隐藏提示
-            setTimeout(() => setShowToast(false), 3000);
-          }
-        },
-        onError: (error: string) => {
-          setGlobalLoading(false);
-          setMessage(`上传失败: ${error}`);
-          setShowToast(true);
-          onError?.(error);
-
-          // 5秒后隐藏提示
-          setTimeout(() => setShowToast(false), 5000);
-        },
-        onProgress: (percentage: number) => {
-          setLoadingProgress(percentage);
-        },
-        onFileQueued: (file: File) => {
-          setGlobalLoading(true, `正在上传: ${file.name}`);
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 2000);
-        },
-        onBeginUpload: () => {
-          setLoadingMessage('正在上传...');
-        },
+        onSuccess,
+        onError,
       });
-    }, [
-      isAuthenticated,
-      nodeId,
-      onSuccess,
-      onError,
-      selectFiles,
-      externalReferenceUpload,
-      enableExternalReferenceCheck,
-      setGlobalLoading,
-      setLoadingMessage,
-      setLoadingProgress,
-    ]);
+    }, [isAuthenticated, nodeId, selectFiles, onSuccess, onError]);
 
-    // 暴露方法给父组件
     useImperativeHandle(
       ref,
       () => ({
@@ -188,36 +78,15 @@ export const MxCadUppyUploader = forwardRef<MxCadUppyUploaderRef, MxCadUppyUploa
       [handleSelectFiles]
     );
 
-    const { globalLoading } = useUIStore();
-
     return (
-      <div className="mxcad-uppy-uploader">
-        <button
-          onClick={handleSelectFiles}
-          disabled={globalLoading || !isAuthenticated}
-          className={`px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 ${buttonClassName}`}
-          title={!isAuthenticated ? '请先登录后再上传文件' : ''}
-        >
-          {globalLoading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
-        </button>
-
-        {showToast && (
-          <div className="fixed top-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50">
-            {escapeHtml(message)}
-          </div>
-        )}
-
-        {/* 外部参照上传模态框 */}
-        <ExternalReferenceModal
-          isOpen={externalReferenceUpload.isOpen}
-          files={externalReferenceUpload.files}
-          loading={externalReferenceUpload.loading}
-          onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
-          onComplete={externalReferenceUpload.complete}
-          onSkip={externalReferenceUpload.skip}
-          onClose={externalReferenceUpload.close}
-        />
-      </div>
+      <button
+        onClick={handleSelectFiles}
+        disabled={!isAuthenticated}
+        className={`px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 ${buttonClassName}`}
+        title={!isAuthenticated ? '请先登录后再上传文件' : ''}
+      >
+        {!isAuthenticated ? '请先登录' : buttonText}
+      </button>
     );
   }
 );

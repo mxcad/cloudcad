@@ -8,10 +8,16 @@ import { ConfigService } from "@nestjs/config";
 import { FileStore } from "@tus/file-store";
 import { Server } from "@tus/server";
 import { TusEventHandler } from "./tus-event-handler.service";
-import { FileConversionService } from "../conversion/file-conversion.service";
-import * as path from "path";
-import * as fs from "fs";
 
+/**
+ * Tus 上传协议服务
+ *
+ * 基于 @tus/server 实现标准 tus 协议的分片上传服务。
+ *
+ * 上传完成后的处理流程（统一走 TusEventHandler）：
+ * - 已登录用户（userId 存在）：hash 对比 + 转换 + 创建文件节点
+ * - 匿名用户（userId 为空）：仅复制文件到 uploads 目录，不做转换
+ */
 @Injectable()
 export class TusService {
 	private readonly logger = new Logger(TusService.name);
@@ -21,7 +27,6 @@ export class TusService {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly tusEventHandler: TusEventHandler,
-		private readonly fileConversionService: FileConversionService,
 	) {}
 
 	private ensureInitialized(): void {
@@ -30,9 +35,6 @@ export class TusService {
 		try {
 			const tempPath = this.configService.get<string>(
 				"mxcadTempPath",
-			) as string;
-			const uploadPath = this.configService.get<string>(
-				"mxcadUploadPath",
 			) as string;
 			const maxFileSize =
 				(this.configService.get<number>("upload.maxFileSize") as number) ||
@@ -48,6 +50,7 @@ export class TusService {
 				path: "/api/v1/files",
 				datastore: store,
 				maxSize: maxFileSize,
+				relativeLocation: true,
 				onUploadFinish: async (req, upload) => {
 					const logger = new Logger("TusServer");
 					logger.log(
@@ -55,73 +58,21 @@ export class TusService {
 					);
 
 					try {
-						const user = (req as any).user;
-						const metadata = upload.metadata || {};
-						const filename = metadata.filename || "unknown";
-						const fileHash = metadata.fileHash || upload.id;
+						const user = (req as any).user || {};
+						// JWT payload 中用户 ID 在 sub 字段（标准 JWT claim），兼容 id 字段
+						const userId = user.id || user.sub;
 
-						// 已登录用户：走正常流程（创建文件节点 + 转换）
-						if (user?.id) {
-							const result = await this.tusEventHandler.handleUploadFinish(
-								upload.id,
-								"",
-								metadata,
-								user.id,
-								user.role,
-							);
+						const result = await this.tusEventHandler.handleUploadFinish(
+							upload.id,
+							"",
+							upload.metadata || {},
+							userId,
+							user.role,
+						);
 
-							if (result?.nodeId) {
-								return { headers: { "X-Node-Id": result.nodeId } };
-							}
+						if (result?.nodeId) {
+							return { headers: { "X-Node-Id": result.nodeId } };
 						}
-
-						// 匿名用户：将文件复制到 uploads/{hash}/ 目录并触发转换
-						const tusFilePath = path.join(tempPath, upload.id);
-						const ext = path.extname(filename);
-
-						if (!fs.existsSync(tusFilePath)) {
-							logger.warn(`TUS 上传文件不存在: ${tusFilePath}`);
-							return {};
-						}
-
-						// 创建目标目录 uploads/{hash}/
-						const targetDir = path.join(uploadPath, fileHash);
-						if (!fs.existsSync(targetDir)) {
-							fs.mkdirSync(targetDir, { recursive: true });
-						}
-
-						// 复制原始文件到 uploads/{hash}/{filename}
-						const targetPath = path.join(targetDir, filename);
-						await fs.promises.copyFile(tusFilePath, targetPath);
-						logger.log(`匿名上传文件已复制到: ${targetPath}`);
-
-						// 尝试转换 CAD 文件为 mxweb 格式
-						if (this.fileConversionService.needsConversion(filename)) {
-							try {
-								logger.log(`开始转换匿名上传文件: ${filename}`);
-								const { isOk } = await this.fileConversionService.convertFile({
-									srcPath: targetPath,
-									fileHash,
-									createPreloadingData: true,
-								});
-
-								if (isOk) {
-									logger.log(`匿名上传文件转换成功: ${filename} -> ${fileHash}${ext}.mxweb`);
-								} else {
-									logger.warn(`匿名上传文件转换失败: ${filename}，将提供原始文件`);
-								}
-							} catch (convertError) {
-								logger.warn(`文件转换异常: ${(convertError as Error).message}，将提供原始文件`);
-							}
-						}
-
-						// 返回 hash 和文件名给前端
-						return {
-							headers: {
-								"X-File-Hash": fileHash,
-								"X-File-Name": filename,
-							},
-						};
 					} catch (error) {
 						logger.error(
 							`处理上传完成事件失败: ${(error as Error).message}`,

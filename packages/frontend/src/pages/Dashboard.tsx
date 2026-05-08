@@ -222,6 +222,7 @@ export const Dashboard: React.FC = () => {
         setTimeout(() => setCreateSuccess(null), 3000);
       } catch (err) {
         console.error('创建项目失败:', err);
+        // 错误由 createError 状态在页面顶部横幅中展示，弹框保持打开
       }
     },
     [projectFormData, createProject]

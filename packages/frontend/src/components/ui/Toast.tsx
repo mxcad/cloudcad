@@ -21,7 +21,7 @@ interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg animate-slide-in-right ${
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg animate-slide-in-top ${
         type === 'success'
           ? 'bg-green-50 text-green-800 border border-green-200'
           : type === 'error'
@@ -56,7 +56,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   onRemove,
 }) => {
   return (
-    <div className="fixed top-4 right-4 space-y-2" style={{ zIndex: 100010 }}>
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 space-y-2" style={{ zIndex: 100010 }}>
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

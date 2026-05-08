@@ -7,6 +7,7 @@ import React from 'react';
 import { FolderPlus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyFolderIcon, RefreshIcon } from '@/components/FileIcons';
+import type { ProjectFilterType } from '@/types/project';
 
 interface FileSystemStatesProps {
   loading: boolean;
@@ -17,6 +18,7 @@ interface FileSystemStatesProps {
   isProjectTrashView: boolean;
   searchTerm: string;
   canCreateProject: boolean;
+  projectFilter: ProjectFilterType;
   onRefresh: () => void;
   onCreateProject: () => void;
 }
@@ -30,6 +32,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
   isProjectTrashView,
   searchTerm,
   canCreateProject,
+  projectFilter,
   onRefresh,
   onCreateProject,
 }) => {
@@ -112,7 +115,8 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
         {isProjectsEmpty &&
           canCreateProject &&
           !isProjectTrashView &&
-          !isTrashView && (
+          !isTrashView &&
+          projectFilter !== 'joined' && (
             <Button
               onClick={onCreateProject}
               variant="outline"

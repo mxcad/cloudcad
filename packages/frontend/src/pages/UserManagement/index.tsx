@@ -11,13 +11,12 @@ import { Users } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
 import { HardDrive, Save } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission, getRoleDisplayName } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useTheme } from '@/contexts/ThemeContext';
 import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
 import { useUserCRUD } from './hooks/useUserCRUD';
 import { useUserSearch } from './hooks/useUserSearch';
@@ -25,36 +24,12 @@ import { UserTable, type UserTableUser } from './UserTable';
 import { CreateUserModal } from './UserModals/CreateUserModal';
 import { EditUserModal } from './UserModals/EditUserModal';
 import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
-
-type RoleDto = {
-  id: string;
-  name: string;
-  description?: string;
-  isSystem: boolean;
-  permissions: string[];
-  createdAt: string;
-  updatedAt: string;
-};
+import { userManagementStyles } from './UserManagementStyles';
 
 export const UserManagement = () => {
   useDocumentTitle('用户管理');
-  const { isDark } = useTheme();
   const { hasPermission } = usePermission();
   const [canAccess, setCanAccess] = useState(false);
-
-  const {
-    users,
-    loading,
-    error,
-    roles,
-    mailEnabled,
-    smsEnabled,
-    createUser,
-    updateUser,
-    deleteUser,
-    restoreUser,
-    loadUsers,
-  } = useUserCRUD();
 
   const {
     searchQuery,
@@ -68,10 +43,38 @@ export const UserManagement = () => {
     currentPage,
     setCurrentPage,
     pageSize,
-    totalUsers,
     userTab,
     setUserTab,
   } = useUserSearch();
+
+  const apiParams = useMemo(() => ({
+    search: searchQuery || undefined,
+    roleId: roleFilter || undefined,
+    status: userTab === 'deleted' ? 'DELETED' : undefined,
+    sortBy,
+    sortOrder,
+    page: currentPage,
+    limit: pageSize,
+  }), [searchQuery, roleFilter, userTab, sortBy, sortOrder, currentPage, pageSize]);
+
+  const {
+    users,
+    totalUsers,
+    loading,
+    error,
+    roles,
+    mailEnabled,
+    smsEnabled,
+    cleanupStats,
+    createUser,
+    updateUser,
+    deleteUser,
+    restoreUser,
+    loadUsers,
+    triggerCleanup,
+    getStorageQuota,
+    updateStorageQuota,
+  } = useUserCRUD(apiParams);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserResponseDto | null>(null);
@@ -98,16 +101,12 @@ export const UserManagement = () => {
   const [quotaModalOpen, setQuotaModalOpen] = useState(false);
   const [quotaLoading, setQuotaLoading] = useState(false);
   const [quotaUser, setQuotaUser] = useState<UserResponseDto | null>(null);
+  const [quotaNodeId, setQuotaNodeId] = useState<string>('');
   const [userQuota, setUserQuota] = useState<number>(10);
   const [defaultQuota, setDefaultQuota] = useState<number>(10);
 
   const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
   const [cleanupLoading, setCleanupLoading] = useState(false);
-  const [cleanupStats, setCleanupStats] = useState<{
-    pendingCleanup: number;
-    expiryDate: string;
-    delayDays: number;
-  } | null>(null);
 
   useEffect(() => {
     initialize();
@@ -262,6 +261,22 @@ export const UserManagement = () => {
     setDeleteImmediately(false);
   };
 
+  const handleOpenQuota = async (user: UserTableUser) => {
+    setQuotaUser(user as UserResponseDto);
+    setQuotaModalOpen(true);
+    try {
+      const info = await getStorageQuota(user.id);
+      if (info?.total) {
+        setUserQuota(Math.round(info.total / (1024 * 1024 * 1024)));
+      }
+      if (info?.nodeId) {
+        setQuotaNodeId(info.nodeId);
+      }
+    } catch {
+      // ignore, use default
+    }
+  };
+
   const handleRestore = async (id: string) => {
     try {
       await restoreUser(id);
@@ -277,6 +292,7 @@ export const UserManagement = () => {
   if (!canAccess) {
     return (
       <div className="user-management-container">
+        <style>{userManagementStyles}</style>
         <div className="access-denied-state">
           <div className="access-denied-icon">
             <AlertCircle size={48} />
@@ -291,6 +307,7 @@ export const UserManagement = () => {
   if (!hasPermission(SystemPermission.SYSTEM_USER_READ)) {
     return (
       <div className="user-management-container">
+        <style>{userManagementStyles}</style>
         <div className="limited-access-card">
           <div className="limited-access-icon">
             <AlertCircle size={48} />
@@ -314,6 +331,7 @@ export const UserManagement = () => {
 
   return (
     <div className="user-management-container">
+      <style>{userManagementStyles}</style>
       {successMessage && (
         <div className="success-toast">
           <CheckCircle2 size={18} />
@@ -459,7 +477,7 @@ export const UserManagement = () => {
           onEdit={handleOpenEdit}
           onDelete={handleDelete}
           onRestore={handleRestore}
-          onOpenQuota={() => {}}
+          onOpenQuota={handleOpenQuota}
           userTab={userTab}
           loading={loading}
         />
@@ -509,7 +527,23 @@ export const UserManagement = () => {
         footer={
           <div className="modal-footer">
             <Button variant="ghost" onClick={() => setQuotaModalOpen(false)} disabled={quotaLoading}>取消</Button>
-            <Button onClick={() => {}} disabled={quotaLoading} className="submit-btn">
+            <Button
+              onClick={async () => {
+                if (!quotaNodeId) return;
+                setQuotaLoading(true);
+                try {
+                  await updateStorageQuota(quotaNodeId, userQuota);
+                  showSuccess('配额更新成功');
+                  setQuotaModalOpen(false);
+                } catch {
+                  // Error handled by hook
+                } finally {
+                  setQuotaLoading(false);
+                }
+              }}
+              disabled={quotaLoading || !quotaNodeId}
+              className="submit-btn"
+            >
               {quotaLoading ? <><Loader2 size={18} className="animate-spin" />保存中...</> : <><Save size={16} className="mr-1" />保存</>}
             </Button>
           </div>
@@ -550,8 +584,24 @@ export const UserManagement = () => {
         footer={
           <div className="modal-footer">
             <Button variant="ghost" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>取消</Button>
-            <Button onClick={() => {}} disabled={cleanupLoading} className="submit-btn">
-              <Sparkles size={16} className="mr-1" />立即清理
+            <Button
+              onClick={async () => {
+                setCleanupLoading(true);
+                try {
+                  const result = await triggerCleanup();
+                  showSuccess(result?.message || '清理完成');
+                  setCleanupModalOpen(false);
+                  await loadUsers();
+                } catch {
+                  // Error handled by hook
+                } finally {
+                  setCleanupLoading(false);
+                }
+              }}
+              disabled={cleanupLoading}
+              className="submit-btn"
+            >
+              {cleanupLoading ? <><Loader2 size={16} className="animate-spin" />清理中...</> : <><Sparkles size={16} className="mr-1" />立即清理</>}
             </Button>
           </div>
         }

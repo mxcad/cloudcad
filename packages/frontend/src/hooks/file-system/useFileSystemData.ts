@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fileSystemControllerGetProjects,
   fileSystemControllerGetTrash,
+  fileSystemControllerGetProjectTrash,
   fileSystemControllerSearch,
   fileSystemControllerGetNode,
   fileSystemControllerGetChildren,
@@ -258,8 +259,41 @@ export const useFileSystemData = ({
 
   // ── Query 4: Trash ────────────────────────────────────────────────
   const trashQuery = useQuery({
-    queryKey: [...queryKeys.fileSystem.trash, { page: pagination.page, limit: pagination.limit }] as const,
+    queryKey: isProjectTrashView
+      ? [...queryKeys.fileSystem.trash, effectiveNodeId, { page: pagination.page, limit: pagination.limit }] as const
+      : [...queryKeys.fileSystem.trash, { page: pagination.page, limit: pagination.limit }] as const,
     queryFn: async () => {
+      // 项目内/私人空间回收站：调用项目级接口
+      if (isProjectTrashView && effectiveNodeId) {
+        const response = await fileSystemControllerGetProjectTrash({
+          path: { projectId: effectiveNodeId },
+          query: {
+            page: pagination.page,
+            limit: pagination.limit,
+          },
+        });
+
+        const data = response.data;
+        if (data) {
+          const trashNodes = data.nodes.map(toFileSystemNode);
+          return {
+            nodes: trashNodes,
+            total: data.total,
+            page: data.page,
+            limit: data.limit,
+            totalPages: data.totalPages,
+          };
+        }
+        return {
+          nodes: [],
+          total: 0,
+          page: pagination.page,
+          limit: pagination.limit,
+          totalPages: 0,
+        };
+      }
+
+      // 全局回收站：调用全局接口（仅返回已删除的项目）
       const response = await fileSystemControllerGetTrash();
 
       const data = response.data;

@@ -127,12 +127,14 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           description: roleDesc,
           permissions: selectedPerms,
         });
+        showToast('角色更新成功', 'success');
       } else {
         await createRole({
           name: roleName,
           description: roleDesc,
           permissions: selectedPerms,
         });
+        showToast('角色创建成功', 'success');
       }
 
       setConfigModalOpen(false);

@@ -9,6 +9,19 @@ import type { ProjectRoleDto } from '../../../types/api-client';
 
 const PROJECT_ROLES_BY_PROJECT_KEY = ['projectRolesByProject'] as const;
 
+/** 从后端 ResponseInterceptor 包装的 { code, message, data, timestamp } 中提取 data */
+function unwrapResponse<T>(raw: unknown): T {
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    'data' in raw &&
+    'code' in raw
+  ) {
+    return (raw as { data: T }).data;
+  }
+  return raw as T;
+}
+
 export const useProjectRoleCRUD = (projectId: string) => {
   const queryClient = useQueryClient();
 
@@ -24,7 +37,7 @@ export const useProjectRoleCRUD = (projectId: string) => {
         path: { projectId },
       });
       if (result.error) throw result.error;
-      return (result.data as ProjectRoleDto[]) || [];
+      return unwrapResponse<ProjectRoleDto[]>(result.data) || [];
     },
     enabled: !!projectId,
   });

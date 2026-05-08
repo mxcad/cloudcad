@@ -37,7 +37,7 @@ const openapiEntry = path.join(__dirname, '../node_modules/openapicmd/bin/run.js
 
 try {
   const output = execFileSync(
-    'node',
+    process.execPath,
     [openapiEntry, 'typegen', SWAGGER_FILE],
     {
       encoding: 'utf8',

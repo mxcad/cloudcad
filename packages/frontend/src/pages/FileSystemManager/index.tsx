@@ -305,6 +305,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               canManageNodeRoles(user, nodeId),
             ]);
 
+          console.log('[权限加载]', nodeId, { canEdit, canDelete, canManageMembers, canManageRoles });
+
           return { nodeId, canEdit, canDelete, canManageMembers, canManageRoles };
         });
 
@@ -366,6 +368,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           await fileSystemControllerUpdateNode({
             path: { nodeId: id },
             body: { name: data.name ?? undefined, description: data.description },
+            throwOnError: true,
           } as Parameters<typeof fileSystemControllerUpdateNode>[0]);
         });
       } else {

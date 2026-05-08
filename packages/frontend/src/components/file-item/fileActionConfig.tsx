@@ -308,9 +308,9 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-red-50',
     isDestructive: true,
     visibilityCheck: ({ isRoot, isTrash, onDeleteNode }) => {
-      // 项目根节点：不在回收站时显示删除按钮
+      // 项目根节点：不在回收站时，由权限检查控制显示
       if (isRoot) {
-        return !isTrash && !!onDeleteNode;
+        return !isTrash;
       }
       // 普通节点：有 onDeleteNode 处理函数时显示
       return !!onDeleteNode;

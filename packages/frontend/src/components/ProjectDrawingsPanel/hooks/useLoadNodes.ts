@@ -3,32 +3,25 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useCallback, useRef, useState } from 'react';
-import {
-  fileSystemControllerGetChildren,
-  fileSystemControllerGetNode,
-  libraryControllerGetDrawingAllFiles,
-  libraryControllerGetBlockAllFiles,
-} from '@/api-sdk';
-import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
-import { handleError } from '@/utils/errorHandler';
-import { PAGE_SIZE } from '@/components/ProjectDrawingsPanel/constants';
+import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useLibraryQuery } from '@/hooks/library/useLibraryQuery';
+import { useFileSystemChildren } from '@/hooks/useFileSystemChildren';
+import { useBuildBreadcrumbs } from '@/hooks/useBuildBreadcrumbs';
+import type { FileSystemNode } from '@/types/filesystem';
 import type { BreadcrumbItem } from '@/components/ProjectDrawingsPanel/types';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
+import { PAGE_SIZE } from '@/components/ProjectDrawingsPanel/constants';
+import { queryKeys } from '@/lib/queryKeys';
 
 export interface UseLoadNodesReturn {
   nodes: FileSystemNode[];
-  setNodes: React.Dispatch<React.SetStateAction<FileSystemNode[]>>;
   loading: boolean;
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   total: number;
-  setTotal: React.Dispatch<React.SetStateAction<number>>;
   totalPages: number;
-  setTotalPages: React.Dispatch<React.SetStateAction<number>>;
   hasMore: boolean;
-  setHasMore: React.Dispatch<React.SetStateAction<boolean>>;
   activeRequestId: React.MutableRefObject<number>;
   loadNodes: (
     nodeId: string,
@@ -44,22 +37,76 @@ export interface UseLoadNodesReturn {
     append?: boolean | 'prepend'
   ) => Promise<void>>;
   buildBreadcrumbPathRef: React.MutableRefObject<(nodeId: string) => Promise<BreadcrumbItem[]>>;
+  /** 重置节点列表和分页状态 */
+  reset: () => void;
 }
 
 export function useLoadNodes(
   isLibraryMode: boolean,
   libraryType: LibraryType | undefined
 ): UseLoadNodesReturn {
-  const [nodes, setNodes] = useState<FileSystemNode[]>([]);
-  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
   const activeRequestId = useRef(0);
+  const queryClient = useQueryClient();
 
-  // 加载当前目录下的节点（支持分页和搜索）
+  // 共享面包屑 hook
+  const { buildBreadcrumbPath } = useBuildBreadcrumbs();
+
+  // ── Library mode: 使用 useLibraryQuery ──
+  const [librarySearch, setLibrarySearch] = useState('');
+  const [libraryNodeId, setLibraryNodeId] = useState<string | undefined>();
+
+  const libraryQuery = useLibraryQuery({
+    libraryType: libraryType || 'drawing',
+    nodeId: libraryNodeId,
+    page: currentPage,
+    limit: PAGE_SIZE,
+    search: librarySearch,
+  });
+
+  // ── File system mode: 使用 useFileSystemChildren ──
+  const [fsNodeId, setFsNodeId] = useState<string | undefined>();
+  const [fsSearch, setFsSearch] = useState<string>();
+
+  const fsQuery = useFileSystemChildren({
+    nodeId: fsNodeId,
+    page: currentPage,
+    search: fsSearch,
+    enabled: !isLibraryMode,
+  });
+
+  // ── 合并结果 ──
+  const nodes = useMemo(() => {
+    if (isLibraryMode) return libraryQuery.nodes;
+    return fsQuery.nodes;
+  }, [isLibraryMode, libraryQuery.nodes, fsQuery.nodes]);
+
+  const loading = useMemo(() => {
+    if (isLibraryMode) return libraryQuery.loading;
+    return fsQuery.loading;
+  }, [isLibraryMode, libraryQuery.loading, fsQuery.loading]);
+
+  // ── Library mode: 同步分页信息 ──
+  useEffect(() => {
+    if (!isLibraryMode) return;
+    // useLibraryQuery 通过 onTotalChange/onTotalPagesChange 回调报告分页
+    // 这里我们从节点数量推断 hasMore
+    setHasMore(libraryQuery.nodes.length >= PAGE_SIZE);
+  }, [isLibraryMode, libraryQuery.nodes.length]);
+
+  // ── File system mode: 同步分页信息 ──
+  useEffect(() => {
+    if (isLibraryMode) return;
+    setTotal(fsQuery.total);
+    setTotalPages(fsQuery.totalPages);
+    setHasMore(currentPage < fsQuery.totalPages);
+  }, [isLibraryMode, fsQuery.total, fsQuery.totalPages, currentPage]);
+
+  // ── 加载节点（统一入口） ──
   const loadNodes = useCallback(
     async (
       nodeId: string,
@@ -70,148 +117,55 @@ export function useLoadNodes(
       const currentRequestId = activeRequestId.current + 1;
       activeRequestId.current = currentRequestId;
 
-      setLoading(true);
-      try {
-        let nodeList: FileSystemNode[] = [];
-        let totalCount = 0;
-        let totalPageCount = 1;
+      setCurrentPage(page);
 
-        if (isLibraryMode) {
-          const response =
-            libraryType === 'drawing'
-              ? await libraryControllerGetDrawingAllFiles({ path: { nodeId }, query: {
-                  page,
-                  limit: PAGE_SIZE,
-                  search: search || undefined,
-                } })
-              : await libraryControllerGetBlockAllFiles({ path: { nodeId }, query: {
-                  page,
-                  limit: PAGE_SIZE,
-                  search: search || undefined,
-                } });
-          const libResponse = response as { nodes?: FileSystemNode[]; total?: number; totalPages?: number };
-          nodeList = libResponse.nodes || [];
-          totalCount = libResponse.total || 0;
-          totalPageCount =
-            libResponse.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
-        } else {
-          const { data: response } = await fileSystemControllerGetChildren({
-            path: { nodeId },
-            query: { page, limit: PAGE_SIZE, search: search || undefined } as Record<string, unknown>,
-          });
-          nodeList = (response?.nodes || []).map(toFileSystemNode);
-          totalCount = response?.total || 0;
-          totalPageCount =
-            response?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
-        }
-
-        if (currentRequestId !== activeRequestId.current) {
-          return;
-        }
-
-        if (append === 'prepend') {
-          setNodes((prev) => {
-            const uniqueMap = new Map<string, FileSystemNode>();
-            nodeList.forEach((node) => uniqueMap.set(node.id, node));
-            prev.forEach((node) => {
-              if (!uniqueMap.has(node.id)) {
-                uniqueMap.set(node.id, node);
-              }
-            });
-            return Array.from(uniqueMap.values());
-          });
-        } else if (append === true) {
-          setNodes((prev) => {
-            const uniqueMap = new Map<string, FileSystemNode>();
-            prev.forEach((node) => uniqueMap.set(node.id, node));
-            nodeList.forEach((node) => {
-              if (!uniqueMap.has(node.id)) {
-                uniqueMap.set(node.id, node);
-              }
-            });
-            return Array.from(uniqueMap.values());
-          });
-        } else {
-          const uniqueMap = new Map<string, FileSystemNode>();
-          nodeList.forEach((node) => uniqueMap.set(node.id, node));
-          setNodes(Array.from(uniqueMap.values()));
-        }
-
-        setTotal(totalCount);
-        setTotalPages(totalPageCount);
-        setHasMore(page < totalPageCount);
-      } catch (error: unknown) {
-        handleError(error, 'useLoadNodes: 加载节点失败');
-        if (currentRequestId === activeRequestId.current && !append) {
-          setNodes([]);
-          setTotal(0);
-        }
-        setTotalPages(1);
-        setHasMore(false);
-      } finally {
-        if (currentRequestId === activeRequestId.current) {
-          setLoading(false);
-        }
+      if (isLibraryMode) {
+        // Library mode: 更新查询参数，React Query 自动加载
+        setLibraryNodeId(nodeId);
+        setLibrarySearch(search || '');
+        // 分页信息由 useEffect 同步
+      } else {
+        // File system mode: 更新查询参数
+        setFsNodeId(nodeId);
+        setFsSearch(search);
+        // 分页信息由 useEffect 同步
       }
     },
-    [isLibraryMode, libraryType]
+    [isLibraryMode]
   );
 
-  // 构建面包屑路径（带最大深度限制防止无限循环）
-  const buildBreadcrumbPath = useCallback(async (nodeId: string) => {
-    try {
-      const path: BreadcrumbItem[] = [];
-      let currentId: string | null = nodeId;
-      let depth = 0;
-      const MAX_DEPTH = 20;
-
-      while (currentId && depth < MAX_DEPTH) {
-        try {
-          const { data: node } = await fileSystemControllerGetNode({ path: { nodeId: currentId } }) as unknown as { data: { id: string; name: string; parentId?: string | null } | undefined };
-          if (node) {
-            path.unshift({ id: node.id, name: node.name });
-            currentId = node.parentId || null;
-            depth++;
-          } else {
-            break;
-          }
-        } catch (error: unknown) {
-          handleError(error, `useLoadNodes: 获取节点 ${currentId} 失败`);
-          break;
-        }
-      }
-
-      if (path.length === 0) {
-        return [{ id: nodeId, name: '根目录' }];
-      }
-
-      return path;
-    } catch (error: unknown) {
-      handleError(error, 'useLoadNodes: 构建面包屑路径失败');
-      return [{ id: nodeId, name: '根目录' }];
-    }
-  }, []);
+  // ── 重置状态 ──
+  const reset = useCallback(() => {
+    setCurrentPage(1);
+    setTotal(0);
+    setTotalPages(1);
+    setHasMore(false);
+    activeRequestId.current = 0;
+    setLibraryNodeId(undefined);
+    setLibrarySearch('');
+    setFsNodeId(undefined);
+    setFsSearch(undefined);
+    // 清除 React Query 缓存
+    queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
+  }, [queryClient]);
 
   const loadNodesRef = useRef(loadNodes);
   const buildBreadcrumbPathRef = useRef(buildBreadcrumbPath);
 
   return {
     nodes,
-    setNodes,
     loading,
-    setLoading,
     currentPage,
     setCurrentPage,
     total,
-    setTotal,
     totalPages,
-    setTotalPages,
     hasMore,
-    setHasMore,
     activeRequestId,
     loadNodes,
     buildBreadcrumbPath,
     loadNodesRef,
     buildBreadcrumbPathRef,
+    reset,
   };
 }
