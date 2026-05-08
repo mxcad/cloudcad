@@ -10,6 +10,8 @@ import { formatFileSize } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
+import { usersControllerGetDashboardStats } from '@/api-sdk';
+import type { UserDashboardStatsDto } from '@/api-sdk';
 
 // Lucide 图标
 import { FolderOpen } from 'lucide-react';
@@ -158,6 +160,10 @@ export const Dashboard: React.FC = () => {
     error: statsError,
   } = useDashboardStats();
 
+  // 用于手动刷新后的统计数据（覆盖 hook 数据）
+  const [refreshedStats, setRefreshedStats] = useState<UserDashboardStatsDto | null>(null);
+  const finalStats = refreshedStats ?? dashboardStats;
+
   const {
     projects: rawProjects,
     personalFiles,
@@ -217,6 +223,17 @@ export const Dashboard: React.FC = () => {
         setIsProjectModalOpen(false);
         setProjectFormData({ name: '', description: '' });
 
+        // 刷新统计数据
+        try {
+          const result = await usersControllerGetDashboardStats();
+          if (result.data) {
+            setRefreshedStats(result.data);
+          }
+        } catch (refreshErr) {
+          // 静默失败，不影响主流程
+          console.error('刷新统计数据失败:', refreshErr);
+        }
+
         // 显示成功提示
         setCreateSuccess(projectFormData.name);
         setTimeout(() => setCreateSuccess(null), 3000);
@@ -230,7 +247,7 @@ export const Dashboard: React.FC = () => {
 
   // 统计数据
   const stats = useMemo(() => {
-    if (!dashboardStats) {
+    if (!finalStats) {
       return {
         projects: 0,
         files: 0,
@@ -245,17 +262,17 @@ export const Dashboard: React.FC = () => {
     }
 
     return {
-      projects: dashboardStats.projectCount,
-      files: dashboardStats.totalFiles,
-      todayUploads: dashboardStats.todayUploads,
-      storage: formatFileSize(dashboardStats.storage.used),
-      storageTotal: formatFileSize(dashboardStats.storage.total),
-      usagePercent: dashboardStats.storage.usagePercent,
-      dwgFiles: dashboardStats.fileTypeStats.dwg,
-      dxfFiles: dashboardStats.fileTypeStats.dxf,
-      otherFiles: dashboardStats.fileTypeStats.other,
+      projects: finalStats.projectCount,
+      files: finalStats.totalFiles,
+      todayUploads: finalStats.todayUploads,
+      storage: formatFileSize(finalStats.storage.used),
+      storageTotal: formatFileSize(finalStats.storage.total),
+      usagePercent: finalStats.storage.usagePercent,
+      dwgFiles: finalStats.fileTypeStats.dwg,
+      dxfFiles: finalStats.fileTypeStats.dxf,
+      otherFiles: finalStats.fileTypeStats.other,
     };
-  }, [dashboardStats]);
+  }, [finalStats]);
 
   const userName = user?.nickname || user?.username || '用户';
 
@@ -323,16 +340,17 @@ export const Dashboard: React.FC = () => {
       {/* 错误提示 */}
       {(error || createError) && (
         <div
-          className="flex items-center gap-3 p-4 rounded-xl mb-6"
+          className="flex items-start gap-3 p-4 rounded-xl mb-6"
           style={{
             background: 'var(--error-light)',
             border: '1px solid var(--error-dim)',
           }}
         >
-          <AlertCircle size={20} style={{ color: 'var(--error)' }} />
-          <span className="text-sm" style={{ color: 'var(--error)' }}>
-            {error || createError}
-          </span>
+          <AlertCircle size={20} style={{ color: 'var(--error)' }} className="flex-shrink-0 mt-0.5" />
+          <div className="text-sm" style={{ color: 'var(--error)' }}>
+            {error && <div>{error}</div>}
+            {createError && <div>{createError}</div>}
+          </div>
         </div>
       )}
 
