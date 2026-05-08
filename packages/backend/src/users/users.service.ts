@@ -19,7 +19,6 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as crypto from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PermissionCacheService } from '../common/services/permission-cache.service';
 import { UserCleanupService } from '../common/services/user-cleanup.service';
@@ -36,12 +35,6 @@ import {
   IUserDetail,
   IUserActionResponse,
 } from '../common/interfaces/user-service.interface';
-import {
-  SMS_VERIFICATION_SERVICE,
-  ISmsVerificationService,
-  EMAIL_VERIFICATION_SERVICE,
-  IEmailVerificationService,
-} from '../common/interfaces/verification.interface';
 import { PASSWORD_HASHER, IPasswordHasher } from './interfaces/password-hasher.interface';
 import {
   VERIFICATION_STRATEGIES,
@@ -64,10 +57,6 @@ export class UsersService implements IUserService {
     private readonly passwordHasher: IPasswordHasher,
     @Inject(VERIFICATION_STRATEGIES)
     private readonly verificationStrategies: IAccountVerificationStrategy[],
-    @Inject(SMS_VERIFICATION_SERVICE)
-    private readonly smsVerificationService: ISmsVerificationService,
-    @Inject(EMAIL_VERIFICATION_SERVICE)
-    private readonly emailVerificationService: IEmailVerificationService,
     private readonly eventEmitter: EventEmitter2
   ) {}
 
@@ -958,22 +947,6 @@ export class UsersService implements IUserService {
     } catch (error) {
       this.logger.error(`账户恢复失败：${error.message}`, error.stack);
       throw error;
-    }
-  }
-
-  /**
-   * 验证邮箱验证码（复用邮箱验证服务）
-   */
-  private async verifyEmailCode(email: string, code: string): Promise<boolean> {
-    try {
-      const result = await this.emailVerificationService.verifyEmail(
-        email,
-        code
-      );
-      return result.valid;
-    } catch (error) {
-      this.logger.warn(`邮箱验证码校验失败: ${email}, error: ${error instanceof Error ? error.message : String(error)}`);
-      return false;
     }
   }
 
