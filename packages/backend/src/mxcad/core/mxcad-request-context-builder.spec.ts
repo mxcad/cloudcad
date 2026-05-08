@@ -1,6 +1,7 @@
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { MxCadService } from './mxcad.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
@@ -58,7 +59,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: { nodeId: 'node-1', conflictStrategy: 'overwrite' },
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       const context = await builder.buildContextFromRequest(request);
 
@@ -85,7 +86,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: {},
         query: { nodeId: 'node-2' },
-      } as any;
+      } as Partial<Request>;
 
       const context = await builder.buildContextFromRequest(request);
 
@@ -106,7 +107,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: { nodeId: 'node-1' },
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       const context = await builder.buildContextFromRequest(request);
 
@@ -127,7 +128,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: { nodeId: 'node-1' },
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       const context = await builder.buildContextFromRequest(request);
 
@@ -148,7 +149,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: { nodeId: 'node-1' },
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       const context = await builder.buildContextFromRequest(request);
 
@@ -160,7 +161,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: {},
         body: {},
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       await expect(builder.buildContextFromRequest(request)).rejects.toThrow(
         UnauthorizedException,
@@ -176,7 +177,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer bad-token' },
         body: {},
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       await expect(builder.buildContextFromRequest(request)).rejects.toThrow(
         UnauthorizedException,
@@ -191,7 +192,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: { nodeId: 'node-1' },
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       await expect(builder.buildContextFromRequest(request)).rejects.toThrow(
         UnauthorizedException,
@@ -211,7 +212,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: { nodeId: 'node-1' },
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       await expect(builder.buildContextFromRequest(request)).rejects.toThrow(
         UnauthorizedException,
@@ -231,7 +232,7 @@ describe('MxCadRequestContextBuilder', () => {
         headers: { authorization: 'Bearer valid-token' },
         body: {},
         query: {},
-      } as any;
+      } as Partial<Request>;
 
       await expect(builder.buildContextFromRequest(request)).rejects.toThrow(
         UnauthorizedException,
@@ -249,7 +250,7 @@ describe('MxCadRequestContextBuilder', () => {
 
       const request = {
         headers: { authorization: 'Bearer valid-token' },
-      } as any;
+      } as Partial<Request>;
 
       const userId = await builder.validateTokenAndGetUserId(request);
 
@@ -257,7 +258,7 @@ describe('MxCadRequestContextBuilder', () => {
     });
 
     it('should throw UnauthorizedException when no header', async () => {
-      const request = { headers: {} } as any;
+      const request = { headers: {} } as Partial<Request>;
 
       await expect(builder.validateTokenAndGetUserId(request)).rejects.toThrow(
         UnauthorizedException,
@@ -273,7 +274,7 @@ describe('MxCadRequestContextBuilder', () => {
 
       const request = {
         headers: { authorization: 'Bearer valid-token' },
-      } as any;
+      } as Partial<Request>;
 
       await expect(builder.validateTokenAndGetUserId(request)).rejects.toThrow(
         UnauthorizedException,
