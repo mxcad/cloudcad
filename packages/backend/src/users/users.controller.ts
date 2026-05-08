@@ -285,6 +285,23 @@ export class UsersController {
     return this.usersService.restore(id);
   }
 
+  @Patch(':id/status')
+  @RequirePermissions([SystemPermission.SYSTEM_USER_UPDATE])
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '更新用户状态' })
+  @ApiResponse({
+    status: 200,
+    description: '更新用户状态成功',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+  ) {
+    return this.usersService.updateStatus(id, status);
+  }
+
   @Post(':id/delete-immediately')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '立即注销指定用户账户（软删除 + 立即清理）' })
