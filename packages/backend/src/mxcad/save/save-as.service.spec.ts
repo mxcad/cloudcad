@@ -127,7 +127,7 @@ describe('SaveAsService', () => {
 
     it('should return error when file is missing', async () => {
       const result = await service.saveMxwebAs({
-        file: null as any,
+        file: null as unknown as Express.Multer.File,
         targetType: 'personal',
         targetParentId: 'parent1',
         projectId: undefined,
