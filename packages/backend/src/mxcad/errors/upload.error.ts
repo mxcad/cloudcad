@@ -28,8 +28,6 @@ export enum UploadErrorCode {
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
-import { HttpException, HttpStatus } from '@nestjs/common';
-
 /**
  * UploadErrorCode 到 HTTP 状态码的映射
  */
