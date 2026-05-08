@@ -12,9 +12,14 @@ export function usePersonalSpaceQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.fileSystem.personalSpace,
     queryFn: async () => {
-      const result = await fileSystemControllerGetPersonalSpace();
-      if (result.error) throw result.error;
-      return result.data;
+      try {
+        const result = await fileSystemControllerGetPersonalSpace();
+        if (result.error) throw result.error;
+        return result.data;
+      } catch (error) {
+        console.warn('无法加载个人空间文件', error);
+        throw error;
+      }
     },
     staleTime: 5 * 60 * 1000,
     throwOnError: false,
