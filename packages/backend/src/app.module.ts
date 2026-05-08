@@ -20,6 +20,7 @@ import { JwtStrategyExecutor } from './auth/jwt.strategy.executor';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { CommonModule } from './common/common.module';
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CustomValidationPipe } from './common/pipes/validation.pipe';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
@@ -94,6 +95,10 @@ const envFilePaths = [
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter,
     },
     {
       provide: APP_INTERCEPTOR,
