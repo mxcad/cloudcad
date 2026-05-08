@@ -23,6 +23,16 @@ import type { DuplicateCheckResult } from './mxcadTypes';
 export type { DuplicateCheckResult } from './mxcadTypes';
 
 /**
+ * HTML 转义函数 — 防止 XSS 攻击
+ * 将字符串中的特殊字符转为 HTML 实体，安全插入 innerHTML
+ */
+function escapeHtml(str: string): string {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+/**
  * 检查目标目录中是否存在重复文件
  * @param fileHash 文件哈希值
  * @param filename 文件名
@@ -138,7 +148,7 @@ export function showDuplicateFileDialog(
                 当前目录中已存在相同的文件：
               </p>
               <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937; word-break: break-all;">
-                ${filename}
+                ${escapeHtml(filename)}
               </p>
             </div>
           </div>

@@ -54,6 +54,9 @@ export class AdminController {
     private readonly storageCleanupService: StorageCleanupService
   ) {}
 
+  // TODO: 统计功能待实现，当前返回占位数据。
+  // 实现时需要查询用户数、项目数、存储使用量等真实统计指标，
+  // 并同步更新 AdminStatsResponseDto 添加对应字段。
   @Get('stats')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取管理员统计信息' })

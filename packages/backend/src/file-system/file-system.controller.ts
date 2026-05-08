@@ -70,6 +70,7 @@ import {
 import { ProjectPermissionService } from "../roles/project-permission.service";
 import { CopyNodeDto } from "./dto/copy-node.dto";
 import { CreateFolderDto } from "./dto/create-folder.dto";
+import { CreateNodeDto } from "./dto/create-node.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { AddProjectMemberDto } from "./dto/add-project-member.dto";
 import {
@@ -278,11 +279,11 @@ export class FileSystemController {
 	@ApiResponse({ status: 400, description: "请求参数错误" })
 	async createNode(
 		@Request() req: ExpressRequest & { user: { id: string } },
-		@Body() body: { name: string; parentId?: string; description?: string },
+		@Body() dto: CreateNodeDto,
 	) {
-		return this.fileSystemService.createNode(req.user.id, body.name, {
-			parentId: body.parentId,
-			description: body.description,
+		return this.fileSystemService.createNode(req.user.id, dto.name, {
+			parentId: dto.parentId,
+			description: dto.description,
 		});
 	}
 
