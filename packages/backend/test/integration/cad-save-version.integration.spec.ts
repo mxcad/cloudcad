@@ -18,6 +18,7 @@ import {
 import { SaveAsService } from '../../src/mxcad/save/save-as.service';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 const svnBehaviors: Record<string, Function> = {};
 
@@ -122,7 +123,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
       listDirectoryAtRevision: jest.fn().mockResolvedValue({ success: true, message: '获取成功', files: [] }),
       getFileContentAtRevision: jest.fn().mockResolvedValue({ success: true, message: '获取成功', content: Buffer.from('') }),
       rollbackToRevision: jest.fn().mockResolvedValue({ success: true, message: '回滚成功' }),
-    } as any;
+    } as unknown as jest.Mocked<IVersionControl>;
 
     const mockFileSystemService = {
       getNode: jest.fn().mockResolvedValue({ id: 'parent-123', isFolder: true, parentId: null }),
@@ -193,7 +194,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -227,7 +228,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -264,7 +265,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -350,7 +351,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
         destination: tempDir,
         filename: 'project.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const saveResult = await saveAsService.saveMxwebAs({
@@ -397,7 +398,7 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       await saveAsService.saveMxwebAs({
@@ -440,12 +441,12 @@ describe('CAD Save → SVN Commit → Version History Integration', () => {
         destination: tempDir,
         filename: 'library.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
         file: mockFile,
-        targetType: 'library' as any,
+        targetType: 'library',
         targetParentId: 'library-parent',
         projectId: undefined,
         format: 'dwg',

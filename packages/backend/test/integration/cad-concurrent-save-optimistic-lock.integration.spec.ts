@@ -20,6 +20,7 @@ import { DatabaseService } from '../../src/database/database.service';
 import { FileConversionService } from '../../src/mxcad/conversion/file-conversion.service';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 // 模拟版本控制服务
 const mockVersionControl = {
@@ -135,7 +136,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from('test content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       // 执行保存操作，不提供 expectedTimestamp（首次保存）
@@ -181,7 +182,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from('test content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       // 执行保存操作，提供正确的 expectedTimestamp
@@ -228,7 +229,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from('test content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       // 尝试保存，提供过期的 expectedTimestamp
@@ -274,7 +275,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from('test content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await mxCadService.saveMxwebFile(
@@ -316,7 +317,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.txt',
         buffer: Buffer.from('invalid content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await mxCadService.saveMxwebFile(
@@ -356,7 +357,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from('test content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await mxCadService.saveMxwebFile(
@@ -410,7 +411,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from('test content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       await mxCadService.saveMxwebFile(

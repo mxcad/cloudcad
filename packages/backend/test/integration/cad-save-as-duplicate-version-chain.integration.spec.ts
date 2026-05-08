@@ -25,6 +25,7 @@ import {
 import { SaveAsService } from '../../src/mxcad/save/save-as.service';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 const svnBehaviors: Record<string, Function> = {};
 
@@ -194,7 +195,7 @@ describe('CAD Save As → Node Duplication → Independent Version Chain Integra
         destination: tempDir,
         filename: 'original.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -225,7 +226,7 @@ describe('CAD Save As → Node Duplication → Independent Version Chain Integra
         destination: tempDir,
         filename: 'new-file.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       await saveAsService.saveMxwebAs({
@@ -266,7 +267,7 @@ describe('CAD Save As → Node Duplication → Independent Version Chain Integra
         destination: tempDir,
         filename: 'test.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       // First save
@@ -314,7 +315,7 @@ describe('CAD Save As → Node Duplication → Independent Version Chain Integra
           destination: tempDir,
           filename: 'convert-test.mxweb',
           buffer: Buffer.from(''),
-          stream: null as any,
+          stream: null as unknown as Readable,
         };
 
         const result = await saveAsService.saveMxwebAs({

@@ -17,6 +17,7 @@ import {
 } from '../../src/version-control/interfaces/version-control.interface';
 import { SaveAsService } from '../../src/mxcad/save/save-as.service';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 // Mock the SVN module
 const svnBehaviors: Record<string, Function> = {};
@@ -114,7 +115,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
       listDirectoryAtRevision: jest.fn().mockResolvedValue({ success: true, message: 'List successful', files: [] }),
       getFileContentAtRevision: jest.fn().mockResolvedValue({ success: true, message: 'Get content successful', content: Buffer.from('mock mxweb content') }),
       rollbackToRevision: jest.fn().mockResolvedValue({ success: true, message: 'Rollback successful' }),
-    } as any;
+    } as unknown as jest.Mocked<IVersionControl>;
 
     mockFileSystemService = {
       getNode: jest.fn().mockResolvedValue({ 
@@ -132,7 +133,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
       }),
       updateNodePath: jest.fn().mockResolvedValue(undefined),
       deleteNode: jest.fn().mockResolvedValue({ success: true }),
-    } as any;
+    } as unknown as jest.Mocked<FileSystemService>;
 
     mockFileSystemNodeService = {
       findById: jest.fn().mockResolvedValue({ id: mockFileId, name: mockFileName }),
@@ -189,7 +190,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
         destination: path.join(process.cwd(), 'test-temp'),
         filename: 'test.mxweb',
         buffer: Buffer.from('mock mxweb content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -234,7 +235,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
         destination: path.join(process.cwd(), 'test-temp'),
         filename: 'personal-drawing.mxweb',
         buffer: Buffer.from('personal drawing content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -266,7 +267,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
         destination: path.join(process.cwd(), 'test-temp'),
         filename: 'empty.mxweb',
         buffer: Buffer.from(''),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -298,7 +299,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
         destination: path.join(process.cwd(), 'test-temp'),
         filename: 'test.mxweb',
         buffer: Buffer.from('mock mxweb content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -396,7 +397,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
         destination: path.join(process.cwd(), 'test-temp'),
         filename: 'library-item.mxweb',
         buffer: Buffer.from('library content'),
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
@@ -468,7 +469,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
         destination: path.join(process.cwd(), 'test-temp'),
         filename: 'large-drawing.mxweb',
         buffer: Buffer.alloc(largeFileSize, 'x'), // 50MB buffer
-        stream: null as any,
+        stream: null as unknown as Readable,
       };
 
       const result = await saveAsService.saveMxwebAs({
