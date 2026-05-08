@@ -236,7 +236,8 @@ export class FileCopyService {
     try {
       await fsPromises.access(filePath, fs.constants.F_OK);
       return true;
-    } catch {
+    } catch (error) {
+      this.logger.warn(`fileExists check failed for path: ${filePath}, error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }

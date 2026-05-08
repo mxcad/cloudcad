@@ -120,6 +120,7 @@ export class UserDto {
   id: string;
 
   @ApiPropertyOptional({
+    type: 'string',
     description: '用户邮箱（可能未绑定）',
     example: 'user@example.com',
     nullable: true,

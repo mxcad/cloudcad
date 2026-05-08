@@ -33,7 +33,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
-import { PublicFileService } from './public-file.service';
+import { PublicFileService, PreloadingData } from './public-file.service';
 import { UploadExtReferenceDto } from './dto';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
@@ -217,7 +217,7 @@ export class PublicFileController {
     description: '返回预加载数据',
   })
   @ApiResponse({ status: 404, description: '预加载数据不存在' })
-  async getPreloadingData(@Param('hash') hash: string): Promise<any> {
+  async getPreloadingData(@Param('hash') hash: string): Promise<PreloadingData | null> {
     if (!hash) {
       throw new BadRequestException('缺少文件哈希值');
     }

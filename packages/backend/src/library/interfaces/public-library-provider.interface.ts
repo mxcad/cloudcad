@@ -16,11 +16,23 @@ import { CreateFolderDto } from '../../file-system/dto/create-folder.dto';
 export interface IPublicLibraryProvider {
   getLibraryId(): Promise<string>;
 
-  getRootNode(): Promise<any>;
+  /**
+   * 获取公共资源库根节点（含直接子节点列表）
+   * @returns FileSystemNode 节点对象（含 children 数组），未找到时返回 null
+   */
+  getRootNode(): Promise<unknown>;
 
-  createFolder(dto: CreateFolderDto): Promise<any>;
+  /**
+   * 在公共资源库中创建文件夹
+   * @returns 新创建的 FileSystemNode 文件夹节点
+   */
+  createFolder(dto: CreateFolderDto): Promise<unknown>;
 
-  deleteNode(nodeId: string): Promise<any>;
+  /**
+   * 删除公共资源库中的节点（永久删除）
+   * @returns 删除操作的执行结果
+   */
+  deleteNode(nodeId: string): Promise<unknown>;
 }
 
 export const PUBLIC_LIBRARY_PROVIDER_DRAWING = 'PUBLIC_LIBRARY_PROVIDER_DRAWING';
