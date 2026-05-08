@@ -851,6 +851,9 @@ export class VersionControlService implements OnModuleInit {
   ): Promise<{ success: boolean; message: string; files?: string[] }> {
     await this.ensureInitialized();
 
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(directoryPath, this.filesDataPath);
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化' };
