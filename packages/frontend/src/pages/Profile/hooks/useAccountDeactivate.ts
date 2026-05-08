@@ -3,6 +3,7 @@ import {
   usersControllerDeactivateAccount,
   authControllerResendVerification,
 } from '@/api-sdk';
+import type { ResendVerificationDto } from '@/api-sdk/types.gen';
 
 interface DeactivateParams {
   password?: string;
@@ -30,8 +31,7 @@ export const useAccountDeactivate = () => {
   const resendVerification = useMutation({
     mutationFn: async (params: { email: string }) => {
       const result = await authControllerResendVerification({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { email: params.email },
+        body: { email: params.email } satisfies ResendVerificationDto,
       });
       if (result.error) throw result.error;
       return result;
