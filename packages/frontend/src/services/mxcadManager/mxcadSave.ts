@@ -125,7 +125,7 @@ export function showSaveConfirmDialog(): Promise<string | null> {
             padding: 4px;
             color: var(--text-muted, ${isDark ? '#5a6a7a' : '#94a3b8'});
             transition: color 0.2s ease;
-          " onmouseover="this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.color='var(--text-muted, ${isDark ? '#5a6a7a' : '#94a3b8'})'">
+          ">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -155,7 +155,7 @@ export function showSaveConfirmDialog(): Promise<string | null> {
             box-sizing: border-box;
             font-family: inherit;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
-          " onfocus="this.style.borderColor='var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'})'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.2)'" onblur="this.style.borderColor='var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'})'; this.style.boxShadow='none'"></textarea>
+          "></textarea>
           <p style="
             margin: 8px 0 0 0;
             font-size: 12px;
@@ -182,7 +182,7 @@ export function showSaveConfirmDialog(): Promise<string | null> {
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
-          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'; this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'})'">
+          ">
             取消
           </button>
           <button id="mxcad-save-dialog-confirm" style="
@@ -196,7 +196,7 @@ export function showSaveConfirmDialog(): Promise<string | null> {
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
-          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})${isDark ? ', 0 0 20px rgba(99, 102, 241, 0.3)' : ''}'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
+          ">
             保存
           </button>
         </div>

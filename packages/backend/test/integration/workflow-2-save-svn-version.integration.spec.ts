@@ -138,7 +138,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
     mockFileSystemNodeService = {
       findById: jest.fn().mockResolvedValue({ id: mockFileId, name: mockFileName }),
       getMimeType: jest.fn().mockReturnValue('application/dwg'),
-    } as any;
+    } as unknown as jest.Mocked<FileSystemNodeService>;
 
     mockStorageManager = {
       allocateNodeStorage: jest.fn().mockResolvedValue({
@@ -148,18 +148,18 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
       }),
       getNodeDirectoryRelativePath: jest.fn(),
       getFullPath: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<StorageManager>;
 
     mockFileConversionService = {
       convertFile: jest.fn().mockResolvedValue({ isOk: true, ret: { code: 0 } }),
-    } as any;
+    } as unknown as jest.Mocked<FileConversionService>;
 
     mockDatabaseService = {
       fileSystemNode: {
         update: jest.fn().mockResolvedValue({}),
         findUnique: jest.fn(),
       },
-    } as any;
+    } as unknown as jest.Mocked<DatabaseService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -402,7 +402,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
 
       const result = await saveAsService.saveMxwebAs({
         file: mockFile,
-        targetType: 'library' as any,
+        targetType: 'library',
         targetParentNodeId: 'library-parent',
         projectId: undefined,
         format: 'dwg',

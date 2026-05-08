@@ -60,9 +60,7 @@ declare namespace Components {
                  * example:
                  * user@example.com
                  */
-                email?: {
-                    [key: string]: any;
-                } | null;
+                email?: string | null;
                 /**
                  * 用户名
                  * example:
@@ -2265,9 +2263,7 @@ declare namespace Components {
              * example:
              * user@example.com
              */
-            email?: {
-                [key: string]: any;
-            } | null;
+            email?: string | null;
             /**
              * 用户名
              * example:
