@@ -65,10 +65,10 @@ describe('SaveController', () => {
 
       const result = await controller.saveMxwebToNode(
         'node-1',
-        { path: '/tmp/test.mxweb', originalname: 'test.mxweb' } as any,
+        { path: '/tmp/test.mxweb', originalname: 'test.mxweb' } as MockFile,
         'commit msg',
         undefined,
-        { user: { id: 'u1', username: 'tester' } } as any,
+        { user: { id: 'u1', username: 'tester' } } as MockRequest,
       );
 
       expect(result.nodeId).toBe('node-1');
@@ -84,10 +84,10 @@ describe('SaveController', () => {
       await expect(
         controller.saveMxwebToNode(
           'node-1',
-          {} as any,
+          {} as MockFile,
           '',
           undefined,
-          { user: { id: 'u1' } } as any,
+          { user: { id: 'u1' } } as MockRequest,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -113,14 +113,14 @@ describe('SaveController', () => {
       });
 
       const result = await controller.saveMxwebAs(
-        { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as any,
+        { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as MockFile,
         {
           targetType: 'project',
           targetParentId: 'parent-1',
           projectId: 'proj-1',
           format: 'dwg',
-        } as any,
-        { user: { id: 'u1', username: 'tester' } } as any,
+        } as Partial<SaveMxwebAsDto>,
+        { user: { id: 'u1', username: 'tester' } } as MockRequest,
       );
 
       expect(result.success).toBe(true);
@@ -129,7 +129,7 @@ describe('SaveController', () => {
 
     it('should throw when user not logged in', async () => {
       await expect(
-        controller.saveMxwebAs({} as any, {} as any, { user: null } as any),
+        controller.saveMxwebAs({} as MockFile, {} as Partial<SaveMxwebAsDto>, { user: null } as MockRequest),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -138,9 +138,9 @@ describe('SaveController', () => {
 
       await expect(
         controller.saveMxwebAs(
-          { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as any,
-          { targetType: 'project', targetParentId: 'missing', projectId: 'p1' } as any,
-          { user: { id: 'u1' } } as any,
+          { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as MockFile,
+          { targetType: 'project', targetParentId: 'missing', projectId: 'p1' } as Partial<SaveMxwebAsDto>,
+          { user: { id: 'u1' } } as MockRequest,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -153,9 +153,9 @@ describe('SaveController', () => {
 
       await expect(
         controller.saveMxwebAs(
-          { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as any,
-          { targetType: 'project', targetParentId: 'file-1', projectId: 'p1' } as any,
-          { user: { id: 'u1' } } as any,
+          { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as MockFile,
+          { targetType: 'project', targetParentId: 'file-1', projectId: 'p1' } as Partial<SaveMxwebAsDto>,
+          { user: { id: 'u1' } } as MockRequest,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -169,9 +169,9 @@ describe('SaveController', () => {
 
       await expect(
         controller.saveMxwebAs(
-          { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as any,
-          { targetType: 'project', targetParentId: 'parent-1', projectId: 'p1' } as any,
-          { user: { id: 'u1' } } as any,
+          { path: '/tmp/f.mxweb', originalname: 'f.mxweb' } as MockFile,
+          { targetType: 'project', targetParentId: 'parent-1', projectId: 'p1' } as Partial<SaveMxwebAsDto>,
+          { user: { id: 'u1' } } as MockRequest,
         ),
       ).rejects.toThrow(BadRequestException);
     });

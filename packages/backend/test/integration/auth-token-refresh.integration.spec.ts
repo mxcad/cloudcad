@@ -79,7 +79,7 @@ describe('Auth Token Refresh Integration Tests', () => {
       signAsync: jest.fn(),
       verify: jest.fn(),
       sign: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<JwtService>;
 
     mockUserService = {
       create: jest.fn(),

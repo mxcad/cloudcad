@@ -137,7 +137,7 @@ export class AuthFacadeService {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     const existingUserByPhone = await this.prisma.user.findUnique({
-      where: { phone: formattedPhone },
+      where: { phone: formattedPhone, deletedAt: null },
     });
     if (existingUserByPhone) {
       throw new ConflictException('手机号已被注册');
@@ -587,7 +587,7 @@ export class AuthFacadeService {
     const formattedPhone = phone.replace(/^\+86/, '');
 
     const existingUserByPhone = await this.prisma.user.findUnique({
-      where: { phone: formattedPhone },
+      where: { phone: formattedPhone, deletedAt: null },
     });
     if (existingUserByPhone) {
       throw new ConflictException('手机号已被注册');

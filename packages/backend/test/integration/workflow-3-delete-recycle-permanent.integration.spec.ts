@@ -41,28 +41,28 @@ describe('Workflow 3: Delete → Reference Count → Recycle Bin → Permanent D
       getNodeDirectoryRelativePath: jest.fn().mockReturnValue('test/node/path'),
       allocateNodeStorage: jest.fn(),
       copyNodeDirectory: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<StorageManager>;
 
     mockVersionControlService = {
       isReady: jest.fn().mockReturnValue(true),
       commitNodeDirectory: jest.fn().mockResolvedValue({ success: true, message: 'Commit successful' }),
       deleteNodeDirectory: jest.fn().mockResolvedValue({ success: true, message: 'Delete successful' }),
       commitWorkingCopy: jest.fn().mockResolvedValue({ success: true, message: 'Commit successful' }),
-    } as any;
+    } as unknown as jest.Mocked<IVersionControl>;
 
     mockStorageInfoService = {
       invalidateQuotaCache: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as jest.Mocked<StorageInfoService>;
 
     mockFileTreeService = {
       getProjectId: jest.fn().mockResolvedValue(mockProjectId),
       getLibraryKey: jest.fn().mockResolvedValue(null),
-    } as any;
+    } as unknown as jest.Mocked<FileTreeService>;
 
     mockStorageProvider = {
       deleteAll: jest.fn().mockResolvedValue(undefined),
       copyFromFs: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as jest.Mocked<IStorageProvider>;
 
     mockDatabaseService = {
       fileSystemNode: {

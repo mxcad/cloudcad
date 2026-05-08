@@ -23,6 +23,7 @@ import { RuntimeConfigService } from "../../runtime-config/runtime-config.servic
 import { MxCadController } from "./mxcad.controller";
 import { MxCadService } from "./mxcad.service";
 import { MxcadFileHandlerService } from "./mxcad-file-handler.service";
+import { MxCadRequest } from "../types/request.types";
 describe("MxCadController", () => {
 	let controller: MxCadController;
 
@@ -166,7 +167,7 @@ describe("MxCadController", () => {
 
 		it("should throw BadRequestException without fileName", async () => {
 			await expect(
-				controller.checkExternalReference("node-1", {} as any),
+				controller.checkExternalReference("node-1", {} as { fileName: string }),
 			).rejects.toThrow(BadRequestException);
 		});
 	});
@@ -193,7 +194,7 @@ describe("MxCadController", () => {
 			headers: { authorization: "Bearer test-token" },
 			user: { id: "user-1", role: "ADMIN" },
 			body: { nodeId: "folder-1" },
-		} as any;
+		} as Partial<MxCadRequest>;
 
 		it("should return exists=true with nodeId when file exists", async () => {
 			mockMxCadService.checkFileExist.mockResolvedValue({
