@@ -2,19 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fileSystemControllerGetProjects,
   fileSystemControllerCreateProject,
-  fileSystemControllerGetPersonalSpace,
   fileSystemControllerGetChildren,
 } from '@/api-sdk';
 import type {
   FileSystemNodeDto,
 } from '@/api-sdk';
+import { queryKeys } from '@/lib/queryKeys';
+import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 
 const PROJECTS_KEY = ['dashboard', 'projects'] as const;
-const PERSONAL_SPACE_KEY = ['dashboard', 'personal-space'] as const;
-
-function getPersonalSpaceChildrenKey(personalSpaceId: string) {
-  return ['dashboard', 'personal-space', 'children', personalSpaceId] as const;
-}
 
 export function useDashboardProjects() {
   const queryClient = useQueryClient();
@@ -35,22 +31,13 @@ export function useDashboardProjects() {
     },
   });
 
-  // 2. 私人空间
-  const personalSpaceQuery = useQuery({
-    queryKey: PERSONAL_SPACE_KEY,
-    queryFn: async () => {
-      const result = await fileSystemControllerGetPersonalSpace();
-      if (result.error) throw result.error;
-      return result.data ?? null;
-    },
-    throwOnError: false,
-  });
-
+  // 2. 私人空间（使用共享 hook）
+  const personalSpaceQuery = usePersonalSpaceQuery();
   const personalSpaceId = personalSpaceQuery.data?.id;
 
   // 3. 私人空间下的子文件（依赖于私人空间 ID）
   const personalFilesQuery = useQuery({
-    queryKey: getPersonalSpaceChildrenKey(personalSpaceId || ''),
+    queryKey: queryKeys.dashboard.personalSpaceChildren(personalSpaceId || ''),
     queryFn: async () => {
       const result = await fileSystemControllerGetChildren({
         path: { nodeId: personalSpaceId! },

@@ -177,6 +177,34 @@ async function main() {
     await assignPermissionsToRole(role.id, roleConfig.permissions);
   }
 
+  // 创建项目系统角色（PROJECT_OWNER）
+  console.log('处理项目系统角色...');
+  const projectSystemRoles = [
+    { name: 'PROJECT_OWNER', description: '项目所有者，拥有最高权限', isSystem: true },
+    { name: 'PROJECT_ADMIN', description: '项目管理员，可管理项目设置', isSystem: true },
+    { name: 'PROJECT_MEMBER', description: '项目成员，可查看和编辑文件', isSystem: true },
+    { name: 'PROJECT_VIEWER', description: '项目查看者，仅可查看文件', isSystem: true },
+  ];
+
+  for (const roleConfig of projectSystemRoles) {
+    const existingRole = await prisma.projectRole.findFirst({
+      where: { name: roleConfig.name, projectId: null },
+    });
+
+    if (!existingRole) {
+      await prisma.projectRole.create({
+        data: {
+          name: roleConfig.name,
+          description: roleConfig.description,
+          isSystem: roleConfig.isSystem,
+        },
+      });
+      console.log(`  项目角色 ${roleConfig.name} 已创建`);
+    } else {
+      console.log(`  项目角色 ${roleConfig.name} 已存在，跳过创建`);
+    }
+  }
+
   // 创建默认管理员账户（如果不存在）
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@cloudcad.com';
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';

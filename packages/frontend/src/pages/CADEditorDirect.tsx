@@ -15,7 +15,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetPersonalSpace, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
+import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
@@ -203,32 +204,27 @@ export const CADEditorDirect: React.FC = () => {
     return searchParams.get('v');
   }, [location.search]);
 
-  // 私人空间 ID（用于判断当前文件所属空间）
-  const [personalSpaceId, setPersonalSpaceId] = React.useState<string | null>(
-    null
-  );
+  // 私人空间 ID（使用共享 hook）
+  const personalSpaceQuery = usePersonalSpaceQuery({
+    enabled: isAuthenticated,
+  });
+  const personalSpaceId = personalSpaceQuery.data?.id || null;
+
+  // 同步到 mxcadManager 缓存
+  useEffect(() => {
+    if (personalSpaceId) {
+      import('../services/mxcadManager').then(
+        ({ setPersonalSpaceId: setCachedPersonalSpaceId }) => {
+          setCachedPersonalSpaceId(personalSpaceId);
+        }
+      );
+    }
+  }, [personalSpaceId]);
+
   // 当前文件所属项目 ID
   const [currentProjectId, setCurrentProjectId] = React.useState<string | null>(
     null
   );
-
-  // 获取私人空间 ID
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fileSystemControllerGetPersonalSpace()
-      .then((res) => {
-        if (res?.data?.id) {
-          setPersonalSpaceId(res.data.id);
-          // 同时缓存到 mxcadManager，用于 openUploadedFile 等函数
-          import('../services/mxcadManager').then(
-            ({ setPersonalSpaceId: setCachedPersonalSpaceId }) => {
-              setCachedPersonalSpaceId(res?.data?.id || null);
-            }
-          );
-        }
-      })
-      .catch(console.error);
-  }, [isAuthenticated]);
 
   // 判断是否为私人空间模式（根据当前文件所属项目）
   const isPersonalSpaceMode = React.useMemo(() => {

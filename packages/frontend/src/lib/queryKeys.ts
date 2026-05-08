@@ -20,7 +20,6 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
     projects: ['dashboard', 'projects'] as const,
-    personalSpace: ['dashboard', 'personal-space'] as const,
     personalSpaceChildren: (personalSpaceId: string) =>
       ['dashboard', 'personal-space', 'children', personalSpaceId] as const,
   },

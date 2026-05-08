@@ -1,26 +1,18 @@
 import { useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   fileSystemControllerGetNode,
   fileSystemControllerGetRootNode,
-  fileSystemControllerGetPersonalSpace,
 } from '@/api-sdk';
 import { openUploadedFile } from '../../../services/mxcadManager';
 import type { FileSystemNode } from '../../../types/filesystem';
+import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 
 export const useFileSystemNavigation = (isAuthenticated: boolean) => {
-  // 查询私人空间
-  const { data: personalSpaceId = null } = useQuery<string | null>({
-    queryKey: ['personalSpace'],
-    queryFn: async () => {
-      const result = await fileSystemControllerGetPersonalSpace();
-      if (result.error) throw result.error;
-      const data = result.data as { id?: string } | undefined;
-      return data?.id || null;
-    },
+  // 查询私人空间（使用共享 hook）
+  const { data: personalSpaceData } = usePersonalSpaceQuery({
     enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000,
   });
+  const personalSpaceId = personalSpaceData?.id || null;
 
   // 获取节点信息
   const getNode = useCallback(async (nodeId: string) => {

@@ -25,7 +25,6 @@ import { useFileSystemStore } from '@/stores/fileSystemStore';
 import {
   fileSystemControllerUpdateNode,
   fileSystemControllerCreateProject,
-  fileSystemControllerGetPersonalSpace,
 } from '@/api-sdk';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FileSystemNode } from '@/types/filesystem';
@@ -47,6 +46,8 @@ import { FileSystemStates } from './FileSystemStates';
 import { useVersionHistory } from './hooks/useVersionHistory';
 import { useMoveCopy } from './hooks/useMoveCopy';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
+import { useFileDropUpload } from '@/hooks/useFileDropUpload';
+import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 
 interface FileSystemManagerProps {
   mode?: 'project' | 'personal-space';
@@ -165,49 +166,20 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     showToast,
   });
 
-  const [personalSpaceErrorCount, setPersonalSpaceErrorCount] = useState(0);
-  const MAX_RETRY_COUNT = 3;
+  // 使用共享 hook 获取私人空间（替代手动 fetch + 重试逻辑）
+  const personalSpaceQuery = usePersonalSpaceQuery({
+    enabled: mode === 'personal-space',
+  });
 
+  // 同步到 Zustand store（供子组件使用）
   useEffect(() => {
-    if (mode !== 'personal-space') return;
-    if (personalSpaceId) return;
-    if (personalSpaceIdLoading) return;
-    if (personalSpaceErrorCount >= MAX_RETRY_COUNT) {
-      showToast('获取私人空间失败，请刷新页面重试', 'error');
-      return;
+    if (personalSpaceQuery.data?.id) {
+      setPersonalSpaceId(personalSpaceQuery.data.id);
+      setPersonalSpaceIdLoading(false);
+    } else if (personalSpaceQuery.isError) {
+      setPersonalSpaceIdLoading(false);
     }
-
-    const fetchPersonalSpace = async () => {
-      setPersonalSpaceIdLoading(true);
-      try {
-        const { data: response } = await fileSystemControllerGetPersonalSpace();
-        if (response?.id) {
-          setPersonalSpaceId(response.id);
-          setPersonalSpaceErrorCount(0);
-        }
-      } catch (error) {
-        if (isAbortError(error)) return;
-        handleError(error, '获取私人空间失败');
-        setPersonalSpaceErrorCount((prev) => prev + 1);
-        showToast(
-          `获取私人空间失败 (${personalSpaceErrorCount + 1}/${MAX_RETRY_COUNT})`,
-          'error'
-        );
-      } finally {
-        setPersonalSpaceIdLoading(false);
-      }
-    };
-
-    fetchPersonalSpace();
-  }, [
-    mode,
-    personalSpaceId,
-    personalSpaceIdLoading,
-    setPersonalSpaceId,
-    setPersonalSpaceIdLoading,
-    showToast,
-    personalSpaceErrorCount,
-  ]);
+  }, [personalSpaceQuery.data, personalSpaceQuery.isError, setPersonalSpaceId, setPersonalSpaceIdLoading]);
 
   const { hasPermission } = usePermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
@@ -288,6 +260,15 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       currentNodeIdRef.current = currentNode.id;
     }
   }, [currentNode]);
+
+  // 外部文件拖拽上传
+  const currentDirId = getCurrentParentId();
+  const { isDragOver: isFileDragOver, dropHandlers: fileDropHandlers } = useFileDropUpload({
+    nodeId: currentDirId,
+    onSuccess: () => {
+      handleRefresh();
+    },
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -389,7 +370,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         });
       } else {
         handleCreateProjectSubmit(async (name, description) => {
-          await fileSystemControllerCreateProject({ body: { name, description } } as Parameters<typeof fileSystemControllerCreateProject>[0]);
+          await fileSystemControllerCreateProject({ body: { name, description }, throwOnError: true } as Parameters<typeof fileSystemControllerCreateProject>[0]);
         });
       }
     },
@@ -487,6 +468,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             isProjectTrashView={isProjectTrashView}
             searchTerm={searchTerm}
             canCreateProject={canCreateProject}
+            projectFilter={projectFilter}
             onRefresh={handleRefresh}
             onCreateProject={openCreateProject}
           />
@@ -529,6 +511,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              fileDropHandlers={fileDropHandlers}
+              isFileDragOver={isFileDragOver}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
               onDeleteProject={handleDeleteProject}
