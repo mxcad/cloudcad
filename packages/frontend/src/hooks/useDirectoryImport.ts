@@ -136,7 +136,12 @@ class UploadQueue {
     // 启动尽可能多的任务（直到达到并发上限或队列为空）
     while (this.running < this.maxConcurrent && this.queue.length > 0) {
       this.running++;
-      const { task, resolve, reject } = this.queue.shift()!;
+      const item = this.queue.shift();
+      if (!item) {
+        this.running--;
+        return;
+      }
+      const { task, resolve, reject } = item;
 
       // 不 await，让任务异步执行
       task()
@@ -293,7 +298,10 @@ export function useDirectoryImport() {
         // 跳过根目录文件（没有路径）
         if (pathParts.length === 0 || !pathParts[0]) {
           fileCount++;
-          root.children!.push({
+          if (!root.children) {
+            root.children = [];
+          }
+          root.children.push({
             name: file.name,
             relativePath: file.name,
             isFolder: false,
@@ -397,7 +405,9 @@ export function useDirectoryImport() {
       let rootName: string = 'root';
 
       if (firstPath && firstPath.includes('/')) {
-        rootName = firstPath.split('/')[0]!;
+        const splitResult = firstPath.split('/');
+        const firstSegment = splitResult[0];
+        rootName = firstSegment || 'root';
       }
 
       currentRootNameRef.current = rootName;
@@ -439,7 +449,10 @@ export function useDirectoryImport() {
           // 跳过根目录文件（没有路径）
           if (pathParts.length === 0 || !pathParts[0]) {
             fileCount++;
-            root.children!.push({
+            if (!root.children) {
+            root.children = [];
+          }
+          root.children.push({
               name: file.name,
               relativePath: file.name,
               isFolder: false,
@@ -756,7 +769,11 @@ export function useDirectoryImport() {
           if (child.isFolder || !child.file) continue;
 
           // 使用并发队列上传文件
-          const uploadTask = uploadQueueRef.current!.enqueue(async () => {
+          const queue = uploadQueueRef.current;
+            if (!queue) {
+              throw new Error('上传队列未初始化');
+            }
+            const uploadTask = queue.enqueue(async () => {
             if (abortRef.current) return;
 
             setProgress({

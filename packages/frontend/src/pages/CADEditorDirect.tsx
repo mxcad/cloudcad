@@ -34,6 +34,13 @@ declare global {
       parentId?: string;
       userRole: string;
     };
+    MxPluginContext: {
+      getServerConfig: () => {
+        uploadFileConfig?: {
+          create?: { formData?: Record<string, string> };
+        };
+      };
+    };
   }
 }
 
@@ -351,17 +358,7 @@ export const CADEditorDirect: React.FC = () => {
     });
 
     // 设置MxCAD服务器配置
-    const serverConfig = await (
-      window as unknown as {
-        MxPluginContext: {
-          getServerConfig: () => {
-            uploadFileConfig?: {
-              create?: { formData?: Record<string, string> };
-            };
-          };
-        };
-      }
-    ).MxPluginContext.getServerConfig();
+    const serverConfig = window.MxPluginContext.getServerConfig();
     if (serverConfig?.uploadFileConfig?.create) {
       // 优先使用当前打开文件的父节点作为上传目标
       // 如果没有当前文件信息，则从 URL 获取
@@ -509,15 +506,15 @@ export const CADEditorDirect: React.FC = () => {
         // 如果 URL 参数指定了 libraryKey，直接使用
         if (libraryKeyParam === 'drawing') {
           const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
-          file = nodeResponse.data as typeof file;
+          file = nodeResponse;
         } else if (libraryKeyParam === 'block') {
           const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
-          file = nodeResponse.data as typeof file;
+          file = nodeResponse;
         } else {
           // 项目文件：需要登录
           try {
-            const { data: fileNode } = await fileSystemControllerGetNode({ path: { nodeId: fileId } }) as unknown as { data: unknown };
-            file = fileNode as typeof file;
+            const fileNode = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
+            file = fileNode;
           } catch (error) {
             console.error('获取文件信息失败:', error);
             const axiosError = error as { response?: { status?: number } };
@@ -1133,7 +1130,7 @@ export const CADEditorDirect: React.FC = () => {
     // 文件编辑模式：已有打开的文件
     try {
       // 获取目标文件信息（要打开的文件）
-      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } }) as unknown as { data: { deletedAt?: string | null } };
+      const targetFile = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } });
 
       // 检查目标文件是否在回收站中
       if (targetFile.deletedAt) {
@@ -1144,7 +1141,7 @@ export const CADEditorDirect: React.FC = () => {
       const currentFileId = currentFileIdRef.current;
       if (!currentFileId) return;
 
-      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } }) as unknown as { data: { parentId?: string | null; id?: string; isRoot?: boolean } };
+      const currentFile = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } });
 
       // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
       let uploadTargetNodeId = currentFile.parentId || '';

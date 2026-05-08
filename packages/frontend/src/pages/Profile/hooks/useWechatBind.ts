@@ -3,13 +3,13 @@ import {
   authControllerBindWechat,
   authControllerUnbindWechat,
 } from '@/api-sdk';
+import type { BindWechatDto } from '@/api-sdk/types.gen';
 
 export const useWechatBind = () => {
   const bindWechat = useMutation({
     mutationFn: async (params: { code: string; state: string }) => {
       const result = await authControllerBindWechat({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { code: params.code, state: params.state },
+        body: { code: params.code, state: params.state } satisfies BindWechatDto,
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };

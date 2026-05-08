@@ -232,9 +232,21 @@ export function useLibraryCategories(
           setLibraryRootId(libraryNode.id);
 
           try {
-            const allLevels = await loadAllLevels(libraryNode.id);
-            setCategories(allLevels);
+            const level0 = await loadAllCategories(libraryNode.id, 0);
+            if (level0) {
+              setCategories([level0]);
+            }
             setCategoriesLoaded(true);
+            // 后台预加载更深层级分类（不阻塞首屏渲染）
+            const bgLoadDeeperLevels = async () => {
+              try {
+                const allLevels = await loadAllLevels(libraryNode.id);
+                setCategories(allLevels);
+              } catch {
+                // 后台加载失败不阻塞主流程
+              }
+            };
+            bgLoadDeeperLevels();
           } catch (error: unknown) {
             handleError(error, 'useLibraryCategories: 加载分类失败');
             setCategoriesLoaded(true);
