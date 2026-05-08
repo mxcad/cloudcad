@@ -14,7 +14,7 @@ interface EmailForm {
 interface ProfileEmailTabProps {
   email?: string | null | undefined;
   emailForm: EmailForm;
-  emailStep: 'input' | 'verify';
+  emailStep: 'input' | 'verify' | 'verifyOld' | 'inputNew' | 'verifyNew';
   loading: boolean;
   focusedField: string | null;
   setFocusedField: (field: string | null) => void;

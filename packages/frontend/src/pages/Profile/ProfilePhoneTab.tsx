@@ -13,6 +13,7 @@ interface PhoneForm {
 interface ProfilePhoneTabProps {
   phone?: string | null | undefined;
   phoneVerified?: boolean;
+  verifyToken: string;
   phoneForm: PhoneForm;
   phoneStep: 'verifyOld' | 'inputNew' | 'verifyNew';
   isEditingPhone: boolean;
@@ -35,9 +36,11 @@ interface ProfilePhoneTabProps {
 
 export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
   phone,
+  phoneVerified,
   phoneForm,
   phoneStep,
   isEditingPhone,
+  verifyToken,
   loading,
   sendingCode,
   countdown,

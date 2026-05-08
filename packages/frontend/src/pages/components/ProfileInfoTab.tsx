@@ -21,13 +21,13 @@ import { useAuth } from '../../contexts/AuthContext';
 interface ProfileInfoTabProps {
   user: {
     username?: string;
-    email?: string | null;
-    phone?: string | null;
+    email?: { [key: string]: unknown } | null;
+    phone?: { [key: string]: unknown } | null;
     phoneVerified?: boolean;
     nickname?: string;
     status?: string;
     avatar?: string;
-    wechatId?: string | null;
+    wechatId?: { [key: string]: unknown } | null;
     createdAt?: string;
     lastLoginAt?: string;
   } | null;

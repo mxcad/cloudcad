@@ -23,6 +23,7 @@ interface ShowPassword {
 interface ProfilePasswordTabProps {
   passwordForm: PasswordForm;
   showPassword: ShowPassword;
+  passwordStrength: { strength: number; label: string; color: string };
   loading: boolean;
   focusedField: string | null;
   setFocusedField: (field: string | null) => void;
@@ -34,6 +35,7 @@ interface ProfilePasswordTabProps {
 export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
   passwordForm,
   showPassword,
+  passwordStrength,
   loading,
   focusedField,
   setFocusedField,
@@ -41,29 +43,6 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
   onPasswordSubmit,
   onTogglePassword,
 }) => {
-  const getPasswordStrength = (
-    password: string
-  ): { strength: number; label: string; color: string } => {
-    if (!password) return { strength: 0, label: '', color: '' };
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[^a-zA-Z0-9]/.test(password)) score++;
-
-    const levels = [
-      { label: '太弱', color: '#ef4444' },
-      { label: '较弱', color: '#f97316' },
-      { label: '一般', color: '#eab308' },
-      { label: '较强', color: '#22c55e' },
-      { label: '很强', color: '#10b981' },
-    ];
-    const level = levels[score] ?? levels[0]!;
-    return { strength: score, label: level.label, color: level.color };
-  };
-
-  const passwordStrength = getPasswordStrength(passwordForm.newPassword);
-
   return (
     <form onSubmit={onPasswordSubmit} className="password-form">
       {typeof window !== 'undefined' &&
