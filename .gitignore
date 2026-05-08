@@ -114,4 +114,4 @@ runtime/cache/
 # SVN
 .svn/
 
-temp
+temp.claude/worktrees/
