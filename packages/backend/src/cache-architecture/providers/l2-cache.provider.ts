@@ -321,11 +321,7 @@ export class L2CacheProvider<T = unknown>
       }
 
       if (keys.length > 0) {
-        // Redis 的 del 方法支持数组形式
-        // 使用 any 来避免 TypeScript 类型检查问题
-        await (
-          this.client.del as unknown as (keys: string[]) => Promise<number>
-        )(keys);
+        await this.client.del(keys);
         this.logger.debug(
           `根据模式删除了 ${keys.length} 条 L2 缓存: ${pattern}`
         );
