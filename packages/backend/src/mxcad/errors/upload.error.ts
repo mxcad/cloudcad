@@ -10,6 +10,8 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { HttpException, HttpStatus } from '@nestjs/common';
+
 /**
  * 上传错误代码枚举
  */
@@ -26,10 +28,29 @@ export enum UploadErrorCode {
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
 
+import { HttpException, HttpStatus } from '@nestjs/common';
+
+/**
+ * UploadErrorCode 到 HTTP 状态码的映射
+ */
+const UPLOAD_ERROR_HTTP_STATUS: Record<UploadErrorCode, HttpStatus> = {
+  [UploadErrorCode.FILE_NOT_FOUND]: HttpStatus.NOT_FOUND,
+  [UploadErrorCode.CHUNK_NOT_FOUND]: HttpStatus.NOT_FOUND,
+  [UploadErrorCode.PERMISSION_DENIED]: HttpStatus.FORBIDDEN,
+  [UploadErrorCode.CHUNK_ALREADY_EXISTS]: HttpStatus.CONFLICT,
+  [UploadErrorCode.CONCURRENT_OPERATION]: HttpStatus.CONFLICT,
+  [UploadErrorCode.INVALID_FILE]: HttpStatus.BAD_REQUEST,
+  [UploadErrorCode.CONVERSION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [UploadErrorCode.NODE_CREATION_FAILED]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [UploadErrorCode.STORAGE_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+  [UploadErrorCode.UNKNOWN_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
+};
+
 /**
  * 上传错误类
+ * 继承 HttpException，确保被 NestJS 全局异常过滤器正确处理
  */
-export class UploadError extends Error {
+export class UploadError extends HttpException {
   /**
    * 错误代码
    */
@@ -45,13 +66,12 @@ export class UploadError extends Error {
     message: string,
     details?: Record<string, unknown>
   ) {
-    super(message);
+    const status =
+      UPLOAD_ERROR_HTTP_STATUS[code] || HttpStatus.INTERNAL_SERVER_ERROR;
+    super({ code, message, details }, status);
     this.name = 'UploadError';
     this.code = code;
     this.details = details;
-
-    // 维护正确的原型链
-    Object.setPrototypeOf(this, UploadError.prototype);
   }
 
   /**
