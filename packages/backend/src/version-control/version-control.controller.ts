@@ -109,4 +109,41 @@ export class VersionControlController {
       revision
     );
   }
+
+  /**
+   * 列出指定版本目录下的文件列表
+   */
+  @Get('list/:revision')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '列出指定版本目录下的文件列表' })
+  @ApiParam({
+    name: 'revision',
+    required: true,
+    description: '修订版本号',
+    type: Number,
+  })
+  @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
+  @ApiQuery({ name: 'directoryPath', required: true, description: '目录路径' })
+  @ApiOkResponse({
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        files: { type: 'array', items: { type: 'string' } }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @ApiResponse({ status: 403, description: '无权限' })
+  @RequireProjectPermission(ProjectPermission.VERSION_READ)
+  async listDirectoryAtRevision(
+    @Param('revision', ParseIntPipe) revision: number,
+    @Query('projectId') projectId: string,
+    @Query('directoryPath') directoryPath: string
+  ): Promise<{ success: boolean; message: string; files?: string[] }> {
+    return this.versionControlService.listDirectoryAtRevision(directoryPath, revision);
+  }
 }
