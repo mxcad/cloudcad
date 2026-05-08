@@ -18,6 +18,20 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 
 /**
+ * 预加载数据结构（来自 _preloading.json 文件）
+ */
+export interface PreloadingData {
+  /** 是否为图纸 */
+  tz: boolean;
+  /** 源文件 MD5 哈希值 */
+  src_file_md5: string;
+  /** 图片列表 */
+  images: string[];
+  /** 外部参照文件列表 */
+  externalReference: string[];
+}
+
+/**
  * 公开文件服务
  * 提供无需认证的文件访问和外部参照功能
  */
@@ -198,7 +212,7 @@ export class PublicFileService {
    * @param hash 文件 hash
    * @returns 预加载数据
    */
-  async getPreloadingData(hash: string): Promise<any> {
+  async getPreloadingData(hash: string): Promise<PreloadingData | null> {
     const uploadPath = this.uploadService.getUploadPath();
 
     try {

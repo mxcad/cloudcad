@@ -312,7 +312,10 @@ export class FileMergeService {
                   const cacheExists = await fsPromises
                     .access(thumbnailCachePath)
                     .then(() => true)
-                    .catch(() => false);
+                    .catch((err) => {
+                      this.logger.warn(`[mergeConvertFile] 缓存缩略图检查失败: ${thumbnailCachePath}, error: ${err instanceof Error ? err.message : String(err)}`);
+                      return false;
+                    });
 
                   if (cacheExists) {
                     // 从缓存拷贝
@@ -731,7 +734,10 @@ export class FileMergeService {
                 const thumbnailExists = await fsPromises
                   .access(thumbnailCachePath)
                   .then(() => true)
-                  .catch(() => false);
+                  .catch((err) => {
+                    this.logger.warn(`[performFileExistenceCheck] 缩略图检查失败: ${thumbnailCachePath}, error: ${err instanceof Error ? err.message : String(err)}`);
+                    return false;
+                  });
 
                 if (thumbnailExists) {
                   // 从缓存拷贝
