@@ -76,7 +76,7 @@ export class CacheMonitorController {
   })
   async getSummary(): Promise<CacheMonitoringSummaryDto> {
     const summary = this.cacheMonitorService.getMonitoringSummary();
-    return summary as unknown as CacheMonitoringSummaryDto;
+    return summary as CacheMonitoringSummaryDto;
   }
 
   /**
@@ -128,12 +128,12 @@ export class CacheMonitorController {
   async getPerformanceTrend(
     @Query() query: PerformanceTrendQueryDto
   ): Promise<PerformanceTrendDto> {
-    const level = query.level as unknown as CacheLevel;
+    const level = query.level as CacheLevel;
     const trend = this.cacheMonitorService.getPerformanceTrend(
       level,
       query.minutes ?? 60
     );
-    return trend as unknown as PerformanceTrendDto;
+    return trend as PerformanceTrendDto;
   }
 
   /**
