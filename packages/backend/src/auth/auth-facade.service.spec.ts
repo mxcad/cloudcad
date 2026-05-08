@@ -620,7 +620,7 @@ describe("AuthFacadeService", () => {
 				email: "test@example.com",
 				username: "testuser",
 				role: { name: "USER" },
-			} as any;
+			} as Partial<AuthResponseDto["user"]>;
 			const tokens = {
 				accessToken: "access_token",
 				refreshToken: "refresh_token",
