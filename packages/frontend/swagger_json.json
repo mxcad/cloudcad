@@ -679,6 +679,16 @@
       "post": {
         "operationId": "AuthController_sendVerification",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendVerificationDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "验证邮件已发送",
@@ -739,6 +749,16 @@
       "post": {
         "operationId": "AuthController_verifyEmailAndRegisterPhone",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailAndRegisterPhoneDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "注册成功",
@@ -767,6 +787,16 @@
       "post": {
         "operationId": "AuthController_resendVerification",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "验证邮件已重新发送",
@@ -792,6 +822,16 @@
       "post": {
         "operationId": "AuthController_bindEmailAndLogin",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindEmailAndLoginDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "绑定成功",
@@ -817,6 +857,16 @@
       "post": {
         "operationId": "AuthController_bindPhoneAndLogin",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindPhoneAndLoginDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "绑定成功",
@@ -842,6 +892,16 @@
       "post": {
         "operationId": "AuthController_verifyPhone",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifySmsCodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "手机号验证成功",
@@ -943,6 +1003,16 @@
       "post": {
         "operationId": "AuthController_sendBindEmailCode",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindEmailDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "验证码已发送",
@@ -1055,6 +1125,16 @@
       "post": {
         "operationId": "AuthController_verifyUnbindEmailCode",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyUnbindCodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "验证通过，可以换绑新邮箱",
@@ -1092,6 +1172,16 @@
       "post": {
         "operationId": "AuthController_rebindEmail",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RebindEmailDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "换绑成功",
@@ -1242,6 +1332,16 @@
       "post": {
         "operationId": "AuthController_loginByPhone",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginByPhoneDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "登录成功",
@@ -1270,6 +1370,16 @@
       "post": {
         "operationId": "AuthController_bindPhone",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindPhoneDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "绑定成功",
@@ -1339,6 +1449,16 @@
       "post": {
         "operationId": "AuthController_verifyUnbindPhoneCode",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyUnbindCodeDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "验证通过，可以换绑新手机号",
@@ -1376,6 +1496,16 @@
       "post": {
         "operationId": "AuthController_rebindPhone",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RebindPhoneDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "换绑成功",
@@ -1516,6 +1646,16 @@
       "post": {
         "operationId": "AuthController_bindWechat",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindWechatDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "绑定成功",
@@ -3634,6 +3774,28 @@
       "post": {
         "operationId": "FileSystemController_restoreTrashItems",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "itemIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "要恢复的回收站项ID列表"
+                  }
+                },
+                "required": [
+                  "itemIds"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "恢复项目成功",
@@ -3661,6 +3823,28 @@
       "delete": {
         "operationId": "FileSystemController_permanentlyDeleteTrashItems",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "itemIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "要永久删除的回收站项ID列表"
+                  }
+                },
+                "required": [
+                  "itemIds"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "永久删除项目成功",
@@ -3688,6 +3872,33 @@
       "post": {
         "operationId": "FileSystemController_createNode",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "节点名称"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "父节点ID（可选）"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "节点描述（可选）"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "节点创建成功",
@@ -4349,6 +4560,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddProjectMemberDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "添加成员成功",
@@ -4405,6 +4626,30 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projectRoleId": {
+                    "type": "string",
+                    "description": "项目角色ID"
+                  },
+                  "roleId": {
+                    "type": "string",
+                    "description": "角色ID（兼容旧字段）"
+                  },
+                  "roleName": {
+                    "type": "string",
+                    "description": "角色名称"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "更新成员角色成功",
@@ -5931,7 +6176,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "系统正常运行\n\nThe Health Check is successful",
+            "description": "The Health Check is successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -6005,7 +6250,7 @@
             }
           },
           "503": {
-            "description": "服务不可用\n\nThe Health Check is not successful",
+            "description": "The Health Check is not successful",
             "content": {
               "application/json": {
                 "schema": {
@@ -8093,7 +8338,7 @@
           "status"
         ]
       },
-      "AuthResponseDto": {
+      "AuthApiResponseDto": {
         "type": "object",
         "properties": {
           "accessToken": {
@@ -8119,44 +8364,6 @@
           "accessToken",
           "refreshToken",
           "user"
-        ]
-      },
-      "AuthApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "认证响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AuthResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
         ]
       },
       "LoginDto": {
@@ -8291,6 +8498,19 @@
           "updatedAt"
         ]
       },
+      "SendVerificationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
       "SendVerificationResponseDto": {
         "type": "object",
         "properties": {
@@ -8343,6 +8563,144 @@
         },
         "required": [
           "email",
+          "code"
+        ]
+      },
+      "VerifyEmailAndRegisterPhoneDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "code": {
+            "type": "string",
+            "description": "邮箱验证码（6位数字）",
+            "example": "123456"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆，可带 +86 前缀）",
+            "example": "13800138000"
+          },
+          "phoneCode": {
+            "type": "string",
+            "description": "手机验证码（6位数字）",
+            "example": "123456"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "username",
+            "minLength": 3,
+            "maxLength": 20
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "Password123!",
+            "minLength": 8,
+            "maxLength": 50
+          },
+          "nickname": {
+            "type": "string",
+            "description": "昵称",
+            "example": "用户昵称",
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "email",
+          "code",
+          "phone",
+          "phoneCode",
+          "username",
+          "password"
+        ]
+      },
+      "ResendVerificationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "BindEmailAndLoginDto": {
+        "type": "object",
+        "properties": {
+          "tempToken": {
+            "type": "string",
+            "description": "临时令牌",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "email": {
+            "type": "string",
+            "description": "邮箱地址",
+            "example": "user@example.com"
+          },
+          "code": {
+            "type": "string",
+            "description": "邮箱验证码",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "tempToken",
+          "email",
+          "code"
+        ]
+      },
+      "BindPhoneAndLoginDto": {
+        "type": "object",
+        "properties": {
+          "tempToken": {
+            "type": "string",
+            "description": "临时令牌",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆，可带 +86 前缀）",
+            "example": "13800138000"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "tempToken",
+          "phone",
+          "code"
+        ]
+      },
+      "VerifySmsCodeDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆，可带 +86 前缀）",
+            "example": "13800138000",
+            "pattern": "^(\\+86)?1[3-9]\\d{9}$"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码（6位数字）",
+            "example": "123456",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "phone",
           "code"
         ]
       },
@@ -8530,6 +8888,24 @@
           "timestamp"
         ]
       },
+      "BindEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "要绑定的邮箱地址",
+            "example": "user@example.com"
+          },
+          "isRebind": {
+            "type": "boolean",
+            "description": "是否为重新绑定（换绑）",
+            "example": false
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
       "BindEmailResponseDto": {
         "type": "object",
         "properties": {
@@ -8599,6 +8975,44 @@
           "code"
         ]
       },
+      "VerifyUnbindCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "验证码（6位数字）",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "RebindEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "新邮箱地址",
+            "example": "newuser@example.com"
+          },
+          "code": {
+            "type": "string",
+            "description": "新邮箱验证码",
+            "example": "123456"
+          },
+          "token": {
+            "type": "string",
+            "description": "解绑原邮箱的验证令牌",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "email",
+          "code",
+          "token"
+        ]
+      },
       "SendSmsCodeDto": {
         "type": "object",
         "properties": {
@@ -8611,28 +9025,6 @@
         },
         "required": [
           "phone"
-        ]
-      },
-      "VerifySmsCodeDto": {
-        "type": "object",
-        "properties": {
-          "phone": {
-            "type": "string",
-            "description": "手机号（中国大陆，可带 +86 前缀）",
-            "example": "13800138000",
-            "pattern": "^(\\+86)?1[3-9]\\d{9}$"
-          },
-          "code": {
-            "type": "string",
-            "description": "验证码（6位数字）",
-            "example": "123456",
-            "minLength": 6,
-            "maxLength": 6
-          }
-        },
-        "required": [
-          "phone",
-          "code"
         ]
       },
       "RegisterByPhoneDto": {
@@ -8680,6 +9072,75 @@
           "password"
         ]
       },
+      "LoginByPhoneDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆，可带 +86 前缀）",
+            "example": "13800138000",
+            "pattern": "^(\\+86)?1[3-9]\\d{9}$"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码（6位数字）",
+            "example": "123456",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "BindPhoneDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "手机号（中国大陆，可带 +86 前缀）",
+            "example": "13800138000",
+            "pattern": "^(\\+86)?1[3-9]\\d{9}$"
+          },
+          "code": {
+            "type": "string",
+            "description": "验证码（6位数字）",
+            "example": "123456",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "RebindPhoneDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "新手机号（中国大陆，可带 +86 前缀）",
+            "example": "13900139000"
+          },
+          "code": {
+            "type": "string",
+            "description": "新手机号验证码",
+            "example": "123456"
+          },
+          "token": {
+            "type": "string",
+            "description": "解绑原手机号的验证令牌",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "phone",
+          "code",
+          "token"
+        ]
+      },
       "CheckFieldUniquenessDto": {
         "type": "object",
         "properties": {
@@ -8700,6 +9161,25 @@
             "example": "13800138000"
           }
         }
+      },
+      "BindWechatDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "微信授权回调返回的 code",
+            "example": "081x7J0w3Q4e1Z2B5L1w3FVKJT0x7J0Z"
+          },
+          "state": {
+            "type": "string",
+            "description": "微信授权 state 参数（包含 csrf token）",
+            "example": "eyJjc3JmIjoiYWJjZGVmIiwib3JpZ2luIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwIn0="
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ]
       },
       "UserCleanupStatsResponseDto": {
         "type": "object",
@@ -10476,14 +10956,25 @@
           "joinedAt"
         ]
       },
-      "CadDownloadFormat": {
-        "type": "string",
-        "enum": [
-          "dwg",
-          "dxf",
-          "mxweb",
-          "pdf"
+      "AddProjectMemberDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "projectRoleId": {
+            "type": "string",
+            "description": "项目角色ID"
+          }
+        },
+        "required": [
+          "userId",
+          "projectRoleId"
         ]
+      },
+      "CadDownloadFormat": {
+        "type": "string"
       },
       "ProjectUserPermissionsDto": {
         "type": "object",
@@ -10675,6 +11166,10 @@
           "entries"
         ]
       },
+      "Buffer": {
+        "type": "object",
+        "properties": {}
+      },
       "FileContentResponseDto": {
         "type": "object",
         "properties": {
@@ -10689,9 +11184,12 @@
             "example": "获取成功"
           },
           "content": {
-            "type": "string",
-            "description": "文件内容（Base64 编码）",
-            "example": "base64encodedcontent..."
+            "description": "文件内容",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Buffer"
+              }
+            ]
           }
         },
         "required": [
