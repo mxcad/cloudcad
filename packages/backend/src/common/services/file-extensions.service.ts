@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig, FileExtensionsConfig } from '../../config/app.config';
 
@@ -23,7 +23,11 @@ export class FileExtensionsService {
   private readonly config: FileExtensionsConfig;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    this.config = this.configService.get('fileExtensions', { infer: true })!;
+    const config = this.configService.get('fileExtensions', { infer: true });
+    if (!config) {
+      throw new InternalServerErrorException('FileExtensions configuration is missing');
+    }
+    this.config = config;
   }
 
   /** 获取 CAD 文件扩展名列表 */
