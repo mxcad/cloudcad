@@ -21,7 +21,6 @@ import {
 import type { FileSystemNode } from '../types/filesystem';
 import { handleError } from '../utils/errorHandler';
 import { isAbortError } from '../utils/errorHandler';
-import type { ResponseStyle } from '@/api-sdk/client/types.gen';
 
 /**
  * 公共资源库类型
@@ -349,15 +348,15 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
       try {
         // 使用 SDK 下载文件
         const response = libraryType === 'drawing'
-          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id }, responseStyle: 'blob' as unknown as ResponseStyle })
-          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id }, responseStyle: 'blob' as unknown as ResponseStyle });
+          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id }, parseAs: 'blob' })
+          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id }, parseAs: 'blob' });
 
         // 处理下载
         if (!response.data) {
           showToast?.('下载失败：文件内容为空', 'error');
           return;
         }
-        const blob = new Blob([response.data as unknown as BlobPart]);
+        const blob = response.data as Blob;
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
