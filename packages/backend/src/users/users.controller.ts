@@ -41,6 +41,7 @@ import { SystemPermission } from '../common/enums/permissions.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UsersService } from './users.service';
 import {
   UserResponseDto,
@@ -297,9 +298,9 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '用户不存在' })
   updateStatus(
     @Param('id') id: string,
-    @Body('status') status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+    @Body() updateUserStatusDto: UpdateUserStatusDto
   ) {
-    return this.usersService.updateStatus(id, status);
+    return this.usersService.updateStatus(id, updateUserStatusDto.status);
   }
 
   @Post(':id/delete-immediately')
