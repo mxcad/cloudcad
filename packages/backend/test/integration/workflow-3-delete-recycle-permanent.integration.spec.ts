@@ -77,7 +77,7 @@ describe('Workflow 3: Delete → Reference Count → Recycle Bin → Permanent D
       $transaction: jest.fn().mockImplementation(async (fn) => {
         return await fn(mockDatabaseService);
       }),
-    } as any;
+    } as unknown as jest.Mocked<DatabaseService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
