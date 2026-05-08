@@ -64,7 +64,7 @@ export function useLibraryQuota({
     try {
       // 获取默认配额（GB）
       const response = await runtimeConfigControllerGetPublicConfigs();
-      const configs = response.data as Record<string, number> | undefined;
+      const configs = response.data as unknown as Record<string, number> | undefined;
       const defaultVal = configs?.libraryStorageQuota || 100;
       setDefaultLibraryQuota(defaultVal);
 

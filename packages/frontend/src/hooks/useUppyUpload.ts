@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useRef, useCallback } from 'react';
-import Uppy from '@uppy/core';
+import Uppy, { type UploadResult } from '@uppy/core';
 import Tus from '@uppy/tus';
 import { calculateFileHash } from '../utils/hashUtils';
 import { getValidToken } from '@/utils/tokenUtils';
@@ -146,68 +146,67 @@ export const useUppyUpload = () => {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      // 元数据配置
-      metadata: (file: UppyFile) => {
-        const fileMeta = file.meta || {};
-        return {
-          filename: file.name,
-          fileHash: (fileMeta.fileHash as string) || '',
-          fileSize: String(file.size),
-          nodeId: config.nodeId || '',
-          fileType: file.type,
-        };
-      },
+      // 元数据配置（@uppy/tus 类型定义不支持函数形式，但运行时支持）
+      metadata: ((file: UppyFile) => ({
+        filename: file.name,
+        fileHash: (file.meta?.fileHash as string) || '',
+        fileSize: String(file.size ?? ''),
+        nodeId: config.nodeId || '',
+        fileType: file.type,
+      })) as unknown as Record<string, string>,
     });
 
     // 文件添加事件：计算文件哈希
     let uploadStarted = false;
-    uppy.on('file-added', async (file: UppyFile) => {
+    uppy.on('file-added', (file) => {
       // 防止并发：若 upload 已调用则跳过，避免 Uppy 抛出 "already uploading"
       if (uploadStarted) return;
       uploadStarted = true;
 
-      try {
-        // 计算文件哈希值
-        const hash = await calculateFileHash(file.data as File);
-        // 更新文件元数据
-        uppy.setFileMeta(file.id, {
-          fileHash: hash,
-        });
-        // 触发 onFileQueued 回调
-        config.onFileQueued?.(file.data as File);
+      void (async () => {
+        try {
+          // 计算文件哈希值
+          const hash = await calculateFileHash(file.data as File);
+          // 更新文件元数据
+          uppy.setFileMeta(file.id, {
+            fileHash: hash,
+          });
+          // 触发 onFileQueued 回调
+          config.onFileQueued?.(file.data as File);
 
-        // 哈希计算完成后再启动上传（autoProceed 关闭时需手动触发）
-        uppy.upload();
-      } catch (error) {
-        uploadStarted = false;
-        console.error('[useUppyUpload] 文件哈希计算失败:', error);
-      }
+          // 哈希计算完成后再启动上传（autoProceed 关闭时需手动触发）
+          uppy.upload();
+        } catch (error) {
+          uploadStarted = false;
+          console.error('[useUppyUpload] 文件哈希计算失败:', error);
+        }
+      })();
     });
 
-    // 上传开始事件（@uppy/core 类型定义缺少此事件，使用扩展类型）
-    (uppy as UppyExtended).on('upload-started', () => {
+    // 上传开始事件
+    uppy.on('upload-start', (_files) => {
       config.onBeginUpload?.();
     });
 
-    // 上传进度事件（@uppy/core 类型定义缺少此事件，使用扩展类型）
-    (uppy as UppyExtended).on('total-progress', (progress: UppyProgress) => {
-      if (progress && typeof progress.bytesTotal === 'number' && progress.bytesTotal > 0) {
-        const percentage = Math.round((progress.bytesUploaded / progress.bytesTotal) * 100);
-        config.onProgress?.(percentage);
+    // 上传进度事件
+    uppy.on('progress', (percentage) => {
+      if (typeof percentage === 'number' && percentage >= 0) {
+        config.onProgress?.(Math.round(percentage));
       }
     });
 
     // 从 Tus 响应头中提取 nodeId
     let uploadedNodeId: string | undefined;
-    uppy.on('upload-success', (_file: UppyFile, resp: { body?: { xhr?: XMLHttpRequest } }) => {
-      const xhr = resp?.body?.xhr;
+    uppy.on('upload-success', (_file, response) => {
+      const body = response?.body as unknown as { xhr?: XMLHttpRequest } | undefined;
+      const xhr = body?.xhr;
       if (xhr) {
         uploadedNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
       }
     });
 
     // 上传完成事件
-    uppy.on('complete', (result: UppyCompleteResult) => {
+    uppy.on('complete', (result) => {
       if (result.successful && result.successful.length > 0) {
         const file = result.successful[0];
         if (!file) return;
@@ -217,7 +216,7 @@ export const useUppyUpload = () => {
           file: file.data as File,
           id: (file.meta?.fileHash as string) || file.id,
           name: file.name,
-          size: file.size,
+          size: file.size ?? 0,
           type: file.type,
           hash: (file.meta?.fileHash as string) || '',
           isUseServerExistingFile: false,
@@ -231,28 +230,22 @@ export const useUppyUpload = () => {
         const failedItem = result.failed[0];
         if (!failedItem) return;
         const uploadError = failedItem.error;
-        const errorMessage = uploadError instanceof Error
-          ? uploadError.message
-          : typeof uploadError === 'string'
-            ? uploadError
-            : '上传失败';
+        const errorMessage = typeof uploadError === 'string'
+          ? uploadError
+          : '上传失败';
 
         config.onError?.(errorMessage);
       }
 
-      // 清理 Uppy 实例（@uppy/core 类型定义缺少 close 方法，使用扩展类型）
-      (uppy as UppyExtended).close();
+      // 清理 Uppy 实例
+      uppy.destroy();
       isUploadingRef.current = false;
     });
 
     // 上传失败事件
-    uppy.on('upload-error', (file: UppyFile, uploadError: unknown) => {
-      const errorMessage = uploadError instanceof Error
-        ? uploadError.message
-        : typeof uploadError === 'string'
-          ? uploadError
-          : '上传失败';
-
+    uppy.on('upload-error', (file, error, _response) => {
+      if (!file) return;
+      const errorMessage = error?.message || '上传失败';
       config.onError?.(`文件 ${file.name} 上传失败: ${errorMessage}`);
       isUploadingRef.current = false;
     });
@@ -271,7 +264,7 @@ export const useUppyUpload = () => {
 
     // 销毁旧实例（防止残留上传与新实例冲突）
     if (uppyRef.current) {
-      (uppyRef.current as UppyExtended).close();
+      uppyRef.current.destroy();
       uppyRef.current = null;
     }
 
@@ -318,7 +311,7 @@ export const useUppyUpload = () => {
    */
   const destroy = useCallback(() => {
     if (uppyRef.current) {
-      (uppyRef.current as UppyExtended).close();
+      uppyRef.current.destroy();
       uppyRef.current = null;
     }
     isUploadingRef.current = false;

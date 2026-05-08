@@ -196,16 +196,16 @@ export const uploadFileWithUppy = async (
       }
     });
 
-    (uppy as unknown as UppyWithClose).on('total-progress', (progress: UppyTotalProgressPayload) => {
+    (uppy as unknown as UppyWithClose).on('total-progress', ((progress: UppyTotalProgressPayload) => {
       if (progress?.bytesTotal > 0) {
         const percentage = Math.round(
           (progress.bytesUploaded / progress.bytesTotal) * 100,
         );
         onProgress?.(percentage);
       }
-    });
+    }) as unknown as (...args: unknown[]) => void);
 
-    (uppy as unknown as UppyWithClose).on('complete', (result: UppyCompletePayload) => {
+    (uppy as unknown as UppyWithClose).on('complete', ((result: UppyCompletePayload) => {
       const successful = result.successful?.[0];
       if (successful) {
         resolve({
@@ -231,7 +231,7 @@ export const uploadFileWithUppy = async (
       (uppy as unknown as UppyWithClose).clear();
       (uppy as unknown as UppyWithClose).cancelAll?.();
       (uppy as unknown as UppyWithClose).close?.();
-    });
+    }) as unknown as (...args: unknown[]) => void);
 
     uppy.on('upload-error', (_file: unknown, err: Error | string) => {
       const message =
@@ -312,16 +312,16 @@ export const uploadFilePublic = async (options: {
       }
     });
 
-    (uppy as unknown as UppyWithClose).on('total-progress', (progress: UppyTotalProgressPayload) => {
+    (uppy as unknown as UppyWithClose).on('total-progress', ((progress: UppyTotalProgressPayload) => {
       if (progress?.bytesTotal > 0) {
         const percentage = Math.round(
           (progress.bytesUploaded / progress.bytesTotal) * 100,
         );
         onProgress?.(percentage);
       }
-    });
+    }) as unknown as (...args: unknown[]) => void);
 
-    (uppy as unknown as UppyWithClose).on('complete', (result: UppyCompletePayload) => {
+    (uppy as unknown as UppyWithClose).on('complete', ((result: UppyCompletePayload) => {
       const successful = result.successful?.[0];
       if (successful) {
         resolve({
@@ -341,7 +341,7 @@ export const uploadFilePublic = async (options: {
       (uppy as unknown as UppyWithClose).clear();
       (uppy as unknown as UppyWithClose).cancelAll?.();
       (uppy as unknown as UppyWithClose).close?.();
-    });
+    }) as unknown as (...args: unknown[]) => void);
 
     uppy.on('upload-error', (_file: unknown, err: Error | string) => {
       const message =

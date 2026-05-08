@@ -349,8 +349,8 @@ export const useLibraryPanel = (options: UseLibraryPanelOptions): UseLibraryPane
       try {
         // 使用 SDK 下载文件
         const response = libraryType === 'drawing'
-          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id }, responseStyle: 'blob' as ResponseStyle as ResponseStyle })
-          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id }, responseStyle: 'blob' as ResponseStyle as ResponseStyle });
+          ? await libraryControllerDownloadDrawingNode({ path: { nodeId: node.id }, responseStyle: 'blob' as unknown as ResponseStyle })
+          : await libraryControllerDownloadBlockNode({ path: { nodeId: node.id }, responseStyle: 'blob' as unknown as ResponseStyle });
 
         // 处理下载
         if (!response.data) {
