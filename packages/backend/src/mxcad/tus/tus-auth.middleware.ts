@@ -38,7 +38,11 @@ export class TusAuthMiddleware implements NestMiddleware {
 
       if (token) {
         // 验证 JWT
-        const secret = this.configService.get('jwt.secret', { infer: true });
+        const secret = this.configService.get<string>('jwt.secret');
+        if (!secret) {
+          this.logger.error('JWT 密钥未配置，拒绝所有上传请求');
+          throw new Error('JWT 密钥未配置，请设置 JWT_SECRET 环境变量');
+        }
         const payload = this.jwtService.verify(token, { secret });
         (req as any).user = payload;
         this.logger.debug(`JWT 认证成功: ${payload.id}`);

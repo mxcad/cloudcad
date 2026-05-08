@@ -30,22 +30,26 @@ export class DatabaseService
   private readonly slowQueryThresholdMs: number;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    // 优先使用 DATABASE_URL 环境变量
+    const dbConfig = configService.get<{
+      username: string; password: string; host: string; port: number;
+      database: string; maxConnections: number; idleTimeoutMillis: number; connectionTimeoutMillis: number;
+    }>('database');
+    if (!dbConfig) {
+      throw new Error('无法获取数据库配置，请检查 .env 文件或环境变量');
+    }
+
+    // 优先使用 DATABASE_URL 环境变量，否则根据各配置项拼接
     let databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
-      const dbConfig = configService.get<{
-        username: string; password: string; host: string; port: number;
-        database: string; maxConnections: number; idleTimeoutMillis: number; connectionTimeoutMillis: number;
-      }>('database');
-      if (!dbConfig) {
-        throw new Error('无法获取数据库配置，请检查 .env 文件或环境变量');
-      }
       const encodedPassword = encodeURIComponent(dbConfig.password);
       databaseUrl = `postgresql://${dbConfig.username}:${encodedPassword}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
     }
 
     const adapter = new PrismaPg({
       connectionString: databaseUrl,
+      max: dbConfig.maxConnections,
+      idleTimeoutMillis: dbConfig.idleTimeoutMillis,
+      connectionTimeoutMillis: dbConfig.connectionTimeoutMillis,
     });
 
     const isDev = process.env.NODE_ENV !== 'production';
