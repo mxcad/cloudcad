@@ -11,7 +11,7 @@ import {
 } from "../../common/enums/permissions.enum";
 import { PermissionService } from "../../common/services/permission.service";
 import { DatabaseService } from "../../database/database.service";
-import { SearchScope, SearchType } from "../dto/search.dto";
+import { SearchScope, SearchType, SearchDto } from "../dto/search.dto";
 import { FileSystemPermissionService } from "../file-permission/file-system-permission.service";
 import { SearchService } from "./search.service";
 
@@ -90,7 +90,7 @@ describe("SearchService", () => {
 	describe("search scope dispatch", () => {
 		it("throws for unknown scope", async () => {
 			await expect(
-				service.search("u1", { keyword: "test", scope: "invalid" as any }),
+				service.search("u1", { keyword: "test", scope: "invalid" as SearchScope }),
 			).rejects.toThrow(BadRequestException);
 		});
 	});
@@ -107,7 +107,7 @@ describe("SearchService", () => {
 				filter: "all",
 				page: 1,
 				limit: 50,
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(result.total).toBe(1);
 			expect(result.nodes).toHaveLength(1);
@@ -122,7 +122,7 @@ describe("SearchService", () => {
 				keyword: "my",
 				scope: SearchScope.PROJECT,
 				filter: "owned",
-			} as any);
+			} as Partial<SearchDto>);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.isRoot).toBe(true);
@@ -137,7 +137,7 @@ describe("SearchService", () => {
 				keyword: "shared",
 				scope: SearchScope.PROJECT,
 				filter: "joined",
-			} as any);
+			} as Partial<SearchDto>);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.ownerId).toEqual({ not: "u1" });
@@ -151,7 +151,7 @@ describe("SearchService", () => {
 			const result = await service.search("u1", {
 				keyword: "zzz_nonexistent",
 				scope: SearchScope.PROJECT,
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(result.nodes).toEqual([]);
 			expect(result.total).toBe(0);
@@ -165,7 +165,7 @@ describe("SearchService", () => {
 				service.search("u1", {
 					keyword: "test",
 					scope: SearchScope.PROJECT_FILES,
-				} as any),
+				} as Partial<SearchDto>),
 			).rejects.toThrow(BadRequestException);
 		});
 
@@ -176,7 +176,7 @@ describe("SearchService", () => {
 				keyword: "test",
 				scope: SearchScope.PROJECT_FILES,
 				projectId: "p1",
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(result.nodes).toEqual([]);
 			expect(result.total).toBe(0);
@@ -195,7 +195,7 @@ describe("SearchService", () => {
 				scope: SearchScope.PROJECT_FILES,
 				projectId: "proj-1",
 				type: SearchType.FILE,
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(mockPermissionService.checkNodePermission).toHaveBeenCalledWith(
 				"u1",
@@ -217,7 +217,7 @@ describe("SearchService", () => {
 				scope: SearchScope.PROJECT_FILES,
 				projectId: "proj-1",
 				type: SearchType.FOLDER,
-			} as any);
+			} as Partial<SearchDto>);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.isFolder).toBe(true);
@@ -235,7 +235,7 @@ describe("SearchService", () => {
 			const result = await service.search("u1", {
 				keyword: "test",
 				scope: SearchScope.ALL_PROJECTS,
-			} as any);
+			} as Partial<SearchDto>);
 
 			// Should query user projects then search within them
 			expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledTimes(2);
@@ -249,7 +249,7 @@ describe("SearchService", () => {
 			const result = await service.search("u1", {
 				keyword: "test",
 				scope: SearchScope.ALL_PROJECTS,
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledTimes(2);
 			expect(result.nodes).toEqual([]);
@@ -267,7 +267,7 @@ describe("SearchService", () => {
 				scope: SearchScope.LIBRARY,
 				libraryKey: "drawing",
 				type: SearchType.ALL,
-			} as any);
+			} as Partial<SearchDto>);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.libraryKey).toEqual({ equals: "drawing" });
@@ -280,7 +280,7 @@ describe("SearchService", () => {
 			await service.search("u1", {
 				keyword: "common",
 				scope: SearchScope.LIBRARY,
-			} as any);
+			} as Partial<SearchDto>);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.libraryKey).toEqual({ not: null });
@@ -294,7 +294,7 @@ describe("SearchService", () => {
 				keyword: "cad",
 				scope: SearchScope.LIBRARY,
 				extension: ".dwg",
-			} as any);
+			} as Partial<SearchDto>);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.extension).toBe(".dwg");
@@ -312,7 +312,7 @@ describe("SearchService", () => {
 				scope: SearchScope.LIBRARY,
 				page: 1,
 				limit: 10,
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(result.nodes).toHaveLength(3);
 			expect(result.total).toBe(20);
@@ -331,7 +331,7 @@ describe("SearchService", () => {
 			const result = await service.search("u1", {
 				keyword: "",
 				scope: SearchScope.PROJECT,
-			} as any);
+			} as Partial<SearchDto>);
 
 			expect(result.nodes).toEqual([]);
 		});
@@ -343,7 +343,7 @@ describe("SearchService", () => {
 			const result = await service.search("u1", {
 				keyword: "test%_file",
 				scope: SearchScope.LIBRARY,
-			} as any);
+			} as Partial<SearchDto>);
 
 			// Should not throw — special chars are passed through to Prisma's contains
 			expect(result).toBeDefined();
@@ -352,7 +352,7 @@ describe("SearchService", () => {
 		it("defaults to PROJECT_FILES scope when not specified", async () => {
 			// Since scope defaults to PROJECT_FILES but no projectId provided, should throw
 			await expect(
-				service.search("u1", { keyword: "test" } as any),
+				service.search("u1", { keyword: "test" } as Partial<SearchDto>),
 			).rejects.toThrow(BadRequestException);
 		});
 	});
