@@ -22,6 +22,22 @@ interface ImportMeta {
 declare global {
   interface Window {
     MxPluginContext?: any;
+    /** mxcad-app 挂载在 window 上的全局对象 */
+    mxcadApp?: {
+      getVuetify?: () => Promise<{
+        theme: {
+          toggle: (themes: string[]) => void;
+          change: (name: string) => void;
+        };
+      }>;
+      useTheme?: () => {
+        global: {
+          name: {
+            value: string;
+          };
+        };
+      };
+    };
   }
 
   var MxPluginContext: any;

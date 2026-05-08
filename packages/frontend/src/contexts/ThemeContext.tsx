@@ -111,19 +111,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     
     // 尝试通过 mxcad-app 切换主题（双向同步）
     try {
-      const win = window as unknown as {
-        mxcadApp?: {
-          getVuetify?: () => Promise<{
-            theme: {
-              toggle: (themes: string[]) => void;
-              change: (name: string) => void;
-            };
-          }>;
-        };
-      };
-      
-      if (win.mxcadApp?.getVuetify) {
-        const vuetify = await win.mxcadApp.getVuetify();
+      if (window.mxcadApp?.getVuetify) {
+        const vuetify = await window.mxcadApp.getVuetify();
         // 调用 Vuetify 切换主题，Vue watch 会派发事件通知 React
         vuetify.theme.toggle(['light', 'dark']);
         console.log('[ThemeContext] 通过 mxcad-app 切换主题:', newTheme ? 'dark' : 'light');
@@ -142,19 +131,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const setTheme = useCallback(async (dark: boolean) => {
     // 尝试通过 mxcad-app 设置主题（双向同步）
     try {
-      const win = window as unknown as {
-        mxcadApp?: {
-          getVuetify?: () => Promise<{
-            theme: {
-              toggle: (themes: string[]) => void;
-              change: (name: string) => void;
-            };
-          }>;
-        };
-      };
-      
-      if (win.mxcadApp?.getVuetify) {
-        const vuetify = await win.mxcadApp.getVuetify();
+      if (window.mxcadApp?.getVuetify) {
+        const vuetify = await window.mxcadApp.getVuetify();
         // 调用 Vuetify 设置主题，Vue watch 会派发事件通知 React
         vuetify.theme.change(dark ? 'dark' : 'light');
         console.log('[ThemeContext] 通过 mxcad-app 设置主题:', dark ? 'dark' : 'light');
@@ -202,22 +180,10 @@ export function initThemeSync(): void {
   // 等待 mxcad-app 加载完成
   const checkAndSync = () => {
     // 检查 mxcad-app 是否可用
-    const win = window as unknown as {
-      mxcadApp?: {
-        useTheme?: () => {
-          global: {
-            name: {
-              value: string;
-            };
-          };
-        };
-      };
-    };
-
-    if (win.mxcadApp?.useTheme) {
+    if (window.mxcadApp?.useTheme) {
       try {
         // 获取当前 mxcad-app 的主题
-        const theme = win.mxcadApp.useTheme();
+        const theme = window.mxcadApp.useTheme();
         const isDarkTheme = theme.global.name.value === 'dark';
 
         // 同步到当前应用
