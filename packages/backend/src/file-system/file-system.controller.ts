@@ -184,6 +184,21 @@ export class FileSystemController {
     return this.fileSystemService.getPersonalSpace(req.user.id);
   }
 
+  @Get('personal-space/by-user/:userId')
+  @RequirePermissions([SystemPermission.SYSTEM_USER_UPDATE, SystemPermission.STORAGE_QUOTA])
+  @ApiOperation({ summary: '获取指定用户的私人空间（管理员）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取私人空间成功',
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 403, description: '无权限' })
+  async getUserPersonalSpace(
+    @Param('userId') userId: string
+  ) {
+    return this.fileSystemService.getPersonalSpace(userId);
+  }
+
   @Get('projects/:projectId')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @ApiOperation({ summary: '获取项目详情' })
