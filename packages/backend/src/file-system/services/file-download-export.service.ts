@@ -259,7 +259,7 @@ export class FileDownloadExportService {
           }
           const targetFilename = `${path.basename(originalFilename, ext)}${targetExt}`;
 
-          const conversionOptions: any = {
+          const conversionOptions: { srcpath: string; src_file_md5: string; outname: string; create_preloading_data: boolean; width?: string; height?: string; colorPolicy?: string } = {
             srcpath: mxwebFullPath.replace(/\\/g, '/'),
             src_file_md5: node.fileHash || '',
             outname: targetFilename,

@@ -12,10 +12,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import {
-  FileStatus,
-  FileSystemNode as PrismaFileSystemNode,
-} from '@prisma/client';
+import { Prisma, FileStatus, FileSystemNode as PrismaFileSystemNode } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
 import { QueryChildrenDto } from '../dto/query-children.dto';
@@ -134,7 +131,7 @@ export class FileTreeService {
 
       this.logger.log(`[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`);
 
-      let storageInfo: any = null;
+      let storageInfo: { nodeDirectoryRelativePath: string; filePath: string; nodeDirectoryPath: string; fileRelativePath: string } | null = null;
 
       if (!skipFileCopy) {
         storageInfo = await this.storageManager.allocateNodeStorage(
@@ -327,7 +324,7 @@ export class FileTreeService {
     const safeLimit = Number(limit) || 50;
     const skip = (safePage - 1) * safeLimit;
 
-    const where: any = {
+    const where: Prisma.FileSystemNodeWhereInput = {
       parentId: nodeId,
       deletedAt: includeDeleted ? undefined : null,
     };
@@ -666,7 +663,7 @@ export class FileTreeService {
 
       // 构建查询条件
       const skip = (safePage - 1) * safeLimit;
-      const where: any = {
+      const where: Prisma.FileSystemNodeWhereInput = {
         id: { in: allFileIds },
         deletedAt: includeDeleted ? undefined : null,
         isFolder: false, // 只返回文件

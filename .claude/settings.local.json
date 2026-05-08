@@ -51,7 +51,17 @@
       "Bash(cat jest.config.ts)",
       "Bash(cat jest.config.js)",
       "Bash(pnpm test *)",
-      "Bash(dir \"D:\\\\project\\\\cloudcad\\\\packages\\\\backend\")"
+      "Bash(dir \"D:\\\\project\\\\cloudcad\\\\packages\\\\backend\")",
+      "Bash(sed 's/.*operationId: \"//')",
+      "Bash(sed 's/\".*//')",
+      "Bash(find /d/project/cloudcad/packages/backend/src -name \"*.ts\" -not -name \"*.spec.ts\" -not -name \"*.test.ts\" -exec wc -l {} +)",
+      "Bash(ls \"D:\\\\\\\\project\\\\\\\\cloudcad\\\\\\\\packages\\\\\\\\frontend\\\\\\\\src\\\\\\\\pages\\\\\\\\Login/\")",
+      "Bash(ls \"D:\\\\\\\\project\\\\\\\\cloudcad\\\\\\\\packages\\\\\\\\frontend\\\\\\\\src\\\\\\\\pages\\\\\\\\Register/\")",
+      "Bash(ls \"D:\\\\\\\\project\\\\\\\\cloudcad\\\\\\\\packages\\\\\\\\frontend\\\\\\\\src\\\\\\\\pages\\\\\\\\ForgotPassword/\")",
+      "Bash(ls \"D:\\\\\\\\project\\\\\\\\cloudcad\\\\\\\\packages\\\\\\\\frontend\\\\\\\\src\\\\\\\\pages\\\\\\\\ResetPassword/\")",
+      "Bash(ls \"D:\\\\\\\\project\\\\\\\\cloudcad\\\\\\\\packages\\\\\\\\frontend\\\\\\\\src\\\\\\\\pages\\\\\\\\Login\\\\\\\\components/\")",
+      "Bash(ls \"D:\\\\\\\\project\\\\\\\\cloudcad\\\\\\\\packages\\\\\\\\frontend\\\\\\\\src\\\\\\\\pages\\\\\\\\Register\\\\\\\\components/\")",
+      "Bash(git push *)"
     ]
   },
   "enableAllProjectMcpServers": true,
