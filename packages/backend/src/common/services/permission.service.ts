@@ -499,7 +499,7 @@ export class PermissionService {
     if (uncachedPermissions.length > 0) {
       try {
         const user = await this.prisma.user.findUnique({
-          where: { id: userId },
+          where: { id: userId, deletedAt: null },
           select: {
             role: {
               select: {

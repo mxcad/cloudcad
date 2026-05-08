@@ -7,6 +7,11 @@ import { FileSystemPermissionService } from '../../file-system/file-permission/f
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { MxCadRequest } from '../types/request.types';
+import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
+
+type MockFile = Partial<Express.Multer.File>;
+type MockRequest = Partial<MxCadRequest>;
 
 describe('SaveController', () => {
   let controller: SaveController;
