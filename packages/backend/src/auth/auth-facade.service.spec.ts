@@ -183,7 +183,7 @@ describe("AuthFacadeService", () => {
 				{ provide: USER_SERVICE, useValue: mockUserService },
 				{
 					provide: "default_IORedisModuleConnectionToken",
-					useValue: {} as any,
+					useValue: {} as Partial<Redis>,
 				},
 				{ provide: RegistrationService, useValue: mockRegistrationService },
 				{ provide: LoginService, useValue: mockLoginService },
@@ -209,7 +209,7 @@ describe("AuthFacadeService", () => {
 				email: "test@example.com",
 				nickname: "Test User",
 			};
-			const req: SessionRequest = { session: {} } as any;
+			const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 			const expectedResult: AuthResponseDto = {
 				accessToken: "access_token",
 				refreshToken: "refresh_token",
@@ -245,7 +245,7 @@ describe("AuthFacadeService", () => {
 		it("should delegate to registrationService.verifyEmailAndActivate", async () => {
 			const email = "test@example.com";
 			const code = "123456";
-			const req: SessionRequest = { session: {} } as any;
+			const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 			const expectedResult: AuthResponseDto = {
 				accessToken: "access_token",
 				refreshToken: "refresh_token",
@@ -287,7 +287,7 @@ describe("AuthFacadeService", () => {
 				account: "test@example.com",
 				password: "password123",
 			};
-			const req: SessionRequest = { session: {} } as any;
+			const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 			const expectedResult: AuthResponseDto = {
 				accessToken: "access_token",
 				refreshToken: "refresh_token",
@@ -322,13 +322,13 @@ describe("AuthFacadeService", () => {
 	describe("loginByPhone", () => {
 		const phone = "+8613812345678";
 		const code = "123456";
-		const req: SessionRequest = { session: {} } as any;
+		const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 
 		it("should delegate to authProvider.loginByPhone and return result", async () => {
 			const expectedResult: AuthResponseDto = {
 				accessToken: "access_token",
 				refreshToken: "refresh_token",
-				user: { id: "user123" } as any,
+				user: { id: "user123" } as Partial<AuthResponseDto>["user"],
 			};
 			mockAuthProvider.loginByPhone.mockResolvedValue(expectedResult);
 
@@ -362,7 +362,7 @@ describe("AuthFacadeService", () => {
 			nickname: "Test User",
 		};
 		const formattedPhone = "13812345678";
-		const req: SessionRequest = { session: {} } as any;
+		const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 
 		describe("when registration is disabled", () => {
 			it("should throw BadRequestException", async () => {
@@ -530,7 +530,7 @@ describe("AuthFacadeService", () => {
 			const expectedResult: WechatLoginResponseDto = {
 				accessToken: "access_token",
 				refreshToken: "refresh_token",
-				user: { id: "user123" } as any,
+				user: { id: "user123" } as Partial<AuthResponseDto>["user"],
 				requireEmailBinding: false,
 				requirePhoneBinding: false,
 				needRegister: false,
@@ -562,7 +562,7 @@ describe("AuthFacadeService", () => {
 			const expectedResult: AuthResponseDto = {
 				accessToken: "new_access_token",
 				refreshToken: "new_refresh_token",
-				user: { id: "user123" } as any,
+				user: { id: "user123" } as Partial<AuthResponseDto>["user"],
 			};
 			mockAuthProvider.refreshToken.mockResolvedValue(expectedResult);
 
@@ -874,7 +874,7 @@ describe("AuthFacadeService", () => {
 				message: "微信绑定成功",
 			};
 
-			mockAccountBindingService.bindWechat.mockResolvedValue(result as any);
+			mockAccountBindingService.bindWechat.mockResolvedValue(result);
 
 			const response = await service.bindWechat(userId, code, state);
 
@@ -942,7 +942,7 @@ describe("AuthFacadeService", () => {
 		const phone = "+8613812345678";
 		const code = "123456";
 		const formattedPhone = "13812345678";
-		const req: SessionRequest = { session: {} } as any;
+		const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 
 		describe("when verification code is invalid", () => {
 			it("should throw BadRequestException", async () => {
@@ -1053,7 +1053,7 @@ describe("AuthFacadeService", () => {
 		const tempToken = "temp_token";
 		const email = "test@example.com";
 		const code = "123456";
-		const req: SessionRequest = { session: {} } as any;
+		const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 
 		beforeEach(() => {
 			mockJwtService.verify.mockReturnValue({
@@ -1178,7 +1178,7 @@ describe("AuthFacadeService", () => {
 		const phone = "+8613812345678";
 		const code = "123456";
 		const formattedPhone = "13812345678";
-		const req: SessionRequest = { session: {} } as any;
+		const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 
 		beforeEach(() => {
 			mockJwtService.verify.mockReturnValue({
@@ -1309,7 +1309,7 @@ describe("AuthFacadeService", () => {
 			nickname: "Test User",
 		};
 		const formattedPhone = "13812345678";
-		const req: SessionRequest = { session: {} } as any;
+		const req: SessionRequest = { session: {} } as Partial<SessionRequest>;
 
 		describe("when email verification fails", () => {
 			it("should throw BadRequestException", async () => {

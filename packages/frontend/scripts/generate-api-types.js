@@ -32,14 +32,19 @@ if (!fs.existsSync(SWAGGER_FILE)) {
 const swaggerData = JSON.parse(fs.readFileSync(SWAGGER_FILE, 'utf8'));
 
 // 运行 openapicmd typegen
-const binExt = process.platform === 'win32' ? '.CMD' : '';
-const openapiBin = path.join(__dirname, `../node_modules/.bin/openapi${binExt}`);
+// bypass .cmd wrapper — call node directly with --no-experimental-detect-module
+// to prevent Node 22+ from treating openapicmd (CJS) as ESM due to dynamic import()
+const nodeBin = process.execPath;
+const openapiEntry = path.join(__dirname, '../node_modules/openapicmd/bin/run.js');
 
 try {
-  const output = execSync(`"${openapiBin}" typegen "${SWAGGER_FILE}"`, {
-    encoding: 'utf8',
-    maxBuffer: 50 * 1024 * 1024,
-  });
+  const output = execSync(
+    `"${nodeBin}" --no-experimental-detect-module "${openapiEntry}" typegen "${SWAGGER_FILE}"`,
+    {
+      encoding: 'utf8',
+      maxBuffer: 50 * 1024 * 1024,
+    },
+  );
 
   const outputDir = path.dirname(OUTPUT_FILE);
   if (!fs.existsSync(outputDir)) {
