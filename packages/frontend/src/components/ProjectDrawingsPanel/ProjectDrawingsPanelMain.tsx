@@ -26,7 +26,6 @@ import {
 import { libraryControllerGetDrawingAllFiles, libraryControllerGetBlockAllFiles } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
-import type { ProjectDto, UpdateNodeDto } from '@/api-sdk';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { SystemPermission } from '@/constants/permissions';
@@ -139,7 +138,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     const loadProjects = async () => {
       try {
         const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
-        const projectList = response?.nodes || [];
+        const projectList = response[200]?.nodes || [];
         setProjects(projectList.map((p): FileSystemNode => ({
           id: p.id, name: p.name, isFolder: true, isRoot: true,
           updatedAt: p.updatedAt, parentId: undefined,
