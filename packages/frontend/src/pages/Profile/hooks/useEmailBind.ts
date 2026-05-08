@@ -6,13 +6,13 @@ import {
   authControllerVerifyUnbindEmailCode,
   authControllerRebindEmail,
 } from '@/api-sdk';
+import type { BindEmailDto, VerifyUnbindCodeDto, RebindEmailDto } from '@/api-sdk/types.gen';
 
 export const useEmailBind = () => {
   const sendBindCode = useMutation({
     mutationFn: async (params: { email: string; isRebind?: boolean }) => {
       const result = await authControllerSendBindEmailCode({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { email: params.email, isRebind: params.isRebind },
+        body: { email: params.email, isRebind: params.isRebind } satisfies BindEmailDto,
       });
       if (result.error) throw result.error;
       return result;
@@ -40,8 +40,7 @@ export const useEmailBind = () => {
   const verifyUnbindEmail = useMutation({
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindEmailCode({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { code: params.code },
+        body: { code: params.code } satisfies VerifyUnbindCodeDto,
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string; token?: string };
@@ -51,8 +50,7 @@ export const useEmailBind = () => {
   const rebindEmail = useMutation({
     mutationFn: async (params: { email: string; code: string; token: string }) => {
       const result = await authControllerRebindEmail({
-        // @ts-expect-error: API SDK body type misgenerated as never
-        body: { email: params.email, code: params.code, token: params.token },
+        body: { email: params.email, code: params.code, token: params.token } satisfies RebindEmailDto,
       });
       if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
