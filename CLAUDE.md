@@ -87,3 +87,7 @@ These upgrades introduced breaking type changes. When upgrading any of these, ex
 ## Workshop Setup
 
 Root `tsconfig.json` uses `composite: true` + `incremental: true`. Each package overrides to `composite: false`.
+
+## 使用技能
+
+当遇到项目相关问题时先查找项目技能是否可以使用
