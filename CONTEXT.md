@@ -109,6 +109,7 @@ CloudCAD 和 mxcad-app 的关系：
 - [SDD 规格文档](docs/sdd/)
 - [ADR 0001 - 转换引擎合并](docs/adr/0001-merge-conversion-engine-into-backend.md)
 - [ADR 0002 - 解耦 file-operations 模块](docs/adr/0002-decouple-file-operations-module.md)
+- [ADR 0003 - IPermissionStore 策略模式解耦权限检查](docs/adr/0003-permission-store-strategy-pattern.md)
 
 ## 图纸打开流程对齐验证（2026-05-09）
 
@@ -153,4 +154,23 @@ CloudCAD 和 mxcad-app 的关系：
 - **资源库 hooks**：`useLibrary.ts` 单体 hook 拆分为 `useLibraryQuery`、`useLibraryMutations`、`useLibraryPagination`、`useLibraryQuota`、`useLibraryDownload`、`useLibraryModals`
 - **项目管理**：`FileSystemManager.tsx` 单体页面拆分为 `FileSystemManager/` 子组件 + hooks（`useDragAndDrop`、`useMoveCopy`、`useVersionHistory`）
 - **mxcad 管理**：`mxcadManager.ts` 单体服务拆分为 `mxcadManager/` 子模块（check、extRef、save、thumbnail、types）
+
+## 项目成员角色管理对齐验证（2026-05-09）
+
+`refactor/circular-deps` 分支与 `main` 分支逐项对比，成员角色管理功能完全一致：
+
+| # | 验证项 | 结论 |
+|---|--------|------|
+| 1 | 添加成员（DTO `roleId`→`projectRoleId`，语义不变） | ✅ 一致 |
+| 2 | 移除成员（新增软删除用户校验 + 错误日志） | ✅ 一致 |
+| 3 | 更新成员角色（逻辑不变，拒绝直接设置 OWNER） | ✅ 一致 |
+| 4 | 获取成员列表（返回字段含 `projectRoleId`/`projectRoleName`/`permissions`） | ✅ 一致 |
+| 5 | 项目角色 CRUD（返回类型从 `any`→强 Prisma include 类型） | ✅ 一致 |
+| 6 | 所有权转让（修复：前端误调用 `updateProjectMember`，改为 `POST .../transfer` 端点，事务内降级前所有者） | ✅ 已修复 |
+| 7 | 成员弹窗 UI（SDK 生成层替换手写 service 层，交互不变） | ✅ 一致 |
+| 8 | 权限检查（`IPermissionStore` 策略模式，`PrismaPermissionStore` 100% 等价原 Prisma 逻辑） | ✅ 增强 |
+
+**关键发现：** 所有权转让发现 bug — 前端 `MembersModal.tsx` 错误调用 `updateProjectMember({ roleName: 'PROJECT_OWNER' })`，后端 DTO 无此字段且服务端显式拒绝。已修复为 `client.post()` 直调正确端点 `POST /api/v1/file-system/projects/:projectId/transfer`。详见 ADR 0003。
+
+**已删除端点（无影响）：** `GET /roles/category/:category`、`GET /roles/project-roles/:id` — 无前端调用，文档已标记"待删除"。
 
