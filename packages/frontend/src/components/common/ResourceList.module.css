@@ -491,13 +491,13 @@
 .gridViewGallery {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-around;
-  gap: 6px;
+  justify-content: space-evenly;
+  gap: 8px;
 }
 
 /* 图库模式网格视图中的卡片 - 固定宽度 */
 .gridViewGallery > * {
-  width: 140px;
+  width: 120px;
   flex-shrink: 0;
 }
 

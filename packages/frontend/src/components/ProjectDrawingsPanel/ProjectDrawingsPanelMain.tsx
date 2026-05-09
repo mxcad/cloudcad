@@ -88,7 +88,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     currentPage, setCurrentPage,
     loadNodes, buildBreadcrumbPath,
     loadNodesRef, buildBreadcrumbPathRef,
-    activeRequestId, reset: resetNodes,
+    reset: resetNodes,
   } = useLoadNodes(isLibraryMode, libraryType);
 
   // Library categories
@@ -282,6 +282,19 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       loadNodes(currentCategoryId, 1, '', false);
     }
   }, [isLibraryMode, categoriesLoaded, libraryRootId, libraryType]);
+
+  // 分类选择：当用户点击分类时重新加载节点列表
+  useEffect(() => {
+    if (!isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
+    setSearchQuery('');
+    setCurrentPage(1);
+    const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1];
+    if (currentCategoryId === 'all') {
+      loadNodes(libraryRootId, 1);
+    } else if (currentCategoryId) {
+      loadNodes(currentCategoryId, 1, '', false);
+    }
+  }, [selectedCategoryPath]);
 
   // Reset on libraryType change
   useEffect(() => {
@@ -585,6 +598,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         <CategoryTabs categories={categories} selectedPath={selectedCategoryPath} onSelect={handleCategorySelect} />
       )}
       <ResourceList
+        galleryMode={isLibraryMode}
         items={resourceItems} loading={loading} searchQuery={searchQuery}
         onSearchChange={(query) => { setSearchQuery(query); setCurrentPage(1);
           if (isLibraryMode) { const cid = selectedCategoryPath[selectedCategoryPath.length - 1]; const nid = cid === 'all' ? libraryRootId : cid; if (nid) loadNodes(nid, 1, query); }

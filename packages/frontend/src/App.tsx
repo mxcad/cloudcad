@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useRef } from 'react';
 import {
   Navigate,
   Route,
@@ -129,14 +129,22 @@ const PermissionRoute: React.FC<{
 // 应用内容组件
 // ============================================================================
 
-// CAD 编辑器路由守卫 — 仅在 / 或 /cad-editor 路由下才挂载，
-// 避免其他页面（如 /projects）触发 CAD 引擎及其重依赖的懒加载。
+// CAD 编辑器路由守卫 — 首次仅在 / 或 /cad-editor 路由下挂载（懒加载优化），
+// 一旦加载即永久驻留以保护 WebGL 上下文和主题双向同步（Vue watch）。
+// 原因：CADEditorDirect 卸载会销毁 initThemeSync 的 Vue watch，
+// 导致 CAD 内部主题切换与项目侧栏主题切换无法双向同步。
 function CADEditorRouteGuard() {
   const location = useLocation();
   const isCADRoute =
     location.pathname === '/' || location.pathname.startsWith('/cad-editor');
 
-  if (!isCADRoute) return null;
+  // 跟踪 CAD 是否已首次加载。加载后必须永久驻留 DOM。
+  const everLoadedRef = useRef(false);
+  if (isCADRoute) {
+    everLoadedRef.current = true;
+  }
+
+  if (!isCADRoute && !everLoadedRef.current) return null;
 
   return (
     <Suspense fallback={
