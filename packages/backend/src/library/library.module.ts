@@ -23,7 +23,6 @@ import { FileTreeModule } from '../file-system/file-tree/file-tree.module';
 import { StorageQuotaModule } from '../file-system/storage-quota/storage-quota.module';
 import { DatabaseService } from '../database/database.service';
 import {
-  PublicLibraryService,
   createDrawingLibraryProvider,
   createBlockLibraryProvider,
   PUBLIC_LIBRARY_PROVIDER_DRAWING,

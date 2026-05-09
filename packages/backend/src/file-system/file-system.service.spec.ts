@@ -388,10 +388,4 @@ describe('FileSystemService', () => {
     });
   });
 
-  // ==================== Unimplemented methods ====================
-  describe('unimplemented methods', () => {
-    it('uploadFile throws not implemented', async () => {
-      await expect(service.uploadFile('u1', 'p1', {} as any)).rejects.toThrow('尚未实现');
-    });
-  });
 });

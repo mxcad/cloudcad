@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemService } from '../../file-system/file-system.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
@@ -26,7 +26,6 @@ import { ThumbnailGenerationService } from '../infra/thumbnail-generation.servic
 import {
   getThumbnailFileName,
   THUMBNAIL_FORMATS,
-  type ThumbnailFormat,
 } from '../infra/thumbnail-utils';
 import { FileTypeDetector } from '../utils/file-type-detector';
 import { StorageService } from '../../storage/storage.service';

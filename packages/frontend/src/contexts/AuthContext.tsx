@@ -243,9 +243,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const apiResponse = response.data!;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
-      if (apiResponse.message && !apiResponse.accessToken) {
+      if ((apiResponse as Record<string, unknown>).message && !apiResponse.accessToken) {
         return {
-          message: apiResponse.message,
+          message: (apiResponse as Record<string, unknown>).message as string,
           email: (apiResponse as unknown as Record<string, unknown>).email as string | undefined,
         };
       }

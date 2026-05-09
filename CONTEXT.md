@@ -108,4 +108,49 @@ CloudCAD 和 mxcad-app 的关系：
 - [DDD 限界上下文映射图](docs/ddd/context-map.md)
 - [SDD 规格文档](docs/sdd/)
 - [ADR 0001 - 转换引擎合并](docs/adr/0001-merge-conversion-engine-into-backend.md)
+- [ADR 0002 - 解耦 file-operations 模块](docs/adr/0002-decouple-file-operations-module.md)
+
+## 图纸打开流程对齐验证（2026-05-09）
+
+`refactor/circular-deps` 分支与 `main` 分支逐项对比，用户交互层全部一致：
+
+| # | 验证项 | 结论 |
+|---|--------|------|
+| 1 | 路由跳转（`/cad-editor/:fileId`、`?library=drawing/block`、`?v=`） | ✅ 一致 |
+| 2 | 文件获取与错误提示（401/404/网络错误/deletedAt/!fileHash/`!updatedAt`新增保护） | ✅ 一致 |
+| 3 | 权限校验（CAD_SAVE/FILE_DOWNLOAD/CAD_EXTERNAL_REFERENCE） | ✅ 一致 |
+| 4 | mxcad 初始化（`initializeMxCADView`/`openFile`/`openFile_noCache`/`openUploadedFile`） | ✅ 一致 |
+| 5 | mxweb URL 构造（`/api/v1/mxcad/filesData/...` 路径前缀同步） | ✅ 一致 |
+| 6 | 加载状态（加载/错误/空/成功，Strict Mode 白屏修复，canvas 渲染后隐藏 loading） | ✅ 增强 |
+| 7 | 后端 mxcad 模块（重构为 core/save/upload/infra/conversion 子模块，API 端点未变） | ✅ 一致 |
+| 8 | 外部参照（检查缺失参照 → 上传 → 打开文件） | ✅ 一致 |
+
+**关键发现：** `openFile` 的 `noCache` 参数当前分支已保留（类方法 `MxCADManager.openFile(fileUrl, noCache?)`），`openFile_noCache` 命令正常注册。后端重构无 API 契约变更。
+
+## 移动/复制功能对齐验证（2026-05-09）
+
+`refactor/circular-deps` 分支与 `main` 分支逐项对比，move/copy 文件、文件夹功能全部一致：
+
+| # | 验证项 | 结论 |
+|---|--------|------|
+| 1 | API 路由（`POST nodes/:nodeId/move`、`POST nodes/:nodeId/copy`） | ✅ 一致 |
+| 2 | 请求体参数（`{ targetParentId }`） | ✅ 一致 |
+| 3 | 后端 moveNode 逻辑（校验→去重命名→更新 parentId/projectId→清除配额缓存） | ✅ 一致 |
+| 4 | 后端 copyNode 逻辑（校验→去重命名→copyNodeRecursive→清除配额缓存） | ✅ 一致 |
+| 5 | 后端 copyNodeRecursive（创建节点→复制存储文件→递归复制子节点→子节点去重命名） | ✅ 一致 |
+| 6 | 权限控制（`FILE_MOVE`/`FILE_COPY` 枚举值及角色分配） | ✅ 一致 |
+| 7 | 前端资源库 move/copy（`useLibraryMutations` hook，react-query mutation，相同 API 参数） | ✅ 一致 |
+| 8 | 前端项目文件 move/copy（`useMoveCopy` hook，支持单选和批量） | ✅ 一致 |
+| 9 | CSRF 保护 | 🟡 新增（安全增强，不影响功能） |
+
+**关键发现：** 后端 moveNode/copyNode/copyNodeRecursive 逻辑逐行一致。变更仅为文件位置移动（`file-system/services/` → `file-operations/`）、Controller 直调子 Service（跳过 Facade）、前端重构为独立 hook + react-query、存储抽象层 `IStorageProvider` 替换直接 `fs` 调用。无 API 契约变更。
+
+## 前端架构重构（2026-05-09）
+
+`refactor/circular-deps` 分支前端重构要点：
+
+- **API 层**：手写 `services/*Api.ts` 替换为自动生成 `@/api-sdk`（基于 OpenAPI 规范）
+- **资源库 hooks**：`useLibrary.ts` 单体 hook 拆分为 `useLibraryQuery`、`useLibraryMutations`、`useLibraryPagination`、`useLibraryQuota`、`useLibraryDownload`、`useLibraryModals`
+- **项目管理**：`FileSystemManager.tsx` 单体页面拆分为 `FileSystemManager/` 子组件 + hooks（`useDragAndDrop`、`useMoveCopy`、`useVersionHistory`）
+- **mxcad 管理**：`mxcadManager.ts` 单体服务拆分为 `mxcadManager/` 子模块（check、extRef、save、thumbnail、types）
 

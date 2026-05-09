@@ -70,7 +70,6 @@ import {
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
 import { SaveLibraryNodeDto } from './dto/save-library-node.dto';
 import { SaveLibraryAsDto } from './dto/save-library-as.dto';
-import { UploadFilesDto } from '../mxcad/dto/upload-files.dto';
 import {
   IPublicLibraryProvider,
   PUBLIC_LIBRARY_PROVIDER_DRAWING,
@@ -78,15 +77,16 @@ import {
 } from './interfaces/public-library-provider.interface';
 
 /**
- * 公共资源库控制器
+ * Public resource library controller
  *
- * 设计思想：
- * - 公共资源库是一个特殊的全局项目，不是某个人的资源库
- * - 读操作：公开访问（无需登录）
- * - 写操作：需要登录 + LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE 权限
- * - 无版本管理、无回收站（删除即永久删除）
+ * Design principles:
+ * - The public library is a special global project, not any user's personal resource
+ * - Read operations: public access (no login required)
+ * - Download: public access (no login required), supports mxweb/dwg/dxf formats
+ * - Write operations: requires login + LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE permission
+ * - No version control, no recycle bin (delete = permanent delete)
  */
-@ApiTags('library', '公共资源库')
+@ApiTags('library', 'Public resource library')
 @Controller('library')
 export class LibraryController {
   private readonly logger = new Logger(LibraryController.name);
@@ -106,52 +106,29 @@ export class LibraryController {
     private readonly blockLibraryProvider: IPublicLibraryProvider
   ) {}
 
-  // ========== 图纸库接口（只读） ==========
+  // ========== Drawing library - read ==========
 
-  /**
-   * 获取图纸库详情
-   */
   @Get('drawing')
   @Public()
-  @ApiOperation({ summary: '获取图纸库详情' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: FileSystemNodeDto,
-  })
+  @ApiOperation({ summary: 'Get drawing library details' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
   async getDrawingLibrary() {
     return this.drawingLibraryProvider.getRootNode();
   }
 
-  /**
-   * 获取图纸库全部三级分类（一次请求返回完整分类树）
-   *
-   * 使用递归 CTE 在数据库层面一次查询全部层级，避免前端多次 API 调用。
-   * 分类深度最多 3 层（一级 / 二级 / 三级）。
-   */
   @Get('drawing/categories')
   @Public()
-  @ApiOperation({ summary: '获取图纸库全部三级分类（一次请求）' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-  })
+  @ApiOperation({ summary: 'Get all three-level categories of drawing library (single request)' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async getDrawingCategories() {
     const rootId = await this.drawingLibraryProvider.getLibraryId();
     return this.fileSystemService.getCategoryTree(rootId);
   }
 
-  /**
-   * 获取图纸库子节点列表
-   */
   @Get('drawing/children/:nodeId')
   @Public()
-  @ApiOperation({ summary: '获取图纸库子节点列表' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: NodeListResponseDto,
-  })
+  @ApiOperation({ summary: 'Get child nodes of drawing library' })
+  @ApiResponse({ status: 200, description: 'Success', type: NodeListResponseDto })
   async getDrawingChildren(
     @Param('nodeId') nodeId: string,
     @Query() query?: QueryChildrenDto
@@ -164,17 +141,10 @@ export class LibraryController {
     return this.fileSystemService.getChildren(actualNodeId, mockUserId, query);
   }
 
-  /**
-   * 递归获取图纸库节点下的所有文件（包括子目录）
-   */
   @Get('drawing/all-files/:nodeId')
   @Public()
-  @ApiOperation({ summary: '递归获取图纸库节点下的所有文件' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: NodeListResponseDto,
-  })
+  @ApiOperation({ summary: 'Recursively get all files under drawing library node' })
+  @ApiResponse({ status: 200, description: 'Success', type: NodeListResponseDto })
   async getDrawingAllFiles(
     @Param('nodeId') nodeId: string,
     @Query() query?: QueryChildrenDto
@@ -184,88 +154,50 @@ export class LibraryController {
       nodeId === 'root'
         ? await this.drawingLibraryProvider.getLibraryId()
         : nodeId;
-    return this.fileSystemService.getAllFilesUnderNode(
-      actualNodeId,
-      mockUserId,
-      query
-    );
+    return this.fileSystemService.getAllFilesUnderNode(actualNodeId, mockUserId, query);
   }
 
-  /**
-   * 图纸库统一文件访问路由（公开访问）
-   *
-   * URL 格式：/api/library/drawing/filesData/*path
-   */
   @Get('drawing/filesData/*path')
   @Public()
-  @ApiOperation({ summary: '获取图纸库文件（统一入口）' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    content: { 'application/octet-stream': {} },
-  })
-  async getDrawingFile(
-    @Param('path') filePath: string[],
-    @Res() res: Response
-  ) {
+  @ApiOperation({ summary: 'Serve drawing library file (unified entry)' })
+  @ApiResponse({ status: 200, description: 'Success', content: { 'application/octet-stream': {} } })
+  async getDrawingFile(@Param('path') filePath: string[], @Res() res: Response) {
     const filename = filePath.join('/');
     return this.mxcadFileHandler.serveFile(filename, res);
   }
 
-  /**
-   * 获取图纸库节点详情
-   */
   @Get('drawing/nodes/:nodeId')
   @Public()
-  @ApiOperation({ summary: '获取图纸库节点详情' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: FileSystemNodeDto,
-  })
+  @ApiOperation({ summary: 'Get drawing library node details' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
   async getDrawingNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
-  /**
-   * 下载图纸库文件（公开访问）
-   */
   @Get('drawing/nodes/:nodeId/download')
   @Public()
-  @ApiOperation({ summary: '下载图纸库文件（公开）' })
-  @ApiResponse({
-    status: 200,
-    description: '下载成功',
-    type: FileContentResponseDto,
-  })
+  @ApiOperation({ summary: 'Download drawing library file (public)' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileContentResponseDto })
   async downloadDrawingNode(
     @Param('nodeId') nodeId: string,
     @Request() req,
     @Res() res: Response
   ) {
     const userId = req.user?.id || 'system';
-    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, {
-      clientIp: req.ip,
-    });
+    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, { clientIp: req.ip });
   }
 
-  /**
-   * 获取图纸库文件缩略图
-   */
   @Get('drawing/nodes/:nodeId/thumbnail')
   @Public()
-  @ApiOperation({ summary: '获取图纸库文件缩略图' })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiOperation({ summary: 'Get drawing library file thumbnail' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async getDrawingThumbnail(@Param('nodeId') nodeId: string, @Request() req) {
     const mockUserId = 'system';
     return this.fileSystemService.checkFileAccess(nodeId, mockUserId);
   }
 
-  // ========== 图纸库写接口 ==========
+  // ========== Drawing library - write ==========
 
-  /**
-   * 覆盖保存图纸库文件（需要图纸库管理权限）
-   */
   @Post('drawing/save/:nodeId')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
@@ -273,8 +205,8 @@ export class LibraryController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '覆盖保存图纸库文件' })
-  @ApiResponse({ status: 200, description: '保存成功' })
+  @ApiOperation({ summary: 'Overwrite save drawing library file' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async saveDrawingNode(
     @Param('nodeId') nodeId: string,
     @Body() dto: SaveLibraryNodeDto,
@@ -285,9 +217,6 @@ export class LibraryController {
     return this.saveLibraryNode(nodeId, file, req);
   }
 
-  /**
-   * 另存为图纸到图纸库（需要图纸库管理权限）
-   */
   @Post('drawing/save-as')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
@@ -295,8 +224,8 @@ export class LibraryController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '另存为图纸到图纸库' })
-  @ApiResponse({ status: 200, description: '保存成功' })
+  @ApiOperation({ summary: 'Save-as drawing to drawing library' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async saveDrawingAs(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: SaveLibraryAsDto,
@@ -305,124 +234,95 @@ export class LibraryController {
     return this.saveLibraryAs(file, dto, req, 'drawing');
   }
 
-  /**
-   * 上传图纸库文件（完整文件上传，复用 MxCAD 转换逻辑）
-   */
-  @Post('drawing/upload')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '上传图纸库文件' })
-  @ApiResponse({ status: 201, description: '上传成功' })
-  async uploadDrawingFile(
-    @Request() req,
-    @Body() uploadFilesDto: UploadFilesDto,
-    @UploadedFile() file?: Express.Multer.File
-  ) {
-    return this.uploadLibraryFile(uploadFilesDto, file, req);
-  }
-
-  /**
-   * 上传图纸库文件（分片上传，复用 MxCAD 转换逻辑）
-   */
-  @Post('drawing/upload-chunk')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '上传图纸库文件（分片）' })
-  @ApiResponse({ status: 201, description: '上传成功' })
-  async uploadDrawingChunk(
-    @Request() req,
-    @Body() uploadFilesDto: UploadFilesDto,
-    @UploadedFile() file?: Express.Multer.File
-  ) {
-    return this.uploadLibraryChunk(uploadFilesDto, file, req);
-  }
-
-  /**
-   * 创建图纸库文件夹
-   */
   @Post('drawing/folders')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建图纸库文件夹' })
-  @ApiResponse({
-    status: 201,
-    description: '文件夹创建成功',
-    type: FileSystemNodeDto,
-  })
-  async createDrawingFolder(
-    @Body() dto: CreateFolderDto,
-    @Request() req,
-  ) {
+  @ApiOperation({ summary: 'Create folder in drawing library' })
+  @ApiResponse({ status: 201, description: 'Success', type: FileSystemNodeDto })
+  async createDrawingFolder(@Body() dto: CreateFolderDto, @Request() req) {
     const userId = req.user.id;
     const parentId =
       !dto.parentId || dto.parentId === 'root'
         ? await this.drawingLibraryProvider.getLibraryId()
         : dto.parentId;
-    await this.validateLibraryParent(parentId, 'drawing');
+    await this.validateLibraryNode(parentId, 'drawing');
     return this.fileSystemService.createFolder(userId, parentId, dto);
   }
 
-  /**
-   * 删除图纸库节点
-   */
   @Delete('drawing/nodes/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete drawing library node' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  async deleteDrawingNode(
+    @Param('nodeId') nodeId: string,
+    @Query('permanently') permanently?: boolean,
+  ) {
+    return this.fileSystemService.deleteNode(nodeId, permanently ?? true);
+  }
 
-  // ========== 图块库接口（只读） ==========
+  @Patch('drawing/nodes/:nodeId')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rename drawing library node' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
+  async renameDrawingNode(@Param('nodeId') nodeId: string, @Body() dto: UpdateNodeDto) {
+    return this.fileSystemService.updateNode(nodeId, dto);
+  }
 
-  /**
-   * 获取图块库详情
-   */
+  @Post('drawing/nodes/:nodeId/move')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Move drawing library node' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
+  async moveDrawingNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'drawing');
+    return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
+  }
+
+  @Post('drawing/nodes/:nodeId/copy')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Copy drawing library node' })
+  @ApiResponse({ status: 201, description: 'Success', type: FileSystemNodeDto })
+  async copyDrawingNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'drawing');
+    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
+  }
+
+  // ========== Block library - read ==========
+
   @Get('block')
   @Public()
-  @ApiOperation({ summary: '获取图块库详情' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: FileSystemNodeDto,
-  })
+  @ApiOperation({ summary: 'Get block library details' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
   async getBlockLibrary() {
     return this.blockLibraryProvider.getRootNode();
   }
 
-  /**
-   * 获取图块库全部三级分类（一次请求返回完整分类树）
-   *
-   * 使用递归 CTE 在数据库层面一次查询全部层级，避免前端多次 API 调用。
-   * 分类深度最多 3 层（一级 / 二级 / 三级）。
-   */
   @Get('block/categories')
   @Public()
-  @ApiOperation({ summary: '获取图块库全部三级分类（一次请求）' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-  })
+  @ApiOperation({ summary: 'Get all three-level categories of block library (single request)' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async getBlockCategories() {
     const rootId = await this.blockLibraryProvider.getLibraryId();
     return this.fileSystemService.getCategoryTree(rootId);
   }
 
-  /**
-   * 获取图块库子节点列表
-   */
   @Get('block/children/:nodeId')
   @Public()
-  @ApiOperation({ summary: '获取图块库子节点列表' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: NodeListResponseDto,
-  })
+  @ApiOperation({ summary: 'Get child nodes of block library' })
+  @ApiResponse({ status: 200, description: 'Success', type: NodeListResponseDto })
   async getBlockChildren(
     @Param('nodeId') nodeId: string,
     @Query() query?: QueryChildrenDto
@@ -435,17 +335,10 @@ export class LibraryController {
     return this.fileSystemService.getChildren(actualNodeId, mockUserId, query);
   }
 
-  /**
-   * 递归获取图块库节点下的所有文件（包括子目录）
-   */
   @Get('block/all-files/:nodeId')
   @Public()
-  @ApiOperation({ summary: '递归获取图块库节点下的所有文件' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: NodeListResponseDto,
-  })
+  @ApiOperation({ summary: 'Recursively get all files under block library node' })
+  @ApiResponse({ status: 200, description: 'Success', type: NodeListResponseDto })
   async getBlockAllFiles(
     @Param('nodeId') nodeId: string,
     @Query() query?: QueryChildrenDto
@@ -455,26 +348,13 @@ export class LibraryController {
       nodeId === 'root'
         ? await this.blockLibraryProvider.getLibraryId()
         : nodeId;
-    return this.fileSystemService.getAllFilesUnderNode(
-      actualNodeId,
-      mockUserId,
-      query
-    );
+    return this.fileSystemService.getAllFilesUnderNode(actualNodeId, mockUserId, query);
   }
 
-  /**
-   * 图块库统一文件访问路由（公开访问）
-   *
-   * URL 格式：/api/library/block/filesData/*path
-   */
   @Get('block/filesData/*path')
   @Public()
-  @ApiOperation({ summary: '获取图块库文件（统一入口）' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    content: { 'application/octet-stream': {} },
-  })
+  @ApiOperation({ summary: 'Serve block library file (unified entry)' })
+  @ApiResponse({ status: 200, description: 'Success', content: { 'application/octet-stream': {} } })
   async getBlockFile(
     @Param('path') filePath: string[],
     @Res() res: Response,
@@ -482,77 +362,42 @@ export class LibraryController {
   ) {
     const filename = filePath.join('/');
     const expressReq = req as any;
-
-    this.logger.log(`
-========================================
-[图块库文件访问] 收到请求
-- 完整URL: ${expressReq.protocol}://${expressReq.get('host')}${expressReq.originalUrl}
-- 请求路径: ${filename}
-- 请求方法: ${expressReq.method}
-- 来源页面(Referer): ${expressReq.get('referer') || '无'}
-- 客户端IP: ${expressReq.ip}
-- User-Agent: ${expressReq.get('user-agent')}
-- 时间: ${new Date().toISOString()}
-========================================
-    `);
-
+    this.logger.log(`[Block file access] path: ${filename}, from: ${expressReq.get('referer') || 'N/A'}`);
     return this.mxcadFileHandler.serveFile(filename, res);
   }
 
-  /**
-   * 获取图块库节点详情
-   */
   @Get('block/nodes/:nodeId')
   @Public()
-  @ApiOperation({ summary: '获取图块库节点详情' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: FileSystemNodeDto,
-  })
+  @ApiOperation({ summary: 'Get block library node details' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
   async getBlockNode(@Param('nodeId') nodeId: string) {
     return this.fileSystemService.getNodeTree(nodeId);
   }
 
-  /**
-   * 下载图块库文件（公开访问）
-   */
   @Get('block/nodes/:nodeId/download')
   @Public()
-  @ApiOperation({ summary: '下载图块库文件（公开）' })
-  @ApiResponse({
-    status: 200,
-    description: '下载成功',
-    type: FileContentResponseDto,
-  })
+  @ApiOperation({ summary: 'Download block library file (public)' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileContentResponseDto })
   async downloadBlockNode(
     @Param('nodeId') nodeId: string,
     @Request() req,
     @Res() res: Response
   ) {
     const userId = req.user?.id || 'system';
-    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, {
-      clientIp: req.ip,
-    });
+    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, { clientIp: req.ip });
   }
 
-  /**
-   * 获取图块库文件缩略图
-   */
   @Get('block/nodes/:nodeId/thumbnail')
   @Public()
-  @ApiOperation({ summary: '获取图块库文件缩略图' })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiOperation({ summary: 'Get block library file thumbnail' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async getBlockThumbnail(@Param('nodeId') nodeId: string, @Request() req) {
     const mockUserId = 'system';
     return this.fileSystemService.checkFileAccess(nodeId, mockUserId);
   }
 
-  // ========== 图块库写接口 ==========
+  // ========== Block library - write ==========
 
-  /**
-   * 覆盖保存图块库文件（需要图块库管理权限）
-   */
   @Post('block/save/:nodeId')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
@@ -560,8 +405,8 @@ export class LibraryController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '覆盖保存图块库文件' })
-  @ApiResponse({ status: 200, description: '保存成功' })
+  @ApiOperation({ summary: 'Overwrite save block library file' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async saveBlockNode(
     @Param('nodeId') nodeId: string,
     @Body() dto: SaveLibraryNodeDto,
@@ -572,9 +417,6 @@ export class LibraryController {
     return this.saveLibraryNode(nodeId, file, req);
   }
 
-  /**
-   * 另存为图块到图块库（需要图块库管理权限）
-   */
   @Post('block/save-as')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
@@ -582,8 +424,8 @@ export class LibraryController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '另存为图块到图块库' })
-  @ApiResponse({ status: 200, description: '保存成功' })
+  @ApiOperation({ summary: 'Save-as block to block library' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async saveBlockAs(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: SaveLibraryAsDto,
@@ -592,82 +434,30 @@ export class LibraryController {
     return this.saveLibraryAs(file, dto, req, 'block');
   }
 
-  /**
-   * 上传图块库文件（完整文件上传，复用 MxCAD 转换逻辑）
-   */
-  @Post('block/upload')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '上传图块库文件' })
-  @ApiResponse({ status: 201, description: '上传成功' })
-  async uploadBlockFile(
-    @Request() req,
-    @Body() uploadFilesDto: UploadFilesDto,
-    @UploadedFile() file?: Express.Multer.File
-  ) {
-    return this.uploadLibraryFile(uploadFilesDto, file, req);
-  }
-
-  /**
-   * 上传图块库文件（分片上传，复用 MxCAD 转换逻辑）
-   */
-  @Post('block/upload-chunk')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: '上传图块库文件（分片）' })
-  @ApiResponse({ status: 201, description: '上传成功' })
-  async uploadBlockChunk(
-    @Request() req,
-    @Body() uploadFilesDto: UploadFilesDto,
-    @UploadedFile() file?: Express.Multer.File
-  ) {
-    return this.uploadLibraryChunk(uploadFilesDto, file, req);
-  }
-
-  /**
-   * 创建图块库文件夹
-   */
   @Post('block/folders')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建图块库文件夹' })
-  @ApiResponse({
-    status: 201,
-    description: '文件夹创建成功',
-    type: FileSystemNodeDto,
-  })
-  async createBlockFolder(
-    @Body() dto: CreateFolderDto,
-    @Request() req,
-  ) {
+  @ApiOperation({ summary: 'Create folder in block library' })
+  @ApiResponse({ status: 201, description: 'Success', type: FileSystemNodeDto })
+  async createBlockFolder(@Body() dto: CreateFolderDto, @Request() req) {
     const userId = req.user.id;
     const parentId =
       !dto.parentId || dto.parentId === 'root'
         ? await this.blockLibraryProvider.getLibraryId()
         : dto.parentId;
+    await this.validateLibraryNode(parentId, 'block');
     return this.fileSystemService.createFolder(userId, parentId, dto);
   }
 
-  /**
-   * 删除图块库节点
-   */
   @Delete('block/nodes/:nodeId')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '删除图块库节点' })
-  @ApiResponse({ status: 200, description: '删除成功' })
+  @ApiOperation({ summary: 'Delete block library node' })
+  @ApiResponse({ status: 200, description: 'Success' })
   async deleteBlockNode(
     @Param('nodeId') nodeId: string,
     @Query('permanently') permanently?: boolean,
@@ -675,66 +465,47 @@ export class LibraryController {
     return this.fileSystemService.deleteNode(nodeId, permanently ?? true);
   }
 
-  /**
-   * 重命名图块库节点
-   */
   @Patch('block/nodes/:nodeId')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '重命名图块库节点' })
-  @ApiResponse({ status: 200, description: '重命名成功', type: FileSystemNodeDto })
-  async renameBlockNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: UpdateNodeDto,
-  ) {
+  @ApiOperation({ summary: 'Rename block library node' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
+  async renameBlockNode(@Param('nodeId') nodeId: string, @Body() dto: UpdateNodeDto) {
     return this.fileSystemService.updateNode(nodeId, dto);
   }
 
-  /**
-   * 移动图块库节点
-   */
   @Post('block/nodes/:nodeId/move')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '移动图块库节点' })
-  @ApiResponse({ status: 200, description: '移动成功', type: FileSystemNodeDto })
-  async moveBlockNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: MoveNodeDto,
-  ) {
+  @ApiOperation({ summary: 'Move block library node' })
+  @ApiResponse({ status: 200, description: 'Success', type: FileSystemNodeDto })
+  async moveBlockNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'block');
     return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
   }
 
-  /**
-   * 复制图块库节点
-   */
   @Post('block/nodes/:nodeId/copy')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '复制图块库节点' })
-  @ApiResponse({ status: 201, description: '复制成功', type: FileSystemNodeDto })
-  async copyBlockNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: CopyNodeDto,
-  ) {
+  @ApiOperation({ summary: 'Copy block library node' })
+  @ApiResponse({ status: 201, description: 'Success', type: FileSystemNodeDto })
+  async copyBlockNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'block');
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
   }
 
-  // ========== 公共方法 ==========
+  // ========== Private helpers ==========
 
-  /**
-   * 验证节点属于指定库类型，不属于则抛出异常
-   */
   private async validateLibraryNode(nodeId: string, expectedKey: string): Promise<void> {
     const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
     if (libraryKey !== expectedKey) {
-      throw new BadRequestException(`节点不属于${expectedKey === 'drawing' ? '图纸库' : '图块库'}`);
+      throw new BadRequestException(`Node does not belong to ${expectedKey === 'drawing' ? 'drawing library' : 'block library'}`);
     }
   }
 
@@ -743,19 +514,17 @@ export class LibraryController {
     file: Express.Multer.File,
     req: AuthenticatedRequest,
   ) {
-    // 1. 验证文件扩展名
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext !== '.mxweb') {
-      throw new BadRequestException(`不支持的文件格式: ${ext}，仅支持 .mxweb 文件`);
+      throw new BadRequestException(`Unsupported format: ${ext}, only .mxweb is supported`);
     }
 
-    // 2. 保存（跳过 SVN + bin 生成）
     const result = await this.mxCadService.saveMxwebFile(
       nodeId,
       file,
       req.user.id,
       req.user.username || req.user.nickname || req.user.email,
-      '覆盖保存资源库文件',
+      'Overwrite save library file',
       true, // skipBinGeneration
     );
 
@@ -764,5 +533,57 @@ export class LibraryController {
     }
 
     return { nodeId, path: result.path };
+  }
+
+  private async saveLibraryAs(
+    file: Express.Multer.File,
+    dto: SaveLibraryAsDto,
+    req: any,
+    libraryKey: string,
+  ) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.mxweb') {
+      throw new BadRequestException(`Unsupported format: ${ext}, only .mxweb is supported`);
+    }
+
+    const parentNode = await this.db.fileSystemNode.findUnique({
+      where: { id: dto.targetParentId },
+    });
+    if (!parentNode) {
+      throw new NotFoundException('Target folder does not exist');
+    }
+    const actualLibraryKey = await this.fileTreeService.getLibraryKey(parentNode.id);
+    if (actualLibraryKey !== libraryKey) {
+      throw new BadRequestException(`Target is not in ${libraryKey === 'drawing' ? 'drawing library' : 'block library'}`);
+    }
+
+    const fileName = dto.fileName || 'untitled';
+    const newNode = await this.fileSystemService.createFileNode({
+      name: fileName,
+      fileHash: '',
+      size: file.size,
+      mimeType: file.mimetype,
+      extension: '.mxweb',
+      parentId: parentNode.id,
+      ownerId: req.user.id,
+      skipFileCopy: true,
+    });
+
+    const nodeFullPath = this.storageManager.getFullPath(newNode.path);
+    const nodeDir = path.dirname(nodeFullPath);
+    if (!fs.existsSync(nodeDir)) {
+      fs.mkdirSync(nodeDir, { recursive: true });
+    }
+    const mxwebFileName = `${newNode.id}.mxweb`;
+    const mxwebTargetPath = path.join(nodeDir, mxwebFileName);
+    fs.copyFileSync(file.path, mxwebTargetPath);
+
+    try {
+      fs.unlinkSync(file.path);
+    } catch (e) {
+      this.logger.warn(`[saveLibraryAs] Failed to delete temp file: ${(e as Error).message}`);
+    }
+
+    return { nodeId: newNode.id, fileName: newNode.name, path: newNode.path, parentId: newNode.parentId };
   }
 }

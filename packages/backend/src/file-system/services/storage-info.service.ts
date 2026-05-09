@@ -10,7 +10,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { FileStatus, FileSystemNode } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
 import { ConfigService } from '@nestjs/config';
-import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { StorageQuotaService, StorageQuotaType } from './storage-quota.service';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';

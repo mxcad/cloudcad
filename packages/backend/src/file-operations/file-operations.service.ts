@@ -17,7 +17,6 @@ import {
 import {
   FileStatus,
   ProjectStatus,
-  FileSystemNode as PrismaFileSystemNode,
   Prisma,
 } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';

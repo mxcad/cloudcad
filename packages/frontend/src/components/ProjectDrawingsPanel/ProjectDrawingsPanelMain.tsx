@@ -57,7 +57,7 @@ import { useVersionHistory } from './hooks/useVersionHistory';
 import { useFileItemRenderer } from './hooks/useFileItemRenderer';
 import { ProjectListView } from './components/ProjectListView';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
-import { VersionHistoryModal } from './components/VersionHistoryModal';
+import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 
 export type { LibraryType } from './types';
 
@@ -139,8 +139,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     const loadProjects = async () => {
       try {
         const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
-        const projectList = response[200]?.nodes || [];
-        setProjects(projectList.map((p): FileSystemNode => ({
+        const projectList = ((response as unknown as Record<number, { nodes?: unknown[] }>)[200])?.nodes || [];
+        setProjects((projectList as Array<Record<string, unknown>>).map((p): FileSystemNode => ({
           id: p.id, name: p.name, isFolder: true, isRoot: true,
           updatedAt: p.updatedAt, parentId: undefined,
           createdAt: p.createdAt, path: p.path || '', ownerId: p.ownerId || '',
@@ -603,7 +603,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       />
       <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />
       <RenameModal isOpen={libraryRenameModalOpen} editingNode={libraryRenamingNode} newName={libraryRenameName} loading={false} onClose={() => { setLibraryRenameModalOpen(false); setLibraryRenamingNode(null); setLibraryRenameName(''); }} onNameChange={setLibraryRenameName} onRename={handleLibraryRenameSubmit} />
-      <VersionHistoryModal show={vh.showVersionHistoryModal} nodeName={vh.versionHistoryNode?.name || ''} entries={vh.versionHistoryEntries} loading={vh.versionHistoryLoading} error={vh.versionHistoryError} onClose={() => vh.setShowVersionHistoryModal(false)} onOpenVersion={vh.handleOpenHistoricalVersion} />
+      <VersionHistoryModal isOpen={vh.showVersionHistoryModal} node={vh.versionHistoryNode} entries={vh.versionHistoryEntries as any} loading={vh.versionHistoryLoading} error={vh.versionHistoryError} onClose={() => vh.setShowVersionHistoryModal(false)} onOpenVersion={vh.handleOpenHistoricalVersion} />
       <DownloadFormatModal isOpen={showDownloadFormatModal} fileName={downloadingNode?.name || ''} onClose={() => { setShowDownloadFormatModal(false); setDownloadingNode(null); }} onDownload={isLibraryMode ? handleLibraryDownloadWithFormat : handleDownloadWithFormat} />
       <MembersModal isOpen={isMembersModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsMembersModalOpen(false); setEditingProject(null); }} />
       <ProjectRolesModal isOpen={isProjectRolesModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsProjectRolesModalOpen(false); setEditingProject(null); }} />

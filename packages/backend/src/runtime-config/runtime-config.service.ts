@@ -22,7 +22,6 @@ import Redis from 'ioredis';
 import { DatabaseService } from '../database/database.service';
 import {
   RUNTIME_CONFIG_DEFINITIONS,
-  DEFAULT_RUNTIME_CONFIGS,
 } from './runtime-config.constants';
 import {
   RuntimeConfigDefinition,

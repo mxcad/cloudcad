@@ -132,7 +132,7 @@ export const SystemMonitorPage: React.FC = () => {
     setCleanupSuccess(null);
     setCleanupResult(null);
     try {
-      const response = await adminControllerCleanupStorage({ delayDays: 0 }).then(r => r.data);
+      const response = await adminControllerCleanupStorage().then(r => r.data);
       setCleanupSuccess('存储清理完成');
       setCleanupResult(response as unknown as { deletedNodes: number; deletedDirectories: number; freedSpace: number; errors: string[] });
       await fetchCleanupStats();

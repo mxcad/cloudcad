@@ -22,7 +22,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
-import { CadDownloadFormat } from './dto/download-node.dto';
 import { ProjectCrudService } from '../file-operations/project-crud.service';
 import { FileTreeService } from './file-tree/file-tree.service';
 import { FileOperationsService } from '../file-operations/file-operations.service';

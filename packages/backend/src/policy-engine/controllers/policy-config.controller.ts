@@ -37,7 +37,6 @@ import { CreatePolicyDto } from '../dto/create-policy.dto';
 import { UpdatePolicyDto } from '../dto/update-policy.dto';
 import { PolicyResponseDto } from '../dto/policy.dto';
 import { PolicyType } from '../enums/policy-type.enum';
-import { Permission as PrismaPermission } from '@prisma/client';
 
 /**
  * ńŁ¢ńĢźķģŹńĮ«µÄ¦ÕłČÕÖ©

@@ -19,9 +19,7 @@ import {
   findThumbnail,
   findThumbnailSync,
   hasThumbnail,
-  hasThumbnailSync,
   getThumbnailFileName,
-  THUMBNAIL_BASE_NAME,
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
 } from './thumbnail-utils';

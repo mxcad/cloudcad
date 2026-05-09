@@ -38,7 +38,6 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { InitializationService } from '../common/services/initialization.service';
 import { AppConfig } from '../config/app.config';
 import { EMAIL_VERIFICATION_SERVICE } from '../common/interfaces/verification.interface';
-import { USER_SERVICE } from '../common/interfaces/user-service.interface';
 import { AUTH_PROVIDER } from './interfaces/auth-provider.interface';
 import { LocalAuthProvider } from './providers/local-auth.provider';
 

@@ -85,7 +85,14 @@ export class VersionControlController {
     return {
       success: result.success,
       message: result.message,
-      entries: result.entries,
+      entries: result.entries.map((entry) => ({
+        revision: typeof entry.revision === 'string' ? parseInt(entry.revision, 10) : entry.revision,
+        author: entry.author,
+        date: entry.date,
+        message: entry.message,
+        userName: entry.userName,
+        paths: entry.paths,
+      })),
     };
   }
 

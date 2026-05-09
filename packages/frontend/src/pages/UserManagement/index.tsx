@@ -166,7 +166,7 @@ export const UserManagement = () => {
       password: '',
       roleId: user.role?.id || '',
       nickname: user.nickname || '',
-      status: user.status || 'ACTIVE',
+      status: (user.status as "ACTIVE" | "INACTIVE" | "SUSPENDED") || 'ACTIVE',
     });
     setFormErrors({ username: '', email: '', password: '' });
     setIsModalOpen(true);

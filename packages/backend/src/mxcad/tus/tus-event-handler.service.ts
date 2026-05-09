@@ -87,16 +87,11 @@ export class TusEventHandler {
       this.logger.log(`上传文件路径: ${actualFilePath}`);
       this.logger.log(`上传元数据: ${JSON.stringify(metadata)}`);
 
-      // 将 Tus 上传的文件复制到 uploads/{hash}/ 子目录，与 PublicFileController.accessFile 路径匹配
+      // 将 Tus 上传的文件复制到 uploads 目录，重命名为 fileHash + 扩展名
       let targetFilePath = '';
       if (fileHash) {
         const ext = path.extname(filename);
-        const hashDir = path.join(this.mxcadUploadPath, fileHash);
-        if (!fs.existsSync(hashDir)) {
-          fs.mkdirSync(hashDir, { recursive: true });
-          this.logger.log(`创建 hash 目录: ${hashDir}`);
-        }
-        targetFilePath = path.join(hashDir, `${fileHash}${ext}`);
+        targetFilePath = path.join(this.mxcadUploadPath, `${fileHash}${ext}`);
         await fs.promises.copyFile(actualFilePath, targetFilePath);
         this.logger.log(`文件已复制到: ${targetFilePath}`);
       }

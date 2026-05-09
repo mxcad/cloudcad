@@ -10,7 +10,6 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { LibraryType } from '../../library/library.service';
 import { CreateFolderDto } from '../../file-system/dto/create-folder.dto';
 
 export interface IPublicLibraryProvider {

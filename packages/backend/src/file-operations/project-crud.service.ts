@@ -32,7 +32,6 @@ import {
   NodeListResponseDto,
   FileSystemNodeDto,
 } from '../file-system/dto/file-system-response.dto';
-import * as path from 'path';
 
 @Injectable()
 export class ProjectCrudService {

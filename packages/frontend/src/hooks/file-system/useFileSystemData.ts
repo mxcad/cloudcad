@@ -154,7 +154,7 @@ export const useFileSystemData = ({
         ) as ProjectDto[];
         return {
           nodes: allProjects.map(
-            (p) => projectToNode(p as FileSystemNodeDto)
+            (p) => projectToNode(p as unknown as FileSystemNodeDto)
           ),
           total: allProjects.length,
           page: pagination.page,

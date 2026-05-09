@@ -31,3 +31,40 @@ Extract project CRUD and file operations into `file-operations/` module to break
 - Old `packages/backend/src/file-system/services/project-crud.service.ts` (537 lines, zero references) deleted.
 - `FileSystemModule` remains as the import target for `app.module.ts`, `mxcad.module.ts`, `library.module.ts`, `version-control.module.ts`, `tus.module.ts`, and test utilities — no breaking module changes.
 - Project CRUD and recycle bin API contracts are unchanged from `main`.
+
+**Implementation on `refactor/circular-deps` (2026-05-09 verified):**
+
+Backend changes:
+
+| Change | Detail |
+|--------|--------|
+| `FileOperationsService` | Moved from `file-system/services/` to `file-operations/`. `moveNode()`, `copyNode()`, `copyNodeRecursive()` logic byte-for-byte identical to main. Added `IStorageProvider` injection for `deleteFileFromStorage` (was direct `fsPromises.rm`). |
+| `FileTreeService` | Extracted from `file-system/services/` to `file-system/file-tree/`. `getProjectId()` helper unchanged. |
+| `ProjectCrudService` | Extracted from `file-system/services/` to `file-operations/`. |
+| `StorageManager` | `copyNodeDirectory()` and `recursiveCopyDirectory()` unchanged (whitespace only diff). |
+| Controller | `FileSystemController` now injects sub-services directly. Added `@CsrfProtected()` on move/copy endpoints (security enhancement). |
+| Permissions | `FILE_MOVE`/`FILE_COPY` enum values and role assignments unchanged (whitespace only diff). |
+
+Frontend changes:
+
+| Change | Detail |
+|--------|--------|
+| API layer | Hand-written `services/*Api.ts` → auto-generated `@/api-sdk` (OpenAPI-based). Move/copy call signatures functionally equivalent. |
+| Library hooks | `useLibrary.ts` monolithic hook → `useLibraryMutations.ts` (react-query mutations, same API parameters). Added `isMovingNode`/`isCopyingNode` loading states. |
+| Project file-system | New `useMoveCopy.ts` hook supporting single and batch move/copy operations. Previously inlined in `FileSystemManager.tsx`. |
+| MxCAD manager | `mxcadManager.ts` → `mxcadManager/` sub-modules (check, extRef, save, thumbnail, types). |
+
+Move/copy functional verification (2026-05-09):
+
+| # | Item | Result |
+|---|------|--------|
+| 1 | API routes (`POST nodes/:nodeId/move`, `POST nodes/:nodeId/copy`) | ✅ Unchanged |
+| 2 | Request body (`{ targetParentId }`) | ✅ Unchanged |
+| 3 | Backend moveNode logic | ✅ Identical |
+| 4 | Backend copyNode + copyNodeRecursive logic | ✅ Identical |
+| 5 | Permission guards (`FILE_MOVE`/`FILE_COPY`) | ✅ Identical |
+| 6 | Frontend API call parameters | ✅ Functionally equivalent |
+| 7 | Frontend post-operation refresh strategy | ✅ Equivalent (invalidateQueries vs manual refresh) |
+| 8 | CSRF protection | 🟡 Added (security enhancement) |
+
+No API contract changes. No breaking changes for external consumers (library/, mxcad/).

@@ -21,7 +21,6 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ApiResponseDto } from '../../common/dto/api-response.dto';
 
 export class RegisterDto {
   @ApiPropertyOptional({

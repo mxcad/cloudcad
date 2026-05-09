@@ -44,7 +44,6 @@ import {
   ApiConsumes,
   ApiResponse,
   ApiBody,
-  ApiOperation,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
@@ -54,21 +53,10 @@ import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
 import { CheckFileExistDto } from '../dto/check-file-exist.dto';
 import { FileExistResponseDto } from '../dto/file-exist-response.dto';
-import { CheckDuplicateFileDto } from '../dto/check-duplicate-file.dto';
-import { CheckDuplicateFileResponseDto } from '../dto/check-duplicate-file-response.dto';
 import { CheckReferenceResponseDto } from '../dto/check-reference-response.dto';
 import { RefreshExternalReferencesResponseDto } from '../dto/refresh-external-references-response.dto';
-import { CheckThumbnailResponseDto } from '../dto/check-thumbnail-response.dto';
-import { UploadThumbnailResponseDto } from '../dto/upload-thumbnail-response.dto';
-import { UploadThumbnailDto } from '../dto/upload-thumbnail.dto';
-import {
-  findThumbnail,
-  getThumbnailFileName,
-  getThumbnailFormatFromFileName,
-  getMimeType,
-  THUMBNAIL_FORMATS,
-  type ThumbnailFormat,
-} from '../infra/thumbnail-utils';
+
+
 import { MxCadRequest } from '../types/request.types';
 import { MxCadContext } from '../types/mxcad-context.types';
 import { ConfigService } from '@nestjs/config';

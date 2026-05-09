@@ -27,12 +27,11 @@ import {
   VERSION_CONTROL_TOKEN,
 } from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
-import { FileSystemNode, Prisma, User } from '@prisma/client';
+import { FileSystemNode, Prisma } from '@prisma/client';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
 import { ConversionOptions } from '../interfaces/file-conversion.interface';
 import {
   ExternalReferenceStats,
-  ExternalReferenceInfo,
 } from '../types/external-reference.types';
 import {
   MxCadContext,
@@ -45,9 +44,7 @@ import path from 'path';
 import { AppConfig } from '../../config/app.config';
 import {
   findThumbnail,
-  findThumbnailSync,
   getThumbnailFileName,
-  getMimeType,
   THUMBNAIL_FORMATS,
   type ThumbnailFormat,
 } from '../infra/thumbnail-utils';

@@ -42,8 +42,9 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
         }
 
         // 处理下载逻辑（后端返回文件流）
-        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as unknown as BlobPart]);
         const link = document.createElement('a');
+        const url = window.URL.createObjectURL(blob);
         link.href = url;
         link.setAttribute('download', 'file');
         document.body.appendChild(link);

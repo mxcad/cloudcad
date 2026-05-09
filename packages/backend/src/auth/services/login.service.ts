@@ -12,7 +12,6 @@ import {
   Injectable,
   Logger,
   UnauthorizedException,
-  BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { LoginDto, AuthResponseDto } from '../dto/auth.dto';

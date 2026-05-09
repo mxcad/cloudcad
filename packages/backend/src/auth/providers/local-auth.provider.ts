@@ -13,7 +13,6 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
-  ConflictException,
   InternalServerErrorException,
   Inject,
 } from '@nestjs/common';

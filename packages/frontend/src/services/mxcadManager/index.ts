@@ -20,6 +20,10 @@
 // ==================== 从子模块重新导出 ====================
 
 export {
+  escapeHtml,
+} from '@/utils/sanitize';
+
+export {
   type CurrentFileInfo,
   type PendingImage,
   type UploadTargetInfo,
@@ -1046,7 +1050,10 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
         callback: async () => {
           try {
             showGlobalLoading('正在打开文件...');
-            const fileUrl = `/api/v1/public-file/access/${result.hash}/${result.fileName}`;
+            // 构造 mxweb 文件名：{hash}.{原扩展名}.mxweb（与后端转换产物一致）
+            const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
+            const mxwebFilename = `${result.hash}${ext}.mxweb`;
+            const fileUrl = `/api/v1/public-file/access/${result.hash}/${mxwebFilename}`;
 
             await mxcadManager.openFile(fileUrl, noCache);
 

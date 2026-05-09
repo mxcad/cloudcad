@@ -25,7 +25,6 @@ import { WechatService } from './wechat.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { AuthTokenService } from './auth-token.service';
 import {
-  WechatLoginResponseDto,
   WechatBindResponseDto,
   WechatUnbindResponseDto,
 } from '../dto/wechat.dto';

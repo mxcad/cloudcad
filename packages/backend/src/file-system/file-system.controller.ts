@@ -59,10 +59,7 @@ import { RequireProjectPermissionGuard } from "../common/guards/require-project-
 import { StorageQuotaInterceptor } from "../common/interceptors/storage-quota.interceptor";
 import { PermissionService } from "../common/services/permission.service";
 import {
-  findThumbnail,
   findThumbnailSync,
-  getMimeType,
-  THUMBNAIL_FORMATS,
 } from "../mxcad/infra/thumbnail-utils";
 import { ProjectPermissionService } from "../roles/project-permission.service";
 import { CopyNodeDto } from "./dto/copy-node.dto";

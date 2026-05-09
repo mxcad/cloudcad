@@ -106,7 +106,7 @@ export function useLibraryOperations({
             ? await libraryControllerDownloadDrawingNode({ path: { nodeId }, parseAs: 'blob' })
             : await libraryControllerDownloadBlockNode({ path: { nodeId }, parseAs: 'blob' });
 
-        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as unknown as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -143,7 +143,7 @@ export function useLibraryOperations({
             ? await libraryControllerDownloadDrawingNode({ path: { nodeId }, parseAs: 'blob' })
             : await libraryControllerDownloadBlockNode({ path: { nodeId }, parseAs: 'blob' });
 
-        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
+        const blob = blobData instanceof Blob ? blobData : new Blob([blobData as unknown as BlobPart]);
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
