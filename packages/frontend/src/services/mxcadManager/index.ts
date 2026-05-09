@@ -55,6 +55,8 @@ import { showDuplicateFileDialog as _showDuplicateFileDialog } from './mxcadChec
 import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
 
 
+import { escapeHtml } from '@/utils/sanitize';
+
 // ==================== 外部依赖 ====================
 import "mxcad-app/style"
 import { MxCADView } from 'mxcad-app';
