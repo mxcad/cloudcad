@@ -71,7 +71,7 @@ export function useLibraryQuota({
       // 获取公共资源库的存储信息
       if (libraryId) {
         const { data: storageInfo } = await fileSystemControllerGetStorageQuota({
-          query: { nodeId: libraryId },
+          query: { nodeId: libraryId, userId: '' },
         });
 
         if (storageInfo) {

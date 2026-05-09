@@ -147,8 +147,8 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
               <div className="info-content">
                 <label>邮箱地址</label>
                 <span className="with-status">
-                  {user?.email || '未绑定'}
-                  {user?.email && (
+                  {typeof user?.email === 'string' ? user.email : '未绑定'}
+                  {typeof user?.email === 'string' && (
                     <CheckCircle size={14} className="status-icon success" />
                   )}
                 </span>
@@ -162,8 +162,8 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
               <div className="info-content">
                 <label>手机号</label>
                 <span className="with-status">
-                  {user?.phone || '未绑定'}
-                  {user?.phone && user?.phoneVerified && (
+                  {typeof user?.phone === 'string' ? user.phone : '未绑定'}
+                  {typeof user?.phone === 'string' && user?.phoneVerified && (
                     <CheckCircle size={14} className="status-icon success" />
                   )}
                 </span>

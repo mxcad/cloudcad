@@ -6,20 +6,14 @@
 import { useState, useCallback } from 'react';
 import { versionControlControllerGetFileHistory } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
+import type { SvnLogEntryDto } from '@/types/api-client';
 import { handleError } from '@/utils/errorHandler';
-
-export interface VersionHistoryEntry {
-  revision: number;
-  author: string;
-  date: string;
-  message: string;
-}
 
 export interface UseVersionHistoryReturn {
   showVersionHistoryModal: boolean;
   setShowVersionHistoryModal: (show: boolean) => void;
   versionHistoryNode: FileSystemNode | null;
-  versionHistoryEntries: VersionHistoryEntry[];
+  versionHistoryEntries: SvnLogEntryDto[];
   versionHistoryLoading: boolean;
   versionHistoryError: string | null;
   handleShowVersionHistory: (node: FileSystemNode) => Promise<void>;
@@ -31,7 +25,7 @@ export function useVersionHistory(selectedProjectId: string | null): UseVersionH
   const [versionHistoryNode, setVersionHistoryNode] =
     useState<FileSystemNode | null>(null);
   const [versionHistoryEntries, setVersionHistoryEntries] = useState<
-    VersionHistoryEntry[]
+    SvnLogEntryDto[]
   >([]);
   const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
   const [versionHistoryError, setVersionHistoryError] = useState<string | null>(

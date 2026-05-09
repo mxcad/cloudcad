@@ -45,7 +45,6 @@ import {
   ApiConsumes,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { LibraryService } from './library.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -92,7 +91,6 @@ export class LibraryController {
   private readonly logger = new Logger(LibraryController.name);
 
   constructor(
-    private readonly libraryService: LibraryService,
     private readonly fileSystemService: FileSystemService,
     private readonly fileDownloadHandler: FileDownloadHandlerService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
@@ -361,7 +359,7 @@ export class LibraryController {
     @Request() req: AuthenticatedRequest
   ) {
     const filename = filePath.join('/');
-    const expressReq = req as any;
+    const expressReq = req as unknown as Express.Request;
     this.logger.log(`[Block file access] path: ${filename}, from: ${expressReq.get('referer') || 'N/A'}`);
     return this.mxcadFileHandler.serveFile(filename, res);
   }
@@ -569,6 +567,9 @@ export class LibraryController {
       skipFileCopy: true,
     });
 
+    if (!newNode.path) {
+      throw new BadRequestException('Failed to create file node: path is null');
+    }
     const nodeFullPath = this.storageManager.getFullPath(newNode.path);
     const nodeDir = path.dirname(nodeFullPath);
     if (!fs.existsSync(nodeDir)) {

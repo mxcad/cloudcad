@@ -108,6 +108,65 @@ export class PublicFileController {
 
 
   /**
+   * 在 uploads 目录下查找 {hash}.*.mxweb 文件（平铺存储）
+   * GET /api/public-file/access/:filename（filename 格式: {hash}.xxx.mxweb）
+   * 例如: GET /api/v1/public-file/access/abc123.dwg.mxweb
+   *        → findMxwebFile("abc123") → uploads/abc123.dwg.mxweb
+   */
+  @Get('access/:filename')
+  @Public()
+  @ApiOperation({ summary: '在 uploads 目录下查找 mxweb 文件（平铺存储）' })
+  @ApiResponse({
+    status: 200,
+    description: '返回文件二进制数据',
+    content: { 'application/octet-stream': {} },
+  })
+  @ApiResponse({ status: 404, description: '文件不存在' })
+  async accessFileByHashPattern(
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 从 filename 中提取 hash（去掉 .xxx.mxweb 或 .mxweb 后缀）
+    // 如 "abc123.dwg.mxweb" → "abc123"
+    // 如 "4246fa7f1b8b623e72f5db8634d788c6.mxweb" → "4246fa7f1b8b623e72f5db8634d788c6"
+    const hash = filename.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
+
+    const filePath = await this.publicFileService.findMxwebFile(hash);
+
+    if (!filePath) {
+      throw new NotFoundException('文件不存在');
+    }
+
+    this.logger.log(`文件访问: filename=${filename}, hash=${hash}, path=${filePath}`);
+
+    try {
+      const fileStats = fs.statSync(filePath);
+
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Length', fileStats.size);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+
+      fileStream.on('error', (error) => {
+        this.logger.error(`文件流错误: ${error.message}`, error);
+        if (!res.headersSent) {
+          res.status(500).json({ code: -1, message: '获取文件失败' });
+        }
+      });
+    } catch (error) {
+      this.logger.error(`访问文件失败: ${error.message}`, error.stack);
+      if (!res.headersSent) {
+        throw new NotFoundException('文件不存在或已被删除');
+      }
+    }
+  }
+
+
+  /**
    * 上传外部参照文件（公开接口，无需认证）
    * POST /api/public-file/ext-reference/upload
    * 外部参照文件存储在主图纸的 hash 目录下

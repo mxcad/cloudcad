@@ -1050,10 +1050,10 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
         callback: async () => {
           try {
             showGlobalLoading('正在打开文件...');
-            // 构造 mxweb 文件名：{hash}.{原扩展名}.mxweb（与后端转换产物一致）
+            // 扁平存储：{hash}.{ext}.mxweb（如 abc123.dwg.mxweb），通过 accessFileByHashPattern 端点访问
             const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
             const mxwebFilename = `${result.hash}${ext}.mxweb`;
-            const fileUrl = `/api/v1/public-file/access/${result.hash}/${mxwebFilename}`;
+            const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
 
             await mxcadManager.openFile(fileUrl, noCache);
 

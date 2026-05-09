@@ -45,6 +45,21 @@ export class PublicFileService {
   ) {}
 
   /**
+   * 在 uploads 目录下扁平查找 mxweb 文件
+   * 如 findMxwebFile("abc123") → uploads/abc123.dwg.mxweb
+   */
+  async findMxwebFile(hash: string): Promise<string | null> {
+    const files = await this.uploadService.findFilesByPrefix(hash);
+    const mxwebFile = files.find(
+      (f) => f.startsWith(hash) && f.endsWith('.mxweb')
+    );
+    if (mxwebFile) {
+      return path.join(this.uploadService.getUploadPath(), mxwebFile);
+    }
+    return null;
+  }
+
+  /**
    * 在 uploads/{hash} 目录下查找指定文件
    * 如 findFileInDir(hash, "A1.dwg.mxweb") 返回 uploads/{hash}/A1.dwg.mxweb
    */

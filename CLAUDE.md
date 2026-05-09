@@ -56,6 +56,21 @@ pnpm build                       # Vite build
 
 **CI requires** PostgreSQL 15 + Redis 7 as service containers.
 
+## Dependency Versions (Post-Upgrade Gotchas)
+
+These upgrades introduced breaking type changes. When upgrading any of these, expect type errors:
+
+| Dependency | Version | Breaking Change |
+|-----------|---------|----------------|
+| **Prisma** | ^7.1.0 | `FileSystemNode` → `FileSystemNodeOmit` (renamed generated types). `$Enums.FileStatus` no longer compatible with local `FileStatus` enum — use `as FileStatus` casts when mapping Prisma results to DTOs. |
+| **Express** | ^5.2.1 | Session API is now Promise-based: `session.destroy()` returns `Promise<void>` (no callback). `session.save()` returns `Promise<void>`. Request type changes cause `string \| ParsedQs` mismatches — wrap with `String()`. |
+| **TypeScript** | ~5.0.0 declared, 5.9.3 resolved | Stricter type inference exposes hidden incompatibilities. `Record<string, unknown>` no longer assignable from `unknown`. Use `any` or explicit narrowing.
+
+- **Prisma Client v7 naming:** When a model has relations/config that affect the generated type, Prisma v7 may export `ModelNameOmit` instead of `ModelName`. Always run `pnpm type-check` after `pnpm prisma generate`.
+- **FileStatus enum rule:** The custom ESLint rule `no-prisma-enum-in-api-property` forbids Prisma enums in `@ApiProperty`. Map Prisma `$Enums.FileStatus` to local `FileStatus` enum using `as FileStatus` when building DTOs.
+- **`ConvertServerFileParam`:** Uses **camelCase** (`srcPath`, `fileHash`, `nodeId`, `createPreloadingData`), not snake_case. See `src/mxcad/types/mxcad-context.types.ts`.
+- **ADR 0002:** `FileSystemService` (`src/file-system/file-system.service.ts`) is now a **Façade** — external consumers (library, mxcad, file-download) use it, but `FileSystemController` injects sub-services directly. When adding methods, check which pattern applies.
+
 ## Key Backend Conventions
 
 - API routes at `/api/xxx` (no version prefix in path). NestJS URI versioning is enabled for future v2 support — use `@Version('2')` on new endpoints when needed

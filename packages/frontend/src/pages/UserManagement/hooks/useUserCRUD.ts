@@ -132,7 +132,7 @@ export function useUserCRUD(params?: UserSearchParams) {
       return result.data;
     },
     getStorageQuota: async (userId: string) => {
-      const result = await fileSystemControllerGetStorageQuota({ query: { userId } });
+      const result = await fileSystemControllerGetStorageQuota({ query: { nodeId: '', userId } });
       if (result.error) throw result.error;
       return result.data;
     },
