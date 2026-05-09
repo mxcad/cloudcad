@@ -220,31 +220,6 @@ export class StorageInfoService {
     return updatedNode;
   }
 
-  /**
-   * 更新节点存储配额
-   */
-  async updateNodeStorageQuota(nodeId: string, quota: number) {
-    const node = await this.prisma.fileSystemNode.findUnique({
-      where: { id: nodeId },
-      select: { id: true, ownerId: true },
-    });
-    if (!node) {
-      throw new NotFoundException('节点不存在');
-    }
-
-    const updatedNode = await this.prisma.fileSystemNode.update({
-      where: { id: nodeId },
-      data: { storageQuota: quota },
-    });
-
-    if (node.ownerId) {
-      await this.invalidateQuotaCache(node.ownerId, nodeId);
-    }
-
-    this.logger.log(`节点 ${nodeId} 的存储配额已更新为 ${quota} GB`);
-    return updatedNode;
-  }
-
   async deleteMxCadFilesFromUploads(fileHash: string): Promise<number> {
     if (!fileHash) {
       return 0;

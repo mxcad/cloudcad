@@ -262,7 +262,7 @@ export class FileSystemController {
     type: TrashListResponseDto,
   })
   async getTrash(@Request() req) {
-    return this.projectCrudService.getUserDeletedProjects(req.user.id);
+    return this.fileTreeService.getTrashItems(req.user.id);
   }
 
   @Post("trash/restore")
