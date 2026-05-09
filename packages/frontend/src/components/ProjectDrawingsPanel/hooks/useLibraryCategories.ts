@@ -11,7 +11,7 @@
  * 中完成所有层级的检索，前端不再需要多次 API 调用和渐进式加载。
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   libraryControllerGetDrawingLibrary,
   libraryControllerGetDrawingCategories,
@@ -20,7 +20,27 @@ import {
 } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
-import { CategoryLevel } from '@/components/CategoryTabs';
+import { CategoryLevel, type CategoryItem } from '@/components/CategoryTabs';
+
+// 根据选中路径过滤分类：上级选中具体分类时，下级只显示属于该父分类的项（含"全部"）
+function filterCategoriesBySelection(
+  allCategories: CategoryLevel[],
+  selectedPath: string[],
+): CategoryLevel[] {
+  return allCategories.map((levelData) => {
+    const level = levelData.level;
+    if (level === 0) return levelData; // L0 不需要过滤
+
+    // 获取上一级选中的分类 ID
+    const parentSelectedId = selectedPath[level - 1];
+    if (!parentSelectedId || parentSelectedId === 'all') return levelData; // 上级为"全部"，显示全部
+
+    const filteredItems = levelData.items.filter(
+      (item) => item.id === 'all' || item.parentId === parentSelectedId,
+    );
+    return { ...levelData, items: filteredItems };
+  });
+}
 
 export interface UseLibraryCategoriesReturn {
   libraryRootId: string | null;
@@ -113,9 +133,15 @@ export function useLibraryCategories(
     [libraryType]
   );
 
+  // 根据选中路径过滤分类：上级选中具体分类时，下级只显示属于该父分类的项
+  const filteredCategories = useMemo(
+    () => filterCategoriesBySelection(categories, selectedCategoryPath),
+    [categories, selectedCategoryPath],
+  );
+
   return {
     libraryRootId,
-    categories,
+    categories: filteredCategories,
     categoriesLoaded,
     selectedCategoryPath,
     setSelectedCategoryPath,

@@ -462,11 +462,11 @@ export class FileTreeService {
 
     for (const row of rows) {
       if (row.level === 0) {
-        level0Items.push({ id: row.id, name: row.name, hasChildren: true });
+        level0Items.push({ id: row.id, name: row.name, parentId: row.parentId, hasChildren: true });
       } else if (row.level === 1) {
-        level1Items.push({ id: row.id, name: row.name, hasChildren: true });
+        level1Items.push({ id: row.id, name: row.name, parentId: row.parentId, hasChildren: true });
       } else if (row.level === 2) {
-        level2Items.push({ id: row.id, name: row.name, hasChildren: true });
+        level2Items.push({ id: row.id, name: row.name, parentId: row.parentId, hasChildren: true });
       }
     }
 

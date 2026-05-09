@@ -150,6 +150,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 onSelectAndUpload();
               }}
               disabled={hasUploading}
+              className='mr-2'
               variant="primary"
             >
               {hasUploading ? (
@@ -159,7 +160,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Upload size={16} className="mr-2" data-testid="icon-upload" />
                   选择并上传
                 </>
               )}

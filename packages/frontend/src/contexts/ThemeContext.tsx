@@ -1,7 +1,7 @@
 /**
  * 主题上下文 - 管理明暗主题状态并与 CAD 编辑器主题同步
  */
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 interface ThemeContextType {
   /** 当前是否为暗色主题 */
@@ -53,10 +53,10 @@ function storeTheme(isDark: boolean): void {
  */
 function applyThemeToDOM(isDark: boolean): void {
   const theme = isDark ? 'dark' : 'light';
-  
+
   // 设置根元素的 data-theme（CSS 变量系统使用）
   document.documentElement.setAttribute('data-theme', theme);
-  
+
   // 设置 body 的 class（向后兼容）
   if (isDark) {
     document.body.classList.add('dark-theme');
@@ -65,7 +65,7 @@ function applyThemeToDOM(isDark: boolean): void {
     document.body.classList.add('light-theme');
     document.body.classList.remove('dark-theme');
   }
-  
+
   // 同时设置 body 的 data-theme 属性
   document.body.setAttribute('data-theme', theme);
 }
@@ -78,8 +78,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDark, setIsDark] = useState<boolean>(getStoredTheme);
 
   // 监听 localStorage 变化（来自其他标签页的主题切换）
-  // 仅更新 React 状态 + DOM，不写入 localStorage（避免循环）
-  // mxcad-app 主题同步由 CADEditorDirect.initThemeSync() 在初始化时处理
+  // 仅更新 React 状态 + DOM，不写入 localStorage（避免跨标签页循环）
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === THEME_STORAGE_KEY && e.newValue !== null) {
@@ -108,46 +107,43 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     };
   }, []);
 
+  // isDark 变化时同步 mxcad-app Vuetify 主题（差量检查避免重复调用）
+  useEffect(() => {
+    const syncToMxcad = async () => {
+      try {
+        const { mxcadApp } = await import('mxcad-app');
+        if (mxcadApp.getVuetify) {
+          const vuetify = await mxcadApp.getVuetify();
+          const target = isDark ? 'dark' : 'light';
+          if (vuetify.theme.global.name.value !== target) {
+            vuetify.theme.change(target);
+          }
+        }
+      } catch {
+        // mxcad-app 尚未加载
+      }
+    };
+    syncToMxcad();
+  }, [isDark]);
+
   const toggleTheme = useCallback(async () => {
     const newTheme = !isDark;
-    
-    // 尝试通过 mxcad-app 切换主题（双向同步）
-    try {
-      if (window.mxcadApp?.getVuetify) {
-        const vuetify = await window.mxcadApp.getVuetify();
-        // 调用 Vuetify 切换主题
-        vuetify.theme.toggle(['light', 'dark']);
-        console.log('[ThemeContext] 通过 mxcad-app 切换主题:', newTheme ? 'dark' : 'light');
-      }
-    } catch (error) {
-      console.warn('[ThemeContext] mxcad-app 不可用，直接切换:', error);
-    }
 
-    // 直接更新 React 状态，不依赖 Vue watch 回传
-    //（CAD 编辑器未初始化时 Vue watch 不存在，必须自己更新）
+    // 先更新自身状态（React + DOM + localStorage）
     setIsDark(newTheme);
     applyThemeToDOM(newTheme);
     storeTheme(newTheme);
+
+    // mxcad-app Vuetify 同步由上方 isDark 变化的 useEffect 处理
   }, [isDark]);
 
   const setTheme = useCallback(async (dark: boolean) => {
-    // 尝试通过 mxcad-app 设置主题（双向同步）
-    try {
-      if (window.mxcadApp?.getVuetify) {
-        const vuetify = await window.mxcadApp.getVuetify();
-        // 调用 Vuetify 设置主题
-        vuetify.theme.change(dark ? 'dark' : 'light');
-        console.log('[ThemeContext] 通过 mxcad-app 设置主题:', dark ? 'dark' : 'light');
-      }
-    } catch (error) {
-      console.warn('[ThemeContext] mxcad-app 不可用，直接设置:', error);
-    }
-
-    // 直接更新 React 状态，不依赖 Vue watch 回传
-    //（CAD 编辑器未初始化时 Vue watch 不存在，必须自己更新）
+    // 先更新自身状态（React + DOM + localStorage）
     setIsDark(dark);
     applyThemeToDOM(dark);
     storeTheme(dark);
+
+    // mxcad-app Vuetify 同步由上方 isDark 变化的 useEffect 处理
   }, []);
 
   const value: ThemeContextType = {

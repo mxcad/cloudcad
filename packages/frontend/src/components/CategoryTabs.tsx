@@ -32,6 +32,8 @@ export interface CategoryItem {
   id: string;
   name: string;
   hasChildren?: boolean;
+  /** 父分类 ID（"all" 项无此字段），用于根据上级选择过滤下级分类 */
+  parentId?: string;
 }
 
 /** 分类级别 */

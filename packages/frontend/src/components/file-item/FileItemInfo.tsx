@@ -63,6 +63,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
               justifyContent: 'center',
               fontSize: resolvedFontSize,
               color: 'var(--text-primary)',
+              textOverflow: 'ellipsis',
             }}
           >
             {galleryMode ? (

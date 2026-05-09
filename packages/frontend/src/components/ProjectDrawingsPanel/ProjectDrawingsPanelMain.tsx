@@ -58,6 +58,7 @@ import { useFileItemRenderer } from './hooks/useFileItemRenderer';
 import { ProjectListView } from './components/ProjectListView';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
+import { createPortal } from 'react-dom';
 
 export type { LibraryType } from './types';
 
@@ -151,7 +152,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       try {
         const result = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
         const projectList = result.data?.nodes || [];
-        setProjects((projectList as Array<Record<string, string | boolean | undefined>>).map((p): FileSystemNode => ({
+        setProjects(projectList.map((p): FileSystemNode => ({
           id: String(p.id ?? ''), name: String(p.name ?? ''), isFolder: true, isRoot: true,
           updatedAt: String(p.updatedAt || ''), parentId: undefined,
           createdAt: String(p.createdAt || ''), path: String(p.path || ''), ownerId: String(p.ownerId || ''),
@@ -212,7 +213,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   } = useFileSystemCRUD({
     urlProjectId: selectedProjectId || undefined, currentNode, loadData: refreshNodes,
     showToast, showConfirm, selectedNodes: new Set(), nodes,
-    clearSelection: () => {}, isProjectTrashViewRef,
+    clearSelection: () => { }, isProjectTrashViewRef,
     mode: isPersonalSpace ? 'personal-space' : 'project',
   });
 
@@ -584,7 +585,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           onConfirm={handleConfirmMoveOrCopy}
           confirmButtonText={moveSourceNode ? '移动到此' : '复制到此'}
         />
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        {createPortal(
+          <ToastContainer toasts={toasts} onRemove={removeToast} />,
+          document.body
+        )}
       </>
     );
   }
@@ -592,7 +596,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   // Main view
   return (
     <div className={styles.projectDrawingsPanel}>
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {createPortal(
+        <ToastContainer toasts={toasts} onRemove={removeToast} />,
+        document.body
+      )}
+
       <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText || '确定'} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm} type={confirmDialog.type} />
       {isLibraryMode && (
         <CategoryTabs categories={categories} selectedPath={selectedCategoryPath} onSelect={handleCategorySelect} />
@@ -600,7 +608,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       <ResourceList
         galleryMode={isLibraryMode}
         items={resourceItems} loading={loading} searchQuery={searchQuery}
-        onSearchChange={(query) => { setSearchQuery(query); setCurrentPage(1);
+        onSearchChange={(query) => {
+          setSearchQuery(query); setCurrentPage(1);
           if (isLibraryMode) { const nid = getCategoryNodeId(selectedCategoryPath, libraryRootId); if (nid) loadNodes(nid, 1, query); }
           else { const lb = breadcrumb[breadcrumb.length - 1]; if (lb) loadNodes(lb.id, 1, query); }
         }}
