@@ -78,22 +78,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDark, setIsDark] = useState<boolean>(getStoredTheme);
 
   // 监听 localStorage 变化（来自其他标签页的主题切换）
+  // 仅更新 React 状态 + DOM，不写入 localStorage（避免循环）
+  // mxcad-app 主题同步由 CADEditorDirect.initThemeSync() 在初始化时处理
   useEffect(() => {
-    const handleStorageChange = async (e: StorageEvent) => {
+    const handleStorageChange = (e: StorageEvent) => {
       if (e.key === THEME_STORAGE_KEY && e.newValue !== null) {
-        const isDark = e.newValue === 'true';
-        setIsDark(isDark);
-        applyThemeToDOM(isDark);
-
-        // 同步 mxcad-app 的 Vuetify 主题（跨标签页通信）
-        try {
-          if (window.mxcadApp?.getVuetify) {
-            const vuetify = await window.mxcadApp.getVuetify();
-            vuetify.theme.change(isDark ? 'dark' : 'light');
-          }
-        } catch (error) {
-          console.warn('[ThemeContext] 跨标签页同步 mxcad-app 主题失败:', error);
-        }
+        const newDark = e.newValue === 'true';
+        setIsDark(newDark);
+        applyThemeToDOM(newDark);
       }
     };
 

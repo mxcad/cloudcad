@@ -37,33 +37,35 @@ export class TusAuthMiddleware implements NestMiddleware {
       const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
       if (token) {
-        // 验证 JWT — 使用 JwtService 内置的 secret，不手动传入，避免与 JwtModule 初始化逻辑冲突
+        // 验证 JWT
         const payload = this.jwtService.verify(token);
         (req as any).user = payload;
         this.logger.debug(`JWT 认证成功: ${payload.id}`);
         return next();
       }
-
-      // 尝试从 session 中获取
-      if ((req.session as any)?.userId) {
-        (req as any).user = {
-          id: (req.session as any).userId,
-          role: (req.session as any).userRole,
-          email: (req.session as any).userEmail,
-        };
-        this.logger.debug(`使用 Session 认证: ${(req as any).user.id}`);
-        return next();
-      }
-
-      // 匿名用户：不设置 user，继续处理
-      this.logger.debug('匿名上传（无 Token 且无 Session）');
-      res.setHeader('X-Auth-Status', 'anonymous');
-      next();
     } catch (error) {
-      // Token 存在但无效 → 降级为匿名上传，不拒绝请求
-      this.logger.warn(`Token 无效，降级为匿名上传: ${(error as Error).message}`);
-      res.setHeader('X-Auth-Status', 'anonymous');
-      next();
+      // Token 存在但无效 → 记录日志，继续尝试 session 降级
+      this.logger.warn(
+        `Token 无效，尝试 session 降级: ${(error as Error).message}`
+      );
     }
+
+    // 尝试从 session 中获取
+    if ((req.session as any)?.userId) {
+      (req as any).user = {
+        id: (req.session as any).userId,
+        role: (req.session as any).userRole,
+        email: (req.session as any).userEmail,
+      };
+      this.logger.debug(
+        `使用 Session 认证: ${(req as any).user.id}`
+      );
+      return next();
+    }
+
+    // 匿名用户：不设置 user，继续处理
+    this.logger.debug('匿名上传（无 Token 且无 Session）');
+    res.setHeader('X-Auth-Status', 'anonymous');
+    next();
   }
 }
