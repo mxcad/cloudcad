@@ -87,7 +87,7 @@ export class MxCadService {
       const conversionOptions: ConversionOptions = {
         srcPath: param.srcPath || param.srcpath || '',
         fileHash: param.fileHash || param.src_file_md5 || '',
-        createPreloadingData: true,
+        createPreloadingData: param.createPreloadingData ?? true,
         outname: param.outname,
         cmd: param.cmd,
         width: param.width ? String(param.width) : undefined,
