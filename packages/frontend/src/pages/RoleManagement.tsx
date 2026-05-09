@@ -475,12 +475,6 @@ export const RoleManagement = () => {
                 系统默认项目角色，所有项目共享使用
               </p>
             </div>
-            {canCreateRoles && (
-              <Button onClick={handleCreateProjectRole} disabled={loading}>
-                <Plus size={18} />
-                新建角色
-              </Button>
-            )}
           </div>
 
           <div className="roles-grid" data-tour="role-list">
