@@ -70,6 +70,23 @@ export type CacheWarningsDto = {
     warnings: Array<string>;
 };
 
+export type CacheOperationDto = {
+    /**
+     * 缓存键
+     */
+    key: string;
+    /**
+     * 缓存值
+     */
+    value?: {
+        [key: string]: unknown;
+    };
+    /**
+     * TTL（秒）
+     */
+    ttl?: number;
+};
+
 export type BatchCacheOperationDto = {
     /**
      * 缓存键列表
@@ -1152,6 +1169,13 @@ export type UpdateUserDto = {
     status?: UserStatus;
 };
 
+export type UpdateUserStatusDto = {
+    /**
+     * 用户状态
+     */
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+};
+
 export type DeactivateAccountDto = {
     /**
      * 用户密码（密码登录用户必填）
@@ -1630,6 +1654,36 @@ export type ProjectListResponseDto = {
     totalPages: number;
 };
 
+export type UpdateNodeDto = {
+    /**
+     * 节点名称
+     */
+    name?: string;
+    /**
+     * 描述
+     */
+    description?: string;
+    /**
+     * 状态
+     */
+    status?: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
+};
+
+export type OperationSuccessDto = {
+    /**
+     * 操作结果消息
+     */
+    message: string;
+    /**
+     * 受影响的节点 ID
+     */
+    nodeId?: string;
+    /**
+     * 是否成功
+     */
+    success: boolean;
+};
+
 export type TrashListResponseDto = {
     /**
      * 节点列表
@@ -1674,21 +1728,6 @@ export type BatchOperationResponseDto = {
      * 错误信息
      */
     errors?: Array<string>;
-};
-
-export type OperationSuccessDto = {
-    /**
-     * 操作结果消息
-     */
-    message: string;
-    /**
-     * 受影响的节点 ID
-     */
-    nodeId?: string;
-    /**
-     * 是否成功
-     */
-    success: boolean;
 };
 
 export type FileStatus = 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'DELETED';
@@ -1837,21 +1876,6 @@ export type NodeListResponseDto = {
     totalPages: number;
 };
 
-export type UpdateNodeDto = {
-    /**
-     * 节点名称
-     */
-    name?: string;
-    /**
-     * 描述
-     */
-    description?: string;
-    /**
-     * 状态
-     */
-    status?: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
-};
-
 export type MoveNodeDto = {
     /**
      * 目标父节点ID
@@ -1923,7 +1947,7 @@ export type AddProjectMemberDto = {
     projectRoleId: string;
 };
 
-export type CadDownloadFormat = string;
+export type CadDownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
 
 export type ProjectUserPermissionsDto = {
     /**
@@ -2315,6 +2339,193 @@ export type AdminStatsResponseDto = {
     timestamp: string;
 };
 
+export type AdminCacheStatsDto = {
+    /**
+     * 缓存条目数
+     */
+    size: number;
+    /**
+     * 命中次数
+     */
+    hits: number;
+    /**
+     * 未命中次数
+     */
+    misses: number;
+    /**
+     * 命中率
+     */
+    hitRate: number;
+};
+
+export type CacheStatsResponseDto = {
+    /**
+     * 提示消息
+     */
+    message: string;
+    /**
+     * 缓存统计数据
+     */
+    data: AdminCacheStatsDto;
+};
+
+export type CacheCleanupResponseDto = {
+    /**
+     * 提示消息
+     */
+    message: string;
+};
+
+export type UserCacheClearResponseDto = {
+    /**
+     * 提示消息
+     */
+    message: string;
+};
+
+export type UserPermissionInfoDto = {
+    /**
+     * 用户角色
+     */
+    userRole: string;
+    /**
+     * 权限列表
+     */
+    permissions: Array<string>;
+};
+
+export type UserPermissionsResponseDto = {
+    /**
+     * 提示消息
+     */
+    message: string;
+    /**
+     * 用户权限信息
+     */
+    data: UserPermissionInfoDto;
+};
+
+/**
+ * 策略类型
+ */
+export type PolicyType = 'TIME' | 'IP' | 'DEVICE';
+
+/**
+ * 系统权限枚举
+ */
+export type SystemPermission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE';
+
+export type CreatePolicyDto = {
+    /**
+     * 策略类型
+     */
+    type: PolicyType;
+    /**
+     * 策略名称
+     */
+    name: string;
+    /**
+     * 策略描述
+     */
+    description?: string;
+    /**
+     * 策略配置
+     */
+    config: {
+        [key: string]: unknown;
+    };
+    /**
+     * 关联的权限
+     */
+    permissions: Array<SystemPermission>;
+    /**
+     * 是否启用
+     */
+    enabled?: boolean;
+    /**
+     * 优先级（数值越大优先级越高）
+     */
+    priority?: number;
+};
+
+export type PolicyResponseDto = {
+    /**
+     * 策略 ID
+     */
+    id: string;
+    /**
+     * 策略类型
+     */
+    type: PolicyType;
+    /**
+     * 策略名称
+     */
+    name: string;
+    /**
+     * 策略描述
+     */
+    description?: string;
+    /**
+     * 策略配置
+     */
+    config: {
+        [key: string]: unknown;
+    };
+    /**
+     * 关联的权限
+     */
+    permissions: Array<SystemPermission>;
+    /**
+     * 是否启用
+     */
+    enabled: boolean;
+    /**
+     * 优先级
+     */
+    priority?: number;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+};
+
+export type UpdatePolicyDto = {
+    /**
+     * 策略名称
+     */
+    name?: string;
+    /**
+     * 策略描述
+     */
+    description?: string;
+    /**
+     * 策略配置
+     */
+    config?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 关联的权限
+     */
+    permissions?: Array<SystemPermission>;
+    /**
+     * 是否启用
+     */
+    enabled?: boolean;
+    /**
+     * 优先级
+     */
+    priority?: number;
+    /**
+     * 策略类型
+     */
+    type?: 'TIME' | 'IP' | 'DEVICE';
+};
+
 export type UploadExtReferenceDto = {
     /**
      * 源图纸文件的哈希值（主图纸文件的 hash）
@@ -2337,10 +2548,20 @@ export type SaveLibraryNodeDto = {
     file: Blob | File;
 };
 
-/**
- * 系统权限枚举
- */
-export type SystemPermission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE';
+export type SaveLibraryAsDto = {
+    /**
+     * mxweb 文件
+     */
+    file: Blob | File;
+    /**
+     * 目标父节点ID
+     */
+    targetParentId: string;
+    /**
+     * 文件名（不含扩展名）
+     */
+    fileName?: string;
+};
 
 /**
  * 项目权限枚举
@@ -2367,6 +2588,37 @@ export type CacheMonitorControllerGetSummaryResponses = {
 };
 
 export type CacheMonitorControllerGetSummaryResponse = CacheMonitorControllerGetSummaryResponses[keyof CacheMonitorControllerGetSummaryResponses];
+
+export type CacheMonitorControllerGetStatsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 缓存级别
+         */
+        level?: 'L1' | 'L2' | 'L3';
+        /**
+         * 是否包含性能指标
+         */
+        includePerformance?: boolean;
+        /**
+         * 是否包含热点数据
+         */
+        includeHotData?: boolean;
+        /**
+         * 热点数据数量
+         */
+        hotDataLimit?: number;
+    };
+    url: '/api/v1/cache-monitor/stats';
+};
+
+export type CacheMonitorControllerGetStatsResponses = {
+    /**
+     * 成功获取统计信息
+     */
+    200: unknown;
+};
 
 export type CacheMonitorControllerGetHealthStatusData = {
     body?: never;
@@ -2499,6 +2751,36 @@ export type CacheMonitorControllerGetValueData = {
 export type CacheMonitorControllerGetValueResponses = {
     /**
      * 成功获取缓存值
+     */
+    200: unknown;
+};
+
+export type CacheMonitorControllerSetValueData = {
+    body: CacheOperationDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cache-monitor/value';
+};
+
+export type CacheMonitorControllerSetValueResponses = {
+    /**
+     * 成功设置缓存值
+     */
+    200: unknown;
+};
+
+export type CacheMonitorControllerDeleteByPatternData = {
+    body?: never;
+    path?: never;
+    query: {
+        pattern: string;
+    };
+    url: '/api/v1/cache-monitor/pattern';
+};
+
+export type CacheMonitorControllerDeleteByPatternResponses = {
+    /**
+     * 成功删除缓存
      */
     200: unknown;
 };
@@ -3834,6 +4116,31 @@ export type UsersControllerRestoreResponses = {
     200: unknown;
 };
 
+export type UsersControllerUpdateStatusData = {
+    body: UpdateUserStatusDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/status';
+};
+
+export type UsersControllerUpdateStatusErrors = {
+    /**
+     * 用户不存在
+     */
+    404: unknown;
+};
+
+export type UsersControllerUpdateStatusResponses = {
+    /**
+     * 更新用户状态成功
+     */
+    200: UserResponseDto;
+};
+
+export type UsersControllerUpdateStatusResponse = UsersControllerUpdateStatusResponses[keyof UsersControllerUpdateStatusResponses];
+
 export type UsersControllerDeleteImmediatelyData = {
     body?: never;
     path: {
@@ -4414,6 +4721,51 @@ export type FileSystemControllerCreateProjectResponses = {
 
 export type FileSystemControllerCreateProjectResponse = FileSystemControllerCreateProjectResponses[keyof FileSystemControllerCreateProjectResponses];
 
+export type FileSystemControllerGetDeletedProjectsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 搜索关键词（匹配名称或描述）
+         */
+        search?: string;
+        /**
+         * 项目状态
+         */
+        projectStatus?: ProjectStatus;
+        /**
+         * 页码
+         */
+        page?: number;
+        /**
+         * 每页数量
+         */
+        limit?: number;
+        /**
+         * 排序字段
+         */
+        sortBy?: string;
+        /**
+         * 排序方向
+         */
+        sortOrder?: 'asc' | 'desc';
+        /**
+         * 项目过滤类型：all-全部，owned-我创建的，joined-我加入的
+         */
+        filter?: ProjectFilterType;
+    };
+    url: '/api/v1/file-system/projects/trash';
+};
+
+export type FileSystemControllerGetDeletedProjectsResponses = {
+    /**
+     * 获取已删除项目列表成功
+     */
+    200: ProjectListResponseDto;
+};
+
+export type FileSystemControllerGetDeletedProjectsResponse = FileSystemControllerGetDeletedProjectsResponses[keyof FileSystemControllerGetDeletedProjectsResponses];
+
 export type FileSystemControllerGetPersonalSpaceData = {
     body?: never;
     path?: never;
@@ -4429,6 +4781,58 @@ export type FileSystemControllerGetPersonalSpaceResponses = {
 };
 
 export type FileSystemControllerGetPersonalSpaceResponse = FileSystemControllerGetPersonalSpaceResponses[keyof FileSystemControllerGetPersonalSpaceResponses];
+
+export type FileSystemControllerGetUserPersonalSpaceData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/personal-space/by-user/{userId}';
+};
+
+export type FileSystemControllerGetUserPersonalSpaceErrors = {
+    /**
+     * 无权限
+     */
+    403: unknown;
+};
+
+export type FileSystemControllerGetUserPersonalSpaceResponses = {
+    /**
+     * 获取私人空间成功
+     */
+    200: FileSystemNodeDto;
+};
+
+export type FileSystemControllerGetUserPersonalSpaceResponse = FileSystemControllerGetUserPersonalSpaceResponses[keyof FileSystemControllerGetUserPersonalSpaceResponses];
+
+export type FileSystemControllerDeleteProjectData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query: {
+        permanently: boolean;
+    };
+    url: '/api/v1/file-system/projects/{projectId}';
+};
+
+export type FileSystemControllerDeleteProjectErrors = {
+    /**
+     * 项目不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerDeleteProjectResponses = {
+    /**
+     * 删除项目成功
+     */
+    200: OperationSuccessDto;
+};
+
+export type FileSystemControllerDeleteProjectResponse = FileSystemControllerDeleteProjectResponses[keyof FileSystemControllerDeleteProjectResponses];
 
 export type FileSystemControllerGetProjectData = {
     body?: never;
@@ -4454,6 +4858,31 @@ export type FileSystemControllerGetProjectResponses = {
 };
 
 export type FileSystemControllerGetProjectResponse = FileSystemControllerGetProjectResponses[keyof FileSystemControllerGetProjectResponses];
+
+export type FileSystemControllerUpdateProjectData = {
+    body: UpdateNodeDto;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/projects/{projectId}';
+};
+
+export type FileSystemControllerUpdateProjectErrors = {
+    /**
+     * 项目不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerUpdateProjectResponses = {
+    /**
+     * 更新项目信息成功
+     */
+    200: ProjectDto;
+};
+
+export type FileSystemControllerUpdateProjectResponse = FileSystemControllerUpdateProjectResponses[keyof FileSystemControllerUpdateProjectResponses];
 
 export type FileSystemControllerClearTrashData = {
     body?: never;
@@ -4528,6 +4957,24 @@ export type FileSystemControllerPermanentlyDeleteTrashItemsResponses = {
 };
 
 export type FileSystemControllerPermanentlyDeleteTrashItemsResponse = FileSystemControllerPermanentlyDeleteTrashItemsResponses[keyof FileSystemControllerPermanentlyDeleteTrashItemsResponses];
+
+export type FileSystemControllerClearProjectTrashData = {
+    body?: never;
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/projects/{projectId}/trash';
+};
+
+export type FileSystemControllerClearProjectTrashResponses = {
+    /**
+     * 项目回收站已清空
+     */
+    200: OperationSuccessDto;
+};
+
+export type FileSystemControllerClearProjectTrashResponse = FileSystemControllerClearProjectTrashResponses[keyof FileSystemControllerClearProjectTrashResponses];
 
 export type FileSystemControllerGetProjectTrashData = {
     body?: never;
@@ -5100,6 +5547,144 @@ export type FileSystemControllerUpdateProjectMemberResponses = {
 
 export type FileSystemControllerUpdateProjectMemberResponse = FileSystemControllerUpdateProjectMemberResponses[keyof FileSystemControllerUpdateProjectMemberResponses];
 
+export type FileSystemControllerTransferProjectData = {
+    body: {
+        /**
+         * 新所有者用户ID
+         */
+        newOwnerId: string;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/projects/{projectId}/transfer';
+};
+
+export type FileSystemControllerTransferProjectErrors = {
+    /**
+     * 请求参数错误
+     */
+    400: unknown;
+    /**
+     * 未登录
+     */
+    401: unknown;
+    /**
+     * 无权限转移项目所有权
+     */
+    403: unknown;
+    /**
+     * 项目或用户不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerTransferProjectResponses = {
+    /**
+     * 转移所有权成功
+     */
+    200: unknown;
+};
+
+export type FileSystemControllerUpdateProjectMembersBatchData = {
+    body: {
+        /**
+         * 要更新的成员列表
+         */
+        members: Array<{
+            /**
+             * 用户ID
+             */
+            userId?: string;
+            /**
+             * 项目角色ID
+             */
+            projectRoleId?: string;
+        }>;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/projects/{projectId}/members/batch';
+};
+
+export type FileSystemControllerUpdateProjectMembersBatchErrors = {
+    /**
+     * 请求参数错误
+     */
+    400: unknown;
+    /**
+     * 未登录
+     */
+    401: unknown;
+    /**
+     * 无权限修改成员角色
+     */
+    403: unknown;
+    /**
+     * 项目或成员不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerUpdateProjectMembersBatchResponses = {
+    /**
+     * 批量更新成员角色成功
+     */
+    200: unknown;
+};
+
+export type FileSystemControllerAddProjectMembersBatchData = {
+    body: {
+        /**
+         * 要添加的成员列表
+         */
+        members: Array<{
+            /**
+             * 用户ID
+             */
+            userId?: string;
+            /**
+             * 项目角色ID
+             */
+            projectRoleId?: string;
+        }>;
+    };
+    path: {
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/projects/{projectId}/members/batch';
+};
+
+export type FileSystemControllerAddProjectMembersBatchErrors = {
+    /**
+     * 请求参数错误
+     */
+    400: unknown;
+    /**
+     * 未登录
+     */
+    401: unknown;
+    /**
+     * 无权限添加成员
+     */
+    403: unknown;
+    /**
+     * 项目不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerAddProjectMembersBatchResponses = {
+    /**
+     * 批量添加成员成功
+     */
+    201: unknown;
+};
+
 export type FileSystemControllerGetThumbnailData = {
     body?: never;
     path: {
@@ -5448,6 +6033,55 @@ export type VersionControlControllerGetFileContentAtRevisionResponses = {
 };
 
 export type VersionControlControllerGetFileContentAtRevisionResponse = VersionControlControllerGetFileContentAtRevisionResponses[keyof VersionControlControllerGetFileContentAtRevisionResponses];
+
+export type VersionControlControllerListDirectoryAtRevisionData = {
+    body?: never;
+    path: {
+        /**
+         * 修订版本号
+         */
+        revision: number;
+    };
+    query: {
+        /**
+         * 项目ID
+         */
+        projectId: string;
+        /**
+         * 目录路径
+         */
+        directoryPath: string;
+    };
+    url: '/api/v1/version-control/list/{revision}';
+};
+
+export type VersionControlControllerListDirectoryAtRevisionErrors = {
+    /**
+     * 请求参数错误
+     */
+    400: unknown;
+    /**
+     * 未授权
+     */
+    401: unknown;
+    /**
+     * 无权限
+     */
+    403: unknown;
+};
+
+export type VersionControlControllerListDirectoryAtRevisionResponses = {
+    /**
+     * 获取成功
+     */
+    200: {
+        success?: boolean;
+        message?: string;
+        files?: Array<string>;
+    };
+};
+
+export type VersionControlControllerListDirectoryAtRevisionResponse = VersionControlControllerListDirectoryAtRevisionResponses[keyof VersionControlControllerListDirectoryAtRevisionResponses];
 
 export type FontsControllerGetFontsData = {
     body?: never;
@@ -5946,6 +6580,74 @@ export type AdminControllerGetAdminStatsResponses = {
 
 export type AdminControllerGetAdminStatsResponse = AdminControllerGetAdminStatsResponses[keyof AdminControllerGetAdminStatsResponses];
 
+export type AdminControllerGetCacheStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/permissions/cache';
+};
+
+export type AdminControllerGetCacheStatsResponses = {
+    /**
+     * 获取权限缓存统计成功
+     */
+    200: CacheStatsResponseDto;
+};
+
+export type AdminControllerGetCacheStatsResponse = AdminControllerGetCacheStatsResponses[keyof AdminControllerGetCacheStatsResponses];
+
+export type AdminControllerCleanupCacheData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/permissions/cache/cleanup';
+};
+
+export type AdminControllerCleanupCacheResponses = {
+    /**
+     * 缓存清理完成
+     */
+    200: CacheCleanupResponseDto;
+};
+
+export type AdminControllerCleanupCacheResponse = AdminControllerCleanupCacheResponses[keyof AdminControllerCleanupCacheResponses];
+
+export type AdminControllerClearUserCacheData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/permissions/cache/user/{userId}';
+};
+
+export type AdminControllerClearUserCacheResponses = {
+    /**
+     * 用户权限缓存已清除
+     */
+    200: UserCacheClearResponseDto;
+};
+
+export type AdminControllerClearUserCacheResponse = AdminControllerClearUserCacheResponses[keyof AdminControllerClearUserCacheResponses];
+
+export type AdminControllerGetUserPermissionsData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/permissions/user/{userId}';
+};
+
+export type AdminControllerGetUserPermissionsResponses = {
+    /**
+     * 获取用户权限信息成功
+     */
+    200: UserPermissionsResponseDto;
+};
+
+export type AdminControllerGetUserPermissionsResponse = AdminControllerGetUserPermissionsResponses[keyof AdminControllerGetUserPermissionsResponses];
+
 export type AdminControllerCleanupStorageData = {
     body?: never;
     path?: never;
@@ -5997,7 +6699,7 @@ export type HealthControllerPublicHealthData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/v1/health';
+    url: '/api/v1/health/public';
 };
 
 export type HealthControllerPublicHealthResponses = {
@@ -6006,6 +6708,75 @@ export type HealthControllerPublicHealthResponses = {
      */
     200: unknown;
 };
+
+export type HealthControllerCheckFullData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/health';
+};
+
+export type HealthControllerCheckFullErrors = {
+    /**
+     * 服务不可用
+     *
+     * The Health Check is not successful
+     */
+    503: {
+        status?: string;
+        info?: {
+            [key: string]: {
+                status: string;
+                [key: string]: unknown;
+            };
+        } | null;
+        error?: {
+            [key: string]: {
+                status: string;
+                [key: string]: unknown;
+            };
+        } | null;
+        details?: {
+            [key: string]: {
+                status: string;
+                [key: string]: unknown;
+            };
+        };
+    };
+};
+
+export type HealthControllerCheckFullError = HealthControllerCheckFullErrors[keyof HealthControllerCheckFullErrors];
+
+export type HealthControllerCheckFullResponses = {
+    /**
+     * 系统正常运行
+     *
+     * The Health Check is successful
+     */
+    200: {
+        status?: string;
+        info?: {
+            [key: string]: {
+                status: string;
+                [key: string]: unknown;
+            };
+        } | null;
+        error?: {
+            [key: string]: {
+                status: string;
+                [key: string]: unknown;
+            };
+        } | null;
+        details?: {
+            [key: string]: {
+                status: string;
+                [key: string]: unknown;
+            };
+        };
+    };
+};
+
+export type HealthControllerCheckFullResponse = HealthControllerCheckFullResponses[keyof HealthControllerCheckFullResponses];
 
 export type HealthControllerCheckData = {
     body?: never;
@@ -6016,6 +6787,8 @@ export type HealthControllerCheckData = {
 
 export type HealthControllerCheckErrors = {
     /**
+     * 服务不可用
+     *
      * The Health Check is not successful
      */
     503: {
@@ -6045,6 +6818,8 @@ export type HealthControllerCheckError = HealthControllerCheckErrors[keyof Healt
 
 export type HealthControllerCheckResponses = {
     /**
+     * 系统正常运行
+     *
      * The Health Check is successful
      */
     200: {
@@ -6114,6 +6889,156 @@ export type HealthControllerCheckStorageResponses = {
     200: unknown;
 };
 
+export type PolicyConfigControllerGetAllPoliciesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy-config';
+};
+
+export type PolicyConfigControllerGetAllPoliciesResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«ÕłŚĶĪ©ĶÄĘÕÅ¢µłÉÕŖ¤
+     */
+    200: Array<PolicyResponseDto>;
+};
+
+export type PolicyConfigControllerGetAllPoliciesResponse = PolicyConfigControllerGetAllPoliciesResponses[keyof PolicyConfigControllerGetAllPoliciesResponses];
+
+export type PolicyConfigControllerCreatePolicyData = {
+    body: CreatePolicyDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy-config';
+};
+
+export type PolicyConfigControllerCreatePolicyErrors = {
+    /**
+     * µØāķÖÉõĖŹĶČ│
+     */
+    403: unknown;
+};
+
+export type PolicyConfigControllerCreatePolicyResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«ÕłøÕ╗║µłÉÕŖ¤
+     */
+    201: PolicyResponseDto;
+};
+
+export type PolicyConfigControllerCreatePolicyResponse = PolicyConfigControllerCreatePolicyResponses[keyof PolicyConfigControllerCreatePolicyResponses];
+
+export type PolicyConfigControllerDeletePolicyData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/policy-config/{id}';
+};
+
+export type PolicyConfigControllerDeletePolicyErrors = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©
+     */
+    404: unknown;
+};
+
+export type PolicyConfigControllerDeletePolicyResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«ÕłĀķÖżµłÉÕŖ¤
+     */
+    204: void;
+};
+
+export type PolicyConfigControllerDeletePolicyResponse = PolicyConfigControllerDeletePolicyResponses[keyof PolicyConfigControllerDeletePolicyResponses];
+
+export type PolicyConfigControllerGetPolicyData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/policy-config/{id}';
+};
+
+export type PolicyConfigControllerGetPolicyErrors = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©
+     */
+    404: unknown;
+};
+
+export type PolicyConfigControllerGetPolicyResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«ĶÄĘÕÅ¢µłÉÕŖ¤
+     */
+    200: PolicyResponseDto;
+};
+
+export type PolicyConfigControllerGetPolicyResponse = PolicyConfigControllerGetPolicyResponses[keyof PolicyConfigControllerGetPolicyResponses];
+
+export type PolicyConfigControllerUpdatePolicyData = {
+    body: UpdatePolicyDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/policy-config/{id}';
+};
+
+export type PolicyConfigControllerUpdatePolicyErrors = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©
+     */
+    404: unknown;
+};
+
+export type PolicyConfigControllerUpdatePolicyResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«µø┤µ¢░µłÉÕŖ¤
+     */
+    200: PolicyResponseDto;
+};
+
+export type PolicyConfigControllerUpdatePolicyResponse = PolicyConfigControllerUpdatePolicyResponses[keyof PolicyConfigControllerUpdatePolicyResponses];
+
+export type PolicyConfigControllerEnablePolicyData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/policy-config/{id}/enable';
+};
+
+export type PolicyConfigControllerEnablePolicyResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«ÕÉ»ńö©µłÉÕŖ¤
+     */
+    200: PolicyResponseDto;
+};
+
+export type PolicyConfigControllerEnablePolicyResponse = PolicyConfigControllerEnablePolicyResponses[keyof PolicyConfigControllerEnablePolicyResponses];
+
+export type PolicyConfigControllerDisablePolicyData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/policy-config/{id}/disable';
+};
+
+export type PolicyConfigControllerDisablePolicyResponses = {
+    /**
+     * ńŁ¢ńĢźķģŹńĮ«ń”üńö©µłÉÕŖ¤
+     */
+    200: PolicyResponseDto;
+};
+
+export type PolicyConfigControllerDisablePolicyResponse = PolicyConfigControllerDisablePolicyResponses[keyof PolicyConfigControllerDisablePolicyResponses];
+
 export type PublicFileControllerAccessFileData = {
     body?: never;
     path: {
@@ -6139,6 +7064,31 @@ export type PublicFileControllerAccessFileResponses = {
 };
 
 export type PublicFileControllerAccessFileResponse = PublicFileControllerAccessFileResponses[keyof PublicFileControllerAccessFileResponses];
+
+export type PublicFileControllerAccessFileByHashPatternData = {
+    body?: never;
+    path: {
+        filename: string;
+    };
+    query?: never;
+    url: '/api/v1/public-file/access/{filename}';
+};
+
+export type PublicFileControllerAccessFileByHashPatternErrors = {
+    /**
+     * 文件不存在
+     */
+    404: unknown;
+};
+
+export type PublicFileControllerAccessFileByHashPatternResponses = {
+    /**
+     * 返回文件二进制数据
+     */
+    200: Blob | File;
+};
+
+export type PublicFileControllerAccessFileByHashPatternResponse = PublicFileControllerAccessFileByHashPatternResponses[keyof PublicFileControllerAccessFileByHashPatternResponses];
 
 export type PublicFileControllerUploadExtReferenceData = {
     body: UploadExtReferenceDto;
@@ -6226,7 +7176,7 @@ export type LibraryControllerGetDrawingLibraryData = {
 
 export type LibraryControllerGetDrawingLibraryResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6242,7 +7192,7 @@ export type LibraryControllerGetDrawingCategoriesData = {
 
 export type LibraryControllerGetDrawingCategoriesResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: unknown;
 };
@@ -6295,7 +7245,7 @@ export type LibraryControllerGetDrawingChildrenData = {
 
 export type LibraryControllerGetDrawingChildrenResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: NodeListResponseDto;
 };
@@ -6350,7 +7300,7 @@ export type LibraryControllerGetDrawingAllFilesData = {
 
 export type LibraryControllerGetDrawingAllFilesResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: NodeListResponseDto;
 };
@@ -6368,7 +7318,7 @@ export type LibraryControllerGetDrawingFileData = {
 
 export type LibraryControllerGetDrawingFileResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: Blob | File;
 };
@@ -6388,7 +7338,7 @@ export type LibraryControllerDeleteDrawingNodeData = {
 
 export type LibraryControllerDeleteDrawingNodeResponses = {
     /**
-     * 删除成功
+     * Success
      */
     200: unknown;
 };
@@ -6404,7 +7354,7 @@ export type LibraryControllerGetDrawingNodeData = {
 
 export type LibraryControllerGetDrawingNodeResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6422,7 +7372,7 @@ export type LibraryControllerRenameDrawingNodeData = {
 
 export type LibraryControllerRenameDrawingNodeResponses = {
     /**
-     * 重命名成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6440,7 +7390,7 @@ export type LibraryControllerDownloadDrawingNodeData = {
 
 export type LibraryControllerDownloadDrawingNodeResponses = {
     /**
-     * 下载成功
+     * Success
      */
     200: FileContentResponseDto;
 };
@@ -6458,7 +7408,7 @@ export type LibraryControllerGetDrawingThumbnailData = {
 
 export type LibraryControllerGetDrawingThumbnailResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: unknown;
 };
@@ -6474,7 +7424,21 @@ export type LibraryControllerSaveDrawingNodeData = {
 
 export type LibraryControllerSaveDrawingNodeResponses = {
     /**
-     * 保存成功
+     * Success
+     */
+    200: unknown;
+};
+
+export type LibraryControllerSaveDrawingAsData = {
+    body: SaveLibraryAsDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/drawing/save-as';
+};
+
+export type LibraryControllerSaveDrawingAsResponses = {
+    /**
+     * Success
      */
     200: unknown;
 };
@@ -6488,7 +7452,7 @@ export type LibraryControllerCreateDrawingFolderData = {
 
 export type LibraryControllerCreateDrawingFolderResponses = {
     /**
-     * 文件夹创建成功
+     * Success
      */
     201: FileSystemNodeDto;
 };
@@ -6506,7 +7470,7 @@ export type LibraryControllerMoveDrawingNodeData = {
 
 export type LibraryControllerMoveDrawingNodeResponses = {
     /**
-     * 移动成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6524,7 +7488,7 @@ export type LibraryControllerCopyDrawingNodeData = {
 
 export type LibraryControllerCopyDrawingNodeResponses = {
     /**
-     * 复制成功
+     * Success
      */
     201: FileSystemNodeDto;
 };
@@ -6540,7 +7504,7 @@ export type LibraryControllerGetBlockLibraryData = {
 
 export type LibraryControllerGetBlockLibraryResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6556,7 +7520,7 @@ export type LibraryControllerGetBlockCategoriesData = {
 
 export type LibraryControllerGetBlockCategoriesResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: unknown;
 };
@@ -6609,7 +7573,7 @@ export type LibraryControllerGetBlockChildrenData = {
 
 export type LibraryControllerGetBlockChildrenResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: NodeListResponseDto;
 };
@@ -6664,7 +7628,7 @@ export type LibraryControllerGetBlockAllFilesData = {
 
 export type LibraryControllerGetBlockAllFilesResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: NodeListResponseDto;
 };
@@ -6682,7 +7646,7 @@ export type LibraryControllerGetBlockFileData = {
 
 export type LibraryControllerGetBlockFileResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: Blob | File;
 };
@@ -6702,7 +7666,7 @@ export type LibraryControllerDeleteBlockNodeData = {
 
 export type LibraryControllerDeleteBlockNodeResponses = {
     /**
-     * 删除成功
+     * Success
      */
     200: unknown;
 };
@@ -6718,7 +7682,7 @@ export type LibraryControllerGetBlockNodeData = {
 
 export type LibraryControllerGetBlockNodeResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6736,7 +7700,7 @@ export type LibraryControllerRenameBlockNodeData = {
 
 export type LibraryControllerRenameBlockNodeResponses = {
     /**
-     * 重命名成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6754,7 +7718,7 @@ export type LibraryControllerDownloadBlockNodeData = {
 
 export type LibraryControllerDownloadBlockNodeResponses = {
     /**
-     * 下载成功
+     * Success
      */
     200: FileContentResponseDto;
 };
@@ -6772,7 +7736,7 @@ export type LibraryControllerGetBlockThumbnailData = {
 
 export type LibraryControllerGetBlockThumbnailResponses = {
     /**
-     * 获取成功
+     * Success
      */
     200: unknown;
 };
@@ -6788,7 +7752,21 @@ export type LibraryControllerSaveBlockNodeData = {
 
 export type LibraryControllerSaveBlockNodeResponses = {
     /**
-     * 保存成功
+     * Success
+     */
+    200: unknown;
+};
+
+export type LibraryControllerSaveBlockAsData = {
+    body: SaveLibraryAsDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/block/save-as';
+};
+
+export type LibraryControllerSaveBlockAsResponses = {
+    /**
+     * Success
      */
     200: unknown;
 };
@@ -6802,7 +7780,7 @@ export type LibraryControllerCreateBlockFolderData = {
 
 export type LibraryControllerCreateBlockFolderResponses = {
     /**
-     * 文件夹创建成功
+     * Success
      */
     201: FileSystemNodeDto;
 };
@@ -6820,7 +7798,7 @@ export type LibraryControllerMoveBlockNodeData = {
 
 export type LibraryControllerMoveBlockNodeResponses = {
     /**
-     * 移动成功
+     * Success
      */
     200: FileSystemNodeDto;
 };
@@ -6838,7 +7816,7 @@ export type LibraryControllerCopyBlockNodeData = {
 
 export type LibraryControllerCopyBlockNodeResponses = {
     /**
-     * 复制成功
+     * Success
      */
     201: FileSystemNodeDto;
 };
