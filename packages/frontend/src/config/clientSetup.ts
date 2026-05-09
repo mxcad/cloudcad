@@ -7,6 +7,13 @@ import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
 import { getValidToken, isValidToken, getRefreshToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken } from '@/utils/tokenUtils';
 
+// 用于在非 React 上下文中显示 Toast（通过 NotificationContext 的全局事件）
+function showGlobalToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'warning') {
+  window.dispatchEvent(
+    new CustomEvent('cloudcad:toast', { detail: { message, type } })
+  );
+}
+
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
 const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
 client.setConfig({
@@ -111,19 +118,36 @@ function clearAuthAndRedirect() {
   window.location.href = '/login';
 }
 
+function saveReturnUrl() {
+  const currentPath = window.location.pathname + window.location.search + window.location.hash;
+  // 不要保存 login 页面本身作为返回地址
+  if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+    sessionStorage.setItem('returnUrl', currentPath);
+  }
+}
+
+function getReturnUrl(): string {
+  const url = sessionStorage.getItem('returnUrl') || '/';
+  sessionStorage.removeItem('returnUrl');
+  return url;
+}
+
 function handleTokenRefreshFailure() {
   if (isRedirecting) return;
   isRedirecting = true;
 
-  // Show alert to user
-  alert('Login session expired. Please log in again.');
+  // 保存当前页面路径，登录后跳回
+  saveReturnUrl();
+
+  // 使用 Toast 替代 alert，非阻塞提示
+  showGlobalToast('登录已过期，正在跳转到登录页...', 'warning');
 
   // Clear any pending redirect
   if (redirectTimer !== null) {
     clearTimeout(redirectTimer);
   }
 
-  // Delay redirect to allow user to see the alert
+  // Delay redirect to allow user to see the Toast
   redirectTimer = window.setTimeout(() => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -192,3 +216,73 @@ client.interceptors.error.use(async (error, _response, _request, _options) => {
   }
   return error;
 });
+
+// ── 5. Proactive Token Refresh ───────────────────────────────
+// 在 access token 过期前 5 分钟主动刷新，避免 401 发生
+
+function parseJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1] || ''));
+    return payload.exp ? payload.exp * 1000 : null; // 转换为毫秒
+  } catch {
+    return null;
+  }
+}
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleProactiveRefresh() {
+  // 清除旧定时器
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+
+  const token = getValidToken();
+  if (!token) return;
+
+  const expMs = parseJwtExp(token);
+  if (!expMs) return;
+
+  const now = Date.now();
+  // 提前 5 分钟刷新（300000ms）
+  const REFRESH_AHEAD_MS = 5 * 60 * 1000;
+  const delay = expMs - now - REFRESH_AHEAD_MS;
+
+  // 如果已过期或即将过期（剩余不足 60 秒），立即刷新
+  if (delay <= 60_000) {
+    if (delay <= 0) {
+      // token 已过期，等下一次 401 被动刷新
+      return;
+    }
+    tryRefreshToken().then((ok) => {
+      if (ok) scheduleProactiveRefresh(); // 刷新成功，重新排期
+    });
+    return;
+  }
+
+  refreshTimer = setTimeout(() => {
+    tryRefreshToken().then((ok) => {
+      if (ok) scheduleProactiveRefresh(); // 刷新成功，重新排期
+    });
+  }, delay);
+}
+
+// 当 token 被外部更新时（如登录、主动刷新成功），重新排期
+export function triggerProactiveRefresh(): void {
+  scheduleProactiveRefresh();
+}
+
+// 清除主动刷新定时器（用于登出）
+export function cancelProactiveRefresh(): void {
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+}
+
+// 暴露 returnUrl 供登录页使用
+export { getReturnUrl };
+
+// 初始化：页面加载时启动主动刷新
+scheduleProactiveRefresh();

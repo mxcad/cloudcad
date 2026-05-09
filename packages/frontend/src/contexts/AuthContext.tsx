@@ -19,6 +19,7 @@ import {
 } from '@/api-sdk';
 import type { UserDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
+import { triggerProactiveRefresh, cancelProactiveRefresh } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 
 type User = UserDtoType;
@@ -183,6 +184,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
+      // 启动主动 token 刷新
+      triggerProactiveRefresh();
+
       console.log('[AuthContext] 登录完成');
     } catch (error) {
       console.log('[AuthContext] 登录失败:', error);
@@ -220,6 +224,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 更新状态
       setToken(accessToken);
       setUser(userData);
+
+      // 启动主动 token 刷新
+      triggerProactiveRefresh();
 
       console.log('[AuthContext] 手机登录完成');
     } catch (error) {
@@ -264,6 +271,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
+      // 启动主动 token 刷新
+      triggerProactiveRefresh();
+
       return { message: '注册成功' };
     },
     []
@@ -289,6 +299,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(accessToken);
       setUser(userData);
 
+      // 启动主动 token 刷新
+      triggerProactiveRefresh();
+
       return apiResponse;
     },
     []
@@ -312,6 +325,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(accessToken);
       setUser(userData);
+
+      // 启动主动 token 刷新
+      triggerProactiveRefresh();
 
       return apiResponse;
     },
@@ -345,6 +361,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 3. 更新状态
       setToken(null);
       setUser(null);
+
+      // 4. 取消主动 token 刷新定时器
+      cancelProactiveRefresh();
 
       console.log('[AuthContext] 本地状态已清除');
 
@@ -393,6 +412,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(action.user));
             setToken(action.accessToken);
             setUser(action.user as User);
+
+            // 启动主动 token 刷新
+            triggerProactiveRefresh();
+
+            // 启动主动 token 刷新
+            triggerProactiveRefresh();
           } else if (action?.type === 'need_register') {
             sessionStorage.setItem('wechatTempToken', action.tempToken);
             window.location.href = '/register?wechat=1';

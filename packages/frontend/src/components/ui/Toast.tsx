@@ -3,6 +3,7 @@ import { CheckCircle } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { Info } from 'lucide-react';
 import { X } from 'lucide-react';
+import { Z_LAYERS } from '@/constants/layers';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -56,7 +57,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   onRemove,
 }) => {
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 space-y-2" style={{ zIndex: 100010 }}>
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 space-y-2" style={{ zIndex: Z_LAYERS.TOAST }}>
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

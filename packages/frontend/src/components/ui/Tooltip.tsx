@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { Z_LAYERS } from '@/constants/layers';
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TooltipTrigger = 'hover' | 'click' | 'focus';
@@ -193,7 +194,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
     return {
       position: 'fixed',
-      zIndex: 99999,
+      zIndex: Z_LAYERS.TOOLTIP,
       top: tooltipPosition.top,
       left: tooltipPosition.left,
       transform,

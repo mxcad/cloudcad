@@ -414,11 +414,13 @@ export const FileItem: React.FC<FileItemProps> = ({
     return (
       <div
         data-tour="file-item"
-        className={`group relative rounded-xl transition-all duration-200 cursor-pointer pointer-events-auto
+        className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto
+          ${galleryMode ? 'w-[120px] min-h-[150px] rounded-sm' : 'rounded-xl'}
           ${isPreviewOpen ? 'pointer-events-none' : ''}
           ${showSelection ? 'shadow-md' : ''}
           ${isDropTarget ? 'shadow-md' : ''}
-          ${!showSelection && !isDropTarget ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
+          ${!showSelection && !isDropTarget && !galleryMode ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
+          ${!showSelection && !isDropTarget && galleryMode ? 'hover:shadow-lg' : ''}
         `}
         style={{
           background: showSelection
@@ -435,7 +437,11 @@ export const FileItem: React.FC<FileItemProps> = ({
         onMouseEnter={(e) => {
           setIsHovered(true);
           if (!showSelection && !isDropTarget) {
-            e.currentTarget.style.borderColor = 'var(--primary-400)';
+            if (galleryMode) {
+              e.currentTarget.style.background = 'var(--bg-tertiary)';
+            } else {
+              e.currentTarget.style.borderColor = 'var(--primary-400)';
+            }
           }
         }}
         onMouseLeave={(e) => {
@@ -443,7 +449,11 @@ export const FileItem: React.FC<FileItemProps> = ({
           setShowMenu(false);
           onDragLeave?.();
           if (!showSelection && !isDropTarget) {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
+            if (galleryMode) {
+              e.currentTarget.style.background = 'var(--bg-secondary)';
+            } else {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+            }
           }
         }}
         onClick={handleClick}

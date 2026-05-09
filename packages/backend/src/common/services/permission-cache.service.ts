@@ -239,6 +239,15 @@ export class PermissionCacheService implements OnModuleDestroy {
   }
 
   /**
+   * 批量删除缓存
+   */
+  async deleteMany(keys: string[]): Promise<void> {
+    if (keys.length > 0) {
+      this.multiLevelCache.deleteMany(keys);
+    }
+  }
+
+  /**
    * 清除用户缓存（公共接口）
    */
   async clearUserCache(userId: string): Promise<void> {

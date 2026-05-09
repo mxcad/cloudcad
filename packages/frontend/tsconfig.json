@@ -29,5 +29,5 @@
     "vitest.config.ts",
     "vite-env.d.ts"
   ],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts", "src/test/msw/generated/**/*"]
 }

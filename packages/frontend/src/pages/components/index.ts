@@ -5,7 +5,4 @@ export { FileSystemToolbar } from './FileSystemToolbar';
 export { BatchActionsBar } from './BatchActionsBar';
 export { ProjectFilterTabs } from './ProjectFilterTabs';
 export { ProfileInfoTab } from './ProfileInfoTab';
-export { ProfilePasswordTab } from './ProfilePasswordTab';
-export { ProfileEmailTab } from './ProfileEmailTab';
-export { ProfilePhoneTab } from './ProfilePhoneTab';
 export { ProfileDeactivateTab } from './ProfileDeactivateTab';

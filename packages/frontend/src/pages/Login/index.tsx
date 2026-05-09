@@ -15,6 +15,7 @@ import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { CheckCircle, AlertCircle, Cpu, Boxes, ShieldCheck, Mail, Phone } from 'lucide-react';
 import { useLoginForm } from './hooks/useLoginForm';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
+import { getReturnUrl } from '@/config/clientSetup';
 import { loginStyles } from './LoginStyles';
 import { LoginHeader } from './components/LoginHeader';
 import { AccountLoginForm } from './components/AccountLoginForm';
@@ -110,7 +111,9 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      const from = (location.state as LocationState)?.from || '/';
+      // 优先使用 session 中保存的 returnUrl（来自 session 过期），其次使用路由 state.from
+      const returnUrl = getReturnUrl();
+      const from = (location.state as LocationState)?.from || returnUrl || '/';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate, location]);

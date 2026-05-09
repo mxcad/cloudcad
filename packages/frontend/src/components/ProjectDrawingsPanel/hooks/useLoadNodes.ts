@@ -22,7 +22,6 @@ export interface UseLoadNodesReturn {
   total: number;
   totalPages: number;
   hasMore: boolean;
-  activeRequestId: React.MutableRefObject<number>;
   loadNodes: (
     nodeId: string,
     page?: number,
@@ -50,7 +49,6 @@ export function useLoadNodes(
   const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  const activeRequestId = useRef(0);
   const queryClient = useQueryClient();
 
   // 共享面包屑 hook
@@ -115,9 +113,6 @@ export function useLoadNodes(
       search?: string,
       append: boolean | 'prepend' = false
     ) => {
-      const currentRequestId = activeRequestId.current + 1;
-      activeRequestId.current = currentRequestId;
-
       setCurrentPage(page);
 
       if (isLibraryMode) {
@@ -141,7 +136,6 @@ export function useLoadNodes(
     setTotal(0);
     setTotalPages(1);
     setHasMore(false);
-    activeRequestId.current = 0;
     setLibraryNodeId(undefined);
     setLibrarySearch('');
     setFsNodeId(undefined);
@@ -162,7 +156,6 @@ export function useLoadNodes(
     total,
     totalPages,
     hasMore,
-    activeRequestId,
     loadNodes,
     buildBreadcrumbPath,
     loadNodesRef,

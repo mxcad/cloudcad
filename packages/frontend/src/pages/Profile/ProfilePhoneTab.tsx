@@ -41,7 +41,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
   onFocusField,
   onSetEditingPhone,
 }) => {
-  const phone = user?.phone;
+  const phone = user?.phone as unknown as string | null | undefined;
 
   if (phone && !isEditingPhone) {
     return (

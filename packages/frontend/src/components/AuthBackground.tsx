@@ -22,7 +22,7 @@ export const AuthBackground: React.FC = () => {
           position: fixed;
           inset: 0;
           pointer-events: none;
-          z-index: 0;
+          z-index: 0; /* Z_LAYERS.BACKGROUND */
         }
 
         .gradient-orb {

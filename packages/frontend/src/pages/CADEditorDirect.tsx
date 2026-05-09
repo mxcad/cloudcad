@@ -13,6 +13,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
@@ -506,16 +507,16 @@ export const CADEditorDirect: React.FC = () => {
 
         // 如果 URL 参数指定了 libraryKey，直接使用
         if (libraryKeyParam === 'drawing') {
-          const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
-          file = nodeResponse;
+          const { data: nodeData } = await libraryControllerGetDrawingNode({ path: { nodeId: fileId } });
+          file = nodeData!;
         } else if (libraryKeyParam === 'block') {
-          const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
-          file = nodeResponse;
+          const { data: nodeData } = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
+          file = nodeData!;
         } else {
           // 项目文件：需要登录
           try {
-            const fileNode = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
-            file = fileNode;
+            const { data: fileData } = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
+            file = fileData!;
           } catch (error) {
             console.error('获取文件信息失败:', error);
             const axiosError = error as { response?: { status?: number } };
@@ -797,6 +798,22 @@ export const CADEditorDirect: React.FC = () => {
     
     return () => {
       window.removeEventListener('public-file-uploaded', handlePublicFileUploaded as EventListener);
+    };
+  }, [externalReferenceUpload]);
+
+  // 监听已登录用户上传完成事件，检查外部参照（替代 mxcadManager 中的直接 hook 调用）
+  useEffect(() => {
+    const handleUploadCompleted = (event: CustomEvent<{ nodeId: string }>) => {
+      const { nodeId } = event.detail;
+      // shouldRetry = true，上传完成后需要等待后端生成 preloading.json
+      // forceOpen = false，没有外部参照不弹框
+      externalReferenceUpload.checkMissingReferences(nodeId, true, false).catch(err => {
+        console.error('外部参照检查失败:', err);
+      });
+    };
+    window.addEventListener('mxcad-upload-completed', handleUploadCompleted as EventListener);
+    return () => {
+      window.removeEventListener('mxcad-upload-completed', handleUploadCompleted as EventListener);
     };
   }, [externalReferenceUpload]);
 
@@ -1131,10 +1148,10 @@ export const CADEditorDirect: React.FC = () => {
     // 文件编辑模式：已有打开的文件
     try {
       // 获取目标文件信息（要打开的文件）
-      const targetFile = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } });
+      const { data: targetFile } = await fileSystemControllerGetNode({ path: { nodeId: file.nodeId } });
 
       // 检查目标文件是否在回收站中
-      if (targetFile.deletedAt) {
+      if (targetFile?.deletedAt) {
         return;
       }
 
@@ -1142,11 +1159,11 @@ export const CADEditorDirect: React.FC = () => {
       const currentFileId = currentFileIdRef.current;
       if (!currentFileId) return;
 
-      const currentFile = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } });
+      const { data: currentFile } = await fileSystemControllerGetNode({ path: { nodeId: currentFileId } });
 
       // 确定 uploadTargetNodeId：优先使用 parentId，如果是根节点则使用 id
-      let uploadTargetNodeId = currentFile.parentId || '';
-      if (currentFile.isRoot && currentFile.id) {
+      let uploadTargetNodeId = currentFile?.parentId || '';
+      if (currentFile?.isRoot && currentFile?.id) {
         uploadTargetNodeId = currentFile.id;
       }
 
@@ -1228,7 +1245,7 @@ export const CADEditorDirect: React.FC = () => {
       className="fixed inset-0"
       style={{
         visibility: isActive ? 'visible' : 'hidden',
-        zIndex: isActive ? 9999 : -1,
+        zIndex: isActive ? Z_LAYERS.CAD_EDITOR : -1,
         pointerEvents: isActive ? 'auto' : 'none',
         background: 'transparent',
       }}

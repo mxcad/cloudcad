@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Z_LAYERS } from '@/constants/layers';
 import { useTheme } from '../contexts/ThemeContext';
 
 /**
@@ -215,7 +216,7 @@ export const InteractiveBackground: React.FC = () => {
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 0,
+        zIndex: Z_LAYERS.BACKGROUND,
       }}
     />,
     document.body

@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryKey } from '@tanstack/react-query';
 import {
   libraryControllerGetDrawingLibrary,
   libraryControllerGetDrawingChildren,
@@ -16,6 +16,7 @@ import {
   libraryControllerGetBlockNode,
 } from '@/api-sdk';
 import type { FileSystemNode } from '../../types/filesystem';
+import type { NodeListResponseDto, FileSystemNodeDto } from '@/api-sdk';
 import { queryKeys } from '../../lib/queryKeys';
 
 export type LibraryType = 'drawing' | 'block';
@@ -35,11 +36,10 @@ interface LibraryData {
   libraryName: string;
 }
 
-interface ChildrenData {
-  nodes: FileSystemNode[];
-  total: number;
-  totalPages: number;
-}
+type ChildrenData = Pick<
+  NodeListResponseDto,
+  'nodes' | 'total' | 'totalPages'
+>;
 
 interface BreadcrumbItem {
   id: string;
@@ -115,12 +115,14 @@ function getNodeApi(type: LibraryType) {
 async function getNodePath(
   type: LibraryType,
   nodeId: string,
-  libraryId: string
+  libraryId: string,
 ): Promise<BreadcrumbItem[]> {
   const nodeApi = getNodeApi(type);
   const nodeResponse = await nodeApi({ path: { nodeId } });
   if (nodeResponse.error) throw nodeResponse.error;
-  const nodeData = nodeResponse.data as FileSystemNode & {
+
+  // FileSystemNodeDto 没有 parent 字段，但 API 响应实际包含
+  const nodeData = nodeResponse.data as FileSystemNodeDto & {
     parent?: { id: string; name: string };
   };
 
@@ -140,7 +142,7 @@ async function getNodePath(
 async function buildBreadcrumbs(
   type: LibraryType,
   libraryData: LibraryData,
-  nodeId: string
+  nodeId: string,
 ): Promise<BreadcrumbItem[]> {
   const nodeApi = getNodeApi(type);
   const crumbs: BreadcrumbItem[] = [
@@ -150,7 +152,7 @@ async function buildBreadcrumbs(
   try {
     const nodeResponse = await nodeApi({ path: { nodeId } });
     if (nodeResponse.error) throw nodeResponse.error;
-    const nodeData = nodeResponse.data as FileSystemNode & {
+    const nodeData = nodeResponse.data as FileSystemNodeDto & {
       parent?: { id: string; name: string };
     };
 
@@ -158,14 +160,11 @@ async function buildBreadcrumbs(
       return crumbs;
     }
 
-    // 递归获取完整路径
     const pathNodes = await getNodePath(type, nodeData.id, libraryData.libraryId);
     if (pathNodes.length > 0) {
-      // 过滤掉库根节点（已在 crumbs[0]）
       const intermediate = pathNodes.filter(
-        (p) => p.id !== libraryData.libraryId
+        (p) => p.id !== libraryData.libraryId,
       );
-      // 最后一个节点是当前节点，最后单独添加
       if (intermediate.length > 0) {
         intermediate.pop();
         crumbs.push(...intermediate);
@@ -175,11 +174,10 @@ async function buildBreadcrumbs(
     crumbs.push({ id: nodeData.id, name: nodeData.name });
     return crumbs;
   } catch {
-    // 回退：尝试用 parentId 构建单层面包屑
     try {
       const nodeResponse = await nodeApi({ path: { nodeId } });
       if (!nodeResponse.error) {
-        const nodeData = nodeResponse.data as FileSystemNode & {
+        const nodeData = nodeResponse.data as FileSystemNodeDto & {
           parent?: { id: string; name: string };
         };
         if (nodeData.parent && nodeData.parent.id !== libraryData.libraryId) {
@@ -197,11 +195,30 @@ async function buildBreadcrumbs(
   }
 }
 
+// ---- 构建 queryKey 辅助函数（消除条件类型断言） ----
+
+function buildChildrenOrAllFilesKey(
+  isRootBrowse: boolean,
+  libraryType: LibraryType,
+  libraryId: string,
+  effectiveNodeId: string,
+): QueryKey {
+  if (isRootBrowse && libraryId) {
+    return getAllFilesQueryKey(libraryType, libraryId, '');
+  }
+  return getChildrenQueryKey(libraryType, effectiveNodeId);
+}
+
 /**
  * 资源库数据查询 Hook
  *
  * 管理库根节点、子节点列表、搜索、面包屑的查询逻辑。
  * 使用 React Query 实现缓存和自动重试。
+ *
+ * 类型安全性：
+ * - SDK 返回类型为判别联合：{ data: Dto; error: undefined } | { data: undefined; error: unknown }
+ * - if (result.error) throw → TypeScript 自动窄化 result.data 为精确的 Dto 类型
+ * - 不使用 as 类型断言
  */
 export function useLibraryQuery({
   libraryType,
@@ -215,12 +232,14 @@ export function useLibraryQuery({
   // ---- 1. 库根节点信息 ----
   const libraryQuery = useQuery({
     queryKey: getLibraryQueryKey(libraryType),
-    queryFn: async () => {
+    queryFn: async (): Promise<LibraryData> => {
       const api = getLibraryApi(libraryType);
       const result = await api();
-      if (result.error) throw result.error;
-      const data = result.data as { id: string; name: string };
-      return { libraryId: data.id, libraryName: data.name } as LibraryData;
+      if (result.error || !result.data) throw result.error ?? new Error('Library root not found');
+      return {
+        libraryId: result.data.id,
+        libraryName: result.data.name,
+      };
     },
     staleTime: 5 * 60 * 1000,
     throwOnError: false,
@@ -232,53 +251,63 @@ export function useLibraryQuery({
   // ---- 2. 搜索模式：获取所有文件 ----
   const searchQuery = useQuery({
     queryKey: getAllFilesQueryKey(libraryType, libraryId || '__disabled__', search),
-    queryFn: async () => {
+    queryFn: async (): Promise<ChildrenData> => {
       const api = getAllFilesApi(libraryType);
       const result = await api({
         path: { nodeId: libraryId! },
         query: { page, limit, search },
       });
-      if (result.error) throw result.error;
-      const data = result.data as {
-        nodes: FileSystemNode[];
-        total?: number;
-        totalPages?: number;
-      };
+      if (result.error || !result.data) throw result.error ?? new Error('Search failed');
       return {
-        nodes: data.nodes || [],
-        total: data.total || (data.nodes || []).length,
+        nodes: result.data.nodes || [],
+        total: result.data.total || (result.data.nodes || []).length,
         totalPages:
-          data.totalPages ||
-          Math.ceil(((data.total || (data.nodes || []).length) as number) / limit),
-      } as ChildrenData;
+          result.data.totalPages ||
+          Math.ceil(((result.data.total || (result.data.nodes || []).length) / limit)),
+      };
     },
     enabled: !!search && !!libraryId,
     throwOnError: false,
   });
 
   // ---- 3. 子节点列表（非搜索模式） ----
+  // 库根节点"全部"分类 → 递归获取全部文件（getAllFiles）
+  // 具体分类文件夹 → 直接子节点（getChildren）
   const effectiveNodeId = nodeId || libraryId;
+  const isRootBrowse = !nodeId || effectiveNodeId === libraryId;
   const childrenQuery = useQuery({
-    queryKey: getChildrenQueryKey(libraryType, effectiveNodeId || '__disabled__'),
-    queryFn: async () => {
-      const api = getChildrenApi(libraryType);
-      const result = await api({
-        path: { nodeId: effectiveNodeId! },
-        query: { page, limit },
-      });
-      if (result.error) throw result.error;
-      const data = result.data as {
-        nodes: FileSystemNode[];
-        total?: number;
-        totalPages?: number;
-      };
+    queryKey: buildChildrenOrAllFilesKey(
+      isRootBrowse,
+      libraryType,
+      libraryId || '__disabled__',
+      effectiveNodeId || '__disabled__',
+    ),
+    queryFn: async (): Promise<ChildrenData> => {
+      let data: NodeListResponseDto;
+      if (isRootBrowse && libraryId) {
+        const api = getAllFilesApi(libraryType);
+        const result = await api({
+          path: { nodeId: libraryId },
+          query: { page, limit },
+        });
+        if (result.error || !result.data) throw result.error ?? new Error('Failed to load children');
+        data = result.data;
+      } else {
+        const api = getChildrenApi(libraryType);
+        const result = await api({
+          path: { nodeId: effectiveNodeId! },
+          query: { page, limit },
+        });
+        if (result.error || !result.data) throw result.error ?? new Error('Failed to load children');
+        data = result.data;
+      }
       return {
         nodes: data.nodes || [],
         total: data.total || (data.nodes || []).length,
         totalPages:
           data.totalPages ||
-          Math.ceil(((data.total || (data.nodes || []).length) as number) / limit),
-      } as ChildrenData;
+          Math.ceil(((data.total || (data.nodes || []).length) / limit)),
+      };
     },
     enabled: !search && !!effectiveNodeId,
     throwOnError: false,
@@ -287,11 +316,11 @@ export function useLibraryQuery({
   // ---- 4. 当前节点详情（有 nodeId 时） ----
   const nodeQuery = useQuery({
     queryKey: getNodeQueryKey(libraryType, nodeId || '__disabled__'),
-    queryFn: async () => {
+    queryFn: async (): Promise<FileSystemNodeDto> => {
       const api = getNodeApi(libraryType);
       const result = await api({ path: { nodeId: nodeId! } });
-      if (result.error) throw result.error;
-      return result.data as FileSystemNode;
+      if (result.error || !result.data) throw result.error ?? new Error('Node not found');
+      return result.data;
     },
     enabled: !!nodeId,
     staleTime: 2 * 60 * 1000,
@@ -346,7 +375,7 @@ export function useLibraryQuery({
     currentNode,
     breadcrumbs,
     loading: isLoading,
-    error: queryError ? (queryError as Error).message : null,
+    error: queryError ? String(queryError) : null,
     isFolderMode,
   };
 }

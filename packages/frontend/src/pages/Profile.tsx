@@ -1,10 +1,4 @@
 import React, {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
@@ -828,7 +822,7 @@ export const Profile: React.FC = () => {
         setError('手机号不存在');
         return;
       }
-      const phone = (user.phone as unknown as string) ?? '';
+      const phone = String(user.phone ?? '');
       await sendSmsCode({ phone });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
@@ -856,7 +850,7 @@ export const Profile: React.FC = () => {
         setError('邮箱不存在');
         return;
       }
-      const email = (user.email as unknown as string) ?? '';
+      const email = String(user.email ?? '');
       await resendVerification({ email });
       setDeactivateCountdown(60);
       const timer = setInterval(() => {
@@ -1005,8 +999,8 @@ export const Profile: React.FC = () => {
 
                 onPasswordChange={handlePasswordChange}
                 onPasswordSubmit={handlePasswordSubmit}
-                onTogglePassword={(field: string) =>
-                  setShowPassword((p) => ({ ...p, [field]: !(p as Record<string, boolean>)[field] }))
+                onTogglePassword={(field) =>
+                  setShowPassword((p) => ({ ...p, [field]: !p[field] }))
                 }
                 onFocusField={setFocusedField}
                 onNavigate={navigate}
@@ -1019,7 +1013,6 @@ export const Profile: React.FC = () => {
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
-                verifyToken={emailVerifyToken}
                 countdown={countdown}
                 sendingCode={sendingCode}
                 loading={loading}
@@ -1045,7 +1038,6 @@ export const Profile: React.FC = () => {
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
-                verifyToken={verifyToken}
                 countdown={countdown}
                 sendingCode={sendingCode}
                 loading={loading}
@@ -1115,8 +1107,8 @@ export const Profile: React.FC = () => {
                   setSuccess('微信验证成功');
                 }}
                 onDeactivate={handleDeactivate}
-                onTogglePassword={(field: string) =>
-                  setShowPassword((p) => ({ ...p, [field]: !(p as Record<string, boolean>)[field] }))
+                onTogglePassword={(field) =>
+                  setShowPassword((p) => ({ ...p, [field]: !p[field] }))
                 }
                 onShowConfirm={showConfirm}
                 onLogout={logout}

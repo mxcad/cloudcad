@@ -1119,6 +1119,10 @@ async function handleFileSelection(
           duplicateCheck.data?.nodeId,
           uploadTargetNodeId
         );
+        // 派发上传完成事件，由 CADEditorDirect 组件在 React 生命周期内检查外部参照
+        window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
+          detail: { nodeId: duplicateCheck.data?.nodeId },
+        }));
         hideGlobalLoading();
         return;
       } else if (userChoice === null) {
@@ -1142,37 +1146,12 @@ async function handleFileSelection(
     });
 
     await openUploadedFile(uploadResult.nodeId, uploadTargetNodeId);
-    
-    // 检查外部参照
-    try {
-      // 动态导入外部参照检查相关模块
-      const { useExternalReferenceUpload } = await import('../../hooks/useExternalReferenceUpload');
-      
-      // 创建临时的外部参照上传实例
-      const externalReferenceUpload = useExternalReferenceUpload({
-        nodeId: uploadResult.nodeId,
-        onSuccess: () => {
-          // 外部参照上传成功后重新加载文件
-          mxcadManager.reloadCurrentFile().catch(err => {
-            console.error('重新加载文件失败:', err);
-          });
-        },
-        onError: (error: unknown) => {
-          handleError(error, 'mxcadManager: onExternalReferenceError');
-        },
-        onSkip: () => {
-          // 跳过外部参照上传
-        },
-      });
-      
-      // 检查缺失的外部参照
-      // shouldRetry = true，因为上传后需要等待后端生成 preloading.json
-      // forceOpen = false，上传后如果没有外部参照不弹框
-      await externalReferenceUpload.checkMissingReferences(uploadResult.nodeId, true, false);
-    } catch (error) {
-      handleError(error, 'mxcadManager: externalReferenceCheckInit');
-    }
-    
+
+    // 派发上传完成事件，由 CADEditorDirect 组件在 React 生命周期内检查外部参照
+    window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
+      detail: { nodeId: uploadResult.nodeId },
+    }));
+
     hideGlobalLoading();
   } catch (error) {
     hideGlobalLoading();
@@ -1906,7 +1885,7 @@ class MxCADContainerManager {
         right: 0;
         bottom: 0;
         visibility: hidden;
-        z-index: -1;
+        z-index: -1; /* Z_LAYERS.CAD_EDITOR hidden */
         pointer-events: none;
       `;
       document.body.appendChild(container);
@@ -1937,7 +1916,7 @@ class MxCADContainerManager {
       // pointer-events 禁用交互
       if (show) {
         this.globalContainer.style.visibility = 'visible';
-        this.globalContainer.style.zIndex = '9998';
+        this.globalContainer.style.zIndex = String(Z_LAYERS.CAD_EDITOR);
         this.globalContainer.style.pointerEvents = 'auto';
       } else {
         this.globalContainer.style.visibility = 'hidden';
