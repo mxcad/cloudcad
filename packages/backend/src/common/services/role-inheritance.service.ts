@@ -590,18 +590,18 @@ export class RoleInheritanceService implements OnModuleInit {
 
       this.logger.log(`清除 ${activeUsers.length} 个活跃用户的权限缓存...`);
 
+      // 收集所有需要删除的缓存键
+      const allKeysToDelete: string[] = [];
       for (const user of activeUsers) {
-        // 清除用户级别的权限缓存
-        const keysToDelete = [
-          `is_admin:${user.id}`,
-          ...Object.values(SystemPermission).map(
-            (perm) => `system_perm:${user.id}:${perm}`
-          ),
-        ];
-
-        for (const key of keysToDelete) {
-          this.cacheService.delete(key);
+        allKeysToDelete.push(`is_admin:${user.id}`);
+        for (const perm of Object.values(SystemPermission)) {
+          allKeysToDelete.push(`system_perm:${user.id}:${perm}`);
         }
+      }
+
+      // 批量删除，避免逐条 DELETE 导致数据库排队阻塞
+      if (allKeysToDelete.length > 0) {
+        await this.cacheService.deleteMany(allKeysToDelete);
       }
 
       this.logger.log(`活跃用户权限缓存清除完成`);

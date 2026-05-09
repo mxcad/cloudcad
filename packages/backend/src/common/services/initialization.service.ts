@@ -153,17 +153,27 @@ export class InitializationService implements OnModuleInit {
             roleConfig.permissions.map((p) => p as Permission)
           );
 
-          // 1. 检测缺失的权限（仅警告，不自动补充）
+          // 1. 检测并自动补充缺失的权限
           const missingPerms = roleConfig.permissions.filter(
             (p) => !existingPerms.has(p as Permission)
           );
 
           if (missingPerms.length > 0) {
             this.logger.warn(
-              `⚠️  权限审计警告：系统角色 ${roleConfig.name} 缺少 ${missingPerms.length} 个默认权限: ${missingPerms.join(', ')}`
+              `⚠️  权限审计：系统角色 ${roleConfig.name} 缺少 ${missingPerms.length} 个默认权限: ${missingPerms.join(', ')}`
             );
-            this.logger.warn(
-              `   这可能是手动配置的权限。如果需要补充，请在角色管理页面手动添加。`
+            this.logger.warn(`   正在自动补充缺失的权限...`);
+
+            await this.prisma.rolePermission.createMany({
+              data: missingPerms.map((permission) => ({
+                roleId: existingRole.id,
+                permission: permission as Permission,
+              })),
+              skipDuplicates: true,
+            });
+
+            this.logger.log(
+              `✅ 系统角色 ${roleConfig.name} 已补充 ${missingPerms.length} 个默认权限`
             );
           }
 
