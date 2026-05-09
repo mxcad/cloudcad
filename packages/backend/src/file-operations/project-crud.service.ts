@@ -18,6 +18,7 @@ import {
   FileSystemNode as PrismaFileSystemNode,
   Prisma,
 } from '@prisma/client';
+import { FileStatus } from '../common/enums/file-status.enum';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { PersonalSpaceService } from '../personal-space/personal-space.service';
@@ -271,7 +272,7 @@ export class ProjectCrudService {
         size: node.size,
         mimeType: node.mimeType,
         fileHash: node.fileHash,
-        fileStatus: node.fileStatus,
+        fileStatus: node.fileStatus as FileStatus,
         createdAt: node.createdAt,
         updatedAt: node.updatedAt,
         deletedAt: node.deletedAt,
@@ -370,7 +371,7 @@ export class ProjectCrudService {
         size: node.size,
         mimeType: node.mimeType,
         fileHash: node.fileHash,
-        fileStatus: node.fileStatus,
+        fileStatus: node.fileStatus as FileStatus,
         createdAt: node.createdAt,
         updatedAt: node.updatedAt,
         deletedAt: node.deletedAt,

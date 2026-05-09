@@ -46,7 +46,7 @@ export class L1CacheProvider<T = unknown> implements IL1CacheManager<T> {
   /**
    * 获取缓存值
    */
-  async get<K extends T = T>(key: string): Promise<K | null> {
+  async get<K = T>(key: string): Promise<K | null> {
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -70,16 +70,16 @@ export class L1CacheProvider<T = unknown> implements IL1CacheManager<T> {
     this.cache.delete(key);
     this.cache.set(key, entry);
 
-    return entry.value as K;
+    return entry.value as unknown as K;
   }
 
   /**
    * 设置缓存值
    */
-  async set<K extends T = T>(key: string, value: K, ttl?: number | null): Promise<void> {
+  async set<K = T>(key: string, value: K, ttl?: number | null): Promise<void> {
     const effectiveTTL = ttl ?? this.defaultTTL;
     const entry: ICacheEntry<T> = {
-      value,
+      value: value as unknown as T,
       expiresAt: Date.now() + effectiveTTL * 1000,
       lastAccessedAt: Date.now(),
       accessCount: 0,

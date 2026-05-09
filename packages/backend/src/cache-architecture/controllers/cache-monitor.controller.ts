@@ -75,8 +75,8 @@ export class CacheMonitorController {
     type: CacheMonitoringSummaryDto,
   })
   async getSummary(): Promise<CacheMonitoringSummaryDto> {
-    const summary = this.cacheMonitorService.getMonitoringSummary();
-    return summary as CacheMonitoringSummaryDto;
+    const summary = await this.cacheMonitorService.getMonitoringSummary();
+    return summary as unknown as CacheMonitoringSummaryDto;
   }
 
   /**

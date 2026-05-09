@@ -4,7 +4,8 @@ import { SearchDto, SearchScope, SearchType } from '../dto/search.dto';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { PermissionService } from '../../common/services/permission.service';
 import { ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
-import { Prisma, FileStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { FileStatus } from '../../common/enums/file-status.enum';
 import {
   NodeListResponseDto,
   FileSystemNodeDto,
@@ -169,7 +170,7 @@ export class SearchService {
       size: node.size,
       mimeType: node.mimeType,
       fileHash: node.fileHash,
-      fileStatus: node.fileStatus,
+      fileStatus: node.fileStatus as FileStatus,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
       deletedAt: node.deletedAt,
@@ -290,7 +291,7 @@ export class SearchService {
       size: node.size,
       mimeType: node.mimeType,
       fileHash: node.fileHash,
-      fileStatus: node.fileStatus,
+      fileStatus: node.fileStatus as FileStatus,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
       deletedAt: node.deletedAt,
@@ -384,7 +385,7 @@ export class SearchService {
       size: node.size,
       mimeType: node.mimeType,
       fileHash: node.fileHash,
-      fileStatus: node.fileStatus,
+      fileStatus: node.fileStatus as FileStatus,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
       deletedAt: node.deletedAt,
@@ -523,7 +524,7 @@ export class SearchService {
       size: node.size,
       mimeType: node.mimeType,
       fileHash: node.fileHash,
-      fileStatus: node.fileStatus,
+      fileStatus: node.fileStatus as FileStatus,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
       deletedAt: node.deletedAt,

@@ -227,24 +227,24 @@ export class StorageQuotaInterceptor implements NestInterceptor {
 
     for (const key of queryKeys) {
       if (request.query?.[key]) {
-        return request.query[key];
+        return String(request.query[key]);
       }
     }
 
     // 3. 从 params 获取
     if (request.params?.nodeId) {
-      return request.params.nodeId;
+      return String(request.params.nodeId);
     }
     if (request.params?.projectId) {
-      return request.params.projectId;
+      return String(request.params.projectId);
     }
     if (request.params?.folderId) {
-      return request.params.folderId;
+      return String(request.params.folderId);
     }
 
     // 4. 从路由参数获取（如 /api/file-system/nodes/:nodeId/upload）
     if (request.params?.id) {
-      return request.params.id;
+      return String(request.params.id);
     }
 
     return null;

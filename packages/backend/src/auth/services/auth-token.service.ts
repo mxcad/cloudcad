@@ -251,17 +251,13 @@ export class AuthTokenService {
       }
 
       if (req?.session) {
-        await new Promise<void>((resolve, reject) => {
-          req.session.destroy((err: Error) => {
-            if (err) {
-              this.logger.error(`Session 销毁失败：${err.message}`);
-              reject(err);
-            } else {
-              this.logger.log(`用户 Session 已销毁：${userId}`);
-              resolve();
-            }
-          });
-        });
+        try {
+          await (req.session as any).destroy();
+          this.logger.log(`用户 Session 已销毁：${userId}`);
+        } catch (err) {
+          this.logger.error(`Session 销毁失败：${err instanceof Error ? err.message : String(err)}`);
+          throw err;
+        }
       }
     } catch (error) {
       const err = error as Error;

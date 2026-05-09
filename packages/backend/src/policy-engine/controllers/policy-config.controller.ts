@@ -218,7 +218,7 @@ export class PolicyConfigController {
       name: policy.name,
       description: policy.description ?? undefined,
       config: policy.config as Record<string, unknown>,
-      permissions: (policy.permissions || []) as PrismaPermission[],
+      permissions: ((policy.permissions || []) as any),
       enabled: policy.enabled,
       priority: policy.priority,
       createdAt: policy.createdAt,

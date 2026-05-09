@@ -29,8 +29,11 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import {
   AuthenticatedRequest,
 } from '../common/types/request.types';
@@ -52,6 +55,9 @@ import { FileSystemService } from '../file-system/file-system.service';
 import { FileDownloadHandlerService } from '../file-system/file-download/file-download-handler.service';
 import { MxcadFileHandlerService } from '../mxcad/core/mxcad-file-handler.service';
 import { MxCadService } from '../mxcad/core/mxcad.service';
+import { FileTreeService } from '../file-system/file-tree/file-tree.service';
+import { DatabaseService } from '../database/database.service';
+import { StorageManager } from '../common/services/storage-manager.service';
 import { CreateFolderDto } from '../file-system/dto/create-folder.dto';
 import { MoveNodeDto } from '../file-system/dto/move-node.dto';
 import { CopyNodeDto } from '../file-system/dto/copy-node.dto';
@@ -63,6 +69,8 @@ import {
 } from '../file-system/dto/file-system-response.dto';
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
 import { SaveLibraryNodeDto } from './dto/save-library-node.dto';
+import { SaveLibraryAsDto } from './dto/save-library-as.dto';
+import { UploadFilesDto } from '../mxcad/dto/upload-files.dto';
 import {
   IPublicLibraryProvider,
   PUBLIC_LIBRARY_PROVIDER_DRAWING,
@@ -89,6 +97,9 @@ export class LibraryController {
     private readonly fileDownloadHandler: FileDownloadHandlerService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
     private readonly mxCadService: MxCadService,
+    private readonly fileTreeService: FileTreeService,
+    private readonly db: DatabaseService,
+    private readonly storageManager: StorageManager,
     @Inject(PUBLIC_LIBRARY_PROVIDER_DRAWING)
     private readonly drawingLibraryProvider: IPublicLibraryProvider,
     @Inject(PUBLIC_LIBRARY_PROVIDER_BLOCK)
@@ -217,13 +228,11 @@ export class LibraryController {
   }
 
   /**
-   * 下载图纸库文件（需要图纸库管理权限）
+   * 下载图纸库文件（公开访问）
    */
   @Get('drawing/nodes/:nodeId/download')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '下载图纸库文件' })
+  @Public()
+  @ApiOperation({ summary: '下载图纸库文件（公开）' })
   @ApiResponse({
     status: 200,
     description: '下载成功',
@@ -234,7 +243,8 @@ export class LibraryController {
     @Request() req,
     @Res() res: Response
   ) {
-    await this.fileDownloadHandler.handleDownload(nodeId, req.user.id, res, {
+    const userId = req.user?.id || 'system';
+    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, {
       clientIp: req.ip,
     });
   }
@@ -271,7 +281,68 @@ export class LibraryController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {
+    await this.validateLibraryNode(nodeId, 'drawing');
     return this.saveLibraryNode(nodeId, file, req);
+  }
+
+  /**
+   * 另存为图纸到图纸库（需要图纸库管理权限）
+   */
+  @Post('drawing/save-as')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '另存为图纸到图纸库' })
+  @ApiResponse({ status: 200, description: '保存成功' })
+  async saveDrawingAs(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: SaveLibraryAsDto,
+    @Request() req,
+  ) {
+    return this.saveLibraryAs(file, dto, req, 'drawing');
+  }
+
+  /**
+   * 上传图纸库文件（完整文件上传，复用 MxCAD 转换逻辑）
+   */
+  @Post('drawing/upload')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '上传图纸库文件' })
+  @ApiResponse({ status: 201, description: '上传成功' })
+  async uploadDrawingFile(
+    @Request() req,
+    @Body() uploadFilesDto: UploadFilesDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.uploadLibraryFile(uploadFilesDto, file, req);
+  }
+
+  /**
+   * 上传图纸库文件（分片上传，复用 MxCAD 转换逻辑）
+   */
+  @Post('drawing/upload-chunk')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '上传图纸库文件（分片）' })
+  @ApiResponse({ status: 201, description: '上传成功' })
+  async uploadDrawingChunk(
+    @Request() req,
+    @Body() uploadFilesDto: UploadFilesDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.uploadLibraryChunk(uploadFilesDto, file, req);
   }
 
   /**
@@ -297,6 +368,7 @@ export class LibraryController {
       !dto.parentId || dto.parentId === 'root'
         ? await this.drawingLibraryProvider.getLibraryId()
         : dto.parentId;
+    await this.validateLibraryParent(parentId, 'drawing');
     return this.fileSystemService.createFolder(userId, parentId, dto);
   }
 
@@ -304,69 +376,6 @@ export class LibraryController {
    * 删除图纸库节点
    */
   @Delete('drawing/nodes/:nodeId')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '删除图纸库节点' })
-  @ApiResponse({ status: 200, description: '删除成功' })
-  async deleteDrawingNode(
-    @Param('nodeId') nodeId: string,
-    @Query('permanently') permanently?: boolean,
-  ) {
-    return this.fileSystemService.deleteNode(nodeId, permanently ?? true);
-  }
-
-  /**
-   * 重命名图纸库节点
-   */
-  @Patch('drawing/nodes/:nodeId')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '重命名图纸库节点' })
-  @ApiResponse({ status: 200, description: '重命名成功', type: FileSystemNodeDto })
-  async renameDrawingNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: UpdateNodeDto,
-  ) {
-    return this.fileSystemService.updateNode(nodeId, dto);
-  }
-
-  /**
-   * 移动图纸库节点
-   */
-  @Post('drawing/nodes/:nodeId/move')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '移动图纸库节点' })
-  @ApiResponse({ status: 200, description: '移动成功', type: FileSystemNodeDto })
-  async moveDrawingNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: MoveNodeDto,
-  ) {
-    return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
-  }
-
-  /**
-   * 复制图纸库节点
-   */
-  @Post('drawing/nodes/:nodeId/copy')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '复制图纸库节点' })
-  @ApiResponse({ status: 201, description: '复制成功', type: FileSystemNodeDto })
-  async copyDrawingNode(
-    @Param('nodeId') nodeId: string,
-    @Body() dto: CopyNodeDto,
-  ) {
-    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
-  }
 
   // ========== 图块库接口（只读） ==========
 
@@ -472,16 +481,17 @@ export class LibraryController {
     @Request() req: AuthenticatedRequest
   ) {
     const filename = filePath.join('/');
+    const expressReq = req as any;
 
     this.logger.log(`
 ========================================
 [图块库文件访问] 收到请求
-- 完整URL: ${req.protocol}://${req.get('host')}${req.originalUrl}
+- 完整URL: ${expressReq.protocol}://${expressReq.get('host')}${expressReq.originalUrl}
 - 请求路径: ${filename}
-- 请求方法: ${req.method}
-- 来源页面(Referer): ${req.get('referer') || '无'}
-- 客户端IP: ${req.ip}
-- User-Agent: ${req.get('user-agent')}
+- 请求方法: ${expressReq.method}
+- 来源页面(Referer): ${expressReq.get('referer') || '无'}
+- 客户端IP: ${expressReq.ip}
+- User-Agent: ${expressReq.get('user-agent')}
 - 时间: ${new Date().toISOString()}
 ========================================
     `);
@@ -505,13 +515,11 @@ export class LibraryController {
   }
 
   /**
-   * 下载图块库文件（需要图块库管理权限）
+   * 下载图块库文件（公开访问）
    */
   @Get('block/nodes/:nodeId/download')
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '下载图块库文件' })
+  @Public()
+  @ApiOperation({ summary: '下载图块库文件（公开）' })
   @ApiResponse({
     status: 200,
     description: '下载成功',
@@ -522,7 +530,8 @@ export class LibraryController {
     @Request() req,
     @Res() res: Response
   ) {
-    await this.fileDownloadHandler.handleDownload(nodeId, req.user.id, res, {
+    const userId = req.user?.id || 'system';
+    await this.fileDownloadHandler.handleDownload(nodeId, userId, res, {
       clientIp: req.ip,
     });
   }
@@ -559,7 +568,68 @@ export class LibraryController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {
+    await this.validateLibraryNode(nodeId, 'block');
     return this.saveLibraryNode(nodeId, file, req);
+  }
+
+  /**
+   * 另存为图块到图块库（需要图块库管理权限）
+   */
+  @Post('block/save-as')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '另存为图块到图块库' })
+  @ApiResponse({ status: 200, description: '保存成功' })
+  async saveBlockAs(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: SaveLibraryAsDto,
+    @Request() req,
+  ) {
+    return this.saveLibraryAs(file, dto, req, 'block');
+  }
+
+  /**
+   * 上传图块库文件（完整文件上传，复用 MxCAD 转换逻辑）
+   */
+  @Post('block/upload')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '上传图块库文件' })
+  @ApiResponse({ status: 201, description: '上传成功' })
+  async uploadBlockFile(
+    @Request() req,
+    @Body() uploadFilesDto: UploadFilesDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.uploadLibraryFile(uploadFilesDto, file, req);
+  }
+
+  /**
+   * 上传图块库文件（分片上传，复用 MxCAD 转换逻辑）
+   */
+  @Post('block/upload-chunk')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: '上传图块库文件（分片）' })
+  @ApiResponse({ status: 201, description: '上传成功' })
+  async uploadBlockChunk(
+    @Request() req,
+    @Body() uploadFilesDto: UploadFilesDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.uploadLibraryChunk(uploadFilesDto, file, req);
   }
 
   /**
@@ -658,11 +728,28 @@ export class LibraryController {
 
   // ========== 公共方法 ==========
 
+  /**
+   * 验证节点属于指定库类型，不属于则抛出异常
+   */
+  private async validateLibraryNode(nodeId: string, expectedKey: string): Promise<void> {
+    const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
+    if (libraryKey !== expectedKey) {
+      throw new BadRequestException(`节点不属于${expectedKey === 'drawing' ? '图纸库' : '图块库'}`);
+    }
+  }
+
   private async saveLibraryNode(
     nodeId: string,
     file: Express.Multer.File,
     req: AuthenticatedRequest,
   ) {
+    // 1. 验证文件扩展名
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.mxweb') {
+      throw new BadRequestException(`不支持的文件格式: ${ext}，仅支持 .mxweb 文件`);
+    }
+
+    // 2. 保存（跳过 SVN + bin 生成）
     const result = await this.mxCadService.saveMxwebFile(
       nodeId,
       file,

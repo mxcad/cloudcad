@@ -171,7 +171,7 @@ export class AuthController {
   ): Promise<{ message: string }> {
     // 从请求头中获取 access token
     const accessToken = request.headers.authorization?.replace('Bearer ', '');
-    await this.authService.logout(req.user.id, accessToken, request);
+    await this.authService.logout(req.user.id, accessToken, request as any);
 
     // 清除 Cookie
     const sessionName = this.configService.get('session.name');

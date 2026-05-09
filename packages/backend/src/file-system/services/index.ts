@@ -1,4 +1,3 @@
-export { ProjectCrudService } from './project-crud.service';
 export { FileTreeService } from './file-tree.service';
 export { FileOperationsService } from '../../file-operations/file-operations.service';
 export { FileDownloadExportService } from './file-download-export.service';

@@ -6,10 +6,10 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FileStatus, FileSystemNode } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
-import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { StorageQuotaService, StorageQuotaType } from './storage-quota.service';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
@@ -193,6 +193,56 @@ export class StorageInfoService {
 
   async getUserStorageInfo(userId: string): Promise<StorageQuotaInfo> {
     return this.getStorageQuota(userId);
+  }
+
+  /**
+   * 更新节点存储配额
+   */
+  async updateNodeStorageQuota(nodeId: string, quota: number) {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId },
+      select: { id: true, ownerId: true },
+    });
+    if (!node) {
+      throw new NotFoundException('节点不存在');
+    }
+
+    const updatedNode = await this.prisma.fileSystemNode.update({
+      where: { id: nodeId },
+      data: { storageQuota: quota },
+    });
+
+    if (node.ownerId) {
+      await this.invalidateQuotaCache(node.ownerId, nodeId);
+    }
+
+    this.logger.log(`节点 ${nodeId} 的存储配额已更新为 ${quota} GB`);
+    return updatedNode;
+  }
+
+  /**
+   * 更新节点存储配额
+   */
+  async updateNodeStorageQuota(nodeId: string, quota: number) {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId },
+      select: { id: true, ownerId: true },
+    });
+    if (!node) {
+      throw new NotFoundException('节点不存在');
+    }
+
+    const updatedNode = await this.prisma.fileSystemNode.update({
+      where: { id: nodeId },
+      data: { storageQuota: quota },
+    });
+
+    if (node.ownerId) {
+      await this.invalidateQuotaCache(node.ownerId, nodeId);
+    }
+
+    this.logger.log(`节点 ${nodeId} 的存储配额已更新为 ${quota} GB`);
+    return updatedNode;
   }
 
   async deleteMxCadFilesFromUploads(fileHash: string): Promise<number> {

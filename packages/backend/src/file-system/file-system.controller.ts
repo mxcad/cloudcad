@@ -115,12 +115,16 @@ export class FileSystemController {
   private readonly logger = new Logger(FileSystemController.name);
 
   constructor(
-    private readonly fileSystemService: FileSystemService,
+    private readonly projectCrudService: ProjectCrudService,
+    private readonly fileOperationsService: FileOperationsService,
     private readonly fileTreeService: FileTreeService,
     private readonly searchService: SearchService,
     private readonly projectPermissionService: ProjectPermissionService,
     private readonly systemPermissionService: PermissionService,
     private readonly fileDownloadHandler: FileDownloadHandlerService,
+    private readonly fileDownloadExportService: FileDownloadExportService,
+    private readonly projectMemberService: ProjectMemberService,
+    private readonly storageInfoService: StorageInfoService,
   ) {}
 
   // ==================== 项目 CRUD ====================
@@ -140,7 +144,7 @@ export class FileSystemController {
     @Request() req: ExpressRequest & { user: { id: string } },
     @Body() dto: CreateProjectDto,
   ) {
-    return this.fileSystemService.createProject(req.user.id, dto);
+    return this.projectCrudService.createProject(req.user.id, dto);
   }
 
   @Get("projects")

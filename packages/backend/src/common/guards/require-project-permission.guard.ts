@@ -17,6 +17,7 @@ import {
   ForbiddenException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ProjectPermissionService } from '../../roles/project-permission.service';
@@ -42,6 +43,8 @@ import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
  */
 @Injectable()
 export class RequireProjectPermissionGuard implements CanActivate {
+  private readonly logger = new Logger(RequireProjectPermissionGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly projectPermissionService: ProjectPermissionService,

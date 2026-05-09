@@ -152,7 +152,7 @@ export class MxCadRequestContextBuilder {
 
   async getProjectRootByNodeId(
     nodeId: string,
-  ): Promise<Pick<FileSystemNode, 'id' | 'isRoot' | 'parentId'> | null> {
+  ): Promise<Pick<any, 'id' | 'isRoot' | 'parentId'> | null> {
     return this.mxCadService.getProjectRootByNodeId(nodeId);
   }
 

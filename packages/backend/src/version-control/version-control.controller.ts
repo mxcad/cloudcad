@@ -19,6 +19,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   UseGuards,
+  Inject,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,14 +33,20 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
-import { VersionControlService } from './version-control.service';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from './interfaces/version-control.interface';
 import { SvnLogResponseDto, FileContentResponseDto } from './dto';
 
 @ApiTags('version-control')
 @Controller('version-control')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
 export class VersionControlController {
-  constructor(private readonly versionControlService: VersionControlService) {}
+  constructor(
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl,
+  ) {}
 
   /**
    * 获取节点的 SVN 提交历史（自动提取目录路径）
@@ -74,7 +81,12 @@ export class VersionControlController {
     @Query('filePath') filePath: string,
     @Query('limit') limit?: number
   ): Promise<SvnLogResponseDto> {
-    return this.versionControlService.getFileHistory(filePath, limit);
+    const result = await this.versionControlService.getFileHistory(filePath, limit);
+    return {
+      success: result.success,
+      message: result.message,
+      entries: result.entries,
+    };
   }
 
   /**

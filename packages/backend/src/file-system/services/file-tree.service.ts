@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, FileStatus, FileSystemNode as PrismaFileSystemNode } from '@prisma/client';
 import { DatabaseService } from '../../database/database.service';
-import { StorageManager } from '../../common/services/storage-manager.service';
+import { StorageManager, NodeStorageInfo } from '../../common/services/storage-manager.service';
 import { QueryChildrenDto } from '../dto/query-children.dto';
 import { StorageInfoService } from './storage-info.service';
 import * as path from 'path';
@@ -131,7 +131,7 @@ export class FileTreeService {
 
       this.logger.log(`[createFileNode] 数据库节点创建成功: ID=${fileNode.id}`);
 
-      let storageInfo: { nodeDirectoryRelativePath: string; filePath: string; nodeDirectoryPath: string; fileRelativePath: string } | null = null;
+      let storageInfo: NodeStorageInfo | null = null;
 
       if (!skipFileCopy) {
         storageInfo = await this.storageManager.allocateNodeStorage(

@@ -317,14 +317,14 @@ export const expectValidUserResponse = (
   }
 };
 
-export const expectValidAuthResponse = (response: Record<string, unknown>) => {
+export const expectValidAuthResponse = (response: any) => {
   expect(response).toHaveProperty('accessToken');
   expect(response).toHaveProperty('refreshToken');
   expect(response).toHaveProperty('user');
   expectValidUserResponse(response.user, null);
 };
 
-export const expectPaginatedResponse = (response: Record<string, unknown>) => {
+export const expectPaginatedResponse = (response: any) => {
   expect(response).toHaveProperty('data');
   expect(response).toHaveProperty('pagination');
   expect(Array.isArray(response.data)).toBe(true);

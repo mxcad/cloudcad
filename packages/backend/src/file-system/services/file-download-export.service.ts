@@ -28,6 +28,7 @@ import { PassThrough } from 'stream';
 
 // 延迟导入 MxCadService，避免循环依赖
 import type { MxCadService } from '../../mxcad/core/mxcad.service';
+import type { ConvertServerFileParam } from '../../mxcad/types/mxcad-context.types';
 
 @Injectable()
 export class FileDownloadExportService {
@@ -259,12 +260,13 @@ export class FileDownloadExportService {
           }
           const targetFilename = `${path.basename(originalFilename, ext)}${targetExt}`;
 
-          const conversionOptions: { srcpath: string; src_file_md5: string; outname: string; create_preloading_data: boolean; width?: string; height?: string; colorPolicy?: string } = {
-            srcpath: mxwebFullPath.replace(/\\/g, '/'),
-            src_file_md5: node.fileHash || '',
+          const conversionOptions = {
+            srcPath: mxwebFullPath.replace(/\\/g, '/'),
+            fileHash: node.fileHash || '',
+            nodeId: node.id,
             outname: targetFilename,
-            create_preloading_data: false,
-          };
+            createPreloadingData: false,
+          } as ConvertServerFileParam;
 
           if (format === CadDownloadFormat.PDF) {
             conversionOptions.width = pdfParams?.width || '2000';

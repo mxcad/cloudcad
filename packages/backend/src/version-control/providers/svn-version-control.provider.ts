@@ -35,6 +35,7 @@ import {
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import { FileUtils } from '../../common/utils/file-utils';
 import {
   IVersionControl,
   CommitResult,
@@ -300,6 +301,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   ): Promise<CommitResult> {
     await this.ensureInitialized();
 
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(directoryPath, this.filesDataPath);
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过提交');
       return { success: false, message: 'SVN 未初始化' };
@@ -486,6 +490,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
 
   async deleteNodeDirectory(directoryPath: string): Promise<CommitResult> {
     await this.ensureInitialized();
+
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(directoryPath, this.filesDataPath);
 
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化，跳过删除');
@@ -681,6 +688,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   ): Promise<ListResult> {
     await this.ensureInitialized();
 
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(directoryPath, this.filesDataPath);
+
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');
       return { success: false, message: 'SVN 未初始化' };
@@ -727,6 +737,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     revision: string | number
   ): Promise<FileContentResult> {
     await this.ensureInitialized();
+
+    // 路径安全校验：防止路径遍历攻击
+    FileUtils.validatePath(filePath, this.filesDataPath);
 
     if (!this.isInitialized) {
       this.logger.warn('SVN 未初始化');

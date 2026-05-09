@@ -75,7 +75,6 @@ import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../../storage/storage.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
-import { VersionControlService } from '../../version-control/version-control.service';
 import {
   IVersionControl,
   VERSION_CONTROL_TOKEN,

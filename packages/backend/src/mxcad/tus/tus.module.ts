@@ -45,7 +45,7 @@ import { AppConfig } from '../../config/app.config';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService<AppConfig>) => ({
         secret: (() => {
-          const s = configService.get<string>('jwt.secret');
+          const s = configService.get<string>('jwt.secret' as any);
           if (!s) throw new Error('JWT 密钥未配置，请设置 JWT_SECRET 环境变量');
           return s;
         })(),

@@ -148,7 +148,7 @@ export class FileSystemPermissionService {
       },
     });
 
-    return member?.projectRole?.name || null;
+    return (member?.projectRole?.name as ProjectRole) || null;
   }
 
   /**

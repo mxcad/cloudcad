@@ -242,10 +242,11 @@ export class FileDownloadExportService {
           const targetFilename = `${path.basename(originalFilename, ext)}${targetExt}`;
 
           const conversionOptions: ConvertServerFileParam = {
-            srcpath: this.storageManager.getFullPath(mxwebPath).replace(/\\/g, '/'),
-            src_file_md5: node.fileHash || '',
+            srcPath: this.storageManager.getFullPath(mxwebPath).replace(/\\/g, '/'),
+            fileHash: node.fileHash || '',
+            nodeId: node.id,
             outname: targetFilename,
-            create_preloading_data: false,
+            createPreloadingData: false,
           };
 
           if (format === CadDownloadFormat.PDF) {
