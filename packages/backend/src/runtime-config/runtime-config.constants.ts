@@ -93,7 +93,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     category: 'user',
     description: '手机验证码登录时自动注册',
     defaultValue: false,
-    isPublic: true,
+    isPublic: false,
   },
 
   // 微信配置

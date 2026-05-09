@@ -217,6 +217,15 @@ export class LocalAuthProvider implements IAuthProvider {
       throw new BadRequestException('无效的状态参数');
     }
 
+    // 检查微信登录功能开关
+    const wechatEnabled = await this.runtimeConfigService.getValue<boolean>(
+      'wechatEnabled',
+      false
+    );
+    if (!wechatEnabled) {
+      throw new BadRequestException('微信登录功能未启用');
+    }
+
     const tokenData = await this.wechatService.getAccessToken(code);
 
     const wechatUser = await this.wechatService.getUserInfo(

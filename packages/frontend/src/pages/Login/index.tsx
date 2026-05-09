@@ -48,6 +48,7 @@ export const Login: React.FC = () => {
 
   const smsEnabled = runtimeConfig?.smsEnabled ?? false;
   const wechatEnabled = runtimeConfig?.wechatEnabled ?? false;
+  const wechatAutoRegister = runtimeConfig?.wechatAutoRegister ?? false;
 
   // 处理微信登录回调 Hash
   useEffect(() => {
@@ -69,6 +70,10 @@ export const Login: React.FC = () => {
               alert(`微信登录失败：${action.message}`);
             } else if (action?.type === 'need_register') {
               sessionStorage.setItem('wechatTempToken', action.tempToken);
+              // 自动注册已开启但后端仍返回 needRegister → 被 allowRegister 等策略阻断
+              if (wechatAutoRegister) {
+                alert('微信自动注册失败，请手动完成注册');
+              }
               navigate('/register?wechat=1');
             } else if (action?.type === 'bind_email') {
               sessionStorage.setItem('wechatTempToken', action.tempToken);
