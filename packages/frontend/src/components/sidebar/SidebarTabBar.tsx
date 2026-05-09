@@ -66,7 +66,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
               alignItems: 'center', 
               gap: '6px',
               position: 'relative',
-              zIndex: 1 
+              zIndex: 1 /* tab label */
             }}>
               {tab.icon}
               {tab.label}

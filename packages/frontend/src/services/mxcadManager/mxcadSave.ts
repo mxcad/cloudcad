@@ -97,7 +97,7 @@ export function showSaveConfirmDialog(): Promise<string | null> {
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 100000;
+      z-index: 100000; /* Z_LAYERS.TOAST - save confirm dialog */
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
 

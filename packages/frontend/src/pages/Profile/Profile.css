@@ -194,16 +194,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.tab-indicator {
-  position: absolute;
-  bottom: var(--space-2);
-  height: 2px;
-  background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
-  border-radius: var(--radius-full);
-  transition: all var(--transition-slow);
-  z-index: 0;
-}
-
 /* ============================================
    5. 提示消息 (Alert)
    ============================================ */
@@ -313,7 +303,7 @@
   border-radius: var(--radius-xl);
   background: linear-gradient(135deg, var(--primary-400), var(--accent-400));
   opacity: 0;
-  z-index: -1;
+  z-index: -1; /* input glow: local stacking */
   transition: opacity var(--transition-base);
   pointer-events: none;
 }

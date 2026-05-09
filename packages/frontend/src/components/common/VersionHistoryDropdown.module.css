@@ -16,7 +16,7 @@
   transition: all 0.2s ease;
   flex-shrink: 0;
   position: relative;
-  z-index: 1;
+  z-index: 1; /* local stacking */
 }
 
 .historyButton:hover {

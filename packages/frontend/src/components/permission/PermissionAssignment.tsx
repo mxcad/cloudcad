@@ -330,7 +330,7 @@ const permissionStyles = `
     border-bottom: 1px solid var(--border-default);
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 1; /* sticky header */
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
 

@@ -946,7 +946,7 @@ export const Register: React.FC = () => {
           border-radius: 12px;
           background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
           opacity: 0;
-          z-index: -1;
+          z-index: -1; /* input glow: local stacking */
           transition: opacity 0.3s;
           filter: blur(8px);
         }

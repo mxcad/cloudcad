@@ -1,4 +1,9 @@
 import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
@@ -69,28 +74,6 @@ export const Profile: React.FC = () => {
     ...(wechatEnabled ? (['wechat'] as TabType[]) : []),
     'deactivate',
   ];
-
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [indicatorStyle, setIndicatorStyle] = useState({
-    width: 0,
-    transform: 0,
-  });
-
-  useLayoutEffect(() => {
-    const container = tabsContainerRef.current;
-    if (!container) return;
-    const buttons =
-      container.querySelectorAll<HTMLButtonElement>('.tab-button');
-    const activeButton = buttons[visibleTabs.indexOf(activeTab)];
-    if (activeButton) {
-      const containerRect = container.getBoundingClientRect();
-      const buttonRect = activeButton.getBoundingClientRect();
-      setIndicatorStyle({
-        width: buttonRect.width,
-        transform: buttonRect.left - containerRect.left,
-      });
-    }
-  }, [activeTab, visibleTabs.length]);
 
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: '',
@@ -912,7 +895,7 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          <div className="tabs-container" ref={tabsContainerRef}>
+          <div className="tabs-container">
             <button
               onClick={() => switchTab('info')}
               className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
@@ -963,13 +946,6 @@ export const Profile: React.FC = () => {
               <AlertTriangle size={16} />
               <span>注销账户</span>
             </button>
-            <div
-              className="tab-indicator"
-              style={{
-                width: `${indicatorStyle.width}px`,
-                transform: `translateX(${indicatorStyle.transform}px)`,
-              }}
-            />
           </div>
 
           {success && (

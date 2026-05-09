@@ -33,7 +33,7 @@ export const userManagementStyles = `
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     animation: slideInRight 0.3s ease-out;
-    z-index: 100;
+    z-index: 100; /* local stacking */
   }
 
   @keyframes slideInRight {

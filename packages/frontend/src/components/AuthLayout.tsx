@@ -113,7 +113,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           position: fixed;
           top: 1.5rem;
           right: 1.5rem;
-          z-index: 100;
+          z-index: 100; /* theme-toggle: local stacking */
         }
 
         /* ===== 返回按钮 ===== */
@@ -133,7 +133,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
-          z-index: 100;
+          z-index: 100; /* theme-toggle: local stacking */
           backdrop-filter: blur(10px);
         }
 

@@ -74,7 +74,7 @@ export const profileStyles = `
         .input-wrapper input::placeholder { color: var(--text-muted); }
         .input-wrapper input:hover { border-color: var(--border-strong); }
         .input-wrapper input:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-        .input-glow { position: absolute; inset: -2px; border-radius: 14px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); opacity: 0; z-index: -1; transition: opacity 0.3s; filter: blur(8px); }
+        .input-glow { position: absolute; inset: -2px; border-radius: 14px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); opacity: 0; z-index: -1; /* local stacking */ transition: opacity 0.3s; filter: blur(8px); }
         .input-group.focused .input-glow { opacity: 0.25; }
         .toggle-password { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.25rem; transition: color 0.2s; }
         .toggle-password:hover { color: var(--text-secondary); }

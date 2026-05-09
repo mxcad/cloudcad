@@ -17,6 +17,8 @@
  * 并包含未被子模块覆盖的核心逻辑：MxCADManager 类、命令处理、文件上传等。
  */
 
+import { Z_LAYERS } from '@/constants/layers';
+
 // ==================== 从子模块重新导出 ====================
 
 export {
@@ -118,6 +120,9 @@ let documentModified = false;
 
 let pendingImages: PendingImage[] = [];
 
+// 标记是否正在离开页面（用于抑制 beforeunload 二次弹窗）
+const isLeavingPageRef = { current: false };
+
 /**
  * 检查文档是否有未保存的修改
  * 尝试从 MxCAD SDK 获取修改状态，如果不可用则使用本地跟踪状态
@@ -148,6 +153,11 @@ export function resetDocumentModified(): void {
  */
 function setupBeforeUnloadHandler(): void {
   window.addEventListener('beforeunload', (e: BeforeUnloadEvent) => {
+    // 如果正在主动离开页面（已弹过确认），跳过二次弹窗
+    if (isLeavingPageRef.current) {
+      e.returnValue = '';
+      return;
+    }
     if (isDocumentModified()) {
       // 标准做法：设置 returnValue 并返回提示文本
       e.preventDefault();
@@ -195,7 +205,7 @@ export function showUnsavedChangesDialog(): Promise<
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 100001;
+      z-index: 100001; /* Z_LAYERS.TOAST + 1 - above save confirm */
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
 
@@ -523,30 +533,78 @@ function calculateReturnPath(
 // ==================== return-to-cloud-map-management 命令 ====================
 
 /**
+ * 尝试关闭当前窗口并兜底返回
+ * 仅在单标签页（无浏览器历史）时调用：
+ * 1. 隐藏编辑器
+ * 2. 检查未保存更改（用户取消则恢复显示）
+ * 3. 尝试 window.close()
+ * 4. 200ms 后如果窗口没关 → 用 calculateReturnPath 兜底跳转
+ */
+const checkToReturnToPreviousPage = async () => {
+  // 先隐藏编辑器
+  mxcadManager.showMxCAD(false);
+
+  // 检查是否有未保存的更改
+  const canProceed = await checkAndConfirmUnsavedChanges();
+  if (!canProceed) {
+    // 用户取消了操作，重新显示编辑器
+    mxcadManager.showMxCAD(true);
+    return;
+  }
+
+  // 禁用离开确认对话框（正在主动离开页面，避免 beforeunload 二次弹窗）
+  isLeavingPageRef.current = true;
+
+  // 尝试关闭当前标签页
+  try {
+    window.close();
+
+    // 如果窗口没有关闭（说明是通过浏览器地址栏直接打开的），延迟兜底跳转
+    setTimeout(() => {
+      if (!window.closed) {
+        if (!currentFileInfo) {
+          navigateToProjectsList();
+        } else {
+          const targetPath = calculateReturnPath(
+            currentFileInfo.parentId,
+            currentFileInfo.projectId,
+            currentFileInfo.personalSpaceId,
+            currentFileInfo.libraryKey
+          );
+          navigateTo(targetPath);
+        }
+      }
+    }, 200);
+  } catch (error) {
+    handleError(error, 'mxcadManager: checkToReturnToPreviousPage');
+    navigateToProjectsList();
+  }
+};
+
+/**
  * 返回到云图管理命令
+ * 3 分支逻辑：
+ * 1. 从平台跳转且有 opener → 关闭窗口
+ * 2. 有浏览器历史（多标签）→ history.back()
+ * 3. 单标签（无历史）→ 尝试关窗口 → 关不掉用 calculateReturnPath 兜底
  */
 MxFun.addCommand('return-to-cloud-map-management', () => {
   mxcadManager.showMxCAD(false);
 
-  // 如果是从平台跳转进入的，并且当前窗口是由其他窗口打开的，直接关闭当前标签页
+  // 分支1：从平台跳转进入，且当前窗口由其他窗口打开 → 直接关闭
   if (currentFileInfo?.fromPlatform && window.opener) {
     window.close();
     return;
   }
 
-  if (!currentFileInfo) {
-    navigateToProjectsList();
+  // 分支2：有浏览器历史（多标签）→ 浏览器后退
+  if (history.length > 1) {
+    history.back();
     return;
   }
 
-  const { parentId, projectId, personalSpaceId, libraryKey } = currentFileInfo;
-  const targetPath = calculateReturnPath(
-    parentId,
-    projectId,
-    personalSpaceId,
-    libraryKey
-  );
-  navigateTo(targetPath);
+  // 分支3：单标签 → 尝试关窗口 → 兜底跳转
+  checkToReturnToPreviousPage();
 });
 
 // 获取或创建文件选择器（复用 useMxCadUploadNative 的逻辑）
