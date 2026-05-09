@@ -434,7 +434,7 @@ export class ProjectMemberService {
   async transferProjectOwnership(
     projectId: string,
     newOwnerId: string,
-    currentOwnerId: string
+    operatorId: string
   ) {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
@@ -450,11 +450,11 @@ export class ProjectMemberService {
         throw new BadRequestException('私人空间不支持转让操作');
       }
 
-      if (project.ownerId !== currentOwnerId) {
+      if (project.ownerId !== operatorId) {
         throw new ForbiddenException('只有项目所有者可以转让项目');
       }
 
-      if (newOwnerId === currentOwnerId) {
+      if (newOwnerId === operatorId) {
         throw new BadRequestException('不能转让给自己');
       }
 
@@ -482,15 +482,25 @@ export class ProjectMemberService {
         throw new NotFoundException('项目所有者角色不存在');
       }
 
-      const adminRole = await this.prisma.projectRole.findFirst({
+      // 查找原 owner 降级目标角色：优先 PROJECT_ADMIN，缺失则回退到 PROJECT_MEMBER
+      let downgradeRole = await this.prisma.projectRole.findFirst({
         where: {
           name: 'PROJECT_ADMIN',
           isSystem: true,
         },
       });
 
-      if (!adminRole) {
-        throw new NotFoundException('PROJECT_ADMIN 角色不存在，请检查系统初始化');
+      if (!downgradeRole) {
+        downgradeRole = await this.prisma.projectRole.findFirst({
+          where: {
+            name: 'PROJECT_MEMBER',
+            isSystem: true,
+          },
+        });
+      }
+
+      if (!downgradeRole) {
+        throw new NotFoundException('PROJECT_ADMIN 和 PROJECT_MEMBER 角色均不存在，请检查系统初始化');
       }
 
       await this.prisma.$transaction(async (tx) => {
@@ -508,10 +518,10 @@ export class ProjectMemberService {
           where: {
             projectId_userId: {
               projectId,
-              userId: currentOwnerId,
+              userId: operatorId,
             },
           },
-          data: { projectRoleId: adminRole.id },
+          data: { projectRoleId: downgradeRole.id },
         });
 
         await tx.fileSystemNode.update({
@@ -526,17 +536,17 @@ export class ProjectMemberService {
         AuditAction.TRANSFER_OWNERSHIP,
         ResourceType.PROJECT,
         projectId,
-        currentOwnerId,
+        operatorId,
         true,
         undefined,
         JSON.stringify({
-          fromOwnerId: currentOwnerId,
+          fromOwnerId: operatorId,
           toOwnerId: newOwnerId,
         })
       );
 
       this.logger.log(
-        `项目所有权转让成功: ${projectId} from ${currentOwnerId} to ${newOwnerId}`
+        `项目所有权转让成功: ${projectId} from ${operatorId} to ${newOwnerId}`
       );
 
       return { message: '项目所有权转让成功' };
@@ -545,11 +555,11 @@ export class ProjectMemberService {
         AuditAction.TRANSFER_OWNERSHIP,
         ResourceType.PROJECT,
         projectId,
-        currentOwnerId,
+        operatorId,
         false,
         error instanceof Error ? error.message : String(error),
         JSON.stringify({
-          fromOwnerId: currentOwnerId,
+          fromOwnerId: operatorId,
           toOwnerId: newOwnerId,
         })
       );

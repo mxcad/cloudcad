@@ -57,7 +57,6 @@ import {
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { RequireProjectPermissionGuard } from "../common/guards/require-project-permission.guard";
 import { StorageQuotaInterceptor } from "../common/interceptors/storage-quota.interceptor";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { PermissionService } from "../common/services/permission.service";
 import {
   findThumbnail,
@@ -65,7 +64,6 @@ import {
   getMimeType,
   THUMBNAIL_FORMATS,
 } from "../mxcad/infra/thumbnail-utils";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { ProjectPermissionService } from "../roles/project-permission.service";
 import { CopyNodeDto } from "./dto/copy-node.dto";
 import { CreateFolderDto } from "./dto/create-folder.dto";
@@ -97,14 +95,14 @@ import { SearchDto } from "./dto/search.dto";
 import { UpdateNodeDto } from "./dto/update-node.dto";
 import { UpdateProjectMemberDto } from "./dto/update-project-member.dto";
 import { UpdateStorageQuotaDto } from "./dto/update-storage-quota.dto";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { FileDownloadHandlerService } from "./file-download/file-download-handler.service";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { FileSystemService } from "./file-system.service";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { ProjectCrudService } from "../file-operations/project-crud.service";
+import { FileOperationsService } from "../file-operations/file-operations.service";
 import { FileTreeService } from "./file-tree/file-tree.service";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { SearchService } from "./search/search.service";
+import { FileDownloadHandlerService } from "./file-download/file-download-handler.service";
+import { FileDownloadExportService } from "./file-download/file-download-export.service";
+import { ProjectMemberService } from "./project-member/project-member.service";
+import { StorageInfoService } from "./storage-quota/storage-info.service";
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard, PermissionsGuard)
@@ -158,7 +156,7 @@ export class FileSystemController {
     @Request() req: ExpressRequest & { user: { id: string } },
     @Query() query?: QueryProjectsDto,
   ) {
-    return this.fileSystemService.getUserProjects(req.user.id, query);
+    return this.projectCrudService.getUserProjects(req.user.id, query);
   }
 
   @Get("projects/trash")
@@ -172,7 +170,7 @@ export class FileSystemController {
     @Request() req: ExpressRequest & { user: { id: string } },
     @Query() query?: QueryProjectsDto,
   ) {
-    return this.fileSystemService.getUserDeletedProjects(req.user.id, query);
+    return this.projectCrudService.getUserDeletedProjects(req.user.id, query);
   }
 
   @Get('personal-space')
@@ -185,7 +183,7 @@ export class FileSystemController {
   async getPersonalSpace(
     @Request() req: ExpressRequest & { user: { id: string } }
   ) {
-    return this.fileSystemService.getPersonalSpace(req.user.id);
+    return this.projectCrudService.getPersonalSpace(req.user.id);
   }
 
   @Get('personal-space/by-user/:userId')
@@ -200,7 +198,7 @@ export class FileSystemController {
   async getUserPersonalSpace(
     @Param('userId') userId: string
   ) {
-    return this.fileSystemService.getPersonalSpace(userId);
+    return this.projectCrudService.getPersonalSpace(userId);
   }
 
   @Get('projects/:projectId')
@@ -213,7 +211,7 @@ export class FileSystemController {
   })
   @ApiResponse({ status: 404, description: '项目不存在' })
   async getProject(@Param('projectId') projectId: string) {
-    return this.fileSystemService.getProject(projectId);
+    return this.projectCrudService.getProject(projectId);
   }
 
   @Patch('projects/:projectId')
@@ -230,7 +228,7 @@ export class FileSystemController {
     @Param('projectId') projectId: string,
     @Body() dto: UpdateNodeDto,
   ) {
-    return this.fileSystemService.updateProject(projectId, dto);
+    return this.projectCrudService.updateProject(projectId, dto);
   }
 
   @Delete('projects/:projectId')
@@ -248,7 +246,7 @@ export class FileSystemController {
     @Param('projectId') projectId: string,
     @Query('permanently') permanently?: boolean,
   ) {
-    return this.fileSystemService.deleteProject(
+    return this.fileOperationsService.deleteProject(
       projectId,
       permanently ?? false,
     );
@@ -264,7 +262,7 @@ export class FileSystemController {
     type: TrashListResponseDto,
   })
   async getTrash(@Request() req) {
-    return this.fileSystemService.getTrashItems(req.user.id);
+    return this.projectCrudService.getUserDeletedProjects(req.user.id);
   }
 
   @Post("trash/restore")
@@ -290,7 +288,7 @@ export class FileSystemController {
     @Body() body: { itemIds: string[] },
     @Request() req: ExpressRequest & { user: { id: string } },
   ) {
-    return this.fileSystemService.restoreTrashItems(body.itemIds, req.user.id);
+    return this.fileOperationsService.restoreTrashItems(body.itemIds, req.user.id);
   }
 
   @Delete('trash/items')
@@ -313,7 +311,7 @@ export class FileSystemController {
     type: BatchOperationResponseDto,
   })
   async permanentlyDeleteTrashItems(@Body() body: { itemIds: string[] }) {
-    return this.fileSystemService.permanentlyDeleteTrashItems(body.itemIds);
+    return this.fileOperationsService.permanentlyDeleteTrashItems(body.itemIds);
   }
 
   @Delete('trash')
@@ -327,7 +325,7 @@ export class FileSystemController {
     type: OperationSuccessDto,
   })
   async clearTrash(@Request() req) {
-    return this.fileSystemService.clearTrash(req.user.id);
+    return this.fileOperationsService.clearTrash(req.user.id);
   }
 
   @Get('projects/:projectId/trash')
@@ -344,7 +342,7 @@ export class FileSystemController {
     @Request() req,
     @Query() query?: QueryChildrenDto,
   ) {
-    return this.fileSystemService.getProjectTrash(projectId, req.user.id, query);
+    return this.fileOperationsService.getProjectTrash(projectId, req.user.id, query);
   }
 
   @Delete('projects/:projectId/trash')
@@ -361,7 +359,7 @@ export class FileSystemController {
     @Request() req,
     @Param('projectId') projectId: string,
   ) {
-    return this.fileSystemService.clearProjectTrash(projectId, req.user.id);
+    return this.fileOperationsService.clearProjectTrash(projectId, req.user.id);
   }
 
   // ==================== 节点操作 ====================
@@ -391,7 +389,7 @@ export class FileSystemController {
     @Request() req: ExpressRequest & { user: { id: string } },
     @Body() dto: CreateNodeDto,
   ) {
-    return this.fileSystemService.createNode(req.user.id, dto.name, {
+    return this.projectCrudService.createNode(req.user.id, dto.name, {
       parentId: dto.parentId,
       description: dto.description,
     });
@@ -412,7 +410,7 @@ export class FileSystemController {
     @Param('parentId') parentId: string,
     @Body() dto: CreateFolderDto,
   ) {
-    return this.fileSystemService.createFolder(req.user.id, parentId, dto);
+    return this.projectCrudService.createFolder(req.user.id, parentId, dto);
   }
 
   @Get('nodes/:nodeId/root')
@@ -421,7 +419,7 @@ export class FileSystemController {
   @ApiResponse({ status: 200, description: '获取根节点成功', type: FileSystemNodeDto })
   @ApiResponse({ status: 404, description: '节点不存在' })
   async getRootNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.getRootNode(nodeId);
+    return this.fileTreeService.getRootNode(nodeId);
   }
 
   @Post("nodes/:nodeId/restore")
@@ -439,7 +437,7 @@ export class FileSystemController {
     @Param('nodeId') nodeId: string,
     @Request() req: ExpressRequest & { user: { id: string } },
   ) {
-    return this.fileSystemService.restoreNode(nodeId, req.user.id);
+    return this.fileOperationsService.restoreNode(nodeId, req.user.id);
   }
 
   @Get('nodes/:nodeId')
@@ -452,7 +450,7 @@ export class FileSystemController {
   })
   @ApiResponse({ status: 404, description: '节点不存在' })
   async getNode(@Param('nodeId') nodeId: string) {
-    return this.fileSystemService.getNodeTree(nodeId);
+    return this.fileTreeService.getNodeTree(nodeId);
   }
 
   @Get("nodes/:nodeId/children")
@@ -469,7 +467,7 @@ export class FileSystemController {
     @Request() req,
     @Query() query?: QueryChildrenDto,
   ) {
-    return this.fileSystemService.getChildren(nodeId, req.user.id, query);
+    return this.fileTreeService.getChildren(nodeId, req.user.id, query);
   }
 
   @Patch("nodes/:nodeId")
@@ -486,7 +484,7 @@ export class FileSystemController {
     @Param('nodeId') nodeId: string,
     @Body() dto: UpdateNodeDto,
   ) {
-    return this.fileSystemService.updateNode(nodeId, dto);
+    return this.fileOperationsService.updateNode(nodeId, dto);
   }
 
   @Delete("nodes/:nodeId")
@@ -506,7 +504,7 @@ export class FileSystemController {
     @Query('permanently') permanentlyQuery?: boolean,
   ) {
     const permanently = body?.permanently ?? permanentlyQuery ?? false;
-    return this.fileSystemService.deleteNode(nodeId, permanently);
+    return this.fileOperationsService.deleteNode(nodeId, permanently);
   }
 
   @Post("nodes/:nodeId/move")
@@ -520,7 +518,7 @@ export class FileSystemController {
   })
   @ApiResponse({ status: 404, description: "节点不存在" })
   async moveNode(@Param('nodeId') nodeId: string, @Body() dto: MoveNodeDto) {
-    return this.fileSystemService.moveNode(nodeId, dto.targetParentId);
+    return this.fileOperationsService.moveNode(nodeId, dto.targetParentId);
   }
 
   @Post("nodes/:nodeId/copy")
@@ -534,59 +532,7 @@ export class FileSystemController {
   })
   @ApiResponse({ status: 404, description: "节点不存在" })
   async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
-    return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
-  }
-
-  // ==================== 文件上传 ====================
-
-  @Post("files/upload")
-  @RequireProjectPermission(ProjectPermission.FILE_UPLOAD)
-  @CsrfProtected()
-  @ApiOperation({ summary: "上传文件" })
-  @ApiResponse({
-    status: 201,
-    description: "文件上传成功",
-    type: FileSystemNodeDto,
-  })
-  @ApiResponse({ status: 400, description: "请求参数错误或文件类型不支持" })
-  async uploadFile(
-    @Request() req,
-    @Body() dto: { parentId: string; fileName: string; fileContent?: string },
-  ) {
-    const { parentId, fileName, fileContent } = dto;
-    if (!fileName) {
-      throw new BadRequestException("缺少文件名称");
-    }
-
-    if (!parentId) {
-      throw new BadRequestException("缺少父节点ID");
-    }
-
-    const parentNode = await this.fileSystemService.getNode(parentId);
-    if (!parentNode) {
-      throw new NotFoundException("父节点不存在");
-    }
-
-    if (!parentNode.isFolder) {
-      throw new BadRequestException("只能上传文件到文件夹");
-    }
-
-    let buffer: Buffer;
-    if (fileContent) {
-      buffer = Buffer.from(fileContent, "base64");
-    } else {
-      buffer = Buffer.from(`文件内容: ${fileName}`, "utf-8");
-    }
-
-    const mockFile = {
-      originalname: fileName,
-      filename: `${Date.now()}-${fileName}`,
-      mimetype: this.getMimeType(fileName),
-      size: buffer.length,
-      buffer: buffer,
-    } as Express.Multer.File;
-
-    return this.fileSystemService.uploadFile(req.user.id, parentId, mockFile);
+    return this.fileOperationsService.copyNode(nodeId, dto.targetParentId);
   }
 
   // ==================== 配额管理 ====================
@@ -600,10 +546,14 @@ export class FileSystemController {
   })
   async getStorageQuota(@Request() req, @Query('nodeId') nodeId?: string, @Query('userId') userId?: string) {
     if (nodeId) {
-      return this.fileSystemService.getNodeStorageQuota(req.user.id, nodeId);
+      const node = await this.fileTreeService.getNode(nodeId);
+    if (!node) {
+      throw new NotFoundException('节点不存在');
+    }
+    return this.storageInfoService.getStorageQuota(req.user.id, nodeId, node);
     }
     const targetUserId = userId || req.user.id;
-    return this.fileSystemService.getUserStorageInfo(targetUserId);
+    return this.storageInfoService.getUserStorageInfo(targetUserId);
   }
 
   @Post("quota/update")
@@ -620,7 +570,7 @@ export class FileSystemController {
   @ApiResponse({ status: 403, description: "无权限更新配额" })
   @ApiResponse({ status: 404, description: "节点不存在" })
   async updateStorageQuota(@Request() req, @Body() dto: UpdateStorageQuotaDto) {
-    return this.fileSystemService.updateNodeStorageQuota(dto.nodeId, dto.quota);
+    return this.storageInfoService.updateNodeStorageQuota(dto.nodeId, dto.quota);
   }
 
   // ==================== 项目成员管理 ====================
@@ -637,7 +587,7 @@ export class FileSystemController {
   @ApiResponse({ status: 403, description: '无权限访问该项目' })
   @ApiResponse({ status: 404, description: '项目不存在' })
   async getProjectMembers(@Param('projectId') projectId: string) {
-    return this.fileSystemService.getProjectMembers(projectId);
+    return this.projectMemberService.getProjectMembers(projectId);
   }
 
   @Post("projects/:projectId/members")
@@ -659,7 +609,7 @@ export class FileSystemController {
     @Request() req,
   ) {
     const { userId, projectRoleId } = dto;
-    return this.fileSystemService.addProjectMember(
+    return this.projectMemberService.addProjectMember(
       projectId,
       userId,
       projectRoleId,
@@ -700,7 +650,7 @@ export class FileSystemController {
     if (!projectRoleId) {
       throw new BadRequestException("projectRoleId 或 roleId 不能为空");
     }
-    return this.fileSystemService.updateProjectMember(
+    return this.projectMemberService.updateProjectMember(
       projectId,
       userId,
       projectRoleId,
@@ -726,7 +676,7 @@ export class FileSystemController {
     @Param('userId') userId: string,
     @Request() req,
   ) {
-    return this.fileSystemService.removeProjectMember(
+    return this.projectMemberService.removeProjectMember(
       projectId,
       userId,
       req.user.id,
@@ -756,7 +706,7 @@ export class FileSystemController {
     @Body() body: { newOwnerId: string },
     @Request() req,
   ) {
-    return this.fileSystemService.transferProjectOwnership(
+    return this.projectMemberService.transferProjectOwnership(
       projectId,
       body.newOwnerId,
       req.user.id,
@@ -796,7 +746,7 @@ export class FileSystemController {
     @Body() body: { members: Array<{ userId: string; projectRoleId: string }> },
     @Request() req,
   ) {
-    return this.fileSystemService.batchAddProjectMembers(
+    return this.projectMemberService.batchAddProjectMembers(
       projectId,
       body.members,
       req.user.id,
@@ -836,7 +786,7 @@ export class FileSystemController {
     @Body() body: { members: Array<{ userId: string; projectRoleId: string }> },
     @Request() req,
   ) {
-    return this.fileSystemService.batchUpdateProjectMembers(
+    return this.projectMemberService.batchUpdateProjectMembers(
       projectId,
       body.members,
       req.user.id,
@@ -861,7 +811,7 @@ export class FileSystemController {
   ) {
     const userId = (req.user as { id?: string })?.id;
 
-    const node = await this.fileSystemService.getNode(nodeId);
+    const node = await this.fileTreeService.getNode(nodeId);
     if (!node) {
       throw new NotFoundException("文件节点不存在");
     }
@@ -877,7 +827,7 @@ export class FileSystemController {
       }
     } else {
       // 使用统一的文件访问权限检查（适用于资源库和项目文件）
-      const hasAccess = await this.fileSystemService.checkFileAccess(
+      const hasAccess = await this.fileDownloadExportService.checkFileAccess(
         nodeId,
         userId,
       );
@@ -890,7 +840,7 @@ export class FileSystemController {
       throw new NotFoundException("文件节点不存在");
     }
 
-    const nodeFullPath = this.fileSystemService.getFullPath(node.path);
+    const nodeFullPath = this.fileDownloadExportService.getFullPath(node.path);
     const nodeDir = path.dirname(nodeFullPath);
     const thumbnail = findThumbnailSync(nodeDir);
 
@@ -1030,7 +980,7 @@ export class FileSystemController {
           : undefined;
 
       const { stream, filename, mimeType } =
-        await this.fileSystemService.downloadNodeWithFormat(
+        await this.fileDownloadExportService.downloadNodeWithFormat(
           nodeId,
           userId,
           format,
@@ -1060,7 +1010,7 @@ export class FileSystemController {
         `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`,
       );
 
-      const node = await this.fileSystemService.getNode(nodeId);
+      const node = await this.fileTreeService.getNode(nodeId);
       if (node && !node.isFolder && (node.fileHash || node.id)) {
         const etag = `"${node.fileHash || node.id}_${format}"`;
         res.setHeader("ETag", etag);
