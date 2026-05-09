@@ -3,8 +3,8 @@ import { RefreshCw, X, UserPlus, AlertCircle, Loader2, ArrowUpRight } from 'luci
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { TruncateText } from '@/components/ui/TruncateText';
-// transferOwnership 使用动态 import，因为 SDK 无此端点
 import { fileSystemControllerGetProjectMembers, fileSystemControllerAddProjectMember, fileSystemControllerRemoveProjectMember, fileSystemControllerUpdateProjectMember } from '@/api-sdk';
+import { client } from '@/api-sdk/client.gen';
 import { usersControllerSearchUsers } from '@/api-sdk';
 import { rolesControllerGetProjectRolesByProject } from '@/api-sdk';
 import { useProjectPermission } from '@/hooks/useProjectPermission';
@@ -287,9 +287,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setTransferring(true);
     setErrorMessage('');
     try {
-      await fileSystemControllerUpdateProjectMember({
-        path: { projectId, userId: transferTarget.userId },
-        body: { roleName: 'PROJECT_OWNER' },
+      // SDK 无 transferOwnership，直接用 client POST 到后端 /transfer 端点
+      await client.post({
+        security: [{ scheme: 'bearer', type: 'http' }],
+        url: `/api/v1/file-system/projects/${projectId}/transfer`,
+        body: { newOwnerId: transferTarget.userId },
       });
 
       // 刷新成员列表
