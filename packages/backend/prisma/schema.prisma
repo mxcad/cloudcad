@@ -33,6 +33,7 @@ model User {
   ownedNodes           FileSystemNode[] @relation("NodeOwner")
   projectMembers       ProjectMember[]
   role                 Role             @relation(fields: [roleId], references: [id])
+  refreshTokens        RefreshToken[]
 
   @@index([deletedAt])
   @@map("users")
