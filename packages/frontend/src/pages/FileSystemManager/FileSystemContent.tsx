@@ -96,11 +96,13 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   // 获取节点权限信息
   const getNodePermissionProps = (node: FileSystemNode) => {
     const cachedPermissions = nodePermissions.get(node.id);
+    // 乐观默认值：假设项目所有者拥有全部权限，按钮立即显示
+    // API 返回后会纠正（如有变化），避免权限加载延迟导致的按钮闪烁
     const defaultPermissions = {
-      canEdit: false,
-      canDelete: false,
-      canManageMembers: false,
-      canManageRoles: false,
+      canEdit: true,
+      canDelete: true,
+      canManageMembers: true,
+      canManageRoles: true,
     };
 
     const permissions = node.isRoot
@@ -124,7 +126,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     let onShowRolesHandler: ((node: FileSystemNode) => void) | undefined;
 
     if (node.isRoot && permissions.canEdit && onEdit) {
-      onEditHandler = onEdit;
+      onEditHandler = () => onEdit(node);
     }
     if (node.isRoot && permissions.canDelete) {
       onDeleteHandler = () => {
@@ -136,10 +138,10 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
       };
     }
     if (node.isRoot && permissions.canManageMembers && onShowMembers) {
-      onShowMembersHandler = onShowMembers;
+      onShowMembersHandler = () => onShowMembers(node);
     }
     if (node.isRoot && permissions.canManageRoles && onShowRoles) {
-      onShowRolesHandler = onShowRoles;
+      onShowRolesHandler = () => onShowRoles(node);
     }
 
     return {
@@ -201,6 +203,10 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   ? onRestore
                   : undefined
               }
+              onEdit={extraProps.onEdit}
+              onDeleteNode={extraProps.onDeleteNode}
+              onShowMembers={extraProps.onShowMembers}
+              onShowRoles={extraProps.onShowRoles}
               onMove={
                 !node.isRoot &&
                 projectPermissions['FILE_MOVE' as keyof typeof projectPermissions]
