@@ -35,14 +35,16 @@ declare global {
       parentId?: string;
       userRole: string;
     };
-    MxPluginContext: {
-      getServerConfig: () => {
-        uploadFileConfig?: {
-          create?: { formData?: Record<string, string> };
-        };
+  }
+  // eslint-disable-next-line no-var
+  var MxPluginContext: {
+    getServerConfig: () => {
+      uploadFileConfig?: {
+        create?: { formData?: Record<string, string> };
       };
     };
-  }
+    useFileName: () => { fileName: { value: string } };
+  };
 }
 
 /**

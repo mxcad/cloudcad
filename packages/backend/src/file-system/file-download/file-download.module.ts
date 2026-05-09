@@ -4,12 +4,13 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '../../database/database.module';
 import { StorageModule } from '../../storage/storage.module';
 import { CommonModule } from '../../common/common.module';
 import { FilePermissionModule } from '../file-permission/file-permission.module';
+import { FileSystemModule } from '../file-system.module';
 import { FileDownloadExportService } from './file-download-export.service';
 import { FileDownloadHandlerService } from './file-download-handler.service';
 
@@ -20,7 +21,7 @@ import { FileDownloadHandlerService } from './file-download-handler.service';
  * 依赖: DatabaseModule, StorageModule, CommonModule, FilePermissionModule
  */
 @Module({
-  imports: [ConfigModule, DatabaseModule, StorageModule, CommonModule, FilePermissionModule],
+  imports: [ConfigModule, DatabaseModule, StorageModule, CommonModule, FilePermissionModule, forwardRef(() => FileSystemModule)],
   providers: [FileDownloadExportService, FileDownloadHandlerService],
   exports: [FileDownloadExportService, FileDownloadHandlerService],
 })

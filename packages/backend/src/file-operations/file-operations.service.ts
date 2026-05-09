@@ -141,7 +141,6 @@ export class FileOperationsService {
         '\\$&'
       );
       const escapedExtension = extension.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // eslint-disable-next-line no-useless-escape
       const pattern = new RegExp(
         `^${escapedNameWithoutExt} \((\d+)\)${escapedExtension}$`
       );
@@ -178,7 +177,6 @@ export class FileOperationsService {
 
     // 找到现有名称中的最大数字后缀
     let maxCounter = 0;
-    // eslint-disable-next-line no-useless-escape
     const pattern = new RegExp(`^${escapedBaseName} \((\d+)\)$`);
 
     for (const name of existingNames) {

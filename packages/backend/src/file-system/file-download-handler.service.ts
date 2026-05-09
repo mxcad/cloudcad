@@ -53,7 +53,6 @@ export class FileDownloadHandlerService {
 
       // 3. 设置 Content-Disposition（支持中文文件名）
       const encodedFilename = encodeURIComponent(filename);
-      // eslint-disable-next-line no-control-regex
       const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, '_');
       res.setHeader(
         'Content-Disposition',

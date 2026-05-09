@@ -361,7 +361,6 @@ export class FileValidationService {
       let sanitized = filename.replace(/[\\/]/g, '');
 
       // 2. 移除控制字符（0x00-0x1f, 0x7f-0x9f，故意匹配用于安全清理）
-      // eslint-disable-next-line no-control-regex
       sanitized = sanitized.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
 
       // 3. 限制文件名长度（255字节）

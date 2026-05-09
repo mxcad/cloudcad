@@ -231,13 +231,13 @@ export class FileUtils {
       throw new BadRequestException('路径不能为空');
     }
 
-    // 规范化路径，移除 .. 和 .
-    const normalizedPath = path.normalize(inputPath);
-
-    // 检查是否包含路径遍历尝试
-    if (normalizedPath.includes('..') || normalizedPath.includes('~')) {
+    // 检查原始输入是否包含路径遍历尝试（在 normalize 之前，避免 normalize 展开 .. 导致绕过）
+    if (inputPath.includes('..') || inputPath.includes('~')) {
       throw new BadRequestException('路径包含非法字符');
     }
+
+    // 规范化路径，移除 .. 和 .
+    const normalizedPath = path.normalize(inputPath);
 
     // 检查绝对路径
     if (path.isAbsolute(normalizedPath)) {

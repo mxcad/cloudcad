@@ -41,7 +41,7 @@ export class DeactivateAccountDto {
 
   @ApiPropertyOptional({
     description:
-      '微信扫码验证（微信登录用户必填，值为 \"confirmed\" 表示已确认）',
+      '微信扫码验证（微信登录用户必填，值为 "confirmed" 表示已确认）',
     example: 'confirmed',
   })
   @IsString({ message: '微信验证必须是字符串' })

@@ -73,7 +73,6 @@ export class FileDownloadExportService {
 
   private sanitizeFileName(fileName: string): string {
     let sanitized = fileName.replace(/[\/\\]/g, '_');
-    // eslint-disable-next-line no-control-regex
     sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '_');
 
     if (sanitized.length > this.fileLimits.maxFilenameLength) {

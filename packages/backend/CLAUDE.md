@@ -81,3 +81,40 @@ pnpm check                        # lint + type-check
 pnpm check:fix                    # Auto-fix lint + format
 pnpm verify                       # check:fix → test → build
 ```
+
+## Dependency Upgrades — Backend-Specific Gotchas
+
+### Prisma v7 (`@prisma/client: ^7.1.0`)
+
+- **Generated type rename:** Prisma v7 may rename `ModelName` to `ModelNameOmit` when the model has relations that affect type generation. Example: `FileSystemNode` → `FileSystemNodeOmit`. Always run `pnpm type-check` after `pnpm prisma generate`.
+- **Enum incompatibility:** `@prisma/client` `$Enums.FileStatus` is not assignable to the local `FileStatus` enum in `src/common/enums/file-status.enum.ts`. When mapping Prisma query results to DTOs, cast explicitly:
+  ```typescript
+  fileStatus: node.fileStatus as FileStatus,
+  ```
+  The custom ESLint rule `no-prisma-enum-in-api-property` already forbids Prisma enums in `@ApiProperty` decorators — the local enum must be used instead.
+
+### Express v5 (`express: ^5.2.1`)
+
+- **Session is now Promise-based:** `session.destroy()` returns `Promise<void>` (no callback). `session.save()` also returns `Promise<void>`. Do NOT wrap in `new Promise` with callback-style — just `await` directly.
+- **`AuthenticatedRequest` lacks Express properties** (`protocol`, `get()`, `originalUrl`, `method`, `ip`). The `AuthenticatedRequest` in `src/mxcad/types/request.types.ts` explicitly omits `session` from Express Request. When these properties are needed, cast the request to `any`.
+
+### ADR 0002 — FileSystemService Façade
+
+`FileSystemService` (`src/file-system/file-system.service.ts`) is now a **Façade** for external consumers only (`library/`, `mxcad/`, `file-download/`). The `FileSystemController` injects sub-services directly:
+- `ProjectCrudService` — project CRUD, folders, project members
+- `FileOperationsService` — file operations (move, copy, delete, update)
+- `FileTreeService` — tree navigation (children, node lookup, categories)
+- `FileDownloadExportService` — download, format conversion, file access checks
+- `StorageInfoService` — quota management
+- `ProjectMemberService` — project member management
+- `SearchService` — search functionality
+
+When adding methods, decide: external API consumers → add to Facade; internal controller logic → call sub-service directly.
+
+### TypeScript Version Gap
+
+`package.json` declares `"typescript": "~5.0.0"` but `pnpm-lock.yaml` resolves to `5.9.3`. The stricter type inference can expose incompatibilities not caught by 5.0.
+
+### ConvertServerFileParam
+
+Uses **camelCase**: `srcPath`, `fileHash`, `nodeId`, `createPreloadingData` (NOT `srcpath`, `src_file_md5`, `create_preloading_data`). Defined in `src/mxcad/types/mxcad-context.types.ts`.

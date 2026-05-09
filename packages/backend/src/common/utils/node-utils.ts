@@ -138,11 +138,9 @@ export class NodeUtils {
     /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
 
   /** 非法字符（Windows / Linux 均不允许；包含控制字符是故意的，用于安全验证） */
-  // eslint-disable-next-line no-control-regex
   private static readonly INVALID_CHARS = /[<>:"|?*\x00-\x1F]/;
 
   /** 控制字符（用于安全清理） */
-  // eslint-disable-next-line no-control-regex
   private static readonly CONTROL_CHARS = /[\x00-\x1F\x7F]/;
 
   /** 最大文件名长度 */

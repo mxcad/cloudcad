@@ -110,6 +110,7 @@ CloudCAD 和 mxcad-app 的关系：
 - [ADR 0001 - 转换引擎合并](docs/adr/0001-merge-conversion-engine-into-backend.md)
 - [ADR 0002 - 解耦 file-operations 模块](docs/adr/0002-decouple-file-operations-module.md)
 - [ADR 0003 - IPermissionStore 策略模式解耦权限检查](docs/adr/0003-permission-store-strategy-pattern.md)
+- [AI E2E 测试指南](packages/frontend/e2e/guide/AI_E2E_GUIDE.md) — AI 自动生成 Playwright E2E 测试的 prompt 指南，按业务域组织（身份权限/图纸内容/图纸组织/资源库/系统管理）
 
 ## 图纸打开流程对齐验证（2026-05-09）
 

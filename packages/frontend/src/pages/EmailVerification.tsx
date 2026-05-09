@@ -85,7 +85,7 @@ export const EmailVerification: React.FC = () => {
         hasAutoSent.current = true;
         setEmailSent(true);
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
-        resendVerification().catch((err) => {
+        resendVerification({ email: stateEmail }).catch((err) => {
           const errorMessage =
             (err as Error & { response?: { data?: { message?: string } } }).response
               ?.data?.message ||
@@ -130,7 +130,7 @@ export const EmailVerification: React.FC = () => {
     try {
       if (bindMode) {
         // 绑定模式：调用绑定邮箱接口，返回 token 后存储并通过刷新更新 AuthContext
-        const response = await bindEmailAndLogin();
+        const response = await bindEmailAndLogin({ tempToken, email, code: verificationCode.trim() });
         if (!response) throw new Error('绑定邮箱失败');
         const { accessToken, refreshToken, user: userData } = response;
         localStorage.setItem('accessToken', accessToken);
@@ -143,7 +143,14 @@ export const EmailVerification: React.FC = () => {
         // 手机号注册场景：验证邮箱后完成手机号注册
         // NOTE: verifyEmailAndRegisterPhone SDK type has body?: never;
         // old params: { email, code, phone, phoneCode, username, password, nickname }
-        const response = await verifyEmailAndRegisterPhone();
+        const response = await verifyEmailAndRegisterPhone({
+          email, code: verificationCode.trim(),
+          phone: phoneRegisterData.phone,
+          phoneCode: phoneRegisterData.code,
+          username: phoneRegisterData.username,
+          password: phoneRegisterData.password,
+          nickname: phoneRegisterData.nickname,
+        });
         if (!response) throw new Error('注册失败');
         const { accessToken, refreshToken, user: userData } = response;
         localStorage.setItem('accessToken', accessToken);
@@ -192,7 +199,7 @@ export const EmailVerification: React.FC = () => {
     setResendSuccess(false);
 
     try {
-      await resendVerification();
+      await resendVerification({ email });
       setResendSuccess(true);
       setEmailSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);

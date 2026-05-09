@@ -140,10 +140,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       try {
         const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
         const projectList = ((response as unknown as Record<number, { nodes?: unknown[] }>)[200])?.nodes || [];
-        setProjects((projectList as Array<Record<string, unknown>>).map((p): FileSystemNode => ({
-          id: p.id, name: p.name, isFolder: true, isRoot: true,
-          updatedAt: p.updatedAt, parentId: undefined,
-          createdAt: p.createdAt, path: p.path || '', ownerId: p.ownerId || '',
+        setProjects((projectList as Array<Record<string, string | boolean | undefined>>).map((p): FileSystemNode => ({
+          id: String(p.id ?? ''), name: String(p.name ?? ''), isFolder: true, isRoot: true,
+          updatedAt: String(p.updatedAt || ''), parentId: undefined,
+          createdAt: String(p.createdAt || ''), path: String(p.path || ''), ownerId: String(p.ownerId || ''),
         })));
       } catch (error: unknown) {
         handleError(error, 'ProjectDrawingsPanel: 加载项目列表失败');

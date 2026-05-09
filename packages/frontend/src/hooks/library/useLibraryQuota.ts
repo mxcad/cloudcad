@@ -117,7 +117,7 @@ export function useLibraryQuota({
 
       // 刷新库配额信息
       const { data: storageInfo } = await fileSystemControllerGetStorageQuota({
-        query: { nodeId: libraryId },
+        query: { nodeId: libraryId, userId: '' },
       });
       if (storageInfo) {
         setLibraryStorageInfo(storageInfo);

@@ -359,7 +359,7 @@ export class LibraryController {
     @Request() req: AuthenticatedRequest
   ) {
     const filename = filePath.join('/');
-    const expressReq = req as unknown as Express.Request;
+    const expressReq = req as any;
     this.logger.log(`[Block file access] path: ${filename}, from: ${expressReq.get('referer') || 'N/A'}`);
     return this.mxcadFileHandler.serveFile(filename, res);
   }

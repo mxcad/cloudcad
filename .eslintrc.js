@@ -74,13 +74,16 @@ module.exports = {
       ],
       rules: {
         '@typescript-eslint/no-unused-vars': 'off',
-        '@typescript-eslint/no-explicit-any': 'error',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
         '@typescript-eslint/consistent-type-imports': 'off',
         '@typescript-eslint/interface-name-prefix': 'off',
         '@typescript-eslint/explicit-function-return-type': 'off',
         '@typescript-eslint/explicit-module-boundary-types': 'off',
         'no-unused-vars': 'off',
         'no-console': 'off',
+        'no-useless-escape': 'off',
+        'no-control-regex': 'off',
         'unused-imports/no-unused-imports': 'error',
         'unused-imports/no-unused-vars': 'off',
         // 'custom-rules/no-prisma-enum-in-api-property': 'error', // disabled until plugin is installed

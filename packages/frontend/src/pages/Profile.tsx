@@ -996,6 +996,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'password' && (
               <ProfilePasswordTab
+                user={user}
                 passwordForm={passwordForm}
                 showPassword={showPassword}
                 focusedField={focusedField}
@@ -1014,6 +1015,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'email' && (
               <ProfileEmailTab
+                user={user}
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
@@ -1039,6 +1041,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'phone' && smsEnabled && (
               <ProfilePhoneTab
+                user={user}
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
