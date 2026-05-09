@@ -68,12 +68,12 @@ export const Login: React.FC = () => {
           } else {
             const action = classifyWechatAuthResult(result);
             if (action?.type === 'error') {
-              alert(`微信登录失败：${action.message}`);
+              form.setError(`微信登录失败：${action.message}`);
             } else if (action?.type === 'need_register') {
               sessionStorage.setItem('wechatTempToken', action.tempToken);
               // 自动注册已开启但后端仍返回 needRegister → 被 allowRegister 等策略阻断
               if (wechatAutoRegister) {
-                alert('微信自动注册失败，请手动完成注册');
+                form.setError('微信自动注册失败，请手动完成注册');
               }
               navigate('/register?wechat=1');
             } else if (action?.type === 'bind_email') {
@@ -90,7 +90,9 @@ export const Login: React.FC = () => {
               localStorage.setItem('accessToken', action.accessToken);
               localStorage.setItem('refreshToken', action.refreshToken);
               localStorage.setItem('user', JSON.stringify(action.user));
-              window.location.href = '/';
+              // 使用 returnUrl 替代硬编码 '/'，支持登录后跳回原页面
+              const returnUrl = getReturnUrl();
+              window.location.href = returnUrl;
             }
           }
         }

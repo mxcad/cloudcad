@@ -118,14 +118,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
           const fetchError = error as { status?: number; message?: string };
           console.error('[AuthContext] Token 验证失败:', fetchError.status, fetchError.message);
-          // Clear auth state on any error during token validation.
-          // Without this, a network timeout or server error would leave
-          // loading=true indefinitely, permanently blocking the app.
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
+          // Only clear auth state on explicit 401 — network errors, 5xx, etc.
+          // should not log the user out (consistent with main branch behavior).
+          // clientSetup.ts already handles 401 → token refresh → redirect.
+          if (fetchError.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('personalSpaceId');
+            localStorage.removeItem('mxcad-personal-space-id');
+            setToken(null);
+            setUser(null);
+          }
         } finally {
           clearTimeout(timeoutId);
           setLoading(false);
@@ -412,9 +416,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(action.user));
             setToken(action.accessToken);
             setUser(action.user as User);
-
-            // 启动主动 token 刷新
-            triggerProactiveRefresh();
 
             // 启动主动 token 刷新
             triggerProactiveRefresh();

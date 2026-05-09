@@ -109,15 +109,6 @@ async function tryRefreshToken(): Promise<boolean> {
 let isRedirecting = false;
 let redirectTimer: number | null = null;
 
-function clearAuthAndRedirect() {
-  if (isRedirecting) return;
-  isRedirecting = true;
-  removeAccessToken();
-  removeRefreshToken();
-  localStorage.removeItem('user');
-  window.location.href = '/login';
-}
-
 function saveReturnUrl() {
   const currentPath = window.location.pathname + window.location.search + window.location.hash;
   // 不要保存 login 页面本身作为返回地址
@@ -142,6 +133,9 @@ function handleTokenRefreshFailure() {
   // 使用 Toast 替代 alert，非阻塞提示
   showGlobalToast('登录已过期，正在跳转到登录页...', 'warning');
 
+  // 清除主动刷新定时器
+  cancelProactiveRefresh();
+
   // Clear any pending redirect
   if (redirectTimer !== null) {
     clearTimeout(redirectTimer);
@@ -149,9 +143,11 @@ function handleTokenRefreshFailure() {
 
   // Delay redirect to allow user to see the Toast
   redirectTimer = window.setTimeout(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    removeAccessToken();
+    removeRefreshToken();
     localStorage.removeItem('user');
+    localStorage.removeItem('personalSpaceId');
+    localStorage.removeItem('mxcad-personal-space-id');
     window.location.href = '/login';
   }, 2000);
 }
