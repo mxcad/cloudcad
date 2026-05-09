@@ -88,7 +88,7 @@ export class RegistrationService {
     if (wechatTempToken) {
       try {
         const payload = this.jwtService.verify(wechatTempToken, {
-          secret: this.configService.get<string>('JWT_SECRET'),
+          secret: this.configService.get<string>('jwt.secret'),
         }) as {
           type: string;
           wechatId?: string;

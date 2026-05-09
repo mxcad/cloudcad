@@ -13,6 +13,7 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
+  ConflictException,
   InternalServerErrorException,
   Inject,
 } from '@nestjs/common';
@@ -23,6 +24,7 @@ import { DatabaseService } from '../../database/database.service';
 import { LoginDto, RegisterDto, AuthResponseDto, UserDto } from '../dto/auth.dto';
 import { WechatLoginResponseDto, WechatLoginUserDto } from '../dto/wechat.dto';
 import { SmsVerificationService } from '../services/sms';
+import { EmailVerificationService } from '../services/email-verification.service';
 import { WechatService } from '../services/wechat.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import {
@@ -44,6 +46,7 @@ export class LocalAuthProvider implements IAuthProvider {
     private jwtService: JwtService,
     private configService: ConfigService,
     private smsVerificationService: SmsVerificationService,
+    private emailVerificationService: EmailVerificationService,
     private wechatService: WechatService,
     private runtimeConfigService: RuntimeConfigService,
     @Inject(USER_SERVICE) private readonly userService: IUserService,
@@ -523,6 +526,396 @@ export class LocalAuthProvider implements IAuthProvider {
       nickname: user.nickname || undefined,
       avatar: user.avatar || undefined,
       phone: user.phone || undefined,
+    };
+  }
+
+  async verifyPhoneAndLogin(
+    phone: string,
+    code: string,
+    req?: SessionRequest
+  ): Promise<AuthResponseDto> {
+    this.logger.log(`开始验证手机号: ${phone}`);
+
+    const verifyResult = await this.smsVerificationService.verifyCode(
+      phone,
+      code
+    );
+    if (!verifyResult.valid) {
+      throw new BadRequestException(verifyResult.message);
+    }
+
+    const formattedPhone = phone.replace(/^\+86/, '');
+
+    const user = await this.prisma.user.findFirst({
+      where: { phone: formattedPhone, deletedAt: null },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('该手机号未注册');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('账号已被禁用');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        phoneVerified: true,
+        phoneVerifiedAt: new Date(),
+      },
+    });
+
+    this.logger.log(`手机号验证成功: ${formattedPhone}, userId: ${user.id}`);
+
+    const { password: _, ...userWithoutPassword } = user;
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
+
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role?.name || 'USER';
+    }
+
+    return {
+      ...tokens,
+      user: {
+        ...userWithoutPassword,
+        phoneVerified: true,
+      },
+    };
+  }
+
+  async bindEmailAndLogin(
+    tempToken: string,
+    email: string,
+    code: string,
+    req?: SessionRequest
+  ): Promise<AuthResponseDto> {
+    this.logger.log(`开始绑定邮箱并登录: ${email}`);
+
+    let payload: { sub: string; type: string };
+    try {
+      payload = this.jwtService.verify(tempToken, {
+        secret: this.configService.get<string>('jwt.secret'),
+      });
+    } catch {
+      throw new BadRequestException('临时令牌无效或已过期，请重新登录');
+    }
+
+    if (payload.type !== 'bind_email_temp') {
+      throw new BadRequestException('无效的令牌类型');
+    }
+
+    const userId = payload.sub;
+
+    const result = await this.emailVerificationService.verifyEmail(email, code);
+    if (!result.valid) {
+      throw new BadRequestException(result.message);
+    }
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        email,
+        deletedAt: null,
+      },
+    });
+    if (existingUser && existingUser.id !== userId) {
+      throw new ConflictException('该邮箱已被其他账号绑定');
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+      },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
+    });
+
+    this.logger.log(`邮箱绑定成功: userId=${userId}, email=${email}`);
+
+    const { password: _, ...userWithoutPassword } = user;
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
+
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role?.name || 'USER';
+    }
+
+    return {
+      ...tokens,
+      user: userWithoutPassword,
+    };
+  }
+
+  async bindPhoneAndLogin(
+    tempToken: string,
+    phone: string,
+    code: string,
+    req?: SessionRequest
+  ): Promise<AuthResponseDto> {
+    this.logger.log(`开始绑定手机号并登录: ${phone}`);
+
+    let payload: { sub: string; type: string };
+    try {
+      payload = this.jwtService.verify(tempToken, {
+        secret: this.configService.get<string>('jwt.secret'),
+      });
+    } catch {
+      throw new BadRequestException('临时令牌无效或已过期，请重新登录');
+    }
+
+    if (payload.type !== 'bind_phone_temp') {
+      throw new BadRequestException('无效的令牌类型');
+    }
+
+    const userId = payload.sub;
+
+    const verifyResult = await this.smsVerificationService.verifyCode(
+      phone,
+      code
+    );
+    if (!verifyResult.valid) {
+      throw new BadRequestException(verifyResult.message);
+    }
+
+    const formattedPhone = phone.replace(/^\+86/, '');
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: { phone: formattedPhone, deletedAt: null },
+    });
+    if (existingUser && existingUser.id !== userId) {
+      throw new ConflictException('该手机号已被其他账号绑定');
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        phone: formattedPhone,
+        phoneVerified: true,
+        phoneVerifiedAt: new Date(),
+      },
+      include: {
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isSystem: true,
+            permissions: { select: { permission: true } },
+          },
+        },
+      },
+    });
+
+    this.logger.log(
+      `手机号绑定成功: userId=${userId}, phone=${formattedPhone}`
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+    const tokens =
+      await this.authTokenService.generateTokens(userWithoutPassword);
+
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role?.name || 'USER';
+    }
+
+    return {
+      ...tokens,
+      user: userWithoutPassword,
+    };
+  }
+
+  async verifyEmailAndRegisterPhone(
+    email: string,
+    emailCode: string,
+    registerData: {
+      phone: string;
+      code: string;
+      username: string;
+      password: string;
+      nickname?: string;
+    },
+    req?: SessionRequest
+  ): Promise<AuthResponseDto> {
+    this.logger.log(
+      `开始验证邮箱并完成手机号注册: ${email}, phone: ${registerData.phone}`
+    );
+
+    const emailVerifyResult = await this.emailVerificationService.verifyEmail(
+      email,
+      emailCode
+    );
+    if (!emailVerifyResult.valid) {
+      throw new BadRequestException(emailVerifyResult.message);
+    }
+
+    const phoneVerifyResult = await this.smsVerificationService.verifyCode(
+      registerData.phone,
+      registerData.code
+    );
+    if (!phoneVerifyResult.valid) {
+      throw new BadRequestException(phoneVerifyResult.message);
+    }
+
+    const { phone, username, password, nickname } = registerData;
+    const formattedPhone = phone.replace(/^\+86/, '');
+
+    const existingUserByPhone = await this.prisma.user.findUnique({
+      where: { phone: formattedPhone, deletedAt: null },
+    });
+    if (existingUserByPhone) {
+      throw new ConflictException('手机号已被注册');
+    }
+
+    const existingUserByUsername = await this.prisma.user.findUnique({
+      where: { username, deletedAt: null },
+    });
+    if (existingUserByUsername) {
+      throw new ConflictException('用户名已被使用');
+    }
+
+    const existingUserByEmail = await this.prisma.user.findFirst({
+      where: {
+        email,
+        deletedAt: null,
+      },
+    });
+    if (existingUserByEmail) {
+      throw new ConflictException('邮箱已被注册');
+    }
+
+    const user = await this.userService.create({
+      username,
+      password,
+      nickname: nickname || username,
+      email,
+      emailVerified: true,
+      phone: formattedPhone,
+      phoneVerified: true,
+    });
+
+    this.logger.log(
+      `手机号注册成功（邮箱验证后）: ${formattedPhone}, email: ${email}, username: ${username}`
+    );
+
+    const tokens = await this.authTokenService.generateTokens(user);
+
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role?.name || 'USER';
+    }
+
+    return {
+      ...tokens,
+      user: {
+        ...user,
+        role: user.role,
+        status: user.status,
+      },
+    };
+  }
+
+  async registerByPhone(
+    registerDto: RegisterDto & { phone: string; code: string },
+    req?: SessionRequest
+  ): Promise<AuthResponseDto> {
+    const { phone, code, username, password, nickname } = registerDto;
+
+    const allowRegister = await this.runtimeConfigService.getValue<boolean>(
+      'allowRegister',
+      true
+    );
+    if (!allowRegister) {
+      throw new BadRequestException('系统已关闭注册功能');
+    }
+
+    const smsEnabled = await this.runtimeConfigService.getValue<boolean>(
+      'smsEnabled',
+      false
+    );
+    const requirePhoneVerification =
+      await this.runtimeConfigService.getValue<boolean>(
+        'requirePhoneVerification',
+        false
+      );
+    if (!smsEnabled || !requirePhoneVerification) {
+      throw new BadRequestException('手机号注册未启用，请使用邮箱注册');
+    }
+
+    const verifyResult = await this.smsVerificationService.verifyCode(
+      phone,
+      code
+    );
+    if (!verifyResult.valid) {
+      throw new BadRequestException(verifyResult.message);
+    }
+
+    const formattedPhone = phone.replace(/^\+86/, '');
+
+    const existingUserByPhone = await this.prisma.user.findUnique({
+      where: { phone: formattedPhone, deletedAt: null },
+    });
+    if (existingUserByPhone) {
+      throw new ConflictException('手机号已被注册');
+    }
+
+    const existingUserByUsername = await this.prisma.user.findUnique({
+      where: { username, deletedAt: null },
+    });
+    if (existingUserByUsername) {
+      throw new ConflictException('用户名已被使用');
+    }
+
+    const user = await this.userService.create({
+      username,
+      password,
+      nickname: nickname || username,
+      phone: formattedPhone,
+      phoneVerified: true,
+    });
+
+    this.logger.log(`手机号注册成功: ${formattedPhone}, username: ${username}`);
+
+    const tokens = await this.authTokenService.generateTokens(user);
+
+    if (req && req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = user.role?.name || 'USER';
+    }
+
+    return {
+      ...tokens,
+      user: {
+        ...user,
+        role: user.role,
+        status: user.status,
+      },
     };
   }
 }

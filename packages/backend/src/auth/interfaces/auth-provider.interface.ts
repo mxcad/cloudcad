@@ -21,4 +21,14 @@ export interface IAuthProvider {
   register(data: RegisterDto, req?: SessionRequest): Promise<AuthResponseDto>;
   refreshToken(token: string): Promise<AuthResponseDto>;
   getUserInfo(userId: string): Promise<UserDto>;
+  verifyPhoneAndLogin(phone: string, code: string, req?: SessionRequest): Promise<AuthResponseDto>;
+  bindEmailAndLogin(tempToken: string, email: string, code: string, req?: SessionRequest): Promise<AuthResponseDto>;
+  bindPhoneAndLogin(tempToken: string, phone: string, code: string, req?: SessionRequest): Promise<AuthResponseDto>;
+  verifyEmailAndRegisterPhone(
+    email: string,
+    emailCode: string,
+    registerData: { phone: string; code: string; username: string; password: string; nickname?: string },
+    req?: SessionRequest
+  ): Promise<AuthResponseDto>;
+  registerByPhone(registerDto: RegisterDto & { phone: string; code: string }, req?: SessionRequest): Promise<AuthResponseDto>;
 }

@@ -11,31 +11,14 @@
 import {
   Injectable,
   Logger,
-  UnauthorizedException,
-  BadRequestException,
-  ConflictException,
   Inject,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { DatabaseService } from '../database/database.service';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto/auth.dto';
 import {
   WechatLoginResponseDto,
   WechatBindResponseDto,
   WechatUnbindResponseDto,
 } from './dto/wechat.dto';
-import { TokenBlacklistService } from './services/token-blacklist.service';
-import { EmailVerificationService } from './services/email-verification.service';
-import { SmsVerificationService } from './services/sms';
-import { InitializationService } from '../common/services/initialization.service';
-import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
-import {
-  USER_SERVICE,
-  IUserService,
-} from '../common/interfaces/user-service.interface';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
 import {
   SessionRequest,
   UserForToken,
@@ -52,16 +35,6 @@ export class AuthFacadeService {
   private readonly logger = new Logger(AuthFacadeService.name);
 
   constructor(
-    private prisma: DatabaseService,
-    private jwtService: JwtService,
-    private configService: ConfigService,
-    private tokenBlacklistService: TokenBlacklistService,
-    private emailVerificationService: EmailVerificationService,
-    private smsVerificationService: SmsVerificationService,
-    private initializationService: InitializationService,
-    private runtimeConfigService: RuntimeConfigService,
-    @Inject(USER_SERVICE) private readonly userService: IUserService,
-    @InjectRedis() private readonly redis: Redis,
     private registrationService: RegistrationService,
     private passwordService: PasswordService,
     private accountBindingService: AccountBindingService,
@@ -103,78 +76,7 @@ export class AuthFacadeService {
     registerDto: RegisterDto & { phone: string; code: string },
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    const { phone, code, username, password, nickname } = registerDto;
-
-    const allowRegister = await this.runtimeConfigService.getValue<boolean>(
-      'allowRegister',
-      true
-    );
-    if (!allowRegister) {
-      throw new BadRequestException('系统已关闭注册功能');
-    }
-
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'smsEnabled',
-      false
-    );
-    const requirePhoneVerification =
-      await this.runtimeConfigService.getValue<boolean>(
-        'requirePhoneVerification',
-        false
-      );
-    if (!smsEnabled || !requirePhoneVerification) {
-      throw new BadRequestException('手机号注册未启用，请使用邮箱注册');
-    }
-
-    const verifyResult = await this.smsVerificationService.verifyCode(
-      phone,
-      code
-    );
-    if (!verifyResult.valid) {
-      throw new BadRequestException(verifyResult.message);
-    }
-
-    const formattedPhone = phone.replace(/^\+86/, '');
-
-    const existingUserByPhone = await this.prisma.user.findUnique({
-      where: { phone: formattedPhone, deletedAt: null },
-    });
-    if (existingUserByPhone) {
-      throw new ConflictException('手机号已被注册');
-    }
-
-    const existingUserByUsername = await this.prisma.user.findUnique({
-      where: { username, deletedAt: null },
-    });
-    if (existingUserByUsername) {
-      throw new ConflictException('用户名已被使用');
-    }
-
-    const user = await this.userService.create({
-      username,
-      password,
-      nickname: nickname || username,
-      phone: formattedPhone,
-      phoneVerified: true,
-    });
-
-    this.logger.log(`手机号注册成功: ${formattedPhone}, username: ${username}`);
-
-    const tokens = await this.authTokenService.generateTokens(user);
-
-    if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-    }
-
-    return {
-      ...tokens,
-      user: {
-        ...user,
-        role: user.role,
-        status: user.status,
-      },
-    };
+    return this.authProvider.registerByPhone(registerDto, req);
   }
 
   async loginWithWechat(
@@ -334,67 +236,7 @@ export class AuthFacadeService {
     code: string,
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    this.logger.log(`开始验证手机号: ${phone}`);
-
-    const verifyResult = await this.smsVerificationService.verifyCode(
-      phone,
-      code
-    );
-    if (!verifyResult.valid) {
-      throw new BadRequestException(verifyResult.message);
-    }
-
-    const formattedPhone = phone.replace(/^\+86/, '');
-
-    const user = await this.prisma.user.findFirst({
-      where: { phone: formattedPhone, deletedAt: null },
-      include: {
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            isSystem: true,
-            permissions: { select: { permission: true } },
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestException('该手机号未注册');
-    }
-
-    if (user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('账号已被禁用');
-    }
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        phoneVerified: true,
-        phoneVerifiedAt: new Date(),
-      },
-    });
-
-    this.logger.log(`手机号验证成功: ${formattedPhone}, userId: ${user.id}`);
-
-    const { password: _, ...userWithoutPassword } = user;
-    const tokens =
-      await this.authTokenService.generateTokens(userWithoutPassword);
-
-    if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-    }
-
-    return {
-      ...tokens,
-      user: {
-        ...userWithoutPassword,
-        phoneVerified: true,
-      },
-    };
+    return this.authProvider.verifyPhoneAndLogin(phone, code, req);
   }
 
   async bindEmailAndLogin(
@@ -403,73 +245,7 @@ export class AuthFacadeService {
     code: string,
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    this.logger.log(`开始绑定邮箱并登录: ${email}`);
-
-    let payload: { sub: string; type: string };
-    try {
-      payload = this.jwtService.verify(tempToken, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-      });
-    } catch {
-      throw new BadRequestException('临时令牌无效或已过期，请重新登录');
-    }
-
-    if (payload.type !== 'bind_email_temp') {
-      throw new BadRequestException('无效的令牌类型');
-    }
-
-    const userId = payload.sub;
-
-    const result = await this.emailVerificationService.verifyEmail(email, code);
-    if (!result.valid) {
-      throw new BadRequestException(result.message);
-    }
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        email,
-        deletedAt: null,
-      },
-    });
-    if (existingUser && existingUser.id !== userId) {
-      throw new ConflictException('该邮箱已被其他账号绑定');
-    }
-
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        email,
-        emailVerified: true,
-        emailVerifiedAt: new Date(),
-      },
-      include: {
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            isSystem: true,
-            permissions: { select: { permission: true } },
-          },
-        },
-      },
-    });
-
-    this.logger.log(`邮箱绑定成功: userId=${userId}, email=${email}`);
-
-    const { password: _, ...userWithoutPassword } = user;
-    const tokens =
-      await this.authTokenService.generateTokens(userWithoutPassword);
-
-    if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-    }
-
-    return {
-      ...tokens,
-      user: userWithoutPassword,
-    };
+    return this.authProvider.bindEmailAndLogin(tempToken, email, code, req);
   }
 
   async bindPhoneAndLogin(
@@ -478,77 +254,7 @@ export class AuthFacadeService {
     code: string,
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    this.logger.log(`开始绑定手机号并登录: ${phone}`);
-
-    let payload: { sub: string; type: string };
-    try {
-      payload = this.jwtService.verify(tempToken, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-      });
-    } catch {
-      throw new BadRequestException('临时令牌无效或已过期，请重新登录');
-    }
-
-    if (payload.type !== 'bind_phone_temp') {
-      throw new BadRequestException('无效的令牌类型');
-    }
-
-    const userId = payload.sub;
-
-    const verifyResult = await this.smsVerificationService.verifyCode(
-      phone,
-      code
-    );
-    if (!verifyResult.valid) {
-      throw new BadRequestException(verifyResult.message);
-    }
-
-    const formattedPhone = phone.replace(/^\+86/, '');
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: { phone: formattedPhone, deletedAt: null },
-    });
-    if (existingUser && existingUser.id !== userId) {
-      throw new ConflictException('该手机号已被其他账号绑定');
-    }
-
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        phone: formattedPhone,
-        phoneVerified: true,
-        phoneVerifiedAt: new Date(),
-      },
-      include: {
-        role: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            isSystem: true,
-            permissions: { select: { permission: true } },
-          },
-        },
-      },
-    });
-
-    this.logger.log(
-      `手机号绑定成功: userId=${userId}, phone=${formattedPhone}`
-    );
-
-    const { password: _, ...userWithoutPassword } = user;
-    const tokens =
-      await this.authTokenService.generateTokens(userWithoutPassword);
-
-    if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-    }
-
-    return {
-      ...tokens,
-      user: userWithoutPassword,
-    };
+    return this.authProvider.bindPhoneAndLogin(tempToken, phone, code, req);
   }
 
   async verifyEmailAndRegisterPhone(
@@ -563,81 +269,11 @@ export class AuthFacadeService {
     },
     req?: SessionRequest
   ): Promise<AuthResponseDto> {
-    this.logger.log(
-      `开始验证邮箱并完成手机号注册: ${email}, phone: ${registerData.phone}`
-    );
-
-    const emailVerifyResult = await this.emailVerificationService.verifyEmail(
+    return this.authProvider.verifyEmailAndRegisterPhone(
       email,
-      emailCode
+      emailCode,
+      registerData,
+      req
     );
-    if (!emailVerifyResult.valid) {
-      throw new BadRequestException(emailVerifyResult.message);
-    }
-
-    const phoneVerifyResult = await this.smsVerificationService.verifyCode(
-      registerData.phone,
-      registerData.code
-    );
-    if (!phoneVerifyResult.valid) {
-      throw new BadRequestException(phoneVerifyResult.message);
-    }
-
-    const { phone, username, password, nickname } = registerData;
-    const formattedPhone = phone.replace(/^\+86/, '');
-
-    const existingUserByPhone = await this.prisma.user.findUnique({
-      where: { phone: formattedPhone, deletedAt: null },
-    });
-    if (existingUserByPhone) {
-      throw new ConflictException('手机号已被注册');
-    }
-
-    const existingUserByUsername = await this.prisma.user.findUnique({
-      where: { username, deletedAt: null },
-    });
-    if (existingUserByUsername) {
-      throw new ConflictException('用户名已被使用');
-    }
-
-    const existingUserByEmail = await this.prisma.user.findFirst({
-      where: {
-        email,
-        deletedAt: null,
-      },
-    });
-    if (existingUserByEmail) {
-      throw new ConflictException('邮箱已被注册');
-    }
-
-    const user = await this.userService.create({
-      username,
-      password,
-      nickname: nickname || username,
-      email,
-      emailVerified: true,
-      phone: formattedPhone,
-      phoneVerified: true,
-    });
-
-    this.logger.log(
-      `手机号注册成功（邮箱验证后）: ${formattedPhone}, email: ${email}, username: ${username}`
-    );
-
-    const tokens = await this.authTokenService.generateTokens(user);
-
-    if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-    }
-
-    return {
-      ...tokens,
-      user: {
-        ...user,
-        role: user.role,
-        status: user.status,
-      },
-    };
   }
 }

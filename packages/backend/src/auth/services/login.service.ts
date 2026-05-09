@@ -123,7 +123,7 @@ export class LoginService {
         const tempToken = this.jwtService.sign(
           { sub: user.id, type: 'bind_email_temp' },
           {
-            secret: this.configService.get<string>('JWT_SECRET'),
+            secret: this.configService.get<string>('jwt.secret'),
             expiresIn: '30m',
           }
         );
@@ -159,7 +159,7 @@ export class LoginService {
         const tempToken = this.jwtService.sign(
           { sub: user.id, type: 'bind_phone_temp' },
           {
-            secret: this.configService.get<string>('JWT_SECRET'),
+            secret: this.configService.get<string>('jwt.secret'),
             expiresIn: '30m',
           }
         );
