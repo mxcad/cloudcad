@@ -27,6 +27,8 @@ interface UseLibraryQueryOptions {
   page: number;
   limit: number;
   search: string;
+  /** 根级是否用 flat 模式（getAllFiles）vs 层级目录（getChildren）。默认 true 保持侧边栏行为 */
+  flatMode?: boolean;
   onTotalChange?: (total: number) => void;
   onTotalPagesChange?: (pages: number) => void;
 }
@@ -198,13 +200,13 @@ async function buildBreadcrumbs(
 // ---- 构建 queryKey 辅助函数（消除条件类型断言） ----
 
 function buildChildrenOrAllFilesKey(
-  isRootBrowse: boolean,
   libraryType: LibraryType,
   libraryId: string,
   effectiveNodeId: string,
+  flatMode: boolean,
 ): QueryKey {
-  if (isRootBrowse && libraryId) {
-    return getAllFilesQueryKey(libraryType, libraryId, '');
+  if (flatMode && libraryId) {
+    return getAllFilesQueryKey(libraryType, effectiveNodeId, '');
   }
   return getChildrenQueryKey(libraryType, effectiveNodeId);
 }
@@ -226,6 +228,7 @@ export function useLibraryQuery({
   page,
   limit,
   search,
+  flatMode = true,
   onTotalChange,
   onTotalPagesChange,
 }: UseLibraryQueryOptions): UseLibraryQueryReturn {
@@ -271,23 +274,23 @@ export function useLibraryQuery({
   });
 
   // ---- 3. 子节点列表（非搜索模式） ----
-  // 库根节点"全部"分类 → 递归获取全部文件（getAllFiles）
-  // 具体分类文件夹 → 直接子节点（getChildren）
+  // flatMode=true: 递归获取该节点下所有嵌套文件（getAllFiles，侧边栏用）
+  // flatMode=false: 仅直接子节点（getChildren，管理页用）
   const effectiveNodeId = nodeId || libraryId;
-  const isRootBrowse = !nodeId || effectiveNodeId === libraryId;
+  const useAllFiles = flatMode && !!libraryId;
   const childrenQuery = useQuery({
     queryKey: buildChildrenOrAllFilesKey(
-      isRootBrowse,
       libraryType,
       libraryId || '__disabled__',
       effectiveNodeId || '__disabled__',
+      flatMode,
     ),
     queryFn: async (): Promise<ChildrenData> => {
       let data: NodeListResponseDto;
-      if (isRootBrowse && libraryId) {
+      if (useAllFiles) {
         const api = getAllFilesApi(libraryType);
         const result = await api({
-          path: { nodeId: libraryId },
+          path: { nodeId: effectiveNodeId! },
           query: { page, limit },
         });
         if (result.error || !result.data) throw result.error ?? new Error('Failed to load children');

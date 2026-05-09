@@ -138,7 +138,7 @@ export const useSaveAs = ({
   });
 
   const handleConfirm = useCallback(async () => {
-    if (!fileName.trim()) {
+    if (!(fileName || '').trim()) {
       setError('请输入文件名');
       return;
     }

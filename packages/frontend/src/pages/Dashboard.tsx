@@ -211,7 +211,7 @@ export const Dashboard: React.FC = () => {
   const handleCreateProject = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!projectFormData.name.trim()) return;
+      if (!projectFormData.name?.trim()) return;
 
       try {
         await createProject({

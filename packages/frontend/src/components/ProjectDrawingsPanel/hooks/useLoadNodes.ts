@@ -57,7 +57,6 @@ export function useLoadNodes(
   // ── Library mode: 使用 useLibraryQuery ──
   const [librarySearch, setLibrarySearch] = useState('');
   const [libraryNodeId, setLibraryNodeId] = useState<string | undefined>();
-  console.log('[DEBUG-useLoadNodes] render:', { isLibraryMode, libraryNodeId, libraryType });
 
   const libraryQuery = useLibraryQuery({
     libraryType: libraryType || 'drawing',

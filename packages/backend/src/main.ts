@@ -130,9 +130,6 @@ async function bootstrap() {
     name: config.session.name,
   });
   server.use((req, res, next) => {
-    if (req.path.startsWith('/api/v1/files')) {
-      return next();
-    }
     sessionMiddleware(req, res, next);
   });
   logger.log(

@@ -71,7 +71,11 @@ export class TusService {
 						);
 
 						if (result?.nodeId) {
-							return { headers: { "X-Node-Id": result.nodeId } };
+							const headers: Record<string, string> = { "X-Node-Id": result.nodeId };
+							if (!userId) {
+								headers["X-File-Hash"] = result.nodeId;
+							}
+							return { headers };
 						}
 					} catch (error) {
 						logger.error(

@@ -97,17 +97,20 @@ export function useLibraryCategories(
 
   const handleCategorySelect = useCallback(
     async (level: number, categoryId: string) => {
-      const newPath = selectedCategoryPath.slice(0, level);
-      newPath.push(categoryId);
-
-      try {
-        localStorage.setItem(`library_category_path_${libraryType}`, JSON.stringify(newPath));
-      } catch {
-      }
-
-      setSelectedCategoryPath(newPath);
+      // 使用函数式 setState 避免 stale closure。
+      // 选中某级时，重置所有更深层级为 'all'。
+      setSelectedCategoryPath((prev) => {
+        const newPath = [...prev.slice(0, level), categoryId];
+        // 补齐到 3 级，确保路径长度匹配分类级数
+        while (newPath.length < 3) newPath.push('all');
+        try {
+          localStorage.setItem(`library_category_path_${libraryType}`, JSON.stringify(newPath));
+        } catch {
+        }
+        return newPath;
+      });
     },
-    [libraryType, selectedCategoryPath]
+    [libraryType]
   );
 
   return {

@@ -694,6 +694,35 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   // 保存加载前的状态
   const beforeLoad = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
 
+  // 加载超时计时器
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+
+  // 首次加载超时检测（items 为空 + loading 超过 10 秒 → 静默 fallback 到空状态）
+  useEffect(() => {
+    if (!loading || items.length > 0) {
+      // 加载结束或有数据，清除计时器
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+      setLoadingTimedOut(false);
+      return;
+    }
+
+    // loading 为 true 且 items 为空，启动超时计时器
+    loadingTimerRef.current = setTimeout(() => {
+      setLoadingTimedOut(true);
+    }, 10_000);
+
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    };
+  }, [loading, items.length]);
+
   // 是否显示分类筛选
   const hasCategories = showCategoryFilter && categories && categories.length > 0;
 
@@ -889,7 +918,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
 
       {/* 内容区域 */}
       <div className={styles.content} ref={contentRef}>
-        {loading && items.length === 0 ? (
+        {loading && !loadingTimedOut && items.length === 0 ? (
           <div className={styles.loadingState}>
             <Loader2 className={styles.loadingIcon} />
           </div>

@@ -39,7 +39,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           </Button>
           <Button
             onClick={onSubmit}
-            disabled={loading || !formData.name.trim()}
+            disabled={loading || !(formData?.name || '').trim()}
             data-tour="project-create-submit"
           >
             {loading ? '处理中...' : editingProject ? '保存' : '创建'}

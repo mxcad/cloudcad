@@ -128,6 +128,13 @@ export class MxCadController {
     @Req() request: MxCadRequest,
   ) {
     const context = await this.buildContextFromRequest(request);
+
+    // 匿名用户：跳过权限检查，直接允许上传
+    if (!context.userId) {
+      this.logger.log('匿名用户预检查：允许上传');
+      return { exists: false };
+    }
+
     context.fileSize = body.fileSize;
     const result = (await this.mxCadService.checkFileExist(
       body.filename,

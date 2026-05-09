@@ -76,6 +76,7 @@ describe('UserManagement', () => {
 
     const mockCRUDReturn = {
       users: mockUsers,
+      totalUsers: 2,
       loading: false,
       isLoading: false,
       error: null,
@@ -87,6 +88,10 @@ describe('UserManagement', () => {
       roles: mockRoles,
       mailEnabled: true,
       smsEnabled: false,
+      cleanupStats: undefined,
+      triggerCleanup: vi.fn(),
+      getStorageQuota: vi.fn(),
+      updateStorageQuota: vi.fn(),
     };
 
     const mockSearchReturn = {
@@ -101,7 +106,6 @@ describe('UserManagement', () => {
       currentPage: 1,
       setCurrentPage: vi.fn(),
       pageSize: 20,
-      totalUsers: 2,
       userTab: 'active' as const,
       setUserTab: vi.fn(),
     };
@@ -195,7 +199,6 @@ describe('UserManagement', () => {
       const mockReturn = mockUseUserSearch() as UseUserSearchReturn;
       expect(mockReturn.currentPage).toBe(1);
       expect(mockReturn.pageSize).toBe(20);
-      expect(mockReturn.totalUsers).toBe(2);
     });
 
     it('exposes search state', () => {

@@ -21,6 +21,7 @@ import type { UserDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { triggerProactiveRefresh, cancelProactiveRefresh } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
+import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 
 type User = UserDtoType;
 
@@ -93,7 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 异步验证 token - 只在 token 存在且用户信息存在时执行
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const validateToken = async () => {
       if (token && user) {
@@ -175,8 +176,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
 
       // 存储到本地存储
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
 
       // 清除旧用户的私人空间 ID 缓存，确保不会使用上一个用户的缓存
@@ -216,8 +217,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } = apiResponse;
 
       // 存储到本地存储
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
 
       console.log('[AuthContext] 手机登录 Token 已存储到 localStorage');
@@ -269,8 +270,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } = apiResponse;
 
       // 自动登录，保存 token
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(accessToken);
       setUser(userData);
@@ -297,8 +298,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user: userData,
       } = apiResponse;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(accessToken);
       setUser(userData);
@@ -324,8 +325,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user: userData,
       } = apiResponse;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setToken(accessToken);
       setUser(userData);

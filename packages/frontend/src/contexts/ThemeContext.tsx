@@ -77,13 +77,23 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDark, setIsDark] = useState<boolean>(getStoredTheme);
 
-  // 监听 localStorage 变化（来自 CAD 编辑器的主题切换）
+  // 监听 localStorage 变化（来自其他标签页的主题切换）
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === THEME_STORAGE_KEY) {
-        const newTheme = e.newValue === 'true';
-        setIsDark(newTheme);
-        applyThemeToDOM(newTheme);
+    const handleStorageChange = async (e: StorageEvent) => {
+      if (e.key === THEME_STORAGE_KEY && e.newValue !== null) {
+        const isDark = e.newValue === 'true';
+        setIsDark(isDark);
+        applyThemeToDOM(isDark);
+
+        // 同步 mxcad-app 的 Vuetify 主题（跨标签页通信）
+        try {
+          if (window.mxcadApp?.getVuetify) {
+            const vuetify = await window.mxcadApp.getVuetify();
+            vuetify.theme.change(isDark ? 'dark' : 'light');
+          }
+        } catch (error) {
+          console.warn('[ThemeContext] 跨标签页同步 mxcad-app 主题失败:', error);
+        }
       }
     };
 
@@ -113,16 +123,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     try {
       if (window.mxcadApp?.getVuetify) {
         const vuetify = await window.mxcadApp.getVuetify();
-        // 调用 Vuetify 切换主题，Vue watch 会派发事件通知 React
+        // 调用 Vuetify 切换主题
         vuetify.theme.toggle(['light', 'dark']);
         console.log('[ThemeContext] 通过 mxcad-app 切换主题:', newTheme ? 'dark' : 'light');
-        return; // Vue watch 会派发事件，React 会收到更新
       }
     } catch (error) {
       console.warn('[ThemeContext] mxcad-app 不可用，直接切换:', error);
     }
-    
-    // mxcad-app 不可用时，直接切换
+
+    // 直接更新 React 状态，不依赖 Vue watch 回传
+    //（CAD 编辑器未初始化时 Vue watch 不存在，必须自己更新）
     setIsDark(newTheme);
     applyThemeToDOM(newTheme);
     storeTheme(newTheme);
@@ -133,16 +143,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     try {
       if (window.mxcadApp?.getVuetify) {
         const vuetify = await window.mxcadApp.getVuetify();
-        // 调用 Vuetify 设置主题，Vue watch 会派发事件通知 React
+        // 调用 Vuetify 设置主题
         vuetify.theme.change(dark ? 'dark' : 'light');
         console.log('[ThemeContext] 通过 mxcad-app 设置主题:', dark ? 'dark' : 'light');
-        return; // Vue watch 会派发事件，React 会收到更新
       }
     } catch (error) {
       console.warn('[ThemeContext] mxcad-app 不可用，直接设置:', error);
     }
-    
-    // mxcad-app 不可用时，直接设置
+
+    // 直接更新 React 状态，不依赖 Vue watch 回传
+    //（CAD 编辑器未初始化时 Vue watch 不存在，必须自己更新）
     setIsDark(dark);
     applyThemeToDOM(dark);
     storeTheme(dark);

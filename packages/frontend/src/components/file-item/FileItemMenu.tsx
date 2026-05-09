@@ -196,7 +196,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
           return (
             <React.Fragment key={action.type}>
               <button
-                data-tour="menu-show-roles"
+                {...action.props}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleMenuAction(() => actionHandlers[action.type]?.());

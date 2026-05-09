@@ -37,13 +37,8 @@ export class TusAuthMiddleware implements NestMiddleware {
       const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
       if (token) {
-        // 验证 JWT
-        const secret = this.configService.get<string>('jwt.secret');
-        if (!secret) {
-          this.logger.error('JWT 密钥未配置，拒绝所有上传请求');
-          throw new Error('JWT 密钥未配置，请设置 JWT_SECRET 环境变量');
-        }
-        const payload = this.jwtService.verify(token, { secret });
+        // 验证 JWT — 使用 JwtService 内置的 secret，不手动传入，避免与 JwtModule 初始化逻辑冲突
+        const payload = this.jwtService.verify(token);
         (req as any).user = payload;
         this.logger.debug(`JWT 认证成功: ${payload.id}`);
         return next();
@@ -62,10 +57,12 @@ export class TusAuthMiddleware implements NestMiddleware {
 
       // 匿名用户：不设置 user，继续处理
       this.logger.debug('匿名上传（无 Token 且无 Session）');
+      res.setHeader('X-Auth-Status', 'anonymous');
       next();
     } catch (error) {
       // Token 存在但无效 → 降级为匿名上传，不拒绝请求
       this.logger.warn(`Token 无效，降级为匿名上传: ${(error as Error).message}`);
+      res.setHeader('X-Auth-Status', 'anonymous');
       next();
     }
   }

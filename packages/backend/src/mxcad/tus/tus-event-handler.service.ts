@@ -96,9 +96,9 @@ export class TusEventHandler {
         this.logger.log(`文件已复制到: ${targetFilePath}`);
       }
 
-      // 匿名用户：只转换文件，不创建节点
-      if (!userId || !nodeId) {
-        this.logger.log('匿名上传：缺少 userId 或 nodeId，仅进行文件转换');
+      // 匿名用户（无 userId）：只上传文件到 uploads 目录，不创建节点
+      if (!userId) {
+        this.logger.log('匿名上传：仅进行文件存储和转换');
 
         if (targetFilePath && this.fileConversionService.needsConversion(filename)) {
           try {
@@ -120,6 +120,12 @@ export class TusEventHandler {
 
         // 返回 hash，供前端构造访问 URL：/api/v1/public-file/access/{hash}/{hash}.dwg.mxweb
         return { nodeId: fileHash } as { nodeId?: string };
+      }
+
+      // 有 userId 但没有 nodeId：无法确定目标位置
+      if (!nodeId) {
+        this.logger.warn('缺少 nodeId，无法创建文件节点');
+        return {};
       }
 
       // 已登录用户：检查目标节点的写权限

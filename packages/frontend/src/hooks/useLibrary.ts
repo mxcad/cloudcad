@@ -159,12 +159,14 @@ export const useLibrary = (
   }, []);
 
   // ── 数据查询 ──
+  // flatMode: false → 管理页面走层级目录（getChildren），而非递归扁平（getAllFiles）
   const query = useLibraryQuery({
     libraryType,
     nodeId: urlNodeId,
     page,
     limit,
     search: debouncedSearchTerm,
+    flatMode: false,
     onTotalChange,
     onTotalPagesChange,
   });

@@ -7,7 +7,7 @@ import { useRef, useCallback } from 'react';
 import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import { calculateFileHash } from '../utils/hashUtils';
-import { getValidToken } from '@/utils/tokenUtils';
+import { getValidToken, refreshTokenIfNeeded } from '@/utils/tokenUtils';
 
 // 导出 LoadFileParam 接口，保持和 useMxCadUploadNative 的兼容性
 export interface LoadFileParam {
@@ -50,9 +50,9 @@ export class MxCadUploadError extends Error {
 /**
  * 创建 Uppy 实例
  */
-function createUppy(config: MxCadUploadConfig, onDone: () => void): Uppy {
+async function createUppy(config: MxCadUploadConfig, onDone: () => void): Promise<Uppy> {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  const token = getValidToken();
+  const token = await refreshTokenIfNeeded();
 
   const uppy = new Uppy({
     debug: false,
@@ -188,7 +188,7 @@ export const useUppyUpload = () => {
   /**
    * 上传指定的文件（供拖拽上传使用）
    */
-  const uploadFiles = useCallback((files: File[], config: MxCadUploadConfig) => {
+  const uploadFiles = useCallback(async (files: File[], config: MxCadUploadConfig) => {
     if (isUploadingRef.current) {
       console.warn('[useUppyUpload] 已有上传进行中，忽略');
       return;
@@ -201,7 +201,7 @@ export const useUppyUpload = () => {
     }
 
     isUploadingRef.current = true;
-    const uppy = createUppy(config, markDone);
+    const uppy = await createUppy(config, markDone);
     uppyRef.current = uppy;
 
     // 添加文件

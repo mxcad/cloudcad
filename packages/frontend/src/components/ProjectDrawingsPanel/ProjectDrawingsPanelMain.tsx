@@ -82,6 +82,17 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       : hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE)
   );
 
+  // 解析分类路径，从右往左找第一个非'all'的节点ID。
+  // 全'all' → libraryRootId（加载根目录所有图纸）
+  // ['all', 'catA', 'all'] → catA（加载catA下所有子分类图纸）
+  // ['all', 'catA', 'catA1'] → catA1（加载catA1下图纸）
+  const getCategoryNodeId = (path: string[], rootId: string | null): string | undefined => {
+    for (let i = path.length - 1; i >= 0; i--) {
+      if (path[i] !== 'all') return path[i];
+    }
+    return rootId ?? undefined;
+  };
+
   // Node loader hook
   const {
     nodes, loading, total, totalPages, hasMore,
@@ -138,8 +149,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (isPersonalSpace || isLibraryMode) return;
     const loadProjects = async () => {
       try {
-        const { data: response } = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
-        const projectList = ((response as unknown as Record<number, { nodes?: unknown[] }>)[200])?.nodes || [];
+        const result = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
+        const projectList = result.data?.nodes || [];
         setProjects((projectList as Array<Record<string, string | boolean | undefined>>).map((p): FileSystemNode => ({
           id: String(p.id ?? ''), name: String(p.name ?? ''), isFolder: true, isRoot: true,
           updatedAt: String(p.updatedAt || ''), parentId: undefined,
@@ -177,9 +188,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const refreshNodes = useCallback(() => {
     setProjectRefreshKey((k) => k + 1);
     if (isLibraryMode) {
-      const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1];
-      if (currentCategoryId === 'all' && libraryRootId) loadNodes(libraryRootId, 1, searchQuery, false);
-      else if (currentCategoryId) loadNodes(currentCategoryId, currentPage, searchQuery, false);
+      const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+      if (nodeId) loadNodes(nodeId, currentPage, searchQuery, false);
     } else {
       const lastBreadcrumb = breadcrumb[breadcrumb.length - 1];
       if (lastBreadcrumb) loadNodes(lastBreadcrumb.id);
@@ -275,12 +285,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   useEffect(() => {
     if (!isLibraryMode || !libraryRootId || listInitializedRef.current) return;
     listInitializedRef.current = true;
-    const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1];
-    if (currentCategoryId === 'all') {
-      loadNodes(libraryRootId, 1);
-    } else if (currentCategoryId) {
-      loadNodes(currentCategoryId, 1, '', false);
-    }
+    const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    if (nodeId) loadNodes(nodeId, 1, '', false);
   }, [isLibraryMode, categoriesLoaded, libraryRootId, libraryType]);
 
   // 分类选择：当用户点击分类时重新加载节点列表
@@ -288,12 +294,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (!isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
     setSearchQuery('');
     setCurrentPage(1);
-    const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1];
-    if (currentCategoryId === 'all') {
-      loadNodes(libraryRootId, 1);
-    } else if (currentCategoryId) {
-      loadNodes(currentCategoryId, 1, '', false);
-    }
+    const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    if (nodeId) loadNodes(nodeId, 1, '', false);
   }, [selectedCategoryPath]);
 
   // Reset on libraryType change
@@ -422,8 +424,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (!hasMore || loading) return;
     let nodeId: string | undefined;
     if (isLibraryMode) {
-      const catId = selectedCategoryPath[selectedCategoryPath.length - 1];
-      nodeId = catId === 'all' ? (libraryRootId ?? undefined) : catId;
+      nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
     } else nodeId = breadcrumb[breadcrumb.length - 1]?.id;
     if (nodeId) { const np = currentPage + 1; setNextLoadDirection('down'); setCurrentPage(np); loadNodes(nodeId, np, searchQuery, true); }
   }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, currentPage, hasMore, loading, loadNodes, searchQuery]);
@@ -431,8 +432,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const handlePageChange = useCallback((page: number, direction: 'prev' | 'next' | 'jump') => {
     let nodeId: string | undefined;
     if (isLibraryMode) {
-      const catId = selectedCategoryPath[selectedCategoryPath.length - 1];
-      nodeId = catId === 'all' ? (libraryRootId ?? undefined) : catId;
+      nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
     } else nodeId = breadcrumb[breadcrumb.length - 1]?.id;
     if (!nodeId) return;
     const loadDir = direction === 'prev' ? 'up' : direction === 'jump' ? 'jump' : 'down';
@@ -601,7 +601,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         galleryMode={isLibraryMode}
         items={resourceItems} loading={loading} searchQuery={searchQuery}
         onSearchChange={(query) => { setSearchQuery(query); setCurrentPage(1);
-          if (isLibraryMode) { const cid = selectedCategoryPath[selectedCategoryPath.length - 1]; const nid = cid === 'all' ? libraryRootId : cid; if (nid) loadNodes(nid, 1, query); }
+          if (isLibraryMode) { const nid = getCategoryNodeId(selectedCategoryPath, libraryRootId); if (nid) loadNodes(nid, 1, query); }
           else { const lb = breadcrumb[breadcrumb.length - 1]; if (lb) loadNodes(lb.id, 1, query); }
         }}
         onItemClick={handleItemClick} doubleClickToOpen={doubleClickToOpen}

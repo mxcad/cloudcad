@@ -16,6 +16,7 @@ import { CheckCircle, AlertCircle, Cpu, Boxes, ShieldCheck, Mail, Phone } from '
 import { useLoginForm } from './hooks/useLoginForm';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 import { getReturnUrl } from '@/config/clientSetup';
+import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 import { loginStyles } from './LoginStyles';
 import { LoginHeader } from './components/LoginHeader';
 import { AccountLoginForm } from './components/AccountLoginForm';
@@ -72,10 +73,12 @@ export const Login: React.FC = () => {
             } else if (action?.type === 'need_register') {
               sessionStorage.setItem('wechatTempToken', action.tempToken);
               // 自动注册已开启但后端仍返回 needRegister → 被 allowRegister 等策略阻断
-              if (wechatAutoRegister) {
-                form.setError('微信自动注册失败，请手动完成注册');
-              }
-              navigate('/register?wechat=1');
+              // 通过路由 state 传递错误信息，避免 form.setError 在 navigate 后不可见
+              navigate('/register?wechat=1', {
+                state: wechatAutoRegister
+                  ? { message: '微信自动注册失败，请手动完成注册' }
+                  : undefined,
+              });
             } else if (action?.type === 'bind_email') {
               sessionStorage.setItem('wechatTempToken', action.tempToken);
               navigate('/verify-email', {
@@ -87,8 +90,8 @@ export const Login: React.FC = () => {
                 state: { tempToken: action.tempToken, mode: 'bind' },
               });
             } else if (action?.type === 'login') {
-              localStorage.setItem('accessToken', action.accessToken);
-              localStorage.setItem('refreshToken', action.refreshToken);
+              setAccessToken(action.accessToken);
+              setRefreshToken(action.refreshToken);
               localStorage.setItem('user', JSON.stringify(action.user));
               // 使用 returnUrl 替代硬编码 '/'，支持登录后跳回原页面
               const returnUrl = getReturnUrl();

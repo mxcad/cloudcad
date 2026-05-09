@@ -120,10 +120,10 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     });
 
     // Build on-handler wrappers that need the permission check injected
-    let onEditHandler: ((node: FileSystemNode) => void) | undefined;
-    let onDeleteHandler: ((node: FileSystemNode) => void) | undefined;
-    let onShowMembersHandler: ((node: FileSystemNode) => void) | undefined;
-    let onShowRolesHandler: ((node: FileSystemNode) => void) | undefined;
+    let onEditHandler: ((e: React.MouseEvent) => void) | undefined;
+    let onDeleteHandler: ((e: React.MouseEvent) => void) | undefined;
+    let onShowMembersHandler: ((e: React.MouseEvent) => void) | undefined;
+    let onShowRolesHandler: ((e: React.MouseEvent) => void) | undefined;
 
     if (node.isRoot && permissions.canEdit && onEdit) {
       onEditHandler = () => onEdit(node);

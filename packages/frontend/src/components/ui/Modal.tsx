@@ -229,7 +229,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             取消
           </Button>
-          <Button onClick={handleSubmit} disabled={!value.trim() || loading}>
+          <Button onClick={handleSubmit} disabled={!(value || '').trim() || loading}>
             {loading ? '提交中...' : '确定'}
           </Button>
         </>

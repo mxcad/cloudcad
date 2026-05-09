@@ -38,40 +38,6 @@ export class MxCadRequestContextBuilder {
     request: MxCadRequest,
   ): Promise<MxCadContext & { isLibrary?: boolean }> {
     try {
-      if (!request.headers.authorization) {
-        throw new UnauthorizedException(
-          '缺少Authorization header，请提供有效的JWT token',
-        );
-      }
-
-      const token = request.headers.authorization.replace('Bearer ', '');
-
-      let payload;
-      try {
-        payload = this.jwtService.verify(token);
-      } catch (error) {
-        throw new UnauthorizedException('JWT token无效或已过期');
-      }
-
-      const userData = await this.mxCadService.findUserById(payload.sub, {
-        id: true,
-        email: true,
-        username: true,
-        nickname: true,
-        roleId: true,
-        status: true,
-      });
-
-      if (!userData) {
-        throw new UnauthorizedException('用户不存在');
-      }
-
-      if (userData.status !== 'ACTIVE') {
-        throw new UnauthorizedException('用户账号已被禁用');
-      }
-
-      this.logger.log(`JWT 验证成功: ${userData.username}`);
-
       const nodeId = request.body?.nodeId || request.query?.nodeId;
 
       this.logger.log(
@@ -79,30 +45,84 @@ export class MxCadRequestContextBuilder {
       );
       this.logger.log(`🔍 最终值: nodeId=${nodeId}`);
 
+      // 尝试 JWT 认证，允许匿名访问
+      const token = request.headers.authorization?.replace('Bearer ', '');
+
+      if (token) {
+        try {
+          const payload = this.jwtService.verify(token);
+
+          const userData = await this.mxCadService.findUserById(payload.sub, {
+            id: true,
+            email: true,
+            username: true,
+            nickname: true,
+            roleId: true,
+            status: true,
+          });
+
+          if (!userData) {
+            this.logger.warn('用户不存在，降级为匿名访问');
+          } else if (userData.status !== 'ACTIVE') {
+            this.logger.warn('用户账号已被禁用，降级为匿名访问');
+          } else {
+            this.logger.log(`JWT 验证成功: ${userData.username}`);
+
+            if (!nodeId) {
+              throw new BadRequestException(
+                '缺少节点ID（nodeId），无法创建文件系统节点',
+              );
+            }
+
+            const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
+
+            const context: MxCadContext & { isLibrary?: boolean } = {
+              nodeId,
+              userId: userData.id,
+              userRole: userData.roleId,
+              conflictStrategy: request.body?.conflictStrategy || 'rename',
+              isLibrary: libraryKey === 'drawing' || libraryKey === 'block',
+            };
+
+            this.logger.log(
+              `构建上下文: userId=${userData.id}, nodeId=${nodeId}, conflictStrategy=${context.conflictStrategy}, libraryKey=${libraryKey}, isLibrary=${context.isLibrary}`,
+            );
+            return context;
+          }
+        } catch (error) {
+          if (error instanceof BadRequestException) {
+            throw error;
+          }
+          this.logger.warn(`JWT 验证失败，降级为匿名访问: ${(error as Error).message}`);
+        }
+      }
+
+      // 匿名访问：返回部分上下文（无用户信息）
+      this.logger.log('匿名访问：返回部分上下文');
+
       if (!nodeId) {
         throw new BadRequestException(
           '缺少节点ID（nodeId），无法创建文件系统节点',
         );
       }
 
-      const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
-
       const context: MxCadContext & { isLibrary?: boolean } = {
         nodeId,
-        userId: userData.id,
-        userRole: userData.roleId,
+        userId: undefined as any,
+        userRole: undefined as any,
         conflictStrategy: request.body?.conflictStrategy || 'rename',
-        isLibrary: libraryKey === 'drawing' || libraryKey === 'block',
+        isLibrary: undefined,
       };
 
-      this.logger.log(
-        `构建上下文: userId=${userData.id}, nodeId=${nodeId}, conflictStrategy=${context.conflictStrategy}, libraryKey=${libraryKey}, isLibrary=${context.isLibrary}`,
-      );
       return context;
     } catch (error) {
       this.logger.error(`构建上下文失败: ${error.message}`, error);
 
       if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      if (error instanceof BadRequestException) {
         throw error;
       }
 

@@ -13,10 +13,10 @@ import { WechatDeactivateConfirm } from '../Profile/WechatDeactivateConfirm';
 interface ProfileDeactivateTabProps {
   user?: {
     hasPassword?: boolean;
-    phone?: { [key: string]: unknown } | null;
+    phone?: string | { [key: string]: unknown } | null;
     phoneVerified?: boolean;
-    email?: { [key: string]: unknown } | null;
-    wechatId?: { [key: string]: unknown } | null;
+    email?: string | { [key: string]: unknown } | null;
+    wechatId?: string | { [key: string]: unknown } | null;
   } | null;
   deactivateForm: {
     verificationMethod: 'password' | 'phone' | 'email' | 'wechat' | '';

@@ -417,6 +417,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.23
         version: 10.5.0(postcss@8.5.14)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       eslint:
         specifier: ^8.57.0
         version: 8.57.1

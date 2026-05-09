@@ -6,7 +6,7 @@
 import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import { mxCadControllerCheckFileExist } from '@/api-sdk';
-import { getValidToken } from '@/utils/tokenUtils';
+import { getValidToken, refreshTokenIfNeeded } from '@/utils/tokenUtils';
 
 /**
  * Uppy 事件负载类型——细分各种事件的回调参数，
@@ -155,9 +155,9 @@ export const uploadFileWithUppy = async (
     };
   }
 
-  // 2. Tus 上传
+  // 2. Tus 上传 — 先刷新 token
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  const token = getValidToken();
+  const token = await refreshTokenIfNeeded();
 
   return new Promise<UppyUploadResult>((resolve, reject) => {
     const uppy = new Uppy({

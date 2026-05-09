@@ -3,6 +3,7 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fileSystemControllerGetChildren } from '@/api-sdk';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';

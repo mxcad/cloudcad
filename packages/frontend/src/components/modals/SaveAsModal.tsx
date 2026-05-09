@@ -66,7 +66,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
   const handleConfirm = async () => {
     // 验证文件名
-    if (!fileName.trim()) {
+    if (!(fileName || '').trim()) {
       setError('请输入文件名');
       return;
     }
