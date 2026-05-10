@@ -1,8 +1,6 @@
 const fs = require('fs');
 const fsPromises = fs.promises;
 const path = require('path');
-const http = require('http');
-const crypto = require('crypto');
 
 // 配置
 const config = {
@@ -21,16 +19,16 @@ const config = {
       sourceDir: path.join(__dirname, '..', 'data', 'block-library')
     }
   },
-  maxConcurrent: 5,          // Tus 并发数（服务端处理，可更高）
-  chunkSize: 10 * 1024 * 1024, // Tus PATCH 分片大小 10MB
-  conflictStrategy: 'skip',  // skip, overwrite, rename
-  logLevel: 'info',          // debug, info, warn, error
-  onlyUploadWithThumbnail: true,
-  requestTimeout: 600000,    // Tus 上传超时 10 分钟
-  maxRetries: 3,
-  progressFile: path.join(__dirname, 'upload-progress.json'),
-  forceResyncThumbnails: true,
-  onlySyncThumbnails: false
+  maxConcurrent: 10, // 只更新缩略图可以并发更高
+  chunkSize: 10 * 1024 * 1024, // 增大分片大小到10MB
+  conflictStrategy: 'skip', // skip, overwrite, rename
+  logLevel: 'info', // debug, info, warn, error
+  onlyUploadWithThumbnail: true, // 只有有缩略图的图纸才上传
+  requestTimeout: 300000, // 请求超时时间 5分钟
+  maxRetries: 3, // 最大重试次数
+  progressFile: path.join(__dirname, 'upload-progress.json'), // 断点续传进度文件
+  forceResyncThumbnails: true, // 是否强制重新同步缩略图（即使文件已完成也重新复制缩略图）
+  onlySyncThumbnails: false // 只同步缩略图，不上传 CAD 文件
 };
 
 /**
@@ -40,7 +38,7 @@ function log(message, level = 'info') {
   const levels = ['error', 'warn', 'info', 'debug'];
   const currentLevelIndex = levels.indexOf(config.logLevel);
   const messageLevelIndex = levels.indexOf(level);
-
+  
   if (messageLevelIndex <= currentLevelIndex) {
     console.log(`[${level.toUpperCase()}] ${message}`);
   }
@@ -55,55 +53,49 @@ let filesDataPath = path.resolve(__dirname, '../data/files');
  */
 async function sendRequest(options, data = null, maxRetries = config.maxRetries) {
   let retries = 0;
-
+  
   while (retries < maxRetries) {
     try {
       return await new Promise((resolve, reject) => {
+        const http = require('http');
+        
         const req = http.request(options, (res) => {
-          // 204 No Content 不需要解析 body
-          if (res.statusCode === 204) {
-            resolve({ _headers: res.headers, _statusCode: res.statusCode });
-            return;
-          }
-
           let responseData = '';
-
+          
           res.on('data', (chunk) => {
             responseData += chunk;
           });
-
+          
           res.on('end', () => {
             try {
               const parsedData = JSON.parse(responseData);
-              parsedData._headers = res.headers;
-              parsedData._statusCode = res.statusCode;
               resolve(parsedData);
             } catch (error) {
-              resolve({ _raw: responseData, _headers: res.headers, _statusCode: res.statusCode });
+              resolve({});
             }
           });
         });
-
+        
         req.setTimeout(config.requestTimeout, () => {
           req.destroy(new Error(`请求超时 (${config.requestTimeout}ms)`));
         });
-
+        
         req.on('error', (error) => {
           reject(error);
         });
-
+        
         if (data) {
           req.write(data);
         }
-
+        
         req.end();
       });
     } catch (error) {
-      const shouldRetry = error.message.includes('ECONNRESET') ||
-                         error.message.includes('ETIMEDOUT') ||
+      const shouldRetry = error.message.includes('ECONNRESET') || 
+                         error.message.includes('ETIMEDOUT') || 
                          error.message.includes('timeout') ||
                          error.message.includes('ENOTFOUND');
-
+      
       if (shouldRetry && retries < maxRetries - 1) {
         const delay = Math.pow(2, retries) * 1000;
         console.warn(`请求失败 (${retries + 1}/${maxRetries}):`, error.message, `等待 ${delay}ms 后重试...`);
@@ -123,7 +115,7 @@ async function sendRequest(options, data = null, maxRetries = config.maxRetries)
  */
 const progressStore = {
   data: {},
-
+  
   async load() {
     if (fs.existsSync(config.progressFile)) {
       try {
@@ -134,27 +126,27 @@ const progressStore = {
       }
     }
   },
-
+  
   async save() {
     await fsPromises.writeFile(config.progressFile, JSON.stringify(this.data, null, 2));
   },
-
+  
   markDone(filePath) {
     this.data[filePath] = 'done';
   },
-
+  
   markFailed(filePath) {
     this.data[filePath] = 'failed';
   },
-
+  
   isDone(filePath) {
     return this.data[filePath] === 'done';
   },
-
+  
   isFailed(filePath) {
     return this.data[filePath] === 'failed';
   },
-
+  
   reset() {
     this.data = {};
     if (fs.existsSync(config.progressFile)) {
@@ -168,7 +160,7 @@ const progressStore = {
  */
 async function login() {
   log('正在登录管理员账号...');
-
+  
   try {
     const postData = JSON.stringify({
       account: config.admin.username,
@@ -188,7 +180,7 @@ async function login() {
     };
 
     const response = await sendRequest(options, postData);
-
+    
     if (response && response.data && response.data.accessToken) {
       token = response.data.accessToken;
       log('登录成功，获取到token');
@@ -213,6 +205,9 @@ class UploadQueue {
     this.queue = [];
   }
 
+  /**
+   * 将任务加入队列并返回 Promise
+   */
   enqueue(task) {
     return new Promise((resolve, reject) => {
       this.queue.push({ task, resolve, reject });
@@ -220,14 +215,21 @@ class UploadQueue {
     });
   }
 
+  /**
+   * 处理队列中的任务
+   */
   processQueue() {
     while (this.running < this.maxConcurrent && this.queue.length > 0) {
       this.running++;
       const { task, resolve, reject } = this.queue.shift();
 
       task()
-        .then(() => { resolve(); })
-        .catch((error) => { reject(error); })
+        .then(() => {
+          resolve();
+        })
+        .catch((error) => {
+          reject(error);
+        })
         .finally(() => {
           this.running--;
           this.processQueue();
@@ -235,22 +237,29 @@ class UploadQueue {
     }
   }
 
+  /**
+   * 获取当前队列长度
+   */
   getQueueLength() {
     return this.queue.length;
   }
 
+  /**
+   * 获取当前运行中的任务数
+   */
   getRunningCount() {
     return this.running;
   }
 }
 
 /**
- * 计算文件哈希
+ * 计算文件哈希（使用sha1提高速度）
  */
 async function computeFileHash(filePath) {
+  const crypto = require('crypto');
   const hash = crypto.createHash('sha1');
   const stream = fs.createReadStream(filePath);
-
+  
   return new Promise((resolve, reject) => {
     stream.on('data', (data) => hash.update(data));
     stream.on('end', () => resolve(hash.digest('hex')));
@@ -283,18 +292,37 @@ async function createFolder(libraryType, parentId, folderName) {
 
   const response = await sendRequest(options, postData);
   const folderData = response.data ? response.data : response;
-
+  
   return folderData;
 }
 
 /**
- * 分页获取目录下所有子节点
+ * 获取文件夹子节点（分页获取所有）
+ */
+async function getChildren(libraryType, parentId) {
+  const options = {
+    protocol: 'http:',
+    hostname: 'localhost',
+    port: 3001,
+    path: `/api/library/${libraryType}/children/${parentId}`,
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  };
+
+  const response = await sendRequest(options);
+  return response.data ? response.data.nodes : response.nodes || [];
+}
+
+/**
+ * 分页获取目录下所有子节点（解决分页限制）
  */
 async function getAllChildren(libraryType, parentId) {
   const allNodes = [];
   let page = 1;
   const limit = 100;
-
+  
   while (true) {
     const options = {
       protocol: 'http:',
@@ -310,16 +338,17 @@ async function getAllChildren(libraryType, parentId) {
     const response = await sendRequest(options);
     const data = response.data || response;
     const nodes = data.nodes || [];
-
+    
     allNodes.push(...nodes);
-
+    
+    // 如果返回的节点数少于 limit，说明已经获取完所有数据
     if (nodes.length < limit) {
       break;
     }
-
+    
     page++;
   }
-
+  
   return allNodes;
 }
 
@@ -333,18 +362,17 @@ const childrenCache = new Map();
  */
 async function getCachedChildren(libraryType, parentId) {
   const cacheKey = `${libraryType}:${parentId}`;
-
+  
   if (!childrenCache.has(cacheKey)) {
     const nodes = await getAllChildren(libraryType, parentId);
     childrenCache.set(cacheKey, nodes);
   }
-
+  
   return childrenCache.get(cacheKey);
 }
 
 /**
  * 检查文件是否已存在（秒传）
- * 注意：此端点仍使用旧的文件存在性检查 API
  */
 async function checkFileExist(fileSize, fileHash, filename, nodeId, conflictStrategy) {
   const postData = JSON.stringify({
@@ -372,308 +400,138 @@ async function checkFileExist(fileSize, fileHash, filename, nodeId, conflictStra
   return response.data ? response.data : response;
 }
 
-// ============================================================
-// Tus 协议上传（替代旧的分片上传）
-// ============================================================
-
 /**
- * Tus 协议：创建上传会话
- * POST /api/v1/files
- * 返回 Location header 中的上传 URL
+ * 检查分片是否已存在
  */
-async function tusCreateSession(fileSize, fileName, fileHash, nodeId, conflictStrategy) {
-  // 构建 Upload-Metadata header（base64 编码的 key-value 对）
-  const metadataPairs = [
-    `filename ${Buffer.from(fileName).toString('base64')}`,
-    `fileHash ${Buffer.from(fileHash).toString('base64')}`,
-    `fileSize ${Buffer.from(String(fileSize)).toString('base64')}`,
-    `nodeId ${Buffer.from(nodeId).toString('base64')}`,
-  ];
-  if (conflictStrategy) {
-    metadataPairs.push(`conflictStrategy ${Buffer.from(conflictStrategy).toString('base64')}`);
-  }
+async function checkChunkExist(chunk, chunks, size, fileHash, filename, nodeId) {
+  const postData = JSON.stringify({
+    chunk: parseInt(chunk),
+    chunks: parseInt(chunks),
+    size: parseInt(size),
+    fileHash,
+    filename,
+    nodeId
+  });
 
   const options = {
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: '/api/v1/files',
+    path: '/api/mxcad/files/chunkisExist',
     method: 'POST',
     headers: {
-      'Upload-Length': String(fileSize),
-      'Tus-Resumable': '1.0.0',
-      'Upload-Metadata': metadataPairs.join(','),
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData),
       'Authorization': `Bearer ${token}`
     }
   };
 
-  return new Promise((resolve, reject) => {
-    const req = http.request(options, (res) => {
-      let body = '';
-      res.on('data', d => body += d);
-      res.on('end', () => {
-        if (res.statusCode === 201) {
-          const location = res.headers.location;
-          if (!location) {
-            reject(new Error('Tus 创建会话失败：未返回 Location header'));
-            return;
-          }
-          // location 是相对路径如 /api/v1/files/<uploadId>
-          resolve(location);
-        } else {
-          reject(new Error(`Tus 创建会话失败: ${res.statusCode} ${body}`));
-        }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(config.requestTimeout, () => {
-      req.destroy(new Error('Tus 创建会话超时'));
-    });
-    req.end();
-  });
+  const response = await sendRequest(options, postData);
+  return response.data ? response.data : response;
 }
 
 /**
- * Tus 协议：上传单个分片
- * PATCH <uploadUrl>
- * 返回 { uploadOffset, nodeId } — nodeId 在最后一个分片响应中返回
+ * 上传分片
  */
-async function tusPatchChunk(uploadUrl, offset, chunk, chunkLength) {
-  const options = {
-    protocol: 'http:',
-    hostname: 'localhost',
-    port: 3001,
-    path: uploadUrl,
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/offset+octet-stream',
-      'Upload-Offset': String(offset),
-      'Tus-Resumable': '1.0.0',
-      'Authorization': `Bearer ${token}`,
-      'Content-Length': String(chunkLength)
+async function uploadChunk(formData) {
+  const boundary = '----WebKitFormBoundary' + Math.random().toString(16).slice(2);
+  const parts = [];
+
+  for (const [key, value] of Object.entries(formData)) {
+    parts.push(`--${boundary}`);
+    if (Buffer.isBuffer(value)) {
+      parts.push(`Content-Disposition: form-data; name="${key}"; filename="chunk"`);
+      parts.push(`Content-Type: application/octet-stream`);
+      parts.push(`Content-Length: ${value.length}`);
+      parts.push(``);
+      parts.push(value);
+    } else {
+      parts.push(`Content-Disposition: form-data; name="${key}"`);
+      parts.push(``);
+      parts.push(value);
     }
-  };
+  }
+  parts.push(`--${boundary}--`);
 
-  return new Promise((resolve, reject) => {
-    const req = http.request(options, (res) => {
-      let body = '';
-      res.on('data', d => body += d);
-      res.on('end', () => {
-        if (res.statusCode === 204 || res.statusCode === 200) {
-          const newOffset = parseInt(res.headers['upload-offset'], 10);
-          const nodeId = res.headers['x-node-id'] || undefined;
-          resolve({
-            uploadOffset: isNaN(newOffset) ? offset + chunkLength : newOffset,
-            nodeId
-          });
-        } else {
-          reject(new Error(`Tus 上传分片失败: ${res.statusCode} ${body}`));
-        }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(config.requestTimeout, () => {
-      req.destroy(new Error('Tus 上传分片超时'));
-    });
-    req.write(chunk);
-    req.end();
-  });
-}
+  // 构建body
+  const bodyParts = [];
+  for (const part of parts) {
+    if (Buffer.isBuffer(part)) {
+      bodyParts.push(part);
+    } else {
+      bodyParts.push(Buffer.from(part + '\r\n'));
+    }
+  }
+  const body = Buffer.concat(bodyParts);
 
-/**
- * Tus 协议：查询上传进度（用于断点续传）
- * HEAD <uploadUrl>
- * 返回当前已上传的 offset
- */
-async function tusHeadUpload(uploadUrl) {
   const options = {
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: uploadUrl,
-    method: 'HEAD',
+    path: '/api/mxcad/files/uploadFiles',
+    method: 'POST',
     headers: {
-      'Tus-Resumable': '1.0.0',
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      'Content-Length': body.length,
       'Authorization': `Bearer ${token}`
     }
   };
 
-  return new Promise((resolve, reject) => {
-    const req = http.request(options, (res) => {
-      if (res.statusCode === 200) {
-        const uploadOffset = parseInt(res.headers['upload-offset'], 10);
-        resolve(isNaN(uploadOffset) ? 0 : uploadOffset);
-      } else {
-        // 404 表示会话不存在
-        resolve(0);
-      }
-    });
-    req.on('error', reject);
-    req.setTimeout(30000, () => {
-      req.destroy(new Error('Tus HEAD 请求超时'));
-    });
-    req.end();
-  });
+  const response = await sendRequest(options, body);
+  return response.data ? response.data : response;
 }
-
-/**
- * Tus 协议完整上传流程
- * 1. POST 创建会话
- * 2. 循环 PATCH 分片
- * 3. 最后一个 PATCH 响应中提取 X-Node-Id
- */
-async function tusUploadFile(filePath, fileName, fileSize, fileHash, nodeId, conflictStrategy) {
-  log(`[Tus] 开始上传: ${path.relative(config.libraries.drawing.sourceDir, filePath)} (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
-
-  try {
-    // 1. 创建 Tus 上传会话
-    const uploadUrl = await tusCreateSession(fileSize, fileName, fileHash, nodeId, conflictStrategy);
-    log(`[Tus] 会话已创建: ${uploadUrl}`, 'debug');
-
-    // 2. 分片上传
-    const chunkSize = config.chunkSize;
-    let newNodeId = undefined;
-    let offset = 0;
-
-    while (offset < fileSize) {
-      const end = Math.min(offset + chunkSize, fileSize);
-      const chunkLength = end - offset;
-
-      // 流式读取分片
-      const chunk = await new Promise((resolve, reject) => {
-        const buffer = Buffer.allocUnsafe(chunkLength);
-        let bytesRead = 0;
-        const stream = fs.createReadStream(filePath, {
-          start: offset,
-          end: end - 1
-        });
-
-        stream.on('data', (data) => {
-          data.copy(buffer, bytesRead);
-          bytesRead += data.length;
-        });
-
-        stream.on('end', () => {
-          resolve(buffer);
-        });
-
-        stream.on('error', (error) => {
-          reject(error);
-        });
-      });
-
-      // PATCH 上传分片
-      const result = await tusPatchChunk(uploadUrl, offset, chunk, chunkLength);
-      offset = result.uploadOffset;
-
-      if (result.nodeId) {
-        newNodeId = result.nodeId;
-      }
-
-      const progress = ((offset / fileSize) * 100).toFixed(1);
-      log(`[Tus] 进度: ${progress}%`, 'debug');
-    }
-
-    log(`[Tus] 上传完成: ${path.relative(config.libraries.drawing.sourceDir, filePath)}`);
-
-    return newNodeId || nodeId;
-
-  } catch (error) {
-    log(`[Tus] 上传失败: ${error.message}`, 'error');
-    throw error;
-  }
-}
-
-// ============================================================
-// 上传文件（秒传检查 + Tus 协议）
-// ============================================================
-
-async function uploadFile(nodeId, filePath, conflictStrategy) {
-  const fileName = path.basename(filePath);
-  const fileStats = await fsPromises.stat(filePath);
-  const fileSize = fileStats.size;
-  const hash = await computeFileHash(filePath);
-
-  // 1. 检查文件是否已存在（秒传）
-  const existData = await checkFileExist(fileSize, hash, fileName, nodeId, conflictStrategy);
-  if (existData?.exists) {
-    log(`秒传成功：${path.relative(config.libraries.drawing.sourceDir, filePath)}`);
-
-    // 复制缩略图
-    await copyThumbnail(filePath, existData.nodeId || nodeId);
-
-    return {
-      nodeId: existData.nodeId || nodeId,
-      isUseServerExistingFile: true,
-      isInstantUpload: true
-    };
-  }
-
-  // 2. Tus 协议上传
-  const newNodeId = await tusUploadFile(filePath, fileName, fileSize, hash, nodeId, conflictStrategy);
-
-  // 3. 复制缩略图
-  await copyThumbnail(filePath, newNodeId);
-
-  return {
-    nodeId: newNodeId,
-    isUseServerExistingFile: false,
-    isInstantUpload: false
-  };
-}
-
-// ============================================================
-// 缩略图相关
-// ============================================================
 
 /**
  * 查找nodeId所在的目录
  */
 function findNodeDirectory(nodeId) {
   try {
+    // 检查filesDataPath是否存在
     if (!fs.existsSync(filesDataPath)) {
       console.error(`文件存储目录不存在: ${filesDataPath}`);
       return null;
     }
-
+    
+    // 读取filesDataPath下的所有目录
     const dirs = fs.readdirSync(filesDataPath, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => dirent.name);
-
+    
+    // 遍历所有目录，查找包含nodeId的目录
     for (const dir of dirs) {
       const dirPath = path.join(filesDataPath, dir);
       if (fs.existsSync(dirPath)) {
         const nodeDirs = fs.readdirSync(dirPath, { withFileTypes: true })
           .filter(dirent => dirent.isDirectory())
           .map(dirent => dirent.name);
-
+        
         if (nodeDirs.includes(nodeId)) {
           return path.join(dirPath, nodeId);
         }
       }
     }
-
-    // 检查 files1 目录
+    
+    // 还需要检查可能的files1目录
     const files1Path = path.resolve(__dirname, '../data/files1');
     if (fs.existsSync(files1Path)) {
       const dirs = fs.readdirSync(files1Path, { withFileTypes: true })
         .filter(dirent => dirent.isDirectory())
         .map(dirent => dirent.name);
-
+      
       for (const dir of dirs) {
         const dirPath = path.join(files1Path, dir);
         if (fs.existsSync(dirPath)) {
           const nodeDirs = fs.readdirSync(dirPath, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
             .map(dirent => dirent.name);
-
+          
           if (nodeDirs.includes(nodeId)) {
             return path.join(dirPath, nodeId);
           }
         }
       }
     }
-
+    
     console.error(`未找到nodeId目录: ${nodeId}`);
     return null;
   } catch (error) {
@@ -687,21 +545,26 @@ function findNodeDirectory(nodeId) {
  */
 async function copyThumbnail(filePath, nodeId) {
   try {
+    // 生成缩略图文件路径（使用文件全名+.jpg格式）
     const thumbnailPath = `${filePath}.jpg`;
-
+    
+    // 检查缩略图文件是否存在
     if (!fs.existsSync(thumbnailPath)) {
       console.log(`未找到缩略图：${path.relative(config.libraries.drawing.sourceDir, thumbnailPath)}`);
       return false;
     }
-
+    
+    // 查找nodeId所在的目录
     const nodeDir = findNodeDirectory(nodeId);
     if (!nodeDir) {
       console.error(`未找到nodeId目录: ${nodeId}`);
       return false;
     }
-
+    
+    // 构建目标文件路径
     const targetThumbnailPath = path.join(nodeDir, 'thumbnail.jpg');
-
+    
+    // 复制文件
     fs.copyFileSync(thumbnailPath, targetThumbnailPath);
     console.log(`缩略图复制成功：${path.relative(config.libraries.drawing.sourceDir, thumbnailPath)}`);
     return true;
@@ -712,18 +575,167 @@ async function copyThumbnail(filePath, nodeId) {
 }
 
 /**
+ * 上传文件（分片上传 - 流式读取）
+ */
+async function uploadFile(nodeId, filePath, conflictStrategy) {
+  const fileName = path.basename(filePath);
+  const fileStats = await fsPromises.stat(filePath);
+  const fileSize = fileStats.size;
+  const hash = await computeFileHash(filePath);
+
+  // 1. 检查文件是否已存在（秒传）
+  const existData = await checkFileExist(fileSize, hash, fileName, nodeId, conflictStrategy);
+  if (existData?.exists) {
+    log(`秒传成功：${path.relative(config.libraries.drawing.sourceDir, filePath)}`);
+    
+    // 复制缩略图
+    await copyThumbnail(filePath, existData.nodeId || nodeId);
+    
+    return {
+      nodeId: existData.nodeId || nodeId,
+      isUseServerExistingFile: true,
+      isInstantUpload: true
+    };
+  }
+
+  // 2. 分片上传（流式读取）
+  const chunkSize = config.chunkSize;
+  const totalChunks = Math.ceil(fileSize / chunkSize);
+  let newNodeId;
+  let hasUploadedAnyChunk = false;
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    const start = chunkIndex * chunkSize;
+    const end = Math.min(start + chunkSize, fileSize);
+    const chunkLength = end - start;
+
+    // 检查分片是否已存在
+    const chunkData = await checkChunkExist(chunkIndex, totalChunks, chunkLength, hash, fileName, nodeId);
+    if (chunkData?.exists) {
+      continue;
+    }
+
+    // 流式读取分片数据（使用Buffer.allocUnsafe提高性能）
+    const chunk = await new Promise((resolve, reject) => {
+      const buffer = Buffer.allocUnsafe(chunkLength);
+      let offset = 0;
+      const stream = fs.createReadStream(filePath, {
+        start: start,
+        end: end - 1
+      });
+
+      stream.on('data', (data) => {
+        data.copy(buffer, offset);
+        offset += data.length;
+      });
+
+      stream.on('end', () => {
+        resolve(buffer);
+      });
+
+      stream.on('error', (error) => {
+        reject(error);
+      });
+    });
+
+    // 上传分片
+    const formData = {
+      chunk: chunkIndex.toString(),
+      chunks: totalChunks.toString(),
+      name: fileName,
+      hash: hash,
+      size: fileSize.toString(),
+      nodeId: nodeId,
+      file: chunk
+    };
+    
+    if (conflictStrategy) {
+      formData.conflictStrategy = conflictStrategy;
+    }
+
+    const uploadData = await uploadChunk(formData);
+    hasUploadedAnyChunk = true;
+
+    // 最后一个分片上传完成后，获取nodeId
+    if (chunkIndex === totalChunks - 1 && uploadData?.nodeId) {
+      newNodeId = uploadData.nodeId;
+      
+      // 检查是否是跳过策略（文件已存在）
+      if (uploadData.ret === 'fileAlreadyExist') {
+        log(`跳过文件（已存在）：${path.relative(config.libraries.drawing.sourceDir, filePath)}`);
+        
+        // 复制缩略图
+        await copyThumbnail(filePath, newNodeId);
+        
+        return {
+          nodeId: newNodeId,
+          isUseServerExistingFile: true,
+          isInstantUpload: false
+        };
+      }
+    }
+  }
+
+  // 3. 如果所有分片都已存在，发送合并请求
+  if (!hasUploadedAnyChunk) {
+    const mergeFormData = {
+      chunks: totalChunks.toString(),
+      name: fileName,
+      hash: hash,
+      size: fileSize.toString(),
+      nodeId: nodeId
+    };
+    
+    if (conflictStrategy) {
+      mergeFormData.conflictStrategy = conflictStrategy;
+    }
+
+    const mergeData = await uploadChunk(mergeFormData);
+    if (mergeData?.nodeId) {
+      newNodeId = mergeData.nodeId;
+    }
+    
+    // 检查是否是跳过策略（文件已存在）
+    if (mergeData?.ret === 'fileAlreadyExist') {
+      log(`跳过文件（已存在）：${path.relative(config.libraries.drawing.sourceDir, filePath)}`);
+      
+      // 复制缩略图
+      await copyThumbnail(filePath, newNodeId || nodeId);
+      
+      return {
+        nodeId: newNodeId || nodeId,
+        isUseServerExistingFile: true,
+        isInstantUpload: false
+      };
+    }
+  }
+
+  log(`上传成功：${path.relative(config.libraries.drawing.sourceDir, filePath)}`);
+  
+  // 复制缩略图
+  await copyThumbnail(filePath, newNodeId || nodeId);
+  
+  return {
+    nodeId: newNodeId || nodeId,
+    isUseServerExistingFile: false,
+    isInstantUpload: false
+  };
+}
+
+/**
  * 检查目录是否包含有效图纸文件
  */
 async function hasValidDrawingFiles(dirPath) {
   const files = await fsPromises.readdir(dirPath);
-
+  
   for (const file of files) {
     const fullPath = path.join(dirPath, file);
     const fileStats = await fsPromises.stat(fullPath);
-
+    
     if (fileStats.isFile()) {
       const ext = path.extname(fullPath).toLowerCase();
       if (ext === '.dwg' || ext === '.dxf') {
+        // 如果需要缩略图，检查是否存在缩略图
         if (config.onlyUploadWithThumbnail) {
           const thumbnailPath = `${fullPath}.jpg`;
           if (fs.existsSync(thumbnailPath)) {
@@ -735,7 +747,7 @@ async function hasValidDrawingFiles(dirPath) {
       }
     }
   }
-
+  
   return false;
 }
 
@@ -744,16 +756,16 @@ async function hasValidDrawingFiles(dirPath) {
  */
 async function hasSubdirectories(dirPath) {
   const files = await fsPromises.readdir(dirPath);
-
+  
   for (const file of files) {
     const fullPath = path.join(dirPath, file);
     const fileStats = await fsPromises.stat(fullPath);
-
+    
     if (fileStats.isDirectory()) {
       return true;
     }
   }
-
+  
   return false;
 }
 
@@ -762,25 +774,30 @@ async function hasSubdirectories(dirPath) {
  */
 async function processDirectory(libraryType, currentPath, currentParentId, uploadQueue, stats) {
   const files = await fsPromises.readdir(currentPath);
-
-  // 先创建所有文件夹
+  
+  // 先创建所有文件夹（如果需要）
   for (const file of files) {
     const fullPath = path.join(currentPath, file);
     const fileStats = await fsPromises.stat(fullPath);
-
+    
     if (fileStats.isDirectory()) {
+      // 检查是否应该创建这个目录：
+      // 1. 如果有子目录 → 创建
+      // 2. 如果只有文件，检查是否有有效图纸 → 有则创建，无则跳过
       const hasSubDirs = await hasSubdirectories(fullPath);
       const hasDrawings = await hasValidDrawingFiles(fullPath);
-
+      
       if (!hasSubDirs && !hasDrawings) {
         log(`跳过空目录（无图纸）：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`, 'debug');
         continue;
       }
-
+      
+      // 尝试创建文件夹
       let folderId;
       try {
         const folderData = await createFolder(libraryType, currentParentId, file);
         if (folderData?.id) {
+          // 检查是否是新创建的文件夹
           const isNewFolder = folderData.createdAt === folderData.updatedAt;
           if (isNewFolder) {
             stats.createdFolders++;
@@ -790,17 +807,20 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
             log(`跳过文件夹（已存在）：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
           }
           folderId = folderData.id;
+          // 递归处理子目录
           await processDirectory(libraryType, fullPath, folderId, uploadQueue, stats);
         } else {
+          // 如果返回数据异常，尝试通过查询获取已存在的文件夹
           try {
             const children = await getCachedChildren(libraryType, currentParentId);
-            const existingFolder = children.find(child =>
+            const existingFolder = children.find(child => 
               child.isFolder && child.name === file
             );
             if (existingFolder) {
               folderId = existingFolder.id;
               stats.skippedFolders++;
               log(`跳过文件夹（已存在）：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
+              // 递归处理子目录
               await processDirectory(libraryType, fullPath, folderId, uploadQueue, stats);
             } else {
               throw new Error('文件夹创建失败且未找到已存在的文件夹');
@@ -812,15 +832,17 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
           }
         }
       } catch (error) {
+        // 文件夹创建失败，尝试查找已存在的文件夹
         try {
           const children = await getCachedChildren(libraryType, currentParentId);
-          const existingFolder = children.find(child =>
+          const existingFolder = children.find(child => 
             child.isFolder && child.name === file
           );
           if (existingFolder) {
             folderId = existingFolder.id;
             stats.skippedFolders++;
             log(`跳过文件夹（已存在）：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
+            // 递归处理子目录
             await processDirectory(libraryType, fullPath, folderId, uploadQueue, stats);
           } else {
             log(`创建文件夹失败：${path.relative(config.libraries[libraryType].sourceDir, fullPath)} ${error.message}`, 'error');
@@ -833,20 +855,22 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
       }
     }
   }
-
+  
   // 再处理所有文件
   const fileTasks = [];
   for (const file of files) {
     const fullPath = path.join(currentPath, file);
     const fileStats = await fsPromises.stat(fullPath);
-
+    
     if (fileStats.isFile()) {
+      // 只上传 .dwg 和 .dxf 文件
       const ext = path.extname(fullPath).toLowerCase();
       if (ext !== '.dwg' && ext !== '.dxf') {
         log(`跳过非CAD文件：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`, 'debug');
         continue;
       }
-
+      
+      // 检查是否需要缩略图
       if (config.onlyUploadWithThumbnail) {
         const thumbnailPath = `${fullPath}.jpg`;
         if (!fs.existsSync(thumbnailPath)) {
@@ -854,22 +878,25 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
           continue;
         }
       }
-
+      
       stats.totalFiles++;
-
+      
+      // 如果只同步缩略图模式
       if (config.onlySyncThumbnails) {
         const syncTask = uploadQueue.enqueue(async () => {
           let success = false;
           let retryCount = 0;
-
+          
           while (!success && retryCount < config.maxRetries) {
             try {
+              // 获取当前目录的子节点（使用缓存）
               const nodes = await getCachedChildren(libraryType, currentParentId);
-              const existingFile = nodes.find(node =>
+              const existingFile = nodes.find(node => 
                 !node.isFolder && node.name === file
               );
-
+              
               if (existingFile?.id) {
+                // 复制缩略图
                 await copyThumbnail(fullPath, existingFile.id);
                 stats.successFiles++;
                 log(`缩略图同步成功：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
@@ -877,7 +904,7 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
                 log(`文件不存在于服务器，跳过：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
                 stats.skippedFiles++;
               }
-
+              
               success = true;
             } catch (error) {
               retryCount++;
@@ -892,37 +919,43 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
             }
           }
         });
-
+        
         fileTasks.push(syncTask);
       } else {
+        // 检查断点续传，跳过已完成的文件
         if (progressStore.isDone(fullPath) && !config.forceResyncThumbnails) {
           log(`跳过已完成文件：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
           stats.skippedFiles++;
           continue;
         }
-
+        
+        // 如果配置了强制重新同步缩略图，先查询服务器是否有同名文件
         if (config.forceResyncThumbnails) {
           const syncTask = uploadQueue.enqueue(async () => {
             let success = false;
             let retryCount = 0;
-
+            
             while (!success && retryCount < config.maxRetries) {
               try {
+                // 查询当前目录的子节点（使用缓存）
                 const nodes = await getCachedChildren(libraryType, currentParentId);
-                const existingFile = nodes.find(node =>
+                const existingFile = nodes.find(node => 
                   !node.isFolder && node.name === file
                 );
-
+                
                 if (existingFile?.id) {
+                  // 服务器有同名文件，只复制缩略图
                   await copyThumbnail(fullPath, existingFile.id);
                   stats.successFiles++;
                   log(`缩略图同步成功（文件已存在）：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
                 } else {
+                  // 服务器没有同名文件，上传新文件
                   const uploadResult = await uploadFile(currentParentId, fullPath, config.conflictStrategy);
                   stats.successFiles++;
                   log(`上传成功：${path.relative(config.libraries[libraryType].sourceDir, fullPath)}`);
                 }
-
+                
+                // 标记完成并保存进度
                 progressStore.markDone(fullPath);
                 await progressStore.save();
                 success = true;
@@ -941,23 +974,25 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
               }
             }
           });
-
+          
           fileTasks.push(syncTask);
         } else {
+          // 正常上传队列
           const uploadTask = uploadQueue.enqueue(async () => {
             let success = false;
             let retryCount = 0;
-
+            
             while (!success && retryCount < config.maxRetries) {
               try {
                 const uploadResult = await uploadFile(currentParentId, fullPath, config.conflictStrategy);
-
+                
                 if (uploadResult.isUseServerExistingFile && config.conflictStrategy === 'skip') {
                   stats.skippedFiles++;
                 } else {
                   stats.successFiles++;
                 }
-
+                
+                // 标记完成并保存进度
                 progressStore.markDone(fullPath);
                 await progressStore.save();
                 success = true;
@@ -976,13 +1011,14 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
               }
             }
           });
-
+          
           fileTasks.push(uploadTask);
         }
       }
     }
   }
-
+  
+  // 等待当前目录的所有任务完成
   await Promise.all(fileTasks);
 }
 
@@ -991,14 +1027,15 @@ async function processDirectory(libraryType, currentPath, currentParentId, uploa
  */
 async function processLibrary(libraryType) {
   log(`\n开始处理${libraryType === 'drawing' ? '图纸库' : '图块库'}...`);
-
+  
   const library = config.libraries[libraryType];
-
+  
+  // 检查源目录是否存在
   if (!fs.existsSync(library.sourceDir)) {
     log(`源目录不存在：${library.sourceDir}`, 'error');
     return;
   }
-
+  
   // 获取库根节点ID
   const options = {
     protocol: 'http:',
@@ -1013,38 +1050,41 @@ async function processLibrary(libraryType) {
   const libraryInfo = await sendRequest(options);
   const rootId = libraryInfo.data ? libraryInfo.data.id : libraryInfo.id;
   log(`库根节点ID：${rootId}`);
-
+  
   if (!rootId) {
     log('获取库根节点失败', 'error');
     return;
   }
-
+  
+  // 初始化统计信息
   const stats = {
     totalFiles: 0,
     successFiles: 0,
     failedFiles: 0,
-    skippedFiles: 0,
     createdFolders: 0,
     skippedFolders: 0,
     failedFolders: 0
   };
-
+  
+  // 初始化上传队列
   const uploadQueue = new UploadQueue(config.maxConcurrent);
-
+  
+  // 递归处理目录
   await processDirectory(libraryType, library.sourceDir, rootId, uploadQueue, stats);
-
+  
+  // 等待所有上传任务完成
   while (uploadQueue.getQueueLength() > 0 || uploadQueue.getRunningCount() > 0) {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-
+  
+  // 等待一小段时间确保数据库写入完成
   await new Promise(resolve => setTimeout(resolve, 500));
-
+  
   log(`\n${libraryType === 'drawing' ? '图纸库' : '图块库'}处理完成！`);
   log(`统计：`);
   log(`- 总文件数：${stats.totalFiles}`);
   log(`- 成功：${stats.successFiles}`);
   log(`- 失败：${stats.failedFiles}`);
-  log(`- 跳过：${stats.skippedFiles}`);
   log(`- 创建文件夹：${stats.createdFolders}`);
   log(`- 跳过文件夹：${stats.skippedFolders}`);
   log(`- 失败文件夹：${stats.failedFolders}`);
@@ -1055,8 +1095,10 @@ async function processLibrary(libraryType) {
  */
 async function main() {
   try {
+    // 加载断点续传进度
     await progressStore.load();
-
+    
+    // 登录
     log('正在登录...');
     const loginSuccess = await login();
     if (!loginSuccess) {
@@ -1064,17 +1106,25 @@ async function main() {
       return;
     }
     log('登录成功！');
-
+    
+    // 处理图纸库
     await processLibrary('drawing');
+    
+    // 处理图块库
     await processLibrary('block');
-
+    
     log('\n所有库处理完成！');
+    
+    // 清理进度文件
+    // progressStore.reset();
+    // log('已清理进度文件');
   } catch (error) {
     log(`脚本执行失败: ${error.message}`, 'error');
     process.exit(1);
   }
 }
 
+// 执行主函数
 main().catch(error => {
   log(`脚本执行失败: ${error.message}`, 'error');
   process.exit(1);
