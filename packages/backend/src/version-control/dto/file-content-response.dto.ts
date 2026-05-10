@@ -29,7 +29,7 @@ export class FileContentResponseDto {
   message: string;
 
   @ApiPropertyOptional({
-    description: '文件内容',
+    description: '文件内容（Base64 编码）',
   })
-  content?: Buffer;
+  content?: string;
 }

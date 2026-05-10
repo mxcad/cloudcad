@@ -160,15 +160,15 @@
 
 | 角色 | 级别 | 类型 | Fixture Key |
 |------|------|------|-------------|
-| SuperAdmin | 系统 | 内置 | `superAdmin` |
-| SysAdmin | 系统 | 自定义 | `sysAdmin` |
-| AuditViewer | 系统 | 自定义 | `auditViewer` |
-| MonitorViewer | 系统 | 自定义 | `monitorViewer` |
-| ProjectOwner | 项目 | 隐式 | `projectOwner` |
-| ProjectEditor | 项目 | 自定义 | `projectEditor` |
-| ProjectViewer | 项目 | 自定义 | `projectViewer` |
-| ProjectUploader | 项目 | 自定义 | `projectUploader` |
-| Guest | 项目 | 匿名 | — |
+| ADMIN | 系统 | 内置 | `admin` |
+| USER_MANAGER | 系统 | 自定义 | `user-manager` |
+| FONT_MANAGER | 系统 | 自定义 | `font-manager` |
+| USER | 系统 | 默认 | `user` |
+| OWNER | 项目 | 隐式 | `owner` |
+| ADMIN (项目) | 项目 | 自定义 | `admin` |
+| MEMBER | 项目 | 自定义 | `member` |
+| EDITOR | 项目 | 自定义 | `editor` |
+| VIEWER | 项目 | 自定义 | `viewer` |
 
 ---
 

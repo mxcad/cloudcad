@@ -8,7 +8,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Module, InternalServerErrorException } from '@nestjs/common';
+import { Module, InternalServerErrorException, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -44,10 +44,10 @@ import { LocalAuthProvider } from './providers/local-auth.provider';
 @Module({
   imports: [
     DatabaseModule,
-    CommonModule,
+    forwardRef(() => CommonModule),
     RedisModule,
     RuntimeConfigModule,
-    UsersModule,
+    forwardRef(() => UsersModule),
     PassportModule,
     SmsModule,
     MailerModule.forRootAsync({

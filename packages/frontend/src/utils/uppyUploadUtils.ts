@@ -386,3 +386,130 @@ export const uploadFilePublic = async (options: {
     uppy.upload();
   });
 };
+
+/**
+ * 泛化 Blob 上传配置
+ *
+ * 用于 save/extRef 等场景：不经过 SDK 序列化，直接通过 Uppy/Tus 发送二进制数据。
+ */
+export interface TusBlobUploadOptions {
+  /** 要上传的 Blob 数据 */
+  blob: Blob;
+  /** 文件名（含扩展名） */
+  filename: string;
+  /** 额外的 metadata，会合并到默认 metadata 中 */
+  metadata?: Record<string, string>;
+  /** 进度回调, 0-100 */
+  onProgress?: (percentage: number) => void;
+}
+
+export interface TusBlobUploadResult {
+  /** 上传完成后提取的 nodeId (X-Node-Id 响应头) */
+  nodeId?: string;
+  /** 上传完成后提取的 fileHash (X-File-Hash 响应头) */
+  fileHash?: string;
+}
+
+/**
+ * 通过 Tus 上传 Blob / 内存数据，绕过 SDK formDataBodySerializer 问题。
+ */
+export const uploadBlobWithTus = async (
+  options: TusBlobUploadOptions,
+): Promise<TusBlobUploadResult> => {
+  const { blob, filename, metadata, onProgress } = options;
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const token = await refreshTokenIfNeeded();
+
+  return new Promise<TusBlobUploadResult>((resolve, reject) => {
+    const uppy = new Uppy({
+      debug: false,
+      autoProceed: false,
+      restrictions: {
+        maxFileSize: 500 * 1024 * 1024,
+        maxNumberOfFiles: 1,
+      },
+    });
+
+    uppy.use(Tus, {
+      endpoint: `${apiBaseUrl}/v1/files`,
+      chunkSize: 5 * 1024 * 1024,
+      retryDelays: [0, 1000, 3000, 5000],
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      metadata: {
+        filename,
+        fileSize: String(blob.size),
+        ...metadata,
+      },
+    });
+
+    let resultNodeId: string | undefined;
+    let resultHash: string | undefined;
+
+    uppy.on('upload-success', (_file: unknown, resp: UppyUploadSuccessPayload) => {
+      try {
+        const xhr = resp?.body?.xhr;
+        if (xhr) {
+          resultNodeId = xhr.getResponseHeader?.('X-Node-Id') || undefined;
+          resultHash = xhr.getResponseHeader?.('X-File-Hash') || undefined;
+        }
+      } catch {
+        // 浏览器可能拒绝读取未暴露的响应头
+      }
+    });
+
+    (uppy as unknown as UppyWithClose).on('total-progress', ((progress: UppyTotalProgressPayload) => {
+      if (progress?.bytesTotal > 0) {
+        const percentage = Math.round(
+          (progress.bytesUploaded / progress.bytesTotal) * 100,
+        );
+        onProgress?.(percentage);
+      }
+    }) as unknown as (...args: unknown[]) => void);
+
+    (uppy as unknown as UppyWithClose).on('complete', ((result: UppyCompletePayload) => {
+      const successful = result.successful?.[0];
+      if (successful) {
+        resolve({ nodeId: resultNodeId, fileHash: resultHash });
+      } else {
+        const err = result.failed?.[0]?.error;
+        const message =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : '上传失败';
+        reject(new UppyUploadError(message, filename));
+      }
+      (uppy as unknown as UppyWithClose).clear();
+      (uppy as unknown as UppyWithClose).cancelAll?.();
+      (uppy as unknown as UppyWithClose).close?.();
+    }) as unknown as (...args: unknown[]) => void);
+
+    uppy.on('upload-error', (_file: unknown, err: Error | string) => {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : '上传失败';
+      reject(new UppyUploadError(message, filename));
+      uppy.clear();
+      uppy.cancelAll?.();
+      (uppy as unknown as UppyWithClose).close?.();
+    });
+
+    // Uppy 需要 File-like 对象，Blob 本身就满足
+    const file = new File([blob], filename, { type: 'application/octet-stream' });
+    uppy.addFile({
+      source: 'local',
+      name: filename,
+      type: file.type,
+      data: file,
+    });
+
+    uppy.upload();
+  });
+};

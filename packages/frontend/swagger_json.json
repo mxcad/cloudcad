@@ -1,6 +1,20 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
     "/api/v1/cache-monitor/summary": {
       "get": {
         "operationId": "CacheMonitorController_getSummary",
@@ -7541,7 +7555,7 @@
         },
         "responses": {
           "201": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«ÕłøÕ╗║µłÉÕŖ¤",
+            "description": "策略配置创建成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -7551,7 +7565,7 @@
             }
           },
           "403": {
-            "description": "µØāķÖÉõĖŹĶČ│"
+            "description": "权限不足"
           }
         },
         "security": [
@@ -7559,9 +7573,9 @@
             "bearer": []
           }
         ],
-        "summary": "ÕłøÕ╗║µØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "创建策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       },
       "get": {
@@ -7569,7 +7583,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«ÕłŚĶĪ©ĶÄĘÕÅ¢µłÉÕŖ¤",
+            "description": "策略配置列表查询成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -7587,9 +7601,9 @@
             "bearer": []
           }
         ],
-        "summary": "ĶÄĘÕÅ¢µēĆµ£ēµØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "获取所有策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       }
     },
@@ -7618,7 +7632,7 @@
         },
         "responses": {
           "200": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«µø┤µ¢░µłÉÕŖ¤",
+            "description": "策略配置更新成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -7628,7 +7642,7 @@
             }
           },
           "404": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©"
+            "description": "策略配置未找到"
           }
         },
         "security": [
@@ -7636,9 +7650,9 @@
             "bearer": []
           }
         ],
-        "summary": "µø┤µ¢░µØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "更新策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       },
       "delete": {
@@ -7655,10 +7669,10 @@
         ],
         "responses": {
           "204": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«ÕłĀķÖżµłÉÕŖ¤"
+            "description": "策略配置删除成功"
           },
           "404": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©"
+            "description": "策略配置未找到"
           }
         },
         "security": [
@@ -7666,9 +7680,9 @@
             "bearer": []
           }
         ],
-        "summary": "ÕłĀķÖżµØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "删除策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       },
       "get": {
@@ -7685,7 +7699,7 @@
         ],
         "responses": {
           "200": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«ĶÄĘÕÅ¢µłÉÕŖ¤",
+            "description": "策略配置查询成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -7695,7 +7709,7 @@
             }
           },
           "404": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©"
+            "description": "策略配置未找到"
           }
         },
         "security": [
@@ -7703,9 +7717,9 @@
             "bearer": []
           }
         ],
-        "summary": "ĶÄĘÕÅ¢µØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "查询策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       }
     },
@@ -7724,7 +7738,7 @@
         ],
         "responses": {
           "200": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«ÕÉ»ńö©µłÉÕŖ¤",
+            "description": "策略配置启用成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -7739,9 +7753,9 @@
             "bearer": []
           }
         ],
-        "summary": "ÕÉ»ńö©µØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "启用策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       }
     },
@@ -7760,7 +7774,7 @@
         ],
         "responses": {
           "200": {
-            "description": "ńŁ¢ńĢźķģŹńĮ«ń”üńö©µłÉÕŖ¤",
+            "description": "策略配置禁用成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -7775,9 +7789,9 @@
             "bearer": []
           }
         ],
-        "summary": "ń”üńö©µØāķÖÉńŁ¢ńĢźķģŹńĮ«",
+        "summary": "禁用策略配置",
         "tags": [
-          "µØāķÖÉńŁ¢ńĢźķģŹńĮ«"
+          "策略配置"
         ]
       }
     },
@@ -9764,146 +9778,38 @@
           "password"
         ]
       },
-      "UserDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "用户ID",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
-          },
-          "email": {
-            "type": "string",
-            "description": "用户邮箱（可能未绑定）",
-            "example": "user@example.com",
-            "nullable": true
-          },
-          "username": {
-            "type": "string",
-            "description": "用户名",
-            "example": "username"
-          },
-          "nickname": {
-            "type": "string",
-            "description": "昵称",
-            "example": "用户昵称"
-          },
-          "avatar": {
-            "type": "string",
-            "description": "头像URL",
-            "example": "https://example.com/avatar.jpg"
-          },
-          "role": {
-            "type": "object",
-            "description": "用户角色",
-            "properties": {
-              "id": {
-                "type": "string",
-                "example": "clxxxxxxx"
-              },
-              "name": {
-                "type": "string",
-                "enum": [
-                  "ADMIN",
-                  "USER_MANAGER",
-                  "FONT_MANAGER",
-                  "USER"
-                ],
-                "example": "USER"
-              },
-              "description": {
-                "type": "string",
-                "example": "普通用户，基础权限",
-                "nullable": true
-              },
-              "isSystem": {
-                "type": "boolean",
-                "example": true
-              },
-              "permissions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "permission": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "status": {
-            "type": "string",
-            "description": "用户状态",
-            "enum": [
-              "ACTIVE",
-              "INACTIVE",
-              "SUSPENDED"
-            ],
-            "example": "ACTIVE"
-          },
-          "phone": {
-            "type": "object",
-            "description": "用户手机号（可能未绑定）",
-            "example": "13800138000",
-            "nullable": true
-          },
-          "phoneVerified": {
-            "type": "boolean",
-            "description": "手机号是否已验证",
-            "example": false
-          },
-          "wechatId": {
-            "type": "object",
-            "description": "微信 OpenID",
-            "example": "oXYZ123...",
-            "nullable": true
-          },
-          "provider": {
-            "type": "string",
-            "description": "登录方式 (LOCAL | WECHAT)",
-            "example": "LOCAL"
-          },
-          "hasPassword": {
-            "type": "boolean",
-            "description": "是否已设置密码",
-            "example": true
-          }
-        },
-        "required": [
-          "id",
-          "username",
-          "role",
-          "status"
-        ]
-      },
       "AuthApiResponseDto": {
         "type": "object",
         "properties": {
-          "accessToken": {
+          "code": {
             "type": "string",
-            "description": "访问Token",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          },
-          "refreshToken": {
-            "type": "string",
-            "description": "刷新Token",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          },
-          "user": {
-            "description": "用户信息",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/UserDto"
-              }
+            "description": "响应状态码",
+            "example": "SUCCESS",
+            "enum": [
+              "SUCCESS",
+              "ERROR"
             ]
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object",
+            "description": "响应数据"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "响应时间戳",
+            "example": "2025-12-12T03:34:55.801Z"
           }
         },
         "required": [
-          "accessToken",
-          "refreshToken",
-          "user"
+          "code",
+          "message",
+          "data",
+          "timestamp"
         ]
       },
       "LoginDto": {
@@ -12770,10 +12676,6 @@
           "entries"
         ]
       },
-      "Buffer": {
-        "type": "object",
-        "properties": {}
-      },
       "FileContentResponseDto": {
         "type": "object",
         "properties": {
@@ -12788,12 +12690,8 @@
             "example": "获取成功"
           },
           "content": {
-            "description": "文件内容",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Buffer"
-              }
-            ]
+            "type": "string",
+            "description": "文件内容（Base64 编码）"
           }
         },
         "required": [

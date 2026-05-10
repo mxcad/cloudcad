@@ -35,7 +35,11 @@ export class FileSystemService implements IFileSystemService {
   }
 
   async exists(path: string): Promise<boolean> {
-    return fs.existsSync(path);
+    try {
+      return fs.existsSync(path);
+    } catch {
+      return false;
+    }
   }
 
   async createDirectory(dirPath: string): Promise<boolean> {

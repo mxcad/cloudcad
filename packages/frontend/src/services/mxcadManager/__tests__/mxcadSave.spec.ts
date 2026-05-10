@@ -5,20 +5,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock api-sdk
-vi.mock('@/api-sdk', () => ({
-  saveControllerSaveMxwebToNode: vi.fn(),
-  fileSystemControllerCheckProjectPermission: vi.fn(),
-  thumbnailControllerUploadThumbnail: vi.fn(),
-  thumbnailControllerCheckThumbnail: vi.fn(),
-}));
-
-// Mock utils
-vi.mock('@/utils/hashUtils', () => ({
-  calculateFileHash: vi.fn(),
-}));
-
+// Mock uploadBlobWithTus instead of saveControllerSaveMxwebToNode
 vi.mock('@/utils/uppyUploadUtils', () => ({
+  uploadBlobWithTus: vi.fn(),
   uploadFileWithUppy: vi.fn(),
 }));
 
@@ -45,10 +34,9 @@ import {
   createSaveFormData,
   showSaveConfirmDialog,
 } from '../mxcadSave';
-import { saveControllerSaveMxwebToNode } from '@/api-sdk';
+import { uploadBlobWithTus } from '@/utils/uppyUploadUtils';
 
 import { handleError } from '@/utils/errorHandler';
-import { globalShowToast } from '@/contexts/NotificationContext';
 
 describe('mxcadSave', () => {
   beforeEach(() => {
@@ -79,81 +67,78 @@ describe('mxcadSave', () => {
   describe('saveMxwebToNode', () => {
     const mockBlob = new Blob(['saved-data'], { type: 'application/octet-stream' });
 
-    it('saves blob to a node with basic parameters', async () => {
-      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
-      mockSave.mockResolvedValue({ data: { success: true } });
+    it('saves blob to a node via Tus upload', async () => {
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      mockUpload.mockResolvedValue({ nodeId: 'node-abc' });
 
       await saveMxwebToNode({
         nodeId: 'node-abc',
         blob: mockBlob,
-        filename: 'drawing.mxweb',
+        fileName: 'drawing.mxweb',
       });
 
-      expect(mockSave).toHaveBeenCalledTimes(1);
-      const callArgs = mockSave.mock.calls[0][0];
-      expect(callArgs.path.nodeId).toBe('node-abc');
-      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
-      expect(body.file).toBe(mockBlob);
+      expect(mockUpload).toHaveBeenCalledTimes(1);
+      const callArgs = mockUpload.mock.calls[0][0];
+      expect(callArgs.blob).toBe(mockBlob);
+      expect(callArgs.metadata.uploadType).toBe('save');
+      expect(callArgs.metadata.overwriteNodeId).toBe('node-abc');
     });
 
     it('includes commitMessage when provided', async () => {
-      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
-      mockSave.mockResolvedValue({ data: { success: true } });
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      mockUpload.mockResolvedValue({ nodeId: 'node-def' });
 
       await saveMxwebToNode({
         nodeId: 'node-def',
         blob: mockBlob,
-        filename: 'drawing.mxweb',
+        fileName: 'drawing.mxweb',
         commitMessage: 'Fixed layer alignment',
       });
 
-      const callArgs = mockSave.mock.calls[0][0];
-      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
-      expect(body.commitMessage).toBe('Fixed layer alignment');
+      const callArgs = mockUpload.mock.calls[0][0];
+      expect(callArgs.metadata.commitMessage).toBe('Fixed layer alignment');
     });
 
-    it('includes expectedTimestamp when provided (optimistic locking)', async () => {
-      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
-      mockSave.mockResolvedValue({ data: { success: true } });
+    it('includes expectedTimestamp when provided', async () => {
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      mockUpload.mockResolvedValue({ nodeId: 'node-ghi' });
 
       await saveMxwebToNode({
         nodeId: 'node-ghi',
         blob: mockBlob,
-        filename: 'drawing.mxweb',
+        fileName: 'drawing.mxweb',
         expectedTimestamp: '2024-01-15T10:30:00Z',
       });
 
-      const callArgs = mockSave.mock.calls[0][0];
-      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
-      expect(body.expectedTimestamp).toBe('2024-01-15T10:30:00Z');
+      const callArgs = mockUpload.mock.calls[0][0];
+      expect(callArgs.metadata.expectedTimestamp).toBe('2024-01-15T10:30:00Z');
     });
 
     it('handles missing optional parameters gracefully', async () => {
-      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
-      mockSave.mockResolvedValue({ data: { success: true } });
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      mockUpload.mockResolvedValue({ nodeId: 'node-jkl' });
 
       await saveMxwebToNode({
         nodeId: 'node-jkl',
         blob: mockBlob,
-        filename: 'minimal.mxweb',
+        fileName: 'minimal.mxweb',
       });
 
-      const callArgs = mockSave.mock.calls[0][0];
-      const body = callArgs.body as { file: Blob; commitMessage?: string; expectedTimestamp?: string };
-      expect(body.commitMessage).toBeUndefined();
-      expect(body.expectedTimestamp).toBeUndefined();
+      const callArgs = mockUpload.mock.calls[0][0];
+      expect(callArgs.metadata.commitMessage).toBeUndefined();
+      expect(callArgs.metadata.expectedTimestamp).toBeUndefined();
     });
 
     it('propagates API errors', async () => {
-      const mockSave = saveControllerSaveMxwebToNode as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
       const apiError = new Error('Server error: file too large');
-      mockSave.mockRejectedValue(apiError);
+      mockUpload.mockRejectedValue(apiError);
 
       await expect(
         saveMxwebToNode({
           nodeId: 'node-err',
           blob: mockBlob,
-          filename: 'drawing.mxweb',
+          fileName: 'drawing.mxweb',
         })
       ).rejects.toThrow('Server error: file too large');
 
@@ -168,7 +153,6 @@ describe('mxcadSave', () => {
         setTimeout(() => {
           const input = (node as HTMLElement).querySelector('#mxcad-save-dialog-input') as HTMLTextAreaElement;
           if (input) {
-            // Simulate user typing
             Object.defineProperty(input, 'value', { value: 'Updated section A', writable: true });
           }
           const confirmBtn = (node as HTMLElement).querySelector('#mxcad-save-dialog-confirm');

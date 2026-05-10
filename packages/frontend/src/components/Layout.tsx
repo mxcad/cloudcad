@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: fix unknown type on runtimeConfig.systemNotice line ~602
 import type React from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -186,7 +185,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (user && !loading) {
       setStorageLoading(true);
-      fileSystemControllerGetStorageQuota({ query: { nodeId: '' } })
+      fileSystemControllerGetStorageQuota({ query: { nodeId: '', userId: user?.id || '' } })
         .then((result: { data?: StorageInfoDto }) => {
           const data = result?.data as StorageInfoDto | undefined;
           if (data) {

@@ -10,9 +10,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference, mxCadControllerUploadExtReferenceImage, mxCadControllerUploadExtReferenceDwg } from '@/api-sdk';
-import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference, publicFileControllerUploadExtReference } from '@/api-sdk';
-import type { UploadExtReferenceDto, UploadExtReferenceFileDto } from '@/api-sdk';
+import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference } from '@/api-sdk';
+import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference } from '@/api-sdk';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -21,6 +20,7 @@ import type {
   UseExternalReferenceUploadReturn,
 } from '../types/filesystem';
 
+import { uploadBlobWithTus } from '../utils/uppyUploadUtils';
 import { handleError } from '../utils/errorHandler';
 import { isAuthenticated } from '../utils/authCheck';
 import { useUIStore } from '../stores/uiStore';
@@ -151,7 +151,7 @@ export const useExternalReferenceUpload = (
         let result = null;
         if (isLoggedIn) {
           // 已登录用户使用 SDK
-          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } as unknown as undefined });
+          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } } as any);
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
           // 未登录用户使用 SDK
@@ -403,37 +403,29 @@ export const useExternalReferenceUpload = (
       );
 
       try {
-        if (fileInfo.type === 'img') {
-          if (isLoggedIn) {
-            // 图片外部参照：使用图片上传接口（已登录用户）
-            const formData = new FormData();
-            formData.append('file', fileInfo.source);
-            formData.append('ext_ref_file', fileInfo.name);
-            if (config.nodeId) formData.append('nodeId', config.nodeId);
-            await mxCadControllerUploadExtReferenceImage({ body: formData as unknown as UploadExtReferenceFileDto });
-          } else {
-            // 图片外部参照：使用公开上传接口（未登录用户）
-            const formData = new FormData();
-            formData.append('file', fileInfo.source);
-            formData.append('srcFileHash', id);
-            formData.append('extRefFile', fileInfo.name);
-            await publicFileControllerUploadExtReference({ body: formData as unknown as UploadExtReferenceDto });
-          }
+        if (isLoggedIn) {
+          // 已登录：通过 Tus 上传外部参照文件
+          await uploadBlobWithTus({
+            blob: fileInfo.source,
+            filename: fileInfo.name,
+            metadata: {
+              uploadType: 'extRef',
+              srcDwgNodeId: id,
+              isImage: fileInfo.type === 'img' ? 'true' : 'false',
+              fileHash: `${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            },
+          });
         } else {
-          if (isLoggedIn) {
-            // DWG 外部参照：使用 DWG 外部参照上传接口（已登录用户）
-            const formData = new FormData();
-            formData.append('file', fileInfo.source);
-            formData.append('ext_ref_file', fileInfo.name);
-            await mxCadControllerUploadExtReferenceDwg({ path: { nodeId: config.nodeId || '' }, body: formData as unknown as UploadExtReferenceFileDto });
-          } else {
-            // DWG 外部参照：使用公开上传接口（未登录用户）
-            const formData = new FormData();
-            formData.append('file', fileInfo.source);
-            formData.append('srcFileHash', id);
-            formData.append('extRefFile', fileInfo.name);
-            await publicFileControllerUploadExtReference({ body: formData as unknown as UploadExtReferenceDto });
-          }
+          // 匿名：通过 Tus 上传外部参照文件
+          await uploadBlobWithTus({
+            blob: fileInfo.source,
+            filename: fileInfo.name,
+            metadata: {
+              uploadType: 'extRef',
+              srcDwgNodeId: id,
+              isImage: fileInfo.type === 'img' ? 'true' : 'false',
+            },
+          });
         }
 
         // 更新状态为成功

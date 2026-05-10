@@ -4,6 +4,7 @@
   "description": "CloudCAD 部署配置中心 - 0依赖独立服务",
   "main": "server.js",
   "scripts": {
+    "dev": "node -e process.exit(0)",
     "start": "node server.js"
   },
   "keywords": ["cloudcad", "config", "deployment"],

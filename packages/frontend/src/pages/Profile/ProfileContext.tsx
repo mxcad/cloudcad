@@ -85,7 +85,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
   }, []);
 
   const value: ProfileContextValue = {
-    user,
+    user: user as any,
     mailEnabled,
     smsEnabled,
     wechatEnabled,

@@ -28,6 +28,7 @@ export interface CurrentFileInfo {
   libraryKey?: 'drawing' | 'block';
   fromPlatform?: boolean;
   updatedAt?: string;
+  expectedTimestamp?: string;
 }
 
 /**

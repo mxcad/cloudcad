@@ -62,13 +62,13 @@ import { escapeHtml } from '@/utils/sanitize';
 // ==================== 外部依赖 ====================
 import "mxcad-app/style"
 import { MxCADView } from 'mxcad-app';
-import { saveControllerSaveMxwebToNode, mxCadControllerUploadExtReferenceImage, mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
+import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
-import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode, libraryControllerSaveDrawingNode, libraryControllerSaveBlockNode } from '@/api-sdk';
+import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
 import { MxFun } from 'mxdraw';
 import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../../utils/hashUtils';
-import { uploadFileWithUppy, uploadFilePublic } from '../../utils/uppyUploadUtils';
+import { uploadFileWithUppy, uploadFilePublic, uploadBlobWithTus } from '../../utils/uppyUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../../contexts/NotificationContext';
@@ -110,6 +110,7 @@ let currentFileInfo: {
   libraryKey?: 'drawing' | 'block'; // 公共资源库标识
   fromPlatform?: boolean; // 是否从平台跳转进入
   updatedAt?: string; // 乐观锁时间戳
+  expectedTimestamp?: string;
 } | null = null;
 
 // 私人空间 ID 缓存（用于判断文件是否属于私人空间）
@@ -416,7 +417,7 @@ export function setCurrentFileInfo(fileInfo: {
   fromPlatform?: boolean; // 是否从平台跳转进入
   updatedAt?: string; // 乐观锁时间戳
 }) {
-  currentFileInfo = fileInfo;
+  currentFileInfo = { ...fileInfo, expectedTimestamp: fileInfo.updatedAt };
 }
 
 export function setCacheTimestamp(timestamp: number | undefined) {
@@ -1555,7 +1556,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     globalShowToast('保存失败：文件信息丢失', 'error');
     return;
   }
-  const { fileId, name } = currentFileInfo;
+  const { fileId, name, expectedTimestamp } = currentFileInfo;
   const commitMessage = await _showSaveConfirmDialog();
   if (commitMessage === null) {
     return;
@@ -1602,26 +1603,33 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   });
 
   setLoadingMessage('正在上传到服务器...');
-  // 保存前获取节点最新 updatedAt，用于乐观锁冲突检测
-  let expectedTimestamp: string | undefined;
-  try {
-    const freshNodeInfo = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
-    expectedTimestamp = freshNodeInfo.data?.updatedAt;
-  } catch (_err) {
-    // getNode 失败不阻塞保存，降级为无时间戳
-  }
-  // 构造 multipart/form-data（SDK 的 formDataBodySerializer 无法正确序列化 Blob）
-  const formData = createSaveFormData(savedFile.blob, fileId, savedFile.filename);
+  // 通过 Tus 上传 mxweb Blob（绕过 SDK formDataBodySerializer 问题）
+  const uploadMeta: Record<string, string> = {
+    uploadType: 'save',
+    overwriteNodeId: fileId,
+  };
   if (commitMessage) {
-    formData.append('commitMessage', commitMessage);
+    uploadMeta.commitMessage = commitMessage;
   }
   if (expectedTimestamp) {
-    formData.append('expectedTimestamp', expectedTimestamp);
+    uploadMeta.expectedTimestamp = expectedTimestamp;
   }
-  await saveControllerSaveMxwebToNode({
-    path: { nodeId: fileId },
-    body: formData as unknown as Record<string, unknown>,
-  });
+
+  try {
+    await uploadBlobWithTus({
+      blob: savedFile.blob,
+      filename: savedFile.filename,
+      metadata: uploadMeta,
+    });
+  } catch (uploadError) {
+    handleError(uploadError, 'mxcadManager: saveToCurrentFile upload');
+    hideGlobalLoading();
+    globalShowToast(
+      uploadError instanceof Error ? uploadError.message : '上传失败，请稍后重试',
+      'error',
+    );
+    return;
+  }
 
   try {
     const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
@@ -1631,7 +1639,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
 
     // 保存成功后更新乐观锁时间戳
     if (fileInfo.updatedAt && currentFileInfo) {
-      currentFileInfo = { ...currentFileInfo, updatedAt: fileInfo.updatedAt };
+      currentFileInfo = { ...currentFileInfo, updatedAt: fileInfo.updatedAt, expectedTimestamp: fileInfo.updatedAt };
     }
 
     if (fileInfo.path) {
@@ -1685,7 +1693,8 @@ async function saveLibraryFile() {
     globalShowToast('保存失败：文件信息丢失', 'error');
     return;
   }
-  let { fileId, name, libraryKey, path: nodePath } = currentFileInfo;
+  let { fileId, name, libraryKey, path: nodePath, expectedTimestamp } = currentFileInfo;
+  const commitMessage = ''; // Library files don't have user-facing commit messages
 
   if (!libraryKey) {
     globalShowToast('保存失败：未知的资源库类型', 'error');
@@ -1758,22 +1767,24 @@ async function saveLibraryFile() {
   });
 
   try {
-    const isDrawing = libraryKey === 'drawing';
-
     setLoadingMessage('正在上传到服务器...');
 
-    // 上传到服务器（使用图书馆覆盖保存接口）
-    const saveFile = new File([savedFile.blob], isDrawing ? 'drawing.mxweb' : 'block.mxweb', {
-      type: 'application/octet-stream',
+    // 通过 Tus 上传 mxweb Blob
+    const filename = `${libraryKey}.mxweb`;
+    await uploadBlobWithTus({
+      blob: savedFile.blob,
+      filename,
+      metadata: {
+        uploadType: 'save',
+        overwriteNodeId: fileId,
+        commitMessage: commitMessage || '',
+        isLibrary: 'true',
+        ...(expectedTimestamp ? { expectedTimestamp } : {}),
+      },
     });
-    if (isDrawing) {
-      await libraryControllerSaveDrawingNode({ path: { nodeId: fileId }, body: { file: saveFile } });
-    } else {
-      await libraryControllerSaveBlockNode({ path: { nodeId: fileId }, body: { file: saveFile } });
-    }
 
     // 更新本地缓存 - 使用 node.path 构建正确的 URL
-    const basePath = isDrawing
+    const basePath = libraryKey === 'drawing'
       ? `/api/v1/library/drawing/filesData/${nodePath}`
       : `/api/v1/library/block/filesData/${nodePath}`;
 
@@ -1821,21 +1832,6 @@ async function saveLibraryFile() {
       'error'
     );
   }
-}
-
-/**
- * 创建上传表单数据
- */
-function createUploadFormData(blob: Blob, nodeId: string, filename: string): FormData {
-  const formData = new FormData();
-  formData.append('file', blob, filename);
-  formData.append('nodeId', nodeId);
-  formData.append('hash', `${Date.now()}_${Math.random().toString(36).substring(7)}`);
-  formData.append('name', filename);
-  formData.append('size', String(blob.size));
-  formData.append('chunk', '0');
-  formData.append('chunks', '1');
-  return formData;
 }
 
 /**
@@ -2695,13 +2691,15 @@ export async function processPendingImages(): Promise<void> {
       const blob = await response.blob();
       const file = new File([blob], img.fileName, { type: blob.type });
 
-      // 上传到外部参照目录（带 updatePreloading=true 更新 preloading.json）
-      await mxCadControllerUploadExtReferenceImage({
-        body: {
-          file,
-          ext_ref_file: img.fileName,
-          nodeId: currentInfo.fileId,
-          updatePreloading: true,
+      // 上传到外部参照目录
+      await uploadBlobWithTus({
+        blob: file,
+        filename: img.fileName,
+        metadata: {
+          uploadType: 'extRef',
+          isImage: 'true',
+          srcDwgNodeId: currentInfo.fileId,
+          fileHash: `${Date.now()}_${Math.random().toString(36).substring(7)}`,
         },
       });
     } catch (error) {

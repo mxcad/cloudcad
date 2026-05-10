@@ -39,11 +39,11 @@ import { PolicyResponseDto } from '../dto/policy.dto';
 import { PolicyType } from '../enums/policy-type.enum';
 
 /**
- * ńŁ¢ńĢźķģŹńĮ«µÄ¦ÕłČÕÖ©
+ * 策略配置控制器
  *
- * µÅÉõŠøńŁ¢ńĢźķģŹńĮ«ńÜä CRUD API
+ * 提供策略配置的 CRUD API
  */
-@ApiTags('µØāķÖÉńŁ¢ńĢźķģŹńĮ«')
+@ApiTags('策略配置')
 @Controller('policy-config')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -51,18 +51,18 @@ export class PolicyConfigController {
   constructor(private readonly policyConfigService: PolicyConfigService) {}
 
   /**
-   * ÕłøÕ╗║ńŁ¢ńĢźķģŹńĮ«
+   * 创建策略配置
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
-  @ApiOperation({ summary: 'ÕłøÕ╗║µØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '创建策略配置' })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'ńŁ¢ńĢźķģŹńĮ«ÕłøÕ╗║µłÉÕŖ¤',
+    description: '策略配置创建成功',
     type: PolicyResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'µØāķÖÉõĖŹĶČ│' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '权限不足' })
   async createPolicy(
     @Body() createPolicyDto: CreatePolicyDto,
     @Request() req
@@ -85,17 +85,17 @@ export class PolicyConfigController {
   }
 
   /**
-   * µø┤µ¢░ńŁ¢ńĢźķģŹńĮ«
+   * 更新策略配置
    */
   @Put(':id')
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
-  @ApiOperation({ summary: 'µø┤µ¢░µØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '更新策略配置' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'ńŁ¢ńĢźķģŹńĮ«µø┤µ¢░µłÉÕŖ¤',
+    description: '策略配置更新成功',
     type: PolicyResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '策略配置未找到' })
   async updatePolicy(
     @Param('id') id: string,
     @Body() updatePolicyDto: UpdatePolicyDto,
@@ -110,50 +110,50 @@ export class PolicyConfigController {
   }
 
   /**
-   * ÕłĀķÖżńŁ¢ńĢźķģŹńĮ«
+   * 删除策略配置
    */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
-  @ApiOperation({ summary: 'ÕłĀķÖżµØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '删除策略配置' })
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
-    description: 'ńŁ¢ńĢźķģŹńĮ«ÕłĀķÖżµłÉÕŖ¤',
+    description: '策略配置删除成功',
   })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '策略配置未找到' })
   async deletePolicy(@Param('id') id: string, @Request() req): Promise<void> {
     await this.policyConfigService.deletePolicyConfig(id, req.user.id);
   }
 
   /**
-   * ĶÄĘÕÅ¢ńŁ¢ńĢźķģŹńĮ«
+   * 查询策略配置
    */
   @Get(':id')
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
-  @ApiOperation({ summary: 'ĶÄĘÕÅ¢µØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '查询策略配置' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'ńŁ¢ńĢźķģŹńĮ«ĶÄĘÕÅ¢µłÉÕŖ¤',
+    description: '策略配置查询成功',
     type: PolicyResponseDto,
   })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '策略配置未找到' })
   async getPolicy(@Param('id') id: string): Promise<PolicyResponseDto> {
     const policy = await this.policyConfigService.getPolicyConfig(id);
     if (!policy) {
-      throw new Error('ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©');
+      throw new Error('策略配置未找到');
     }
     return this.formatPolicyResponse(policy);
   }
 
   /**
-   * ĶÄĘÕÅ¢µēĆµ£ēńŁ¢ńĢźķģŹńĮ«
+   * 获取所有策略配置
    */
   @Get()
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_READ])
-  @ApiOperation({ summary: 'ĶÄĘÕÅ¢µēĆµ£ēµØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '获取所有策略配置' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'ńŁ¢ńĢźķģŹńĮ«ÕłŚĶĪ©ĶÄĘÕÅ¢µłÉÕŖ¤',
+    description: '策略配置列表查询成功',
     type: [PolicyResponseDto],
   })
   async getAllPolicies(): Promise<PolicyResponseDto[]> {
@@ -162,14 +162,14 @@ export class PolicyConfigController {
   }
 
   /**
-   * ÕÉ»ńö©ńŁ¢ńĢźķģŹńĮ«
+   * 启用策略配置
    */
   @Put(':id/enable')
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
-  @ApiOperation({ summary: 'ÕÉ»ńö©µØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '启用策略配置' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'ńŁ¢ńĢźķģŹńĮ«ÕÉ»ńö©µłÉÕŖ¤',
+    description: '策略配置启用成功',
     type: PolicyResponseDto,
   })
   async enablePolicy(
@@ -185,14 +185,14 @@ export class PolicyConfigController {
   }
 
   /**
-   * ń”üńö©ńŁ¢ńĢźķģŹńĮ«
+   * 禁用策略配置
    */
   @Put(':id/disable')
   @RequirePermissions([SystemPermission.SYSTEM_ROLE_PERMISSION_MANAGE])
-  @ApiOperation({ summary: 'ń”üńö©µØāķÖÉńŁ¢ńĢźķģŹńĮ«' })
+  @ApiOperation({ summary: '禁用策略配置' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'ńŁ¢ńĢźķģŹńĮ«ń”üńö©µłÉÕŖ¤',
+    description: '策略配置禁用成功',
     type: PolicyResponseDto,
   })
   async disablePolicy(
@@ -208,7 +208,7 @@ export class PolicyConfigController {
   }
 
   /**
-   * µĀ╝Õ╝ÅÕī¢ńŁ¢ńĢźÕōŹÕ║ö
+   * 格式化策略响应
    */
   private formatPolicyResponse(policy: PermissionPolicyConfig & { id: string; createdAt: Date; updatedAt: Date }): PolicyResponseDto {
     return {

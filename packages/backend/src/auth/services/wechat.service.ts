@@ -53,7 +53,7 @@ interface WechatTokenResponse {
 export class WechatService {
   private readonly logger = new Logger(WechatService.name);
   private _appId: string | undefined;
-  private _packagesecret: string | undefined;
+  private _appSecret: string | undefined;
   private _callbackUrl: string | undefined;
 
   constructor(private readonly configService: ConfigService) {}
@@ -66,10 +66,10 @@ export class WechatService {
   }
 
   private get packagesecret(): string {
-    if (this._packagesecret === undefined) {
-      this._packagesecret = this.configService.get<string>('WECHAT_APP_SECRET') || '';
+    if (this._appSecret === undefined) {
+      this._appSecret = this.configService.get<string>('WECHAT_APP_SECRET') || '';
     }
-    return this._packagesecret;
+    return this._appSecret;
   }
 
   private get callbackUrl(): string {

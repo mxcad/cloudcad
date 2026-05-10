@@ -18,6 +18,24 @@ declare namespace Components {
              */
             projectRoleId: string;
         }
+        export interface AdminCacheStatsDto {
+            /**
+             * 缓存条目数
+             */
+            size: number;
+            /**
+             * 命中次数
+             */
+            hits: number;
+            /**
+             * 未命中次数
+             */
+            misses: number;
+            /**
+             * 命中率
+             */
+            hitRate: number;
+        }
         export interface AdminStatsResponseDto {
             /**
              * 提示消息
@@ -34,120 +52,29 @@ declare namespace Components {
         export type AllPermissionsEnum = "SYSTEM_USER_READ" | "SYSTEM_USER_CREATE" | "SYSTEM_USER_UPDATE" | "SYSTEM_USER_DELETE" | "SYSTEM_ROLE_READ" | "SYSTEM_ROLE_CREATE" | "SYSTEM_ROLE_UPDATE" | "SYSTEM_ROLE_DELETE" | "SYSTEM_ROLE_PERMISSION_MANAGE" | "SYSTEM_FONT_READ" | "SYSTEM_FONT_UPLOAD" | "SYSTEM_FONT_DELETE" | "SYSTEM_FONT_DOWNLOAD" | "SYSTEM_ADMIN" | "SYSTEM_MONITOR" | "SYSTEM_CONFIG_READ" | "SYSTEM_CONFIG_WRITE" | "PROJECT_UPDATE" | "PROJECT_DELETE" | "PROJECT_MEMBER_MANAGE" | "PROJECT_MEMBER_ASSIGN" | "PROJECT_ROLE_MANAGE" | "PROJECT_ROLE_PERMISSION_MANAGE" | "PROJECT_TRANSFER" | "FILE_CREATE" | "FILE_UPLOAD" | "FILE_OPEN" | "FILE_EDIT" | "FILE_DELETE" | "FILE_TRASH_MANAGE" | "FILE_DOWNLOAD" | "FILE_SHARE" | "CAD_SAVE" | "CAD_EXTERNAL_REFERENCE" | "VERSION_READ" | "VERSION_CREATE" | "VERSION_DELETE" | "VERSION_RESTORE" | "PROJECT_SETTINGS_MANAGE";
         export interface AuthApiResponseDto {
             /**
-             * 访问Token
+             * 响应状态码
              * example:
-             * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             * SUCCESS
              */
-            accessToken: string;
+            code: "SUCCESS" | "ERROR";
             /**
-             * 刷新Token
+             * 响应消息
              * example:
-             * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             * 操作成功
              */
-            refreshToken: string;
+            message: string;
             /**
-             * 用户信息
+             * 响应数据
              */
-            user: {
-                /**
-                 * 用户ID
-                 * example:
-                 * 123e4567-e89b-12d3-a456-426614174000
-                 */
-                id: string;
-                /**
-                 * 用户邮箱（可能未绑定）
-                 * example:
-                 * user@example.com
-                 */
-                email?: string | null;
-                /**
-                 * 用户名
-                 * example:
-                 * username
-                 */
-                username: string;
-                /**
-                 * 昵称
-                 * example:
-                 * 用户昵称
-                 */
-                nickname?: string;
-                /**
-                 * 头像URL
-                 * example:
-                 * https://example.com/avatar.jpg
-                 */
-                avatar?: string;
-                /**
-                 * 用户角色
-                 */
-                role: {
-                    /**
-                     * example:
-                     * clxxxxxxx
-                     */
-                    id?: string;
-                    /**
-                     * example:
-                     * USER
-                     */
-                    name?: "ADMIN" | "USER_MANAGER" | "FONT_MANAGER" | "USER";
-                    /**
-                     * example:
-                     * 普通用户，基础权限
-                     */
-                    description?: string | null;
-                    /**
-                     * example:
-                     * true
-                     */
-                    isSystem?: boolean;
-                    permissions?: {
-                        permission?: string;
-                    }[];
-                };
-                /**
-                 * 用户状态
-                 * example:
-                 * ACTIVE
-                 */
-                status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-                /**
-                 * 用户手机号（可能未绑定）
-                 * example:
-                 * 13800138000
-                 */
-                phone?: {
-                    [key: string]: any;
-                } | null;
-                /**
-                 * 手机号是否已验证
-                 * example:
-                 * false
-                 */
-                phoneVerified?: boolean;
-                /**
-                 * 微信 OpenID
-                 * example:
-                 * oXYZ123...
-                 */
-                wechatId?: {
-                    [key: string]: any;
-                } | null;
-                /**
-                 * 登录方式 (LOCAL | WECHAT)
-                 * example:
-                 * LOCAL
-                 */
-                provider?: string;
-                /**
-                 * 是否已设置密码
-                 * example:
-                 * true
-                 */
-                hasPassword?: boolean;
+            data: {
+                [key: string]: any;
             };
+            /**
+             * 响应时间戳
+             * example:
+             * 2025-12-12T03:34:55.801Z
+             */
+            timestamp: string;
         }
         export interface BatchCacheOperationDto {
             /**
@@ -298,8 +225,6 @@ declare namespace Components {
              */
             state: string;
         }
-        export interface Buffer {
-        }
         export interface CacheCleanupDto {
             /**
              * 缓存级别
@@ -309,6 +234,12 @@ declare namespace Components {
              * 模式（支持通配符）
              */
             pattern?: string;
+        }
+        export interface CacheCleanupResponseDto {
+            /**
+             * 提示消息
+             */
+            message: string;
         }
         export interface CacheMonitoringSummaryDto {
             /**
@@ -338,6 +269,22 @@ declare namespace Components {
              */
             timestamp: string; // date-time
         }
+        export interface CacheOperationDto {
+            /**
+             * 缓存键
+             */
+            key: string;
+            /**
+             * 缓存值
+             */
+            value?: {
+                [key: string]: any;
+            };
+            /**
+             * TTL（秒）
+             */
+            ttl?: number;
+        }
         export interface CacheRefreshDto {
             /**
              * 缓存键
@@ -347,6 +294,33 @@ declare namespace Components {
              * 是否强制刷新
              */
             force?: boolean;
+        }
+        export interface CacheStatsResponseDto {
+            /**
+             * 提示消息
+             */
+            message: string;
+            /**
+             * 缓存统计数据
+             */
+            data: {
+                /**
+                 * 缓存条目数
+                 */
+                size: number;
+                /**
+                 * 命中次数
+                 */
+                hits: number;
+                /**
+                 * 未命中次数
+                 */
+                misses: number;
+                /**
+                 * 命中率
+                 */
+                hitRate: number;
+            };
         }
         export interface CacheWarmupConfigDto {
             /**
@@ -376,7 +350,7 @@ declare namespace Components {
              */
             warnings: string[];
         }
-        export type CadDownloadFormat = string;
+        export type CadDownloadFormat = "dwg" | "dxf" | "mxweb" | "pdf";
         export interface ChangePasswordApiResponseDto {
             /**
              * 响应状态码
@@ -525,6 +499,60 @@ declare namespace Components {
              * false
              */
             skipIfExists?: boolean;
+        }
+        export interface CreatePolicyDto {
+            /**
+             * 策略类型
+             * example:
+             * TIME
+             */
+            type: "TIME" | "IP" | "DEVICE";
+            /**
+             * 策略名称
+             * example:
+             * 工作时间限制
+             */
+            name: string;
+            /**
+             * 策略描述
+             * example:
+             * 仅允许在工作时间 9:00-18:00 访问
+             */
+            description?: string;
+            /**
+             * 策略配置
+             * example:
+             * {
+             *   "startTime": "09:00",
+             *   "endTime": "18:00",
+             *   "allowedDays": [
+             *     1,
+             *     2,
+             *     3,
+             *     4,
+             *     5
+             *   ]
+             * }
+             */
+            config: {
+                [key: string]: any;
+            };
+            /**
+             * 关联的权限
+             * example:
+             * [
+             *   "SYSTEM_USER_DELETE"
+             * ]
+             */
+            permissions: /* 系统权限枚举 */ SystemPermission[];
+            /**
+             * 是否启用
+             */
+            enabled?: boolean;
+            /**
+             * 优先级（数值越大优先级越高）
+             */
+            priority?: number;
         }
         export interface CreateProjectDto {
             /**
@@ -749,11 +777,9 @@ declare namespace Components {
              */
             message: string;
             /**
-             * 文件内容
+             * 文件内容（Base64 编码）
              */
-            content?: {
-                [key: string]: any;
-            };
+            content?: string;
         }
         export interface FileExistResponseDto {
             /**
@@ -1154,6 +1180,54 @@ declare namespace Components {
              */
             permissions: string[];
         }
+        export interface PolicyResponseDto {
+            /**
+             * 策略 ID
+             */
+            id: string;
+            /**
+             * 策略类型
+             */
+            type: "TIME" | "IP" | "DEVICE";
+            /**
+             * 策略名称
+             */
+            name: string;
+            /**
+             * 策略描述
+             */
+            description?: string;
+            /**
+             * 策略配置
+             */
+            config: {
+                [key: string]: any;
+            };
+            /**
+             * 关联的权限
+             */
+            permissions: /* 系统权限枚举 */ SystemPermission[];
+            /**
+             * 是否启用
+             */
+            enabled: boolean;
+            /**
+             * 优先级
+             */
+            priority?: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string; // date-time
+            /**
+             * 更新时间
+             */
+            updatedAt: string; // date-time
+        }
+        /**
+         * 策略类型
+         */
+        export type PolicyType = "TIME" | "IP" | "DEVICE";
         export interface PreloadingDataDto {
             /**
              * 是否为图纸
@@ -1767,6 +1841,20 @@ declare namespace Components {
              */
             updatedAt: string; // date-time
         }
+        export interface SaveLibraryAsDto {
+            /**
+             * mxweb 文件
+             */
+            file: string; // binary
+            /**
+             * 目标父节点ID
+             */
+            targetParentId: string;
+            /**
+             * 文件名（不含扩展名）
+             */
+            fileName?: string;
+        }
         export interface SaveLibraryNodeDto {
             /**
              * 要保存的文件
@@ -2065,6 +2153,58 @@ declare namespace Components {
              */
             status?: "ACTIVE" | "ARCHIVED" | "DELETED";
         }
+        export interface UpdatePolicyDto {
+            /**
+             * 策略名称
+             * example:
+             * 工作时间限制
+             */
+            name?: string;
+            /**
+             * 策略描述
+             * example:
+             * 仅允许在工作时间 9:00-18:00 访问
+             */
+            description?: string;
+            /**
+             * 策略配置
+             * example:
+             * {
+             *   "startTime": "09:00",
+             *   "endTime": "18:00",
+             *   "allowedDays": [
+             *     1,
+             *     2,
+             *     3,
+             *     4,
+             *     5
+             *   ]
+             * }
+             */
+            config?: {
+                [key: string]: any;
+            };
+            /**
+             * 关联的权限
+             * example:
+             * [
+             *   "SYSTEM_USER_DELETE"
+             * ]
+             */
+            permissions?: /* 系统权限枚举 */ SystemPermission[];
+            /**
+             * 是否启用
+             */
+            enabled?: boolean;
+            /**
+             * 优先级
+             */
+            priority?: number;
+            /**
+             * 策略类型
+             */
+            type?: "TIME" | "IP" | "DEVICE";
+        }
         export interface UpdateProjectRoleDto {
             /**
              * 角色名称
@@ -2184,6 +2324,14 @@ declare namespace Components {
              */
             status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
         }
+        export interface UpdateUserStatusDto {
+            /**
+             * 用户状态
+             * example:
+             * ACTIVE
+             */
+            status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+        }
         export interface UpdateWarmupConfigDto {
             /**
              * 是否启用预热
@@ -2294,6 +2442,12 @@ declare namespace Components {
                  */
                 fileName: string;
             };
+        }
+        export interface UserCacheClearResponseDto {
+            /**
+             * 提示消息
+             */
+            message: string;
         }
         export interface UserCleanupStatsResponseDto {
             /**
@@ -2433,106 +2587,6 @@ declare namespace Components {
                 usagePercent: number;
             };
         }
-        export interface UserDto {
-            /**
-             * 用户ID
-             * example:
-             * 123e4567-e89b-12d3-a456-426614174000
-             */
-            id: string;
-            /**
-             * 用户邮箱（可能未绑定）
-             * example:
-             * user@example.com
-             */
-            email?: string | null;
-            /**
-             * 用户名
-             * example:
-             * username
-             */
-            username: string;
-            /**
-             * 昵称
-             * example:
-             * 用户昵称
-             */
-            nickname?: string;
-            /**
-             * 头像URL
-             * example:
-             * https://example.com/avatar.jpg
-             */
-            avatar?: string;
-            /**
-             * 用户角色
-             */
-            role: {
-                /**
-                 * example:
-                 * clxxxxxxx
-                 */
-                id?: string;
-                /**
-                 * example:
-                 * USER
-                 */
-                name?: "ADMIN" | "USER_MANAGER" | "FONT_MANAGER" | "USER";
-                /**
-                 * example:
-                 * 普通用户，基础权限
-                 */
-                description?: string | null;
-                /**
-                 * example:
-                 * true
-                 */
-                isSystem?: boolean;
-                permissions?: {
-                    permission?: string;
-                }[];
-            };
-            /**
-             * 用户状态
-             * example:
-             * ACTIVE
-             */
-            status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-            /**
-             * 用户手机号（可能未绑定）
-             * example:
-             * 13800138000
-             */
-            phone?: {
-                [key: string]: any;
-            } | null;
-            /**
-             * 手机号是否已验证
-             * example:
-             * false
-             */
-            phoneVerified?: boolean;
-            /**
-             * 微信 OpenID
-             * example:
-             * oXYZ123...
-             */
-            wechatId?: {
-                [key: string]: any;
-            } | null;
-            /**
-             * 登录方式 (LOCAL | WECHAT)
-             * example:
-             * LOCAL
-             */
-            provider?: string;
-            /**
-             * 是否已设置密码
-             * example:
-             * true
-             */
-            hasPassword?: boolean;
-        }
         export interface UserListResponseDto {
             /**
              * 用户列表
@@ -2554,6 +2608,35 @@ declare namespace Components {
              * 总页数
              */
             totalPages: number;
+        }
+        export interface UserPermissionInfoDto {
+            /**
+             * 用户角色
+             */
+            userRole: string;
+            /**
+             * 权限列表
+             */
+            permissions: string[];
+        }
+        export interface UserPermissionsResponseDto {
+            /**
+             * 提示消息
+             */
+            message: string;
+            /**
+             * 用户权限信息
+             */
+            data: {
+                /**
+                 * 用户角色
+                 */
+                userRole: string;
+                /**
+                 * 权限列表
+                 */
+                permissions: string[];
+            };
         }
         export interface UserProfileResponseDto {
             /**
@@ -2881,6 +2964,11 @@ declare namespace Components {
     }
 }
 declare namespace Paths {
+    namespace AdminControllerCleanupCache {
+        namespace Responses {
+            export type $200 = Components.Schemas.CacheCleanupResponseDto;
+        }
+    }
     namespace AdminControllerCleanupStorage {
         namespace Parameters {
             export type DelayDays = number;
@@ -2893,12 +2981,45 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminControllerClearUserCache {
+        namespace Parameters {
+            export type UserId = string;
+        }
+        export interface PathParameters {
+            userId: Parameters.UserId;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.UserCacheClearResponseDto;
+        }
+    }
     namespace AdminControllerGetAdminStats {
         namespace Responses {
             export type $200 = Components.Schemas.AdminStatsResponseDto;
         }
     }
+    namespace AdminControllerGetCacheStats {
+        namespace Responses {
+            export type $200 = Components.Schemas.CacheStatsResponseDto;
+        }
+    }
     namespace AdminControllerGetCleanupStats {
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
+    namespace AdminControllerGetUserPermissions {
+        namespace Parameters {
+            export type UserId = string;
+        }
+        export interface PathParameters {
+            userId: Parameters.UserId;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.UserPermissionsResponseDto;
+        }
+    }
+    namespace AppControllerGetHello {
         namespace Responses {
             export interface $200 {
             }
@@ -3374,6 +3495,18 @@ declare namespace Paths {
             }
         }
     }
+    namespace CacheMonitorControllerDeleteByPattern {
+        namespace Parameters {
+            export type Pattern = string;
+        }
+        export interface QueryParameters {
+            pattern: Parameters.Pattern;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
     namespace CacheMonitorControllerDeleteValue {
         namespace Parameters {
             export type Key = string;
@@ -3441,6 +3574,24 @@ declare namespace Paths {
             export type $200 = Components.Schemas.SizeTrendDto;
         }
     }
+    namespace CacheMonitorControllerGetStats {
+        namespace Parameters {
+            export type HotDataLimit = number;
+            export type IncludeHotData = boolean;
+            export type IncludePerformance = boolean;
+            export type Level = "L1" | "L2" | "L3";
+        }
+        export interface QueryParameters {
+            level?: Parameters.Level;
+            includePerformance?: Parameters.IncludePerformance;
+            includeHotData?: Parameters.IncludeHotData;
+            hotDataLimit?: Parameters.HotDataLimit;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
     namespace CacheMonitorControllerGetSummary {
         namespace Responses {
             export type $200 = Components.Schemas.CacheMonitoringSummaryDto;
@@ -3486,6 +3637,13 @@ declare namespace Paths {
             }
         }
     }
+    namespace CacheMonitorControllerSetValue {
+        export type RequestBody = Components.Schemas.CacheOperationDto;
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
     namespace CacheMonitorControllerTriggerWarmup {
         export type RequestBody = Components.Schemas.TriggerWarmupDto;
         namespace Responses {
@@ -3519,6 +3677,41 @@ declare namespace Paths {
             }
         }
     }
+    namespace FileSystemControllerAddProjectMembersBatch {
+        namespace Parameters {
+            export type ProjectId = string;
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
+        }
+        export interface RequestBody {
+            /**
+             * 要添加的成员列表
+             */
+            members: {
+                /**
+                 * 用户ID
+                 */
+                userId?: string;
+                /**
+                 * 项目角色ID
+                 */
+                projectRoleId?: string;
+            }[];
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace FileSystemControllerCheckProjectPermission {
         namespace Parameters {
             export type Permission = /* 权限名称 */ Components.Schemas.ProjectPermissionEnum;
@@ -3532,6 +3725,17 @@ declare namespace Paths {
         }
         namespace Responses {
             export type $200 = Components.Schemas.PermissionCheckResponseDto;
+        }
+    }
+    namespace FileSystemControllerClearProjectTrash {
+        namespace Parameters {
+            export type ProjectId = string;
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.OperationSuccessDto;
         }
     }
     namespace FileSystemControllerClearTrash {
@@ -3605,6 +3809,23 @@ declare namespace Paths {
         }
         export interface PathParameters {
             nodeId: Parameters.NodeId;
+        }
+        export interface QueryParameters {
+            permanently: Parameters.Permanently;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.OperationSuccessDto;
+            export interface $404 {
+            }
+        }
+    }
+    namespace FileSystemControllerDeleteProject {
+        namespace Parameters {
+            export type Permanently = boolean;
+            export type ProjectId = string;
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
         }
         export interface QueryParameters {
             permanently: Parameters.Permanently;
@@ -3708,6 +3929,29 @@ declare namespace Paths {
             export type $200 = Components.Schemas.NodeListResponseDto;
             export interface $404 {
             }
+        }
+    }
+    namespace FileSystemControllerGetDeletedProjects {
+        namespace Parameters {
+            export type Filter = Components.Schemas.ProjectFilterType;
+            export type Limit = number;
+            export type Page = number;
+            export type ProjectStatus = Components.Schemas.ProjectStatus;
+            export type Search = string;
+            export type SortBy = string;
+            export type SortOrder = "asc" | "desc";
+        }
+        export interface QueryParameters {
+            search?: Parameters.Search;
+            projectStatus?: Parameters.ProjectStatus;
+            page?: Parameters.Page;
+            limit?: Parameters.Limit;
+            sortBy?: Parameters.SortBy;
+            sortOrder?: Parameters.SortOrder;
+            filter?: Parameters.Filter;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.ProjectListResponseDto;
         }
     }
     namespace FileSystemControllerGetNode {
@@ -3873,6 +4117,19 @@ declare namespace Paths {
             export type $200 = Components.Schemas.TrashListResponseDto;
         }
     }
+    namespace FileSystemControllerGetUserPersonalSpace {
+        namespace Parameters {
+            export type UserId = string;
+        }
+        export interface PathParameters {
+            userId: Parameters.UserId;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.FileSystemNodeDto;
+            export interface $403 {
+            }
+        }
+    }
     namespace FileSystemControllerGetUserProjectPermissions {
         namespace Parameters {
             export type ProjectId = string;
@@ -4007,6 +4264,32 @@ declare namespace Paths {
             }
         }
     }
+    namespace FileSystemControllerTransferProject {
+        namespace Parameters {
+            export type ProjectId = string;
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
+        }
+        export interface RequestBody {
+            /**
+             * 新所有者用户ID
+             */
+            newOwnerId: string;
+        }
+        namespace Responses {
+            export interface $200 {
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace FileSystemControllerUpdateNode {
         namespace Parameters {
             export type NodeId = string;
@@ -4017,6 +4300,20 @@ declare namespace Paths {
         export type RequestBody = Components.Schemas.UpdateNodeDto;
         namespace Responses {
             export type $200 = Components.Schemas.FileSystemNodeDto;
+            export interface $404 {
+            }
+        }
+    }
+    namespace FileSystemControllerUpdateProject {
+        namespace Parameters {
+            export type ProjectId = string;
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
+        }
+        export type RequestBody = Components.Schemas.UpdateNodeDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.ProjectDto;
             export interface $404 {
             }
         }
@@ -4046,6 +4343,41 @@ declare namespace Paths {
         }
         namespace Responses {
             export type $200 = Components.Schemas.ProjectMemberDto;
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace FileSystemControllerUpdateProjectMembersBatch {
+        namespace Parameters {
+            export type ProjectId = string;
+        }
+        export interface PathParameters {
+            projectId: Parameters.ProjectId;
+        }
+        export interface RequestBody {
+            /**
+             * 要更新的成员列表
+             */
+            members: {
+                /**
+                 * 用户ID
+                 */
+                userId?: string;
+                /**
+                 * 项目角色ID
+                 */
+                projectRoleId?: string;
+            }[];
+        }
+        namespace Responses {
+            export interface $200 {
+            }
             export interface $400 {
             }
             export interface $401 {
@@ -4229,6 +4561,109 @@ declare namespace Paths {
             export interface $200 {
             }
             export interface $503 {
+            }
+        }
+    }
+    namespace HealthControllerCheckFull {
+        namespace Responses {
+            export interface $200 {
+                /**
+                 * example:
+                 * ok
+                 */
+                status?: string;
+                /**
+                 * example:
+                 * {
+                 *   "database": {
+                 *     "status": "up"
+                 *   }
+                 * }
+                 */
+                info?: {
+                    [name: string]: {
+                        [name: string]: any;
+                        status: string;
+                    };
+                } | null;
+                /**
+                 * example:
+                 * {}
+                 */
+                error?: {
+                    [name: string]: {
+                        [name: string]: any;
+                        status: string;
+                    };
+                } | null;
+                /**
+                 * example:
+                 * {
+                 *   "database": {
+                 *     "status": "up"
+                 *   }
+                 * }
+                 */
+                details?: {
+                    [name: string]: {
+                        [name: string]: any;
+                        status: string;
+                    };
+                };
+            }
+            export interface $503 {
+                /**
+                 * example:
+                 * error
+                 */
+                status?: string;
+                /**
+                 * example:
+                 * {
+                 *   "database": {
+                 *     "status": "up"
+                 *   }
+                 * }
+                 */
+                info?: {
+                    [name: string]: {
+                        [name: string]: any;
+                        status: string;
+                    };
+                } | null;
+                /**
+                 * example:
+                 * {
+                 *   "redis": {
+                 *     "status": "down",
+                 *     "message": "Could not connect"
+                 *   }
+                 * }
+                 */
+                error?: {
+                    [name: string]: {
+                        [name: string]: any;
+                        status: string;
+                    };
+                } | null;
+                /**
+                 * example:
+                 * {
+                 *   "database": {
+                 *     "status": "up"
+                 *   },
+                 *   "redis": {
+                 *     "status": "down",
+                 *     "message": "Could not connect"
+                 *   }
+                 * }
+                 */
+                details?: {
+                    [name: string]: {
+                        [name: string]: any;
+                        status: string;
+                    };
+                };
             }
         }
     }
@@ -4630,6 +5065,13 @@ declare namespace Paths {
             export type $200 = Components.Schemas.FileSystemNodeDto;
         }
     }
+    namespace LibraryControllerSaveBlockAs {
+        export type RequestBody = Components.Schemas.SaveLibraryAsDto;
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
     namespace LibraryControllerSaveBlockNode {
         namespace Parameters {
             export type NodeId = string;
@@ -4638,6 +5080,13 @@ declare namespace Paths {
             nodeId: Parameters.NodeId;
         }
         export type RequestBody = Components.Schemas.SaveLibraryNodeDto;
+        namespace Responses {
+            export interface $200 {
+            }
+        }
+    }
+    namespace LibraryControllerSaveDrawingAs {
+        export type RequestBody = Components.Schemas.SaveLibraryAsDto;
         namespace Responses {
             export interface $200 {
             }
@@ -4858,6 +5307,82 @@ declare namespace Paths {
             }
         }
     }
+    namespace PolicyConfigControllerCreatePolicy {
+        export type RequestBody = Components.Schemas.CreatePolicyDto;
+        namespace Responses {
+            export type $201 = Components.Schemas.PolicyResponseDto;
+            export interface $403 {
+            }
+        }
+    }
+    namespace PolicyConfigControllerDeletePolicy {
+        namespace Parameters {
+            export type Id = string;
+        }
+        export interface PathParameters {
+            id: Parameters.Id;
+        }
+        namespace Responses {
+            export interface $204 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace PolicyConfigControllerDisablePolicy {
+        namespace Parameters {
+            export type Id = string;
+        }
+        export interface PathParameters {
+            id: Parameters.Id;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.PolicyResponseDto;
+        }
+    }
+    namespace PolicyConfigControllerEnablePolicy {
+        namespace Parameters {
+            export type Id = string;
+        }
+        export interface PathParameters {
+            id: Parameters.Id;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.PolicyResponseDto;
+        }
+    }
+    namespace PolicyConfigControllerGetAllPolicies {
+        namespace Responses {
+            export type $200 = Components.Schemas.PolicyResponseDto[];
+        }
+    }
+    namespace PolicyConfigControllerGetPolicy {
+        namespace Parameters {
+            export type Id = string;
+        }
+        export interface PathParameters {
+            id: Parameters.Id;
+        }
+        namespace Responses {
+            export type $200 = Components.Schemas.PolicyResponseDto;
+            export interface $404 {
+            }
+        }
+    }
+    namespace PolicyConfigControllerUpdatePolicy {
+        namespace Parameters {
+            export type Id = string;
+        }
+        export interface PathParameters {
+            id: Parameters.Id;
+        }
+        export type RequestBody = Components.Schemas.UpdatePolicyDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.PolicyResponseDto;
+            export interface $404 {
+            }
+        }
+    }
     namespace PublicFileControllerAccessFile {
         namespace Parameters {
             export type Filename = string;
@@ -4865,6 +5390,18 @@ declare namespace Paths {
         }
         export interface PathParameters {
             hash: Parameters.Hash;
+            filename: Parameters.Filename;
+        }
+        namespace Responses {
+            export interface $404 {
+            }
+        }
+    }
+    namespace PublicFileControllerAccessFileByHashPattern {
+        namespace Parameters {
+            export type Filename = string;
+        }
+        export interface PathParameters {
             filename: Parameters.Filename;
         }
         namespace Responses {
@@ -5402,6 +5939,20 @@ declare namespace Paths {
             }
         }
     }
+    namespace UsersControllerUpdateStatus {
+        namespace Parameters {
+            export type Id = string;
+        }
+        export interface PathParameters {
+            id: Parameters.Id;
+        }
+        export type RequestBody = Components.Schemas.UpdateUserStatusDto;
+        namespace Responses {
+            export type $200 = Components.Schemas.UserResponseDto;
+            export interface $404 {
+            }
+        }
+    }
     namespace VersionControlControllerGetFileContentAtRevision {
         namespace Parameters {
             export type FilePath = string;
@@ -5446,10 +5997,45 @@ declare namespace Paths {
             }
         }
     }
+    namespace VersionControlControllerListDirectoryAtRevision {
+        namespace Parameters {
+            export type DirectoryPath = string;
+            export type ProjectId = string;
+            export type Revision = number;
+        }
+        export interface PathParameters {
+            revision: Parameters.Revision;
+        }
+        export interface QueryParameters {
+            projectId: Parameters.ProjectId;
+            directoryPath: Parameters.DirectoryPath;
+        }
+        namespace Responses {
+            export interface $200 {
+                success?: boolean;
+                message?: string;
+                files?: string[];
+            }
+            export interface $400 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+        }
+    }
 }
 
 
 export interface OperationMethods {
+  /**
+   * AppController_getHello
+   */
+  'AppController_getHello'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AppControllerGetHello.Responses.$200>
   /**
    * CacheMonitorController_getSummary - 获取缓存监控摘要
    */
@@ -5458,6 +6044,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetSummary.Responses.$200>
+  /**
+   * CacheMonitorController_getStats - 获取缓存统计信息
+   */
+  'CacheMonitorController_getStats'(
+    parameters?: Parameters<Paths.CacheMonitorControllerGetStats.QueryParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.CacheMonitorControllerGetStats.Responses.$200>
   /**
    * CacheMonitorController_getHealthStatus - 获取缓存健康状态
    */
@@ -5515,6 +6109,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerGetValue.Responses.$200>
   /**
+   * CacheMonitorController_setValue - 设置缓存值
+   */
+  'CacheMonitorController_setValue'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.CacheMonitorControllerSetValue.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.CacheMonitorControllerSetValue.Responses.$200>
+  /**
    * CacheMonitorController_deleteValue - 删除缓存
    */
   'CacheMonitorController_deleteValue'(
@@ -5522,6 +6124,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.CacheMonitorControllerDeleteValue.Responses.$200>
+  /**
+   * CacheMonitorController_deleteByPattern - 根据模式删除缓存
+   */
+  'CacheMonitorController_deleteByPattern'(
+    parameters?: Parameters<Paths.CacheMonitorControllerDeleteByPattern.QueryParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.CacheMonitorControllerDeleteByPattern.Responses.$200>
   /**
    * CacheMonitorController_deleteValues - 批量删除缓存
    */
@@ -6003,6 +6613,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UsersControllerRestore.Responses.$200>
   /**
+   * UsersController_updateStatus - 更新用户状态
+   */
+  'UsersController_updateStatus'(
+    parameters?: Parameters<Paths.UsersControllerUpdateStatus.PathParameters> | null,
+    data?: Paths.UsersControllerUpdateStatus.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UsersControllerUpdateStatus.Responses.$200>
+  /**
    * UsersController_deleteImmediately - 立即注销指定用户账户（软删除 + 立即清理）
    */
   'UsersController_deleteImmediately'(
@@ -6219,6 +6837,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerCreateProject.Responses.$201>
   /**
+   * FileSystemController_getDeletedProjects - 获取已删除项目列表
+   */
+  'FileSystemController_getDeletedProjects'(
+    parameters?: Parameters<Paths.FileSystemControllerGetDeletedProjects.QueryParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerGetDeletedProjects.Responses.$200>
+  /**
    * FileSystemController_getPersonalSpace - 获取当前用户的私人空间
    */
   'FileSystemController_getPersonalSpace'(
@@ -6227,6 +6853,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   /**
+   * FileSystemController_getUserPersonalSpace - 获取指定用户的私人空间（管理员）
+   */
+  'FileSystemController_getUserPersonalSpace'(
+    parameters?: Parameters<Paths.FileSystemControllerGetUserPersonalSpace.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerGetUserPersonalSpace.Responses.$200>
+  /**
    * FileSystemController_getProject - 获取项目详情
    */
   'FileSystemController_getProject'(
@@ -6234,6 +6868,22 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetProject.Responses.$200>
+  /**
+   * FileSystemController_updateProject - 更新项目信息
+   */
+  'FileSystemController_updateProject'(
+    parameters?: Parameters<Paths.FileSystemControllerUpdateProject.PathParameters> | null,
+    data?: Paths.FileSystemControllerUpdateProject.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerUpdateProject.Responses.$200>
+  /**
+   * FileSystemController_deleteProject - 删除项目
+   */
+  'FileSystemController_deleteProject'(
+    parameters?: Parameters<Paths.FileSystemControllerDeleteProject.QueryParameters & Paths.FileSystemControllerDeleteProject.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerDeleteProject.Responses.$200>
   /**
    * FileSystemController_getTrash - 获取回收站列表
    */
@@ -6274,6 +6924,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerGetProjectTrash.Responses.$200>
+  /**
+   * FileSystemController_clearProjectTrash - 清空项目回收站
+   */
+  'FileSystemController_clearProjectTrash'(
+    parameters?: Parameters<Paths.FileSystemControllerClearProjectTrash.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerClearProjectTrash.Responses.$200>
   /**
    * FileSystemController_createNode - 创建节点（文件或文件夹）
    */
@@ -6403,6 +7061,30 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.FileSystemControllerRemoveProjectMember.Responses.$200>
   /**
+   * FileSystemController_transferProject - 转移项目所有权
+   */
+  'FileSystemController_transferProject'(
+    parameters?: Parameters<Paths.FileSystemControllerTransferProject.PathParameters> | null,
+    data?: Paths.FileSystemControllerTransferProject.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerTransferProject.Responses.$200>
+  /**
+   * FileSystemController_addProjectMembersBatch - 批量添加项目成员
+   */
+  'FileSystemController_addProjectMembersBatch'(
+    parameters?: Parameters<Paths.FileSystemControllerAddProjectMembersBatch.PathParameters> | null,
+    data?: Paths.FileSystemControllerAddProjectMembersBatch.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerAddProjectMembersBatch.Responses.$201>
+  /**
+   * FileSystemController_updateProjectMembersBatch - 批量更新项目成员角色
+   */
+  'FileSystemController_updateProjectMembersBatch'(
+    parameters?: Parameters<Paths.FileSystemControllerUpdateProjectMembersBatch.PathParameters> | null,
+    data?: Paths.FileSystemControllerUpdateProjectMembersBatch.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.FileSystemControllerUpdateProjectMembersBatch.Responses.$200>
+  /**
    * FileSystemController_getThumbnail - 获取文件节点缩略图
    */
   'FileSystemController_getThumbnail'(
@@ -6489,6 +7171,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.VersionControlControllerGetFileContentAtRevision.Responses.$200>
+  /**
+   * VersionControlController_listDirectoryAtRevision - 列出指定版本目录下的文件列表
+   */
+  'VersionControlController_listDirectoryAtRevision'(
+    parameters?: Parameters<Paths.VersionControlControllerListDirectoryAtRevision.QueryParameters & Paths.VersionControlControllerListDirectoryAtRevision.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.VersionControlControllerListDirectoryAtRevision.Responses.$200>
   /**
    * FontsController_getFonts - 获取字体列表
    * 
@@ -6658,6 +7348,38 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminControllerGetAdminStats.Responses.$200>
   /**
+   * AdminController_getCacheStats - 获取权限缓存统计
+   */
+  'AdminController_getCacheStats'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminControllerGetCacheStats.Responses.$200>
+  /**
+   * AdminController_cleanupCache - 清理权限缓存
+   */
+  'AdminController_cleanupCache'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminControllerCleanupCache.Responses.$200>
+  /**
+   * AdminController_clearUserCache - 清除用户权限缓存
+   */
+  'AdminController_clearUserCache'(
+    parameters?: Parameters<Paths.AdminControllerClearUserCache.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminControllerClearUserCache.Responses.$200>
+  /**
+   * AdminController_getUserPermissions - 获取用户权限信息
+   */
+  'AdminController_getUserPermissions'(
+    parameters?: Parameters<Paths.AdminControllerGetUserPermissions.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminControllerGetUserPermissions.Responses.$200>
+  /**
    * AdminController_cleanupStorage - 手动触发存储清理
    */
   'AdminController_cleanupStorage'(
@@ -6682,13 +7404,21 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
   /**
-   * HealthController_publicHealth - 服务健康检查（公开）
+   * HealthController_publicHealth - 公开健康检查（轻量级）
    */
   'HealthController_publicHealth'(
     parameters?: Parameters<UnknownParamsObject> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerPublicHealth.Responses.$200>
+  /**
+   * HealthController_checkFull - 系统健康检查（详细）
+   */
+  'HealthController_checkFull'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.HealthControllerCheckFull.Responses.$200>
   /**
    * HealthController_check - 系统健康检查（详细）
    */
@@ -6714,10 +7444,74 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.HealthControllerCheckStorage.Responses.$200>
   /**
+   * PolicyConfigController_getAllPolicies - 获取所有策略配置
+   */
+  'PolicyConfigController_getAllPolicies'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerGetAllPolicies.Responses.$200>
+  /**
+   * PolicyConfigController_createPolicy - 创建策略配置
+   */
+  'PolicyConfigController_createPolicy'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.PolicyConfigControllerCreatePolicy.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerCreatePolicy.Responses.$201>
+  /**
+   * PolicyConfigController_getPolicy - 查询策略配置
+   */
+  'PolicyConfigController_getPolicy'(
+    parameters?: Parameters<Paths.PolicyConfigControllerGetPolicy.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerGetPolicy.Responses.$200>
+  /**
+   * PolicyConfigController_updatePolicy - 更新策略配置
+   */
+  'PolicyConfigController_updatePolicy'(
+    parameters?: Parameters<Paths.PolicyConfigControllerUpdatePolicy.PathParameters> | null,
+    data?: Paths.PolicyConfigControllerUpdatePolicy.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerUpdatePolicy.Responses.$200>
+  /**
+   * PolicyConfigController_deletePolicy - 删除策略配置
+   */
+  'PolicyConfigController_deletePolicy'(
+    parameters?: Parameters<Paths.PolicyConfigControllerDeletePolicy.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerDeletePolicy.Responses.$204>
+  /**
+   * PolicyConfigController_enablePolicy - 启用策略配置
+   */
+  'PolicyConfigController_enablePolicy'(
+    parameters?: Parameters<Paths.PolicyConfigControllerEnablePolicy.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerEnablePolicy.Responses.$200>
+  /**
+   * PolicyConfigController_disablePolicy - 禁用策略配置
+   */
+  'PolicyConfigController_disablePolicy'(
+    parameters?: Parameters<Paths.PolicyConfigControllerDisablePolicy.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.PolicyConfigControllerDisablePolicy.Responses.$200>
+  /**
    * PublicFileController_accessFile - 通过文件哈希访问目录下的文件
    */
   'PublicFileController_accessFile'(
     parameters?: Parameters<Paths.PublicFileControllerAccessFile.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<any>
+  /**
+   * PublicFileController_accessFileByHashPattern - 在 uploads 目录下查找 mxweb 文件（平铺存储）
+   */
+  'PublicFileController_accessFileByHashPattern'(
+    parameters?: Parameters<Paths.PublicFileControllerAccessFileByHashPattern.PathParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<any>
@@ -6746,7 +7540,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.PublicFileControllerGetPreloadingData.Responses.$200>
   /**
-   * LibraryController_getDrawingLibrary - 获取图纸库详情
+   * LibraryController_getDrawingLibrary - Get drawing library details
    */
   'LibraryController_getDrawingLibrary'(
     parameters?: Parameters<UnknownParamsObject> | null,
@@ -6754,7 +7548,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingLibrary.Responses.$200>
   /**
-   * LibraryController_getDrawingCategories - 获取图纸库全部三级分类（一次请求）
+   * LibraryController_getDrawingCategories - Get all three-level categories of drawing library (single request)
    */
   'LibraryController_getDrawingCategories'(
     parameters?: Parameters<UnknownParamsObject> | null,
@@ -6762,7 +7556,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingCategories.Responses.$200>
   /**
-   * LibraryController_getDrawingChildren - 获取图纸库子节点列表
+   * LibraryController_getDrawingChildren - Get child nodes of drawing library
    */
   'LibraryController_getDrawingChildren'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingChildren.QueryParameters & Paths.LibraryControllerGetDrawingChildren.PathParameters> | null,
@@ -6770,7 +7564,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingChildren.Responses.$200>
   /**
-   * LibraryController_getDrawingAllFiles - 递归获取图纸库节点下的所有文件
+   * LibraryController_getDrawingAllFiles - Recursively get all files under drawing library node
    */
   'LibraryController_getDrawingAllFiles'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingAllFiles.QueryParameters & Paths.LibraryControllerGetDrawingAllFiles.PathParameters> | null,
@@ -6778,7 +7572,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingAllFiles.Responses.$200>
   /**
-   * LibraryController_getDrawingFile - 获取图纸库文件（统一入口）
+   * LibraryController_getDrawingFile - Serve drawing library file (unified entry)
    */
   'LibraryController_getDrawingFile'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingFile.PathParameters> | null,
@@ -6786,7 +7580,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<any>
   /**
-   * LibraryController_getDrawingNode - 获取图纸库节点详情
+   * LibraryController_getDrawingNode - Get drawing library node details
    */
   'LibraryController_getDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingNode.PathParameters> | null,
@@ -6794,7 +7588,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingNode.Responses.$200>
   /**
-   * LibraryController_renameDrawingNode - 重命名图纸库节点
+   * LibraryController_renameDrawingNode - Rename drawing library node
    */
   'LibraryController_renameDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerRenameDrawingNode.PathParameters> | null,
@@ -6802,7 +7596,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerRenameDrawingNode.Responses.$200>
   /**
-   * LibraryController_deleteDrawingNode - 删除图纸库节点
+   * LibraryController_deleteDrawingNode - Delete drawing library node
    */
   'LibraryController_deleteDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerDeleteDrawingNode.QueryParameters & Paths.LibraryControllerDeleteDrawingNode.PathParameters> | null,
@@ -6810,7 +7604,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDeleteDrawingNode.Responses.$200>
   /**
-   * LibraryController_downloadDrawingNode - 下载图纸库文件
+   * LibraryController_downloadDrawingNode - Download drawing library file (public)
    */
   'LibraryController_downloadDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerDownloadDrawingNode.PathParameters> | null,
@@ -6818,7 +7612,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDownloadDrawingNode.Responses.$200>
   /**
-   * LibraryController_getDrawingThumbnail - 获取图纸库文件缩略图
+   * LibraryController_getDrawingThumbnail - Get drawing library file thumbnail
    */
   'LibraryController_getDrawingThumbnail'(
     parameters?: Parameters<Paths.LibraryControllerGetDrawingThumbnail.PathParameters> | null,
@@ -6826,7 +7620,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetDrawingThumbnail.Responses.$200>
   /**
-   * LibraryController_saveDrawingNode - 覆盖保存图纸库文件
+   * LibraryController_saveDrawingNode - Overwrite save drawing library file
    */
   'LibraryController_saveDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerSaveDrawingNode.PathParameters> | null,
@@ -6834,7 +7628,15 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerSaveDrawingNode.Responses.$200>
   /**
-   * LibraryController_createDrawingFolder - 创建图纸库文件夹
+   * LibraryController_saveDrawingAs - Save-as drawing to drawing library
+   */
+  'LibraryController_saveDrawingAs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.LibraryControllerSaveDrawingAs.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.LibraryControllerSaveDrawingAs.Responses.$200>
+  /**
+   * LibraryController_createDrawingFolder - Create folder in drawing library
    */
   'LibraryController_createDrawingFolder'(
     parameters?: Parameters<UnknownParamsObject> | null,
@@ -6842,7 +7644,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerCreateDrawingFolder.Responses.$201>
   /**
-   * LibraryController_moveDrawingNode - 移动图纸库节点
+   * LibraryController_moveDrawingNode - Move drawing library node
    */
   'LibraryController_moveDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerMoveDrawingNode.PathParameters> | null,
@@ -6850,7 +7652,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerMoveDrawingNode.Responses.$200>
   /**
-   * LibraryController_copyDrawingNode - 复制图纸库节点
+   * LibraryController_copyDrawingNode - Copy drawing library node
    */
   'LibraryController_copyDrawingNode'(
     parameters?: Parameters<Paths.LibraryControllerCopyDrawingNode.PathParameters> | null,
@@ -6858,7 +7660,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerCopyDrawingNode.Responses.$201>
   /**
-   * LibraryController_getBlockLibrary - 获取图块库详情
+   * LibraryController_getBlockLibrary - Get block library details
    */
   'LibraryController_getBlockLibrary'(
     parameters?: Parameters<UnknownParamsObject> | null,
@@ -6866,7 +7668,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockLibrary.Responses.$200>
   /**
-   * LibraryController_getBlockCategories - 获取图块库全部三级分类（一次请求）
+   * LibraryController_getBlockCategories - Get all three-level categories of block library (single request)
    */
   'LibraryController_getBlockCategories'(
     parameters?: Parameters<UnknownParamsObject> | null,
@@ -6874,7 +7676,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockCategories.Responses.$200>
   /**
-   * LibraryController_getBlockChildren - 获取图块库子节点列表
+   * LibraryController_getBlockChildren - Get child nodes of block library
    */
   'LibraryController_getBlockChildren'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockChildren.QueryParameters & Paths.LibraryControllerGetBlockChildren.PathParameters> | null,
@@ -6882,7 +7684,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockChildren.Responses.$200>
   /**
-   * LibraryController_getBlockAllFiles - 递归获取图块库节点下的所有文件
+   * LibraryController_getBlockAllFiles - Recursively get all files under block library node
    */
   'LibraryController_getBlockAllFiles'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockAllFiles.QueryParameters & Paths.LibraryControllerGetBlockAllFiles.PathParameters> | null,
@@ -6890,7 +7692,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockAllFiles.Responses.$200>
   /**
-   * LibraryController_getBlockFile - 获取图块库文件（统一入口）
+   * LibraryController_getBlockFile - Serve block library file (unified entry)
    */
   'LibraryController_getBlockFile'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockFile.PathParameters> | null,
@@ -6898,7 +7700,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<any>
   /**
-   * LibraryController_getBlockNode - 获取图块库节点详情
+   * LibraryController_getBlockNode - Get block library node details
    */
   'LibraryController_getBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockNode.PathParameters> | null,
@@ -6906,7 +7708,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockNode.Responses.$200>
   /**
-   * LibraryController_renameBlockNode - 重命名图块库节点
+   * LibraryController_renameBlockNode - Rename block library node
    */
   'LibraryController_renameBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerRenameBlockNode.PathParameters> | null,
@@ -6914,7 +7716,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerRenameBlockNode.Responses.$200>
   /**
-   * LibraryController_deleteBlockNode - 删除图块库节点
+   * LibraryController_deleteBlockNode - Delete block library node
    */
   'LibraryController_deleteBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerDeleteBlockNode.QueryParameters & Paths.LibraryControllerDeleteBlockNode.PathParameters> | null,
@@ -6922,7 +7724,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDeleteBlockNode.Responses.$200>
   /**
-   * LibraryController_downloadBlockNode - 下载图块库文件
+   * LibraryController_downloadBlockNode - Download block library file (public)
    */
   'LibraryController_downloadBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerDownloadBlockNode.PathParameters> | null,
@@ -6930,7 +7732,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerDownloadBlockNode.Responses.$200>
   /**
-   * LibraryController_getBlockThumbnail - 获取图块库文件缩略图
+   * LibraryController_getBlockThumbnail - Get block library file thumbnail
    */
   'LibraryController_getBlockThumbnail'(
     parameters?: Parameters<Paths.LibraryControllerGetBlockThumbnail.PathParameters> | null,
@@ -6938,7 +7740,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerGetBlockThumbnail.Responses.$200>
   /**
-   * LibraryController_saveBlockNode - 覆盖保存图块库文件
+   * LibraryController_saveBlockNode - Overwrite save block library file
    */
   'LibraryController_saveBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerSaveBlockNode.PathParameters> | null,
@@ -6946,7 +7748,15 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerSaveBlockNode.Responses.$200>
   /**
-   * LibraryController_createBlockFolder - 创建图块库文件夹
+   * LibraryController_saveBlockAs - Save-as block to block library
+   */
+  'LibraryController_saveBlockAs'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.LibraryControllerSaveBlockAs.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.LibraryControllerSaveBlockAs.Responses.$200>
+  /**
+   * LibraryController_createBlockFolder - Create folder in block library
    */
   'LibraryController_createBlockFolder'(
     parameters?: Parameters<UnknownParamsObject> | null,
@@ -6954,7 +7764,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerCreateBlockFolder.Responses.$201>
   /**
-   * LibraryController_moveBlockNode - 移动图块库节点
+   * LibraryController_moveBlockNode - Move block library node
    */
   'LibraryController_moveBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerMoveBlockNode.PathParameters> | null,
@@ -6962,7 +7772,7 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.LibraryControllerMoveBlockNode.Responses.$200>
   /**
-   * LibraryController_copyBlockNode - 复制图块库节点
+   * LibraryController_copyBlockNode - Copy block library node
    */
   'LibraryController_copyBlockNode'(
     parameters?: Parameters<Paths.LibraryControllerCopyBlockNode.PathParameters> | null,
@@ -6972,6 +7782,16 @@ export interface OperationMethods {
 }
 
 export interface PathsDictionary {
+  ['/api/v1']: {
+    /**
+     * AppController_getHello
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AppControllerGetHello.Responses.$200>
+  }
   ['/api/v1/cache-monitor/summary']: {
     /**
      * CacheMonitorController_getSummary - 获取缓存监控摘要
@@ -6981,6 +7801,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetSummary.Responses.$200>
+  }
+  ['/api/v1/cache-monitor/stats']: {
+    /**
+     * CacheMonitorController_getStats - 获取缓存统计信息
+     */
+    'get'(
+      parameters?: Parameters<Paths.CacheMonitorControllerGetStats.QueryParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.CacheMonitorControllerGetStats.Responses.$200>
   }
   ['/api/v1/cache-monitor/health']: {
     /**
@@ -7052,6 +7882,14 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerGetValue.Responses.$200>
     /**
+     * CacheMonitorController_setValue - 设置缓存值
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.CacheMonitorControllerSetValue.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.CacheMonitorControllerSetValue.Responses.$200>
+    /**
      * CacheMonitorController_deleteValue - 删除缓存
      */
     'delete'(
@@ -7059,6 +7897,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.CacheMonitorControllerDeleteValue.Responses.$200>
+  }
+  ['/api/v1/cache-monitor/pattern']: {
+    /**
+     * CacheMonitorController_deleteByPattern - 根据模式删除缓存
+     */
+    'delete'(
+      parameters?: Parameters<Paths.CacheMonitorControllerDeleteByPattern.QueryParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.CacheMonitorControllerDeleteByPattern.Responses.$200>
   }
   ['/api/v1/cache-monitor/values']: {
     /**
@@ -7646,6 +8494,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UsersControllerRestore.Responses.$200>
   }
+  ['/api/v1/users/{id}/status']: {
+    /**
+     * UsersController_updateStatus - 更新用户状态
+     */
+    'patch'(
+      parameters?: Parameters<Paths.UsersControllerUpdateStatus.PathParameters> | null,
+      data?: Paths.UsersControllerUpdateStatus.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UsersControllerUpdateStatus.Responses.$200>
+  }
   ['/api/v1/users/{id}/delete-immediately']: {
     /**
      * UsersController_deleteImmediately - 立即注销指定用户账户（软删除 + 立即清理）
@@ -7898,6 +8756,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProjects.Responses.$200>
   }
+  ['/api/v1/file-system/projects/trash']: {
+    /**
+     * FileSystemController_getDeletedProjects - 获取已删除项目列表
+     */
+    'get'(
+      parameters?: Parameters<Paths.FileSystemControllerGetDeletedProjects.QueryParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerGetDeletedProjects.Responses.$200>
+  }
   ['/api/v1/file-system/personal-space']: {
     /**
      * FileSystemController_getPersonalSpace - 获取当前用户的私人空间
@@ -7908,6 +8776,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetPersonalSpace.Responses.$200>
   }
+  ['/api/v1/file-system/personal-space/by-user/{userId}']: {
+    /**
+     * FileSystemController_getUserPersonalSpace - 获取指定用户的私人空间（管理员）
+     */
+    'get'(
+      parameters?: Parameters<Paths.FileSystemControllerGetUserPersonalSpace.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerGetUserPersonalSpace.Responses.$200>
+  }
   ['/api/v1/file-system/projects/{projectId}']: {
     /**
      * FileSystemController_getProject - 获取项目详情
@@ -7917,6 +8795,22 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProject.Responses.$200>
+    /**
+     * FileSystemController_updateProject - 更新项目信息
+     */
+    'patch'(
+      parameters?: Parameters<Paths.FileSystemControllerUpdateProject.PathParameters> | null,
+      data?: Paths.FileSystemControllerUpdateProject.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerUpdateProject.Responses.$200>
+    /**
+     * FileSystemController_deleteProject - 删除项目
+     */
+    'delete'(
+      parameters?: Parameters<Paths.FileSystemControllerDeleteProject.QueryParameters & Paths.FileSystemControllerDeleteProject.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerDeleteProject.Responses.$200>
   }
   ['/api/v1/file-system/trash']: {
     /**
@@ -7965,6 +8859,14 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerGetProjectTrash.Responses.$200>
+    /**
+     * FileSystemController_clearProjectTrash - 清空项目回收站
+     */
+    'delete'(
+      parameters?: Parameters<Paths.FileSystemControllerClearProjectTrash.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerClearProjectTrash.Responses.$200>
   }
   ['/api/v1/file-system/nodes']: {
     /**
@@ -8118,6 +9020,34 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.FileSystemControllerRemoveProjectMember.Responses.$200>
   }
+  ['/api/v1/file-system/projects/{projectId}/transfer']: {
+    /**
+     * FileSystemController_transferProject - 转移项目所有权
+     */
+    'post'(
+      parameters?: Parameters<Paths.FileSystemControllerTransferProject.PathParameters> | null,
+      data?: Paths.FileSystemControllerTransferProject.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerTransferProject.Responses.$200>
+  }
+  ['/api/v1/file-system/projects/{projectId}/members/batch']: {
+    /**
+     * FileSystemController_addProjectMembersBatch - 批量添加项目成员
+     */
+    'post'(
+      parameters?: Parameters<Paths.FileSystemControllerAddProjectMembersBatch.PathParameters> | null,
+      data?: Paths.FileSystemControllerAddProjectMembersBatch.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerAddProjectMembersBatch.Responses.$201>
+    /**
+     * FileSystemController_updateProjectMembersBatch - 批量更新项目成员角色
+     */
+    'patch'(
+      parameters?: Parameters<Paths.FileSystemControllerUpdateProjectMembersBatch.PathParameters> | null,
+      data?: Paths.FileSystemControllerUpdateProjectMembersBatch.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.FileSystemControllerUpdateProjectMembersBatch.Responses.$200>
+  }
   ['/api/v1/file-system/nodes/{nodeId}/thumbnail']: {
     /**
      * FileSystemController_getThumbnail - 获取文件节点缩略图
@@ -8222,6 +9152,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.VersionControlControllerGetFileContentAtRevision.Responses.$200>
+  }
+  ['/api/v1/version-control/list/{revision}']: {
+    /**
+     * VersionControlController_listDirectoryAtRevision - 列出指定版本目录下的文件列表
+     */
+    'get'(
+      parameters?: Parameters<Paths.VersionControlControllerListDirectoryAtRevision.QueryParameters & Paths.VersionControlControllerListDirectoryAtRevision.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.VersionControlControllerListDirectoryAtRevision.Responses.$200>
   }
   ['/api/v1/font-management']: {
     /**
@@ -8425,6 +9365,46 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminControllerGetAdminStats.Responses.$200>
   }
+  ['/api/v1/admin/permissions/cache']: {
+    /**
+     * AdminController_getCacheStats - 获取权限缓存统计
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminControllerGetCacheStats.Responses.$200>
+  }
+  ['/api/v1/admin/permissions/cache/cleanup']: {
+    /**
+     * AdminController_cleanupCache - 清理权限缓存
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminControllerCleanupCache.Responses.$200>
+  }
+  ['/api/v1/admin/permissions/cache/user/{userId}']: {
+    /**
+     * AdminController_clearUserCache - 清除用户权限缓存
+     */
+    'delete'(
+      parameters?: Parameters<Paths.AdminControllerClearUserCache.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminControllerClearUserCache.Responses.$200>
+  }
+  ['/api/v1/admin/permissions/user/{userId}']: {
+    /**
+     * AdminController_getUserPermissions - 获取用户权限信息
+     */
+    'get'(
+      parameters?: Parameters<Paths.AdminControllerGetUserPermissions.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminControllerGetUserPermissions.Responses.$200>
+  }
   ['/api/v1/admin/storage/cleanup']: {
     /**
      * AdminController_cleanupStorage - 手动触发存储清理
@@ -8455,15 +9435,25 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerLiveness.Responses.$200>
   }
-  ['/api/v1/health']: {
+  ['/api/v1/health/public']: {
     /**
-     * HealthController_publicHealth - 服务健康检查（公开）
+     * HealthController_publicHealth - 公开健康检查（轻量级）
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerPublicHealth.Responses.$200>
+  }
+  ['/api/v1/health']: {
+    /**
+     * HealthController_checkFull - 系统健康检查（详细）
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.HealthControllerCheckFull.Responses.$200>
   }
   ['/api/v1/health/full']: {
     /**
@@ -8495,12 +9485,86 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.HealthControllerCheckStorage.Responses.$200>
   }
+  ['/api/v1/policy-config']: {
+    /**
+     * PolicyConfigController_createPolicy - 创建策略配置
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.PolicyConfigControllerCreatePolicy.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerCreatePolicy.Responses.$201>
+    /**
+     * PolicyConfigController_getAllPolicies - 获取所有策略配置
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerGetAllPolicies.Responses.$200>
+  }
+  ['/api/v1/policy-config/{id}']: {
+    /**
+     * PolicyConfigController_updatePolicy - 更新策略配置
+     */
+    'put'(
+      parameters?: Parameters<Paths.PolicyConfigControllerUpdatePolicy.PathParameters> | null,
+      data?: Paths.PolicyConfigControllerUpdatePolicy.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerUpdatePolicy.Responses.$200>
+    /**
+     * PolicyConfigController_deletePolicy - 删除策略配置
+     */
+    'delete'(
+      parameters?: Parameters<Paths.PolicyConfigControllerDeletePolicy.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerDeletePolicy.Responses.$204>
+    /**
+     * PolicyConfigController_getPolicy - 查询策略配置
+     */
+    'get'(
+      parameters?: Parameters<Paths.PolicyConfigControllerGetPolicy.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerGetPolicy.Responses.$200>
+  }
+  ['/api/v1/policy-config/{id}/enable']: {
+    /**
+     * PolicyConfigController_enablePolicy - 启用策略配置
+     */
+    'put'(
+      parameters?: Parameters<Paths.PolicyConfigControllerEnablePolicy.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerEnablePolicy.Responses.$200>
+  }
+  ['/api/v1/policy-config/{id}/disable']: {
+    /**
+     * PolicyConfigController_disablePolicy - 禁用策略配置
+     */
+    'put'(
+      parameters?: Parameters<Paths.PolicyConfigControllerDisablePolicy.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.PolicyConfigControllerDisablePolicy.Responses.$200>
+  }
   ['/api/v1/public-file/access/{hash}/{filename}']: {
     /**
      * PublicFileController_accessFile - 通过文件哈希访问目录下的文件
      */
     'get'(
       parameters?: Parameters<Paths.PublicFileControllerAccessFile.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<any>
+  }
+  ['/api/v1/public-file/access/{filename}']: {
+    /**
+     * PublicFileController_accessFileByHashPattern - 在 uploads 目录下查找 mxweb 文件（平铺存储）
+     */
+    'get'(
+      parameters?: Parameters<Paths.PublicFileControllerAccessFileByHashPattern.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<any>
@@ -8537,7 +9601,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing']: {
     /**
-     * LibraryController_getDrawingLibrary - 获取图纸库详情
+     * LibraryController_getDrawingLibrary - Get drawing library details
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
@@ -8547,7 +9611,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/categories']: {
     /**
-     * LibraryController_getDrawingCategories - 获取图纸库全部三级分类（一次请求）
+     * LibraryController_getDrawingCategories - Get all three-level categories of drawing library (single request)
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
@@ -8557,7 +9621,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/children/{nodeId}']: {
     /**
-     * LibraryController_getDrawingChildren - 获取图纸库子节点列表
+     * LibraryController_getDrawingChildren - Get child nodes of drawing library
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingChildren.QueryParameters & Paths.LibraryControllerGetDrawingChildren.PathParameters> | null,
@@ -8567,7 +9631,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/all-files/{nodeId}']: {
     /**
-     * LibraryController_getDrawingAllFiles - 递归获取图纸库节点下的所有文件
+     * LibraryController_getDrawingAllFiles - Recursively get all files under drawing library node
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingAllFiles.QueryParameters & Paths.LibraryControllerGetDrawingAllFiles.PathParameters> | null,
@@ -8577,7 +9641,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/filesData/{path}']: {
     /**
-     * LibraryController_getDrawingFile - 获取图纸库文件（统一入口）
+     * LibraryController_getDrawingFile - Serve drawing library file (unified entry)
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingFile.PathParameters> | null,
@@ -8587,7 +9651,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/nodes/{nodeId}']: {
     /**
-     * LibraryController_getDrawingNode - 获取图纸库节点详情
+     * LibraryController_getDrawingNode - Get drawing library node details
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingNode.PathParameters> | null,
@@ -8595,7 +9659,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetDrawingNode.Responses.$200>
     /**
-     * LibraryController_deleteDrawingNode - 删除图纸库节点
+     * LibraryController_deleteDrawingNode - Delete drawing library node
      */
     'delete'(
       parameters?: Parameters<Paths.LibraryControllerDeleteDrawingNode.QueryParameters & Paths.LibraryControllerDeleteDrawingNode.PathParameters> | null,
@@ -8603,7 +9667,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDeleteDrawingNode.Responses.$200>
     /**
-     * LibraryController_renameDrawingNode - 重命名图纸库节点
+     * LibraryController_renameDrawingNode - Rename drawing library node
      */
     'patch'(
       parameters?: Parameters<Paths.LibraryControllerRenameDrawingNode.PathParameters> | null,
@@ -8613,7 +9677,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/nodes/{nodeId}/download']: {
     /**
-     * LibraryController_downloadDrawingNode - 下载图纸库文件
+     * LibraryController_downloadDrawingNode - Download drawing library file (public)
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerDownloadDrawingNode.PathParameters> | null,
@@ -8623,7 +9687,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/nodes/{nodeId}/thumbnail']: {
     /**
-     * LibraryController_getDrawingThumbnail - 获取图纸库文件缩略图
+     * LibraryController_getDrawingThumbnail - Get drawing library file thumbnail
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetDrawingThumbnail.PathParameters> | null,
@@ -8633,7 +9697,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/save/{nodeId}']: {
     /**
-     * LibraryController_saveDrawingNode - 覆盖保存图纸库文件
+     * LibraryController_saveDrawingNode - Overwrite save drawing library file
      */
     'post'(
       parameters?: Parameters<Paths.LibraryControllerSaveDrawingNode.PathParameters> | null,
@@ -8641,9 +9705,19 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerSaveDrawingNode.Responses.$200>
   }
+  ['/api/v1/library/drawing/save-as']: {
+    /**
+     * LibraryController_saveDrawingAs - Save-as drawing to drawing library
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.LibraryControllerSaveDrawingAs.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.LibraryControllerSaveDrawingAs.Responses.$200>
+  }
   ['/api/v1/library/drawing/folders']: {
     /**
-     * LibraryController_createDrawingFolder - 创建图纸库文件夹
+     * LibraryController_createDrawingFolder - Create folder in drawing library
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
@@ -8653,7 +9727,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/nodes/{nodeId}/move']: {
     /**
-     * LibraryController_moveDrawingNode - 移动图纸库节点
+     * LibraryController_moveDrawingNode - Move drawing library node
      */
     'post'(
       parameters?: Parameters<Paths.LibraryControllerMoveDrawingNode.PathParameters> | null,
@@ -8663,7 +9737,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/drawing/nodes/{nodeId}/copy']: {
     /**
-     * LibraryController_copyDrawingNode - 复制图纸库节点
+     * LibraryController_copyDrawingNode - Copy drawing library node
      */
     'post'(
       parameters?: Parameters<Paths.LibraryControllerCopyDrawingNode.PathParameters> | null,
@@ -8673,7 +9747,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block']: {
     /**
-     * LibraryController_getBlockLibrary - 获取图块库详情
+     * LibraryController_getBlockLibrary - Get block library details
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
@@ -8683,7 +9757,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/categories']: {
     /**
-     * LibraryController_getBlockCategories - 获取图块库全部三级分类（一次请求）
+     * LibraryController_getBlockCategories - Get all three-level categories of block library (single request)
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
@@ -8693,7 +9767,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/children/{nodeId}']: {
     /**
-     * LibraryController_getBlockChildren - 获取图块库子节点列表
+     * LibraryController_getBlockChildren - Get child nodes of block library
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockChildren.QueryParameters & Paths.LibraryControllerGetBlockChildren.PathParameters> | null,
@@ -8703,7 +9777,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/all-files/{nodeId}']: {
     /**
-     * LibraryController_getBlockAllFiles - 递归获取图块库节点下的所有文件
+     * LibraryController_getBlockAllFiles - Recursively get all files under block library node
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockAllFiles.QueryParameters & Paths.LibraryControllerGetBlockAllFiles.PathParameters> | null,
@@ -8713,7 +9787,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/filesData/{path}']: {
     /**
-     * LibraryController_getBlockFile - 获取图块库文件（统一入口）
+     * LibraryController_getBlockFile - Serve block library file (unified entry)
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockFile.PathParameters> | null,
@@ -8723,7 +9797,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/nodes/{nodeId}']: {
     /**
-     * LibraryController_getBlockNode - 获取图块库节点详情
+     * LibraryController_getBlockNode - Get block library node details
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockNode.PathParameters> | null,
@@ -8731,7 +9805,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerGetBlockNode.Responses.$200>
     /**
-     * LibraryController_deleteBlockNode - 删除图块库节点
+     * LibraryController_deleteBlockNode - Delete block library node
      */
     'delete'(
       parameters?: Parameters<Paths.LibraryControllerDeleteBlockNode.QueryParameters & Paths.LibraryControllerDeleteBlockNode.PathParameters> | null,
@@ -8739,7 +9813,7 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerDeleteBlockNode.Responses.$200>
     /**
-     * LibraryController_renameBlockNode - 重命名图块库节点
+     * LibraryController_renameBlockNode - Rename block library node
      */
     'patch'(
       parameters?: Parameters<Paths.LibraryControllerRenameBlockNode.PathParameters> | null,
@@ -8749,7 +9823,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/nodes/{nodeId}/download']: {
     /**
-     * LibraryController_downloadBlockNode - 下载图块库文件
+     * LibraryController_downloadBlockNode - Download block library file (public)
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerDownloadBlockNode.PathParameters> | null,
@@ -8759,7 +9833,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/nodes/{nodeId}/thumbnail']: {
     /**
-     * LibraryController_getBlockThumbnail - 获取图块库文件缩略图
+     * LibraryController_getBlockThumbnail - Get block library file thumbnail
      */
     'get'(
       parameters?: Parameters<Paths.LibraryControllerGetBlockThumbnail.PathParameters> | null,
@@ -8769,7 +9843,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/save/{nodeId}']: {
     /**
-     * LibraryController_saveBlockNode - 覆盖保存图块库文件
+     * LibraryController_saveBlockNode - Overwrite save block library file
      */
     'post'(
       parameters?: Parameters<Paths.LibraryControllerSaveBlockNode.PathParameters> | null,
@@ -8777,9 +9851,19 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.LibraryControllerSaveBlockNode.Responses.$200>
   }
+  ['/api/v1/library/block/save-as']: {
+    /**
+     * LibraryController_saveBlockAs - Save-as block to block library
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.LibraryControllerSaveBlockAs.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.LibraryControllerSaveBlockAs.Responses.$200>
+  }
   ['/api/v1/library/block/folders']: {
     /**
-     * LibraryController_createBlockFolder - 创建图块库文件夹
+     * LibraryController_createBlockFolder - Create folder in block library
      */
     'post'(
       parameters?: Parameters<UnknownParamsObject> | null,
@@ -8789,7 +9873,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/nodes/{nodeId}/move']: {
     /**
-     * LibraryController_moveBlockNode - 移动图块库节点
+     * LibraryController_moveBlockNode - Move block library node
      */
     'post'(
       parameters?: Parameters<Paths.LibraryControllerMoveBlockNode.PathParameters> | null,
@@ -8799,7 +9883,7 @@ export interface PathsDictionary {
   }
   ['/api/v1/library/block/nodes/{nodeId}/copy']: {
     /**
-     * LibraryController_copyBlockNode - 复制图块库节点
+     * LibraryController_copyBlockNode - Copy block library node
      */
     'post'(
       parameters?: Parameters<Paths.LibraryControllerCopyBlockNode.PathParameters> | null,
@@ -8813,6 +9897,7 @@ export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
 
 export type AddProjectMemberDto = Components.Schemas.AddProjectMemberDto;
+export type AdminCacheStatsDto = Components.Schemas.AdminCacheStatsDto;
 export type AdminStatsResponseDto = Components.Schemas.AdminStatsResponseDto;
 export type AllPermissionsEnum = Components.Schemas.AllPermissionsEnum;
 export type AuthApiResponseDto = Components.Schemas.AuthApiResponseDto;
@@ -8825,10 +9910,12 @@ export type BindEmailResponseDto = Components.Schemas.BindEmailResponseDto;
 export type BindPhoneAndLoginDto = Components.Schemas.BindPhoneAndLoginDto;
 export type BindPhoneDto = Components.Schemas.BindPhoneDto;
 export type BindWechatDto = Components.Schemas.BindWechatDto;
-export type Buffer = Components.Schemas.Buffer;
 export type CacheCleanupDto = Components.Schemas.CacheCleanupDto;
+export type CacheCleanupResponseDto = Components.Schemas.CacheCleanupResponseDto;
 export type CacheMonitoringSummaryDto = Components.Schemas.CacheMonitoringSummaryDto;
+export type CacheOperationDto = Components.Schemas.CacheOperationDto;
 export type CacheRefreshDto = Components.Schemas.CacheRefreshDto;
+export type CacheStatsResponseDto = Components.Schemas.CacheStatsResponseDto;
 export type CacheWarmupConfigDto = Components.Schemas.CacheWarmupConfigDto;
 export type CacheWarningsDto = Components.Schemas.CacheWarningsDto;
 export type CadDownloadFormat = Components.Schemas.CadDownloadFormat;
@@ -8841,6 +9928,7 @@ export type CheckReferenceResponseDto = Components.Schemas.CheckReferenceRespons
 export type CheckThumbnailResponseDto = Components.Schemas.CheckThumbnailResponseDto;
 export type CopyNodeDto = Components.Schemas.CopyNodeDto;
 export type CreateFolderDto = Components.Schemas.CreateFolderDto;
+export type CreatePolicyDto = Components.Schemas.CreatePolicyDto;
 export type CreateProjectDto = Components.Schemas.CreateProjectDto;
 export type CreateProjectRoleDto = Components.Schemas.CreateProjectRoleDto;
 export type CreateRoleDto = Components.Schemas.CreateRoleDto;
@@ -8870,6 +9958,8 @@ export type PerformanceTrendDto = Components.Schemas.PerformanceTrendDto;
 export type Permission = Components.Schemas.Permission;
 export type PermissionCheckResponseDto = Components.Schemas.PermissionCheckResponseDto;
 export type PermissionsDto = Components.Schemas.PermissionsDto;
+export type PolicyResponseDto = Components.Schemas.PolicyResponseDto;
+export type PolicyType = Components.Schemas.PolicyType;
 export type PreloadingDataDto = Components.Schemas.PreloadingDataDto;
 export type ProjectDto = Components.Schemas.ProjectDto;
 export type ProjectFilter = Components.Schemas.ProjectFilter;
@@ -8901,6 +9991,7 @@ export type RoleCategoryEnum = Components.Schemas.RoleCategoryEnum;
 export type RoleDto = Components.Schemas.RoleDto;
 export type RuntimeConfigDefinitionDto = Components.Schemas.RuntimeConfigDefinitionDto;
 export type RuntimeConfigResponseDto = Components.Schemas.RuntimeConfigResponseDto;
+export type SaveLibraryAsDto = Components.Schemas.SaveLibraryAsDto;
 export type SaveLibraryNodeDto = Components.Schemas.SaveLibraryNodeDto;
 export type SaveMxwebAsDto = Components.Schemas.SaveMxwebAsDto;
 export type SaveMxwebAsResponseDto = Components.Schemas.SaveMxwebAsResponseDto;
@@ -8922,11 +10013,13 @@ export type SystemPermission = Components.Schemas.SystemPermission;
 export type TrashListResponseDto = Components.Schemas.TrashListResponseDto;
 export type TriggerWarmupDto = Components.Schemas.TriggerWarmupDto;
 export type UpdateNodeDto = Components.Schemas.UpdateNodeDto;
+export type UpdatePolicyDto = Components.Schemas.UpdatePolicyDto;
 export type UpdateProjectRoleDto = Components.Schemas.UpdateProjectRoleDto;
 export type UpdateRoleDto = Components.Schemas.UpdateRoleDto;
 export type UpdateRuntimeConfigDto = Components.Schemas.UpdateRuntimeConfigDto;
 export type UpdateStorageQuotaDto = Components.Schemas.UpdateStorageQuotaDto;
 export type UpdateUserDto = Components.Schemas.UpdateUserDto;
+export type UpdateUserStatusDto = Components.Schemas.UpdateUserStatusDto;
 export type UpdateWarmupConfigDto = Components.Schemas.UpdateWarmupConfigDto;
 export type UploadExtReferenceDto = Components.Schemas.UploadExtReferenceDto;
 export type UploadExtReferenceFileDto = Components.Schemas.UploadExtReferenceFileDto;
@@ -8934,12 +10027,14 @@ export type UploadFontDto = Components.Schemas.UploadFontDto;
 export type UploadThumbnailDataDto = Components.Schemas.UploadThumbnailDataDto;
 export type UploadThumbnailDto = Components.Schemas.UploadThumbnailDto;
 export type UploadThumbnailResponseDto = Components.Schemas.UploadThumbnailResponseDto;
+export type UserCacheClearResponseDto = Components.Schemas.UserCacheClearResponseDto;
 export type UserCleanupStatsResponseDto = Components.Schemas.UserCleanupStatsResponseDto;
 export type UserCleanupTriggerDto = Components.Schemas.UserCleanupTriggerDto;
 export type UserCleanupTriggerResponseDto = Components.Schemas.UserCleanupTriggerResponseDto;
 export type UserDashboardStatsDto = Components.Schemas.UserDashboardStatsDto;
-export type UserDto = Components.Schemas.UserDto;
 export type UserListResponseDto = Components.Schemas.UserListResponseDto;
+export type UserPermissionInfoDto = Components.Schemas.UserPermissionInfoDto;
+export type UserPermissionsResponseDto = Components.Schemas.UserPermissionsResponseDto;
 export type UserProfileResponseDto = Components.Schemas.UserProfileResponseDto;
 export type UserResponseDto = Components.Schemas.UserResponseDto;
 export type UserRoleDto = Components.Schemas.UserRoleDto;

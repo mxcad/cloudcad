@@ -245,82 +245,25 @@ export type RegisterDto = {
     wechatTempToken?: string;
 };
 
-export type UserDto = {
-    /**
-     * 用户ID
-     */
-    id: string;
-    /**
-     * 用户邮箱（可能未绑定）
-     */
-    email?: string | null;
-    /**
-     * 用户名
-     */
-    username: string;
-    /**
-     * 昵称
-     */
-    nickname?: string;
-    /**
-     * 头像URL
-     */
-    avatar?: string;
-    /**
-     * 用户角色
-     */
-    role: {
-        id?: string;
-        name?: 'ADMIN' | 'USER_MANAGER' | 'FONT_MANAGER' | 'USER';
-        description?: string | null;
-        isSystem?: boolean;
-        permissions?: Array<{
-            permission?: string;
-        }>;
-    };
-    /**
-     * 用户状态
-     */
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-    /**
-     * 用户手机号（可能未绑定）
-     */
-    phone?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * 手机号是否已验证
-     */
-    phoneVerified?: boolean;
-    /**
-     * 微信 OpenID
-     */
-    wechatId?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * 登录方式 (LOCAL | WECHAT)
-     */
-    provider?: string;
-    /**
-     * 是否已设置密码
-     */
-    hasPassword?: boolean;
-};
-
 export type AuthApiResponseDto = {
     /**
-     * 访问Token
+     * 响应状态码
      */
-    accessToken: string;
+    code: 'SUCCESS' | 'ERROR';
     /**
-     * 刷新Token
+     * 响应消息
      */
-    refreshToken: string;
+    message: string;
     /**
-     * 用户信息
+     * 响应数据
      */
-    user: UserDto;
+    data: {
+        [key: string]: unknown;
+    };
+    /**
+     * 响应时间戳
+     */
+    timestamp: string;
 };
 
 export type LoginDto = {
@@ -2048,10 +1991,6 @@ export type SvnLogResponseDto = {
     entries: Array<SvnLogEntryDto>;
 };
 
-export type Buffer = {
-    [key: string]: unknown;
-};
-
 export type FileContentResponseDto = {
     /**
      * 操作是否成功
@@ -2062,9 +2001,9 @@ export type FileContentResponseDto = {
      */
     message: string;
     /**
-     * 文件内容
+     * 文件内容（Base64 编码）
      */
-    content?: Buffer;
+    content?: string;
 };
 
 /**
@@ -2572,6 +2511,17 @@ export type ProjectPermission = 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_M
  * 统一权限枚举
  */
 export type Permission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_MEMBER_MANAGE' | 'PROJECT_MEMBER_ASSIGN' | 'PROJECT_ROLE_MANAGE' | 'PROJECT_ROLE_PERMISSION_MANAGE' | 'PROJECT_TRANSFER' | 'FILE_CREATE' | 'FILE_UPLOAD' | 'FILE_OPEN' | 'FILE_EDIT' | 'FILE_DELETE' | 'FILE_TRASH_MANAGE' | 'FILE_DOWNLOAD' | 'FILE_SHARE' | 'CAD_SAVE' | 'CAD_EXTERNAL_REFERENCE' | 'VERSION_READ' | 'VERSION_CREATE' | 'VERSION_DELETE' | 'VERSION_RESTORE' | 'PROJECT_SETTINGS_MANAGE';
+
+export type AppControllerGetHelloData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1';
+};
+
+export type AppControllerGetHelloResponses = {
+    200: unknown;
+};
 
 export type CacheMonitorControllerGetSummaryData = {
     body?: never;
@@ -6898,7 +6848,7 @@ export type PolicyConfigControllerGetAllPoliciesData = {
 
 export type PolicyConfigControllerGetAllPoliciesResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«ÕłŚĶĪ©ĶÄĘÕÅ¢µłÉÕŖ¤
+     * 策略配置列表查询成功
      */
     200: Array<PolicyResponseDto>;
 };
@@ -6914,14 +6864,14 @@ export type PolicyConfigControllerCreatePolicyData = {
 
 export type PolicyConfigControllerCreatePolicyErrors = {
     /**
-     * µØāķÖÉõĖŹĶČ│
+     * 权限不足
      */
     403: unknown;
 };
 
 export type PolicyConfigControllerCreatePolicyResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«ÕłøÕ╗║µłÉÕŖ¤
+     * 策略配置创建成功
      */
     201: PolicyResponseDto;
 };
@@ -6939,14 +6889,14 @@ export type PolicyConfigControllerDeletePolicyData = {
 
 export type PolicyConfigControllerDeletePolicyErrors = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©
+     * 策略配置未找到
      */
     404: unknown;
 };
 
 export type PolicyConfigControllerDeletePolicyResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«ÕłĀķÖżµłÉÕŖ¤
+     * 策略配置删除成功
      */
     204: void;
 };
@@ -6964,14 +6914,14 @@ export type PolicyConfigControllerGetPolicyData = {
 
 export type PolicyConfigControllerGetPolicyErrors = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©
+     * 策略配置未找到
      */
     404: unknown;
 };
 
 export type PolicyConfigControllerGetPolicyResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«ĶÄĘÕÅ¢µłÉÕŖ¤
+     * 策略配置查询成功
      */
     200: PolicyResponseDto;
 };
@@ -6989,14 +6939,14 @@ export type PolicyConfigControllerUpdatePolicyData = {
 
 export type PolicyConfigControllerUpdatePolicyErrors = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«õĖŹÕŁśÕ£©
+     * 策略配置未找到
      */
     404: unknown;
 };
 
 export type PolicyConfigControllerUpdatePolicyResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«µø┤µ¢░µłÉÕŖ¤
+     * 策略配置更新成功
      */
     200: PolicyResponseDto;
 };
@@ -7014,7 +6964,7 @@ export type PolicyConfigControllerEnablePolicyData = {
 
 export type PolicyConfigControllerEnablePolicyResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«ÕÉ»ńö©µłÉÕŖ¤
+     * 策略配置启用成功
      */
     200: PolicyResponseDto;
 };
@@ -7032,7 +6982,7 @@ export type PolicyConfigControllerDisablePolicyData = {
 
 export type PolicyConfigControllerDisablePolicyResponses = {
     /**
-     * ńŁ¢ńĢźķģŹńĮ«ń”üńö©µłÉÕŖ¤
+     * 策略配置禁用成功
      */
     200: PolicyResponseDto;
 };

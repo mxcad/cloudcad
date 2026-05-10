@@ -77,19 +77,9 @@ export class FontsService {
     const backendPath = this.configService.get<string>('fonts.backendPath');
     const frontendPath = this.configService.get<string>('fonts.frontendPath');
 
-    if (!backendPath) {
-      throw new Error(
-        '字体服务初始化失败：配置项 fonts.backendPath 未设置，请检查配置文件'
-      );
-    }
-    if (!frontendPath) {
-      throw new Error(
-        '字体服务初始化失败：配置项 fonts.frontendPath 未设置，请检查配置文件'
-      );
-    }
-
-    this.backendFontsDir = backendPath;
-    this.frontendFontsDir = frontendPath;
+    // 使用配置值，如果未配置则回退到默认路径
+    this.backendFontsDir = backendPath || path.join(process.cwd(), '..', '..', 'runtime', 'windows', 'mxcad', 'fonts');
+    this.frontendFontsDir = frontendPath || path.join(process.cwd(), '..', '..', 'runtime', 'windows', 'mxcad', 'fonts');
 
     this.logger.log(`后端字体目录: ${this.backendFontsDir}`);
     this.logger.log(`前端字体目录: ${this.frontendFontsDir}`);

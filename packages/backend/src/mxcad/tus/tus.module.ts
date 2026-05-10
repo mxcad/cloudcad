@@ -10,8 +10,13 @@ import { MxcadInfraModule } from '../infra/mxcad-infra.module';
 import { MxcadCoreModule } from '../core/mxcad-core.module';
 import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadUploadModule } from '../upload/mxcad-upload.module';
+import { MxcadNodeModule } from '../node/mxcad-node.module';
+import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.module';
 import { FileSystemModule } from '../../file-system/file-system.module';
 import { FilePermissionModule } from '../../file-system/file-permission/file-permission.module';
+import { StorageModule } from '../../storage/storage.module';
+import { VersionControlModule } from '../../version-control/version-control.module';
+import { CommonModule } from '../../common/common.module';
 import { TusService } from './tus.service';
 import { TusEventHandler } from './tus-event-handler.service';
 import { TusAuthMiddleware } from './tus-auth.middleware';
@@ -39,8 +44,13 @@ import { AppConfig } from '../../config/app.config';
     MxcadCoreModule,
     MxcadConversionModule,
     MxcadUploadModule,
+    MxcadNodeModule,
+    MxcadExternalRefModule,
     forwardRef(() => FileSystemModule),
     FilePermissionModule,
+    StorageModule,
+    VersionControlModule,
+    CommonModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<AppConfig>) => ({

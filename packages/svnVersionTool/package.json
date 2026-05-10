@@ -5,6 +5,7 @@
   "main": "svncmd.js",
   "types": "index.d.ts",
   "scripts": {
+    "dev": "node -e process.exit(0)",
     "test": "node test.js"
   },
   "keywords": [

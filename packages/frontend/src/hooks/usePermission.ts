@@ -33,26 +33,28 @@ export const usePermission = () => {
    * 获取用户的权限列表（从缓存）
    */
   const getUserPermissions = useCallback((): Permission[] => {
-    if (!user?.role?.permissions || !Array.isArray(user.role.permissions)) {
+    // Note: UserRoleDto from API doesn't include permissions in schema, but runtime data does
+    const rolePermissions = (user?.role as Record<string, unknown> | undefined)?.permissions;
+    if (!rolePermissions || !Array.isArray(rolePermissions)) {
       return [];
     }
 
     // 后端返回的权限格式验证
     const permissions: Permission[] = [];
-    for (const p of user.role.permissions) {
+    for (const p of rolePermissions) {
       // 检查权限是否为字符串
       if (typeof p === 'string') {
         permissions.push(p as Permission);
-      } else if (p && typeof p.permission === 'string') {
+      } else if (p && typeof (p as Record<string, unknown>).permission === 'string') {
         // 兼容后端可能返回 { permission: string } 的格式
-        permissions.push(p.permission as Permission);
+        permissions.push((p as Record<string, unknown>).permission as Permission);
       } else {
         console.warn(`[usePermission] 无效的权限格式:`, p);
       }
     }
 
     return permissions;
-  }, [user?.role?.permissions]);
+  }, [user?.role]);
 
   /**
    * 获取用户权限的 Set（用于高效查找）

@@ -112,11 +112,11 @@ export const Profile: React.FC = () => {
     if (!deactivateForm.verificationMethod && user) {
       if (user.hasPassword)
         setDeactivateForm((f) => ({ ...f, verificationMethod: 'password' }));
-      else if (user.phone && user.phoneVerified)
+      else if (user.phone && (user as Record<string, unknown>).phoneVerified)
         setDeactivateForm((f) => ({ ...f, verificationMethod: 'phone' }));
       else if (user.email)
         setDeactivateForm((f) => ({ ...f, verificationMethod: 'email' }));
-      else if (user.wechatId)
+      else if ((user as Record<string, unknown>).wechatId)
         setDeactivateForm((f) => ({ ...f, verificationMethod: 'wechat' }));
     }
   }, [user, deactivateForm.verificationMethod]);
@@ -966,7 +966,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'password' && (
               <ProfilePasswordTab
-                user={user}
+                user={user as any}
                 passwordForm={passwordForm}
                 showPassword={showPassword}
                 focusedField={focusedField}
@@ -985,7 +985,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'email' && (
               <ProfileEmailTab
-                user={user}
+                user={user as any}
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
@@ -1010,7 +1010,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'phone' && smsEnabled && (
               <ProfilePhoneTab
-                user={user}
+                user={user as any}
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
@@ -1042,7 +1042,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'deactivate' && (
               <ProfileDeactivateTab
-                user={user}
+                user={user as any}
                 deactivateForm={deactivateForm}
                 showPassword={showPassword}
                 deactivateLoading={deactivateLoading}

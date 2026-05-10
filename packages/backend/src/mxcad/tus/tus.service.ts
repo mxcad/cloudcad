@@ -35,9 +35,7 @@ export class TusService {
 		if (this._initialized) return;
 		this._initialized = true;
 		try {
-			const uploadPath = this.configService.get<string>(
-				"mxcadUploadPath",
-			) as string;
+			const uploadPath = this.configService.get<string>("mxcadUploadPath", { infer: true }) as string;
 			const maxFileSize =
 				(this.configService.get<number>("upload.maxFileSize") as number) ||
 				500 * 1024 * 1024;

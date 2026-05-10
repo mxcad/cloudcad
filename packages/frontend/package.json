@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node node_modules/vite/bin/vite.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -74,6 +74,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.23",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",

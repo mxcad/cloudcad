@@ -228,12 +228,11 @@ export class MxCadService {
       throw new BadRequestException('上下文缺少节点ID');
     }
 
-    // 确保 userRole 有值
-    if (!context.userRole) {
-      context.userRole = context.role || 'USER';
-    }
-
-    return context;
+    // 确保 userRole 有值（返回新对象，遵循不可变性原则）
+    return {
+      ...context,
+      userRole: context.userRole || context.role || 'USER',
+    };
   }
 
   /**
@@ -656,7 +655,7 @@ export class MxCadService {
         }
       } else {
         this.logger.log(
-          `[saveMxwebFile] 跳过 SVN 提交: ${node.name} (公共资源库: ${node.libraryKey})`
+          `[saveMxwebFile] 跳过 SVN 提交: ${fullNode.name} (公共资源库: ${fullNode.libraryKey})`
         );
       }
 

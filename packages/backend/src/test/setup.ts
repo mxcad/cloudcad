@@ -242,8 +242,15 @@ jest.mock("../conversion", () => {
 	};
 });
 
-// Mock @nestjs-modules/mailer handlebars adapter (pulls in native @css-inline/css-inline)
-jest.mock("@nestjs-modules/mailer/dist/adapters/handlebars.adapter", () => ({
+// Mock @nestjs-modules/mailer (module not available in dev environment)
+jest.mock("@nestjs-modules/mailer", () => ({
+	MailerModule: {
+		forRoot: jest.fn().mockReturnValue({
+			module: class {},
+			providers: [],
+			exports: [],
+		}),
+	},
 	HandlebarsAdapter: jest.fn().mockImplementation(() => ({
 		compile: jest
 			.fn()

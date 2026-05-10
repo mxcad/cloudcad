@@ -208,11 +208,14 @@ export class ProcessRunnerService {
         let settled = false;
 
         // ---- 启动子进程 ----
+        // shell: true 确保 Windows 上通过 cmd.exe 调起，与旧 exec 行为一致，
+        // 避免 spawn 将 JSON 参数中的双引号翻倍转义导致 mxcadassembly.exe 解析失败
         const child = spawn(binaryPath, options.args, {
           cwd: options.cwd,
           env: { ...process.env, ...options.env },
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
+          shell: true,
         });
 
         let stdout = '';

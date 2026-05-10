@@ -16,8 +16,7 @@
  * 提供外部参照图片上传、检查和 URL 解析功能。
  */
 
-import { mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
-import type { UploadExtReferenceFileDto } from '@/api-sdk';
+import { uploadBlobWithTus } from '../../utils/uppyUploadUtils';
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
 import type { ExtRefUploadParams, ExtRefUploadResult } from './mxcadTypes';
@@ -33,12 +32,15 @@ export async function uploadExtReferenceImage(
   params: ExtRefUploadParams
 ): Promise<ExtRefUploadResult> {
   try {
-    const formData = new FormData();
-    formData.append('file', params.file, params.fileName);
-    formData.append('ext_ref_file', params.fileName);
-
-    const result = await mxCadControllerUploadExtReferenceImage({
-      body: formData as unknown as UploadExtReferenceFileDto,
+    await uploadBlobWithTus({
+      blob: params.file,
+      filename: params.fileName,
+      metadata: {
+        uploadType: 'extRef',
+        isImage: 'true',
+        srcDwgNodeId: params.nodeId || '',
+        fileHash: `${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      },
     });
 
     return {

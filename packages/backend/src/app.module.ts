@@ -10,10 +10,13 @@
 
 import { INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
 import { AdminModule } from './admin/admin.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 import { AuthModule } from './auth/auth.module';
 import { JwtStrategyExecutor } from './auth/jwt.strategy.executor';
@@ -46,6 +49,7 @@ import { CacheArchitectureModule } from './cache-architecture/cache-architecture
 import { RuntimeConfigModule } from './runtime-config/runtime-config.module';
 import { PublicFileModule } from './public-file/public-file.module';
 import { LibraryModule } from './library/library.module';
+import { ConversionModule } from './conversion/conversion.module';
 
 // env 文件查找路径：支持多种运行模式
 // 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
@@ -68,6 +72,7 @@ const envFilePaths = [
       load: [configuration],
       envFilePath: envFilePaths,
     }),
+    EventEmitterModule.forRoot(),
     DatabaseModule,
     RedisModule,
     CacheArchitectureModule, // 缓存架构模块（必须在 SchedulerModule 之前导入）
@@ -89,9 +94,11 @@ const envFilePaths = [
     RuntimeConfigModule,
     PublicFileModule,
     LibraryModule,
+    ConversionModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [
+    AppService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,

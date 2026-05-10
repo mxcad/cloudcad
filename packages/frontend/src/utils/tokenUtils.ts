@@ -59,7 +59,7 @@ export const refreshTokenIfNeeded = async (): Promise<string | null> => {
   // 检查 token 是否过期（解析 JWT payload 的 exp 字段）
   if (currentToken) {
     try {
-      const payload = JSON.parse(atob(currentToken.split('.')[1]));
+      const payload = JSON.parse(atob(currentToken.split('.')[1] || ''));
       const now = Math.floor(Date.now() / 1000);
       // 如果还有 60 秒以上才过期，直接返回
       if (payload.exp && payload.exp > now + 60) {
@@ -78,7 +78,7 @@ export const refreshTokenIfNeeded = async (): Promise<string | null> => {
 
   try {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+    const response = await fetch(`${apiBaseUrl}/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),

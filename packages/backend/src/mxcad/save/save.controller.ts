@@ -43,6 +43,7 @@ import { FileSystemPermissionService } from '../../file-system/file-permission/f
 import { PermissionService } from '../../common/services/permission.service';
 import { SystemPermission } from '../../common/enums/permissions.enum';
 import { MxCadRequest } from '../types/request.types';
+import { StorageQuotaInterceptor } from '../../common/interceptors/storage-quota.interceptor';
 import { SaveMxwebDto } from '../dto/save-mxweb.dto';
 import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
 import { SaveMxwebResponseDto } from '../dto/save-mxweb-response.dto';
@@ -50,6 +51,7 @@ import { SaveMxwebAsResponseDto } from '../dto/save-mxweb-as-response.dto';
 
 @ApiTags('MxCAD 图纸保存')
 @Controller('mxcad')
+@UseInterceptors(StorageQuotaInterceptor)
 export class SaveController {
   private readonly logger = new Logger(SaveController.name);
 

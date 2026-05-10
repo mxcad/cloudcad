@@ -17,7 +17,7 @@ import {
   authControllerVerifyPhone,
   authControllerGetWechatAuthUrl,
 } from '@/api-sdk';
-import type { UserDto as UserDtoType } from '@/api-sdk';
+import type { UserResponseDto as UserDtoType } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { triggerProactiveRefresh, cancelProactiveRefresh } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
@@ -36,7 +36,7 @@ interface AuthContextType {
     password: string;
     username: string;
     nickname?: string;
-  }) => Promise<{ message: string; email?: string }>;
+  }) => Promise<{ message: string; email?: string | undefined }>;
   verifyEmailAndLogin: (email: string, code: string) => Promise<unknown>;
   verifyPhoneAndLogin: (phone: string, code: string) => Promise<unknown>;
   logout: () => void;
@@ -111,9 +111,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const userData = response.data as unknown as User;
             setUser(userData);
             localStorage.setItem('user', JSON.stringify(userData));
-          } else if (response.error) {
+          } else if ((response as Record<string, unknown>).error) {
             // API返回了错误，但token可能仍有效，保留用户信息
-            console.warn('[AuthContext] Token验证返回错误:', response.error);
+            console.warn('[AuthContext] Token验证返回错误:', (response as Record<string, unknown>).error);
             setLoading(false);
           }
         } catch (error) {
@@ -152,90 +152,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = useCallback(async (account: string, password: string) => {
-    console.log('[AuthContext] 开始登录:', account);
     try {
       const response = await authControllerLogin({
         body: { account, password },
       });
       if (response.error) throw response.error;
       const apiResponse = response.data!;
-      console.log('[AuthContext] 登录响应:', apiResponse);
+      const authData = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse;
-   
-      console.log(
-        '[AuthContext] Access Token:',
-        accessToken ? `${accessToken.substring(0, 20)}...` : 'missing'
-      );
-      console.log(
-        '[AuthContext] Refresh Token:',
-        refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing'
-      );
+      } = authData;
 
-      // 存储到本地存储
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
-
-      // 清除旧用户的私人空间 ID 缓存，确保不会使用上一个用户的缓存
       localStorage.removeItem('personalSpaceId');
-
-      console.log('[AuthContext] Token 已存储到 localStorage');
-
-      // 更新状态
       setToken(accessToken);
       setUser(userData);
-
-      // 启动主动 token 刷新
       triggerProactiveRefresh();
-
-      console.log('[AuthContext] 登录完成');
     } catch (error) {
-      console.log('[AuthContext] 登录失败:', error);
-      // 重新抛出错误，让调用方处理
       throw error;
     }
   }, []);
 
   const loginByPhone = useCallback(async (phone: string, code: string) => {
-    console.log('[AuthContext] 开始手机号登录:', phone);
     try {
       const response = await authControllerLoginByPhone({
         body: { phone, code },
       });
       if (response.error) throw response.error;
       const apiResponse = response.data!;
-      console.log('[AuthContext] 手机登录响应:', apiResponse);
 
+      const authData = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse;
+      } = authData;
 
-      // 存储到本地存储
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
-
-      console.log('[AuthContext] 手机登录 Token 已存储到 localStorage');
-
-      // 清除旧用户的私人空间 ID 缓存，确保不会使用上一个用户的缓存
       localStorage.removeItem('personalSpaceId');
-
-      // 更新状态
       setToken(accessToken);
       setUser(userData);
-
-      // 启动主动 token 刷新
       triggerProactiveRefresh();
-
-      console.log('[AuthContext] 手机登录完成');
     } catch (error) {
-      console.log('[AuthContext] 手机登录失败:', error);
       throw error;
     }
   }, []);
@@ -247,18 +211,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       username: string;
       nickname?: string;
       wechatTempToken?: string;
-    }): Promise<{ message: string; email?: string }> => {
+    }): Promise<{ message: string; email?: string | undefined }> => {
       const response = await authControllerRegister({
         body: data,
       });
       if (response.error) throw response.error;
       const apiResponse = response.data!;
+      const authData = apiResponse.data as Record<string, unknown>;
 
       // 需要邮箱验证：后端返回 { message, email }，无 token
-      if ((apiResponse as Record<string, unknown>).message && !apiResponse.accessToken) {
+      if (authData.message && !authData.accessToken) {
         return {
-          message: (apiResponse as Record<string, unknown>).message as string,
-          email: (apiResponse as unknown as Record<string, unknown>).email as string | undefined,
+          message: authData.message as unknown as string,
+          email: authData.email as unknown as string | undefined,
         };
       }
 
@@ -267,7 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse;
+      } = authData as unknown as { accessToken: string; refreshToken: string; user: User };
 
       // 自动登录，保存 token
       setAccessToken(accessToken);
@@ -296,7 +261,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse;
+      } = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
 
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
@@ -323,7 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse;
+      } = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
 
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
@@ -389,7 +354,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshUser = useCallback(async () => {
     try {
       const response = await authControllerGetProfile();
-      if (response.error) throw response.error;
+      if ((response as Record<string, unknown>).error) throw (response as Record<string, unknown>).error;
       const userData = response.data as unknown as User;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -451,7 +416,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           purpose: 'login',
         },
       });
-      if (response.error) throw response.error;
+      if ((response as Record<string, unknown>).error) throw (response as Record<string, unknown>).error;
       const wechatData = response.data as unknown as { authUrl: string };
       const { authUrl } = wechatData;
 

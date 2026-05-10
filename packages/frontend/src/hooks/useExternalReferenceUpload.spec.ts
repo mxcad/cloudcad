@@ -13,18 +13,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useExternalReferenceUpload } from './useExternalReferenceUpload';
-import {
-  mxCadControllerGetPreloadingData,
-  mxCadControllerCheckExternalReference,
-  mxCadControllerUploadExtReferenceDwg,
-  mxCadControllerUploadExtReferenceImage,
-} from '@/api-sdk';
 
-// Mock authCheck to return true (avoids empty identifier in test environment)
+// Mock authCheck to return true
 vi.mock('../utils/authCheck', () => ({
   isAuthenticated: () => true,
 }));
 
+// Mock uploadBlobWithTus
+vi.mock('../utils/uppyUploadUtils', () => ({
+  uploadBlobWithTus: vi.fn(),
+}));
+
+// Mock SDK (still needed for preloading data + existence checks)
 vi.mock('@/api-sdk', () => ({
   mxCadControllerGetPreloadingData: vi.fn(),
   mxCadControllerCheckExternalReference: vi.fn(),
@@ -33,6 +33,11 @@ vi.mock('@/api-sdk', () => ({
   publicFileControllerGetPreloadingData: vi.fn(),
   publicFileControllerCheckExtReference: vi.fn(),
 }));
+
+import {
+  mxCadControllerGetPreloadingData,
+  mxCadControllerCheckExternalReference,
+} from '@/api-sdk';
 
 describe('useExternalReferenceUpload', () => {
   beforeEach(() => {
@@ -43,7 +48,7 @@ describe('useExternalReferenceUpload', () => {
     vi.resetAllMocks();
   });
 
-  it('应该初始化正确的状态', () => {
+  it('should initialize with correct state', () => {
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
         nodeId: 'testnode123',
@@ -55,7 +60,7 @@ describe('useExternalReferenceUpload', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it('应该检测到缺失的外部参照', async () => {
+  it('should detect missing external references', async () => {
     const mockPreloadingData = {
       tz: false,
       src_file_md5: 'testhash123',
@@ -87,7 +92,7 @@ describe('useExternalReferenceUpload', () => {
     expect(result.current.files.length).toBe(2);
   });
 
-  it('应该在没有缺失外部参照时不打开模态框', async () => {
+  it('should not open modal when no missing references', async () => {
     const mockPreloadingData = {
       tz: false,
       src_file_md5: 'testhash123',
@@ -114,9 +119,9 @@ describe('useExternalReferenceUpload', () => {
     expect(result.current.isOpen).toBe(false);
   });
 
-  it('应该在预加载数据获取失败时返回false', async () => {
+  it('should return false on preloading data failure', async () => {
     vi.mocked(mxCadControllerGetPreloadingData).mockRejectedValue(
-      new Error('网络错误')
+      new Error('Network error')
     );
 
     const { result } = renderHook(() =>
@@ -134,7 +139,7 @@ describe('useExternalReferenceUpload', () => {
     expect(result.current.isOpen).toBe(false);
   });
 
-  it('应该正确跳过上传', () => {
+  it('should skip upload correctly', () => {
     const onSkip = vi.fn();
 
     const { result } = renderHook(() =>
@@ -152,14 +157,13 @@ describe('useExternalReferenceUpload', () => {
     expect(result.current.isOpen).toBe(false);
   });
 
-  it('应该正确关闭模态框', () => {
+  it('should close modal correctly', () => {
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
         nodeId: 'testnode123',
       })
     );
 
-    // 模拟打开模态框
     act(() => {
       result.current.close();
     });
@@ -168,8 +172,10 @@ describe('useExternalReferenceUpload', () => {
     expect(result.current.files).toEqual([]);
   });
 
-  it('应该在所有文件上传成功时调用onSuccess', async () => {
+  it('should call onSuccess when all files uploaded successfully', async () => {
     const onSuccess = vi.fn();
+    const { uploadBlobWithTus } = await import('../utils/uppyUploadUtils');
+
     const mockPreloadingData = {
       tz: false,
       src_file_md5: 'testhash123',
@@ -185,8 +191,7 @@ describe('useExternalReferenceUpload', () => {
       data: { exists: false },
     } as any);
 
-    vi.mocked(mxCadControllerUploadExtReferenceDwg).mockResolvedValue({} as any);
-    vi.mocked(mxCadControllerUploadExtReferenceImage).mockResolvedValue({} as any);
+    vi.mocked(uploadBlobWithTus).mockResolvedValue({});
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
@@ -195,35 +200,23 @@ describe('useExternalReferenceUpload', () => {
       })
     );
 
-    // 检查缺失的外部参照
     await act(async () => {
       await result.current.checkMissingReferences();
     });
 
-    // 直接设置文件源
-    const mockFile = new File(['content'], 'ref1.dwg', {
-      type: 'application/octet-stream',
-    });
-    const mockImageFile = new File(['image'], 'image1.png', {
-      type: 'image/png',
-    });
+    // Set file sources
+    const mockFile = new File(['content'], 'ref1.dwg', { type: 'application/octet-stream' });
+    const mockImageFile = new File(['image'], 'image1.png', { type: 'image/png' });
 
-    // 通过直接更新状态来设置文件源
     result.current.files.forEach((file) => {
-      if (file.name === 'ref1.dwg') {
-        (file as any).source = mockFile;
-      }
-      if (file.name === 'image1.png') {
-        (file as any).source = mockImageFile;
-      }
+      if (file.name === 'ref1.dwg') (file as any).source = mockFile;
+      if (file.name === 'image1.png') (file as any).source = mockImageFile;
     });
 
-    // 上传文件
     await act(async () => {
       await result.current.uploadFiles();
     });
 
-    // 完成
     act(() => {
       result.current.complete();
     });
@@ -231,7 +224,7 @@ describe('useExternalReferenceUpload', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('应该过滤掉已存在的外部参照', async () => {
+  it('should filter out already-existing external references', async () => {
     const mockPreloadingData = {
       tz: false,
       src_file_md5: 'testhash123',
@@ -243,12 +236,11 @@ describe('useExternalReferenceUpload', () => {
       data: mockPreloadingData,
     } as any);
 
-    // 模拟部分文件已存在
     vi.mocked(mxCadControllerCheckExternalReference)
-      .mockResolvedValueOnce({ data: { exists: true } } as any) // ref1.dwg 已存在
-      .mockResolvedValueOnce({ data: { exists: false } } as any) // ref2.dwg 不存在
-      .mockResolvedValueOnce({ data: { exists: true } } as any) // image1.png 已存在
-      .mockResolvedValueOnce({ data: { exists: false } } as any); // image2.png 不存在
+      .mockResolvedValueOnce({ data: { exists: true } } as any)
+      .mockResolvedValueOnce({ data: { exists: false } } as any)
+      .mockResolvedValueOnce({ data: { exists: true } } as any)
+      .mockResolvedValueOnce({ data: { exists: false } } as any);
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({
@@ -269,7 +261,7 @@ describe('useExternalReferenceUpload', () => {
     ]);
   });
 
-  it('应该过滤掉HTTP/HTTPS开头的URL（已有外部参照）', async () => {
+  it('should filter out HTTP/HTTPS prefixed URLs', async () => {
     const mockPreloadingData = {
       tz: false,
       src_file_md5: 'testhash123',
@@ -298,20 +290,7 @@ describe('useExternalReferenceUpload', () => {
 
     expect(hasMissing).toBe(true);
     expect(result.current.files.length).toBe(2);
-    expect(result.current.files.map((f) => f.name)).toContain(
-      'local_image.png'
-    );
-    expect(result.current.files.map((f) => f.name)).not.toContain(
-      'http://example.com/image1.png'
-    );
+    expect(result.current.files.map((f) => f.name)).toContain('local_image.png');
+    expect(result.current.files.map((f) => f.name)).not.toContain('http://example.com/image1.png');
   });
 });
-
-// 辅助函数：设置文件源
-function setFiles(
-  _updater: (
-    prev: import('../types/filesystem').ExternalReferenceFile[]
-  ) => import('../types/filesystem').ExternalReferenceFile[]
-) {
-  // 此函数用于测试中的状态更新，实际状态更新在Hook内部处理
-}

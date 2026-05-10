@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/auth.fixture';
 import { LibraryPage } from '../pages/LibraryPage';
 import { FontLibraryPage } from '../pages/FontLibraryPage';
+import { LoginPage } from '../pages/LoginPage';
 
 /**
  * 资源库域 — E2E 测试
@@ -22,6 +23,11 @@ test.describe('资源库', { tag: ['@library'] }, () => {
     test.describe('基础交互', () => {
       test.beforeEach(async ({ page }) => {
         libPage = new LibraryPage(page);
+        const loginPage = new LoginPage(page);
+        await loginPage.goto();
+        await loginPage.login('admin', 'Admin@123');
+        await page.waitForLoadState('domcontentloaded');
+        await page.waitForTimeout(3000);
       });
 
       // LB-001: P0 — 资源库加载
@@ -543,91 +549,75 @@ test.describe('资源库', { tag: ['@library'] }, () => {
   // 权限验证
   // ========================================================================
   test.describe('权限', () => {
-    // LB-015: P0 — USER 无权限访问资源库
-    test('LB-015 USER → 访问 /library → NoPermissionPage', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/user.json' });
-      await page.goto('/library/drawing');
-
-      const noPermission = page.getByText(/无权|无权限|权限不足|无访问权限/);
-      await expect(noPermission.first()).toBeVisible({ timeout: 10000 });
+    test.describe('USER 角色权限', () => {
+      test.beforeEach(async ({ page }) => {
+        await page.context().storageState({ path: 'e2e/.auth/user.json' });
+      });
+      test('LB-015 USER → 访问 /library → NoPermissionPage', async ({ page }) => {
+        await page.goto('/library/drawing');
+        const noPermission = page.getByText(/无权|无权限|权限不足|无访问权限/);
+        await expect(noPermission.first()).toBeVisible({ timeout: 10000 });
+      });
+      test('FL-007 USER → 访问 /font-library → NoPermissionPage', async ({ page }) => {
+        await page.goto('/font-library');
+        const noPermission = page.getByText(/无权|无权限|权限不足|无访问权限/);
+        await expect(noPermission.first()).toBeVisible({ timeout: 10000 });
+      });
     });
 
-    // FL-007: P0 — USER 无权限访问字体库
-    test('FL-007 USER → 访问 /font-library → NoPermissionPage', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/user.json' });
-      await page.goto('/font-library');
-
-      const noPermission = page.getByText(/无权|无权限|权限不足|无访问权限/);
-      await expect(noPermission.first()).toBeVisible({ timeout: 10000 });
+    test.describe('FONT_MANAGER 角色权限', () => {
+      test.beforeEach(async ({ page }) => {
+        await page.context().storageState({ path: 'e2e/.auth/font-manager.json' });
+      });
+      test('FONT_MANAGER → 访问 /font-library → 正常加载', async ({ page }) => {
+        const fontPage = new FontLibraryPage(page);
+        await fontPage.goto();
+        await expect(fontPage.fontTable).toBeVisible({ timeout: 10000 });
+        await expect(fontPage.uploadFontBtn).toBeVisible();
+      });
+      test('FONT_MANAGER → 访问 /library → NoPermissionPage', async ({ page }) => {
+        await page.goto('/library/drawing');
+        const noPermission = page.getByText(/无权|无权限|权限不足|无访问权限/);
+        await expect(noPermission.first()).toBeVisible({ timeout: 10000 });
+      });
+      test('FONT_MANAGER → 字体库上传/删除按钮可见', async ({ page }) => {
+        const fontPage = new FontLibraryPage(page);
+        await fontPage.goto();
+        await expect(fontPage.uploadFontBtn).toBeVisible({ timeout: 10000 });
+        const firstRow = fontPage.fontTableRows.first();
+        if (await firstRow.isVisible()) {
+          await expect(fontPage.deleteBtns.first()).toBeVisible();
+          await expect(fontPage.downloadBtns.first()).toBeVisible();
+        }
+      });
     });
 
-    // P1 — FONT_MANAGER 可访问字体库
-    test('FONT_MANAGER → 访问 /font-library → 正常加载', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/font-manager.json' });
-      const fontPage = new FontLibraryPage(page);
-      await fontPage.goto();
-
-      await expect(fontPage.fontTable).toBeVisible({ timeout: 10000 });
-      await expect(fontPage.uploadFontBtn).toBeVisible();
-    });
-
-    // P1 — FONT_MANAGER 无法访问资源库
-    test('FONT_MANAGER → 访问 /library → NoPermissionPage', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/font-manager.json' });
-      await page.goto('/library/drawing');
-
-      const noPermission = page.getByText(/无权|无权限|权限不足|无访问权限/);
-      await expect(noPermission.first()).toBeVisible({ timeout: 10000 });
-    });
-
-    // FL-006: P1 — ADMIN 可访问字体库
-    test('FL-006 ADMIN → 访问 /font-library → 正常加载', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/admin.json' });
-      const fontPage = new FontLibraryPage(page);
-      await fontPage.goto();
-
-      await expect(fontPage.fontTable).toBeVisible({ timeout: 10000 });
-    });
-
-    // P1 — ADMIN 可上传/删除字体
-    test('ADMIN → 字体库上传/删除按钮可见', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/admin.json' });
-      const fontPage = new FontLibraryPage(page);
-      await fontPage.goto();
-
-      await expect(fontPage.uploadFontBtn).toBeVisible({ timeout: 10000 });
-
-      const firstRow = fontPage.fontTableRows.first();
-      if (await firstRow.isVisible()) {
-        await expect(fontPage.deleteBtns.first()).toBeVisible();
-        await expect(fontPage.downloadBtns.first()).toBeVisible();
-      }
-    });
-
-    // P1 — FONT_MANAGER 可上传/删除字体
-    test('FONT_MANAGER → 字体库上传/删除按钮可见', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/font-manager.json' });
-      const fontPage = new FontLibraryPage(page);
-      await fontPage.goto();
-
-      await expect(fontPage.uploadFontBtn).toBeVisible({ timeout: 10000 });
-
-      const firstRow = fontPage.fontTableRows.first();
-      if (await firstRow.isVisible()) {
-        await expect(fontPage.deleteBtns.first()).toBeVisible();
-        await expect(fontPage.downloadBtns.first()).toBeVisible();
-      }
-    });
-
-    // P1 — ADMIN 可访问所有资源库操作
-    test('ADMIN → 资源库 → 上传/新建文件夹/删除按钮可见', async ({ page }) => {
-      test.use({ storageState: 'e2e/.auth/admin.json' });
-      const libPage = new LibraryPage(page);
-      await libPage.goto('drawing');
-
-      await expect(libPage.uploadBtn).toBeVisible({ timeout: 10000 });
-      await expect(libPage.newFolderBtn).toBeVisible();
-      await expect(libPage.deleteSelectedBtn).toBeVisible();
+    test.describe('ADMIN 角色权限', () => {
+      test.beforeEach(async ({ page }) => {
+        await page.context().storageState({ path: 'e2e/.auth/admin.json' });
+      });
+      test('FL-006 ADMIN → 访问 /font-library → 正常加载', async ({ page }) => {
+        const fontPage = new FontLibraryPage(page);
+        await fontPage.goto();
+        await expect(fontPage.fontTable).toBeVisible({ timeout: 10000 });
+      });
+      test('ADMIN → 字体库上传/删除按钮可见', async ({ page }) => {
+        const fontPage = new FontLibraryPage(page);
+        await fontPage.goto();
+        await expect(fontPage.uploadFontBtn).toBeVisible({ timeout: 10000 });
+        const firstRow = fontPage.fontTableRows.first();
+        if (await firstRow.isVisible()) {
+          await expect(fontPage.deleteBtns.first()).toBeVisible();
+          await expect(fontPage.downloadBtns.first()).toBeVisible();
+        }
+      });
+      test('ADMIN → 资源库 → 上传/新建文件夹/删除按钮可见', async ({ page }) => {
+        const libPage = new LibraryPage(page);
+        await libPage.goto('drawing');
+        await expect(libPage.uploadBtn).toBeVisible({ timeout: 10000 });
+        await expect(libPage.newFolderBtn).toBeVisible();
+        await expect(libPage.deleteSelectedBtn).toBeVisible();
+      });
     });
   });
 

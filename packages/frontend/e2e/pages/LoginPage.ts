@@ -34,11 +34,11 @@ export class LoginPage {
     this.page = page;
 
     // Legacy locators — kept identical for backward compatibility
-    this.accountInput = page.getByLabel('账号');
-    this.passwordInput = page.locator('#password');
-    this.submitButton = page.getByRole('button', { name: '登录' });
-    this.registerLink = page.getByRole('link', { name: '注册' });
-    this.forgotPasswordLink = page.getByRole('link', { name: '忘记密码' });
+    this.accountInput = page.locator('form input').first();
+    this.passwordInput = page.locator('form input[type="password"]').first();
+    this.submitButton = page.getByRole('button', { name: /登录|Sign In/i });
+    this.registerLink = page.getByRole('button', { name: /注册|立即注册|Register/i });
+    this.forgotPasswordLink = page.getByRole('button', { name: /忘记密码|Forgot/i });
 
     // Tab locators
     this.accountTab = page.getByText('账号登录');
@@ -46,8 +46,8 @@ export class LoginPage {
 
     // Account login form
     this.passwordVisibilityToggle = page.locator(
-      '[role="button"][aria-label*="密码"], button:has([data-icon="eye"])'
-    );
+      '#password ~ button, [class*="password"] button, button:has([class*="eye"])'
+    ).first();
     this.rememberMeCheckbox = page.getByLabel(/记住|自动登录|remember/i);
 
     // Phone login form

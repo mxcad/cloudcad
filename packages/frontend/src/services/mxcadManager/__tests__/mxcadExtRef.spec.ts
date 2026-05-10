@@ -5,9 +5,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock api-sdk
-vi.mock('@/api-sdk', () => ({
-  mxCadControllerUploadExtReferenceImage: vi.fn(),
+// Mock uploadBlobWithTus instead of mxCadControllerUploadExtReferenceImage
+vi.mock('../../utils/uppyUploadUtils', () => ({
+  uploadBlobWithTus: vi.fn(),
+  uploadFileWithUppy: vi.fn(),
 }));
 
 // Mock utils
@@ -30,7 +31,7 @@ import {
   checkExtReferenceImages,
   resolveExtReferenceUrl,
 } from '../mxcadExtRef';
-import { mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
+import { uploadBlobWithTus } from '../../utils/uppyUploadUtils';
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
 
@@ -40,9 +41,9 @@ describe('mxcadExtRef', () => {
   });
 
   describe('uploadExtReferenceImage', () => {
-    it('uploads a single external reference image', async () => {
-      const mockUpload = mxCadControllerUploadExtReferenceImage as ReturnType<typeof vi.fn>;
-      mockUpload.mockResolvedValue({ data: { success: true, nodeId: 'new-node-1' } });
+    it('uploads a single external reference image via Tus', async () => {
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      mockUpload.mockResolvedValue({ nodeId: 'new-node-1' });
 
       const mockFile = new File(['ref-data'], 'xref.dwg', { type: 'application/octet-stream' });
 
@@ -54,10 +55,14 @@ describe('mxcadExtRef', () => {
 
       expect(result.success).toBe(true);
       expect(mockUpload).toHaveBeenCalledTimes(1);
+      const callArgs = mockUpload.mock.calls[0][0];
+      expect(callArgs.blob).toBe(mockFile);
+      expect(callArgs.metadata.uploadType).toBe('extRef');
+      expect(callArgs.metadata.isImage).toBe('true');
     });
 
     it('handles upload failure gracefully', async () => {
-      const mockUpload = mxCadControllerUploadExtReferenceImage as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
       mockUpload.mockRejectedValue(new Error('File too large'));
 
       const mockFile = new File(['large-data'], 'big.xref', { type: 'application/octet-stream' });
@@ -73,9 +78,9 @@ describe('mxcadExtRef', () => {
       expect(handleError).toHaveBeenCalled();
     });
 
-    it('constructs FormData with correct fields', async () => {
-      const mockUpload = mxCadControllerUploadExtReferenceImage as ReturnType<typeof vi.fn>;
-      mockUpload.mockResolvedValue({ data: { success: true } });
+    it('passes metadata correctly to Tus upload', async () => {
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      mockUpload.mockResolvedValue({ nodeId: 'node-xyz' });
 
       const mockFile = new File(['data'], 'test.xref', { type: 'application/octet-stream' });
 
@@ -86,12 +91,12 @@ describe('mxcadExtRef', () => {
       });
 
       const callArgs = mockUpload.mock.calls[0][0];
-      expect(callArgs.path.nodeId).toBe('parent-node-3');
-      expect(callArgs.body).toBeInstanceOf(FormData);
+      expect(callArgs.filename).toBe('test.xref');
+      expect(callArgs.metadata.srcDwgNodeId).toBe('parent-node-3');
     });
 
     it('shows toast on failure', async () => {
-      const mockUpload = mxCadControllerUploadExtReferenceImage as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
       mockUpload.mockRejectedValue(new Error('Network offline'));
 
       const mockFile = new File(['data'], 'offline.xref');
@@ -108,7 +113,6 @@ describe('mxcadExtRef', () => {
 
   describe('checkExtReferenceImages', () => {
     it('returns empty array when no missing references', () => {
-      // This is a pure function that processes the CAD's missing references data
       const missingRefs: string[] = [];
       const result = checkExtReferenceImages(missingRefs);
       expect(result).toEqual([]);
@@ -148,7 +152,6 @@ describe('mxcadExtRef', () => {
 
       const result = checkExtReferenceImages(missingRefs);
 
-      // xref.dwg appears in both paths but should only be returned once
       expect(result).toHaveLength(2);
       expect(result).toContain('xref.dwg');
       expect(result).toContain('unique.dxf');
@@ -168,7 +171,6 @@ describe('mxcadExtRef', () => {
     it('returns original name when URL does not match public-file pattern', () => {
       const url = resolveExtReferenceUrl('http://other.com/files/drawing.dwg');
 
-      // Should handle non-matching URLs gracefully
       expect(typeof url).toBe('string');
     });
   });

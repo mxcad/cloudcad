@@ -47,13 +47,20 @@ const AppInitializer: React.FC = () => {
   useEffect(() => {
     console.log('[CloudCAD] 开始初始化 Brand Config');
     // API 客户端已通过 @/api-sdk 的 side-effect import 自动配置
+    const timeoutId = setTimeout(() => {
+      console.warn('[CloudCAD] Brand Config 超时，继续渲染');
+      setIsReady(true);
+    }, 5000);
+
     fetchBrandConfig()
       .then((brandConfig) => {
         console.log('[CloudCAD] 初始化成功:', { brandConfig });
+        clearTimeout(timeoutId);
         setIsReady(true);
       })
       .catch((err) => {
         console.error('[CloudCAD] 初始化失败:', err);
+        clearTimeout(timeoutId);
         setInitError(err instanceof Error ? err.message : String(err));
         // 即使失败也继续渲染，让应用使用默认配置
         setIsReady(true);

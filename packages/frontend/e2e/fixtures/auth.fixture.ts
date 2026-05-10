@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
 
 /**
  * 通过 MSW 浏览器 worker 拦截 API 请求。
@@ -11,15 +11,33 @@ export type TestUser = { account: string; password: string };
 export interface TestFixtures {
   testUser: TestUser;
   invalidUser: TestUser;
+  page: Page;
 }
 
-export const test = base.extend<TestFixtures>({
-  testUser: async ({}, use) => {
-    await use({ account: 'admin', password: 'Admin@123' });
-  },
-  invalidUser: async ({}, use) => {
-    await use({ account: 'invalid', password: 'wrong' });
-  },
-});
+const baseWithCleanup = base
+  .extend<TestFixtures>({
+    testUser: async ({}, use) => {
+      await use({ account: 'admin', password: 'Admin@123' });
+    },
+    invalidUser: async ({}, use) => {
+      await use({ account: 'invalid', password: 'wrong' });
+    },
+  })
+  .extend({
+    page: async ({ page }, use) => {
+      await page.goto('about:blank');
+      try {
+        await page.evaluate(() => {
+          localStorage.clear();
+          sessionStorage.clear();
+        });
+      } catch {
+        // ignore localStorage errors before page loads
+      }
+      await use(page);
+    },
+  });
+
+export const test = baseWithCleanup;
 
 export { expect };

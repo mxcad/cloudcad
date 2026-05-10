@@ -454,12 +454,13 @@ export class FileMergeService {
       return { ret: MxUploadReturn.kOk };
     }
 
-    await this.cacheManager.set('file-upload', mergeKey, true);
-
     if (
       !FileTypeDetector.isMxwebFile(name) &&
       this.fileConversionService.needsConversion(name)
     ) {
+      // mergeConvertFile internally manages its own lock via cacheManager.
+      // We must NOT set the lock here first, or mergeConvertFile will find
+      // isMerging=true and return kOk without doing any work (double-lock deadlock).
       const mergeResult = await this.mergeConvertFile({
         hash,
         name,
@@ -468,13 +469,11 @@ export class FileMergeService {
         context,
         srcDwgNodeId,
       });
-      await this.cacheManager.delete('file-upload', mergeKey);
       return mergeResult;
     } else if (FileTypeDetector.isMxwebFile(name)) {
       this.logger.log(
         `[mergeChunksWithPermission] 检测到 MXWeb 文件，直接复制到节点目录: ${name}`
       );
-    } else {
       try {
         const tmpDir = this.fileSystemService.getChunkTempDirPath(hash);
         const mergedFilePath = path.join(tmpDir, `${hash}_merged_${name}`);
@@ -486,6 +485,7 @@ export class FileMergeService {
         });
 
         if (!mergeResult.success) {
+          await this.cacheManager.delete('file-upload', mergeKey);
           return { ret: MxUploadReturn.kConvertFileError };
         }
 
@@ -501,6 +501,7 @@ export class FileMergeService {
           );
           if (!parentNode) {
             await this.fileSystemService.deleteDirectory(tmpDir);
+            await this.cacheManager.delete('file-upload', mergeKey);
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
@@ -509,6 +510,105 @@ export class FileMergeService {
             : parentNode.parentId;
           if (!parentId) {
             await this.fileSystemService.deleteDirectory(tmpDir);
+            await this.cacheManager.delete('file-upload', mergeKey);
+            return { ret: MxUploadReturn.kConvertFileError };
+          }
+
+          const newNode = await this.fileSystemServiceMain.createFileNode({
+            name,
+            fileHash: hash,
+            size: fileSize,
+            mimeType,
+            extension,
+            parentId: parentId,
+            ownerId: context.userId,
+            skipFileCopy: true,
+          });
+
+          const newNodeId = newNode.id;
+          const storageInfo = await this.storageManager.allocateNodeStorage(
+            newNodeId,
+            name
+          );
+
+          await this.storageService.copyFromFs(mergedFilePath, storageInfo.fileRelativePath);
+          await this.fileSystemServiceMain.updateNodePath(
+            newNodeId,
+            storageInfo.fileRelativePath
+          );
+
+          // 注意：公开资源库上传不需要提交 SVN
+          if (!context.isLibrary) {
+            try {
+              const nodeDirectory = storageInfo.nodeDirectoryPath;
+              await this.versionControlService.commitNodeDirectory(
+                nodeDirectory,
+                `Upload MXWeb file: ${name}`,
+                context.userId,
+                `User${context.userId}`
+              );
+            } catch (svnError) {
+              this.logger.error(
+                `[mergeChunksWithPermission] MXWeb SVN 提交异常`,
+                svnError.stack
+              );
+            }
+          }
+
+          await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
+        } else {
+          await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+      } catch (error) {
+        this.logger.error(
+          `MXWeb文件合并上传失败: ${error.message}`,
+          error.stack
+        );
+        await this.cacheManager.delete('file-upload', mergeKey);
+        return { ret: MxUploadReturn.kConvertFileError };
+      }
+    } else {
+      try {
+        const tmpDir = this.fileSystemService.getChunkTempDirPath(hash);
+        const mergedFilePath = path.join(tmpDir, `${hash}_merged_${name}`);
+
+        const mergeResult = await this.fileSystemService.mergeChunks({
+          sourceFiles: [],
+          targetPath: mergedFilePath,
+          chunkDir: tmpDir,
+        });
+
+        if (!mergeResult.success) {
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+
+        const fileSize =
+          await this.fileSystemService.getFileSize(mergedFilePath);
+
+        if (context && context.userId && context.nodeId) {
+          const extension = path.extname(name).toLowerCase();
+          const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+          const parentNode = await this.fileSystemServiceMain.getNode(
+            context.nodeId
+          );
+          if (!parentNode) {
+            await this.fileSystemService.deleteDirectory(tmpDir);
+            await this.cacheManager.delete('file-upload', mergeKey);
+            return { ret: MxUploadReturn.kConvertFileError };
+          }
+
+          const parentId = parentNode.isFolder
+            ? parentNode.id
+            : parentNode.parentId;
+          if (!parentId) {
+            await this.fileSystemService.deleteDirectory(tmpDir);
+            await this.cacheManager.delete('file-upload', mergeKey);
             return { ret: MxUploadReturn.kConvertFileError };
           }
 
@@ -555,9 +655,11 @@ export class FileMergeService {
           }
 
           await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
           return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
         } else {
           await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
           return { ret: MxUploadReturn.kConvertFileError };
         }
       } catch (error) {

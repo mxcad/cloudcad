@@ -15,6 +15,8 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  HttpException,
+  HttpStatus,
   Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -169,11 +171,14 @@ export class LocalAuthProvider implements IAuthProvider {
           },
         });
       } else {
-        throw new BadRequestException({
-          code: 'PHONE_NOT_REGISTERED',
-          message: '手机号未注册，请先注册',
-          phone: formattedPhone,
-        });
+        throw new HttpException(
+          {
+            code: 'PHONE_NOT_REGISTERED',
+            message: '手机号未注册，请先注册',
+            phone: formattedPhone,
+          },
+          HttpStatus.PRECONDITION_FAILED,
+        );
       }
     }
 
@@ -586,6 +591,7 @@ export class LocalAuthProvider implements IAuthProvider {
     if (req && req.session) {
       req.session.userId = user.id;
       req.session.userRole = user.role?.name || 'USER';
+      await req.session.save();
     }
 
     return {
@@ -664,6 +670,7 @@ export class LocalAuthProvider implements IAuthProvider {
     if (req && req.session) {
       req.session.userId = user.id;
       req.session.userRole = user.role?.name || 'USER';
+      await req.session.save();
     }
 
     return {
@@ -743,6 +750,7 @@ export class LocalAuthProvider implements IAuthProvider {
     if (req && req.session) {
       req.session.userId = user.id;
       req.session.userRole = user.role?.name || 'USER';
+      await req.session.save();
     }
 
     return {
@@ -829,6 +837,7 @@ export class LocalAuthProvider implements IAuthProvider {
     if (req && req.session) {
       req.session.userId = user.id;
       req.session.userRole = user.role?.name || 'USER';
+      await req.session.save();
     }
 
     return {
@@ -907,6 +916,7 @@ export class LocalAuthProvider implements IAuthProvider {
     if (req && req.session) {
       req.session.userId = user.id;
       req.session.userRole = user.role?.name || 'USER';
+      await req.session.save();
     }
 
     return {

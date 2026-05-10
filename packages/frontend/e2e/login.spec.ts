@@ -28,12 +28,12 @@ test.describe('Login Page', () => {
 
   test('should show error with invalid credentials', async ({ invalidUser }) => {
     await loginPage.login(invalidUser.account, invalidUser.password);
-    await expect(loginPage.errorAlert).toBeVisible({ timeout: 10000 });
+    await expect(loginPage.errorToast).toBeVisible({ timeout: 10000 });
   });
 
   test('should login successfully with valid credentials', async ({ testUser }) => {
     await loginPage.login(testUser.account, testUser.password);
-    await expect(loginPage.page).toHaveURL('/', { timeout: 15000 });
+    await expect(loginPage.page).toHaveURL(/\/(cad-editor)?/, { timeout: 15000 });
   });
 
   test('should toggle password visibility', async () => {

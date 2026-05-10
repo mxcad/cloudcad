@@ -11,9 +11,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { MulterModule } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { join } from 'path';
+import * as fs from 'fs';
 import { DatabaseModule } from '../../database/database.module';
+import { AppConfig } from '../../config/app.config';
 import { CommonModule } from '../../common/common.module';
 import { FileSystemModule } from '../../file-system/file-system.module';
 import { FilePermissionModule } from '../../file-system/file-permission/file-permission.module';
@@ -60,6 +65,47 @@ import { SaveController } from '../save/save.controller';
     VersionControlModule,
     RolesModule,
     JwtModule,
+    MulterModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService<AppConfig>) => {
+        const config = configService.get('mxcadUploadPath', { infer: true });
+        const tempPath = configService.get('mxcadTempPath', { infer: true });
+        const maxFileSize = 500 * 1024 * 1024; // 500MB
+
+        return {
+          storage: diskStorage({
+            destination: (req, file, cb) => {
+              if (req.body.chunk !== undefined) {
+                const fileMd5 = req.body.hash;
+                const tmpDir = join(tempPath, `chunk_${fileMd5}`);
+                fs.mkdirSync(tmpDir, { recursive: true });
+                cb(null, tmpDir);
+              } else {
+                fs.mkdirSync(config, { recursive: true });
+                cb(null, config);
+              }
+            },
+            filename: (req, file, cb) => {
+              const fileMd5 = req.body.hash;
+              if (req.body.chunk !== undefined) {
+                cb(null, `${req.body.chunk}_${fileMd5}`);
+              } else if (fileMd5) {
+                const ext = file.originalname.split('.').pop();
+                cb(null, `${fileMd5}.${ext}`);
+              } else {
+                cb(null, file.originalname);
+              }
+            },
+          }),
+          limits: {
+            fileSize: maxFileSize,
+            fields: 20,
+            fieldSize: 1024 * 1024,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
     MxcadInfraModule,
     MxcadConversionModule,
     MxcadNodeModule,

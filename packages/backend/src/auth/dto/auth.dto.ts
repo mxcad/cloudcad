@@ -20,6 +20,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { Transform } from 'class-transformer';
 
 export class RegisterDto {
@@ -239,7 +240,7 @@ export class AuthResponseDto {
   user: UserDto;
 }
 
-export class AuthApiResponseDto extends AuthResponseDto {}
+export class AuthApiResponseDto extends ApiResponseDto<AuthResponseDto> {}
 
 export class CheckFieldUniquenessDto {
   @ApiPropertyOptional({

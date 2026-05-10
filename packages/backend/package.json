@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "pnpm exec nest start --watch",
+    "dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",
     "build": "pnpm exec nest build && pnpm generate:swagger",
     "generate:swagger": "node scripts/generate-swagger.js",
     "start": "node dist/src/main",

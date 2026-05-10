@@ -11,7 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module, forwardRef } from '@nestjs/common';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CommonModule } from '../common/common.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { SmsModule } from '../auth/services/sms/sms.module';
@@ -36,7 +35,6 @@ import { WechatVerificationStrategy } from './strategies/wechat-verification.str
     RuntimeConfigModule,
     SmsModule,
     forwardRef(() => AuthModule),
-    EventEmitterModule.forRoot(),
   ],
   controllers: [UsersController],
   providers: [
@@ -63,6 +61,6 @@ import { WechatVerificationStrategy } from './strategies/wechat-verification.str
       ],
     },
   ],
-  exports: [UsersService, USER_SERVICE],
+  exports: [UsersService, USER_SERVICE, PASSWORD_HASHER, VERIFICATION_STRATEGIES],
 })
 export class UsersModule {}

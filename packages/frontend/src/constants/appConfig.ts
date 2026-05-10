@@ -31,14 +31,17 @@ export async function fetchBrandConfig(): Promise<BrandConfig> {
   if (cachedBrandConfig) return cachedBrandConfig;
 
   try {
-    const res = await fetch(BRAND_CONFIG_URL);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(BRAND_CONFIG_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (res.ok) {
       const config = (await res.json()) as BrandConfig;
       cachedBrandConfig = config;
       return config;
     }
   } catch (e) {
-    console.warn('Failed to fetch brand config, using defaults');
+    console.warn('Failed to fetch brand config, using defaults', e);
   }
 
   const defaultConfig: BrandConfig = {

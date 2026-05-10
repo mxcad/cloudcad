@@ -123,10 +123,14 @@ export class VersionControlController {
     @Query('projectId') projectId: string,
     @Query('filePath') filePath: string
   ): Promise<FileContentResponseDto> {
-    return this.versionControlService.getFileContentAtRevision(
+    const result = await this.versionControlService.getFileContentAtRevision(
       filePath,
       revision
     );
+    return {
+      ...result,
+      content: result.content?.toString(),
+    };
   }
 
   /**
