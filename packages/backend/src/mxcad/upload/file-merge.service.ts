@@ -860,4 +860,204 @@ export class FileMergeService {
       return { ret: MxUploadReturn.kFileNoExist };
     }
   }
+
+  /**
+   * 处理一个已完成上传的完整文件（无需分片合并）
+   *
+   * 用于 Tus 上传等场景：文件已在 uploads 目录中完成重命名（{hash}.{ext}），
+   * 只需格式转换 + 创建节点 + 复制文件到节点目录 + 缩略图 + SVN。
+   * 不再模拟分片合并流程（临时 chunk 目录、单 chunk 文件复制等）。
+   *
+   * 包含并发控制：同一 hash 的文件通过 CacheManagerService 防重处理。
+   */
+  async processUploadedFile(options: {
+    fileHash: string;
+    fileName: string;
+    fileSize: number;
+    context: FileSystemNodeContext;
+    srcDwgNodeId?: string;
+  }): Promise<MergeResult> {
+    const { fileHash, fileName, fileSize, context, srcDwgNodeId } = options;
+
+    this.logger.log(`[processUploadedFile] 开始: hash=${fileHash}, name=${fileName}`);
+
+    const uploadPath = this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
+    const extension = path.extname(fileName).toLowerCase();
+    const fileExtName = extension.replace('.', '');
+
+    // 并发控制
+    const mergeKey = `merging:${fileHash}`;
+    const isProcessing = await this.cacheManager.get<boolean>('file-upload', mergeKey);
+    if (isProcessing) {
+      this.logger.log(`[processUploadedFile] 文件正在处理中，跳过: ${fileHash}`);
+      return { ret: MxUploadReturn.kOk };
+    }
+    await this.cacheManager.set('file-upload', mergeKey, true);
+
+    let newNodeId: string | undefined;
+
+    try {
+      // Step 1: 格式转换（仅 CAD 文件，MXWeb 文件直接跳过）
+      if (
+        !FileTypeDetector.isMxwebFile(fileName) &&
+        this.fileConversionService.needsConversion(fileName)
+      ) {
+        const srcPath = path.join(uploadPath, `${fileHash}${extension}`);
+        const { isOk } = await this.fileConversionService.convertFile({
+          srcPath,
+          fileHash,
+          createPreloadingData: true,
+        });
+        if (!isOk) {
+          this.logger.error(`[processUploadedFile] 转换失败: ${fileName}`);
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+        this.logger.log(`[processUploadedFile] 转换成功: ${fileName}`);
+      }
+
+      // Step 2: 创建节点 + 复制文件 + 缩略图 + SVN
+      if (context?.userId && context?.nodeId) {
+        const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+        const parentNode = await this.fileSystemServiceMain.getNode(context.nodeId);
+        if (!parentNode) {
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+
+        const parentId = parentNode.isFolder ? parentNode.id : parentNode.parentId;
+        if (!parentId) {
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+
+        // 冲突策略
+        let finalFileName = fileName;
+        const strategy = context.conflictStrategy || 'rename';
+        const childrenResult = await this.fileSystemServiceMain.getChildren(parentId);
+        const existingNodes = childrenResult.nodes || [];
+        const existingFile = existingNodes.find(
+          (node) => !node.isFolder && node.name.toLowerCase() === fileName.toLowerCase(),
+        );
+
+        if (existingFile) {
+          if (strategy === 'skip') {
+            this.logger.log(`[processUploadedFile] 同名文件已存在，跳过: ${fileName}`);
+            await this.cacheManager.delete('file-upload', mergeKey);
+            return { ret: MxUploadReturn.kFileAlreadyExist, nodeId: existingFile.id };
+          } else if (strategy === 'overwrite') {
+            this.logger.log(`[processUploadedFile] 覆盖同名文件: ${fileName}`);
+            await this.fileSystemServiceMain.deleteNode(existingFile.id, true);
+          } else {
+            finalFileName = await this.uploadUtilityService.generateUniqueFileName(parentId, fileName);
+            this.logger.log(`[processUploadedFile] 重命名: ${fileName} -> ${finalFileName}`);
+          }
+        }
+
+        // 创建节点
+        const newNode = await this.fileSystemServiceMain.createFileNode({
+          name: finalFileName,
+          fileHash,
+          size: fileSize,
+          mimeType,
+          extension,
+          parentId,
+          ownerId: context.userId,
+          skipFileCopy: true,
+        });
+        newNodeId = newNode.id;
+        this.logger.log(`[processUploadedFile] 节点创建成功: ${newNodeId}`);
+
+        // 分配存储 + 复制文件
+        const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId);
+        const filesInUpload = await fsPromises.readdir(uploadPath);
+        const matchingFiles = filesInUpload.filter((f) => f.startsWith(fileHash));
+
+        if (matchingFiles.length > 0) {
+          const nodeDir = storageInfo.nodeDirectoryPath;
+          let mxwebFileName = '';
+
+          for (const file of matchingFiles) {
+            const sourcePath = path.join(uploadPath, file);
+            const targetFileName = file.replace(fileHash, newNodeId);
+            const targetPath = path.join(nodeDir, targetFileName);
+            await copyFileOrDir(sourcePath, targetPath, { fileHash, newNodeId });
+            if (targetFileName.endsWith('.mxweb')) {
+              mxwebFileName = targetFileName;
+            }
+          }
+
+          // 更新节点路径
+          const nodePathWithFile = mxwebFileName
+            ? `${storageInfo.nodeDirectoryRelativePath}/${mxwebFileName}`
+            : `${storageInfo.nodeDirectoryRelativePath}/${newNodeId}${extension}.mxweb`;
+          await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
+
+          // 缩略图（仅 CAD 文件）
+          const isCadFile = extension === '.dwg' || extension === '.dxf';
+          if (isCadFile) {
+            try {
+              const thumbCachePath = path.join(uploadPath, `${fileHash}.${fileExtName}.jpg`);
+              const cacheExists = await fsPromises.access(thumbCachePath).then(() => true).catch(() => false);
+
+              if (cacheExists) {
+                const thumbKey = `${storageInfo.nodeDirectoryRelativePath}/${getThumbnailFileName(THUMBNAIL_FORMATS[0])}`;
+                await this.storageService.copyFromFs(thumbCachePath, thumbKey);
+                this.logger.log(`[processUploadedFile] 缩略图缓存命中: ${newNodeId}`);
+              } else if (this.thumbnailGenerationService.isEnabled()) {
+                const cadPath = path.join(uploadPath, `${fileHash}${extension}`);
+                const result = await this.thumbnailGenerationService.generateThumbnail(
+                  cadPath, uploadPath, newNodeId, `${fileHash}.${fileExtName}.jpg`,
+                );
+                if (result.success) {
+                  const thumbKey = `${storageInfo.nodeDirectoryRelativePath}/${getThumbnailFileName(THUMBNAIL_FORMATS[0])}`;
+                  await this.storageService.copyFromFs(thumbCachePath, thumbKey);
+                } else {
+                  this.logger.warn(`[processUploadedFile] 缩略图生成失败: ${result.error}`);
+                }
+              }
+            } catch (thumbErr) {
+              this.logger.warn(`[processUploadedFile] 缩略图异常: ${thumbErr.message}`);
+            }
+          }
+        }
+
+        // SVN（公开资源库跳过）
+        if (!context.isLibrary) {
+          try {
+            await this.versionControlService.commitNodeDirectory(
+              storageInfo.nodeDirectoryPath,
+              `Upload file: ${fileName}`,
+              context.userId,
+              `User${context.userId}`,
+            );
+          } catch (svnErr) {
+            this.logger.error(`[processUploadedFile] SVN 异常`, svnErr.stack);
+          }
+        }
+
+        // 外部参照
+        if (srcDwgNodeId) {
+          try {
+            await this.externalRefService.handleExternalReferenceFile(
+              fileHash, srcDwgNodeId, fileName, path.join(uploadPath, `${fileHash}${extension}`),
+            );
+          } catch (refErr) {
+            this.logger.error(`[processUploadedFile] 外部参照异常: ${refErr.message}`);
+          }
+        }
+
+        await this.cacheManager.delete('file-upload', mergeKey);
+        return { ret: MxUploadReturn.kOk, nodeId: newNodeId };
+      }
+
+      await this.cacheManager.delete('file-upload', mergeKey);
+      return { ret: MxUploadReturn.kOk };
+    } catch (error) {
+      await this.cacheManager.delete('file-upload', mergeKey);
+      this.logger.error(`[processUploadedFile] 失败: ${error.message}`, error.stack);
+      return { ret: MxUploadReturn.kConvertFileError };
+    }
+  }
 }

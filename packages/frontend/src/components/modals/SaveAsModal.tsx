@@ -65,33 +65,45 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE);
 
   const handleConfirm = async () => {
-    // 验证文件名
+    // Validate file name
     if (!(fileName || '').trim()) {
       setError('请输入文件名');
       return;
     }
 
-    // 验证文件名格式
+    // Validate file name format
     const invalidChars = /[\\/:*?"<>|]/;
     if (invalidChars.test(fileName)) {
       setError('文件名不能包含以下字符: \\ / : * ? " < > |');
       return;
     }
 
-    // 如果没有选择保存位置，设置默认值
-    if (!selectedParentId) {
+    // Resolve the effective parentId BEFORE calling mutation
+    // Avoids race condition: setSelectedParentId is async, but mutation
+    // would use the stale (empty) value in the same render cycle.
+    let effectiveParentId = selectedParentId;
+    let effectiveProjectId = selectedProjectId;
+
+    if (!effectiveParentId) {
       if (targetType === 'personal') {
-        setSelectedParentId(getFolderPickerProjectId() || '');
+        effectiveParentId = getFolderPickerProjectId() || '';
+        setSelectedParentId(effectiveParentId);
       } else if (targetType === 'project') {
-        if (!selectedProjectId) {
+        if (!effectiveProjectId) {
           setError('请先选择项目');
           return;
         }
-        setSelectedParentId(selectedProjectId);
+        effectiveParentId = effectiveProjectId;
+        setSelectedParentId(effectiveProjectId);
       } else if (targetType === 'library') {
         setError('请选择公开资源库中的保存位置');
         return;
       }
+    }
+
+    if (!effectiveParentId) {
+      setError('请选择保存位置');
+      return;
     }
 
     setError(null);
@@ -100,8 +112,8 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       const result = await saveMutation.mutateAsync({
         targetType,
         libraryType,
-        selectedProjectId,
-        selectedParentId,
+        selectedProjectId: effectiveProjectId,
+        selectedParentId: effectiveParentId,
         format,
         fileName,
         mxwebBlob,

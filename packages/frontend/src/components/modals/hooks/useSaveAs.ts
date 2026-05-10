@@ -103,34 +103,42 @@ export const useSaveAs = ({
     mutationFn: async (params: SaveAsParams): Promise<SaveAsResult> => {
       const { targetType, libraryType, selectedProjectId, selectedParentId, format, fileName, mxwebBlob } = params;
 
+      // Wrap blob as File so multer can extract filename metadata
+      const file = new File([mxwebBlob], `${fileName || 'untitled'}.mxweb`, {
+        type: mxwebBlob.type || 'application/octet-stream',
+      });
+
       // 公开资源库另存为
       if (targetType === 'library') {
-        const formData = new FormData();
-        formData.append('file', mxwebBlob);
-        formData.append('targetType', 'library');
-        formData.append('targetParentId', selectedParentId);
-        formData.append('libraryType', libraryType || 'drawing');
-        formData.append('fileName', fileName.trim());
-
-        const result = await saveControllerSaveMxwebAs({ body: formData as unknown as SaveMxwebAsDto });
+        const result = await saveControllerSaveMxwebAs({
+          body: {
+            file,
+            targetType: 'library' as const,
+            targetParentId: selectedParentId,
+            libraryType: libraryType || 'drawing',
+            fileName: fileName.trim(),
+            format,
+          } as SaveMxwebAsDto,
+        });
         const saveResult = result.data as SaveAsResult;
 
         return saveResult;
       }
 
       // 我的图纸/项目另存为
-      const formData = new FormData();
-      formData.append('file', mxwebBlob);
-      formData.append('targetType', targetType);
-      formData.append('targetParentId', selectedParentId);
+      const body: SaveMxwebAsDto = {
+        file,
+        targetType,
+        targetParentId: selectedParentId,
+        format,
+        commitMessage: `Save as: ${fileName}.${format}`,
+        fileName: fileName.trim(),
+      };
       if (targetType === 'project' && selectedProjectId) {
-        formData.append('projectId', selectedProjectId);
+        body.projectId = selectedProjectId;
       }
-      formData.append('format', format);
-      formData.append('commitMessage', `Save as: ${fileName}.${format}`);
-      formData.append('fileName', fileName.trim());
 
-      const result = await saveControllerSaveMxwebAs({ body: formData as unknown as SaveMxwebAsDto });
+      const result = await saveControllerSaveMxwebAs({ body });
       const saveResult = result.data as SaveAsResult;
 
       return saveResult;

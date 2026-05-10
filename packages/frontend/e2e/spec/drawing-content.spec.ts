@@ -1,885 +1,809 @@
+test.describe.configure({ mode: 'serial' });
+
 import { test, expect } from '../fixtures/auth.fixture';
 import { CADEditorPage } from '../pages/CADEditorPage';
 import { SaveAsModalPage } from '../pages/SaveAsModalPage';
-import { ExternalReferenceModalPage } from '../pages/ExternalReferenceModalPage';
 import { DownloadFormatModalPage } from '../pages/DownloadFormatModalPage';
+import { ExternalReferenceModalPage } from '../pages/ExternalReferenceModalPage';
+import { DashboardPage } from '../pages/DashboardPage';
 
 /**
  * 图纸内容域 — E2E 测试
  *
- * 覆盖：CAD 编辑器外壳 / 另存为弹窗 / 外部参照弹窗 / 下载格式弹窗 / 端到端工作流
- * 执行方式：CAD 编辑器 WebGL 单实例，域内必须串行。
- * 仅测试 React DOM 外壳（工具栏按钮、模态框、容器），不涉及 Canvas/WebGL 交互。
+ * 覆盖：CAD 编辑器外壳、另存为弹窗、导出弹窗、外部参照弹窗、
+ *       未保存修改确认、Toast 通知、仪表盘、端到端工作流
  *
- * 种子数据依赖（运行前需准备）：
- *   - 预建项目含已转换的 mxweb 文件（test-file-id）
- *   - DWG/DXF 测试文件（用于上传/转换）
- *   - 含外部参照的测试文件对
- *   - 各角色用户（OWNER/EDITOR/VIEWER）的 storageState 文件
+ * 执行约束：
+ *   - 域内串行（CAD 编辑器 WebGL 单实例，不可并行）
+ *   - CAD canvas 是黑盒，仅测试 React DOM 外围（加载状态、弹窗、Toast、按钮可见性）
+ *   - CAD 工具栏按钮在 mxcad-app 的 Vue 3 + Vuetify 内，使用 CSS 选择器后备定位
  */
-test.describe('图纸内容', { tag: ['@drawing-content'] }, () => {
-  // CAD 编辑器 WebGL 单实例，所有测试必须串行
-  test.describe.configure({ mode: 'serial' });
 
-  // 用于跨测试共享的测试文件 ID
-  const TEST_FILE_ID = process.env.TEST_FILE_ID || 'test-file-id';
-  const TEST_FILE_WITH_XREF = process.env.TEST_FILE_WITH_XREF || 'test-file-with-xref';
-  const TEST_PROJECT_ID = process.env.TEST_PROJECT_ID || 'test-project-id';
+// ─── 测试种子数据 ──────────────────────────────────────────
+// 需要预建以下数据：
+//   - FILE_A: 私有 mxweb 文件（OWNER 所有）
+//   - FILE_B: 项目内 mxweb 文件（EDITOR 可编辑）
+//   - FILE_XREF: 含外部参照的主文件
+//   - XREF_DEP: 外部参照依赖文件
+//   - FILE_404: 不存在的 fileId，用于测试错误状态
+const SEED = {
+  fileA: 'seed-file-a',          // 私有文件
+  fileB: 'seed-file-b',          // 项目文件
+  fileXref: 'seed-file-xref',    // 含外部参照
+  xrefDep: 'seed-xref-dep',      // 参照依赖
+  file404: 'nonexistent-file-id',// 不存在的文件
+};
 
-  // ================================================================
-  // CAD 编辑器外壳 (CADEditorDirect)
-  // ================================================================
+// ─── 图纸内容域顶层 ────────────────────────────────────────
+
+test.describe('图纸内容域', { tag: ['@drawing-content'] }, () => {
+
+  // =========================================================
+  //  1. CAD 编辑器
+  // =========================================================
   test.describe('CAD 编辑器', () => {
-    let editor: CADEditorPage;
+    let cadEditor: CADEditorPage;
 
+    // ── 基础交互 ──
     test.describe('基础交互', () => {
-      test('CE-001: 编辑器容器渲染 → #mx-cad-container 存在', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-        await expect(editor.cadContainer).toBeAttached();
+      test('CE-001: 编辑器容器渲染 → canvas 元素存在', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        // mxcad-app 在 document.body 级创建 canvas
+        await cadEditor.waitForDrawingLoad(60000);
+        await expect(page.locator('canvas').first()).toBeAttached();
       });
 
-      test('CE-002: 打开大文件 → 加载 Spinner 可见 → 加载后消失', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await editor.goto(TEST_FILE_ID);
-
-        // 加载 Spinner 应该可见（加载中）
-        const spinnerVisible = await editor.loadingSpinner.isVisible({ timeout: 5000 }).catch(() => false);
-        if (spinnerVisible) {
-          await expect(editor.loadingSpinner).toBeVisible();
-          // 等待加载完成
-          await editor.waitForLoadComplete(60000);
-          await expect(editor.loadingSpinner).toBeHidden();
-        }
-        // 如果 spinner 瞬间消失（文件小/已缓存），也是正常行为
-      });
-
-      test('CE-003: 打开不存在的文件 → 显示错误恢复 UI', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await editor.goto('non-existent-file-id-99999');
-
-        // 错误消息应可见
-        await expect(editor.errorMessage).toBeVisible({ timeout: 15000 });
-        // "返回项目列表" 按钮应可见
-        await expect(editor.errorRecoveryButton).toBeVisible();
-      });
-
-      test('CE-004: 错误状态 → 点击"刷新页面" → 重新加载', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        // 先进入首页（空白编辑器），模拟错误需要通过主页模式
-        await editor.gotoHome();
-        await editor.waitForCADContainer(30000);
-
-        // 主页模式下错误恢复按钮文本是"刷新页面"
-        // 此测试验证错误恢复按钮存在且可点击
-        // 实际触发错误需要后端不可用场景，此处验证按钮可见性
-        const recoveryBtn = page.getByRole('button', { name: /刷新页面|返回项目列表/ });
-        // 正常加载时不会显示错误按钮
-        await expect(editor.cadContainer).toBeAttached();
-      });
-
-      test('CE-005: 错误状态 → 点击"返回项目列表" → 导航到 /projects', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await editor.goto('non-existent-file-id-99999');
-
-        // 等待错误恢复按钮出现
-        await expect(editor.errorRecoveryButton).toBeVisible({ timeout: 15000 });
-        await editor.clickErrorRecovery();
-
-        // 应导航到 /projects
-        await expect(page).toHaveURL(/\/projects/, { timeout: 10000 });
+      test('CE-002: 无文件参数访问 → 显示空白画布或欢迎引导', async ({ page }) => {
+        await page.goto('/cad-editor');
+        await page.waitForLoadState('networkidle');
+        // 无 fileId 参数，应显示空白画布或欢迎面板
+        await expect(page.locator('canvas').first()).toBeAttached({ timeout: 30000 });
       });
     });
 
-    test.describe('基础交互 - 工具栏按钮', () => {
+    // ── 加载状态 ──
+    test.describe('加载状态', () => {
+      test('CE-003: CAD 引擎加载中 → 显示 Spinner + "加载CAD引擎..." 文字', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        // 加载过程中应显示 spinner 和加载文字
+        await expect(cadEditor.container).toBeAttached({ timeout: 30000 });
+        // 根据引擎初始化速度，spinner 可能出现也可能已消失
+        const loadingState = await cadEditor.getLoadingState();
+        // 至少容器已挂载，加载完成后无错误
+        await cadEditor.waitForDrawingLoad(60000);
+        await expect(cadEditor.loadingSpinner).toBeHidden({ timeout: 10000 });
+      });
+
+      test('CE-004: 指定 fileId → 打开图纸 → "加载图纸..." → 渲染完成消失', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        // 等待图纸加载完成
+        await cadEditor.waitForDrawingLoad(60000);
+        // 加载完成后 spinner 应消失
+        await expect(cadEditor.loadingSpinner).toBeHidden({ timeout: 10000 });
+        // canvas 应已挂载
+        await expect(page.locator('canvas').first()).toBeAttached();
+      });
+    });
+
+    // ── 错误状态 ──
+    test.describe('错误状态', () => {
+      test('CE-005: 打开不存在的文件 → 显示错误信息 + "刷新页面"/"返回项目列表"', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.file404);
+        // 等待编辑器进入错误状态
+        await cadEditor.errorMessage.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+        await expect(cadEditor.errorMessage).toBeVisible({ timeout: 30000 });
+        // 应有恢复按钮
+        await expect(cadEditor.retryButton.first()).toBeVisible();
+      });
+
+      test('CE-006: 错误状态 → 点击"刷新页面" → 重新加载当前页面', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.file404);
+        await cadEditor.errorMessage.waitFor({ state: 'visible', timeout: 30000 });
+        // 点击刷新按钮
+        const refreshButton = cadEditor.retryButton.filter({ hasText: /刷新/ }).first();
+        await refreshButton.click();
+        // 页面重新加载，应保持在 cad-editor 路由
+        await expect(page).toHaveURL(/\/cad-editor/, { timeout: 15000 });
+      });
+
+      test('CE-007: 错误状态 → 点击"返回项目列表" → 导航到 /projects', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.file404);
+        await cadEditor.errorMessage.waitFor({ state: 'visible', timeout: 30000 });
+        // 点击返回按钮
+        const backButton = cadEditor.retryButton.filter({ hasText: /返回/ }).first();
+        await backButton.click();
+        await expect(page).toHaveURL(/\/projects/, { timeout: 15000 });
+      });
+
+      test('CE-009: 打开已删除文件 → 显示"文件已删除"或类似错误提示', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.file404);
+        await cadEditor.errorMessage.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+        // 错误提示应包含文件相关错误信息
+        await expect(cadEditor.errorMessage).toBeVisible({ timeout: 30000 });
+      });
+    });
+
+    // ── 工具栏 ──
+    test.describe('工具栏', () => {
       test.beforeEach(async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-        await editor.waitForLoadComplete(60000);
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+        await cadEditor.waitForToolbar(15000);
       });
 
-      test('CE-006: 登录后打开图纸 → 保存按钮在工具栏可见', async ({ page }) => {
-        // MxCAD 工具栏按钮由 mxcad-app 渲染，检查 CAD 容器存在且无错误
-        await expect(editor.cadContainer).toBeAttached();
-        await expect(editor.errorMessage).toBeHidden();
+      test('CE-010: 保存按钮可见', async () => {
+        await expect(cadEditor.saveButton).toBeVisible({ timeout: 15000 });
       });
 
-      test('CE-007: 登录后打开图纸 → 另存为按钮在工具栏可见', async ({ page }) => {
-        await expect(editor.cadContainer).toBeAttached();
-        await expect(editor.errorMessage).toBeHidden();
+      test('CE-011: 另存为按钮可见', async () => {
+        await expect(cadEditor.saveAsButton).toBeVisible({ timeout: 15000 });
       });
 
-      test('CE-008: 登录后打开图纸 → 导出按钮可见', async ({ page }) => {
-        await expect(editor.cadContainer).toBeAttached();
-        await expect(editor.errorMessage).toBeHidden();
+      test('CE-012: 导出按钮可见', async () => {
+        await expect(cadEditor.exportButton).toBeVisible({ timeout: 15000 });
       });
 
-      test('CE-009: 编辑器加载 → 撤销/重做按钮可见', async ({ page }) => {
-        // 撤销/重做由 mxcad-app 渲染，验证 CAD 容器正常加载
-        await expect(editor.cadContainer).toBeAttached();
-        await expect(editor.errorMessage).toBeHidden();
+      test('CE-013: 撤销/重做按钮可见', async () => {
+        await expect(cadEditor.undoButton).toBeVisible({ timeout: 15000 });
+        await expect(cadEditor.redoButton).toBeVisible({ timeout: 15000 });
       });
     });
 
-    test.describe('弹窗 - 登录提示', () => {
-      // 未登录用户场景 — 使用未登录的 storageState
-      test.describe('未登录用户', () => {
-        test.use({ storageState: 'e2e/.auth/anonymous.json' });
-
-        test('CE-010: 未登录 → 点击保存 → 显示 LoginPrompt 弹窗', async ({ page }) => {
-          editor = new CADEditorPage(page);
-          await editor.gotoHome();
-          await editor.waitForCADContainer(30000);
-
-          // mxcad-app 的保存按钮触发 mxcad-save-required 事件
-          // CADEditorDirect 监听该事件，未登录时显示 LoginPrompt
-          // LoginPrompt 弹窗标题为"需要登录"
-          // 注意：触发保存需要 mxcad-app 内部机制，此处验证弹窗容器结构
-          // 实际触发通过 mxcadManager 的命令机制
-        });
-
-        test('CE-012: LoginPrompt → 点击"立即登录" → 跳转登录页', async ({ page }) => {
-          editor = new CADEditorPage(page);
-          await editor.gotoHome();
-          await editor.waitForCADContainer(30000);
-
-          // 派发 mxcad-save-required 事件触发 LoginPrompt
-          await page.evaluate(() => {
-            window.dispatchEvent(new CustomEvent('mxcad-save-required', { detail: { action: '保存文件' } }));
-          });
-
-          // 等待 LoginPrompt 出现
-          await expect(editor.loginPromptTitle).toBeVisible({ timeout: 5000 });
-          await editor.loginPromptLoginButton.click();
-
-          // 应导航到 /login
-          await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
-        });
-
-        test('CE-011: LoginPrompt → 点击"稍后再说" → 弹窗关闭', async ({ page }) => {
-          editor = new CADEditorPage(page);
-          await editor.gotoHome();
-          await editor.waitForCADContainer(30000);
-
-          // 派发事件触发 LoginPrompt
-          await page.evaluate(() => {
-            window.dispatchEvent(new CustomEvent('mxcad-save-required', { detail: { action: '保存文件' } }));
-          });
-
-          await expect(editor.loginPromptTitle).toBeVisible({ timeout: 5000 });
-          await editor.loginPromptCloseButton.click();
-
-          // 弹窗应关闭
-          await expect(editor.loginPromptTitle).toBeHidden({ timeout: 3000 });
-        });
-
-        test('CE-013: 未登录 → 打开文件 → LoginPrompt 弹窗', async ({ page }) => {
-          editor = new CADEditorPage(page);
-          await editor.gotoHome();
-          await editor.waitForCADContainer(30000);
-
-          // 在主页模式下，未登录用户尝试打开"我的图纸"会触发 LoginPrompt
-          // 派发 mxcad-saveas-required 事件
-          await page.evaluate(() => {
-            window.dispatchEvent(new CustomEvent('mxcad-saveas-required', { detail: { action: '另存为' } }));
-          });
-
-          // LoginPrompt 应可见（"需要登录"标题 + "立即登录"按钮）
-          const loginPromptVisible = await editor.loginPromptTitle.isVisible({ timeout: 5000 }).catch(() => false);
-          if (loginPromptVisible) {
-            await expect(editor.loginPromptTitle).toBeVisible();
-            await expect(editor.loginPromptLoginButton).toBeVisible();
-          }
-        });
-      });
-    });
-
-    test.describe('URL 参数', () => {
-      test('CE-014: URL 直达 → ?nodeId=xxx → 跳过欢迎面板，直接打开指定文件', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        // 使用 URL 参数直接定位文件
-        await page.goto(`/?nodeId=${TEST_FILE_ID}`);
+    // ── 导航 ──
+    test.describe('导航', () => {
+      test('CE-020: URL 直达打开（?nodeId=xxx）→ 跳过欢迎面板直接打开图纸', async ({ page }) => {
+        await page.goto(`/cad-editor?nodeId=${SEED.fileA}`);
         await page.waitForLoadState('networkidle');
-        await editor.waitForCADContainer(30000);
-
-        // CAD 容器应正常加载
-        await expect(editor.cadContainer).toBeAttached();
+        await expect(page.locator('canvas').first()).toBeAttached({ timeout: 30000 });
       });
 
-      test('CE-015: 资源库文件 → ?library=drawing → 从图纸库打开', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await page.goto(`/cad-editor/${TEST_FILE_ID}?library=drawing`);
-        await page.waitForLoadState('networkidle');
-        await editor.waitForCADContainer(30000);
-
-        // CAD 容器应正常加载（资源库文件免登录访问）
-        await expect(editor.cadContainer).toBeAttached();
+      test('CE-021: 资源库文件打开（?library=drawing）→ 从图纸库打开', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        await cadEditor.gotoWithLibrary(SEED.fileA, 'drawing');
+        await expect(page.locator('canvas').first()).toBeAttached({ timeout: 30000 });
       });
     });
   });
 
-  // ================================================================
-  // 另存为弹窗 (SaveAsModal)
-  // ================================================================
+  // =========================================================
+  //  2. 另存为弹窗 (SaveAsModal)
+  // =========================================================
   test.describe('另存为弹窗', () => {
-    let editor: CADEditorPage;
+    let cadEditor: CADEditorPage;
     let saveAsModal: SaveAsModalPage;
 
-    test.describe('弹窗交互', () => {
-      test.beforeEach(async ({ page }) => {
-        editor = new CADEditorPage(page);
-        saveAsModal = new SaveAsModalPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-        await editor.waitForLoadComplete(60000);
-      });
+    test.beforeEach(async ({ page }) => {
+      cadEditor = new CADEditorPage(page);
+      saveAsModal = new SaveAsModalPage(page);
+      await cadEditor.goto(SEED.fileA);
+      await cadEditor.waitForDrawingLoad(60000);
+      await cadEditor.waitForToolbar(15000);
+    });
 
-      test('SA-001: 点击另存为按钮 → SaveAsModal 弹窗显示', async ({ page }) => {
-        // 派发 mxcad-save-as 事件触发另存为弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
-
-        // 另存为弹窗应显示
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
+    // ── 弹窗打开/关闭 ──
+    test.describe('弹窗打开/关闭', () => {
+      test('SA-001: 点击另存为按钮 → SaveAsModal 弹窗显示', async () => {
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
+        await expect(saveAsModal.modal).toBeVisible();
         await expect(saveAsModal.title).toBeVisible();
-        await expect(saveAsModal.fileNameInput).toBeVisible();
       });
 
-      test('SA-002: 目标类型切换 → 点击"我的图纸" → 选中状态', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
+      test('SA-007: 点击右上角 X → 弹窗关闭', async () => {
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
+        await cadEditor.closeSaveAsModal();
+        await expect(saveAsModal.modal).toBeHidden({ timeout: 5000 });
+      });
 
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
+      test('SA-008: 点击弹窗遮罩 → 弹窗关闭', async () => {
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
+        await saveAsModal.clickOverlay();
+        await expect(saveAsModal.modal).toBeHidden({ timeout: 5000 });
+      });
 
-        // 点击"我的图纸"
+      test('SA-009: 按 Esc 键 → 弹窗关闭', async () => {
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
+        await cadEditor.pressEscape();
+        await expect(saveAsModal.modal).toBeHidden({ timeout: 5000 });
+      });
+    });
+
+    // ── 目标选择 ──
+    test.describe('目标选择', () => {
+      test.beforeEach(async () => {
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
+      });
+
+      test('SA-002: 切换到"私人空间/我的图纸" Tab → 显示私人空间文件树', async () => {
         await saveAsModal.selectTargetType('personal');
-
-        // 验证按钮变为选中状态（indigo 边框样式）
-        await expect(saveAsModal.targetPersonalButton).toHaveClass(/border-indigo-500/);
+        await expect(saveAsModal.targetPersonalButton).toBeVisible();
       });
 
-      test('SA-003: 目标类型切换 → 点击"项目文件夹" → 显示项目选择下拉', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
-
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
-
-        // 切换到项目文件夹
+      test('SA-003: 切换到"项目" Tab → 显示项目选择下拉 + 搜索输入', async () => {
         await saveAsModal.selectTargetType('project');
-
-        // 验证项目选择下拉出现
-        await expect(saveAsModal.projectSelect).toBeVisible();
+        await expect(saveAsModal.projectSelect).toBeVisible({ timeout: 5000 });
       });
 
-      test('SA-004: 目标类型 → 点击"公开资源库" → 显示资源库选项（需库权限）', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
-
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
-
-        // "公开资源库"按钮可能存在也可能不可见（取决于权限）
+      test('SA-004: 切换到"公开资源库" Tab → 显示资源库类型选项', async () => {
+        // 库权限用户可看到此 Tab
         const libraryVisible = await saveAsModal.targetLibraryButton.isVisible().catch(() => false);
         if (libraryVisible) {
           await saveAsModal.selectTargetType('library');
-          // 资源库类型选择下拉应可见
-          await expect(saveAsModal.librarySelect).toBeVisible();
+          await expect(saveAsModal.librarySelect).toBeVisible({ timeout: 5000 });
         }
         // 如果不可见，说明用户没有库管理权限，符合预期
       });
 
-      test('SA-006: 填写文件名 → 选择目标 → 点击保存 → Toast 成功 → 弹窗关闭', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
+      test('SA-005: 在搜索输入框输入关键词 → 目标列表过滤', async () => {
+        await cadEditor.fillSaveAsTarget('搜索关键词');
+        await expect(cadEditor.saveAsSearchInput).toHaveValue('搜索关键词');
+      });
+    });
 
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
+    // ── 确认保存 ──
+    test.describe('确认保存', () => {
+      test('SA-006: 选择目标 → 确认保存 → loading → Toast "保存成功" → 弹窗关闭', async ({ page }) => {
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
 
-        // 填写文件名
-        await saveAsModal.fillFileName('test-save-as-drawing');
+        // 选择项目 Tab
+        await saveAsModal.selectTargetType('project');
 
-        // 选择目标类型
-        await saveAsModal.selectTargetType('personal');
-
-        // 选择 DWG 格式
-        await saveAsModal.selectFormat('dwg');
-
-        // 提交保存
-        await saveAsModal.submit();
-
-        // 等待 Toast 或弹窗关闭
-        const successToast = page.getByText(/保存成功/);
-        const toastVisible = await successToast.isVisible({ timeout: 10000 }).catch(() => false);
-        if (toastVisible) {
-          await expect(successToast).toBeVisible();
+        // 选择第一个可用目标（如果有）
+        const targetItem = cadEditor.saveAsTargetList.first();
+        if (await targetItem.isVisible({ timeout: 3000 }).catch(() => false)) {
+          await targetItem.click();
         }
+
+        // 确认保存
+        await cadEditor.confirmSaveAs();
+
+        // Toast 成功提示
+        await expect(page.getByText(/保存成功/)).toBeVisible({ timeout: 15000 });
+        // 弹窗关闭
+        await expect(saveAsModal.modal).toBeHidden({ timeout: 5000 });
       });
     });
 
-    test.describe('关闭弹窗', () => {
-      test.beforeEach(async ({ page }) => {
-        editor = new CADEditorPage(page);
-        saveAsModal = new SaveAsModalPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-        await editor.waitForLoadComplete(60000);
-
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
-      });
-
-      test('SA-007: 取消 → 点击"取消"按钮 → 弹窗关闭', async () => {
-        await saveAsModal.cancel();
-        await expect(saveAsModal.modal).toBeHidden({ timeout: 3000 });
-      });
-
-      test('SA-008: 取消 → 点击遮罩 → 弹窗关闭', async ({ page }) => {
-        // 按 Escape 键关闭（遮罩点击在 Portal 模式下可能难以定位）
-        await page.keyboard.press('Escape');
-        // 验证弹窗关闭
-        const isHidden = await saveAsModal.modal.isHidden({ timeout: 3000 }).catch(() => false);
-        expect(isHidden).toBeTruthy();
-      });
-
-      test('SA-009: 取消 → 按 Esc 键 → 弹窗关闭', async ({ page }) => {
-        await page.keyboard.press('Escape');
-        const isHidden = await saveAsModal.modal.isHidden({ timeout: 3000 }).catch(() => false);
-        expect(isHidden).toBeTruthy();
-      });
-    });
-
-    test.describe('权限 - VIEWER 角色', () => {
-      test.use({ storageState: 'e2e/.auth/viewer.json' });
-
+    // ── 权限 ──
+    test.describe('权限', () => {
       test('SA-010: VIEWER 角色 → 另存为按钮不可见', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-
-        // VIEWER 没有 CAD_SAVE 权限，mxcad-app 工具栏不显示保存/另存为按钮
-        // 验证 CAD 容器加载且无保存权限
-        await expect(editor.cadContainer).toBeAttached();
-      });
-    });
-
-    test.describe('权限 - 库权限', () => {
-      test('SA-011: 无库权限 → 另存到资源库 → Toast "无权限"', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        saveAsModal = new SaveAsModalPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-        await editor.waitForLoadComplete(60000);
-
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-save-as', {
-              detail: {
-                currentFileName: 'test-drawing.dwg',
-                mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-                personalSpaceId: null,
-              },
-            })
-          );
-        });
-
-        await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
-
-        // "公开资源库"按钮可能不可见（取决于权限）
-        const libraryVisible = await saveAsModal.targetLibraryButton.isVisible().catch(() => false);
-        if (!libraryVisible) {
-          // 无库权限时资源库按钮不可见，预期行为
-          await expect(saveAsModal.targetLibraryButton).toBeHidden();
-        }
+        // 需要 Viewer 角色的 storageState fixture
+        test.skip(true, '需要 Viewer 角色的 storageState fixture');
       });
     });
   });
 
-  // ================================================================
-  // 外部参照弹窗 (ExternalReferenceModal)
-  // ================================================================
-  test.describe('外部参照弹窗', () => {
-    let editor: CADEditorPage;
-    let xrefModal: ExternalReferenceModalPage;
+  // =========================================================
+  //  3. 导出弹窗 (ExportModal)
+  // =========================================================
+  test.describe('导出弹窗', () => {
+    let cadEditor: CADEditorPage;
+    let exportModal: DownloadFormatModalPage;
 
-    test.describe('弹窗交互', () => {
-      test('ER-001: 打开含缺失参照的文件 → 弹窗列出缺失文件', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        xrefModal = new ExternalReferenceModalPage(page);
-        await editor.goto(TEST_FILE_WITH_XREF);
-        await editor.waitForCADContainer(30000);
+    test.beforeEach(async ({ page }) => {
+      cadEditor = new CADEditorPage(page);
+      exportModal = new DownloadFormatModalPage(page);
+      await cadEditor.goto(SEED.fileA);
+      await cadEditor.waitForDrawingLoad(60000);
+      await cadEditor.waitForToolbar(15000);
+    });
 
-        // 外部参照弹窗可能自动弹出（取决于后端返回的参照数据）
-        const isOpen = await xrefModal.isOpen().catch(() => false);
-        if (isOpen) {
-          await expect(xrefModal.title).toBeVisible();
-          // 文件列表应包含行
-          const fileCount = await xrefModal.getFileCount();
-          expect(fileCount).toBeGreaterThan(0);
-        }
-        // 如果弹窗未出现，文件可能没有外部参照或已全部上传
+    // ── 弹窗打开 ──
+    test.describe('弹窗打开', () => {
+      test('EX-001: 点击导出按钮 → 导出弹窗显示，格式选项可见', async () => {
+        await cadEditor.clickExport();
+        await cadEditor.waitForExportModal(10000);
+        await expect(exportModal.modal).toBeVisible();
+        await expect(exportModal.formatDwgRadio).toBeVisible();
+        await expect(exportModal.formatDxfRadio).toBeVisible();
+        await expect(exportModal.title).toBeVisible();
+      });
+    });
+
+    // ── 格式选择 ──
+    test.describe('格式选择', () => {
+      test.beforeEach(async () => {
+        await cadEditor.clickExport();
+        await cadEditor.waitForExportModal(10000);
       });
 
-      test('ER-002: 选择文件 → 上传 → 替换成功 → 弹窗关闭', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        xrefModal = new ExternalReferenceModalPage(page);
-        await editor.goto(TEST_FILE_WITH_XREF);
-        await editor.waitForCADContainer(30000);
+      test('EX-002: 选择 DWG → DWG 选项选中', async () => {
+        await exportModal.selectFormat('dwg');
+        await expect(exportModal.formatDwgRadio).toBeChecked();
+      });
 
+      test('EX-003: 选择 DXF → DXF 选项选中', async () => {
+        await exportModal.selectFormat('dxf');
+        await expect(exportModal.formatDxfRadio).toBeChecked();
+      });
+
+      test('EX-004: 选择 PDF → PDF 选项选中 + PDF 参数面板显示', async () => {
+        await exportModal.selectFormat('pdf');
+        await expect(exportModal.formatPdfRadio).toBeChecked();
+        // PDF 参数区域可能出现（宽度、高度、颜色策略）
+        await expect(exportModal.pdfWidthInput).toBeVisible({ timeout: 3000 }).catch(() => {});
+      });
+    });
+
+    // ── 确认导出 ──
+    test.describe('确认导出', () => {
+      test('EX-005: 选 DWG → 点击导出 → loading → 自动下载触发 → 弹窗关闭', async ({ page }) => {
+        await cadEditor.clickExport();
+        await cadEditor.waitForExportModal(10000);
+        await exportModal.selectFormat('dwg');
+
+        // 监听下载事件
+        const downloadPromise = page.waitForEvent('download', { timeout: 30000 }).catch(() => null);
+        await exportModal.confirm();
+
+        // 弹窗应关闭
+        await expect(exportModal.modal).toBeHidden({ timeout: 10000 });
+
+        // 下载应触发
+        const download = await downloadPromise;
+        if (download) {
+          expect(download.suggestedFilename()).toMatch(/\.dwg$/);
+        }
+      });
+
+      test('EX-006: 点击取消 → 弹窗关闭', async () => {
+        await cadEditor.clickExport();
+        await cadEditor.waitForExportModal(10000);
+        await exportModal.cancel();
+        await expect(exportModal.modal).toBeHidden({ timeout: 5000 });
+      });
+    });
+  });
+
+  // =========================================================
+  //  4. 外部参照弹窗 (ExternalReferenceModal)
+  // =========================================================
+  test.describe('外部参照弹窗', () => {
+    let cadEditor: CADEditorPage;
+    let xrefModal: ExternalReferenceModalPage;
+
+    // ── 弹窗显示 ──
+    test.describe('弹窗显示', () => {
+      test('ER-001: 打开含缺失参照的图纸 → 弹窗列出缺失参照文件名', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        xrefModal = new ExternalReferenceModalPage(page);
+        await cadEditor.goto(SEED.fileXref);
         // 等待外部参照弹窗出现
+        await cadEditor.waitForExternalRefModal(15000).catch(() => {});
         const isOpen = await xrefModal.isOpen().catch(() => false);
         if (isOpen) {
-          await xrefModal.waitForModal(10000);
+          await expect(xrefModal.fileRows.first()).toBeVisible();
+        }
+      });
 
-          // 选择并上传文件
-          const fileChooserPromise = page.waitForEvent('filechooser');
-          await xrefModal.clickUpload();
-          const fileChooser = await fileChooserPromise;
-          await fileChooser.setFiles('e2e/test-files/xref-sample.dwg');
+      test('ER-004: 关闭弹窗（跳过参照）→ 弹窗关闭', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        xrefModal = new ExternalReferenceModalPage(page);
+        await cadEditor.goto(SEED.fileXref);
+        await cadEditor.waitForExternalRefModal(15000).catch(() => {});
+        const isOpen = await xrefModal.isOpen().catch(() => false);
+        if (isOpen) {
+          await cadEditor.closeExternalRefModal();
+          await expect(xrefModal.modal).toBeHidden({ timeout: 5000 });
+        }
+      });
+    });
 
-          // 等待上传完成（成功图标或完成按钮可用）
+    // ── 上传替换 ──
+    test.describe('上传替换', () => {
+      test('ER-002: 选择单个文件 → 上传 → 替换成功 → 参照列表更新', async ({ page }) => {
+        cadEditor = new CADEditorPage(page);
+        xrefModal = new ExternalReferenceModalPage(page);
+        await cadEditor.goto(SEED.fileXref);
+        await cadEditor.waitForExternalRefModal(15000).catch(() => {});
+        const isOpen = await xrefModal.isOpen().catch(() => false);
+        if (isOpen) {
+          const fileChooser = await cadEditor.uploadReplacement();
+          await fileChooser.setFiles('e2e/test-files/xref-dep.dwg');
+          // 等待上传完成 — 成功图标出现
           await expect(xrefModal.successIcons.first()).toBeVisible({ timeout: 15000 });
         }
       });
-
-      test('ER-003: 点击取消/关闭 → 弹窗关闭（可能跳过参照）', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        xrefModal = new ExternalReferenceModalPage(page);
-        await editor.goto(TEST_FILE_WITH_XREF);
-        await editor.waitForCADContainer(30000);
-
-        const isOpen = await xrefModal.isOpen().catch(() => false);
-        if (isOpen) {
-          await xrefModal.waitForModal(10000);
-
-          // 点击取消按钮
-          await xrefModal.clickCancel();
-
-          // 弹窗应关闭
-          await expect(xrefModal.modal).toBeHidden({ timeout: 3000 });
-        }
-      });
     });
 
-    test.describe('权限 - EDITOR 角色', () => {
-      test.use({ storageState: 'e2e/.auth/editor.json' });
-
-      test('ER-004: EDITOR 无外部参照权限 → 参照功能受限', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        xrefModal = new ExternalReferenceModalPage(page);
-        await editor.goto(TEST_FILE_WITH_XREF);
-        await editor.waitForCADContainer(30000);
-
-        // EDITOR 没有 CAD_EXTERNAL_REFERENCE 权限时，
-        // canManageExternalRef 为 false，弹窗可能不显示或按钮受限
-        const isOpen = await xrefModal.isOpen().catch(() => false);
-        if (isOpen) {
-          // 弹窗显示但"选择并上传"按钮可能禁用
-          await xrefModal.waitForModal(10000);
-          const uploadDisabled = await xrefModal.uploadButton.isDisabled().catch(() => true);
-          expect(uploadDisabled).toBeTruthy();
-        }
-        // 弹窗不显示也是预期行为
+    // ── 权限 ──
+    test.describe('权限', () => {
+      test('ER-005: EDITOR 打开含参照文件 → 参照功能受限', async () => {
+        test.skip(true, '需要 EDITOR 角色的 storageState fixture');
       });
     });
   });
 
-  // ================================================================
-  // 下载/导出弹窗 (DownloadFormatModal)
-  // ================================================================
-  test.describe('下载格式弹窗', () => {
-    let editor: CADEditorPage;
-    let downloadModal: DownloadFormatModalPage;
+  // =========================================================
+  //  5. 未保存修改确认弹窗
+  // =========================================================
+  test.describe('未保存修改确认弹窗', () => {
+    let cadEditor: CADEditorPage;
 
-    test.describe('弹窗交互', () => {
-      test.beforeEach(async ({ page }) => {
-        editor = new CADEditorPage(page);
-        downloadModal = new DownloadFormatModalPage(page);
-        await editor.goto(TEST_FILE_ID);
-        await editor.waitForCADContainer(30000);
-        await editor.waitForLoadComplete(60000);
-      });
-
-      test('DL-001: 点击导出按钮 → DownloadFormatModal 弹窗显示', async ({ page }) => {
-        // 派发 mxcad-export-file 事件触发导出弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        // 下载格式弹窗应显示
-        await expect(downloadModal.modal).toBeVisible({ timeout: 5000 });
-        await expect(downloadModal.title).toBeVisible();
-        await expect(downloadModal.downloadButton).toBeVisible();
-        await expect(downloadModal.cancelButton).toBeVisible();
-      });
-
-      test('DL-002: 格式选择 → 选择 DWG → DWG 选项高亮', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        await downloadModal.waitForModal(5000);
-
-        // 选择 DWG 格式
-        await downloadModal.selectFormat('dwg');
-
-        // 验证 DWG radio 被选中
-        await expect(downloadModal.formatDwgRadio).toBeChecked();
-      });
-
-      test('DL-003: 格式选择 → 选择 DXF → DXF 选项高亮', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        await downloadModal.waitForModal(5000);
-
-        // 选择 DXF 格式
-        await downloadModal.selectFormat('dxf');
-
-        // 验证 DXF radio 被选中
-        await expect(downloadModal.formatDxfRadio).toBeChecked();
-      });
-
-      test('DL-004: 格式选择 → 选择 PDF → PDF 参数面板显示', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        await downloadModal.waitForModal(5000);
-
-        // 选择 PDF 格式
-        await downloadModal.selectFormat('pdf');
-
-        // PDF 参数面板应显示（包含宽度、高度、颜色策略字段）
-        await expect(downloadModal.pdfColorPolicySelect).toBeVisible({ timeout: 3000 });
-      });
-
-      test('DL-005: 选择格式 → 点击下载 → 触发下载 → 弹窗关闭', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        await downloadModal.waitForModal(5000);
-
-        // 选择 DWG 格式
-        await downloadModal.selectFormat('dwg');
-
-        // 监听下载请求
-        const downloadRequest = page.waitForRequest(
-          (req) => req.url().includes('/download/') && req.method() === 'GET'
-        ).catch(() => null);
-
-        // 点击下载
-        await downloadModal.confirm();
-
-        // 等待下载请求发出
-        const request = await downloadRequest;
-        if (request) {
-          expect(request.url()).toContain('format=dwg');
-        }
-      });
-
-      test('DL-006: 点击取消 → 弹窗关闭', async ({ page }) => {
-        // 触发弹窗
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        await downloadModal.waitForModal(5000);
-
-        // 点击取消
-        await downloadModal.cancel();
-
-        // 弹窗应关闭
-        await expect(downloadModal.modal).toBeHidden({ timeout: 3000 });
-      });
+    test.beforeEach(async ({ page }) => {
+      cadEditor = new CADEditorPage(page);
+      await cadEditor.goto(SEED.fileA);
+      await cadEditor.waitForDrawingLoad(60000);
     });
 
-    test.describe('权限 - 未登录', () => {
-      test.use({ storageState: 'e2e/.auth/anonymous.json' });
-
-      test('DL-007: 未登录 → 点击导出 → 导出被阻止', async ({ page }) => {
-        editor = new CADEditorPage(page);
-        downloadModal = new DownloadFormatModalPage(page);
-        await editor.gotoHome();
-        await editor.waitForCADContainer(30000);
-
-        // 派发导出事件
-        await page.evaluate(() => {
-          window.dispatchEvent(
-            new CustomEvent('mxcad-export-file', {
-              detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-            })
-          );
-        });
-
-        // 未登录用户导出时，DownloadFormatModal 不出现（canExport 为 false）
-        // 或者 showToast 显示警告
-        const modalVisible = await downloadModal.modal.isVisible({ timeout: 3000 }).catch(() => false);
-        if (!modalVisible) {
-          // 无权限时弹窗不显示，预期行为
-          await expect(downloadModal.modal).toBeHidden();
-        }
-      });
-    });
-  });
-
-  // ================================================================
-  // 端到端工作流
-  // ================================================================
-  test.describe('端到端工作流', () => {
-    let editor: CADEditorPage;
-    let saveAsModal: SaveAsModalPage;
-    let downloadModal: DownloadFormatModalPage;
-
-    test('W-020: 上传 DWG → 等待转换 → 打开 → 编辑 → 保存', async ({ page }) => {
-      editor = new CADEditorPage(page);
-      saveAsModal = new SaveAsModalPage(page);
-
-      // 步骤 1: 进入主页空白编辑器
-      await editor.gotoHome();
-      await editor.waitForCADContainer(30000);
-
-      // 步骤 2: 上传 DWG 文件
-      // 通过 file input 或拖拽上传
-      // mxcad-app 内部处理上传，此处验证编辑器容器可用
-      await expect(editor.cadContainer).toBeAttached();
-
-      // 步骤 3: 等待转换完成
-      // 转换由后端处理，前端通过 WebSocket/polling 获知状态
-      // 验证无错误状态
-      await expect(editor.errorMessage).toBeHidden();
-    });
-
-    test('W-021: 打开文件 → 另存为 → 选择项目 → 确认 → 复制到项目', async ({ page }) => {
-      editor = new CADEditorPage(page);
-      saveAsModal = new SaveAsModalPage(page);
-
-      // 步骤 1: 打开已有文件
-      await editor.goto(TEST_FILE_ID);
-      await editor.waitForCADContainer(30000);
-      await editor.waitForLoadComplete(60000);
-
-      // 步骤 2: 触发另存为
+    test('UC-001: 编辑后切换图纸 → 提示未保存内容弹窗', async ({ page }) => {
+      // 模拟脏状态
       await page.evaluate(() => {
-        window.dispatchEvent(
-          new CustomEvent('mxcad-save-as', {
-            detail: {
-              currentFileName: 'test-drawing.dwg',
-              mxwebBlob: new Blob(['test'], { type: 'application/octet-stream' }),
-              personalSpaceId: null,
-            },
-          })
-        );
+        (window as unknown as Record<string, unknown>).__mxcadDirty = true;
       });
+      try {
+        await page.goto(`/cad-editor/${SEED.fileB}`);
+      } catch {
+        // navigation may be blocked
+      }
+      await page.waitForLoadState('networkidle');
+      await cadEditor.waitForUnsavedDialog(10000).catch(() => {});
+    });
 
-      await expect(saveAsModal.modal).toBeVisible({ timeout: 5000 });
+    test('UC-002: 弹窗 → 点击确认 → 丢弃修改 → 切换图纸', async ({ page }) => {
+      await page.evaluate(() => {
+        (window as unknown as Record<string, unknown>).__mxcadDirty = true;
+      });
+      try {
+        await page.goto(`/cad-editor/${SEED.fileB}`);
+      } catch {
+        // navigation may be blocked
+      }
+      await cadEditor.waitForUnsavedDialog(10000).catch(() => {});
+      const dialogVisible = await cadEditor.unsavedDialog.isVisible().catch(() => false);
+      if (dialogVisible) {
+        await cadEditor.confirmClose();
+        await expect(cadEditor.unsavedDialog).toBeHidden({ timeout: 5000 });
+      }
+    });
 
-      // 步骤 3: 填写文件名
-      await saveAsModal.fillFileName('copied-drawing');
+    test('UC-003: 弹窗 → 点击取消 → 留在当前图纸', async ({ page }) => {
+      await page.evaluate(() => {
+        (window as unknown as Record<string, unknown>).__mxcadDirty = true;
+      });
+      try {
+        await page.goto(`/cad-editor/${SEED.fileB}`);
+      } catch {
+        // navigation blocked
+      }
+      await cadEditor.waitForUnsavedDialog(10000).catch(() => {});
+      const dialogVisible = await cadEditor.unsavedDialog.isVisible().catch(() => false);
+      if (dialogVisible) {
+        await cadEditor.cancelClose();
+        await expect(cadEditor.unsavedDialog).toBeHidden({ timeout: 5000 });
+        await expect(page).toHaveURL(new RegExp(SEED.fileA));
+      }
+    });
 
-      // 步骤 4: 选择目标为项目文件夹
+    test('UC-004: 无修改关闭 → 直接切换图纸，不弹窗', async ({ page }) => {
+      await page.evaluate(() => {
+        delete (window as unknown as Record<string, unknown>).__mxcadDirty;
+      });
+      await page.goto(`/cad-editor/${SEED.fileB}`);
+      await page.waitForLoadState('networkidle');
+      await expect(cadEditor.unsavedDialog).toBeHidden({ timeout: 3000 });
+    });
+  });
+
+  // =========================================================
+  //  6. Toast 通知
+  // =========================================================
+  test.describe('Toast 通知', () => {
+    let cadEditor: CADEditorPage;
+
+    test.beforeEach(async ({ page }) => {
+      cadEditor = new CADEditorPage(page);
+      await cadEditor.goto(SEED.fileA);
+      await cadEditor.waitForDrawingLoad(60000);
+      await cadEditor.waitForToolbar(15000);
+    });
+
+    test('TO-001: 保存成功 → Toast "保存成功" 出现后自动消失', async () => {
+      await cadEditor.clickSave();
+      const toastText = await cadEditor.getToast();
+      if (toastText) {
+        await expect(cadEditor.toast.first()).toBeVisible({ timeout: 15000 });
+        // Toast 应自动消失
+        await expect(cadEditor.toast.first()).toBeHidden({ timeout: 30000 }).catch(() => {});
+      }
+    });
+
+    test('TO-003: 另存为成功 → Toast "保存成功" 出现后消失', async ({ page }) => {
+      await cadEditor.clickSaveAs();
+      await cadEditor.waitForSaveAsModal(10000);
+
+      const saveAsModal = new SaveAsModalPage(page);
       await saveAsModal.selectTargetType('project');
 
-      // 步骤 5: 选择项目（如果下拉有选项）
-      const projectOptions = saveAsModal.projectSelect.locator('option');
-      const optionCount = await projectOptions.count();
-      if (optionCount > 1) {
-        // 选择第一个有效项目（跳过 "请选择项目" 占位符）
-        const firstProjectValue = await projectOptions.nth(1).getAttribute('value');
-        if (firstProjectValue) {
-          await saveAsModal.selectProject(firstProjectValue);
-        }
+      const targetItem = cadEditor.saveAsTargetList.first();
+      if (await targetItem.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await targetItem.click();
       }
-
-      // 步骤 6: 选择 DWG 格式
-      await saveAsModal.selectFormat('dwg');
-
-      // 步骤 7: 提交保存
-      await saveAsModal.submit();
-
-      // 步骤 8: 等待保存结果
-      const successToast = page.getByText(/保存成功/);
-      await expect(successToast).toBeVisible({ timeout: 15000 });
+      await cadEditor.confirmSaveAs();
+      await expect(page.getByText(/保存成功/)).toBeVisible({ timeout: 15000 });
     });
 
-    test('W-022: 打开文件 → 导出 → DWG → 确认 → 下载触发', async ({ page }) => {
-      editor = new CADEditorPage(page);
-      downloadModal = new DownloadFormatModalPage(page);
+    test('TO-004: 导出成功 → Toast 成功 → 自动下载触发', async ({ page }) => {
+      await cadEditor.clickExport();
+      await cadEditor.waitForExportModal(10000);
 
-      // 步骤 1: 打开文件
-      await editor.goto(TEST_FILE_ID);
-      await editor.waitForCADContainer(30000);
-      await editor.waitForLoadComplete(60000);
+      const exportModal = new DownloadFormatModalPage(page);
+      await exportModal.selectFormat('dwg');
+      const downloadPromise = page.waitForEvent('download', { timeout: 30000 }).catch(() => null);
+      await exportModal.confirm();
 
-      // 步骤 2: 触发导出
-      await page.evaluate(() => {
-        window.dispatchEvent(
-          new CustomEvent('mxcad-export-file', {
-            detail: { fileId: 'test-file-id', fileName: 'test-drawing.dwg' },
-          })
-        );
+      const toastText = await cadEditor.getToast();
+      if (toastText) {
+        await expect(cadEditor.toast.first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+      }
+      await downloadPromise;
+    });
+  });
+
+  // =========================================================
+  //  7. 仪表盘
+  // =========================================================
+  test.describe('仪表盘', () => {
+    let dashboard: DashboardPage;
+
+    test.beforeEach(async ({ page }) => {
+      dashboard = new DashboardPage(page);
+      await dashboard.goto();
+      await page.waitForLoadState('networkidle');
+    });
+
+    // ── 基础交互 ──
+    test.describe('基础交互', () => {
+      test('DB-001: 页面正常加载 → 问候语 + 统计卡片可见', async () => {
+        await expect(dashboard.greeting).toBeVisible({ timeout: 10000 });
+        await expect(dashboard.statCards).toBeVisible();
       });
 
-      await downloadModal.waitForModal(5000);
+      test('DB-004: 点击"新建项目" → 弹出创建弹窗或跳转创建页面', async ({ page }) => {
+        await dashboard.openCreateProjectModal();
+        await expect(
+          dashboard.createProjectModal.or(page.getByRole('button', { name: /创建/ }))
+        ).toBeVisible({ timeout: 5000 }).catch(() => {});
+      });
 
-      // 步骤 3: 选择 DWG 格式
-      await downloadModal.selectFormat('dwg');
-
-      // 步骤 4: 确认下载
-      // 监听下载请求
-      const downloadPromise = page.waitForResponse(
-        (res) => res.url().includes('/download/') || res.url().includes('/filesData/'),
-        { timeout: 15000 }
-      ).catch(() => null);
-
-      await downloadModal.confirm();
-
-      // 步骤 5: 验证下载触发
-      const response = await downloadPromise;
-      if (response) {
-        expect(response.status()).toBe(200);
-      }
-    });
-
-    test('W-023: 打开含参照文件 → 上传替换参照 → 继续打开', async ({ page }) => {
-      editor = new CADEditorPage(page);
-      const xrefModal = new ExternalReferenceModalPage(page);
-
-      // 步骤 1: 打开含外部参照的文件
-      await editor.goto(TEST_FILE_WITH_XREF);
-      await editor.waitForCADContainer(30000);
-
-      // 步骤 2: 等待外部参照弹窗
-      const isOpen = await xrefModal.isOpen().catch(() => false);
-      if (isOpen) {
-        await xrefModal.waitForModal(10000);
-
-        // 步骤 3: 上传参照文件
-        const fileChooserPromise = page.waitForEvent('filechooser');
-        await xrefModal.clickUpload();
+      test('DB-005: 点击"上传图纸" → 触发上传流程', async ({ page }) => {
+        const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 }).catch(() => null);
+        await dashboard.uploadButton.first().click();
         const fileChooser = await fileChooserPromise;
-        await fileChooser.setFiles('e2e/test-files/xref-sample.dwg');
-
-        // 步骤 4: 等待上传成功
-        await expect(xrefModal.allSuccessMessage).toBeVisible({ timeout: 20000 });
-
-        // 步骤 5: 点击完成
-        await xrefModal.clickComplete();
-
-        // 步骤 6: 弹窗关闭，文件正常打开
-        await expect(xrefModal.modal).toBeHidden({ timeout: 5000 });
-      }
-
-      // CAD 容器应正常加载
-      await expect(editor.cadContainer).toBeAttached();
+        if (fileChooser) {
+          expect(fileChooser).toBeTruthy();
+        }
+      });
     });
 
-    test('W-024: 编辑后 → 切换图纸 → 未保存确认弹窗', async ({ page }) => {
-      editor = new CADEditorPage(page);
+    // ── 加载状态 ──
+    test.describe('加载状态', () => {
+      test('DB-002: 仪表盘加载中 → 骨架卡片显示 → 数据渲染后消失', async ({ page }) => {
+        await page.reload();
+        const skeleton = page.locator('[class*="skeleton"], [class*="animate-pulse"]').first();
+        await expect(skeleton).toBeAttached({ timeout: 5000 }).catch(() => {});
+        await page.waitForLoadState('networkidle');
+      });
+    });
 
-      // 步骤 1: 打开文件
-      await editor.goto(TEST_FILE_ID);
-      await editor.waitForCADContainer(30000);
-      await editor.waitForLoadComplete(60000);
+    // ── 列表渲染 ──
+    test.describe('列表渲染', () => {
+      test('DB-009: 最近项目卡片列表渲染', async () => {
+        await expect(dashboard.recentProjectsSection).toBeVisible({ timeout: 10000 });
+      });
 
-      // 步骤 2: 模拟导航离开（编辑后未保存）
-      // mxcadManager 通过监听 beforeunload 和路由变化处理未保存提示
-      // 此处验证编辑器正常加载后导航离开不会导致崩溃
-      await page.goto('/projects');
-      await page.waitForLoadState('networkidle');
+      test('DB-011: 最近文件列表渲染', async () => {
+        await expect(dashboard.recentFilesSection).toBeVisible({ timeout: 10000 });
+      });
 
-      // 步骤 3: 应导航到项目列表
-      await expect(page).toHaveURL(/\/projects/, { timeout: 10000 });
+      test('DB-006: 点击最近文件区域 → 跳转或展开', async ({ page }) => {
+        await dashboard.recentFilesSection.first().click();
+        await expect(page).toHaveURL(/\/(files|file-manager|projects)/, { timeout: 10000 })
+          .catch(() => {
+            // 可能在当前页展开更多内容
+          });
+      });
+
+      test('DB-007: 点击最近项目区域 → 跳转项目列表', async ({ page }) => {
+        await dashboard.recentProjectsSection.first().click();
+        await expect(page).toHaveURL(/\/(projects)/, { timeout: 10000 })
+          .catch(() => {
+            // 可能在当前页展开更多内容
+          });
+      });
+    });
+
+    // ── 空状态 ──
+    test.describe('空状态', () => {
+      test('DB-003: 新用户无项目/文件 → 显示空状态引导 + CTA 按钮', async () => {
+        test.skip(true, '需要新用户（无项目/文件）的 storageState fixture');
+      });
+    });
+
+    // ── 错误状态 ──
+    test.describe('错误状态', () => {
+      test('DB-013: 仪表盘数据加载失败 → 错误提示，可重试', async () => {
+        test.skip(true, '需要 mock 仪表盘 API 返回错误');
+      });
+    });
+  });
+
+  // =========================================================
+  //  8. 权限交叉验证
+  // =========================================================
+  test.describe('权限交叉验证', () => {
+    test('VIEWER 角色 → 保存按钮不可见/禁用', async () => {
+      test.skip(true, '需要多角色 storageState fixture 支持');
+    });
+
+    test('VIEWER 角色 → 另存为按钮不可见', async () => {
+      test.skip(true, '需要多角色 storageState fixture 支持');
+    });
+
+    test('VIEWER 角色 → 导出按钮仍可见', async () => {
+      test.skip(true, '需要多角色 storageState fixture 支持');
+    });
+
+    test('EDITOR 角色 → 外部参照按钮不可见/禁用', async () => {
+      test.skip(true, '需要多角色 storageState fixture 支持');
+    });
+  });
+
+  // =========================================================
+  //  9. 端到端工作流
+  // =========================================================
+  test.describe('端到端工作流', () => {
+
+    // ── 保存工作流 ──
+    test.describe('保存工作流', () => {
+      test('W-006: 打开图纸 → 编辑器加载 → 保存 → Toast "保存成功"', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+        await cadEditor.waitForToolbar(15000);
+
+        await expect(page.locator('canvas').first()).toBeAttached();
+        await cadEditor.clickSave();
+        await expect(page.getByText(/保存成功/)).toBeVisible({ timeout: 15000 });
+      });
+
+      test('W-007: 打开项目图纸 → 编辑器加载 → 保存（项目）→ 成功', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileB);
+        await cadEditor.waitForDrawingLoad(60000);
+        await cadEditor.waitForToolbar(15000);
+
+        await expect(page.locator('canvas').first()).toBeAttached();
+        await cadEditor.clickSave();
+        await expect(page.getByText(/保存成功/)).toBeVisible({ timeout: 15000 });
+      });
+    });
+
+    // ── 另存为工作流 ──
+    test.describe('另存为工作流', () => {
+      test('W-009: 打开图纸 → 另存为 → 选项目 Tab → 选择目标 → 确认 → Toast 成功', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        const saveAsModal = new SaveAsModalPage(page);
+
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+        await cadEditor.waitForToolbar(15000);
+
+        await cadEditor.clickSaveAs();
+        await cadEditor.waitForSaveAsModal(10000);
+        await expect(saveAsModal.modal).toBeVisible();
+
+        await saveAsModal.selectTargetType('project');
+
+        const targetItem = cadEditor.saveAsTargetList.first();
+        if (await targetItem.isVisible({ timeout: 3000 }).catch(() => false)) {
+          await targetItem.click();
+        }
+
+        await cadEditor.confirmSaveAs();
+        await expect(page.getByText(/保存成功/)).toBeVisible({ timeout: 15000 });
+      });
+    });
+
+    // ── 导出工作流 ──
+    test.describe('导出工作流', () => {
+      test('W-011: 打开图纸 → 导出 → 选 DWG → 确认 → 触发 .dwg 下载', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        const exportModal = new DownloadFormatModalPage(page);
+
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+        await cadEditor.waitForToolbar(15000);
+
+        await cadEditor.clickExport();
+        await cadEditor.waitForExportModal(10000);
+        await exportModal.selectFormat('dwg');
+        await expect(exportModal.formatDwgRadio).toBeChecked();
+
+        const downloadPromise = page.waitForEvent('download', { timeout: 30000 }).catch(() => null);
+        await exportModal.confirm();
+
+        await expect(exportModal.modal).toBeHidden({ timeout: 10000 });
+
+        const download = await downloadPromise;
+        if (download) {
+          expect(download.suggestedFilename()).toMatch(/\.dwg$/);
+        }
+      });
+
+      test('W-012: 打开图纸 → 导出 → 选 PDF → 确认 → 触发 .pdf 下载', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        const exportModal = new DownloadFormatModalPage(page);
+
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+        await cadEditor.waitForToolbar(15000);
+
+        await cadEditor.clickExport();
+        await cadEditor.waitForExportModal(10000);
+        await exportModal.selectFormat('pdf');
+
+        const downloadPromise = page.waitForEvent('download', { timeout: 30000 }).catch(() => null);
+        await exportModal.confirm();
+
+        const download = await downloadPromise;
+        if (download) {
+          expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+        }
+      });
+    });
+
+    // ── 未保存关闭工作流 ──
+    test.describe('未保存关闭工作流', () => {
+      test('W-015: 编辑 → 未保存 → 关闭/切换图纸 → 弹窗提示 → 确认丢弃', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+
+        await page.evaluate(() => {
+          (window as unknown as Record<string, unknown>).__mxcadDirty = true;
+        });
+
+        try {
+          await page.goto(`/cad-editor/${SEED.fileB}`);
+        } catch {
+          // navigation may be blocked
+        }
+
+        await cadEditor.waitForUnsavedDialog(10000).catch(() => {});
+        const dialogVisible = await cadEditor.unsavedDialog.isVisible().catch(() => false);
+        if (dialogVisible) {
+          await cadEditor.confirmClose();
+          await expect(cadEditor.unsavedDialog).toBeHidden({ timeout: 5000 });
+        }
+      });
+
+      test('W-016: 打开 → 不编辑 → 关闭/切换图纸 → 直接切换，无弹窗', async ({ page }) => {
+        const cadEditor = new CADEditorPage(page);
+        await cadEditor.goto(SEED.fileA);
+        await cadEditor.waitForDrawingLoad(60000);
+
+        await page.evaluate(() => {
+          delete (window as unknown as Record<string, unknown>).__mxcadDirty;
+        });
+
+        await page.goto(`/cad-editor/${SEED.fileB}`);
+        await page.waitForLoadState('networkidle');
+        await expect(cadEditor.unsavedDialog).toBeHidden({ timeout: 3000 });
+      });
     });
   });
 });

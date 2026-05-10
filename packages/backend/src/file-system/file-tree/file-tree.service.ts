@@ -450,13 +450,13 @@ export class FileTreeService {
       ORDER BY level, name
     `;
 
-    const level0Items: { id: string; name: string; hasChildren: boolean }[] = [
+    const level0Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [
       { id: 'all', name: '全部', hasChildren: true },
     ];
-    const level1Items: { id: string; name: string; hasChildren: boolean }[] = [
+    const level1Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [
       { id: 'all', name: '全部', hasChildren: true },
     ];
-    const level2Items: { id: string; name: string; hasChildren: boolean }[] = [
+    const level2Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [
       { id: 'all', name: '全部', hasChildren: false },
     ];
 
