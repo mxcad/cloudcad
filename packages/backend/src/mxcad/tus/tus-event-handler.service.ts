@@ -5,8 +5,6 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FileStore } from '@tus/file-store';
-import { FileSystemService } from '../infra/file-system.service';
 import { FileMergeService } from '../upload/file-merge.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
@@ -35,7 +33,6 @@ export class TusEventHandler {
 
   constructor(
     private readonly configService: ConfigService<AppConfig>,
-    private readonly fileSystemService: FileSystemService,
     private readonly fileMergeService: FileMergeService,
     private readonly fileConversionService: FileConversionService,
     private readonly filePermissionService: FileSystemPermissionService,
@@ -66,18 +63,8 @@ export class TusEventHandler {
     this.logger.log(`处理上传完成事件: uploadId=${uploadId}, filename=${filename}, fileHash=${fileHash}, nodeId=${nodeId}, userId=${userId}`);
 
     try {
-      // 从 FileStore 获取实际的文件路径
-      const tempPath = this.configService.get('mxcadTempPath', { infer: true }) as string;
-      const store = new FileStore({ directory: tempPath });
-
-      // 尝试获取实际的文件路径
-      let actualFilePath = filePath;
-
-      // 尝试构造 tus file store 的路径
-      const possibleTusPath = path.join(tempPath, uploadId);
-      if (!actualFilePath || !fs.existsSync(actualFilePath)) {
-        actualFilePath = possibleTusPath;
-      }
+      // Tus FileStore 直接将文件存储在 uploads 目录下，无需从 temp 复制
+      let actualFilePath = path.join(this.mxcadUploadPath, uploadId);
 
       if (!fs.existsSync(actualFilePath)) {
         this.logger.error(`上传文件不存在: ${actualFilePath}`);
@@ -87,13 +74,16 @@ export class TusEventHandler {
       this.logger.log(`上传文件路径: ${actualFilePath}`);
       this.logger.log(`上传元数据: ${JSON.stringify(metadata)}`);
 
-      // 将 Tus 上传的文件复制到 uploads 目录，重命名为 fileHash + 扩展名
+      // 重命名为 fileHash + 扩展名（同目录下 rename 是原子操作，避免 race condition）
       let targetFilePath = '';
       if (fileHash) {
         const ext = path.extname(filename);
         targetFilePath = path.join(this.mxcadUploadPath, `${fileHash}${ext}`);
-        await fs.promises.copyFile(actualFilePath, targetFilePath);
-        this.logger.log(`文件已复制到: ${targetFilePath}`);
+        await fs.promises.rename(actualFilePath, targetFilePath);
+        actualFilePath = targetFilePath;
+        this.logger.log(`文件已重命名为: ${targetFilePath}`);
+      } else {
+        targetFilePath = actualFilePath;
       }
 
       // 匿名用户（无 userId）：只上传文件到 uploads 目录，不创建节点
@@ -141,67 +131,25 @@ export class TusEventHandler {
         return {};
       }
 
-      // 检查文件是否已存在（秒传逻辑）
-      if (fileHash) {
-        const existResult = await this.fileMergeService.performFileExistenceCheck(
-          filename,
-          fileHash,
-          path.extname(filename).toLowerCase().replace('.', ''),
-          '.mxweb',
-          {
-            nodeId,
-            userId,
-            userRole: userRole || '',
-            fileSize,
-            conflictStrategy: (metadata.conflictStrategy as 'skip' | 'rename' | 'overwrite') || 'rename'
-          }
-        );
-
-        if (existResult.ret === 'kFileAlreadyExist') {
-          this.logger.log(`文件已存在，直接返回节点 ID: ${existResult.nodeId}`);
-          return { nodeId: existResult.nodeId };
-        }
-      }
-
-      // 对于 Tus，我们需要创建一个临时的 chunk 目录，并将文件放进去
-      // 这样可以复用 FileMergeService 的 mergeConvertFile 逻辑
-      const fileMd5 = fileHash || filename;
-      const tempDir = this.fileSystemService.getChunkTempDirPath(fileMd5);
-      
-      if (!fs.existsSync(tempDir)) {
-        await fs.promises.mkdir(tempDir, { recursive: true });
-      }
-
-      // 将文件复制到临时 chunk 目录，模拟 chunk 上传
-      const chunkFilePath = path.join(tempDir, '0'); // 单个 chunk
-      await fs.promises.copyFile(actualFilePath, chunkFilePath);
-
-      // 调用 FileMergeService 进行合并转换和节点创建
-      const mergeResult = await this.fileMergeService.mergeChunksWithPermission({
-        hash: fileMd5,
-        name: filename,
-        size: fileSize,
-        chunks: 1,
+      // 直接调用 processUploadedFile（Tus 已完成分片合并，无需模拟 chunk 流程）
+      // 秒传检查已移至前端: POST /mxcad/files/fileisExist (performFileExistenceCheck)
+      // 主分支流程: 前端预检查秒传 → 秒传成功直接返回节点 ID, 失败则启动 Tus 上传 → 此处处理
+      const result = await this.fileMergeService.processUploadedFile({
+        fileHash: fileHash || filename,
+        fileName: filename,
+        fileSize,
         context: {
           userId,
           nodeId,
           userRole: userRole || '',
+          fileSize,
           conflictStrategy: (metadata.conflictStrategy as 'skip' | 'rename' | 'overwrite') || 'rename'
-        }
+        },
       });
 
-      this.logger.log(`上传完成处理成功: uploadId=${uploadId}, result=${JSON.stringify(mergeResult)}`);
+      this.logger.log(`上传完成处理成功: uploadId=${uploadId}, result=${JSON.stringify(result)}`);
 
-      // 清理临时文件
-      try {
-        await fs.promises.rm(actualFilePath, { force: true });
-        await fs.promises.rmdir(tempDir, { recursive: true });
-        this.logger.log(`临时文件清理成功`);
-      } catch (cleanError) {
-        this.logger.warn(`临时文件清理失败: ${(cleanError as Error).message}`);
-      }
-
-      return { nodeId: mergeResult.nodeId };
+      return { nodeId: result.nodeId };
 
     } catch (error) {
       this.logger.error(

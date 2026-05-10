@@ -20,9 +20,9 @@ import { Box } from 'lucide-react';
 import { LayoutGrid } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
-import { MxFun } from 'mxdraw';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
+import { returnToCloudMapManagement } from '@/services/mxcadManager';
 import styles from './sidebar.module.css';
 
 interface SidebarTriggerProps {
@@ -99,7 +99,7 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   };
 
   const handleReturnToCloudMap = () => {
-    MxFun.sendStringToExecute('return-to-cloud-map-management');
+    returnToCloudMapManagement();
   };
 
   const isButtonActive = (button: ToolButtonConfig): boolean => {

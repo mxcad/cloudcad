@@ -301,7 +301,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-2">
               保存格式
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setFormat('dwg')}
@@ -323,6 +323,28 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                 }`}
               >
                 DXF
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormat('pdf')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  format === 'pdf'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormat('mxweb')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  format === 'mxweb'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                MXWEB
               </button>
             </div>
           </div>

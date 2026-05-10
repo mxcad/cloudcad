@@ -42,8 +42,12 @@ export class FontLibraryPage {
   // --- 字体列表 ---
   readonly fontCards: Locator;
   readonly fontTableRows: Locator;
+  readonly fontTableNameColumn: Locator;
   readonly fontCheckboxes: Locator;
   readonly selectAllCheckbox: Locator;
+
+  // --- 字体预览 ---
+  readonly fontPreviewModal: Locator;
 
   // --- 文件操作按钮（悬浮单个） ---
   readonly downloadBtns: Locator;
@@ -117,8 +121,12 @@ export class FontLibraryPage {
     // 字体列表
     this.fontCards = page.locator('[data-testid="font-card"]');
     this.fontTableRows = page.locator('table tbody tr');
+    this.fontTableNameColumn = page.locator('table tbody tr td:first-child');
     this.fontCheckboxes = page.locator('input[type="checkbox"]');
     this.selectAllCheckbox = page.locator('table thead input[type="checkbox"]');
+
+    // 字体预览
+    this.fontPreviewModal = page.locator('[data-testid="font-preview"]');
 
     // 文件操作按钮
     this.downloadBtns = page.getByTitle('下载');
@@ -248,5 +256,41 @@ export class FontLibraryPage {
     } else {
       await this.toast.first().waitFor({ state: 'visible', timeout: 10000 });
     }
+  }
+
+  /** 获取字体数量 */
+  async getFontCount(): Promise<number> {
+    return this.fontTableRows.count();
+  }
+
+  /** 获取所有字体名称 */
+  async getFontNames(): Promise<string[]> {
+    return this.fontTableNameColumn.allTextContents();
+  }
+
+  /** 按名称下载字体 */
+  async downloadFont(name: string) {
+    await this.fontRow(name).locator('[title="下载"]').click();
+  }
+
+  /** 按名称删除字体 */
+  async deleteFont(name: string) {
+    await this.fontRow(name).locator('[title="删除"]').click();
+  }
+
+  /** 点击字体名称预览 */
+  async previewFont(name: string) {
+    await this.fontRow(name).locator('td:first-child').click();
+  }
+
+  /** 确认删除对话框 */
+  async confirmDelete() {
+    await this.confirmDeleteBtn.click();
+  }
+
+  // ── 内部辅助 ──
+
+  private fontRow(name: string): Locator {
+    return this.fontTableRows.filter({ hasText: name });
   }
 }

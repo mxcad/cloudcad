@@ -130,6 +130,11 @@ async function bootstrap() {
     name: config.session.name,
   });
   server.use((req, res, next) => {
+    // 跳过 TUS 上传路径的 session 处理，避免 srvx 适配器与 express-session 冲突
+    // PATCH /api/v1/files/:uploadId 是 TUS 上传通道，不需要 session
+    if (req.method === 'PATCH' && req.path.startsWith('/api/v1/files/')) {
+      return next();
+    }
     sessionMiddleware(req, res, next);
   });
   logger.log(

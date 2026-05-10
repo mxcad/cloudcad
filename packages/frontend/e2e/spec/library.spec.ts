@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/auth.fixture';
-import { LibraryPage, FontLibraryPage } from '../pages/LibraryPage';
+import { LibraryPage } from '../pages/LibraryPage';
+import { FontLibraryPage } from '../pages/FontLibraryPage';
 
 /**
  * 资源库域 — E2E 测试

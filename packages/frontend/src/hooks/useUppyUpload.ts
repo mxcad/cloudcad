@@ -8,6 +8,7 @@ import Uppy from '@uppy/core';
 import Tus from '@uppy/tus';
 import { calculateFileHash } from '../utils/hashUtils';
 import { getValidToken, refreshTokenIfNeeded } from '@/utils/tokenUtils';
+import { mxCadControllerCheckFileExist } from '@/api-sdk';
 
 // 导出 LoadFileParam 接口，保持和 useMxCadUploadNative 的兼容性
 export interface LoadFileParam {
@@ -52,9 +53,10 @@ export class MxCadUploadError extends Error {
  */
 async function createUppy(config: MxCadUploadConfig, onDone: () => void): Promise<Uppy> {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  const token = await refreshTokenIfNeeded();
+  await refreshTokenIfNeeded(); // 确保 token 在开始上传前已刷新
 
   const uppy = new Uppy({
+
     debug: false,
     autoProceed: false,
     allowMultipleUploads: false,
@@ -69,9 +71,8 @@ async function createUppy(config: MxCadUploadConfig, onDone: () => void): Promis
     endpoint: `${apiBaseUrl}/v1/files`,
     chunkSize: 5 * 1024 * 1024,
     retryDelays: [0, 1000, 3000, 5000],
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    // 仅在 onBeforeRequest 中设置 Authorization，避免与 Uppy 的内部头设置冲突
+    // 两者一起设置可能导致 Header 值被拼接为逗号分隔的多值字符串
     onBeforeRequest: (req) => {
       const freshToken = getValidToken();
       if (freshToken) {
@@ -105,6 +106,41 @@ async function createUppy(config: MxCadUploadConfig, onDone: () => void): Promis
         const hash = await calculateFileHash(file.data as File);
         uppy.setFileMeta(file.id, { fileHash: hash });
         config.onFileQueued?.(file.data as File);
+
+        // 秒传预检查: 与 main 分支一致, 先调用 fileisExist 检查文件是否已存在
+        // 秒传成功 → 直接返回节点 ID (不发起 Tus 上传)
+        // 秒传失败 → 继续 Tus 上传
+        if (config.nodeId) {
+          try {
+            const existResponse = await mxCadControllerCheckFileExist({
+              body: {
+                fileHash: hash,
+                filename: file.name,
+                nodeId: config.nodeId,
+                fileSize: file.size ?? 0,
+              },
+            });
+            const existData = existResponse.data;
+            if (existData?.exists && existData?.nodeId) {
+              config.onSuccess?.({
+                file: file.data as File,
+                id: hash,
+                name: file.name,
+                size: file.size ?? 0,
+                type: file.type,
+                hash,
+                isUseServerExistingFile: true,
+                isInstantUpload: true,
+                nodeId: existData.nodeId || config.nodeId,
+              });
+              onDone();
+              return;
+            }
+          } catch (preCheckError) {
+            console.warn('[useUppyUpload] 秒传预检查失败, 继续上传:', preCheckError);
+          }
+        }
+
         uppy.upload();
       } catch (error) {
         hashComputed = false;

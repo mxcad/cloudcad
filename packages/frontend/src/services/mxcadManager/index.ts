@@ -530,7 +530,7 @@ function calculateReturnPath(
   return NAVIGATION_PATHS.PROJECTS_LIST;
 }
 
-// ==================== return-to-cloud-map-management 命令 ====================
+// ==================== return-to-cloud-map-management ====================
 
 /**
  * 尝试关闭当前窗口并兜底返回
@@ -582,13 +582,13 @@ const checkToReturnToPreviousPage = async () => {
 };
 
 /**
- * 返回到云图管理命令
+ * 返回到云图管理（直接调用，不依赖命令注册）
  * 3 分支逻辑：
  * 1. 从平台跳转且有 opener → 关闭窗口
  * 2. 有浏览器历史（多标签）→ history.back()
  * 3. 单标签（无历史）→ 尝试关窗口 → 关不掉用 calculateReturnPath 兜底
  */
-MxFun.addCommand('return-to-cloud-map-management', () => {
+export const returnToCloudMapManagement = () => {
   mxcadManager.showMxCAD(false);
 
   // 分支1：从平台跳转进入，且当前窗口由其他窗口打开 → 直接关闭
@@ -605,7 +605,7 @@ MxFun.addCommand('return-to-cloud-map-management', () => {
 
   // 分支3：单标签 → 尝试关窗口 → 兜底跳转
   checkToReturnToPreviousPage();
-});
+};
 
 // 获取或创建文件选择器（复用 useMxCadUploadNative 的逻辑）
 const getFilePicker = (): HTMLInputElement => {
@@ -1602,13 +1602,25 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   });
 
   setLoadingMessage('正在上传到服务器...');
+  // 保存前获取节点最新 updatedAt，用于乐观锁冲突检测
+  let expectedTimestamp: string | undefined;
+  try {
+    const freshNodeInfo = await fileSystemControllerGetNode({ path: { nodeId: fileId } });
+    expectedTimestamp = freshNodeInfo.data?.updatedAt;
+  } catch (_err) {
+    // getNode 失败不阻塞保存，降级为无时间戳
+  }
+  // 构造 multipart/form-data（SDK 的 formDataBodySerializer 无法正确序列化 Blob）
+  const formData = createSaveFormData(savedFile.blob, fileId, savedFile.filename);
+  if (commitMessage) {
+    formData.append('commitMessage', commitMessage);
+  }
+  if (expectedTimestamp) {
+    formData.append('expectedTimestamp', expectedTimestamp);
+  }
   await saveControllerSaveMxwebToNode({
     path: { nodeId: fileId },
-    body: {
-      file: savedFile.blob,
-      commitMessage,
-      expectedTimestamp: currentFileInfo?.updatedAt,
-    },
+    body: formData as unknown as Record<string, unknown>,
   });
 
   try {

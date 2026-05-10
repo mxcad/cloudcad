@@ -8,9 +8,9 @@ import { X } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
-import { MxFun } from 'mxdraw';
 import { SidebarTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
+import { returnToCloudMapManagement } from '@/services/mxcadManager';
 import styles from './sidebar.module.css';
 
 interface SidebarTabBarProps {
@@ -39,7 +39,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   onCloseClick,
 }) => {
   const handleReturnToCloudMap = () => {
-    MxFun.sendStringToExecute('return-to-cloud-map-management');
+    returnToCloudMapManagement();
   };
 
   return (

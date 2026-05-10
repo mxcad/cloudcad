@@ -15,7 +15,7 @@ interface SaveAsParams {
   libraryType?: 'drawing' | 'block';
   selectedProjectId: string;
   selectedParentId: string;
-  format: 'dwg' | 'dxf';
+  format: 'dwg' | 'dxf' | 'pdf' | 'mxweb';
   fileName: string;
   mxwebBlob: Blob;
 }
@@ -103,43 +103,39 @@ export const useSaveAs = ({
     mutationFn: async (params: SaveAsParams): Promise<SaveAsResult> => {
       const { targetType, libraryType, selectedProjectId, selectedParentId, format, fileName, mxwebBlob } = params;
 
-      // Wrap blob as File so multer can extract filename metadata
+      // Build FormData manually (matching main branch mxcadApi.saveMxwebAs pattern)
+      // SDK's formDataBodySerializer strips file metadata — multer needs File with name
       const file = new File([mxwebBlob], `${fileName || 'untitled'}.mxweb`, {
         type: mxwebBlob.type || 'application/octet-stream',
       });
 
-      // 公开资源库另存为
-      if (targetType === 'library') {
-        const result = await saveControllerSaveMxwebAs({
-          body: {
-            file,
-            targetType: 'library' as const,
-            targetParentId: selectedParentId,
-            libraryType: libraryType || 'drawing',
-            fileName: fileName.trim(),
-            format,
-          } as SaveMxwebAsDto,
-        });
-        const saveResult = result.data as SaveAsResult;
-
-        return saveResult;
-      }
-
-      // 我的图纸/项目另存为
-      const body: SaveMxwebAsDto = {
-        file,
-        targetType,
-        targetParentId: selectedParentId,
-        format,
-        commitMessage: `Save as: ${fileName}.${format}`,
-        fileName: fileName.trim(),
-      };
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('targetType', targetType);
+      formData.append('targetParentId', selectedParentId);
       if (targetType === 'project' && selectedProjectId) {
-        body.projectId = selectedProjectId;
+        formData.append('projectId', selectedProjectId);
       }
+      if (targetType === 'library') {
+        formData.append('libraryType', libraryType || 'drawing');
+      }
+      formData.append('format', format);
+      formData.append('commitMessage', `Save as: ${fileName}.${format}`);
+      formData.append('fileName', fileName.trim());
 
-      const result = await saveControllerSaveMxwebAs({ body });
-      const saveResult = result.data as SaveAsResult;
+      // Use raw FormData via fetch, bypassing SDK serializer
+      // SDK's formDataBodySerializer re-serializes FormData → loses file multipart boundary
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/v1/mxcad/save-as', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({ message: '保存失败' }));
+        throw new Error((errBody as { message?: string }).message || '保存失败');
+      }
+      const saveResult: SaveAsResult = await response.json();
 
       return saveResult;
     },
