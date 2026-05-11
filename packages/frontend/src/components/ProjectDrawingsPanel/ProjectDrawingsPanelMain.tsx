@@ -96,7 +96,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Node loader hook
   const {
-    nodes, loading, isFetching, total, totalPages, hasMore,
+    nodes, loading, total, totalPages, hasMore,
     currentPage, setCurrentPage,
     loadNodes, buildBreadcrumbPath,
     loadNodesRef, buildBreadcrumbPathRef,
@@ -266,26 +266,17 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   } = useProjectManagement({ onProjectUpdated: refreshNodes, onProjectDeleted: refreshNodes, showToast });
 
   // Initialize: load project root
-  // 对于私人空间模式，projectId 可能异步获取，需要直接监听 projectId 的变化来加载数据，
-  // 避免因 selectedProjectId 两步同步的时序问题导致初始化时不加载数据。
   useEffect(() => {
-    const effectiveId = selectedProjectId || (isPersonalSpace ? projectId || null : null);
-    if (!effectiveId) { resetNodes(); setBreadcrumb([]); return; }
-
-    // 当 projectId 已可用但 selectedProjectId 未同步时，主动同步
-    if (isPersonalSpace && effectiveId && effectiveId !== selectedProjectId) {
-      setSelectedProjectId(effectiveId);
-    }
-
+    if (!selectedProjectId) { resetNodes(); setBreadcrumb([]); return; }
     const initProject = async () => {
       try {
-        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: effectiveId } });
+        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
         if (projectNode) setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
       } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 加载项目信息失败'); }
     };
     initProject();
-    loadNodes(effectiveId);
-  }, [selectedProjectId, projectId, isPersonalSpace, loadNodes]);
+    loadNodes(selectedProjectId);
+  }, [selectedProjectId, loadNodes]);
 
   // Sync projectId in personal space
   useEffect(() => {
@@ -479,7 +470,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         await fileSystemControllerCopyNode({ path: { nodeId: copySourceNode.id }, body: { targetParentId } });
       }
       refreshNodes();
-      showToast(moveSourceNode ? '移动成功' : '复制成功', 'success');
       setShowSelectFolderModal(false);
       setMoveSourceNode(null);
       setCopySourceNode(null);
@@ -522,7 +512,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         await fileSystemControllerMoveNode({ path: { nodeId: draggedNode.id }, body: { targetParentId: targetNode.id } });
       }
       refreshNodes();
-      showToast(isCopy ? '复制成功' : '移动成功', 'success');
     } catch (error: unknown) {
       handleError(error, '拖拽操作失败');
       showToast('操作失败，请重试', 'error');
@@ -629,11 +618,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         emptyText={searchQuery ? '未找到匹配的内容' : '当前目录为空'}
         defaultViewMode="grid" total={total} totalPages={totalPages} currentPage={currentPage}
         onPageChange={handlePageChange} paginationEnabled={true}
-        breadcrumb={!isLibraryMode ? (
+        breadcrumb={!isLibraryMode && (breadcrumb.length > 0 || !isPersonalSpace) ? (
           <BreadcrumbNav breadcrumb={breadcrumb} isLibraryMode={isLibraryMode} isPersonalSpace={isPersonalSpace} handleGoBack={handleGoBack} handleBreadcrumbClick={handleBreadcrumbClick} handleBackToProjects={handleBackToProjects} />
         ) : undefined}
         renderItem={renderFileItem}
-        toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={isFetching} className={styles.refreshButton}><RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} /></button></Tooltip>}
+        toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button></Tooltip>}
         loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
       />
       <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />

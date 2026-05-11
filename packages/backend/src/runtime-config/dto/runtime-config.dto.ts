@@ -19,6 +19,7 @@ import { IsDefined } from 'class-validator';
 export class UpdateRuntimeConfigDto {
   @ApiProperty({
     description: '配置值（string | number | boolean）',
+    type: Object,
     example: false,
   })
   @IsDefined({ message: '配置值不能为空' })
@@ -34,6 +35,7 @@ export class RuntimeConfigResponseDto {
 
   @ApiProperty({
     description: '配置值（string | number | boolean）',
+    type: Object,
     example: false,
   })
   value: string | number | boolean;
@@ -86,6 +88,7 @@ export class RuntimeConfigDefinitionDto {
 
   @ApiProperty({
     description: '默认值（string | number | boolean）',
+    type: Object,
     example: false,
   })
   defaultValue: string | number | boolean;

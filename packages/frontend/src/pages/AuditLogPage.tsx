@@ -117,7 +117,6 @@ export const AuditLogPage: React.FC = () => {
     logs,
     total,
     loading,
-    isFetching: logsIsFetching,
     error: logsError,
     refetch: refetchLogs,
   } = useAuditLogList(queryParams);
@@ -125,7 +124,6 @@ export const AuditLogPage: React.FC = () => {
   const {
     statistics,
     loading: statsLoading,
-    isFetching: statsIsFetching,
     error: statsError,
     refetch: refetchStats,
   } = useAuditLogStats();
@@ -163,8 +161,6 @@ export const AuditLogPage: React.FC = () => {
     refetchLogs();
     refetchStats();
   };
-
-  const isRefreshing = logsIsFetching || statsIsFetching;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -335,10 +331,10 @@ export const AuditLogPage: React.FC = () => {
             onClick={handleRefresh}
             variant="outline"
             size="sm"
-            disabled={loading || isRefreshing}
+            disabled={loading}
           >
             <RefreshCw
-              className={`w-4 h-4 mr-2 ${(loading || isRefreshing) ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
             />
             刷新
           </Button>
