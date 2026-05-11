@@ -160,6 +160,7 @@ export const Dashboard: React.FC = () => {
   const {
     data: dashboardStats,
     loading: statsLoading,
+    isFetching: statsIsFetching,
     error: statsError,
   } = useDashboardStats();
 
@@ -171,6 +172,7 @@ export const Dashboard: React.FC = () => {
     projects: rawProjects,
     personalFiles,
     loading: projectsLoading,
+    isFetching: projectsIsFetching,
     error: projectsError,
     createProject,
     isCreating,
@@ -178,6 +180,7 @@ export const Dashboard: React.FC = () => {
   } = useDashboardProjects();
 
   const loading = statsLoading || projectsLoading;
+  const isBackgroundFetching = statsIsFetching || projectsIsFetching;
   const error = statsError || projectsError;
 
   const [greeting, setGreeting] = useState('');
@@ -354,7 +357,7 @@ export const Dashboard: React.FC = () => {
             </button>
             <button
               onClick={handleRefreshDashboard}
-              disabled={loading || isRefreshing}
+              disabled={loading || isRefreshing || isBackgroundFetching}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 hover:shadow-md"
               style={{
                 background: 'var(--bg-secondary)',
@@ -363,7 +366,7 @@ export const Dashboard: React.FC = () => {
               }}
               title="刷新仪表盘数据"
             >
-              <RefreshCw size={16} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={(loading || isRefreshing || isBackgroundFetching) ? 'animate-spin' : ''} />
               刷新
             </button>
           </div>

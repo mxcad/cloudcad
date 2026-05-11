@@ -32,6 +32,7 @@ interface UseFileSystemChildrenReturn {
   total: number;
   totalPages: number;
   loading: boolean;
+  isFetching: boolean;
   error: Error | null;
 }
 
@@ -49,7 +50,7 @@ export function useFileSystemChildren({
 }: UseFileSystemChildrenOptions): UseFileSystemChildrenReturn {
   const effectiveNodeId = nodeId || '__disabled__';
 
-  const { data, isLoading, error } = useQuery<FileSystemChildrenData>({
+  const { data, isLoading, isFetching, error } = useQuery<FileSystemChildrenData>({
     queryKey: [...queryKeys.fileSystem.children(effectiveNodeId), { page, search }] as const,
     queryFn: async () => {
       const { data: response } = await fileSystemControllerGetChildren({
@@ -66,7 +67,9 @@ export function useFileSystemChildren({
       };
     },
     enabled: enabled && !!nodeId,
-    staleTime: 30 * 1000,
+    // staleTime: 0 确保侧边栏面板每次挂载和查询键变化时都立即获取最新数据，
+    // 不受全局 30s staleTime 影响。这解决了"我的图纸"面板首次加载为空的问题。
+    staleTime: 0,
     throwOnError: false,
   });
 
@@ -75,6 +78,7 @@ export function useFileSystemChildren({
     total: data?.total ?? 0,
     totalPages: data?.totalPages ?? 1,
     loading: isLoading,
+    isFetching,
     error: error as Error | null,
   };
 }

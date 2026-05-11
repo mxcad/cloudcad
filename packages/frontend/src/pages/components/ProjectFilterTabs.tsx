@@ -13,6 +13,7 @@ interface ProjectFilterTabsProps {
   onClearTrash: () => void;
   onRefresh: () => void;
   loading: boolean;
+  isFetching: boolean;
 }
 
 const projectFilterTabs: { key: ProjectFilterType; label: string }[] = [
@@ -31,6 +32,7 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
   onClearTrash,
   onRefresh,
   loading,
+  isFetching = false,
 }) => {
   return (
     <div
@@ -104,7 +106,7 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
             style={{ color: 'var(--text-tertiary)' }}
             title="刷新"
           >
-            <RefreshIcon size={14} className={loading ? 'animate-spin mr-1' : 'mr-1'} />
+            <RefreshIcon size={14} className={isFetching ? 'animate-spin mr-1' : 'mr-1'} />
             刷新
           </Button>
         </div>

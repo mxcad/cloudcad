@@ -41,8 +41,10 @@ interface UseLibraryState {
   currentNode: FileSystemNode | null;
   /** 面包屑导航 */
   breadcrumbs: Array<{ id: string; name: string }>;
-  /** 加载状态 */
+  /** 加载状态（首次加载为 true） */
   loading: boolean;
+  /** 后台刷新中（数据已存在但正在重新获取），用于驱动刷新按钮 spinner */
+  isFetching: boolean;
   /** 错误信息 */
   error: string | null;
   /** 搜索关键词 */
@@ -267,6 +269,7 @@ export const useLibrary = (
     currentNode: query.currentNode,
     breadcrumbs: query.breadcrumbs,
     loading: query.loading,
+    isFetching: query.isFetching,
     error: query.error,
     searchTerm,
     viewMode,

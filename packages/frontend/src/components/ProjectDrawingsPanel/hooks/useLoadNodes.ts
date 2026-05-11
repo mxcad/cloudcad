@@ -17,6 +17,8 @@ import { queryKeys } from '@/lib/queryKeys';
 export interface UseLoadNodesReturn {
   nodes: FileSystemNode[];
   loading: boolean;
+  /** 后台刷新中（数据已存在但正在重新获取），用于驱动刷新按钮 spinner */
+  isFetching: boolean;
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   total: number;
@@ -88,6 +90,11 @@ export function useLoadNodes(
     return fsQuery.loading;
   }, [isLibraryMode, libraryQuery.loading, fsQuery.loading]);
 
+  const isFetching = useMemo(() => {
+    if (isLibraryMode) return libraryQuery.isFetching;
+    return fsQuery.isFetching;
+  }, [isLibraryMode, libraryQuery.isFetching, fsQuery.isFetching]);
+
   // ── Library mode: 同步分页信息 ──
   useEffect(() => {
     if (!isLibraryMode) return;
@@ -150,6 +157,7 @@ export function useLoadNodes(
   return {
     nodes,
     loading,
+    isFetching,
     currentPage,
     setCurrentPage,
     total,

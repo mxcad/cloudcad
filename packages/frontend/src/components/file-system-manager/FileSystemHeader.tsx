@@ -19,6 +19,7 @@ interface FileSystemHeaderProps {
   selectedNodes: Set<string>;
   nodesCount: number;
   loading: boolean;
+  isFetching: boolean;
   onGoBack: () => void;
   onRefresh: () => void;
   onCreateFolder: () => void;
@@ -42,6 +43,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   selectedNodes,
   nodesCount,
   loading,
+  isFetching,
   onGoBack,
   onRefresh,
   onCreateFolder,
@@ -120,11 +122,11 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             variant="ghost"
             size="sm"
             onClick={onRefresh}
-            disabled={loading}
+            disabled={isFetching}
             className="text-slate-600 hover:bg-slate-100"
             title="刷新"
           >
-            <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
           </Button>
 
           {isAtRoot ? (

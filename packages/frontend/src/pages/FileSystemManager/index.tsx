@@ -77,6 +77,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     currentNode,
     breadcrumbs,
     loading,
+    isFetching,
     error,
     searchTerm,
     setSearchTerm,
@@ -425,6 +426,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           isPersonalSpaceMode={isPersonalSpaceMode}
           isProjectRootMode={isProjectRootMode}
           loading={loading}
+          isFetching={isFetching}
           searchTerm={searchTerm}
           viewMode={viewMode}
           isMultiSelectMode={isMultiSelectMode}

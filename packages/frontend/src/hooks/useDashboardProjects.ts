@@ -75,6 +75,10 @@ export function useDashboardProjects() {
       projectsQuery.isLoading ||
       personalSpaceQuery.isLoading ||
       personalFilesQuery.isLoading,
+    isFetching:
+      projectsQuery.isFetching ||
+      personalSpaceQuery.isFetching ||
+      personalFilesQuery.isFetching,
     error: projectsQuery.error
       ? '加载数据失败'
       : personalSpaceQuery.error

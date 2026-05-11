@@ -87,6 +87,7 @@ export const LibraryManager: React.FC = () => {
     breadcrumbs,
     loading,
     error,
+    isFetching,
     searchTerm,
     viewMode,
     isFolderMode,
@@ -563,13 +564,13 @@ export const LibraryManager: React.FC = () => {
               {/* 刷新按钮 */}
               <button
                 onClick={refresh}
-                disabled={loading}
+                disabled={isFetching}
                 className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all disabled:opacity-50"
                 title="刷新"
               >
                 <RefreshIcon
                   size={18}
-                  className={loading ? 'animate-spin' : ''}
+                  className={isFetching ? 'animate-spin' : ''}
                 />
               </button>
 

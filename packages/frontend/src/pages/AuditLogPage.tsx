@@ -7,6 +7,7 @@ import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useAuditLogList, useAuditLogStats } from './AuditLogPage/hooks/useAuditLog';
+import './AuditLogPage/AuditLogPage.css';
 
 // 审计操作类型
 const AuditAction = {
@@ -116,6 +117,7 @@ export const AuditLogPage: React.FC = () => {
     logs,
     total,
     loading,
+    isFetching: logsIsFetching,
     error: logsError,
     refetch: refetchLogs,
   } = useAuditLogList(queryParams);
@@ -123,6 +125,7 @@ export const AuditLogPage: React.FC = () => {
   const {
     statistics,
     loading: statsLoading,
+    isFetching: statsIsFetching,
     error: statsError,
     refetch: refetchStats,
   } = useAuditLogStats();
@@ -130,9 +133,9 @@ export const AuditLogPage: React.FC = () => {
   // 如果没有权限，在所有 Hooks 调用之后再返回
   if (!hasAdminPermission) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="audit-permission-denied">
         <div className="text-center">
-          <p className="text-gray-500">您没有访问审计日志的权限</p>
+          <p>您没有访问审计日志的权限</p>
         </div>
       </div>
     );
@@ -161,6 +164,8 @@ export const AuditLogPage: React.FC = () => {
     refetchStats();
   };
 
+  const isRefreshing = logsIsFetching || statsIsFetching;
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('zh-CN', {
@@ -184,65 +189,65 @@ export const AuditLogPage: React.FC = () => {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">审计日志</h1>
-        <p className="text-gray-600">查看系统操作审计日志</p>
+    <div className="audit-page">
+      <div className="audit-page-header">
+        <h1 className="audit-page-title">审计日志</h1>
+        <p className="audit-page-subtitle">查看系统操作审计日志</p>
       </div>
 
       {/* 统计信息 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 mb-1">总记录数</div>
-          <div className="text-2xl font-bold text-gray-900">
+      <div className="audit-stat-grid">
+        <div className="audit-stat-card">
+          <div className="audit-stat-label">总记录数</div>
+          <div className="audit-stat-value">
             {statistics.total}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 mb-1">成功次数</div>
-          <div className="text-2xl font-bold text-green-600">
+        <div className="audit-stat-card">
+          <div className="audit-stat-label">成功次数</div>
+          <div className="audit-stat-value audit-stat-value--success">
             {statistics.successCount}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 mb-1">失败次数</div>
-          <div className="text-2xl font-bold text-red-600">
+        <div className="audit-stat-card">
+          <div className="audit-stat-label">失败次数</div>
+          <div className="audit-stat-value audit-stat-value--error">
             {statistics.failureCount}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 mb-1">成功率</div>
-          <div className="text-2xl font-bold text-blue-600">
+        <div className="audit-stat-card">
+          <div className="audit-stat-label">成功率</div>
+          <div className="audit-stat-value audit-stat-value--info">
             {(statistics.successRate ?? 0).toFixed(1)}%
           </div>
         </div>
       </div>
 
       {/* 筛选条件 */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">筛选条件</h2>
+      <div className="audit-filter-section">
+        <div className="audit-filter-title">
+          <Filter className="w-5 h-5" />
+          <h2>筛选条件</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="audit-filter-grid">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               用户 ID
             </label>
             <input
               type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-input"
               placeholder="输入用户 ID"
               value={filters.userId}
               onChange={(e) => handleFilterChange('userId', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               操作类型
             </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-select"
               value={filters.action}
               onChange={(e) => handleFilterChange('action', e.target.value)}
             >
@@ -255,11 +260,11 @@ export const AuditLogPage: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               资源类型
             </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-select"
               value={filters.resourceType}
               onChange={(e) =>
                 handleFilterChange('resourceType', e.target.value)
@@ -274,45 +279,45 @@ export const AuditLogPage: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               资源 ID
             </label>
             <input
               type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-input"
               placeholder="输入资源 ID"
               value={filters.resourceId}
               onChange={(e) => handleFilterChange('resourceId', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               开始日期
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-input"
               value={filters.startDate}
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               结束日期
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-input"
               value={filters.endDate}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="audit-label">
               状态
             </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="audit-select"
               value={filters.success}
               onChange={(e) => handleFilterChange('success', e.target.value)}
             >
@@ -322,7 +327,7 @@ export const AuditLogPage: React.FC = () => {
             </select>
           </div>
         </div>
-        <div className="flex gap-2 mt-4">
+        <div className="audit-filter-actions">
           <Button onClick={handleResetFilters} variant="outline" size="sm">
             重置筛选
           </Button>
@@ -330,10 +335,10 @@ export const AuditLogPage: React.FC = () => {
             onClick={handleRefresh}
             variant="outline"
             size="sm"
-            disabled={loading}
+            disabled={loading || isRefreshing}
           >
             <RefreshCw
-              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 mr-2 ${(loading || isRefreshing) ? 'animate-spin' : ''}`}
             />
             刷新
           </Button>
@@ -341,95 +346,81 @@ export const AuditLogPage: React.FC = () => {
       </div>
 
       {/* 审计日志列表 */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <div className="audit-table-container">
+        <div className="audit-table-scroll">
+          <table className="audit-table">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  时间
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  用户
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  资源类型
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  资源 ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  详情
-                </th>
+                <th>时间</th>
+                <th>用户</th>
+                <th>操作</th>
+                <th>资源类型</th>
+                <th>资源 ID</th>
+                <th>状态</th>
+                <th>详情</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {loading ? (
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-6 py-4 text-center text-gray-500"
+                    className="audit-table-empty"
                   >
-                    加载中...
+                    <span className="audit-loading-text">加载中...</span>
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-6 py-4 text-center text-gray-500"
+                    className="audit-table-empty"
                   >
                     暂无数据
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={log.id}>
+                    <td>
                       {formatDate(log.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>
-                        <div className="font-medium">{log.user.username}</div>
-                        <div className="text-gray-500 text-xs">
+                    <td>
+                      <div className="audit-user-cell">
+                        <div className="audit-user-name">{log.user.username}</div>
+                        <div className="audit-user-email">
                           {log.user.email}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td>
                       {getActionDisplayName(log.action)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td>
                       {getResourceTypeDisplayName(log.resourceType)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td>
                       <DescriptionText maxWidth={20}>
                         {log.resourceId || '-'}
                       </DescriptionText>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td>
                       {log.success ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="audit-badge audit-badge--success">
                           成功
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <span className="audit-badge audit-badge--error">
                           失败
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td>
                       <DescriptionText maxWidth={30}>
                         {log.details || '-'}
                       </DescriptionText>
                       {log.errorMessage && (
-                        <div className="text-red-600 text-xs mt-1">
+                        <div className="audit-error-msg">
                           {log.errorMessage}
                         </div>
                       )}
@@ -443,33 +434,31 @@ export const AuditLogPage: React.FC = () => {
 
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                显示第 {(page - 1) * limit + 1} 到{' '}
-                {Math.min(page * limit, total)} 条，共 {total} 条
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  variant="outline"
-                  size="sm"
-                >
-                  上一页
-                </Button>
-                <span className="px-3 py-1 text-sm text-gray-700">
-                  第 {page} / {totalPages} 页
-                </span>
-                <Button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  variant="outline"
-                  size="sm"
-                >
-                  下一页
-                </Button>
-              </div>
+          <div className="audit-pagination">
+            <div className="audit-pagination-info">
+              显示第 {(page - 1) * limit + 1} 到{' '}
+              {Math.min(page * limit, total)} 条，共 {total} 条
+            </div>
+            <div className="audit-pagination-controls">
+              <Button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                variant="outline"
+                size="sm"
+              >
+                上一页
+              </Button>
+              <span className="audit-page-indicator">
+                第 {page} / {totalPages} 页
+              </span>
+              <Button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                variant="outline"
+                size="sm"
+              >
+                下一页
+              </Button>
             </div>
           </div>
         )}

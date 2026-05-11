@@ -127,7 +127,7 @@ export const useFileSystemData = ({
   const childrenQuery = useQuery({
     queryKey: isProjectRootMode
       ? [...queryKeys.fileSystem.children('__projects'), { filter: projectFilter, page: pagination.page, limit: pagination.limit }]
-      : queryKeys.fileSystem.children(effectiveNodeId),
+      : [...queryKeys.fileSystem.children(effectiveNodeId), { page: pagination.page, limit: pagination.limit }],
     queryFn: async () => {
       if (isProjectRootMode) {
         const response = await fileSystemControllerGetProjects({
@@ -501,6 +501,12 @@ export const useFileSystemData = ({
     (!hasSearch && !isTrash && !isProjectRootMode && nodeQuery.isLoading) ||
     (!hasSearch && !isTrash && childrenQuery.isLoading);
 
+  const isFetching =
+    (hasSearch && searchQueryResult.isFetching) ||
+    (!hasSearch && isTrash && trashQuery.isFetching) ||
+    (!hasSearch && !isTrash && !isProjectRootMode && nodeQuery.isFetching) ||
+    (!hasSearch && !isTrash && childrenQuery.isFetching);
+
   const error = hasSearch
     ? searchQueryResult.error
     : isTrash
@@ -509,17 +515,21 @@ export const useFileSystemData = ({
 
   // ── Refetch helpers ────────────────────────────────────────────────
   const refetchAll = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
+    // 使用 refetchQueries 替代 invalidateQueries，确保手动刷新时立即重新请求，
+    // 不受 staleTime (30s) 的影响
+    queryClient.refetchQueries({
+      queryKey: queryKeys.fileSystem.all,
+      type: 'active',
+    });
   }, [queryClient]);
 
   // ── Public API (backward compatible) ───────────────────────────────
 
   /**
-   * Backward-compatible loader. In the React Query architecture, data is
-   * fetched automatically when query keys change. This method exists so
-   * that the parent (useFileSystem.ts) can still call it imperatively,
-   * e.g. for manual refresh. Internally it simply invalidates all
-   * fileSystem queries.
+   * Backward-compatible loader. When called (e.g. from the refresh button),
+   * it forces an immediate refetch of all active fileSystem queries,
+   * bypassing the staleTime cache. This ensures the file list always
+   * reflects the latest server state after user-initiated refresh.
    */
   const loadData = useCallback(async () => {
     refetchAll();
@@ -539,6 +549,7 @@ export const useFileSystemData = ({
     currentNode: nodeQuery.data ?? null,
     breadcrumbs,
     loading,
+    isFetching,
     error: error ? (error instanceof Error ? error.message : '加载数据失败') : null,
     paginationMeta,
     isTrashView,

@@ -51,7 +51,7 @@ const AUDIT_LOG_STATS_KEY = 'auditLogStats' as const;
  * 查询审计日志列表（分页 + 筛选）
  */
 export function useAuditLogList(params: AuditLogQueryParams) {
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: [AUDIT_LOG_LIST_KEY, params],
     queryFn: async () => {
       const result = await auditLogControllerFindAll({
@@ -68,6 +68,7 @@ export function useAuditLogList(params: AuditLogQueryParams) {
     total: data?.total ?? 0,
     isLoading,
     loading: isLoading,
+    isFetching,
     error: error ? '加载审计日志失败' : null,
     refetch,
   };
@@ -77,7 +78,7 @@ export function useAuditLogList(params: AuditLogQueryParams) {
  * 查询审计统计信息
  */
 export function useAuditLogStats() {
-  const { data, isLoading, error, refetch } = useQuery<Partial<AuditLogStatistics>>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<Partial<AuditLogStatistics>>({
     queryKey: [AUDIT_LOG_STATS_KEY],
     queryFn: async () => {
       const result = await auditLogControllerGetStatistics();
@@ -95,6 +96,7 @@ export function useAuditLogStats() {
     },
     isLoading,
     loading: isLoading,
+    isFetching,
     error: error ? '加载统计信息失败' : null,
     refetch,
   };

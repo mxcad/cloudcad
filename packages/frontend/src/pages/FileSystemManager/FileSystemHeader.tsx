@@ -28,6 +28,7 @@ interface FileSystemHeaderProps {
   isPersonalSpaceMode: boolean;
   isProjectRootMode: boolean;
   loading: boolean;
+  isFetching: boolean;
   searchTerm: string;
   viewMode: 'grid' | 'list';
   isMultiSelectMode: boolean;
@@ -64,6 +65,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   isPersonalSpaceMode,
   isProjectRootMode,
   loading,
+  isFetching,
   searchTerm,
   viewMode,
   isMultiSelectMode,
@@ -242,12 +244,12 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             variant="ghost"
             size="sm"
             onClick={onRefresh}
-            disabled={loading}
+            disabled={isFetching}
             style={{ color: 'var(--text-tertiary)' }}
             className="hover:bg-[var(--bg-tertiary)]"
             title="刷新"
           >
-            <RefreshIcon size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
           </Button>
 
           {/* 回收站按钮 */}
