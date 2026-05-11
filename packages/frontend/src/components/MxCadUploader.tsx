@@ -1,3 +1,8 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+///////////////////////////////////////////////////////////////////////////////
+
 import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   useMxCadUploadNative,
@@ -7,7 +12,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { useUIStore } from '../stores/uiStore';
-import { openUploadedFile } from '../services/mxcadManager';
+import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
+import { globalShowToast } from '../contexts/NotificationContext';
 
 interface MxCadUploaderProps {
   /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
@@ -28,23 +34,13 @@ interface MxCadUploaderProps {
   onExternalReferenceSkip?: () => void;
   /** 是否启用外部参照检查，默认true。批量导入时应设置为false */
   enableExternalReferenceCheck?: boolean;
+  /** 上传完成后是否打开图纸，默认true。列表页上传应设置为false */
+  openAfterUpload?: boolean;
 }
 
 export interface MxCadUploaderRef {
   triggerUpload: () => void;
 }
-
-/**
- * 消息转义函数，防止 XSS 攻击
- */
-const escapeHtml = (unsafe: string): string => {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-};
 
 /**
  * MxCAD 文件上传组件（增强版本）
@@ -53,6 +49,8 @@ const escapeHtml = (unsafe: string): string => {
  * - 自动检测外部参照
  * - 支持外部参照上传
  * - 支持跳过外部参照上传（可选）
+ * - openAfterUpload: 上传后是否打开图纸（默认true，列表页设为false）
+ * - 使用全局通知系统 globalShowToast，与项目其他页面保持一致
  */
 export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
   (
@@ -66,13 +64,12 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       onExternalReferenceSuccess,
       onExternalReferenceSkip,
       enableExternalReferenceCheck = true,
+      openAfterUpload = true,
     },
     ref
   ) => {
     const { isAuthenticated } = useAuth();
     const { setGlobalLoading, setLoadingMessage, setLoadingProgress } = useUIStore();
-    const [showToast, setShowToast] = useState(false);
-    const [message, setMessage] = useState('');
     const [currentNodeId, setCurrentNodeId] = useState('');
 
     const { selectFiles } = useMxCadUploadNative();
@@ -84,9 +81,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         onExternalReferenceSuccess?.();
       },
       onError: (error) => {
-        setMessage(`外部参照上传失败: ${error}`);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 5000);
+        globalShowToast(`外部参照上传失败: ${error}`, 'error');
       },
       onSkip: () => {
         onExternalReferenceSkip?.();
@@ -99,12 +94,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
       // 检查用户是否已登录
       if (!isAuthenticated) {
-        setMessage('请先登录后再上传文件');
-        setShowToast(true);
+        globalShowToast('请先登录后再上传文件', 'warning');
         onError?.('用户未登录');
-
-        // 5秒后隐藏提示
-        setTimeout(() => setShowToast(false), 5000);
         return;
       }
 
@@ -115,49 +106,40 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           param.nodeId && setCurrentNodeId(param.nodeId);
 
           try {
-            // 调用 openUploadedFile 完成文件转换和打开流程
-            // 这里会显示"文件转换中"和"正在打开文件..."的 loading 状态
-            await openUploadedFile(param.nodeId!, currentNodeId || '');
-            
-            setMessage('文件上传成功！');
-            setShowToast(true);
+            if (openAfterUpload) {
+              // 打开模式：上传 → 转换 → 打开 CAD 编辑器
+              await openUploadedFile(param.nodeId!, currentNodeId || '');
+            } else {
+              // 列表页模式：上传 → 转换（等待完成即可，不打开图纸）
+              setLoadingMessage('文件转换中，请稍候...');
+              await waitForFileReady(param.nodeId!);
+            }
+
+            // 通知父组件上传+转换成功（由父组件决定是否 toast 和刷新列表）
             onSuccess?.(param);
 
             // 根据开关决定是否检查外部参照
             if (enableExternalReferenceCheck) {
-              // 检查外部参照（传入 nodeId 确保不为空）
-              // shouldRetry = true，因为上传后需要等待后端生成 preloading.json
-              // forceOpen = false，上传后如果没有外部参照不弹框
               await externalReferenceUpload.checkMissingReferences(param.nodeId!, true, false);
             }
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '文件打开失败';
-            setMessage(`文件打开失败: ${errorMessage}`);
-            setShowToast(true);
+            const errorMessage = error instanceof Error ? error.message : '文件处理失败';
+            globalShowToast(errorMessage, 'error');
             onError?.(errorMessage);
           } finally {
-            // 在整个流程（上传+转换+打开）完成后才隐藏 loading
             setGlobalLoading(false);
-            // 3秒后隐藏提示
-            setTimeout(() => setShowToast(false), 3000);
           }
         },
         onError: (error: string) => {
           setGlobalLoading(false);
-          setMessage(`上传失败: ${error}`);
-          setShowToast(true);
+          globalShowToast(error, 'error');
           onError?.(error);
-
-          // 5秒后隐藏提示
-          setTimeout(() => setShowToast(false), 5000);
         },
         onProgress: (percentage: number) => {
           setLoadingProgress(percentage);
         },
         onFileQueued: (file: File) => {
           setGlobalLoading(true, `正在上传: ${file.name}`);
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 2000);
         },
         onBeginUpload: () => {
           setLoadingMessage('正在上传...');
@@ -171,6 +153,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       selectFiles,
       externalReferenceUpload,
       enableExternalReferenceCheck,
+      openAfterUpload,
       setGlobalLoading,
       setLoadingMessage,
       setLoadingProgress,
@@ -197,12 +180,6 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         >
           {globalLoading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
         </button>
-
-        {showToast && (
-          <div className="fixed top-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50">
-            {escapeHtml(message)}
-          </div>
-        )}
 
         {/* 外部参照上传模态框 */}
         <ExternalReferenceModal

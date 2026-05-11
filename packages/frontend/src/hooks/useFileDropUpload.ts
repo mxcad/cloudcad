@@ -7,7 +7,7 @@ import { useState, useCallback, useRef } from 'react';
 import type { LoadFileParam } from './useMxCadUploadNative';
 import { uploadMxCadFile } from '../utils/mxcadUploadUtils';
 import { calculateFileHash } from '../utils/hashUtils';
-import { openUploadedFile } from '../services/mxcadManager';
+import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
 
@@ -16,6 +16,8 @@ interface UseFileDropUploadOptions {
   nodeId: string;
   /** 上传成功回调 */
   onSuccess?: () => void;
+  /** 上传完成后是否打开图纸，默认true。列表页上传应设置为false */
+  openAfterUpload?: boolean;
 }
 
 /**
@@ -23,7 +25,7 @@ interface UseFileDropUploadOptions {
  *
  * 处理从桌面/文件管理器拖拽文件到文件列表的上传逻辑。
  */
-export function useFileDropUpload({ nodeId, onSuccess }: UseFileDropUploadOptions) {
+export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }: UseFileDropUploadOptions) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const dragCounterRef = useRef(0);
@@ -57,7 +59,11 @@ export function useFileDropUpload({ nodeId, onSuccess }: UseFileDropUploadOption
           });
 
           if (result.nodeId) {
-            await openUploadedFile(result.nodeId, nodeId);
+            if (openAfterUpload) {
+              await openUploadedFile(result.nodeId, nodeId);
+            } else {
+              await waitForFileReady(result.nodeId);
+            }
             onSuccess?.();
           }
         } catch (error) {
@@ -67,7 +73,7 @@ export function useFileDropUpload({ nodeId, onSuccess }: UseFileDropUploadOption
 
       setUploading(false);
     },
-    [nodeId, uploading, onSuccess]
+    [nodeId, uploading, onSuccess, openAfterUpload]
   );
 
   /**

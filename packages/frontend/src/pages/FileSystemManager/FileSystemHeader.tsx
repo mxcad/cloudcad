@@ -376,6 +376,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               buttonClassName="hidden"
               onSuccess={onRefresh}
               onExternalReferenceSuccess={onRefresh}
+              openAfterUpload={false}
               onError={(err: string) => {
               }}
             />

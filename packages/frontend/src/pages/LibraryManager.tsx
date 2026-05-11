@@ -273,18 +273,18 @@ export const LibraryManager: React.FC = () => {
     [nodes, libraryOperations]
   );
 
-  // 上传成功回调
+  // 上传成功回调（MxCadUploader 不再自己弹 toast，由这里统一处理）
   const handleUploadSuccess = useCallback(() => {
     refresh();
     showToast('文件上传成功', 'success');
   }, [refresh, showToast]);
 
-  // 上传失败回调
+  // 上传失败回调（MxCadUploader 已通过 globalShowToast 显示了错误，这里不再重复提示）
   const handleUploadError = useCallback(
-    (error: string) => {
-      showToast(error, 'error');
+    (_error: string) => {
+      // 错误已由 MxCadUploader 的 globalShowToast 统一处理
     },
-    [showToast]
+    []
   );
 
   // 下载文件（免登录）
@@ -462,6 +462,7 @@ export const LibraryManager: React.FC = () => {
                   onError={handleUploadError}
                   buttonText="上传文件"
                   showProgress={true}
+                  openAfterUpload={false}
                 />
               </div>
             )}

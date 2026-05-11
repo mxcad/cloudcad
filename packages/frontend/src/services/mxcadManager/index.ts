@@ -62,13 +62,13 @@ import { escapeHtml } from '@/utils/sanitize';
 // ==================== 外部依赖 ====================
 import "mxcad-app/style"
 import { MxCADView } from 'mxcad-app';
-import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
+import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission, mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
-import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
+import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode, saveControllerSaveMxwebToNode } from '@/api-sdk';
 import { MxFun } from 'mxdraw';
 import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../../utils/hashUtils';
-import { uploadMxCadFile, uploadFileWithFormData } from '../../utils/mxcadUploadUtils';
+import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../../contexts/NotificationContext';
@@ -712,7 +712,7 @@ async function uploadAndProcessFile(
  * @param intervalMs 检查间隔（毫秒）
  * @returns 文件信息，如果超时返回 null
  */
-async function waitForFileReady(
+export async function waitForFileReady(
   nodeId: string,
   maxAttempts: number = 30,
   intervalMs: number = 2000
@@ -1593,21 +1593,16 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   });
 
   setLoadingMessage('正在上传到服务器...');
-  // 通过 FormData 上传 mxweb Blob 到保存端点
-  const uploadMeta: Record<string, string> = {};
-  if (commitMessage) {
-    uploadMeta.commitMessage = commitMessage;
-  }
-  if (expectedTimestamp) {
-    uploadMeta.expectedTimestamp = expectedTimestamp;
-  }
 
   try {
-    await uploadFileWithFormData({
-      blob: savedFile.blob,
-      endpoint: `/api/mxcad/savemxweb/${fileId}`,
-      filename: savedFile.filename,
-      metadata: uploadMeta,
+    const filename = savedFile.filename.replace(/\.[^/.]+$/, '') + '.mxweb';
+    await saveControllerSaveMxwebToNode({
+      body: {
+        file: new File([savedFile.blob], filename, { type: savedFile.blob.type }),
+        ...(commitMessage ? { commitMessage } : {}),
+        ...(expectedTimestamp ? { expectedTimestamp } : {}),
+      },
+      path: { nodeId: fileId },
     });
   } catch (uploadError) {
     handleError(uploadError, 'mxcadManager: saveToCurrentFile upload');
@@ -1757,16 +1752,14 @@ async function saveLibraryFile() {
   try {
     setLoadingMessage('正在上传到服务器...');
 
-    // 通过 FormData 上传 mxweb Blob 到保存端点
-    const filename = `${libraryKey}.mxweb`;
-    await uploadFileWithFormData({
-      blob: savedFile.blob,
-      endpoint: `/api/mxcad/savemxweb/${fileId}`,
-      filename,
-      metadata: {
+    // 通过 SDK 上传 mxweb Blob 到保存端点
+    await saveControllerSaveMxwebToNode({
+      body: {
+        file: new File([savedFile.blob], `${libraryKey}.mxweb`, { type: savedFile.blob.type }),
         commitMessage: commitMessage || '',
         ...(expectedTimestamp ? { expectedTimestamp } : {}),
       },
+      path: { nodeId: fileId },
     });
 
     // 更新本地缓存 - 使用 node.path 构建正确的 URL
@@ -2677,15 +2670,12 @@ export async function processPendingImages(): Promise<void> {
       const blob = await response.blob();
       const file = new File([blob], img.fileName, { type: blob.type });
 
-      // 上传到外部参照目录
-      await uploadFileWithFormData({
-        blob: file,
-        endpoint: '/api/mxcad/up_ext_reference_image',
-        filename: img.fileName,
-        metadata: {
-          uploadType: 'extRef',
-          srcDwgNodeId: currentInfo.fileId,
-          fileHash: `${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      // 上传到外部参照目录（使用 SDK）
+      await mxCadControllerUploadExtReferenceImage({
+        body: {
+          file,
+          nodeId: currentInfo.fileId,
+          ext_ref_file: img.fileName,
         },
       });
     } catch (error) {

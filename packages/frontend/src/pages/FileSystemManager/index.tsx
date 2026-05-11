@@ -265,6 +265,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const currentDirId = getCurrentParentId();
   const { isDragOver: isFileDragOver, dropHandlers: fileDropHandlers } = useFileDropUpload({
     nodeId: currentDirId,
+    openAfterUpload: false,
     onSuccess: () => {
       handleRefresh();
     },
