@@ -69,8 +69,8 @@ export class FontsService {
     '.shx',
   ];
 
-  /** 最大文件大小（10MB） */
-  private readonly maxFileSize = 10 * 1024 * 1024;
+  /** 最大文件大小（不限制） */
+  private readonly maxFileSize = Infinity;
 
   constructor(private configService: ConfigService) {
     // 从配置服务获取字体目录路径（配置已在 configuration.ts 中正确解析为绝对路径）
@@ -258,7 +258,7 @@ export class FontsService {
       ) {
         const backendPath = path.join(this.backendFontsDir, fileName);
         try {
-          await fs.unlink(backendPath);
+          await this.unlinkWithRetry(backendPath);
           results.push({ location: 'backend', path: backendPath });
           this.logger.log(`字体已从后端目录删除: ${backendPath}`);
         } catch (error: unknown) {
@@ -275,7 +275,7 @@ export class FontsService {
       ) {
         const frontendPath = path.join(this.frontendFontsDir, fileName);
         try {
-          await fs.unlink(frontendPath);
+          await this.unlinkWithRetry(frontendPath);
           results.push({ location: 'frontend', path: frontendPath });
           this.logger.log(`字体已从前端目录删除: ${frontendPath}`);
         } catch (error: unknown) {
@@ -451,6 +451,44 @@ export class FontsService {
     } catch (error) {
       this.logger.error(`创建目录失败: ${error.message}`, error.stack);
       throw new BadRequestException('无法创建字体目录');
+    }
+  }
+
+  /**
+   * 带重试的文件删除
+   * Windows 下字体文件可能被 mxcad 转换进程短暂占用，重试等待释放
+   * @param filePath - 要删除的文件绝对路径
+   * @param maxRetries - 最大重试次数，默认 3
+   * @param retryDelayMs - 重试间隔毫秒，默认 500
+   */
+  private async unlinkWithRetry(
+    filePath: string,
+    maxRetries = 3,
+    retryDelayMs = 500
+  ): Promise<void> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await fs.unlink(filePath);
+        return;
+      } catch (error: unknown) {
+        const err = error as NodeJS.ErrnoException;
+        // 文件不存在，视为成功
+        if (err.code === 'ENOENT') {
+          return;
+        }
+        // EBUSY/EPERM — 文件被占用，重试
+        if (
+          (err.code === 'EBUSY' || err.code === 'EPERM') &&
+          attempt < maxRetries - 1
+        ) {
+          this.logger.warn(
+            `文件被占用，${retryDelayMs}ms 后重试 (${attempt + 1}/${maxRetries}): ${filePath}`
+          );
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          continue;
+        }
+        throw error;
+      }
     }
   }
 }

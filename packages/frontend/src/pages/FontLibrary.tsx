@@ -247,7 +247,11 @@ export default function FontLibrary(props: FontLibraryProps) {
     if (!confirmed) return;
 
     try {
-      await fontsControllerDeleteFont({ path: { fileName: fontName }, query: { target: activeTab } });
+      const { error } = await fontsControllerDeleteFont({ path: { fileName: fontName }, query: { target: activeTab } });
+      if (error) {
+        showToast('删除字体失败', 'error');
+        return;
+      }
       await fetchFonts();
       setSelectedFonts(prev => {
         const newSet = new Set(prev);
@@ -276,11 +280,16 @@ export default function FontLibrary(props: FontLibraryProps) {
     if (!confirmed) return;
 
     try {
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedFonts).map((fontName) =>
           fontsControllerDeleteFont({ path: { fileName: fontName as string }, query: { target: activeTab } })
         )
       );
+      const errors = results.filter((r: any) => r.error);
+      if (errors.length > 0) {
+        showToast(`批量删除失败: ${errors.length} 个文件删除失败`, 'error');
+        return;
+      }
       setSelectedFonts(new Set());
       await fetchFonts();
       showToast('批量删除成功', 'success');
@@ -895,12 +904,6 @@ function UploadFontModal({
       return;
     }
 
-    // 验证文件大小（10MB）
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      showToast('文件大小不能超过 10MB', 'warning');
-      return;
-    }
-
     setFile(selectedFile);
   };
 
@@ -1032,7 +1035,6 @@ function UploadFontModal({
                 <p className="text-sm text-text-tertiary">
                   支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX
                 </p>
-                <p className="text-xs text-text-muted mt-2">最大 10MB</p>
               </div>
             )}
           </div>
