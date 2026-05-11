@@ -132,6 +132,27 @@ export class FileSystemController {
 
 ## 前端：@/api-sdk 使用规范
 
+### 🚨 核心规则：所有 API 调用必须走 api-sdk
+
+**项目中所有后端接口调用，必须通过 `@/api-sdk` 生成的函数发起，禁止直接使用 `fetch()` 或手动构造 `FormData`。**
+
+```
+✅ 正确：
+import { mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
+await mxCadControllerUploadExtReferenceImage({
+  body: { file: myFile, nodeId: 'xxx', ext_ref_file: 'image.png' },
+});
+
+❌ 禁止：
+const formData = new FormData();
+formData.append('file', blob);
+await fetch('/api/v1/mxcad/up_ext_reference_image', { method: 'POST', body: formData });
+```
+
+**例外（可接受直接 URL 链接）：**
+- mxweb 文件访问（`.mxweb` / `.mxwbe` 文件流，WASM 内部 fetch）
+- 缩略图图片链接（`.jpg` / `.png` 等，`<img src>` 直链）
+
 ### 导入方式
 
 ```typescript

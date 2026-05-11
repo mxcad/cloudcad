@@ -432,7 +432,8 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
 
     try {
-      await svnAddAsync(filePaths, false);
+      // дҪҝз”Ё --no-ignore з»•иҝҮ SVN е…ЁеұҖеҝҪз•Ҙи§„еҲҷпјҢзЎ®дҝқеӨҮд»Ҫж–Үд»¶иғҪжӯЈеёёжҸҗдәӨ
+      await svnAddAsync(filePaths, false, true);
       const result = await svnCommitAsync(
         filePaths,
         message,

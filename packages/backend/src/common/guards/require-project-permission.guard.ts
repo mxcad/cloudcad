@@ -139,6 +139,17 @@ export class RequireProjectPermissionGuard implements CanActivate {
     }
 
     if (!projectId) {
+      // OptionalAuth 端点：允许无 projectId 的请求通过，由 Controller 层处理匿名逻辑
+      const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
+        IS_OPTIONAL_AUTH_KEY,
+        [targetHandler, targetClass],
+      );
+      if (isOptionalAuth) {
+        this.logger.debug(
+          `[OptionalAuth] 缺少projectId但端点标记为OptionalAuth，放行给Controller处理`
+        );
+        return true;
+      }
       throw new BadRequestException('缺少项目ID参数');
     }
 
