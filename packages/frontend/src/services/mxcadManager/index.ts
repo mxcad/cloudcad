@@ -1162,17 +1162,20 @@ async function handleFileSelection(
       const userChoice = await _showDuplicateFileDialog(file.name);
 
       if (userChoice === 'open') {
-        // 用户选择打开已有文件
-        showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
-        await openUploadedFile(
-          duplicateCheck.data?.nodeId,
-          uploadTargetNodeId
-        );
-        // 派发上传完成事件，由 CADEditorDirect 组件在 React 生命周期内检查外部参照
+        // 用户选择打开已有文件 — 先派发事件检查外部参照，弹框关闭后再打开文件
         window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
-          detail: { nodeId: duplicateCheck.data?.nodeId },
+          detail: {
+            nodeId: duplicateCheck.data?.nodeId,
+            callback: async () => {
+              showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
+              await openUploadedFile(
+                duplicateCheck.data?.nodeId,
+                uploadTargetNodeId
+              );
+              hideGlobalLoading();
+            },
+          },
         }));
-        hideGlobalLoading();
         return;
       } else if (userChoice === null) {
         // 用户取消
@@ -1181,7 +1184,7 @@ async function handleFileSelection(
       // userChoice === 'upload' 继续上传流程
     }
 
-    // 继续上传流程
+    // 继续上传流程 — 先上传文件，再派发事件检查外部参照，弹框关闭后打开文件
     showGlobalLoading(DEFAULT_MESSAGES.UPLOADING);
     const uploadResult = await uploadMxCadFile({
       file,
@@ -1194,14 +1197,16 @@ async function handleFileSelection(
       },
     });
 
-    await openUploadedFile(uploadResult.nodeId, uploadTargetNodeId);
-
-    // 派发上传完成事件，由 CADEditorDirect 组件在 React 生命周期内检查外部参照
+    // 不立即打开文件，先派发事件检查外部参照，弹框关闭后通过回调打开
     window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
-      detail: { nodeId: uploadResult.nodeId },
+      detail: {
+        nodeId: uploadResult.nodeId,
+        callback: async () => {
+          await openUploadedFile(uploadResult.nodeId, uploadTargetNodeId);
+          hideGlobalLoading();
+        },
+      },
     }));
-
-    hideGlobalLoading();
   } catch (error) {
     hideGlobalLoading();
     const errorMessage =
@@ -1345,17 +1350,22 @@ const handleNewFileCommand = async () => {
 
 
 async function triggerSaveAs() {
+  const fileName = currentFileInfo?.name || 'untitled';
+
   if (!isAuthenticated()) {
-    window.dispatchEvent(
-      new CustomEvent('mxcad-save-required', {
-        detail: { action: '保存文件' },
-      })
-    );
+    // 未登录用户：直接保存为 mxweb blob 并触发 mxcad-save-as 事件
+    // CADEditorDirect 中未登录用户的 mxcad-save-as 处理会弹出下载格式选择框（另存为到本地）
+    await showSaveAsDialog(null, fileName);
     return;
   }
 
-  const personalSpaceId = await getPersonalSpaceId();
-  const fileName = currentFileInfo?.name || 'untitled';
+  let personalSpaceId: string | null = null;
+  try {
+    personalSpaceId = await getPersonalSpaceId();
+  } catch {
+    // 获取私人空间 ID 失败（如 token 过期），降级为 null
+    globalShowToast('登录状态可能已过期，请保存到本地或重新登录', 'warning');
+  }
   await showSaveAsDialog(personalSpaceId, fileName);
 }
 
@@ -1432,13 +1442,25 @@ MxFun.addCommand('Mx_Save', async () => {
         );
         return;
       }
-      const personalSpaceId = await getPersonalSpaceId();
+      let personalSpaceId: string | null = null;
+      try {
+        personalSpaceId = await getPersonalSpaceId();
+      } catch {
+        // 获取私人空间 ID 失败（如 token 过期），降级为 null
+        globalShowToast('登录状态可能已过期，请保存到本地或重新登录', 'warning');
+      }
       await showSaveAsDialog(personalSpaceId, 'untitled');
       return;
     }
 
     // 获取个人空间ID
-    const personalSpaceId = await getPersonalSpaceId();
+    let personalSpaceId: string | null = null;
+    try {
+      personalSpaceId = await getPersonalSpaceId();
+    } catch {
+      // 获取私人空间 ID 失败（如 token 过期），降级为 null
+      // 后续逻辑会跳过"我的图纸"判断，走另存为流程
+    }
 
     // 判断是否是我的图纸（个人空间中的图纸）
     const isMyDrawing =
@@ -2160,15 +2182,20 @@ class MxCADInstanceManager {
 
         try {
           // 检查用户是否已登录，未登录则不生成和上传缩略图
-          const token = localStorage.getItem('accessToken');
-          const user = localStorage.getItem('user');
-          const isLoggedIn = !!(token && user);
-
-          if (!isLoggedIn) {
+          if (!isAuthenticated()) {
             return;
           }
 
-          const fileId = currentFileInfo.fileId;
+          // 优先使用 currentFileInfo.fileId；为空时从 mxweb URL 提取 nodeId
+          let fileId = currentFileInfo.fileId;
+          if (!fileId && currentMxwebUrl) {
+            // URL 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}.{ext}.mxweb
+            // 从路径中提取 nodeId
+            const match = currentMxwebUrl.match(/\/([a-z0-9]+)\.[^.]+\.mxweb/i);
+            if (match) {
+              fileId = match[1];
+            }
+          }
 
           if (!fileId) {
             return;

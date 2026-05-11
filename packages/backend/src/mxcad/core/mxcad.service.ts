@@ -483,10 +483,9 @@ export class MxCadService {
       }
 
       // 获取文件扩展名并映射到标准缩略图格式
-      const ext = path.extname(filePath).toLowerCase();
-    
-      
-      
+      const rawExt = path.extname(filePath).toLowerCase();
+      // path.extname 返回带点号前缀 (如 ".png")，需去掉点号；空扩展名回退为 png
+      const ext = (rawExt.startsWith(".") ? rawExt.slice(1) : rawExt) || "jpg";
 
       // 构建目标文件名（使用上传文件的格式）
       const targetFileName = getThumbnailFileName(
@@ -691,6 +690,7 @@ export class MxCadService {
 
       // 只有非公共资源库（libraryKey 为 null）才提交到 SVN 版本控制
       // 公共资源库（图纸库、图块库等）的文件不参与 SVN 版本管理
+      // SVN 只提交 nodeId.mxweb 初始备份文件（灾难恢复），不提交工作文件
       if (!fullNode.libraryKey) {
         const nodeDirectory = path.dirname(targetPath);
         const message = commitMessage
@@ -700,20 +700,35 @@ export class MxCadService {
         this.logger.log(
           `[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`
         );
-        const commitResult =
-          await this.versionControlService.commitNodeDirectory(
-            nodeDirectory,
-            message,
-            userId,
-            userName
-          );
 
-        if (commitResult.success) {
-          this.logger.log(`节点目录已提交到 SVN: ${node.name}`);
-        } else {
-          this.logger.warn(
-            `节点目录 SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
-          );
+        // 优先提交 {nodeId}.mxweb（新格式），否则提交 _initial.mxweb（旧格式）
+        const nodeIdMxwebPath = path.join(nodeDirectory, `${nodeId}.mxweb`);
+        if (fs.existsSync(nodeIdMxwebPath)) {
+          const commitResult =
+            await this.versionControlService.commitFiles(
+              [nodeIdMxwebPath],
+              message,
+            );
+          if (commitResult.success) {
+            this.logger.log(`节点 ${nodeId}.mxweb 已提交到 SVN: ${node.name}`);
+          } else {
+            this.logger.warn(
+              `节点 ${nodeId}.mxweb SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
+            );
+          }
+        } else if (fs.existsSync(initialMxwebPath)) {
+          const commitResult =
+            await this.versionControlService.commitFiles(
+              [initialMxwebPath],
+              message,
+            );
+          if (commitResult.success) {
+            this.logger.log(`节点 _initial.mxweb 已提交到 SVN: ${node.name}`);
+          } else {
+            this.logger.warn(
+              `节点 _initial.mxweb SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
+            );
+          }
         }
       } else {
         this.logger.log(

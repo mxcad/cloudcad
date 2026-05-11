@@ -30,7 +30,7 @@ export interface SaveMxwebAsOptions {
   targetType: 'personal' | 'project' | 'library';
   targetParentId: string;
   projectId: string | undefined;
-  format: 'dwg' | 'dxf';
+  format: 'dwg' | 'dxf' | 'mxweb';
   userId: string;
   userName: string;
   commitMessage?: string;
@@ -150,6 +150,12 @@ export class SaveAsService {
       await fsPromises.copyFile(file.path, mxwebTargetPath);
       this.logger.log(`[SaveAs] mxweb文件保存成功: ${mxwebTargetPath}`);
 
+      // 同时保存 nodeId.mxweb 作为初始备份（灾难恢复用，SVN 只提交此文件）
+      const backupFileName = `${newNodeId}.mxweb`;
+      const backupPath = path.join(nodeDirectory, backupFileName);
+      await fsPromises.copyFile(file.path, backupPath);
+      this.logger.log(`[SaveAs] 初始备份保存成功: ${backupPath}`);
+
       const fileBuffer = await fsPromises.readFile(mxwebTargetPath);
       const hashSum = crypto.createHash('md5');
       hashSum.update(fileBuffer);
@@ -170,11 +176,10 @@ export class SaveAsService {
       // 只对项目和个人空间文件进行 SVN 提交，跳过图纸库和图块库
       if (targetType === 'project' && projectId) {
         try {
-          await this.versionControlService.commitNodeDirectory(
-            nodeDirectory,
+          // SVN 只提交 nodeId.mxweb 初始备份（灾难恢复用），不提交工作文件
+          await this.versionControlService.commitFiles(
+            [backupPath],
             commitMessage || `Save as: ${finalFileName}`,
-            userId,
-            userName
           );
           this.logger.log(`[SaveAs] 项目文件 SVN 提交成功`);
         } catch (svnError) {
@@ -182,11 +187,10 @@ export class SaveAsService {
         }
       } else if (targetType === 'personal') {
         try {
-          await this.versionControlService.commitNodeDirectory(
-            nodeDirectory,
+          // SVN 只提交 nodeId.mxweb 初始备份（灾难恢复用），不提交工作文件
+          await this.versionControlService.commitFiles(
+            [backupPath],
             commitMessage || `Save as: ${finalFileName}`,
-            userId,
-            userName
           );
           this.logger.log(`[SaveAs] 个人空间文件 SVN 提交成功`);
         } catch (svnError) {
