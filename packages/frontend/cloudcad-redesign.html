@@ -1,0 +1,2464 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CloudCAD — 文件管理系统重设计</title>
+<style>
+/* ============================================================
+   CloudCAD Redesign — Design System v2
+   Warm gray base + Refined indigo accent + Unified SVG icons
+   Full mobile + dark/light theme support
+   ============================================================ */
+
+/* ── CSS Variables ── */
+:root {
+  /* Palette: Warm Gray */
+  --gray-25:  oklch(99% 0.003 85);
+  --gray-50:  oklch(97.5% 0.006 85);
+  --gray-75:  oklch(95% 0.008 85);
+  --gray-100: oklch(92% 0.010 85);
+  --gray-200: oklch(87% 0.012 85);
+  --gray-300: oklch(78% 0.014 85);
+  --gray-400: oklch(64% 0.016 85);
+  --gray-500: oklch(50% 0.018 85);
+  --gray-600: oklch(39% 0.018 80);
+  --gray-700: oklch(28% 0.018 75);
+  --gray-800: oklch(20% 0.018 70);
+  --gray-900: oklch(13% 0.015 65);
+
+  /* Accent: Refined Indigo */
+  --accent-50:  oklch(96% 0.02 265);
+  --accent-100: oklch(91% 0.04 265);
+  --accent-200: oklch(84% 0.08 265);
+  --accent-300: oklch(74% 0.12 265);
+  --accent-400: oklch(64% 0.17 265);
+  --accent-500: oklch(54% 0.20 265);
+  --accent-600: oklch(46% 0.21 265);
+  --accent-700: oklch(38% 0.20 265);
+  --accent-800: oklch(30% 0.18 265);
+  --accent-900: oklch(22% 0.14 265);
+
+  /* Semantic */
+  --success:      oklch(58% 0.16 155);
+  --success-dim:  oklch(92% 0.04 155);
+  --warning:      oklch(62% 0.14 72);
+  --warning-dim:  oklch(94% 0.04 72);
+  --danger:       oklch(54% 0.18 22);
+  --danger-dim:   oklch(93% 0.03 22);
+
+  /* Background Layers — Light */
+  --bg-canvas:    var(--gray-25);
+  --bg-primary:   var(--gray-50);
+  --bg-secondary: #ffffff;
+  --bg-tertiary:  var(--gray-75);
+  --bg-elevated:  #ffffff;
+  --bg-overlay:   rgba(0,0,0,0.35);
+
+  /* Text */
+  --text-primary:    var(--gray-800);
+  --text-secondary:  var(--gray-600);
+  --text-tertiary:   var(--gray-400);
+  --text-inverse:    #ffffff;
+
+  /* Border */
+  --border-default: var(--gray-200);
+  --border-subtle:  var(--gray-100);
+  --border-strong:  var(--gray-300);
+
+  /* Radius */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
+
+  /* Shadow */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.04);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+
+  /* Layout */
+  --sidebar-width: 280px;
+  --header-height: 56px;
+  --icon-color: var(--gray-500);
+
+  /* Transitions */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast:   150ms;
+  --duration-normal: 200ms;
+  --duration-slow:   300ms;
+
+  /* Theme transition */
+  --theme-transition: background-color 0.4s var(--ease-out),
+                      color 0.4s var(--ease-out),
+                      border-color 0.4s var(--ease-out),
+                      box-shadow 0.4s var(--ease-out);
+}
+
+/* ── Dark Theme ── */
+[data-theme="dark"] {
+  --bg-canvas:    oklch(18% 0.012 85);
+  --bg-primary:   oklch(20% 0.012 85);
+  --bg-secondary: oklch(23% 0.012 85);
+  --bg-tertiary:  oklch(27% 0.012 85);
+  --bg-elevated:  oklch(30% 0.012 85);
+  --bg-overlay:   rgba(0,0,0,0.55);
+
+  --text-primary:    oklch(93% 0.005 85);
+  --text-secondary:  oklch(78% 0.008 85);
+  --text-tertiary:   oklch(55% 0.010 85);
+  --text-inverse:    oklch(93% 0.005 85);
+
+  --border-default: oklch(32% 0.010 85);
+  --border-subtle:  oklch(27% 0.010 85);
+  --border-strong:  oklch(40% 0.010 85);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.25), 0 2px 4px -2px rgba(0,0,0,0.15);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px rgba(0,0,0,0.15);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.35), 0 8px 10px -6px rgba(0,0,0,0.15);
+
+  --icon-color: oklch(70% 0.008 85);
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: var(--theme-transition);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+a { color: inherit; text-decoration: none; }
+
+input {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  outline: none;
+  background: none;
+  color: inherit;
+}
+
+/* ============================================================
+   Layout — App Shell
+   ============================================================ */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Mobile overlay backdrop ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  z-index: 25;
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
+  pointer-events: none;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-subtle);
+  transition: var(--theme-transition), transform var(--duration-slow) var(--ease-out);
+  position: relative;
+  z-index: 30;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: var(--theme-transition);
+}
+
+.sidebar-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-500), var(--accent-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+}
+
+.sidebar-logo svg {
+  width: 18px;
+  height: 18px;
+  color: white;
+}
+
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.sidebar-brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  transition: color var(--theme-transition);
+}
+
+.sidebar-brand-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  transition: color var(--theme-transition);
+}
+
+/* ── Sidebar Nav ── */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-section-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  padding: 8px 12px 6px;
+  margin-top: 4px;
+  transition: color var(--theme-transition);
+}
+
+.nav-section-label:first-child { margin-top: 0; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: var(--theme-transition), transform var(--duration-fast) var(--ease-out);
+  position: relative;
+  min-height: 44px;
+}
+
+.nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.nav-item:active {
+  transform: scale(0.985);
+}
+
+.nav-item.active {
+  background: var(--accent-50);
+  color: var(--accent-600);
+  font-weight: 600;
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--accent-500);
+  border-radius: 0 3px 3px 0;
+}
+
+.nav-item-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--icon-color);
+  transition: color var(--theme-transition);
+}
+
+.nav-item:hover .nav-item-icon,
+.nav-item.active .nav-item-icon {
+  color: var(--accent-500);
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 8px 12px;
+  transition: background var(--theme-transition);
+}
+
+/* ── Sidebar Footer ── */
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-subtle);
+  transition: border-color var(--theme-transition);
+}
+
+.storage-card {
+  padding: 14px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  transition: var(--theme-transition);
+}
+
+.storage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.storage-header svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+}
+
+.storage-header span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.storage-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.storage-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-400), var(--accent-500));
+  transition: width 0.6s var(--ease-out);
+}
+
+.storage-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ── User Area ── */
+.user-area {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-subtle);
+  transition: border-color var(--theme-transition);
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  transition: background var(--duration-fast) var(--ease-out), color var(--theme-transition);
+  min-height: 44px;
+}
+
+.user-button:hover {
+  background: var(--bg-tertiary);
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-400), var(--accent-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(99,102,241,0.25);
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.2;
+}
+
+.user-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-out), color var(--theme-transition);
+}
+
+/* ============================================================
+   Main Content Area
+   ============================================================ */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Top Bar ── */
+.topbar {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transition: var(--theme-transition);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+@supports (backdrop-filter: blur(16px)) {
+  .topbar {
+    background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+  }
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Mobile hamburger ── */
+.hamburger-btn {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: var(--theme-transition), background var(--duration-fast) var(--ease-out);
+}
+
+.hamburger-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.hamburger-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.topbar-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  font-variant-numeric: tabular-nums;
+  transition: var(--theme-transition);
+}
+
+.topbar-time-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.topbar-time-sub {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  line-height: 1.2;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: var(--theme-transition), background var(--duration-fast) var(--ease-out);
+}
+
+.icon-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: var(--theme-transition), background var(--duration-fast) var(--ease-out);
+  position: relative;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.theme-toggle .sun-icon,
+.theme-toggle .moon-icon {
+  width: 18px;
+  height: 18px;
+  position: absolute;
+  transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
+}
+
+.theme-toggle .sun-icon { opacity: 1; transform: rotate(0deg) scale(1); }
+.theme-toggle .moon-icon { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+
+[data-theme="dark"] .theme-toggle .sun-icon { opacity: 0; transform: rotate(90deg) scale(0.5); }
+[data-theme="dark"] .theme-toggle .moon-icon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+/* ── Page Content ── */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  transition: padding var(--duration-slow) var(--ease-out);
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a {
+  color: var(--text-tertiary);
+  transition: color var(--duration-fast);
+}
+
+.breadcrumb a:hover {
+  color: var(--accent-500);
+}
+
+.breadcrumb-sep {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.breadcrumb-current {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+  transition: color var(--theme-transition);
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--theme-transition), transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+.btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.btn-primary {
+  background: var(--accent-500);
+  color: white;
+  box-shadow: 0 1px 3px rgba(99,102,241,0.25);
+}
+
+.btn-primary:hover {
+  background: var(--accent-600);
+  box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(99,102,241,0.2);
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-outline {
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.btn-outline:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-dim);
+}
+
+/* ── Search Bar ── */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  transition: var(--theme-transition), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+  min-height: 44px;
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-300);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+.search-bar svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.search-bar input {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  min-width: 0;
+}
+
+.search-bar input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  transition: var(--theme-transition);
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: var(--theme-transition), background var(--duration-fast) var(--ease-out);
+  min-height: 36px;
+}
+
+.toolbar-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.toolbar-btn.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.toolbar-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+}
+
+/* ============================================================
+   File Grid
+   ============================================================ */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 4px 0;
+}
+
+/* ── File Card ── */
+.file-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: var(--theme-transition), transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+  min-height: 160px;
+}
+
+.file-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-xl);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out);
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--accent-300);
+}
+
+.file-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.file-card:hover::after {
+  opacity: 0.3;
+}
+
+.file-card:active {
+  transform: translateY(0);
+}
+
+.file-card.selected {
+  border-color: var(--accent-400);
+  background: var(--accent-50);
+  box-shadow: 0 0 0 1px var(--accent-300), var(--shadow-sm);
+}
+
+.file-card.selected::after {
+  opacity: 1;
+}
+
+/* Selected state in dark theme */
+[data-theme="dark"] .file-card.selected {
+  background: oklch(30% 0.04 265);
+}
+
+.file-card-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  overflow: hidden;
+  position: relative;
+  transition: background var(--theme-transition);
+}
+
+.file-card-thumb svg {
+  width: 48px;
+  height: 48px;
+  color: var(--text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.file-card:hover .file-card-thumb svg {
+  color: var(--accent-400);
+  transform: scale(1.05);
+}
+
+/* Folder thumbnail — warm amber accent */
+.file-card.folder .file-card-thumb svg {
+  color: oklch(65% 0.12 70);
+}
+
+.file-card.folder:hover .file-card-thumb svg {
+  color: oklch(60% 0.14 68);
+}
+
+/* Folder icon dark theme boost */
+[data-theme="dark"] .file-card.folder .file-card-thumb svg {
+  color: oklch(75% 0.12 70);
+}
+
+.file-card-thumb-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  transition: var(--theme-transition);
+}
+
+.file-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+  transition: color var(--theme-transition);
+}
+
+.file-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+
+.file-card-meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.file-card-time {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+/* ── File Card Actions ── */
+.file-card-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+
+.file-card-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: var(--theme-transition), background var(--duration-fast) var(--ease-out);
+  box-shadow: var(--shadow-xs);
+}
+
+.file-card-action:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.file-card-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* On touch devices, always show actions */
+@media (hover: none) and (pointer: coarse) {
+  .file-card-actions {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* On hover-capable devices, show on hover */
+@media (hover: hover) and (pointer: fine) {
+  .file-card-actions {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all var(--duration-fast) var(--ease-out);
+  }
+  .file-card:hover .file-card-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   File List (Table Mode)
+   ============================================================ */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  transition: var(--theme-transition);
+}
+
+.file-list-header {
+  display: grid;
+  grid-template-columns: 1fr 120px 140px 100px;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: var(--theme-transition);
+}
+
+.file-list-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 140px 100px;
+  gap: 16px;
+  padding: 12px 20px;
+  align-items: center;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--theme-transition);
+  border-bottom: 1px solid var(--border-subtle);
+  min-height: 44px;
+}
+
+.file-list-row:last-child { border-bottom: none; }
+
+.file-list-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.file-list-row.selected {
+  background: var(--accent-50);
+}
+
+[data-theme="dark"] .file-list-row.selected {
+  background: oklch(30% 0.04 265);
+}
+
+.file-list-row.selected .file-list-name {
+  color: var(--accent-600);
+}
+
+.file-list-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.file-list-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--icon-color);
+  transition: color var(--theme-transition);
+}
+
+.file-list-row.folder .file-list-icon {
+  color: oklch(65% 0.12 70);
+}
+
+[data-theme="dark"] .file-list-row.folder .file-list-icon {
+  color: oklch(75% 0.12 70);
+}
+
+.file-list-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--theme-transition);
+}
+
+.file-list-cell {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--theme-transition);
+}
+
+.file-list-cell.muted {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+/* ── Status Pills ── */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-pill.modified {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+
+.status-pill.published {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
+/* ============================================================
+   Pagination
+   ============================================================ */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  min-width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: var(--theme-transition), background var(--duration-fast) var(--ease-out);
+}
+
+.pagination-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.pagination-btn.active {
+  background: var(--accent-500);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(99,102,241,0.25);
+}
+
+.pagination-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in var(--duration-normal) var(--ease-out) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up var(--duration-slow) var(--ease-out) forwards;
+}
+
+/* ============================================================
+   RESPONSIVE — Tablet (≤1024px)
+   ============================================================ */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+
+  .page-content {
+    padding: 20px;
+  }
+
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .file-list-header,
+  .file-list-row {
+    grid-template-columns: 1fr 100px 120px 90px;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+
+  .search-bar {
+    min-width: 180px;
+  }
+
+  .topbar-time {
+    display: none;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — Mobile (≤768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 280px;
+    --header-height: 52px;
+  }
+
+  /* Sidebar becomes overlay drawer */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    z-index: 30;
+    box-shadow: var(--shadow-xl);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+  }
+
+  .sidebar-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Show hamburger */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .main-area {
+    width: 100%;
+  }
+
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .topbar-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .search-bar {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .topbar-time {
+    display: none;
+  }
+
+  .page-content {
+    padding: 16px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
+
+  .page-title-row {
+    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-actions {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .page-actions .btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 7px 12px;
+    min-height: 40px;
+  }
+
+  .page-actions .btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .toolbar {
+    gap: 6px;
+  }
+
+  .toolbar-group {
+    flex-shrink: 0;
+  }
+
+  .toolbar .toolbar-sep {
+    margin: 0 2px;
+  }
+
+  .toolbar > .toolbar-btn:nth-child(n+4):not(.toolbar-btn:last-of-type) {
+    display: none;
+  }
+
+  /* File Grid — 2 columns on mobile */
+  .file-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .file-card {
+    padding: 12px;
+  }
+
+  .file-card-thumb svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .file-card-name {
+    font-size: 12px;
+  }
+
+  .file-card-meta {
+    font-size: 10.5px;
+    gap: 4px;
+  }
+
+  .file-card-time {
+    font-size: 10px;
+  }
+
+  .file-card-thumb-badge {
+    top: 6px;
+    right: 6px;
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  .file-card-action {
+    width: 28px;
+    height: 28px;
+  }
+
+  .file-card-action svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* File List — hide size column on mobile */
+  .file-list-header,
+  .file-list-row {
+    grid-template-columns: 1fr 110px 80px;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  .file-list-header > *:nth-child(2),
+  .file-list-row > *:nth-child(2) {
+    display: none;
+  }
+
+  .file-list-cell {
+    font-size: 11px;
+  }
+
+  .pagination {
+    padding: 12px 0;
+    gap: 2px;
+  }
+
+  .pagination-btn {
+    min-width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — Small Mobile (≤480px)
+   ============================================================ */
+@media (max-width: 480px) {
+  :root {
+    --sidebar-width: 260px;
+    --header-height: 48px;
+  }
+
+  .topbar {
+    padding: 0 10px;
+  }
+
+  .hamburger-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .search-bar {
+    padding: 6px 10px;
+    min-height: 40px;
+  }
+
+  .search-bar input {
+    font-size: 12px;
+  }
+
+  .page-content {
+    padding: 12px;
+  }
+
+  .page-title {
+    font-size: 16px;
+  }
+
+  .breadcrumb {
+    font-size: 11px;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .page-actions {
+    gap: 6px;
+  }
+
+  .page-actions .btn {
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 36px;
+    gap: 5px;
+  }
+
+  .page-actions .btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .toolbar {
+    gap: 4px;
+    padding: 8px 0;
+  }
+
+  .toolbar-btn {
+    font-size: 11px;
+    padding: 5px 8px;
+    min-height: 32px;
+  }
+
+  .toolbar-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* File Grid — still 2 columns */
+  .file-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .file-card {
+    padding: 10px;
+  }
+
+  .file-card-thumb {
+    margin-bottom: 8px;
+  }
+
+  .file-card-thumb svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .file-card-name {
+    font-size: 11px;
+  }
+
+  .file-card-meta {
+    font-size: 10px;
+    gap: 3px;
+  }
+
+  .file-card-time {
+    font-size: 9.5px;
+  }
+
+  .file-card-thumb-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+  }
+
+  /* File List — minimal */
+  .file-list-header,
+  .file-list-row {
+    grid-template-columns: 1fr 90px 70px;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .file-list-name,
+  .file-list-cell {
+    font-size: 11px;
+  }
+
+  .pagination-btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .pagination-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — Dark theme specific fixes
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  /* When system prefers dark but we're in light mode, nothing special needed */
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body data-theme="light">
+
+<div class="app-shell">
+
+  <!-- Sidebar Backdrop (mobile) -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+  <!-- ============================================================
+       Sidebar
+       ============================================================ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Header -->
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+        </svg>
+      </div>
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-name">CloudCAD</span>
+        <span class="sidebar-brand-sub">CAD 协同平台</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">主菜单</span>
+
+      <a href="#" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+        </span>
+        仪表盘
+      </a>
+
+      <a href="#" class="nav-item active" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          </svg>
+        </span>
+        项目管理
+      </a>
+
+      <a href="#" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </span>
+        我的图纸
+      </a>
+
+      <a href="#" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+          </svg>
+        </span>
+        公共资源库
+      </a>
+
+      <div class="nav-divider"></div>
+      <span class="nav-section-label">系统管理</span>
+
+      <a href="#" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+            <path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </span>
+        用户管理
+      </a>
+
+      <a href="#" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </span>
+        角色权限
+      </a>
+
+      <a href="#" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </span>
+        系统监控
+      </a>
+    </nav>
+
+    <!-- Storage -->
+    <div class="sidebar-footer">
+      <div class="storage-card">
+        <div class="storage-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          <span>存储空间</span>
+        </div>
+        <div class="storage-bar">
+          <div class="storage-bar-fill" style="width: 42%"></div>
+        </div>
+        <div class="storage-info">
+          <span>4.2 GB</span>
+          <span>42%</span>
+          <span>10 GB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- User -->
+    <div class="user-area">
+      <button class="user-button">
+        <div class="user-avatar">张</div>
+        <div class="user-info">
+          <div class="user-name">张工</div>
+          <div class="user-role">系统管理员</div>
+        </div>
+        <svg class="user-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       Main Content
+       ============================================================ -->
+  <main class="main-area">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger-btn" onclick="openSidebar()" aria-label="打开菜单">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="搜索文件或文件夹..." aria-label="搜索">
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-time">
+          <span class="topbar-time-main">14:32</span>
+          <span class="topbar-time-sub">5月11日 周一</span>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" title="切换明暗主题" aria-label="切换主题">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" title="设置" aria-label="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content animate-fade-in">
+
+      <!-- Breadcrumb -->
+      <div class="page-header">
+        <div class="breadcrumb">
+          <a href="#">CloudCAD</a>
+          <svg class="breadcrumb-sep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <a href="#">项目管理</a>
+          <svg class="breadcrumb-sep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <span class="breadcrumb-current">天府国际机场</span>
+        </div>
+
+        <div class="page-title-row">
+          <h1 class="page-title">天府国际机场 — 航站楼施工图</h1>
+          <div class="page-actions">
+            <button class="btn btn-outline">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              下载
+            </button>
+            <button class="btn btn-outline">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              重命名
+            </button>
+            <button class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              新建文件夹
+            </button>
+            <button class="btn btn-primary" style="background:var(--success); box-shadow: 0 1px 3px rgba(34,197,94,0.25)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              上传文件
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button class="toolbar-btn active" onclick="switchView('grid')" id="btn-grid" aria-label="网格视图">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            网格
+          </button>
+          <button class="toolbar-btn" onclick="switchView('list')" id="btn-list" aria-label="列表视图">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            列表
+          </button>
+        </div>
+        <div class="toolbar-sep"></div>
+        <button class="toolbar-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 3 15 3 12 6 9 3 2 3 2 21 22 21 22 3"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+          按名称
+        </button>
+        <button class="toolbar-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          按时间
+        </button>
+        <span style="margin-left:auto;font-size:12px;color:var(--text-tertiary);white-space:nowrap">共 8 项</span>
+      </div>
+
+      <!-- File Grid -->
+      <div class="file-grid animate-slide-up" id="file-grid">
+
+        <!-- Folder 1 -->
+        <div class="file-card folder" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="重命名" aria-label="重命名" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="删除" aria-label="删除" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+            </svg>
+            <span class="file-card-thumb-badge">3 项</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">建筑平面图</div>
+            <div class="file-card-meta">
+              <span>文件夹</span>
+              <span class="file-card-meta-dot"></span>
+              <span>3 个文件</span>
+            </div>
+            <div class="file-card-time">2026-05-08</div>
+          </div>
+        </div>
+
+        <!-- Folder 2 -->
+        <div class="file-card folder" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="重命名" aria-label="重命名" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="删除" aria-label="删除" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+            </svg>
+            <span class="file-card-thumb-badge">5 项</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">结构施工图</div>
+            <div class="file-card-meta">
+              <span>文件夹</span>
+              <span class="file-card-meta-dot"></span>
+              <span>5 个文件</span>
+            </div>
+            <div class="file-card-time">2026-05-06</div>
+          </div>
+        </div>
+
+        <!-- Folder 3 -->
+        <div class="file-card folder" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="重命名" aria-label="重命名" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="删除" aria-label="删除" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+            </svg>
+            <span class="file-card-thumb-badge">2 项</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">给排水图纸</div>
+            <div class="file-card-meta">
+              <span>文件夹</span>
+              <span class="file-card-meta-dot"></span>
+              <span>2 个文件</span>
+            </div>
+            <div class="file-card-time">2026-04-28</div>
+          </div>
+        </div>
+
+        <!-- DWG File 1 -->
+        <div class="file-card" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="下载" aria-label="下载" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="版本历史" aria-label="版本历史" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="file-card-thumb-badge">DWG</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">航站楼一层平面图.dwg</div>
+            <div class="file-card-meta">
+              <span>2.4 MB</span>
+              <span class="file-card-meta-dot"></span>
+              <span class="status-pill modified">已修改</span>
+            </div>
+            <div class="file-card-time">2026-05-11 14:21</div>
+          </div>
+        </div>
+
+        <!-- DWG File 2 (selected) -->
+        <div class="file-card selected" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="下载" aria-label="下载" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="版本历史" aria-label="版本历史" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="file-card-thumb-badge">DWG</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">航站楼立面图-A.dwg</div>
+            <div class="file-card-meta">
+              <span>1.8 MB</span>
+              <span class="file-card-meta-dot"></span>
+              <span class="status-pill published">已发布</span>
+            </div>
+            <div class="file-card-time">2026-05-10 09:15</div>
+          </div>
+        </div>
+
+        <!-- DWG File 3 -->
+        <div class="file-card" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="下载" aria-label="下载" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="版本历史" aria-label="版本历史" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="file-card-thumb-badge">DWG</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">指廊结构详图.dwg</div>
+            <div class="file-card-meta">
+              <span>3.1 MB</span>
+              <span class="file-card-meta-dot"></span>
+              <span class="status-pill modified">已修改</span>
+            </div>
+            <div class="file-card-time">2026-05-09 16:42</div>
+          </div>
+        </div>
+
+        <!-- DWG File 4 -->
+        <div class="file-card" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="下载" aria-label="下载" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+            <button class="file-card-action" title="版本历史" aria-label="版本历史" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="file-card-thumb-badge">DWG</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">电气系统图-弱电.dwg</div>
+            <div class="file-card-meta">
+              <span>920 KB</span>
+              <span class="file-card-meta-dot"></span>
+              <span class="status-pill published">已发布</span>
+            </div>
+            <div class="file-card-time">2026-05-07 11:08</div>
+          </div>
+        </div>
+
+        <!-- PDF File -->
+        <div class="file-card" onclick="toggleSelect(this)">
+          <div class="file-card-actions">
+            <button class="file-card-action" title="下载" aria-label="下载" onclick="event.stopPropagation()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-card-thumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            <span class="file-card-thumb-badge">PDF</span>
+          </div>
+          <div class="file-card-info">
+            <div class="file-card-name">设计说明-总则.pdf</div>
+            <div class="file-card-meta">
+              <span>450 KB</span>
+              <span class="file-card-meta-dot"></span>
+              <span class="status-pill published">已发布</span>
+            </div>
+            <div class="file-card-time">2026-04-30</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- File List (hidden by default) -->
+      <div class="file-list animate-slide-up" id="file-list" style="display:none">
+        <div class="file-list-header">
+          <span>名称</span>
+          <span>大小</span>
+          <span>修改时间</span>
+          <span>状态</span>
+        </div>
+
+        <div class="file-list-row folder" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+            </svg>
+            <span class="file-list-name">建筑平面图</span>
+          </div>
+          <span class="file-list-cell muted">—</span>
+          <span class="file-list-cell muted">2026-05-08</span>
+          <span class="file-list-cell muted">3 项</span>
+        </div>
+
+        <div class="file-list-row folder" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+            </svg>
+            <span class="file-list-name">结构施工图</span>
+          </div>
+          <span class="file-list-cell muted">—</span>
+          <span class="file-list-cell muted">2026-05-06</span>
+          <span class="file-list-cell muted">5 项</span>
+        </div>
+
+        <div class="file-list-row folder" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+            </svg>
+            <span class="file-list-name">给排水图纸</span>
+          </div>
+          <span class="file-list-cell muted">—</span>
+          <span class="file-list-cell muted">2026-04-28</span>
+          <span class="file-list-cell muted">2 项</span>
+        </div>
+
+        <div class="file-list-row" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span class="file-list-name">航站楼一层平面图.dwg</span>
+          </div>
+          <span class="file-list-cell">2.4 MB</span>
+          <span class="file-list-cell muted">2026-05-11 14:21</span>
+          <span class="file-list-cell"><span class="status-pill modified">已修改</span></span>
+        </div>
+
+        <div class="file-list-row selected" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span class="file-list-name">航站楼立面图-A.dwg</span>
+          </div>
+          <span class="file-list-cell">1.8 MB</span>
+          <span class="file-list-cell muted">2026-05-10 09:15</span>
+          <span class="file-list-cell"><span class="status-pill published">已发布</span></span>
+        </div>
+
+        <div class="file-list-row" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span class="file-list-name">指廊结构详图.dwg</span>
+          </div>
+          <span class="file-list-cell">3.1 MB</span>
+          <span class="file-list-cell muted">2026-05-09 16:42</span>
+          <span class="file-list-cell"><span class="status-pill modified">已修改</span></span>
+        </div>
+
+        <div class="file-list-row" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span class="file-list-name">电气系统图-弱电.dwg</span>
+          </div>
+          <span class="file-list-cell">920 KB</span>
+          <span class="file-list-cell muted">2026-05-07 11:08</span>
+          <span class="file-list-cell"><span class="status-pill published">已发布</span></span>
+        </div>
+
+        <div class="file-list-row" onclick="toggleSelect(this)">
+          <div class="file-list-name-cell">
+            <svg class="file-list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span class="file-list-name">设计说明-总则.pdf</span>
+          </div>
+          <span class="file-list-cell">450 KB</span>
+          <span class="file-list-cell muted">2026-04-30</span>
+          <span class="file-list-cell"><span class="status-pill published">已发布</span></span>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <button class="pagination-btn" aria-label="上一页">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <button class="pagination-btn active">1</button>
+        <button class="pagination-btn">2</button>
+        <button class="pagination-btn">3</button>
+        <button class="pagination-btn" aria-label="下一页">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================
+     Scripts
+     ============================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // ── Theme ──
+  var savedTheme = localStorage.getItem('cloudcad-redesign-theme');
+  if (savedTheme === 'dark') {
+    document.body.setAttribute('data-theme', 'dark');
+  } else if (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.setAttribute('data-theme', 'dark');
+  }
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+    if (!localStorage.getItem('cloudcad-redesign-theme')) {
+      document.body.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    }
+  });
+
+  window.toggleTheme = function() {
+    var current = document.body.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.body.setAttribute('data-theme', next);
+    localStorage.setItem('cloudcad-redesign-theme', next);
+  };
+
+  // ── Mobile Sidebar ──
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebar-backdrop');
+
+  window.openSidebar = function() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeSidebar = function() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('visible');
+    document.body.style.overflow = '';
+  };
+
+  // Close sidebar on backdrop click
+  backdrop.addEventListener('click', closeSidebar);
+
+  // Close sidebar on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+      closeSidebar();
+    }
+  });
+
+  // Close sidebar on window resize to desktop
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 768 && sidebar.classList.contains('open')) {
+      closeSidebar();
+    }
+  });
+
+  // ── View Switcher ──
+  window.switchView = function(mode) {
+    var grid = document.getElementById('file-grid');
+    var list = document.getElementById('file-list');
+    var btnGrid = document.getElementById('btn-grid');
+    var btnList = document.getElementById('btn-list');
+
+    if (mode === 'grid') {
+      grid.style.display = '';
+      list.style.display = 'none';
+      btnGrid.classList.add('active');
+      btnList.classList.remove('active');
+    } else {
+      grid.style.display = 'none';
+      list.style.display = '';
+      btnGrid.classList.remove('active');
+      btnList.classList.add('active');
+    }
+  };
+
+  // ── Card Select ──
+  window.toggleSelect = function(el) {
+    el.classList.toggle('selected');
+  };
+
+  // ── Live Clock ──
+  function updateClock() {
+    var now = new Date();
+    var timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    var dateStr = now.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
+    var el = document.querySelector('.topbar-time-main');
+    var sub = document.querySelector('.topbar-time-sub');
+    if (el) el.textContent = timeStr;
+    if (sub) sub.textContent = dateStr;
+  }
+  updateClock();
+  setInterval(updateClock, 10000);
+
+})();
+</script>
+
+</body>
+</html>

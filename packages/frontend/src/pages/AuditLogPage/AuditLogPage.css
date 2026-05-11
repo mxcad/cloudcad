@@ -1,0 +1,355 @@
+/* ============================================
+   AuditLogPage Styles - 审计日志页面样式
+   使用 theme.css 中的 CSS 变量，支持亮色/深色主题
+   ============================================ */
+
+/* ----------------------------------------
+   1. 页面容器
+   ---------------------------------------- */
+.audit-page {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.audit-page-header {
+  margin-bottom: var(--space-6);
+}
+
+.audit-page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.audit-page-subtitle {
+  color: var(--text-tertiary);
+}
+
+/* ----------------------------------------
+   2. 无权限提示
+   ---------------------------------------- */
+.audit-permission-denied {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.audit-permission-denied p {
+  color: var(--text-tertiary);
+}
+
+/* ----------------------------------------
+   3. 统计卡片
+   ---------------------------------------- */
+.audit-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .audit-stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.audit-stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.audit-stat-label {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.audit-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.audit-stat-value--success {
+  color: var(--success);
+}
+
+.audit-stat-value--error {
+  color: var(--error);
+}
+
+.audit-stat-value--info {
+  color: var(--info);
+}
+
+/* ----------------------------------------
+   4. 筛选区域
+   ---------------------------------------- */
+.audit-filter-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.audit-filter-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.audit-filter-title h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.audit-filter-title svg {
+  color: var(--text-tertiary);
+}
+
+.audit-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .audit-filter-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .audit-filter-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.audit-filter-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ----------------------------------------
+   5. 表单控件
+   ---------------------------------------- */
+.audit-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.audit-input,
+.audit-select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: var(--font-family-base);
+  transition: all var(--transition-base);
+  box-sizing: border-box;
+}
+
+.audit-input::placeholder {
+  color: var(--text-muted);
+}
+
+.audit-input:hover,
+.audit-select:hover {
+  border-color: var(--border-strong);
+}
+
+.audit-input:focus,
+.audit-select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .audit-input:focus,
+[data-theme="dark"] .audit-select:focus {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* ----------------------------------------
+   6. 表格
+   ---------------------------------------- */
+.audit-table-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.audit-table-scroll {
+  overflow-x: auto;
+}
+
+.audit-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.audit-table thead {
+  background: var(--bg-tertiary);
+}
+
+.audit-table th {
+  padding: var(--space-3) var(--space-6);
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.audit-table td {
+  padding: var(--space-4) var(--space-6);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+/* 备注列允许换行 */
+.audit-table td:last-child {
+  white-space: normal;
+  min-width: 160px;
+}
+
+.audit-table tbody tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.audit-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.audit-table-empty {
+  padding: var(--space-4) var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* ----------------------------------------
+   7. 状态徽章
+   ---------------------------------------- */
+.audit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.audit-badge--success {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
+.audit-badge--error {
+  background: var(--error-dim);
+  color: var(--error);
+}
+
+/* ----------------------------------------
+   8. 用户信息单元格
+   ---------------------------------------- */
+.audit-user-cell {
+  line-height: 1.4;
+}
+
+.audit-user-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.audit-user-email {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* ----------------------------------------
+   9. 错误消息
+   ---------------------------------------- */
+.audit-error-msg {
+  color: var(--error);
+  font-size: 0.75rem;
+  margin-top: var(--space-1);
+}
+
+/* ----------------------------------------
+   10. 分页
+   ---------------------------------------- */
+.audit-pagination {
+  background: var(--bg-tertiary);
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.audit-pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.audit-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.audit-page-indicator {
+  padding: 0 var(--space-3);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* ----------------------------------------
+   11. 加载/空状态
+   ---------------------------------------- */
+.audit-loading-text {
+  color: var(--text-muted);
+}
+
+/* ----------------------------------------
+   12. 响应式
+   ---------------------------------------- */
+@media (max-width: 640px) {
+  .audit-page {
+    padding: var(--space-4);
+  }
+
+  .audit-pagination {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}

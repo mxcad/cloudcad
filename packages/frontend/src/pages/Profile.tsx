@@ -102,7 +102,6 @@ export const Profile: React.FC = () => {
       emailCode: '',
       wechatConfirm: savedMethod === 'wechat' ? 'confirmed' : '',
       confirmed: false,
-      immediate: false,
     };
   });
   const [deactivateLoading, setDeactivateLoading] = useState(false);
@@ -1069,9 +1068,6 @@ export const Profile: React.FC = () => {
                 }
                 onConfirmedChange={(confirmed: boolean) =>
                   setDeactivateForm((f) => ({ ...f, confirmed }))
-                }
-                onImmediateChange={(immediate: boolean) =>
-                  setDeactivateForm((f) => ({ ...f, immediate }))
                 }
                 onSendPhoneCode={handleSendDeactivatePhoneCode}
                 onSendEmailCode={handleSendDeactivateEmailCode}

@@ -25,7 +25,6 @@ interface ProfileDeactivateTabProps {
     emailCode: string;
     wechatConfirm: string;
     confirmed: boolean;
-    immediate: boolean;
   };
   showPassword: { old: boolean; new: boolean; confirm: boolean };
   deactivateLoading: boolean;
@@ -39,7 +38,6 @@ interface ProfileDeactivateTabProps {
   onPhoneCodeChange: (value: string) => void;
   onEmailCodeChange: (value: string) => void;
   onConfirmedChange: (confirmed: boolean) => void;
-  onImmediateChange: (immediate: boolean) => void;
   onSendPhoneCode: () => void;
   onSendEmailCode: () => void;
   onWechatConfirm: () => void;
@@ -68,7 +66,6 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
   onPhoneCodeChange,
   onEmailCodeChange,
   onConfirmedChange,
-  onImmediateChange,
   onSendPhoneCode,
   onSendEmailCode,
   onWechatConfirm,
@@ -268,18 +265,6 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
             />
             <label htmlFor="confirmDeactivate">
               我已了解注销的后果，并确认注销
-            </label>
-          </div>
-
-          <div className="confirm-checkbox">
-            <input
-              type="checkbox"
-              id="immediateDeactivate"
-              checked={deactivateForm.immediate}
-              onChange={(e) => onImmediateChange(e.target.checked)}
-            />
-            <label htmlFor="immediateDeactivate">
-              立即注销并清理所有数据（不等待30天）
             </label>
           </div>
 

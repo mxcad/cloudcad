@@ -65,6 +65,7 @@ export function useMoveCopy({
           await fileSystemControllerCopyNode({ path: { nodeId: copySourceNode.id }, body: { targetParentId } });
         }
         handleRefresh();
+        showToast(moveSourceNode ? '移动成功' : '复制成功', 'success');
         closeMoveCopy();
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '操作失败，请重试';

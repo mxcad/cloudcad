@@ -150,8 +150,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
         className={`${className} ${responsiveClasses.join(' ')}`}
         style={{
           ...style,
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          display: 'flex',
           width: '100%',
           minWidth: 0,
         }}
@@ -165,8 +164,9 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
           }}
         >
           {baseName}
-        </span>{hasExtension && (
-          <span>{extension}</span>
+        </span>
+        {hasExtension && (
+          <span style={{ flexShrink: 0 }}>{extension}</span>
         )}
       </span>
     );
@@ -238,9 +238,9 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   if (mode === 'start') {
     cssStyle.direction = 'rtl';
     cssStyle.textAlign = 'left';
-    cssStyle.textOverflow = showEllipsis ? 'ellipsis' : 'clip';
+    cssStyle.textOverflow = showEllipsis ? ellipsis : 'clip';
   } else if (mode === 'end') {
-    cssStyle.textOverflow = showEllipsis ? 'ellipsis' : 'clip';
+    cssStyle.textOverflow = showEllipsis ? ellipsis : 'clip';
   } else if (mode === 'clip') {
     cssStyle.textOverflow = 'clip';
   }

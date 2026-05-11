@@ -45,6 +45,8 @@ import type { Request } from 'express';
 @ApiTags('runtime-config')
 @Controller('runtime-config')
 export class RuntimeConfigController {
+  private readonly logger = new Logger(RuntimeConfigController.name);
+
   constructor(private readonly runtimeConfigService: RuntimeConfigService) {}
 
   /**
@@ -154,6 +156,8 @@ export class RuntimeConfigController {
   ) {
     const user = req.user as { id: string };
     const ip = req.ip;
+
+    this.logger.log(`UPDATE ${key}: value=${JSON.stringify(dto.value)}, type=${typeof dto.value}, dto=${JSON.stringify(dto)}`);
 
     await this.runtimeConfigService.set(key, dto.value, user.id, ip);
 

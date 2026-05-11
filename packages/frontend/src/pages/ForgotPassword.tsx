@@ -47,7 +47,15 @@ export const ForgotPassword: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
   const appLogo = brandConfig?.logo || '/logo.png';
 
-  const [contactType, setContactType] = useState<'email' | 'phone'>('email');
+  // 根据运行时配置判断可用渠道
+  const mailAvailable = runtimeConfig.mailEnabled;
+  const phoneAvailable = runtimeConfig.smsEnabled;
+  const noChannelAvailable = !mailAvailable && !phoneAvailable;
+
+  // 初始化 contactType：优先邮箱，邮箱不可用则用手机
+  const [contactType, setContactType] = useState<'email' | 'phone'>(
+    mailAvailable ? 'email' : 'phone'
+  );
   const forgotPassword = useForgotPassword();
   const [success, setSuccess] = useState(false);
   const [successContact, setSuccessContact] = useState('');
@@ -108,7 +116,95 @@ export const ForgotPassword: React.FC = () => {
     setLocalError(null);
   };
 
-  // 邮件服务未启用 - 客服联系页面
+  // 两个渠道都未启用 - 直接显示客服联系页面（不发 API）
+  if (noChannelAvailable) {
+    const noChannelInfo = {
+      supportEmail: runtimeConfig.supportEmail || undefined,
+      supportPhone: runtimeConfig.supportPhone || undefined,
+    };
+    return (
+      <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
+        <InteractiveBackground />
+        <div className="theme-toggle-wrapper"><ThemeToggle /></div>
+        <div className="auth-container">
+          <div className="auth-card">
+            <div className="logo-section">
+              <div className="logo-wrapper">
+                <div className="logo-glow" />
+                <img src={appLogo} alt={appName} className="logo-image" />
+              </div>
+              <h1 className="app-title">{appName}</h1>
+            </div>
+            <div className="support-content">
+              <div className="support-icon">
+                <Phone size={28} />
+              </div>
+              <h2 className="support-title">找回密码</h2>
+              <p className="support-subtitle">
+                邮件和短信服务均未启用，请联系客服重置密码
+              </p>
+              <div className="support-card">
+                <h3 className="support-card-title">客服联系方式</h3>
+                <div className="support-list">
+                  {noChannelInfo.supportEmail && (
+                    <a href={`mailto:${noChannelInfo.supportEmail}`} className="support-item">
+                      <Mail size={18} />
+                      <span>{noChannelInfo.supportEmail}</span>
+                    </a>
+                  )}
+                  {noChannelInfo.supportPhone && (
+                    <a href={`tel:${noChannelInfo.supportPhone}`} className="support-item">
+                      <Phone size={18} />
+                      <span>{noChannelInfo.supportPhone}</span>
+                    </a>
+                  )}
+                  {!noChannelInfo.supportEmail && !noChannelInfo.supportPhone && (
+                    <p className="support-empty">暂无客服联系方式，请联系系统管理员</p>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => navigate('/login')} className="back-button">
+                <ArrowLeft size={18} />
+                <span>返回登录</span>
+              </button>
+            </div>
+          </div>
+          <p className="copyright">© 2026 {appName}. All rights reserved.</p>
+        </div>
+        <style>{`
+          .auth-page { min-height: 100vh; display: flex; position: relative; overflow: hidden; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: transparent; }
+          .theme-toggle-wrapper { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; }
+          .auth-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; position: relative; z-index: 1; min-height: 100vh; }
+          .auth-card { width: 100%; max-width: 420px; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 24px; padding: 2.5rem; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; animation: card-appear 0.6s ease-out; }
+          @keyframes card-appear { from { opacity: 0; transform: translateY(30px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+          .logo-section { text-align: center; margin-bottom: 1.5rem; }
+          .logo-wrapper { position: relative; width: 72px; height: 72px; margin: 0 auto 1rem; }
+          .logo-glow { position: absolute; inset: -8px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); border-radius: 50%; opacity: 0.3; filter: blur(20px); animation: logo-glow-pulse 3s ease-in-out infinite; }
+          @keyframes logo-glow-pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
+          .logo-image { position: relative; width: 100%; height: 100%; object-fit: contain; border-radius: 16px; z-index: 1; animation: logo-float 3s ease-in-out infinite; }
+          @keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+          .app-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+          .support-content { text-align: center; }
+          .support-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
+          .support-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+          .support-subtitle { font-size: 0.875rem; color: var(--text-tertiary); margin-bottom: 1.5rem; }
+          .support-card { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+          .support-card-title { font-size: 0.9375rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
+          .support-list { display: flex; flex-direction: column; gap: 0.75rem; }
+          .support-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--primary-500); text-decoration: none; transition: all 0.2s; }
+          .support-item:hover { background: var(--bg-elevated); border-color: var(--border-strong); transform: translateX(4px); }
+          .support-empty { color: var(--text-muted); font-size: 0.875rem; }
+          .back-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+          .back-button:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
+          .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
+          [data-theme="dark"] .auth-card { background: rgba(26, 29, 33, 0.9); backdrop-filter: blur(20px); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; }
+          @media (max-width: 480px) { .auth-container { padding: 1rem; } .auth-card { padding: 1.75rem; border-radius: 20px; } }
+        `}</style>
+      </div>
+    );
+  }
+
+  // 邮件服务未启用 - 客服联系页面（API 返回）
   if (supportInfo) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
@@ -134,9 +230,9 @@ export const ForgotPassword: React.FC = () => {
               <div className="support-icon">
                 <Phone size={28} />
               </div>
-              <h2 className="support-title">邮件服务未启用</h2>
+              <h2 className="support-title">找回密码</h2>
               <p className="support-subtitle">
-                无法通过邮件重置密码，请联系客服
+                该找回方式暂不可用，请联系客服重置密码
               </p>
 
               <div className="support-card">
@@ -363,11 +459,16 @@ export const ForgotPassword: React.FC = () => {
           <div className="form-header">
             <h2 className="form-title">忘记密码</h2>
             <p className="form-subtitle">
-              使用{contactType === 'email' ? '邮箱' : '手机号'}接收验证码
+              {mailAvailable && phoneAvailable
+                ? `使用${contactType === 'email' ? '邮箱' : '手机号'}接收验证码`
+                : mailAvailable
+                  ? '使用邮箱接收验证码'
+                  : '使用手机号接收验证码'}
             </p>
           </div>
 
-          {/* 联系方式切换 */}
+          {/* 联系方式切换 - 仅在两个渠道都可用时显示 */}
+          {mailAvailable && phoneAvailable && (
           <div className="contact-type-toggle">
             <button
               type="button"
@@ -386,6 +487,7 @@ export const ForgotPassword: React.FC = () => {
               <span>手机号</span>
             </button>
           </div>
+          )}
 
           {/* 忘记联系方式 */}
           <div className="forgot-contact-links">

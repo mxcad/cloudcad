@@ -77,7 +77,7 @@ export function useFileSystemChildren({
     nodes: data?.nodes ?? [],
     total: data?.total ?? 0,
     totalPages: data?.totalPages ?? 1,
-    loading: isLoading,
+    loading: isLoading || (isFetching && !data),
     isFetching,
     error: error as Error | null,
   };

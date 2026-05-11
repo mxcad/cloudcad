@@ -27,7 +27,10 @@ import { CommonModule } from '../common/common.module';
 @Module({
   imports: [DatabaseModule, CommonModule],
   controllers: [AuditLogController],
-  providers: [AuditLogService],
+  providers: [
+    AuditLogService,
+    AuditLogListener,
+  ],
   exports: [AuditLogService],
 })
 export class AuditLogModule {}

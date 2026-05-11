@@ -15,11 +15,98 @@ _避免_: 文件夹（folder 是另一种节点类型）
 **mxweb 文件**:
 图纸的运行时格式。CAD 引擎（MxCADView）操作的是 mxweb 数据，保存时也是将 mxweb 二进制上传到后端。.dwg/.dxf 上传后由后端转换为 .mxweb。
 
+**角色（Role）**:
+用户在某范围内的身份标签，决定其可执行的操作集合。分两个独立维度：
+- **系统角色（System Role）**：控制后台管理功能。ADMIN（全部权限）> USER_MANAGER（用户/角色管理）> FONT_MANAGER（字体库管理）> USER（基础权限）。含继承层级。
+- **项目角色（Project Role）**：控制项目内文件操作。OWNER（全部权限）> ADMIN（管理+编辑）> EDITOR（编辑但不能创建）> MEMBER（基本操作）> VIEWER（只读）。与系统角色完全解耦。
+_避免_: 权限组、用户组、职位
+
+**权限（Permission）**:
+一个具体的原子操作许可，授予角色后生效。分两个维度：
+- **系统权限（System Permission）**：后台管理操作（SYSTEM_USER_*、SYSTEM_ROLE_*、SYSTEM_FONT_*、SYSTEM_ADMIN、SYSTEM_MONITOR、LIBRARY_*_MANAGE、STORAGE_QUOTA、PROJECT_CREATE 等）。
+- **项目权限（Project Permission）**：项目内操作（FILE_*、CAD_SAVE、CAD_EXTERNAL_REFERENCE、VERSION_READ、PROJECT_* 等）。
+_避免_: 权利、许可
+
+**文件状态（FileStatus）**:
+文件节点在上传/转换管道中的生命周期状态。流转路径为：UPLOADING（上传中）→ PROCESSING（格式转换中）→ COMPLETED（完成）或 FAILED（转换失败）。已删除节点标记为 DELETED。
+_避免_: 上传状态、处理状态
+
+**版本（Version）**:
+图纸在某个时间点的 SVN 快照。每次保存图纸时，后端自动提交一次 SVN，生成一个新的 VersionRecord。一个 FileNode 拥有多个 VersionRecord，构成版本历史链。资源库不产生版本。
+_避免_: 修订、历史记录
+
+**审计日志（AuditLog）**:
+记录谁（用户）在何时（时间戳）做了什么（操作类型）的不可篡改记录。覆盖权限变更、敏感文件操作、系统配置修改等。支持查询和导出，是权限体系的合规配套。
+_避免_: 操作日志、活动记录
+
+**外部参照（External Reference / Xref）**:
+图纸中引用的外部 DWG 文件或图片，作为当前图纸的参照底图。外部参照独立存储，不纳入 FileNode 体系（非 CAD 文件如参照图片属于外部参照专项）。需要 CAD_EXTERNAL_REFERENCE 权限方可上传/管理。
+_避免_: 外部引用、附件
+
+**回收站（Trash）**:
+文件节点被删除后的暂存区域。删除操作不物理删除数据，而是将节点移入回收站（FileStatus 标记为 DELETED）。支持恢复（restore）和彻底删除（permanently delete）。需要 FILE_TRASH_MANAGE 权限管理。
+_避免_: 已删除、垃圾箱
+
+**秒传（Instant Upload / Dedup）**:
+上传优化机制——上传前先通过文件 hash 检查文件是否已存在于存储中。若已存在则跳过实际传输，直接复用已有数据创建 FileNode，大幅减少重复上传。是手动分片上传流程的第一步。
+_避免_: 去重上传、快速上传
+
+**编辑会话（DrawingSession）**:
+用户在编辑器中对一张图纸的活动编辑状态。包含当前 mxweb 数据、是否已修改标记（isDirty）。核心不变条件：一个 FileNode 同时只能有一个活跃会话；关闭会话时若 isDirty 为 true 必须提示用户保存。
+_避免_: 编辑器实例、打开的文件
+
+**存储配额（Storage Quota）**:
+用户或项目可使用的存储空间上限。管理员通过 STORAGE_QUOTA 权限为用户分配配额（字节数），上传文件前检查配额是否充足，超出配额时阻止上传。每个 FileNode 记录其实际占用大小（fileSize），用于累计计算。
+_避免_: 空间限制、容量上限
+
+**项目成员（Project Member）**:
+用户在特定项目中的身份关联，由 [用户 + ProjectRole] 组成。OWNER 是项目创建者（不可移除），其他角色由 OWNER/ADMIN 分配。支持添加、移除、角色变更、所有权转让。私人空间无项目成员（仅所有者一人）。
+_避免_: 协作者、团队成员
+
+**另存为（Save As）**:
+区别于覆盖保存的写入操作——创建新的 FileNode 并拷贝当前 mxweb 数据，而非原位覆盖。需要指定目标归属类型（personal/project/library）。常用于无权限覆盖保存时（如资源库无管理权限），或需将图纸复制到其他位置时。
+_避免_: 复制保存、副本
+
+**导出（Export）**:
+将 mxweb 格式的图纸按需转换为 DWG/DXF 格式并提供下载。平台以 mxweb 为唯一内部流通格式，导出仅在用户主动触发时执行后端转换（conversion 引擎），转换完成后即提供下载。未登录不可导出。
+_避免_: 下载、输出
+
+**图块（Block）**:
+CAD 中可复用的图形单元（如门、窗、家具符号），可被多个图纸引用。平台通过资源库的图块库（block library）统一管理，需要 LIBRARY_BLOCK_MANAGE 权限。与图纸库（drawing library）属于资源库的两种子类型。
+_避免_: 组件、符号
+
+**分片上传（Chunk Upload）**:
+大文件传输机制——将文件按固定大小切分为分片（chunk），逐片上传至后端，全部到达后触发合并（merge）还原完整文件。替换了之前的 Tus 协议，是自实现手动分片上传的核心。与秒传协作：先检查 hash，不存在时走分片上传。
+_避免_: 分块上传、分段上传
+
+**字体（Font）**:
+CAD 工程图纸中使用的文字渲染资源，包括 SHX 形字体和 TrueType 字体。通过系统字体库统一管理（上传、下载、删除、预览），需要 SYSTEM_FONT_* 系列权限。FONT_MANAGER 角色专门负责字体库维护。
+_避免_: 字型、文字样式
+
+**格式转换（Format Conversion）**:
+DWG/DXF ↔ mxweb 之间的格式互转。上传时 DWG/DXF 自动转为 mxweb（内部流通格式），导出时 mxweb 按需转回 DWG/DXF。由 conversion 引擎执行，是平台"以 mxweb 为唯一内部格式"架构的前提。转换失败时 FileNode 标记为 FAILED。
+_避免_: 转码、格式变换
+
+**缩略图（Thumbnail）**:
+文件节点在列表中的预览图像——后端在保存/上传完成后为图纸生成缩略图，前端通过 Thumbnail 组件渲染。用于文件浏览器和资源库列表中的快速预览识别，减少不必要的完整图纸加载。
+_避免_: 预览图、快照图
+
+**运行时配置（RuntimeConfig）**:
+区别于静态环境变量的动态配置体系。通过管理后台页面对系统行为开关进行实时调整（如注册开关、验证策略），修改后立即生效无需重启。受 SYSTEM_CONFIG_READ/WRITE 权限管控。与部署时固定的环境变量（如 JWT_SECRET）是互补关系。
+_避免_: 动态配置、特性开关
+
+**文件哈希（File Hash）**:
+文件的唯一数字指纹，通过对文件内容计算哈希值（如 SHA-256）生成。用于秒传检测（比对哈希判断文件是否已存在）、存储去重、以及验证 Drawing.fileHash 与 storage 中 mxweb 文件的一致性。上传链路的第一步就是计算文件哈希。
+_避免_: 文件指纹、MD5、校验码
+
 ## 关系
 
-- 一张 **图纸** 存储为一个或多个 **文件节点**（版本管理）
+- 一张 **图纸** 存储为一个或多个 **文件节点**（每个文件节点有多个版本）
 - 一个 **文件节点** 引用一条 mxweb 文件路径
 - CAD 引擎通过 mxweb URL 加载图纸数据
+- 一个 **文件节点** 拥有多个 **版本**（通过 SVN 提交生成）
+- **资源库** 节点不产生版本
+- 删除 **文件节点** 时，其所有 **版本** 记录一同删除
 
 ## 图纸归属
 

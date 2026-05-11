@@ -25,6 +25,7 @@ import { Users } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
 import { Type } from 'lucide-react';
 import { Activity } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
@@ -283,6 +284,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         label: '角色权限',
         visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
         dataTour: 'sidebar-roles',
+      },
+      {
+        to: '/audit-logs',
+        icon: ScrollText,
+        label: '审计日志',
+        visible: hasPermission(SystemPermission.SYSTEM_ADMIN),
       },
       {
         to: '/system-monitor',
