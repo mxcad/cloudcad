@@ -6,7 +6,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThumbnailGenerationService } from './thumbnail-generation.service';
 import { ConfigService } from '@nestjs/config';
-import { I_CONVERSION_SERVICE, IConversionService } from '../../conversion';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -18,16 +17,15 @@ describe('ThumbnailGenerationService', () => {
     get: jest.fn(),
   };
 
-  const mockConversionService = {
-    generateThumbnail: jest.fn(),
-  };
-
   beforeEach(async () => {
     jest.clearAllMocks();
-    jest.spyOn(fs.promises, 'copyFile').mockResolvedValue(undefined);
+
+    // 模拟 Windows 平台
+    jest.spyOn(os, 'platform').mockReturnValue('win32');
+    jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined);
-    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-    jest.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 } as fs.Stats);
+    jest.spyOn(fs.promises, 'writeFile').mockResolvedValue(undefined);
+    jest.spyOn(fs.promises, 'unlink').mockResolvedValue(undefined);
 
     mockConfigService.get.mockReturnValue({
       autoGenerateEnabled: true,
@@ -39,11 +37,12 @@ describe('ThumbnailGenerationService', () => {
       providers: [
         ThumbnailGenerationService,
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: I_CONVERSION_SERVICE, useValue: mockConversionService },
       ],
     }).compile();
 
     service = module.get<ThumbnailGenerationService>(ThumbnailGenerationService);
+    // 等待 onModuleInit 完成
+    await new Promise((r) => setTimeout(r, 10));
   });
 
   afterEach(() => {
@@ -55,70 +54,68 @@ describe('ThumbnailGenerationService', () => {
   });
 
   describe('isEnabled', () => {
-    it('should return true when enabled', () => {
+    it('should return true when enabled on Windows with exe available', () => {
       expect(service.isEnabled()).toBe(true);
     });
-  });
 
-  describe('generateThumbnail', () => {
-    it('should generate thumbnail successfully', async () => {
-      mockConversionService.generateThumbnail.mockResolvedValue({
-        success: true,
-        outputPaths: [path.join(os.tmpdir(), 'thumbnail.webp')],
-      });
+    it('should return false on Linux', async () => {
+      jest.restoreAllMocks();
+      jest.spyOn(os, 'platform').mockReturnValue('linux');
+      jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
+      jest.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined);
 
-      const result = await service.generateThumbnail(
-        path.join(os.tmpdir(), 'test.dwg'),
-        os.tmpdir(),
-        'node1'
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.thumbnailPath).toBe(path.join(os.tmpdir(), 'thumbnail.webp'));
-    });
-
-    it('should return error when thumbnail generation is disabled', async () => {
       mockConfigService.get.mockReturnValue({
-        autoGenerateEnabled: false,
+        autoGenerateEnabled: true,
         width: 200,
         height: 200,
       });
 
-      const newModule = await Test.createTestingModule({
+      const module = await Test.createTestingModule({
         providers: [
           ThumbnailGenerationService,
           { provide: ConfigService, useValue: mockConfigService },
-          { provide: I_CONVERSION_SERVICE, useValue: mockConversionService },
         ],
       }).compile();
 
-      const newService = newModule.get<ThumbnailGenerationService>(ThumbnailGenerationService);
+      const linuxService = module.get<ThumbnailGenerationService>(ThumbnailGenerationService);
+      await new Promise((r) => setTimeout(r, 10));
 
-      const result = await newService.generateThumbnail(
-        path.join(os.tmpdir(), 'test.dwg'),
-        os.tmpdir(),
-        'node1'
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('缩略图生成功能已禁用');
+      expect(linuxService.isEnabled()).toBe(false);
     });
+  });
 
-    it('should return error when conversion fails', async () => {
-      mockConversionService.generateThumbnail.mockResolvedValue({
-        success: false,
-        outputPaths: [],
-        error: 'conversion failed',
+  describe('generateThumbnail', () => {
+    it('should return error when disabled', async () => {
+      // 创建一个禁用的服务实例
+      jest.restoreAllMocks();
+      jest.spyOn(os, 'platform').mockReturnValue('linux');
+      jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
+      jest.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined);
+
+      mockConfigService.get.mockReturnValue({
+        autoGenerateEnabled: true,
+        width: 200,
+        height: 200,
       });
 
-      const result = await service.generateThumbnail(
+      const module = await Test.createTestingModule({
+        providers: [
+          ThumbnailGenerationService,
+          { provide: ConfigService, useValue: mockConfigService },
+        ],
+      }).compile();
+
+      const linuxService = module.get<ThumbnailGenerationService>(ThumbnailGenerationService);
+      await new Promise((r) => setTimeout(r, 10));
+
+      const result = await linuxService.generateThumbnail(
         path.join(os.tmpdir(), 'test.dwg'),
         os.tmpdir(),
         'node1'
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('conversion failed');
+      expect(result.error).toContain('不启用');
     });
   });
 

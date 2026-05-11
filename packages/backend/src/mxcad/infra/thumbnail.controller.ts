@@ -128,10 +128,12 @@ export class ThumbnailController {
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
-      const fileExt = path
+      const rawExt = path
         .extname(file.originalname || file.filename)
         .toLowerCase();
-      
+      // path.extname 返回带点号前缀 (如 ".png")，需去掉点号；空扩展名回退为 png
+      const fileExt = (rawExt.startsWith(".") ? rawExt.slice(1) : rawExt) || "jpg";
+
       const targetFileName = getThumbnailFileName(fileExt as ThumbnailFormat);
       const targetFilePath = path.join(targetDir, targetFileName);
       if (fs.existsSync(targetFilePath)) {

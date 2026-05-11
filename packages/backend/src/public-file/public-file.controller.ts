@@ -292,4 +292,72 @@ export class PublicFileController {
 
     return data;
   }
+
+  /**
+   * 将 mxweb 文件转换为指定格式并下载（公开接口，无需认证）
+   * POST /api/v1/public-file/convert?format=dwg|dxf|pdf|mxweb
+   */
+  @Post('convert')
+  @Public()
+  @ApiOperation({ summary: '将 mxweb 文件转换为指定格式并下载（公开接口）' })
+  @ApiConsumes('multipart/form-data')
+  @ApiQuery({
+    name: 'format',
+    description: '目标格式',
+    enum: ['dwg', 'dxf', 'pdf', 'mxweb'],
+    required: true,
+  })
+  @ApiQuery({ name: 'width', description: 'PDF 宽度（像素）', required: false })
+  @ApiQuery({ name: 'height', description: 'PDF 高度（像素）', required: false })
+  @ApiQuery({
+    name: 'colorPolicy',
+    description: '颜色策略',
+    enum: ['mono', 'color'],
+    required: false,
+  })
+  @ApiResponse({ status: 200, description: '返回转换后的文件' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async convertAndDownload(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('format') format: string,
+    @Query('width') width?: string,
+    @Query('height') height?: string,
+    @Query('colorPolicy') colorPolicy?: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!file) {
+      throw new BadRequestException('未上传文件');
+    }
+
+    if (!format || !['dwg', 'dxf', 'pdf', 'mxweb'].includes(format)) {
+      throw new BadRequestException(
+        '不支持的格式，请选择 dwg、dxf、pdf 或 mxweb',
+      );
+    }
+
+    try {
+      const result = await this.publicFileService.convertMxwebToFormat(
+        file.buffer,
+        format,
+        { width, height, colorPolicy: colorPolicy as 'mono' | 'color' | undefined },
+      );
+
+      res.setHeader('Content-Type', result.mimeType);
+      res.setHeader('Content-Length', result.buffer.length);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(result.filename)}"`,
+      );
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      res.send(result.buffer);
+    } catch (error) {
+      this.logger.error(
+        `[convertAndDownload] 转换失败: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException(error.message || '文件转换失败');
+    }
+  }
 }
