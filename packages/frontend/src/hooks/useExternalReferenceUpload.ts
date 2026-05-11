@@ -20,7 +20,7 @@ import type {
   UseExternalReferenceUploadReturn,
 } from '../types/filesystem';
 
-import { uploadFileWithFormData } from '../utils/mxcadUploadUtils';
+import { mxCadControllerUploadExtReferenceImage, mxCadControllerUploadExtReferenceDwg } from '@/api-sdk';
 import { handleError } from '../utils/errorHandler';
 import { isAuthenticated } from '../utils/authCheck';
 import { useUIStore } from '../stores/uiStore';
@@ -423,32 +423,26 @@ export const useExternalReferenceUpload = (
       );
 
       try {
-        const extRefEndpoint = fileInfo.type === 'img'
-          ? '/api/mxcad/up_ext_reference_image'
-          : `/api/mxcad/up_ext_reference_dwg/${id}`;
-        if (isLoggedIn) {
-          // 已登录：通过 FormData 上传外部参照文件
-          await uploadFileWithFormData({
-            blob: fileInfo.source,
-            endpoint: extRefEndpoint,
-            filename: fileInfo.name,
-            metadata: {
-              uploadType: 'extRef',
-              srcDwgNodeId: id,
-              isImage: fileInfo.type === 'img' ? 'true' : 'false',
-              fileHash: `${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        const extRefFile = fileInfo.source instanceof File
+          ? fileInfo.source
+          : new File([fileInfo.source], fileInfo.name);
+
+        if (fileInfo.type === 'img') {
+          await mxCadControllerUploadExtReferenceImage({
+            body: {
+              file: extRefFile,
+              nodeId: id,
+              ext_ref_file: fileInfo.name,
+              updatePreloading: true,
             },
           });
         } else {
-          // 匿名：通过 FormData 上传外部参照文件
-          await uploadFileWithFormData({
-            blob: fileInfo.source,
-            endpoint: extRefEndpoint,
-            filename: fileInfo.name,
-            metadata: {
-              uploadType: 'extRef',
-              srcDwgNodeId: id,
-              isImage: fileInfo.type === 'img' ? 'true' : 'false',
+          await mxCadControllerUploadExtReferenceDwg({
+            path: { nodeId: id },
+            body: {
+              file: extRefFile,
+              nodeId: id,
+              ext_ref_file: fileInfo.name,
             },
           });
         }
@@ -511,13 +505,15 @@ export const useExternalReferenceUpload = (
 
     const allSuccess = files.every((f) => f.uploadState === 'success');
 
+    // 先关闭弹窗，等一帧渲染完成后再触发回调打开文件
+    close();
     if (allSuccess) {
-      config.onSuccess?.();
+      requestAnimationFrame(() => {
+        config.onSuccess?.();
+      });
     } else {
       console.warn('部分文件上传失败');
     }
-
-    close();
   }, [files, config.onSuccess, close]);
 
   /**
@@ -529,8 +525,11 @@ export const useExternalReferenceUpload = (
     if (id) {
       autoOpenedIdentifiersRef.current.add(id);
     }
-    config.onSkip?.();
+    // 先关闭弹窗，等一帧渲染完成后再触发回调打开文件
     close();
+    requestAnimationFrame(() => {
+      config.onSkip?.();
+    });
   }, [config.onSkip, close]);
 
   /**

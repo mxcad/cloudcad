@@ -35,6 +35,23 @@ export const removeRefreshToken = (): void => {
   localStorage.removeItem('refreshToken');
 };
 
+/**
+ * 检查 accessToken 是否已过期（解析 JWT payload 中的 exp 字段）
+ * @returns true 表示 token 已过期或无法解析，false 表示 token 仍然有效
+ */
+export const isAccessTokenExpired = (): boolean => {
+  try {
+    const token = getAccessToken();
+    if (!token) return true;
+    const payload = JSON.parse(atob(token.split('.')[1] || ''));
+    if (!payload.exp) return true;
+    // exp 是秒级时间戳，转换为毫秒后与当前时间比较
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+};
+
 // WeChat Temp Token (sessionStorage)
 export const getWechatTempToken = (): string | null => {
   return sessionStorage.getItem('wechatTempToken');

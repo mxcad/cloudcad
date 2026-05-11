@@ -16,35 +16,12 @@
  * 提供 mxweb 文件保存到节点的核心逻辑和保存确认 UI。
  */
 
-import { uploadFileWithFormData } from '../../utils/mxcadUploadUtils';
+import { saveControllerSaveMxwebToNode } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import { escapeHtml } from '@/utils/sanitize';
 import type { SaveMxwebParams } from './mxcadTypes';
 
 export type { SaveMxwebParams } from './mxcadTypes';
-
-/**
- * 创建保存用的 FormData
- * @param blob 文件 Blob
- * @param nodeId 目标节点 ID
- * @param filename 文件名
- * @returns 构造好的 FormData
- */
-export function createSaveFormData(
-  blob: Blob,
-  nodeId: string,
-  filename: string
-): FormData {
-  const formData = new FormData();
-  formData.append('file', blob, filename);
-  formData.append('nodeId', nodeId);
-  formData.append('hash', `${Date.now()}_${Math.random().toString(36).substring(7)}`);
-  formData.append('name', filename);
-  formData.append('size', String(blob.size));
-  formData.append('chunk', '0');
-  formData.append('chunks', '1');
-  return formData;
-}
 
 /**
  * 将 mxweb Blob 保存到指定节点
@@ -53,11 +30,10 @@ export function createSaveFormData(
 export async function saveMxwebToNode(params: SaveMxwebParams): Promise<void> {
   try {
     const filename = params.filename || 'drawing.mxweb';
-    await uploadFileWithFormData({
-      blob: params.blob,
-      endpoint: `/api/v1/mxcad/savemxweb/${params.nodeId}`,
-      filename,
-      metadata: {
+    await saveControllerSaveMxwebToNode({
+      path: { nodeId: params.nodeId },
+      body: {
+        file: new File([params.blob], filename, { type: params.blob.type }),
         ...(params.commitMessage ? { commitMessage: params.commitMessage } : {}),
         ...(params.expectedTimestamp ? { expectedTimestamp: params.expectedTimestamp } : {}),
       },

@@ -52,9 +52,6 @@ export async function uploadThumbnail(
       return false;
     }
 
-    const formData = new FormData();
-    formData.append('file', blob, 'thumbnail.png');
-
     await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: {
       file: blob,
     } });

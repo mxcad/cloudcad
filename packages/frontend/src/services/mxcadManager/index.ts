@@ -37,7 +37,7 @@ export {
   THUMBNAIL_CONFIG,
 } from './mxcadTypes';
 
-export { saveMxwebToNode, createSaveFormData, showSaveConfirmDialog } from './mxcadSave';
+export { saveMxwebToNode, showSaveConfirmDialog } from './mxcadSave';
 export type { SaveMxwebParams } from './mxcadSave';
 
 export { checkThumbnail, uploadThumbnail, dataURLtoBlob, generateThumbnail } from './mxcadThumbnail';
@@ -73,6 +73,7 @@ import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../../contexts/NotificationContext';
 import { isAuthenticated } from '../../utils/authCheck';
+import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { handleError } from '@/utils/errorHandler';
 import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../../utils/loadingUtils';
 
@@ -1352,8 +1353,8 @@ const handleNewFileCommand = async () => {
 async function triggerSaveAs() {
   const fileName = currentFileInfo?.name || 'untitled';
 
-  if (!isAuthenticated()) {
-    // 未登录用户：直接保存为 mxweb blob 并触发 mxcad-save-as 事件
+  if (!isAuthenticated() || isAccessTokenExpired()) {
+    // 未登录或 token 已过期：直接保存为 mxweb blob 并触发 mxcad-save-as 事件
     // CADEditorDirect 中未登录用户的 mxcad-save-as 处理会弹出下载格式选择框（另存为到本地）
     await showSaveAsDialog(null, fileName);
     return;
@@ -1363,7 +1364,7 @@ async function triggerSaveAs() {
   try {
     personalSpaceId = await getPersonalSpaceId();
   } catch {
-    // 获取私人空间 ID 失败（如 token 过期），降级为 null
+    // 获取私人空间 ID 失败，降级为 null
     globalShowToast('登录状态可能已过期，请保存到本地或重新登录', 'warning');
   }
   await showSaveAsDialog(personalSpaceId, fileName);
