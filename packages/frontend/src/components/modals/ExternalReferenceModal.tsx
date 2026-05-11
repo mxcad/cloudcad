@@ -9,6 +9,7 @@ import { XCircle } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { Upload } from 'lucide-react';
 import { AlertTriangle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 interface ExternalReferenceModalProps {
   /** 模态框是否打开 */
@@ -82,8 +83,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       return <CheckCircle size={16} style={{ color: 'var(--success)' }} data-testid="icon-check-circle" />;
     }
 
-    // 默认状态
-    return null;
+    // 默认状态（待上传），显示灰色提示图标
+    return <AlertCircle size={16} style={{ color: 'var(--text-muted)' }} data-testid="icon-alert-circle" />;
   };
 
   const getStatusColor = (file: ExternalReferenceFile) => {
@@ -133,6 +134,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="管理外部参照文件"
+      size="xl"
+      contentClassName="p-6"
       footer={
         <div data-tour="xref-actions">
           <Button
@@ -251,11 +254,11 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         {files.length > 0 && (
           <div
             className="rounded-lg overflow-hidden"
-            style={{ border: '1px solid var(--border-default)' }}
+            style={{ border: '1px solid var(--border-default)', maxHeight: '320px', overflowY: 'auto' }}
             data-tour="xref-list"
           >
             <table className="w-full">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
                   <th className="px-4 py-2 text-left text-sm font-medium w-20" style={{ color: 'var(--text-secondary)' }}>
                     状态

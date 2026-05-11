@@ -62,13 +62,17 @@ export const useExternalReferenceUpload = (
 
   const preloadingDataCacheRef = useRef<Map<string, PreloadingData>>(new Map());
 
+  // 记录已自动打开过弹框的文件标识符（forceOpen=false 时记录）
+  // 用于防止每次跳转到 CAD 编辑器都弹出外部参照弹框
+  const autoOpenedIdentifiersRef = useRef<Set<string>>(new Set());
+
   /**
-       * 获取预加载数据
-       *
-       * 添加了请求去重和缓存机制：
-       * 1. 如果已有相同请求在进行中，跳过重复请求
-       * 2. 如果缓存中存在数据且未过期，直接返回缓存数据
-       */
+         * 获取预加载数据
+         *
+         * 添加了请求去重和缓存机制：
+         * 1. 如果已有相同请求在进行中，跳过重复请求
+         * 2. 如果缓存中存在数据且未过期，直接返回缓存数据
+         */
 
   const fetchPreloadingData = useCallback(
     async (id: string): Promise<PreloadingData | null> => {
@@ -189,7 +193,7 @@ export const useExternalReferenceUpload = (
       if (shouldRetry) {
         // 强制清除缓存，确保获取最新的预加载数据
         preloadingDataCacheRef.current.delete(id);
-        
+
         // 重试逻辑：等待 preloading.json 生成
         // 解决文件转换未完成时检查外部参照导致预加载数据不存在的问题
         let retryCount = 0;
@@ -299,6 +303,16 @@ export const useExternalReferenceUpload = (
         return false;
       }
 
+      // 如果不是强制打开或重试模式，且该文件已经自动弹出过，则不再重复弹出
+      // 防止每次跳转到 CAD 编辑器都弹出弹框
+      if (!forceOpen && !shouldRetry && autoOpenedIdentifiersRef.current.has(id)) {
+        console.debug(
+          `[useExternalReferenceUpload] 文件 ${id} 已自动检查过外部参照，跳过弹框`,
+          'external-reference'
+        );
+        return true;
+      }
+
       console.debug(
         `[useExternalReferenceUpload] 缺失的外部参照文件数: ${missingExternalReferences.length} 个`,
         'external-reference'
@@ -306,6 +320,12 @@ export const useExternalReferenceUpload = (
 
       setFiles(missingExternalReferences);
       setIsOpen(true);
+
+      // 记录已自动弹出（非强制打开且非重试模式）
+      if (!forceOpen && !shouldRetry) {
+        autoOpenedIdentifiersRef.current.add(id);
+      }
+
       return true;
     },
     [fetchPreloadingData, checkReferenceExists]
@@ -466,12 +486,23 @@ export const useExternalReferenceUpload = (
   const close = useCallback(() => {
     setIsOpen(false);
     setFiles([]);
+    // 关闭弹框时记录当前文件已处理过，防止重复弹出
+    const id = identifierRef.current;
+    if (id) {
+      autoOpenedIdentifiersRef.current.add(id);
+    }
   }, []);
 
   /**
    * 完成上传
    */
   const complete = useCallback(() => {
+    // 完成/关闭时记录当前文件已处理过，防止重复弹出
+    const id = identifierRef.current;
+    if (id) {
+      autoOpenedIdentifiersRef.current.add(id);
+    }
+
     // 空文件列表或没有文件需要上传时，不触发 onSuccess
     if (files.length === 0) {
       close();
@@ -493,6 +524,11 @@ export const useExternalReferenceUpload = (
    * 跳过上传
    */
   const skip = useCallback(() => {
+    // 跳过上传时也记录当前文件已处理过，防止重复弹出
+    const id = identifierRef.current;
+    if (id) {
+      autoOpenedIdentifiersRef.current.add(id);
+    }
     config.onSkip?.();
     close();
   }, [config.onSkip, close]);
