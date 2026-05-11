@@ -536,12 +536,10 @@ function calculateReturnPath(
 // ==================== return-to-cloud-map-management ====================
 
 /**
- * 尝试关闭当前窗口并兜底返回
- * 仅在单标签页（无浏览器历史）时调用：
+ * 返回到上一页面（云图管理/项目文件列表）
  * 1. 隐藏编辑器
  * 2. 检查未保存更改（用户取消则恢复显示）
- * 3. 尝试 window.close()
- * 4. 200ms 后如果窗口没关 → 用 calculateReturnPath 兜底跳转
+ * 3. 根据当前文件信息计算返回路径并导航
  */
 const checkToReturnToPreviousPage = async () => {
   // 先隐藏编辑器
@@ -558,26 +556,19 @@ const checkToReturnToPreviousPage = async () => {
   // 禁用离开确认对话框（正在主动离开页面，避免 beforeunload 二次弹窗）
   isLeavingPageRef.current = true;
 
-  // 尝试关闭当前标签页
+  // 根据当前文件信息计算返回路径并导航
   try {
-    window.close();
-
-    // 如果窗口没有关闭（说明是通过浏览器地址栏直接打开的），延迟兜底跳转
-    setTimeout(() => {
-      if (!window.closed) {
-        if (!currentFileInfo) {
-          navigateToProjectsList();
-        } else {
-          const targetPath = calculateReturnPath(
-            currentFileInfo.parentId,
-            currentFileInfo.projectId,
-            currentFileInfo.personalSpaceId,
-            currentFileInfo.libraryKey
-          );
-          navigateTo(targetPath);
-        }
-      }
-    }, 200);
+    if (!currentFileInfo) {
+      navigateToProjectsList();
+    } else {
+      const targetPath = calculateReturnPath(
+        currentFileInfo.parentId,
+        currentFileInfo.projectId,
+        currentFileInfo.personalSpaceId,
+        currentFileInfo.libraryKey
+      );
+      navigateTo(targetPath);
+    }
   } catch (error) {
     handleError(error, 'mxcadManager: checkToReturnToPreviousPage');
     navigateToProjectsList();
@@ -586,15 +577,12 @@ const checkToReturnToPreviousPage = async () => {
 
 /**
  * 返回到云图管理（直接调用，不依赖命令注册）
- * 3 分支逻辑：
- * 1. 从平台跳转且有 opener → 关闭窗口
- * 2. 有浏览器历史（多标签）→ history.back()
- * 3. 单标签（无历史）→ 尝试关窗口 → 关不掉用 calculateReturnPath 兜底
+ * 1. 隐藏编辑器
+ * 2. 检查未保存更改，根据当前文件信息计算返回路径并导航
  */
 export const returnToCloudMapManagement = () => {
   mxcadManager.showMxCAD(false);
 
-  // 分支3：单标签 → 尝试关窗口 → 兜底跳转
   checkToReturnToPreviousPage();
 };
 
@@ -1164,13 +1152,20 @@ async function handleFileSelection(
       const userChoice = await _showDuplicateFileDialog(file.name);
 
       if (userChoice === 'open') {
-        // 秒传：文件已存在，直接打开，不检查外部参照
-        showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
-        await openUploadedFile(
-          duplicateCheck.data?.nodeId,
-          uploadTargetNodeId
-        );
-        hideGlobalLoading();
+        // 用户选择打开已有文件 — 先派发事件检查外部参照，弹框关闭后再打开文件
+        window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
+          detail: {
+            nodeId: duplicateCheck.data?.nodeId,
+            callback: async () => {
+              showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
+              await openUploadedFile(
+                duplicateCheck.data?.nodeId,
+                uploadTargetNodeId
+              );
+              hideGlobalLoading();
+            },
+          },
+        }));
         return;
       } else if (userChoice === null) {
         // 用户取消
