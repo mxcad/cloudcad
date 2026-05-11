@@ -52,11 +52,14 @@ interface SidebarContainerProps {
   projectId: string;
   /** 插入文件回调（图库使用） */
   onInsertFile?: (file: InsertFileParams) => void | Promise<void>;
+  /** 是否可见 - 用于 loading 期间隐藏但保持 DOM 布局稳定 */
+  visible?: boolean;
 }
 
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   projectId,
   onInsertFile,
+  loading: isLoading = false,
 }) => {
   // ==================== Hooks ====================
   const { isAuthenticated } = useAuth();
@@ -89,6 +92,14 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
   // 宽度调整状态
   const [isResizing, setIsResizing] = useState(false);
+
+  // 跟踪组件是否已完成首次挂载，用于禁止初始过渡动画
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // 通过 requestAnimationFrame 确保在首次绘制后标记为已挂载
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   // 当前打开的文件 ID
   const [currentOpenFileId, setCurrentOpenFileId] = useState<string | null>(
@@ -544,11 +555,29 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       className={`${styles.sidebarContainer} ${!isVisible ? styles.collapsed : ''}`}
       style={{
         width: isVisible ? settings.width : 48,
-        // 拖拽时禁用 transition,避免延迟导致空白
-        transition: isResizing ? 'none' : undefined,
+        transition: isResizing || !mounted ? 'none' : undefined,
       }}
     >
-      {isVisible ? (
+      {isLoading ? (
+        /* 加载骨架屏 */
+        <div className={styles.skeletonContainer}>
+          <div className={styles.skeletonTabBar}>
+            <div className={styles.skeletonTab} />
+            <div className={styles.skeletonTab} />
+          </div>
+          <div className={styles.skeletonList}>
+            {[1,2,3,4,5,6,7,8].map(i => (
+              <div key={i} className={styles.skeletonItem}>
+                <div className={styles.skeletonIcon} />
+                <div className={styles.skeletonText}>
+                  <div className={styles.skeletonLine} style={{width: '60%'}} />
+                  <div className={styles.skeletonLine} style={{width: '35%'}} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : isVisible ? (
         <>
           {/* Tab 栏 */}
           <SidebarTabBar

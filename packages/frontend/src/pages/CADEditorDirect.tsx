@@ -1364,40 +1364,55 @@ export const CADEditorDirect: React.FC = () => {
         </div>
       )}
 
-      {loading && !error && (
-        <div
-          className="flex flex-col items-center justify-center h-full"
-          style={{
-            backgroundColor: 'var(--bg-primary)',
-          }}
-        >
-          <div
-            className="animate-spin rounded-full h-8 w-8"
-            style={{
-              border: `2px solid var(--border-strong)`,
-              borderTopColor: 'var(--accent-600)',
-            }}
-          />
-          <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
-            正在加载 CAD 编辑器...
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && isActive && (
+      {!error && isActive && (
         <div className="flex w-full h-screen relative">
-          {/* 侧边栏容器 - 始终渲染，自带背景色 */}
+          {/* 侧边栏容器 */}
           <SidebarContainer
             projectId={
               isHomeMode ? personalSpaceId || '' : currentProjectId || ''
             }
             onInsertFile={handleInsertFile}
+            loading={loading}
           />
 
-          {/* CAD编辑器内容区域 - 必须透明以让 MxCAD canvas (z-index 9998) 可见 */}
+          {/* CAD编辑器内容区域 */}
           <div className="flex-1 relative" style={{ background: 'transparent' }}>
-            {/* 返回功能通过 MxCAD 命令实现：MxFun.execCmd("return-to-cloud-map-management") */}
-
+            {loading && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  zIndex: 100,
+                }}
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div
+                    className="animate-pulse rounded-lg"
+                    style={{
+                      width: 120,
+                      height: 120,
+                      backgroundColor: 'var(--bg-tertiary)',
+                    }}
+                  />
+                  <div
+                    className="animate-pulse rounded"
+                    style={{
+                      width: 200,
+                      height: 14,
+                      backgroundColor: 'var(--bg-tertiary)',
+                    }}
+                  />
+                  <div
+                    className="animate-pulse rounded"
+                    style={{
+                      width: 140,
+                      height: 12,
+                      backgroundColor: 'var(--bg-tertiary)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
             {/* 下载格式选择弹窗 */}
             <DownloadFormatModal
               isOpen={showDownloadFormatModal}
@@ -1410,7 +1425,7 @@ export const CADEditorDirect: React.FC = () => {
               loading={downloading}
             />
           </div>
-          </div>
+        </div>
       )}
 
       {/* 登录提示弹窗 - 主页模式 */}

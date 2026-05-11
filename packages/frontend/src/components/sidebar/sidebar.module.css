@@ -818,6 +818,7 @@
   flex-wrap: nowrap;
   gap: 2px;
   padding: 10px 16px;
+  min-height: 42px;
   background: linear-gradient(
     90deg,
     var(--bg-tertiary) 0%,
@@ -2215,4 +2216,89 @@
   box-shadow:
     0 6px 20px rgba(96, 165, 250, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================
+   22. 骨架屏加载状态
+   ============================================ */
+
+.skeletonContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-secondary);
+  padding: 12px 0;
+}
+
+[data-theme="dark"] .skeletonContainer {
+  background: var(--sidebar-bg, #212832);
+}
+
+.skeletonTabBar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.skeletonTab {
+  flex: 1;
+  height: 36px;
+  border-radius: var(--radius-lg, 8px);
+  background-color: var(--bg-tertiary);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeletonList {
+  flex: 1;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.skeletonItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 2px 0;
+  border-radius: var(--radius-lg, 8px);
+}
+
+.skeletonIcon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md, 6px);
+  background-color: var(--bg-tertiary);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeletonText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: var(--radius-sm, 4px);
+  background-color: var(--bg-tertiary);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+[data-theme="dark"] .skeletonTab,
+[data-theme="dark"] .skeletonIcon,
+[data-theme="dark"] .skeletonLine {
+  background-color: rgba(255, 255, 255, 0.08);
 }
