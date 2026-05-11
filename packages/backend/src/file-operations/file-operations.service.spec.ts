@@ -702,6 +702,17 @@ describe("FileOperationsService", () => {
 			);
 		});
 
+		it("should return node as-is when already in target parent (idempotent)", async () => {
+			prisma.fileSystemNode.findUnique
+				.mockResolvedValueOnce(srcNode)
+				.mockResolvedValueOnce({ ...tgt, id: "old" });
+			const r = await service.moveNode("node-1", "old");
+			expect(r).toBe(srcNode);
+			// 不应触发 update 或 generateUniqueName
+			expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+			expect(prisma.fileSystemNode.findFirst).not.toHaveBeenCalled();
+		});
+
 		it("should invalidate quota cache for source and target projects", async () => {
 			prisma.fileSystemNode.findUnique
 				.mockResolvedValueOnce(srcNode)

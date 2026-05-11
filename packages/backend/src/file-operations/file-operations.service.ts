@@ -798,6 +798,11 @@ export class FileOperationsService {
         throw new BadRequestException('不能将节点移动到自身');
       }
 
+      // 如果节点已经在目标父节点下，直接返回（幂等操作）
+      if (node.parentId === targetParentId) {
+        return node;
+      }
+
       // 检查是否存在命名冲突，如果存在则生成唯一名称
       const uniqueName = await this.generateUniqueName(
         targetParentId,
