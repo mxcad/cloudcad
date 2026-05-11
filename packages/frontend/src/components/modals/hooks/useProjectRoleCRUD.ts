@@ -5,7 +5,7 @@ import {
   rolesControllerUpdateProjectRole,
   rolesControllerDeleteProjectRole,
 } from '@/api-sdk';
-import type { ProjectRoleDto } from '../../../types/api-client';
+import type { ProjectRoleDto } from '@/api-sdk';
 
 const PROJECT_ROLES_BY_PROJECT_KEY = ['projectRolesByProject'] as const;
 

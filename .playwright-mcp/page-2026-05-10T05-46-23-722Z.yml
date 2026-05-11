@@ -1,0 +1,10 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "CloudCAD 部署配置中心" [level=1] [ref=e4]
+    - paragraph [ref=e5]: 管理服务器环境配置
+  - generic [ref=e7]:
+    - heading "管理员登录" [level=2] [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]: 管理员密码
+      - textbox "请输入管理员密码" [active] [ref=e11]
+    - button "登 录" [ref=e12] [cursor=pointer]

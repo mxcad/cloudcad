@@ -11,22 +11,20 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef } from 'react';
-// NOTE: Upload methods migrated to useUppyUpload via useDirectoryImport's own UploadQueue implementation.
+// 使用原生分片上传（uploadFile）
 import {
   libraryControllerGetDrawingChildren,
   libraryControllerGetBlockChildren,
   libraryControllerCreateDrawingFolder,
   libraryControllerCreateBlockFolder,
+  FileSystemNodeDto
 } from '@/api-sdk';
 import {
-  uploadFileWithUppy,
-  UppyUploadOptions,
-  UppyUploadResult,
-} from '../utils/uppyUploadUtils';
-import type {
-  NodeListResponseDto,
-  FileSystemNodeDto,
-} from '../types/api-client';
+  uploadMxCadFile,
+  MxCadUploadOptions,
+  MxCadUploadResult,
+} from '../utils/mxcadUploadUtils';
+
 
 /**
  * 冲突策略
@@ -925,17 +923,17 @@ async function uploadFileWithRetry(
   nodeId: string,
   conflictStrategy?: 'skip' | 'overwrite' | 'rename',
   maxRetries: number = 3
-): Promise<UppyUploadResult | null> {
+): Promise<MxCadUploadResult | null> {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const options: UppyUploadOptions = {
+      const options: MxCadUploadOptions = {
         file,
         hash,
         nodeId,
         conflictStrategy,
       };
 
-      return await uploadFileWithUppy(options);
+      return await uploadMxCadFile(options);
     } catch (error) {
       console.error(`上传失败 (尝试 ${i + 1}/${maxRetries}):`, error);
       if (i === maxRetries - 1) {

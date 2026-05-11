@@ -1,0 +1,46 @@
+- generic [ref=e8]:
+  - button "切换到亮色模式" [ref=e10]:
+    - generic [ref=e11]:
+      - img [ref=e12]
+      - img [ref=e18]
+  - generic [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - img "梦想网页CAD协同平台" [ref=e25]
+        - heading "梦想网页CAD协同平台" [level=1] [ref=e26]
+        - paragraph [ref=e27]: 专业云端 CAD 图纸管理平台
+      - generic [ref=e28]:
+        - heading "欢迎回来" [level=2] [ref=e29]
+        - paragraph [ref=e30]: 登录您的账户以继续
+      - generic [ref=e82]:
+        - img [ref=e83]
+        - generic [ref=e85]: 账号或密码错误
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]: 用户名
+          - generic [ref=e34]:
+            - img [ref=e35]
+            - textbox "用户名" [ref=e38]:
+              - /placeholder: 请输入用户名
+              - text: admin
+        - generic [ref=e40]:
+          - generic [ref=e41]: 密码
+          - generic [ref=e42]:
+            - img [ref=e43]
+            - textbox "密码" [ref=e46]:
+              - /placeholder: 请输入密码
+              - text: Admin123!
+            - button [ref=e47] [cursor=pointer]:
+              - img [ref=e48]
+        - button "忘记密码？" [ref=e53] [cursor=pointer]
+        - button "立即登录" [ref=e54] [cursor=pointer]:
+          - generic [ref=e86]: 立即登录
+          - img [ref=e87]
+      - paragraph [ref=e59]:
+        - text: 还没有账户？
+        - button "立即注册" [ref=e60] [cursor=pointer]
+      - generic [ref=e61]:
+        - img [ref=e63] [cursor=pointer]
+        - img [ref=e67] [cursor=pointer]
+        - img [ref=e78] [cursor=pointer]
+    - paragraph [ref=e81]: © 2026 梦想网页CAD协同平台. All rights reserved.

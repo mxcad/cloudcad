@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import type { SvnLogEntryDto } from '../../types/api-client';
+import type { SvnLogEntryDto } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 import { History } from 'lucide-react';
 

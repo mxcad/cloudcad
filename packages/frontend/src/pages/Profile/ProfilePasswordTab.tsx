@@ -8,10 +8,11 @@ import {
   Loader2,
   Shield,
 } from 'lucide-react';
-import type { User } from '../../types/filesystem';
+import { UserDto } from '@/api-sdk';
+
 
 interface ProfilePasswordTabProps {
-  user?: User | null;
+  user?: UserDto | null;
   passwordForm: {
     oldPassword: string;
     newPassword: string;

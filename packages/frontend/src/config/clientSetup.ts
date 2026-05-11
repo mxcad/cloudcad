@@ -6,7 +6,7 @@
 import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
 import { getValidToken, isValidToken, getRefreshToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken } from '@/utils/tokenUtils';
-
+import { authControllerRefreshToken } from "@/api-sdk"
 // 用于在非 React 上下文中显示 Toast（通过 NotificationContext 的全局事件）
 function showGlobalToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'warning') {
   window.dispatchEvent(
@@ -76,13 +76,10 @@ async function tryRefreshToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/v1/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: token }),
-      });
-      const body = await res.json();
-      const inner = body?.data || body;
+      const res = await authControllerRefreshToken({
+        body: { refreshToken: token }
+      })
+      const inner = res.data!;
       if (inner?.accessToken && isValidToken(inner.accessToken)) {
         setAccessToken(inner.accessToken);
         if (inner.refreshToken && isValidToken(inner.refreshToken)) {
@@ -170,8 +167,9 @@ client.setConfig({
   fetch: async (input, init) => {
     // 首次请求前，保存 body 副本（用于可能的重试）
     const persistedInit = persistBody(init);
+   
     let response = await nativeFetch(input, init);
-
+  
     // 401 → 尝试刷新 token 并重试（支持所有 HTTP 方法）
     if (response.status === 401) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;

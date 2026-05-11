@@ -68,7 +68,7 @@ import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '
 import { MxFun } from 'mxdraw';
 import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
 import { calculateFileHash } from '../../utils/hashUtils';
-import { uploadFileWithUppy, uploadFilePublic, uploadBlobWithTus } from '../../utils/uppyUploadUtils';
+import { uploadMxCadFile, uploadFileWithFormData } from '../../utils/mxcadUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../../contexts/NotificationContext';
@@ -592,18 +592,6 @@ const checkToReturnToPreviousPage = async () => {
 export const returnToCloudMapManagement = () => {
   mxcadManager.showMxCAD(false);
 
-  // 分支1：从平台跳转进入，且当前窗口由其他窗口打开 → 直接关闭
-  if (currentFileInfo?.fromPlatform && window.opener) {
-    window.close();
-    return;
-  }
-
-  // 分支2：有浏览器历史（多标签）→ 浏览器后退
-  if (history.length > 1) {
-    history.back();
-    return;
-  }
-
   // 分支3：单标签 → 尝试关窗口 → 兜底跳转
   checkToReturnToPreviousPage();
 };
@@ -703,7 +691,7 @@ async function uploadAndProcessFile(
   const hash = await calculateFileHash(file);
 
   setLoadingMessage(DEFAULT_MESSAGES.UPLOADING);
-  const uploadResult = await uploadFileWithUppy({
+  const uploadResult = await uploadMxCadFile({
     file,
     hash,
     nodeId: uploadTargetNodeId,
@@ -1080,7 +1068,7 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
 }
 
 /**
- * 使用 TUS 上传文件（未登录用户，匿名上传）
+ * 上传文件（未登录用户，匿名上传）
  * @param file 要上传的文件
  * @param noCache 是否无缓存打开（强制重新上传）
  */
@@ -1089,12 +1077,14 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
     showGlobalLoading('正在计算文件哈希...');
     const hash = await calculateFileHash(file);
 
-    // 使用 TUS 上传（匿名）
+    // 匿名上传：使用分片上传到公开端点
     setLoadingMessage('正在上传文件...');
-    const result = await uploadFilePublic({
+    await uploadMxCadFile({
       file,
       hash,
-      onProgress: (percentage) => {
+      nodeId: '',
+      forceUpload: true, // 匿名/公开上传，跳过节点检查和秒传
+      onProgress: (percentage: number) => {
         setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
       },
     });
@@ -1105,15 +1095,15 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
 
     const event = new CustomEvent('public-file-uploaded', {
       detail: {
-        fileHash: result.hash,
-        fileName: result.fileName,
+        fileHash: hash,
+        fileName: file.name,
         noCache: noCache,
         callback: async () => {
           try {
             showGlobalLoading('正在打开文件...');
             // 扁平存储：{hash}.{ext}.mxweb（如 abc123.dwg.mxweb），通过 accessFileByHashPattern 端点访问
             const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
-            const mxwebFilename = `${result.hash}${ext}.mxweb`;
+            const mxwebFilename = `${hash}${ext}.mxweb`;
             const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
 
             await mxcadManager.openFile(fileUrl, noCache);
@@ -1193,7 +1183,7 @@ async function handleFileSelection(
 
     // 继续上传流程
     showGlobalLoading(DEFAULT_MESSAGES.UPLOADING);
-    const uploadResult = await uploadFileWithUppy({
+    const uploadResult = await uploadMxCadFile({
       file,
       hash,
       nodeId: uploadTargetNodeId,
@@ -1603,11 +1593,8 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   });
 
   setLoadingMessage('正在上传到服务器...');
-  // 通过 Tus 上传 mxweb Blob（绕过 SDK formDataBodySerializer 问题）
-  const uploadMeta: Record<string, string> = {
-    uploadType: 'save',
-    overwriteNodeId: fileId,
-  };
+  // 通过 FormData 上传 mxweb Blob 到保存端点
+  const uploadMeta: Record<string, string> = {};
   if (commitMessage) {
     uploadMeta.commitMessage = commitMessage;
   }
@@ -1616,8 +1603,9 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   }
 
   try {
-    await uploadBlobWithTus({
+    await uploadFileWithFormData({
       blob: savedFile.blob,
+      endpoint: `/api/mxcad/savemxweb/${fileId}`,
       filename: savedFile.filename,
       metadata: uploadMeta,
     });
@@ -1769,16 +1757,14 @@ async function saveLibraryFile() {
   try {
     setLoadingMessage('正在上传到服务器...');
 
-    // 通过 Tus 上传 mxweb Blob
+    // 通过 FormData 上传 mxweb Blob 到保存端点
     const filename = `${libraryKey}.mxweb`;
-    await uploadBlobWithTus({
+    await uploadFileWithFormData({
       blob: savedFile.blob,
+      endpoint: `/api/mxcad/savemxweb/${fileId}`,
       filename,
       metadata: {
-        uploadType: 'save',
-        overwriteNodeId: fileId,
         commitMessage: commitMessage || '',
-        isLibrary: 'true',
         ...(expectedTimestamp ? { expectedTimestamp } : {}),
       },
     });
@@ -2692,12 +2678,12 @@ export async function processPendingImages(): Promise<void> {
       const file = new File([blob], img.fileName, { type: blob.type });
 
       // 上传到外部参照目录
-      await uploadBlobWithTus({
+      await uploadFileWithFormData({
         blob: file,
+        endpoint: '/api/mxcad/up_ext_reference_image',
         filename: img.fileName,
         metadata: {
           uploadType: 'extRef',
-          isImage: 'true',
           srcDwgNodeId: currentInfo.fileId,
           fileHash: `${Date.now()}_${Math.random().toString(36).substring(7)}`,
         },

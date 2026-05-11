@@ -11,7 +11,7 @@ import {
   ProjectPermission,
   getRoleDisplayName,
 } from '@/constants/permissions';
-import type { ProjectMemberDto, UserResponseDto } from '@/types/api-client';
+import type { ProjectMemberDto, UserResponseDto } from '@/api-sdk';
 
 interface Member extends ProjectMemberDto {
   // 添加 userId 作为 id 的别名以保持兼容性

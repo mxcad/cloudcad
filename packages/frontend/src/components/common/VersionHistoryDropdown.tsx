@@ -18,9 +18,9 @@ import { createPortal } from 'react-dom';
 import { History } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { ExternalLink } from 'lucide-react';
-import { versionControlControllerGetFileHistory } from '@/api-sdk';
+import { versionControlControllerGetFileHistory, SvnLogEntryDto } from '@/api-sdk';
 import { Tooltip } from '../ui/Tooltip';
-import type { SvnLogEntryDto } from '../../types/api-client';
+
 import styles from './VersionHistoryDropdown.module.css';
 
 interface VersionHistoryDropdownProps {

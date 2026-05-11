@@ -50,6 +50,8 @@ import {
 } from '../infra/thumbnail-utils';
 import { FileConversionUploadService } from '../upload/file-conversion-upload.service';
 import { ExternalRefService } from '../external-ref/external-ref.service';
+import { ChunkUploadManagerService } from '../services/chunk-upload-manager.service';
+import { MxUploadReturn } from '../enums/mxcad-return.enum';
 
 @Injectable()
 export class MxCadService {
@@ -67,6 +69,7 @@ export class MxCadService {
     private readonly prisma: DatabaseService,
     private readonly fileConversionUploadService: FileConversionUploadService,
     private readonly externalRefService: ExternalRefService,
+    private readonly chunkUploadManager: ChunkUploadManagerService,
   ) {
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
       infer: true,
@@ -185,13 +188,89 @@ export class MxCadService {
   }
 
   /**
+   * 检查分片是否存在
+   */
+  async checkChunkExist(
+    chunk: number,
+    fileHash: string,
+    size: number,
+    chunks: number,
+    fileName: string,
+    context?: MxCadContext
+  ): Promise<{ ret: MxUploadReturn }> {
+    return this.chunkUploadManager.checkChunkExist({
+      hash: fileHash,
+      name: fileName,
+      size,
+      chunk,
+      chunks,
+      context: this.validateContext(context),
+    });
+  }
+
+  /**
+   * 上传分片文件方法
+   */
+  async uploadChunkWithPermission(
+    hash: string,
+    name: string,
+    size: number,
+    chunk: number,
+    chunks: number,
+    context?: MxCadContext
+  ): Promise<{ ret: MxUploadReturn; tz?: boolean; nodeId?: string }> {
+    const result = await this.chunkUploadManager.uploadChunk({
+      hash,
+      name,
+      size,
+      chunk,
+      chunks,
+      context: this.validateContext(context),
+    });
+    return result;
+  }
+
+  /**
+   * 合并分片文件方法
+   */
+  async mergeChunksWithPermission(
+    hash: string,
+    name: string,
+    size: number,
+    chunks: number,
+    context?: MxCadContext,
+    srcDwgNodeId?: string
+  ): Promise<{ ret: MxUploadReturn; tz?: boolean; nodeId?: string }> {
+    const result = await this.chunkUploadManager.uploadChunk({
+      hash,
+      name,
+      size,
+      chunk: chunks - 1,
+      chunks,
+      context: this.validateContext(context),
+    });
+    return result;
+  }
+
+  /**
+   * 公共日志方法
+   */
+  logError(message: string, error?: unknown): void {
+    if (error instanceof Error) {
+      this.logger.error(message, error.stack);
+    } else {
+      this.logger.error(message);
+    }
+  }
+
+  /**
    * 检查文件是否已存在（秒传）
    */
   async checkFileExist(
     filename: string,
     fileHash: string,
     context?: MxCadContext,
-  ): Promise<{ ret: string; nodeId?: string }> {
+  ): Promise<{ ret: MxUploadReturn; nodeId?: string }> {
     return this.fileConversionUploadService.checkFileExist(
       filename,
       fileHash,
@@ -412,23 +491,13 @@ export class MxCadService {
 
       // 获取文件扩展名并映射到标准缩略图格式
       const ext = path.extname(filePath).toLowerCase();
-      const extMap: Record<string, string> = {
-        '.png': 'png',
-        '.jpg': 'jpg',
-        '.jpeg': 'jpg',
-        '.webp': 'webp',
-      };
-      const thumbnailFormat = extMap[ext];
-      if (!thumbnailFormat) {
-        return {
-          success: false,
-          message: `不支持的图片格式: ${ext}，仅支持 ${THUMBNAIL_FORMATS.join(', ')}`,
-        };
-      }
+    
+      
+      
 
       // 构建目标文件名（使用上传文件的格式）
       const targetFileName = getThumbnailFileName(
-        thumbnailFormat as ThumbnailFormat
+        ext as ThumbnailFormat
       );
 
       // 构建目标路径：filesData/YYYYMM[/N]/nodeId/thumbnail.{format}

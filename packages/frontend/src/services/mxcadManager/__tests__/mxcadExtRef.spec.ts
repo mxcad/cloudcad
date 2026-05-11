@@ -5,10 +5,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock uploadBlobWithTus instead of mxCadControllerUploadExtReferenceImage
-vi.mock('../../utils/uppyUploadUtils', () => ({
-  uploadBlobWithTus: vi.fn(),
-  uploadFileWithUppy: vi.fn(),
+// Mock uploadFileWithFormData instead of mxCadControllerUploadExtReferenceImage
+vi.mock('../../utils/mxcadUploadUtils', () => ({
+  uploadFileWithFormData: vi.fn(),
+  uploadMxCadFile: vi.fn(),
 }));
 
 // Mock utils
@@ -31,7 +31,7 @@ import {
   checkExtReferenceImages,
   resolveExtReferenceUrl,
 } from '../mxcadExtRef';
-import { uploadBlobWithTus } from '../../utils/uppyUploadUtils';
+import { uploadFileWithFormData } from '../../utils/mxcadUploadUtils';
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
 
@@ -42,7 +42,7 @@ describe('mxcadExtRef', () => {
 
   describe('uploadExtReferenceImage', () => {
     it('uploads a single external reference image via Tus', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ nodeId: 'new-node-1' });
 
       const mockFile = new File(['ref-data'], 'xref.dwg', { type: 'application/octet-stream' });
@@ -62,7 +62,7 @@ describe('mxcadExtRef', () => {
     });
 
     it('handles upload failure gracefully', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockRejectedValue(new Error('File too large'));
 
       const mockFile = new File(['large-data'], 'big.xref', { type: 'application/octet-stream' });
@@ -79,7 +79,7 @@ describe('mxcadExtRef', () => {
     });
 
     it('passes metadata correctly to Tus upload', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ nodeId: 'node-xyz' });
 
       const mockFile = new File(['data'], 'test.xref', { type: 'application/octet-stream' });
@@ -96,7 +96,7 @@ describe('mxcadExtRef', () => {
     });
 
     it('shows toast on failure', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockRejectedValue(new Error('Network offline'));
 
       const mockFile = new File(['data'], 'offline.xref');

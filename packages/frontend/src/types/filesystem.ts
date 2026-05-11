@@ -12,7 +12,7 @@
 /**
  * 文件系统相关类型定义
  * 
- * 原则：优先使用 Swagger 自动生成的 DTO 类型（从 ./api-client 导入）
+ * 原则：优先使用 Swagger 自动生成的 DTO 类型（从 @/api-sdk 导入）
  * 本文件仅保留：
  * 1. 前端扩展类型（在 DTO 基础上添加前端专用属性）
  * 2. 前端专用的 UI 状态类型
@@ -33,9 +33,8 @@ import type {
   PreloadingDataDto,
   CheckReferenceResponseDto,
   StorageInfoDto,
-  UserDto,
   ProjectMemberDto,
-} from './api-client';
+} from '@/api-sdk';
 
 // ============================================
 // 前端扩展类型（在 DTO 基础上添加前端专用属性）
@@ -107,7 +106,7 @@ export type TrashItem = FileSystemNodeDto;
 export type PreloadingData = PreloadingDataDto;
 export type CheckReferenceExistsResult = CheckReferenceResponseDto;
 export type StorageInfo = StorageInfoDto;
-export type User = UserDto;
+
 export type Member = ProjectMemberDto;
 
 // ============================================

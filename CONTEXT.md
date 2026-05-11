@@ -78,6 +78,38 @@ CloudCAD 和 mxcad-app 的关系：
 
 <br />
 
+## 上传协议（手动分片上传）
+
+Tus 协议已完全移除，当前使用自实现的手动分片上传。
+
+### API 端点（当前）
+
+| 端点 | 用途 |
+|------|------|
+| `POST /api/v1/mxcad/files/fileisExist` | 秒传检查（文件是否已存在） |
+| `POST /api/v1/mxcad/files/chunkisExist` | 检查分片是否已上传 |
+| `POST /api/v1/mxcad/files/uploadFiles` | 上传分片 / 合并文件 |
+| `POST /api/v1/mxcad/up_ext_reference_dwg/:nodeId` | 上传外部参照 DWG |
+| `POST /api/v1/mxcad/up_ext_reference_image` | 上传外部参照图片 |
+
+### 前端上传链路
+
+`MxCadUploader` → `useMxCadUploadNative.selectFiles()` → `calculateFileHash()` → `uploadMxCadFile()` → `mxcadApi.checkFileExist/chunkisExist/uploadFiles` → `POST /api/mxcad/files/*`
+
+冲突策略 `skip/overwrite/rename` 前后端一致，通过 `FormData` 字段传递。
+
+### 后端上传处理
+
+`MxCadController` → `MxCadService` → `ChunkUploadManagerService`（分片检查+触发合并）→ `FileMergeService.mergeConvertFile()`（合并+转换+节点创建+SVN）
+
+### 已完成的清理
+
+- ✅ `@tus/server` / `@tus/file-store` 依赖及 mock 已移除
+- ✅ `@uppy/core` / `@uppy/tus` / `tus-js-client` 依赖已移除
+- ✅ `MxCadUppyUploader` 组件已移除
+- ✅ 前端所有 `uploadFileWithUppy` / `uploadBlobWithTus` / `uploadFilePublic` 调用已替换为 `uploadMxCadFile` 或 `uploadFileWithFormData`
+- ✅ `node_modules/.vite/deps/@uppy_*` 构建缓存已清理
+
 ## 保存流程
 
 平台只有 mxweb 是核心流通格式。dwg/dxf 仅在下载/导出时按需转换。
@@ -121,189 +153,6 @@ CloudCAD 和 mxcad-app 的关系：
 - [ADR 0004 - 前端 CSS Z-Index 层级体系](docs/adr/0004-frontend-css-layer-system.md)
 - [AI E2E 测试指南](packages/frontend/e2e/guide/AI_E2E_GUIDE.md) — AI 自动生成 Playwright E2E 测试的 prompt 指南，按业务域组织（身份权限/图纸内容/图纸组织/资源库/系统管理）
 
-## 图纸打开流程对齐验证（2026-05-09）
-
-`refactor/circular-deps` 分支与 `main` 分支逐项对比，用户交互层全部一致：
-
-| # | 验证项 | 结论 |
-|---|--------|------|
-| 1 | 路由跳转（`/cad-editor/:fileId`、`?library=drawing/block`、`?v=`） | ✅ 一致 |
-| 2 | 文件获取与错误提示（401/404/网络错误/deletedAt/!fileHash/`!updatedAt`新增保护） | ✅ 一致 |
-| 3 | 权限校验（CAD_SAVE/FILE_DOWNLOAD/CAD_EXTERNAL_REFERENCE） | ✅ 一致 |
-| 4 | mxcad 初始化（`initializeMxCADView`/`openFile`/`openFile_noCache`/`openUploadedFile`） | ✅ 一致 |
-| 5 | mxweb URL 构造（`/api/v1/mxcad/filesData/...` 路径前缀同步） | ✅ 一致 |
-| 6 | 加载状态（加载/错误/空/成功，Strict Mode 白屏修复，canvas 渲染后隐藏 loading） | ✅ 增强 |
-| 7 | 后端 mxcad 模块（重构为 core/save/upload/infra/conversion 子模块，API 端点未变） | ✅ 一致 |
-| 8 | 外部参照（检查缺失参照 → 上传 → 打开文件） | ✅ 一致 |
-
-**关键发现：** `openFile` 的 `noCache` 参数当前分支已保留（类方法 `MxCADManager.openFile(fileUrl, noCache?)`），`openFile_noCache` 命令正常注册。后端重构无 API 契约变更。
-
-## 移动/复制功能对齐验证（2026-05-09）
-
-`refactor/circular-deps` 分支与 `main` 分支逐项对比，move/copy 文件、文件夹功能全部一致：
-
-| # | 验证项 | 结论 |
-|---|--------|------|
-| 1 | API 路由（`POST nodes/:nodeId/move`、`POST nodes/:nodeId/copy`） | ✅ 一致 |
-| 2 | 请求体参数（`{ targetParentId }`） | ✅ 一致 |
-| 3 | 后端 moveNode 逻辑（校验→去重命名→更新 parentId/projectId→清除配额缓存） | ✅ 一致 |
-| 4 | 后端 copyNode 逻辑（校验→去重命名→copyNodeRecursive→清除配额缓存） | ✅ 一致 |
-| 5 | 后端 copyNodeRecursive（创建节点→复制存储文件→递归复制子节点→子节点去重命名） | ✅ 一致 |
-| 6 | 权限控制（`FILE_MOVE`/`FILE_COPY` 枚举值及角色分配） | ✅ 一致 |
-| 7 | 前端资源库 move/copy（`useLibraryMutations` hook，react-query mutation，相同 API 参数） | ✅ 一致 |
-| 8 | 前端项目文件 move/copy（`useMoveCopy` hook，支持单选和批量） | ✅ 一致 |
-| 9 | CSRF 保护 | 🟡 新增（安全增强，不影响功能） |
-
-**关键发现：** 后端 moveNode/copyNode/copyNodeRecursive 逻辑逐行一致。变更仅为文件位置移动（`file-system/services/` → `file-operations/`）、Controller 直调子 Service（跳过 Facade）、前端重构为独立 hook + react-query、存储抽象层 `IStorageProvider` 替换直接 `fs` 调用。无 API 契约变更。
-
-## 前端架构重构（2026-05-09）
-
-`refactor/circular-deps` 分支前端重构要点：
-
-- **API 层**：手写 `services/*Api.ts` 替换为自动生成 `@/api-sdk`（基于 OpenAPI 规范）
-- **资源库 hooks**：`useLibrary.ts` 单体 hook 拆分为 `useLibraryQuery`、`useLibraryMutations`、`useLibraryPagination`、`useLibraryQuota`、`useLibraryDownload`、`useLibraryModals`
-- **项目管理**：`FileSystemManager.tsx` 单体页面拆分为 `FileSystemManager/` 子组件 + hooks（`useDragAndDrop`、`useMoveCopy`、`useVersionHistory`）
-- **mxcad 管理**：`mxcadManager.ts` 单体服务拆分为 `mxcadManager/` 子模块（check、extRef、save、thumbnail、types）
-
-## 项目成员角色管理对齐验证（2026-05-09）
-
-`refactor/circular-deps` 分支与 `main` 分支逐项对比，成员角色管理功能完全一致：
-
-| # | 验证项 | 结论 |
-|---|--------|------|
-| 1 | 添加成员（DTO `roleId`→`projectRoleId`，语义不变） | ✅ 一致 |
-| 2 | 移除成员（新增软删除用户校验 + 错误日志） | ✅ 一致 |
-| 3 | 更新成员角色（逻辑不变，拒绝直接设置 OWNER） | ✅ 一致 |
-| 4 | 获取成员列表（返回字段含 `projectRoleId`/`projectRoleName`/`permissions`） | ✅ 一致 |
-| 5 | 项目角色 CRUD（返回类型从 `any`→强 Prisma include 类型） | ✅ 一致 |
-| 6 | 所有权转让（修复：前端误调用 `updateProjectMember`，改为 `POST .../transfer` 端点，事务内降级前所有者） | ✅ 已修复 |
-| 7 | 成员弹窗 UI（SDK 生成层替换手写 service 层，交互不变） | ✅ 一致 |
-| 8 | 权限检查（`IPermissionStore` 策略模式，`PrismaPermissionStore` 100% 等价原 Prisma 逻辑） | ✅ 增强 |
-
-**关键发现：** 所有权转让发现 bug — 前端 `MembersModal.tsx` 错误调用 `updateProjectMember({ roleName: 'PROJECT_OWNER' })`，后端 DTO 无此字段且服务端显式拒绝。已修复为 `client.post()` 直调正确端点 `POST /api/v1/file-system/projects/:projectId/transfer`。详见 ADR 0003。
-
-**已删除端点（无影响）：** `GET /roles/category/:category`、`GET /roles/project-roles/:id` — 无前端调用，文档已标记"待删除"。
-
-## 批量导入与上传协议对齐验证（2026-05-09）
-
-`refactor/circular-deps` 分支上传协议从手动分片上传迁移至 Tus 协议：
-
-### API 端点变化
-
-| 端点 | main | refactor/circular-deps | 结论 |
-|------|------|------------------------|------|
-| `POST /api/mxcad/files/chunkisExist` | ✅ | ❌ 删除 | Tus 替代 |
-| `POST /api/mxcad/files/uploadFiles` | ✅ | ❌ 删除 | Tus 替代 |
-| `POST /api/v1/files` (Tus) | ❌ | ✅ 新增 | `TusService` + `TusEventHandler` |
-| `PATCH /api/v1/files/:id` (Tus) | ❌ | ✅ 新增 | 分片上传 |
-| `HEAD /api/v1/files/:id` (Tus) | ❌ | ✅ 新增 | 断点续传检查 |
-| `POST /api/mxcad/files/fileisExist` | ✅ | ✅ | 秒传检查保留 |
-
-### 前端上传链路
-
-- main：`MxCadUploader` → `uploadMxCadFile()` → 手动分片 `POST uploadFiles`
-- 当前分支：`MxCadUppyUploader` → `uploadFileWithUppy()` → 秒传检查 `fileisExist` → Tus `POST /api/v1/files`
-- 冲突策略 `skip/overwrite/rename` 前后端一致，通过 `Upload-Metadata` header 传递
-
-### 后端上传处理
-
-- main：`mxcad.controller.ts` 直接处理分片合并和转换
-- 当前分支：`TusService`（`@tus/server`）接收分片 → `TusEventHandler.handleUploadFinish()` → `FileMergeService.mergeChunksWithPermission()` → 转换 + 节点创建
-- 支持登录用户（创建文件节点）和匿名用户（仅存储+转换）
-- 权限检查：`FILE_CREATE` 项目权限 + 冲突策略（`skip`/`overwrite`/`rename`）
-
-### 本地批量导入脚本
-
-`scripts/batch-import-library.js` 已从旧分片上传端点改造为 Tus 协议：
-- 删除 `checkChunkExist()` → `POST /api/mxcad/files/chunkisExist`
-- 删除 `uploadChunk()` → 手动 multipart `POST /api/mxcad/files/uploadFiles`
-- 新增 `tusCreateSession()` / `tusPatchChunk()` / `tusHeadUpload()` → Tus `POST/PATCH/HEAD /api/v1/files`
-- 保留：秒传检查、登录、文件夹创建、子节点查询、缩略图复制、断点续传进度文件
-
-**关键发现：** main 分支的 `scripts/batch-import-library.js` 在当前分支无法运行——依赖的 `chunkisExist` 和 `uploadFiles` 端点已删除，需用 Tus 协议替代。
-
-## 图纸库/图块库分页加载对齐验证（2026-05-09）
-
-`refactor/circular-deps` 分支图纸库和图块库分页加载完全一致，共用统一代码路径：
-
-| # | 验证项 | 结论 |
-|---|--------|------|
-| 1 | 核心组件（`ProjectDrawingsPanelMain`，`libraryType` 区分） | ✅ 统一 |
-| 2 | 分页 hook（`useLoadNodes` → `useLibraryQuery`） | ✅ 共用 |
-| 3 | PAGE_SIZE（20条/页） | ✅ 一致 |
-| 4 | 向下预加载阈值（距底部 500px） | ✅ 一致 |
-| 5 | 向上预加载阈值（距顶部 200px） | ✅ 一致 |
-| 6 | 滚动位置恢复（向上翻页补偿 heightDiff，向下不调整） | ✅ 一致 |
-| 7 | 分页控件（首页/上一页/跳转/下一页/末页） | ✅ 共用 |
-
-**关键差异：** 仅 `libraryType` 参数区分 API 端点（`/library/drawing/` vs `/library/block/`）和权限检查（`LIBRARY_DRAWING_MANAGE` vs `LIBRARY_BLOCK_MANAGE`），分页逻辑零差异。
-
-## 用户管理对齐验证（2026-05-09）
-
-`refactor/circular-deps` 分支与 `main` 分支逐项对比，用户管理核心功能完全一致：
-
-### 后端 Controller（`users.controller.ts`）
-
-| # | 验证项 | 结论 |
-|---|--------|------|
-| 1 | 创建用户 `POST /users` | ✅ 一致 |
-| 2 | 用户列表 `GET /users`（搜索/筛选/排序/分页） | ✅ 一致 |
-| 3 | 邮箱搜索 `GET /users/search/by-email` | ✅ 一致 |
-| 4 | 成员搜索 `GET /users/search` | ✅ 一致 |
-| 5 | 当前用户信息 `GET /users/profile/me` | ✅ 一致 |
-| 6 | 仪表盘统计 `GET /users/stats/me` | ✅ 一致 |
-| 7 | 更新个人信息 `PATCH /users/profile/me`（含用户名修改限制） | ✅ 一致 |
-| 8 | 单用户查询 `GET /users/:id` | ✅ 一致 |
-| 9 | 更新用户 `PATCH /users/:id` | ✅ 一致 |
-| 10 | 软删除用户 `DELETE /users/:id` | ✅ 一致 |
-| 11 | 立即注销 `POST /users/:id/delete-immediately` | ✅ 一致 |
-| 12 | 更新用户状态 `PATCH /users/:id/status` | ✅ 一致（独立 DTO 替代内联参数） |
-| 13 | 自助注销 `POST /users/deactivate-account` | ✅ 一致（方法名 `deactivateAccount`→`deactivate`） |
-| 14 | 自助恢复 `POST /users/me/restore` | ✅ 一致 |
-| 15 | 修改密码 `POST /users/change-password` | ✅ 一致 |
-| 16 | 管理员恢复 `POST /users/:id/restore` | ✅ 新增（main 分支后端缺失此端点，前端已调用但后端无实现） |
-
-### 后端 Service（`users.service.ts`）
-
-| 方面 | main | 当前分支 | 结论 |
-|------|------|---------|------|
-| 密码哈希 | `bcrypt.hash()` 硬编码 | `IPasswordHasher` 接口注入 | 等价增强 |
-| 注销验证 | 内联 if-else 链（4种验证硬编码） | 策略模式 `IAccountVerificationStrategy[]` | 等价增强 |
-| 恢复验证 | 内联 if-else 链 | 复用策略模式 | 等价增强 |
-| Service 接口 | 无 `implements` | `implements IUserService` | 等价增强 |
-| 生命周期事件 | 无 | `EventEmitter2` 发射 `user.created/restored/deactivated` | 新增能力 |
-| 唯一性校验 | `findFirst` 精确匹配 | `findFirst` 精确匹配（格式化差异） | ✅ 一致 |
-| 软删除逻辑 | `deletedAt` + 清除 phone/微信 | 相同 | ✅ 一致 |
-| ADMIN 账户保护 | 拒绝删除/注销 ADMIN 角色用户 | 相同 | ✅ 一致 |
-
-### 前端 UserManagement
-
-| 方面 | main | 当前分支 | 结论 |
-|------|------|---------|------|
-| 文件结构 | `UserManagement.tsx` 单文件 2416行 | `UserManagement/` 目录 16 文件 | 等价拆分 |
-| API 调用 | `getApiClient().UsersController_*`（手写） | `@/api-sdk` 自动生成（OpenAPI） | 等价迁移 |
-| 状态管理 | 内联 `useState`（全部在组件内） | `useUserCRUD` / `useUserSearch` / `useUserForm` hooks | 等价拆分 |
-| 表单校验 | 内联 `validateForm()` | `userFormSchema.ts` + `useUserForm.ts` | 等价拆分 |
-| 样式 | 内联 `<style>` 标签 | `UserManagementStyles.ts` 独立文件 | 等价拆分 |
-| 测试 | 无 | 4 个 `.spec.ts` 文件 | 新增 |
-| 运行时配置 | `runtimeConfigApi.getPublicConfigs()` 动态读取 | `useUserCRUD` 中写死 `mailEnabled: false` | ⚠️ 待关注 |
-| 用户列表/搜索/筛选/排序/分页 | ✅ | ✅ | 功能一致 |
-| 创建/编辑/删除用户 | ✅ | ✅ | 功能一致 |
-| 存储配额管理 | ✅（内联） | ✅（`UserQuotaModal` 独立组件） | 功能一致 |
-| 已注销用户清理 | ✅ | ✅ | 功能一致 |
-| 活跃/已注销 Tab 切换 | ✅ | ✅ | 功能一致 |
-| 管理员恢复 | ⚠️ 前端调用但后端端点缺失 | ✅ 前后端均已实现 | 已修复 |
-
-### 关键发现
-
-1. **main 分支前后端不一致已修复：** main 分支前端 `usersApi.ts` 调用了 `UsersController_restore`，但后端 controller 无此端点。当前分支已补全，前端通过 `useUserCRUD.restoreMutation` → `usersControllerRestore` 正常调用。
-2. **`mailEnabled`/`smsEnabled` 写死为 false：** 当前分支 `useUserCRUD` 中硬编码为 `false`，main 分支通过 `runtimeConfigApi.getPublicConfigs()` 动态读取。此差异不影响用户管理核心流程（仅影响创建用户表单中邮箱/手机字段的必填校验）。
-3. **后端架构增强：** 验证策略模式（`IAccountVerificationStrategy`）和密码哈希接口（`IPasswordHasher`）为纯架构重构，不改变业务行为。
-
-## Auth 认证体系架构（2026-05-09）
-
-`refactor/circular-deps` 分支引入 `IAuthProvider` 策略模式重构认证模块。
-
 ### 服务职责
 
 | 服务 | 职责 | 所属层 |
@@ -338,10 +187,4 @@ CloudCAD 和 mxcad-app 的关系：
 - `forwardRef` 已在 AuthModule 中移除，模块依赖为单向：AuthModule → UsersModule, CommonModule。
 - `session.controller.ts` 已移除 — 前后端均无调用方，功能由 JWT + Cookie 替代。
 
-### 已知差异（vs main）
-
-| 差异 | 影响 | 状态 |
-|---|---|---|
-| `loginByPhone` 错误响应格式变更（`code`/`phone` 字段丢失，412→400） | 前端 `PHONE_NOT_REGISTERED` 判断失效，需恢复结构化错误 | ⏸️ 暂缓修复 |
-| `registerByPhone` 业务逻辑留在 `AuthFacadeService` | 仍依赖 `prisma`/`smsVerificationService`/`runtimeConfigService`，未完全委托给 Provider | 后续迭代 |
 

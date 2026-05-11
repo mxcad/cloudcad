@@ -4,7 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef } from 'react';
-import { useUppyUpload, type LoadFileParam } from './useUppyUpload';
+import type { LoadFileParam } from './useMxCadUploadNative';
+import { uploadMxCadFile } from '../utils/mxcadUploadUtils';
+import { calculateFileHash } from '../utils/hashUtils';
 import { openUploadedFile } from '../services/mxcadManager';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
@@ -25,7 +27,6 @@ export function useFileDropUpload({ nodeId, onSuccess }: UseFileDropUploadOption
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const dragCounterRef = useRef(0);
-  const { uploadFiles, destroy } = useUppyUpload();
 
   /**
    * 过滤允许的文件类型
@@ -38,32 +39,35 @@ export function useFileDropUpload({ nodeId, onSuccess }: UseFileDropUploadOption
   }, []);
 
   /**
-   * 处理文件上传
+   * 处理文件上传 - 使用手动分片上传
    */
   const handleFilesUpload = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (files.length === 0 || uploading) return;
 
       setUploading(true);
 
-      uploadFiles(files, {
-        nodeId,
-        onSuccess: async (param: LoadFileParam) => {
-          try {
-            await openUploadedFile(param.nodeId!, nodeId);
-          } catch (error) {
-            console.error('[useFileDropUpload] 打开文件失败:', error);
+      for (const file of files) {
+        try {
+          const hash = await calculateFileHash(file);
+          const result = await uploadMxCadFile({
+            file,
+            hash,
+            nodeId,
+          });
+
+          if (result.nodeId) {
+            await openUploadedFile(result.nodeId, nodeId);
+            onSuccess?.();
           }
-          setUploading(false);
-          onSuccess?.();
-        },
-        onError: (error: string) => {
+        } catch (error) {
           console.error('[useFileDropUpload] 上传失败:', error);
-          setUploading(false);
-        },
-      });
+        }
+      }
+
+      setUploading(false);
     },
-    [nodeId, uploading, uploadFiles, onSuccess]
+    [nodeId, uploading, onSuccess]
   );
 
   /**

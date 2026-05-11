@@ -4,9 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback } from 'react';
-import { versionControlControllerGetFileHistory } from '@/api-sdk';
+import { versionControlControllerGetFileHistory, SvnLogEntryDto } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
-import type { SvnLogEntryDto } from '@/types/api-client';
+
 import { handleError } from '@/utils/errorHandler';
 
 export interface UseVersionHistoryReturn {

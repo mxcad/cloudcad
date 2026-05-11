@@ -11,6 +11,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module, forwardRef } from '@nestjs/common';
+import { MulterModule } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { join } from 'path';
+import * as fs from 'fs';
 import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
@@ -18,7 +22,7 @@ import { MxcadExternalRefModule } from './external-ref/mxcad-external-ref.module
 import { MxcadSaveModule } from './save/mxcad-save.module';
 import { MxcadUploadModule } from './upload/mxcad-upload.module';
 import { MxcadCoreModule } from './core/mxcad-core.module';
-import { TusModule } from './tus/tus.module';
+import { ChunkUploadService } from './services/chunk-upload.service';
 import { DatabaseModule } from '../database/database.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -50,6 +54,47 @@ import { ConversionModule } from '../conversion';
       }),
       inject: [ConfigService],
     }),
+    MulterModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService<AppConfig>) => {
+        const config = configService.get('mxcadUploadPath', { infer: true });
+        const tempPath = configService.get('mxcadTempPath', { infer: true });
+        const maxFileSize = 500 * 1024 * 1024;
+
+        return {
+          storage: diskStorage({
+            destination: (req, file, cb) => {
+              if (req.body.chunk !== undefined) {
+                const fileMd5 = req.body.hash;
+                const tmpDir = join(tempPath, `chunk_${fileMd5}`);
+                fs.mkdirSync(tmpDir, { recursive: true });
+                cb(null, tmpDir);
+              } else {
+                fs.mkdirSync(config, { recursive: true });
+                cb(null, config);
+              }
+            },
+            filename: (req, file, cb) => {
+              const fileMd5 = req.body.hash;
+              if (req.body.chunk !== undefined) {
+                cb(null, `${req.body.chunk}_${fileMd5}`);
+              } else if (fileMd5) {
+                const ext = file.originalname.split('.').pop();
+                cb(null, `${fileMd5}.${ext}`);
+              } else {
+                cb(null, file.originalname);
+              }
+            },
+          }),
+          limits: {
+            fileSize: maxFileSize,
+            fields: 20,
+            fieldSize: 1024 * 1024,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
     MxcadInfraModule,
     MxcadConversionModule,
     MxcadNodeModule,
@@ -57,7 +102,6 @@ import { ConversionModule } from '../conversion';
     MxcadSaveModule,
     MxcadCoreModule,
     MxcadUploadModule,
-    TusModule,
     forwardRef(() => FileSystemModule),
     FileTreeModule,
     forwardRef(() => StorageModule),
@@ -66,14 +110,12 @@ import { ConversionModule } from '../conversion';
   ],
   controllers: [],
   providers: [
-    // 来自 FileSystemModule 的 FileSystemService 别名
+    ChunkUploadService,
     {
       provide: 'FileSystemServiceMain',
       useExisting: MainFileSystemService,
     },
-    // 权限守卫
     RequireProjectPermissionGuard,
-    // 注意：异常过滤器统一使用全局 GlobalExceptionFilter，不再单独注册 MxcadExceptionFilter
   ],
   exports: [MxcadConversionModule, MxcadInfraModule, MxcadUploadModule],
 })

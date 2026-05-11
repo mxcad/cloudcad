@@ -12,7 +12,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
-import { ApiResponseDto } from '../../common/dto/api-response.dto';
+
 
 export class DeactivateAccountDto {
   @ApiPropertyOptional({
@@ -54,7 +54,6 @@ export class DeactivateAccountResponseDto {
   message: string;
 }
 
-export class DeactivateAccountApiResponseDto extends ApiResponseDto<DeactivateAccountResponseDto> {
-  @ApiProperty({ type: () => DeactivateAccountResponseDto })
-  declare data: DeactivateAccountResponseDto;
+export class DeactivateAccountApiResponseDto extends DeactivateAccountResponseDto {
+
 }

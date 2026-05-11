@@ -16,7 +16,7 @@
  * 提供 mxweb 文件保存到节点的核心逻辑和保存确认 UI。
  */
 
-import { uploadBlobWithTus } from '../../utils/uppyUploadUtils';
+import { uploadFileWithFormData } from '../../utils/mxcadUploadUtils';
 import { handleError } from '@/utils/errorHandler';
 import { escapeHtml } from '@/utils/sanitize';
 import type { SaveMxwebParams } from './mxcadTypes';
@@ -52,16 +52,15 @@ export function createSaveFormData(
  */
 export async function saveMxwebToNode(params: SaveMxwebParams): Promise<void> {
   try {
-    const metadata: Record<string, string> = {
-      uploadType: 'save',
-      overwriteNodeId: params.nodeId,
-    };
-    if (params.commitMessage) metadata.commitMessage = params.commitMessage;
-    if (params.expectedTimestamp) metadata.expectedTimestamp = params.expectedTimestamp;
-    await uploadBlobWithTus({
+    const filename = params.filename || 'drawing.mxweb';
+    await uploadFileWithFormData({
       blob: params.blob,
-      filename: params.filename || 'drawing.mxweb',
-      metadata,
+      endpoint: `/api/v1/mxcad/savemxweb/${params.nodeId}`,
+      filename,
+      metadata: {
+        ...(params.commitMessage ? { commitMessage: params.commitMessage } : {}),
+        ...(params.expectedTimestamp ? { expectedTimestamp: params.expectedTimestamp } : {}),
+      },
     });
   } catch (error) {
     handleError(error, 'mxcadSave: saveMxwebToNode');

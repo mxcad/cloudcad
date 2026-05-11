@@ -30,7 +30,7 @@ const config: Config = {
 		],
 	},
 	transformIgnorePatterns: [
-		"node_modules/(?!(flydrive|@tus|@css-inline)/)",
+		"node_modules/(?!(flydrive|@css-inline)/)",
 	],
 	collectCoverageFrom: [
 		"src/**/*.(t|j)s",

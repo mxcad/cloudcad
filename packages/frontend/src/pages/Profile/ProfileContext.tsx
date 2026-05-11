@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
-import { User } from '../../types/filesystem';
+import { UserDto } from '@/api-sdk';
+
 
 type TabType = 'info' | 'password' | 'email' | 'deactivate' | 'phone' | 'wechat';
 
@@ -18,7 +19,7 @@ interface ConfirmConfig {
 
 interface ProfileContextValue {
   // 用户信息
-  user: User | null;
+  user: UserDto | null;
   
   // 运行时配置
   mailEnabled: boolean;

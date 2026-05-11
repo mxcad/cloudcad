@@ -679,7 +679,7 @@ export class FileMergeService {
     suffix: string,
     convertedExt: string,
     context?: FileSystemNodeContext
-  ): Promise<{ ret: string; nodeId?: string }> {
+  ): Promise<{ ret: MxUploadReturn; nodeId?: string }> {
     const targetFile = `${fileHash}.${suffix}${convertedExt}`;
     let fileExists = false;
 
@@ -966,7 +966,7 @@ export class FileMergeService {
   /**
    * 处理一个已完成上传的完整文件（无需分片合并）
    *
-   * 用于 Tus 上传等场景：文件已在 uploads 目录中完成重命名（{hash}.{ext}），
+   * 用于分片上传合并后的完整文件：文件已在 uploads 目录中完成重命名（{hash}.{ext}），
    * 只需格式转换 + 创建节点 + 复制文件到节点目录 + 缩略图 + SVN。
    * 不再模拟分片合并流程（临时 chunk 目录、单 chunk 文件复制等）。
    *

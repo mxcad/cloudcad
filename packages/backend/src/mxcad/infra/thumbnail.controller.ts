@@ -70,13 +70,6 @@ export class ThumbnailController {
   ) {
     this.logger.log(`[checkThumbnail] 查询缩略图, nodeId: ${nodeId}`);
     try {
-      const node =
-        await this.mxCadService.getFileSystemNodeByNodeId(nodeId);
-      if (!node || !node.path) {
-        return res
-          .status(404)
-          .json({ code: -1, message: '文件不存在或没有 path' });
-      }
       const result =
         await this.mxCadService.checkThumbnailExists(nodeId);
       return res.json({ code: 0, message: 'ok', exists: result.exists });
@@ -138,20 +131,8 @@ export class ThumbnailController {
       const fileExt = path
         .extname(file.originalname || file.filename)
         .toLowerCase();
-      const extMap: Record<string, string> = {
-        '.png': 'png',
-        '.jpg': 'jpg',
-        '.jpeg': 'jpg',
-        '.webp': 'webp',
-      };
-      const thumbnailFormat = extMap[fileExt] as ThumbnailFormat | undefined;
-      if (!thumbnailFormat) {
-        return res.status(400).json({
-          code: -1,
-          message: `不支持的图片格式: ${fileExt}，仅支持 ${THUMBNAIL_FORMATS.join(', ')}`,
-        });
-      }
-      const targetFileName = getThumbnailFileName(thumbnailFormat);
+      
+      const targetFileName = getThumbnailFileName(fileExt as ThumbnailFormat);
       const targetFilePath = path.join(targetDir, targetFileName);
       if (fs.existsSync(targetFilePath)) {
         fs.unlinkSync(targetFilePath);

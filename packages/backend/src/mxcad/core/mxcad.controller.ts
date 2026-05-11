@@ -17,6 +17,7 @@ import {
   Head,
   Body,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   HttpStatus,
   HttpCode,
@@ -36,7 +37,7 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import type { Response, Request } from 'express';
 
 import {
@@ -72,9 +73,14 @@ import { FileConversionService } from '../conversion/file-conversion.service';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { StorageQuotaInterceptor } from '../../common/interceptors/storage-quota.interceptor';
+import { MxUploadReturn } from '../enums/mxcad-return.enum';
+import { CheckChunkExistDto, CheckChunkExistResponseDto } from '../dto/check-chunk-exist.dto';
+import { UploadFilesDto } from '../dto/upload-files.dto';
+import { UploadFileResponseDto } from '../dto/upload-file-response.dto';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
@@ -112,10 +118,41 @@ export class MxCadController {
   }
 
   /**
+   * 检查分片是否存在
+   */
+  @Post('files/chunkisExist')
+  @OptionalAuth()
+  @UseGuards(RequireProjectPermissionGuard)
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({
+    status: 200,
+    description: '检查文件是否存在',
+    type: CheckChunkExistResponseDto,
+  })
+  async checkChunkExist(
+    @Body() body: CheckChunkExistDto,
+    @Req() request: MxCadRequest,
+  ) {
+    this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
+    const context = await this.buildContextFromRequest(request);
+    const result = await this.mxCadService.checkChunkExist(
+      body.chunk,
+      body.fileHash,
+      body.size,
+      body.chunks,
+      body.filename,
+      context
+    );
+    return { exists: result.ret === MxUploadReturn.kChunkAlreadyExist };
+  }
+
+  /**
    * 检查文件是否存在（秒传）
    */
   @Post('files/fileisExist')
-  @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
+  @OptionalAuth()
+  @UseGuards(RequireProjectPermissionGuard)
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({
@@ -140,11 +177,103 @@ export class MxCadController {
       body.filename,
       body.fileHash,
       context,
-    )) as { ret: string; nodeId?: string };
+    ));
     return {
-      exists: result.ret === 'fileAlreadyExist',
+      exists: result.ret === MxUploadReturn.kFileAlreadyExist,
       nodeId: result.nodeId,
     };
+  }
+
+  /**
+   * 上传文件（支持分片）
+   */
+  @Post('files/uploadFiles')
+  @OptionalAuth()
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 200,
+    description: '文件上传成功',
+    type: UploadFileResponseDto,
+  })
+  async uploadFile(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: UploadFilesDto,
+    @Req() request: MxCadRequest,
+  ) {
+    const file = files && files.length > 0 ? files[0] : null;
+    this.logger.log(
+      `[uploadFile] files count: ${files?.length || 0}, file exists: ${!!file}, file size: ${file?.size}, body: ${JSON.stringify(body)}`
+    );
+
+    const isMergeRequest = !file && body.chunks !== undefined;
+
+    if (!isMergeRequest && !file) {
+      throw new BadRequestException('缺少上传文件');
+    }
+
+    if (!body.hash || !body.name || !body.size) {
+      throw new BadRequestException('缺少必要参数: hash, name 或 size');
+    }
+
+    if (body.chunk !== undefined && body.chunks === undefined) {
+      throw new BadRequestException('缺少必要参数: chunks');
+    }
+
+    const context = await this.buildContextFromRequest(request);
+
+    if (isMergeRequest) {
+      if (body.chunks === undefined) {
+        throw new BadRequestException('缺少必要参数: chunks');
+      }
+
+      const result = await this.mxCadService.mergeChunksWithPermission(
+        body.hash,
+        body.name,
+        body.size,
+        body.chunks,
+        context,
+        body.srcDwgNodeId,
+      );
+      return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
+    }
+
+    if (body.chunk !== undefined) {
+      this.logger.log(
+        `[uploadFiles] 收到分片上传请求: chunk=${body.chunk}, chunks=${body.chunks}, hash=${body.hash}, filePath=${file?.path}`
+      );
+
+      if (body.chunks === undefined) {
+        throw new BadRequestException('缺少必要参数: chunks');
+      }
+
+      if (!file) {
+        throw new BadRequestException('缺少上传文件');
+      }
+
+      const result = await this.mxCadService.uploadChunkWithPermission(
+        body.hash,
+        body.name,
+        body.size,
+        body.chunk,
+        body.chunks,
+        context
+      );
+      return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
+    } else {
+      if (!file) {
+        throw new BadRequestException('缺少上传文件');
+      }
+
+      const result = await this.mxCadService.uploadAndConvertFileWithPermission(
+        file.path,
+        body.hash,
+        body.name,
+        body.size,
+        context
+      );
+      return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
+    }
   }
 
   /**
@@ -1543,25 +1672,21 @@ export class MxCadController {
     request: MxCadRequest
   ): Promise<MxCadContext> {
     try {
-      // 1. 必须从 Authorization header 获取 JWT token
-      if (!request.headers.authorization) {
-        throw new UnauthorizedException(
-          '缺少Authorization header，请提供有效的JWT token'
-        );
+      // 1. 匿名用户：返回空上下文，允许上传但不记录数据库
+      if (!request.user) {
+        this.logger.log('匿名用户访问，使用空上下文');
+        const context: MxCadContext & { isLibrary?: boolean; isAnonymous?: boolean } = {
+          userId: null as unknown as string,
+          userRole: '',
+          nodeId: '',
+          isAnonymous: true,
+        };
+        return context;
       }
 
-      const token = request.headers.authorization.replace('Bearer ', '');
-
-      let payload;
-      try {
-        payload = this.jwtService.verify(token);
-      } catch (error) {
-        throw new UnauthorizedException('JWT token无效或已过期');
-      }
-
-      // 2. 验证用户存在且状态正常
+      // 2. 验证用户状态正常
       const userData = await this.mxCadService.findUserById(
-        payload.sub,
+        request.user.id,
         { id: true, email: true, username: true, nickname: true, roleId: true, status: true }
       );
 
@@ -1573,7 +1698,7 @@ export class MxCadController {
         throw new UnauthorizedException('用户账号已被禁用');
       }
 
-      this.logger.log(`JWT 验证成功: ${userData.username}`);
+      this.logger.log(`用户认证成功: ${userData.username}`);
 
       // 3. 从多个来源获取节点信息：
       // - POST 请求：从 request.body 获取
@@ -1629,6 +1754,26 @@ export class MxCadController {
   private async validateTokenAndGetUserId(
     request: MxCadRequest
   ): Promise<string> {
+    // 优先使用 NestJS Guard 已验证的 request.user 信息
+    // 避免重复 JWT 验证（消除 MxCadModule 本地 JwtModule 与全局 JwtModule 配置不一致导致的 401）
+    if (request.user) {
+      const userData = await this.mxCadService.findUserById(
+        request.user.id,
+        { id: true, status: true }
+      );
+
+      if (!userData) {
+        throw new UnauthorizedException('用户不存在');
+      }
+
+      if (userData.status !== 'ACTIVE') {
+        throw new UnauthorizedException('用户账号已被禁用');
+      }
+
+      return userData.id;
+    }
+
+    // Fallback: 手动验证 JWT（兼容无 Guard 保护的调用路径）
     const authorization = request.headers.authorization;
 
     if (!authorization) {

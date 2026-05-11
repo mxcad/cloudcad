@@ -15,7 +15,7 @@ import { useProjectRoleCRUD } from './hooks/useProjectRoleCRUD';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
 import { useNotification } from '../../contexts/NotificationContext';
 import { ProjectPermission } from '../../constants/permissions';
-import type { ProjectRoleDto } from '../../types/api-client';
+import type { ProjectRoleDto } from '@/api-sdk';
 
 // 角色名称中文映射
 const ROLE_NAME_MAP: Record<string, string> = {

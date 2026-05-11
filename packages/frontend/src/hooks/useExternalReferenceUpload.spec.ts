@@ -19,9 +19,9 @@ vi.mock('../utils/authCheck', () => ({
   isAuthenticated: () => true,
 }));
 
-// Mock uploadBlobWithTus
-vi.mock('../utils/uppyUploadUtils', () => ({
-  uploadBlobWithTus: vi.fn(),
+// Mock uploadFileWithFormData from mxcadUploadUtils
+vi.mock('../utils/mxcadUploadUtils', () => ({
+  uploadFileWithFormData: vi.fn(),
 }));
 
 // Mock SDK (still needed for preloading data + existence checks)
@@ -174,7 +174,7 @@ describe('useExternalReferenceUpload', () => {
 
   it('should call onSuccess when all files uploaded successfully', async () => {
     const onSuccess = vi.fn();
-    const { uploadBlobWithTus } = await import('../utils/uppyUploadUtils');
+    const { uploadFileWithFormData } = await import('../utils/mxcadUploadUtils');
 
     const mockPreloadingData = {
       tz: false,
@@ -191,7 +191,7 @@ describe('useExternalReferenceUpload', () => {
       data: { exists: false },
     } as any);
 
-    vi.mocked(uploadBlobWithTus).mockResolvedValue({});
+    vi.mocked(uploadFileWithFormData).mockResolvedValue({});
 
     const { result } = renderHook(() =>
       useExternalReferenceUpload({

@@ -21,7 +21,7 @@ import {
   IsMobilePhone,
   ValidationArguments,
 } from 'class-validator';
-import { ApiResponseDto } from '../../common/dto/api-response.dto';
+
 import { IsMatch } from '../../common/decorators/validation.decorator';
 
 export class ForgotPasswordDto {
@@ -146,19 +146,16 @@ export class ChangePasswordResponseDto {
   message: string;
 }
 
-export class ForgotPasswordApiResponseDto extends ApiResponseDto<ForgotPasswordResponseDto> {
-  @ApiProperty({ type: () => ForgotPasswordResponseDto })
-  declare data: ForgotPasswordResponseDto;
+export class ForgotPasswordApiResponseDto extends ForgotPasswordResponseDto {
+
 }
 
-export class ResetPasswordApiResponseDto extends ApiResponseDto<ResetPasswordResponseDto> {
-  @ApiProperty({ type: () => ResetPasswordResponseDto })
-  declare data: ResetPasswordResponseDto;
+export class ResetPasswordApiResponseDto extends ResetPasswordResponseDto {
+
 }
 
-export class ChangePasswordApiResponseDto extends ApiResponseDto<ChangePasswordResponseDto> {
-  @ApiProperty({ type: () => ChangePasswordResponseDto })
-  declare data: ChangePasswordResponseDto;
+export class ChangePasswordApiResponseDto extends ChangePasswordResponseDto {
+
 }
 
 // 绑定邮箱相关 DTO
@@ -194,7 +191,6 @@ export class BindEmailResponseDto {
   message: string;
 }
 
-export class BindEmailApiResponseDto extends ApiResponseDto<BindEmailResponseDto> {
-  @ApiProperty({ type: () => BindEmailResponseDto })
-  declare data: BindEmailResponseDto;
+export class BindEmailApiResponseDto extends BindEmailResponseDto {
+
 }

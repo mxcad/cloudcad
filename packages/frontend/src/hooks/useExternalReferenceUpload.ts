@@ -20,7 +20,7 @@ import type {
   UseExternalReferenceUploadReturn,
 } from '../types/filesystem';
 
-import { uploadBlobWithTus } from '../utils/uppyUploadUtils';
+import { uploadFileWithFormData } from '../utils/mxcadUploadUtils';
 import { handleError } from '../utils/errorHandler';
 import { isAuthenticated } from '../utils/authCheck';
 import { useUIStore } from '../stores/uiStore';
@@ -403,10 +403,14 @@ export const useExternalReferenceUpload = (
       );
 
       try {
+        const extRefEndpoint = fileInfo.type === 'img'
+          ? '/api/mxcad/up_ext_reference_image'
+          : `/api/mxcad/up_ext_reference_dwg/${id}`;
         if (isLoggedIn) {
-          // 已登录：通过 Tus 上传外部参照文件
-          await uploadBlobWithTus({
+          // 已登录：通过 FormData 上传外部参照文件
+          await uploadFileWithFormData({
             blob: fileInfo.source,
+            endpoint: extRefEndpoint,
             filename: fileInfo.name,
             metadata: {
               uploadType: 'extRef',
@@ -416,9 +420,10 @@ export const useExternalReferenceUpload = (
             },
           });
         } else {
-          // 匿名：通过 Tus 上传外部参照文件
-          await uploadBlobWithTus({
+          // 匿名：通过 FormData 上传外部参照文件
+          await uploadFileWithFormData({
             blob: fileInfo.source,
+            endpoint: extRefEndpoint,
             filename: fileInfo.name,
             metadata: {
               uploadType: 'extRef',

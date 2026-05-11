@@ -55,7 +55,9 @@ export async function uploadThumbnail(
     const formData = new FormData();
     formData.append('file', blob, 'thumbnail.png');
 
-    await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: formData as unknown as UploadThumbnailDto });
+    await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: {
+      file: blob,
+    } });
     return true;
   } catch (error) {
     handleError(error, 'mxcadThumbnail: uploadThumbnail');

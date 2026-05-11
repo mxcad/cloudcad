@@ -7,7 +7,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import MxCadUppyUploader, { MxCadUppyUploaderRef } from '@/components/MxCadUppyUploader';
+import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
 import { RefreshIcon } from '@/components/FileIcons';
@@ -36,7 +36,7 @@ interface FileSystemHeaderProps {
   projectFilter: ProjectFilterType;
   breadcrumbs: BreadcrumbItem[];
   canCreateProject: boolean;
-  uploaderRef: React.RefObject<MxCadUppyUploaderRef>;
+  uploaderRef: React.RefObject<MxCadUploaderRef>;
   getCurrentParentId: () => string;
   onSetSearchTerm: (term: string) => void;
   onSetViewMode: (mode: 'grid' | 'list') => void;
@@ -369,7 +369,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
 
           {/* 上传组件 - 仅在项目/文件夹模式下显示 */}
           {!isAtRoot && (
-            <MxCadUppyUploader
+            <MxCadUploader
               ref={uploaderRef}
               nodeId={() => getCurrentParentId()}
               buttonText=""

@@ -56,7 +56,7 @@ async function copyFileOrDir(
 export class FileConversionUploadService {
   private readonly logger = new Logger(FileConversionUploadService.name);
 
-  private readonly checkingFiles: Map<string, Promise<{ ret: string }>> =
+  private readonly checkingFiles: Map<string, Promise<{ ret: MxUploadReturn }>> =
     new Map();
   private readonly mxcadUploadPath: string;
   private readonly filesDataPath: string;
@@ -467,7 +467,7 @@ export class FileConversionUploadService {
       userRole?: string;
       conflictStrategy?: 'skip' | 'overwrite' | 'rename';
     }
-  ): Promise<{ ret: string; nodeId?: string }> {
+  ): Promise<{ ret: MxUploadReturn; nodeId?: string }> {
     try {
       const suffix = filename.substring(filename.lastIndexOf('.') + 1);
       const convertedExt =

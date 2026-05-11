@@ -1,0 +1,383 @@
+﻿
+> frontend@0.0.0 type-check D:\project\cloudcad\packages\frontend
+> tsc --noEmit
+
+src/components/modals/SaveAsModal.tsx(329,42): error TS2345: Argument of type '"pdf"' is not assignable to parameter of type 'SetStateAction<"dwg" | "dxf">'.
+src/components/modals/SaveAsModal.tsx(331,19): error TS2367: This comparison appears to be unintentional because the types '"dwg" | "dxf"' and '"pdf"' have no overlap.
+src/components/modals/SaveAsModal.tsx(340,42): error TS2345: Argument of type '"mxweb"' is not assignable to parameter of type 'SetStateAction<"dwg" | "dxf">'.
+src/components/modals/SaveAsModal.tsx(342,19): error TS2367: This comparison appears to be unintentional because the types '"dwg" | "dxf"' and '"mxweb"' have no overlap.
+src/pages/UserManagement/UserManagement.spec.tsx(171,97): error TS2344: Type 'UseUserSearchReturn' does not satisfy the constraint 'Procedure | Constructable'.
+src/services/mxcadManager/index.ts(1613,7): error TS2304: Cannot find name 'expectedTimestamp'.
+src/services/mxcadManager/index.ts(1614,36): error TS2304: Cannot find name 'expectedTimestamp'.
+src/services/mxcadManager/index.ts(1778,24): error TS2304: Cannot find name 'commitMessage'.
+src/services/mxcadManager/index.ts(1780,13): error TS2304: Cannot find name 'expectedTimestamp'.
+src/services/mxcadManager/index.ts(1780,35): error TS18004: No value exists in scope for the shorthand property 'expectedTimestamp'. Either declare one or provide an initializer.
+src/services/mxcadManager/mxcadSave.ts(63,24): error TS2551: Property 'fileName' does not exist on type 'SaveMxwebParams'. Did you mean 'filename'?
+src/test/msw/generated/handlers.ts(47,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(53,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(79,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(86,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(114,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(120,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(141,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(147,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(166,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(170,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(192,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(198,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(223,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(229,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(254,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(260,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(285,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(292,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(315,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(321,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(345,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(351,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(371,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(375,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(395,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(401,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(420,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(424,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(444,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(448,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(468,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(474,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(495,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(499,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(519,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(523,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(545,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(551,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(576,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(582,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(611,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(617,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(642,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(648,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(673,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(679,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(701,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(707,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(729,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(735,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(757,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(763,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(785,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(791,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(816,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(822,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(847,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(853,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(879,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(886,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(906,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(912,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(933,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(937,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(957,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(963,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(983,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(989,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1008,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1014,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1033,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1037,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1057,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1061,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1081,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1085,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1105,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1109,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1129,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1135,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1155,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1161,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1183,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1189,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1214,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1221,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1246,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1252,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1272,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1278,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1298,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1302,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1324,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1330,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1354,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1360,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1380,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1386,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1408,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1412,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1432,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1436,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1455,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1459,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1479,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1483,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1503,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1507,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1527,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1531,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1551,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1555,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1574,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1578,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1600,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1604,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1628,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1634,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1657,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1663,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1682,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1686,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1705,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1709,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1734,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1740,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1760,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1764,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1785,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1789,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1814,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1820,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1842,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1846,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1871,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1877,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1900,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1904,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1925,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1931,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1951,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1955,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(1976,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(1980,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2000,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2004,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2025,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2029,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2050,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2054,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2074,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2078,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2099,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2103,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2124,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2130,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2155,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2161,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2183,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2189,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2209,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2213,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2238,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2244,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2270,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2276,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2297,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2303,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2325,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2331,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2351,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2355,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2381,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2388,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2409,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2413,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2433,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2439,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2465,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2472,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2499,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2506,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2527,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2533,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2553,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2559,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2579,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2583,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2607,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2613,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2633,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2639,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2659,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2663,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2690,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2696,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2716,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2722,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2744,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2750,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2772,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2778,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2804,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2810,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2831,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2835,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2855,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2859,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2878,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2882,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2904,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2908,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2927,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2931,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2950,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2954,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(2975,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(2979,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3003,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3011,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3036,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3043,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3066,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3073,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3098,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3105,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3128,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3135,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3161,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3168,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3194,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3201,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3226,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3233,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3259,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3266,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3292,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3299,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3325,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3332,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3360,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3367,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3392,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3399,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3422,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3429,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3454,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3461,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3486,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3493,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3515,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3521,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3543,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3549,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3574,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3581,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3606,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3613,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3638,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3645,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3670,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3676,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3702,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3708,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3733,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3740,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3765,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3772,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3798,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3805,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3828,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3835,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3858,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3865,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3891,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3898,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3924,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3931,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3960,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(3967,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(3996,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4003,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4029,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4036,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4059,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4066,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4092,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4098,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4126,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4132,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4158,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4164,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4185,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4189,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4211,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4217,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4240,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4247,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4270,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4277,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4299,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4303,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4324,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4330,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4352,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4358,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4379,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4385,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4407,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4413,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4436,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4442,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4469,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4476,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4498,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4502,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4523,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4529,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4551,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4557,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4582,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4588,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4610,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4616,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4640,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4646,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4674,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4681,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4701,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4707,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4731,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4737,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4761,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4767,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4788,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4792,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4817,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4823,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4844,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4848,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4868,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4872,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4891,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4895,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4914,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4918,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4938,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4942,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4961,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4965,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(4985,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(4989,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(5011,11): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(5015,22): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(5045,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(5053,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(5082,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(5090,24): error TS2698: Spread types may only be created from object types.
+src/test/msw/generated/handlers.ts(5113,13): error TS2488: Type '[unknown, { status: number; }] | undefined' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/test/msw/generated/handlers.ts(5120,24): error TS2698: Spread types may only be created from object types.
+src/utils/tokenUtils.ts(62,39): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(data: string): string', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+  Overload 2 of 2, '(data: string): string', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+鈥塃LIFECYCLE鈥?Command failed with exit code 1.

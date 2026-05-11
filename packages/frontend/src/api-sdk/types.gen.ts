@@ -245,25 +245,82 @@ export type RegisterDto = {
     wechatTempToken?: string;
 };
 
-export type AuthApiResponseDto = {
+export type UserDto = {
     /**
-     * 响应状态码
+     * 用户ID
      */
-    code: 'SUCCESS' | 'ERROR';
+    id: string;
     /**
-     * 响应消息
+     * 用户邮箱（可能未绑定）
      */
-    message: string;
+    email?: string | null;
     /**
-     * 响应数据
+     * 用户名
      */
-    data: {
-        [key: string]: unknown;
+    username: string;
+    /**
+     * 昵称
+     */
+    nickname?: string;
+    /**
+     * 头像URL
+     */
+    avatar?: string;
+    /**
+     * 用户角色
+     */
+    role: {
+        id?: string;
+        name?: 'ADMIN' | 'USER_MANAGER' | 'FONT_MANAGER' | 'USER';
+        description?: string | null;
+        isSystem?: boolean;
+        permissions?: Array<{
+            permission?: string;
+        }>;
     };
     /**
-     * 响应时间戳
+     * 用户状态
      */
-    timestamp: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    /**
+     * 用户手机号（可能未绑定）
+     */
+    phone?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 手机号是否已验证
+     */
+    phoneVerified?: boolean;
+    /**
+     * 微信 OpenID
+     */
+    wechatId?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 登录方式 (LOCAL | WECHAT)
+     */
+    provider?: string;
+    /**
+     * 是否已设置密码
+     */
+    hasPassword?: boolean;
+};
+
+export type AuthApiResponseDto = {
+    /**
+     * 访问Token
+     */
+    accessToken: string;
+    /**
+     * 刷新Token
+     */
+    refreshToken: string;
+    /**
+     * 用户信息
+     */
+    user: UserDto;
 };
 
 export type LoginDto = {
@@ -477,7 +534,7 @@ export type ForgotPasswordDto = {
     validateContact: string;
 };
 
-export type ForgotPasswordResponseDto = {
+export type ForgotPasswordApiResponseDto = {
     /**
      * 消息
      */
@@ -498,25 +555,6 @@ export type ForgotPasswordResponseDto = {
      * 客服电话（邮件禁用时返回）
      */
     supportPhone?: string | null;
-};
-
-export type ForgotPasswordApiResponseDto = {
-    /**
-     * 响应状态码
-     */
-    code: 'SUCCESS' | 'ERROR';
-    /**
-     * 响应消息
-     */
-    message: string;
-    /**
-     * 响应数据
-     */
-    data: ForgotPasswordResponseDto;
-    /**
-     * 响应时间戳
-     */
-    timestamp: string;
 };
 
 export type ResetPasswordDto = {
@@ -546,30 +584,11 @@ export type ResetPasswordDto = {
     validateContact: string;
 };
 
-export type ResetPasswordResponseDto = {
+export type ResetPasswordApiResponseDto = {
     /**
      * 消息
      */
     message: string;
-};
-
-export type ResetPasswordApiResponseDto = {
-    /**
-     * 响应状态码
-     */
-    code: 'SUCCESS' | 'ERROR';
-    /**
-     * 响应消息
-     */
-    message: string;
-    /**
-     * 响应数据
-     */
-    data: ResetPasswordResponseDto;
-    /**
-     * 响应时间戳
-     */
-    timestamp: string;
 };
 
 export type BindEmailDto = {
@@ -583,30 +602,11 @@ export type BindEmailDto = {
     isRebind?: boolean;
 };
 
-export type BindEmailResponseDto = {
+export type BindEmailApiResponseDto = {
     /**
      * 消息
      */
     message: string;
-};
-
-export type BindEmailApiResponseDto = {
-    /**
-     * 响应状态码
-     */
-    code: 'SUCCESS' | 'ERROR';
-    /**
-     * 响应消息
-     */
-    message: string;
-    /**
-     * 响应数据
-     */
-    data: BindEmailResponseDto;
-    /**
-     * 响应时间戳
-     */
-    timestamp: string;
 };
 
 export type VerifyBindEmailDto = {
@@ -1138,30 +1138,11 @@ export type DeactivateAccountDto = {
     wechatConfirm?: string;
 };
 
-export type DeactivateAccountResponseDto = {
+export type DeactivateAccountApiResponseDto = {
     /**
      * 消息
      */
     message: string;
-};
-
-export type DeactivateAccountApiResponseDto = {
-    /**
-     * 响应状态码
-     */
-    code: 'SUCCESS' | 'ERROR';
-    /**
-     * 响应消息
-     */
-    message: string;
-    /**
-     * 响应数据
-     */
-    data: DeactivateAccountResponseDto;
-    /**
-     * 响应时间戳
-     */
-    timestamp: string;
 };
 
 export type RestoreAccountDto = {
@@ -1193,30 +1174,11 @@ export type ChangePasswordDto = {
     newPassword: string;
 };
 
-export type ChangePasswordResponseDto = {
+export type ChangePasswordApiResponseDto = {
     /**
      * 消息
      */
     message: string;
-};
-
-export type ChangePasswordApiResponseDto = {
-    /**
-     * 响应状态码
-     */
-    code: 'SUCCESS' | 'ERROR';
-    /**
-     * 响应消息
-     */
-    message: string;
-    /**
-     * 响应数据
-     */
-    data: ChangePasswordResponseDto;
-    /**
-     * 响应时间戳
-     */
-    timestamp: string;
 };
 
 /**
@@ -2018,6 +1980,40 @@ export type UploadFontDto = {
     target: FontUploadTarget;
 };
 
+export type CheckChunkExistDto = {
+    /**
+     * 文件 MD5 哈希值
+     */
+    fileHash: string;
+    /**
+     * 原始文件名
+     */
+    filename: string;
+    /**
+     * 节点ID
+     */
+    nodeId: string;
+    /**
+     * 分片索引
+     */
+    chunk: number;
+    /**
+     * 总分片数量
+     */
+    chunks: number;
+    /**
+     * 分片大小（字节）
+     */
+    size: number;
+};
+
+export type CheckChunkExistResponseDto = {
+    /**
+     * 分片是否存在
+     */
+    exists: boolean;
+};
+
 export type CheckFileExistDto = {
     /**
      * 文件 MD5 哈希值
@@ -2050,6 +2046,72 @@ export type FileExistResponseDto = {
      * 已存在文件的节点 ID（秒传时返回）
      */
     nodeId?: string;
+};
+
+export type UploadFilesDto = {
+    /**
+     * 上传的文件
+     */
+    file?: Blob | File;
+    /**
+     * 文件 MD5 哈希值
+     */
+    hash: string;
+    /**
+     * 原始文件名
+     */
+    name: string;
+    /**
+     * 文件总大小（字节）
+     */
+    size: number;
+    /**
+     * 分片索引（分片上传时必填）
+     */
+    chunk?: number;
+    /**
+     * 总分片数量（分片上传时必填）
+     */
+    chunks?: number;
+    /**
+     * 节点ID
+     */
+    nodeId?: string;
+    /**
+     * 源图纸节点 ID（外部参照上传时使用）
+     */
+    srcDwgNodeId?: string;
+    /**
+     * 文件ID（前端传递的标识符）
+     */
+    id?: string;
+    /**
+     * 文件类型（如 dwg、dxf）
+     */
+    type?: string;
+    /**
+     * 文件最后修改日期
+     */
+    lastModifiedDate?: string;
+    /**
+     * 冲突策略
+     */
+    conflictStrategy?: 'skip' | 'overwrite' | 'rename';
+};
+
+export type UploadFileResponseDto = {
+    /**
+     * 上传文件的节点 ID
+     */
+    nodeId?: string;
+    /**
+     * 是否为图纸文件
+     */
+    tz?: boolean;
+    /**
+     * 文件上传状态
+     */
+    ret?: string;
 };
 
 export type PreloadingDataDto = {
@@ -6096,6 +6158,22 @@ export type FontsControllerDownloadFontResponses = {
     200: unknown;
 };
 
+export type MxCadControllerCheckChunkExistData = {
+    body: CheckChunkExistDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/mxcad/files/chunkisExist';
+};
+
+export type MxCadControllerCheckChunkExistResponses = {
+    /**
+     * 检查文件是否存在
+     */
+    200: CheckChunkExistResponseDto;
+};
+
+export type MxCadControllerCheckChunkExistResponse = MxCadControllerCheckChunkExistResponses[keyof MxCadControllerCheckChunkExistResponses];
+
 export type MxCadControllerCheckFileExistData = {
     body: CheckFileExistDto;
     path?: never;
@@ -6111,6 +6189,22 @@ export type MxCadControllerCheckFileExistResponses = {
 };
 
 export type MxCadControllerCheckFileExistResponse = MxCadControllerCheckFileExistResponses[keyof MxCadControllerCheckFileExistResponses];
+
+export type MxCadControllerUploadFileData = {
+    body: UploadFilesDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/mxcad/files/uploadFiles';
+};
+
+export type MxCadControllerUploadFileResponses = {
+    /**
+     * 文件上传成功
+     */
+    200: UploadFileResponseDto;
+};
+
+export type MxCadControllerUploadFileResponse = MxCadControllerUploadFileResponses[keyof MxCadControllerUploadFileResponses];
 
 export type MxCadControllerGetPreloadingDataData = {
     body?: never;

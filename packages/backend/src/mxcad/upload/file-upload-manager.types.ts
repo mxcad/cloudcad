@@ -3,6 +3,8 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
+import { MxUploadReturn } from '../enums/mxcad-return.enum';
+
 export interface UploadChunkOptions {
   hash: string;
   name: string;
@@ -22,7 +24,7 @@ export interface MergeOptions {
 }
 
 export interface MergeResult {
-  ret: string;
+  ret: MxUploadReturn;
   tz?: boolean;
   nodeId?: string;
 }

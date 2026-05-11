@@ -1,3 +1,5 @@
+
+import { JsonValue } from './../api-sdk/core/queryKeySerializer.gen';
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
@@ -9,9 +11,7 @@
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
-
-import { mxcadApi } from '../services/mxcadApi';
-
+import { mxCadControllerCheckFileExist, mxCadControllerCheckChunkExist, mxCadControllerUploadFile } from "@/api-sdk"
 /**
  * MxCAD 上传配置接口
  */
@@ -99,14 +99,22 @@ export const validateFileSize = (
  * @returns 上传结果
  * @throws MxCadUploadError 上传失败时抛出
  */
-export const uploadMxCadFile = async (
+export const uploadMxCadFile = uploadFile;
+
+/**
+ * 分片上传文件（统一的上传逻辑）— 主要导出
+ *
+ * @deprecated 直接使用 uploadFile；uploadMxCadFile 保留作为向后兼容别名
+ */
+export async function uploadFile(
   options: MxCadUploadOptions
-): Promise<MxCadUploadResult> => {
+): Promise<MxCadUploadResult> {
   const {
     file,
     hash,
     nodeId,
     conflictStrategy,
+    forceUpload,
     onBeginUpload,
     onProgress,
     onFileQueued,
@@ -125,8 +133,13 @@ export const uploadMxCadFile = async (
     throw new MxCadUploadError(`文件过大: ${file.name} (最大100MB)`, file.name);
   }
 
-  if (!nodeId) {
-    throw new MxCadUploadError('缺少节点 ID，请确保已选择目标文件夹');
+  // forceUpload 模式：跳过节点检查和秒传检查（匿名/公开上传等场景）
+  if (forceUpload) {
+    // forceUpload 模式下 nodeId 可为空，后端从文件哈希推断上下文
+  } else {
+    if (!nodeId) {
+      throw new MxCadUploadError('缺少节点 ID，请确保已选择目标文件夹');
+    }
   }
 
   // 触发文件排队回调
@@ -135,9 +148,8 @@ export const uploadMxCadFile = async (
   const chunkSize = 5 * 1024 * 1024; // 5MB
   const totalChunks = Math.ceil(file.size / chunkSize);
 
-  // 构建请求参数
-
-  // 1. 检查文件是否已存在（秒传）
+  // 1. 检查文件是否已存在（秒传）— forceUpload 时跳过
+  if (!forceUpload) {
   const existRequest = {
     fileSize: file.size,
     fileHash: hash,
@@ -145,12 +157,14 @@ export const uploadMxCadFile = async (
     nodeId,
     conflictStrategy,
   };
-  const existData = await mxcadApi.checkFileExist(existRequest);
-
-  // mxcadApi 已自动解包，existData 直接是 { exists: boolean, nodeId?: string }
-  if (existData?.exists) {
+  const existData = await mxCadControllerCheckFileExist({
+    body: existRequest
+  });
+  const data = existData.data!
+ 
+  if (data?.exists) {
     // 秒传成功
-    const instantNodeId = existData.nodeId || nodeId;
+    const instantNodeId = data.nodeId || nodeId;
     return {
       file,
       hash,
@@ -161,6 +175,7 @@ export const uploadMxCadFile = async (
       isUseServerExistingFile: true,
       isInstantUpload: true,
     };
+  }
   }
 
   // 2. 开始分片上传
@@ -184,45 +199,44 @@ export const uploadMxCadFile = async (
       filename: file.name,
       nodeId,
     };
-    const chunkData = await mxcadApi.checkChunkExist(chunkRequest);
-
+    const chunkData = await mxCadControllerCheckChunkExist({
+      body: chunkRequest
+    });
+    const data = chunkData.data!
     // mxcadApi 已自动解包，chunkData 直接是 { exists: boolean }
-    if (chunkData?.exists) {
+    if (data.exists) {
       // 分片已存在，跳过
       onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
       continue;
     }
-
-    // 上传分片
-    const formData = new FormData();
-    formData.append('chunk', chunkIndex.toString());
-    formData.append('chunks', totalChunks.toString());
-    formData.append('name', file.name);
-    formData.append('hash', hash);
-    formData.append('size', file.size.toString());
-    formData.append('nodeId', nodeId);
-    if (conflictStrategy) {
-      formData.append('conflictStrategy', conflictStrategy);
-    }
-    formData.append('file', chunk);
-
-    const uploadData = await mxcadApi.uploadChunk(formData);
-
+    const uploadData = await mxCadControllerUploadFile({
+      body: {
+        chunk: chunkIndex,
+        chunks: totalChunks,
+        name: file.name,
+        hash: hash,
+        size: file.size,
+        nodeId: nodeId,
+        conflictStrategy: conflictStrategy,
+        file: chunk
+      }
+    });
+    
     hasUploadedAnyChunk = true; // 标记已上传至少一个分片
 
     // mxcadApi 已自动解包，uploadData 直接是响应数据
     // 最后一个分片上传完成后，检查响应中是否包含 nodeId
-    if (isLastChunk(chunkIndex) && uploadData?.nodeId) {
-      newNodeId = uploadData.nodeId;
+    if (isLastChunk(chunkIndex) && uploadData.data!?.nodeId) {
+      newNodeId = uploadData.data!.nodeId;
 
       // 检查是否是跳过策略（文件已存在）
       if (
-        (uploadData as unknown as { ret?: string }).ret === 'fileAlreadyExist'
+        uploadData.data!.ret === 'fileAlreadyExist'
       ) {
         return {
           file,
           hash,
-          nodeId: uploadData.nodeId,
+          nodeId: uploadData.data!.nodeId,
           name: file.name,
           size: file.size,
           type: file.type,
@@ -237,22 +251,19 @@ export const uploadMxCadFile = async (
 
   // 3. 如果所有分片都已存在（没有上传任何新分片），发送合并请求
   if (!hasUploadedAnyChunk) {
-    // 发送合并请求（不包含文件，只包含合并参数）
-    const mergeFormData = new FormData();
-    mergeFormData.append('chunks', totalChunks.toString());
-    mergeFormData.append('name', file.name);
-    mergeFormData.append('hash', hash);
-    mergeFormData.append('size', file.size.toString());
-    mergeFormData.append('nodeId', nodeId);
-    if (conflictStrategy) {
-      mergeFormData.append('conflictStrategy', conflictStrategy);
-    }
+    const mergeData = await mxCadControllerUploadFile({
+      body: {
+        chunks: totalChunks,
+        name: file.name,
+        hash: hash,
+        size: file.size,
+        nodeId: nodeId,
+        conflictStrategy: conflictStrategy
+      }
+    });
 
-    const mergeData = await mxcadApi.uploadChunk(mergeFormData);
-
-    // mxcadApi 已自动解包，mergeData 直接是响应数据
-    if (mergeData?.nodeId) {
-      newNodeId = mergeData.nodeId;
+    if (mergeData.data!?.nodeId) {
+      newNodeId = mergeData.data!.nodeId;
     }
 
     // 检查是否是跳过策略（文件已存在）
@@ -260,7 +271,7 @@ export const uploadMxCadFile = async (
       return {
         file,
         hash,
-        nodeId: mergeData?.nodeId ?? '',
+        nodeId: mergeData.data?.nodeId ?? '',
         name: file.name,
         size: file.size,
         type: file.type,
@@ -285,3 +296,43 @@ export const uploadMxCadFile = async (
     isInstantUpload: false,
   };
 };
+
+/**
+ * 使用 FormData + fetch 上传文件到指定端点（替代已移除的 Tus 协议）
+ *
+ * 调用方负责传入 endpoint 和 metadata，本函数仅负责构建 FormData 并 POST。
+ *
+ * @param params.blob     文件 Blob
+ * @param params.endpoint 上传目标 URL（如 '/api/v1/mxcad/savemxweb/{nodeId}'）
+ * @param params.filename 文件名
+ * @param params.metadata 可选元数据字段，会作为独立的 FormData 字段附加
+ * @throws 上传失败时抛出错误
+ */
+export async function uploadFileWithFormData(params: {
+  blob: Blob;
+  endpoint: string;
+  filename: string;
+  metadata?: Record<string, string>;
+}): Promise<Response> {
+  const formData = new FormData();
+  formData.append('file', params.blob, params.filename);
+  formData.append('name', params.filename);
+
+  if (params.metadata) {
+    for (const [key, value] of Object.entries(params.metadata)) {
+      formData.append(key, value);
+    }
+  }
+
+  const response = await fetch(params.endpoint, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response;
+}

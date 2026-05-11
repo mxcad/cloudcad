@@ -28,8 +28,6 @@ import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
 import configuration from './config/configuration';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { TusService } from './mxcad/tus/tus.service';
-import { TusAuthMiddleware } from './mxcad/tus/tus-auth.middleware';
 
 const logger = new Logger('Bootstrap');
 
@@ -114,7 +112,7 @@ async function bootstrap() {
     prefix: 'mxcad:sess:',
   });
 
-  // 配置 Session 中间件（跳过 TUS 上传路径，避免 srvx 适配器与 express-session 冲突）
+  // 配置 Session 中间件
   const sessionMiddleware = session({
     store: redisStore,
     secret: config.session.secret,
@@ -129,12 +127,7 @@ async function bootstrap() {
     },
     name: config.session.name,
   });
-  server.use((req, res, next) => {
-    // 跳过 TUS 上传路径的 session 处理，避免 srvx 适配器与 express-session 冲突
-    // PATCH /api/v1/files/:uploadId 是 TUS 上传通道，不需要 session
-    if (req.method === 'PATCH' && req.path.startsWith('/api/v1/files/')) {
-      return next();
-    }
+    server.use((req, res, next) => {
     sessionMiddleware(req, res, next);
   });
   logger.log(
@@ -205,48 +198,27 @@ async function bootstrap() {
       'Content-Type',
       'Authorization',
       'Cookie',
-      'Tus-Resumable',
-      'Upload-Length',
-      'Upload-Metadata',
-      'Upload-Offset',
       'X-CSRF-Token',
     ],
     exposedHeaders: ['X-Node-Id'],
   });
 
   // 全局设置 CORP 响应头，支持 MxCAD-App 的 SharedArrayBuffer 跨域访问
-  // 同时设置所有必要的安全响应头
   app.use((req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    // 仅在 HTTPS 环境下设置 HSTS
     if (req.protocol === 'https' || req.get('X-Forwarded-Proto') === 'https') {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
-    // 基础 Content-Security-Policy（可根据需要调整）
     res.setHeader(
       'Content-Security-Policy',
       "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:"
     );
     next();
   });
-
-  // 配置 Tus 上传端点
-  try {
-    const tusService = app.get(TusService);
-    const tusAuthMiddleware = app.get(TusAuthMiddleware);
-    
-    // 挂载 Tus 认证中间件和 Tus 服务器
-    server.use('/api/v1/files', (req, res, next) => tusAuthMiddleware.use(req, res, next));
-    server.use('/api/v1/files', tusService.getHandler());
-    
-    logger.log('✅ Tus 上传端点已挂载: /api/v1/files');
-  } catch (error) {
-    logger.warn('⚠️ Tus 服务挂载失败:', (error as Error).message);
-  }
 
   // 配置 Swagger 文档
   AppModule.configureSwagger(app);

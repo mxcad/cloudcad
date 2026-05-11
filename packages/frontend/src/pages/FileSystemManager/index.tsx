@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import MxCadUppyUploader, { MxCadUppyUploaderRef } from '@/components/MxCadUppyUploader';
+import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { useFileSystem } from '@/hooks/file-system';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { usePermission } from '@/hooks/usePermission';
@@ -70,7 +70,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setPersonalSpaceIdLoading,
   } = useFileSystemStore();
 
-  const uploaderRef = useRef<MxCadUppyUploaderRef>(null);
+  const uploaderRef = useRef<MxCadUploaderRef>(null);
 
   const {
     nodes,
@@ -433,7 +433,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           projectFilter={projectFilter}
           breadcrumbs={breadcrumbs}
           canCreateProject={canCreateProject}
-          uploaderRef={uploaderRef as React.RefObject<MxCadUppyUploaderRef>}
+          uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
           getCurrentParentId={getCurrentParentId}
           onSetSearchTerm={setSearchTerm}
           onSetViewMode={setViewMode}

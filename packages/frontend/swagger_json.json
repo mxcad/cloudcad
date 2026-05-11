@@ -6302,6 +6302,37 @@
         ]
       }
     },
+    "/api/v1/mxcad/files/chunkisExist": {
+      "post": {
+        "operationId": "MxCadController_checkChunkExist",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckChunkExistDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "检查文件是否存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckChunkExistResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
     "/api/v1/mxcad/files/fileisExist": {
       "post": {
         "operationId": "MxCadController_checkFileExist",
@@ -6323,6 +6354,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FileExistResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MxCAD 文件上传与转换"
+        ]
+      }
+    },
+    "/api/v1/mxcad/files/uploadFiles": {
+      "post": {
+        "operationId": "MxCadController_uploadFile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "文件上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileResponseDto"
                 }
               }
             }
@@ -9778,38 +9840,146 @@
           "password"
         ]
       },
-      "AuthApiResponseDto": {
+      "UserDto": {
         "type": "object",
         "properties": {
-          "code": {
+          "id": {
             "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
+            "description": "用户ID",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
           },
-          "message": {
+          "email": {
             "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
+            "description": "用户邮箱（可能未绑定）",
+            "example": "user@example.com",
+            "nullable": true
           },
-          "data": {
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "username"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "昵称",
+            "example": "用户昵称"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像URL",
+            "example": "https://example.com/avatar.jpg"
+          },
+          "role": {
             "type": "object",
-            "description": "响应数据"
+            "description": "用户角色",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "clxxxxxxx"
+              },
+              "name": {
+                "type": "string",
+                "enum": [
+                  "ADMIN",
+                  "USER_MANAGER",
+                  "FONT_MANAGER",
+                  "USER"
+                ],
+                "example": "USER"
+              },
+              "description": {
+                "type": "string",
+                "example": "普通用户，基础权限",
+                "nullable": true
+              },
+              "isSystem": {
+                "type": "boolean",
+                "example": true
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "permission": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           },
-          "timestamp": {
+          "status": {
             "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
+            "description": "用户状态",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "SUSPENDED"
+            ],
+            "example": "ACTIVE"
+          },
+          "phone": {
+            "type": "object",
+            "description": "用户手机号（可能未绑定）",
+            "example": "13800138000",
+            "nullable": true
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "手机号是否已验证",
+            "example": false
+          },
+          "wechatId": {
+            "type": "object",
+            "description": "微信 OpenID",
+            "example": "oXYZ123...",
+            "nullable": true
+          },
+          "provider": {
+            "type": "string",
+            "description": "登录方式 (LOCAL | WECHAT)",
+            "example": "LOCAL"
+          },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "是否已设置密码",
+            "example": true
           }
         },
         "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
+          "id",
+          "username",
+          "role",
+          "status"
+        ]
+      },
+      "AuthApiResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "访问Token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "刷新Token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": {
+            "description": "用户信息",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "user"
         ]
       },
       "LoginDto": {
@@ -10173,7 +10343,7 @@
           "validateContact"
         ]
       },
-      "ForgotPasswordResponseDto": {
+      "ForgotPasswordApiResponseDto": {
         "type": "object",
         "properties": {
           "message": {
@@ -10203,44 +10373,6 @@
           "message",
           "mailEnabled",
           "smsEnabled"
-        ]
-      },
-      "ForgotPasswordApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ForgotPasswordResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
         ]
       },
       "ResetPasswordDto": {
@@ -10284,7 +10416,7 @@
           "validateContact"
         ]
       },
-      "ResetPasswordResponseDto": {
+      "ResetPasswordApiResponseDto": {
         "type": "object",
         "properties": {
           "message": {
@@ -10294,44 +10426,6 @@
         },
         "required": [
           "message"
-        ]
-      },
-      "ResetPasswordApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ResetPasswordResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
         ]
       },
       "BindEmailDto": {
@@ -10352,7 +10446,7 @@
           "email"
         ]
       },
-      "BindEmailResponseDto": {
+      "BindEmailApiResponseDto": {
         "type": "object",
         "properties": {
           "message": {
@@ -10362,44 +10456,6 @@
         },
         "required": [
           "message"
-        ]
-      },
-      "BindEmailApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BindEmailResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
         ]
       },
       "VerifyBindEmailDto": {
@@ -11241,7 +11297,7 @@
           }
         }
       },
-      "DeactivateAccountResponseDto": {
+      "DeactivateAccountApiResponseDto": {
         "type": "object",
         "properties": {
           "message": {
@@ -11251,44 +11307,6 @@
         },
         "required": [
           "message"
-        ]
-      },
-      "DeactivateAccountApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeactivateAccountResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
         ]
       },
       "RestoreAccountDto": {
@@ -11340,7 +11358,7 @@
           "newPassword"
         ]
       },
-      "ChangePasswordResponseDto": {
+      "ChangePasswordApiResponseDto": {
         "type": "object",
         "properties": {
           "message": {
@@ -11350,44 +11368,6 @@
         },
         "required": [
           "message"
-        ]
-      },
-      "ChangePasswordApiResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "响应状态码",
-            "example": "SUCCESS",
-            "enum": [
-              "SUCCESS",
-              "ERROR"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "description": "响应消息",
-            "example": "操作成功"
-          },
-          "data": {
-            "description": "响应数据",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ChangePasswordResponseDto"
-              }
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "description": "响应时间戳",
-            "example": "2025-12-12T03:34:55.801Z"
-          }
-        },
-        "required": [
-          "code",
-          "message",
-          "data",
-          "timestamp"
         ]
       },
       "RoleCategoryEnum": {
@@ -12725,6 +12705,62 @@
           "target"
         ]
       },
+      "CheckChunkExistDto": {
+        "type": "object",
+        "properties": {
+          "fileHash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值",
+            "example": "25e89b5adf19984330f4e68b0f99db64"
+          },
+          "filename": {
+            "type": "string",
+            "description": "原始文件名",
+            "example": "drawing.dwg"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "节点ID",
+            "example": "clx1234567890"
+          },
+          "chunk": {
+            "type": "number",
+            "description": "分片索引",
+            "example": 0
+          },
+          "chunks": {
+            "type": "number",
+            "description": "总分片数量",
+            "example": 10
+          },
+          "size": {
+            "type": "number",
+            "description": "分片大小（字节）",
+            "example": 1048576
+          }
+        },
+        "required": [
+          "fileHash",
+          "filename",
+          "nodeId",
+          "chunk",
+          "chunks",
+          "size"
+        ]
+      },
+      "CheckChunkExistResponseDto": {
+        "type": "object",
+        "properties": {
+          "exists": {
+            "type": "boolean",
+            "description": "分片是否存在",
+            "example": true
+          }
+        },
+        "required": [
+          "exists"
+        ]
+      },
       "CheckFileExistDto": {
         "type": "object",
         "properties": {
@@ -12781,6 +12817,87 @@
         "required": [
           "exists"
         ]
+      },
+      "UploadFilesDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "上传的文件",
+            "format": "binary"
+          },
+          "hash": {
+            "type": "string",
+            "description": "文件 MD5 哈希值"
+          },
+          "name": {
+            "type": "string",
+            "description": "原始文件名"
+          },
+          "size": {
+            "type": "number",
+            "description": "文件总大小（字节）"
+          },
+          "chunk": {
+            "type": "number",
+            "description": "分片索引（分片上传时必填）"
+          },
+          "chunks": {
+            "type": "number",
+            "description": "总分片数量（分片上传时必填）"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "节点ID"
+          },
+          "srcDwgNodeId": {
+            "type": "string",
+            "description": "源图纸节点 ID（外部参照上传时使用）"
+          },
+          "id": {
+            "type": "string",
+            "description": "文件ID（前端传递的标识符）"
+          },
+          "type": {
+            "type": "string",
+            "description": "文件类型（如 dwg、dxf）"
+          },
+          "lastModifiedDate": {
+            "type": "string",
+            "description": "文件最后修改日期"
+          },
+          "conflictStrategy": {
+            "type": "string",
+            "description": "冲突策略",
+            "enum": [
+              "skip",
+              "overwrite",
+              "rename"
+            ]
+          }
+        },
+        "required": [
+          "hash",
+          "name",
+          "size"
+        ]
+      },
+      "UploadFileResponseDto": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "上传文件的节点 ID"
+          },
+          "tz": {
+            "type": "boolean",
+            "description": "是否为图纸文件"
+          },
+          "ret": {
+            "type": "string",
+            "description": "文件上传状态"
+          }
+        }
       },
       "PreloadingDataDto": {
         "type": "object",

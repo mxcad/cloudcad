@@ -5,10 +5,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock uploadBlobWithTus instead of saveControllerSaveMxwebToNode
-vi.mock('@/utils/uppyUploadUtils', () => ({
-  uploadBlobWithTus: vi.fn(),
-  uploadFileWithUppy: vi.fn(),
+// Mock uploadFileWithFormData instead of saveControllerSaveMxwebToNode
+vi.mock('@/utils/mxcadUploadUtils', () => ({
+  uploadFileWithFormData: vi.fn(),
+  uploadMxCadFile: vi.fn(),
 }));
 
 vi.mock('@/utils/errorHandler', () => ({
@@ -34,7 +34,7 @@ import {
   createSaveFormData,
   showSaveConfirmDialog,
 } from '../mxcadSave';
-import { uploadBlobWithTus } from '@/utils/uppyUploadUtils';
+import { uploadFileWithFormData } from '@/utils/mxcadUploadUtils';
 
 import { handleError } from '@/utils/errorHandler';
 
@@ -68,7 +68,7 @@ describe('mxcadSave', () => {
     const mockBlob = new Blob(['saved-data'], { type: 'application/octet-stream' });
 
     it('saves blob to a node via Tus upload', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ nodeId: 'node-abc' });
 
       await saveMxwebToNode({
@@ -85,7 +85,7 @@ describe('mxcadSave', () => {
     });
 
     it('includes commitMessage when provided', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ nodeId: 'node-def' });
 
       await saveMxwebToNode({
@@ -100,7 +100,7 @@ describe('mxcadSave', () => {
     });
 
     it('includes expectedTimestamp when provided', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ nodeId: 'node-ghi' });
 
       await saveMxwebToNode({
@@ -115,7 +115,7 @@ describe('mxcadSave', () => {
     });
 
     it('handles missing optional parameters gracefully', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       mockUpload.mockResolvedValue({ nodeId: 'node-jkl' });
 
       await saveMxwebToNode({
@@ -130,7 +130,7 @@ describe('mxcadSave', () => {
     });
 
     it('propagates API errors', async () => {
-      const mockUpload = uploadBlobWithTus as ReturnType<typeof vi.fn>;
+      const mockUpload = uploadFileWithFormData as ReturnType<typeof vi.fn>;
       const apiError = new Error('Server error: file too large');
       mockUpload.mockRejectedValue(apiError);
 

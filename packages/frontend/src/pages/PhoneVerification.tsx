@@ -112,7 +112,7 @@ export const PhoneVerification: React.FC = () => {
         // 绑定模式：调用绑定手机号接口，返回 token 后存储并通过刷新更新 AuthContext
         const response = await bindPhoneAndLogin({ tempToken, phone, code: verificationCode.trim() });
         if (!response) throw new Error('绑定手机号失败');
-        const { accessToken, refreshToken, user: userData } = response.data as { accessToken: string; refreshToken: string; user: unknown };
+        const { accessToken, refreshToken, user: userData } = response
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(userData));

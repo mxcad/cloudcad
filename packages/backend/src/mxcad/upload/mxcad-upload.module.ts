@@ -19,6 +19,7 @@ import { MxcadSaveModule } from '../save/mxcad-save.module';
 import { FileMergeService } from './file-merge.service';
 import { FileConversionUploadService } from './file-conversion-upload.service';
 import { UploadUtilityService } from './upload-utility.service';
+import { ChunkUploadManagerService } from '../services/chunk-upload-manager.service';
 
 @Module({
   imports: [ConfigModule, DatabaseModule, CommonModule, FileSystemModule, StorageModule, VersionControlModule, MxcadInfraModule, MxcadNodeModule, MxcadConversionModule, MxcadExternalRefModule, MxcadSaveModule],
@@ -26,12 +27,14 @@ import { UploadUtilityService } from './upload-utility.service';
     FileMergeService,
     FileConversionUploadService,
     UploadUtilityService,
+    ChunkUploadManagerService,
     { provide: 'FileSystemServiceMain', useExisting: MainFileSystemService },
   ],
   exports: [
     FileMergeService,
     FileConversionUploadService,
     UploadUtilityService,
+    ChunkUploadManagerService,
   ],
 })
 export class MxcadUploadModule {}

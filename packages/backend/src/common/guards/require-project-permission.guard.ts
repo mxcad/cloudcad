@@ -26,6 +26,7 @@ import {
   REQUIRE_PROJECT_PERMISSION_MODE_KEY,
   ProjectPermissionCheckMode,
 } from '../decorators/require-project-permission.decorator';
+import { IS_OPTIONAL_AUTH_KEY } from '../../auth/decorators/optional-auth.decorator';
 import { ProjectPermission, SystemPermission } from '../enums/permissions.enum';
 import { DatabaseService } from '../../database/database.service';
 import { PermissionService } from '../services/permission.service';
@@ -91,6 +92,14 @@ export class RequireProjectPermissionGuard implements CanActivate {
     const userId = request.user?.id;
 
     if (!userId) {
+      // 检查是否为可选认证：匿名用户跳过项目权限检查
+      const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
+        IS_OPTIONAL_AUTH_KEY,
+        [targetHandler, targetClass],
+      );
+      if (isOptionalAuth) {
+        return true;
+      }
       throw new ForbiddenException('用户未认证');
     }
 

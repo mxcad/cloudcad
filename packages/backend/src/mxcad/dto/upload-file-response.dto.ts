@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
+import { MxUploadReturn } from '../enums/mxcad-return.enum';
 
 /**
  * 上传文件响应 DTO
@@ -29,4 +30,11 @@ export class UploadFileResponseDto {
     required: false,
   })
   tz?: boolean;
+
+  @ApiProperty({
+    description: '文件上传状态',
+    type: String,
+    required: false,
+  })
+  ret?: MxUploadReturn;
 }

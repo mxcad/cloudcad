@@ -1,8 +1,7 @@
 import type React from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { UserDto, StorageInfoDto } from '../types/api-client';
-import { fileSystemControllerGetStorageQuota } from '@/api-sdk';
+import { fileSystemControllerGetStorageQuota, StorageInfoDto } from '@/api-sdk';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';

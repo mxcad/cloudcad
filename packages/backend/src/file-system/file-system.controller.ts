@@ -795,7 +795,7 @@ export class FileSystemController {
   @Get("nodes/:nodeId/thumbnail")
   @OptionalAuth()
   @ApiOperation({ summary: "获取文件节点缩略图" })
-  @ApiProduces("image/jpeg")
+  @ApiProduces("image/*")
   @ApiResponse({ status: 200, description: "获取缩略图成功" })
   @ApiResponse({ status: 204, description: "缩略图不存在" })
   @ApiResponse({ status: 401, description: "未登录（项目文件需要登录）" })

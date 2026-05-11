@@ -17,13 +17,13 @@ import {
   authControllerVerifyPhone,
   authControllerGetWechatAuthUrl,
 } from '@/api-sdk';
-import type { UserResponseDto as UserDtoType } from '@/api-sdk';
+import type { UserDto } from '@/api-sdk';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { triggerProactiveRefresh, cancelProactiveRefresh } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 
-type User = UserDtoType;
+type User = UserDto;
 
 interface AuthContextType {
   user: User | null;
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const initialState = getInitialAuthState();
-  const [user, setUser] = useState<User | null>(initialState.user);
+  const [user, setUser] = useState<UserDto | null>(initialState.user);
   const [token, setToken] = useState<string | null>(initialState.token);
   const [loading, setLoading] = useState<boolean>(initialState.loading);
   const [error, setError] = useState<string | null>(null);
@@ -158,19 +158,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       if (response.error) throw response.error;
       const apiResponse = response.data!;
-      const authData = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
+
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = authData;
+      } = apiResponse;
 
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.removeItem('personalSpaceId');
       setToken(accessToken);
-      setUser(userData);
+      userData && setUser(userData);
       triggerProactiveRefresh();
     } catch (error) {
       throw error;
@@ -185,12 +185,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.error) throw response.error;
       const apiResponse = response.data!;
 
-      const authData = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
       const {
         accessToken,
         refreshToken,
         user: userData,
-      } = authData;
+      } = apiResponse;
 
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
@@ -216,15 +215,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: data,
       });
       if (response.error) throw response.error;
-      const apiResponse = response.data!;
-      const authData = apiResponse.data as Record<string, unknown>;
+      const authData = response.data!;
 
-      // 需要邮箱验证：后端返回 { message, email }，无 token
-      if (authData.message && !authData.accessToken) {
-        return {
-          message: authData.message as unknown as string,
-          email: authData.email as unknown as string | undefined,
-        };
+      // 如果 API 返回的 data 为空，抛出错误
+      if (!authData) {
+        throw new Error('注册失败，服务器返回数据异常');
       }
 
       // 直接注册成功：后端返回 { accessToken, refreshToken, user }
@@ -261,7 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
+      } = apiResponse
 
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
@@ -288,7 +283,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         accessToken,
         refreshToken,
         user: userData,
-      } = apiResponse.data as { accessToken: string; refreshToken: string; user: User };
+      } = apiResponse
 
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);

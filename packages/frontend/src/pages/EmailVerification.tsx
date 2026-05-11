@@ -131,8 +131,7 @@ export const EmailVerification: React.FC = () => {
         // 绑定模式：调用绑定邮箱接口，返回 token 后存储并通过刷新更新 AuthContext
         const response = await bindEmailAndLogin({ tempToken, email, code: verificationCode.trim() });
         if (!response) throw new Error('绑定邮箱失败');
-        const { accessToken, refreshToken, user: userData } = response.data as { accessToken: string; refreshToken: string; user: unknown };
-        localStorage.setItem('accessToken', accessToken);
+        const {  refreshToken, user: userData } = response
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(userData));
         // 直接刷新页面，让 AuthContext 从 localStorage 重新初始化
@@ -151,7 +150,7 @@ export const EmailVerification: React.FC = () => {
           nickname: phoneRegisterData.nickname,
         });
         if (!response) throw new Error('注册失败');
-        const { accessToken, refreshToken, user: userData } = response.data as { accessToken: string; refreshToken: string; user: unknown };
+        const { accessToken, refreshToken, user: userData } = response
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(userData));

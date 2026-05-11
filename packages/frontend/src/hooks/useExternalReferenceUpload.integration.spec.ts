@@ -20,9 +20,9 @@ vi.mock('../utils/authCheck', () => ({
   isAuthenticated: () => true,
 }));
 
-// Mock uploadBlobWithTus
-vi.mock('../utils/uppyUploadUtils', () => ({
-  uploadBlobWithTus: vi.fn(),
+// Mock uploadFileWithFormData from mxcadUploadUtils
+vi.mock('../utils/mxcadUploadUtils', () => ({
+  uploadFileWithFormData: vi.fn(),
 }));
 
 // Mock SDK (still needed for preloading data + existence checks)
@@ -172,9 +172,9 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    it('should call uploadBlobWithTus for external ref upload', async () => {
+    it('should call uploadFileWithFormData for external ref upload', async () => {
       const sdk = await import('@/api-sdk');
-      const { uploadBlobWithTus } = await import('../utils/uppyUploadUtils');
+      const { uploadFileWithFormData } = await import('../utils/mxcadUploadUtils');
 
       vi.mocked(sdk.mxCadControllerGetPreloadingData).mockResolvedValue({
         data: { tz: false, src_file_md5: testFileHash, images: [], externalReference: ['ref1.dwg'] },
@@ -182,7 +182,7 @@ describe('useExternalReferenceUpload Integration Tests', () => {
       vi.mocked(sdk.mxCadControllerCheckExternalReference).mockResolvedValue(
         { data: { exists: false } } as any
       );
-      vi.mocked(uploadBlobWithTus).mockResolvedValue({});
+      vi.mocked(uploadFileWithFormData).mockResolvedValue({});
 
       const { result } = renderHook(() =>
         useExternalReferenceUpload({ nodeId: testNodeId })

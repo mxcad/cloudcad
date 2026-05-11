@@ -1,6 +1,7 @@
 import React from 'react';
 import { Mail, Shield, CheckCircle, Loader2, Send } from 'lucide-react';
-import type { User } from '../../types/filesystem';
+import { UserDto } from '@/api-sdk';
+
 
 interface EmailForm {
   email: string;
@@ -8,7 +9,7 @@ interface EmailForm {
 }
 
 interface ProfileEmailTabProps {
-  user?: User | null;
+  user?: UserDto | null;
   emailForm: EmailForm;
   emailStep: 'input' | 'verify' | 'verifyOld' | 'inputNew' | 'verifyNew';
   isEditingEmail: boolean;

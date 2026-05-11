@@ -258,23 +258,7 @@ jest.mock("@nestjs-modules/mailer", () => ({
 	})),
 }));
 
-// Mock @tus/server and @tus/file-store (ESM packages incompatible with Jest CJS transform)
-jest.mock("@tus/server", () => ({
-	Server: jest.fn().mockImplementation(() => ({
-		handle: jest.fn(),
-		listen: jest.fn(),
-		get: jest.fn(),
-		on: jest.fn(),
-	})),
-}));
 
-jest.mock("@tus/file-store", () => ({
-	FileStore: jest.fn().mockImplementation(() => ({
-		read: jest.fn(),
-		write: jest.fn(),
-		remove: jest.fn(),
-	})),
-}));
 
 // Mock flydrive (ESM package incompatible with Jest CJS transform)
 jest.mock("flydrive", () => ({

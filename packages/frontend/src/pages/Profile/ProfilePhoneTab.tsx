@@ -1,9 +1,10 @@
 import React from 'react';
 import { Phone, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import type { User } from '../../types/filesystem';
+import { UserDto } from '@/api-sdk';
+
 
 interface ProfilePhoneTabProps {
-  user?: User | null;
+  user?: UserDto | null;
   phoneForm: { phone: string; code: string };
   phoneStep: 'verifyOld' | 'inputNew' | 'verifyNew';
   isEditingPhone: boolean;

@@ -21,6 +21,7 @@ import {
   fileSystemControllerGetNode,
   fileSystemControllerGetChildren,
   fileSystemControllerGetRootNode,
+  FileSystemNodeDto, ProjectDto
 } from '@/api-sdk';
 import {
   FileSystemNode,
@@ -28,7 +29,7 @@ import {
   projectToNode,
   toFileSystemNode,
 } from '@/types/filesystem';
-import type { FileSystemNodeDto, ProjectDto } from '@/types/api-client';
+
 import { PaginationMeta } from '@/components/ui/Pagination';
 import { handleError } from '@/utils/errorHandler';
 import { queryKeys } from '@/lib/queryKeys';
