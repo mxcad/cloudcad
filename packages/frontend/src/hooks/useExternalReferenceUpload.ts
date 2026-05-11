@@ -37,7 +37,7 @@ import { useUIStore } from '../stores/uiStore';
 export const useExternalReferenceUpload = (
   config: UseExternalReferenceUploadConfig
 ): UseExternalReferenceUploadReturn => {
-  const { setGlobalLoading, setLoadingMessage } = useUIStore();
+  const { setGlobalLoading, setLoadingMessage, addToast } = useUIStore();
   const [localLoading, setLocalLoading] = useState(false);
   const [files, setFiles] = useState<ExternalReferenceFile[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -155,7 +155,7 @@ export const useExternalReferenceUpload = (
         let result = null;
         if (isLoggedIn) {
           // 已登录用户使用 SDK
-          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } } as any);
+          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } });
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
           // 未登录用户使用 SDK
@@ -358,7 +358,7 @@ export const useExternalReferenceUpload = (
           if (existingFile) { Object.assign(existingFile, { source: file });
             existingFile.uploadState = 'notSelected';
           } else {
-            console.warn(`未找到匹配的缺失文件: ${file.name}`);
+            addToast(`未找到匹配的缺失文件: ${file.name}`, 'warning');
           }
         });
         return newFiles;
@@ -569,7 +569,7 @@ export const useExternalReferenceUpload = (
           if (existingFile) { Object.assign(existingFile, { source: file });
             existingFile.uploadState = 'notSelected';
           } else {
-            console.warn(`未找到匹配的缺失文件: ${file.name}`);
+            addToast(`未找到匹配的缺失文件: ${file.name}`, 'warning');
           }
         });
         return newFiles;

@@ -463,7 +463,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       >
         <div
           className="overflow-hidden h-full rounded-2xl"
-          {...fileDropHandlers}
+          {...(!isAtRoot ? fileDropHandlers : {})}
         >
           {/* 拖拽上传提示覆盖层 */}
           {isFileDragOver && (

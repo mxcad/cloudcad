@@ -19,7 +19,7 @@ export const profileStyles = `
         .avatar-placeholder { background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); display: flex; align-items: center; justify-content: center; color: white; }
         .avatar-badge { position: absolute; bottom: 0; right: 0; width: 24px; height: 24px; background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; z-index: 2; border: 2px solid var(--bg-secondary); }
         .user-info { flex: 1; }
-        .user-name { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.375rem; }
+        .user-name { font-weight: 700; color: var(--text-primary); margin-bottom: 0.375rem; }
         .user-role { display: flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; color: var(--text-tertiary); }
         .tabs-container { position: relative; display: flex; padding: 0.5rem; background: var(--bg-tertiary); margin: 1.5rem 2rem 0; border-radius: var(--radius-xl); }
         .tab-button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: transparent; border: none; border-radius: var(--radius-lg); color: var(--text-tertiary); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease; position: relative; z-index: 1; }

@@ -55,6 +55,7 @@ import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto'
 import { CheckFileExistDto } from '../dto/check-file-exist.dto';
 import { FileExistResponseDto } from '../dto/file-exist-response.dto';
 import { CheckReferenceResponseDto } from '../dto/check-reference-response.dto';
+import { CheckReferenceDto } from '../dto/check-reference.dto';
 import { RefreshExternalReferencesResponseDto } from '../dto/refresh-external-references-response.dto';
 
 
@@ -361,6 +362,7 @@ export class MxCadController {
     description: '成功检查文件存在性',
     type: CheckReferenceResponseDto,
   })
+  @ApiBody({ type: CheckReferenceDto })
   @ApiResponse({
     status: 400,
     description: '请求参数错误',
@@ -374,7 +376,7 @@ export class MxCadController {
   })
   async checkExternalReference(
     @Param('nodeId') nodeId: string,
-    @Body() body: { fileName: string }
+    @Body() body: CheckReferenceDto
   ) {
     this.logger.log(
       `[checkExternalReference] 请求参数: nodeId=${nodeId}, fileName=${body.fileName}`

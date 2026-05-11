@@ -2133,6 +2133,13 @@ export type PreloadingDataDto = {
     externalReference: Array<string>;
 };
 
+export type CheckReferenceDto = {
+    /**
+     * 要检查的外部参照文件名称
+     */
+    fileName: string;
+};
+
 export type CheckReferenceResponseDto = {
     /**
      * 文件是否存在
@@ -6232,7 +6239,7 @@ export type MxCadControllerGetPreloadingDataResponses = {
 export type MxCadControllerGetPreloadingDataResponse = MxCadControllerGetPreloadingDataResponses[keyof MxCadControllerGetPreloadingDataResponses];
 
 export type MxCadControllerCheckExternalReferenceData = {
-    body?: never;
+    body: CheckReferenceDto;
     path: {
         nodeId: string;
     };

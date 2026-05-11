@@ -89,10 +89,9 @@ export const CADEditorDirect: React.FC = () => {
   const [isActive, setIsActive] = useState(() => {
     return !!fileId || isHomeMode;
   });
-  // 主页模式（无 fileId）初始不显示 loading，文件模式初始显示 loading
-  // 注意：必须与旧版 useFileLoader hook 的初始值保持一致，
-  // 否则主页模式 loading 遮罩会在 Strict Mode 下覆盖 canvas 导致白屏
-  const [loading, setLoading] = useState(() => !!fileId);
+  // 始终以 loading 状态初始化，确保 CAD 引擎异步初始化期间
+  // 编辑器区域显示 loading 遮罩，避免侧边栏先渲染但编辑器白屏
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // 存储当前文件的 hash（用于未登录用户的外部参照上传）
@@ -762,11 +761,11 @@ export const CADEditorDirect: React.FC = () => {
   
   // 监听公开文件上传事件，上传完成后检查外部参照
   useEffect(() => {
-    const handlePublicFileUploaded = (event: CustomEvent<{ 
-      fileHash: string; 
-      fileName?: string; 
-      noCache?: boolean; 
-      callback?: () => Promise<void> 
+    const handlePublicFileUploaded = async (event: CustomEvent<{
+      fileHash: string;
+      fileName?: string;
+      noCache?: boolean;
+      callback?: () => Promise<void>
     }>) => {
       const { fileHash, noCache, callback } = event.detail;
       setCurrentFileHash(fileHash);
@@ -1070,15 +1069,21 @@ export const CADEditorDirect: React.FC = () => {
 
     // 立即生成并上传缩略图（失败不影响主流程）
     try {
+      console.log(`[handleSaveAsSuccess] 开始生成缩略图: ${result.nodeId}`);
       const imageData = await generateThumbnail();
-      if (imageData) {
-        const uploaded = await uploadThumbnail(result.nodeId, imageData);
-        if (uploaded) {
-          console.log(`[handleSaveAsSuccess] 缩略图已生成并上传: ${result.nodeId}`);
-        }
+      if (!imageData) {
+        console.warn(`[handleSaveAsSuccess] 缩略图生成失败(无数据): ${result.nodeId}`);
+        return;
+      }
+      console.log(`[handleSaveAsSuccess] 缩略图生成成功, 开始上传: ${result.nodeId}`);
+      const uploaded = await uploadThumbnail(result.nodeId, imageData);
+      if (uploaded) {
+        console.log(`[handleSaveAsSuccess] 缩略图上传成功: ${result.nodeId}`);
+      } else {
+        console.warn(`[handleSaveAsSuccess] 缩略图上传失败: ${result.nodeId}`);
       }
     } catch (err) {
-      console.warn('[handleSaveAsSuccess] 缩略图生成/上传失败:', err);
+      console.error('[handleSaveAsSuccess] 缩略图生成/上传异常:', err);
     }
   };
 
@@ -1256,18 +1261,20 @@ export const CADEditorDirect: React.FC = () => {
 
       // 另存为到本地模式：调用公开转换端点
       if (isSaveAsLocalModeRef.current && saveAsBlob) {
-        const formData = new FormData();
-        formData.append('file', saveAsBlob, 'file.mxweb');
+        const arrayBuffer = await saveAsBlob.arrayBuffer();
+        const uint8 = new Uint8Array(arrayBuffer);
+        const base64File = btoa(Array.from(uint8).map(b => String.fromCharCode(b)).join(''));
 
-        const params = new URLSearchParams({ format });
-        if (pdfOptions?.width) params.append('width', pdfOptions.width);
-        if (pdfOptions?.height) params.append('height', pdfOptions.height);
-        if (pdfOptions?.colorPolicy) params.append('colorPolicy', pdfOptions.colorPolicy);
+        const body: Record<string, string> = { file: base64File, format };
+        if (pdfOptions?.width) body.width = pdfOptions.width;
+        if (pdfOptions?.height) body.height = pdfOptions.height;
+        if (pdfOptions?.colorPolicy) body.colorPolicy = pdfOptions.colorPolicy;
 
-        const response = await fetch(`/api/v1/public-file/convert?${params.toString()}`, {
-          method: 'POST',
-          body: formData,
-        });
+        const { response } = await (publicFileControllerConvertAndDownload as any)({ body });
+
+        if (!response) {
+          throw new Error('转换失败：服务器无响应');
+        }
 
         if (!response.ok) {
           const errBody = await response.json().catch(() => ({ message: '转换失败' }));

@@ -55,8 +55,10 @@ export async function uploadThumbnail(
     await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: {
       file: blob,
     } });
+    console.log(`[uploadThumbnail] 缩略图上传成功: ${nodeId}`);
     return true;
   } catch (error) {
+    console.error(`[uploadThumbnail] 缩略图上传失败: ${nodeId}`, error);
     handleError(error, 'mxcadThumbnail: uploadThumbnail');
     return false;
   }
@@ -144,8 +146,8 @@ export async function generateThumbnail(
         }
       );
     });
-  } catch {
-    // MxCAD SDK 不可用时（如单元测试环境），静默返回 undefined
+  } catch (err) {
+    console.error('[generateThumbnail] 缩略图生成失败:', err);
     return undefined;
   }
 }

@@ -66,8 +66,23 @@ async function bootstrap() {
 
   // 创建基础 Express 实例
   const server = express();
-  server.use(express.json({ limit: '50mb' }));
-  server.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+  // 对于 multipart/form-data 请求，必须跳过 JSON/URL-encoded 解析，
+  // 否则 body stream 会被消费，导致 Multer 报 "Malformed part header"。
+  server.use((req, res, next) => {
+    const ct = req.headers['content-type'] || '';
+    if (ct.includes('multipart/form-data')) {
+      return next();
+    }
+    express.json({ limit: '50mb' })(req, res, next);
+  });
+  server.use((req, res, next) => {
+    const ct = req.headers['content-type'] || '';
+    if (ct.includes('multipart/form-data')) {
+      return next();
+    }
+    express.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
+  });
   server.disable('x-powered-by');
 
   // 创建 Redis 客户端

@@ -6441,6 +6441,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckReferenceDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "成功检查文件存在性",
@@ -12993,6 +13003,19 @@
           "src_file_md5",
           "images",
           "externalReference"
+        ]
+      },
+      "CheckReferenceDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "要检查的外部参照文件名称",
+            "example": "转换后的文件位置.jpg"
+          }
+        },
+        "required": [
+          "fileName"
         ]
       },
       "CheckReferenceResponseDto": {

@@ -107,7 +107,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const {
     libraryRootId, categories, categoriesLoaded,
     selectedCategoryPath, setSelectedCategoryPath,
-    handleCategorySelect, listInitializedRef,
+    handleCategorySelect, refreshCategories, listInitializedRef,
   } = useLibraryCategories(isLibraryMode, libraryType);
 
   // UI state
@@ -189,13 +189,14 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const refreshNodes = useCallback(() => {
     setProjectRefreshKey((k) => k + 1);
     if (isLibraryMode) {
+      refreshCategories();
       const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
       if (nodeId) loadNodes(nodeId, currentPage, searchQuery, false);
     } else {
       const lastBreadcrumb = breadcrumb[breadcrumb.length - 1];
       if (lastBreadcrumb) loadNodes(lastBreadcrumb.id);
     }
-  }, [isLibraryMode, selectedCategoryPath, libraryRootId, searchQuery, currentPage, breadcrumb, loadNodes]);
+  }, [isLibraryMode, selectedCategoryPath, libraryRootId, searchQuery, currentPage, breadcrumb, loadNodes, refreshCategories]);
 
   // Library operations
   const libraryOperations = useLibraryOperations({ libraryType: libraryType || 'drawing', showToast, refreshNodes, showConfirm });
@@ -621,7 +622,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           <BreadcrumbNav breadcrumb={breadcrumb} isLibraryMode={isLibraryMode} isPersonalSpace={isPersonalSpace} handleGoBack={handleGoBack} handleBreadcrumbClick={handleBreadcrumbClick} handleBackToProjects={handleBackToProjects} />
         ) : undefined}
         renderItem={renderFileItem}
-        toolbarExtra={<Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button></Tooltip>}
+        toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button></Tooltip>}
         loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
       />
       <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />

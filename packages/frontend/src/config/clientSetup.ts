@@ -5,7 +5,7 @@
 
 import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
-import { getValidToken, isValidToken, getRefreshToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken } from '@/utils/tokenUtils';
+import { getValidToken, getAccessToken, isValidToken, getRefreshToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken } from '@/utils/tokenUtils';
 import { authControllerRefreshToken } from "@/api-sdk"
 // 用于在非 React 上下文中显示 Toast（通过 NotificationContext 的全局事件）
 function showGlobalToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'warning') {
@@ -195,7 +195,7 @@ client.setConfig({
     // 401 → 尝试刷新 token 并重试（支持所有 HTTP 方法）
     if (response.status === 401) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/profile');
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/profile') || url.includes('/auth/forgot-password') || url.includes('/auth/reset-password');
       if (!isAuthEndpoint) {
         const refreshed = await tryRefreshToken();
         if (refreshed) {

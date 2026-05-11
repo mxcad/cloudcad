@@ -1587,7 +1587,14 @@ export const mxCadControllerUploadFile = <ThrowOnError extends boolean = false>(
 
 export const mxCadControllerGetPreloadingData = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerGetPreloadingDataData, ThrowOnError>) => (options.client ?? client).get<MxCadControllerGetPreloadingDataResponses, MxCadControllerGetPreloadingDataErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{nodeId}/preloading', ...options });
 
-export const mxCadControllerCheckExternalReference = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerCheckExternalReferenceData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerCheckExternalReferenceResponses, MxCadControllerCheckExternalReferenceErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{nodeId}/check-reference', ...options });
+export const mxCadControllerCheckExternalReference = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerCheckExternalReferenceData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerCheckExternalReferenceResponses, MxCadControllerCheckExternalReferenceErrors, ThrowOnError>({
+    url: '/api/v1/mxcad/file/{nodeId}/check-reference',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const mxCadControllerRefreshExternalReferences = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerRefreshExternalReferencesData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerRefreshExternalReferencesResponses, MxCadControllerRefreshExternalReferencesErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{nodeId}/refresh-external-references', ...options });
 

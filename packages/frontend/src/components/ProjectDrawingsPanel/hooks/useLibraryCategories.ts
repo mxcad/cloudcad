@@ -49,6 +49,7 @@ export interface UseLibraryCategoriesReturn {
   selectedCategoryPath: string[];
   setSelectedCategoryPath: React.Dispatch<React.SetStateAction<string[]>>;
   handleCategorySelect: (level: number, categoryId: string) => Promise<void>;
+  refreshCategories: () => void;
   listInitializedRef: React.MutableRefObject<boolean>;
 }
 
@@ -58,6 +59,7 @@ export function useLibraryCategories(
 ): UseLibraryCategoriesReturn {
   const [libraryRootId, setLibraryRootId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryLevel[]>([]);
+  const [categoriesRefreshKey, setCategoriesRefreshKey] = useState(0);
   const [categoriesLoaded, setCategoriesLoaded] = useState(false);
 
   const getDefaultCategoryPath = (): string[] => {
@@ -113,8 +115,12 @@ export function useLibraryCategories(
     };
 
     fetchAll();
-  }, [isLibraryMode, libraryType]);
+  }, [isLibraryMode, libraryType, categoriesRefreshKey]);
 
+  // 暴露刷新分类列表的方法
+  const refreshCategories = useCallback(() => {
+    setCategoriesRefreshKey((k) => k + 1);
+  }, []);
   const handleCategorySelect = useCallback(
     async (level: number, categoryId: string) => {
       // 使用函数式 setState 避免 stale closure。
@@ -146,6 +152,7 @@ export function useLibraryCategories(
     selectedCategoryPath,
     setSelectedCategoryPath,
     handleCategorySelect,
+    refreshCategories,
     listInitializedRef,
   };
 }
