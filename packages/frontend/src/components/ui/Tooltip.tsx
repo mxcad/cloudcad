@@ -41,6 +41,7 @@ export interface TooltipProps {
  * - 支持多种触发方式（hover、click、focus）
  * - 智能边界检测，自动调整位置
  * - 流畅的动画效果
+ * - 基于实际 DOM 尺寸的边界夹持，防止溢出屏幕
  */
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
@@ -75,7 +76,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   }, []);
 
-  // 计算 Tooltip 位置（相对于视口）
+  // 计算 Tooltip 位置（相对于视口），使用实际 DOM 尺寸并夹持在视口内
   const calculatePosition = useCallback(() => {
     if (!triggerRef.current) return;
 
@@ -83,53 +84,65 @@ export const Tooltip: React.FC<TooltipProps> = ({
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // 预估 Tooltip 尺寸
-    const estimatedWidth = 100;
-    const estimatedHeight = 40;
+    // 使用 tooltip 实际 DOM 尺寸，回退值设大一些（长文件名）
+    const tooltipEl = tooltipRef.current;
+    const actualWidth = tooltipEl ? tooltipEl.offsetWidth : 200;
+    const actualHeight = tooltipEl ? tooltipEl.offsetHeight : 40;
     const offset = 8;
+    const viewportPadding = 12;
 
     let newPosition = position;
     let top = 0;
     let left = 0;
 
-    // 根据位置计算坐标，并进行边界检测
+    // 根据期望位置计算初始坐标，并进行方向翻转检测
     switch (position) {
       case 'top':
-        top = triggerRect.top - estimatedHeight - offset;
-        left = triggerRect.left + triggerRect.width / 2;
-        // 边界检测：如果上方空间不够，切换到下方
-        if (triggerRect.top < estimatedHeight + offset + 10) {
+        left = triggerRect.left + triggerRect.width / 2 - actualWidth / 2;
+        top = triggerRect.top - actualHeight - offset;
+        if (triggerRect.top < actualHeight + offset + 10) {
           newPosition = 'bottom';
           top = triggerRect.bottom + offset;
         }
         break;
       case 'bottom':
+        left = triggerRect.left + triggerRect.width / 2 - actualWidth / 2;
         top = triggerRect.bottom + offset;
-        left = triggerRect.left + triggerRect.width / 2;
-        // 边界检测：如果下方空间不够，切换到上方
-        if (viewportHeight - triggerRect.bottom < estimatedHeight + offset + 10) {
+        if (viewportHeight - triggerRect.bottom < actualHeight + offset + 10) {
           newPosition = 'top';
-          top = triggerRect.top - estimatedHeight - offset;
+          top = triggerRect.top - actualHeight - offset;
         }
         break;
       case 'left':
-        top = triggerRect.top + triggerRect.height / 2;
-        left = triggerRect.left - estimatedWidth - offset;
-        // 边界检测：如果左侧空间不够，切换到右侧
-        if (triggerRect.left < estimatedWidth + offset + 10) {
+        top = triggerRect.top + triggerRect.height / 2 - actualHeight / 2;
+        left = triggerRect.left - actualWidth - offset;
+        if (triggerRect.left < actualWidth + offset + 10) {
           newPosition = 'right';
           left = triggerRect.right + offset;
         }
         break;
       case 'right':
-        top = triggerRect.top + triggerRect.height / 2;
+        top = triggerRect.top + triggerRect.height / 2 - actualHeight / 2;
         left = triggerRect.right + offset;
-        // 边界检测：如果右侧空间不够，切换到左侧
-        if (viewportWidth - triggerRect.right < estimatedWidth + offset + 10) {
+        if (viewportWidth - triggerRect.right < actualWidth + offset + 10) {
           newPosition = 'left';
-          left = triggerRect.left - estimatedWidth - offset;
+          left = triggerRect.left - actualWidth - offset;
         }
         break;
+    }
+
+    // 水平边界夹持：防止 tooltip 超出屏幕左右边缘
+    if (left < viewportPadding) {
+      left = viewportPadding;
+    } else if (left + actualWidth > viewportWidth - viewportPadding) {
+      left = viewportWidth - actualWidth - viewportPadding;
+    }
+
+    // 垂直边界夹持：防止 tooltip 超出屏幕上下边缘
+    if (top < viewportPadding) {
+      top = viewportPadding;
+    } else if (top + actualHeight > viewportHeight - viewportPadding) {
+      top = viewportHeight - actualHeight - viewportPadding;
     }
 
     setActualPosition(newPosition);
@@ -187,17 +200,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
   }, [clearTimeouts]);
 
   // 获取 Tooltip 基础样式
+  // 注意：calculatePosition() 已直接计算 left/top 为边缘像素位置并进行了视口边界夹持，
+  // 因此这里不再使用 translateX/Y transform 居中，避免与边界夹持冲突。
   const getTooltipStyles = (): React.CSSProperties => {
-    const transform = actualPosition === 'top' || actualPosition === 'bottom'
-      ? 'translateX(-50%)'
-      : 'translateY(-50%)';
-
     return {
       position: 'fixed',
       zIndex: Z_LAYERS.TOOLTIP,
       top: tooltipPosition.top,
       left: tooltipPosition.left,
-      transform,
       maxWidth,
       ...style,
     };

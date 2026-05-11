@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { Tooltip } from './Tooltip';
 
 export type TruncateMode = 'start' | 'middle' | 'end' | 'clip';
@@ -21,6 +21,49 @@ export interface TruncateTextProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * 检测 CSS 文本溢出（scrollWidth > clientWidth）
+ * 用于 CSS text-overflow: ellipsis 路径，弥补 useCharLimit=false 时
+ * isTruncated 永远为 false 的缺陷。
+ */
+function useOverflowDetector(ref: React.RefObject<HTMLElement | null>) {
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  const checkOverflow = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    // 使用 1px 容差避免浮点舍入误差
+    setIsOverflowing(el.scrollWidth > el.clientWidth + 1);
+  }, [ref]);
+
+  useEffect(() => {
+    // 初始检测（DOM 已挂载）
+    // requestAnimationFrame 确保浏览器已完成布局
+    const raf = requestAnimationFrame(checkOverflow);
+    return () => cancelAnimationFrame(raf);
+  }, [checkOverflow]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    // ResizeObserver 监听容器尺寸变化（窗口缩放、侧边栏拖拽等）
+    const observer = new ResizeObserver(() => {
+      checkOverflow();
+    });
+    observer.observe(el);
+
+    // 同时监听父级尺寸变化（父级可能不在 ResizeObserver 范围内）
+    if (el.parentElement) {
+      observer.observe(el.parentElement);
+    }
+
+    return () => observer.disconnect();
+  }, [checkOverflow, ref]);
+
+  return isOverflowing;
+}
+
 export const TruncateText: React.FC<TruncateTextProps> = ({
   children,
   mode = 'end',
@@ -39,6 +82,10 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   style = {},
 }) => {
   const ellipsisText = showEllipsis ? ellipsis : '';
+
+  // CSS 截断路径的溢出检测
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const cssOverflowing = useOverflowDetector(textRef);
 
   const getResponsiveClasses = (): string[] => {
     const classes: string[] = [];
@@ -72,12 +119,16 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
 
   const responsiveClasses = getResponsiveClasses();
 
-  const isTruncated = useMemo(() => {
+  // 字符数截断判断
+  const charTruncated = useMemo(() => {
     if (useCharLimit) {
       return children.length > maxChars;
     }
     return false;
   }, [children, useCharLimit, maxChars]);
+
+  // 综合判断是否被截断：字符截断 或 CSS 溢出
+  const isTruncated = useCharLimit ? charTruncated : cssOverflowing;
 
   const tooltipDisplayText = useMemo((): string | undefined => {
     if (!showTooltip) return undefined;
@@ -86,10 +137,11 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     return undefined;
   }, [showTooltip, tooltipText, isTruncated, children]);
 
+  // --- middle 模式：保留扩展名，截断中间部分 ---
   if (mode === 'middle') {
     const lastDotIndex = children.lastIndexOf('.');
     const hasExtension = lastDotIndex !== -1 && lastDotIndex < children.length - 1;
-    
+
     const baseName = hasExtension ? children.slice(0, lastDotIndex) : children;
     const extension = hasExtension ? children.slice(lastDotIndex) : '';
 
@@ -98,12 +150,14 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
         className={`${className} ${responsiveClasses.join(' ')}`}
         style={{
           ...style,
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
           width: '100%',
           minWidth: 0,
         }}
       >
         <span
+          ref={textRef}
           style={{
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -111,17 +165,17 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
           }}
         >
           {baseName}
-        </span>
-        {hasExtension && (
-          <span style={{ flexShrink: 0 }}>{extension}</span>
+        </span>{hasExtension && (
+          <span>{extension}</span>
         )}
       </span>
     );
 
-    if (showTooltip) {
-      const tooltipContent = tooltipText || children;
+    const tooltipContent = tooltipText || children;
+    // middle 模式使用 cssOverflowing 而非 isTruncated，因为 baseName 才是实际截断的部分
+    if (showTooltip && cssOverflowing) {
       return (
-        <Tooltip  content={tooltipContent} position="top" delay={300}>
+        <Tooltip content={tooltipContent} position="top" delay={300}>
           {textElement}
         </Tooltip>
       );
@@ -129,6 +183,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     return textElement;
   }
 
+  // --- useCharLimit 模式：JS 层面按字符数截断 ---
   if (useCharLimit) {
     const availableChars = maxChars - ellipsisText.length;
     let truncatedText = children;
@@ -173,6 +228,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     return textElement;
   }
 
+  // --- CSS 截断路径（默认）：使用 CSS text-overflow ---
   const cssStyle: React.CSSProperties = {
     ...style,
     overflow: 'hidden',
@@ -182,15 +238,16 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   if (mode === 'start') {
     cssStyle.direction = 'rtl';
     cssStyle.textAlign = 'left';
-    cssStyle.textOverflow = showEllipsis ? ellipsis : 'clip';
+    cssStyle.textOverflow = showEllipsis ? 'ellipsis' : 'clip';
   } else if (mode === 'end') {
-    cssStyle.textOverflow = showEllipsis ? ellipsis : 'clip';
+    cssStyle.textOverflow = showEllipsis ? 'ellipsis' : 'clip';
   } else if (mode === 'clip') {
     cssStyle.textOverflow = 'clip';
   }
 
   const textElement = (
     <span
+      ref={textRef}
       className={`${className} ${responsiveClasses.join(' ')}`}
       style={cssStyle}
     >
@@ -198,6 +255,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     </span>
   );
 
+  // CSS 截断路径：基于实际溢出检测决定是否显示 tooltip
   if (showTooltip && tooltipDisplayText) {
     return (
       <Tooltip content={tooltipDisplayText} position="top" delay={300}>

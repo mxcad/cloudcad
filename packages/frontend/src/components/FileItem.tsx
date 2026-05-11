@@ -612,10 +612,22 @@ export const FileItem: React.FC<FileItemProps> = ({
           <h4
             className="font-medium text-sm"
             style={{ color: 'var(--text-primary)' }}
+            title={
+              node.isFolder
+                ? node.name
+                : node.name.replace(/\.[^/.]+$/, '')
+            }
           >
-            <FileNameText maxWidth="100%" showTooltip={true}>
+            <span
+              style={{
+                display: 'block',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+              }}
+            >
               {node.name}
-            </FileNameText>
+            </span>
           </h4>
           <div
             className="flex items-center gap-2 text-xs"

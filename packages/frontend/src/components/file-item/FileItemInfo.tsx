@@ -67,11 +67,11 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             }}
           >
             {galleryMode ? (
-              <TruncateText mode="end" showTooltip={true} style={{ minWidth: 0, width: '100%', display: 'block', fontSize: resolvedFontSize }}>
+              <TruncateText mode="end" showTooltip={true} style={{ minWidth: 0, width: '100%', display: 'block', fontSize: resolvedFontSize, textAlign: 'center' as const }}>
                 {displayName}
               </TruncateText>
             ) : (
-              <FileNameText showTooltip={true} style={{ minWidth: 0, width: '100%', fontSize: resolvedFontSize }}>
+              <FileNameText showTooltip={true} style={{ minWidth: 0, width: '100%', fontSize: resolvedFontSize, justifyContent: 'center' as const }}>
                 {displayName}
               </FileNameText>
             )}
