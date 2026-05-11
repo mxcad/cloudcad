@@ -54,6 +54,8 @@ export interface UseLibraryQueryReturn {
   currentNode: FileSystemNode | null;
   breadcrumbs: BreadcrumbItem[];
   loading: boolean;
+  /** 后台刷新中（数据已存在但正在重新获取），用于驱动刷新按钮 spinner */
+  isFetching: boolean;
   error: string | null;
   isFolderMode: boolean;
 }
@@ -352,6 +354,14 @@ export function useLibraryQuery({
     return libraryQuery.isLoading || childrenQuery.isLoading;
   }, [search, searchQuery.isLoading, libraryQuery.isLoading, childrenQuery.isLoading]);
 
+  // isFetching: 后台刷新时仍为 true，用于驱动刷新按钮的 spinner
+  const isFetching = useMemo(() => {
+    if (search) {
+      return searchQuery.isFetching || libraryQuery.isFetching;
+    }
+    return libraryQuery.isFetching || childrenQuery.isFetching || nodeQuery.isFetching;
+  }, [search, searchQuery.isFetching, libraryQuery.isFetching, childrenQuery.isFetching, nodeQuery.isFetching]);
+
   const queryError = search ? searchQuery.error : childrenQuery.error;
 
   const nodes = useMemo(() => {
@@ -378,6 +388,7 @@ export function useLibraryQuery({
     currentNode,
     breadcrumbs,
     loading: isLoading,
+    isFetching,
     error: queryError ? String(queryError) : null,
     isFolderMode,
   };
