@@ -1990,9 +1990,9 @@ export type CheckChunkExistDto = {
      */
     filename: string;
     /**
-     * 节点ID
+     * 节点ID（可选，匿名用户可为空）
      */
-    nodeId: string;
+    nodeId?: string;
     /**
      * 分片索引
      */
@@ -2024,9 +2024,9 @@ export type CheckFileExistDto = {
      */
     filename: string;
     /**
-     * 节点ID（项目根目录或文件夹的 FileSystemNode ID）
+     * 节点ID（项目根目录或文件夹的 FileSystemNode ID，可选，匿名用户可为空）
      */
-    nodeId: string;
+    nodeId?: string;
     /**
      * 文件大小（字节）
      */
@@ -2281,9 +2281,9 @@ export type SaveMxwebAsDto = {
      */
     projectId?: string;
     /**
-     * 保存格式: dwg, dxf
+     * 保存格式: dwg, dxf, mxweb（磁盘始终存为 .mxweb，此后缀仅用于数据库文件名）
      */
-    format: 'dwg' | 'dxf';
+    format: 'dwg' | 'dxf' | 'mxweb';
     /**
      * 提交信息
      */
@@ -7207,6 +7207,44 @@ export type PublicFileControllerGetPreloadingDataErrors = {
 export type PublicFileControllerGetPreloadingDataResponses = {
     /**
      * 返回预加载数据
+     */
+    200: unknown;
+};
+
+export type PublicFileControllerConvertAndDownloadData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * 目标格式
+         */
+        format: 'dwg' | 'dxf' | 'pdf' | 'mxweb';
+        /**
+         * PDF 宽度（像素）
+         */
+        width?: string;
+        /**
+         * PDF 高度（像素）
+         */
+        height?: string;
+        /**
+         * 颜色策略
+         */
+        colorPolicy?: 'mono' | 'color';
+    };
+    url: '/api/v1/public-file/convert';
+};
+
+export type PublicFileControllerConvertAndDownloadErrors = {
+    /**
+     * 请求参数错误
+     */
+    400: unknown;
+};
+
+export type PublicFileControllerConvertAndDownloadResponses = {
+    /**
+     * 返回转换后的文件
      */
     200: unknown;
 };

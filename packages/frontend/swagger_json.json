@@ -8045,6 +8045,71 @@
         ]
       }
     },
+    "/api/v1/public-file/convert": {
+      "post": {
+        "operationId": "PublicFileController_convertAndDownload",
+        "parameters": [
+          {
+            "name": "format",
+            "required": true,
+            "in": "query",
+            "description": "目标格式",
+            "schema": {
+              "enum": [
+                "dwg",
+                "dxf",
+                "pdf",
+                "mxweb"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "width",
+            "required": false,
+            "in": "query",
+            "description": "PDF 宽度（像素）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "height",
+            "required": false,
+            "in": "query",
+            "description": "PDF 高度（像素）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "colorPolicy",
+            "required": false,
+            "in": "query",
+            "description": "颜色策略",
+            "schema": {
+              "enum": [
+                "mono",
+                "color"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回转换后的文件"
+          },
+          "400": {
+            "description": "请求参数错误"
+          }
+        },
+        "summary": "将 mxweb 文件转换为指定格式并下载（公开接口）",
+        "tags": [
+          "公开文件服务"
+        ]
+      }
+    },
     "/api/v1/library/drawing": {
       "get": {
         "operationId": "LibraryController_getDrawingLibrary",
@@ -12720,7 +12785,7 @@
           },
           "nodeId": {
             "type": "string",
-            "description": "节点ID",
+            "description": "节点ID（可选，匿名用户可为空）",
             "example": "clx1234567890"
           },
           "chunk": {
@@ -12742,7 +12807,6 @@
         "required": [
           "fileHash",
           "filename",
-          "nodeId",
           "chunk",
           "chunks",
           "size"
@@ -12776,7 +12840,7 @@
           },
           "nodeId": {
             "type": "string",
-            "description": "节点ID（项目根目录或文件夹的 FileSystemNode ID）",
+            "description": "节点ID（项目根目录或文件夹的 FileSystemNode ID，可选，匿名用户可为空）",
             "example": "clx1234567890"
           },
           "fileSize": {
@@ -12798,7 +12862,6 @@
         "required": [
           "fileHash",
           "filename",
-          "nodeId",
           "fileSize"
         ]
       },
@@ -13166,10 +13229,11 @@
           },
           "format": {
             "type": "string",
-            "description": "保存格式: dwg, dxf",
+            "description": "保存格式: dwg, dxf, mxweb（磁盘始终存为 .mxweb，此后缀仅用于数据库文件名）",
             "enum": [
               "dwg",
-              "dxf"
+              "dxf",
+              "mxweb"
             ],
             "default": "dwg"
           },
