@@ -742,38 +742,8 @@ export const CADEditorDirect: React.FC = () => {
           }
         };
 
-        // 先检查外部参照，再决定是否打开 mxweb
-        // 将打开文件的回调存入 ref，弹框关闭后通过 onSkip/onSuccess 触发
-        openFileCallbackRef.current = doOpenMxFile;
-
-        try {
-          let hasMissing = false;
-          let shouldCheck = false;
-
-          // 如果已登录且有文件ID，使用nodeId检查
-          if (isAuthenticated && fileId && !libraryKeyParam) {
-            shouldCheck = true;
-            hasMissing = await externalReferenceUpload.checkMissingReferences(fileId, false, false);
-          }
-          // 如果未登录且有文件hash，使用hash检查
-          else if (!isAuthenticated && file.fileHash) {
-            shouldCheck = true;
-            setCurrentFileHash(file.fileHash);
-            hasMissing = await externalReferenceUpload.checkMissingReferences(file.fileHash, false, false);
-          }
-
-          if (!shouldCheck || !hasMissing) {
-            // 无需检查或没有缺失的外部参照，直接打开文件
-            await doOpenMxFile();
-            openFileCallbackRef.current = null;
-          }
-          // 有缺失外部参照时，弹框已显示，回调在用户操作后通过 onSkip/onSuccess 触发
-        } catch (error) {
-          console.error('外部参照检查失败:', error);
-          // 检查失败也打开文件
-          await doOpenMxFile();
-          openFileCallbackRef.current = null;
-        }
+        // 从页面跳转打开文件（我的图纸/项目管理/公开资源库），直接打开，不检查外部参照
+        await doOpenMxFile();
       } catch (err) {
         console.error('加载文件失败:', err);
         if (!cancelled) {
@@ -798,19 +768,29 @@ export const CADEditorDirect: React.FC = () => {
       noCache?: boolean; 
       callback?: () => Promise<void> 
     }>) => {
-      const { fileHash, callback } = event.detail;
+      const { fileHash, noCache, callback } = event.detail;
       setCurrentFileHash(fileHash);
-      
+
       // 保存回调函数到 ref，在外部参照操作完成后调用
       openFileCallbackRef.current = callback || null;
-      
+
+      // 只有无缓存模式才检查外部参照（CAD编辑器打开文件_无缓存）
+      if (!noCache) {
+        // 非无缓存模式，直接打开文件
+        if (openFileCallbackRef.current) {
+          await openFileCallbackRef.current();
+          openFileCallbackRef.current = null;
+        }
+        return;
+      }
+
       // 等待一小会儿，让文件先加载完成
       setTimeout(async () => {
         try {
           // shouldRetry = true，因为刚上传文件，需要等待生成 preloading.json
           // forceOpen = false，如果没有外部参照不弹框
           const hasMissingReferences = await externalReferenceUpload.checkMissingReferences(fileHash, true, false);
-          
+
           if (!hasMissingReferences) {
             // 如果没有外部参照，直接调用回调打开文件
             if (openFileCallbackRef.current) {

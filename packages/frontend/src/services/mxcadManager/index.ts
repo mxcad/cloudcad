@@ -1164,20 +1164,13 @@ async function handleFileSelection(
       const userChoice = await _showDuplicateFileDialog(file.name);
 
       if (userChoice === 'open') {
-        // 用户选择打开已有文件 — 先派发事件检查外部参照，弹框关闭后再打开文件
-        window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
-          detail: {
-            nodeId: duplicateCheck.data?.nodeId,
-            callback: async () => {
-              showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
-              await openUploadedFile(
-                duplicateCheck.data?.nodeId,
-                uploadTargetNodeId
-              );
-              hideGlobalLoading();
-            },
-          },
-        }));
+        // 秒传：文件已存在，直接打开，不检查外部参照
+        showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
+        await openUploadedFile(
+          duplicateCheck.data?.nodeId,
+          uploadTargetNodeId
+        );
+        hideGlobalLoading();
         return;
       } else if (userChoice === null) {
         // 用户取消
