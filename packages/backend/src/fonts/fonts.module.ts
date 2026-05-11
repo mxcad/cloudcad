@@ -26,7 +26,7 @@ import { CommonModule } from '../common/common.module';
     ConfigModule,
     MulterModule.register({
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB
+        // 字体文件上传不限制大小
       },
     }),
   ],

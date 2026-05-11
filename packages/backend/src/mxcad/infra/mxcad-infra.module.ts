@@ -16,7 +16,6 @@ import { FileSystemService } from './file-system.service';
 import { CacheManagerService } from './cache-manager.service';
 import { ThumbnailGenerationService } from './thumbnail-generation.service';
 import { LinuxInitService } from './linux-init.service';
-import { ConversionModule } from '../../conversion/conversion.module';
 
 /**
  * Mxcad 基础设施子模块
@@ -31,7 +30,7 @@ import { ConversionModule } from '../../conversion/conversion.module';
  * - LinuxInitService: Linux 环境初始化（OnModuleInit 自动执行）
  */
 @Module({
-  imports: [ConfigModule, ConversionModule],
+  imports: [ConfigModule],
   providers: [
     FileSystemService,
     CacheManagerService,

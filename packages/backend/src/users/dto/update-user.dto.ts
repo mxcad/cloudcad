@@ -12,6 +12,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { UserStatus } from '../../common/enums/user-status.enum';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
@@ -23,6 +24,7 @@ import {
 
 export class UpdateUserDto {
   @ApiProperty({ description: '用户邮箱', required: false })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsEmail()
   email?: string;
@@ -32,34 +34,40 @@ export class UpdateUserDto {
     example: '13800138000',
     required: false,
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString({ message: '手机号必须是字符串' })
   @Matches(/^1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
   phone?: string;
 
   @ApiProperty({ description: '用户名', required: false, minLength: 3 })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   @MinLength(3)
   username?: string;
 
   @ApiProperty({ description: '密码', required: false, minLength: 6 })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   @MinLength(6)
   password?: string;
 
   @ApiProperty({ description: '昵称', required: false })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   nickname?: string;
 
   @ApiProperty({ description: '头像URL', required: false })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   avatar?: string;
 
   @ApiProperty({ description: '角色ID', required: false })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString({ message: '角色ID必须是字符串' })
   roleId?: string;

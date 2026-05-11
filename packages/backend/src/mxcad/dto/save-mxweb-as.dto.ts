@@ -44,13 +44,13 @@ export class SaveMxwebAsDto {
   projectId?: string;
 
   @ApiProperty({
-    description: '保存格式: dwg, dxf',
-    enum: ['dwg', 'dxf'],
+    description: '保存格式: dwg, dxf, mxweb（磁盘始终存为 .mxweb，此后缀仅用于数据库文件名）',
+    enum: ['dwg', 'dxf', 'mxweb'],
     default: 'dwg',
   })
-  @IsIn(['dwg', 'dxf'])
+  @IsIn(['dwg', 'dxf', 'mxweb'])
   @IsOptional()
-  format?: 'dwg' | 'dxf' = 'dwg';
+  format?: 'dwg' | 'dxf' | 'mxweb' = 'dwg';
 
   @ApiProperty({
     description: '提交信息',

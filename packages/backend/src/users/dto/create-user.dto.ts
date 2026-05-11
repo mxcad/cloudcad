@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
@@ -29,6 +30,7 @@ export class CreateUserDto {
     format: 'email',
     required: false,
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsEmail({}, { message: '请输入有效的邮箱地址' })
   email?: string;
@@ -38,6 +40,7 @@ export class CreateUserDto {
     example: '13800138000',
     required: false,
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString({ message: '手机号必须是字符串' })
   @Matches(/^1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
@@ -72,12 +75,14 @@ export class CreateUserDto {
   password: string;
 
   @ApiProperty({ description: '昵称', required: false, maxLength: 50 })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString({ message: '昵称必须是字符串' })
   @MaxLength(50, { message: '昵称最多50个字符' })
   nickname?: string;
 
   @ApiProperty({ description: '头像URL', required: false })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   avatar?: string;
@@ -87,6 +92,7 @@ export class CreateUserDto {
     example: 'clh8x9y0z1a2b3c4d5e6f7g8h9',
     required: false,
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString({ message: '角色ID必须是字符串' })
   roleId?: string;
@@ -110,6 +116,7 @@ export class CreateUserDto {
   emailVerified?: boolean;
 
   @ApiProperty({ description: '微信 OpenID', required: false })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   wechatId?: string;
@@ -119,6 +126,7 @@ export class CreateUserDto {
     required: false,
     default: 'LOCAL',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   provider?: string;
