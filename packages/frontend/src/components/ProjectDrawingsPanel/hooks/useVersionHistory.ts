@@ -65,7 +65,7 @@ export function useVersionHistory(selectedProjectId: string | null): UseVersionH
   const handleOpenHistoricalVersion = useCallback(
     (revision: number) => {
       if (!versionHistoryNode?.path || !versionHistoryNode.id) return;
-      const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}`;
+      const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       window.open(url, '_blank');
     },
     [versionHistoryNode]

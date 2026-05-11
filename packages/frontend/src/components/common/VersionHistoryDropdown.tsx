@@ -158,7 +158,7 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
       onViewVersion(entry.revision, fileId, parentId);
     } else {
       // 默认在新标签页打开
-      const url = `/cad-editor/${fileId}?nodeId=${parentId || ''}&v=${entry.revision}`;
+      const url = `/cad-editor/${fileId}?nodeId=${parentId || ''}&v=${entry.revision}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       window.open(url, '_blank');
     }
     setIsOpen(false);

@@ -460,7 +460,7 @@ export const Dashboard: React.FC = () => {
                         navigate(`/personal-space/${node.id}`);
                       } else {
                         // 文件：在新标签页打开编辑器
-                        window.open(`/cad-editor/${node.id}`, '_blank');
+                        window.open(`/cad-editor/${node.id}?back=${encodeURIComponent(window.location.pathname + window.location.search)}`, '_blank');
                       }
                     }}
                   />

@@ -121,6 +121,7 @@ export const useFileSystemNavigation = ({
           // 正常模式：新标签页打开
           const queryParams = new URLSearchParams();
           queryParams.set('nodeId', node.parentId || '');
+          queryParams.set('back', window.location.pathname + window.location.search);
           const url = `/cad-editor/${node.id}?${queryParams.toString()}`;
           window.open(url, '_blank');
         }

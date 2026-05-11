@@ -203,7 +203,7 @@ export const LibraryManager: React.FC = () => {
 
       // 统一使用新的路由格式
       try {
-        const editorUrl = `/cad-editor/${node.id}?library=${libraryType}`;
+        const editorUrl = `/cad-editor/${node.id}?library=${libraryType}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`;
         window.open(editorUrl, '_blank');
         showToast(`正在打开：${node.name}`, 'success');
       } catch (err) {

@@ -89,7 +89,7 @@ export function useVersionHistory({
         return;
       }
 
-      const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}`;
+      const url = `/cad-editor/${versionHistoryNode.id}?nodeId=${versionHistoryNode.parentId}&v=${revision}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       window.open(url, '_blank');
     },
     [versionHistoryNode]
