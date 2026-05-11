@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -14,6 +15,7 @@ import { usersControllerGetDashboardStats } from '@/api-sdk';
 import type { UserDashboardStatsDto } from '@/api-sdk';
 
 // Lucide 图标
+import { RefreshCw } from 'lucide-react';
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { HardDrive } from 'lucide-react';
@@ -152,6 +154,7 @@ export const Dashboard: React.FC = () => {
   const { config: brandConfig } = useBrandConfig();
 
   const appName = brandConfig?.title || 'CloudCAD';
+  const queryClient = useQueryClient();
 
   // 数据状态
   const {
@@ -186,6 +189,22 @@ export const Dashboard: React.FC = () => {
     description: '',
   });
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+
+  // 手动刷新仪表盘数据
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefreshDashboard = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await usersControllerGetDashboardStats();
+      if (result.data) {
+        setRefreshedStats(result.data);
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient]);
 
   // 计算问候语
   useEffect(() => {
@@ -332,6 +351,20 @@ export const Dashboard: React.FC = () => {
             >
               <Upload size={16} />
               上传图纸
+            </button>
+            <button
+              onClick={handleRefreshDashboard}
+              disabled={loading || isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 hover:shadow-md"
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-secondary)',
+              }}
+              title="刷新仪表盘数据"
+            >
+              <RefreshCw size={16} className={(loading || isRefreshing) ? 'animate-spin' : ''} />
+              刷新
             </button>
           </div>
         </div>

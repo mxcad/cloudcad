@@ -121,7 +121,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
         <AlertCircle size={32} className="text-error-600" />
       </div>
       <p className="text-error-600 font-medium mb-4">{error}</p>
-      <Button onClick={onRefresh} variant="outline">
+      <Button onClick={onRefresh} variant="outline" disabled={loading}>
         <RefreshIcon size={16} className="mr-2" />
         刷新
       </Button>

@@ -442,6 +442,16 @@ export const RoleManagement = () => {
             className="search-input"
           />
         </div>
+
+        {/* 刷新按钮 */}
+        <button
+          onClick={initialize}
+          disabled={loading}
+          className="refresh-button"
+          title="刷新角色数据"
+        >
+          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {/* Tab 切换 */}

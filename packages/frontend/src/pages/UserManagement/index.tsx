@@ -342,7 +342,7 @@ export const UserManagement = () => {
         <div className="error-banner">
           <XCircle size={18} />
           <span>{error}</span>
-          <button onClick={loadUsers} className="error-retry-btn">
+          <button onClick={loadUsers} disabled={loading} className="error-retry-btn">
             <RefreshCw size={14} />
             重试
           </button>
