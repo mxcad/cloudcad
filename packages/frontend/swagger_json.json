@@ -8048,54 +8048,54 @@
     "/api/v1/public-file/convert": {
       "post": {
         "operationId": "PublicFileController_convertAndDownload",
-        "parameters": [
-          {
-            "name": "format",
-            "required": true,
-            "in": "query",
-            "description": "目标格式",
-            "schema": {
-              "enum": [
-                "dwg",
-                "dxf",
-                "pdf",
-                "mxweb"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "width",
-            "required": false,
-            "in": "query",
-            "description": "PDF 宽度（像素）",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "height",
-            "required": false,
-            "in": "query",
-            "description": "PDF 高度（像素）",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "colorPolicy",
-            "required": false,
-            "in": "query",
-            "description": "颜色策略",
-            "schema": {
-              "enum": [
-                "mono",
-                "color"
-              ],
-              "type": "string"
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "转换请求参数",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "format"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "mxweb 文件的 Base64 编码内容"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "dwg",
+                      "dxf",
+                      "pdf",
+                      "mxweb"
+                    ],
+                    "description": "目标格式"
+                  },
+                  "width": {
+                    "type": "string",
+                    "description": "PDF 宽度（像素）"
+                  },
+                  "height": {
+                    "type": "string",
+                    "description": "PDF 高度（像素）"
+                  },
+                  "colorPolicy": {
+                    "type": "string",
+                    "enum": [
+                      "mono",
+                      "color"
+                    ],
+                    "description": "颜色策略"
+                  }
+                }
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": "返回转换后的文件"

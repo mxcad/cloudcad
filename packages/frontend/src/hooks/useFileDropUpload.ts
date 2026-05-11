@@ -4,10 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef } from 'react';
-import type { LoadFileParam } from './useMxCadUploadNative';
-import { uploadMxCadFile } from '../utils/mxcadUploadUtils';
-import { calculateFileHash } from '../utils/hashUtils';
 import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
+import { uploadSingleFile } from '../utils/mxcadUploadUtils';
+import { useUIStore } from '../stores/uiStore';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
 
@@ -24,11 +23,13 @@ interface UseFileDropUploadOptions {
  * 文件拖拽上传 Hook
  *
  * 处理从桌面/文件管理器拖拽文件到文件列表的上传逻辑。
+ * 核心上传管线复用 uploadSingleFile（与 MxCadUploader 共用）。
  */
 export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }: UseFileDropUploadOptions) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const dragCounterRef = useRef(0);
+  const { setGlobalLoading, setLoadingMessage, setLoadingProgress } = useUIStore();
 
   /**
    * 过滤允许的文件类型
@@ -41,7 +42,7 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
   }, []);
 
   /**
-   * 处理文件上传 - 使用手动分片上传
+   * 处理文件上传 - 复用 uploadSingleFile（与正常上传共用管线）
    */
   const handleFilesUpload = useCallback(
     async (files: File[]) => {
@@ -55,20 +56,18 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
       }
 
       setUploading(true);
+      setGlobalLoading(true, `正在上传: ${files[0].name}`);
 
       for (const file of files) {
         try {
-          const hash = await calculateFileHash(file);
-          const result = await uploadMxCadFile({
-            file,
-            hash,
-            nodeId: resolvedNodeId,
-          });
+          setLoadingMessage(`正在上传: ${file.name}`);
+          const result = await uploadSingleFile(file, resolvedNodeId, setLoadingProgress);
 
           if (result.nodeId) {
             if (openAfterUpload) {
               await openUploadedFile(result.nodeId, resolvedNodeId);
             } else {
+              setLoadingMessage('文件转换中，请稍候...');
               await waitForFileReady(result.nodeId);
             }
             onSuccess?.();
@@ -79,6 +78,7 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
       }
 
       setUploading(false);
+      setGlobalLoading(false);
     },
     [nodeId, uploading, onSuccess, openAfterUpload]
   );

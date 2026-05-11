@@ -26,11 +26,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiConsumes,
-  ApiResponse,
-  ApiQuery,
+  ApiTags, ApiOperation, ApiConsumes, ApiResponse, ApiQuery, ApiBody,
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { PublicFileService, PreloadingData } from './public-file.service';
@@ -300,37 +296,31 @@ export class PublicFileController {
   @Post('convert')
   @Public()
   @ApiOperation({ summary: '将 mxweb 文件转换为指定格式并下载（公开接口）' })
-  @ApiConsumes('multipart/form-data')
-  @ApiQuery({
-    name: 'format',
-    description: '目标格式',
-    enum: ['dwg', 'dxf', 'pdf', 'mxweb'],
-    required: true,
-  })
-  @ApiQuery({ name: 'width', description: 'PDF 宽度（像素）', required: false })
-  @ApiQuery({ name: 'height', description: 'PDF 高度（像素）', required: false })
-  @ApiQuery({
-    name: 'colorPolicy',
-    description: '颜色策略',
-    enum: ['mono', 'color'],
-    required: false,
+  @ApiBody({
+    description: '转换请求参数',
+    schema: {
+      type: 'object',
+      required: ['file', 'format'],
+      properties: {
+        file: { type: 'string', description: 'mxweb 文件的 Base64 编码内容' },
+        format: { type: 'string', enum: ['dwg', 'dxf', 'pdf', 'mxweb'], description: '目标格式' },
+        width: { type: 'string', description: 'PDF 宽度（像素）' },
+        height: { type: 'string', description: 'PDF 高度（像素）' },
+        colorPolicy: { type: 'string', enum: ['mono', 'color'], description: '颜色策略' },
+      },
+    },
   })
   @ApiResponse({ status: 200, description: '返回转换后的文件' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async convertAndDownload(
-    @UploadedFile() file: Express.Multer.File,
-    @Query('format') format: string,
-    @Query('width') width?: string,
-    @Query('height') height?: string,
-    @Query('colorPolicy') colorPolicy?: string,
+    @Body() body: { file: string; format: string; width?: string; height?: string; colorPolicy?: string },
     @Res() res: Response,
   ): Promise<void> {
-    if (!file) {
-      throw new BadRequestException('未上传文件');
+    if (!body?.file) {
+      throw new BadRequestException('缺少文件内容');
     }
 
-    if (!format || !['dwg', 'dxf', 'pdf', 'mxweb'].includes(format)) {
+    if (!body?.format || !['dwg', 'dxf', 'pdf', 'mxweb'].includes(body.format)) {
       throw new BadRequestException(
         '不支持的格式，请选择 dwg、dxf、pdf 或 mxweb',
       );
@@ -338,9 +328,9 @@ export class PublicFileController {
 
     try {
       const result = await this.publicFileService.convertMxwebToFormat(
-        file.buffer,
-        format,
-        { width, height, colorPolicy: colorPolicy as 'mono' | 'color' | undefined },
+        body.file,
+        body.format,
+        { width: body.width, height: body.height, colorPolicy: body.colorPolicy as 'mono' | 'color' | undefined },
       );
 
       res.setHeader('Content-Type', result.mimeType);

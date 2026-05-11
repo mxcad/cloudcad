@@ -122,6 +122,16 @@ function getReturnUrl(): string {
 
 function handleTokenRefreshFailure() {
   if (isRedirecting) return;
+
+  // еҰӮжһңз”ЁжҲ·д»ҺжңӘзҷ»еҪ•пјҲжІЎжңүд»»дҪ• tokenпјүпјҢеҲҷдёҚи§ҰеҸ‘зҷ»еҪ•и·іиҪ¬
+  // иҝҷз§Қжғ…еҶөеҸ‘з”ҹеңЁе…¬ејҖиө„жәҗеә“и®ҝй—®зӯүеңәжҷҜпјҢ
+  // еҗҺеҸ° API зҡ„ 401 жҳҜеӣ дёәжІЎжңүи®ӨиҜҒеӨҙпјҢиҖҢйқһ token иҝҮжңҹ
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
+  if (!accessToken && !refreshToken) {
+    return;
+  }
+
   isRedirecting = true;
 
   // 保存当前页面路径，登录后跳回
@@ -147,6 +157,18 @@ function handleTokenRefreshFailure() {
     localStorage.removeItem('mxcad-personal-space-id');
     window.location.href = '/login';
   }, 2000);
+}
+
+/**
+ * 取消待定的登录跳转
+ * 当用户触发另存为等本地操作时，应调用此函数取消后台 401 触发的跳转定时器
+ */
+export function cancelLoginRedirect(): void {
+  if (redirectTimer !== null) {
+    clearTimeout(redirectTimer);
+    redirectTimer = null;
+  }
+  isRedirecting = false;
 }
 
 const nativeFetch = globalThis.fetch.bind(globalThis);

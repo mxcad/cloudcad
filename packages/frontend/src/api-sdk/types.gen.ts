@@ -7212,9 +7212,14 @@ export type PublicFileControllerGetPreloadingDataResponses = {
 };
 
 export type PublicFileControllerConvertAndDownloadData = {
-    body?: never;
-    path?: never;
-    query: {
+    /**
+     * 转换请求参数
+     */
+    body: {
+        /**
+         * mxweb 文件的 Base64 编码内容
+         */
+        file: string;
         /**
          * 目标格式
          */
@@ -7232,6 +7237,8 @@ export type PublicFileControllerConvertAndDownloadData = {
          */
         colorPolicy?: 'mono' | 'color';
     };
+    path?: never;
+    query?: never;
     url: '/api/v1/public-file/convert';
 };
 

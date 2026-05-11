@@ -1866,7 +1866,14 @@ export const publicFileControllerGetPreloadingData = <ThrowOnError extends boole
 /**
  * 将 mxweb 文件转换为指定格式并下载（公开接口）
  */
-export const publicFileControllerConvertAndDownload = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerConvertAndDownloadData, ThrowOnError>) => (options.client ?? client).post<PublicFileControllerConvertAndDownloadResponses, PublicFileControllerConvertAndDownloadErrors, ThrowOnError>({ url: '/api/v1/public-file/convert', ...options });
+export const publicFileControllerConvertAndDownload = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerConvertAndDownloadData, ThrowOnError>) => (options.client ?? client).post<PublicFileControllerConvertAndDownloadResponses, PublicFileControllerConvertAndDownloadErrors, ThrowOnError>({
+    url: '/api/v1/public-file/convert',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Get drawing library details

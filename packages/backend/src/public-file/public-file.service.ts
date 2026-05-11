@@ -273,13 +273,15 @@ export class PublicFileService {
    * @returns 转换后的文件 buffer 和元信息
    */
   async convertMxwebToFormat(
-    fileBuffer: Buffer,
+    base64File: string,
     targetFormat: string,
     pdfOptions?: { width?: string; height?: string; colorPolicy?: string }
   ): Promise<{ buffer: Buffer; filename: string; mimeType: string }> {
     if (!this.fileConversionService) {
       throw new Error('文件转换服务不可用');
     }
+
+    const fileBuffer = Buffer.from(base64File, 'base64');
 
     // mxweb 格式无需转换，直接返回
     if (targetFormat === 'mxweb') {

@@ -74,6 +74,7 @@ import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '../../contexts/NotificationContext';
 import { isAuthenticated } from '../../utils/authCheck';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
+import { cancelLoginRedirect } from '../../config/clientSetup';
 import { handleError } from '@/utils/errorHandler';
 import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../../utils/loadingUtils';
 
@@ -1354,8 +1355,10 @@ async function triggerSaveAs() {
   const fileName = currentFileInfo?.name || 'untitled';
 
   if (!isAuthenticated() || isAccessTokenExpired()) {
-    // 未登录或 token 已过期：直接保存为 mxweb blob 并触发 mxcad-save-as 事件
+    // 未登录或 token 已过期：取消后台 401 触发的登录跳转定时器，
+    // 直接保存为 mxweb blob 并触发 mxcad-save-as 事件，
     // CADEditorDirect 中未登录用户的 mxcad-save-as 处理会弹出下载格式选择框（另存为到本地）
+    cancelLoginRedirect();
     await showSaveAsDialog(null, fileName);
     return;
   }

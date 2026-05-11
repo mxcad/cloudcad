@@ -12,6 +12,7 @@ import { JsonValue } from './../api-sdk/core/queryKeySerializer.gen';
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 import { mxCadControllerCheckFileExist, mxCadControllerCheckChunkExist, mxCadControllerUploadFile } from "@/api-sdk"
+import { calculateFileHash } from './hashUtils';
 /**
  * MxCAD 上传配置接口
  */
@@ -296,3 +297,20 @@ export async function uploadFile(
     isInstantUpload: false,
   };
 };
+
+/**
+ * 计算文件哈希并上传（组合函数，供拖拽上传和正常上传共用）
+ *
+ * @param file 要上传的文件
+ * @param nodeId 目标节点 ID
+ * @param onProgress 进度回调（可选，percentage 0-100）
+ * @returns 上传结果
+ */
+export async function uploadSingleFile(
+  file: File,
+  nodeId: string,
+  onProgress?: (percentage: number) => void
+): Promise<MxCadUploadResult> {
+  const hash = await calculateFileHash(file);
+  return uploadFile({ file, hash, nodeId, onProgress });
+}
