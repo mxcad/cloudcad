@@ -16,7 +16,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode } from '@/api-sdk';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload } from '@/api-sdk';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
@@ -24,6 +24,7 @@ import { ExternalReferenceModal } from '../components/modals/ExternalReferenceMo
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
+import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
@@ -156,6 +157,9 @@ export const CADEditorDirect: React.FC = () => {
   // 登录后触发保存操作标记
   const saveTriggeredRef = useRef(false);
 
+  // 标记是否处于"另存为到本地"模式（用于区分导出下载和本地另存为）
+  const isSaveAsLocalModeRef = useRef(false);
+
   // 下载格式弹窗状态
   const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
   const [downloadingNodeId, setDownloadingNodeId] = useState<string>('');
@@ -185,6 +189,27 @@ export const CADEditorDirect: React.FC = () => {
       setShowLoginPrompt(false);
     }
   }, [location.pathname, isHomeMode]);
+
+  // 修复 window.open 新标签页无历史栈 → 返回时页面直接关闭的 bug
+  // 原理：window.open 创建的新标签页历史栈只有 1 条，replaceState 不会增加条目。
+  //       从 URL 的 back 参数获取来源页面，通过 replaceState + pushState 注入历史栈。
+  //       back 参数由各 window.open 调用处传入 window.location.pathname + window.location.search。
+  useEffect(() => {
+    if (!fileId) return;
+    if (window.history.length > 1) return;
+
+    const backUrl = new URLSearchParams(location.search).get('back');
+    if (!backUrl) return;
+
+    // 初始栈: [CAD编辑器URL] (索引0, 当前)
+    // ⚠️ 必须先保存 CAD 编辑器 URL，因为 replaceState 会立刻改变 window.location
+    const cadEditorPath = window.location.pathname + window.location.search;
+    // replaceState → 栈: [来源页面URL] (索引0, 当前)
+    window.history.replaceState(null, '', backUrl);
+    // pushState → 栈: [来源页面URL, CAD编辑器URL] (索引1, 当前)
+    // 用户点"返回"时回到来源页面URL → React Router 导航到对应页面
+    window.history.pushState(null, '', cadEditorPath);
+  }, [fileId, location.search]);
 
   // 标记是否正在处理保存命令（防止同一次保存命令重复触发弹框）
   const isProcessingSaveRef = useRef(false);
@@ -649,94 +674,105 @@ export const CADEditorDirect: React.FC = () => {
           }
         }
 
-        // 如果 MxCAD 已经创建（且不是第一次初始化）
+        // 如果 MxCAD 已经创建且是同一个文件 URL，直接显示（无需重新检查外部参照）
         if (isInitializedRef.current && mxcadManager.isCreated()) {
-          // 检查是否是同一个文件 URL（包括版本参数）
           if (loadedFileUrlRef.current === mxcadFileUrl) {
-            // 同一个文件，只需显示编辑器
+            mxcadManager.showMxCAD(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 定义打开 mxweb 文件的核心逻辑（延迟执行，等待外部参照弹框关闭后调用）
+        const doOpenMxFile = async () => {
+          if (isInitializedRef.current && mxcadManager.isCreated()) {
+            // URL 变化了，需要重新加载文件
+            console.log(
+              `文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`
+            );
+            await mxcadManager.openFile(mxcadFileUrl);
+            mxcadManager.showMxCAD(true);
+            loadedFileUrlRef.current = mxcadFileUrl;
+            currentFileIdRef.current = fileId;
+            setLoading(false);
+            return;
+          }
+
+          // 检查 MxCAD 是否已创建（可能是其他组件初始化的）
+          if (mxcadManager.isCreated()) {
+            console.log('[CADEditorDirect] MxCAD 已创建，跳过初始化');
+            isInitializedRef.current = true;
+            loadedFileUrlRef.current = mxcadFileUrl;
+            currentFileIdRef.current = fileId;
             mxcadManager.showMxCAD(true);
             setLoading(false);
             return;
           }
 
-          // URL 变化了（可能是版本参数变化），需要重新加载文件
-          console.log(
-            `文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`
-          );
+          // 按需加载 MxCAD 依赖
+          await loadMxCADDependencies();
+          if (cancelled) return;
 
-          // 重新加载 mxweb 文件
-          await mxcadManager.openFile(mxcadFileUrl);
+          // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
+          await initMxCADConfig(file);
+          if (cancelled) return;
+
+          // 初始化 MxCAD 视图，传入 mxweb 文件 URL
+          await mxcadManager.initializeMxCADView(mxcadFileUrl);
+          if (cancelled) return;
+
           mxcadManager.showMxCAD(true);
 
-          // 更新已加载的文件 URL
-          loadedFileUrlRef.current = mxcadFileUrl;
-          currentFileIdRef.current = fileId;
+          // 初始化主题同步 - 监听 mxcad-app 主题变化
+          await initThemeSync();
+          if (cancelled) return;
 
-          setLoading(false);
-          return;
-        }
-
-        // 第一次初始化 MxCAD
-        // 检查 MxCAD 是否已创建（可能是其他组件初始化的）
-        if (mxcadManager.isCreated()) {
-          console.log('[CADEditorDirect] MxCAD 已创建，跳过初始化');
+          // 标记为已初始化
           isInitializedRef.current = true;
           loadedFileUrlRef.current = mxcadFileUrl;
           currentFileIdRef.current = fileId;
-          mxcadManager.showMxCAD(true);
-          setLoading(false);
-          return;
-        }
 
-        // 按需加载 MxCAD 依赖
-        await loadMxCADDependencies();
-        if (cancelled) return;
+          // 等待一帧渲染，确保 CAD canvas 已绘制到屏幕后再隐藏 loading
+          await new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          });
 
-        // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
-        await initMxCADConfig(file);
-        if (cancelled) return;
+          if (!cancelled) {
+            setLoading(false);
+          }
+        };
 
-        // 初始化 MxCAD 视图，传入 mxweb 文件 URL
-        await mxcadManager.initializeMxCADView(mxcadFileUrl);
-        if (cancelled) return;
+        // 先检查外部参照，再决定是否打开 mxweb
+        // 将打开文件的回调存入 ref，弹框关闭后通过 onSkip/onSuccess 触发
+        openFileCallbackRef.current = doOpenMxFile;
 
-        mxcadManager.showMxCAD(true);
-
-        // 初始化主题同步 - 监听 mxcad-app 主题变化
-        await initThemeSync();
-        if (cancelled) return;
-
-        // 标记为已初始化
-        isInitializedRef.current = true;
-        loadedFileUrlRef.current = mxcadFileUrl;
-        currentFileIdRef.current = fileId;
-
-        // 等待一帧渲染，确保 CAD canvas 已绘制到屏幕后再隐藏 loading
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-        });
-
-        if (!cancelled) {
-          setLoading(false);
-        }
-        
-        // 检查外部参照
         try {
+          let hasMissing = false;
+          let shouldCheck = false;
+
           // 如果已登录且有文件ID，使用nodeId检查
           if (isAuthenticated && fileId && !libraryKeyParam) {
-            // shouldRetry = false，因为文件已经存在了，不需要等待生成
-            // forceOpen = false，如果没有外部参照不弹框
-            await externalReferenceUpload.checkMissingReferences(fileId, false, false);
+            shouldCheck = true;
+            hasMissing = await externalReferenceUpload.checkMissingReferences(fileId, false, false);
           }
           // 如果未登录且有文件hash，使用hash检查
           else if (!isAuthenticated && file.fileHash) {
-            // 保存文件hash到state
+            shouldCheck = true;
             setCurrentFileHash(file.fileHash);
-            // shouldRetry = false，forceOpen = false
-            await externalReferenceUpload.checkMissingReferences(file.fileHash, false, false);
+            hasMissing = await externalReferenceUpload.checkMissingReferences(file.fileHash, false, false);
           }
+
+          if (!shouldCheck || !hasMissing) {
+            // 无需检查或没有缺失的外部参照，直接打开文件
+            await doOpenMxFile();
+            openFileCallbackRef.current = null;
+          }
+          // 有缺失外部参照时，弹框已显示，回调在用户操作后通过 onSkip/onSuccess 触发
         } catch (error) {
           console.error('外部参照检查失败:', error);
+          // 检查失败也打开文件
+          await doOpenMxFile();
+          openFileCallbackRef.current = null;
         }
       } catch (err) {
         console.error('加载文件失败:', err);
@@ -803,13 +839,33 @@ export const CADEditorDirect: React.FC = () => {
 
   // 监听已登录用户上传完成事件，检查外部参照（替代 mxcadManager 中的直接 hook 调用）
   useEffect(() => {
-    const handleUploadCompleted = (event: CustomEvent<{ nodeId: string }>) => {
-      const { nodeId } = event.detail;
-      // shouldRetry = true，上传完成后需要等待后端生成 preloading.json
-      // forceOpen = false，没有外部参照不弹框
-      externalReferenceUpload.checkMissingReferences(nodeId, true, false).catch(err => {
-        console.error('外部参照检查失败:', err);
-      });
+    const handleUploadCompleted = (event: CustomEvent<{ nodeId: string; callback?: () => Promise<void> }>) => {
+      const { nodeId, callback } = event.detail;
+
+      // Save file-open callback in ref; triggered after external ref operations complete
+      if (callback) {
+        openFileCallbackRef.current = callback;
+      }
+
+      // shouldRetry = true, wait for backend to generate preloading.json after upload
+      // forceOpen = false, don't show dialog if no missing external refs
+      externalReferenceUpload.checkMissingReferences(nodeId, true, false)
+        .then((hasMissing) => {
+          if (!hasMissing && openFileCallbackRef.current) {
+            // No missing external refs, open file directly
+            openFileCallbackRef.current();
+            openFileCallbackRef.current = null;
+          }
+          // If missing external refs, dialog is shown; callback triggered via onSkip/onSuccess
+        })
+        .catch(err => {
+          console.error('External ref check failed:', err);
+          // Open file even if check fails
+          if (openFileCallbackRef.current) {
+            openFileCallbackRef.current();
+            openFileCallbackRef.current = null;
+          }
+        });
     };
     window.addEventListener('mxcad-upload-completed', handleUploadCompleted as EventListener);
     return () => {
@@ -894,8 +950,12 @@ export const CADEditorDirect: React.FC = () => {
     const handleSaveRequired = (event: CustomEvent<{ action: string }>) => {
       if (loginPromptDismissedRef.current) return;
 
+      // 另存为操作不需要登录 — 未登录用户直接弹出下载格式选择框
+      const action = event.detail?.action || '';
+      if (action.includes('另存为')) return;
+
       if (!isAuthenticated) {
-        setLoginPromptAction(event.detail?.action || '保存文件');
+        setLoginPromptAction(action || '保存文件');
         setShowLoginPrompt(true);
         event.preventDefault();
       }
@@ -907,10 +967,11 @@ export const CADEditorDirect: React.FC = () => {
       'mxcad-save-required',
       handleSaveRequired as EventListener
     );
-    window.addEventListener(
-      'mxcad-saveas-required',
-      handleSaveRequired as EventListener
-    );
+    // 另存为不再限制登录 — 未登录用户在 mxcad-save-as handler 中直接弹出下载格式选择框
+    // window.addEventListener(
+    //   'mxcad-saveas-required',
+    //   handleSaveRequired as EventListener
+    // );
 
     return () => {
       window.removeEventListener(
@@ -986,9 +1047,12 @@ export const CADEditorDirect: React.FC = () => {
       if (loginPromptDismissedRef.current) return;
 
       if (!isAuthenticated) {
-        loginPromptActionRef.current = '另存为';
-        setLoginPromptAction('另存为');
-        setShowLoginPrompt(true);
+        // 未登录用户：弹出下载格式选择框，另存为到本地
+        const { currentFileName, mxwebBlob } = event.detail;
+        setDownloadingFileName(currentFileName);
+        setSaveAsBlob(mxwebBlob);
+        isSaveAsLocalModeRef.current = true;
+        setShowDownloadFormatModal(true);
         return;
       }
 
@@ -1022,20 +1086,31 @@ export const CADEditorDirect: React.FC = () => {
   }) => {
     setShowSaveAsModal(false);
     setSaveAsBlob(null);
-    showToast('文件保存成功', 'success');
+    showToast('另存为成功', 'success');
 
-    // 重新打开保存后的文件
-    const { openUploadedFile, processPendingImages } = await import('../services/mxcadManager');
-    await openUploadedFile(result.nodeId, result.parentId);
-
-    // 处理待上传图片
-    await processPendingImages();
-
-    // 更新当前文件 ID
-    currentFileIdRef.current = result.nodeId;
+    // 立即生成并上传缩略图（失败不影响主流程）
+    try {
+      const imageData = await generateThumbnail();
+      if (imageData) {
+        const uploaded = await uploadThumbnail(result.nodeId, imageData);
+        if (uploaded) {
+          console.log(`[handleSaveAsSuccess] 缩略图已生成并上传: ${result.nodeId}`);
+        }
+      }
+    } catch (err) {
+      console.warn('[handleSaveAsSuccess] 缩略图生成/上传失败:', err);
+    }
   };
 
-  // 监听文件打开事件，更新 URL（保留 mode 参数）
+  // 登录用户点击"另存为到本地"按钮
+  const handleSaveAsDownloadLocal = useCallback(() => {
+    setDownloadingFileName(saveAsFileName);
+    isSaveAsLocalModeRef.current = true;
+    setShowDownloadFormatModal(true);
+    setShowSaveAsModal(false);
+  }, [saveAsFileName]);
+
+// 监听文件打开事件，更新 URL（保留 mode 参数）
   useEffect(() => {
     const handleFileOpened = (
       event: CustomEvent<{
@@ -1198,6 +1273,46 @@ export const CADEditorDirect: React.FC = () => {
   ) => {
     try {
       setDownloading(true);
+
+      // 另存为到本地模式：调用公开转换端点
+      if (isSaveAsLocalModeRef.current && saveAsBlob) {
+        const formData = new FormData();
+        formData.append('file', saveAsBlob, 'file.mxweb');
+
+        const params = new URLSearchParams({ format });
+        if (pdfOptions?.width) params.append('width', pdfOptions.width);
+        if (pdfOptions?.height) params.append('height', pdfOptions.height);
+        if (pdfOptions?.colorPolicy) params.append('colorPolicy', pdfOptions.colorPolicy);
+
+        const response = await fetch(`/api/v1/public-file/convert?${params.toString()}`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({ message: '转换失败' }));
+          throw new Error((errBody as { message?: string }).message || '转换失败');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const nameWithoutExt = downloadingFileName.replace(/\.[^.]+$/, '');
+        const finalFileName = `${nameWithoutExt}.${format}`;
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        setShowDownloadFormatModal(false);
+        setSaveAsBlob(null);
+        isSaveAsLocalModeRef.current = false;
+        showToast('文件已保存到本地', 'success');
+        return;
+      }
+
       const { response } = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
         query: { format, ...pdfOptions },
@@ -1300,7 +1415,10 @@ export const CADEditorDirect: React.FC = () => {
             <DownloadFormatModal
               isOpen={showDownloadFormatModal}
               fileName={downloadingFileName}
-              onClose={() => setShowDownloadFormatModal(false)}
+              onClose={() => {
+                setShowDownloadFormatModal(false);
+                isSaveAsLocalModeRef.current = false;
+              }}
               onDownload={handleDownloadWithFormat}
               loading={downloading}
             />
@@ -1328,6 +1446,7 @@ export const CADEditorDirect: React.FC = () => {
             setSaveAsBlob(null);
           }}
           onSuccess={handleSaveAsSuccess}
+          onDownloadLocal={handleSaveAsDownloadLocal}
         />
       )}
 
@@ -1339,7 +1458,7 @@ export const CADEditorDirect: React.FC = () => {
         onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
         onComplete={externalReferenceUpload.complete}
         onSkip={externalReferenceUpload.skip}
-        onClose={externalReferenceUpload.close}
+        onClose={externalReferenceUpload.skip}
       />
     </div>
   );

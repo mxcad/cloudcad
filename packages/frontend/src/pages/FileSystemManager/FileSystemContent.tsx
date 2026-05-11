@@ -156,18 +156,9 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   return (
     <>
       <div
-        {...fileDropHandlers}
         className={`relative ${isFileDragOver ? 'ring-2 ring-green-500 ring-inset bg-green-50/10' : ''}`}
         style={{ minHeight: 200 }}
       >
-        {/* 拖拽上传提示覆盖层 */}
-        {isFileDragOver && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-500/10 border-2 border-dashed border-green-500 rounded-lg pointer-events-none">
-            <div className="text-green-600 font-medium text-lg">
-              释放文件以上传到当前目录
-            </div>
-          </div>
-        )}
 
         <div
           data-view-mode={viewMode}

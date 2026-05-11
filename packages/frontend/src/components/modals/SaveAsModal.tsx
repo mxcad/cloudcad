@@ -23,6 +23,8 @@ interface SaveAsModalProps {
     projectId?: string;
     parentId: string;
   }) => void;
+  /** 另存为到本地（触发下载弹框） */
+  onDownloadLocal?: () => void;
 }
 
 export const SaveAsModal: React.FC<SaveAsModalProps> = ({
@@ -32,6 +34,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
   personalSpaceId,
   onClose,
   onSuccess,
+  onDownloadLocal,
 }) => {
   const { hasPermission } = usePermission();
   const {
@@ -120,7 +123,6 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       });
 
       if (result?.success) {
-        globalShowToast('保存成功', 'success');
         onSuccess({
           nodeId: result.nodeId || '',
           fileName: result.fileName || '',
@@ -155,6 +157,11 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
             <Button variant="ghost" onClick={handleClose} disabled={saving}>
               取消
             </Button>
+            {onDownloadLocal && (
+              <Button variant="outline" onClick={onDownloadLocal} disabled={saving}>
+                另存为到本地
+              </Button>
+            )}
             <Button onClick={handleConfirm} disabled={saving}>
               {saving ? '保存中...' : '保存'}
             </Button>

@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { Upload } from 'lucide-react';
 import {
   useMxCadUploadNative,
   LoadFileParam,
@@ -14,6 +15,7 @@ import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { useUIStore } from '../stores/uiStore';
 import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
 import { globalShowToast } from '../contexts/NotificationContext';
+import { Button } from './ui/Button';
 
 interface MxCadUploaderProps {
   /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
@@ -172,14 +174,18 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
     return (
       <div className="mxcad-uploader">
-        <button
+        <Button
           onClick={handleSelectFiles}
           disabled={globalLoading || !isAuthenticated}
-          className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 ${buttonClassName}`}
+          variant="outline"
+          size="sm"
+          loading={globalLoading}
+          icon={globalLoading ? undefined : (isAuthenticated ? Upload : undefined)}
+          className={buttonClassName}
           title={!isAuthenticated ? '请先登录后再上传文件' : ''}
         >
           {globalLoading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
-        </button>
+        </Button>
 
         {/* 外部参照上传模态框 */}
         <ExternalReferenceModal

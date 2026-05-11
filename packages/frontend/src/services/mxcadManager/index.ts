@@ -1420,10 +1420,11 @@ document.addEventListener(
  */
 MxFun.addCommand('Mx_Save', async () => {
   try {
-    // 检查登录状态
+    // 检查登录状态（同时验证 JWT 是否过期）
     const { isAuthenticated } = await import('../../utils/authCheck');
-    if (!isAuthenticated()) {
-      // 未登录，触发登录提示事件
+    const { isAccessTokenExpired: tokenExpired } = await import('../../utils/tokenUtils');
+    if (!isAuthenticated() || tokenExpired()) {
+      // 未登录或 token 已过期，触发登录提示事件
       window.dispatchEvent(
         new CustomEvent('mxcad-save-required', {
           detail: { action: '保存文件' },
@@ -1434,8 +1435,9 @@ MxFun.addCommand('Mx_Save', async () => {
 
     if (!currentFileInfo) {
       // 没有打开的文件（可能是空白画布新建的文件），弹出保存弹窗
-      const { isAuthenticated } = await import('../../utils/authCheck');
-      if (!isAuthenticated()) {
+      const { isAuthenticated: authCheck } = await import('../../utils/authCheck');
+      const { isAccessTokenExpired: tokenExpiredCheck } = await import('../../utils/tokenUtils');
+      if (!authCheck() || tokenExpiredCheck()) {
         window.dispatchEvent(
           new CustomEvent('mxcad-save-required', {
             detail: { action: '保存文件' },

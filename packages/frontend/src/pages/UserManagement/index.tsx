@@ -203,26 +203,28 @@ export const UserManagement = () => {
     if (!validateForm()) return;
     try {
       if (editingUser) {
-        const updateData = {
+        const updateData: Record<string, unknown> = {
           username: formData.username,
-          email: formData.email,
           roleId: formData.roleId,
-          nickname: formData.nickname,
           status: formData.status,
-        } as UpdateUserDto & { password?: string };
-        if (formData.password) {
-          updateData.password = formData.password;
-        }
-        await updateUser(editingUser.id, updateData);
+        };
+        // 可选字段：仅当有值时传递
+        if (formData.email) updateData.email = formData.email;
+        if (formData.nickname) updateData.nickname = formData.nickname;
+        if (formData.password) updateData.password = formData.password;
+        await updateUser(editingUser.id, updateData as UpdateUserDto);
         showSuccess('用户更新成功');
       } else {
-        await createUser({
+        const createData: Record<string, unknown> = {
           username: formData.username,
-          email: formData.email,
           password: formData.password,
           roleId: formData.roleId,
-          nickname: formData.nickname,
-        });
+        };
+        // 可选字段：仅当有值时传递
+        if (formData.email) createData.email = formData.email;
+        if (formData.nickname) createData.nickname = formData.nickname;
+        if (formData.phone) createData.phone = formData.phone;
+        await createUser(createData as CreateUserDto);
         showSuccess('用户创建成功');
       }
       setIsModalOpen(false);

@@ -12,8 +12,8 @@ import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
 
 interface UseFileDropUploadOptions {
-  /** 当前目录的节点 ID */
-  nodeId: string;
+  /** 当前目录的节点 ID，或返回节点 ID 的 getter 函数（drop 时动态获取） */
+  nodeId: string | (() => string);
   /** 上传成功回调 */
   onSuccess?: () => void;
   /** 上传完成后是否打开图纸，默认true。列表页上传应设置为false */
@@ -47,6 +47,13 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
     async (files: File[]) => {
       if (files.length === 0 || uploading) return;
 
+      // Drop 时动态获取 nodeId（支持 getter 函数）
+      const resolvedNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
+      if (!resolvedNodeId) {
+        console.warn('[useFileDropUpload] 无法获取上传目标目录');
+        return;
+      }
+
       setUploading(true);
 
       for (const file of files) {
@@ -55,12 +62,12 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
           const result = await uploadMxCadFile({
             file,
             hash,
-            nodeId,
+            nodeId: resolvedNodeId,
           });
 
           if (result.nodeId) {
             if (openAfterUpload) {
-              await openUploadedFile(result.nodeId, nodeId);
+              await openUploadedFile(result.nodeId, resolvedNodeId);
             } else {
               await waitForFileReady(result.nodeId);
             }

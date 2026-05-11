@@ -132,7 +132,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   const modalContent = (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={onSkip}
       title="管理外部参照文件"
       size="xl"
       contentClassName="p-6"
@@ -170,7 +170,11 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           )}
           <Button
             onClick={() => {
-              onComplete();
+              if (allSuccess) {
+                onComplete();
+              } else {
+                onSkip();
+              }
             }}
             disabled={loading}
           >

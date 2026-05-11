@@ -135,7 +135,9 @@ export const useSaveAs = ({
         const errBody = await response.json().catch(() => ({ message: '保存失败' }));
         throw new Error((errBody as { message?: string }).message || '保存失败');
       }
-      const saveResult: SaveAsResult = await response.json();
+      const wrapped = await response.json();
+      // ResponseInterceptor wraps all responses: { code, message, data, timestamp }
+      const saveResult: SaveAsResult = wrapped.data || wrapped;
 
       return saveResult;
     },

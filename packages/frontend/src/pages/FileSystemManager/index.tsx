@@ -262,9 +262,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [currentNode]);
 
   // 外部文件拖拽上传
-  const currentDirId = getCurrentParentId();
   const { isDragOver: isFileDragOver, dropHandlers: fileDropHandlers } = useFileDropUpload({
-    nodeId: currentDirId,
+    nodeId: getCurrentParentId,
     openAfterUpload: false,
     onSuccess: () => {
       handleRefresh();
@@ -462,7 +461,18 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           border: '1px solid var(--border-default)',
         }}
       >
-        <div className="overflow-hidden h-full rounded-2xl">
+        <div
+          className="overflow-hidden h-full rounded-2xl"
+          {...fileDropHandlers}
+        >
+          {/* 拖拽上传提示覆盖层 */}
+          {isFileDragOver && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-500/10 border-2 border-dashed border-green-500 rounded-2xl pointer-events-none m-0">
+              <div className="text-green-600 font-medium text-lg">
+                释放文件以上传到当前目录
+              </div>
+            </div>
+          )}
           <FileSystemStates
             loading={loading}
             error={error}

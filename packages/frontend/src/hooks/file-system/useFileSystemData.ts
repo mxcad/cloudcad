@@ -452,7 +452,7 @@ export const useFileSystemData = ({
   const breadcrumbs: BreadcrumbItem[] = (() => {
     if (isProjectRootMode && !isTrash) return [];
 
-    if (isTrashView && isPersonalSpaceMode) {
+    if (isTrash && isPersonalSpaceMode) {
       const nodeId = urlNodeId || urlProjectId || '';
       return [
         { id: nodeId, name: '我的图纸', isRoot: true, isFolder: true },
@@ -461,7 +461,9 @@ export const useFileSystemData = ({
     }
 
     if (isTrash && !isPersonalSpaceMode && isProjectRootMode) {
-      return [];
+      return [
+        { id: 'trash', name: '回收站', isRoot: true, isFolder: true },
+      ];
     }
 
     if (isTrash && !isPersonalSpaceMode && !isProjectRootMode && urlProjectId) {
