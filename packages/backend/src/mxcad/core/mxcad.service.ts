@@ -298,14 +298,7 @@ export class MxCadService {
       throw new BadRequestException('上下文参数不能为空');
     }
 
-    // 确保必要的字段存在
-    if (!context.userId) {
-      throw new BadRequestException('上下文缺少用户ID');
-    }
-
-    if (!context.nodeId) {
-      throw new BadRequestException('上下文缺少节点ID');
-    }
+    // 匿名用户允许通过（userId/nodeId 可为空），下游服务各自校验
 
     // 确保 userRole 有值（返回新对象，遵循不可变性原则）
     return {

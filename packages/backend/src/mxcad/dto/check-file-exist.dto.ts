@@ -39,13 +39,13 @@ export class CheckFileExistDto {
   @IsNotEmpty()
   filename: string;
 
-  @ApiProperty({
-    description: '节点ID（项目根目录或文件夹的 FileSystemNode ID）',
+  @ApiPropertyOptional({
+    description: '节点ID（项目根目录或文件夹的 FileSystemNode ID，可选，匿名用户可为空）',
     example: 'clx1234567890',
   })
   @IsString()
-  @IsNotEmpty()
-  nodeId: string;
+  @IsOptional()
+  nodeId?: string;
 
   @ApiProperty({
     description: '文件大小（字节）',

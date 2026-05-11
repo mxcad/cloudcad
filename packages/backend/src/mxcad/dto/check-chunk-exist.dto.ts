@@ -3,8 +3,8 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsNotEmpty, IsBoolean } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
 
 export class CheckChunkExistDto {
   @ApiProperty({
@@ -23,13 +23,13 @@ export class CheckChunkExistDto {
   @IsNotEmpty()
   filename: string;
 
-  @ApiProperty({
-    description: '节点ID',
+  @ApiPropertyOptional({
+    description: '节点ID（可选，匿名用户可为空）',
     example: 'clx1234567890',
   })
   @IsString()
-  @IsNotEmpty()
-  nodeId: string;
+  @IsOptional()
+  nodeId?: string;
 
   @ApiProperty({
     description: '分片索引',

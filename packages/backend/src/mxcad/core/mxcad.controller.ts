@@ -136,6 +136,13 @@ export class MxCadController {
   ) {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
     const context = await this.buildContextFromRequest(request);
+
+    // 匿名用户：无历史分片，直接返回不存在
+    if (!context.userId) {
+      this.logger.log('匿名用户预检查：分片不存在，允许上传');
+      return { exists: false };
+    }
+
     const result = await this.mxCadService.checkChunkExist(
       body.chunk,
       body.fileHash,
