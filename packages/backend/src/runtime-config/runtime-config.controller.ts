@@ -155,7 +155,7 @@ export class RuntimeConfigController {
     const user = req.user as { id: string };
     const ip = req.ip;
 
-    await this.runtimeConfigService.set(key, dto.value, user.id, ip);
+    await this.runtimeConfigService.set(key, dto.val, user.id, ip);
 
     return { success: true };
   }
