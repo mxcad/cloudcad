@@ -17,7 +17,12 @@ import {
   libraryControllerGetBlockChildren,
   libraryControllerCreateDrawingFolder,
   libraryControllerCreateBlockFolder,
-  FileSystemNodeDto
+  FileSystemNodeDto,
+} from '@/api-sdk';
+import {
+  mxCadControllerUploadExtReferenceDwg,
+  mxCadControllerUploadExtReferenceImage,
+  mxCadControllerGetPreloadingData,
 } from '@/api-sdk';
 import {
   uploadMxCadFile,
@@ -619,6 +624,101 @@ export function useDirectoryImport() {
   );
 
   /**
+   * 在 fileTree 中递归搜索文件（跨所有目录层级）
+   */
+  function findFileInTree(node: FileTreeNode, fileName: string): File | null {
+    if (!node.children) return null;
+    for (const child of node.children) {
+      if (!child.isFolder && child.file && child.name === fileName) {
+        return child.file;
+      }
+      if (child.isFolder) {
+        const found = findFileInTree(child, fileName);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 获取外部参照文件名列表（带重试等待 preloading.json 生成）
+   */
+  async function fetchXrefNames(nodeId: string): Promise<{ images: string[]; refs: string[] } | null> {
+    const maxRetries = 10;
+    const retryDelay = 2000;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const result = await mxCadControllerGetPreloadingData({ path: { nodeId } });
+        const data = result?.data as { images?: string[]; externalReference?: string[] } | null;
+        if (data) {
+          return {
+            images: data.images || [],
+            refs: data.externalReference || [],
+          };
+        }
+      } catch {
+        // preloading.json 尚未生成，等待后重试
+      }
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 静默处理批量导入的外部参照——在 fileTree 中搜索并上传匹配的外部参照文件
+   */
+  const processExternalReferences = useCallback(async (
+    uploadedFiles: Array<{ nodeId: string; fileName: string }>,
+    tree: FileTreeNode
+  ): Promise<{ found: number; uploaded: number; ignored: number }> => {
+    const dwgFiles = uploadedFiles.filter(f =>
+      f.fileName.toLowerCase().endsWith('.dwg') || f.fileName.toLowerCase().endsWith('.dxf')
+    );
+
+    let found = 0, uploaded = 0, ignored = 0;
+    const dwgExts = ['.dwg', '.dxf'];
+    const imgExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif'];
+
+    for (const { nodeId } of dwgFiles) {
+      const xrefNames = await fetchXrefNames(nodeId);
+      if (!xrefNames) continue;
+
+      const allXrefNames = [...xrefNames.images, ...xrefNames.refs];
+
+      for (const xrefName of allXrefNames) {
+        const matchedFile = findFileInTree(tree, xrefName);
+
+        if (matchedFile) {
+          found++;
+          try {
+            const ext = '.' + (xrefName.toLowerCase().split('.').pop() || '');
+            if (dwgExts.includes(ext)) {
+              await mxCadControllerUploadExtReferenceDwg({
+                path: { nodeId },
+                body: { file: matchedFile, nodeId, ext_ref_file: xrefName },
+              });
+            } else if (imgExts.includes(ext)) {
+              await mxCadControllerUploadExtReferenceImage({
+                body: { file: matchedFile, nodeId, ext_ref_file: xrefName, updatePreloading: true },
+              });
+            }
+            uploaded++;
+          } catch (err) {
+            console.warn(`外部参照上传失败: ${xrefName}`, err);
+          }
+        } else {
+          ignored++;
+        }
+      }
+    }
+
+    return { found, uploaded, ignored };
+  }, []);
+
+  /**
    * 执行导入
    */
   const executeImport = useCallback(
@@ -626,7 +726,8 @@ export function useDirectoryImport() {
       tree: FileTreeNode,
       targetParentId: string,
       libraryType: 'drawing' | 'block',
-      strategy: ConflictStrategy
+      strategy: ConflictStrategy,
+      enableAutoXrefDiscovery: boolean = false
     ): Promise<ImportResult> => {
       abortRef.current = false;
       const stats: ImportStats = {
@@ -639,6 +740,7 @@ export function useDirectoryImport() {
         skippedFolders: 0,
       };
       const errors: Array<{ fileName: string; error: string }> = [];
+      const uploadedFileNodes: Array<{ nodeId: string; fileName: string }> = [];
 
       // 统计文件数
       const countFiles = (node: FileTreeNode) => {
@@ -805,6 +907,10 @@ export function useDirectoryImport() {
                 } else {
                   stats.successFiles++;
                 }
+                // 记录 nodeId 用于后续外部参照处理
+                if (uploadResult.nodeId) {
+                  uploadedFileNodes.push({ nodeId: uploadResult.nodeId, fileName: child.name });
+                }
               } else {
                 stats.failedFiles++;
                 errors.push({
@@ -832,6 +938,14 @@ export function useDirectoryImport() {
 
       // 等待一小段时间确保数据库写入完成
       await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 静默处理外部参照——当 enableAutoXrefDiscovery 为 true 时异步处理，不阻塞弹框关闭
+      if (enableAutoXrefDiscovery && uploadedFileNodes.length > 0 && !abortRef.current) {
+        // 异步处理外部参照（fire-and-forget，不阻塞弹框关闭）
+        processExternalReferences(uploadedFileNodes, tree).catch(err => {
+          console.warn('外部参照处理异常:', err);
+        });
+      }
 
       const finalProgress: ImportProgress = {
         currentFile: stats.totalFiles,

@@ -26,6 +26,8 @@ interface DirectoryImportDialogProps {
   targetParentId: string;
   libraryType: 'drawing' | 'block';
   onSuccess?: () => void;
+  /** 是否自动发现并上传外部参照文件，默认 false */
+  enableAutoXrefDiscovery?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   targetParentId,
   libraryType,
   onSuccess,
+  enableAutoXrefDiscovery = false,
 }) => {
   const [step, setStep] = useState<
     'select' | 'preview' | 'importing' | 'result'
@@ -44,6 +47,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   const [strategy, setStrategy] = useState<ConflictStrategy>('skip');
   const [importMode, setImportMode] = useState<ImportMode>('content');
   const [error, setError] = useState<string>('');
+  const [autoXrefDiscovery, setAutoXrefDiscovery] = useState(enableAutoXrefDiscovery);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -95,7 +99,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         fileTree!,
         targetParentId,
         libraryType,
-        strategy
+        strategy,
+        autoXrefDiscovery
       );
 
       setStep('result');
@@ -309,6 +314,22 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
               <span className="text-sm">自动重命名（添加序号）</span>
             </label>
           </div>
+        </div>
+
+        {/* 外部参照自动发现选项 */}
+        <div className="mb-4">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoXrefDiscovery}
+              onChange={(e) => setAutoXrefDiscovery(e.target.checked)}
+              className="mr-2 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium">自动发现并上传外部参照文件</span>
+          </label>
+          <p className="text-xs text-slate-500 mt-1 ml-6">
+            启用后，导入完成时将自动在目录中搜索图纸的外部参照文件并静默上传（不阻塞弹框关闭）
+          </p>
         </div>
 
         {error && (

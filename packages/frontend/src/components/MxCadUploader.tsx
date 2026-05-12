@@ -121,7 +121,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             onSuccess?.(param);
 
             // 根据开关决定是否检查外部参照
-            if (enableExternalReferenceCheck) {
+            // .mxweb 文件跳过（预转换格式，MxCAD 转换引擎不生成 preloading.json）
+            const isSkipXrefCheck = param.name.toLowerCase().endsWith('.mxweb')
+            if (enableExternalReferenceCheck && !isSkipXrefCheck) {
               await externalReferenceUpload.checkMissingReferences(param.nodeId!, true, false);
             }
           } catch (error) {
