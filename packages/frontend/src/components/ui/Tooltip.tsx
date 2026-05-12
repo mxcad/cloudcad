@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Z_LAYERS } from '@/constants/layers';
 
@@ -178,6 +178,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   }, [disabled, isVisible, showTooltip, hideTooltip, calculatePosition]);
 
+  // Tooltip DOM 渲染后重新计算位置，确保使用实际元素尺寸
+  // 解决首次显示时 tooltipRef.current 为 null 导致回退宽度 200px 的偏移问题
+  useLayoutEffect(() => {
+    if (isVisible) {
+      calculatePosition();
+    }
+  }, [isVisible, calculatePosition]);
+
   // 滚动时更新位置
   useEffect(() => {
     if (!isVisible) return;
@@ -324,7 +332,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <div
       ref={triggerRef}
       className="relative inline-flex"
-      style={{ minWidth: 0 }}
+      style={{ flexShrink: 0 }}
       {...getEventHandlers()}
     >
       {children}
