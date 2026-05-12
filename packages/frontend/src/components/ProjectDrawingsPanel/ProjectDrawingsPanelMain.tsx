@@ -267,10 +267,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Initialize: load project root
   useEffect(() => {
-    // 个人空间模式下直接使用 projectId，否则使用 selectedProjectId
-    const effectiveId = isPersonalSpace ? projectId : selectedProjectId;
-
-    if (!effectiveId) {
+    if (!selectedProjectId) {
       resetNodes();
       setBreadcrumb([]);
       return;
@@ -278,7 +275,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
     const initProject = async () => {
       try {
-        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: effectiveId } });
+        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
         if (projectNode) setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
       } catch (error: unknown) {
         handleError(error, 'ProjectDrawingsPanel: 加载项目信息失败');
@@ -286,18 +283,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     };
 
     initProject();
-    // 关键修复：添加 loadNodes 调用，确保数据被加载
-    loadNodes(effectiveId);
-  }, [isPersonalSpace, projectId, selectedProjectId, loadNodes, resetNodes]);
-
-  // 自动加载个人空间图纸（当 projectId 有效时）
-  const autoLoadedRef = useRef(false);
-  useEffect(() => {
-    if (isPersonalSpace && projectId && !autoLoadedRef.current) {
-      autoLoadedRef.current = true;
-      loadNodes(projectId);
-    }
-  }, [isPersonalSpace, projectId, loadNodes]);
+    loadNodes(selectedProjectId);
+  }, [selectedProjectId, loadNodes]);
 
   // Sync projectId in personal space
   useEffect(() => {
