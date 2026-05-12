@@ -132,10 +132,6 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageSrc, setPreviewImageSrc] = useState('');
   const [useCompactActions, setUseCompactActions] = useState(false);
@@ -296,24 +292,13 @@ export const FileItem: React.FC<FileItemProps> = ({
   const handleToggleMenu = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      const newShowMenu = !showMenu;
-      if (!showMenu && menuButtonRef.current) {
-        const rect = menuButtonRef.current.getBoundingClientRect();
-        setMenuPosition({
-          top: rect.bottom + 4,
-          left: rect.right - 120,
-        });
-      } else {
-        setMenuPosition(null);
-      }
-      setShowMenu(newShowMenu);
+      setShowMenu(!showMenu);
     },
     [showMenu]
   );
 
   const handleCloseMenu = useCallback(() => {
     setShowMenu(false);
-    setMenuPosition(null);
   }, []);
 
   // 操作处理函数映射
@@ -418,7 +403,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   useEffect(() => {
     setIsHovered(false);
     setShowMenu(false);
-    setMenuPosition(null);
   }, [viewMode]);
 
   if (viewMode === 'grid') {
@@ -540,7 +524,6 @@ export const FileItem: React.FC<FileItemProps> = ({
             node={node}
             isTrash={isTrash}
             showMenu={showMenu}
-            menuPosition={menuPosition}
             menuButtonRef={menuButtonRef}
             menuContainerRef={menuContainerRef}
             onToggleMenu={handleToggleMenu}
@@ -737,7 +720,6 @@ export const FileItem: React.FC<FileItemProps> = ({
             node={node}
             isTrash={isTrash}
             showMenu={showMenu}
-            menuPosition={menuPosition}
             menuButtonRef={menuButtonRef}
             menuContainerRef={menuContainerRef}
             onToggleMenu={handleToggleMenu}

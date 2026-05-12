@@ -5,11 +5,55 @@ import { FileSystemNode } from '../../types/filesystem';
 import { getAvailableActions, type ActionType } from './fileActionConfig';
 import { Tooltip } from '../ui/Tooltip';
 
+// 视口边界检测：确保菜单不超出屏幕
+const VIEWPORT_PADDING = 8;
+const MENU_MIN_WIDTH = 120;
+const MENU_OFFSET = 4;
+
+function clampPosition(
+  buttonRect: DOMRect,
+  menuEl: HTMLDivElement | null
+): { top: number; left: number } {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  const menuWidth = menuEl ? menuEl.offsetWidth : MENU_MIN_WIDTH;
+  const menuHeight = menuEl ? menuEl.offsetHeight : 200;
+
+  // 首选位置：菜单右边缘对齐按钮右边缘，位于按钮下方
+  let left = buttonRect.right - menuWidth;
+  let top = buttonRect.bottom + MENU_OFFSET;
+
+  // 水平方向翻转：右侧空间不足时翻转到左侧
+  if (buttonRect.right - menuWidth < VIEWPORT_PADDING) {
+    left = buttonRect.left;
+  }
+  // 如果左侧也溢出，退化为按钮右边缘对齐
+  if (left < VIEWPORT_PADDING) {
+    left = Math.min(buttonRect.right, viewportWidth - menuWidth - VIEWPORT_PADDING);
+  }
+
+  // 垂直方向翻转：底部空间不足时翻转到上方
+  if (buttonRect.bottom + MENU_OFFSET + menuHeight > viewportHeight - VIEWPORT_PADDING) {
+    top = buttonRect.top - menuHeight - MENU_OFFSET;
+  }
+  // 如果上方也溢出，退化为贴底
+  if (top < VIEWPORT_PADDING) {
+    top = Math.max(VIEWPORT_PADDING, viewportHeight - menuHeight - VIEWPORT_PADDING);
+  }
+
+  // 最终边界夹持
+  left = Math.max(VIEWPORT_PADDING, Math.min(left, viewportWidth - menuWidth - VIEWPORT_PADDING));
+  top = Math.max(VIEWPORT_PADDING, Math.min(top, viewportHeight - menuHeight - VIEWPORT_PADDING));
+
+  return { top, left };
+}
+
 interface FileItemMenuProps {
   node: FileSystemNode;
   isTrash: boolean;
   showMenu: boolean;
-  menuPosition: { top: number; left: number } | null;
+  menuPosition?: { top: number; left: number } | null;
   menuButtonRef: React.RefObject<HTMLButtonElement | null>;
   menuContainerRef: React.RefObject<HTMLDivElement | null>;
   onToggleMenu: (e: React.MouseEvent) => void;
@@ -69,6 +113,9 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 }) => {
   const isRoot = node.isRoot;
   const isFolder = node.isFolder;
+
+  // 内部视口感知定位 state
+  const [adjustedPosition, setAdjustedPosition] = useState<{ top: number; left: number } | null>(null);
 
   const handleMenuAction = (action: () => void) => {
     action();
@@ -140,30 +187,44 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
       }
     };
 
-    const handleScroll = () => {
-      if (showMenu && menuButtonRef.current) {
-        const rect = menuButtonRef.current.getBoundingClientRect();
-        onToggleMenu({
-          currentTarget: menuButtonRef.current,
-          stopPropagation: () => {},
-        } as unknown as React.MouseEvent);
-      }
-    };
-
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, {
-        passive: true,
-        capture: true,
-      });
     }, 100);
 
     return () => {
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, { capture: true });
     };
-  }, [showMenu, menuButtonRef, menuContainerRef, onCloseMenu, onToggleMenu]);
+  }, [showMenu, menuButtonRef, menuContainerRef, onCloseMenu]);
+
+  // 菜单打开时计算视口感知位置
+  useEffect(() => {
+    if (showMenu && menuButtonRef.current) {
+      requestAnimationFrame(() => {
+        if (menuButtonRef.current) {
+          const rect = menuButtonRef.current.getBoundingClientRect();
+          const pos = clampPosition(rect, menuContainerRef.current);
+          setAdjustedPosition(pos);
+        }
+      });
+    } else {
+      setAdjustedPosition(null);
+    }
+  }, [showMenu]);
+
+  // 滚动时更新菜单位置
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleScroll = () => {
+      if (menuButtonRef.current) {
+        const rect = menuButtonRef.current.getBoundingClientRect();
+        const pos = clampPosition(rect, menuContainerRef.current);
+        setAdjustedPosition(pos);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', handleScroll, { capture: true });
+  }, [showMenu]);
 
   const renderMenu = () => {
     return (
@@ -235,14 +296,14 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
       </Tooltip>
 
       {showMenu &&
-        menuPosition &&
+        adjustedPosition &&
         createPortal(
           <div
             ref={menuContainerRef}
             className="fixed bg-[var(--bg-elevated)] rounded-lg shadow-xl border border-[var(--border-default)] py-1 min-w-[120px] z-[99999] animate-scale-in origin-top-right pointer-events-auto"
             style={{
-              top: `${menuPosition.top}px`,
-              left: `${menuPosition.left}px`,
+              top: `${adjustedPosition.top}px`,
+              left: `${adjustedPosition.left}px`,
             }}
             onClick={(e) => {
               e.stopPropagation();
