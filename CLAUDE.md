@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Before implementing any feature request, first state all assumptions
+and present every plausible interpretation. Pick one, explain why,
+then wait for confirmation.
+
+Always write tests first. Before implementing any feature,
+write failing tests that describe the expected behavior.
+Then implement until tests pass.
+
+使用中文对话和思考
+
 ## GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **cloudcad**. Use `gitnexus_impact()` before editing any symbol and `gitnexus_detect_changes()` before committing. See `.claude/skills/gitnexus/` for full skill references.
@@ -19,7 +29,6 @@ packages/
 ├── backend/          # NestJS API (port 3001)
 ├── frontend/         # React 19 SPA (port 5173)
 ├── config-service/   # Deployment config center (port 3002)
-├── server-tasks/     # Sharp image resizing utility
 └── svnVersionTool/   # SVN subprocess wrapper
 ```
 
@@ -33,11 +42,6 @@ packages/
 ## Common Commands
 
 ```bash
-pnpm dev                         # Start both frontend + backend
-pnpm check                       # lint + format:check + type-check
-pnpm generate:api-types          # Regenerate frontend types from backend Swagger
-pnpm generate:frontend-permissions  # Sync backend permissions to frontend constants
-
 # Backend (packages/backend)
 pnpm exec jest                   # All tests
 pnpm exec jest -- --testPathPattern="auth"  # Specific suite
@@ -50,14 +54,6 @@ pnpm test                        # vitest run
 pnpm type-check                  # tsc --noEmit
 ```
 
-## Dependency Versions (Post-Upgrade Gotchas)
-
-| Dependency | Version | Breaking Change |
-|-----------|---------|----------------|
-| **Prisma** | ^7.1.0 | Generated types renamed (`FileSystemNode` → `FileSystemNodeOmit`). `$Enums.FileStatus` incompatible with local `FileStatus` enum — use `as FileStatus` casts. |
-| **Express** | ^5.2.1 | Session API is Promise-based: `session.destroy()` returns `Promise<void>`. |
-| **TypeScript** | ~5.0.0 declared, 5.9.3 resolved | Stricter type inference exposes hidden incompatibilities. |
-
 ## Key Backend Conventions
 
 - API routes at `/api/xxx` (no version prefix). URI versioning enabled for future v2 — use `@Version('2')`.
@@ -67,6 +63,7 @@ pnpm type-check                  # tsc --noEmit
 - Custom ESLint rule `no-prisma-enum-in-api-property` forbids Prisma enums in `@ApiProperty`.
 - `ConvertServerFileParam` uses **camelCase** (`srcPath`, `fileHash`, `nodeId`, `createPreloadingData`), not snake_case.
 - **ADR 0002:** `FileSystemService` is a Façade — external consumers use it; `FileSystemController` injects sub-services directly.
+- **审计日志:** 通过 `AuditLogger`（继承 `ConsoleLogger`）全局拦截 `context='audit'` 的日志，自动写入数据库。业务模块无需注入额外服务，只需调用 `this.logger.log({ action, resourceType, resourceId?, userId, success, errorMessage?, details? }, 'audit')`。`action`、`resourceType`、`userId` 必填。
 
 ## Key Frontend Conventions
 
@@ -90,3 +87,4 @@ See `docs/adr/` for major decisions:
 ## CI
 
 GitHub Actions: push/PR to main/develop → PostgreSQL 15 + Redis 7 → lint + format + type-check → build → test → Codecov.
+

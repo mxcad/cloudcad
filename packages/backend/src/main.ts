@@ -28,6 +28,8 @@ import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
 import configuration from './config/configuration';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { AuditLogService } from './audit/audit-log.service';
+import { AuditLogger } from './common/services/audit-logger.service';
 
 const logger = new Logger('Bootstrap');
 
@@ -173,6 +175,12 @@ async function bootstrap() {
       logger: config.log.levels,
     }
   );
+
+  // 配置审计日志
+  const auditLogService = app.get(AuditLogService);
+  const auditLogger = new AuditLogger();
+  auditLogger.setAuditLogService(auditLogService);
+  app.useLogger(auditLogger);
 
   // 全局前缀
   app.setGlobalPrefix('api');

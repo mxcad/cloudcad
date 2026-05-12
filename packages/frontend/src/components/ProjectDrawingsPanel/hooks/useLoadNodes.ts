@@ -147,8 +147,8 @@ export function useLoadNodes(
     setFsNodeId(undefined);
     setFsSearch(undefined);
     // 清除 React Query 缓存
-    queryClient.invalidateQueries({ queryKey: queryKeys.library.all });
-    queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
+    queryClient.refetchQueries({ queryKey: queryKeys.library.all, type: 'active' });
+    queryClient.refetchQueries({ queryKey: queryKeys.fileSystem.all, type: 'active' });
   }, [queryClient]);
 
   const loadNodesRef = useRef(loadNodes);

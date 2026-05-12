@@ -862,7 +862,7 @@ export type UpdateRuntimeConfigDto = {
     /**
      * 配置值（string | number | boolean）
      */
-    value: {
+    val: {
         [key: string]: unknown;
     };
 };

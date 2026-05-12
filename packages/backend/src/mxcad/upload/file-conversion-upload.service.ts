@@ -639,7 +639,7 @@ export class FileConversionUploadService {
       // 转换后的 {nodeId}.{ext}.mxweb 是工作文件，每次覆盖保存都会更新，不提交 SVN
       const originalExt = path.extname(originalName).toLowerCase();
       let originalBackupPath = '';
-      if (originalFilePath && fs.existsSync(originalFilePath)) {
+      if (originalFilePath && await fsPromises.access(originalFilePath).then(() => true).catch(() => false)) {
         originalBackupPath = path.join(
           storageInfo.nodeDirectoryPath,
           `${newNode.id}${originalExt}`

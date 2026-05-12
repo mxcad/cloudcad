@@ -23,7 +23,7 @@ export class UpdateRuntimeConfigDto {
     example: false,
   })
   @IsDefined({ message: '配置值不能为空' })
-  value: string | number | boolean;
+  val: string | number | boolean;
 }
 
 /**

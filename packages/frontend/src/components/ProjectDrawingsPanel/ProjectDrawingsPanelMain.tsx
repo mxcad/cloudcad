@@ -117,7 +117,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const [projectRefreshKey, setProjectRefreshKey] = useState(0);
   const [nodePermissions, setNodePermissions] = useState<Map<string, { canEdit: boolean; canDelete: boolean; canManageMembers: boolean; canManageRoles: boolean }>>(new Map());
   const [projectFilter, setProjectFilter] = useState<ProjectFilterType>('all');
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(isPersonalSpace ? projectId || null : null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(isPersonalSpace ? (projectId || null) : null);
   const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([]);
   const [nextLoadDirection, setNextLoadDirection] = useState<'up' | 'down' | 'jump' | null>(null);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
@@ -267,16 +267,37 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Initialize: load project root
   useEffect(() => {
-    if (!selectedProjectId) { resetNodes(); setBreadcrumb([]); return; }
+    // 个人空间模式下直接使用 projectId，否则使用 selectedProjectId
+    const effectiveId = isPersonalSpace ? projectId : selectedProjectId;
+
+    if (!effectiveId) {
+      resetNodes();
+      setBreadcrumb([]);
+      return;
+    }
+
     const initProject = async () => {
       try {
-        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: selectedProjectId } });
+        const { data: projectNode } = await fileSystemControllerGetNode({ path: { nodeId: effectiveId } });
         if (projectNode) setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
-      } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 加载项目信息失败'); }
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 加载项目信息失败');
+      }
     };
+
     initProject();
-    loadNodes(selectedProjectId);
-  }, [selectedProjectId, loadNodes]);
+    // 关键修复：添加 loadNodes 调用，确保数据被加载
+    loadNodes(effectiveId);
+  }, [isPersonalSpace, projectId, selectedProjectId, loadNodes, resetNodes]);
+
+  // 自动加载个人空间图纸（当 projectId 有效时）
+  const autoLoadedRef = useRef(false);
+  useEffect(() => {
+    if (isPersonalSpace && projectId && !autoLoadedRef.current) {
+      autoLoadedRef.current = true;
+      loadNodes(projectId);
+    }
+  }, [isPersonalSpace, projectId, loadNodes]);
 
   // Sync projectId in personal space
   useEffect(() => {

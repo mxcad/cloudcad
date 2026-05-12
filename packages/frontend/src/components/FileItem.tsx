@@ -134,6 +134,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   const [previewImageSrc, setPreviewImageSrc] = useState('');
   const [useCompactActions, setUseCompactActions] = useState(false);
   const [showDoubleClickTip, setShowDoubleClickTip] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isRoot = node.isRoot;
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
@@ -407,6 +408,13 @@ export const FileItem: React.FC<FileItemProps> = ({
     return () => resizeObserver.disconnect();
   }, [viewMode]);
 
+  // 当视图模式切换时，重置悬停和菜单状态，避免闪烁
+  useEffect(() => {
+    setIsHovered(false);
+    setShowMenu(false);
+    setMenuPosition(null);
+  }, [viewMode]);
+
   if (viewMode === 'grid') {
     const showSelection = isMultiSelectMode && isSelected;
     const thumbnailSize = galleryMode ? 120 : 64;
@@ -519,7 +527,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
         <div
           className={`absolute top-3 right-3 transition-opacity duration-200 z-20 pointer-events-auto ${
-            isHovered || showMenu ? 'opacity-100' : 'opacity-100'
+            isHovered || showMenu ? 'opacity-100' : 'opacity-0'
           }`}
         >
           <FileItemMenu
