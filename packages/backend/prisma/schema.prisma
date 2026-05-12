@@ -82,7 +82,7 @@ model FileSystemNode {
   size                           Int?
   mimeType                       String?
   extension                      String?
-  fileStatus                     FileStatus?
+  fileStatus                     FileStatus?  @default(COMPLETED)
   fileHash                       String?
   description                    String?
   projectStatus                  ProjectStatus?

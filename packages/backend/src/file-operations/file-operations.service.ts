@@ -30,6 +30,7 @@ import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
+import { FileStatusStateMachine } from '../file-system/file-status/file-status-state-machine';
 import { ProjectPermissionService } from '../roles/project-permission.service';
 import { PermissionService } from '../common/services/permission.service';
 import { ProjectPermission } from '../common/enums/permissions.enum';
@@ -309,6 +310,7 @@ export class FileOperationsService {
         if (node.isRoot) {
           updateData.projectStatus = ProjectStatus.DELETED;
         } else {
+          FileStatusStateMachine.validateTransition(node.fileStatus, FileStatus.DELETED);
           updateData.fileStatus = FileStatus.DELETED;
         }
 
@@ -484,6 +486,7 @@ export class FileOperationsService {
       if (node.isRoot) {
         updateData.projectStatus = ProjectStatus.ACTIVE;
       } else {
+        FileStatusStateMachine.validateTransition(node.fileStatus, FileStatus.COMPLETED);
         updateData.fileStatus = FileStatus.COMPLETED;
 
         // 检查是否存在文件名冲突，如果存在则生成唯一文件名

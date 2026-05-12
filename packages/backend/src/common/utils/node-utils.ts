@@ -12,6 +12,7 @@
 
 import { Logger } from '@nestjs/common';
 import { FileStatus } from '@prisma/client';
+import { FileStatusStateMachine } from '../../file-system/file-status/file-status-state-machine';
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -105,7 +106,6 @@ export class NodeUtils {
     '.webp',
     // MxCAD
     '.mxweb',
-    '.mxwbe',
   ];
 
   /** MIME 类型映射（key 为不含点的扩展名小写） */
@@ -476,19 +476,25 @@ export class NodeUtils {
    * @returns 是否允许
    */
   static canPerformOperation(
-    fileStatus: FileStatus,
+    fileStatus: FileStatus | null,
     operation: 'read' | 'write' | 'delete',
   ): boolean {
+    // null 视为 COMPLETED（向后兼容无 fileStatus 的历史节点）
+    const effectiveStatus = fileStatus ?? FileStatus.COMPLETED;
+
     switch (operation) {
       case 'read':
-        // 所有非删除状态都可以读取
-        return fileStatus !== FileStatus.DELETED;
+        // 所有非删除状态都可以读取（包括 PROCESSING、FAILED）
+        return effectiveStatus !== FileStatus.DELETED;
       case 'write':
         // 只有 COMPLETED 状态可以写入
-        return fileStatus === FileStatus.COMPLETED;
+        return effectiveStatus === FileStatus.COMPLETED;
       case 'delete':
-        // 所有非 DELETED 状态都可以删除
-        return fileStatus !== FileStatus.DELETED;
+        // COMPLETED 或 FAILED 可以删除，不允许删除 PROCESSING 中的节点
+        return (
+          effectiveStatus === FileStatus.COMPLETED ||
+          effectiveStatus === FileStatus.FAILED
+        );
       default:
         return false;
     }
@@ -566,7 +572,7 @@ export class NodeUtils {
    */
   static isMxCADFile(filename: string): boolean {
     const extension = NodeUtils.extractExtension(filename).toLowerCase();
-    return extension === '.mxweb' || extension === '.mxwbe';
+    return extension === '.mxweb';
   }
 
   /**
