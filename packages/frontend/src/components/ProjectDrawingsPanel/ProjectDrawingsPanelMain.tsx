@@ -282,8 +282,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       }
     };
 
-    initProject();
-    loadNodes(selectedProjectId);
+    // 先等待项目根节点就绪（可能触发服务端懒创建），再加载子节点
+    initProject().then(() => {
+      loadNodes(selectedProjectId);
+    });
   }, [selectedProjectId, loadNodes]);
 
   // Sync projectId in personal space
