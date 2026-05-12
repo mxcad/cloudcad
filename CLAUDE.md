@@ -88,3 +88,5 @@ See `docs/adr/` for major decisions:
 
 GitHub Actions: push/PR to main/develop → PostgreSQL 15 + Redis 7 → lint + format + type-check → build → test → Codecov.
 
+
+请阅读`AGENTS.md`

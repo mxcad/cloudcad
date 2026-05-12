@@ -21,6 +21,7 @@
 import React, {
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useState,
 } from 'react';
@@ -133,31 +134,25 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
 
-  // 检测容器宽度（用于自适应布局）
-  // 使用父容器（侧边栏）的宽度来判断是否使用紧凑布局
+  // 每次渲染后同步获取父容器宽度（在浏览器绘制前执行），确保 layout 切换发生在首帧之前
+  useLayoutEffect(() => {
+    const parent = containerRef.current?.parentElement;
+    if (parent) {
+      const width = parent.offsetWidth;
+      if (width > 0) {
+        setContainerWidth(width);
+      }
+    }
+  }); // 无依赖数组：每次渲染都执行
+
+  // 监听容器宽度变化（ResizeObserver），用于侧边栏拖拽调整大小时响应
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // 获取父容器（侧边栏）的宽度
-    const getParentWidth = () => {
-      const parent = container.parentElement;
-      if (parent) {
-        return parent.offsetWidth;
-      }
-      // 如果没有父容器，回退到自身宽度
-      return container.offsetWidth;
-    };
-
-    const updateWidth = () => {
-      const width = getParentWidth();
-      setContainerWidth(width);
-    };
-
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
-        // 优先使用父容器宽度
         const parent = container.parentElement;
         if (parent) {
           setContainerWidth(parent.offsetWidth);
@@ -167,30 +162,16 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
       }
     });
 
-    // 监听窗口 resize
-    const handleResize = () => {
-      updateWidth();
-    };
-
     resizeObserver.observe(container);
-    window.addEventListener('resize', handleResize);
-    
-    // 初始化时多次尝试获取宽度
-    updateWidth();
-    setTimeout(updateWidth, 100);
-    setTimeout(updateWidth, 300);
-    setTimeout(updateWidth, 500);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
-  // 是否使用紧凑布局（窄屏幕）
-  // 宽度小于420px时使用选择框形式，否则使用横向滚动标签
-  // 初始状态（containerWidth=0）时默认使用宽屏布局（横向滚动标签）
-  const isCompactLayout = containerWidth > 0 && containerWidth < 420;
+  // 是否使用紧凑布局（选择框模式）
+  // 默认 containerWidth=0 时也使用紧凑布局，避免先闪现宽屏标签再切换的闪动
+  const isCompactLayout = containerWidth === 0 || containerWidth < 420;
 
   // 获取指定级别的分类列表（用于选择框）
   const getLevelItems = (level: number): CategoryItem[] => {

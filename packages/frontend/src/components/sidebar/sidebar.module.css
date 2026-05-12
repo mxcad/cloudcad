@@ -376,6 +376,36 @@
   background: var(--sidebar-bg, #212832);
 }
 
+/* ---- 面板显隐控制（保持 DOM 存在，视觉切换） ---- */
+.subTabPanel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.subTabPanel.active {
+  display: flex;
+  opacity: 1;
+}
+.subTabPanel:not(.active) {
+  display: none;
+  opacity: 0;
+}
+
+/* 面包屑占位容器 — 始终保留 min-height */
+.breadcrumbPlaceholder {
+  min-height: 42px;
+  flex-shrink: 0;
+}
+
+/* 分类标签占位容器 */
+.categoryPlaceholder {
+  min-height: 48px;
+  flex-shrink: 0;
+}
+
 /* ============================================
    5. 窄条侧边栏 - 工业级精密工具条
    ============================================ */

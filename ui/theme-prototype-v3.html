@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudCAD — CAD Industrial 主题原型 v3</title>
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  line-height:1.5;overflow:hidden;height:100vh;
+  background:var(--bg-canvas);color:var(--text-primary);
+  transition:background-color .4s ease,color .4s ease;
+}
+*,*::before,*::after{transition:background-color .4s ease,border-color .4s ease,color .25s ease,box-shadow .4s ease}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* ============================================================
+   CSS CUSTOM PROPERTIES — CAD Industrial Palette
+   Derived from myVuetifyThemeConfig.json
+   ============================================================ */
+
+/* --- DARK theme (default, matches CAD editor) --- */
+:root, [data-theme="dark"]{
+  --bg-canvas:#212832;
+  --bg-primary:#262D38;
+  --bg-secondary:#2B3340;
+  --bg-tertiary:#313A48;
+  --bg-elevated:#3A4352;
+  --bg-overlay:rgba(18,22,28,0.85);
+  --text-primary:#E8E6E4;
+  --text-secondary:#B8B5B2;
+  --text-tertiary:#8A8783;
+  --text-muted:#6B6864;
+  --text-inverse:#1A1E24;
+  --border-subtle:rgba(255,255,255,0.06);
+  --border-default:rgba(255,255,255,0.12);
+  --border-strong:rgba(255,255,255,0.18);
+  --border-focus:rgba(43,54,71,0.50);
+  --brand-primary:#2B3647;
+  --brand-secondary:#3A4352;
+  --brand-light:#99B4D1;
+  --nav-bg:#3A4352;
+  --nav-bg-active:#282A2D;
+  --sidebar-bg:#262D38;
+  --topbar-bg:rgba(38,45,56,0.85);
+  --card-bg:#2B3340;
+  --input-bg:#262D38;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.30);
+  --shadow-md:0 4px 6px rgba(0,0,0,0.40);
+  --shadow-lg:0 10px 15px rgba(0,0,0,0.55);
+  --shadow-xl:0 20px 25px rgba(0,0,0,0.6);
+  --glow-brand:0 0 20px rgba(43,54,71,0.35);
+  --status-success:#4ADE80;
+  --status-warning:#FBBF24;
+  --status-error:#F87171;
+  --status-info:#60A5FA;
+  --status-success-bg:rgba(74,222,128,0.12);
+  --status-warning-bg:rgba(251,191,36,0.12);
+  --status-error-bg:rgba(248,113,113,0.12);
+  --status-info-bg:rgba(96,165,250,0.12);
+}
+
+/* --- LIGHT theme --- */
+[data-theme="light"]{
+  --bg-canvas:#F5F6F7;
+  --bg-primary:#FFFFFF;
+  --bg-secondary:#FAFBFC;
+  --bg-tertiary:#F0F0F0;
+  --bg-elevated:#FFFFFF;
+  --bg-overlay:rgba(0,0,0,0.35);
+  --text-primary:#212832;
+  --text-secondary:#3A4352;
+  --text-tertiary:#6B7280;
+  --text-muted:#9CA3AF;
+  --text-inverse:#FFFFFF;
+  --border-subtle:rgba(0,0,0,0.06);
+  --border-default:rgba(0,0,0,0.12);
+  --border-strong:rgba(0,0,0,0.18);
+  --border-focus:rgba(153,180,209,0.50);
+  --brand-primary:#99B4D1;
+  --brand-secondary:#6B8EA8;
+  --brand-light:#B8D0E3;
+  --nav-bg:#DBDBDB;
+  --nav-bg-active:#787878;
+  --sidebar-bg:#FFFFFF;
+  --topbar-bg:rgba(255,255,255,0.85);
+  --card-bg:#FFFFFF;
+  --input-bg:#FFFFFF;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md:0 4px 8px rgba(0,0,0,0.10);
+  --shadow-lg:0 10px 20px rgba(0,0,0,0.15);
+  --shadow-xl:0 20px 30px rgba(0,0,0,0.18);
+  --glow-brand:0 0 20px rgba(153,180,209,0.30);
+  --status-success:#22C55E;
+  --status-warning:#F59E0B;
+  --status-error:#EF4444;
+  --status-info:#3B82F6;
+  --status-success-bg:rgba(34,197,94,0.10);
+  --status-warning-bg:rgba(245,158,11,0.10);
+  --status-error-bg:rgba(239,68,68,0.10);
+  --status-info-bg:rgba(59,130,246,0.10);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.animate-fadeIn{animation:fadeIn .4s ease-out}
+.animate-slideUp{animation:slideUp .35s ease-out}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.app{display:flex;height:100vh;width:100vw;overflow:hidden}
+
+/* Sidebar */
+.sidebar{
+  width:260px;flex-shrink:0;display:flex;flex-direction:column;
+  background:var(--sidebar-bg);border-right:1px solid var(--border-default);
+  overflow-y:auto;z-index:20;
+}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:16px 16px 12px}
+.sidebar-logo .logo-icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--brand-secondary),var(--brand-primary));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:14px;font-weight:700;
+  box-shadow:var(--glow-brand);
+}
+.sidebar-logo .brand-text{line-height:1.15}
+.sidebar-logo .brand-name{font-size:15px;font-weight:700;color:var(--text-primary);letter-spacing:-0.01em}
+.sidebar-logo .brand-sub{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:0.03em}
+
+.sidebar-nav{padding:8px 12px;flex:1}
+.sidebar-section-title{
+  font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--text-muted);padding:12px 12px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  cursor:pointer;color:var(--text-tertiary);font-size:13px;font-weight:500;
+  text-decoration:none;transition:all .2s ease;margin-bottom:2px;
+}
+.nav-item:hover{background:var(--bg-tertiary);color:var(--text-secondary)}
+.nav-item.active{
+  background:linear-gradient(135deg,var(--brand-secondary),var(--brand-primary));
+  color:#fff;box-shadow:0 2px 8px rgba(43,54,71,.35);
+}
+.nav-item .nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+.nav-item .nav-icon svg{width:18px;height:18px}
+
+/* Sidebar storage */
+.sidebar-storage{
+  margin:12px;padding:14px;border-radius:12px;
+  background:var(--bg-secondary);border:1px solid var(--border-subtle);
+}
+.storage-header{
+  display:flex;align-items:center;gap:6px;margin-bottom:8px;
+  color:var(--text-tertiary);font-size:13px;font-weight:500;
+}
+.storage-bar{height:4px;border-radius:2px;background:var(--bg-elevated);overflow:hidden;margin-bottom:6px}
+.storage-bar-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,var(--brand-secondary),var(--brand-primary));
+  transition:width .5s ease;
+}
+.storage-info{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
+
+/* Sidebar user */
+.sidebar-user{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  border-top:1px solid var(--border-default);
+}
+.user-avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--brand-secondary),var(--brand-primary));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:13px;font-weight:600;
+  box-shadow:0 2px 8px rgba(43,54,71,.3);
+}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-role{font-size:10px;color:var(--text-muted)}
+
+/* Main content */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* Topbar */
+.topbar{
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;z-index:10;
+  background:var(--topbar-bg);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border-subtle);
+}
+.topbar-title{font-size:14px;font-weight:600;color:var(--text-secondary);letter-spacing:-0.01em}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-time{
+  display:flex;flex-direction:column;align-items:flex-end;
+  padding:4px 10px;border-radius:8px;background:var(--bg-tertiary);
+}
+.topbar-time .time{font-size:13px;font-weight:600;color:var(--text-primary)}
+.topbar-time .date{font-size:11px;color:var(--text-muted)}
+
+/* Theme toggle button */
+.theme-toggle-btn{
+  display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;
+  cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;
+  border:1px solid var(--border-default);color:var(--text-tertiary);
+  background:var(--bg-secondary);transition:all .2s ease;
+}
+.theme-toggle-btn:hover{color:var(--text-primary);border-color:var(--border-strong);background:var(--bg-tertiary)}
+.theme-toggle-btn .theme-dot{width:8px;height:8px;border-radius:50%;background:var(--brand-primary);box-shadow:0 0 6px var(--brand-primary)}
+.theme-toggle-btn svg{width:14px;height:14px}
+
+.page-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 32px}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+.welcome-banner{
+  border-radius:16px;padding:32px;margin-bottom:24px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,rgba(43,54,71,0.08)0%,rgba(58,67,82,0.04)100%);
+  border:1px solid var(--border-subtle);
+}
+.welcome-banner h1{font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:4px;letter-spacing:-0.02em}
+.welcome-banner p{font-size:13px;color:var(--text-tertiary)}
+.welcome-actions{display:flex;gap:10px;margin-top:16px}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{
+  border-radius:14px;padding:20px;background:var(--card-bg);
+  border:1px solid var(--border-subtle);cursor:pointer;
+  transition:all .25s ease;box-shadow:var(--shadow-sm);
+}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--border-default)}
+.stat-card-header{display:flex;align-items:flex-start;justify-content:space-between}
+.stat-card-title{font-size:13px;color:var(--text-tertiary);font-weight:500;margin-bottom:4px}
+.stat-card-value{font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:2px;letter-spacing:-0.02em}
+.stat-card-sub{font-size:11px;color:var(--text-muted)}
+.stat-card-icon{
+  width:40px;height:40px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;
+}
+
+.content-grid{display:grid;grid-template-columns:2fr 1fr;gap:24px}
+.content-panel{
+  border-radius:14px;padding:20px;background:var(--card-bg);
+  border:1px solid var(--border-subtle);
+}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.panel-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--text-primary)}
+.panel-link{
+  font-size:12px;color:var(--brand-light);cursor:pointer;
+  display:flex;align-items:center;gap:4px;transition:gap .2s ease;
+  text-decoration:none;font-weight:500;
+}
+.panel-link:hover{gap:6px}
+
+.file-item-compact{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:10px;cursor:pointer;transition:all .15s ease;
+}
+.file-item-compact:hover{background:var(--bg-tertiary)}
+.file-item-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-item-name{font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-item-meta{font-size:11px;color:var(--text-muted);margin-top:1px;display:flex;align-items:center;gap:6px}
+
+.quick-action{
+  display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;
+  cursor:pointer;transition:all .2s ease;font-size:13px;font-weight:500;
+  color:var(--text-secondary);width:100%;text-align:left;
+  background:none;border:none;font-family:inherit;
+}
+.quick-action:hover{background:var(--bg-tertiary)}
+.quick-action-icon{
+  width:34px;height:34px;border-radius:8px;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;
+  transition:transform .2s ease;
+}
+.quick-action:hover .quick-action-icon{transform:scale(1.08)}
+.quick-action-arrow{
+  margin-left:auto;opacity:0;transition:all .2s ease;color:var(--text-muted);
+}
+.quick-action:hover .quick-action-arrow{opacity:1;transform:translateX(3px)}
+
+/* ============================================================
+   FILE SYSTEM
+   ============================================================ */
+.folder-header{
+  border-radius:14px;padding:20px;background:var(--card-bg);
+  border:1px solid var(--border-subtle);margin-bottom:16px;
+}
+.folder-header-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.folder-header-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.back-btn{
+  padding:8px;border-radius:8px;cursor:pointer;color:var(--text-tertiary);
+  transition:all .15s ease;background:none;border:none;display:flex;align-items:center;
+}
+.back-btn:hover{color:var(--text-secondary);background:var(--bg-tertiary)}
+.back-btn svg{width:18px;height:18px}
+
+.breadcrumb{display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}
+.breadcrumb::-webkit-scrollbar{display:none}
+.breadcrumb-item{
+  padding:4px 8px;border-radius:6px;font-size:13px;font-weight:500;
+  color:var(--text-tertiary);white-space:nowrap;cursor:pointer;
+  transition:all .15s ease;display:flex;align-items:center;gap:4px;
+  background:none;border:none;font-family:inherit;
+}
+.breadcrumb-item:hover{color:var(--text-primary);background:var(--bg-tertiary)}
+.breadcrumb-item.current{color:var(--text-primary);font-weight:600}
+.breadcrumb-sep{color:var(--text-muted);font-size:11px;margin:0 2px;flex-shrink:0}
+
+.folder-header-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+
+.filter-tabs{
+  display:flex;align-items:center;gap:2px;padding-bottom:12px;margin-bottom:0;
+  border-bottom:1px solid var(--border-subtle);flex-wrap:wrap;
+}
+.filter-tab{
+  padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .15s ease;border:none;background:none;
+  color:var(--text-tertiary);font-family:inherit;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.filter-tab:hover{color:var(--text-secondary)}
+.filter-tab.active{color:var(--brand-light);border-bottom-color:var(--brand-primary)}
+.filter-group{
+  display:flex;gap:2px;margin-left:12px;padding-left:12px;
+  border-left:1px solid var(--border-subtle);
+}
+.filter-btn{
+  padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;
+  cursor:pointer;transition:all .15s ease;border:none;
+  background:transparent;color:var(--text-tertiary);font-family:inherit;
+}
+.filter-btn:hover{color:var(--text-secondary)}
+.filter-btn.active{background:var(--bg-tertiary);color:var(--text-primary)}
+
+.toolbar-row{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:12px 0;border-bottom:1px solid var(--border-subtle);flex-wrap:wrap;
+}
+.search-box{position:relative;flex:1;max-width:280px}
+.search-box input{
+  width:100%;padding:8px 12px 8px 34px;border-radius:8px;
+  border:1px solid var(--border-default);background:var(--input-bg);
+  color:var(--text-primary);font-size:13px;outline:none;
+  transition:border-color .2s ease;font-family:inherit;
+}
+.search-box input::placeholder{color:var(--text-muted)}
+.search-box input:focus{border-color:var(--brand-primary)}
+.search-box svg.search-icon{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;color:var(--text-muted);
+}
+.toolbar-actions{display:flex;align-items:center;gap:6px}
+
+.view-toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border-default)}
+.view-toggle button{
+  padding:7px 10px;border:none;background:transparent;cursor:pointer;
+  color:var(--text-tertiary);transition:all .15s ease;display:flex;align-items:center;
+}
+.view-toggle button:hover{color:var(--text-secondary)}
+.view-toggle button.active{background:var(--brand-primary);color:#fff}
+.view-toggle .vt-sep{width:1px;background:var(--border-default)}
+
+/* File grid */
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:16px 0}
+.file-card{
+  border-radius:12px;padding:16px 12px 12px;background:var(--card-bg);
+  border:1px solid var(--border-subtle);cursor:pointer;
+  transition:all .2s ease;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.file-card:hover{border-color:var(--border-default);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.file-card-thumb{width:56px;height:56px;display:flex;align-items:center;justify-content:center;transition:transform .2s ease}
+.file-card:hover .file-card-thumb{transform:scale(1.08)}
+.file-card-name{
+  font-size:12px;font-weight:500;color:var(--text-primary);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;
+}
+.file-card-meta{font-size:10px;color:var(--text-muted)}
+
+/* File list */
+.file-list{display:flex;flex-direction:column}
+.file-list-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  border-radius:8px;cursor:pointer;transition:all .12s ease;
+  border:1px solid transparent;
+}
+.file-list-item:hover{background:var(--bg-tertiary);border-color:var(--border-subtle)}
+.file-list-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-list-info{flex:1;min-width:0}
+.file-list-name{font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-list-meta{font-size:11px;color:var(--text-muted);margin-top:2px;display:flex;gap:8px}
+.file-list-tag{
+  font-size:10px;padding:2px 8px;border-radius:4px;
+  font-weight:600;letter-spacing:.02em;flex-shrink:0;
+}
+
+/* Pagination */
+.pagination{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 0;border-top:1px solid var(--border-subtle);margin-top:8px;
+  font-size:12px;color:var(--text-muted);
+}
+.pagination-left{display:flex;align-items:center;gap:8px}
+.pagination-right{display:flex;align-items:center;gap:4px}
+.page-btn{
+  min-width:32px;height:32px;border-radius:6px;font-size:12px;font-weight:500;
+  cursor:pointer;transition:all .15s ease;border:none;
+  background:transparent;color:var(--text-tertiary);font-family:inherit;
+  display:flex;align-items:center;justify-content:center;
+}
+.page-btn:hover{background:var(--bg-tertiary);color:var(--text-secondary)}
+.page-btn.active{background:var(--brand-primary);color:#fff;font-weight:600}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+.per-page-select{
+  background:var(--input-bg);border:1px solid var(--border-default);
+  color:var(--text-secondary);border-radius:6px;padding:4px 8px;
+  font-size:11px;font-family:inherit;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-primary{
+  display:inline-flex;align-items:center;gap:6px;padding:10px 18px;
+  border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .2s ease;border:none;color:#fff;
+  background:linear-gradient(135deg,var(--brand-secondary),var(--brand-primary));
+  box-shadow:0 2px 8px rgba(43,54,71,.3);font-family:inherit;
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(43,54,71,.4)}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:6px;padding:10px 18px;
+  border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .2s ease;background:var(--bg-secondary);
+  border:1px solid var(--border-default);color:var(--text-secondary);font-family:inherit;
+}
+.btn-secondary:hover{border-color:var(--border-strong);background:var(--bg-tertiary)}
+.btn-ghost{
+  display:inline-flex;align-items:center;gap:4px;padding:6px 10px;
+  border-radius:8px;cursor:pointer;transition:all .2s ease;
+  background:transparent;border:none;color:var(--text-tertiary);
+  font-size:12px;font-weight:500;font-family:inherit;
+}
+.btn-ghost:hover{background:var(--bg-tertiary);color:var(--text-secondary)}
+.btn-ghost svg{width:14px;height:14px}
+
+/* ============================================================
+   FLOATING TUNE PANEL — Interactive Color Debugger
+   ============================================================ */
+.tune-panel{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--bg-elevated);border:1px solid var(--border-default);
+  border-radius:14px;padding:16px;box-shadow:var(--shadow-xl);
+  z-index:100;min-width:260px;max-width:320px;max-height:70vh;
+  overflow-y:auto;font-size:12px;
+}
+.tune-panel-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;
+}
+.tune-panel-title{
+  font-size:12px;font-weight:600;color:var(--text-secondary);
+  display:flex;align-items:center;gap:6px;
+}
+.tune-panel-actions{display:flex;gap:4px}
+.tune-btn{
+  padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;
+  transition:all .15s ease;border:1px solid var(--border-default);
+  background:var(--bg-secondary);color:var(--text-tertiary);font-family:inherit;
+}
+.tune-btn:hover{background:var(--bg-tertiary);color:var(--text-primary);border-color:var(--border-strong)}
+.tune-btn.copy-css{color:var(--status-info);border-color:var(--status-info-bg)}
+.tune-btn.copy-css:hover{background:var(--status-info-bg)}
+.tune-btn.copy-json{color:var(--status-success);border-color:var(--status-success-bg)}
+.tune-btn.copy-json:hover{background:var(--status-success-bg)}
+.tune-btn.reset-btn{color:var(--status-warning);border-color:var(--status-warning-bg)}
+.tune-btn.reset-btn:hover{background:var(--status-warning-bg)}
+
+.tune-color-row{
+  display:flex;align-items:center;gap:6px;margin-bottom:5px;padding:3px 4px;
+  border-radius:6px;transition:background .15s ease;
+}
+.tune-color-row:hover{background:var(--bg-tertiary)}
+.tune-color-swatch{
+  width:20px;height:20px;border-radius:5px;flex-shrink:0;
+  border:1px solid var(--border-strong);cursor:pointer;position:relative;
+}
+.tune-color-swatch input[type="color"]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.tune-color-label{flex:1;font-size:11px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tune-color-input{
+  width:68px;padding:2px 4px;border-radius:4px;font-size:10px;
+  border:1px solid var(--border-default);background:var(--input-bg);
+  color:var(--text-secondary);font-family:'SF Mono',Consolas,monospace;
+  outline:none;text-align:center;transition:border-color .15s ease;
+}
+.tune-color-input:focus{border-color:var(--brand-primary)}
+.tune-theme-badge{
+  display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:10px;font-weight:600;margin-left:auto;
+  background:var(--brand-primary);color:#fff;
+}
+.tune-copied-toast{
+  position:fixed;bottom:90px;right:20px;padding:8px 14px;
+  border-radius:8px;font-size:12px;font-weight:500;
+  background:var(--status-success-bg);color:var(--status-success);
+  border:1px solid var(--status-success);z-index:200;
+  animation:slideUp .25s ease;
+  pointer-events:none;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .content-grid{grid-template-columns:1fr}
+  .page-content{padding:16px}
+  .file-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+  .welcome-banner{padding:20px}
+  .welcome-banner h1{font-size:20px}
+  .topbar{padding:0 16px}
+  .tune-panel{max-width:260px;bottom:10px;right:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ======== SIDEBAR ======== -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">CC</div>
+      <div class="brand-text">
+        <div class="brand-name">CloudCAD</div>
+        <div class="brand-sub">协同设计平台</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">主菜单</div>
+      <a class="nav-item active" data-nav="dashboard">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+        仪表盘
+      </a>
+      <a class="nav-item" data-nav="projects">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></span>
+        项目管理
+      </a>
+      <a class="nav-item" data-nav="drawings">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+        我的图纸
+      </a>
+      <a class="nav-item" data-nav="library">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></span>
+        公共资源库
+      </a>
+      <div class="sidebar-section-title">系统管理</div>
+      <a class="nav-item" data-nav="users">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        用户管理
+      </a>
+      <a class="nav-item" data-nav="roles">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        角色权限
+      </a>
+    </nav>
+
+    <div class="sidebar-storage">
+      <div class="storage-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12H2M6 4h12l4 8-4 8H6l-4-8 4-8z"/></svg>
+        存储空间
+      </div>
+      <div class="storage-bar"><div class="storage-bar-fill" style="width:42%"></div></div>
+      <div class="storage-info">
+        <span>4.2 GB</span><span>42%</span><span>10 GB</span>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">M</div>
+      <div class="user-info">
+        <div class="user-name">MxDev</div>
+        <div class="user-role">系统管理员</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ======== MAIN ======== -->
+  <main class="main">
+    <header class="topbar">
+      <span class="topbar-title" id="pageTitle">仪表盘</span>
+      <div class="topbar-right">
+        <div class="topbar-time">
+          <span class="time" id="liveTime">14:30</span>
+          <span class="date" id="liveDate">5月12日 周二</span>
+        </div>
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+          <span class="theme-dot"></span>
+          <span id="themeLabel">暗色主题</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="page-content" id="pageContent">
+      <!-- JS 动态渲染 -->
+    </div>
+  </main>
+
+  <!-- ======== FLOATING TUNE PANEL ======== -->
+  <div class="tune-panel" id="tunePanel">
+    <div class="tune-panel-header">
+      <span class="tune-panel-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        实时调色板
+        <span class="tune-theme-badge" id="tuneThemeBadge">暗色</span>
+      </span>
+      <div class="tune-panel-actions">
+        <button class="tune-btn copy-css" onclick="copyThemeCSS()" title="复制 CSS 变量">📋 CSS</button>
+        <button class="tune-btn copy-json" onclick="copyThemeJSON()" title="复制 JSON 配置">📋 JSON</button>
+        <button class="tune-btn reset-btn" onclick="resetThemeColors()" title="恢复默认">↺</button>
+      </div>
+    </div>
+    <div id="tuneColorRows"></div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toastContainer"></div>
+
+<script>
+// ============================================
+// STATE
+// ============================================
+const state = {
+  theme: 'dark',
+  view: 'dashboard',
+  viewMode: 'grid',
+  searchQuery: '',
+};
+
+// Color variable definitions for the tune panel
+const TUNABLE_COLORS = [
+  { var: '--bg-canvas',       label: 'Canvas 底色',     dftDark: '#212832', dftLight: '#F5F6F7' },
+  { var: '--bg-primary',      label: '主表面',          dftDark: '#262D38', dftLight: '#FFFFFF' },
+  { var: '--bg-secondary',    label: '次表面',          dftDark: '#2B3340', dftLight: '#FAFBFC' },
+  { var: '--bg-tertiary',     label: '三级表面',        dftDark: '#313A48', dftLight: '#F0F0F0' },
+  { var: '--bg-elevated',     label: '浮层表面',        dftDark: '#3A4352', dftLight: '#FFFFFF' },
+  { var: '--text-primary',    label: '主文字',          dftDark: '#E8E6E4', dftLight: '#212832' },
+  { var: '--text-secondary',  label: '次文字',          dftDark: '#B8B5B2', dftLight: '#3A4352' },
+  { var: '--text-tertiary',   label: '三级文字',        dftDark: '#8A8783', dftLight: '#6B7280' },
+  { var: '--text-muted',      label: '弱化文字',        dftDark: '#6B6864', dftLight: '#9CA3AF' },
+  { var: '--border-default',  label: '默认边框',        dftDark: 'rgba(255,255,255,0.12)', dftLight: 'rgba(0,0,0,0.12)' },
+  { var: '--brand-primary',   label: '品牌主色',        dftDark: '#2B3647', dftLight: '#99B4D1' },
+  { var: '--brand-secondary', label: '品牌副色',        dftDark: '#3A4352', dftLight: '#6B8EA8' },
+];
+
+// Tracks which colors have been overridden (for reset)
+const colorOverrides = {};
+
+// ============================================
+// SVG ICON GENERATORS — CAD Industrial Palette
+// ============================================
+const icons = {
+  folder(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 16C4 12.686 6.686 10 10 10H26L30 14H54C57.314 14 60 16.686 60 20V52C60 55.314 57.314 58 54 58H10C6.686 58 4 55.314 4 52V16Z" fill="#3A4352" stroke="#5D6675" stroke-width="2"/>
+      <path d="M4 22C4 18.686 6.686 16 10 16H26L30 20H54C57.314 20 60 22.686 60 26V52C60 55.314 57.314 58 54 58H10C6.686 58 4 55.314 4 52V22Z" fill="#454F61" stroke="#5D6675" stroke-width="2"/>
+      <path d="M4 16V20C4 20.552 4.448 21 5 21H25L30 16H5C4.448 16 4 16.448 4 16Z" fill="#3A4352" stroke="#5D6675" stroke-width="2"/>
+      <rect x="14" y="30" width="36" height="4" rx="1" fill="#5D6675" fill-opacity="0.25"/>
+      <rect x="14" y="38" width="28" height="4" rx="1" fill="#5D6675" fill-opacity="0.25"/>
+      <rect x="14" y="46" width="32" height="4" rx="1" fill="#5D6675" fill-opacity="0.25"/>
+    </svg>`;
+  },
+  dwg(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 4C7.791 4 6 5.791 6 8V56C6 58.209 7.791 60 10 60H48C50.209 60 52 58.209 52 56V16L40 4H10Z" fill="#2B3647" stroke="#5D6675" stroke-width="2"/>
+      <path d="M40 4V16H52" fill="#3A4352" stroke="#5D6675" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="14" y="18" width="36" height="28" rx="2" stroke="#AEABAB" stroke-opacity="0.4" stroke-width="2" fill="none"/>
+      <line x1="14" y1="32" x2="50" y2="32" stroke="#AEABAB" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <line x1="32" y1="18" x2="32" y2="46" stroke="#AEABAB" stroke-opacity="0.3" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <rect x="14" y="50" width="22" height="8" rx="1.5" fill="#2B3647"/>
+      <text x="25" y="56" font-size="8" fill="white" text-anchor="middle" font-weight="bold">DWG</text>
+    </svg>`;
+  },
+  dxf(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 4C7.791 4 6 5.791 6 8V56C6 58.209 7.791 60 10 60H48C50.209 60 52 58.209 52 56V16L40 4H10Z" fill="#2E3440" stroke="#5D6675" stroke-width="2"/>
+      <path d="M40 4V16H52" fill="#454F61" stroke="#5D6675" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="20" cy="36" r="9" stroke="#5D6675" stroke-opacity="0.6" stroke-width="2" fill="none"/>
+      <rect x="34" y="31" width="14" height="14" rx="1" stroke="#5D6675" stroke-opacity="0.6" stroke-width="2" fill="none" transform="rotate(45 41 38)"/>
+      <rect x="14" y="50" width="22" height="8" rx="1.5" fill="#5D6675"/>
+      <text x="25" y="56" font-size="8" fill="white" text-anchor="middle" font-weight="bold">DXF</text>
+    </svg>`;
+  },
+  pdf(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 4C7.791 4 6 5.791 6 8V56C6 58.209 7.791 60 10 60H48C50.209 60 52 58.209 52 56V16L40 4H10Z" fill="#454F61" stroke="#5D6675" stroke-width="2"/>
+      <path d="M40 4V16H52" fill="#3A4352" stroke="#5D6675" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="14" y="20" width="24" height="28" rx="2" fill="#313A48"/>
+      <text x="26" y="34" font-size="8" fill="white" fill-opacity="0.8" text-anchor="middle" font-weight="bold">PDF</text>
+      <line x1="17" y1="40" x2="35" y2="40" stroke="#5D6675" stroke-width="2" stroke-linecap="round"/>
+      <line x1="17" y1="44" x2="29" y2="44" stroke="#5D6675" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+  },
+  image(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 4C7.791 4 6 5.791 6 8V56C6 58.209 7.791 60 10 60H48C50.209 60 52 58.209 52 56V16L40 4H10Z" fill="#313A48" stroke="#5D6675" stroke-width="2"/>
+      <path d="M40 4V16H52" fill="#454F61" stroke="#5D6675" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="14" y="20" width="24" height="24" rx="2" fill="#262D38"/>
+      <path d="M14 44L22 32L28 40L34 28L44 44" stroke="#5D6675" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <circle cx="32" cy="26" r="4" fill="#AEABAB" fill-opacity="0.3"/>
+    </svg>`;
+  },
+  file(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 4C7.791 4 6 5.791 6 8V56C6 58.209 7.791 60 10 60H48C50.209 60 52 58.209 52 56V16L40 4H10Z" fill="#262D38" stroke="#5D6675" stroke-width="2"/>
+      <path d="M40 4V16H52" fill="#3A4352" stroke="#5D6675" stroke-width="2" stroke-linejoin="round"/>
+      <line x1="16" y1="26" x2="46" y2="26" stroke="#5D6675" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16" y1="34" x2="40" y2="34" stroke="#5D6675" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16" y1="42" x2="32" y2="42" stroke="#5D6675" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+  },
+  project(size=56) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6L10 22V54C10 56.2 11.8 58 14 58H50C52.2 58 54 56.2 54 54V22L32 6Z" fill="#2B3647" stroke="#5D6675" stroke-width="2"/>
+      <rect x="16" y="28" width="32" height="24" rx="1" fill="white" fill-opacity="0.85"/>
+      <rect x="26" y="38" width="12" height="14" rx="1" fill="#3A4352"/>
+      <rect x="16" y="32" width="8" height="8" rx="1" fill="#2B3647" fill-opacity="0.5"/>
+      <rect x="40" y="32" width="8" height="8" rx="1" fill="#2B3647" fill-opacity="0.5"/>
+    </svg>`;
+  }
+};
+
+function getThumbIcon(type, size=56) {
+  if (type === 'folder') return icons.folder(size);
+  if (type === 'dwg') return icons.dwg(size);
+  if (type === 'dxf') return icons.dxf(size);
+  if (type === 'pdf') return icons.pdf(size);
+  if (type === 'image' || type === 'png' || type === 'jpg') return icons.image(size);
+  return icons.file(size);
+}
+
+function getTypeColor(type) {
+  const m = { dwg:'#2B3647', dxf:'#5D6675', pdf:'#454F61', image:'#313A48', folder:'#3A4352' };
+  return m[type] || '#262D38';
+}
+
+function getTypeColorForTag(type) {
+  const m = { dwg:'#99B4D1', dxf:'#8A9BAE', pdf:'#6B8EA8', image:'#7A8A9A', folder:'#B8B5B2' };
+  return m[type] || '#8A8783';
+}
+
+// ============================================
+// MOCK DATA
+// ============================================
+const stats = { projects: 12, files: 247, today: 8, storage: '4.2 GB', storageTotal: '10 GB', dwg: 156, dxf: 89 };
+
+const recentFiles = [
+  { name: 'A座标准层平面图.dwg', updatedAt: '2小时前', size: '2.4 MB', type: 'dwg' },
+  { name: '地下车库布置图.dwg', updatedAt: '昨天', size: '5.1 MB', type: 'dwg' },
+  { name: '结构详图_A3.dxf', updatedAt: '昨天', size: '1.2 MB', type: 'dxf' },
+  { name: '机电管线综合图.dwg', updatedAt: '2天前', size: '8.7 MB', type: 'dwg' },
+  { name: '幕墙节点大样.pdf', updatedAt: '3天前', size: '3.2 MB', type: 'pdf' },
+];
+
+const recentProjects = [
+  { name: '万达商业广场', updatedAt: '1小时前', files: 45 },
+  { name: '绿地中心写字楼', updatedAt: '3小时前', files: 32 },
+  { name: '万科住宅一期', updatedAt: '昨天', files: 28 },
+  { name: '龙湖天街商业综合体', updatedAt: '2天前', files: 56 },
+];
+
+const fileItems = [
+  { name: 'A座标准层平面图.dwg', updatedAt: '2小时前', size: '2.4 MB', type: 'dwg' },
+  { name: '地下车库布置图.dwg', updatedAt: '昨天', size: '5.1 MB', type: 'dwg' },
+  { name: '结构详图_A3.dxf', updatedAt: '昨天', size: '1.2 MB', type: 'dxf' },
+  { name: '机电管线综合图.dwg', updatedAt: '2天前', size: '8.7 MB', type: 'dwg' },
+  { name: '幕墙节点大样.pdf', updatedAt: '3天前', size: '3.2 MB', type: 'pdf' },
+  { name: '建筑总平面图.dwg', updatedAt: '4天前', size: '6.8 MB', type: 'dwg' },
+  { name: '暖通系统图.dxf', updatedAt: '1周前', size: '1.8 MB', type: 'dxf' },
+  { name: '给排水详图.dwg', updatedAt: '1周前', size: '3.5 MB', type: 'dwg' },
+  { name: '电气系统图.dxf', updatedAt: '2周前', size: '2.1 MB', type: 'dxf' },
+  { name: '剖面图_B-B.dwg', updatedAt: '2周前', size: '4.3 MB', type: 'dwg' },
+  { name: '立面图_南.dwg', updatedAt: '3周前', size: '3.9 MB', type: 'dwg' },
+  { name: '节点大样集.pdf', updatedAt: '1个月前', size: '12.5 MB', type: 'pdf' },
+];
+
+// ============================================
+// RENDER: DASHBOARD
+// ============================================
+function renderDashboard() {
+  document.getElementById('pageTitle').textContent = '仪表盘';
+
+  return `
+    <div class="animate-fadeIn">
+      <div class="welcome-banner">
+        <h1 id="greetingText"></h1>
+        <p>欢迎使用 CloudCAD，开始您的设计工作</p>
+        <div class="welcome-actions">
+          <button class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            新建项目
+          </button>
+          <button class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            上传图纸
+          </button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card" onclick="navigateTo('projects')">
+          <div class="stat-card-header">
+            <div>
+              <div class="stat-card-title">我的项目</div>
+              <div class="stat-card-value">${stats.projects}</div>
+              <div class="stat-card-sub">活跃项目</div>
+            </div>
+            <div class="stat-card-icon" style="background:rgba(43,54,71,0.15)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--brand-primary)"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" onclick="navigateTo('drawings')">
+          <div class="stat-card-header">
+            <div>
+              <div class="stat-card-title">图纸文件</div>
+              <div class="stat-card-value">${stats.files}</div>
+              <div class="stat-card-sub">DWG ${stats.dwg} / DXF ${stats.dxf}</div>
+            </div>
+            <div class="stat-card-icon" style="background:rgba(58,67,82,0.15)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--brand-secondary)"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header">
+            <div>
+              <div class="stat-card-title">今日上传</div>
+              <div class="stat-card-value">${stats.today}</div>
+              <div class="stat-card-sub">个文件</div>
+            </div>
+            <div class="stat-card-icon" style="background:var(--status-info-bg)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-info)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-header">
+            <div>
+              <div class="stat-card-title">存储使用</div>
+              <div class="stat-card-value">${stats.storage}</div>
+              <div class="stat-card-sub">共 ${stats.storageTotal}</div>
+            </div>
+            <div class="stat-card-icon" style="background:var(--status-success-bg)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-success)" stroke-width="2"><path d="M22 12H2M6 4h12l4 8-4 8H6l-4-8 4-8z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div style="display:flex;flex-direction:column;gap:24px">
+          <div class="content-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                最近文件
+              </div>
+              <a class="panel-link" onclick="navigateTo('drawings')">查看全部 <span style="font-size:14px">→</span></a>
+            </div>
+            ${recentFiles.map(f => `
+              <div class="file-item-compact">
+                <div class="file-item-icon" style="background:${f.type==='dwg'?'rgba(43,54,71,0.15)':f.type==='dxf'?'rgba(58,67,82,0.15)':'var(--bg-tertiary)'}">
+                  ${getThumbIcon(f.type, 24)}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="file-item-name">${f.name}</div>
+                  <div class="file-item-meta"><span>${f.updatedAt}</span><span>·</span><span>${f.size}</span></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="content-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-secondary)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                最近项目
+              </div>
+              <a class="panel-link" onclick="navigateTo('projects')">查看全部 <span style="font-size:14px">→</span></a>
+            </div>
+            ${recentProjects.map(p => `
+              <div class="file-item-compact">
+                <div class="file-item-icon" style="background:rgba(58,67,82,0.15)">
+                  ${icons.folder(24)}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="file-item-name">${p.name}</div>
+                  <div class="file-item-meta"><span>${p.updatedAt}</span><span>·</span><span>${p.files} 个文件</span></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div>
+          <div class="content-panel">
+            <div class="panel-header">
+              <div class="panel-title" style="font-size:15px">快捷操作</div>
+            </div>
+            <button class="quick-action">
+              <div class="quick-action-icon" style="background:rgba(43,54,71,0.12)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-primary)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+              新建项目
+              <span class="quick-action-arrow">→</span>
+            </button>
+            <button class="quick-action">
+              <div class="quick-action-icon" style="background:rgba(58,67,82,0.12)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-secondary)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              上传图纸
+              <span class="quick-action-arrow">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================
+// RENDER: FILE SYSTEM
+// ============================================
+function renderFileSystem() {
+  document.getElementById('pageTitle').textContent = '我的图纸';
+
+  return `
+    <div class="animate-fadeIn">
+      <div class="folder-header">
+        <div class="folder-header-top">
+          <div class="folder-header-left">
+            <button class="back-btn" title="返回">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M5 12L12 19M5 12L12 5"/></svg>
+            </button>
+            <div class="breadcrumb">
+              <button class="breadcrumb-item" style="display:flex;align-items:center;gap:4px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                我的图纸
+              </button>
+              <span class="breadcrumb-sep">/</span>
+              <button class="breadcrumb-item current">施工图纸</button>
+            </div>
+          </div>
+          <div class="folder-header-actions">
+            <button class="btn-ghost" title="刷新">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/></svg>
+            </button>
+            <button class="btn-ghost" title="新建文件夹">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><path d="M12 11v6M9 14h6"/></svg>
+            </button>
+            <button class="btn-ghost" title="上传">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+            <button class="btn-ghost" title="回收站">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <button class="filter-tab active">我的项目</button>
+        <button class="filter-tab">项目回收站</button>
+        <div class="filter-group">
+          <button class="filter-btn active">全部</button>
+          <button class="filter-btn">我创建的</button>
+          <button class="filter-btn">我加入的</button>
+        </div>
+      </div>
+
+      <div class="toolbar-row">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" placeholder="搜索文件或图纸..." id="fileSearch" oninput="filterFiles(this.value)">
+        </div>
+        <div class="toolbar-actions">
+          <div class="view-toggle">
+            <button class="active" onclick="switchViewMode('grid', this)" title="网格视图">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </button>
+            <div class="vt-sep"></div>
+            <button onclick="switchViewMode('list', this)" title="列表视图">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="fileGridView">
+        <div class="file-grid">
+          ${fileItems.map(f => `
+            <div class="file-card" data-name="${f.name.toLowerCase()}">
+              <div class="file-card-thumb">${getThumbIcon(f.type, 48)}</div>
+              <div class="file-card-name">${f.name}</div>
+              <div class="file-card-meta">${f.size} · ${f.updatedAt}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div id="fileListView" style="display:none">
+        <div class="file-list">
+          ${fileItems.map(f => `
+            <div class="file-list-item" data-name="${f.name.toLowerCase()}">
+              <div class="file-list-icon">${getThumbIcon(f.type, 36)}</div>
+              <div class="file-list-info">
+                <div class="file-list-name">${f.name}</div>
+                <div class="file-list-meta"><span>${f.size}</span><span>${f.updatedAt}</span></div>
+              </div>
+              <div class="file-list-tag" style="background:${getTypeColor(f.type)}30;color:${getTypeColorForTag(f.type)}">${f.type.toUpperCase()}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="pagination">
+        <div class="pagination-left">
+          <span>共 ${fileItems.length} 条，第 1/1 页</span>
+          <select class="per-page-select">
+            <option>每页 20 条</option>
+            <option>每页 50 条</option>
+            <option>每页 100 条</option>
+          </select>
+        </div>
+        <div class="pagination-right">
+          <button class="page-btn" disabled>‹</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn" disabled>›</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================
+// CORE RENDERING & NAVIGATION
+// ============================================
+function renderPage() {
+  const content = state.view === 'dashboard' ? renderDashboard() : renderFileSystem();
+  document.getElementById('pageContent').innerHTML = content;
+  if (state.view === 'dashboard') updateGreeting();
+  renderTunePanel();
+}
+
+function navigateTo(view) {
+  const viewMap = { dashboard: 'dashboard', projects: 'files', drawings: 'files', library: 'files' };
+  state.view = viewMap[view] || 'dashboard';
+
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navItem = document.querySelector(`[data-nav="${view}"]`);
+  if (navItem) navItem.classList.add('active');
+  else {
+    // If navigating to files from stat cards, highlight drawings
+    if (view === 'projects' || view === 'drawings') {
+      const drawingsNav = document.querySelector('[data-nav="drawings"]');
+      if (drawingsNav) drawingsNav.classList.add('active');
+    }
+  }
+  renderPage();
+}
+
+function switchViewMode(mode, btn) {
+  const gridView = document.getElementById('fileGridView');
+  const listView = document.getElementById('fileListView');
+  if (!gridView || !listView) return;
+  const buttons = btn.parentElement.querySelectorAll('button');
+  buttons.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.viewMode = mode;
+  gridView.style.display = mode === 'grid' ? 'block' : 'none';
+  listView.style.display = mode === 'list' ? 'block' : 'none';
+}
+
+function filterFiles(query) {
+  state.searchQuery = query;
+  const items = document.querySelectorAll('.file-card, .file-list-item');
+  items.forEach(item => {
+    const name = item.getAttribute('data-name') || '';
+    item.style.display = name.includes(query.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ============================================
+// THEME TOGGLE
+// ============================================
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(state.theme);
+  try { localStorage.setItem('cloudcad-theme-v3', state.theme); } catch(e) {}
+}
+
+function applyTheme(t) {
+  state.theme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  const label = document.getElementById('themeLabel');
+  const badge = document.getElementById('tuneThemeBadge');
+  if (label) label.textContent = t === 'dark' ? '暗色主题' : '亮色主题';
+  if (badge) badge.textContent = t === 'dark' ? '暗色' : '亮色';
+  renderTunePanel();
+}
+
+// ============================================
+// CLOCK & GREETING
+// ============================================
+function updateClock() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const date = now.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
+  const timeEl = document.getElementById('liveTime');
+  const dateEl = document.getElementById('liveDate');
+  if (timeEl) timeEl.textContent = time;
+  if (dateEl) dateEl.textContent = date;
+}
+
+function updateGreeting() {
+  const hour = new Date().getHours();
+  let greeting = '早上好';
+  if (hour < 6) greeting = '夜深了';
+  else if (hour < 9) greeting = '早上好';
+  else if (hour < 12) greeting = '上午好';
+  else if (hour < 14) greeting = '中午好';
+  else if (hour < 18) greeting = '下午好';
+  else greeting = '晚上好';
+  const el = document.getElementById('greetingText');
+  if (el) el.textContent = greeting + '，MxDev';
+}
+
+// ============================================
+// INTERACTIVE TUNE PANEL
+// ============================================
+function renderTunePanel() {
+  const root = document.documentElement;
+  const style = getComputedStyle(root);
+  const rows = TUNABLE_COLORS.map(c => {
+    const currentVal = style.getPropertyValue(c.var).trim() || c.dftDark;
+    return `
+      <div class="tune-color-row">
+        <div class="tune-color-swatch" style="background:${currentVal}">
+          <input type="color" value="${toHexColor(currentVal)}" onchange="setColor('${c.var}', this.value)" title="${c.label}">
+        </div>
+        <span class="tune-color-label">${c.label}</span>
+        <input type="text" class="tune-color-input" value="${currentVal}" onchange="setColor('${c.var}', this.value)" onfocus="this.select()">
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('tuneColorRows').innerHTML = rows;
+}
+
+function toHexColor(val) {
+  val = val.trim();
+  if (val.startsWith('#')) return val.substring(0, 7);
+  // Try to parse rgba
+  const m = val.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (m) {
+    return '#' + [m[1], m[2], m[3]].map(v => parseInt(v).toString(16).padStart(2, '0')).join('');
+  }
+  return val.substring(0, 7); // fallback
+}
+
+function setColor(varName, value) {
+  document.documentElement.style.setProperty(varName, value);
+  colorOverrides[varName] = value;
+  // Re-render to update swatch and input
+  renderTunePanel();
+}
+
+function resetThemeColors() {
+  Object.keys(colorOverrides).forEach(v => {
+    document.documentElement.style.removeProperty(v);
+  });
+  // Clear overrides
+  for (const k in colorOverrides) delete colorOverrides[k];
+  const defaults = state.theme === 'dark'
+    ? Object.fromEntries(TUNABLE_COLORS.map(c => [c.var, c.dftDark]))
+    : Object.fromEntries(TUNABLE_COLORS.map(c => [c.var, c.dftLight]));
+  Object.entries(defaults).forEach(([v, val]) => {
+    document.documentElement.style.setProperty(v, val);
+  });
+  renderTunePanel();
+  showToast('已恢复默认配色');
+}
+
+function copyThemeCSS() {
+  const style = getComputedStyle(document.documentElement);
+  const prefix = state.theme === 'dark' ? ':root, [data-theme="dark"]' : '[data-theme="light"]';
+  const lines = TUNABLE_COLORS.map(c => {
+    const val = style.getPropertyValue(c.var).trim() || c.dftDark;
+    return `  ${c.var}: ${val};`;
+  });
+  const css = `${prefix} {\n${lines.join('\n')}\n}`;
+  copyToClipboard(css, 'CSS 变量');
+}
+
+function copyThemeJSON() {
+  const style = getComputedStyle(document.documentElement);
+  const config = {};
+  TUNABLE_COLORS.forEach(c => {
+    const val = style.getPropertyValue(c.var).trim() || c.dftDark;
+    config[c.var] = val;
+  });
+  const json = JSON.stringify({ theme: state.theme, colors: config }, null, 2);
+  copyToClipboard(json, 'JSON 配置');
+}
+
+function copyToClipboard(text, label) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast(`✅ ${label}已复制到剪贴板`));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(`✅ ${label}已复制到剪贴板`);
+  }
+}
+
+function showToast(msg) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'tune-copied-toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 1500);
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+(function init() {
+  // Apply saved theme
+  let saved = 'dark';
+  try { saved = localStorage.getItem('cloudcad-theme-v3') || 'dark'; } catch(e) {}
+  applyTheme(saved);
+
+  // Bind sidebar navigation
+  document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
+    item.addEventListener('click', function() {
+      const nav = this.getAttribute('data-nav');
+      navigateTo(nav);
+    });
+  });
+
+  // Bind filter tabs (delegated — re-render aware)
+  document.getElementById('pageContent').addEventListener('click', function(e) {
+    const tab = e.target.closest('.filter-tab');
+    if (tab) {
+      tab.parentElement.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    }
+    const btn = e.target.closest('.filter-btn');
+    if (btn) {
+      btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    const pageBtn = e.target.closest('.page-btn:not(.active):not(:disabled)');
+    if (pageBtn) {
+      pageBtn.parentElement.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'));
+      pageBtn.classList.add('active');
+    }
+  });
+
+  // Start clock
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Initial render
+  renderPage();
+
+  console.log('🎨 CloudCAD 主题原型 v3 已就绪 — CAD Industrial Palette');
+  console.log('   右下角调色板: 实时调色 | 📋 CSS 一键复制 | 📋 JSON 一键复制');
+  console.log('   点击顶栏按钮切换暗色/亮色主题');
+})();
+</script>
+
+</body>
+</html>

@@ -966,7 +966,7 @@ export async function openLibraryBlock(
  */
 function isMxwebFile(filename: string): boolean {
   const lowerFilename = filename.toLowerCase();
-  return lowerFilename.endsWith('.mxweb') || lowerFilename.endsWith('.mxwbe');
+  return lowerFilename.endsWith('.mxweb')
 }
 
 /**
@@ -974,7 +974,7 @@ function isMxwebFile(filename: string): boolean {
  */
 function isCadFile(filename: string): boolean {
   const ext = filename.toLowerCase();
-  return ext.endsWith('.dwg') || ext.endsWith('.dxf') || ext.endsWith('.mxweb') || ext.endsWith('.mxwbe');
+  return ext.endsWith('.dwg') || ext.endsWith('.dxf') || ext.endsWith('.mxweb')
 }
 
 /**
@@ -1229,7 +1229,7 @@ const openFile = async (noCache?: boolean) => {
         // 检查是否为 CAD 文件
         if (!isCadFile(selectedFile.name)) {
           globalShowToast(
-            '不支持的文件格式，请选择 .dwg、.dxf、.mxweb 或 .mxwbe 文件',
+            '不支持的文件格式，请选择 .dwg、.dxf、.mxweb',
             'error'
           );
           picker.value = '';

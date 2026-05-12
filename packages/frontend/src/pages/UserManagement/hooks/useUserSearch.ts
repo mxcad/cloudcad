@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useSearch } from '../../../hooks/useSearch';
 
 interface UseUserSearchReturn {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  debouncedSearchTerm: string;
+  isSearching: boolean;
   roleFilter: string;
   setRoleFilter: (roleId: string) => void;
   sortBy: string;
@@ -17,7 +20,17 @@ interface UseUserSearchReturn {
 }
 
 export function useUserSearch(): UseUserSearchReturn {
-  const [searchQuery, setSearchQuery] = useState('');
+  const {
+    searchQuery,
+    setSearchQuery,
+    debouncedSearchTerm,
+    isSearching,
+  } = useSearch({
+    debounceDelay: 300,
+    enableRemoteSearch: false,
+    initialLimit: 20,
+  });
+
   const [roleFilter, setRoleFilter] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -28,6 +41,8 @@ export function useUserSearch(): UseUserSearchReturn {
   return {
     searchQuery,
     setSearchQuery,
+    debouncedSearchTerm,
+    isSearching,
     roleFilter,
     setRoleFilter,
     sortBy,

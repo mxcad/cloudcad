@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "CloudCAD 工程蓝图工作台 v3",
+  "entry": "cloudcad-blueprint-v3.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-05-12T02:47:48.436Z",
+  "updatedAt": "2026-05-12T02:47:48.453Z",
+  "metadata": {
+    "identifier": "cloudcad-blueprint-v3",
+    "artifactType": "text/html",
+    "inferred": false
+  }
+}

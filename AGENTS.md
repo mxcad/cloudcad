@@ -6,28 +6,30 @@
 
 ## 项目技能
 
-以下技能位于 `.agents/skills/`，通过软链接映射到 `.claude/skills/`。**遇到对应场景时必须触发。**
+以下三个是**主技能**（入口）。AI 在对应领域工作时必须加载，Skill 内部按需引导到具体文档/示例/原技能。原有 8 个技能已作为子文档整合进这三个主技能中。
 
-| 技能 | 触发条件 | 核心规则 |
+| 技能 | 触发条件 | 核心理念 |
 |------|----------|----------|
-| **api-contracts** | 类型缺失、DTO 找不到、`has no exported member`、`is not a function` | 先查后端 DTO 的 `@ApiProperty`，禁止前端本地定义类型 |
-| **permission-system** | 权限检查、角色管理、权限装饰器、`@RequirePermissions` | 双层权限架构（系统+项目），严格调用链 Controller→Guard→Service→Cache→DB |
-| **nestjs-circular-dependency** | `Circular dependency`、`forwardRef`、模块相互导入 | 模块依赖单向 DAG，数据库关系可双向 |
-| **prisma-database** | 修改 `schema.prisma`、添加/删除字段、迁移脚本 | 迁移脚本必提交、部署前备份、破坏性变更分版本 |
-| **config-management** | 添加环境变量、修改配置项、`process.env` | 三层配置体系：环境变量 → 运行时配置 → 部署配置中心 |
-| **decompose** | 大型重构、5+文件改动、需要并发 agent | grill → plan → 拆独立任务文档 → 并发派发 → 汇总汇报 |
-| **verify** | 提交前、PR 前 | lint → format → type-check → test |
-| **issue** | 创建/管理 GitHub Issues | `/issue` |
+| **project-coding-standards** | 任何代码生成、新建文件、重构、提交前检查 | 全栈公共规范：复用优先、文件组织、反模式清单、工作流约束 |
+| **frontend-coding-standards** | 编写 React 组件、样式、前端页面、API 调用、或任何 `packages/frontend` 代码变更 | 前端专属：主题系统、Z-Index 层级、组件复用、API 契约。自动引用公共规范 |
+| **backend-coding-standards** | 编写 NestJS service/controller、Prisma 变更、权限逻辑、或任何 `packages/backend` 代码变更 | 后端专属：NestJS DI、Prisma 迁移/枚举、Façade 模式、审计日志。自动引用公共规范 |
+
+### 整合说明
+
+原有 8 个技能（`api-contracts`、`permission-system`、`nestjs-circular-dependency`、`prisma-database`、`config-management`、`decompose`、`verify`、`issue`）已作为**子文档**按领域归属整合。AI 加载主技能后根据具体场景自主选择阅读相关文档：
+
+- 前端主技能内包含：`api-contracts`、`permission-system`、`verify` 的前端子集
+- 后端主技能内包含：`nestjs-circular-dependency`、`prisma-database`、`config-management`、`verify` 的后端子集
+- 公共主技能内包含：`decompose`、跨领域规则
 
 ## 规范速查
 
 | 规范 | 位置 |
 |------|------|
-| API 契约 | `.claude/skills/api-contracts/SKILL.md` |
-| 任务分解 | `.claude/skills/decompose/SKILL.md` |
-| Prisma 迁移 | 见下方 |
-| 前端编码 | `packages/frontend/CLAUDE.md` |
-| 后端编码 | `packages/backend/CLAUDE.md` |
+| 全栈编码规范 | `.agents/skills/project-coding-standards/SKILL.md` — 复用优先、文件组织、反模式 |
+| 前端编码规范 | `.agents/skills/frontend-coding-standards/SKILL.md` — 主题、Z-Index、组件复用、API 契约 |
+| 后端编码规范 | `.agents/skills/backend-coding-standards/SKILL.md` — NestJS DI、Prisma、Façade、审计日志 |
+| 领域术语 | `CONTEXT.md` |
 | 全局规范 | `CLAUDE.md` |
 
 ---
@@ -52,3 +54,10 @@
    - 遵循"向后兼容"原则：先加新字段，同步数据，再删旧字段（分版本发布）。
 
 ---
+
+<!-- lean-ctx -->
+## lean-ctx
+
+Prefer lean-ctx MCP tools over native equivalents for token savings.
+Full rules: @LEAN-CTX.md
+<!-- /lean-ctx -->

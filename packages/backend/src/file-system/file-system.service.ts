@@ -19,6 +19,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { FileStatus } from '@prisma/client';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
 import { QueryChildrenDto } from './dto/query-children.dto';
@@ -53,6 +54,7 @@ export class FileSystemService {
     sourceFilePath?: string;
     sourceDirectoryPath?: string;
     skipFileCopy?: boolean;
+    fileStatus?: FileStatus;
   }) {
     return this.fileTreeService.createFileNode(options);
   }
@@ -85,6 +87,18 @@ export class FileSystemService {
 
   async updateNodePath(nodeId: string, path: string) {
     return this.fileTreeService.updateNodePath(nodeId, path);
+  }
+
+  /**
+   * 更新文件节点状态
+   *
+   * 调用方应在调用前通过 FileStatusStateMachine.validateTransition() 校验转换合法性。
+   *
+   * @param nodeId     文件节点 ID
+   * @param fileStatus 目标状态
+   */
+  async updateFileStatus(nodeId: string, fileStatus: FileStatus) {
+    return this.fileTreeService.updateFileStatus(nodeId, fileStatus);
   }
 
   // ==================== 文件操作（library, mxcad） ====================

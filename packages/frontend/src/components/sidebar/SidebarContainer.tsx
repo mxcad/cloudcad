@@ -54,6 +54,8 @@ interface SidebarContainerProps {
   onInsertFile?: (file: InsertFileParams) => void | Promise<void>;
   /** 是否可见 - 用于 loading 期间隐藏但保持 DOM 布局稳定 */
   visible?: boolean;
+  /** 是否处于加载状态 */
+  loading?: boolean;
 }
 
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
@@ -428,7 +430,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
             </div>
             {/* 子 Tab 内容 */}
             <div className={styles.subTabContent}>
-              {activeDrawingsSubTab === 'drawings-gallery' && (
+              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}>
                 <ProjectDrawingsPanel
                   key="drawings-gallery"
                   libraryType="drawing"
@@ -436,19 +438,21 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
                   doubleClickToOpen={true}
+                  visible={activeDrawingsSubTab === 'drawings-gallery'}
                 />
-              )}
-              {activeDrawingsSubTab === 'blocks-gallery' && (
+              </div>
+              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}>
                 <ProjectDrawingsPanel
                   key="blocks-gallery"
                   libraryType="block"
                   onDrawingOpen={handleDrawingOpen}
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
+                  visible={activeDrawingsSubTab === 'blocks-gallery'}
                 />
-              )}
-              {activeDrawingsSubTab === 'my-project' && (
-                isAuthenticated ? (
+              </div>
+              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}>
+                {isAuthenticated ? (
                   <ProjectDrawingsPanel
                     key="my-project"
                     projectId={isLibraryFile ? '' : projectId}
@@ -457,6 +461,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                     isModified={isModified}
                     parentId={isLibraryFile ? null : currentOpenFileParentId}
                     personalSpaceId={personalSpaceId}
+                    visible={activeDrawingsSubTab === 'my-project'}
                   />
                 ) : (
                   <div className={styles.loginPromptContainer}>
@@ -476,10 +481,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       </button>
                     </div>
                   </div>
-                )
-              )}
-              {activeDrawingsSubTab === 'my-drawings' && (
-                isAuthenticated ? (
+                )}
+              </div>
+              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}>
+                {isAuthenticated ? (
                   <ProjectDrawingsPanel
                     key="my-drawings"
                     projectId={personalSpaceId || ''}
@@ -488,6 +493,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                     currentOpenFileId={currentOpenFileId}
                     isModified={isModified}
                     parentId={currentOpenFileParentId}
+                    visible={activeDrawingsSubTab === 'my-drawings'}
                   />
                 ) : (
                   <div className={styles.loginPromptContainer}>
@@ -507,8 +513,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       </button>
                     </div>
                   </div>
-                )
-              )}
+                )}
+              </div>
             </div>
           </div>
         );

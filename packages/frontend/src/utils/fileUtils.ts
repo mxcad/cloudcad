@@ -133,7 +133,7 @@ export const getCadThumbnailUrl = (node: FileSystemNode): string => {
   if (!node.id) return '';
 
   const extension = node.extension?.toLowerCase() || '';
-  const cadExtensions = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
+  const cadExtensions = ['.dwg', '.dxf', '.mxweb'];
   if (!cadExtensions.includes(extension)) {
     return '';
   }
@@ -151,7 +151,7 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
 
   // CAD 文件使用缩略图路径预览
   const extension = node.extension?.toLowerCase() || '';
-  const cadExtensions = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
+  const cadExtensions = ['.dwg', '.dxf', '.mxweb'];
   if (cadExtensions.includes(extension)) {
     return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
   }

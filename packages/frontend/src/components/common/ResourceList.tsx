@@ -23,6 +23,7 @@ import { Loader2 } from 'lucide-react';
 import { X } from 'lucide-react';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import styles from './ResourceList.module.css';
+import sidebarStyles from '@/components/sidebar/sidebar.module.css';
 
 /** 视图类型 */
 export type ViewMode = 'list' | 'grid';
@@ -919,8 +920,18 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       {/* 内容区域 */}
       <div className={styles.content} ref={contentRef}>
         {loading && !loadingTimedOut && items.length === 0 ? (
-          <div className={styles.loadingState}>
-            <Loader2 className={styles.loadingIcon} />
+          <div className={sidebarStyles.skeletonContainer}>
+            <div className={sidebarStyles.skeletonList}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={sidebarStyles.skeletonItem}>
+                  <div className={sidebarStyles.skeletonIcon} />
+                  <div className={sidebarStyles.skeletonText}>
+                    <div className={sidebarStyles.skeletonLine} style={{ width: '60%' }} />
+                    <div className={sidebarStyles.skeletonLine} style={{ width: '40%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : items.length === 0 ? (
           <div className={styles.emptyState}>

@@ -115,7 +115,7 @@ export const DEFAULT_MESSAGES = {
 /** 文件上传配置 */
 export const FILE_UPLOAD_CONFIG = {
   FILE_PICKER_ID: 'mxcad-file-picker',
-  ALLOWED_EXTENSIONS: '.dwg,.dxf,.dwt,.mxweb,.mxwbe',
+  ALLOWED_EXTENSIONS: '.dwg,.dxf,.dwt,.mxweb',
 } as const;
 
 /** 文件重试配置 */

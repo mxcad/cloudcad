@@ -31,7 +31,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
     const isCad = useMemo(
       () =>
         !node.isFolder &&
-        ['.dwg', '.dxf', '.mxweb', '.mxwbe'].includes(node.extension?.toLowerCase() || ''),
+        ['.dwg', '.dxf', '.mxweb'].includes(node.extension?.toLowerCase() || ''),
       [node.isFolder, node.extension]
     );
 

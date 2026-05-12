@@ -12,13 +12,23 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFileSystemStore } from '../../stores/fileSystemStore';
+import { useSearch } from '../useSearch';
 
 interface UseFileSystemSearchProps {
   loadData: () => void;
 }
 
 export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const {
+    searchQuery,
+    setSearchQuery,
+    debouncedSearchTerm,
+    isSearching,
+  } = useSearch({
+    debounceDelay: 300,
+    enableRemoteSearch: false,
+  });
+
   const { pageSize: storePageSize, setPageSize: setStorePageSize } = useFileSystemStore();
   const [pagination, setPagination] = useState({ page: 1, limit: storePageSize });
   const paginationRef = useRef(pagination);
@@ -39,7 +49,7 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
     setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  }, [setSearchQuery]);
 
   const handleSearchSubmit = useCallback(() => {
     loadData();
@@ -68,6 +78,8 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
 
   return {
     searchQuery,
+    debouncedSearchTerm,
+    isSearching,
     setSearchQuery: handleSearchChange,
     handleSearchSubmit,
     pagination,

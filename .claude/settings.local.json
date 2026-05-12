@@ -1,7 +1,33 @@
 {
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "puppeteer"
+  ],
   "env": {
     "ECC_GATEGUARD": "off",
     "PATH": "/d/Program Files/nodejs:${env:PATH};C:\\tools\\gh\\bin"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "lean-ctx hook rewrite",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|bash|PowerShell|powershell"
+      },
+      {
+        "hooks": [
+          {
+            "command": "lean-ctx hook redirect",
+            "type": "command"
+          }
+        ],
+        "matcher": "Read|read|ReadFile|read_file|View|view|Grep|grep|Search|search|ListFiles|list_files|ListDirectory|list_directory"
+      }
+    ]
   },
   "permissions": {
     "allow": [
@@ -82,9 +108,5 @@
       "Bash(dir /b /s \"D:\\\\project\\\\cloudcad\\\\packages\\\\backend\\\\src\\\\file-system\\\\file-download\\\\\" 2>nul || echo \"NO FILE-DOWNLOAD DIR\")",
       "Bash(dir /b \"D:\\\\project\\\\cloudcad\\\\packages\\\\backend\\\\src\\\\mxcad\\\\save\\\\\" 2>nul)"
     ]
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "puppeteer"
-  ]
+  }
 }

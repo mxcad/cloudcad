@@ -28,11 +28,26 @@ export enum SearchType {
   FOLDER = 'folder',
 }
 
+export enum SearchEntity {
+  FILE = 'file',
+}
+
 export class SearchDto {
   @ApiProperty({ description: '搜索关键词', required: true })
   @IsString()
   @MaxLength(200, { message: '搜索关键词最长200个字符' })
   keyword: string;
+
+  @ApiProperty({
+    description: '搜索实体类型（预留扩展，当前仅支持 file）',
+    enum: Object.values(SearchEntity),
+    enumName: 'SearchEntity',
+    required: false,
+    default: SearchEntity.FILE,
+  })
+  @IsOptional()
+  @IsEnum(SearchEntity)
+  entity?: SearchEntity = SearchEntity.FILE;
 
   @ApiProperty({
     description: '搜索范围',

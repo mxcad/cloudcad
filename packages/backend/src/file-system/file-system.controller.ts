@@ -1184,7 +1184,7 @@ export class FileSystemController {
       `[统一搜索] 用户ID: ${req.user.id}, 关键词: ${dto.keyword}, 范围: ${dto.scope}, 项目ID: ${dto.projectId}`,
     );
 
-    return this.searchService.search(req.user.id, dto);
+    return this.searchService.search(req.user.id, dto, req.signal);
   }
 
   // ==================== Helper ====================

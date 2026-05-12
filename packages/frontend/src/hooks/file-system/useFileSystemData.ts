@@ -222,7 +222,7 @@ export const useFileSystemData = ({
       } else if (isPersonalSpaceMode || urlProjectId) {
         searchScope = 'project_files';
         searchProjectId = isPersonalSpaceMode
-          ? (urlNodeId || urlProjectId || '')
+          ? (urlProjectId || '')
           : urlProjectId;
       }
 

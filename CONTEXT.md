@@ -230,6 +230,53 @@ Tus 协议已完全移除，当前使用自实现的手动分片上传。
 - 非 CAD 文件（外部引用中的图片）属于外部引用专项，不纳入 FileNode 体系
 - 支持的图纸格式：DWG、DXF、mxweb（后续可能扩展更多 CAD 格式，但不会是通用文档格式）
 
+## 编码约束 (Coding Constraints)
+
+面向 AI agent 的强制性规则清单。违反任一条即视为输出不合格。
+
+### 1. 基础设施遵循
+
+- **Z-Index**: 所有 z-index 必须引用 `Z_LAYERS` 常量（`@/constants/layers`），禁止裸数字。
+- **颜色/主题**: 所有颜色必须使用 `--color-*`（Tailwind 侧）或 `--bg-*/--text-*/--border-*/--primary-*/--accent-*`（组件侧）CSS 变量。禁止硬编码色值（如 `#6366f1`、`white`、`#333`）。支持亮色/深色双主题。
+- **字体**: 使用 `--font-family-base` / `--font-family-mono` CSS 变量，不硬编码字体栈。
+- **间距/圆角/阴影**: 使用 Tailwind token 或 `--spacing-*` / `--radius-*` / `--shadow-*` CSS 变量。
+- **i18n**: 暂无基础设施，所有用户可见字符串直接写中文。预留 i18n 扩展点。
+
+### 2. 复用优先
+
+- **UI 组件**: 新增组件前，必须先搜索 `src/components/ui/` 是否有可复用组件（Button、Modal、Table、Form、Input、ConfirmDialog、Pagination 等）。
+- **工具函数**: 新增工具函数前，必须先搜索 `src/utils/` 是否有已有实现。
+- **Hooks**: 新增 hook 前，必须先搜索 `src/hooks/` 是否有已有实现。
+- **后端 Service**: 新增 service 方法前，必须先检查是否已有类似功能。外部消费者走 `FileSystemService` Façade；Controller 内部逻辑直接调用子 Service。
+
+### 3. 文件与目录约定
+
+- **前端**: 组件放 `src/components/<domain>/`，页面放 `src/pages/`，hook 放 `src/hooks/`，store 放 `src/stores/`，工具函数放 `src/utils/`。不随意创建新文件，优先使用已有目录。
+- **后端**: 每个功能模块自包含（controller、service、dto、module）。公共能力放 `src/common/`。
+- **禁止**: 将类型定义写在组件文件内——类型放 `src/types/` 或就近 `<module>/types.ts`。
+
+### 4. 反模式清单 (Anti-Patterns)
+
+| ❌ 反模式 | ✅ 正确做法 |
+|----------|------------|
+| `zIndex: 9999` | `zIndex: Z_LAYERS.MODAL` |
+| `color: #6366f1` | `color: var(--primary-500)` |
+| `background: white` | `background: var(--bg-primary)` |
+| 自己写一套 Modal/Table | 复用 `src/components/ui/` 已有组件 |
+| 在组件文件中定义类型 | 提取到独立 types 文件 |
+| 后端 Controller 写业务逻辑 | 逻辑放 Service，Controller 只做路由委托 |
+| `import type { XService }` (NestJS DI) | `import { XService }` |
+| 修改 Prisma schema 后只执行 `db push` | 必须生成 migration 脚本并提交 |
+| Prisma 枚举用在 `@ApiProperty` | 使用本地枚举，显式转换 |
+| `console.log()` | 使用 NestJS Logger |
+| 重构后代码量比原来多 | 正常情况下重构应减少代码量（消除重复、简化抽象） |
+
+### 5. 工作流约束
+
+- **新增功能**: 先在同级模块中找相似功能，参照其结构和模式实现。不要孤立设计。
+- **重构**: 目标应使代码更少、更清晰、耦合更低。避免"为抽象而抽象"——每增加一层抽象必须能说出具体好处。
+- **提交前**: lint → format → type-check → test（后端用 `pnpm verify`，前端用 `pnpm check && pnpm test`）。
+
 ## 参考
 
 - [DDD 限界上下文映射图](docs/ddd/context-map.md)

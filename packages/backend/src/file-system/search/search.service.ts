@@ -21,7 +21,7 @@ export class SearchService {
     private readonly systemPermissionService: PermissionService
   ) {}
 
-  async search(userId: string, dto: SearchDto): Promise<NodeListResponseDto> {
+  async search(userId: string, dto: SearchDto, signal?: AbortSignal): Promise<NodeListResponseDto> {
     const {
       keyword,
       scope = SearchScope.PROJECT_FILES,
@@ -37,6 +37,11 @@ export class SearchService {
       sortOrder = 'desc',
     } = dto;
 
+    const ALLOWED_SORT_FIELDS = ['name', 'createdAt', 'updatedAt', 'size'] as const;
+    if (!(ALLOWED_SORT_FIELDS as readonly string[]).includes(sortBy)) {
+      throw new BadRequestException(`不支持的排序字段: ${sortBy}`);
+    }
+
     const skip = (page - 1) * limit;
 
     switch (scope) {
@@ -49,7 +54,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
-        });
+        }, signal);
       case SearchScope.PROJECT_FILES:
         if (!projectId) {
           throw new BadRequestException('搜索项目文件时必须提供 projectId');
@@ -64,7 +69,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
-        });
+        }, signal);
       case SearchScope.ALL_PROJECTS:
         return this.searchAllProjects(userId, {
           keyword,
@@ -73,7 +78,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
-        });
+        }, signal);
       case SearchScope.LIBRARY:
         return this.searchLibrary(userId, {
           keyword,
@@ -85,7 +90,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
-        });
+        }, signal);
       default:
         throw new BadRequestException(`不支持的搜索范围: ${scope}`);
     }
@@ -101,7 +106,8 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
-    }
+    },
+    signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
     const { keyword, filter, skip, limit, sortBy, sortOrder } = params;
     const safeLimit = Number(limit) || 50;
@@ -139,6 +145,8 @@ export class SearchService {
       ],
     };
 
+    this.checkAborted(signal);
+
     const [nodes, total] = await Promise.all([
       this.prisma.fileSystemNode.findMany({
         where,
@@ -159,35 +167,13 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
-    const results: FileSystemNodeDto[] = nodes.map((node) => ({
-      id: node.id,
-      name: node.name,
-      description: node.description,
-      isFolder: node.isFolder,
-      isRoot: node.isRoot,
-      parentId: node.parentId,
-      path: node.path,
-      size: node.size,
-      mimeType: node.mimeType,
-      fileHash: node.fileHash,
-      fileStatus: node.fileStatus as FileStatus,
-      createdAt: node.createdAt,
-      updatedAt: node.updatedAt,
-      deletedAt: node.deletedAt,
-      ownerId: node.ownerId,
-      personalSpaceKey: node.personalSpaceKey,
-      libraryKey: node.libraryKey,
-      childrenCount: node._count?.children,
-      projectId: node.projectId,
-    }));
-
-    return {
-      nodes: results,
+    return this.toNodeListResponse(
+      nodes as Record<string, unknown>[],
       total,
-      page: params.page,
+      params.page,
       limit,
-      totalPages: Math.ceil(total / safeLimit),
-    };
+      (node) => ({ childrenCount: (node._count as any)?.children }),
+    );
   }
 
   private async searchProjectFiles(
@@ -203,7 +189,8 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
-    }
+    },
+    signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
     const {
       keyword,
@@ -231,7 +218,6 @@ export class SearchService {
     const where: Prisma.FileSystemNodeWhereInput = {
       id: { in: projectNodeIds },
       deletedAt: null,
-      personalSpaceKey: null,
       isRoot: false,
       OR: [
         { name: { contains: keyword, mode: 'insensitive' } },
@@ -250,6 +236,8 @@ export class SearchService {
       where.fileStatus = fileStatus as FileStatus;
     }
 
+    this.checkAborted(signal);
+
     const [nodes, total] = await Promise.all([
       this.prisma.fileSystemNode.findMany({
         where,
@@ -280,34 +268,13 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
-    const results: FileSystemNodeDto[] = nodes.map((node) => ({
-      id: node.id,
-      name: node.name,
-      description: node.description,
-      isFolder: node.isFolder,
-      isRoot: node.isRoot,
-      parentId: node.parentId,
-      path: node.path,
-      size: node.size,
-      mimeType: node.mimeType,
-      fileHash: node.fileHash,
-      fileStatus: node.fileStatus as FileStatus,
-      createdAt: node.createdAt,
-      updatedAt: node.updatedAt,
-      deletedAt: node.deletedAt,
-      ownerId: node.ownerId,
-      personalSpaceKey: node.personalSpaceKey,
-      libraryKey: node.libraryKey,
-      projectId: node.projectId || projectId,
-    }));
-
-    return {
-      nodes: results,
+    return this.toNodeListResponse(
+      nodes as Record<string, unknown>[],
       total,
-      page: params.page,
+      params.page,
       limit,
-      totalPages: Math.ceil(total / safeLimit),
-    };
+      (node) => ({ projectId: (node.projectId as string) || projectId }),
+    );
   }
 
   private async searchAllProjects(
@@ -319,30 +286,31 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
-    }
+    },
+    signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
     const { keyword, skip, limit, sortBy, sortOrder } = params;
     const safeLimit = Number(limit) || 50;
 
-    const userProjects = await this.prisma.fileSystemNode.findMany({
-      where: {
+    // 使用 Prisma relation filter 合并两次查询为一次 JOIN
+    const where: Prisma.FileSystemNodeWhereInput = {
+      deletedAt: null,
+      project: {
         isRoot: true,
         deletedAt: null,
         libraryKey: null,
-        OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
+        OR: [
+          { ownerId: userId },
+          { projectMembers: { some: { userId } } },
+        ],
       },
-      select: { id: true },
-    });
-
-    const projectIds = userProjects.map((p) => p.id);
-    const where: Prisma.FileSystemNodeWhereInput = {
-      projectId: { in: projectIds },
-      deletedAt: null,
       OR: [
         { name: { contains: keyword, mode: 'insensitive' } },
         { description: { contains: keyword, mode: 'insensitive' } },
       ],
     };
+
+    this.checkAborted(signal);
 
     const [nodes, total] = await Promise.all([
       this.prisma.fileSystemNode.findMany({
@@ -374,34 +342,12 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
-    const results: FileSystemNodeDto[] = nodes.map((node) => ({
-      id: node.id,
-      name: node.name,
-      description: node.description,
-      isFolder: node.isFolder,
-      isRoot: node.isRoot,
-      parentId: node.parentId,
-      path: node.path,
-      size: node.size,
-      mimeType: node.mimeType,
-      fileHash: node.fileHash,
-      fileStatus: node.fileStatus as FileStatus,
-      createdAt: node.createdAt,
-      updatedAt: node.updatedAt,
-      deletedAt: node.deletedAt,
-      ownerId: node.ownerId,
-      personalSpaceKey: node.personalSpaceKey,
-      libraryKey: node.libraryKey,
-      projectId: node.projectId,
-    }));
-
-    return {
-      nodes: results,
+    return this.toNodeListResponse(
+      nodes as Record<string, unknown>[],
       total,
-      page: params.page,
+      params.page,
       limit,
-      totalPages: Math.ceil(total / safeLimit),
-    };
+    );
   }
 
   private async searchLibrary(
@@ -416,7 +362,8 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
-    }
+    },
+    signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
     const {
       keyword,
@@ -483,6 +430,8 @@ export class SearchService {
     else if (type === SearchType.FOLDER) where.isFolder = true;
     if (extension) where.extension = extension;
 
+    this.checkAborted(signal);
+
     const [nodes, total] = await Promise.all([
       this.prisma.fileSystemNode.findMany({
         where,
@@ -513,31 +462,52 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
+    return this.toNodeListResponse(
+      nodes as Record<string, unknown>[],
+      total,
+      params.page,
+      limit,
+    );
+  }
+
+  /**
+   * 将 Prisma 查询结果映射为 NodeListResponseDto
+   * 消除四个搜索方法中的重复映射逻辑
+   */
+  private toNodeListResponse(
+    nodes: Record<string, unknown>[],
+    total: number,
+    page: number,
+    limit: number,
+    overrides?: (node: Record<string, unknown>) => Partial<FileSystemNodeDto>,
+  ): NodeListResponseDto {
+    const safeLimit = Number(limit) || 50;
     const results: FileSystemNodeDto[] = nodes.map((node) => ({
-      id: node.id,
-      name: node.name,
-      description: node.description,
-      isFolder: node.isFolder,
-      isRoot: node.isRoot,
-      parentId: node.parentId,
-      path: node.path,
-      size: node.size,
-      mimeType: node.mimeType,
-      fileHash: node.fileHash,
+      id: node.id as string,
+      name: node.name as string,
+      description: node.description as string | null,
+      isFolder: node.isFolder as boolean,
+      isRoot: node.isRoot as boolean,
+      parentId: node.parentId as string | null,
+      path: node.path as string | null,
+      size: node.size as number | null,
+      mimeType: node.mimeType as string | null,
+      fileHash: node.fileHash as string | null,
       fileStatus: node.fileStatus as FileStatus,
-      createdAt: node.createdAt,
-      updatedAt: node.updatedAt,
-      deletedAt: node.deletedAt,
-      ownerId: node.ownerId,
-      personalSpaceKey: node.personalSpaceKey,
-      libraryKey: node.libraryKey,
-      projectId: node.projectId,
+      createdAt: node.createdAt as Date,
+      updatedAt: node.updatedAt as Date,
+      deletedAt: node.deletedAt as Date | null,
+      ownerId: node.ownerId as string,
+      personalSpaceKey: node.personalSpaceKey as string | null,
+      libraryKey: node.libraryKey as string | null,
+      projectId: node.projectId as string | null,
+      ...overrides?.(node),
     }));
 
     return {
       nodes: results,
       total,
-      page: params.page,
+      page,
       limit,
       totalPages: Math.ceil(total / safeLimit),
     };
@@ -547,15 +517,22 @@ export class SearchService {
     const result = await this.prisma.$queryRaw<{ id: string }[]>`
       WITH RECURSIVE tree AS (
         SELECT id FROM file_system_nodes
-        WHERE id = ${projectId} AND deleted_at IS NULL
+        WHERE id = ${projectId} AND "deletedAt" IS NULL
         UNION ALL
         SELECT n.id FROM file_system_nodes n
-        JOIN tree t ON n.parent_id = t.id
-        WHERE n.deleted_at IS NULL
+        JOIN tree t ON n."parentId" = t.id
+        WHERE n."deletedAt" IS NULL
       )
       SELECT id FROM tree
     `;
 
     return result.map((row) => row.id);
+  }
+
+  private checkAborted(signal?: AbortSignal): void {
+    if (signal?.aborted) {
+      this.logger.log('搜索请求已通过 AbortSignal 取消');
+      throw new Error('Request aborted');
+    }
   }
 }

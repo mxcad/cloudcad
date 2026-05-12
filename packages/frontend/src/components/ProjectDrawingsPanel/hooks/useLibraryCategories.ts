@@ -55,10 +55,18 @@ export interface UseLibraryCategoriesReturn {
 
 export function useLibraryCategories(
   isLibraryMode: boolean,
-  libraryType: LibraryType | undefined
+  libraryType: LibraryType | undefined,
+  visible: boolean = true,
 ): UseLibraryCategoriesReturn {
+  // 占位分类数据：始终渲染三级"全部"，确保加载前后高度一致，消除跳动
+  const PLACEHOLDER_CATEGORIES: CategoryLevel[] = [
+    { level: 0, items: [{ id: 'all', name: '全部' }] },
+    { level: 1, items: [{ id: 'all', name: '全部' }] },
+    { level: 2, items: [{ id: 'all', name: '全部' }] },
+  ];
+
   const [libraryRootId, setLibraryRootId] = useState<string | null>(null);
-  const [categories, setCategories] = useState<CategoryLevel[]>([]);
+  const [categories, setCategories] = useState<CategoryLevel[]>(PLACEHOLDER_CATEGORIES);
   const [categoriesRefreshKey, setCategoriesRefreshKey] = useState(0);
   const [categoriesLoaded, setCategoriesLoaded] = useState(false);
 
@@ -81,9 +89,10 @@ export function useLibraryCategories(
 
   // 图书馆模式：并行获取库根节点和全部三级分类（一次请求）
   useEffect(() => {
-    if (!isLibraryMode) return;
+    if (!visible || !isLibraryMode) return;
 
-    setCategories([]);
+    // 重置为占位分类（而非空数组），保持三级结构，消除跳动
+    setCategories(PLACEHOLDER_CATEGORIES);
     setCategoriesLoaded(false);
 
     const fetchAll = async () => {
@@ -105,7 +114,13 @@ export function useLibraryCategories(
 
         const catData = categoriesResponse.data as { categories?: CategoryLevel[] } | undefined;
         if (catData?.categories && catData.categories.length > 0) {
-          setCategories(catData.categories);
+          // 确保始终有三级分类，不足的级别填充"全部"占位
+          const padded = [...catData.categories];
+          while (padded.length < 3) {
+            const nextLevel = padded.length;
+            padded.push({ level: nextLevel, items: [{ id: 'all', name: '全部' }] });
+          }
+          setCategories(padded);
         }
         setCategoriesLoaded(true);
       } catch (error: unknown) {
@@ -115,7 +130,7 @@ export function useLibraryCategories(
     };
 
     fetchAll();
-  }, [isLibraryMode, libraryType, categoriesRefreshKey]);
+  }, [visible, isLibraryMode, libraryType, categoriesRefreshKey]);
 
   // 暴露刷新分类列表的方法
   const refreshCategories = useCallback(() => {

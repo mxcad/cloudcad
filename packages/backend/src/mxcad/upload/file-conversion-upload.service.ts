@@ -29,6 +29,8 @@ import { StorageService } from '../../storage/storage.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { FileTypeDetector } from '../utils/file-type-detector';
+import { FileStatus } from '../../common/enums/file-status.enum';
+import { FileStatusStateMachine } from '../../file-system/file-status/file-status-state-machine';
 
 async function copyFileOrDir(
   sourcePath: string,
@@ -92,16 +94,76 @@ export class FileConversionUploadService {
 
     try {
       await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
+
+      // Step 1: 提前创建 FileNode（状态 = UPLOADING）
+      let newNodeId: string | undefined;
+      if (context?.nodeId && context?.userId) {
+        try {
+          const parentNode = await this.fileSystemServiceMain.getNode(
+            context.nodeId
+          );
+          if (!parentNode) {
+            this.logger.warn(`[uploadAndConvertFile] 父节点不存在: ${context.nodeId}`);
+          } else {
+            const parentId = parentNode.isFolder
+              ? parentNode.id
+              : parentNode.parentId;
+            if (parentId) {
+              const extension = path.extname(name).toLowerCase();
+              const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+              const newNode = await this.fileSystemServiceMain.createFileNode({
+                name,
+                fileHash: hash,
+                size,
+                mimeType,
+                extension,
+                parentId,
+                ownerId: context.userId,
+                skipFileCopy: true,
+                fileStatus: FileStatus.UPLOADING,
+              });
+
+              newNodeId = newNode.id;
+              this.logger.log(`[uploadAndConvertFile] 节点创建成功 (UPLOADING): ${newNodeId}`);
+
+              // 转换 UPLOADING → PROCESSING
+              FileStatusStateMachine.validateTransition(FileStatus.UPLOADING, FileStatus.PROCESSING);
+              await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.PROCESSING as any);
+              this.logger.log(`[uploadAndConvertFile] 状态转换: UPLOADING → PROCESSING (${newNodeId})`);
+            }
+          }
+        } catch (nodeErr) {
+          this.logger.warn(`[uploadAndConvertFile] 节点创建失败，继续转换: ${nodeErr.message}`);
+        }
+      }
+
+      // Step 2: 格式转换
       const { isOk, ret } = await this.fileConversionService.convertFile({
         srcPath: filePath,
         fileHash: hash,
         createPreloadingData: true,
       });
 
+      // Step 3: 根据转换结果更新状态
       if (isOk) {
-        await this.handleFileNodeCreation(name, hash, size, filePath, context);
+        // 转换成功 → COMPLETED
+        if (newNodeId) {
+          FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.COMPLETED);
+          await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.COMPLETED as any);
+          this.logger.log(`[uploadAndConvertFile] 状态转换: PROCESSING → COMPLETED (${newNodeId})`);
+        }
+        await this.handleFileNodeCreation(name, hash, size, filePath, context, newNodeId);
         return { ret: MxUploadReturn.kOk, tz: ret?.tz };
       } else {
+        // 转换失败 → FAILED → 删除节点
+        if (newNodeId) {
+          FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.FAILED);
+          await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.FAILED as any);
+          this.logger.log(`[uploadAndConvertFile] 状态转换: PROCESSING → FAILED (${newNodeId})`);
+          await this.fileSystemServiceMain.deleteNode(newNodeId, true);
+          this.logger.log(`[uploadAndConvertFile] 已删除失败节点: ${newNodeId}`);
+        }
         return { ret: MxUploadReturn.kConvertFileError };
       }
     } catch (error) {
@@ -191,7 +253,7 @@ export class FileConversionUploadService {
           skipFileCopy: true,
         });
 
-        const newNodeId = newNode.id;
+        const newNodeId = nodeId;
         const storageInfo = await this.storageManager.allocateNodeStorage(
           newNodeId,
           name
@@ -300,7 +362,7 @@ export class FileConversionUploadService {
             skipFileCopy: true,
           });
 
-          const newNodeId = newNode.id;
+          const newNodeId = nodeId;
           // 工作文件命名：{nodeId}.mxweb.mxweb（与 save-as 格式统一，DB path 指向它）
           const mxwebFileName = `${newNodeId}.mxweb.mxweb`;
           const storageInfo = await this.storageManager.allocateNodeStorage(
@@ -348,6 +410,49 @@ export class FileConversionUploadService {
 
     if (this.fileConversionService.needsConversion(name)) {
       this.logger.log(`检测到CAD文件，执行转换流程: ${name}`);
+
+      // Step 1: 提前创建 FileNode（非外部参照路径，状态 = UPLOADING）
+      let cadNodeId: string | undefined;
+      if ((!context.srcDwgNodeId || context.isImage) && context?.nodeId && context?.userId) {
+        try {
+          const parentNode = await this.fileSystemServiceMain.getNode(
+            context.nodeId
+          );
+          if (parentNode) {
+            const parentId = parentNode.isFolder
+              ? parentNode.id
+              : parentNode.parentId;
+            if (parentId) {
+              const extension = path.extname(name).toLowerCase();
+              const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+              const newNode = await this.fileSystemServiceMain.createFileNode({
+                name,
+                fileHash: hash,
+                size,
+                mimeType,
+                extension,
+                parentId,
+                ownerId: context.userId,
+                skipFileCopy: true,
+                fileStatus: FileStatus.UPLOADING,
+              });
+
+              cadNodeId = newNode.id;
+              this.logger.log(`[uploadAndConvertFileWithPermission] 节点创建成功 (UPLOADING): ${cadNodeId}`);
+
+              // 转换 UPLOADING → PROCESSING
+              FileStatusStateMachine.validateTransition(FileStatus.UPLOADING, FileStatus.PROCESSING);
+              await this.fileSystemServiceMain.updateFileStatus(cadNodeId, FileStatus.PROCESSING as any);
+              this.logger.log(`[uploadAndConvertFileWithPermission] 状态转换: UPLOADING → PROCESSING (${cadNodeId})`);
+            }
+          }
+        } catch (nodeErr) {
+          this.logger.warn(`[uploadAndConvertFileWithPermission] 节点创建失败，继续转换: ${nodeErr.message}`);
+        }
+      }
+
+      // Step 2: 格式转换
       await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
       const { isOk, ret } = await this.fileConversionService.convertFile({
         srcPath: filePath,
@@ -355,7 +460,15 @@ export class FileConversionUploadService {
         createPreloadingData: true,
       });
 
+      // Step 3: 根据转换结果更新状态
       if (isOk) {
+        // 转换成功 → COMPLETED
+        if (cadNodeId) {
+          FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.COMPLETED);
+          await this.fileSystemServiceMain.updateFileStatus(cadNodeId, FileStatus.COMPLETED as any);
+          this.logger.log(`[uploadAndConvertFileWithPermission] 状态转换: PROCESSING → COMPLETED (${cadNodeId})`);
+        }
+
         // 外部参照上传：跳过创建数据库节点和存储分配，直接处理外部参照文件
         if (context.srcDwgNodeId && !context.isImage) {
           this.logger.log(
@@ -380,11 +493,19 @@ export class FileConversionUploadService {
           }
         } else {
           // 普通图纸上传：创建数据库节点和存储分配
-          await this.handleFileNodeCreation(name, hash, size, filePath, context);
+          await this.handleFileNodeCreation(name, hash, size, filePath, context, cadNodeId);
         }
 
         return { ret: MxUploadReturn.kOk, tz: ret?.tz };
       } else {
+        // 转换失败 → FAILED → 删除节点
+        if (cadNodeId) {
+          FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.FAILED);
+          await this.fileSystemServiceMain.updateFileStatus(cadNodeId, FileStatus.FAILED as any);
+          this.logger.log(`[uploadAndConvertFileWithPermission] 状态转换: PROCESSING → FAILED (${cadNodeId})`);
+          await this.fileSystemServiceMain.deleteNode(cadNodeId, true);
+          this.logger.log(`[uploadAndConvertFileWithPermission] 已删除失败节点: ${cadNodeId}`);
+        }
         return { ret: MxUploadReturn.kConvertFileError };
       }
     } else {
@@ -421,7 +542,7 @@ export class FileConversionUploadService {
             skipFileCopy: true,
           });
 
-          const newNodeId = newNode.id;
+          const newNodeId = nodeId;
           const storageInfo = await this.storageManager.allocateNodeStorage(
             newNodeId,
             name
@@ -515,52 +636,67 @@ export class FileConversionUploadService {
       nodeId?: string;
       srcDwgNodeId?: string;
       isLibrary?: boolean;
-    }
+    },
+    existingNodeId?: string,
   ): Promise<void> {
-    if (!context.nodeId) {
+    if (!context.nodeId && !existingNodeId) {
       this.logger.warn('⚠️ 缺少节点ID，无法创建文件系统节点。');
       return;
     }
 
     try {
-      const parentNode = await this.fileSystemServiceMain.getNode(
-        context.nodeId
-      );
-      if (!parentNode) {
-        this.logger.error(
-          `[handleFileNodeCreation] 父节点不存在: ${context.nodeId}`
-        );
-        return;
-      }
+      let nodeId: string;
 
-      const parentId = parentNode.isFolder
-        ? parentNode.id
-        : parentNode.parentId;
-      if (!parentId) {
-        this.logger.error(
-          `[handleFileNodeCreation] 无法确定父节点ID: ${context.nodeId}`
+      if (existingNodeId) {
+        // 节点已提前创建，直接使用
+        nodeId = existingNodeId;
+        this.logger.log(`[handleFileNodeCreation] 使用已有节点: ${nodeId}`);
+      } else {
+        // 创建新节点（原有逻辑）
+        const parentNode = await this.fileSystemServiceMain.getNode(
+          context.nodeId
         );
-        return;
+        if (!parentNode) {
+          this.logger.error(
+            `[handleFileNodeCreation] 父节点不存在: ${context.nodeId}`
+          );
+          return;
+        }
+
+        const parentId = parentNode.isFolder
+          ? parentNode.id
+          : parentNode.parentId;
+        if (!parentId) {
+          this.logger.error(
+            `[handleFileNodeCreation] 无法确定父节点ID: ${context.nodeId}`
+          );
+          return;
+        }
+
+        const extension = path.extname(originalName).toLowerCase();
+        const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+        const newNode = await this.fileSystemServiceMain.createFileNode({
+          name: originalName,
+          fileHash: fileHash,
+          size: fileSize,
+          mimeType,
+          extension,
+          parentId: parentId,
+          ownerId: context.userId,
+          skipFileCopy: true,
+        });
+
+        nodeId = nodeId;
+        this.logger.log(`[handleFileNodeCreation] 节点创建成功: ${nodeId}`);
       }
 
       const uploadPath =
         this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
       const extension = path.extname(originalName).toLowerCase();
-      const mimeType = this.fileSystemNodeService.getMimeType(extension);
-
-      const newNode = await this.fileSystemServiceMain.createFileNode({
-        name: originalName,
-        fileHash: fileHash,
-        size: fileSize,
-        mimeType,
-        extension,
-        parentId: parentId,
-        ownerId: context.userId,
-        skipFileCopy: true,
-      });
 
       const storageInfo = await this.storageManager.allocateNodeStorage(
-        newNode.id,
+        nodeId,
         originalName
       );
 
@@ -573,7 +709,7 @@ export class FileConversionUploadService {
 
         for (const file of matchingFiles) {
           const sourcePath = path.join(uploadPath, file);
-          const targetFileName = file.replace(fileHash, newNode.id);
+          const targetFileName = file.replace(fileHash, nodeId);
           const targetPath = path.join(nodeDirectory, targetFileName);
           await fsPromises.copyFile(sourcePath, targetPath);
 
@@ -585,14 +721,14 @@ export class FileConversionUploadService {
         if (mxwebFileName) {
           const nodePathWithFile = `${storageInfo.nodeDirectoryRelativePath}/${mxwebFileName}`;
           await this.fileSystemServiceMain.updateNodePath(
-            newNode.id,
+            nodeId,
             nodePathWithFile
           );
         } else {
-          const expectedMxwebFileName = `${newNode.id}${extension}.mxweb`;
+          const expectedMxwebFileName = `${nodeId}${extension}.mxweb`;
           const nodePathWithFile = `${storageInfo.nodeDirectoryRelativePath}/${expectedMxwebFileName}`;
           await this.fileSystemServiceMain.updateNodePath(
-            newNode.id,
+            nodeId,
             nodePathWithFile
           );
         }
@@ -608,13 +744,13 @@ export class FileConversionUploadService {
             // 检查缩略图生成功能是否启用
             if (this.thumbnailGenerationService.isEnabled()) {
               this.logger.log(
-                `[handleFileNodeCreation] 开始自动生成缩略图: ${newNode.id}`
+                `[handleFileNodeCreation] 开始自动生成缩略图: ${nodeId}`
               );
               const result =
                 await this.thumbnailGenerationService.generateThumbnail(
                   mxwebPath,
                   nodeDir,
-                  newNode.id
+                  nodeId
                 );
               if (result.success) {
                 this.logger.log(
@@ -642,7 +778,7 @@ export class FileConversionUploadService {
       if (originalFilePath && await fsPromises.access(originalFilePath).then(() => true).catch(() => false)) {
         originalBackupPath = path.join(
           storageInfo.nodeDirectoryPath,
-          `${newNode.id}${originalExt}`
+          `${nodeId}${originalExt}`
         );
         await fsPromises.copyFile(originalFilePath, originalBackupPath);
         this.logger.log(

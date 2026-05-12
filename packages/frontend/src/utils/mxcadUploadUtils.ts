@@ -76,7 +76,7 @@ export class MxCadUploadError extends Error {
 export const validateFileType = (file: File): boolean => {
   const fileExtension = '.' + file.name.split('.').pop();
   const normalizedExtension = fileExtension.toLowerCase();
-  return ['.dwg', '.dxf', '.mxweb', '.mxwbe'].includes(normalizedExtension);
+  return ['.dwg', '.dxf', '.mxweb'].includes(normalizedExtension);
 };
 
 /**
@@ -124,7 +124,7 @@ export async function uploadFile(
   // 验证文件类型
   if (!validateFileType(file)) {
     throw new MxCadUploadError(
-      `文件类型不支持: ${file.name} (支持 .dwg, .dxf, .mxweb, .mxwbe)`,
+      `文件类型不支持: ${file.name} (支持 .dwg, .dxf, .mxweb)`,
       file.name
     );
   }

@@ -47,6 +47,7 @@ export class FileTreeService {
     sourceFilePath?: string;
     sourceDirectoryPath?: string;
     skipFileCopy?: boolean;
+    fileStatus?: FileStatus;
   }): Promise<PrismaFileSystemNode> {
     const {
       name,
@@ -59,6 +60,7 @@ export class FileTreeService {
       sourceFilePath,
       sourceDirectoryPath,
       skipFileCopy = false,
+      fileStatus = FileStatus.COMPLETED,
     } = options;
 
     this.logger.log(
@@ -128,7 +130,7 @@ export class FileTreeService {
           size,
           mimeType,
           extension,
-          fileStatus: FileStatus.COMPLETED,
+          fileStatus,
           fileHash,
           ownerId,
           projectId,
@@ -214,6 +216,25 @@ export class FileTreeService {
     );
 
     return createdNode;
+  }
+
+  /**
+   * 更新文件节点状态
+   *
+   * 调用方应在调用前通过 FileStatusStateMachine.validateTransition() 校验转换合法性。
+   * 此方法直接执行数据库更新，不做额外校验。
+   *
+   * @param nodeId     文件节点 ID
+   * @param fileStatus 目标状态
+   */
+  async updateFileStatus(
+    nodeId: string,
+    fileStatus: FileStatus,
+  ): Promise<void> {
+    await this.prisma.fileSystemNode.update({
+      where: { id: nodeId },
+      data: { fileStatus },
+    });
   }
 
   async getNode(nodeId: string) {

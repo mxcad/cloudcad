@@ -139,7 +139,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
 
   // --- middle 模式：保留扩展名，截断中间部分 ---
   if (mode === 'middle') {
-    const lastDotIndex = children.lastIndexOf('.');
+    const lastDotIndex = children.lastIndexOf('.') + 1;
     const hasExtension = lastDotIndex !== -1 && lastDotIndex < children.length - 1;
 
     const baseName = hasExtension ? children.slice(0, lastDotIndex) : children;
@@ -164,9 +164,11 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
           }}
         >
           {baseName}
-        </span>
-        {hasExtension && (
-          <span style={{ flexShrink: 0 }}>{extension}</span>
+        </span>{hasExtension && (
+          <span style={{
+            flexShrink: 0,
+            position: "relative",
+          }}>{extension}</span>
         )}
       </span>
     );

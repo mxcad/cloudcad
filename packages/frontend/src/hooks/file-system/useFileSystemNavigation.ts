@@ -106,7 +106,7 @@ export const useFileSystemNavigation = ({
           navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
         }
       } else {
-        const cadExtensions = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
+        const cadExtensions = ['.dwg', '.dxf', '.mxweb'];
         if (
           node.extension &&
           cadExtensions.includes(node.extension.toLowerCase())

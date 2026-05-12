@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudCAD 项目管理 — Warm Graphite 原型</title>
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI','Microsoft YaHei',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--w-canvas);color:var(--w-text-primary);
+  overflow:hidden;height:100vh;
+  transition:background-color 0.35s ease,color 0.35s ease;
+}
+*,*::before,*::after{transition:background-color 0.35s ease,border-color 0.35s ease,color 0.25s ease,box-shadow 0.35s ease}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--w-border-strong);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--w-text-muted)}
+
+/* ============================================================
+   CSS VARIABLES — Warm Graphite (Light + Dark)
+   ============================================================ */
+:root{
+  /* DARK theme (default for CAD) */
+  --w-canvas:#12110f;
+  --w-primary:#191816;
+  --w-secondary:#1e1d1b;
+  --w-tertiary:#242320;
+  --w-elevated:#2a2926;
+  --w-overlay:rgba(10,10,8,0.75);
+  --w-text-primary:#e8e3dc;
+  --w-text-secondary:#b0a99f;
+  --w-text-tertiary:#888178;
+  --w-text-muted:#686158;
+  --w-text-inverse:#121110;
+  --w-border-subtle:rgba(200,190,170,0.06);
+  --w-border-default:rgba(200,190,170,0.10);
+  --w-border-strong:rgba(200,190,170,0.15);
+  --w-border-focus:rgba(178,148,94,0.45);
+  --w-brand-50:#f5f0e5;--w-brand-100:#e8dfc8;--w-brand-200:#d4c8a2;
+  --w-brand-300:#c0b280;--w-brand-400:#b19f6e;--w-brand-500:#a38d5d;
+  --w-brand-600:#8c774a;--w-brand-700:#75633d;--w-brand-800:#5e4f30;--w-brand-900:#473b24;
+  --w-accent-50:#e8efec;--w-accent-100:#d0ddd8;--w-accent-200:#b0c8bf;
+  --w-accent-300:#90b3a6;--w-accent-400:#7da696;--w-accent-500:#6b9a8f;
+  --w-accent-600:#598277;--w-accent-700:#476a60;--w-accent-800:#355249;--w-accent-900:#243a32;
+  --w-success:#689a6e;--w-success-dim:rgba(104,154,110,0.15);--w-success-light:rgba(104,154,110,0.08);
+  --w-warning:#b3955a;--w-warning-dim:rgba(179,149,90,0.15);--w-warning-light:rgba(179,149,90,0.08);
+  --w-error:#b56262;--w-error-dim:rgba(181,98,98,0.15);--w-error-light:rgba(181,98,98,0.08);
+  --w-info:#688e9a;--w-info-dim:rgba(104,142,154,0.15);--w-info-light:rgba(104,142,154,0.08);
+  --w-shadow-sm:0 1px 2px rgba(0,0,0,0.25);
+  --w-shadow-md:0 4px 6px rgba(0,0,0,0.35);
+  --w-shadow-lg:0 10px 15px rgba(0,0,0,0.4);
+  --w-glow-brand:0 0 18px rgba(163,141,93,0.25);
+  --r-sm:4px;--r-md:6px;--r-lg:8px;--r-xl:12px;--r-2xl:16px;--r-full:9999px;
+}
+
+[data-theme="light"]{
+  /* LIGHT theme — warm paper tones */
+  --w-canvas:#f2ede4;
+  --w-primary:#faf7f2;
+  --w-secondary:#ffffff;
+  --w-tertiary:#f0ede6;
+  --w-elevated:#ffffff;
+  --w-overlay:rgba(80,70,55,0.35);
+  --w-text-primary:#2d2921;
+  --w-text-secondary:#5c5548;
+  --w-text-tertiary:#8a8275;
+  --w-text-muted:#a0988a;
+  --w-text-inverse:#f5f0e5;
+  --w-border-subtle:rgba(100,90,75,0.08);
+  --w-border-default:rgba(100,90,75,0.14);
+  --w-border-strong:rgba(100,90,75,0.22);
+  --w-border-focus:rgba(163,141,93,0.55);
+  --w-brand-50:#faf6ef;--w-brand-100:#f2e8d4;--w-brand-200:#e4d2ad;
+  --w-brand-300:#d4bb85;--w-brand-400:#c4a667;--w-brand-500:#a38d5d;
+  --w-brand-600:#8c774a;--w-brand-700:#75633d;--w-brand-800:#5e4f30;--w-brand-900:#473b24;
+  --w-accent-50:#f0f5f3;--w-accent-100:#dde8e4;--w-accent-200:#c0d4cc;
+  --w-accent-300:#a0bfb5;--w-accent-400:#85aa9e;--w-accent-500:#6b9a8f;
+  --w-accent-600:#598277;--w-accent-700:#476a60;--w-accent-800:#355249;--w-accent-900:#243a32;
+  --w-success:#5a8a62;--w-success-dim:rgba(90,138,98,0.12);--w-success-light:rgba(90,138,98,0.06);
+  --w-warning:#a88848;--w-warning-dim:rgba(168,136,72,0.12);--w-warning-light:rgba(168,136,72,0.06);
+  --w-error:#a85a5a;--w-error-dim:rgba(168,90,90,0.12);--w-error-light:rgba(168,90,90,0.06);
+  --w-info:#5a7a88;--w-info-dim:rgba(90,122,136,0.12);--w-info-light:rgba(90,122,136,0.06);
+  --w-shadow-sm:0 1px 3px rgba(0,0,0,0.06);
+  --w-shadow-md:0 4px 8px rgba(0,0,0,0.08);
+  --w-shadow-lg:0 10px 20px rgba(0,0,0,0.1);
+  --w-glow-brand:0 0 20px rgba(163,141,93,0.3);
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ---- Sidebar ---- */
+.sidebar{
+  width:260px;flex-shrink:0;display:flex;flex-direction:column;
+  background:var(--w-primary);border-right:1px solid var(--w-border-default);
+  z-index:20;height:100vh;
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;padding:16px 20px;
+}
+.sidebar-logo-icon{
+  width:36px;height:36px;border-radius:var(--r-lg);
+  background:linear-gradient(135deg,var(--w-brand-600),var(--w-brand-500));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:16px;font-weight:700;
+}
+.sidebar-logo-text h2{font-size:14px;font-weight:700;color:var(--w-text-primary);line-height:1.2}
+.sidebar-logo-text span{font-size:10px;color:var(--w-text-muted);font-weight:500}
+.sidebar-nav{padding:8px 12px;flex:1;overflow-y:auto}
+.sidebar-section-title{
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;
+  color:var(--w-text-muted);padding:12px 8px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:var(--r-lg);font-size:13px;cursor:pointer;
+  color:var(--w-text-tertiary);transition:all 0.15s ease;
+  margin-bottom:2px;position:relative;text-decoration:none;
+}
+.nav-item:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.nav-item.active{
+  background:linear-gradient(135deg,var(--w-brand-900),var(--w-brand-800));
+  color:var(--w-brand-300);font-weight:600;
+}
+.nav-item.active::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:20px;background:var(--w-brand-500);border-radius:0 3px 3px 0;
+}
+.nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.nav-icon svg{width:16px;height:16px;stroke:currentColor}
+
+.sidebar-storage{
+  margin:12px;padding:14px;border-radius:var(--r-xl);
+  background:var(--w-secondary);border:1px solid var(--w-border-default);
+}
+.storage-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.storage-header span{font-size:12px;font-weight:600;color:var(--w-text-secondary)}
+.storage-bar{height:4px;border-radius:2px;background:var(--w-tertiary);margin-bottom:8px}
+.storage-bar-fill{height:100%;border-radius:2px;background:var(--w-brand-500);width:45%}
+.storage-info{display:flex;justify-content:space-between;font-size:10px;color:var(--w-text-muted)}
+
+.sidebar-user{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  border-top:1px solid var(--w-border-default);
+}
+.user-avatar{
+  width:32px;height:32px;border-radius:var(--r-full);
+  background:linear-gradient(135deg,var(--w-brand-400),var(--w-accent-400));
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  font-size:13px;font-weight:600;flex-shrink:0;
+}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;color:var(--w-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-role{font-size:10px;color:var(--w-text-muted)}
+
+/* ---- Main Content ---- */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* ---- Top Bar ---- */
+.topbar{
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;flex-shrink:0;
+  background:rgba(25,24,22,0.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--w-border-default);
+}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-time{display:flex;flex-direction:column;align-items:flex-end}
+.topbar-time .time{font-size:13px;font-weight:600;color:var(--w-text-primary)}
+.topbar-time .date{font-size:11px;color:var(--w-text-muted)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.topbar-btn{
+  width:36px;height:36px;border-radius:var(--r-lg);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;color:var(--w-text-tertiary);transition:all 0.15s ease;
+}
+.topbar-btn:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.topbar-btn svg{width:18px;height:18px}
+
+/* ---- Page Content ---- */
+.page{flex:1;overflow-y:auto;padding:24px}
+
+/* ---- File System Panel ---- */
+.fs-panel{
+  border-radius:var(--r-2xl);border:1px solid var(--w-border-default);
+  background:var(--w-secondary);overflow:hidden;
+}
+
+/* ---- FS Header ---- */
+.fs-header{padding:16px 20px;}
+.fs-header-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.fs-header-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden}
+.btn-back{
+  width:36px;height:36px;border-radius:var(--r-lg);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:transparent;color:var(--w-text-tertiary);transition:all 0.15s ease;
+}
+.btn-back:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.btn-back svg{width:18px;height:18px}
+
+/* Breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:2px;overflow-x:auto;flex:1;min-width:0}
+.breadcrumb::-webkit-scrollbar{display:none}
+.breadcrumb-item{
+  display:flex;align-items:center;gap:4px;padding:4px 8px;
+  border-radius:var(--r-lg);font-size:12px;white-space:nowrap;cursor:pointer;
+  color:var(--w-text-tertiary);border:none;background:transparent;
+  transition:all 0.15s ease;
+}
+.breadcrumb-item:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.breadcrumb-item.current{color:var(--w-text-primary);font-weight:600;cursor:default}
+.breadcrumb-item.current:hover{background:transparent}
+.breadcrumb-chevron{width:12px;height:12px;color:var(--w-text-muted);flex-shrink:0}
+
+.fs-header-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.header-btn{
+  padding:6px 12px;font-size:12px;border-radius:var(--r-lg);border:none;cursor:pointer;
+  display:flex;align-items:center;gap:5px;transition:all 0.15s ease;
+  background:transparent;color:var(--w-text-tertiary);
+}
+.header-btn:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.header-btn svg{width:15px;height:15px}
+
+/* Project Filter Tabs */
+.filter-tabs{
+  display:flex;align-items:center;gap:0;border-bottom:1px solid var(--w-border-default);
+  padding:0 20px;
+}
+.filter-tab{
+  padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;
+  border:none;background:transparent;color:var(--w-text-tertiary);
+  border-bottom:2px solid transparent;transition:all 0.15s ease;
+}
+.filter-tab.active{
+  color:var(--w-brand-400);border-bottom-color:var(--w-brand-500);
+}
+.filter-subtabs{
+  display:flex;align-items:center;gap:4px;margin-left:16px;
+  padding-left:16px;border-left:1px solid var(--w-border-default);
+}
+.filter-subtab{
+  padding:5px 10px;font-size:12px;border-radius:var(--r-md);cursor:pointer;
+  border:none;background:transparent;color:var(--w-text-tertiary);transition:all 0.15s ease;
+}
+.filter-subtab.active{background:var(--w-tertiary);color:var(--w-text-primary)}
+
+/* ---- FS Toolbar ---- */
+.fs-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-top:1px solid var(--w-border-subtle);gap:12px;flex-wrap:wrap;
+}
+.search-box{
+  position:relative;flex:1;max-width:280px;
+}
+.search-box svg.search-icon{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;color:var(--w-text-muted);
+}
+.search-box input{
+  width:100%;padding:8px 12px 8px 32px;border-radius:var(--r-xl);border:1px solid var(--w-border-default);
+  background:var(--w-primary);color:var(--w-text-primary);font-size:12px;
+  font-family:inherit;outline:none;transition:all 0.15s ease;
+}
+.search-box input::placeholder{color:var(--w-text-muted)}
+.search-box input:focus{border-color:var(--w-brand-500);box-shadow:0 0 0 3px rgba(163,141,93,0.12)}
+
+.toolbar-right{display:flex;align-items:center;gap:8px}
+.toolbar-action{
+  padding:6px 10px;font-size:12px;border-radius:var(--r-lg);border:none;cursor:pointer;
+  background:transparent;color:var(--w-text-tertiary);display:flex;align-items:center;gap:4px;
+  transition:all 0.15s ease;
+}
+.toolbar-action:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.toolbar-action.active{background:var(--w-brand-900);color:var(--w-brand-300)}
+.toolbar-action svg{width:14px;height:14px}
+
+.view-toggle{
+  display:flex;border-radius:var(--r-xl);overflow:hidden;
+  border:1px solid var(--w-border-default);background:var(--w-secondary);
+}
+.view-btn{
+  padding:7px;border:none;cursor:pointer;display:flex;align-items:center;
+  background:transparent;color:var(--w-text-tertiary);transition:all 0.15s ease;
+}
+.view-btn.active{background:var(--w-brand-900);color:var(--w-brand-300)}
+.view-btn svg{width:14px;height:14px}
+.view-btn-divider{width:1px;background:var(--w-border-default)}
+
+/* ---- FS Content ---- */
+.fs-content{padding:16px 20px;min-height:300px}
+
+/* Grid Mode */
+.file-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;
+}
+.file-card{
+  border-radius:var(--r-xl);border:1px solid var(--w-border-default);
+  background:var(--w-secondary);cursor:pointer;transition:all 0.2s ease;
+  padding:20px 12px 16px;display:flex;flex-direction:column;align-items:center;
+  position:relative;
+}
+.file-card:hover{border-color:var(--w-border-strong);box-shadow:var(--w-shadow-md);transform:translateY(-2px)}
+.file-card.selected{border-color:var(--w-brand-500);box-shadow:0 0 0 2px rgba(163,141,93,0.2),var(--w-shadow-md);background:var(--w-brand-900)}
+.file-card.selected .file-card-name{color:var(--w-brand-200)}
+.file-card-thumb{
+  width:56px;height:56px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:12px;transition:transform 0.2s ease;
+}
+.file-card:hover .file-card-thumb{transform:scale(1.08)}
+.file-card-thumb svg{width:52px;height:52px}
+.file-card-name{
+  font-size:12px;font-weight:500;color:var(--w-text-primary);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;margin-bottom:4px;
+}
+.file-card-meta{font-size:10px;color:var(--w-text-muted)}
+.file-card-menu{
+  position:absolute;top:8px;right:8px;width:28px;height:28px;
+  border-radius:var(--r-md);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  background:transparent;color:var(--w-text-muted);opacity:0;transition:all 0.15s ease;
+}
+.file-card:hover .file-card-menu{opacity:1}
+.file-card-menu:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+
+/* Grid selection checkbox */
+.grid-checkbox{
+  position:absolute;top:8px;left:8px;width:20px;height:20px;
+  border-radius:var(--r-full);border:2px solid var(--w-border-strong);
+  background:transparent;display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s ease;opacity:0;
+}
+.file-card:hover .grid-checkbox,.file-card.selected .grid-checkbox{opacity:1}
+.file-card.selected .grid-checkbox{background:var(--w-brand-500);border-color:var(--w-brand-500)}
+.grid-checkbox svg{width:10px;height:10px;color:#fff;display:none}
+.file-card.selected .grid-checkbox svg{display:block}
+
+/* List Mode */
+.file-list{display:flex;flex-direction:column}
+.file-row{
+  display:flex;align-items:center;gap:12px;padding:10px 16px;
+  border-radius:var(--r-lg);cursor:pointer;transition:background 0.12s ease;
+  border:1px solid transparent;
+}
+.file-row:hover{background:var(--w-tertiary)}
+.file-row.selected{background:var(--w-brand-900);border-color:var(--w-brand-700)}
+.file-row.selected .file-row-name{color:var(--w-brand-200)}
+.list-checkbox{
+  width:18px;height:18px;border-radius:var(--r-full);border:2px solid var(--w-border-strong);
+  background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all 0.15s ease;
+}
+.file-row.selected .list-checkbox{background:var(--w-brand-500);border-color:var(--w-brand-500)}
+.list-checkbox svg{width:10px;height:10px;color:#fff;display:none}
+.file-row.selected .list-checkbox svg{display:block}
+.file-row-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-row-icon svg{width:30px;height:30px}
+.file-row-info{flex:1;min-width:0}
+.file-row-name{font-size:13px;font-weight:500;color:var(--w-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-row-meta{font-size:11px;color:var(--w-text-muted);margin-top:2px}
+.file-row-tag{
+  padding:2px 8px;border-radius:var(--r-full);font-size:10px;font-weight:500;
+  background:var(--w-tertiary);color:var(--w-text-secondary);flex-shrink:0;
+}
+.file-row-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.row-action-btn{
+  width:30px;height:30px;border-radius:var(--r-md);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;color:var(--w-text-tertiary);transition:all 0.15s ease;
+}
+.row-action-btn:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.row-action-btn.danger:hover{background:var(--w-error-dim);color:var(--w-error)}
+.row-action-btn svg{width:15px;height:15px}
+
+/* ---- Pagination ---- */
+.pagination{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-top:1px solid var(--w-border-subtle);
+  font-size:12px;color:var(--w-text-muted);
+}
+.pagination-left{display:flex;align-items:center;gap:8px}
+.pagination-right{display:flex;align-items:center;gap:4px}
+.page-btn{
+  min-width:32px;height:32px;border-radius:var(--r-md);border:1px solid var(--w-border-default);
+  background:var(--w-secondary);color:var(--w-text-secondary);cursor:pointer;
+  font-size:12px;display:flex;align-items:center;justify-content:center;transition:all 0.15s ease;
+}
+.page-btn:hover:not(:disabled){border-color:var(--w-border-strong);background:var(--w-tertiary)}
+.page-btn:disabled{opacity:0.35;cursor:not-allowed}
+.page-btn.active{background:var(--w-brand-500);border-color:var(--w-brand-500);color:#fff;font-weight:600}
+
+/* ---- Action Buttons (file operations) ---- */
+.action-icon{display:flex;align-items:center;justify-content:center}
+
+/* ---- Empty State ---- */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;text-align:center;
+}
+.empty-state svg{width:80px;height:80px;color:var(--w-text-muted);opacity:0.4;margin-bottom:16px}
+.empty-state h3{font-size:16px;font-weight:600;color:var(--w-text-primary);margin-bottom:6px}
+.empty-state p{font-size:13px;color:var(--w-text-muted);margin-bottom:16px}
+
+/* ---- Buttons ---- */
+.btn{
+  padding:8px 16px;border-radius:var(--r-lg);border:none;cursor:pointer;
+  font-size:13px;font-weight:500;font-family:inherit;transition:all 0.15s ease;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--w-brand-600),var(--w-brand-500));
+  color:#fff;box-shadow:var(--w-shadow-sm);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:var(--w-shadow-md),var(--w-glow-brand)}
+.btn-ghost{background:transparent;color:var(--w-text-tertiary);border:1px solid var(--w-border-default)}
+.btn-ghost:hover{background:var(--w-tertiary);color:var(--w-text-secondary)}
+.btn-outline{
+  background:transparent;border:1px solid var(--w-border-default);
+  color:var(--w-text-secondary);
+}
+.btn-outline:hover{border-color:var(--w-border-strong);background:var(--w-tertiary)}
+
+/* ---- Badges ---- */
+.badge{
+  display:inline-flex;align-items:center;padding:2px 10px;
+  border-radius:var(--r-full);font-size:11px;font-weight:500;
+}
+.badge-brand{background:var(--w-brand-900);color:var(--w-brand-300)}
+.badge-success{background:var(--w-success-dim);color:var(--w-success)}
+.badge-warning{background:var(--w-warning-dim);color:var(--w-warning)}
+.badge-error{background:var(--w-error-dim);color:var(--w-error)}
+
+/* ---- Switch toggle ---- */
+.toggle-switch{
+  display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;
+  color:var(--w-text-tertiary);
+}
+.toggle-track{
+  width:36px;height:20px;border-radius:10px;background:var(--w-tertiary);
+  position:relative;transition:all 0.2s ease;
+}
+.toggle-thumb{
+  width:16px;height:16px;border-radius:50%;background:#fff;
+  position:absolute;top:2px;left:2px;transition:all 0.2s ease;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle-switch.on .toggle-track{background:var(--w-brand-500)}
+.toggle-switch.on .toggle-thumb{left:18px}
+
+/* ---- Tooltip ---- */
+[data-tooltip]{position:relative}
+[data-tooltip]:hover::after{
+  content:attr(data-tooltip);position:absolute;bottom:100%;left:50%;
+  transform:translateX(-50%);margin-bottom:6px;padding:4px 8px;
+  background:var(--w-elevated);color:var(--w-text-primary);
+  border-radius:var(--r-md);font-size:11px;white-space:nowrap;
+  border:1px solid var(--w-border-default);z-index:100;pointer-events:none;
+}
+
+/* ---- Hover animations ---- */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade{animation:fadeIn 0.2s ease}
+.animate-slide{animation:slideUp 0.2s ease}
+
+/* ---- Dropdown menu ---- */
+.dropdown{
+  position:absolute;top:100%;right:0;margin-top:4px;min-width:160px;
+  border-radius:var(--r-xl);background:var(--w-elevated);
+  border:1px solid var(--w-border-default);box-shadow:var(--w-shadow-lg);
+  z-index:50;overflow:hidden;animation:slideUp 0.15s ease;
+}
+.dropdown-item{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  font-size:12px;color:var(--w-text-secondary);cursor:pointer;
+  transition:all 0.1s ease;
+}
+.dropdown-item:hover{background:var(--w-tertiary)}
+.dropdown-item.danger{color:var(--w-error)}
+.dropdown-item.danger:hover{background:var(--w-error-dim)}
+.dropdown-item svg{width:15px;height:15px}
+.dropdown-divider{height:1px;background:var(--w-border-subtle)}
+
+/* ---- Resize handle ---- */
+.resize-handle{
+  position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;
+  z-index:30;background:transparent;transition:background 0.15s ease;
+}
+.resize-handle:hover,.resize-handle:active{background:var(--w-brand-500)}
+
+/* ---- SVG Icon color classes ---- */
+.svg-folder-bg{fill:#c4a55a;stroke:#a88b3e}
+.svg-folder-front{fill:#e8dfc8;stroke:#a88b3e}
+.svg-folder-tab{fill:#c4a55a;stroke:#a88b3e}
+.svg-folder-lines{fill:#a88b3e;fill-opacity:0.2}
+
+.svg-dwg-body{fill:#4a5a82;stroke:#5a6a9e}
+.svg-dwg-fold{fill:#6a7aae;stroke:#5a6a9e}
+.svg-dwg-grid{stroke:#c4c4c4}
+.svg-dwg-accent{stroke:#6a7aae}
+.svg-dwg-tag-rect{fill:#5a6a9e}
+
+.svg-dxf-body{fill:#4a6b5a;stroke:#5a8a6e}
+.svg-dxf-fold{fill:#6a9a7e;stroke:#5a8a6e}
+.svg-dxf-grid{stroke:#c4c4c4}
+.svg-dxf-accent{stroke:#6a9a7e;fill:#6a9a7e}
+.svg-dxf-tag-rect{fill:#5a8a6e}
+
+.svg-pdf-body{fill:#c4a5a0;stroke:#a06862}
+.svg-pdf-fold{fill:#d4b8b2;stroke:#a06862}
+.svg-pdf-inner{fill:#e8dfc8}
+.svg-pdf-tag-rect{fill:#a06862}
+.svg-pdf-text{fill:#a06862}
+.svg-pdf-line{stroke:#a06862}
+
+.svg-img-body{fill:#8a9ab4;stroke:#5a7a9e}
+.svg-img-fold{fill:#a0b0c4;stroke:#5a7a9e}
+.svg-img-area{fill:#5a7a9e;fill-opacity:0.12}
+.svg-img-line{stroke:#5a7a9e}
+.svg-img-sun{fill:#c4a55a}
+
+.svg-file-body{fill:#8a8a85;stroke:#6a6a68}
+.svg-file-fold{fill:#9a9a95;stroke:#6a6a68}
+.svg-file-lines{stroke:#6a6a68}
+
+.svg-proj-body{fill:#5a7a7a;stroke:#6a8a88}
+.svg-proj-front{fill:#e8e3dc;fill-opacity:0.85}
+.svg-proj-door{fill:#6a8a88}
+.svg-proj-win{fill:#5a7a7a}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ======== SIDEBAR ======== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">C</div>
+      <div class="sidebar-logo-text">
+        <h2>CloudCAD</h2>
+        <span>协同设计平台</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">主菜单</div>
+      <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>仪表盘</a>
+      <a class="nav-item active" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></span>项目管理</a>
+      <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>我的图纸</a>
+      <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>公共资源库</a>
+      <div class="sidebar-section-title">系统管理</div>
+      <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>用户管理</a>
+      <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>角色权限</a>
+    </nav>
+
+    <div class="sidebar-storage">
+      <div class="storage-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--w-text-muted)"><path d="M22 12H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+        <span>存储空间</span>
+      </div>
+      <div class="storage-bar"><div class="storage-bar-fill" style="width:45%"></div></div>
+      <div class="storage-info">
+        <span>4.5 GB</span><span>45%</span><span>10 GB</span>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">张</div>
+      <div class="user-info">
+        <div class="user-name">张工程师</div>
+        <div class="user-role">项目经理</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ======== MAIN ======== -->
+  <div class="main">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--w-text-secondary)"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-time">
+          <span class="time">14:32</span>
+          <span class="date">5月12日 周二</span>
+        </div>
+        <button class="topbar-btn theme-toggle-btn" id="themeToggle" data-tooltip="切换明暗主题" onclick="toggleTheme()" style="position:relative;overflow:hidden">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;transition:opacity 0.3s,transform 0.3s"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;opacity:0;transform:rotate(90deg);transition:opacity 0.3s,transform 0.3s"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page">
+
+      <!-- File System Panel -->
+      <div class="fs-panel">
+
+        <!-- FS Header -->
+        <div class="fs-header">
+          <div class="fs-header-top">
+            <div class="fs-header-left">
+              <button class="btn-back" data-tooltip="返回项目列表">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 12H5M5 12L12 19M5 12L12 5"/>
+                </svg>
+              </button>
+              <div class="breadcrumb">
+                <button class="breadcrumb-item">
+                  <svg width="14" height="14" viewBox="0 0 64 64" fill="none">
+                    <path d="M32 6L10 22V54C10 56.2 11.8 58 14 58H50C52.2 58 54 56.2 54 54V22L32 6Z" class="svg-proj-body" stroke-width="2"/>
+                    <rect x="16" y="28" width="32" height="24" rx="1" class="svg-proj-front"/>
+                    <rect x="26" y="38" width="12" height="14" rx="1" class="svg-proj-door"/>
+                  </svg>
+                  云端大厦
+                </button>
+                <svg class="breadcrumb-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                <button class="breadcrumb-item">
+                  <svg width="14" height="14" viewBox="0 0 64 64" fill="none">
+                    <path d="M4 16C4 12.7 6.7 10 10 10H26L30 14H54C57.3 14 60 16.7 60 20V52C60 55.3 57.3 58 54 58H10C6.7 58 4 55.3 4 52V16Z" class="svg-folder-bg" stroke-width="2"/>
+                    <path d="M4 22C4 18.7 6.7 16 10 16H26L30 20H54C57.3 20 60 22.7 60 26V52C60 55.3 57.3 58 54 58H10C6.7 58 4 55.3 4 52V22Z" class="svg-folder-front" stroke-width="2"/>
+                  </svg>
+                  结构图纸
+                </button>
+                <svg class="breadcrumb-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                <button class="breadcrumb-item current">施工图</button>
+              </div>
+            </div>
+            <div class="fs-header-actions">
+              <button class="header-btn" data-tooltip="刷新">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              </button>
+              <button class="header-btn" data-tooltip="新建文件夹">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><path d="M12 11v6M9 14h6"/></svg>
+                新建文件夹
+              </button>
+              <button class="header-btn" data-tooltip="上传文件">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                上传
+              </button>
+              <button class="header-btn" data-tooltip="文件回收站">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                回收站
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project Filter Tabs -->
+        <div class="filter-tabs">
+          <button class="filter-tab active">我的项目</button>
+          <button class="filter-tab">项目回收站</button>
+          <div class="filter-subtabs">
+            <button class="filter-subtab active">全部</button>
+            <button class="filter-subtab">我创建的</button>
+            <button class="filter-subtab">我加入的</button>
+          </div>
+        </div>
+
+        <!-- FS Toolbar -->
+        <div class="fs-toolbar">
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="搜索文件或项目...">
+          </div>
+          <div class="toolbar-right">
+            <button class="toolbar-action" data-tooltip="多选模式">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              多选
+            </button>
+            <div class="view-toggle">
+              <button class="view-btn active" data-tooltip="网格视图" onclick="switchView('grid')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              </button>
+              <div class="view-btn-divider"></div>
+              <button class="view-btn" data-tooltip="列表视图" onclick="switchView('list')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FS Content — GRID (default visible) -->
+        <div class="fs-content" id="view-grid">
+          <div class="file-grid">
+
+            <!-- Folder: 结构图纸 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M4 16C4 12.7 6.7 10 10 10H26L30 14H54C57.3 14 60 16.7 60 20V52C60 55.3 57.3 58 54 58H10C6.7 58 4 55.3 4 52V16Z" class="svg-folder-bg" stroke-width="2"/>
+                  <path d="M4 22C4 18.7 6.7 16 10 16H26L30 20H54C57.3 20 60 22.7 60 26V52C60 55.3 57.3 58 54 58H10C6.7 58 4 55.3 4 52V22Z" class="svg-folder-front" stroke-width="2"/>
+                  <path d="M4 16V20C4 20.55 4.45 21 5 21H25L30 16H5C4.45 16 4 16.45 4 16Z" class="svg-folder-tab" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="file-card-name">结构图纸</div>
+              <div class="file-card-meta">8 个项目</div>
+            </div>
+
+            <!-- DWG: 建筑平面图 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dwg-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dwg-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="20" width="32" height="28" rx="2" fill="none" class="svg-dwg-grid" stroke-width="2"/>
+                  <path d="M16 32H48" class="svg-dwg-grid" stroke-width="1.5" stroke-dasharray="4 2"/>
+                  <path d="M32 20V48" class="svg-dwg-grid" stroke-width="1.5" stroke-dasharray="4 2"/>
+                  <path d="M44 32L48 28" class="svg-dwg-accent" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M44 32L48 36" class="svg-dwg-accent" stroke-width="2" stroke-linecap="round"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dwg-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DWG</text>
+                </svg>
+              </div>
+              <div class="file-card-name">建筑平面图.dwg</div>
+              <div class="file-card-meta">2.4 MB</div>
+            </div>
+
+            <!-- DWG: 电气系统图 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dwg-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dwg-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="20" width="32" height="28" rx="2" fill="none" class="svg-dwg-grid" stroke-width="2"/>
+                  <path d="M16 32H48" class="svg-dwg-grid" stroke-width="1.5" stroke-dasharray="4 2"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dwg-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DWG</text>
+                </svg>
+              </div>
+              <div class="file-card-name">电气系统图.dwg</div>
+              <div class="file-card-meta">1.8 MB</div>
+            </div>
+
+            <!-- DXF: 暖通布局 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dxf-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dxf-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M14 24H50" class="svg-dxf-grid" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M46 20L50 24L46 28" class="svg-dxf-grid" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="20" cy="38" r="8" class="svg-dxf-accent" stroke-width="2" fill="none"/>
+                  <rect x="34" y="34" width="12" height="12" transform="rotate(45 40 40)" class="svg-dxf-accent" stroke-width="2" fill="none"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dxf-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DXF</text>
+                </svg>
+              </div>
+              <div class="file-card-name">暖通布局.dxf</div>
+              <div class="file-card-meta">980 KB</div>
+            </div>
+
+            <!-- PDF: 施工说明 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-pdf-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-pdf-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="14" y="20" width="24" height="28" rx="2" class="svg-pdf-tag-rect"/>
+                  <rect x="16" y="22" width="20" height="24" rx="1" class="svg-pdf-inner"/>
+                  <text x="26" y="34" font-size="8" class="svg-pdf-text" text-anchor="middle" font-weight="bold">PDF</text>
+                  <line x1="18" y1="40" x2="34" y2="40" class="svg-pdf-line" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="18" y1="44" x2="30" y2="44" class="svg-pdf-line" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="file-card-name">施工说明.pdf</div>
+              <div class="file-card-meta">340 KB</div>
+            </div>
+
+            <!-- PNG: 渲染效果图 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-img-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-img-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="14" y="20" width="24" height="24" rx="2" class="svg-img-area"/>
+                  <path d="M14 44L22 32L28 40L34 28L44 44" class="svg-img-line" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <circle cx="32" cy="26" r="4" class="svg-img-sun"/>
+                </svg>
+              </div>
+              <div class="file-card-name">渲染效果图.png</div>
+              <div class="file-card-meta">5.1 MB</div>
+            </div>
+
+            <!-- DWG: 给排水 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dwg-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dwg-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dwg-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DWG</text>
+                </svg>
+              </div>
+              <div class="file-card-name">给排水图.dwg</div>
+              <div class="file-card-meta">1.2 MB</div>
+            </div>
+
+            <!-- PDF: 材料清单 -->
+            <div class="file-card">
+              <div class="grid-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <button class="file-card-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+              <div class="file-card-thumb">
+                <svg viewBox="0 0 64 64" fill="none">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-pdf-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-pdf-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="14" y="20" width="24" height="28" rx="2" class="svg-pdf-tag-rect"/>
+                  <rect x="16" y="22" width="20" height="24" rx="1" class="svg-pdf-inner"/>
+                  <text x="26" y="34" font-size="8" class="svg-pdf-text" text-anchor="middle" font-weight="bold">PDF</text>
+                </svg>
+              </div>
+              <div class="file-card-name">材料清单.pdf</div>
+              <div class="file-card-meta">180 KB</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- FS Content — LIST (hidden by default) -->
+        <div class="fs-content" id="view-list" style="display:none">
+          <div class="file-list">
+
+            <!-- Folder -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M4 16C4 12.7 6.7 10 10 10H26L30 14H54C57.3 14 60 16.7 60 20V52C60 55.3 57.3 58 54 58H10C6.7 58 4 55.3 4 52V16Z" class="svg-folder-bg" stroke-width="2"/>
+                  <path d="M4 22C4 18.7 6.7 16 10 16H26L30 20H54C57.3 20 60 22.7 60 26V52C60 55.3 57.3 58 54 58H10C6.7 58 4 55.3 4 52V22Z" class="svg-folder-front" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">结构图纸</div>
+                <div class="file-row-meta">2026-05-10  ·  8 个项目</div>
+              </div>
+              <span class="file-row-tag">文件夹</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="重命名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="row-action-btn" data-tooltip="移动到"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- DWG: 建筑平面图 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dwg-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dwg-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dwg-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DWG</text>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">建筑平面图.dwg</div>
+                <div class="file-row-meta">2026-05-12  ·  2.4 MB</div>
+              </div>
+              <span class="file-row-tag">DWG</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="版本历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn" data-tooltip="重命名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="row-action-btn" data-tooltip="移动到"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l7-7 7 7M5 15l7 7 7-7"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- DWG: 电气系统图 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dwg-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dwg-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dwg-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DWG</text>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">电气系统图.dwg</div>
+                <div class="file-row-meta">2026-05-09  ·  1.8 MB</div>
+              </div>
+              <span class="file-row-tag">DWG</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="版本历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn" data-tooltip="重命名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- DXF: 暖通布局 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dxf-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dxf-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dxf-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DXF</text>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">暖通布局.dxf</div>
+                <div class="file-row-meta">2026-05-08  ·  980 KB</div>
+              </div>
+              <span class="file-row-tag">DXF</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="版本历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn" data-tooltip="复制到"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- PDF: 施工说明 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-pdf-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-pdf-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="14" y="20" width="24" height="28" rx="2" class="svg-pdf-tag-rect"/>
+                  <rect x="16" y="22" width="20" height="24" rx="1" class="svg-pdf-inner"/>
+                  <text x="26" y="34" font-size="8" class="svg-pdf-text" text-anchor="middle" font-weight="bold">PDF</text>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">施工说明.pdf</div>
+                <div class="file-row-meta">2026-05-07  ·  340 KB</div>
+              </div>
+              <span class="file-row-tag">PDF</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn" data-tooltip="重命名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- PNG: 渲染效果图 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-img-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-img-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="14" y="20" width="24" height="24" rx="2" class="svg-img-area"/>
+                  <path d="M14 44L22 32L28 40L34 28L44 44" class="svg-img-line" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <circle cx="32" cy="26" r="4" class="svg-img-sun"/>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">渲染效果图.png</div>
+                <div class="file-row-meta">2026-05-06  ·  5.1 MB</div>
+              </div>
+              <span class="file-row-tag">PNG</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn" data-tooltip="重命名"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- DWG: 给排水 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-dwg-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-dwg-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="16" y="49" width="20" height="7" rx="1" class="svg-dwg-tag-rect"/>
+                  <text x="26" y="54.5" font-size="7" fill="#e8e3dc" text-anchor="middle" font-weight="bold">DWG</text>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">给排水图.dwg</div>
+                <div class="file-row-meta">2026-05-05  ·  1.2 MB</div>
+              </div>
+              <span class="file-row-tag">DWG</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="版本历史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+            <!-- PDF: 材料清单 -->
+            <div class="file-row">
+              <div class="list-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="file-row-icon">
+                <svg viewBox="0 0 64 64" fill="none" width="30" height="30">
+                  <path d="M10 4C7.8 4 6 5.8 6 8V56C6 58.2 7.8 60 10 60H48C50.2 60 52 58.2 52 56V16L40 4H10Z" class="svg-pdf-body" stroke-width="2"/>
+                  <path d="M40 4V16H52" class="svg-pdf-fold" stroke-width="2" stroke-linejoin="round"/>
+                  <rect x="14" y="20" width="24" height="28" rx="2" class="svg-pdf-tag-rect"/>
+                  <rect x="16" y="22" width="20" height="24" rx="1" class="svg-pdf-inner"/>
+                  <text x="26" y="34" font-size="8" class="svg-pdf-text" text-anchor="middle" font-weight="bold">PDF</text>
+                </svg>
+              </div>
+              <div class="file-row-info">
+                <div class="file-row-name">材料清单.pdf</div>
+                <div class="file-row-meta">2026-05-04  ·  180 KB</div>
+              </div>
+              <span class="file-row-tag">PDF</span>
+              <div class="file-row-actions">
+                <button class="row-action-btn" data-tooltip="下载"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                <button class="row-action-btn danger" data-tooltip="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <div class="pagination-left">
+            <span>共 8 条，第 1/1 页</span>
+            <select style="
+              background:var(--w-secondary);border:1px solid var(--w-border-default);
+              color:var(--w-text-secondary);border-radius:var(--r-md);padding:4px 8px;font-size:11px;font-family:inherit;
+            ">
+              <option>每页 20 条</option>
+              <option>每页 50 条</option>
+              <option>每页 100 条</option>
+            </select>
+          </div>
+          <div class="pagination-right">
+            <button class="page-btn" disabled>‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn" disabled>›</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Theme toggle — switch between dark/light
+(function(){
+  var STORAGE_KEY = 'cloudcad-theme-preview';
+  var html = document.documentElement;
+  var sun = document.querySelector('.icon-sun');
+  var moon = document.querySelector('.icon-moon');
+
+  function applyTheme(t) {
+    html.setAttribute('data-theme', t);
+    var isLight = t === 'light';
+    if (sun) { sun.style.opacity = isLight ? '0' : '1'; sun.style.transform = isLight ? 'rotate(-90deg)' : 'rotate(0)'; }
+    if (moon) { moon.style.opacity = isLight ? '1' : '0'; moon.style.transform = isLight ? 'rotate(0)' : 'rotate(90deg)'; }
+    try { localStorage.setItem(STORAGE_KEY, t); } catch(e) {}
+  }
+
+  // Init: read saved theme, default dark
+  var saved = 'dark';
+  try { saved = localStorage.getItem(STORAGE_KEY) || 'dark'; } catch(e) {}
+  applyTheme(saved);
+
+  window.toggleTheme = function() {
+    var current = html.getAttribute('data-theme') || 'dark';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  };
+})();
+
+// Toggle between grid and list view
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+function switchView(mode) {
+  document.getElementById('view-grid').style.display = mode === 'grid' ? 'block' : 'none';
+  document.getElementById('view-list').style.display = mode === 'list' ? 'block' : 'none';
+}
+
+// File card click - toggle selected
+document.querySelectorAll('.file-card, .file-row').forEach(el => {
+  el.addEventListener('click', function(e) {
+    // Don't toggle if clicking menu or action buttons
+    if (e.target.closest('.file-card-menu') || e.target.closest('.row-action-btn') || e.target.closest('.grid-checkbox') || e.target.closest('.list-checkbox')) return;
+    this.classList.toggle('selected');
+  });
+});
+
+// Grid checkbox toggle
+document.querySelectorAll('.grid-checkbox, .list-checkbox').forEach(el => {
+  el.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const parent = this.closest('.file-card') || this.closest('.file-row');
+    parent.classList.toggle('selected');
+  });
+});
+</script>
+
+</body>
+</html>

@@ -29,6 +29,8 @@ import {
 } from '../infra/thumbnail-utils';
 import { FileTypeDetector } from '../utils/file-type-detector';
 import { StorageService } from '../../storage/storage.service';
+import { FileStatus } from '../../common/enums/file-status.enum';
+import { FileStatusStateMachine } from '../../file-system/file-status/file-status-state-machine';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 
@@ -155,19 +157,7 @@ export class FileMergeService {
             filepath
           );
 
-          const { isOk, ret } = await this.fileConversionService.convertFile({
-            srcPath: filepath,
-            fileHash: fileMd5,
-            createPreloadingData: true,
-          });
-
-          // 文件转换结果处理
-          if (!isOk) {
-            await this.fileSystemService.deleteDirectory(tmpDir);
-            await this.cacheManager.delete('file-upload', mergeKey);
-            return { ret: MxUploadReturn.kConvertFileError };
-          }
-
+          // Step 1: 提前创建 FileNode（状态 = UPLOADING）
           if (context && context.userId && context.nodeId) {
             const extension = path.extname(fileName).toLowerCase();
             const mimeType = this.fileSystemNodeService.getMimeType(extension);
@@ -240,10 +230,50 @@ export class FileMergeService {
               parentId: parentId,
               ownerId: context.userId,
               skipFileCopy: true,
+              fileStatus: FileStatus.UPLOADING,
             });
 
             newNodeId = newNode.id;
-            this.logger.log(`[mergeConvertFile] 节点创建成功: ${newNodeId}`);
+            this.logger.log(`[mergeConvertFile] 节点创建成功 (UPLOADING): ${newNodeId}`);
+
+            // 转换 UPLOADING → PROCESSING
+            FileStatusStateMachine.validateTransition(FileStatus.UPLOADING, FileStatus.PROCESSING);
+            await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.PROCESSING as any);
+            this.logger.log(`[mergeConvertFile] 状态转换: UPLOADING → PROCESSING (${newNodeId})`);
+          }
+
+          // Step 2: 格式转换
+          const { isOk, ret } = await this.fileConversionService.convertFile({
+            srcPath: filepath,
+            fileHash: fileMd5,
+            createPreloadingData: true,
+          });
+
+          // Step 3: 根据转换结果更新状态
+          if (!isOk) {
+            // 转换失败 → FAILED → 删除节点
+            if (newNodeId) {
+              FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.FAILED);
+              await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.FAILED as any);
+              this.logger.log(`[mergeConvertFile] 状态转换: PROCESSING → FAILED (${newNodeId})`);
+              await this.fileSystemServiceMain.deleteNode(newNodeId, true);
+              this.logger.log(`[mergeConvertFile] 已删除失败节点: ${newNodeId}`);
+            }
+            await this.fileSystemService.deleteDirectory(tmpDir);
+            await this.cacheManager.delete('file-upload', mergeKey);
+            return { ret: MxUploadReturn.kConvertFileError };
+          }
+
+          // 转换成功 → COMPLETED
+          if (newNodeId) {
+            FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.COMPLETED);
+            await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.COMPLETED as any);
+            this.logger.log(`[mergeConvertFile] 状态转换: PROCESSING → COMPLETED (${newNodeId})`);
+          }
+
+          if (context && context.userId && context.nodeId) {
+            // 节点已在转换前创建（fileStatus = UPLOADING → PROCESSING → COMPLETED）
+            const extension = path.extname(fileName).toLowerCase();
 
             const storageInfo =
               await this.storageManager.allocateNodeStorage(newNodeId);
@@ -999,26 +1029,7 @@ export class FileMergeService {
     let newNodeId: string | undefined;
 
     try {
-      // Step 1: 格式转换（仅 CAD 文件，MXWeb 文件直接跳过）
-      if (
-        !FileTypeDetector.isMxwebFile(fileName) &&
-        this.fileConversionService.needsConversion(fileName)
-      ) {
-        const srcPath = path.join(uploadPath, `${fileHash}${extension}`);
-        const { isOk } = await this.fileConversionService.convertFile({
-          srcPath,
-          fileHash,
-          createPreloadingData: true,
-        });
-        if (!isOk) {
-          this.logger.error(`[processUploadedFile] 转换失败: ${fileName}`);
-          await this.cacheManager.delete('file-upload', mergeKey);
-          return { ret: MxUploadReturn.kConvertFileError };
-        }
-        this.logger.log(`[processUploadedFile] 转换成功: ${fileName}`);
-      }
-
-      // Step 2: 创建节点 + 复制文件 + 缩略图 + SVN
+      // Step 1: 提前创建节点（fileStatus = UPLOADING）并转换到 PROCESSING
       if (context?.userId && context?.nodeId) {
         const mimeType = this.fileSystemNodeService.getMimeType(extension);
 
@@ -1057,7 +1068,7 @@ export class FileMergeService {
           }
         }
 
-        // 创建节点
+        // 创建节点（UPLOADING）
         const newNode = await this.fileSystemServiceMain.createFileNode({
           name: finalFileName,
           fileHash,
@@ -1067,11 +1078,53 @@ export class FileMergeService {
           parentId,
           ownerId: context.userId,
           skipFileCopy: true,
+          fileStatus: FileStatus.UPLOADING,
         });
         newNodeId = newNode.id;
-        this.logger.log(`[processUploadedFile] 节点创建成功: ${newNodeId}`);
+        this.logger.log(`[processUploadedFile] 节点创建成功 (UPLOADING): ${newNodeId}`);
 
-        // 分配存储 + 复制文件
+        // 转换 UPLOADING → PROCESSING
+        FileStatusStateMachine.validateTransition(FileStatus.UPLOADING, FileStatus.PROCESSING);
+        await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.PROCESSING as any);
+        this.logger.log(`[processUploadedFile] 状态转换: UPLOADING → PROCESSING (${newNodeId})`);
+      }
+
+      // Step 2: 格式转换（仅 CAD 文件，MXWeb 文件直接跳过）
+      if (
+        !FileTypeDetector.isMxwebFile(fileName) &&
+        this.fileConversionService.needsConversion(fileName)
+      ) {
+        const srcPath = path.join(uploadPath, `${fileHash}${extension}`);
+        const { isOk } = await this.fileConversionService.convertFile({
+          srcPath,
+          fileHash,
+          createPreloadingData: true,
+        });
+        if (!isOk) {
+          // 转换失败 → FAILED → 删除节点
+          this.logger.error(`[processUploadedFile] 转换失败: ${fileName}`);
+          if (newNodeId) {
+            FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.FAILED);
+            await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.FAILED as any);
+            this.logger.log(`[processUploadedFile] 状态转换: PROCESSING → FAILED (${newNodeId})`);
+            await this.fileSystemServiceMain.deleteNode(newNodeId, true);
+            this.logger.log(`[processUploadedFile] 已删除失败节点: ${newNodeId}`);
+          }
+          await this.cacheManager.delete('file-upload', mergeKey);
+          return { ret: MxUploadReturn.kConvertFileError };
+        }
+        this.logger.log(`[processUploadedFile] 转换成功: ${fileName}`);
+      }
+
+      // 转换成功 → COMPLETED
+      if (newNodeId) {
+        FileStatusStateMachine.validateTransition(FileStatus.PROCESSING, FileStatus.COMPLETED);
+        await this.fileSystemServiceMain.updateFileStatus(newNodeId, FileStatus.COMPLETED as any);
+        this.logger.log(`[processUploadedFile] 状态转换: PROCESSING → COMPLETED (${newNodeId})`);
+      }
+
+      // Step 3: 复制文件 + 缩略图 + SVN（后处理）
+      if (context?.userId && context?.nodeId) {
         const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId);
         const filesInUpload = await fsPromises.readdir(uploadPath);
         const matchingFiles = filesInUpload.filter((f) => f.startsWith(fileHash));

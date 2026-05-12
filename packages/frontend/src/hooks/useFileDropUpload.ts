@@ -8,7 +8,7 @@ import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
 import { uploadSingleFile } from '../utils/mxcadUploadUtils';
 import { useUIStore } from '../stores/uiStore';
 
-const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb', '.mxwbe'];
+const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
 
 interface UseFileDropUploadOptions {
   /** 当前目录的节点 ID，或返回节点 ID 的 getter 函数（drop 时动态获取） */

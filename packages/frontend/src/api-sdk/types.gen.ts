@@ -1888,6 +1888,8 @@ export type PermissionCheckResponseDto = {
     hasPermission: boolean;
 };
 
+export type SearchEntity = 'file';
+
 export type SearchScope = 'project' | 'project_files' | 'all_projects' | 'library';
 
 export type SearchType = 'all' | 'file' | 'folder';
@@ -5900,6 +5902,10 @@ export type FileSystemControllerSearchData = {
          * 搜索关键词
          */
         keyword: string;
+        /**
+         * 搜索实体类型（预留扩展，当前仅支持 file）
+         */
+        entity?: SearchEntity;
         /**
          * 搜索范围
          */

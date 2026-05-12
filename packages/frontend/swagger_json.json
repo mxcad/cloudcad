@@ -5826,6 +5826,15 @@
             }
           },
           {
+            "name": "entity",
+            "required": false,
+            "in": "query",
+            "description": "搜索实体类型（预留扩展，当前仅支持 file）",
+            "schema": {
+              "$ref": "#/components/schemas/SearchEntity"
+            }
+          },
+          {
             "name": "scope",
             "required": false,
             "in": "query",
@@ -12591,6 +12600,12 @@
           "userId",
           "permission",
           "hasPermission"
+        ]
+      },
+      "SearchEntity": {
+        "type": "string",
+        "enum": [
+          "file"
         ]
       },
       "SearchScope": {

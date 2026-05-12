@@ -32,4 +32,6 @@ export interface ProjectDrawingsPanelProps {
   libraryType?: LibraryType;
   /** 是否需要双击打开图纸（默认 false，单击打开） */
   doubleClickToOpen?: boolean;
+  /** 面板是否可见（不可见时跳过数据加载，保持 DOM 存在避免切换跳动） */
+  visible?: boolean;
 }

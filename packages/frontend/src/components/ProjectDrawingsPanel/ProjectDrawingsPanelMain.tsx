@@ -72,6 +72,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   personalSpaceId,
   libraryType,
   doubleClickToOpen = false,
+  visible = true,
 }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermission();
@@ -108,7 +109,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     libraryRootId, categories, categoriesLoaded,
     selectedCategoryPath, setSelectedCategoryPath,
     handleCategorySelect, refreshCategories, listInitializedRef,
-  } = useLibraryCategories(isLibraryMode, libraryType);
+  } = useLibraryCategories(isLibraryMode, libraryType, visible);
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -147,7 +148,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Load projects
   useEffect(() => {
-    if (isPersonalSpace || isLibraryMode) return;
+    if (!visible || isPersonalSpace || isLibraryMode) return;
     const loadProjects = async () => {
       try {
         const result = await fileSystemControllerGetProjects({ query: { filter: projectFilter } });
@@ -162,11 +163,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       }
     };
     loadProjects();
-  }, [isPersonalSpace, projectFilter, projectRefreshKey]);
+  }, [visible, isPersonalSpace, projectFilter, projectRefreshKey]);
 
   // Load project permissions
   useEffect(() => {
-    if (isPersonalSpace || isLibraryMode || projects.length === 0) return;
+    if (!visible || isPersonalSpace || isLibraryMode || projects.length === 0) return;
     const loadProjectPermissions = async () => {
       const { canEditNode, canDeleteNode, canManageNodeMembers, canManageNodeRoles } = await import('@/utils/permissionUtils');
       const permissionsResults = await Promise.all(projects.map(async (project) => {
@@ -183,7 +184,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       });
     };
     loadProjectPermissions();
-  }, [isPersonalSpace, projects, user]);
+  }, [visible, isPersonalSpace, projects, user]);
 
   // Build refreshNodes
   const refreshNodes = useCallback(() => {
@@ -267,6 +268,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Initialize: load project root
   useEffect(() => {
+    if (!visible) return;
     if (!selectedProjectId) {
       resetNodes();
       setBreadcrumb([]);
@@ -286,7 +288,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     initProject().then(() => {
       loadNodes(selectedProjectId);
     });
-  }, [selectedProjectId, loadNodes]);
+  }, [visible, selectedProjectId, loadNodes]);
 
   // Sync projectId in personal space
   useEffect(() => {
@@ -295,20 +297,20 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Library mode: load on categories loaded
   useEffect(() => {
-    if (!isLibraryMode || !libraryRootId || listInitializedRef.current) return;
+    if (!visible || !isLibraryMode || !libraryRootId || listInitializedRef.current) return;
     listInitializedRef.current = true;
     const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
     if (nodeId) loadNodes(nodeId, 1, '', false);
-  }, [isLibraryMode, categoriesLoaded, libraryRootId, libraryType]);
+  }, [visible, isLibraryMode, categoriesLoaded, libraryRootId, libraryType]);
 
   // 分类选择：当用户点击分类时重新加载节点列表
   useEffect(() => {
-    if (!isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
+    if (!visible || !isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
     setSearchQuery('');
     setCurrentPage(1);
     const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
     if (nodeId) loadNodes(nodeId, 1, '', false);
-  }, [selectedCategoryPath]);
+  }, [visible, selectedCategoryPath]);
 
   // Reset on libraryType change
   useEffect(() => {
@@ -567,10 +569,20 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 重命名失败'); showToast('重命名失败', 'error'); } finally { setIsRenameLoading(false); }
   }, [editingNode, folderName, isLibraryMode, libraryOperations, handleRename, showToast]);
 
-  // Project list view
-  if (!isPersonalSpace && !isLibraryMode && !selectedProjectId && !loading) {
-    return (
-      <>
+  // 判断是否显示项目列表视图（我的项目 tab，未选中项目时）
+  const showProjectList = !isPersonalSpace && !isLibraryMode && !selectedProjectId;
+
+  return (
+    <div className={styles.projectDrawingsPanel}>
+      {createPortal(
+        <ToastContainer toasts={toasts} onRemove={removeToast} />,
+        document.body
+      )}
+
+      <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText || '确定'} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm} type={confirmDialog.type} />
+
+      {/* 项目列表视图 — 我的项目 tab 初始状态 */}
+      <div className={`${styles.subTabPanel} ${showProjectList ? styles.active : ''}`}>
         <ProjectListView
           projects={projects} searchQuery={searchQuery} projectFilter={projectFilter}
           onProjectFilterChange={setProjectFilter} nodePermissions={nodePermissions}
@@ -587,6 +599,45 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           }}
           onRefresh={refreshNodes}
         />
+      </div>
+
+      {/* 主视图 — 项目详情/图纸浏览/库浏览 */}
+      <div className={`${styles.subTabPanel} ${!showProjectList ? styles.active : ''}`}>
+        {/* 分类标签占位容器 */}
+        {isLibraryMode && (
+        <div className={styles.categoryPlaceholder}>
+          <CategoryTabs categories={categories} selectedPath={selectedCategoryPath} onSelect={handleCategorySelect} />
+        </div>
+        )}
+        <ResourceList
+          galleryMode={isLibraryMode}
+          items={resourceItems} loading={loading} searchQuery={searchQuery}
+          onSearchChange={(query) => {
+            setSearchQuery(query); setCurrentPage(1);
+            if (isLibraryMode) { const nid = getCategoryNodeId(selectedCategoryPath, libraryRootId); if (nid) loadNodes(nid, 1, query); }
+            else { const lb = breadcrumb[breadcrumb.length - 1]; if (lb) loadNodes(lb.id, 1, query); }
+          }}
+          onItemClick={handleItemClick} doubleClickToOpen={doubleClickToOpen}
+          emptyText={searchQuery ? '未找到匹配的内容' : '当前目录为空'}
+          defaultViewMode="grid" total={total} totalPages={totalPages} currentPage={currentPage}
+          onPageChange={handlePageChange} paginationEnabled={true}
+          breadcrumb={
+            !isLibraryMode ? (
+            <div className={styles.breadcrumbPlaceholder}>
+              {(breadcrumb.length > 0 || !isPersonalSpace) && (
+                <BreadcrumbNav breadcrumb={breadcrumb} isLibraryMode={isLibraryMode} isPersonalSpace={isPersonalSpace} handleGoBack={handleGoBack} handleBreadcrumbClick={handleBreadcrumbClick} handleBackToProjects={handleBackToProjects} />
+              )}
+            </div>
+          ) : undefined
+          }
+          renderItem={renderFileItem}
+          toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button></Tooltip>}
+          loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
+        />
+        <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />
+        <RenameModal isOpen={libraryRenameModalOpen} editingNode={libraryRenamingNode} newName={libraryRenameName} loading={false} onClose={() => { setLibraryRenameModalOpen(false); setLibraryRenamingNode(null); setLibraryRenameName(''); }} onNameChange={setLibraryRenameName} onRename={handleLibraryRenameSubmit} />
+        <VersionHistoryModal isOpen={vh.showVersionHistoryModal} node={vh.versionHistoryNode} entries={vh.versionHistoryEntries} loading={vh.versionHistoryLoading} error={vh.versionHistoryError} onClose={() => vh.setShowVersionHistoryModal(false)} onOpenVersion={vh.handleOpenHistoricalVersion} />
+        <DownloadFormatModal isOpen={showDownloadFormatModal} fileName={downloadingNode?.name || ''} onClose={() => { setShowDownloadFormatModal(false); setDownloadingNode(null); }} onDownload={isLibraryMode ? handleLibraryDownloadWithFormat : handleDownloadWithFormat} />
         <MembersModal isOpen={isMembersModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsMembersModalOpen(false); setEditingProject(null); }} />
         <ProjectRolesModal isOpen={isProjectRolesModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsProjectRolesModalOpen(false); setEditingProject(null); }} />
         <ProjectModal isOpen={isProjectModalOpen} onClose={closeProjectModal} editingProject={editingProject} formData={projectFormData} onFormDataChange={setProjectFormData} onSubmit={handleSubmitProject} loading={projectLoading} />
@@ -598,60 +649,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           onConfirm={handleConfirmMoveOrCopy}
           confirmButtonText={moveSourceNode ? '移动到此' : '复制到此'}
         />
-        {createPortal(
-          <ToastContainer toasts={toasts} onRemove={removeToast} />,
-          document.body
-        )}
-      </>
-    );
-  }
-
-  // Main view
-  return (
-    <div className={styles.projectDrawingsPanel}>
-      {createPortal(
-        <ToastContainer toasts={toasts} onRemove={removeToast} />,
-        document.body
-      )}
-
-      <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText || '确定'} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm} type={confirmDialog.type} />
-      {isLibraryMode && (
-        <CategoryTabs categories={categories} selectedPath={selectedCategoryPath} onSelect={handleCategorySelect} />
-      )}
-      <ResourceList
-        galleryMode={isLibraryMode}
-        items={resourceItems} loading={loading} searchQuery={searchQuery}
-        onSearchChange={(query) => {
-          setSearchQuery(query); setCurrentPage(1);
-          if (isLibraryMode) { const nid = getCategoryNodeId(selectedCategoryPath, libraryRootId); if (nid) loadNodes(nid, 1, query); }
-          else { const lb = breadcrumb[breadcrumb.length - 1]; if (lb) loadNodes(lb.id, 1, query); }
-        }}
-        onItemClick={handleItemClick} doubleClickToOpen={doubleClickToOpen}
-        emptyText={searchQuery ? '未找到匹配的内容' : '当前目录为空'}
-        defaultViewMode="grid" total={total} totalPages={totalPages} currentPage={currentPage}
-        onPageChange={handlePageChange} paginationEnabled={true}
-        breadcrumb={!isLibraryMode && (breadcrumb.length > 0 || !isPersonalSpace) ? (
-          <BreadcrumbNav breadcrumb={breadcrumb} isLibraryMode={isLibraryMode} isPersonalSpace={isPersonalSpace} handleGoBack={handleGoBack} handleBreadcrumbClick={handleBreadcrumbClick} handleBackToProjects={handleBackToProjects} />
-        ) : undefined}
-        renderItem={renderFileItem}
-        toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button></Tooltip>}
-        loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
-      />
-      <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />
-      <RenameModal isOpen={libraryRenameModalOpen} editingNode={libraryRenamingNode} newName={libraryRenameName} loading={false} onClose={() => { setLibraryRenameModalOpen(false); setLibraryRenamingNode(null); setLibraryRenameName(''); }} onNameChange={setLibraryRenameName} onRename={handleLibraryRenameSubmit} />
-      <VersionHistoryModal isOpen={vh.showVersionHistoryModal} node={vh.versionHistoryNode} entries={vh.versionHistoryEntries} loading={vh.versionHistoryLoading} error={vh.versionHistoryError} onClose={() => vh.setShowVersionHistoryModal(false)} onOpenVersion={vh.handleOpenHistoricalVersion} />
-      <DownloadFormatModal isOpen={showDownloadFormatModal} fileName={downloadingNode?.name || ''} onClose={() => { setShowDownloadFormatModal(false); setDownloadingNode(null); }} onDownload={isLibraryMode ? handleLibraryDownloadWithFormat : handleDownloadWithFormat} />
-      <MembersModal isOpen={isMembersModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsMembersModalOpen(false); setEditingProject(null); }} />
-      <ProjectRolesModal isOpen={isProjectRolesModalOpen} projectId={editingProject?.id || ''} onClose={() => { setIsProjectRolesModalOpen(false); setEditingProject(null); }} />
-      <ProjectModal isOpen={isProjectModalOpen} onClose={closeProjectModal} editingProject={editingProject} formData={projectFormData} onFormDataChange={setProjectFormData} onSubmit={handleSubmitProject} loading={projectLoading} />
-      <SelectFolderModal
-        isOpen={showSelectFolderModal}
-        currentNodeId={moveSourceNode?.id || copySourceNode?.id || ''}
-        projectId={selectedProjectId || undefined}
-        onClose={() => { setShowSelectFolderModal(false); setMoveSourceNode(null); setCopySourceNode(null); }}
-        onConfirm={handleConfirmMoveOrCopy}
-        confirmButtonText={moveSourceNode ? '移动到此' : '复制到此'}
-      />
+      </div>
     </div>
   );
 };
