@@ -100,6 +100,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 viewMode="list"
                 isMultiSelectMode={false}
                 isTrash={false}
+                hideTypeTag={true}
+                forceCompactActions={true}
                 {...getFileItemPermissionProps(project, {
                   projectPermissions: {},
                   nodePermissions: projectPerms,

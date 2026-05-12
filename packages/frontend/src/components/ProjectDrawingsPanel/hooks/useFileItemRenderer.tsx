@@ -20,6 +20,8 @@ interface UseFileItemRendererOptions {
   libraryType?: LibraryType;
   canManageLibrary: boolean;
   doubleClickToOpen: boolean;
+  hideTypeTag?: boolean;
+  forceCompactActions?: boolean;
   projectPermissions: ReturnType<typeof import('@/hooks/useProjectPermissions').useProjectPermissions>['permissions'];
   onDrawingOpen: (node: FileSystemNode, libraryType?: LibraryType) => void;
   handleEnterFolder: (folder: FileSystemNode) => void;
@@ -48,6 +50,7 @@ interface UseFileItemRendererOptions {
 export function useFileItemRenderer(options: UseFileItemRendererOptions) {
   const {
     nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
+    hideTypeTag, forceCompactActions,
     projectPermissions, onDrawingOpen, handleEnterFolder, handleDownload,
     handleDelete, handleOpenRename, handleLibraryOpenRename,
     handleShowVersionHistory, handleMove, handleCopy,
@@ -135,6 +138,8 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           galleryMode={isLibraryMode}
           isMultiSelectMode={false}
           isTrash={false}
+          hideTypeTag={hideTypeTag}
+          forceCompactActions={forceCompactActions}
           doubleClickToOpen={doubleClickToOpen}
           {...(isLibraryMode
             ? { canDownload: canManageLibrary, canEdit: canManageLibrary, canDelete: canManageLibrary, canUpload: canManageLibrary, canViewVersionHistory: false }
@@ -156,6 +161,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
       );
     },
     [nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
+     hideTypeTag, forceCompactActions,
      projectPermissions, onDrawingOpen, handleEnterFolder, handleDownload,
      handleDelete, handleOpenRename, handleLibraryOpenRename,
      handleShowVersionHistory, handleMove, handleCopy,

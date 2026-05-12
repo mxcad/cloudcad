@@ -534,6 +534,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   // File item renderer
   const { renderFileItem } = useFileItemRenderer({
     nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
+    hideTypeTag: !isLibraryMode,
+    forceCompactActions: !isLibraryMode,
     projectPermissions, onDrawingOpen, handleEnterFolder,
     handleDownload, handleDelete, handleOpenRename, handleLibraryOpenRename,
     handleShowVersionHistory: vh.handleShowVersionHistory,

@@ -54,6 +54,10 @@ interface FileItemProps {
   doubleClickToOpen?: boolean;
   /** 文件名字体大小，默认不设置（继承父元素字体大小） */
   fontSize?: number | string;
+  /** 隐藏文件类型标签（文件夹/DWG/DXF 等徽章） */
+  hideTypeTag?: boolean;
+  /** 强制紧凑操作模式：始终使用"更多"菜单替代独立操作按钮 */
+  forceCompactActions?: boolean;
   onSelect?: (
     nodeId: string,
     isMultiSelect?: boolean,
@@ -97,6 +101,8 @@ export const FileItem: React.FC<FileItemProps> = ({
   canManageTrash = false,
   doubleClickToOpen = false,
   fontSize,
+  hideTypeTag = false,
+  forceCompactActions = false,
   onSelect,
   onEnter,
   onDownload,
@@ -191,7 +197,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   const isCadFile = useCallback(() => {
     if (node.isFolder || node.isRoot) return false;
     const ext = node.extension?.toLowerCase();
-    return ext === '.dwg' || ext === '.dxf' || ext === '.mxweb' || ext === '.mxwbe';
+    return ext === '.dwg' || ext === '.dxf' || ext === '.mxweb';
   }, [node.extension, node.isFolder, node.isRoot]);
 
   const isImageFile = useCallback(() => {
@@ -713,8 +719,8 @@ export const FileItem: React.FC<FileItemProps> = ({
         <FileItemInfo node={node} galleryMode={galleryMode} fontSize={fontSize} />
       </div>
 
-      {/* 图库模式下不显示文件后缀标签 */}
-      {!galleryMode && (
+      {/* 图库模式或显式隐藏时不显示文件后缀标签 */}
+      {!galleryMode && !hideTypeTag && (
         <div className="p-3">
           <FileItemTypeTag node={node} />
         </div>
@@ -724,9 +730,10 @@ export const FileItem: React.FC<FileItemProps> = ({
         data-tour="file-item-actions"
         className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? 'p-2' : 'p-3'}`}
       >
-        {useCompactActions ? (
-          // 紧凑模式：显示菜单按钮
-          <FileItemMenu
+        {(forceCompactActions || useCompactActions) ? (
+          // 紧凑模式 / 强制紧凑：悬停时显示菜单按钮（与网格模式一致）
+          <div className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}>
+            <FileItemMenu
             node={node}
             isTrash={isTrash}
             showMenu={showMenu}
@@ -755,6 +762,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             canManageExternalReference={canManageExternalReference}
             canManageTrash={canManageTrash}
           />
+          </div>
         ) : (
           // 正常模式：显示独立操作按钮
           availableActions.map((action) => (
