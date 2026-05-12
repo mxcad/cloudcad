@@ -147,7 +147,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
 
     try {
       setSaving((prev) => new Set(prev).add(key));
-      await runtimeConfigControllerUpdateConfig({ path: { key }, body: { value: value as never } });
+      await runtimeConfigControllerUpdateConfig({ path: { key }, body: { val: value as never } });
       showToast('配置已保存', 'success');
       setEditedValues((prev) => {
         const next = { ...prev };
