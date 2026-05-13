@@ -267,6 +267,25 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
   }
 
+  private collectParentDirectories(filePaths: string[]): string[] {
+    const dirs = new Set<string>();
+    const filesDataRoot = this.filesDataPath;
+
+    for (const filePath of filePaths) {
+      let dir = path.dirname(filePath);
+      while (dir !== filesDataRoot && dir !== path.dirname(dir)) {
+        dirs.add(dir);
+        dir = path.dirname(dir);
+      }
+    }
+
+    return Array.from(dirs).sort((a, b) => {
+      const depthA = a.split(path.sep).length;
+      const depthB = b.split(path.sep).length;
+      return depthA - depthB;
+    });
+  }
+
   private collectFilePaths(dirPath: string): string[] {
     if (!fs.existsSync(dirPath)) {
       return [];
@@ -287,6 +306,20 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
 
     return results;
+  }
+
+  async isFirstCommit(directoryPath: string): Promise<boolean> {
+    try {
+      // 构建仓库 URL
+      const relativePath = path.relative(this.filesDataPath, directoryPath);
+      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
+
+      // 尝试列出目录内容，如果成功说明目录已在 SVN 中
+      await svnListAsync(repoUrl, false, null, null, null);
+      return false; // 目录已在 SVN 中，不是首次提交
+    } catch {
+      return true; // 目录不在 SVN 中，是首次提交
+    }
   }
 
   isReady(): boolean {
@@ -331,6 +364,8 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
 
         if (isTargetDirectory) {
           try {
+            // 使用 --depth infinity 递归添加
+            // svn:global-ignores 会自动过滤匹配的文件
             await svnAddAsync([currentPath], true, false);
             this.logger.log(`递归添加目录: ${currentPath}`);
           } catch (error) {
@@ -432,7 +467,27 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
 
     try {
-      // дҪҝз”Ё --no-ignore з»•иҝҮ SVN е…ЁеұҖеҝҪз•Ҙи§„еҲҷпјҢзЎ®дҝқеӨҮд»Ҫж–Үд»¶иғҪжӯЈеёёжҸҗдәӨ
+      // 确保文件的父目录链已被 SVN 版本控制
+      const parentDirs = this.collectParentDirectories(filePaths);
+      for (const dir of parentDirs) {
+        try {
+          await svnAddAsync([dir], false, false);
+          await svnCommitAsync(
+            [dir],
+            `Add directory: ${path.basename(dir)}`,
+            false,
+            null,
+            null
+          );
+        } catch (error) {
+          if (!error.message.includes('already under version control')) {
+            this.logger.warn(
+              `添加中间目录失败: ${dir}, 错误: ${error.message}`
+            );
+          }
+        }
+      }
+
       await svnAddAsync(filePaths, false, true);
       const result = await svnCommitAsync(
         filePaths,

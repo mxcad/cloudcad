@@ -15,6 +15,7 @@ export const VERSION_CONTROL_TOKEN = Symbol('VERSION_CONTROL');
 export interface IVersionControl {
   isReady(): boolean;
   ensureInitialized(): Promise<void>;
+  isFirstCommit(directoryPath: string): Promise<boolean>;
   commitNodeDirectory(
     directoryPath: string,
     message: string,

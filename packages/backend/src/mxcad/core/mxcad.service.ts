@@ -690,7 +690,8 @@ export class MxCadService {
 
       // 只有非公共资源库（libraryKey 为 null）才提交到 SVN 版本控制
       // 公共资源库（图纸库、图块库等）的文件不参与 SVN 版本管理
-      // SVN 只提交 nodeId.mxweb 初始备份文件（灾难恢复），不提交工作文件
+      // 首次提交：提交原始文件（dwg、mxweb、dxf）用于灾难恢复
+      // 后续提交：提交 bin 文件用于版本管理
       if (!fullNode.libraryKey) {
         const nodeDirectory = path.dirname(targetPath);
         const message = commitMessage
@@ -701,32 +702,49 @@ export class MxCadService {
           `[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`
         );
 
-        // 优先提交 {nodeId}.mxweb（新格式），否则提交 _initial.mxweb（旧格式）
-        const nodeIdMxwebPath = path.join(nodeDirectory, `${nodeId}.mxweb`);
-        if (fs.existsSync(nodeIdMxwebPath)) {
-          const commitResult =
-            await this.versionControlService.commitFiles(
-              [nodeIdMxwebPath],
-              message,
-            );
-          if (commitResult.success) {
-            this.logger.log(`节点 ${nodeId}.mxweb 已提交到 SVN: ${node.name}`);
-          } else {
-            this.logger.warn(
-              `节点 ${nodeId}.mxweb SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
-            );
+        // 检查是否是首次提交（目录中是否有文件已在 SVN 版本控制下）
+        const isFirstCommit = await this.versionControlService.isFirstCommit(nodeDirectory);
+        this.logger.log(`[saveMxwebFile] 目录 ${nodeDirectory} 首次提交: ${isFirstCommit}`);
+
+        if (isFirstCommit) {
+          // 首次提交：使用 commitFiles 提交原始文件（dwg、mxweb、dxf）
+          const filesToCommit: string[] = [];
+
+          // 收集原始文件（dwg、mxweb、dxf）
+          const files = fs.readdirSync(nodeDirectory);
+          for (const file of files) {
+            const ext = path.extname(file).toLowerCase();
+            if (ext === '.dwg' || ext === '.mxweb' || ext === '.dxf') {
+              filesToCommit.push(path.join(nodeDirectory, file));
+            }
           }
-        } else if (fs.existsSync(initialMxwebPath)) {
-          const commitResult =
-            await this.versionControlService.commitFiles(
-              [initialMxwebPath],
+
+          if (filesToCommit.length > 0) {
+            const commitResult = await this.versionControlService.commitFiles(
+              filesToCommit,
               message,
             );
+            if (commitResult.success) {
+              this.logger.log(`首次提交成功: ${node.name}, 共 ${filesToCommit.length} 个原始文件`);
+            } else {
+              this.logger.warn(
+                `首次提交失败: ${node.name}, 原因: ${commitResult.message}`
+              );
+            }
+          }
+        } else {
+          // 后续提交：使用 commitNodeDirectory 提交 bin 文件
+          const commitResult = await this.versionControlService.commitNodeDirectory(
+            nodeDirectory,
+            message,
+            userId,
+            userName
+          );
           if (commitResult.success) {
-            this.logger.log(`节点 _initial.mxweb 已提交到 SVN: ${node.name}`);
+            this.logger.log(`后续提交成功: ${node.name}`);
           } else {
             this.logger.warn(
-              `节点 _initial.mxweb SVN 提交失败: ${node.name}, 原因: ${commitResult.message}`
+              `后续提交失败: ${node.name}, 原因: ${commitResult.message}`
             );
           }
         }
