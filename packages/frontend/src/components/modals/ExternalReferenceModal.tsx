@@ -177,6 +177,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               }
             }}
             disabled={loading}
+            data-tour="xref-complete-btn"
           >
             {allSuccess ? '完成' : '关闭'}
           </Button>

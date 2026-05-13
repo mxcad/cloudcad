@@ -269,6 +269,34 @@ export const projectManagementFullGuide: TourGuide = {
       waitForElement: 5000,
       fallbackContent: '上传完成后，文件会显示在列表中。',
     },
+    // ====================  外部参照管理（条件步骤） ====================
+    {
+      target: 'xref-actions',
+      title: '外部参照管理',
+      content:
+        '检测到图纸包含外部参照文件。外部参照是 CAD 图纸中引用的其他文件，确保所有参照文件都已上传可以使图纸正常显示。您可以选择上传缺失的参照文件，处理完成后点击"完成"继续。',
+      placement: 'top',
+      mode: 'display',
+      waitForElement: 20000,
+      skipCondition: {
+        type: 'element-not-exists',
+        selector: '[data-tour="xref-actions"]',
+      },
+    },
+    {
+      target: 'xref-complete-btn',
+      title: '完成外部参照管理',
+      content: '处理完外部参照后，点击"完成"或"关闭"按钮继续打开图纸。',
+      placement: 'top',
+      mode: 'interactive',
+      actionType: 'click',
+      actionHint: '请点击"完成"或"关闭"按钮',
+      waitForElement: 3000,
+      skipCondition: {
+        type: 'element-not-exists',
+        selector: '[data-tour="xref-complete-btn"]',
+      },
+    },
     // ====================  CAD 编辑器 ====================
     {
       target: 'file-item',

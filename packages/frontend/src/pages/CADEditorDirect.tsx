@@ -20,6 +20,7 @@ import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSyste
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
@@ -181,6 +182,13 @@ export const CADEditorDirect: React.FC = () => {
   const [saveAsPersonalSpaceId, setSaveAsPersonalSpaceId] = useState<
     string | null
   >(null);
+
+  // 另存为成功后确认打开新标签页
+  const [showSaveAsOpenConfirm, setShowSaveAsOpenConfirm] = useState(false);
+  const [saveAsResult, setSaveAsResult] = useState<{
+    nodeId: string;
+    parentId: string;
+  } | null>(null);
 
   // 路由变化时重置登录提示弹框（非主页模式下关闭）
   useEffect(() => {
@@ -1067,6 +1075,10 @@ export const CADEditorDirect: React.FC = () => {
     setSaveAsBlob(null);
     showToast('另存为成功', 'success');
 
+    // 保存结果用于确认弹窗
+    setSaveAsResult({ nodeId: result.nodeId, parentId: result.parentId });
+    setShowSaveAsOpenConfirm(true);
+
     // 立即生成并上传缩略图（失败不影响主流程）
     try {
       console.log(`[handleSaveAsSuccess] 开始生成缩略图: ${result.nodeId}`);
@@ -1094,6 +1106,22 @@ export const CADEditorDirect: React.FC = () => {
     setShowDownloadFormatModal(true);
     setShowSaveAsModal(false);
   }, [saveAsFileName]);
+
+  // 另存为成功后打开新标签页
+  const handleSaveAsOpenInNewTab = useCallback(() => {
+    if (saveAsResult) {
+      const url = `/cad-editor/${saveAsResult.nodeId}?nodeId=${saveAsResult.parentId}`;
+      window.open(url, '_blank');
+    }
+    setShowSaveAsOpenConfirm(false);
+    setSaveAsResult(null);
+  }, [saveAsResult]);
+
+  // 另存为成功后取消打开
+  const handleSaveAsOpenCancel = useCallback(() => {
+    setShowSaveAsOpenConfirm(false);
+    setSaveAsResult(null);
+  }, []);
 
 // 监听文件打开事件，更新 URL（保留 mode 参数）
   useEffect(() => {
@@ -1450,6 +1478,18 @@ export const CADEditorDirect: React.FC = () => {
           onDownloadLocal={handleSaveAsDownloadLocal}
         />
       )}
+
+      {/* 另存为成功后确认打开新标签页 */}
+      <ConfirmDialog
+        isOpen={showSaveAsOpenConfirm}
+        title="打开新图纸"
+        message={`"${saveAsFileName}" 已保存成功，是否在新标签页中打开？`}
+        confirmText="打开"
+        cancelText="关闭"
+        onConfirm={handleSaveAsOpenInNewTab}
+        onCancel={handleSaveAsOpenCancel}
+        type="info"
+      />
 
       {/* 外部参照上传弹窗 */}
       <ExternalReferenceModal
