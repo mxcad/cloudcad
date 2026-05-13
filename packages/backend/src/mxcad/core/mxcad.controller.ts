@@ -39,6 +39,7 @@ import * as path from 'path';
 
 import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import type { Response, Request } from 'express';
+import { FileTypeDetector } from '../utils/file-type-detector';
 
 import {
   ApiTags,
@@ -1058,12 +1059,9 @@ export class MxCadController {
               this.logger.log(`转换完成，返回缓存文件: ${historyMxwebName}`);
               buffer = await fsPromises.readFile(historyMxwebPath);
             } else {
-              // 等待完成但文件不存在，说明转换失败，返回错误
-              this.logger.error(`转换完成但文件不存在: ${historyMxwebName}`);
-              return res.status(500).json({
-                code: -1,
-                message: '历史版本文件转换失败',
-              });
+              this.logger.log(
+                `等待完成但 historyMxwebPath 不存在，将尝试 _initial.mxweb 逻辑`
+              );
             }
           } else {
             // 没有缓存，需要从 SVN 获取 bin 文件并转换
@@ -1179,30 +1177,6 @@ export class MxCadController {
               if (resultPath) {
                 // 有分片文件，读取转换后的 mxweb
                 buffer = await fsPromises.readFile(resultPath);
-              } else {
-                // 没有分片文件，使用初始版本逻辑
-                const initialMxwebName = mxwebBaseName.replace(
-                  /\.mxweb$/,
-                  '_initial.mxweb'
-                );
-                const initialMxwebPath = path.join(fileDir, initialMxwebName);
-
-                if (fs.existsSync(initialMxwebPath)) {
-                  buffer = await fsPromises.readFile(initialMxwebPath);
-                  this.logger.log(
-                    `成功返回初始版本 mxweb: ${initialMxwebName} (本地文件)`
-                  );
-                } else {
-                  const currentMxwebPath = path.join(fileDir, mxwebBaseName);
-                  if (!fs.existsSync(currentMxwebPath)) {
-                    return res.status(404).json({
-                      code: -1,
-                      message: '历史版本文件不存在',
-                    });
-                  }
-                  buffer = await fsPromises.readFile(currentMxwebPath);
-                  this.logger.log(`成功返回当前 mxweb 文件: ${mxwebBaseName}`);
-                }
               }
             } catch (error: unknown) {
               const err = error as Error;
@@ -1214,6 +1188,119 @@ export class MxCadController {
             } finally {
               // 转换完成，清除锁
               this.historyConversionLocks.delete(lockKey);
+            }
+          }
+
+          // buffer 仍未设置（historyMxwebPath 不存在），走 _initial.mxweb 逻辑
+          if (!buffer) {
+            const initialMxwebName = mxwebBaseName.replace(
+              /\.mxweb$/,
+              '_initial.mxweb'
+            );
+            const initialMxwebPath = path.join(fileDir, initialMxwebName);
+
+            if (fs.existsSync(initialMxwebPath)) {
+              buffer = await fsPromises.readFile(initialMxwebPath);
+              this.logger.log(
+                `成功返回初始版本 mxweb: ${initialMxwebName} (本地文件)`
+              );
+            } else {
+              // _initial.mxweb 不存在，从 SVN 提取原始文件并转换
+              this.logger.log(
+                `_initial.mxweb 不存在，从 SVN 提取原始文件: ${filename} v${version}`
+              );
+
+              const originalResult =
+                await this.versionControlService.getFileContentAtRevision(
+                  absoluteFilePath,
+                  parseInt(version, 10)
+                );
+
+              if (!originalResult.success || !originalResult.content) {
+                this.logger.error(
+                  `SVN 原始文件提取失败: ${filename} v${version}`
+                );
+                return res.status(404).json({
+                  code: -1,
+                  message: '历史版本原始文件不存在',
+                });
+              }
+
+              const originalBuffer = originalResult.content;
+
+              // 判断原始文件是否为 CAD 文件（需要转换）
+              // 从 mxweb 文件名还原原始扩展名：nodeId.dwg.mxweb → nodeId.dwg
+              const baseBeforeMxweb = mxwebBaseName.replace(/\.mxweb$/, '');
+              const lastDotIndex = baseBeforeMxweb.lastIndexOf('.');
+              const originalExt =
+                lastDotIndex !== -1
+                  ? baseBeforeMxweb.substring(lastDotIndex)
+                  : '';
+              const originalFileName = baseBeforeMxweb;
+
+              if (
+                originalExt &&
+                FileTypeDetector.needsConversion(originalFileName)
+              ) {
+                // 原始文件是 dwg/dxf，需要转换
+                const mxcadUploadPath = this.configService.get(
+                  'mxcadUploadPath',
+                  { infer: true }
+                );
+                const fileHash = crypto
+                  .createHash('md5')
+                  .update(originalBuffer)
+                  .digest('hex');
+                const ext = originalExt.substring(1); // 去掉点号：".dwg" → "dwg"
+                const cachedMxwebName = `${fileHash}.${ext}.mxweb`;
+                const cachedMxwebPath = path.join(
+                  mxcadUploadPath,
+                  cachedMxwebName
+                );
+
+                if (fs.existsSync(cachedMxwebPath)) {
+                  // uploads 缓存命中
+                  buffer = await fsPromises.readFile(cachedMxwebPath);
+                  this.logger.log(`uploads 缓存命中: ${cachedMxwebName}`);
+                } else {
+                  // 将原始文件写入 uploads 并转换
+                  const srcFileName = `${fileHash}.${ext}`;
+                  const srcFilePath = path.join(mxcadUploadPath, srcFileName);
+                  await fsPromises.writeFile(srcFilePath, originalBuffer);
+
+                  const conversionResult =
+                    await this.fileConversionService.convertFile({
+                      srcPath: srcFilePath,
+                      fileHash,
+                    });
+
+                  if (!conversionResult.isOk) {
+                    this.logger.error(
+                      `历史版本文件转换失败: ${conversionResult.error}`
+                    );
+                    return res.status(500).json({
+                      code: -1,
+                      message: '历史版本文件转换失败',
+                    });
+                  }
+
+                  buffer = await fsPromises.readFile(cachedMxwebPath);
+                  // 清理 uploads 中的原始 dwg/dxf 临时文件
+                  await fsPromises.unlink(srcFilePath).catch(() => {});
+                  this.logger.log(
+                    `uploads 缓存已生成: ${cachedMxwebName}`
+                  );
+                }
+              } else {
+                // 原始文件就是 mxweb，直接使用
+                buffer = originalBuffer;
+              }
+
+              // 保存为 _initial.mxweb 供后续请求使用
+              await fsPromises.writeFile(initialMxwebPath, buffer);
+              this.logger.log(
+                `已保存初始版本 mxweb: ${initialMxwebName}`
+              );
             }
           }
         }
