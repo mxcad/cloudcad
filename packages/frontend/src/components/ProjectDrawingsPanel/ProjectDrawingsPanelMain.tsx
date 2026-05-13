@@ -102,7 +102,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     loadNodes, buildBreadcrumbPath,
     loadNodesRef, buildBreadcrumbPathRef,
     reset: resetNodes,
-  } = useLoadNodes(isLibraryMode, libraryType);
+  } = useLoadNodes(isLibraryMode, libraryType, projectId);
 
   // Library categories
   const {

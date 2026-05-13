@@ -44,7 +44,8 @@ export interface UseLoadNodesReturn {
 
 export function useLoadNodes(
   isLibraryMode: boolean,
-  libraryType: LibraryType | undefined
+  libraryType: LibraryType | undefined,
+  projectId?: string
 ): UseLoadNodesReturn {
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -77,6 +78,7 @@ export function useLoadNodes(
     page: currentPage,
     search: fsSearch,
     enabled: !isLibraryMode,
+    projectId,
   });
 
   // ── 合并结果 ──

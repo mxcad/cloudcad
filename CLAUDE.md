@@ -44,7 +44,7 @@ packages/
 ```bash
 # Backend (packages/backend)
 pnpm exec jest                   # All tests
-pnpm exec jest -- --testPathPattern="auth"  # Specific suite
+
 pnpm prisma generate             # Regenerate Prisma client
 pnpm prisma migrate dev          # New migration
 pnpm test:permission             # Permission-specific tests
