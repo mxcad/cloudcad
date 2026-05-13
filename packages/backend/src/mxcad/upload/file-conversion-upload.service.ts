@@ -253,7 +253,7 @@ export class FileConversionUploadService {
           skipFileCopy: true,
         });
 
-        const newNodeId = nodeId;
+        const newNodeId = newNode.id;
         const storageInfo = await this.storageManager.allocateNodeStorage(
           newNodeId,
           name
@@ -362,7 +362,7 @@ export class FileConversionUploadService {
             skipFileCopy: true,
           });
 
-          const newNodeId = nodeId;
+          const newNodeId = newNode.id;
           // 工作文件命名：{nodeId}.mxweb.mxweb（与 save-as 格式统一，DB path 指向它）
           const mxwebFileName = `${newNodeId}.mxweb.mxweb`;
           const storageInfo = await this.storageManager.allocateNodeStorage(
@@ -542,7 +542,7 @@ export class FileConversionUploadService {
             skipFileCopy: true,
           });
 
-          const newNodeId = nodeId;
+          const newNodeId = newNode.id;
           const storageInfo = await this.storageManager.allocateNodeStorage(
             newNodeId,
             name

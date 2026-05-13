@@ -331,7 +331,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
 
         if (isTargetDirectory) {
           try {
-            await svnAddAsync([currentPath], true);
+            await svnAddAsync([currentPath], true, false);
             this.logger.log(`递归添加目录: ${currentPath}`);
           } catch (error) {
             if (!error.message.includes('already under version control')) {
@@ -342,7 +342,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
           }
         } else {
           try {
-            await svnAddAsync([currentPath], false);
+            await svnAddAsync([currentPath], false, false);
           } catch (error) {
             if (!error.message.includes('already under version control')) {
               this.logger.warn(

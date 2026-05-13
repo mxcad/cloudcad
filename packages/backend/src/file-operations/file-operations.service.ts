@@ -15,10 +15,11 @@ import {
   Inject,
 } from '@nestjs/common';
 import {
-  FileStatus,
   ProjectStatus,
   Prisma,
+  FileStatus as PrismaFileStatus,
 } from '@prisma/client';
+import { FileStatus } from '../common/enums/file-status.enum';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../common/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
@@ -213,6 +214,7 @@ export class FileOperationsService {
           ownerId: true,
           projectId: true,
           size: true,
+          fileStatus: true,
         },
       });
 
@@ -310,8 +312,9 @@ export class FileOperationsService {
         if (node.isRoot) {
           updateData.projectStatus = ProjectStatus.DELETED;
         } else {
-          FileStatusStateMachine.validateTransition(node.fileStatus, FileStatus.DELETED);
-          updateData.fileStatus = FileStatus.DELETED;
+          const currentStatus: FileStatus = node.fileStatus as unknown as FileStatus;
+          FileStatusStateMachine.validateTransition(currentStatus, FileStatus.DELETED);
+          updateData.fileStatus = PrismaFileStatus.DELETED;
         }
 
         // 更新主节点
@@ -403,6 +406,7 @@ export class FileOperationsService {
           ownerId: true,
           projectId: true,
           name: true,
+          fileStatus: true,
         },
       });
 
@@ -486,8 +490,9 @@ export class FileOperationsService {
       if (node.isRoot) {
         updateData.projectStatus = ProjectStatus.ACTIVE;
       } else {
-        FileStatusStateMachine.validateTransition(node.fileStatus, FileStatus.COMPLETED);
-        updateData.fileStatus = FileStatus.COMPLETED;
+        const currentStatus: FileStatus = node.fileStatus as unknown as FileStatus;
+        FileStatusStateMachine.validateTransition(currentStatus, FileStatus.COMPLETED);
+        updateData.fileStatus = PrismaFileStatus.COMPLETED;
 
         // 检查是否存在文件名冲突，如果存在则生成唯一文件名
         if (node.parentId && node.name) {
