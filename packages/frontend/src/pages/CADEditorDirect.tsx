@@ -1270,18 +1270,17 @@ export const CADEditorDirect: React.FC = () => {
         if (pdfOptions?.height) body.height = pdfOptions.height;
         if (pdfOptions?.colorPolicy) body.colorPolicy = pdfOptions.colorPolicy;
 
-        const { response } = await (publicFileControllerConvertAndDownload as any)({ body });
+        const result = await (publicFileControllerConvertAndDownload as any)({ body });
 
-        if (!response) {
-          throw new Error('转换失败：服务器无响应');
+        if (result?.error) {
+          throw new Error('转换失败');
         }
 
-        if (!response.ok) {
-          const errBody = await response.json().catch(() => ({ message: '转换失败' }));
-          throw new Error((errBody as { message?: string }).message || '转换失败');
-        }
+        const { data: blob } = result;
 
-        const blob = await response.blob();
+        if (!blob) {
+          throw new Error('转换失败：无返回数据');
+        }
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1300,12 +1299,12 @@ export const CADEditorDirect: React.FC = () => {
         return;
       }
 
-      const { response } = await fileSystemControllerDownloadNodeWithFormat({
+      const result = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
         query: { format, ...pdfOptions },
       });
-      if (!response) throw new Error('下载失败：服务器无响应');
-      const blobData = await response.blob();
+      if (result?.error) throw new Error('下载失败');
+      const blobData = result?.data;
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
       const url = window.URL.createObjectURL(blob);
