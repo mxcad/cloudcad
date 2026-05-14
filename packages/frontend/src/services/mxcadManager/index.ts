@@ -1159,7 +1159,7 @@ async function handleFileSelection(
             callback: async () => {
               showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
               await openUploadedFile(
-                duplicateCheck.data?.nodeId,
+                duplicateCheck.data?.nodeId!,
                 uploadTargetNodeId
               );
               hideGlobalLoading();
@@ -2187,7 +2187,7 @@ class MxCADInstanceManager {
             // 从路径中提取 nodeId
             const match = currentMxwebUrl.match(/\/([a-z0-9]+)\.[^.]+\.mxweb/i);
             if (match) {
-              fileId = match[1];
+              fileId = match[1] ?? '';
             }
           }
 

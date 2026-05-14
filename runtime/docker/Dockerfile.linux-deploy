@@ -104,11 +104,9 @@ COPY packages/config-service ./packages/config-service
 COPY scripts ./scripts
 COPY runtime ./runtime
 COPY tsconfig.json ./
-COPY swagger_json.json ./
 
 # 复制启动/停止脚本
 COPY start.sh stop.sh ./
-COPY start.bat start.ps1 stop.bat stop.ps1 ./
 
 # 默认命令：提取运行时 + 打包
 # 步骤：

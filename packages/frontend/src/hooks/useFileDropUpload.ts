@@ -56,7 +56,7 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
       }
 
       setUploading(true);
-      setGlobalLoading(true, `正在上传: ${files[0].name}`);
+      setGlobalLoading(true, `正在上传: ${files[0]!.name}`);
 
       for (const file of files) {
         try {

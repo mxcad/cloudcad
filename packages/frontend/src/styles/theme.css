@@ -17,7 +17,7 @@
      ---------------------------------------- */
   --bg-canvas: #ffffff;           /* 纯白 - 画布 */
   --bg-primary: #f8fafc;          /* 主背景 - 页面 */
-  --bg-secondary: #ffffff;        /* 次级背景 - 卡片 */
+  --bg-secondary: #ffffff51;        /* 次级背景 - 卡片 */
   --bg-tertiary: #f1f5f9;         /* 三级背景 - 悬停 */
   --bg-elevated: #ffffff;         /* 提升层 - 弹窗 */
   --bg-overlay: rgba(15, 23, 42, 0.5); /* 遮罩层 */
@@ -189,7 +189,7 @@
      ---------------------------------------- */
   --bg-canvas: #0d0f12;           /* 最深 - CAD 画布背景 */
   --bg-primary: #141619;          /* 主背景 - 页面、面板 */
-  --bg-secondary: #1a1d21;        /* 次级背景 - 卡片、输入框 */
+  --bg-secondary: #1a1d2151;        /* 次级背景 - 卡片、输入框 */
   --bg-tertiary: #22262b;         /* 三级背景 - 悬停、选中 */
   --bg-elevated: #2a2f35;         /* 提升层 - 弹窗、下拉菜单 */
   --bg-overlay: rgba(0, 0, 0, 0.7); /* 遮罩层 */

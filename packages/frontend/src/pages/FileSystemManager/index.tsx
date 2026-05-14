@@ -459,7 +459,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       <div
         className="max-w-7xl mx-auto mt-6 rounded-2xl relative min-h-[400px] shadow-sm overflow-visible"
         style={{
-          background: 'var(--bg-secondary)',
+          background: 'transparent',
           border: '1px solid var(--border-default)',
         }}
       >

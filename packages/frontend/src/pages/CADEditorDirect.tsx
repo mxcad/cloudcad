@@ -817,10 +817,10 @@ export const CADEditorDirect: React.FC = () => {
       }, 1000);
     };
     
-    window.addEventListener('public-file-uploaded', handlePublicFileUploaded as EventListener);
-    
+    window.addEventListener('public-file-uploaded', handlePublicFileUploaded as unknown as EventListener);
+
     return () => {
-      window.removeEventListener('public-file-uploaded', handlePublicFileUploaded as EventListener);
+      window.removeEventListener('public-file-uploaded', handlePublicFileUploaded as unknown as EventListener);
     };
   }, [externalReferenceUpload]);
 

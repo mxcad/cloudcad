@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/Modal';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import type { UserResponseDto, UpdateUserDto } from '@/api-sdk';
+import type { CreateUserDto, UserResponseDto, UpdateUserDto } from '@/api-sdk';
 import { useUserCRUD } from './hooks/useUserCRUD';
 import { useUserSearch } from './hooks/useUserSearch';
 import { UserTable, type UserTableUser } from './UserTable';
