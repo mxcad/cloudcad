@@ -1743,6 +1743,86 @@ async function deployMode(skipBuild = false) {
 }
 
 /**
+ * 前台模式：等待服务就绪，后端进程退出时即时显示错误
+ */
+async function waitForServicesForeground(backendProcess, backendStderr) {
+  log('cyan', '等待所有服务就绪...');
+
+  // 同时检查后端 health 和进程状态
+  const http = require('http');
+
+  // 前端服务只检测端口
+  const checkServices = async () => {
+    const backendReady = await new Promise((resolve) => {
+      const tryCheck = () => {
+        // 进程已退出 → 不用再等了
+        if (backendProcess.exitCode !== null || backendProcess.killed) {
+          resolve(false);
+          return;
+        }
+
+        const req = http.request(
+          { hostname: 'localhost', port: PORTS.backend, path: '/api/health/live', method: 'GET', timeout: 3000 },
+          (res) => resolve(res.statusCode === 200)
+        );
+        req.on('error', () => setTimeout(tryCheck, 1000));
+        req.on('timeout', () => { req.destroy(); setTimeout(tryCheck, 1000); });
+        req.end();
+      };
+      tryCheck();
+    });
+
+    if (!backendReady) {
+      // 后端进程已退出，显示捕获的错误输出
+      const stderrText = backendStderr.join('').trim();
+      log('red', `\n[错误] 后端服务进程已退出（退出码: ${backendProcess.exitCode}）`);
+      if (stderrText) {
+        const lastLines = stderrText.split('\n').slice(-15).join('\n');
+        log('red', `最后 ${15} 行日志:\n${lastLines}`);
+      }
+      return false;
+    }
+
+    log('green', `  ✓ 后端服务已就绪 (端口 ${PORTS.backend})`);
+
+    // 等待配置中心和前端端口（较短超时）
+    try {
+      await waitForPort(PORTS.configService, '配置中心', 15000);
+    } catch {
+      log('yellow', '  ⚠ 配置中心未就绪');
+    }
+    try {
+      await waitForPort(PORTS.frontend, '前端页面', 15000);
+    } catch {
+      log('yellow', '  ⚠ 前端页面未就绪');
+    }
+    return true;
+  };
+
+  const ok = await checkServices();
+  if (!ok) {
+    log('red', '后端服务启动失败，请检查上方日志');
+    return false;
+  }
+
+  console.log('');
+  log('green', '╔════════════════════════════════════════╗');
+  log('green', `║        所有服务已就绪                   ║`);
+  log('green', '╠════════════════════════════════════════╣');
+  log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
+  log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
+  log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
+  log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
+  log('green', '╠════════════════════════════════════════╣');
+  log('green', '║  停止:  Ctrl+C                        ║');
+  log('green', '╚════════════════════════════════════════╝');
+
+  // 打开浏览器
+  openBrowser(`http://localhost:${PORTS.frontend}`);
+  return true;
+}
+
+/**
  * 统一的应用服务启动函数
  * @param {'pm2' | 'foreground'} mode - 启动模式
  */
@@ -1821,7 +1901,7 @@ async function startAppServices(mode) {
   } else {
     // 前台模式
     log('cyan', '启动后端服务...');
-    
+
     // 构建后端环境变量
     const backendEnv = {
       ...process.env,
@@ -1829,13 +1909,18 @@ async function startAppServices(mode) {
       PORT: String(PORTS.backend),
       FRONTEND_URL: `http://localhost:${PORTS.frontend}`,
     };
-        
+
+    // 前台模式捕获后端 stderr，健康检查失败时显示
+    const backendStderr = [];
     const backendProcess = spawn(NODE_EXE, [backendDist], {
       cwd: path.join(PROJECT_ROOT, 'packages', 'backend'),
-      stdio: 'inherit',
+      stdio: ['pipe', 'inherit', 'pipe'],
       shell: IS_WINDOWS,
       detached: false,
       env: backendEnv,
+    });
+    backendProcess.stderr.on('data', (chunk) => {
+      backendStderr.push(chunk.toString());
     });
     childProcesses.add(backendProcess);
 
@@ -1855,28 +1940,36 @@ async function startAppServices(mode) {
     childProcesses.add(frontendProcess);
 
     setupSignalHandlers();
+
+    // 等待所有服务就绪（前台模式）
+    const backendOk = await waitForServicesForeground(backendProcess, backendStderr);
+    if (!backendOk) return; // 后端启动失败，不继续
   }
 
-  console.log('');
-  log('green', '╔════════════════════════════════════════╗');
-  log(
-    'green',
-    `║        服务已启动 (${modeLabel})${' '.repeat(Math.max(0, 20 - modeLabel.length))}║`
-  );
-  log('green', '╠════════════════════════════════════════╣');
-  log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
-  log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
-  log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
-  log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
-  log(
-    'green',
-    '║  配置:  http://localhost:' + PORTS.configService + '           ║'
-  );
-  log('green', '╠════════════════════════════════════════╣');
-  log('green', '║  停止:  选择菜单 [停止服务]             ║');
-  log('green', '╚════════════════════════════════════════╝');
+  // PM2 模式：等待服务就绪并打开浏览器
+  //（前台模式已经在 waitForServicesForeground 中处理了）
+  if (mode === 'pm2') {
+    console.log('');
+    log('green', '╔════════════════════════════════════════╗');
+    log(
+      'green',
+      `║        服务已启动 (${modeLabel})${' '.repeat(Math.max(0, 20 - modeLabel.length))}║`
+    );
+    log('green', '╠════════════════════════════════════════╣');
+    log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
+    log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
+    log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
+    log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
+    log(
+      'green',
+      '║  配置:  http://localhost:' + PORTS.configService + '           ║'
+    );
+    log('green', '╠════════════════════════════════════════╣');
+    log('green', '║  停止:  选择菜单 [停止服务]             ║');
+    log('green', '╚════════════════════════════════════════╝');
 
-  await waitAndOpenBrowsers();
+    await waitAndOpenBrowsers();
+  }
 
   if (mode === 'foreground') {
     // 前台模式：等待所有进程退出
