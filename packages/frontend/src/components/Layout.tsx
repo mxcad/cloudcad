@@ -498,7 +498,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${storageColor} transition-all duration-500`}
                     style={{
-                      width: `${Math.min(storageInfo.usagePercent, 100)}%`,
+                      width: `${Math.min(storageInfo.usagePercent ?? 0, 100)}%`,
                     }}
                   />
                 </div>
@@ -509,7 +509,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     {formatFileSize(storageInfo.used)}
                   </span>
                   <span style={{ color: 'var(--text-tertiary)' }}>
-                    {storageInfo.usagePercent.toFixed(1)}%
+                    {(storageInfo.usagePercent ?? 0).toFixed(1)}%
                   </span>
                   <span style={{ color: 'var(--text-muted)' }}>
                     {formatFileSize(storageInfo.total)}
