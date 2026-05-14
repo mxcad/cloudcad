@@ -11,50 +11,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import fs from 'fs';
-import { execSync } from 'child_process';
 import { defineConfig, loadEnv } from 'vite';
 import { mxcadAssetsPlugin } from 'mxcad-app/vite';
 import tailwindcss from '@tailwindcss/vite';
-
-// 监听 swagger_json.json 变化，自动运行 pnpm generate:api-types
-function autoGenerateApiTypes() {
-  const swaggerFile = path.resolve(__dirname, 'swagger_json.json');
-  const lastHash = { value: '' };
-  const scriptFile = path.resolve(__dirname, 'scripts/generate-api-types.js');
-
-  function run() {
-    try {
-      if (!fs.existsSync(swaggerFile)) return;
-
-      const content = fs.readFileSync(swaggerFile, 'utf8');
-      const currentHash = require('crypto').createHash('md5').update(content).digest('hex');
-      if (currentHash === lastHash.value) return;
-      lastHash.value = currentHash;
-
-      execSync(`node "${scriptFile}"`, { encoding: 'utf8', stdio: 'inherit' });
-      console.log(`[api-types] Auto-generated (${(content.length / 1024).toFixed(0)}KB swagger)`);
-    } catch (e) {
-      console.error('[api-types] Failed:', (e as Error).message);
-    }
-  }
-
-  run(); // init
-
-  return {
-    name: 'auto-generate-api-types',
-    configureServer(server: any) {
-      server.watcher.add(swaggerFile);
-      server.watcher.on('change', (file: string) => {
-        if (file === swaggerFile) {
-          run();
-          server.ws.send({ type: 'full-reload' });
-        }
-      });
-    },
-  };
-}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -74,7 +33,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       react(),
-      autoGenerateApiTypes(),
       mxcadAssetsPlugin({
         libraryNames: ['vuetify', 'vue', 'axios'],
       }),
