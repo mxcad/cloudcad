@@ -103,10 +103,39 @@ function calcLockHash() {
     .digest('hex');
 }
 
-function readCachedHash(storeName) {
-  const hashFile = path.join(PROJECT_ROOT, storeName, '.hash');
+function readCachedHash(storeName, hashFileName = '.hash') {
+  const hashFile = path.join(PROJECT_ROOT, storeName, hashFileName);
   if (!fs.existsSync(hashFile)) return null;
   return fs.readFileSync(hashFile, 'utf8').trim();
+}
+
+/**
+ * 确保 store hash 与当前 lockfile 一致 — 如果不一致则自动重建 store
+ * @param {string} storeName - store 目录名
+ * @param {Function} rebuildFn - 重建函数（如 () => ensureOfflinePnpmStore(platform)）
+ * @param {Object} [options]
+ * @param {string} [options.hashFile='.hash'] - store 内 hash 文件名
+ * @param {number} [options.truncate] - 截取前 N 位比较（deploy store 用 16）
+ */
+async function ensureStoreHashMatch(storeName, rebuildFn, options = {}) {
+  const { hashFile = '.hash', truncate } = options;
+  const currentHash = calcLockHash();
+  const storeHash = readCachedHash(storeName, hashFile);
+  if (!currentHash) {
+    throw new Error('无法读取 pnpm-lock.yaml，请确认文件存在');
+  }
+  if (!storeHash) {
+    log(`${storeName} 缺少 ${hashFile}，自动重建...`);
+    await rebuildFn();
+    return;
+  }
+  const expected = truncate ? currentHash.substring(0, truncate) : currentHash;
+  if (expected !== storeHash) {
+    log(`⚠ lockfile 已变更（${storeHash.substring(0, 8)}... → ${expected.substring(0, 8)}...），自动重建 ${storeName}...`);
+    await rebuildFn();
+    return;
+  }
+  log(`✓ ${storeName} hash 校验通过`);
 }
 
 /**
@@ -443,8 +472,12 @@ async function packOffline(platform) {
   if (platform === 'all') {
     await ensureOfflinePnpmStore('win');
     await ensureOfflinePnpmStore('linux');
+    await ensureStoreHashMatch('.pnpm-store', () => ensureOfflinePnpmStore('win'));
+    await ensureStoreHashMatch('.pnpm-store-linux', () => ensureOfflinePnpmStore('linux'));
   } else {
+    const storeName = platform === 'linux' ? '.pnpm-store-linux' : '.pnpm-store';
     await ensureOfflinePnpmStore(platform);
+    await ensureStoreHashMatch(storeName, () => ensureOfflinePnpmStore(platform));
   }
 
   // 创建压缩包
@@ -1049,6 +1082,7 @@ async function packDeploy(platform) {
   log('');
   log('[3/4] 准备生产依赖 store...');
   await prepareDeployStore();
+  await ensureStoreHashMatch('.pnpm-store-deploy', () => prepareDeployStore(), { hashFile: '.lockfile-hash', truncate: 16 });
 
   // 4. 准备打包目录
   log('');

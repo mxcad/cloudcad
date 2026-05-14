@@ -1456,14 +1456,20 @@ function runPnpmInstallOffline(options = {}) {
   }
 
   // 查找 pnpm store
-  const storeCandidates = [
-    path.join(PROJECT_ROOT, '.pnpm-store-deploy'),
-    path.join(PROJECT_ROOT, IS_LINUX ? '.pnpm-store-linux' : '.pnpm-store'),
-  ];
+  // 如果要安装完整依赖：优先 .pnpm-store（全量），找不到则尝试 .pnpm-store-deploy
+  // 如果只装生产依赖：优先 .pnpm-store-deploy（仅 prod），找不到则尝试 .pnpm-store（全量也可用）
+  const preferDeployStore = deployBackendOnly;
+  const fullStore = path.join(PROJECT_ROOT, IS_LINUX ? '.pnpm-store-linux' : '.pnpm-store');
+  const deployStore = path.join(PROJECT_ROOT, '.pnpm-store-deploy');
+  const storeCandidates = preferDeployStore
+    ? [deployStore, fullStore]
+    : [fullStore, deployStore];
   let storePath = null;
+  let isDeployStore = false;
   for (const p of storeCandidates) {
     if (fs.existsSync(p)) {
       storePath = p;
+      isDeployStore = p === deployStore;
       break;
     }
   }
@@ -1475,15 +1481,15 @@ function runPnpmInstallOffline(options = {}) {
   }
 
   // 构建安装命令参数
-  const installArgs = deployBackendOnly
+  // 如果使用 .pnpm-store-deploy（只含 backend prod deps），自动追加 --prod
+  const installArgs = deployBackendOnly || isDeployStore
     ? ['--filter', 'backend', 'install', '--offline', '--prod']
     : ['install', '--offline'];
 
-  log(
-    deployBackendOnly
-      ? '安装后端依赖...'
-      : '运行 pnpm install --offline 重建依赖...'
-  );
+  const installLabel = isDeployStore
+    ? `（生产模式${deployBackendOnly ? '' : '，仅安装可用依赖'}）`
+    : '（完整依赖）';
+  log(`运行 pnpm install --offline 重建依赖${installLabel}`);
   log(`  → 执行: pnpm ${installArgs.join(' ')}`);
 
   try {
