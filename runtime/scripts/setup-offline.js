@@ -1527,10 +1527,37 @@ function runPnpmInstallOffline(options = {}) {
 }
 
 /**
- * 将所有 .env.example 拷贝为对应的目标文件
- * 离线包不包含 .env 文件，首次启动时需要从模板创建
- * 注：前端使用 .env.local（Vite 项目约定）
+ * 生成长度为 64 的随机密钥（十六进制）
  */
+function generateSecret() {
+  const crypto = require('crypto');
+  return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * 填充 .env 中空白的必填密钥（SESSION_SECRET、JWT_SECRET）
+ * 首次部署时自动生成随机密钥，避免生产环境校验报错
+ * @param {string} envFile - .env 文件路径
+ */
+function fillEmptySecrets(envFile) {
+  if (!fs.existsSync(envFile)) return;
+  let content = fs.readFileSync(envFile, 'utf8');
+  const secrets = ['SESSION_SECRET', 'JWT_SECRET'];
+  let changed = false;
+  for (const key of secrets) {
+    const regex = new RegExp(`^${key}=[ \\t]*$`, 'm');
+    if (regex.test(content)) {
+      content = content.replace(regex, `${key}=${generateSecret()}`);
+      log(`  ✓ 自动生成 ${key}`);
+      changed = true;
+    }
+  }
+  if (changed) {
+    fs.writeFileSync(envFile, content, 'utf8');
+    log(`  ✓ 已填充 ${path.basename(envFile)} 中的空白密钥`);
+  }
+}
+
 function copyEnvExampleToEnv() {
   log('检查并创建 .env 配置文件...');
 
@@ -1567,6 +1594,10 @@ function copyEnvExampleToEnv() {
     try {
       fs.copyFileSync(envExample, envFile);
       log(`  ✓ 创建: ${path.relative(PROJECT_ROOT, envFile)}`);
+      // 首次创建 .env 时自动填充空白密钥
+      if (config.target === '.env') {
+        fillEmptySecrets(envFile);
+      }
       copied++;
     } catch (err) {
       error(
