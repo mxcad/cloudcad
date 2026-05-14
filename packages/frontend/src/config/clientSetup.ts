@@ -15,7 +15,7 @@ function showGlobalToast(message: string, type: 'success' | 'error' | 'info' | '
 }
 
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
-const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
+const baseUrl = getApiBaseUrl().replace(/\/api$/, '/api/v1');
 client.setConfig({
   baseUrl,
   responseTransformer: async (data: unknown) => {
@@ -194,21 +194,6 @@ client.setConfig({
   
     // 401 → 尝试刷新 token 并重试（支持所有 HTTP 方法）
     if (response.status === 401) {
-      // 读取 401 响应体中的错误信息，通过全局 Toast 提示用户
-      let errorMessage = '';
-      try {
-        const clonedResponse = response.clone();
-        const body = await clonedResponse.json();
-        if (body && typeof body.message === 'string' && body.message) {
-          errorMessage = body.message;
-        }
-      } catch {
-        // 响应体无法解析为 JSON 时静默忽略
-      }
-      if (errorMessage) {
-        showGlobalToast(errorMessage, 'error');
-      }
-
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/profile') || url.includes('/auth/forgot-password') || url.includes('/auth/reset-password');
       if (!isAuthEndpoint) {
