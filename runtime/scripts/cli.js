@@ -238,7 +238,7 @@ async function waitAndOpenBrowsers() {
     {
       port: PORTS.backend,
       name: '后端服务',
-      path: '/api/health/live',
+      path: '/api/v1/health/live',
       type: 'http',
       url: `http://localhost:${PORTS.backend}/api/docs`,
     },
@@ -1762,7 +1762,7 @@ async function waitForServicesForeground(backendProcess, backendStderr) {
         }
 
         const req = http.request(
-          { hostname: 'localhost', port: PORTS.backend, path: '/api/health/live', method: 'GET', timeout: 3000 },
+          { hostname: 'localhost', port: PORTS.backend, path: '/api/v1/health/live', method: 'GET', timeout: 3000 },
           (res) => resolve(res.statusCode === 200)
         );
         req.on('error', () => setTimeout(tryCheck, 1000));
