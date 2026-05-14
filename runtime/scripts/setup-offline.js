@@ -1575,6 +1575,8 @@ function copyEnvExampleToEnv() {
   let copied = 0;
   let skipped = 0;
 
+  let backendEnvCreated = false;
+
   for (const config of envConfigs) {
     const envExample = path.join(config.dir, '.env.example');
     const envFile = path.join(config.dir, config.target);
@@ -1594,9 +1596,8 @@ function copyEnvExampleToEnv() {
     try {
       fs.copyFileSync(envExample, envFile);
       log(`  ✓ 创建: ${path.relative(PROJECT_ROOT, envFile)}`);
-      // 首次创建 .env 时自动填充空白密钥
       if (config.target === '.env') {
-        fillEmptySecrets(envFile);
+        backendEnvCreated = true;
       }
       copied++;
     } catch (err) {
@@ -1611,6 +1612,14 @@ function copyEnvExampleToEnv() {
   }
   if (skipped > 0) {
     log(`跳过 ${skipped} 个已存在的 .env 文件`);
+  }
+
+  // 无论 .env 是新创建还是已存在，都填补空白密钥
+  const backendEnv = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  if (fs.existsSync(backendEnv)) {
+    const label = backendEnvCreated ? '新创建' : '已有';
+    log(`填充 ${label} .env 文件中的空白密钥...`);
+    fillEmptySecrets(backendEnv);
   }
 
   return true;
