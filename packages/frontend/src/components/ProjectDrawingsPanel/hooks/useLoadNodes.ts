@@ -84,12 +84,20 @@ export function useLoadNodes(
   // ── Library 模式：使用 displayNodes 支持 append/prepend/replace ──
   const loadModeRef = useRef<'replace' | 'append' | 'prepend'>('replace');
   const [displayNodes, setDisplayNodes] = useState<FileSystemNode[]>([]);
+  // 跟踪 libraryNodeId 是否曾被显式设置过，首次从 undefined→value 时不重置
+  // 因为 useLibraryQuery 在挂载时已用 libraryId 作为回退预取了数据，
+  // 若此时重置 displayNodes，查询 key 不变导致 merge effect 不触发、数据丢失
+  const libraryNodeIdWasSetRef = useRef(false);
 
   // 【先】节点ID或搜索变更时重置 displayNodes（必须在 merge effect 之前执行）
+  // 注意：不改 loadModeRef.current，它由 loadNodes 根据 append/prepend/replace 参数设置
   useEffect(() => {
     if (!isLibraryMode) return;
+    if (!libraryNodeIdWasSetRef.current) {
+      if (libraryNodeId !== undefined) libraryNodeIdWasSetRef.current = true;
+      return; // 初始状态转首次有效值不重置，避免与预取数据冲突
+    }
     setDisplayNodes([]);
-    loadModeRef.current = 'replace';
   }, [isLibraryMode, libraryNodeId, librarySearch]);
 
   // 【后】监听 useLibraryQuery 返回的新数据，按模式合并到 displayNodes
@@ -125,10 +133,12 @@ export function useLoadNodes(
     return fsQuery.nodes;
   }, [isLibraryMode, displayNodes, fsQuery.nodes]);
 
+  // library 模式用 isFetching（keepPreviousData 下 isLoading 换页时不更新），
+  // 确保滚动节流能正确判断"正在加载中"。
   const loading = useMemo(() => {
-    if (isLibraryMode) return libraryQuery.loading;
+    if (isLibraryMode) return libraryQuery.loading || libraryQuery.isFetching;
     return fsQuery.loading;
-  }, [isLibraryMode, libraryQuery.loading, fsQuery.loading]);
+  }, [isLibraryMode, libraryQuery.loading, libraryQuery.isFetching, fsQuery.loading]);
 
   const isFetching = useMemo(() => {
     if (isLibraryMode) return libraryQuery.isFetching;
