@@ -18,7 +18,9 @@
   --bg-canvas: #ffffff;           /* 纯白 - 画布 */
   --bg-primary: #f8fafc;          /* 主背景 - 页面 */
   --bg-secondary: #ffffff51;        /* 次级背景 - 卡片 */
+  --bg-drawing-card: #0000001f;      /* 绘图卡片背景 */
   --bg-tertiary: #f1f5f9;         /* 三级背景 - 悬停 */
+  --bg-card: #E5E5E5;             /* 卡片背景 - 图纸库/图块库卡片 */
   --bg-elevated: #ffffff;         /* 提升层 - 弹窗 */
   --bg-overlay: rgba(15, 23, 42, 0.5); /* 遮罩层 */
 
@@ -93,7 +95,19 @@
   --text-tooltip: #ffffff;
 
   /* ----------------------------------------
-     1.8 阴影系统
+     1.8 z-index 层级系统
+     ---------------------------------------- */
+  --z-background: 0;
+  --z-content: 10;
+  --z-sidebar: 100;
+  --z-cad-editor: 1000;
+  --z-overlay: 5000;
+  --z-modal: 10000;
+  --z-tooltip: 50000;
+  --z-toast: 100000;
+
+  /* ----------------------------------------
+     1.9 阴影系统
      ---------------------------------------- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -190,7 +204,9 @@
   --bg-canvas: #0d0f12;           /* 最深 - CAD 画布背景 */
   --bg-primary: #141619;          /* 主背景 - 页面、面板 */
   --bg-secondary: #1a1d2151;        /* 次级背景 - 卡片、输入框 */
+  --bg-drawing-card: #1a1d2151;      /* 绘图卡片背景 */
   --bg-tertiary: #22262b;         /* 三级背景 - 悬停、选中 */
+  --bg-card: #3A4352;             /* 卡片背景 - 图纸库/图块库卡片 */
   --bg-elevated: #2a2f35;         /* 提升层 - 弹窗、下拉菜单 */
   --bg-overlay: rgba(0, 0, 0, 0.7); /* 遮罩层 */
   
@@ -419,6 +435,11 @@
 /* 深色主题聚焦效果 */
 [data-theme="dark"] .input-theme:focus {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.input-theme option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 /* 4.6 卡片 */

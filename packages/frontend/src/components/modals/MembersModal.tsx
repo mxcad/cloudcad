@@ -193,7 +193,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       // 添加成员
-      const memberData = await fileSystemControllerAddProjectMember({
+      await fileSystemControllerAddProjectMember({
         path: { projectId },
         body: {
           userId: selectedUser.id,
@@ -201,20 +201,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         },
       });
 
-      const data = memberData.data!;
-      const { id, email, username, nickname, avatar, projectRoleId, projectRoleName, joinedAt } = data;
-      const newMember: Member = {
-        id,
-        userId: id,
-        email,
-        username,
-        nickname,
-        avatar,
-        projectRoleId,
-        projectRoleName,
-        joinedAt,
-      };
-      setMembers((prev) => [...prev, newMember]);
+      // 重新获取完整成员列表（addProjectMember 返回的是 Prisma 嵌套结构，
+      // 而成员列表需要扁平化的 ProjectMemberDto）
+      await loadMembers();
 
       // 重置表单
       setNewEmail('');

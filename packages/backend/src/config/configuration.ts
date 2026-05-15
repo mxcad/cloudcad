@@ -393,10 +393,7 @@ export default (): AppConfig => {
 
 	// 日志配置
 	log: {
-		levels: parseLogLevels(
-			process.env.LOG_LEVELS,
-			process.env.NODE_ENV || "development",
-		),
+		levels: parseLogLevels(process.env.NODE_ENV || "development"),
 		// 慢查询阈值（毫秒），超过此阈值的 SQL 会打印日志（仅开发环境生效）
 		slowQueryThresholdMs: parseInt(
 			process.env.LOG_SLOW_QUERY_THRESHOLD_MS || "500",
@@ -458,10 +455,10 @@ export default (): AppConfig => {
 			process.env.THUMBNAIL_AUTO_GENERATE_ENABLED,
 			true,
 		),
-		// 缩略图宽度（像素），默认 120
-		width: parseInt(process.env.THUMBNAIL_WIDTH || "120", 10) || 100,
-		// 缩略图高度（像素），默认120  如果是0 表示自动计算保持原始宽高比
-		height: parseInt(process.env.THUMBNAIL_HEIGHT || "120", 10) || 0,
+		// 缩略图宽度（像素），默认 100
+		width: parseInt(process.env.THUMBNAIL_WIDTH || "100", 10) || 100,
+		// 缩略图高度（像素），默认100  如果是0 表示自动计算保持原始宽高比
+		height: parseInt(process.env.THUMBNAIL_HEIGHT || "100", 10) || 0,
 		// 缩略图背景颜色，十六进制 RGB 格式，默认黑色
 		backgroundColor: process.env.THUMBNAIL_BACKGROUND_COLOR || "0x000000",
 		},
@@ -470,19 +467,12 @@ export default (): AppConfig => {
 
 /**
  * 解析日志级别配置
- * @param value 环境变量值
  * @param nodeEnv 运行环境
  * @returns 日志级别数组
  */
 function parseLogLevels(
-	value: string | undefined,
 	nodeEnv: string,
 ): ("error" | "warn" | "log" | "debug" | "verbose")[] {
-	if (value) {
-		return value
-			.split(",")
-			.map((l) => l.trim() as "error" | "warn" | "log" | "debug" | "verbose");
-	}
 	// 开发环境：error + warn + log（不打印 debug/verbose，减少噪音）
 	if (nodeEnv === "development") {
 		return ["error", "warn", "log"];

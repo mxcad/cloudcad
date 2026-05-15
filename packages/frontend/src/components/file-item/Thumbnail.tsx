@@ -65,12 +65,11 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
         <img
           src={thumbnailSrc}
           alt={node.name}
-          className={`w-full h-full transition-all duration-200 rounded-lg ${
-            galleryMode ? 'object-cover bg-black' : 'object-contain bg-slate-50'
-          }`}
+          className="w-full h-full transition-all duration-200 rounded-lg object-contain"
           style={{
             width: size,
-            height: size
+            height: size,
+            backgroundColor: 'var(--bg-card)'
           }}
           onError={() => setImageLoadError(true)}
           onClick={(e) => {

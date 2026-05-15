@@ -104,17 +104,24 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       selectFiles({
         nodeId: currentNodeId || undefined,
         onSuccess: async (param: LoadFileParam) => {
+          // 上传成功，进度条设为100%
+          setLoadingProgress(100);
+          
           // 保存节点ID
           param.nodeId && setCurrentNodeId(param.nodeId);
 
           try {
             if (openAfterUpload) {
-              // 打开模式：上传 → 转换 → 打开 CAD 编辑器
+              // 打开模式：上传100%后延迟1秒再显示"正在打开图纸中"
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              setLoadingMessage('正在打开图纸中...');
               await openUploadedFile(param.nodeId!, currentNodeId || '');
             } else {
-              // 列表页模式：上传 → 转换（等待完成即可，不打开图纸）
-              setLoadingMessage('文件转换中，请稍候...');
+              // 列表页模式：上传完成 → 显示"图纸转换中" → 等待转换完成后隐藏进度条
+              setLoadingMessage('图纸转换中...');
               await waitForFileReady(param.nodeId!);
+              // 列表页模式：转换完成后直接隐藏进度条
+              setGlobalLoading(false);
             }
 
             // 通知父组件上传+转换成功（由父组件决定是否 toast 和刷新列表）
@@ -130,7 +137,6 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             const errorMessage = error instanceof Error ? error.message : '文件处理失败';
             globalShowToast(errorMessage, 'error');
             onError?.(errorMessage);
-          } finally {
             setGlobalLoading(false);
           }
         },

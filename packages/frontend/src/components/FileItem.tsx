@@ -407,7 +407,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   if (viewMode === 'grid') {
     const showSelection = isMultiSelectMode && isSelected;
-    const thumbnailSize = galleryMode ? 120 : 64;
+    const thumbnailSize = galleryMode ? 100 : 64;
 
     return (
       <div
@@ -425,7 +425,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             ? 'var(--primary-50)'
             : isDropTarget
               ? 'var(--success-light)'
-              : 'var(--bg-secondary)',
+              : 'var(--bg-drawing-card)',
           border: showSelection
             ? '2px solid var(--primary-500)'
             : isDropTarget
@@ -448,7 +448,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           onDragLeave?.();
           if (!showSelection && !isDropTarget) {
             if (galleryMode) {
-              e.currentTarget.style.background = 'var(--bg-secondary)';
+              e.currentTarget.style.background = 'var(--bg-drawing-card)';
             } else {
               e.currentTarget.style.borderColor = 'var(--border-default)';
             }

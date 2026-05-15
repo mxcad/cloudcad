@@ -1358,6 +1358,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  background-color: var(--bg-card);
 }
 
 .drawingItem:hover {
@@ -1393,11 +1394,7 @@
 .drawingThumbnail {
   width: 44px;
   height: 44px;
-  background: linear-gradient(
-    135deg,
-    var(--bg-tertiary) 0%,
-    var(--bg-secondary) 100%
-  );
+  background: var(--bg-card);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -1406,11 +1403,6 @@
   overflow: hidden;
   border: 1px solid var(--border-default);
   transition: all 0.2s ease;
-}
-
-[data-theme="dark"] .drawingThumbnail {
-  background: rgba(0, 0, 0, 0.25);
-  border-color: var(--sidebar-border, #3A4352);
 }
 
 .drawingItem:hover .drawingThumbnail {

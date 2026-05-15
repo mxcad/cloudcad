@@ -11,11 +11,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class AddProjectMemberDto {
   @ApiProperty({ description: '用户ID' })
+  @IsString()
+  @IsNotEmpty()
   userId: string;
 
   @ApiProperty({ description: '项目角色ID' })
+  @IsString()
+  @IsNotEmpty()
   projectRoleId: string;
 }

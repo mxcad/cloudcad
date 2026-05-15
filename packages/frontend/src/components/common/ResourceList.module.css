@@ -509,11 +509,7 @@
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--border-default);
-  background: linear-gradient(
-    180deg,
-    var(--bg-secondary) 0%,
-    var(--bg-tertiary) 100%
-  );
+  background: var(--bg-card);
   position: relative;
 }
 
@@ -580,24 +576,11 @@
 .gridItemPreview {
   position: relative;
   aspect-ratio: 4 / 3;
-  background: linear-gradient(
-    135deg,
-    var(--bg-tertiary) 0%,
-    var(--bg-secondary) 100%
-  );
+  background: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-}
-
-/* 深色主题预览区 */
-[data-theme="dark"] .gridItemPreview {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
 }
 
 .gridThumbnail {
@@ -615,7 +598,7 @@
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   position: relative;
 }
 
@@ -765,11 +748,7 @@
 
 .gridItemInfo {
   padding: var(--space-2) var(--space-3);
-  background: linear-gradient(
-    180deg,
-    var(--bg-secondary) 0%,
-    var(--bg-tertiary) 100%
-  );
+  background: var(--bg-card);
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -803,6 +782,10 @@
   border-top: 1px solid var(--sidebar-border, var(--border-default, #212832));
   flex-shrink: 0;
   border-radius: 0;
+}
+
+.footerHidden {
+  display: none;
 }
 
 /* ==================== 滚动加载 ==================== */
@@ -1121,16 +1104,6 @@
   }
 }
 
-/* ==================== 深色主题特定覆盖 ==================== */
-
-[data-theme="dark"] .resourceList {
-  background-color: var(--sidebar-bg, #3A4352);
-}
-
-[data-theme="dark"] .itemIcon {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
 /* ==================== 总数显示 ==================== */
 
 .totalCount {
@@ -1145,11 +1118,6 @@
 .totalCountNumber {
   font-weight: 600;
   color: var(--text-secondary, #8b95a5);
-}
-
-
-[data-theme="dark"] .gridItemPreview {
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 /* ==================== 分页控件 ==================== */

@@ -26,6 +26,7 @@ import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
+import { hideGlobalLoading } from '../utils/loadingUtils';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
@@ -785,9 +786,7 @@ export const CADEditorDirect: React.FC = () => {
         return;
       }
 
-      // 等待一小会儿，让文件先加载完成
-      setTimeout(async () => {
-        try {
+       try {
           // shouldRetry = true，因为刚上传文件，需要等待生成 preloading.json
           // forceOpen = false，如果没有外部参照不弹框
           const hasMissingReferences = await externalReferenceUpload.checkMissingReferences(fileHash, true, false);
@@ -808,7 +807,6 @@ export const CADEditorDirect: React.FC = () => {
             openFileCallbackRef.current = null;
           }
         }
-      }, 1000);
     };
     
     window.addEventListener('public-file-uploaded', handlePublicFileUploaded as unknown as EventListener);
@@ -1195,6 +1193,25 @@ export const CADEditorDirect: React.FC = () => {
       window.removeEventListener(
         'mxcad-new-file',
         handleNewFile as EventListener
+      );
+    };
+  }, []);
+
+  // 监听文件打开完成事件，隐藏底部加载状态
+  useEffect(() => {
+    const handleFileOpenComplete = () => {
+      hideGlobalLoading();
+    };
+
+    window.addEventListener(
+      'mxcad-file-open-complete',
+      handleFileOpenComplete as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'mxcad-file-open-complete',
+        handleFileOpenComplete as EventListener
       );
     };
   }, []);

@@ -73,6 +73,7 @@ import {
 import { AppConfig } from '../../config/app.config';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
+import { UploadUtilityService } from '../upload/upload-utility.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
@@ -111,7 +112,8 @@ export class MxCadController {
     private readonly versionControlService: IVersionControl,
     private readonly fileConversionService: FileConversionService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
-    private readonly fileTreeService: FileTreeService
+    private readonly fileTreeService: FileTreeService,
+    private readonly uploadUtilityService: UploadUtilityService
   ) {
     this.mxCadFileExt =
       this.configService.get('conversion.fileExt', { infer: true }) || '.mxweb';
@@ -139,21 +141,31 @@ export class MxCadController {
     this.logger.log(`[chunkisExist] 收到的参数: ${JSON.stringify(body)}`);
     const context = await this.buildContextFromRequest(request);
 
-    // 匿名用户：无历史分片，直接返回不存在
-    if (!context.userId) {
-      this.logger.log('匿名用户预检查：分片不存在，允许上传');
-      return { exists: false };
+    // 对所有用户（包括匿名）检查 uploads 目录中的分片
+    const chunkExistsInStorage = await this.uploadUtilityService.checkChunkExistsInStorage(
+      body.fileHash,
+      body.chunk
+    );
+
+    if (chunkExistsInStorage) {
+      this.logger.log(`[chunkisExist] 分片存在于 uploads 目录: chunk=${body.chunk}, hash=${body.fileHash}`);
+      return { exists: true };
     }
 
-    const result = await this.mxCadService.checkChunkExist(
-      body.chunk,
-      body.fileHash,
-      body.size,
-      body.chunks,
-      body.filename,
-      context
-    );
-    return { exists: result.ret === MxUploadReturn.kChunkAlreadyExist };
+    // 已登录用户：检查项目内的分片
+    if (context.userId && context.nodeId) {
+      const result = await this.mxCadService.checkChunkExist(
+        body.chunk,
+        body.fileHash,
+        body.size,
+        body.chunks,
+        body.filename,
+        context
+      );
+      return { exists: result.ret === MxUploadReturn.kChunkAlreadyExist };
+    }
+
+    return { exists: false };
   }
 
   /**
@@ -175,22 +187,32 @@ export class MxCadController {
   ) {
     const context = await this.buildContextFromRequest(request);
 
-    // 匿名用户：跳过权限检查，直接允许上传
-    if (!context.userId) {
-      this.logger.log('匿名用户预检查：允许上传');
-      return { exists: false };
+    // 对所有用户（包括匿名）检查 uploads 目录中的文件
+    const fileExistsInStorage = await this.uploadUtilityService.checkFileExistsInStorage(
+      body.fileHash,
+      body.filename
+    );
+
+    if (fileExistsInStorage) {
+      this.logger.log(`[fileisExist] 文件存在于 uploads 目录: ${body.filename}, hash=${body.fileHash}`);
+      return { exists: true, nodeId: null };
     }
 
-    context.fileSize = body.fileSize;
-    const result = (await this.mxCadService.checkFileExist(
-      body.filename,
-      body.fileHash,
-      context,
-    ));
-    return {
-      exists: result.ret === MxUploadReturn.kFileAlreadyExist,
-      nodeId: result.nodeId,
-    };
+    // 已登录用户：检查项目内的文件
+    if (context.userId && context.nodeId) {
+      context.fileSize = body.fileSize;
+      const result = (await this.mxCadService.checkFileExist(
+        body.filename,
+        body.fileHash,
+        context,
+      ));
+      return {
+        exists: result.ret === MxUploadReturn.kFileAlreadyExist,
+        nodeId: result.nodeId,
+      };
+    }
+
+    return { exists: false, nodeId: null };
   }
 
   /**
@@ -1814,11 +1836,19 @@ export class MxCadController {
       );
       this.logger.log(`🔍 最终值: nodeId=${nodeId}`);
 
-      // 4. 严格验证 nodeId 是否存在
+      // 4. 严格验证 nodeId 是否存在（匿名上传到 uploads 目录时允许为空）
+      // 只有在需要创建数据库节点时才要求 nodeId
       if (!nodeId) {
-        throw new BadRequestException(
-          '缺少节点ID（nodeId），无法创建文件系统节点'
-        );
+        // 对于可选认证的端点（如 checkFileExist, checkChunkExist），允许 nodeId 为空
+        // 这些端点会检查 uploads 目录中的缓存，不依赖数据库节点
+        this.logger.log('匿名访问（无 nodeId），允许访问 uploads 目录缓存');
+        const context: MxCadContext & { isLibrary?: boolean; isAnonymous?: boolean } = {
+          userId: null as unknown as string,
+          userRole: '',
+          nodeId: undefined,
+          isAnonymous: true,
+        };
+        return context;
       }
 
       // 5. 检查节点是否属于公共资源库（用于 isLibrary 字段）
@@ -1840,8 +1870,11 @@ export class MxCadController {
     } catch (error) {
       this.logger.error(`构建上下文失败: ${error.message}`, error);
 
-      // 验证失败时抛出异常，不再返回空上下文
       if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      if (error instanceof BadRequestException) {
         throw error;
       }
 

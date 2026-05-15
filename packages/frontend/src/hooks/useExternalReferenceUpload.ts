@@ -43,16 +43,19 @@ export const useExternalReferenceUpload = (
   const [isOpen, setIsOpen] = useState(false);
 
   // 确定当前是使用 nodeId 还是 fileHash
-  const isLoggedIn = isAuthenticated();
-  const identifier = isLoggedIn ? (config.nodeId || '') : (config.fileHash || '');
+  // CAD 编辑器场景统一使用 fileHash（通过公开上传服务）
+  const identifier = config.fileHash || config.nodeId || '';
 
   // 使用 ref 存储标识符，确保闭包中始终使用最新值
   const identifierRef = useRef(identifier);
 
   // 在 useEffect 中更新 ref，遵循 React 最佳实践
   useEffect(() => {
-    identifierRef.current = isLoggedIn ? (config.nodeId || '') : (config.fileHash || '');
-  }, [config.nodeId, config.fileHash, isLoggedIn]);
+    identifierRef.current = config.fileHash || config.nodeId || '';
+  }, [config.nodeId, config.fileHash]);
+
+  // 标记是否使用公开上传（CAD编辑器场景）
+  const usePublicUpload = !!config.fileHash;
 
   // 使用 ref 存储正在进行的请求，避免重复请求
 
@@ -108,14 +111,20 @@ export const useExternalReferenceUpload = (
 
       try {
         let data = null;
-        if (isLoggedIn) {
-          // 已登录用户使用 SDK
-          const result = await mxCadControllerGetPreloadingData({ path: { nodeId: id } });
-          data = result?.data as PreloadingData | null;
-        } else {
-          // 未登录用户使用 SDK
+        // 判断是使用公开上传服务还是节点 ID：
+        // - 如果 config.fileHash 存在，使用公开上传服务（CAD 编辑器场景）
+        // - 如果传入的 id 看起来像 hash（32位十六进制），也使用公开上传服务
+        const isHashLike = /^[a-f0-9]{32}$/i.test(id);
+        const shouldUsePublicUpload = usePublicUpload || isHashLike;
+        
+        if (shouldUsePublicUpload) {
+          // CAD 编辑器场景：使用公开上传服务的预加载接口
           const publicResult = await publicFileControllerGetPreloadingData({ path: { hash: id } });
           data = publicResult?.data as PreloadingData | null;
+        } else {
+          // 项目文件场景：使用节点 ID 获取预加载数据
+          const result = await mxCadControllerGetPreloadingData({ path: { nodeId: id } });
+          data = result?.data as PreloadingData | null;
         }
 
         // 如果成功获取数据，更新缓存
@@ -141,8 +150,7 @@ export const useExternalReferenceUpload = (
         pendingRequestsRef.current.delete(id);
       }
     },
-
-    [isLoggedIn]
+    [usePublicUpload]
   );
 
   /**
@@ -153,13 +161,17 @@ export const useExternalReferenceUpload = (
       if (!id) return false;
       try {
         let result = null;
-        if (isLoggedIn) {
-          // 已登录用户使用 SDK
-          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } });
+        // 判断是使用公开上传服务还是节点 ID
+        const isHashLike = /^[a-f0-9]{32}$/i.test(id);
+        const shouldUsePublicUpload = usePublicUpload || isHashLike;
+        
+        if (shouldUsePublicUpload) {
+          // CAD 编辑器场景：使用公开上传服务的检查接口
+          const sdkResult = await publicFileControllerCheckExtReference({ query: { srcHash: id, fileName } });
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
-          // 未登录用户使用 SDK
-          const sdkResult = await publicFileControllerCheckExtReference({ query: { srcHash: id, fileName } });
+          // 项目文件场景：使用节点 ID 检查
+          const sdkResult = await mxCadControllerCheckExternalReference({ path: { nodeId: id }, body: { fileName } });
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         }
         console.debug(
@@ -174,7 +186,7 @@ export const useExternalReferenceUpload = (
         return false;
       }
     },
-    [isLoggedIn]
+    [usePublicUpload]
   );
 
   /**
@@ -427,24 +439,40 @@ export const useExternalReferenceUpload = (
           ? fileInfo.source
           : new File([fileInfo.source], fileInfo.name);
 
-        if (fileInfo.type === 'img') {
-          await mxCadControllerUploadExtReferenceImage({
+        // 判断是使用公开上传服务还是节点 ID
+        const isHashLike = /^[a-f0-9]{32}$/i.test(id);
+        const shouldUsePublicUpload = usePublicUpload || isHashLike;
+        
+        if (shouldUsePublicUpload) {
+          // CAD 编辑器场景：使用公开上传服务
+          await publicFileControllerUploadExtReference({
             body: {
               file: extRefFile,
-              nodeId: id,
+              srcHash: id,
               ext_ref_file: fileInfo.name,
-              updatePreloading: true,
             },
           });
         } else {
-          await mxCadControllerUploadExtReferenceDwg({
-            path: { nodeId: id },
-            body: {
-              file: extRefFile,
-              nodeId: id,
-              ext_ref_file: fileInfo.name,
-            },
-          });
+          // 项目文件场景：使用节点 ID 上传
+          if (fileInfo.type === 'img') {
+            await mxCadControllerUploadExtReferenceImage({
+              body: {
+                file: extRefFile,
+                nodeId: id,
+                ext_ref_file: fileInfo.name,
+                updatePreloading: true,
+              },
+            });
+          } else {
+            await mxCadControllerUploadExtReferenceDwg({
+              path: { nodeId: id },
+              body: {
+                file: extRefFile,
+                nodeId: id,
+                ext_ref_file: fileInfo.name,
+              },
+            });
+          }
         }
 
         // 更新状态为成功
@@ -472,7 +500,7 @@ export const useExternalReferenceUpload = (
 
     setLocalLoading(false);
     setGlobalLoading(false);
-  }, [files, config.nodeId, config.onError, isLoggedIn, setGlobalLoading]);
+  }, [files, config.nodeId, config.onError, usePublicUpload, setGlobalLoading]);
 
   /**
    * 关闭模态框

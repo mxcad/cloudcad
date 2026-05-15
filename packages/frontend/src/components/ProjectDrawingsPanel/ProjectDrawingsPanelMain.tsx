@@ -641,7 +641,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             else { const lb = breadcrumb[breadcrumb.length - 1]; if (lb) loadNodes(lb.id, 1, query); }
           }}
           onItemClick={handleItemClick} doubleClickToOpen={doubleClickToOpen}
-          emptyText={searchQuery ? '未找到匹配的内容' : '当前目录为空'}
+          emptyText={searchQuery ? '未找到匹配的内容' : `当前没有${libraryType === 'drawing' ? '图纸' : libraryType === 'block' ? '图块' : '内容'}`}
           defaultViewMode="grid" total={total} totalPages={totalPages} currentPage={currentPage}
           onPageChange={handlePageChange} paginationEnabled={true}
           breadcrumb={

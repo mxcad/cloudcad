@@ -159,6 +159,40 @@ export class UploadUtilityService {
     return `${fileHash}.${suffix}.mxweb`;
   }
 
+  async checkChunkExistsInStorage(
+    fileHash: string,
+    chunkIndex: number
+  ): Promise<boolean> {
+    const uploadPath =
+      this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
+    const chunkDir = path.join(uploadPath, `chunk_${fileHash}`);
+    
+    if (!fs.existsSync(chunkDir)) {
+      return false;
+    }
+
+    const chunkFileName = `${chunkIndex}_${fileHash}`;
+    const chunkPath = path.join(chunkDir, chunkFileName);
+
+    if (!fs.existsSync(chunkPath)) {
+      return false;
+    }
+
+    try {
+      const fd = fs.openSync(chunkPath, 'r');
+      const stats = fs.fstatSync(fd);
+      fs.closeSync(fd);
+
+      if (stats.size === 0) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   async generateUniqueFileName(
     parentId: string,
     baseName: string

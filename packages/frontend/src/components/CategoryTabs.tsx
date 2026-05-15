@@ -43,6 +43,42 @@ export interface CategoryLevel {
   items: CategoryItem[];
 }
 
+/**
+ * 处理分类名称去重显示
+ * 当上级分类选中"全部"时，下级分类可能出现同名，需要加上父级名称区分
+ * @param categories 所有层级的分类数据
+ * @param selectedPath 当前选中路径
+ * @param item 当前分类项
+ * @returns 处理后的显示名称
+ */
+function getDisplayName(
+  categories: CategoryLevel[],
+  selectedPath: string[],
+  item: CategoryItem
+): string {
+  if (item.id === 'all') return item.name;
+  
+  const level = categories.findIndex(c => c.items.some(i => i.id === item.id));
+  if (level <= 0) return item.name;
+  
+  const parentLevel = categories.find(c => c.level === level - 1);
+  if (!parentLevel) return item.name;
+  
+  const parentSelectedId = selectedPath[level - 1];
+  if (parentSelectedId !== 'all') return item.name;
+  
+  const parentItem = parentLevel.items.find(p => p.id === item.parentId);
+  if (!parentItem || parentItem.id === 'all') return item.name;
+  
+  const currentLevelItems = categories.find(c => c.level === level);
+  if (!currentLevelItems) return item.name;
+  
+  const sameNameItems = currentLevelItems.items.filter(i => i.name === item.name && i.id !== item.id);
+  if (sameNameItems.length === 0) return item.name;
+  
+  return `${item.name} - ${parentItem.name}`;
+}
+
 interface CategoryTabsProps {
   categories: CategoryLevel[];
   selectedPath: string[];
@@ -58,7 +94,9 @@ const CategoryLevelRow: React.FC<{
   selectedId: string | null;
   onSelect: (categoryId: string) => void;
   isLastLevel: boolean;
-}> = ({ items, selectedId, onSelect, isLastLevel }) => {
+  categories: CategoryLevel[];
+  selectedPath: string[];
+}> = ({ items, selectedId, onSelect, isLastLevel, categories, selectedPath }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
 
@@ -110,16 +148,19 @@ const CategoryLevelRow: React.FC<{
   return (
     <div className={`${styles.categoryRow} ${isLastLevel ? styles.lastRow : ''}`}>
       <div ref={containerRef} className={styles.categoryContainer}>
-        {items.map((item) => (
-          <button
-            key={item.id}
-            ref={item.id === selectedId ? selectedRef : null}
-            className={`${styles.categoryButton} ${item.id === selectedId ? styles.active : ''}`}
-            onClick={() => handleSelect(item.id)}
-          >
-            {item.name}
-          </button>
-        ))}
+        {items.map((item) => {
+            const displayName = getDisplayName(categories, selectedPath, item);
+            return (
+              <button
+                key={item.id}
+                ref={item.id === selectedId ? selectedRef : null}
+                className={`${styles.categoryButton} ${item.id === selectedId ? styles.active : ''}`}
+                onClick={() => handleSelect(item.id)}
+              >
+                {displayName}
+              </button>
+            );
+          })}
       </div>
     </div>
   );
@@ -222,7 +263,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
               className={styles.categorySelect}
             >
               {getLevelItems(0).map(item => (
-                <option key={item.id} value={item.id}>{item.name}</option>
+                <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
               ))}
             </select>
           </div>
@@ -237,7 +278,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             >
               {getLevelItems(1).length > 0 ? (
                 getLevelItems(1).map(item => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
                 ))
               ) : (
                 <option value="all">暂无分类</option>
@@ -255,7 +296,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             >
               {getLevelItems(2).length > 0 ? (
                 getLevelItems(2).map(item => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
                 ))
               ) : (
                 <option value="all">暂无分类</option>
@@ -289,6 +330,8 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
               selectedId={selectedId}
               onSelect={(categoryId) => onSelect(categoryLevel.level, categoryId)}
               isLastLevel={isLastLevel}
+              categories={categories}
+              selectedPath={selectedPath}
             />
           );
         })}

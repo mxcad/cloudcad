@@ -20,6 +20,8 @@ import {
   Query,
   Req,
   Res,
+  VERSION_NEUTRAL,
+  Version,
 } from '@nestjs/common';
 import type {
   Response as ExpressResponse,
@@ -736,6 +738,7 @@ export class AuthController {
   }
 
   @Get('wechat/callback')
+  @Version(VERSION_NEUTRAL)
   @Public()
   @ApiOperation({ summary: '微信授权回调' })
   @ApiResponse({

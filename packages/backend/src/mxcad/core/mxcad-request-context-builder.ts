@@ -100,14 +100,8 @@ export class MxCadRequestContextBuilder {
       // 匿名访问：返回部分上下文（无用户信息）
       this.logger.log('匿名访问：返回部分上下文');
 
-      if (!nodeId) {
-        throw new BadRequestException(
-          '缺少节点ID（nodeId），无法创建文件系统节点',
-        );
-      }
-
       const context: MxCadContext & { isLibrary?: boolean } = {
-        nodeId,
+        nodeId: nodeId || undefined,
         userId: undefined as any,
         userRole: undefined as any,
         conflictStrategy: request.body?.conflictStrategy || 'rename',

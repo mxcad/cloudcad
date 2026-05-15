@@ -1048,7 +1048,6 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
     });
 
     hideGlobalLoading();
-    globalShowToast('文件已打开', 'success');
   } catch (error) {
     hideGlobalLoading();
     const errorMessage =
@@ -1067,13 +1066,67 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
     showGlobalLoading('正在计算文件哈希...');
     const hash = await calculateFileHash(file);
 
-    // 匿名上传：使用分片上传到公开端点
+    // 非 noCache 模式下检查缓存（包括匿名用户）
+    if (!noCache) {
+      setLoadingMessage('正在检查缓存...');
+      const existData = await mxCadControllerCheckFileExist({
+        body: {
+          fileSize: file.size,
+          fileHash: hash,
+          filename: file.name,
+          nodeId: '',
+        },
+      });
+
+      if (existData.data?.exists) {
+        // ⚡ 秒传成功！直接打开已存在的文件
+        hideGlobalLoading();
+
+        const event = new CustomEvent('public-file-uploaded', {
+          detail: {
+            fileHash: hash,
+            fileName: file.name,
+            noCache: noCache,
+            callback: async () => {
+              try {
+                showGlobalLoading('正在打开文件...');
+                const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
+                const mxwebFilename = `${hash}${ext}.mxweb`;
+                const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
+
+                // 先设置文件信息，再打开文件
+                // 确保文件打开完成时 currentFileInfo 已存在
+                setCurrentFileInfo({
+                  fileId: '',
+                  parentId: null,
+                  projectId: null,
+                  name: file.name,
+                  personalSpaceId: null,
+                });
+
+                await mxcadManager.openFile(fileUrl, noCache);
+
+                hideGlobalLoading();
+              } catch (error) {
+                hideGlobalLoading();
+                const errorMessage = error instanceof Error ? error.message : '文件打开失败';
+                globalShowToast(errorMessage, 'error');
+              }
+            },
+          },
+        });
+        window.dispatchEvent(event);
+        return;
+      }
+    }
+
+    // 缓存未命中，继续上传
     setLoadingMessage('正在上传文件...');
     await uploadMxCadFile({
       file,
       hash,
       nodeId: '',
-      forceUpload: true, // 匿名/公开上传，跳过节点检查和秒传
+      forceUpload: true, // 公开上传始终启用强制上传模式，允许 nodeId 为空
       onProgress: (percentage: number) => {
         setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
       },
@@ -1096,8 +1149,8 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
             const mxwebFilename = `${hash}${ext}.mxweb`;
             const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
 
-            await mxcadManager.openFile(fileUrl, noCache);
-
+            // 先设置文件信息，再打开文件
+            // 确保文件打开完成时 currentFileInfo 已存在
             setCurrentFileInfo({
               fileId: '',
               parentId: null,
@@ -1106,8 +1159,9 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
               personalSpaceId: null,
             });
 
+            await mxcadManager.openFile(fileUrl, noCache);
+
             hideGlobalLoading();
-            globalShowToast('文件已打开', 'success');
           } catch (error) {
             hideGlobalLoading();
             const errorMessage = error instanceof Error ? error.message : '文件打开失败';
@@ -1236,25 +1290,11 @@ const openFile = async (noCache?: boolean) => {
           return;
         }
 
-        // 检查登录状态
-        if (!isAuthenticated()) {
-          // 未登录 → 使用公开上传服务
-          await handlePublicUpload(selectedFile, noCache);
-          picker.value = '';
-          return;
-        }
-
-        // 已登录 → 获取上传目标并上传
-        try {
-          const uploadTargetNodeId = await getUploadTargetNodeId();
-          await handleFileSelection(selectedFile, uploadTargetNodeId);
-        } catch (error) {
-          handleError(error, 'mxcadManager: handleFilePickerChange');
-          globalShowToast(
-            error instanceof Error ? error.message : '获取上传目标失败',
-            'error'
-          );
-        }
+        // CAD 编辑器统一使用公开上传服务
+        // 原因：CAD 编辑器通过 uploads 目录访问文件，已登录用户也走此路径以统一缓存逻辑
+        await handlePublicUpload(selectedFile, noCache);
+        picker.value = '';
+        return;
       }
       picker.value = '';
     };
@@ -2148,6 +2188,18 @@ class MxCADInstanceManager {
    */
   private setupFileOpenListener(): void {
     const onOpen = async () => {
+      // 文件打开完成后，派发全局事件通知 UI 隐藏加载状态
+      console.log('[setupFileOpenListener] onOpen 触发', { currentFileInfo });
+
+      window.dispatchEvent(
+        new CustomEvent('mxcad-file-open-complete', {
+          detail: {
+            fileId: currentFileInfo?.fileId,
+            fileName: currentFileInfo?.name,
+          },
+        })
+      );
+      
       // 文件打开完成后，重置修改状态
       resetDocumentModified();
 

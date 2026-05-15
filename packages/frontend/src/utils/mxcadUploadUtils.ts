@@ -164,7 +164,8 @@ export async function uploadFile(
   const data = existData.data!
  
   if (data?.exists) {
-    // 秒传成功
+    // 秒传成功，设置进度为100%
+    onProgress?.(100);
     const instantNodeId = data.nodeId || nodeId;
     return {
       file,
@@ -210,6 +211,12 @@ export async function uploadFile(
       onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
       continue;
     }
+    // 如果是最后一个分片，立即设置进度为100%
+    // 用户感知上，传完最后一个分片就等于上传完成了
+    if (isLastChunk(chunkIndex)) {
+      onProgress?.(100);
+    }
+
     const uploadData = await mxCadControllerUploadFile({
       body: {
         chunk: chunkIndex,
@@ -247,11 +254,17 @@ export async function uploadFile(
       }
     }
 
-    onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
+    // 非最后一个分片上传完成后更新进度
+    if (!isLastChunk(chunkIndex)) {
+      onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
+    }
   }
 
   // 3. 如果所有分片都已存在（没有上传任何新分片），发送合并请求
   if (!hasUploadedAnyChunk) {
+    // 所有分片都已存在，设置进度为100%
+    onProgress?.(100);
+    
     const mergeData = await mxCadControllerUploadFile({
       body: {
         chunks: totalChunks,
@@ -285,6 +298,9 @@ export async function uploadFile(
   // 4. 直接使用合并时返回的 nodeId
   // 避免再次调用 fileisExist API，防止触发秒传逻辑导致重复创建节点
   const finalNodeId = newNodeId || nodeId;
+
+  // 上传完成，设置进度为100%
+  onProgress?.(100);
 
   return {
     file,
