@@ -106,21 +106,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       window.removeEventListener('mxcad-theme-changed', handleThemeChange as EventListener);
     };
   }, []);
-  const syncToMxcad = async () => {
-    try {
-      const { mxcadApp } = await import('mxcad-app');
-      const vuetify = await mxcadApp.getVuetify();
-      const target = isDark ? 'dark' : 'light';
-      if (vuetify.theme.global.name.value !== target) {
-        vuetify.theme.change(target);
-      }
-    } catch {
-      // mxcad-app 尚未加载
-    }
-  };
-  // isDark 变化时同步 mxcad-app Vuetify 主题（差量检查避免重复调用）
+  // isDark 变化时通过事件通知 CAD 编辑器同步 Vuetify 主题
+  // 不直接 import('mxcad-app')，避免样式污染非 CAD 页面
   useEffect(() => {
-    window.MxPluginContext && syncToMxcad();
+    if (window.MxCAD) {
+      window.dispatchEvent(new CustomEvent('react-theme-changed', { detail: { isDark } }));
+    }
   }, [isDark]);
 
   const toggleTheme = useCallback(async () => {

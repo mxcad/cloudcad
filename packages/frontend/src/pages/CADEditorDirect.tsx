@@ -38,6 +38,7 @@ declare global {
       parentId?: string;
       userRole: string;
     };
+    MxCAD?: any
   }
   // eslint-disable-next-line no-var
   var MxPluginContext: {
@@ -321,50 +322,43 @@ export const CADEditorDirect: React.FC = () => {
       const { mxcadApp } = await import('mxcad-app');
       const vuetify = await mxcadApp.getVuetify();
 
-      // 动态导入 Vue 的 watch 函数
-      const { watch } = await import('vue') as { watch: (source: () => unknown, cb: (value: unknown) => void) => void };
+      // 拦截 vuetify.theme.change 方法，替代 Vue watch
+      // 原因：watch 在多个 await 后才注册，错过 mxcad-app 异步初始化时的主题切换
+      // patch 方式无论何时调用都能捕获，且不依赖 Vue 响应式系统
+      const originalChange = vuetify.theme.change.bind(vuetify.theme);
+      vuetify.theme.change = (name: string) => {
+        originalChange(name);
+        window.dispatchEvent(
+          new CustomEvent('mxcad-theme-changed', {
+            detail: { isDark: name === 'dark' },
+          })
+        );
+      };
 
       // 从 localStorage 读取用户设置的主题
       const storedTheme = localStorage.getItem('mx-user-dark');
-      const userThemeIsDark = storedTheme ? storedTheme === 'true' : true; // 默认暗色
+      const userThemeIsDark = storedTheme ? storedTheme === 'true' : true;
       const currentMxcadTheme = vuetify.theme.global.name.value;
       const mxcadIsDark = currentMxcadTheme === 'dark';
 
-      // 如果主题不一致，同步 localStorage 的主题到 mxcad-app
+      // 初始同步：以 localStorage 为准对齐 Vuetify
+      // 覆盖两种情况：
+      //   1. mxcad-app 在 patch 前已完成异步主题切换
+      //   2. mxcad-app 尚未初始化主题（默认值与用户偏好不同）
       if (userThemeIsDark !== mxcadIsDark) {
         vuetify.theme.change(userThemeIsDark ? 'dark' : 'light');
       }
 
-      // 使用 Vue watch 监听 Vuetify 主题变化
-      watch(
-        () => vuetify.theme.global.name.value,
-        (themeName: unknown) => {
-          const isDark = themeName === 'dark';
-
-          // 派发事件通知 React ThemeContext
-          window.dispatchEvent(
-            new CustomEvent('mxcad-theme-changed', {
-              detail: { isDark },
-            })
-          );
-
-          // 双保险：直接更新 DOM 和 localStorage（与 ThemeContext.applyThemeToDOM 保持一致）
-          const theme = isDark ? 'dark' : 'light';
-          document.documentElement.setAttribute('data-theme', theme);
-          document.body.setAttribute('data-theme', theme);
-
-          // 同时更新 body 的 class（向后兼容）
-          if (isDark) {
-            document.body.classList.add('dark-theme');
-            document.body.classList.remove('light-theme');
-          } else {
-            document.body.classList.add('light-theme');
-            document.body.classList.remove('dark-theme');
-          }
-
-          localStorage.setItem('mx-user-dark', String(isDark));
+      // 监听 React 主题变化事件，同步到 Vuetify
+      // 避免 ThemeContext 直接 import('mxcad-app') 污染非 CAD 页面样式
+      const handleReactThemeChanged = (e: Event) => {
+        const { isDark: newIsDark } = (e as CustomEvent<{ isDark: boolean }>).detail;
+        const target = newIsDark ? 'dark' : 'light';
+        if (vuetify.theme.global.name.value !== target) {
+          vuetify.theme.change(target);
         }
-      );
+      };
+      window.addEventListener('react-theme-changed', handleReactThemeChanged);
 
       // 标记主题同步已初始化
       isThemeSyncInitialized.current = true;
