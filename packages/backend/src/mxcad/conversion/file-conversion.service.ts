@@ -10,11 +10,10 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { ProcessRunnerService } from "../../conversion";
 import { Injectable, Logger } from "@nestjs/common";
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { ConfigService } from "@nestjs/config";
+import { exec } from "child_process";
+import { promisify } from "util";
 import * as os from "os";
 import * as path from "path";
 import { RateLimiter } from "../../common/concurrency/rate-limiter";
@@ -24,6 +23,8 @@ import type {
 	IFileConversionService,
 } from "../interfaces/file-conversion.interface";
 import { FileTypeDetector } from "../utils/file-type-detector";
+
+const execAsync = promisify(exec);
 
 @Injectable()
 export class FileConversionService implements IFileConversionService {
@@ -36,10 +37,9 @@ export class FileConversionService implements IFileConversionService {
 
 	constructor(
 		private readonly configService: ConfigService,
-		private readonly processRunner: ProcessRunnerService,
 	) {
 		// 获取 MxCAD 转换配置
-		const conversionConfig = this.configService.get("conversion", { infer: true });
+		const mxcadConfig = this.configService.get("mxcad", { infer: true });
 
 		// 获取上传并发配置
 		const uploadConfig = this.configService.get("upload", { infer: true });
@@ -65,7 +65,7 @@ export class FileConversionService implements IFileConversionService {
 		const projectRoot = path.join(process.cwd(), "..", "..");
 
 		this.mxCadAssemblyPath =
-			conversionConfig?.binPath ||
+			mxcadConfig?.assemblyPath ||
 			(isLinux
 				? path.join(projectRoot, "runtime", "linux", "mxcad", "mxcadassembly")
 				: path.join(
@@ -81,8 +81,8 @@ export class FileConversionService implements IFileConversionService {
 			? path.join(projectRoot, "runtime", "linux", "mxcad")
 			: "";
 
-		this.mxCadFileExt = conversionConfig?.fileExt || ".mxweb";
-		this.compression = conversionConfig?.compression !== false;
+		this.mxCadFileExt = mxcadConfig?.fileExt || ".mxweb";
+		this.compression = mxcadConfig?.compression !== false;
 	}
 
 	/**
@@ -137,6 +137,8 @@ export class FileConversionService implements IFileConversionService {
 	): Promise<ConversionResult> {
 		let stdout = "";
 		let stderr = "";
+		const originalDir = process.cwd();
+		let changedDir = false;
 
 		try {
 			const {
@@ -191,26 +193,48 @@ export class FileConversionService implements IFileConversionService {
 				param.outjpg = outjpg;
 			}
 
-			const runOpts: Record<string, unknown> = {
-				args: [JSON.stringify(param)],
-				timeoutMs: options.timeout || 60000,
-			};
+			// Linux 平台特殊处理
+			if (this.isLinux()) {
+				if (this.mxCadBinPath) {
+					process.chdir(this.mxCadBinPath);
+					changedDir = true;
+					this.logger.log(`[Linux] 切换工作目录: ${this.mxCadBinPath}`);
+				}
 
-			// Linux 平台需要设置工作目录
-			if (this.isLinux() && this.mxCadBinPath) {
-				runOpts.cwd = this.mxCadBinPath;
+				// 将参数中的双引号替换为单引号
+				const paramStr = JSON.stringify(param).replace(/"/g, "'");
+				const cmd = `"${this.mxCadAssemblyPath}" "${paramStr}"`;
+				this.logger.log(`执行 MxCAD 转换命令 (Linux): ${cmd}`);
+
+				const execResult = await execAsync(cmd, {
+					encoding: "utf8",
+					timeout: options.timeout || 60000,
+					maxBuffer: 50 * 1024 * 1024,
+				});
+
+				stdout = execResult.stdout;
+				stderr = execResult.stderr;
+			} else {
+				// Windows 平台
+				const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
+				this.logger.log(`执行 MxCAD 转换命令: ${cmd}`);
+
+				const execResult = await execAsync(cmd, {
+					encoding: "utf8",
+					timeout: options.timeout || 60000,
+					maxBuffer: 50 * 1024 * 1024,
+				});
+
+				stdout = execResult.stdout;
+				stderr = execResult.stderr;
 			}
 
-			const result = await this.processRunner.run(
-				this.mxCadAssemblyPath,
-				runOpts as any,
-			);
-
-			stdout = result.stdout;
-			stderr = result.stderr;
-
 			// 尝试从 stdout 或 stderr 解析结果
-			const output = stdout || stderr || "";
+			const output = Buffer.isBuffer(stdout)
+				? stdout.toString()
+				: stdout ||
+					(Buffer.isBuffer(stderr) ? stderr.toString() : stderr) ||
+					"";
 
 			try {
 				let strOutput = output.toString();
@@ -258,20 +282,17 @@ export class FileConversionService implements IFileConversionService {
 
 			if (outputToCheck) {
 				try {
-					// 确保 outputToCheck 是字符串
 					const outputStr =
 						typeof outputToCheck === "string"
 							? outputToCheck
 							: outputToCheck.toString();
 
-					// 查找 JSON 位置
 					const iPos = outputStr.lastIndexOf('{"code"');
 
 					if (iPos !== -1) {
 						const strOutput = outputStr.substring(iPos);
 						const ret = JSON.parse(strOutput);
 
-						// 如果输出包含成功的结果，视为转换成功
 						if (ret.code === 0) {
 							this.logger.log(`文件转换成功: ${options.srcPath}`);
 							return { isOk: true, ret };
@@ -282,7 +303,6 @@ export class FileConversionService implements IFileConversionService {
 				}
 			}
 
-			// 只有在真正失败时才输出错误日志
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
 			const errorCode = (error as { code?: string | number }).code;
@@ -297,6 +317,12 @@ export class FileConversionService implements IFileConversionService {
 				ret: { code: -1, message: errorMessage },
 				error: errorMessage,
 			};
+		} finally {
+			// 恢复原始工作目录
+			if (changedDir) {
+				process.chdir(originalDir);
+				this.logger.log(`[Linux] 恢复工作目录: ${originalDir}`);
+			}
 		}
 	}
 
@@ -304,7 +330,6 @@ export class FileConversionService implements IFileConversionService {
 		options: ConversionOptions,
 		callbackUrl?: string,
 	): Promise<string> {
-		// TODO: 实现异步转换逻辑
 		const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 		this.logger.warn(`异步转换功能尚未实现，返回任务ID: ${taskId}`);
 		return taskId;
@@ -313,7 +338,6 @@ export class FileConversionService implements IFileConversionService {
 	async checkConversionStatus(
 		taskId: string,
 	): Promise<{ code: number; status?: string }> {
-		// TODO: 实现转换状态检查逻辑
 		this.logger.warn(`转换状态检查功能尚未实现，任务ID: ${taskId}`);
 		return { code: 0, status: "completed" };
 	}
@@ -340,14 +364,6 @@ export class FileConversionService implements IFileConversionService {
 		return FileTypeDetector.needsConversion(filename);
 	}
 
-	/**
-	 * 将 .bin 文件转换成 .mxweb 文件
-	 * 用于历史版本访问时从 SVN 中的 bin 文件恢复 mxweb 文件
-	 * @param binPath bin 文件的完整路径
-	 * @param outputPath 输出目录
-	 * @param outName 输出文件名（如 test2.mxweb）
-	 * @returns 转换结果，包含输出文件路径
-	 */
 	async convertBinToMxweb(
 		binPath: string,
 		outputPath: string,
@@ -355,40 +371,59 @@ export class FileConversionService implements IFileConversionService {
 	): Promise<{ success: boolean; outputPath?: string; error?: string }> {
 		let stdout = "";
 		let stderr = "";
+		const originalDir = process.cwd();
+		let changedDir = false;
 
 		try {
 			this.logger.log(`[convertBinToMxweb] 开始转换: ${binPath} -> ${outName}`);
 
-			// 确保路径是绝对路径
 			const absoluteBinPath = this.resolveToAbsolutePath(binPath);
 			const absoluteOutputPath = this.resolveToAbsolutePath(outputPath);
 
-			// 构建参数：bin 转 mxweb 需要 srcpath, outpath, outname
 			const param: Record<string, string> = {
 				srcpath: absoluteBinPath.replace(/\\/g, "/"),
 				outpath: absoluteOutputPath.replace(/\\/g, "/"),
 				outname: outName,
 			};
 
-			const runOpts: Record<string, unknown> = {
-				args: [JSON.stringify(param)],
-				timeoutMs: 60000,
-			};
+			if (this.isLinux()) {
+				if (this.mxCadBinPath) {
+					process.chdir(this.mxCadBinPath);
+					changedDir = true;
+					this.logger.log(`[Linux] 切换工作目录: ${this.mxCadBinPath}`);
+				}
 
-			// Linux 平台需要设置工作目录
-			if (this.isLinux() && this.mxCadBinPath) {
-				runOpts.cwd = this.mxCadBinPath;
+				const paramStr = JSON.stringify(param).replace(/"/g, "'");
+				const cmd = `"${this.mxCadAssemblyPath}" "${paramStr}"`;
+				this.logger.log(`执行 bin→mxweb 转换命令 (Linux): ${cmd}`);
+
+				const execResult = await execAsync(cmd, {
+					encoding: "utf8",
+					timeout: 60000,
+					maxBuffer: 50 * 1024 * 1024,
+				});
+
+				stdout = execResult.stdout;
+				stderr = execResult.stderr;
+			} else {
+				const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
+				this.logger.log(`执行 bin→mxweb 转换命令: ${cmd}`);
+
+				const execResult = await execAsync(cmd, {
+					encoding: "utf8",
+					timeout: 60000,
+					maxBuffer: 50 * 1024 * 1024,
+				});
+
+				stdout = execResult.stdout;
+				stderr = execResult.stderr;
 			}
 
-			const result = await this.processRunner.run(
-				this.mxCadAssemblyPath,
-				runOpts as any,
-			);
-			stdout = result.stdout;
-			stderr = result.stderr;
-
-			// 尝试从输出解析结果
-			const output = stdout || stderr || "";
+			const output = Buffer.isBuffer(stdout)
+				? stdout.toString()
+				: stdout ||
+					(Buffer.isBuffer(stderr) ? stderr.toString() : stderr) ||
+					"";
 
 			try {
 				let strOutput = output.toString();
@@ -418,7 +453,6 @@ export class FileConversionService implements IFileConversionService {
 				stderr?: string | Buffer;
 			};
 
-			// 确保 stdout 和 stderr 是字符串
 			const errorStdout = err.stdout
 				? Buffer.isBuffer(err.stdout)
 					? err.stdout.toString()
@@ -430,7 +464,6 @@ export class FileConversionService implements IFileConversionService {
 					: err.stderr
 				: stderr || "";
 
-			// 检查输出是否包含成功的结果
 			const outputToCheck = errorStdout || errorStderr;
 
 			if (outputToCheck) {
@@ -458,6 +491,11 @@ export class FileConversionService implements IFileConversionService {
 			this.logger.error(`stderr: [${errorStderr}]`);
 
 			return { success: false, error: err.message };
+		} finally {
+			if (changedDir) {
+				process.chdir(originalDir);
+				this.logger.log(`[Linux] 恢复工作目录: ${originalDir}`);
+			}
 		}
 	}
 }

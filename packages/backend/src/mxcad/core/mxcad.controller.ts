@@ -821,7 +821,14 @@ export class MxCadController {
       );
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
-    // 使用共享的文件处理服务
+
+    // 检查是否请求历史版本（通过 v 参数）
+    const versionParam = req.query.v as string | undefined;
+    if (versionParam) {
+      return this.handleFilesDataFileRequest(filename, res, req, false);
+    }
+
+    // 正常请求：使用共享的文件处理服务
     return this.mxcadFileHandler.serveFile(filename, res);
   }
 
