@@ -750,22 +750,26 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!content) return;
-        
+
         if (loadDirection === 'up' && heightDiff > 0) {
           // 向上加载：新内容在前面，需要向下滚动 heightDiff 来保持原位置
           content.scrollTop = oldTop + heightDiff;
+          lastScrollTopRef.current = oldTop + heightDiff;
         } else if (loadDirection === 'jump') {
           // 跳页：设置到合适位置，方便双向滚动
           const targetScrollTop = Math.min(200, newHeight * 0.3);
           content.scrollTop = targetScrollTop;
+          lastScrollTopRef.current = targetScrollTop;
+        } else {
+          // 向下加载或无限滚动：同步 lastScrollTopRef 防止 stale 值干扰方向判断
+          lastScrollTopRef.current = content.scrollTop;
         }
-        // 向下加载或无限滚动：不需要调整，保持原位
       });
     });
 
     // 加载完成后回调
     onLoadComplete?.();
-    
+
     // 重置
     beforeLoad.current = null;
   }, [loading, items.length, loadDirection, onLoadComplete]);
