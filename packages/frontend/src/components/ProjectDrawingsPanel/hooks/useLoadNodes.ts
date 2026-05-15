@@ -3,8 +3,7 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import { useLibraryQuery } from '@/hooks/library/useLibraryQuery';
 import { useFileSystemChildren } from '@/hooks/useFileSystemChildren';
 import { useBuildBreadcrumbs } from '@/hooks/useBuildBreadcrumbs';
@@ -12,7 +11,6 @@ import type { FileSystemNode } from '@/types/filesystem';
 import type { BreadcrumbItem } from '@/components/ProjectDrawingsPanel/types';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import { PAGE_SIZE } from '@/components/ProjectDrawingsPanel/constants';
-import { queryKeys } from '@/lib/queryKeys';
 
 export interface UseLoadNodesReturn {
   nodes: FileSystemNode[];
@@ -52,8 +50,6 @@ export function useLoadNodes(
   const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  const queryClient = useQueryClient();
-
   // 共享面包屑 hook
   const { buildBreadcrumbPath } = useBuildBreadcrumbs();
 
@@ -67,6 +63,8 @@ export function useLoadNodes(
     page: currentPage,
     limit: PAGE_SIZE,
     search: librarySearch,
+    onTotalChange: setTotal,
+    onTotalPagesChange: setTotalPages,
   });
 
   // ── File system mode: 使用 useFileSystemChildren ──
@@ -81,11 +79,49 @@ export function useLoadNodes(
     projectId,
   });
 
+  // ── Library 模式：使用 displayNodes 支持 append/prepend/replace ──
+  const loadModeRef = useRef<'replace' | 'append' | 'prepend'>('replace');
+  const [displayNodes, setDisplayNodes] = useState<FileSystemNode[]>([]);
+
+  // 【先】节点ID或搜索变更时重置 displayNodes（必须在 merge effect 之前执行）
+  useEffect(() => {
+    if (!isLibraryMode) return;
+    setDisplayNodes([]);
+    loadModeRef.current = 'replace';
+  }, [isLibraryMode, libraryNodeId, librarySearch]);
+
+  // 【后】监听 useLibraryQuery 返回的新数据，按模式合并到 displayNodes
+  // 跳过 keepPreviousData 占位数据（isPlaceholderData），只写入真实数据
+  useEffect(() => {
+    if (!isLibraryMode) return;
+    if (libraryQuery.isPlaceholderData) return;
+
+    const newNodes = libraryQuery.nodes;
+
+    if (loadModeRef.current === 'replace') {
+      setDisplayNodes(newNodes);
+    } else if (loadModeRef.current === 'append') {
+      setDisplayNodes((prev) => {
+        const map = new Map<string, FileSystemNode>();
+        prev.forEach((n) => map.set(n.id, n));
+        newNodes.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        return Array.from(map.values());
+      });
+    } else if (loadModeRef.current === 'prepend') {
+      setDisplayNodes((prev) => {
+        const map = new Map<string, FileSystemNode>();
+        newNodes.forEach((n) => map.set(n.id, n));
+        prev.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        return Array.from(map.values());
+      });
+    }
+  }, [isLibraryMode, libraryQuery.nodes, libraryQuery.isPlaceholderData]);
+
   // ── 合并结果 ──
   const nodes = useMemo(() => {
-    if (isLibraryMode) return libraryQuery.nodes;
+    if (isLibraryMode) return displayNodes;
     return fsQuery.nodes;
-  }, [isLibraryMode, libraryQuery.nodes, fsQuery.nodes]);
+  }, [isLibraryMode, displayNodes, fsQuery.nodes]);
 
   const loading = useMemo(() => {
     if (isLibraryMode) return libraryQuery.loading;
@@ -100,10 +136,8 @@ export function useLoadNodes(
   // ── Library mode: 同步分页信息 ──
   useEffect(() => {
     if (!isLibraryMode) return;
-    // useLibraryQuery 通过 onTotalChange/onTotalPagesChange 回调报告分页
-    // 这里我们从节点数量推断 hasMore
-    setHasMore(libraryQuery.nodes.length >= PAGE_SIZE);
-  }, [isLibraryMode, libraryQuery.nodes.length]);
+    setHasMore(currentPage < totalPages);
+  }, [isLibraryMode, currentPage, totalPages]);
 
   // ── File system mode: 同步分页信息 ──
   useEffect(() => {
@@ -123,16 +157,17 @@ export function useLoadNodes(
     ) => {
       setCurrentPage(page);
 
+      // 记录加载模式，用于 displayNodes 的合并策略
+      if (append === 'prepend') loadModeRef.current = 'prepend';
+      else if (append === true) loadModeRef.current = 'append';
+      else loadModeRef.current = 'replace';
+
       if (isLibraryMode) {
-        // Library mode: 更新查询参数，React Query 自动加载
         setLibraryNodeId(nodeId);
         setLibrarySearch(search || '');
-        // 分页信息由 useEffect 同步
       } else {
-        // File system mode: 更新查询参数
         setFsNodeId(nodeId);
         setFsSearch(search);
-        // 分页信息由 useEffect 同步
       }
     },
     [isLibraryMode]
@@ -144,14 +179,13 @@ export function useLoadNodes(
     setTotal(0);
     setTotalPages(1);
     setHasMore(false);
+    setDisplayNodes([]);
+    loadModeRef.current = 'replace';
     setLibraryNodeId(undefined);
     setLibrarySearch('');
     setFsNodeId(undefined);
     setFsSearch(undefined);
-    // 清除 React Query 缓存
-    queryClient.refetchQueries({ queryKey: queryKeys.library.all, type: 'active' });
-    queryClient.refetchQueries({ queryKey: queryKeys.fileSystem.all, type: 'active' });
-  }, [queryClient]);
+  }, []);
 
   const loadNodesRef = useRef(loadNodes);
   const buildBreadcrumbPathRef = useRef(buildBreadcrumbPath);

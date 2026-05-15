@@ -270,8 +270,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   useEffect(() => {
     if (!visible) return;
     if (!selectedProjectId) {
-      resetNodes();
-      setBreadcrumb([]);
+      // 库模式由专门的 useLoadNodes 初始化 effect 管理，此处不干预
+      if (!isLibraryMode) {
+        resetNodes();
+        setBreadcrumb([]);
+      }
       return;
     }
 
@@ -304,13 +307,21 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   }, [visible, isLibraryMode, categoriesLoaded, libraryRootId, libraryType]);
 
   // 分类选择：当用户点击分类时重新加载节点列表
+  // 注意：不依赖 visible，只依赖 selectedCategoryPath，以免切标签页时重置搜索/页码
   useEffect(() => {
-    if (!visible || !isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
+    if (!isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
     setSearchQuery('');
     setCurrentPage(1);
     const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
     if (nodeId) loadNodes(nodeId, 1, '', false);
-  }, [visible, selectedCategoryPath]);
+  }, [selectedCategoryPath, isLibraryMode, libraryRootId]);
+
+  // 可见性恢复时重新加载当前页（不重置搜索/页码）
+  useEffect(() => {
+    if (!visible || !isLibraryMode || !libraryRootId || !listInitializedRef.current || !nodes.length) return;
+    const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    if (nodeId) loadNodes(nodeId, currentPage, searchQuery, false);
+  }, [visible]);
 
   // Reset on libraryType change
   useEffect(() => {
@@ -452,10 +463,14 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     const loadDir = direction === 'prev' ? 'up' : direction === 'jump' ? 'jump' : 'down';
     setNextLoadDirection(loadDir as 'up' | 'down' | 'jump');
     setCurrentPage(page);
-    if (direction === 'jump') { resetNodes(); loadNodes(nodeId, page, searchQuery, false); }
+    // 对齐 main 分支行为：
+    // - jump: replace 模式（跳转页面，替换列表）
+    // - next: append 模式（追加到列表尾部）
+    // - prev: prepend 模式（插入到列表头部）
+    if (direction === 'jump') { loadNodes(nodeId, page, searchQuery, false); }
     else if (direction === 'next') loadNodes(nodeId, page, searchQuery, true);
     else loadNodes(nodeId, page, searchQuery, 'prepend');
-  }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, totalPages, searchQuery, loadNodes]);
+  }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, searchQuery, loadNodes]);
 
   // Permissions
   const { permissions: projectPermissions } = useProjectPermissions(selectedProjectId);

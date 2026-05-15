@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useEffect, useMemo } from 'react';
-import { useQuery, type QueryKey } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, type QueryKey } from '@tanstack/react-query';
 import {
   libraryControllerGetDrawingLibrary,
   libraryControllerGetDrawingChildren,
@@ -56,6 +56,8 @@ export interface UseLibraryQueryReturn {
   loading: boolean;
   /** 后台刷新中（数据已存在但正在重新获取），用于驱动刷新按钮 spinner */
   isFetching: boolean;
+  /** 当前数据是否为 keepPreviousData 占位数据（真实数据尚未就绪） */
+  isPlaceholderData: boolean;
   error: string | null;
   isFolderMode: boolean;
 }
@@ -203,11 +205,10 @@ async function buildBreadcrumbs(
 
 function buildChildrenOrAllFilesKey(
   libraryType: LibraryType,
-  libraryId: string,
+  useAllFiles: boolean,
   effectiveNodeId: string,
-  flatMode: boolean,
 ): QueryKey {
-  if (flatMode && libraryId) {
+  if (useAllFiles) {
     return getAllFilesQueryKey(libraryType, effectiveNodeId, '');
   }
   return getChildrenQueryKey(libraryType, effectiveNodeId);
@@ -255,7 +256,7 @@ export function useLibraryQuery({
 
   // ---- 2. 搜索模式：获取所有文件 ----
   const searchQuery = useQuery({
-    queryKey: getAllFilesQueryKey(libraryType, libraryId || '__disabled__', search),
+    queryKey: [...getAllFilesQueryKey(libraryType, libraryId || '__disabled__', search), { page, limit }] as const,
     queryFn: async (): Promise<ChildrenData> => {
       const api = getAllFilesApi(libraryType);
       const result = await api({
@@ -273,6 +274,7 @@ export function useLibraryQuery({
     },
     enabled: !!search && !!libraryId,
     throwOnError: false,
+    placeholderData: keepPreviousData,
   });
 
   // ---- 3. 子节点列表（非搜索模式） ----
@@ -281,12 +283,14 @@ export function useLibraryQuery({
   const effectiveNodeId = nodeId || libraryId;
   const useAllFiles = flatMode && !!libraryId;
   const childrenQuery = useQuery({
-    queryKey: buildChildrenOrAllFilesKey(
-      libraryType,
-      libraryId || '__disabled__',
-      effectiveNodeId || '__disabled__',
-      flatMode,
-    ),
+    queryKey: [
+      ...buildChildrenOrAllFilesKey(
+        libraryType,
+        useAllFiles,
+        effectiveNodeId || '__disabled__',
+      ),
+      { page, limit },
+    ] as const,
     queryFn: async (): Promise<ChildrenData> => {
       let data: NodeListResponseDto;
       if (useAllFiles) {
@@ -316,6 +320,7 @@ export function useLibraryQuery({
     },
     enabled: !search && !!effectiveNodeId,
     throwOnError: false,
+    placeholderData: keepPreviousData,
   });
 
   // ---- 4. 当前节点详情（有 nodeId 时） ----
@@ -350,9 +355,10 @@ export function useLibraryQuery({
 
   // ---- 派生状态 ----
   const isLoading = useMemo(() => {
-    if (search) return searchQuery.isLoading;
-    return libraryQuery.isLoading || childrenQuery.isLoading;
-  }, [search, searchQuery.isLoading, libraryQuery.isLoading, childrenQuery.isLoading]);
+    if (search) return searchQuery.isLoading || searchQuery.isPlaceholderData;
+    return libraryQuery.isLoading || childrenQuery.isLoading || childrenQuery.isPlaceholderData;
+  }, [search, searchQuery.isLoading, searchQuery.isPlaceholderData,
+      libraryQuery.isLoading, childrenQuery.isLoading, childrenQuery.isPlaceholderData]);
 
   // isFetching: 后台刷新时仍为 true，用于驱动刷新按钮的 spinner
   const isFetching = useMemo(() => {
@@ -373,14 +379,17 @@ export function useLibraryQuery({
 
   const breadcrumbs = breadcrumbsQuery.data ?? [];
 
-  // 通知分页信息变化（useEffect 避免渲染阶段副作用）
+  // 通知分页信息变化（useEffect 避免渲染阶段副作用，跳过 keepPreviousData 占位数据）
+  const isPlaceholder = search
+    ? searchQuery.isPlaceholderData
+    : childrenQuery.isPlaceholderData;
   const paginationData = search ? searchQuery.data : childrenQuery.data;
   useEffect(() => {
-    if (paginationData) {
+    if (paginationData && !isPlaceholder) {
       onTotalChange?.(paginationData.total);
       onTotalPagesChange?.(paginationData.totalPages);
     }
-  }, [paginationData, onTotalChange, onTotalPagesChange]);
+  }, [paginationData, isPlaceholder, onTotalChange, onTotalPagesChange]);
 
   return {
     libraryId,
@@ -389,6 +398,7 @@ export function useLibraryQuery({
     breadcrumbs,
     loading: isLoading,
     isFetching,
+    isPlaceholderData: isPlaceholder,
     error: queryError ? String(queryError) : null,
     isFolderMode,
   };

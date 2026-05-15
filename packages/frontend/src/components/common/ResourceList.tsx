@@ -776,8 +776,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     if (!content) return;
 
     const handleScroll = () => {
-      // 防止重复加载
-      if (isLoadingRef.current) return;
+      // 防止重复加载（同时检查 isLoadingRef 和 loading 状态）
+      if (isLoadingRef.current || loading) return;
 
       const currentScrollTop = content.scrollTop;
       const scrollHeight = content.scrollHeight;
@@ -788,9 +788,10 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       lastScrollTopRef.current = currentScrollTop;
 
       // 分页模式：使用 onPageChange 进行分页加载
+      // 提前量设为 200px，在用户到达底部/顶部前就开始加载，保证流畅体验
       if (paginationEnabled && onPageChange && totalPages && currentPage) {
-        // 向下滚动到底部附近，提前加载下一页（提前 500px 开始加载）
-        if (scrollDirection === 'down' && currentScrollTop + clientHeight >= scrollHeight - 500) {
+        // 向下滚动到底部附近时加载下一页
+        if (scrollDirection === 'down' && currentScrollTop + clientHeight >= scrollHeight - 200) {
           if (currentPage < totalPages) {
             isLoadingRef.current = true;
             onPageChange(currentPage + 1, 'next');
@@ -799,8 +800,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
             }, 1000);
           }
         }
-        // 向上滚动到顶部附近，提前加载上一页（提前 200px 开始加载）
-        // 只有当当前页不是第一页时才加载
+        // 向上滚动到顶部附近时加载上一页
         else if (scrollDirection === 'up' && currentScrollTop <= 200) {
           if (currentPage > 1) {
             isLoadingRef.current = true;
@@ -811,8 +811,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           }
         }
       } else if (!paginationEnabled && onLoadMore && hasMore) {
-        // 非分页模式：传统滚动加载，提前 500px 开始加载
-        if (currentScrollTop + clientHeight >= scrollHeight - 500) {
+        // 非分页模式：传统滚动加载
+        if (currentScrollTop + clientHeight >= scrollHeight - 200) {
           onLoadMore();
         }
       }
@@ -820,7 +820,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
 
     content.addEventListener('scroll', handleScroll, { passive: true });
     return () => content.removeEventListener('scroll', handleScroll);
-  }, [hasMore, onLoadMore, onPageChange, paginationEnabled, totalPages, currentPage]);
+  }, [hasMore, onLoadMore, onPageChange, paginationEnabled, totalPages, currentPage, loading]);
 
   // 传统滚动加载：使用 Intersection Observer 监听底部加载元素（非分页模式）
   useEffect(() => {
@@ -958,12 +958,14 @@ export const ResourceList: React.FC<ResourceListProps> = ({
                 <span>加载中...</span>
               </div>
             )}
-            {!loading && !hasMore && items.length > 0 && (
-              <div className={styles.noMore}>没有更多了</div>
-            )}
-            {/* 分页模式下：当已经在最后一页时显示提示 */}
-            {!loading && paginationEnabled && totalPages && currentPage === totalPages && (
-              <div className={styles.noMore}>已经是最后一页</div>
+            {paginationEnabled ? (
+              !loading && totalPages && currentPage === totalPages && (
+                <div className={styles.noMore}>已经是最后一页</div>
+              )
+            ) : (
+              !loading && !hasMore && items.length > 0 && (
+                <div className={styles.noMore}>没有更多了</div>
+              )
             )}
           </div>
         )}
