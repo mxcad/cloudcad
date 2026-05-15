@@ -102,6 +102,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     loadNodes, buildBreadcrumbPath,
     loadNodesRef, buildBreadcrumbPathRef,
     reset: resetNodes,
+    error: loadNodesError,
   } = useLoadNodes(isLibraryMode, libraryType, projectId);
 
   // Library categories
@@ -471,6 +472,13 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     else if (direction === 'next') loadNodes(nodeId, page, searchQuery, true);
     else loadNodes(nodeId, page, searchQuery, 'prepend');
   }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, searchQuery, loadNodes]);
+
+  // API 错误时显示 toast
+  useEffect(() => {
+    if (loadNodesError) {
+      showToast(`加载失败: ${loadNodesError}`, 'error');
+    }
+  }, [loadNodesError]);
 
   // Permissions
   const { permissions: projectPermissions } = useProjectPermissions(selectedProjectId);

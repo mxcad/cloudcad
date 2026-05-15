@@ -787,6 +787,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       const scrollHeight = content.scrollHeight;
       const clientHeight = content.clientHeight;
 
+      // 跳过 programmatic scroll 事件（scrollTop 未实际变化时）
+      if (currentScrollTop === lastScrollTopRef.current) return;
+
       // 检测滚动方向
       const scrollDirection = currentScrollTop > lastScrollTopRef.current ? 'down' : 'up';
       lastScrollTopRef.current = currentScrollTop;

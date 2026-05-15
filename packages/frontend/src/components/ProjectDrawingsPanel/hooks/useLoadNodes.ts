@@ -17,6 +17,8 @@ export interface UseLoadNodesReturn {
   loading: boolean;
   /** 后台刷新中（数据已存在但正在重新获取），用于驱动刷新按钮 spinner */
   isFetching: boolean;
+  /** API 错误信息 */
+  error: string | null;
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   total: number;
@@ -190,10 +192,17 @@ export function useLoadNodes(
   const loadNodesRef = useRef(loadNodes);
   const buildBreadcrumbPathRef = useRef(buildBreadcrumbPath);
 
+  // ── API 错误 ──
+  const error: string | null = useMemo(() => {
+    if (isLibraryMode) return libraryQuery.error;
+    return fsQuery.error ? String(fsQuery.error) : null;
+  }, [isLibraryMode, libraryQuery.error, fsQuery.error]);
+
   return {
     nodes,
     loading,
     isFetching,
+    error,
     currentPage,
     setCurrentPage,
     total,
