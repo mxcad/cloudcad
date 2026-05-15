@@ -48,7 +48,17 @@ export function UserQuotaModal({
       <div className="quota-config-content">
         <div className="quota-user-info">
           <div className="user-avatar-sm">
-            {user?.avatar ? <img src={user.avatar} alt="" /> : <User size={20} />}
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt=""
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+            ) : null}
+            {!user?.avatar || <User size={20} />}
           </div>
           <div className="user-info-text">
             <p className="user-name">{user?.nickname || user?.username || '用户'}</p>

@@ -73,10 +73,16 @@ export function UserTable({
                 <div className="user-info">
                   <div className="user-avatar">
                     {user.avatar ? (
-                      <img src={user.avatar} alt="" />
-                    ) : (
-                      <User size={20} />
-                    )}
+                      <img
+                        src={user.avatar}
+                        alt=""
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    ) : null}
+                    {!user.avatar || <User size={20} />}
                   </div>
                   <div className="user-details">
                     <div className="user-name">

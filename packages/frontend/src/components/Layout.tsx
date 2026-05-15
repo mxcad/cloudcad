@@ -604,8 +604,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                       src={user.avatar}
                       alt="Avatar"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
                     />
-                  ) : (
+                  ) : null}
+                  {!user?.avatar || (
                     <span className="text-sm font-semibold text-white">
                       {(user?.nickname || user?.username || user?.email || 'U')
                         .charAt(0)
