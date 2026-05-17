@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import '@/api-sdk';
+
 import { fetchBrandConfig } from './constants/appConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -46,7 +46,7 @@ const AppInitializer: React.FC = () => {
 
   useEffect(() => {
     console.log('[CloudCAD] 开始初始化 Brand Config');
-    // API 客户端已通过 @/api-sdk 的 side-effect import 自动配置
+
     const timeoutId = setTimeout(() => {
       console.warn('[CloudCAD] Brand Config 超时，继续渲染');
       setIsReady(true);

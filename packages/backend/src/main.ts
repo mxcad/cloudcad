@@ -248,6 +248,7 @@ async function bootstrap() {
     }
   }
 
+
   // 启动应用
   await app.listen(config.port, '0.0.0.0');
   const totalDuration = Date.now() - bootstrapStartTime;
