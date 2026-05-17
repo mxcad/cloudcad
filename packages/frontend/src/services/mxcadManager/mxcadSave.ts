@@ -71,7 +71,6 @@ export function showSaveConfirmDialog(): Promise<string | null> {
       width: 100%;
       height: 100%;
       background: var(--bg-overlay, ${isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.5)'});
-      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -154,9 +153,9 @@ export function showSaveConfirmDialog(): Promise<string | null> {
           <button id="mxcad-save-dialog-cancel" style="
             padding: 10px 20px;
             border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-            border-radius: 8px;
+            border-radius: 12px;
             background: transparent;
-            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
+            color: var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'});
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
@@ -167,14 +166,14 @@ export function showSaveConfirmDialog(): Promise<string | null> {
           <button id="mxcad-save-dialog-confirm" style="
             padding: 10px 20px;
             border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#a5b4fc' : '#4f46e5'}), var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'}));
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#33adff' : '#0080cc'}), var(--accent-600, ${isDark ? '#22d3ee' : '#0891b2'}));
             color: white;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
           ">
             保存
           </button>

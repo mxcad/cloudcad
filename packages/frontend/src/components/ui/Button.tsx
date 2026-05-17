@@ -48,7 +48,7 @@ export const Button: React.FC<ButtonProps> = ({
   // 变体样式 - 使用 CSS 变量
   const variants = {
     primary: `
-      bg-gradient-to-r from-[var(--primary-600)] to-[var(--primary-500)]
+      bg-gradient-to-r from-[var(--primary-600)] to-[var(--accent-600)]
       text-white
       hover:shadow-lg hover:shadow-[var(--primary-500)]/30
       focus:ring-[var(--primary-500)]

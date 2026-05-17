@@ -204,7 +204,6 @@ export function showUnsavedChangesDialog(): Promise<
       width: 100%;
       height: 100%;
       background: var(--bg-overlay, ${isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.5)'});
-      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -261,42 +260,41 @@ export function showUnsavedChangesDialog(): Promise<
           <button id="mxcad-unsaved-cancel" style="
             padding: 10px 20px;
             border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-            border-radius: 8px;
+            border-radius: 12px;
             background: transparent;
-            color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});
+            color: var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'});
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
-          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'; this.style.color='var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'})'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'})'">
+          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'" onmouseout="this.style.background='transparent'">
             取消
           </button>
           <button id="mxcad-unsaved-discard" style="
             padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: var(--error, #ef4444);
-            color: white;
+            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
+            border-radius: 12px;
+            background: transparent;
+            color: var(--error, #ef4444);
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
-          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
+          " onmouseover="this.style.background='var(--error-dim, #fee2e2)'" onmouseout="this.style.background='transparent'">
             不保存
           </button>
           <button id="mxcad-unsaved-save" style="
             padding: 10px 20px;
             border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#a5b4fc' : '#4f46e5'}), var(--primary-500, ${isDark ? '#818cf8' : '#6366f1'}));
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#33adff' : '#0080cc'}), var(--accent-600, ${isDark ? '#22d3ee' : '#0891b2'}));
             color: white;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'});
-          " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='var(--shadow-md, 0 4px 6px ${isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.1)'})${isDark ? ', 0 0 20px rgba(99, 102, 241, 0.3)' : ''}'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-sm, 0 1px 2px ${isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)'})'">
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+          " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(99, 102, 241, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(99, 102, 241, 0.3)'">
             保存
           </button>
         </div>

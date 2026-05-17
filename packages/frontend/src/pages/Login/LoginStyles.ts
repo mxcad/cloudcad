@@ -597,12 +597,8 @@ input[type="password"]::-webkit-textfield-decoration-container {
 /* ===== 联系客服弹框 ===== */
 .support-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -708,19 +704,20 @@ input[type="password"]::-webkit-textfield-decoration-container {
 
 .support-modal-button {
   padding: 0.625rem 1.5rem;
-  background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   color: white;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
 .support-modal-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }
 
 @keyframes fade-in {

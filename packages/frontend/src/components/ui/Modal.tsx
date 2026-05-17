@@ -81,7 +81,6 @@ export const Modal: React.FC<ModalProps> = ({
         className="absolute inset-0 transition-opacity duration-300"
         style={{
           background: 'var(--bg-overlay)',
-          backdropFilter: 'blur(4px)',
         }}
         onClick={(e) => {
           e.stopPropagation();

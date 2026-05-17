@@ -25,22 +25,20 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-scale-in">
+    <div className="fixed inset-0 z-[10001] flex items-center justify-center" style={{ background: 'var(--bg-overlay)' }}>
+      <div className="rounded-lg shadow-xl max-w-md w-full mx-4 animate-scale-in" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div
-              className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                type === 'danger'
-                  ? 'bg-red-100'
-                  : type === 'warning'
-                    ? 'bg-yellow-100'
-                    : 'bg-blue-100'
-              }`}
+              className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: type === 'danger' ? 'var(--error-dim)' : type === 'warning' ? 'var(--warning-dim)' : 'var(--info-dim)',
+              }}
             >
               {type === 'danger' && (
                 <svg
-                  className="w-6 h-6 text-red-600"
+                  className="w-6 h-6"
+                  style={{ color: 'var(--error)' }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -55,7 +53,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               )}
               {type === 'warning' && (
                 <svg
-                  className="w-6 h-6 text-yellow-600"
+                  className="w-6 h-6"
+                  style={{ color: 'var(--warning)' }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -70,7 +69,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               )}
               {type === 'info' && (
                 <svg
-                  className="w-6 h-6 text-blue-600"
+                  className="w-6 h-6"
+                  style={{ color: 'var(--info)' }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -85,26 +85,29 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               )}
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-              <p className="mt-2 text-sm text-slate-600">{message}</p>
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
+              <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>{message}</p>
             </div>
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <button
               onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+              className="px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+              style={{
+                color: 'var(--text-secondary)',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-default)',
+              }}
             >
               {cancelText}
             </button>
             <button
               onClick={onConfirm}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                type === 'danger'
-                  ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                  : type === 'warning'
-                    ? 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500'
-                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-              }`}
+              className="px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+              style={{
+                background: 'linear-gradient(135deg, var(--primary-600), var(--accent-600))',
+                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+              }}
             >
               {confirmText}
             </button>

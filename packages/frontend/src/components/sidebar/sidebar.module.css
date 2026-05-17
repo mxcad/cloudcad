@@ -1471,7 +1471,6 @@
   right: 0;
   bottom: 0;
   background-color: var(--bg-overlay);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1558,21 +1557,31 @@
 }
 
 .confirmActions button.primary {
-  background-color: var(--info);
+  background: linear-gradient(
+    135deg,
+    var(--primary-600) 0%,
+    var(--accent-600) 100%
+  );
   color: white;
   border: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
 .confirmActions button.primary:hover {
-  box-shadow: 0 4px 12px rgba(0, 156, 255, 0.3);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
 }
 
 .confirmActions button.secondary {
-  background-color: var(--bg-tertiary);
+  background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
+  border-radius: 12px;
+}
+
+.confirmActions button.secondary:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-strong);
 }
 
 [data-theme="dark"] .confirmActions button.secondary {

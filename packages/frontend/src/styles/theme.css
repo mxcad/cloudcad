@@ -339,19 +339,19 @@
 
 /* 4.1 按钮基础样式 */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
   color: white;
   border: none;
   padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-lg);
-  font-weight: 500;
+  border-radius: var(--radius-xl);
+  font-weight: 600;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md), var(--glow-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }
 
 .btn-primary:active {
@@ -460,7 +460,6 @@
 /* 4.7 模态框 */
 .modal-overlay-theme {
   background: var(--bg-overlay);
-  backdrop-filter: blur(4px);
 }
 
 .modal-theme {
@@ -790,7 +789,7 @@
 
 /* 6.4 渐变背景 */
 .gradient-primary-theme {
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
 }
 
 .gradient-accent-theme {
