@@ -195,6 +195,22 @@ export class MxCadController {
 
     if (fileExistsInStorage) {
       this.logger.log(`[fileisExist] 文件存在于 uploads 目录: ${body.filename}, hash=${body.fileHash}`);
+
+      // 有 nodeId 的上传（公开资源库/项目管理）：执行完整秒传逻辑，创建数据库节点
+      if (context.userId && context.nodeId) {
+        context.fileSize = body.fileSize;
+        const result = await this.mxCadService.checkFileExist(
+          body.filename,
+          body.fileHash,
+          context,
+        );
+        return {
+          exists: result.ret === MxUploadReturn.kFileAlreadyExist,
+          nodeId: result.nodeId,
+        };
+      }
+
+      // CAD 编辑器/匿名上传：只返回缓存存在，通过 public-file 路径直接访问
       return { exists: true, nodeId: null };
     }
 

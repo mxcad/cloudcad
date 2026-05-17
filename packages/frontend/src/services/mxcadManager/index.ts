@@ -76,7 +76,7 @@ import { isAuthenticated } from '../../utils/authCheck';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { cancelLoginRedirect } from '../../config/clientSetup';
 import { handleError } from '@/utils/errorHandler';
-import { showGlobalLoading, hideGlobalLoading, setLoadingMessage } from '../../utils/loadingUtils';
+import { showGlobalLoading, hideGlobalLoading, setLoadingMessage, setLoadingProgress } from '../../utils/loadingUtils';
 
 
 // ==================== 辅助函数 ====================
