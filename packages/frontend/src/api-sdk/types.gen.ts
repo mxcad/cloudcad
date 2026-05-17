@@ -2587,7 +2587,7 @@ export type AppControllerGetHelloData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/';
+    url: '/api/v1';
 };
 
 export type AppControllerGetHelloResponses = {
@@ -2598,7 +2598,7 @@ export type CacheMonitorControllerGetSummaryData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/summary';
+    url: '/api/v1/cache-monitor/summary';
 };
 
 export type CacheMonitorControllerGetSummaryResponses = {
@@ -2631,7 +2631,7 @@ export type CacheMonitorControllerGetStatsData = {
          */
         hotDataLimit?: number;
     };
-    url: '/cache-monitor/stats';
+    url: '/api/v1/cache-monitor/stats';
 };
 
 export type CacheMonitorControllerGetStatsResponses = {
@@ -2645,7 +2645,7 @@ export type CacheMonitorControllerGetHealthStatusData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/health';
+    url: '/api/v1/cache-monitor/health';
 };
 
 export type CacheMonitorControllerGetHealthStatusResponses = {
@@ -2659,7 +2659,7 @@ export type CacheMonitorControllerGetPerformanceMetricsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/performance';
+    url: '/api/v1/cache-monitor/performance';
 };
 
 export type CacheMonitorControllerGetPerformanceMetricsResponses = {
@@ -2675,7 +2675,7 @@ export type CacheMonitorControllerGetHotDataData = {
     query: {
         limit: string;
     };
-    url: '/cache-monitor/hot-data';
+    url: '/api/v1/cache-monitor/hot-data';
 };
 
 export type CacheMonitorControllerGetHotDataResponses = {
@@ -2698,7 +2698,7 @@ export type CacheMonitorControllerGetPerformanceTrendData = {
          */
         minutes?: number;
     };
-    url: '/cache-monitor/performance-trend';
+    url: '/api/v1/cache-monitor/performance-trend';
 };
 
 export type CacheMonitorControllerGetPerformanceTrendResponses = {
@@ -2716,7 +2716,7 @@ export type CacheMonitorControllerGetSizeTrendData = {
     query: {
         minutes: string;
     };
-    url: '/cache-monitor/size-trend';
+    url: '/api/v1/cache-monitor/size-trend';
 };
 
 export type CacheMonitorControllerGetSizeTrendResponses = {
@@ -2732,7 +2732,7 @@ export type CacheMonitorControllerGetWarningsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warnings';
+    url: '/api/v1/cache-monitor/warnings';
 };
 
 export type CacheMonitorControllerGetWarningsResponses = {
@@ -2750,7 +2750,7 @@ export type CacheMonitorControllerDeleteValueData = {
     query: {
         key: string;
     };
-    url: '/cache-monitor/value';
+    url: '/api/v1/cache-monitor/value';
 };
 
 export type CacheMonitorControllerDeleteValueResponses = {
@@ -2766,7 +2766,7 @@ export type CacheMonitorControllerGetValueData = {
     query: {
         key: string;
     };
-    url: '/cache-monitor/value';
+    url: '/api/v1/cache-monitor/value';
 };
 
 export type CacheMonitorControllerGetValueResponses = {
@@ -2780,7 +2780,7 @@ export type CacheMonitorControllerSetValueData = {
     body: CacheOperationDto;
     path?: never;
     query?: never;
-    url: '/cache-monitor/value';
+    url: '/api/v1/cache-monitor/value';
 };
 
 export type CacheMonitorControllerSetValueResponses = {
@@ -2796,7 +2796,7 @@ export type CacheMonitorControllerDeleteByPatternData = {
     query: {
         pattern: string;
     };
-    url: '/cache-monitor/pattern';
+    url: '/api/v1/cache-monitor/pattern';
 };
 
 export type CacheMonitorControllerDeleteByPatternResponses = {
@@ -2810,7 +2810,7 @@ export type CacheMonitorControllerDeleteValuesData = {
     body: BatchCacheOperationDto;
     path?: never;
     query?: never;
-    url: '/cache-monitor/values';
+    url: '/api/v1/cache-monitor/values';
 };
 
 export type CacheMonitorControllerDeleteValuesResponses = {
@@ -2824,7 +2824,7 @@ export type CacheMonitorControllerRefreshData = {
     body: CacheRefreshDto;
     path?: never;
     query?: never;
-    url: '/cache-monitor/refresh';
+    url: '/api/v1/cache-monitor/refresh';
 };
 
 export type CacheMonitorControllerRefreshResponses = {
@@ -2838,7 +2838,7 @@ export type CacheMonitorControllerCleanupData = {
     body: CacheCleanupDto;
     path?: never;
     query?: never;
-    url: '/cache-monitor/cleanup';
+    url: '/api/v1/cache-monitor/cleanup';
 };
 
 export type CacheMonitorControllerCleanupResponses = {
@@ -2852,7 +2852,7 @@ export type CacheMonitorControllerGetWarmupConfigData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warmup/config';
+    url: '/api/v1/cache-monitor/warmup/config';
 };
 
 export type CacheMonitorControllerGetWarmupConfigResponses = {
@@ -2866,7 +2866,7 @@ export type CacheMonitorControllerUpdateWarmupConfigData = {
     body: UpdateWarmupConfigDto;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warmup/config';
+    url: '/api/v1/cache-monitor/warmup/config';
 };
 
 export type CacheMonitorControllerUpdateWarmupConfigResponses = {
@@ -2880,7 +2880,7 @@ export type CacheMonitorControllerTriggerWarmupData = {
     body: TriggerWarmupDto;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warmup/trigger';
+    url: '/api/v1/cache-monitor/warmup/trigger';
 };
 
 export type CacheMonitorControllerTriggerWarmupResponses = {
@@ -2896,7 +2896,7 @@ export type CacheMonitorControllerClearWarmupHistoryData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warmup/history';
+    url: '/api/v1/cache-monitor/warmup/history';
 };
 
 export type CacheMonitorControllerClearWarmupHistoryResponses = {
@@ -2910,7 +2910,7 @@ export type CacheMonitorControllerGetWarmupHistoryData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warmup/history';
+    url: '/api/v1/cache-monitor/warmup/history';
 };
 
 export type CacheMonitorControllerGetWarmupHistoryResponses = {
@@ -2926,7 +2926,7 @@ export type CacheMonitorControllerGetWarmupStatsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/cache-monitor/warmup/stats';
+    url: '/api/v1/cache-monitor/warmup/stats';
 };
 
 export type CacheMonitorControllerGetWarmupStatsResponses = {
@@ -2942,7 +2942,7 @@ export type AuthControllerRegisterData = {
     body: RegisterDto;
     path?: never;
     query?: never;
-    url: '/auth/register';
+    url: '/api/v1/auth/register';
 };
 
 export type AuthControllerRegisterErrors = {
@@ -2969,7 +2969,7 @@ export type AuthControllerLoginData = {
     body: LoginDto;
     path?: never;
     query?: never;
-    url: '/auth/login';
+    url: '/api/v1/auth/login';
 };
 
 export type AuthControllerLoginErrors = {
@@ -2992,7 +2992,7 @@ export type AuthControllerRefreshTokenData = {
     body: RefreshTokenDto;
     path?: never;
     query?: never;
-    url: '/auth/refresh';
+    url: '/api/v1/auth/refresh';
 };
 
 export type AuthControllerRefreshTokenErrors = {
@@ -3015,7 +3015,7 @@ export type AuthControllerLogoutData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/auth/logout';
+    url: '/api/v1/auth/logout';
 };
 
 export type AuthControllerLogoutResponses = {
@@ -3029,7 +3029,7 @@ export type AuthControllerGetProfileData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/auth/profile';
+    url: '/api/v1/auth/profile';
 };
 
 export type AuthControllerGetProfileErrors = {
@@ -3052,7 +3052,7 @@ export type AuthControllerSendVerificationData = {
     body: SendVerificationDto;
     path?: never;
     query?: never;
-    url: '/auth/send-verification';
+    url: '/api/v1/auth/send-verification';
 };
 
 export type AuthControllerSendVerificationErrors = {
@@ -3075,7 +3075,7 @@ export type AuthControllerVerifyEmailData = {
     body: VerifyEmailDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-email';
+    url: '/api/v1/auth/verify-email';
 };
 
 export type AuthControllerVerifyEmailErrors = {
@@ -3098,7 +3098,7 @@ export type AuthControllerVerifyEmailAndRegisterPhoneData = {
     body: VerifyEmailAndRegisterPhoneDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-email-and-register-phone';
+    url: '/api/v1/auth/verify-email-and-register-phone';
 };
 
 export type AuthControllerVerifyEmailAndRegisterPhoneErrors = {
@@ -3125,7 +3125,7 @@ export type AuthControllerResendVerificationData = {
     body: ResendVerificationDto;
     path?: never;
     query?: never;
-    url: '/auth/resend-verification';
+    url: '/api/v1/auth/resend-verification';
 };
 
 export type AuthControllerResendVerificationErrors = {
@@ -3148,7 +3148,7 @@ export type AuthControllerBindEmailAndLoginData = {
     body: BindEmailAndLoginDto;
     path?: never;
     query?: never;
-    url: '/auth/bind-email-and-login';
+    url: '/api/v1/auth/bind-email-and-login';
 };
 
 export type AuthControllerBindEmailAndLoginErrors = {
@@ -3171,7 +3171,7 @@ export type AuthControllerBindPhoneAndLoginData = {
     body: BindPhoneAndLoginDto;
     path?: never;
     query?: never;
-    url: '/auth/bind-phone-and-login';
+    url: '/api/v1/auth/bind-phone-and-login';
 };
 
 export type AuthControllerBindPhoneAndLoginErrors = {
@@ -3194,7 +3194,7 @@ export type AuthControllerVerifyPhoneData = {
     body: VerifySmsCodeDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-phone';
+    url: '/api/v1/auth/verify-phone';
 };
 
 export type AuthControllerVerifyPhoneErrors = {
@@ -3217,7 +3217,7 @@ export type AuthControllerForgotPasswordData = {
     body: ForgotPasswordDto;
     path?: never;
     query?: never;
-    url: '/auth/forgot-password';
+    url: '/api/v1/auth/forgot-password';
 };
 
 export type AuthControllerForgotPasswordErrors = {
@@ -3244,7 +3244,7 @@ export type AuthControllerResetPasswordData = {
     body: ResetPasswordDto;
     path?: never;
     query?: never;
-    url: '/auth/reset-password';
+    url: '/api/v1/auth/reset-password';
 };
 
 export type AuthControllerResetPasswordErrors = {
@@ -3271,7 +3271,7 @@ export type AuthControllerSendBindEmailCodeData = {
     body: BindEmailDto;
     path?: never;
     query?: never;
-    url: '/auth/bind-email';
+    url: '/api/v1/auth/bind-email';
 };
 
 export type AuthControllerSendBindEmailCodeErrors = {
@@ -3298,7 +3298,7 @@ export type AuthControllerVerifyBindEmailData = {
     body: VerifyBindEmailDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-bind-email';
+    url: '/api/v1/auth/verify-bind-email';
 };
 
 export type AuthControllerVerifyBindEmailErrors = {
@@ -3329,7 +3329,7 @@ export type AuthControllerSendUnbindEmailCodeData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/auth/send-unbind-email-code';
+    url: '/api/v1/auth/send-unbind-email-code';
 };
 
 export type AuthControllerSendUnbindEmailCodeErrors = {
@@ -3350,7 +3350,7 @@ export type AuthControllerVerifyUnbindEmailCodeData = {
     body: VerifyUnbindCodeDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-unbind-email-code';
+    url: '/api/v1/auth/verify-unbind-email-code';
 };
 
 export type AuthControllerVerifyUnbindEmailCodeErrors = {
@@ -3375,7 +3375,7 @@ export type AuthControllerRebindEmailData = {
     body: RebindEmailDto;
     path?: never;
     query?: never;
-    url: '/auth/rebind-email';
+    url: '/api/v1/auth/rebind-email';
 };
 
 export type AuthControllerRebindEmailErrors = {
@@ -3400,7 +3400,7 @@ export type AuthControllerSendSmsCodeData = {
     body: SendSmsCodeDto;
     path?: never;
     query?: never;
-    url: '/auth/send-sms-code';
+    url: '/api/v1/auth/send-sms-code';
 };
 
 export type AuthControllerSendSmsCodeErrors = {
@@ -3421,7 +3421,7 @@ export type AuthControllerVerifySmsCodeData = {
     body: VerifySmsCodeDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-sms-code';
+    url: '/api/v1/auth/verify-sms-code';
 };
 
 export type AuthControllerVerifySmsCodeErrors = {
@@ -3442,7 +3442,7 @@ export type AuthControllerRegisterByPhoneData = {
     body: RegisterByPhoneDto;
     path?: never;
     query?: never;
-    url: '/auth/register-phone';
+    url: '/api/v1/auth/register-phone';
 };
 
 export type AuthControllerRegisterByPhoneErrors = {
@@ -3469,7 +3469,7 @@ export type AuthControllerLoginByPhoneData = {
     body: LoginByPhoneDto;
     path?: never;
     query?: never;
-    url: '/auth/login-phone';
+    url: '/api/v1/auth/login-phone';
 };
 
 export type AuthControllerLoginByPhoneErrors = {
@@ -3496,7 +3496,7 @@ export type AuthControllerBindPhoneData = {
     body: BindPhoneDto;
     path?: never;
     query?: never;
-    url: '/auth/bind-phone';
+    url: '/api/v1/auth/bind-phone';
 };
 
 export type AuthControllerBindPhoneErrors = {
@@ -3521,7 +3521,7 @@ export type AuthControllerSendUnbindPhoneCodeData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/auth/send-unbind-phone-code';
+    url: '/api/v1/auth/send-unbind-phone-code';
 };
 
 export type AuthControllerSendUnbindPhoneCodeErrors = {
@@ -3542,7 +3542,7 @@ export type AuthControllerVerifyUnbindPhoneCodeData = {
     body: VerifyUnbindCodeDto;
     path?: never;
     query?: never;
-    url: '/auth/verify-unbind-phone-code';
+    url: '/api/v1/auth/verify-unbind-phone-code';
 };
 
 export type AuthControllerVerifyUnbindPhoneCodeErrors = {
@@ -3567,7 +3567,7 @@ export type AuthControllerRebindPhoneData = {
     body: RebindPhoneDto;
     path?: never;
     query?: never;
-    url: '/auth/rebind-phone';
+    url: '/api/v1/auth/rebind-phone';
 };
 
 export type AuthControllerRebindPhoneErrors = {
@@ -3592,7 +3592,7 @@ export type AuthControllerCheckFieldUniquenessData = {
     body: CheckFieldUniquenessDto;
     path?: never;
     query?: never;
-    url: '/auth/check-field';
+    url: '/api/v1/auth/check-field';
 };
 
 export type AuthControllerCheckFieldUniquenessResponses = {
@@ -3610,7 +3610,7 @@ export type AuthControllerGetWechatAuthUrlData = {
         isPopup: string;
         purpose: string;
     };
-    url: '/auth/wechat/login';
+    url: '/api/v1/auth/wechat/login';
 };
 
 export type AuthControllerGetWechatAuthUrlResponses = {
@@ -3624,7 +3624,7 @@ export type AuthControllerWechatCallbackData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/auth/wechat/callback';
+    url: '/api/auth/wechat/callback';
 };
 
 export type AuthControllerWechatCallbackErrors = {
@@ -3645,7 +3645,7 @@ export type AuthControllerBindWechatData = {
     body: BindWechatDto;
     path?: never;
     query?: never;
-    url: '/auth/wechat/bind';
+    url: '/api/v1/auth/wechat/bind';
 };
 
 export type AuthControllerBindWechatErrors = {
@@ -3670,7 +3670,7 @@ export type AuthControllerUnbindWechatData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/auth/wechat/unbind';
+    url: '/api/v1/auth/wechat/unbind';
 };
 
 export type AuthControllerUnbindWechatErrors = {
@@ -3691,7 +3691,7 @@ export type UserCleanupControllerGetStatsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/user-cleanup/stats';
+    url: '/api/v1/user-cleanup/stats';
 };
 
 export type UserCleanupControllerGetStatsResponses = {
@@ -3707,7 +3707,7 @@ export type UserCleanupControllerTriggerCleanupData = {
     body: UserCleanupTriggerDto;
     path?: never;
     query?: never;
-    url: '/user-cleanup/trigger';
+    url: '/api/v1/user-cleanup/trigger';
 };
 
 export type UserCleanupControllerTriggerCleanupResponses = {
@@ -3723,7 +3723,7 @@ export type RuntimeConfigControllerGetPublicConfigsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/runtime-config/public';
+    url: '/api/v1/runtime-config/public';
 };
 
 export type RuntimeConfigControllerGetPublicConfigsResponses = {
@@ -3741,7 +3741,7 @@ export type RuntimeConfigControllerGetAllConfigsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/runtime-config';
+    url: '/api/v1/runtime-config';
 };
 
 export type RuntimeConfigControllerGetAllConfigsResponses = {
@@ -3757,7 +3757,7 @@ export type RuntimeConfigControllerGetDefinitionsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/runtime-config/definitions';
+    url: '/api/v1/runtime-config/definitions';
 };
 
 export type RuntimeConfigControllerGetDefinitionsResponses = {
@@ -3778,7 +3778,7 @@ export type RuntimeConfigControllerGetConfigData = {
         key: string;
     };
     query?: never;
-    url: '/runtime-config/{key}';
+    url: '/api/v1/runtime-config/{key}';
 };
 
 export type RuntimeConfigControllerGetConfigResponses = {
@@ -3799,7 +3799,7 @@ export type RuntimeConfigControllerUpdateConfigData = {
         key: string;
     };
     query?: never;
-    url: '/runtime-config/{key}';
+    url: '/api/v1/runtime-config/{key}';
 };
 
 export type RuntimeConfigControllerUpdateConfigResponses = {
@@ -3822,7 +3822,7 @@ export type RuntimeConfigControllerResetConfigData = {
         key: string;
     };
     query?: never;
-    url: '/runtime-config/{key}/reset';
+    url: '/api/v1/runtime-config/{key}/reset';
 };
 
 export type RuntimeConfigControllerResetConfigResponses = {
@@ -3873,7 +3873,7 @@ export type UsersControllerFindAllData = {
          */
         projectId?: string;
     };
-    url: '/users';
+    url: '/api/v1/users';
 };
 
 export type UsersControllerFindAllResponses = {
@@ -3889,7 +3889,7 @@ export type UsersControllerCreateData = {
     body: CreateUserDto;
     path?: never;
     query?: never;
-    url: '/users';
+    url: '/api/v1/users';
 };
 
 export type UsersControllerCreateErrors = {
@@ -3918,7 +3918,7 @@ export type UsersControllerSearchByEmailData = {
     query: {
         email: string;
     };
-    url: '/users/search/by-email';
+    url: '/api/v1/users/search/by-email';
 };
 
 export type UsersControllerSearchByEmailErrors = {
@@ -3974,7 +3974,7 @@ export type UsersControllerSearchUsersData = {
          */
         projectId?: string;
     };
-    url: '/users/search';
+    url: '/api/v1/users/search';
 };
 
 export type UsersControllerSearchUsersResponses = {
@@ -3990,7 +3990,7 @@ export type UsersControllerGetProfileData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/users/profile/me';
+    url: '/api/v1/users/profile/me';
 };
 
 export type UsersControllerGetProfileResponses = {
@@ -4006,7 +4006,7 @@ export type UsersControllerUpdateProfileData = {
     body: UpdateUserDto;
     path?: never;
     query?: never;
-    url: '/users/profile/me';
+    url: '/api/v1/users/profile/me';
 };
 
 export type UsersControllerUpdateProfileErrors = {
@@ -4029,7 +4029,7 @@ export type UsersControllerGetDashboardStatsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/users/stats/me';
+    url: '/api/v1/users/stats/me';
 };
 
 export type UsersControllerGetDashboardStatsResponses = {
@@ -4047,7 +4047,7 @@ export type UsersControllerRemoveData = {
         id: string;
     };
     query?: never;
-    url: '/users/{id}';
+    url: '/api/v1/users/{id}';
 };
 
 export type UsersControllerRemoveErrors = {
@@ -4070,7 +4070,7 @@ export type UsersControllerFindOneData = {
         id: string;
     };
     query?: never;
-    url: '/users/{id}';
+    url: '/api/v1/users/{id}';
 };
 
 export type UsersControllerFindOneErrors = {
@@ -4095,7 +4095,7 @@ export type UsersControllerUpdateData = {
         id: string;
     };
     query?: never;
-    url: '/users/{id}';
+    url: '/api/v1/users/{id}';
 };
 
 export type UsersControllerUpdateErrors = {
@@ -4120,7 +4120,7 @@ export type UsersControllerRestoreData = {
         id: string;
     };
     query?: never;
-    url: '/users/{id}/restore';
+    url: '/api/v1/users/{id}/restore';
 };
 
 export type UsersControllerRestoreErrors = {
@@ -4143,7 +4143,7 @@ export type UsersControllerUpdateStatusData = {
         id: string;
     };
     query?: never;
-    url: '/users/{id}/status';
+    url: '/api/v1/users/{id}/status';
 };
 
 export type UsersControllerUpdateStatusErrors = {
@@ -4168,7 +4168,7 @@ export type UsersControllerDeleteImmediatelyData = {
         id: string;
     };
     query?: never;
-    url: '/users/{id}/delete-immediately';
+    url: '/api/v1/users/{id}/delete-immediately';
 };
 
 export type UsersControllerDeleteImmediatelyErrors = {
@@ -4193,7 +4193,7 @@ export type UsersControllerDeactivateAccountData = {
     body: DeactivateAccountDto;
     path?: never;
     query?: never;
-    url: '/users/deactivate-account';
+    url: '/api/v1/users/deactivate-account';
 };
 
 export type UsersControllerDeactivateAccountErrors = {
@@ -4220,7 +4220,7 @@ export type UsersControllerRestoreAccountData = {
     body: RestoreAccountDto;
     path?: never;
     query?: never;
-    url: '/users/me/restore';
+    url: '/api/v1/users/me/restore';
 };
 
 export type UsersControllerRestoreAccountErrors = {
@@ -4247,7 +4247,7 @@ export type UsersControllerChangePasswordData = {
     body: ChangePasswordDto;
     path?: never;
     query?: never;
-    url: '/users/change-password';
+    url: '/api/v1/users/change-password';
 };
 
 export type UsersControllerChangePasswordErrors = {
@@ -4278,7 +4278,7 @@ export type RolesControllerFindAllData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/roles';
+    url: '/api/v1/roles';
 };
 
 export type RolesControllerFindAllResponses = {
@@ -4294,7 +4294,7 @@ export type RolesControllerCreateData = {
     body: CreateRoleDto;
     path?: never;
     query?: never;
-    url: '/roles';
+    url: '/api/v1/roles';
 };
 
 export type RolesControllerCreateResponses = {
@@ -4312,7 +4312,7 @@ export type RolesControllerRemoveData = {
         id: string;
     };
     query?: never;
-    url: '/roles/{id}';
+    url: '/api/v1/roles/{id}';
 };
 
 export type RolesControllerRemoveResponses = {
@@ -4328,7 +4328,7 @@ export type RolesControllerFindOneData = {
         id: string;
     };
     query?: never;
-    url: '/roles/{id}';
+    url: '/api/v1/roles/{id}';
 };
 
 export type RolesControllerFindOneResponses = {
@@ -4346,7 +4346,7 @@ export type RolesControllerUpdateData = {
         id: string;
     };
     query?: never;
-    url: '/roles/{id}';
+    url: '/api/v1/roles/{id}';
 };
 
 export type RolesControllerUpdateResponses = {
@@ -4364,7 +4364,7 @@ export type RolesControllerRemovePermissionsData = {
         id: string;
     };
     query?: never;
-    url: '/roles/{id}/permissions';
+    url: '/api/v1/roles/{id}/permissions';
 };
 
 export type RolesControllerRemovePermissionsResponses = {
@@ -4382,7 +4382,7 @@ export type RolesControllerGetRolePermissionsData = {
         id: string;
     };
     query?: never;
-    url: '/roles/{id}/permissions';
+    url: '/api/v1/roles/{id}/permissions';
 };
 
 export type RolesControllerGetRolePermissionsResponses = {
@@ -4400,7 +4400,7 @@ export type RolesControllerAddPermissionsData = {
         id: string;
     };
     query?: never;
-    url: '/roles/{id}/permissions';
+    url: '/api/v1/roles/{id}/permissions';
 };
 
 export type RolesControllerAddPermissionsResponses = {
@@ -4416,7 +4416,7 @@ export type RolesControllerGetAllProjectRolesData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/roles/project-roles/all';
+    url: '/api/v1/roles/project-roles/all';
 };
 
 export type RolesControllerGetAllProjectRolesResponses = {
@@ -4432,7 +4432,7 @@ export type RolesControllerGetSystemProjectRolesData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/roles/project-roles/system';
+    url: '/api/v1/roles/project-roles/system';
 };
 
 export type RolesControllerGetSystemProjectRolesResponses = {
@@ -4450,7 +4450,7 @@ export type RolesControllerGetProjectRolesByProjectData = {
         projectId: string;
     };
     query?: never;
-    url: '/roles/project-roles/project/{projectId}';
+    url: '/api/v1/roles/project-roles/project/{projectId}';
 };
 
 export type RolesControllerGetProjectRolesByProjectResponses = {
@@ -4468,7 +4468,7 @@ export type RolesControllerRemoveProjectRolePermissionsData = {
         id: string;
     };
     query?: never;
-    url: '/roles/project-roles/{id}/permissions';
+    url: '/api/v1/roles/project-roles/{id}/permissions';
 };
 
 export type RolesControllerRemoveProjectRolePermissionsResponses = {
@@ -4484,7 +4484,7 @@ export type RolesControllerGetProjectRolePermissionsData = {
         id: string;
     };
     query?: never;
-    url: '/roles/project-roles/{id}/permissions';
+    url: '/api/v1/roles/project-roles/{id}/permissions';
 };
 
 export type RolesControllerGetProjectRolePermissionsResponses = {
@@ -4502,7 +4502,7 @@ export type RolesControllerAddProjectRolePermissionsData = {
         id: string;
     };
     query?: never;
-    url: '/roles/project-roles/{id}/permissions';
+    url: '/api/v1/roles/project-roles/{id}/permissions';
 };
 
 export type RolesControllerAddProjectRolePermissionsResponses = {
@@ -4516,7 +4516,7 @@ export type RolesControllerCreateProjectRoleData = {
     body: CreateProjectRoleDto;
     path?: never;
     query?: never;
-    url: '/roles/project-roles';
+    url: '/api/v1/roles/project-roles';
 };
 
 export type RolesControllerCreateProjectRoleResponses = {
@@ -4534,7 +4534,7 @@ export type RolesControllerDeleteProjectRoleData = {
         id: string;
     };
     query?: never;
-    url: '/roles/project-roles/{id}';
+    url: '/api/v1/roles/project-roles/{id}';
 };
 
 export type RolesControllerDeleteProjectRoleResponses = {
@@ -4550,7 +4550,7 @@ export type RolesControllerUpdateProjectRoleData = {
         id: string;
     };
     query?: never;
-    url: '/roles/project-roles/{id}';
+    url: '/api/v1/roles/project-roles/{id}';
 };
 
 export type RolesControllerUpdateProjectRoleResponses = {
@@ -4603,7 +4603,7 @@ export type AuditLogControllerFindAllData = {
          */
         limit?: string;
     };
-    url: '/audit/logs';
+    url: '/api/v1/audit/logs';
 };
 
 export type AuditLogControllerFindAllResponses = {
@@ -4619,7 +4619,7 @@ export type AuditLogControllerFindOneData = {
         id: string;
     };
     query?: never;
-    url: '/audit/logs/{id}';
+    url: '/api/v1/audit/logs/{id}';
 };
 
 export type AuditLogControllerFindOneResponses = {
@@ -4646,7 +4646,7 @@ export type AuditLogControllerGetStatisticsData = {
          */
         userId?: string;
     };
-    url: '/audit/statistics';
+    url: '/api/v1/audit/statistics';
 };
 
 export type AuditLogControllerGetStatisticsResponses = {
@@ -4660,7 +4660,7 @@ export type AuditLogControllerCleanupOldLogsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/audit/cleanup';
+    url: '/api/v1/audit/cleanup';
 };
 
 export type AuditLogControllerCleanupOldLogsResponses = {
@@ -4703,7 +4703,7 @@ export type FileSystemControllerGetProjectsData = {
          */
         filter?: ProjectFilterType;
     };
-    url: '/file-system/projects';
+    url: '/api/v1/file-system/projects';
 };
 
 export type FileSystemControllerGetProjectsResponses = {
@@ -4719,7 +4719,7 @@ export type FileSystemControllerCreateProjectData = {
     body: CreateProjectDto;
     path?: never;
     query?: never;
-    url: '/file-system/projects';
+    url: '/api/v1/file-system/projects';
 };
 
 export type FileSystemControllerCreateProjectErrors = {
@@ -4775,7 +4775,7 @@ export type FileSystemControllerGetDeletedProjectsData = {
          */
         filter?: ProjectFilterType;
     };
-    url: '/file-system/projects/trash';
+    url: '/api/v1/file-system/projects/trash';
 };
 
 export type FileSystemControllerGetDeletedProjectsResponses = {
@@ -4791,7 +4791,7 @@ export type FileSystemControllerGetPersonalSpaceData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/file-system/personal-space';
+    url: '/api/v1/file-system/personal-space';
 };
 
 export type FileSystemControllerGetPersonalSpaceResponses = {
@@ -4809,7 +4809,7 @@ export type FileSystemControllerGetUserPersonalSpaceData = {
         userId: string;
     };
     query?: never;
-    url: '/file-system/personal-space/by-user/{userId}';
+    url: '/api/v1/file-system/personal-space/by-user/{userId}';
 };
 
 export type FileSystemControllerGetUserPersonalSpaceErrors = {
@@ -4836,7 +4836,7 @@ export type FileSystemControllerDeleteProjectData = {
     query: {
         permanently: boolean;
     };
-    url: '/file-system/projects/{projectId}';
+    url: '/api/v1/file-system/projects/{projectId}';
 };
 
 export type FileSystemControllerDeleteProjectErrors = {
@@ -4861,7 +4861,7 @@ export type FileSystemControllerGetProjectData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}';
+    url: '/api/v1/file-system/projects/{projectId}';
 };
 
 export type FileSystemControllerGetProjectErrors = {
@@ -4886,7 +4886,7 @@ export type FileSystemControllerUpdateProjectData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}';
+    url: '/api/v1/file-system/projects/{projectId}';
 };
 
 export type FileSystemControllerUpdateProjectErrors = {
@@ -4909,7 +4909,7 @@ export type FileSystemControllerClearTrashData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/file-system/trash';
+    url: '/api/v1/file-system/trash';
 };
 
 export type FileSystemControllerClearTrashResponses = {
@@ -4925,7 +4925,7 @@ export type FileSystemControllerGetTrashData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/file-system/trash';
+    url: '/api/v1/file-system/trash';
 };
 
 export type FileSystemControllerGetTrashResponses = {
@@ -4946,7 +4946,7 @@ export type FileSystemControllerRestoreTrashItemsData = {
     };
     path?: never;
     query?: never;
-    url: '/file-system/trash/restore';
+    url: '/api/v1/file-system/trash/restore';
 };
 
 export type FileSystemControllerRestoreTrashItemsResponses = {
@@ -4967,7 +4967,7 @@ export type FileSystemControllerPermanentlyDeleteTrashItemsData = {
     };
     path?: never;
     query?: never;
-    url: '/file-system/trash/items';
+    url: '/api/v1/file-system/trash/items';
 };
 
 export type FileSystemControllerPermanentlyDeleteTrashItemsResponses = {
@@ -4985,7 +4985,7 @@ export type FileSystemControllerClearProjectTrashData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/trash';
+    url: '/api/v1/file-system/projects/{projectId}/trash';
 };
 
 export type FileSystemControllerClearProjectTrashResponses = {
@@ -5040,7 +5040,7 @@ export type FileSystemControllerGetProjectTrashData = {
          */
         includeDeleted?: boolean;
     };
-    url: '/file-system/projects/{projectId}/trash';
+    url: '/api/v1/file-system/projects/{projectId}/trash';
 };
 
 export type FileSystemControllerGetProjectTrashErrors = {
@@ -5076,7 +5076,7 @@ export type FileSystemControllerCreateNodeData = {
     };
     path?: never;
     query?: never;
-    url: '/file-system/nodes';
+    url: '/api/v1/file-system/nodes';
 };
 
 export type FileSystemControllerCreateNodeErrors = {
@@ -5101,7 +5101,7 @@ export type FileSystemControllerCreateFolderData = {
         parentId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{parentId}/folders';
+    url: '/api/v1/file-system/nodes/{parentId}/folders';
 };
 
 export type FileSystemControllerCreateFolderErrors = {
@@ -5126,7 +5126,7 @@ export type FileSystemControllerGetRootNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}/root';
+    url: '/api/v1/file-system/nodes/{nodeId}/root';
 };
 
 export type FileSystemControllerGetRootNodeErrors = {
@@ -5151,7 +5151,7 @@ export type FileSystemControllerRestoreNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}/restore';
+    url: '/api/v1/file-system/nodes/{nodeId}/restore';
 };
 
 export type FileSystemControllerRestoreNodeErrors = {
@@ -5178,7 +5178,7 @@ export type FileSystemControllerDeleteNodeData = {
     query: {
         permanently: boolean;
     };
-    url: '/file-system/nodes/{nodeId}';
+    url: '/api/v1/file-system/nodes/{nodeId}';
 };
 
 export type FileSystemControllerDeleteNodeErrors = {
@@ -5203,7 +5203,7 @@ export type FileSystemControllerGetNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}';
+    url: '/api/v1/file-system/nodes/{nodeId}';
 };
 
 export type FileSystemControllerGetNodeErrors = {
@@ -5228,7 +5228,7 @@ export type FileSystemControllerUpdateNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}';
+    url: '/api/v1/file-system/nodes/{nodeId}';
 };
 
 export type FileSystemControllerUpdateNodeErrors = {
@@ -5290,7 +5290,7 @@ export type FileSystemControllerGetChildrenData = {
          */
         includeDeleted?: boolean;
     };
-    url: '/file-system/nodes/{nodeId}/children';
+    url: '/api/v1/file-system/nodes/{nodeId}/children';
 };
 
 export type FileSystemControllerGetChildrenErrors = {
@@ -5315,7 +5315,7 @@ export type FileSystemControllerMoveNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}/move';
+    url: '/api/v1/file-system/nodes/{nodeId}/move';
 };
 
 export type FileSystemControllerMoveNodeErrors = {
@@ -5340,7 +5340,7 @@ export type FileSystemControllerCopyNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}/copy';
+    url: '/api/v1/file-system/nodes/{nodeId}/copy';
 };
 
 export type FileSystemControllerCopyNodeErrors = {
@@ -5366,7 +5366,7 @@ export type FileSystemControllerGetStorageQuotaData = {
         nodeId: string;
         userId: string;
     };
-    url: '/file-system/quota';
+    url: '/api/v1/file-system/quota';
 };
 
 export type FileSystemControllerGetStorageQuotaResponses = {
@@ -5382,7 +5382,7 @@ export type FileSystemControllerUpdateStorageQuotaData = {
     body: UpdateStorageQuotaDto;
     path?: never;
     query?: never;
-    url: '/file-system/quota/update';
+    url: '/api/v1/file-system/quota/update';
 };
 
 export type FileSystemControllerUpdateStorageQuotaErrors = {
@@ -5419,7 +5419,7 @@ export type FileSystemControllerGetProjectMembersData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/members';
+    url: '/api/v1/file-system/projects/{projectId}/members';
 };
 
 export type FileSystemControllerGetProjectMembersErrors = {
@@ -5452,7 +5452,7 @@ export type FileSystemControllerAddProjectMemberData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/members';
+    url: '/api/v1/file-system/projects/{projectId}/members';
 };
 
 export type FileSystemControllerAddProjectMemberErrors = {
@@ -5490,7 +5490,7 @@ export type FileSystemControllerRemoveProjectMemberData = {
         userId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/members/{userId}';
+    url: '/api/v1/file-system/projects/{projectId}/members/{userId}';
 };
 
 export type FileSystemControllerRemoveProjectMemberErrors = {
@@ -5537,7 +5537,7 @@ export type FileSystemControllerUpdateProjectMemberData = {
         userId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/members/{userId}';
+    url: '/api/v1/file-system/projects/{projectId}/members/{userId}';
 };
 
 export type FileSystemControllerUpdateProjectMemberErrors = {
@@ -5579,7 +5579,7 @@ export type FileSystemControllerTransferProjectData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/transfer';
+    url: '/api/v1/file-system/projects/{projectId}/transfer';
 };
 
 export type FileSystemControllerTransferProjectErrors = {
@@ -5628,7 +5628,7 @@ export type FileSystemControllerUpdateProjectMembersBatchData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/members/batch';
+    url: '/api/v1/file-system/projects/{projectId}/members/batch';
 };
 
 export type FileSystemControllerUpdateProjectMembersBatchErrors = {
@@ -5677,7 +5677,7 @@ export type FileSystemControllerAddProjectMembersBatchData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/members/batch';
+    url: '/api/v1/file-system/projects/{projectId}/members/batch';
 };
 
 export type FileSystemControllerAddProjectMembersBatchErrors = {
@@ -5712,7 +5712,7 @@ export type FileSystemControllerGetThumbnailData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}/thumbnail';
+    url: '/api/v1/file-system/nodes/{nodeId}/thumbnail';
 };
 
 export type FileSystemControllerGetThumbnailErrors = {
@@ -5749,7 +5749,7 @@ export type FileSystemControllerDownloadNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/file-system/nodes/{nodeId}/download';
+    url: '/api/v1/file-system/nodes/{nodeId}/download';
 };
 
 export type FileSystemControllerDownloadNodeErrors = {
@@ -5778,7 +5778,7 @@ export type FileSystemControllerDownloadNodeOptionsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/file-system/nodes/{nodeId}/download';
+    url: '/api/v1/file-system/nodes/{nodeId}/download';
 };
 
 export type FileSystemControllerDownloadNodeOptionsResponses = {
@@ -5808,7 +5808,7 @@ export type FileSystemControllerDownloadNodeWithFormatData = {
          */
         format?: CadDownloadFormat;
     };
-    url: '/file-system/nodes/{nodeId}/download-with-format';
+    url: '/api/v1/file-system/nodes/{nodeId}/download-with-format';
 };
 
 export type FileSystemControllerDownloadNodeWithFormatErrors = {
@@ -5843,7 +5843,7 @@ export type FileSystemControllerGetUserProjectPermissionsData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/permissions';
+    url: '/api/v1/file-system/projects/{projectId}/permissions';
 };
 
 export type FileSystemControllerGetUserProjectPermissionsResponses = {
@@ -5866,7 +5866,7 @@ export type FileSystemControllerCheckProjectPermissionData = {
          */
         permission: ProjectPermissionEnum;
     };
-    url: '/file-system/projects/{projectId}/permissions/check';
+    url: '/api/v1/file-system/projects/{projectId}/permissions/check';
 };
 
 export type FileSystemControllerCheckProjectPermissionResponses = {
@@ -5884,7 +5884,7 @@ export type FileSystemControllerGetUserProjectRoleData = {
         projectId: string;
     };
     query?: never;
-    url: '/file-system/projects/{projectId}/role';
+    url: '/api/v1/file-system/projects/{projectId}/role';
 };
 
 export type FileSystemControllerGetUserProjectRoleResponses = {
@@ -5951,7 +5951,7 @@ export type FileSystemControllerSearchData = {
          */
         sortOrder?: 'asc' | 'desc';
     };
-    url: '/file-system/search';
+    url: '/api/v1/file-system/search';
 };
 
 export type FileSystemControllerSearchErrors = {
@@ -5987,7 +5987,7 @@ export type VersionControlControllerGetFileHistoryData = {
          */
         limit?: number;
     };
-    url: '/version-control/history';
+    url: '/api/v1/version-control/history';
 };
 
 export type VersionControlControllerGetFileHistoryErrors = {
@@ -6032,7 +6032,7 @@ export type VersionControlControllerGetFileContentAtRevisionData = {
          */
         filePath: string;
     };
-    url: '/version-control/file/{revision}';
+    url: '/api/v1/version-control/file/{revision}';
 };
 
 export type VersionControlControllerGetFileContentAtRevisionErrors = {
@@ -6077,7 +6077,7 @@ export type VersionControlControllerListDirectoryAtRevisionData = {
          */
         directoryPath: string;
     };
-    url: '/version-control/list/{revision}';
+    url: '/api/v1/version-control/list/{revision}';
 };
 
 export type VersionControlControllerListDirectoryAtRevisionErrors = {
@@ -6117,7 +6117,7 @@ export type FontsControllerGetFontsData = {
          */
         location?: 'backend' | 'frontend';
     };
-    url: '/font-management';
+    url: '/api/v1/font-management';
 };
 
 export type FontsControllerGetFontsResponses = {
@@ -6128,7 +6128,7 @@ export type FontsControllerUploadFontData = {
     body: UploadFontDto;
     path?: never;
     query?: never;
-    url: '/font-management/upload';
+    url: '/api/v1/font-management/upload';
 };
 
 export type FontsControllerUploadFontResponses = {
@@ -6146,7 +6146,7 @@ export type FontsControllerDeleteFontData = {
          */
         target?: FontUploadTarget;
     };
-    url: '/font-management/{fileName}';
+    url: '/api/v1/font-management/{fileName}';
 };
 
 export type FontsControllerDeleteFontResponses = {
@@ -6164,7 +6164,7 @@ export type FontsControllerDownloadFontData = {
          */
         location: 'backend' | 'frontend';
     };
-    url: '/font-management/download/{fileName}';
+    url: '/api/v1/font-management/download/{fileName}';
 };
 
 export type FontsControllerDownloadFontResponses = {
@@ -6175,7 +6175,7 @@ export type MxCadControllerCheckChunkExistData = {
     body: CheckChunkExistDto;
     path?: never;
     query?: never;
-    url: '/mxcad/files/chunkisExist';
+    url: '/api/v1/mxcad/files/chunkisExist';
 };
 
 export type MxCadControllerCheckChunkExistResponses = {
@@ -6191,7 +6191,7 @@ export type MxCadControllerCheckFileExistData = {
     body: CheckFileExistDto;
     path?: never;
     query?: never;
-    url: '/mxcad/files/fileisExist';
+    url: '/api/v1/mxcad/files/fileisExist';
 };
 
 export type MxCadControllerCheckFileExistResponses = {
@@ -6207,7 +6207,7 @@ export type MxCadControllerUploadFileData = {
     body: UploadFilesDto;
     path?: never;
     query?: never;
-    url: '/mxcad/files/uploadFiles';
+    url: '/api/v1/mxcad/files/uploadFiles';
 };
 
 export type MxCadControllerUploadFileResponses = {
@@ -6225,7 +6225,7 @@ export type MxCadControllerGetPreloadingDataData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/file/{nodeId}/preloading';
+    url: '/api/v1/mxcad/file/{nodeId}/preloading';
 };
 
 export type MxCadControllerGetPreloadingDataErrors = {
@@ -6250,7 +6250,7 @@ export type MxCadControllerCheckExternalReferenceData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/file/{nodeId}/check-reference';
+    url: '/api/v1/mxcad/file/{nodeId}/check-reference';
 };
 
 export type MxCadControllerCheckExternalReferenceErrors = {
@@ -6280,7 +6280,7 @@ export type MxCadControllerRefreshExternalReferencesData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/file/{nodeId}/refresh-external-references';
+    url: '/api/v1/mxcad/file/{nodeId}/refresh-external-references';
 };
 
 export type MxCadControllerRefreshExternalReferencesErrors = {
@@ -6305,7 +6305,7 @@ export type MxCadControllerUploadExtReferenceDwgData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/up_ext_reference_dwg/{nodeId}';
+    url: '/api/v1/mxcad/up_ext_reference_dwg/{nodeId}';
 };
 
 export type MxCadControllerUploadExtReferenceDwgErrors = {
@@ -6339,7 +6339,7 @@ export type MxCadControllerUploadExtReferenceImageData = {
     body: UploadExtReferenceFileDto;
     path?: never;
     query?: never;
-    url: '/mxcad/up_ext_reference_image';
+    url: '/api/v1/mxcad/up_ext_reference_image';
 };
 
 export type MxCadControllerUploadExtReferenceImageErrors = {
@@ -6373,7 +6373,7 @@ export type MxCadControllerGetFilesDataFileData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/mxcad/filesData/{path}';
+    url: '/api/v1/mxcad/filesData/{path}';
 };
 
 export type MxCadControllerGetFilesDataFileErrors = {
@@ -6412,7 +6412,7 @@ export type MxCadControllerGetFilesDataFileHeadData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/mxcad/filesData/{path}';
+    url: '/api/v1/mxcad/filesData/{path}';
 };
 
 export type MxCadControllerGetFilesDataFileHeadErrors = {
@@ -6437,7 +6437,7 @@ export type MxCadControllerGetFileData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/mxcad/file/{path}';
+    url: '/api/v1/mxcad/file/{path}';
 };
 
 export type MxCadControllerGetFileErrors = {
@@ -6472,7 +6472,7 @@ export type MxCadControllerGetFileHeadData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/mxcad/file/{path}';
+    url: '/api/v1/mxcad/file/{path}';
 };
 
 export type MxCadControllerGetFileHeadErrors = {
@@ -6499,7 +6499,7 @@ export type MxCadControllerGetNonCadFileData = {
         storageKey: string;
     };
     query?: never;
-    url: '/mxcad/files/{storageKey}';
+    url: '/api/v1/mxcad/files/{storageKey}';
 };
 
 export type MxCadControllerGetNonCadFileErrors = {
@@ -6528,7 +6528,7 @@ export type ThumbnailControllerCheckThumbnailData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/thumbnail/{nodeId}';
+    url: '/api/v1/mxcad/thumbnail/{nodeId}';
 };
 
 export type ThumbnailControllerCheckThumbnailErrors = {
@@ -6557,7 +6557,7 @@ export type ThumbnailControllerUploadThumbnailData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/thumbnail/{nodeId}';
+    url: '/api/v1/mxcad/thumbnail/{nodeId}';
 };
 
 export type ThumbnailControllerUploadThumbnailErrors = {
@@ -6586,7 +6586,7 @@ export type SaveControllerSaveMxwebToNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/mxcad/savemxweb/{nodeId}';
+    url: '/api/v1/mxcad/savemxweb/{nodeId}';
 };
 
 export type SaveControllerSaveMxwebToNodeResponses = {
@@ -6602,7 +6602,7 @@ export type SaveControllerSaveMxwebAsData = {
     body: SaveMxwebAsDto;
     path?: never;
     query?: never;
-    url: '/mxcad/save-as';
+    url: '/api/v1/mxcad/save-as';
 };
 
 export type SaveControllerSaveMxwebAsErrors = {
@@ -6625,7 +6625,7 @@ export type AdminControllerGetAdminStatsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/admin/stats';
+    url: '/api/v1/admin/stats';
 };
 
 export type AdminControllerGetAdminStatsResponses = {
@@ -6641,7 +6641,7 @@ export type AdminControllerGetCacheStatsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/admin/permissions/cache';
+    url: '/api/v1/admin/permissions/cache';
 };
 
 export type AdminControllerGetCacheStatsResponses = {
@@ -6657,7 +6657,7 @@ export type AdminControllerCleanupCacheData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/admin/permissions/cache/cleanup';
+    url: '/api/v1/admin/permissions/cache/cleanup';
 };
 
 export type AdminControllerCleanupCacheResponses = {
@@ -6675,7 +6675,7 @@ export type AdminControllerClearUserCacheData = {
         userId: string;
     };
     query?: never;
-    url: '/admin/permissions/cache/user/{userId}';
+    url: '/api/v1/admin/permissions/cache/user/{userId}';
 };
 
 export type AdminControllerClearUserCacheResponses = {
@@ -6693,7 +6693,7 @@ export type AdminControllerGetUserPermissionsData = {
         userId: string;
     };
     query?: never;
-    url: '/admin/permissions/user/{userId}';
+    url: '/api/v1/admin/permissions/user/{userId}';
 };
 
 export type AdminControllerGetUserPermissionsResponses = {
@@ -6714,7 +6714,7 @@ export type AdminControllerCleanupStorageData = {
          */
         delayDays?: number;
     };
-    url: '/admin/storage/cleanup';
+    url: '/api/v1/admin/storage/cleanup';
 };
 
 export type AdminControllerCleanupStorageResponses = {
@@ -6728,7 +6728,7 @@ export type AdminControllerGetCleanupStatsData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/admin/storage/cleanup/stats';
+    url: '/api/v1/admin/storage/cleanup/stats';
 };
 
 export type AdminControllerGetCleanupStatsResponses = {
@@ -6742,7 +6742,7 @@ export type HealthControllerLivenessData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/health/live';
+    url: '/api/v1/health/live';
 };
 
 export type HealthControllerLivenessResponses = {
@@ -6756,7 +6756,7 @@ export type HealthControllerPublicHealthData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/health/public';
+    url: '/api/v1/health/public';
 };
 
 export type HealthControllerPublicHealthResponses = {
@@ -6770,7 +6770,7 @@ export type HealthControllerCheckFullData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/health';
+    url: '/api/v1/health';
 };
 
 export type HealthControllerCheckFullErrors = {
@@ -6839,7 +6839,7 @@ export type HealthControllerCheckData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/health/full';
+    url: '/api/v1/health/full';
 };
 
 export type HealthControllerCheckErrors = {
@@ -6908,7 +6908,7 @@ export type HealthControllerCheckDatabaseData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/health/db';
+    url: '/api/v1/health/db';
 };
 
 export type HealthControllerCheckDatabaseErrors = {
@@ -6929,7 +6929,7 @@ export type HealthControllerCheckStorageData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/health/storage';
+    url: '/api/v1/health/storage';
 };
 
 export type HealthControllerCheckStorageErrors = {
@@ -6950,7 +6950,7 @@ export type PolicyConfigControllerGetAllPoliciesData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/policy-config';
+    url: '/api/v1/policy-config';
 };
 
 export type PolicyConfigControllerGetAllPoliciesResponses = {
@@ -6966,7 +6966,7 @@ export type PolicyConfigControllerCreatePolicyData = {
     body: CreatePolicyDto;
     path?: never;
     query?: never;
-    url: '/policy-config';
+    url: '/api/v1/policy-config';
 };
 
 export type PolicyConfigControllerCreatePolicyErrors = {
@@ -6991,7 +6991,7 @@ export type PolicyConfigControllerDeletePolicyData = {
         id: string;
     };
     query?: never;
-    url: '/policy-config/{id}';
+    url: '/api/v1/policy-config/{id}';
 };
 
 export type PolicyConfigControllerDeletePolicyErrors = {
@@ -7016,7 +7016,7 @@ export type PolicyConfigControllerGetPolicyData = {
         id: string;
     };
     query?: never;
-    url: '/policy-config/{id}';
+    url: '/api/v1/policy-config/{id}';
 };
 
 export type PolicyConfigControllerGetPolicyErrors = {
@@ -7041,7 +7041,7 @@ export type PolicyConfigControllerUpdatePolicyData = {
         id: string;
     };
     query?: never;
-    url: '/policy-config/{id}';
+    url: '/api/v1/policy-config/{id}';
 };
 
 export type PolicyConfigControllerUpdatePolicyErrors = {
@@ -7066,7 +7066,7 @@ export type PolicyConfigControllerEnablePolicyData = {
         id: string;
     };
     query?: never;
-    url: '/policy-config/{id}/enable';
+    url: '/api/v1/policy-config/{id}/enable';
 };
 
 export type PolicyConfigControllerEnablePolicyResponses = {
@@ -7084,7 +7084,7 @@ export type PolicyConfigControllerDisablePolicyData = {
         id: string;
     };
     query?: never;
-    url: '/policy-config/{id}/disable';
+    url: '/api/v1/policy-config/{id}/disable';
 };
 
 export type PolicyConfigControllerDisablePolicyResponses = {
@@ -7103,7 +7103,7 @@ export type PublicFileControllerAccessFileData = {
         filename: string;
     };
     query?: never;
-    url: '/public-file/access/{hash}/{filename}';
+    url: '/api/v1/public-file/access/{hash}/{filename}';
 };
 
 export type PublicFileControllerAccessFileErrors = {
@@ -7128,7 +7128,7 @@ export type PublicFileControllerAccessFileByHashPatternData = {
         filename: string;
     };
     query?: never;
-    url: '/public-file/access/{filename}';
+    url: '/api/v1/public-file/access/{filename}';
 };
 
 export type PublicFileControllerAccessFileByHashPatternErrors = {
@@ -7151,7 +7151,7 @@ export type PublicFileControllerUploadExtReferenceData = {
     body: UploadExtReferenceDto;
     path?: never;
     query?: never;
-    url: '/public-file/ext-reference/upload';
+    url: '/api/v1/public-file/ext-reference/upload';
 };
 
 export type PublicFileControllerUploadExtReferenceErrors = {
@@ -7187,7 +7187,7 @@ export type PublicFileControllerCheckExtReferenceData = {
          */
         fileName: string;
     };
-    url: '/public-file/ext-reference/check';
+    url: '/api/v1/public-file/ext-reference/check';
 };
 
 export type PublicFileControllerCheckExtReferenceResponses = {
@@ -7207,7 +7207,7 @@ export type PublicFileControllerGetPreloadingDataData = {
         hash: string;
     };
     query?: never;
-    url: '/public-file/preloading/{hash}';
+    url: '/api/v1/public-file/preloading/{hash}';
 };
 
 export type PublicFileControllerGetPreloadingDataErrors = {
@@ -7252,7 +7252,7 @@ export type PublicFileControllerConvertAndDownloadData = {
     };
     path?: never;
     query?: never;
-    url: '/public-file/convert';
+    url: '/api/v1/public-file/convert';
 };
 
 export type PublicFileControllerConvertAndDownloadErrors = {
@@ -7273,7 +7273,7 @@ export type LibraryControllerGetDrawingLibraryData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/library/drawing';
+    url: '/api/v1/library/drawing';
 };
 
 export type LibraryControllerGetDrawingLibraryResponses = {
@@ -7289,7 +7289,7 @@ export type LibraryControllerGetDrawingCategoriesData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/library/drawing/categories';
+    url: '/api/v1/library/drawing/categories';
 };
 
 export type LibraryControllerGetDrawingCategoriesResponses = {
@@ -7342,7 +7342,7 @@ export type LibraryControllerGetDrawingChildrenData = {
          */
         includeDeleted?: boolean;
     };
-    url: '/library/drawing/children/{nodeId}';
+    url: '/api/v1/library/drawing/children/{nodeId}';
 };
 
 export type LibraryControllerGetDrawingChildrenResponses = {
@@ -7397,7 +7397,7 @@ export type LibraryControllerGetDrawingAllFilesData = {
          */
         includeDeleted?: boolean;
     };
-    url: '/library/drawing/all-files/{nodeId}';
+    url: '/api/v1/library/drawing/all-files/{nodeId}';
 };
 
 export type LibraryControllerGetDrawingAllFilesResponses = {
@@ -7415,7 +7415,7 @@ export type LibraryControllerGetDrawingFileData = {
         path: Array<string>;
     };
     query?: never;
-    url: '/library/drawing/filesData/{path}';
+    url: '/api/v1/library/drawing/filesData/{path}';
 };
 
 export type LibraryControllerGetDrawingFileResponses = {
@@ -7435,7 +7435,7 @@ export type LibraryControllerDeleteDrawingNodeData = {
     query: {
         permanently: boolean;
     };
-    url: '/library/drawing/nodes/{nodeId}';
+    url: '/api/v1/library/drawing/nodes/{nodeId}';
 };
 
 export type LibraryControllerDeleteDrawingNodeResponses = {
@@ -7451,7 +7451,7 @@ export type LibraryControllerGetDrawingNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/nodes/{nodeId}';
+    url: '/api/v1/library/drawing/nodes/{nodeId}';
 };
 
 export type LibraryControllerGetDrawingNodeResponses = {
@@ -7469,7 +7469,7 @@ export type LibraryControllerRenameDrawingNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/nodes/{nodeId}';
+    url: '/api/v1/library/drawing/nodes/{nodeId}';
 };
 
 export type LibraryControllerRenameDrawingNodeResponses = {
@@ -7487,7 +7487,7 @@ export type LibraryControllerDownloadDrawingNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/nodes/{nodeId}/download';
+    url: '/api/v1/library/drawing/nodes/{nodeId}/download';
 };
 
 export type LibraryControllerDownloadDrawingNodeResponses = {
@@ -7505,7 +7505,7 @@ export type LibraryControllerGetDrawingThumbnailData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/nodes/{nodeId}/thumbnail';
+    url: '/api/v1/library/drawing/nodes/{nodeId}/thumbnail';
 };
 
 export type LibraryControllerGetDrawingThumbnailResponses = {
@@ -7521,7 +7521,7 @@ export type LibraryControllerSaveDrawingNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/save/{nodeId}';
+    url: '/api/v1/library/drawing/save/{nodeId}';
 };
 
 export type LibraryControllerSaveDrawingNodeResponses = {
@@ -7535,7 +7535,7 @@ export type LibraryControllerSaveDrawingAsData = {
     body: SaveLibraryAsDto;
     path?: never;
     query?: never;
-    url: '/library/drawing/save-as';
+    url: '/api/v1/library/drawing/save-as';
 };
 
 export type LibraryControllerSaveDrawingAsResponses = {
@@ -7549,7 +7549,7 @@ export type LibraryControllerCreateDrawingFolderData = {
     body: CreateFolderDto;
     path?: never;
     query?: never;
-    url: '/library/drawing/folders';
+    url: '/api/v1/library/drawing/folders';
 };
 
 export type LibraryControllerCreateDrawingFolderResponses = {
@@ -7567,7 +7567,7 @@ export type LibraryControllerMoveDrawingNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/nodes/{nodeId}/move';
+    url: '/api/v1/library/drawing/nodes/{nodeId}/move';
 };
 
 export type LibraryControllerMoveDrawingNodeResponses = {
@@ -7585,7 +7585,7 @@ export type LibraryControllerCopyDrawingNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/drawing/nodes/{nodeId}/copy';
+    url: '/api/v1/library/drawing/nodes/{nodeId}/copy';
 };
 
 export type LibraryControllerCopyDrawingNodeResponses = {
@@ -7601,7 +7601,7 @@ export type LibraryControllerGetBlockLibraryData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/library/block';
+    url: '/api/v1/library/block';
 };
 
 export type LibraryControllerGetBlockLibraryResponses = {
@@ -7617,7 +7617,7 @@ export type LibraryControllerGetBlockCategoriesData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/library/block/categories';
+    url: '/api/v1/library/block/categories';
 };
 
 export type LibraryControllerGetBlockCategoriesResponses = {
@@ -7670,7 +7670,7 @@ export type LibraryControllerGetBlockChildrenData = {
          */
         includeDeleted?: boolean;
     };
-    url: '/library/block/children/{nodeId}';
+    url: '/api/v1/library/block/children/{nodeId}';
 };
 
 export type LibraryControllerGetBlockChildrenResponses = {
@@ -7725,7 +7725,7 @@ export type LibraryControllerGetBlockAllFilesData = {
          */
         includeDeleted?: boolean;
     };
-    url: '/library/block/all-files/{nodeId}';
+    url: '/api/v1/library/block/all-files/{nodeId}';
 };
 
 export type LibraryControllerGetBlockAllFilesResponses = {
@@ -7743,7 +7743,7 @@ export type LibraryControllerGetBlockFileData = {
         path: Array<string>;
     };
     query?: never;
-    url: '/library/block/filesData/{path}';
+    url: '/api/v1/library/block/filesData/{path}';
 };
 
 export type LibraryControllerGetBlockFileResponses = {
@@ -7763,7 +7763,7 @@ export type LibraryControllerDeleteBlockNodeData = {
     query: {
         permanently: boolean;
     };
-    url: '/library/block/nodes/{nodeId}';
+    url: '/api/v1/library/block/nodes/{nodeId}';
 };
 
 export type LibraryControllerDeleteBlockNodeResponses = {
@@ -7779,7 +7779,7 @@ export type LibraryControllerGetBlockNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/nodes/{nodeId}';
+    url: '/api/v1/library/block/nodes/{nodeId}';
 };
 
 export type LibraryControllerGetBlockNodeResponses = {
@@ -7797,7 +7797,7 @@ export type LibraryControllerRenameBlockNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/nodes/{nodeId}';
+    url: '/api/v1/library/block/nodes/{nodeId}';
 };
 
 export type LibraryControllerRenameBlockNodeResponses = {
@@ -7815,7 +7815,7 @@ export type LibraryControllerDownloadBlockNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/nodes/{nodeId}/download';
+    url: '/api/v1/library/block/nodes/{nodeId}/download';
 };
 
 export type LibraryControllerDownloadBlockNodeResponses = {
@@ -7833,7 +7833,7 @@ export type LibraryControllerGetBlockThumbnailData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/nodes/{nodeId}/thumbnail';
+    url: '/api/v1/library/block/nodes/{nodeId}/thumbnail';
 };
 
 export type LibraryControllerGetBlockThumbnailResponses = {
@@ -7849,7 +7849,7 @@ export type LibraryControllerSaveBlockNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/save/{nodeId}';
+    url: '/api/v1/library/block/save/{nodeId}';
 };
 
 export type LibraryControllerSaveBlockNodeResponses = {
@@ -7863,7 +7863,7 @@ export type LibraryControllerSaveBlockAsData = {
     body: SaveLibraryAsDto;
     path?: never;
     query?: never;
-    url: '/library/block/save-as';
+    url: '/api/v1/library/block/save-as';
 };
 
 export type LibraryControllerSaveBlockAsResponses = {
@@ -7877,7 +7877,7 @@ export type LibraryControllerCreateBlockFolderData = {
     body: CreateFolderDto;
     path?: never;
     query?: never;
-    url: '/library/block/folders';
+    url: '/api/v1/library/block/folders';
 };
 
 export type LibraryControllerCreateBlockFolderResponses = {
@@ -7895,7 +7895,7 @@ export type LibraryControllerMoveBlockNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/nodes/{nodeId}/move';
+    url: '/api/v1/library/block/nodes/{nodeId}/move';
 };
 
 export type LibraryControllerMoveBlockNodeResponses = {
@@ -7913,7 +7913,7 @@ export type LibraryControllerCopyBlockNodeData = {
         nodeId: string;
     };
     query?: never;
-    url: '/library/block/nodes/{nodeId}/copy';
+    url: '/api/v1/library/block/nodes/{nodeId}/copy';
 };
 
 export type LibraryControllerCopyBlockNodeResponses = {

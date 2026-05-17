@@ -4,6 +4,16 @@ import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { FileNameText } from './ui/TruncateText';
 
+declare global {
+  interface Window {
+    MxPluginContext?: {
+      useMessage: () => {
+        info: (msg: string) => void;
+      };
+    };
+  }
+}
+
 import { handleError } from '../utils/errorHandler';
 import {
   getOriginalFileUrl,
@@ -135,7 +145,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageSrc, setPreviewImageSrc] = useState('');
   const [useCompactActions, setUseCompactActions] = useState(false);
-  const [showDoubleClickTip, setShowDoubleClickTip] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isRoot = node.isRoot;
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -239,12 +248,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           // 第一次点击，启动定时器
           clickTimerRef.current = setTimeout(() => {
             // 超过时间没有第二次点击，确定是单击
-            if (!showDoubleClickTip) {
-              setShowDoubleClickTip(true);
-              setTimeout(() => {
-                setShowDoubleClickTip(false);
-              }, 2000);
-            }
+            window.MxPluginContext?.useMessage()?.info('请双击打开图纸');
             clickCountRef.current = 0;
             clickTimerRef.current = null;
           }, 300);
@@ -277,7 +281,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         clickTimerRef.current = null;
       }
       clickCountRef.current = 0;
-      setShowDoubleClickTip(false);
 
       if (isPreviewOpen) return;
       if (isImageFile()) {
@@ -566,15 +569,6 @@ export const FileItem: React.FC<FileItemProps> = ({
           src={previewImageSrc}
           alt={node.name}
         />
-
-        {/* 双击提示 */}
-        {showDoubleClickTip && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl z-10">
-            <div className="px-4 py-2 bg-gray-900/90 text-white text-sm rounded-lg shadow-lg backdrop-blur-sm" style={{ animation: 'fade-in 0.3s ease' }}>
-              请双击打开图纸
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -794,15 +788,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         onSkip={externalReferenceUpload.skip}
         onClose={externalReferenceUpload.close}
       />
-
-      {/* 双击提示 */}
-      {showDoubleClickTip && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg z-10">
-          <div className="px-4 py-2 bg-gray-900/90 text-white text-sm rounded-lg shadow-lg backdrop-blur-sm" style={{ animation: 'fade-in 0.3s ease' }}>
-            请双击打开图纸
-          </div>
-        </div>
-      )}
     </div>
   );
 };

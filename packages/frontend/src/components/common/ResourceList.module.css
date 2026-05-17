@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+
   border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
   flex-shrink: 0;
@@ -64,22 +64,17 @@
 
 .searchInput {
   width: 100%;
-  padding: 10px 12px 10px 36px;
+  padding: 2px 1px 2px 36px;
   font-size: 0.8125rem;
   color: var(--text-primary, #f0f4f8);
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, var(--border-default, #212832));
-  border-radius: var(--radius-lg);
+
   outline: none;
   transition: all var(--transition-fast);
   box-sizing: border-box;
 }
 
-.searchInput:focus {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: var(--primary-500, #818cf8);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
 
 .searchInput::placeholder {
   color: var(--text-muted, #5a6a7a);
@@ -103,8 +98,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   color: var(--text-tertiary, #7a8a99);
   background-color: transparent;
@@ -141,10 +136,9 @@
 
 .categorySelect {
   width: 100%;
-  padding: 10px 12px;
+  padding: 4px;
   font-size: 0.8125rem;
   color: var(--text-secondary, #b8c5d1);
-  background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, var(--border-default, #212832));
   border-radius: var(--radius-lg);
   outline: none;
@@ -152,17 +146,6 @@
   transition: all var(--transition-fast);
 }
 
-.categorySelect:focus {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: var(--primary-500, #818cf8);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.categorySelect.disabled {
-  background-color: rgba(255, 255, 255, 0.03);
-  color: var(--text-muted, #5a6a7a);
-  cursor: not-allowed;
-}
 
 /* ==================== 内容区域 ==================== */
 

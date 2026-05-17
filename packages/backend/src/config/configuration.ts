@@ -473,7 +473,19 @@ export default (): AppConfig => {
 function parseLogLevels(
 	nodeEnv: string,
 ): ("error" | "warn" | "log" | "debug" | "verbose")[] {
-	// 开发环境：error + warn + log（不打印 debug/verbose，减少噪音）
+	// 优先使用环境变量 LOG_LEVELS（逗号分隔，例如: error,warn,log,debug）
+	const envLogLevels = process.env.LOG_LEVELS;
+	if (envLogLevels && envLogLevels.trim() !== "") {
+		const levels = envLogLevels
+			.split(",")
+			.map((s) => s.trim().toLowerCase())
+			.filter((s) => ["error", "warn", "log", "debug", "verbose"].includes(s));
+		if (levels.length > 0) {
+			return levels as ("error" | "warn" | "log" | "debug" | "verbose")[];
+		}
+	}
+
+	// 默认根据环境判断
 	if (nodeEnv === "development") {
 		return ["error", "warn", "log"];
 	}

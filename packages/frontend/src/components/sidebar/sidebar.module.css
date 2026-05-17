@@ -55,14 +55,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 2px;
   background: linear-gradient(
     180deg,
     var(--bg-tertiary) 0%,
     var(--bg-secondary) 100%
   );
   border-bottom: 1px solid var(--border-default);
-  min-height: 56px;
+  min-height: 40px;
   flex-shrink: 0;
 }
 
@@ -92,7 +92,7 @@
 /* Tab 按钮 */
 .tab {
   position: relative;
-  padding: 8px 16px;
+  padding: 2px 6px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-tertiary);
@@ -225,7 +225,7 @@
 .subTabBar {
   display: flex;
   gap: 4px;
-  padding: 8px 12px;
+  padding: 2px;
   background: linear-gradient(
     180deg,
     var(--bg-tertiary) 0%,
@@ -251,7 +251,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 6px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
@@ -349,10 +349,7 @@
 }
 
 /* 响应式 */
-@container subTabBar (max-width: 390px) {
-  .subTab {
-    padding: 12px 10px;
-  }
+@container subTabBar (max-width: 360px) {
 
   .subTab span {
     display: none;

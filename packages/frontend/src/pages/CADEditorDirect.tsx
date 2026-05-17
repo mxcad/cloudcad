@@ -49,6 +49,12 @@ declare global {
       };
     };
     useFileName: () => { fileName: { value: string } };
+    useMessage: () => {
+      info: (msg: string) => void;
+      success: (msg: string) => void;
+      warning: (msg: string) => void;
+      error: (msg: string) => void;
+    };
   };
 }
 
@@ -1195,6 +1201,32 @@ export const CADEditorDirect: React.FC = () => {
         handleNewFile as EventListener
       );
     };
+  }, []);
+
+  // 拦截 MxPluginContext.useMessage 方法，防止显示文件打开成功的提示
+  useEffect(() => {
+    if (window.MxPluginContext) {
+      const originalUseMessage = window.MxPluginContext.useMessage;
+      
+      window.MxPluginContext.useMessage = () => {
+        const originalMessage = originalUseMessage();
+        
+        return {
+          ...originalMessage,
+          success: (msg: string) => {
+            // 拦截文件打开成功的提示，不显示
+            if (msg && (msg.includes('打开') || msg.includes('open') || msg.includes('成功'))) {
+              console.log('拦截到文件打开成功提示，不显示:', msg);
+              return;
+            }
+            originalMessage.success(msg);
+          },
+          info: originalMessage.info,
+          warning: originalMessage.warning,
+          error: originalMessage.error,
+        };
+      };
+    }
   }, []);
 
   // 监听文件打开完成事件，隐藏底部加载状态

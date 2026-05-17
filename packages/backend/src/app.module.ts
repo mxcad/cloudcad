@@ -139,6 +139,7 @@ export class AppModule {
       .build();
 
     const document = SwaggerModule.createDocument(app, config, {
+      ignoreGlobalPrefix: false,
       operationIdFactory: (controllerKey, methodKey) => {
         const cleanMethod = methodKey.replace(/_v\d+$/, '');
         return `${controllerKey}_${cleanMethod}`;

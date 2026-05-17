@@ -244,11 +244,12 @@
 
 .categorySelect {
   flex: 1;
-  padding: 5px 8px;
+  padding: 2px;
   font-size: 12px;
   color: var(--text-primary, #e5e7eb);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, #212832);
+  outline: none;
   border-radius: 3px;
   cursor: pointer;
   min-width: 100px;
@@ -259,15 +260,7 @@
   background-size: 12px;
 }
 
-.categorySelect:hover {
-  border-color: rgba(99, 102, 241, 0.6);
-}
 
-.categorySelect:focus {
-  outline: none;
-  border-color: var(--primary-500, #6366f1);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
 
 .categoryClearBtn {
   flex: 1;

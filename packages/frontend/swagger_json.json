@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/": {
+    "/api/v1": {
       "get": {
         "operationId": "AppController_getHello",
         "parameters": [],
@@ -15,7 +15,7 @@
         ]
       }
     },
-    "/cache-monitor/summary": {
+    "/api/v1/cache-monitor/summary": {
       "get": {
         "operationId": "CacheMonitorController_getSummary",
         "parameters": [],
@@ -42,7 +42,7 @@
         ]
       }
     },
-    "/cache-monitor/stats": {
+    "/api/v1/cache-monitor/stats": {
       "get": {
         "operationId": "CacheMonitorController_getStats",
         "parameters": [
@@ -104,7 +104,7 @@
         ]
       }
     },
-    "/cache-monitor/health": {
+    "/api/v1/cache-monitor/health": {
       "get": {
         "operationId": "CacheMonitorController_getHealthStatus",
         "parameters": [],
@@ -124,7 +124,7 @@
         ]
       }
     },
-    "/cache-monitor/performance": {
+    "/api/v1/cache-monitor/performance": {
       "get": {
         "operationId": "CacheMonitorController_getPerformanceMetrics",
         "parameters": [],
@@ -144,7 +144,7 @@
         ]
       }
     },
-    "/cache-monitor/hot-data": {
+    "/api/v1/cache-monitor/hot-data": {
       "get": {
         "operationId": "CacheMonitorController_getHotData",
         "parameters": [
@@ -173,7 +173,7 @@
         ]
       }
     },
-    "/cache-monitor/performance-trend": {
+    "/api/v1/cache-monitor/performance-trend": {
       "get": {
         "operationId": "CacheMonitorController_getPerformanceTrend",
         "parameters": [
@@ -224,7 +224,7 @@
         ]
       }
     },
-    "/cache-monitor/size-trend": {
+    "/api/v1/cache-monitor/size-trend": {
       "get": {
         "operationId": "CacheMonitorController_getSizeTrend",
         "parameters": [
@@ -260,7 +260,7 @@
         ]
       }
     },
-    "/cache-monitor/warnings": {
+    "/api/v1/cache-monitor/warnings": {
       "get": {
         "operationId": "CacheMonitorController_getWarnings",
         "parameters": [],
@@ -287,7 +287,7 @@
         ]
       }
     },
-    "/cache-monitor/value": {
+    "/api/v1/cache-monitor/value": {
       "get": {
         "operationId": "CacheMonitorController_getValue",
         "parameters": [
@@ -371,7 +371,7 @@
         ]
       }
     },
-    "/cache-monitor/pattern": {
+    "/api/v1/cache-monitor/pattern": {
       "delete": {
         "operationId": "CacheMonitorController_deleteByPattern",
         "parameters": [
@@ -400,7 +400,7 @@
         ]
       }
     },
-    "/cache-monitor/values": {
+    "/api/v1/cache-monitor/values": {
       "delete": {
         "operationId": "CacheMonitorController_deleteValues",
         "parameters": [],
@@ -430,7 +430,7 @@
         ]
       }
     },
-    "/cache-monitor/refresh": {
+    "/api/v1/cache-monitor/refresh": {
       "post": {
         "operationId": "CacheMonitorController_refresh",
         "parameters": [],
@@ -460,7 +460,7 @@
         ]
       }
     },
-    "/cache-monitor/cleanup": {
+    "/api/v1/cache-monitor/cleanup": {
       "post": {
         "operationId": "CacheMonitorController_cleanup",
         "parameters": [],
@@ -490,7 +490,7 @@
         ]
       }
     },
-    "/cache-monitor/warmup/config": {
+    "/api/v1/cache-monitor/warmup/config": {
       "get": {
         "operationId": "CacheMonitorController_getWarmupConfig",
         "parameters": [],
@@ -538,7 +538,7 @@
         ]
       }
     },
-    "/cache-monitor/warmup/trigger": {
+    "/api/v1/cache-monitor/warmup/trigger": {
       "post": {
         "operationId": "CacheMonitorController_triggerWarmup",
         "parameters": [],
@@ -575,7 +575,7 @@
         ]
       }
     },
-    "/cache-monitor/warmup/history": {
+    "/api/v1/cache-monitor/warmup/history": {
       "get": {
         "operationId": "CacheMonitorController_getWarmupHistory",
         "parameters": [],
@@ -623,7 +623,7 @@
         ]
       }
     },
-    "/cache-monitor/warmup/stats": {
+    "/api/v1/cache-monitor/warmup/stats": {
       "get": {
         "operationId": "CacheMonitorController_getWarmupStats",
         "parameters": [],
@@ -650,7 +650,7 @@
         ]
       }
     },
-    "/auth/register": {
+    "/api/v1/auth/register": {
       "post": {
         "operationId": "AuthController_register",
         "parameters": [],
@@ -688,7 +688,7 @@
         ]
       }
     },
-    "/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -723,7 +723,7 @@
         ]
       }
     },
-    "/auth/refresh": {
+    "/api/v1/auth/refresh": {
       "post": {
         "operationId": "AuthController_refreshToken",
         "parameters": [],
@@ -758,7 +758,7 @@
         ]
       }
     },
-    "/auth/logout": {
+    "/api/v1/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -778,7 +778,7 @@
         ]
       }
     },
-    "/auth/profile": {
+    "/api/v1/auth/profile": {
       "get": {
         "operationId": "AuthController_getProfile",
         "parameters": [],
@@ -808,7 +808,7 @@
         ]
       }
     },
-    "/auth/send-verification": {
+    "/api/v1/auth/send-verification": {
       "post": {
         "operationId": "AuthController_sendVerification",
         "parameters": [],
@@ -843,7 +843,7 @@
         ]
       }
     },
-    "/auth/verify-email": {
+    "/api/v1/auth/verify-email": {
       "post": {
         "operationId": "AuthController_verifyEmail",
         "parameters": [],
@@ -878,7 +878,7 @@
         ]
       }
     },
-    "/auth/verify-email-and-register-phone": {
+    "/api/v1/auth/verify-email-and-register-phone": {
       "post": {
         "operationId": "AuthController_verifyEmailAndRegisterPhone",
         "parameters": [],
@@ -916,7 +916,7 @@
         ]
       }
     },
-    "/auth/resend-verification": {
+    "/api/v1/auth/resend-verification": {
       "post": {
         "operationId": "AuthController_resendVerification",
         "parameters": [],
@@ -951,7 +951,7 @@
         ]
       }
     },
-    "/auth/bind-email-and-login": {
+    "/api/v1/auth/bind-email-and-login": {
       "post": {
         "operationId": "AuthController_bindEmailAndLogin",
         "parameters": [],
@@ -986,7 +986,7 @@
         ]
       }
     },
-    "/auth/bind-phone-and-login": {
+    "/api/v1/auth/bind-phone-and-login": {
       "post": {
         "operationId": "AuthController_bindPhoneAndLogin",
         "parameters": [],
@@ -1021,7 +1021,7 @@
         ]
       }
     },
-    "/auth/verify-phone": {
+    "/api/v1/auth/verify-phone": {
       "post": {
         "operationId": "AuthController_verifyPhone",
         "parameters": [],
@@ -1056,7 +1056,7 @@
         ]
       }
     },
-    "/auth/forgot-password": {
+    "/api/v1/auth/forgot-password": {
       "post": {
         "operationId": "AuthController_forgotPassword",
         "parameters": [],
@@ -1094,7 +1094,7 @@
         ]
       }
     },
-    "/auth/reset-password": {
+    "/api/v1/auth/reset-password": {
       "post": {
         "operationId": "AuthController_resetPassword",
         "parameters": [],
@@ -1132,7 +1132,7 @@
         ]
       }
     },
-    "/auth/bind-email": {
+    "/api/v1/auth/bind-email": {
       "post": {
         "operationId": "AuthController_sendBindEmailCode",
         "parameters": [],
@@ -1175,7 +1175,7 @@
         ]
       }
     },
-    "/auth/verify-bind-email": {
+    "/api/v1/auth/verify-bind-email": {
       "post": {
         "operationId": "AuthController_verifyBindEmail",
         "parameters": [],
@@ -1221,7 +1221,7 @@
         ]
       }
     },
-    "/auth/send-unbind-email-code": {
+    "/api/v1/auth/send-unbind-email-code": {
       "post": {
         "operationId": "AuthController_sendUnbindEmailCode",
         "parameters": [],
@@ -1254,7 +1254,7 @@
         ]
       }
     },
-    "/auth/verify-unbind-email-code": {
+    "/api/v1/auth/verify-unbind-email-code": {
       "post": {
         "operationId": "AuthController_verifyUnbindEmailCode",
         "parameters": [],
@@ -1301,7 +1301,7 @@
         ]
       }
     },
-    "/auth/rebind-email": {
+    "/api/v1/auth/rebind-email": {
       "post": {
         "operationId": "AuthController_rebindEmail",
         "parameters": [],
@@ -1347,7 +1347,7 @@
         ]
       }
     },
-    "/auth/send-sms-code": {
+    "/api/v1/auth/send-sms-code": {
       "post": {
         "operationId": "AuthController_sendSmsCode",
         "parameters": [],
@@ -1385,7 +1385,7 @@
         ]
       }
     },
-    "/auth/verify-sms-code": {
+    "/api/v1/auth/verify-sms-code": {
       "post": {
         "operationId": "AuthController_verifySmsCode",
         "parameters": [],
@@ -1423,7 +1423,7 @@
         ]
       }
     },
-    "/auth/register-phone": {
+    "/api/v1/auth/register-phone": {
       "post": {
         "operationId": "AuthController_registerByPhone",
         "parameters": [],
@@ -1461,7 +1461,7 @@
         ]
       }
     },
-    "/auth/login-phone": {
+    "/api/v1/auth/login-phone": {
       "post": {
         "operationId": "AuthController_loginByPhone",
         "parameters": [],
@@ -1499,7 +1499,7 @@
         ]
       }
     },
-    "/auth/bind-phone": {
+    "/api/v1/auth/bind-phone": {
       "post": {
         "operationId": "AuthController_bindPhone",
         "parameters": [],
@@ -1545,7 +1545,7 @@
         ]
       }
     },
-    "/auth/send-unbind-phone-code": {
+    "/api/v1/auth/send-unbind-phone-code": {
       "post": {
         "operationId": "AuthController_sendUnbindPhoneCode",
         "parameters": [],
@@ -1578,7 +1578,7 @@
         ]
       }
     },
-    "/auth/verify-unbind-phone-code": {
+    "/api/v1/auth/verify-unbind-phone-code": {
       "post": {
         "operationId": "AuthController_verifyUnbindPhoneCode",
         "parameters": [],
@@ -1625,7 +1625,7 @@
         ]
       }
     },
-    "/auth/rebind-phone": {
+    "/api/v1/auth/rebind-phone": {
       "post": {
         "operationId": "AuthController_rebindPhone",
         "parameters": [],
@@ -1671,7 +1671,7 @@
         ]
       }
     },
-    "/auth/check-field": {
+    "/api/v1/auth/check-field": {
       "post": {
         "operationId": "AuthController_checkFieldUniqueness",
         "parameters": [],
@@ -1707,7 +1707,7 @@
         ]
       }
     },
-    "/auth/wechat/login": {
+    "/api/v1/auth/wechat/login": {
       "get": {
         "operationId": "AuthController_getWechatAuthUrl",
         "parameters": [
@@ -1757,7 +1757,7 @@
         ]
       }
     },
-    "/auth/wechat/callback": {
+    "/api/auth/wechat/callback": {
       "get": {
         "operationId": "AuthController_wechatCallback",
         "parameters": [],
@@ -1775,7 +1775,7 @@
         ]
       }
     },
-    "/auth/wechat/bind": {
+    "/api/v1/auth/wechat/bind": {
       "post": {
         "operationId": "AuthController_bindWechat",
         "parameters": [],
@@ -1821,7 +1821,7 @@
         ]
       }
     },
-    "/auth/wechat/unbind": {
+    "/api/v1/auth/wechat/unbind": {
       "post": {
         "operationId": "AuthController_unbindWechat",
         "parameters": [],
@@ -1854,7 +1854,7 @@
         ]
       }
     },
-    "/user-cleanup/stats": {
+    "/api/v1/user-cleanup/stats": {
       "get": {
         "operationId": "UserCleanupController_getStats",
         "parameters": [],
@@ -1881,7 +1881,7 @@
         ]
       }
     },
-    "/user-cleanup/trigger": {
+    "/api/v1/user-cleanup/trigger": {
       "post": {
         "operationId": "UserCleanupController_triggerCleanup",
         "parameters": [],
@@ -1918,7 +1918,7 @@
         ]
       }
     },
-    "/runtime-config/public": {
+    "/api/v1/runtime-config/public": {
       "get": {
         "operationId": "RuntimeConfigController_getPublicConfigs",
         "parameters": [],
@@ -1940,7 +1940,7 @@
         ]
       }
     },
-    "/runtime-config": {
+    "/api/v1/runtime-config": {
       "get": {
         "operationId": "RuntimeConfigController_getAllConfigs",
         "parameters": [],
@@ -1970,7 +1970,7 @@
         ]
       }
     },
-    "/runtime-config/definitions": {
+    "/api/v1/runtime-config/definitions": {
       "get": {
         "operationId": "RuntimeConfigController_getDefinitions",
         "parameters": [],
@@ -2000,7 +2000,7 @@
         ]
       }
     },
-    "/runtime-config/{key}": {
+    "/api/v1/runtime-config/{key}": {
       "get": {
         "operationId": "RuntimeConfigController_getConfig",
         "parameters": [
@@ -2088,7 +2088,7 @@
         ]
       }
     },
-    "/runtime-config/{key}/reset": {
+    "/api/v1/runtime-config/{key}/reset": {
       "post": {
         "operationId": "RuntimeConfigController_resetConfig",
         "parameters": [
@@ -2131,7 +2131,7 @@
         ]
       }
     },
-    "/users": {
+    "/api/v1/users": {
       "post": {
         "operationId": "UsersController_create",
         "parameters": [],
@@ -2283,7 +2283,7 @@
         ]
       }
     },
-    "/users/search/by-email": {
+    "/api/v1/users/search/by-email": {
       "get": {
         "operationId": "UsersController_searchByEmail",
         "parameters": [
@@ -2322,7 +2322,7 @@
         ]
       }
     },
-    "/users/search": {
+    "/api/v1/users/search": {
       "get": {
         "operationId": "UsersController_searchUsers",
         "parameters": [
@@ -2433,7 +2433,7 @@
         ]
       }
     },
-    "/users/profile/me": {
+    "/api/v1/users/profile/me": {
       "get": {
         "operationId": "UsersController_getProfile",
         "parameters": [],
@@ -2498,7 +2498,7 @@
         ]
       }
     },
-    "/users/stats/me": {
+    "/api/v1/users/stats/me": {
       "get": {
         "operationId": "UsersController_getDashboardStats",
         "parameters": [],
@@ -2525,7 +2525,7 @@
         ]
       }
     },
-    "/users/{id}": {
+    "/api/v1/users/{id}": {
       "get": {
         "operationId": "UsersController_findOne",
         "parameters": [
@@ -2641,7 +2641,7 @@
         ]
       }
     },
-    "/users/{id}/restore": {
+    "/api/v1/users/{id}/restore": {
       "post": {
         "operationId": "UsersController_restore",
         "parameters": [
@@ -2673,7 +2673,7 @@
         ]
       }
     },
-    "/users/{id}/status": {
+    "/api/v1/users/{id}/status": {
       "patch": {
         "operationId": "UsersController_updateStatus",
         "parameters": [
@@ -2722,7 +2722,7 @@
         ]
       }
     },
-    "/users/{id}/delete-immediately": {
+    "/api/v1/users/{id}/delete-immediately": {
       "post": {
         "operationId": "UsersController_deleteImmediately",
         "parameters": [
@@ -2757,7 +2757,7 @@
         ]
       }
     },
-    "/users/deactivate-account": {
+    "/api/v1/users/deactivate-account": {
       "post": {
         "operationId": "UsersController_deactivateAccount",
         "parameters": [],
@@ -2800,7 +2800,7 @@
         ]
       }
     },
-    "/users/me/restore": {
+    "/api/v1/users/me/restore": {
       "post": {
         "operationId": "UsersController_restoreAccount",
         "parameters": [],
@@ -2843,7 +2843,7 @@
         ]
       }
     },
-    "/users/change-password": {
+    "/api/v1/users/change-password": {
       "post": {
         "operationId": "UsersController_changePassword",
         "parameters": [],
@@ -2889,7 +2889,7 @@
         ]
       }
     },
-    "/roles": {
+    "/api/v1/roles": {
       "get": {
         "operationId": "RolesController_findAll",
         "parameters": [],
@@ -2954,7 +2954,7 @@
         ]
       }
     },
-    "/roles/{id}": {
+    "/api/v1/roles/{id}": {
       "get": {
         "operationId": "RolesController_findOne",
         "parameters": [
@@ -3061,7 +3061,7 @@
         ]
       }
     },
-    "/roles/{id}/permissions": {
+    "/api/v1/roles/{id}/permissions": {
       "get": {
         "operationId": "RolesController_getRolePermissions",
         "parameters": [
@@ -3168,7 +3168,7 @@
         ]
       }
     },
-    "/roles/project-roles/all": {
+    "/api/v1/roles/project-roles/all": {
       "get": {
         "operationId": "RolesController_getAllProjectRoles",
         "parameters": [],
@@ -3198,7 +3198,7 @@
         ]
       }
     },
-    "/roles/project-roles/system": {
+    "/api/v1/roles/project-roles/system": {
       "get": {
         "operationId": "RolesController_getSystemProjectRoles",
         "parameters": [],
@@ -3228,7 +3228,7 @@
         ]
       }
     },
-    "/roles/project-roles/project/{projectId}": {
+    "/api/v1/roles/project-roles/project/{projectId}": {
       "get": {
         "operationId": "RolesController_getProjectRolesByProject",
         "parameters": [
@@ -3267,7 +3267,7 @@
         ]
       }
     },
-    "/roles/project-roles/{id}/permissions": {
+    "/api/v1/roles/project-roles/{id}/permissions": {
       "get": {
         "operationId": "RolesController_getProjectRolePermissions",
         "parameters": [
@@ -3380,7 +3380,7 @@
         ]
       }
     },
-    "/roles/project-roles": {
+    "/api/v1/roles/project-roles": {
       "post": {
         "operationId": "RolesController_createProjectRole",
         "parameters": [],
@@ -3417,7 +3417,7 @@
         ]
       }
     },
-    "/roles/project-roles/{id}": {
+    "/api/v1/roles/project-roles/{id}": {
       "patch": {
         "operationId": "RolesController_updateProjectRole",
         "parameters": [
@@ -3490,7 +3490,7 @@
         ]
       }
     },
-    "/audit/logs": {
+    "/api/v1/audit/logs": {
       "get": {
         "operationId": "AuditLogController_findAll",
         "parameters": [
@@ -3594,7 +3594,7 @@
         ]
       }
     },
-    "/audit/logs/{id}": {
+    "/api/v1/audit/logs/{id}": {
       "get": {
         "operationId": "AuditLogController_findOne",
         "parameters": [
@@ -3623,7 +3623,7 @@
         ]
       }
     },
-    "/audit/statistics": {
+    "/api/v1/audit/statistics": {
       "get": {
         "operationId": "AuditLogController_getStatistics",
         "parameters": [
@@ -3671,7 +3671,7 @@
         ]
       }
     },
-    "/audit/cleanup": {
+    "/api/v1/audit/cleanup": {
       "post": {
         "operationId": "AuditLogController_cleanupOldLogs",
         "parameters": [],
@@ -3691,7 +3691,7 @@
         ]
       }
     },
-    "/file-system/projects": {
+    "/api/v1/file-system/projects": {
       "post": {
         "operationId": "FileSystemController_createProject",
         "parameters": [],
@@ -3834,7 +3834,7 @@
         ]
       }
     },
-    "/file-system/projects/trash": {
+    "/api/v1/file-system/projects/trash": {
       "get": {
         "operationId": "FileSystemController_getDeletedProjects",
         "parameters": [
@@ -3936,7 +3936,7 @@
         ]
       }
     },
-    "/file-system/personal-space": {
+    "/api/v1/file-system/personal-space": {
       "get": {
         "operationId": "FileSystemController_getPersonalSpace",
         "parameters": [],
@@ -3963,7 +3963,7 @@
         ]
       }
     },
-    "/file-system/personal-space/by-user/{userId}": {
+    "/api/v1/file-system/personal-space/by-user/{userId}": {
       "get": {
         "operationId": "FileSystemController_getUserPersonalSpace",
         "parameters": [
@@ -4002,7 +4002,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}": {
+    "/api/v1/file-system/projects/{projectId}": {
       "get": {
         "operationId": "FileSystemController_getProject",
         "parameters": [
@@ -4133,7 +4133,7 @@
         ]
       }
     },
-    "/file-system/trash": {
+    "/api/v1/file-system/trash": {
       "get": {
         "operationId": "FileSystemController_getTrash",
         "parameters": [],
@@ -4185,7 +4185,7 @@
         ]
       }
     },
-    "/file-system/trash/restore": {
+    "/api/v1/file-system/trash/restore": {
       "post": {
         "operationId": "FileSystemController_restoreTrashItems",
         "parameters": [],
@@ -4234,7 +4234,7 @@
         ]
       }
     },
-    "/file-system/trash/items": {
+    "/api/v1/file-system/trash/items": {
       "delete": {
         "operationId": "FileSystemController_permanentlyDeleteTrashItems",
         "parameters": [],
@@ -4283,7 +4283,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/trash": {
+    "/api/v1/file-system/projects/{projectId}/trash": {
       "get": {
         "operationId": "FileSystemController_getProjectTrash",
         "parameters": [
@@ -4452,7 +4452,7 @@
         ]
       }
     },
-    "/file-system/nodes": {
+    "/api/v1/file-system/nodes": {
       "post": {
         "operationId": "FileSystemController_createNode",
         "parameters": [],
@@ -4509,7 +4509,7 @@
         ]
       }
     },
-    "/file-system/nodes/{parentId}/folders": {
+    "/api/v1/file-system/nodes/{parentId}/folders": {
       "post": {
         "operationId": "FileSystemController_createFolder",
         "parameters": [
@@ -4558,7 +4558,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/root": {
+    "/api/v1/file-system/nodes/{nodeId}/root": {
       "get": {
         "operationId": "FileSystemController_getRootNode",
         "parameters": [
@@ -4597,7 +4597,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/restore": {
+    "/api/v1/file-system/nodes/{nodeId}/restore": {
       "post": {
         "operationId": "FileSystemController_restoreNode",
         "parameters": [
@@ -4636,7 +4636,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}": {
+    "/api/v1/file-system/nodes/{nodeId}": {
       "get": {
         "operationId": "FileSystemController_getNode",
         "parameters": [
@@ -4767,7 +4767,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/children": {
+    "/api/v1/file-system/nodes/{nodeId}/children": {
       "get": {
         "operationId": "FileSystemController_getChildren",
         "parameters": [
@@ -4902,7 +4902,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/move": {
+    "/api/v1/file-system/nodes/{nodeId}/move": {
       "post": {
         "operationId": "FileSystemController_moveNode",
         "parameters": [
@@ -4951,7 +4951,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/copy": {
+    "/api/v1/file-system/nodes/{nodeId}/copy": {
       "post": {
         "operationId": "FileSystemController_copyNode",
         "parameters": [
@@ -5000,7 +5000,7 @@
         ]
       }
     },
-    "/file-system/quota": {
+    "/api/v1/file-system/quota": {
       "get": {
         "operationId": "FileSystemController_getStorageQuota",
         "parameters": [
@@ -5044,7 +5044,7 @@
         ]
       }
     },
-    "/file-system/quota/update": {
+    "/api/v1/file-system/quota/update": {
       "post": {
         "operationId": "FileSystemController_updateStorageQuota",
         "parameters": [],
@@ -5093,7 +5093,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/members": {
+    "/api/v1/file-system/projects/{projectId}/members": {
       "get": {
         "operationId": "FileSystemController_getProjectMembers",
         "parameters": [
@@ -5197,7 +5197,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/members/{userId}": {
+    "/api/v1/file-system/projects/{projectId}/members/{userId}": {
       "patch": {
         "operationId": "FileSystemController_updateProjectMember",
         "parameters": [
@@ -5328,7 +5328,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/transfer": {
+    "/api/v1/file-system/projects/{projectId}/transfer": {
       "post": {
         "operationId": "FileSystemController_transferProject",
         "parameters": [
@@ -5388,7 +5388,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/members/batch": {
+    "/api/v1/file-system/projects/{projectId}/members/batch": {
       "post": {
         "operationId": "FileSystemController_addProjectMembersBatch",
         "parameters": [
@@ -5532,7 +5532,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/thumbnail": {
+    "/api/v1/file-system/nodes/{nodeId}/thumbnail": {
       "get": {
         "operationId": "FileSystemController_getThumbnail",
         "parameters": [
@@ -5573,7 +5573,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/download": {
+    "/api/v1/file-system/nodes/{nodeId}/download": {
       "options": {
         "operationId": "FileSystemController_downloadNodeOptions",
         "parameters": [],
@@ -5629,7 +5629,7 @@
         ]
       }
     },
-    "/file-system/nodes/{nodeId}/download-with-format": {
+    "/api/v1/file-system/nodes/{nodeId}/download-with-format": {
       "get": {
         "description": "支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。",
         "operationId": "FileSystemController_downloadNodeWithFormat",
@@ -5701,7 +5701,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/permissions": {
+    "/api/v1/file-system/projects/{projectId}/permissions": {
       "get": {
         "operationId": "FileSystemController_getUserProjectPermissions",
         "parameters": [
@@ -5737,7 +5737,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/permissions/check": {
+    "/api/v1/file-system/projects/{projectId}/permissions/check": {
       "get": {
         "operationId": "FileSystemController_checkProjectPermission",
         "parameters": [
@@ -5782,7 +5782,7 @@
         ]
       }
     },
-    "/file-system/projects/{projectId}/role": {
+    "/api/v1/file-system/projects/{projectId}/role": {
       "get": {
         "operationId": "FileSystemController_getUserProjectRole",
         "parameters": [
@@ -5811,7 +5811,7 @@
         ]
       }
     },
-    "/file-system/search": {
+    "/api/v1/file-system/search": {
       "get": {
         "description": "支持多种搜索范围：\n- project: 搜索项目列表\n- project_files: 搜索指定项目内的文件（需提供 projectId）\n- all_projects: 搜索所有有权限访问的项目中的文件",
         "operationId": "FileSystemController_search",
@@ -5972,7 +5972,7 @@
         ]
       }
     },
-    "/version-control/history": {
+    "/api/v1/version-control/history": {
       "get": {
         "operationId": "VersionControlController_getFileHistory",
         "parameters": [
@@ -6031,7 +6031,7 @@
         ]
       }
     },
-    "/version-control/file/{revision}": {
+    "/api/v1/version-control/file/{revision}": {
       "get": {
         "operationId": "VersionControlController_getFileContentAtRevision",
         "parameters": [
@@ -6090,7 +6090,7 @@
         ]
       }
     },
-    "/version-control/list/{revision}": {
+    "/api/v1/version-control/list/{revision}": {
       "get": {
         "operationId": "VersionControlController_listDirectoryAtRevision",
         "parameters": [
@@ -6163,7 +6163,7 @@
         ]
       }
     },
-    "/font-management": {
+    "/api/v1/font-management": {
       "get": {
         "description": "获取所有字体文件，前端负责分页、筛选和排序",
         "operationId": "FontsController_getFonts",
@@ -6198,7 +6198,7 @@
         ]
       }
     },
-    "/font-management/upload": {
+    "/api/v1/font-management/upload": {
       "post": {
         "description": "上传字体文件到指定目录",
         "operationId": "FontsController_uploadFont",
@@ -6229,7 +6229,7 @@
         ]
       }
     },
-    "/font-management/{fileName}": {
+    "/api/v1/font-management/{fileName}": {
       "delete": {
         "description": "从指定目录删除字体文件",
         "operationId": "FontsController_deleteFont",
@@ -6268,7 +6268,7 @@
         ]
       }
     },
-    "/font-management/download/{fileName}": {
+    "/api/v1/font-management/download/{fileName}": {
       "get": {
         "description": "下载指定位置的字体文件",
         "operationId": "FontsController_downloadFont",
@@ -6311,7 +6311,7 @@
         ]
       }
     },
-    "/mxcad/files/chunkisExist": {
+    "/api/v1/mxcad/files/chunkisExist": {
       "post": {
         "operationId": "MxCadController_checkChunkExist",
         "parameters": [],
@@ -6342,7 +6342,7 @@
         ]
       }
     },
-    "/mxcad/files/fileisExist": {
+    "/api/v1/mxcad/files/fileisExist": {
       "post": {
         "operationId": "MxCadController_checkFileExist",
         "parameters": [],
@@ -6373,7 +6373,7 @@
         ]
       }
     },
-    "/mxcad/files/uploadFiles": {
+    "/api/v1/mxcad/files/uploadFiles": {
       "post": {
         "operationId": "MxCadController_uploadFile",
         "parameters": [],
@@ -6404,7 +6404,7 @@
         ]
       }
     },
-    "/mxcad/file/{nodeId}/preloading": {
+    "/api/v1/mxcad/file/{nodeId}/preloading": {
       "get": {
         "operationId": "MxCadController_getPreloadingData",
         "parameters": [
@@ -6437,7 +6437,7 @@
         ]
       }
     },
-    "/mxcad/file/{nodeId}/check-reference": {
+    "/api/v1/mxcad/file/{nodeId}/check-reference": {
       "post": {
         "operationId": "MxCadController_checkExternalReference",
         "parameters": [
@@ -6497,7 +6497,7 @@
         ]
       }
     },
-    "/mxcad/file/{nodeId}/refresh-external-references": {
+    "/api/v1/mxcad/file/{nodeId}/refresh-external-references": {
       "post": {
         "operationId": "MxCadController_refreshExternalReferences",
         "parameters": [
@@ -6530,7 +6530,7 @@
         ]
       }
     },
-    "/mxcad/up_ext_reference_dwg/{nodeId}": {
+    "/api/v1/mxcad/up_ext_reference_dwg/{nodeId}": {
       "post": {
         "operationId": "MxCadController_uploadExtReferenceDwg",
         "parameters": [
@@ -6589,7 +6589,7 @@
         ]
       }
     },
-    "/mxcad/up_ext_reference_image": {
+    "/api/v1/mxcad/up_ext_reference_image": {
       "post": {
         "operationId": "MxCadController_uploadExtReferenceImage",
         "parameters": [],
@@ -6639,7 +6639,7 @@
         ]
       }
     },
-    "/mxcad/filesData/{path}": {
+    "/api/v1/mxcad/filesData/{path}": {
       "get": {
         "operationId": "MxCadController_getFilesDataFile",
         "parameters": [],
@@ -6727,7 +6727,7 @@
         ]
       }
     },
-    "/mxcad/file/{path}": {
+    "/api/v1/mxcad/file/{path}": {
       "get": {
         "operationId": "MxCadController_getFile",
         "parameters": [],
@@ -6807,7 +6807,7 @@
         ]
       }
     },
-    "/mxcad/files/{storageKey}": {
+    "/api/v1/mxcad/files/{storageKey}": {
       "get": {
         "operationId": "MxCadController_getNonCadFile",
         "parameters": [
@@ -6849,7 +6849,7 @@
         ]
       }
     },
-    "/mxcad/thumbnail/{nodeId}": {
+    "/api/v1/mxcad/thumbnail/{nodeId}": {
       "get": {
         "operationId": "ThumbnailController_checkThumbnail",
         "parameters": [
@@ -6939,7 +6939,7 @@
         ]
       }
     },
-    "/mxcad/savemxweb/{nodeId}": {
+    "/api/v1/mxcad/savemxweb/{nodeId}": {
       "post": {
         "operationId": "SaveController_saveMxwebToNode",
         "parameters": [
@@ -6979,7 +6979,7 @@
         ]
       }
     },
-    "/mxcad/save-as": {
+    "/api/v1/mxcad/save-as": {
       "post": {
         "operationId": "SaveController_saveMxwebAs",
         "parameters": [],
@@ -7013,7 +7013,7 @@
         ]
       }
     },
-    "/admin/stats": {
+    "/api/v1/admin/stats": {
       "get": {
         "operationId": "AdminController_getAdminStats",
         "parameters": [],
@@ -7040,7 +7040,7 @@
         ]
       }
     },
-    "/admin/permissions/cache": {
+    "/api/v1/admin/permissions/cache": {
       "get": {
         "operationId": "AdminController_getCacheStats",
         "parameters": [],
@@ -7067,7 +7067,7 @@
         ]
       }
     },
-    "/admin/permissions/cache/cleanup": {
+    "/api/v1/admin/permissions/cache/cleanup": {
       "post": {
         "operationId": "AdminController_cleanupCache",
         "parameters": [],
@@ -7094,7 +7094,7 @@
         ]
       }
     },
-    "/admin/permissions/cache/user/{userId}": {
+    "/api/v1/admin/permissions/cache/user/{userId}": {
       "delete": {
         "operationId": "AdminController_clearUserCache",
         "parameters": [
@@ -7130,7 +7130,7 @@
         ]
       }
     },
-    "/admin/permissions/user/{userId}": {
+    "/api/v1/admin/permissions/user/{userId}": {
       "get": {
         "operationId": "AdminController_getUserPermissions",
         "parameters": [
@@ -7166,7 +7166,7 @@
         ]
       }
     },
-    "/admin/storage/cleanup": {
+    "/api/v1/admin/storage/cleanup": {
       "post": {
         "operationId": "AdminController_cleanupStorage",
         "parameters": [
@@ -7196,7 +7196,7 @@
         ]
       }
     },
-    "/admin/storage/cleanup/stats": {
+    "/api/v1/admin/storage/cleanup/stats": {
       "get": {
         "operationId": "AdminController_getCleanupStats",
         "parameters": [],
@@ -7216,7 +7216,7 @@
         ]
       }
     },
-    "/health/live": {
+    "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_liveness",
         "parameters": [],
@@ -7231,7 +7231,7 @@
         ]
       }
     },
-    "/health/public": {
+    "/api/v1/health/public": {
       "get": {
         "operationId": "HealthController_publicHealth",
         "parameters": [],
@@ -7246,7 +7246,7 @@
         ]
       }
     },
-    "/health": {
+    "/api/v1/health": {
       "get": {
         "operationId": "HealthController_checkFull",
         "parameters": [],
@@ -7415,7 +7415,7 @@
         ]
       }
     },
-    "/health/full": {
+    "/api/v1/health/full": {
       "get": {
         "operationId": "HealthController_check",
         "parameters": [],
@@ -7584,7 +7584,7 @@
         ]
       }
     },
-    "/health/db": {
+    "/api/v1/health/db": {
       "get": {
         "operationId": "HealthController_checkDatabase",
         "parameters": [],
@@ -7602,7 +7602,7 @@
         ]
       }
     },
-    "/health/storage": {
+    "/api/v1/health/storage": {
       "get": {
         "operationId": "HealthController_checkStorage",
         "parameters": [],
@@ -7620,7 +7620,7 @@
         ]
       }
     },
-    "/policy-config": {
+    "/api/v1/policy-config": {
       "post": {
         "operationId": "PolicyConfigController_createPolicy",
         "parameters": [],
@@ -7688,7 +7688,7 @@
         ]
       }
     },
-    "/policy-config/{id}": {
+    "/api/v1/policy-config/{id}": {
       "put": {
         "operationId": "PolicyConfigController_updatePolicy",
         "parameters": [
@@ -7804,7 +7804,7 @@
         ]
       }
     },
-    "/policy-config/{id}/enable": {
+    "/api/v1/policy-config/{id}/enable": {
       "put": {
         "operationId": "PolicyConfigController_enablePolicy",
         "parameters": [
@@ -7840,7 +7840,7 @@
         ]
       }
     },
-    "/policy-config/{id}/disable": {
+    "/api/v1/policy-config/{id}/disable": {
       "put": {
         "operationId": "PolicyConfigController_disablePolicy",
         "parameters": [
@@ -7876,7 +7876,7 @@
         ]
       }
     },
-    "/public-file/access/{hash}/{filename}": {
+    "/api/v1/public-file/access/{hash}/{filename}": {
       "get": {
         "operationId": "PublicFileController_accessFile",
         "parameters": [
@@ -7914,7 +7914,7 @@
         ]
       }
     },
-    "/public-file/access/{filename}": {
+    "/api/v1/public-file/access/{filename}": {
       "get": {
         "operationId": "PublicFileController_accessFileByHashPattern",
         "parameters": [
@@ -7944,7 +7944,7 @@
         ]
       }
     },
-    "/public-file/ext-reference/upload": {
+    "/api/v1/public-file/ext-reference/upload": {
       "post": {
         "operationId": "PublicFileController_uploadExtReference",
         "parameters": [],
@@ -7991,7 +7991,7 @@
         ]
       }
     },
-    "/public-file/ext-reference/check": {
+    "/api/v1/public-file/ext-reference/check": {
       "get": {
         "operationId": "PublicFileController_checkExtReference",
         "parameters": [
@@ -8037,7 +8037,7 @@
         ]
       }
     },
-    "/public-file/preloading/{hash}": {
+    "/api/v1/public-file/preloading/{hash}": {
       "get": {
         "operationId": "PublicFileController_getPreloadingData",
         "parameters": [
@@ -8064,7 +8064,7 @@
         ]
       }
     },
-    "/public-file/convert": {
+    "/api/v1/public-file/convert": {
       "post": {
         "operationId": "PublicFileController_convertAndDownload",
         "parameters": [],
@@ -8129,7 +8129,7 @@
         ]
       }
     },
-    "/library/drawing": {
+    "/api/v1/library/drawing": {
       "get": {
         "operationId": "LibraryController_getDrawingLibrary",
         "parameters": [],
@@ -8152,7 +8152,7 @@
         ]
       }
     },
-    "/library/drawing/categories": {
+    "/api/v1/library/drawing/categories": {
       "get": {
         "operationId": "LibraryController_getDrawingCategories",
         "parameters": [],
@@ -8168,7 +8168,7 @@
         ]
       }
     },
-    "/library/drawing/children/{nodeId}": {
+    "/api/v1/library/drawing/children/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingChildren",
         "parameters": [
@@ -8296,7 +8296,7 @@
         ]
       }
     },
-    "/library/drawing/all-files/{nodeId}": {
+    "/api/v1/library/drawing/all-files/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingAllFiles",
         "parameters": [
@@ -8424,7 +8424,7 @@
         ]
       }
     },
-    "/library/drawing/filesData/{path}": {
+    "/api/v1/library/drawing/filesData/{path}": {
       "get": {
         "operationId": "LibraryController_getDrawingFile",
         "parameters": [
@@ -8455,7 +8455,7 @@
         ]
       }
     },
-    "/library/drawing/nodes/{nodeId}": {
+    "/api/v1/library/drawing/nodes/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getDrawingNode",
         "parameters": [
@@ -8568,7 +8568,7 @@
         ]
       }
     },
-    "/library/drawing/nodes/{nodeId}/download": {
+    "/api/v1/library/drawing/nodes/{nodeId}/download": {
       "get": {
         "operationId": "LibraryController_downloadDrawingNode",
         "parameters": [
@@ -8600,7 +8600,7 @@
         ]
       }
     },
-    "/library/drawing/nodes/{nodeId}/thumbnail": {
+    "/api/v1/library/drawing/nodes/{nodeId}/thumbnail": {
       "get": {
         "operationId": "LibraryController_getDrawingThumbnail",
         "parameters": [
@@ -8625,7 +8625,7 @@
         ]
       }
     },
-    "/library/drawing/save/{nodeId}": {
+    "/api/v1/library/drawing/save/{nodeId}": {
       "post": {
         "operationId": "LibraryController_saveDrawingNode",
         "parameters": [
@@ -8665,7 +8665,7 @@
         ]
       }
     },
-    "/library/drawing/save-as": {
+    "/api/v1/library/drawing/save-as": {
       "post": {
         "operationId": "LibraryController_saveDrawingAs",
         "parameters": [],
@@ -8696,7 +8696,7 @@
         ]
       }
     },
-    "/library/drawing/folders": {
+    "/api/v1/library/drawing/folders": {
       "post": {
         "operationId": "LibraryController_createDrawingFolder",
         "parameters": [],
@@ -8734,7 +8734,7 @@
         ]
       }
     },
-    "/library/drawing/nodes/{nodeId}/move": {
+    "/api/v1/library/drawing/nodes/{nodeId}/move": {
       "post": {
         "operationId": "LibraryController_moveDrawingNode",
         "parameters": [
@@ -8781,7 +8781,7 @@
         ]
       }
     },
-    "/library/drawing/nodes/{nodeId}/copy": {
+    "/api/v1/library/drawing/nodes/{nodeId}/copy": {
       "post": {
         "operationId": "LibraryController_copyDrawingNode",
         "parameters": [
@@ -8828,7 +8828,7 @@
         ]
       }
     },
-    "/library/block": {
+    "/api/v1/library/block": {
       "get": {
         "operationId": "LibraryController_getBlockLibrary",
         "parameters": [],
@@ -8851,7 +8851,7 @@
         ]
       }
     },
-    "/library/block/categories": {
+    "/api/v1/library/block/categories": {
       "get": {
         "operationId": "LibraryController_getBlockCategories",
         "parameters": [],
@@ -8867,7 +8867,7 @@
         ]
       }
     },
-    "/library/block/children/{nodeId}": {
+    "/api/v1/library/block/children/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getBlockChildren",
         "parameters": [
@@ -8995,7 +8995,7 @@
         ]
       }
     },
-    "/library/block/all-files/{nodeId}": {
+    "/api/v1/library/block/all-files/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getBlockAllFiles",
         "parameters": [
@@ -9123,7 +9123,7 @@
         ]
       }
     },
-    "/library/block/filesData/{path}": {
+    "/api/v1/library/block/filesData/{path}": {
       "get": {
         "operationId": "LibraryController_getBlockFile",
         "parameters": [
@@ -9154,7 +9154,7 @@
         ]
       }
     },
-    "/library/block/nodes/{nodeId}": {
+    "/api/v1/library/block/nodes/{nodeId}": {
       "get": {
         "operationId": "LibraryController_getBlockNode",
         "parameters": [
@@ -9267,7 +9267,7 @@
         ]
       }
     },
-    "/library/block/nodes/{nodeId}/download": {
+    "/api/v1/library/block/nodes/{nodeId}/download": {
       "get": {
         "operationId": "LibraryController_downloadBlockNode",
         "parameters": [
@@ -9299,7 +9299,7 @@
         ]
       }
     },
-    "/library/block/nodes/{nodeId}/thumbnail": {
+    "/api/v1/library/block/nodes/{nodeId}/thumbnail": {
       "get": {
         "operationId": "LibraryController_getBlockThumbnail",
         "parameters": [
@@ -9324,7 +9324,7 @@
         ]
       }
     },
-    "/library/block/save/{nodeId}": {
+    "/api/v1/library/block/save/{nodeId}": {
       "post": {
         "operationId": "LibraryController_saveBlockNode",
         "parameters": [
@@ -9364,7 +9364,7 @@
         ]
       }
     },
-    "/library/block/save-as": {
+    "/api/v1/library/block/save-as": {
       "post": {
         "operationId": "LibraryController_saveBlockAs",
         "parameters": [],
@@ -9395,7 +9395,7 @@
         ]
       }
     },
-    "/library/block/folders": {
+    "/api/v1/library/block/folders": {
       "post": {
         "operationId": "LibraryController_createBlockFolder",
         "parameters": [],
@@ -9433,7 +9433,7 @@
         ]
       }
     },
-    "/library/block/nodes/{nodeId}/move": {
+    "/api/v1/library/block/nodes/{nodeId}/move": {
       "post": {
         "operationId": "LibraryController_moveBlockNode",
         "parameters": [
@@ -9480,7 +9480,7 @@
         ]
       }
     },
-    "/library/block/nodes/{nodeId}/copy": {
+    "/api/v1/library/block/nodes/{nodeId}/copy": {
       "post": {
         "operationId": "LibraryController_copyBlockNode",
         "parameters": [
