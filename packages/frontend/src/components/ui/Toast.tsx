@@ -21,31 +21,31 @@ interface ToastProps {
 
 export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   const typeStyles = {
-    success: 'bg-[var(--success-light)] text-[var(--success)] border-[var(--success-dim)]',
-    error: 'bg-[var(--error-light)] text-[var(--error)] border-[var(--error-dim)]',
-    warning: 'bg-[var(--warning-light)] text-[var(--warning)] border-[var(--warning-dim)]',
-    info: 'bg-[var(--info-light)] text-[var(--info)] border-[var(--info-dim)]',
+    success: 'bg-[var(--success)] text-white border-[var(--success)]',
+    error: 'bg-[var(--error)] text-white border-[var(--error)]',
+    warning: 'bg-[var(--warning)] text-white border-[var(--warning)]',
+    info: 'bg-[var(--info)] text-white border-[var(--info)]',
   };
 
   const iconColorStyles = {
-    success: 'text-[var(--success)]',
-    error: 'text-[var(--error)]',
-    warning: 'text-[var(--warning)]',
-    info: 'text-[var(--info)]',
+    success: 'text-white',
+    error: 'text-white',
+    warning: 'text-white',
+    info: 'text-white',
   };
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in-top border ${typeStyles[type]}`}
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in-right border ${typeStyles[type]}`}
     >
       {type === 'success' && <CheckCircle size={20} className={iconColorStyles[type]} />}
       {type === 'error' && <AlertCircle size={20} className={iconColorStyles[type]} />}
       {type === 'info' && <Info size={20} className={iconColorStyles[type]} />}
       {type === 'warning' && <AlertCircle size={20} className={iconColorStyles[type]} />}
-      <span className="flex-1 text-sm font-medium">{message}</span>
+      <span className="text-sm font-medium">{message}</span>
       <button
         onClick={onClose}
-        className="text-current opacity-60 hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-black/5"
+        className="text-white opacity-80 hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-white/10"
       >
         <X size={16} />
       </button>
@@ -64,7 +64,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
 }) => {
   return (
     <div 
-      className="fixed left-1/2 -translate-x-1/2 space-y-3 z-[var(--z-toast)] sm:top-[250px] top-[80px] sm:max-w-[480px] w-[calc(100%-2rem)]"
+      className="fixed right-6 bottom-6 space-y-3 z-[var(--z-toast)]"
       style={{ zIndex: Z_LAYERS.TOAST }}
     >
       {toasts.map((toast) => (

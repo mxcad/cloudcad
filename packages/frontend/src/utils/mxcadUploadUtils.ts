@@ -151,33 +151,34 @@ export async function uploadFile(
 
   // 1. 检查文件是否已存在（秒传）— forceUpload 时跳过
   if (!forceUpload) {
-  const existRequest = {
-    fileSize: file.size,
-    fileHash: hash,
-    filename: file.name,
-    nodeId,
-    conflictStrategy,
-  };
-  const existData = await mxCadControllerCheckFileExist({
-    body: existRequest
-  });
-  const data = existData.data!
- 
-  if (data?.exists) {
-    // 秒传成功，设置进度为100%
-    onProgress?.(100);
-    const instantNodeId = data.nodeId || nodeId;
-    return {
-      file,
-      hash,
-      nodeId: instantNodeId,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      isUseServerExistingFile: true,
-      isInstantUpload: true,
+    const existRequest = {
+      fileSize: file.size,
+      fileHash: hash,
+      filename: file.name,
+      nodeId,
+      conflictStrategy,
     };
-  }
+    const existData = await mxCadControllerCheckFileExist({
+      body: existRequest
+    });
+    const data = existData.data!;
+  
+    // 秒传条件：文件存在且数据库中已有对应节点（nodeId 不为 null）
+    // 如果 nodeId 为 null，说明文件仅存在于 uploads 临时目录，需要重新上传
+    if (data?.exists && data.nodeId) {
+      // 秒传成功，设置进度为100%
+      onProgress?.(100);
+      return {
+        file,
+        hash,
+        nodeId: data.nodeId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        isUseServerExistingFile: true,
+        isInstantUpload: true,
+      };
+    }
   }
 
   // 2. 开始分片上传

@@ -29,8 +29,8 @@ export const LoadingOverlay = () => {
             style={{
               width: loadingProgress > 0 ? `${loadingProgress}%` : '100%',
               background: loadingProgress > 0
-                ? 'linear-gradient(to right, #3b82f6, #22d3ee)'
-                : 'linear-gradient(90deg, transparent, #3b82f6, #22d3ee, #3b82f6, transparent)',
+                ? 'linear-gradient(to right, var(--info), var(--accent-500))'
+                : 'linear-gradient(90deg, transparent, var(--info), var(--accent-500), var(--info), transparent)',
               backgroundSize: loadingProgress > 0 ? '100% 100%' : '200% 100%',
               animation: loadingProgress > 0 ? 'none' : 'shimmer 2s linear infinite'
             }}

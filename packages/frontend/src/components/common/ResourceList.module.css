@@ -1,4 +1,4 @@
-/* ==================== 资源列表组件 - 主题适配版 ==================== */
+/* ==================== 资源列表组件 - 主题适配�?==================== */
 
 .resourceList {
   display: flex;
@@ -10,7 +10,7 @@
   border: none;
 }
 
-/* ==================== 标题栏 ==================== */
+/* ==================== 标题�?==================== */
 
 .header {
   display: flex;
@@ -36,7 +36,7 @@
   white-space: nowrap;
 }
 
-/* ==================== 工具栏 ==================== */
+/* ==================== 工具�?==================== */
 
 .toolbar {
   display: flex;
@@ -115,12 +115,12 @@
 }
 
 .viewButton.active {
-  color: var(--primary-500, #818cf8);
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: var(--info);
+  background-color: rgba(0, 156, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 156, 255, 0.2);
 }
 
-/* ==================== 分类筛选 ==================== */
+/* ==================== 分类筛�?==================== */
 
 .categoryFilter {
   display: flex;
@@ -156,7 +156,7 @@
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
 }
 
-/* ==================== 加载状态 ==================== */
+/* ==================== 加载状�?==================== */
 
 .loadingState {
   display: flex;
@@ -181,7 +181,7 @@
   }
 }
 
-/* ==================== 空状态 ==================== */
+/* ==================== 空状�?==================== */
 
 .emptyState {
   display: flex;
@@ -229,7 +229,7 @@
   position: relative;
 }
 
-/* 图库模式列表项 - 更小的内边距和间隙 */
+/* 图库模式列表�?- 更小的内边距和间�?*/
 .listViewGallery .listItem {
   gap: var(--space-2);
   padding: 6px 10px;
@@ -241,11 +241,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(99, 102, 241, 0.05) 0%,
-    transparent 100%
-  );
+  background: rgba(0, 156, 255, 0.03);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -263,33 +259,21 @@
 
 /* 深色主题悬停效果 */
 [data-theme="dark"] .listItem:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(96, 165, 250, 0.08) 0%,
-    rgba(96, 165, 250, 0.02) 100%
-  );
-  border-color: rgba(96, 165, 250, 0.2);
+  background: rgba(0, 156, 255, 0.08);
+  border-color: rgba(0, 156, 255, 0.2);
 }
 
 .listItem.active {
-  background: linear-gradient(
-    90deg,
-    var(--primary-50) 0%,
-    rgba(99, 102, 241, 0.03) 100%
-  );
-  border-color: var(--primary-200);
-  box-shadow: inset 3px 0 0 var(--primary-500);
+  background: rgba(0, 156, 255, 0.05);
+  border-color: var(--info-dim);
+  box-shadow: inset 3px 0 0 var(--info);
 }
 
-/* 深色主题激活状态 */
+/* 深色主题激活状�?*/
 [data-theme="dark"] .listItem.active {
-  background: linear-gradient(
-    90deg,
-    rgba(96, 165, 250, 0.12) 0%,
-    rgba(96, 165, 250, 0.03) 100%
-  );
-  border-color: rgba(96, 165, 250, 0.25);
-  box-shadow: inset 3px 0 0 #60a5fa;
+  background: rgba(0, 156, 255, 0.12);
+  border-color: rgba(0, 156, 255, 0.25);
+  box-shadow: inset 3px 0 0 var(--info);
 }
 
 .itemIcon {
@@ -310,7 +294,7 @@
   transition: all 0.2s ease;
 }
 
-/* 图库模式列表项图标 - 更大的图片 */
+/* 图库模式列表项图�?- 更大的图�?*/
 .listViewGallery .itemIcon {
   width: 64px;
   height: 64px;
@@ -334,7 +318,7 @@
 }
 
 [data-theme="dark"] .listItem:hover .itemIcon {
-  border-color: rgba(96, 165, 250, 0.2);
+  border-color: rgba(0, 156, 255, 0.2);
 }
 
 .thumbnail {
@@ -407,9 +391,9 @@
 }
 
 .downloadButton:hover {
-  color: var(--primary-500);
-  background: var(--primary-dim);
-  border-color: var(--primary-500);
+  color: var(--info);
+  background: var(--info-dim);
+  border-color: var(--info);
   transform: scale(1.1);
 }
 
@@ -419,9 +403,9 @@
 }
 
 [data-theme="dark"] .downloadButton:hover {
-  background: rgba(96, 165, 250, 0.15);
-  border-color: rgba(96, 165, 250, 0.4);
-  box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
+  background: rgba(0, 156, 255, 0.15);
+  border-color: rgba(0, 156, 255, 0.4);
+  box-shadow: 0 0 8px rgba(0, 156, 255, 0.2);
 }
 
 /* 删除按钮 */
@@ -501,11 +485,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(99, 102, 241, 0.05) 0%,
-    transparent 60%
-  );
+  background: rgba(0, 156, 255, 0.05);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -516,43 +496,35 @@
 }
 
 .gridItem:hover {
-  border-color: var(--primary-300);
+  border-color: var(--info-dim);
   box-shadow: 
     0 8px 24px rgba(0, 0, 0, 0.15),
-    0 2px 8px rgba(99, 102, 241, 0.1);
+    0 2px 8px rgba(0, 156, 255, 0.1);
   transform: translateY(-3px);
 }
 
 /* 深色主题悬停 */
 [data-theme="dark"] .gridItem:hover {
-  border-color: rgba(96, 165, 250, 0.4);
+  border-color: rgba(0, 156, 255, 0.4);
   box-shadow: 
     0 8px 24px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(96, 165, 250, 0.1);
+    0 0 20px rgba(0, 156, 255, 0.1);
 }
 
 .gridItem.active {
-  border-color: var(--primary-500);
-  background: linear-gradient(
-    180deg,
-    var(--primary-50) 0%,
-    rgba(99, 102, 241, 0.05) 100%
-  );
+  border-color: var(--info);
+  background: rgba(0, 156, 255, 0.05);
   box-shadow: 
-    0 0 0 2px rgba(99, 102, 241, 0.2),
-    0 4px 16px rgba(99, 102, 241, 0.15);
+    0 0 0 2px rgba(0, 156, 255, 0.2),
+    0 4px 16px rgba(0, 156, 255, 0.15);
 }
 
-/* 深色主题激活状态 */
+/* 深色主题激活状�?*/
 [data-theme="dark"] .gridItem.active {
-  background: linear-gradient(
-    180deg,
-    rgba(96, 165, 250, 0.12) 0%,
-    rgba(96, 165, 250, 0.03) 100%
-  );
-  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(0, 156, 255, 0.12);
+  border-color: rgba(0, 156, 255, 0.5);
   box-shadow: 
-    0 0 0 2px rgba(96, 165, 250, 0.25),
+    0 0 0 2px rgba(0, 156, 255, 0.25),
     0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
@@ -573,7 +545,7 @@
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 图库模式网格项 */
+/* 图库模式网格�?*/
 .gridItemGallery {
   display: flex;
   flex-direction: column;
@@ -708,7 +680,7 @@
   height: 28px;
   padding: 0;
   color: white;
-  background: rgba(96, 165, 250, 0.8);
+  background: rgba(0, 156, 255, 0.8);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -724,9 +696,9 @@
 }
 
 .gridDownloadButton:hover {
-  background: var(--primary-500);
+  background: var(--info);
   transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.4);
 }
 
 .gridItemInfo {
@@ -753,7 +725,7 @@
   gap: var(--space-2);
 }
 
-/* ==================== 底部分页栏 ==================== */
+/* ==================== 底部分页�?==================== */
 
 .footer {
   display: flex;
@@ -799,7 +771,7 @@
   padding: var(--space-2) 0;
 }
 
-/* ==================== 级联分类选择器 ==================== */
+/* ==================== 级联分类选择�?==================== */
 
 .cascadeSelector {
   position: relative;
@@ -814,11 +786,7 @@
   padding: 10px 12px;
   font-size: 0.8125rem;
   color: var(--text-tertiary, #7a8a99);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, var(--border-default, #212832));
   border-radius: var(--radius-lg);
   cursor: pointer;
@@ -828,28 +796,20 @@
 }
 
 .cascadeButton:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 156, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.1);
 }
 
 .cascadeButton.open {
-  border-color: var(--primary-500, #818cf8);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(99, 102, 241, 0.1);
+  border-color: var(--info);
+  box-shadow: 0 0 0 3px rgba(0, 156, 255, 0.15), 0 4px 12px rgba(0, 156, 255, 0.1);
 }
 
 .cascadeButton.active {
   color: var(--text-secondary, #b8c5d1);
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.1) 0%,
-    rgba(99, 102, 241, 0.05) 100%
-  );
-  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(0, 156, 255, 0.1);
+  border-color: rgba(0, 156, 255, 0.3);
 }
 
 .cascadeButtonText {
@@ -900,11 +860,7 @@
   display: flex;
   min-width: max-content;
   max-width: 600px;
-  background: linear-gradient(
-    180deg,
-    var(--bg-elevated) 0%,
-    var(--bg-secondary) 100%
-  );
+  background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   box-shadow: 
@@ -919,7 +875,7 @@
   bottom: calc(100% + 6px);
 }
 
-/* 紧凑布局：垂直堆叠 */
+/* 紧凑布局：垂直堆�?*/
 .cascadePanel.compact {
   flex-direction: column;
   min-width: 100%;
@@ -938,7 +894,7 @@
   border-right: none;
 }
 
-/* 紧凑布局下的列样式 */
+/* 紧凑布局下的列样�?*/
 .cascadePanel.compact .cascadeColumn {
   max-width: 100%;
   border-right: none;
@@ -956,11 +912,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted, #5a6a7a);
-  background: linear-gradient(
-    180deg,
-    var(--bg-tertiary) 0%,
-    var(--bg-secondary) 100%
-  );
+  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
 }
 
@@ -991,20 +943,16 @@
 
 .cascadeItem:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(99, 102, 241, 0.15);
+  border-color: rgba(0, 156, 255, 0.15);
   transform: translateX(2px);
 }
 
 .cascadeItem.selected {
-  color: var(--primary-500, #818cf8);
-  background: linear-gradient(
-    90deg,
-    rgba(99, 102, 241, 0.1) 0%,
-    rgba(99, 102, 241, 0.05) 100%
-  );
-  border-color: rgba(99, 102, 241, 0.2);
+  color: var(--info);
+  background: rgba(0, 156, 255, 0.1);
+  border-color: rgba(0, 156, 255, 0.2);
   font-weight: 500;
-  box-shadow: inset 2px 0 0 var(--primary-500);
+  box-shadow: inset 2px 0 0 var(--info);
 }
 
 .cascadeItem.hasChildren {
@@ -1022,7 +970,7 @@
 }
 
 .cascadeItem.selected .itemArrow {
-  color: var(--primary-500);
+  color: var(--info);
 }
 
 /* 响应式：小屏幕时垂直排列 */
@@ -1050,7 +998,7 @@
   }
 }
 
-/* ==================== 自定义渲染项包装器 ==================== */
+/* ==================== 自定义渲染项包装�?==================== */
 
 .renderItemWrapper {
   cursor: pointer;
@@ -1108,77 +1056,111 @@
 .pagination {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  flex: 1;
+  justify-content: center;
+}
+
+.paginationNumbers {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.paginationEllipsis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 21px;
+  color: var(--text-muted, #5a6a7a);
+  font-size: 0.6875rem;
+  user-select: none;
 }
 
 .paginationButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 var(--space-1);
   color: var(--text-secondary, #8b95a5);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--sidebar-border, #212832);
-  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  font-size: 0.6875rem;
+  font-weight: 500;
 }
 
 .paginationButton:hover:not(:disabled) {
   color: var(--text-primary, #e8eaed);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .paginationButton:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
+}
+
+.paginationButtonActive {
+  color: var(--primary-500, #009cff);
+  background: rgba(0, 156, 255, 0.15);
+  font-weight: 600;
+}
+
+.paginationButtonActive:hover:not(:disabled) {
+  color: var(--primary-400, #33b4ff);
+  background: rgba(0, 156, 255, 0.25);
 }
 
 .paginationInfo {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.8125rem;
-  color: var(--text-secondary, #8b95a5);
+  font-size: 0.6875rem;
+  color: var(--text-muted, #5a6a7a);
   white-space: nowrap;
   padding: 0 var(--space-2);
 }
 
 .paginationCurrent {
   font-weight: 600;
-  color: var(--text-primary, #e8eaed);
+  color: var(--text-secondary, #8b95a5);
 }
 
 .paginationJump {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 2px;
 }
 
 .paginationInput {
-  width: 56px;
-  height: 32px;
-  padding: 0 var(--space-2);
-  font-size: 0.8125rem;
+  width: 36px;
+  height: 21px;
+  padding: 0 var(--space-1);
+  font-size: 0.6875rem;
   color: var(--text-primary, #e8eaed);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, #212832);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   outline: none;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .paginationInput::placeholder {
   color: var(--text-muted, #5a6a7a);
-  font-size: 0.75rem;
+  font-size: 0.625rem;
 }
 
 .paginationInput:focus {
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(0, 156, 255, 0.5);
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -1193,26 +1175,26 @@
 }
 
 .paginationJumpButton {
-  height: 32px;
-  padding: 0 var(--space-3);
-  font-size: 0.8125rem;
+  height: 21px;
+  padding: 0 var(--space-2);
+  font-size: 0.6875rem;
   font-weight: 500;
-  color: var(--text-primary, #e8eaed);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(99, 102, 241, 0.2) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.4);
-  border-radius: var(--radius-md);
+  color: var(--text-secondary, #8b95a5);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .paginationJumpButton:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(99, 102, 241, 0.3) 100%);
-  border-color: rgba(99, 102, 241, 0.6);
+  color: var(--text-primary, #e8eaed);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* 窄屏幕模式样式 */
+/* 窄屏幕模式样�?*/
 .paginationNarrow {
-  gap: var(--space-1);
+  gap: 2px;
 }
 
 .paginationNarrow .paginationJump {
@@ -1220,15 +1202,15 @@
 }
 
 .paginationNarrow .paginationInput {
-  width: 48px;
+  width: 32px;
 }
 
 .paginationJumpButtonNarrow {
-  padding: 0 var(--space-2);
-  font-size: 0.75rem;
+  padding: 0 var(--space-1);
+  font-size: 0.625rem;
 }
 
-/* ==================== 紧凑布局分类选择框 ==================== */
+/* ==================== 紧凑布局分类选择�?==================== */
 
 .cascadeSelectGroup {
   display: flex;
@@ -1255,13 +1237,13 @@
 }
 
 .cascadeSelect:hover:not(:disabled) {
-  border-color: rgba(99, 102, 241, 0.6);
+  border-color: rgba(0, 156, 255, 0.6);
 }
 
 .cascadeSelect:focus {
   outline: none;
-  border-color: var(--primary-500, #6366f1);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  border-color: var(--info);
+  box-shadow: 0 0 0 2px rgba(0, 156, 255, 0.2);
 }
 
 .cascadeSelect:disabled {

@@ -44,16 +44,16 @@
   /* ----------------------------------------
      1.4 主品牌色 - 工程蓝
      ---------------------------------------- */
-  --primary-50: #eef2ff;
-  --primary-100: #e0e7ff;
-  --primary-200: #c7d2fe;
-  --primary-300: #a5b4fc;
-  --primary-400: #818cf8;
-  --primary-500: #6366f1;
-  --primary-600: #4f46e5;   /* 主按钮 */
-  --primary-700: #4338ca;   /* 悬停 */
-  --primary-800: #3730a3;
-  --primary-900: #312e81;
+  --primary-50: #ecfeff;
+  --primary-100: #cffafe;
+  --primary-200: #a5f3fc;
+  --primary-300: #67e8f9;
+  --primary-400: #22d3ee;
+  --primary-500: #009cff;
+  --primary-600: #0080cc;   /* 主按钮 */
+  --primary-700: #006699;   /* 悬停 */
+  --primary-800: #004d73;
+  --primary-900: #00334d;
 
   /* ----------------------------------------
      1.5 CAD 强调色 - 青蓝
@@ -84,9 +84,9 @@
   --error-dim: #fee2e2;
   --error-light: #fef2f2;
 
-  --info: #2563eb;
-  --info-dim: #dbeafe;
-  --info-light: #eff6ff;
+  --info: #009cff;
+  --info-dim: rgba(0, 156, 255, 0.15);
+  --info-light: rgba(0, 156, 255, 0.1);
 
   /* ----------------------------------------
      1.7 Tooltip 提示框
@@ -234,16 +234,16 @@
   /* ----------------------------------------
      2.4 主品牌色 - 工程蓝（保持）
      ---------------------------------------- */
-  --primary-50: #1e1b4b;
-  --primary-100: #312e81;
-  --primary-200: #4338ca;
-  --primary-300: #4f46e5;
-  --primary-400: #6366f1;
-  --primary-500: #818cf8;
-  --primary-600: #a5b4fc;
-  --primary-700: #c7d2fe;
-  --primary-800: #e0e7ff;
-  --primary-900: #eef2ff;
+  --primary-50: #0c1d29;
+  --primary-100: #0f2d40;
+  --primary-200: #123d57;
+  --primary-300: #154d6e;
+  --primary-400: #0077aa;
+  --primary-500: #009cff;
+  --primary-600: #33adff;
+  --primary-700: #66beff;
+  --primary-800: #99d0ff;
+  --primary-900: #cce1ff;
 
   /* ----------------------------------------
      2.5 CAD 强调色 - 青蓝（增强）
@@ -274,9 +274,9 @@
   --error-dim: rgba(239, 68, 68, 0.15);
   --error-light: rgba(239, 68, 68, 0.1);
 
-  --info: #3b82f6;
-  --info-dim: rgba(59, 130, 246, 0.15);
-  --info-light: rgba(59, 130, 246, 0.1);
+  --info: #009cff;
+  --info-dim: rgba(0, 156, 255, 0.15);
+  --info-light: rgba(0, 156, 255, 0.1);
 
   /* ----------------------------------------
      2.7 Tooltip 提示框

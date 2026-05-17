@@ -523,17 +523,22 @@ const Pagination: React.FC<{
 }> = ({ currentPage, totalPages, onPageChange, loading }) => {
   const [inputValue, setInputValue] = useState('');
   const [isNarrow, setIsNarrow] = useState(false);
+  const [maxVisiblePages, setMaxVisiblePages] = useState(9);
+  const paginationRef = useRef<HTMLDivElement>(null);
 
-  // 监听窗口宽度变化，判断是否为窄屏幕
   useEffect(() => {
     const checkWidth = () => {
-      // 当容器宽度小于 400px 时认为是窄屏幕
-      const container = document.querySelector<HTMLElement>(`.${styles.pagination}`);
+      const container = paginationRef.current;
       if (container) {
-        setIsNarrow(container.offsetWidth < 400);
+        const containerWidth = container.offsetWidth;
+        setIsNarrow(containerWidth < 400);
+        const buttonWidth = 23;
+        const availableWidth = containerWidth - 120;
+        const calculated = Math.floor(availableWidth / buttonWidth);
+        setMaxVisiblePages(Math.max(5, Math.min(15, calculated)));
       } else {
-        // 默认检查窗口宽度
         setIsNarrow(window.innerWidth < 450);
+        setMaxVisiblePages(9);
       }
     };
 
@@ -541,6 +546,43 @@ const Pagination: React.FC<{
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
+
+  const getVisiblePages = (): (number | 'ellipsis')[] => {
+    if (totalPages <= maxVisiblePages) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | 'ellipsis')[] = [];
+    const sideCount = Math.floor((maxVisiblePages - 3) / 2);
+
+    let left = Math.max(2, currentPage - sideCount);
+    let right = Math.min(totalPages - 1, currentPage + sideCount);
+
+    if (left === 2) {
+      right = Math.min(totalPages - 1, left + maxVisiblePages - 4);
+    }
+    if (right === totalPages - 1) {
+      left = Math.max(2, right - maxVisiblePages + 4);
+    }
+
+    pages.push(1);
+
+    if (left > 2) {
+      pages.push('ellipsis');
+    }
+
+    for (let i = left; i <= right; i++) {
+      pages.push(i);
+    }
+
+    if (right < totalPages - 1) {
+      pages.push('ellipsis');
+    }
+
+    pages.push(totalPages);
+
+    return pages;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -555,19 +597,10 @@ const Pagination: React.FC<{
     setInputValue('');
   };
 
-  const handleJumpInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      const page = parseInt((e.target as HTMLInputElement).value, 10);
-      if (page >= 1 && page <= totalPages && page !== currentPage) {
-        onPageChange(page, 'jump');
-      }
-      setInputValue('');
-    }
-  };
+  const visiblePages = getVisiblePages();
 
   return (
-    <div className={`${styles.pagination} ${isNarrow ? styles.paginationNarrow : ''}`}>
-      {/* 首页（窄屏幕时隐藏） */}
+    <div ref={paginationRef} className={`${styles.pagination} ${isNarrow ? styles.paginationNarrow : ''}`}>
       {!isNarrow && (
         <button
           className={styles.paginationButton}
@@ -575,26 +608,36 @@ const Pagination: React.FC<{
           disabled={currentPage === 1 || loading}
           title="首页"
         >
-          <ChevronsLeft size={16} />
+          <ChevronsLeft size={12} />
         </button>
       )}
 
-      {/* 上一页 */}
       <button
         className={styles.paginationButton}
         onClick={() => onPageChange(currentPage - 1, 'jump')}
         disabled={currentPage === 1 || loading}
         title="上一页"
       >
-        <ChevronLeft size={16} />
+        <ChevronLeft size={12} />
       </button>
 
-      {/* 页码信息 */}
-      <span className={styles.paginationInfo}>
-        {currentPage} / {totalPages}
-      </span>
+      <div className={styles.paginationNumbers}>
+        {visiblePages.map((page, index) =>
+          page === 'ellipsis' ? (
+            <span key={`ellipsis-${index}`} className={styles.paginationEllipsis}>···</span>
+          ) : (
+            <button
+              key={page}
+              className={`${styles.paginationButton} ${page === currentPage ? styles.paginationButtonActive : ''}`}
+              onClick={() => page !== currentPage && onPageChange(page, 'jump')}
+              disabled={loading || page === currentPage}
+            >
+              {page}
+            </button>
+          )
+        )}
+      </div>
 
-      {/* 跳转输入框（窄屏幕时使用更紧凑的样式） */}
       <form onSubmit={handleInputSubmit} className={`${styles.paginationJump} ${isNarrow ? styles.paginationJumpNarrow : ''}`}>
         <input
           type="number"
@@ -602,7 +645,6 @@ const Pagination: React.FC<{
           max={totalPages}
           value={inputValue}
           onChange={handleInputChange}
-          onKeyDown={handleJumpInputKeyDown}
           placeholder={isNarrow ? '页' : '跳转'}
           className={styles.paginationInput}
         />
@@ -611,17 +653,15 @@ const Pagination: React.FC<{
         </button>
       </form>
 
-      {/* 下一页 */}
       <button
         className={styles.paginationButton}
         onClick={() => onPageChange(currentPage + 1, 'jump')}
         disabled={currentPage === totalPages || loading}
         title="下一页"
       >
-        <ChevronRight size={16} />
+        <ChevronRight size={12} />
       </button>
 
-      {/* 末页（窄屏幕时隐藏） */}
       {!isNarrow && (
         <button
           className={styles.paginationButton}
@@ -629,7 +669,7 @@ const Pagination: React.FC<{
           disabled={currentPage === totalPages || loading}
           title="末页"
         >
-          <ChevronsRight size={16} />
+          <ChevronsRight size={12} />
         </button>
       )}
     </div>

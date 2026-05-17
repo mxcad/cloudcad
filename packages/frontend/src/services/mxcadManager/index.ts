@@ -712,6 +712,7 @@ export async function waitForFileReady(
   name: string;
   parentId: string;
 } | null> {
+  setLoadingProgress(0);
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const fileInfoResponse = await fileSystemControllerGetNode({ path: { nodeId } });
     const fileInfo = fileInfoResponse.data;

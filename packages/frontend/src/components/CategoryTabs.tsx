@@ -25,7 +25,6 @@ import React, {
   useCallback,
   useState,
 } from 'react';
-import { X } from 'lucide-react';
 import styles from './CategoryTabs.module.css';
 
 /** 分类项 */
@@ -97,10 +96,6 @@ const CategoryLevelRow: React.FC<{
   categories: CategoryLevel[];
   selectedPath: string[];
 }> = ({ items, selectedId, onSelect, isLastLevel, categories, selectedPath }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const selectedRef = useRef<HTMLButtonElement>(null);
-
-  // 点击时滚动到选中项
   const handleSelect = useCallback(
     (categoryId: string) => {
       onSelect(categoryId);
@@ -108,52 +103,16 @@ const CategoryLevelRow: React.FC<{
     [onSelect]
   );
 
-  // 选中项变化时自动滚动到中间位置
-  useEffect(() => {
-    const container = containerRef.current;
-    const selected = selectedRef.current;
-    if (!container || !selected) return;
-
-    const containerWidth = container.clientWidth;
-    const selectedWidth = selected.offsetWidth;
-    const selectedOffset = selected.offsetLeft;
-
-    // 计算让选中项居中需要的滚动位置
-    const scrollLeft = selectedOffset - (containerWidth - selectedWidth) / 2;
-
-    container.scrollTo({
-      left: Math.max(0, scrollLeft),
-      behavior: 'smooth',
-    });
-  }, [selectedId]);
-
-  // 鼠标滚轮横向滚动
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      // 阻止默认垂直滚动
-      e.preventDefault();
-      // 转换为横向滚动
-      container.scrollLeft += e.deltaY;
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, []);
-
   if (items.length === 0) return null;
 
   return (
     <div className={`${styles.categoryRow} ${isLastLevel ? styles.lastRow : ''}`}>
-      <div ref={containerRef} className={styles.categoryContainer}>
+      <div className={styles.categoryContainer}>
         {items.map((item) => {
             const displayName = getDisplayName(categories, selectedPath, item);
             return (
               <button
                 key={item.id}
-                ref={item.id === selectedId ? selectedRef : null}
                 className={`${styles.categoryButton} ${item.id === selectedId ? styles.active : ''}`}
                 onClick={() => handleSelect(item.id)}
               >

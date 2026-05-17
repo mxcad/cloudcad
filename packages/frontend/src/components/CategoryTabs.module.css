@@ -1,9 +1,9 @@
 /**
- * CategoryTabs - 分类标签样式（横向滚动版）
+ * CategoryTabs - 分类标签样式（横向滚动版�?
  *
- * 设计理念：
- * - 与 CAD 编辑器深色主题完美融合
- * - 清晰的视觉层次和专业的工业风格
+ * 设计理念�?
+ * - �?CAD 编辑器深色主题完美融�?
+ * - 清晰的视觉层次和专业的工业风�?
  * - 简洁直观的横向滚动交互
  */
 
@@ -46,7 +46,7 @@
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--primary-500, #3B82F6);
+  border-top-color: var(--info);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -58,7 +58,7 @@
 }
 
 /* ============================================
-   单级分类行
+   单级分类�?
    ============================================ */
 
 .categoryRow {
@@ -85,56 +85,7 @@
   align-items: center;
   gap: 6px;
   flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  /* 滚动条样式 */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-  /* 平滑滚动 */
-  scroll-behavior: smooth;
-}
-
-/* WebKit 滚动条样式 */
-.categoryContainer::-webkit-scrollbar {
-  height: 4px;
-}
-
-.categoryContainer::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.categoryContainer::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-.categoryContainer::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-[data-theme="dark"] .categoryContainer {
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
-}
-
-[data-theme="dark"] .categoryContainer::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-[data-theme="dark"] .categoryContainer::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-[data-theme="light"] .categoryContainer {
-  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-}
-
-[data-theme="light"] .categoryContainer::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-}
-
-[data-theme="light"] .categoryContainer::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
+  flex-wrap: wrap;
 }
 
 /* ============================================
@@ -167,17 +118,17 @@
   transform: scale(0.98);
 }
 
-/* 选中状态 */
+/* 选中状�?*/
 .categoryButton.active {
   color: #FFFFFF;
-  background: var(--primary-600, #3B82F6);
-  border-color: var(--primary-600, #3B82F6);
-  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+  background: var(--info);
+  border-color: var(--info);
+  box-shadow: 0 1px 3px rgba(0, 156, 255, 0.3);
 }
 
 .categoryButton.active:hover {
-  background: var(--primary-500, #60A5FA);
-  border-color: var(--primary-500, #60A5FA);
+  background: var(--info);
+  border-color: var(--info);
 }
 
 /* ============================================
@@ -207,12 +158,12 @@
 
 [data-theme="light"] .categoryButton.active {
   color: #FFFFFF;
-  background: #3B82F6;
-  border-color: #3B82F6;
+  background: var(--info);
+  border-color: var(--info);
 }
 
 /* ============================================
-   紧凑布局（窄屏幕）选择框样式
+   紧凑布局（窄屏幕）选择框样�?
    ============================================ */
 
 .categorySelectGroup {

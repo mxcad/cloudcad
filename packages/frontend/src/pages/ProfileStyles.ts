@@ -42,7 +42,7 @@ export const profileStyles = `
         .info-icon-wrapper.accent { background: linear-gradient(135deg, var(--accent-500), var(--accent-600)); color: white; }
         .info-icon-wrapper.success { background: linear-gradient(135deg, var(--success), #16a34a); color: white; }
         .info-icon-wrapper.warning { background: linear-gradient(135deg, var(--warning), #d97706); color: white; }
-        .info-icon-wrapper.info { background: linear-gradient(135deg, var(--info), #2563eb); color: white; }
+        .info-icon-wrapper.info { background: var(--info); color: white; }
         .info-icon-wrapper.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
         .info-content { flex: 1; min-width: 0; }
         .info-content label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }

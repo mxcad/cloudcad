@@ -49,7 +49,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     subTab: 'my-project',
     icon: <FolderOpen size={18} />,
     label: '我的项目',
-    color: '#3b82f6',
+    color: '#009cff',
     dataTour: 'trigger-my-project',
   },
   {

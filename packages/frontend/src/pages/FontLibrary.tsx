@@ -33,7 +33,7 @@ interface FontLibraryProps {}
 const FONT_TYPES = [
   { value: '', label: '全部格式', color: '#6366f1', Icon: FolderOpen },
   { value: '.ttf', label: 'TTF', color: '#22c55e', Icon: Type },
-  { value: '.otf', label: 'OTF', color: '#3b82f6', Icon: FileText },
+  { value: '.otf', label: 'OTF', color: '#009cff', Icon: FileText },
   { value: '.woff', label: 'WOFF', color: '#f59e0b', Icon: FileBox },
   { value: '.woff2', label: 'WOFF2', color: '#f97316', Icon: FileBox },
   { value: '.eot', label: 'EOT', color: '#8b5cf6', Icon: FileDigit },
