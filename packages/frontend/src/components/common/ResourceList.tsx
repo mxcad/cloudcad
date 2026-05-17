@@ -364,25 +364,22 @@ const CascadeCategorySelector: React.FC<{
             )}
           </select>
 
-          {/* 三级分类选择框 */}
-          <select
-            value={selectedThirdCategory || ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              onThirdCategoryChange(val || null);
-            }}
-            className={styles.cascadeSelect}
-            disabled={!selectedSubCategory || thirdCategories.length === 0}
-          >
-            <option value="">三级分类</option>
-            {thirdCategories.length > 0 ? (
-              thirdCategories.map(thirdCat => (
+          {/* 三级分类选择框 - 仅在有数据时显示 */}
+          {thirdCategories.length > 0 && (
+            <select
+              value={selectedThirdCategory || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                onThirdCategoryChange(val || null);
+              }}
+              className={styles.cascadeSelect}
+            >
+              <option value="">三级分类</option>
+              {thirdCategories.map(thirdCat => (
                 <option key={thirdCat.id} value={thirdCat.id}>{thirdCat.name}</option>
-              ))
-            ) : (
-              <option value="" disabled>暂无分类</option>
-            )}
-          </select>
+              ))}
+            </select>
+          )}
 
         </div>
       ) : (

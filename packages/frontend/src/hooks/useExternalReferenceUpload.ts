@@ -448,8 +448,8 @@ export const useExternalReferenceUpload = (
           await publicFileControllerUploadExtReference({
             body: {
               file: extRefFile,
-              srcHash: id,
-              ext_ref_file: fileInfo.name,
+              srcFileHash: id,
+              extRefFile: fileInfo.name,
             },
           });
         } else {
