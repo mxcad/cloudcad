@@ -202,6 +202,18 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
     return selectedId !== 'all';
   });
 
+  // 判断某级别是否只有"全部"（没有实际分类）
+  const isOnlyAll = (level: number): boolean => {
+    const items = getLevelItems(level);
+    return items.length === 1 && items[0]?.id === 'all';
+  };
+
+  // 所有级别都只有"全部"时，不渲染任何内容（不占空间）
+  const allLevelsEmpty = isOnlyAll(0) && isOnlyAll(1) && isOnlyAll(2);
+  if (!loading && allLevelsEmpty) {
+    return null;
+  }
+
   // 紧凑布局：使用选择框
   if (isCompactLayout) {
     return (
@@ -213,55 +225,53 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
         )}
 
         <div className={styles.categorySelectGroup}>
-          {/* 一级分类 */}
-          <div className={styles.categorySelectRow}>
-            <span className={styles.categorySelectLabel}>一级分类</span>
-            <select
-              value={getSelectedId(0)}
-              onChange={(e) => handleSelectChange(0, e.target.value)}
-              className={styles.categorySelect}
-            >
-              {getLevelItems(0).map(item => (
-                <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 二级分类 */}
-          <div className={styles.categorySelectRow}>
-            <span className={styles.categorySelectLabel}>二级分类</span>
-            <select
-              value={getSelectedId(1)}
-              onChange={(e) => handleSelectChange(1, e.target.value)}
-              className={styles.categorySelect}
-            >
-              {getLevelItems(1).length > 0 ? (
-                getLevelItems(1).map(item => (
+          {/* 一级分类 - 只有"全部"时不显示 */}
+          {!isOnlyAll(0) && (
+            <div className={styles.categorySelectRow}>
+              <span className={styles.categorySelectLabel}>一级分类</span>
+              <select
+                value={getSelectedId(0)}
+                onChange={(e) => handleSelectChange(0, e.target.value)}
+                className={styles.categorySelect}
+              >
+                {getLevelItems(0).map(item => (
                   <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
-                ))
-              ) : (
-                <option value="all">暂无分类</option>
-              )}
-            </select>
-          </div>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* 三级分类 */}
-          <div className={styles.categorySelectRow}>
-            <span className={styles.categorySelectLabel}>三级分类</span>
-            <select
-              value={getSelectedId(2)}
-              onChange={(e) => handleSelectChange(2, e.target.value)}
-              className={styles.categorySelect}
-            >
-              {getLevelItems(2).length > 0 ? (
-                getLevelItems(2).map(item => (
+          {/* 二级分类 - 只有"全部"时不显示 */}
+          {!isOnlyAll(1) && (
+            <div className={styles.categorySelectRow}>
+              <span className={styles.categorySelectLabel}>二级分类</span>
+              <select
+                value={getSelectedId(1)}
+                onChange={(e) => handleSelectChange(1, e.target.value)}
+                className={styles.categorySelect}
+              >
+                {getLevelItems(1).map(item => (
                   <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
-                ))
-              ) : (
-                <option value="all">暂无分类</option>
-              )}
-            </select>
-          </div>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 三级分类 - 只有"全部"时不显示 */}
+          {!isOnlyAll(2) && (
+            <div className={styles.categorySelectRow}>
+              <span className={styles.categorySelectLabel}>三级分类</span>
+              <select
+                value={getSelectedId(2)}
+                onChange={(e) => handleSelectChange(2, e.target.value)}
+                className={styles.categorySelect}
+              >
+                {getLevelItems(2).map(item => (
+                  <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
         </div>
       </div>
@@ -269,6 +279,14 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   }
 
   // 宽屏布局：使用横向滚动标签
+  // 检查是否有可见的级别
+  const visibleLevels = categories.filter(
+    (c) => !(c.items.length === 1 && c.items[0]?.id === 'all')
+  );
+  if (!loading && visibleLevels.length === 0) {
+    return null;
+  }
+
   return (
     <div ref={containerRef} className={styles.categoryTabsWrapper}>
       {loading && (
@@ -279,8 +297,17 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
 
       <div className={styles.categoryTabsContainer}>
         {categories.map((categoryLevel, index) => {
+          // 任何级别如果只有"全部"则不显示
+          const isHidden = categoryLevel.items.length === 1 && categoryLevel.items[0]?.id === 'all';
+          if (isHidden) {
+            return null;
+          }
+
           const selectedId = selectedPath[categoryLevel.level] || 'all';
-          const isLastLevel = index === categories.length - 1;
+          // 判断是否是最后一个可见级别
+          const isLastLevel = categories.slice(index + 1).every(
+            (c) => c.items.length === 1 && c.items[0]?.id === 'all'
+          );
 
           return (
             <CategoryLevelRow
