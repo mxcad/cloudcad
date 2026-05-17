@@ -1207,14 +1207,18 @@ export const CADEditorDirect: React.FC = () => {
   useEffect(() => {
     if (window.MxPluginContext) {
       const originalUseMessage = window.MxPluginContext.useMessage;
-      
+
       window.MxPluginContext.useMessage = () => {
-        const originalMessage = originalUseMessage();
-        
+        const originalMessage = originalUseMessage() as {
+          info: (msg: string) => void;
+          success: (msg: string) => void;
+          warning: (msg: string) => void;
+          error: (msg: string) => void;
+        };
+
         return {
           ...originalMessage,
           success: (msg: string) => {
-            // 拦截文件打开成功的提示，不显示
             if (msg && (msg.includes('打开') || msg.includes('open') || msg.includes('成功'))) {
               console.log('拦截到文件打开成功提示，不显示:', msg);
               return;

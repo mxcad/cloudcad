@@ -112,8 +112,18 @@ export class PublicFileService {
       throw new BadRequestException('缺少外部参照文件名');
     }
 
+    // 验证文件名安全性（防止路径遍历攻击）
+    if (extRefFileName.includes('..') || extRefFileName.includes('/') || extRefFileName.includes('\\')) {
+      throw new BadRequestException('文件名包含非法字符');
+    }
+
     const ext = path.extname(extRefFileName).toLowerCase();
     const isDwgFile = ['.dwg', '.dxf'].includes(ext);
+    const isImageFile = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(ext);
+
+    if (!isDwgFile && !isImageFile) {
+      throw new BadRequestException('不支持的文件类型');
+    }
 
     let hash = fileHash;
     if (!hash) {
@@ -124,6 +134,13 @@ export class PublicFileService {
     const uploadPath = this.uploadService.getUploadPath();
     const srcDir = path.join(uploadPath, srcFileHash);
 
+    // 确保目标目录在 uploads 路径下，防止路径遍历
+    const resolvedSrcDir = path.resolve(srcDir);
+    const resolvedUploadPath = path.resolve(uploadPath);
+    if (!resolvedSrcDir.startsWith(resolvedUploadPath)) {
+      throw new BadRequestException('无效的源路径');
+    }
+
     if (!fs.existsSync(srcDir)) {
       fs.mkdirSync(srcDir, { recursive: true });
       logger.log(`[uploadExtReference] 创建源图纸目录: ${srcDir}`);
@@ -133,6 +150,13 @@ export class PublicFileService {
       if (isDwgFile) {
         // 对于 DWG/DXF 文件，需要进行转换
         const tempFilePath = path.join(srcDir, extRefFileName);
+
+        // 再次验证解析后的路径在预期目录内
+        const resolvedTempPath = path.resolve(tempFilePath);
+        if (!resolvedTempPath.startsWith(resolvedSrcDir)) {
+          throw new BadRequestException('无效的文件路径');
+        }
+
         await fs.promises.writeFile(tempFilePath, fileBuffer);
 
         try {
@@ -178,8 +202,15 @@ export class PublicFileService {
           };
         }
       } else {
-        // 对于非 DWG/DXF 文件，直接保存
+        // 对于图片文件，直接保存
         const targetPath = path.join(srcDir, extRefFileName);
+
+        // 再次验证解析后的路径在预期目录内
+        const resolvedTargetPath = path.resolve(targetPath);
+        if (!resolvedTargetPath.startsWith(resolvedSrcDir)) {
+          throw new BadRequestException('无效的文件路径');
+        }
+
         await fs.promises.writeFile(targetPath, fileBuffer);
 
         logger.log(

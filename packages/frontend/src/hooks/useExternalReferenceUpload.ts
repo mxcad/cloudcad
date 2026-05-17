@@ -11,7 +11,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference } from '@/api-sdk';
-import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference } from '@/api-sdk';
+import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference, publicFileControllerUploadExtReference } from '@/api-sdk';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -356,29 +356,36 @@ export const useExternalReferenceUpload = (
 
     input.onchange = () => {
       if (!input.files) {
+        document.body.removeChild(input);
         return;
       }
 
       const selectedFiles = Array.from(input.files);
-      input.remove();
+      document.body.removeChild(input);
 
-      // 更新文件列表，设置 source
+      // 更新文件列表，使用不可变更新避免状态突变
       setFiles((prevFiles) => {
-        const newFiles = [...prevFiles];
-        selectedFiles.forEach((file) => {
-          const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) { Object.assign(existingFile, { source: file });
-            existingFile.uploadState = 'notSelected';
-          } else {
-            addToast(`未找到匹配的缺失文件: ${file.name}`, 'warning');
+        const newFiles = prevFiles.map((f) => {
+          const matchedFile = selectedFiles.find((sf) => sf.name === f.name);
+          if (matchedFile) {
+            return { ...f, source: matchedFile, uploadState: 'notSelected' as UploadState };
+          }
+          return f;
+        });
+
+        // 提示未匹配的文件
+        selectedFiles.forEach((sf) => {
+          if (!prevFiles.some((f) => f.name === sf.name)) {
+            addToast(`未找到匹配的缺失文件: ${sf.name}`, 'warning');
           }
         });
+
         return newFiles;
       });
     };
 
     input.click();
-  }, []);
+  }, [addToast]);
 
   /**
    * 上传文件
@@ -583,23 +590,30 @@ export const useExternalReferenceUpload = (
 
     input.onchange = async () => {
       if (!input.files) {
+        document.body.removeChild(input);
         return;
       }
 
       const selectedFiles = Array.from(input.files);
-      input.remove();
+      document.body.removeChild(input);
 
-      // 更新文件列表，设置 source
+      // 更新文件列表，使用不可变更新避免状态突变
       setFiles((prevFiles) => {
-        const newFiles = [...prevFiles];
-        selectedFiles.forEach((file) => {
-          const existingFile = newFiles.find((f) => f.name === file.name);
-          if (existingFile) { Object.assign(existingFile, { source: file });
-            existingFile.uploadState = 'notSelected';
-          } else {
-            addToast(`未找到匹配的缺失文件: ${file.name}`, 'warning');
+        const newFiles = prevFiles.map((f) => {
+          const matchedFile = selectedFiles.find((sf) => sf.name === f.name);
+          if (matchedFile) {
+            return { ...f, source: matchedFile, uploadState: 'notSelected' as UploadState };
+          }
+          return f;
+        });
+
+        // 提示未匹配的文件
+        selectedFiles.forEach((sf) => {
+          if (!prevFiles.some((f) => f.name === sf.name)) {
+            addToast(`未找到匹配的缺失文件: ${sf.name}`, 'warning');
           }
         });
+
         return newFiles;
       });
 
@@ -611,7 +625,7 @@ export const useExternalReferenceUpload = (
     };
 
     input.click();
-  }, [files, uploadFiles]);
+  }, [files, uploadFiles, addToast]);
 
   // 使用 useMemo 缓存返回对象，避免每次渲染都创建新对象
   const returnValue = useMemo(() => ({

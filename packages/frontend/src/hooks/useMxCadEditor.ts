@@ -62,9 +62,9 @@ export const useMxCadServerConfig = (
         serverConfig.uploadFileConfig.create.formData = {
           ...originalFormData,
           mxcadUserId: user.id,
-          mxcadProjectId: projectContext.projectId,
+          mxcadProjectId: projectContext.projectId || '',
           mxcadParentId: projectContext.parentId || '',
-          mxcadUserRole: user.role,
+          mxcadUserRole: user.role || '',
         };
 
         // Authorization header 由 apiService 拦截器统一处理

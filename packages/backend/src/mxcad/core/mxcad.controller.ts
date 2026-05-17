@@ -716,8 +716,8 @@ export class MxCadController {
       return res.json({ code: -1, message: '权限验证失败' });
     }
 
-    // 计算文件哈希
-    const fileBuffer = fs.readFileSync(file.path);
+    // 计算文件哈希（异步读取，避免阻塞事件循环）
+    const fileBuffer = await fs.promises.readFile(file.path);
     const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
     this.logger.log(`[uploadExtReferenceImage] 文件哈希: ${fileHash}`);

@@ -37,6 +37,30 @@ import { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const ALLOWED_EXT_REFERENCE_EXTENSIONS = [
+  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp',
+  '.dwg', '.dxf',
+];
+
+const MAX_EXT_REFERENCE_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+function validateFileName(fileName: string): boolean {
+  if (fileName.length > 255) return false;
+  if (/[<>:"|?*]/.test(fileName)) return false;
+  if (/[\/\\]/.test(fileName)) return false;
+  if (/\.\./.test(fileName)) return false;
+  for (let i = 0; i < fileName.length; i++) {
+    const charCode = fileName.charCodeAt(i);
+    if (charCode < 0x20 || charCode === 0x7f) return false;
+  }
+  return true;
+}
+
+function validateFileType(fileName: string): boolean {
+  const ext = path.extname(fileName).toLowerCase();
+  return ALLOWED_EXT_REFERENCE_EXTENSIONS.includes(ext);
+}
+
 @ApiTags('公开文件服务')
 @Controller('public-file')
 export class PublicFileController {
@@ -199,6 +223,19 @@ export class PublicFileController {
 
     if (!dto.extRefFile) {
       throw new BadRequestException('缺少外部参照文件名');
+    }
+
+    if (!validateFileName(dto.extRefFile)) {
+      throw new BadRequestException('文件名包含非法字符');
+    }
+
+    if (!validateFileType(dto.extRefFile)) {
+      const allowed = ALLOWED_EXT_REFERENCE_EXTENSIONS.join(', ');
+      throw new BadRequestException(`仅支持 ${allowed} 文件`);
+    }
+
+    if (file.size > MAX_EXT_REFERENCE_FILE_SIZE) {
+      throw new BadRequestException('文件大小超出限制（最大 100MB）');
     }
 
     this.logger.log(

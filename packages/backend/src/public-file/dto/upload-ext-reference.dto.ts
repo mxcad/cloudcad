@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
 
 export class UploadExtReferenceDto {
   @ApiProperty({
@@ -16,6 +16,7 @@ export class UploadExtReferenceDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(255)
   extRefFile!: string;
 
   @ApiProperty({
