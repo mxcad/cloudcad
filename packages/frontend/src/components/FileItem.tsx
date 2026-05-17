@@ -684,7 +684,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         <Thumbnail
           node={node}
           size={galleryMode ? 56 : 40}
-          galleryMode={false}
+          galleryMode={galleryMode}
           onPreview={(src) => {
             setPreviewImageSrc(src);
             setIsPreviewOpen(true);
