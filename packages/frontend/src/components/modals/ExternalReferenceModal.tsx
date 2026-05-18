@@ -134,17 +134,17 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       isOpen={isOpen}
       onClose={onSkip}
       title="管理外部参照文件"
-      size="xl"
+      size="lg"
       contentClassName="p-0"
       footer={
-        <div data-tour="xref-actions" className="flex items-center justify-end gap-3">
+        <div data-tour="xref-actions" className="flex items-center justify-end gap-2">
           <Button
             variant="ghost"
             onClick={() => {
               onClose();
             }}
             disabled={loading}
-            className="min-w-[80px]"
+            className="min-w-[72px] h-8 text-sm"
           >
             取消
           </Button>
@@ -154,17 +154,17 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 onSelectAndUpload();
               }}
               disabled={hasUploading}
-              className="min-w-[120px]"
+              className="min-w-[100px] h-8 text-sm"
               variant="primary"
             >
               {hasUploading ? (
                 <>
-                  <Loader2 size={16} className="mr-2 animate-spin" data-testid="icon-loader" />
+                  <Loader2 size={14} className="mr-1.5 animate-spin" data-testid="icon-loader" />
                   上传中...
                 </>
               ) : (
                 <>
-                  <Upload size={16} className="mr-2" />
+                  <Upload size={14} className="mr-1.5" />
                   选择并上传
                 </>
               )}
@@ -180,34 +180,34 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             }}
             disabled={loading}
             data-tour="xref-complete-btn"
-            className="min-w-[80px]"
+            className="min-w-[72px] h-8 text-sm"
           >
             {allSuccess ? '完成' : '关闭'}
           </Button>
         </div>
       }
     >
-      <div className="p-6">
+      <div className="p-4">
         {/* 文件列表 */}
         {files.length > 0 ? (
           <div
-            className="rounded-xl overflow-hidden"
-            style={{ border: '1px solid var(--border-default)', maxHeight: '360px', overflowY: 'auto' }}
+            className="rounded-lg overflow-hidden"
+            style={{ border: '1px solid var(--border-default)', maxHeight: '300px', overflowY: 'auto' }}
             data-tour="xref-list"
           >
             <table className="w-full">
               <thead className="sticky top-0 z-10">
                 <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-left text-xs font-medium w-12" style={{ color: 'var(--text-tertiary)' }}>
                     状态
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
                     文件名
                   </th>
-                  <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-center text-xs font-medium w-20" style={{ color: 'var(--text-tertiary)' }}>
                     类型
                   </th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider w-28" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-right text-xs font-medium w-24" style={{ color: 'var(--text-tertiary)' }}>
                     进度
                   </th>
                 </tr>
@@ -222,9 +222,9 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                       backgroundColor: file.exists && file.uploadState === 'notSelected' ? 'var(--success-light)' : 'var(--bg-primary)',
                     }}
                   >
-                    <td className="px-5 py-3 align-middle">
+                    <td className="px-3 py-2 align-middle">
                       <div className="flex items-center justify-center">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{
                           backgroundColor: file.uploadState === 'success' || (file.exists && file.uploadState === 'notSelected') ? 'var(--success-dim)' :
                             file.uploadState === 'fail' ? 'var(--error-dim)' :
                             file.uploadState === 'uploading' ? 'var(--info-dim)' :
@@ -234,10 +234,10 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3 align-middle max-w-0">
+                    <td className="px-3 py-2 align-middle max-w-0">
                       <div className="flex flex-col gap-0.5">
                         <span
-                          className="text-sm font-medium block"
+                          className="text-sm font-medium block truncate"
                           style={{
                             color: file.exists && file.uploadState === 'notSelected' ? 'var(--text-muted)' : 'var(--text-primary)',
                           }}
@@ -249,15 +249,15 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-center align-middle">
-                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                    <td className="px-3 py-2 text-center align-middle">
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                         {file.type === 'img' ? '图片' : 'DWG'}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right align-middle">
+                    <td className="px-3 py-2 text-right align-middle">
                       {file.uploadState === 'uploading' ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <div className="w-12 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
                             <div 
                               className="h-full rounded-full transition-all duration-300" 
                               style={{ 
@@ -266,18 +266,18 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                               }} 
                             />
                           </div>
-                          <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
                             {Math.round(file.progress)}%
                           </span>
                         </div>
                       ) : file.uploadState === 'success' ? (
-                        <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>100%</span>
+                        <span className="text-xs" style={{ color: 'var(--success)' }}>100%</span>
                       ) : file.uploadState === 'fail' ? (
-                        <span className="text-xs font-medium" style={{ color: 'var(--error)' }}>失败</span>
+                        <span className="text-xs" style={{ color: 'var(--error)' }}>失败</span>
                       ) : file.exists ? (
-                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>可覆盖</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>可覆盖</span>
                       ) : (
-                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>-</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
                       )}
                     </td>
                   </tr>
@@ -286,21 +286,21 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             </table>
           </div>
         ) : (
-          <div className="rounded-xl p-8 text-center" style={{ color: 'var(--text-muted)' }}>
+          <div className="rounded-lg p-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
             暂无外部参照文件
           </div>
         )}
 
         {hasUploading && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
-              <span className="font-semibold" style={{ color: 'var(--primary-500)' }}>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
+              <span style={{ color: 'var(--primary-500)' }}>
                 {files.filter((f) => f.uploadState === 'success').length} /{' '}
                 {files.length}
               </span>
             </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
               <div 
                 className="h-full transition-all duration-300" 
                 style={{ 
