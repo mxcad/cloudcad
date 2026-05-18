@@ -49,10 +49,17 @@ export const useExternalReferenceUpload = (
   // 使用 ref 存储标识符，确保闭包中始终使用最新值
   const identifierRef = useRef(identifier);
 
+  // 使用 ref 存储 files 状态，解决 selectAndUploadFiles 中 uploadFiles 闭包过期问题
+  const filesRef = useRef(files);
+
   // 在 useEffect 中更新 ref，遵循 React 最佳实践
   useEffect(() => {
     identifierRef.current = config.fileHash || config.nodeId || '';
   }, [config.nodeId, config.fileHash]);
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
 
   // 标记是否使用公开上传（CAD编辑器场景）
   const usePublicUpload = !!config.fileHash;
@@ -265,55 +272,39 @@ export const useExternalReferenceUpload = (
         return false;
       }
 
-      // 检查哪些文件缺失
-      const missingFiles: ExternalReferenceFile[] = [];
+      // 收集所有外部参照文件（包括已上传和缺失的）
+      const allExternalReferences: ExternalReferenceFile[] = [];
 
       // 检查 DWG 外部参照
       for (const name of externalReference) {
         const exists = await checkReferenceExists(id, name);
-        if (!exists) {
-          missingFiles.push({
-            name,
-            type: 'ref',
-            uploadState: 'notSelected',
-            progress: 0,
-            exists,
-          });
-        }
+        allExternalReferences.push({
+          name,
+          type: 'ref',
+          uploadState: exists ? 'success' as UploadState : 'notSelected' as UploadState,
+          progress: exists ? 100 : 0,
+          exists,
+        });
       }
 
       // 检查图片外部参照
       for (const name of missingImages) {
         const exists = await checkReferenceExists(id, name);
-        if (!exists) {
-          missingFiles.push({
-            name,
-            type: 'img',
-            uploadState: 'notSelected',
-            progress: 0,
-            exists,
-          });
-        }
+        allExternalReferences.push({
+          name,
+          type: 'img',
+          uploadState: exists ? 'success' as UploadState : 'notSelected' as UploadState,
+          progress: exists ? 100 : 0,
+          exists,
+        });
       }
 
-      // 只显示缺失的外部参照文件
-      const missingExternalReferences = missingFiles;
-
+      // 有外部参照文件时弹出弹框（显示所有文件，包括已上传的）
       console.debug(
-        '[useExternalReferenceUpload] 缺失的外部参照文件:',
+        '[useExternalReferenceUpload] 外部参照文件:',
         'external-reference',
-        missingExternalReferences
+        allExternalReferences
       );
-
-      if (missingExternalReferences.length === 0) {
-        // 没有缺失的外部参照文件
-        // 只有手动点击（forceOpen = true）时才打开弹框显示提示
-        if (forceOpen) {
-          setFiles([]);
-          setIsOpen(true);
-        }
-        return false;
-      }
 
       // 如果不是强制打开或重试模式，且该文件已经自动弹出过，则不再重复弹出
       // 防止每次跳转到 CAD 编辑器都弹出弹框
@@ -326,11 +317,11 @@ export const useExternalReferenceUpload = (
       }
 
       console.debug(
-        `[useExternalReferenceUpload] 缺失的外部参照文件数: ${missingExternalReferences.length} 个`,
+        `[useExternalReferenceUpload] 外部参照文件数: ${allExternalReferences.length} 个`,
         'external-reference'
       );
 
-      setFiles(missingExternalReferences);
+      setFiles(allExternalReferences);
       setIsOpen(true);
 
       // 记录已自动弹出（非强制打开且非重试模式）
@@ -399,7 +390,7 @@ export const useExternalReferenceUpload = (
     console.debug(
       '[useExternalReferenceUpload] 当前文件列表:',
       'external-reference',
-      files.map((f) => ({
+      filesRef.current.map((f) => ({
         name: f.name,
         type: f.type,
         uploadState: f.uploadState,
@@ -407,7 +398,7 @@ export const useExternalReferenceUpload = (
       }))
     );
 
-    const filesToUpload = files.filter(
+    const filesToUpload = filesRef.current.filter(
       (f) => f.source && f.uploadState === 'notSelected'
     );
 
@@ -507,7 +498,7 @@ export const useExternalReferenceUpload = (
 
     setLocalLoading(false);
     setGlobalLoading(false);
-  }, [files, config.nodeId, config.onError, usePublicUpload, setGlobalLoading]);
+  }, [config.nodeId, config.onError, usePublicUpload, setGlobalLoading]);
 
   /**
    * 关闭模态框
@@ -533,12 +524,12 @@ export const useExternalReferenceUpload = (
     }
 
     // 空文件列表或没有文件需要上传时，不触发 onSuccess
-    if (files.length === 0) {
+    if (filesRef.current.length === 0) {
       close();
       return;
     }
 
-    const allSuccess = files.every((f) => f.uploadState === 'success');
+    const allSuccess = filesRef.current.every((f) => f.uploadState === 'success');
 
     // 先关闭弹窗，等一帧渲染完成后再触发回调打开文件
     close();
@@ -549,7 +540,7 @@ export const useExternalReferenceUpload = (
     } else {
       console.warn('部分文件上传失败');
     }
-  }, [files, config.onSuccess, close]);
+  }, [config.onSuccess, close]);
 
   /**
    * 跳过上传
@@ -625,7 +616,7 @@ export const useExternalReferenceUpload = (
     };
 
     input.click();
-  }, [files, uploadFiles, addToast]);
+  }, [addToast]);
 
   // 使用 useMemo 缓存返回对象，避免每次渲染都创建新对象
   const returnValue = useMemo(() => ({
