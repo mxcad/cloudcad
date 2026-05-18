@@ -111,7 +111,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   const getStatusText = (file: ExternalReferenceFile) => {
     // 优先显示上传状态
     if (file.uploadState === 'success') {
-      return '上传成功';
+      return '已完成';
     }
     if (file.uploadState === 'fail') {
       return '上传失败';
@@ -187,81 +187,9 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         </div>
       }
     >
-      <div className="space-y-5 p-6">
-        {/* 提示信息 - 优化为更轻量的样式 */}
-        {files.length === 0 ? (
-          <div className="rounded-xl p-4" style={{
-            backgroundColor: 'var(--info-light)',
-            border: '1px solid var(--info-dim)',
-          }}>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--info-dim)' }}>
-                <AlertTriangle
-                  size={18}
-                  style={{ color: 'var(--info)' }}
-                  data-testid="icon-alert-triangle"
-                />
-              </div>
-              <div className="text-sm" style={{ color: 'var(--info)' }}>
-                <p className="font-semibold mb-1">
-                  该文件没有外部参照
-                </p>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  此 CAD 文件不包含任何外部参照文件。如果您需要添加外部参照,可以在 CAD 软件中插入外部参照后重新保存文件。
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : missingCount > 0 ? (
-          <div className="rounded-xl p-4" style={{
-            backgroundColor: 'var(--warning-light)',
-            border: '1px solid var(--warning-dim)',
-          }}>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--warning-dim)' }}>
-                <AlertTriangle
-                  size={18}
-                  style={{ color: 'var(--warning)' }}
-                  data-testid="icon-alert-triangle"
-                />
-              </div>
-              <div className="text-sm" style={{ color: 'var(--warning)' }}>
-                <p className="font-semibold mb-1">
-                  检测到 {missingCount} 个缺失的外部参照文件（共 {files.length} 个）
-                </p>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-xl p-4" style={{
-            backgroundColor: 'var(--info-light)',
-            border: '1px solid var(--info-dim)',
-          }}>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--info-dim)' }}>
-                <AlertTriangle
-                  size={18}
-                  style={{ color: 'var(--info)' }}
-                  data-testid="icon-alert-triangle"
-                />
-              </div>
-              <div className="text-sm" style={{ color: 'var(--info)' }}>
-                <p className="font-semibold mb-1">
-                  所有外部参照文件已存在（共 {files.length} 个）
-                </p>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  图纸可以正常显示。如果您需要更新外部参照文件，可以选择覆盖已存在的文件。
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 文件列表 - 优化为卡片式列表 */}
-        {files.length > 0 && (
+      <div className="p-6">
+        {/* 文件列表 */}
+        {files.length > 0 ? (
           <div
             className="rounded-xl overflow-hidden"
             style={{ border: '1px solid var(--border-default)', maxHeight: '360px', overflowY: 'auto' }}
@@ -357,10 +285,14 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               </tbody>
             </table>
           </div>
+        ) : (
+          <div className="rounded-xl p-8 text-center" style={{ color: 'var(--text-muted)' }}>
+            暂无外部参照文件
+          </div>
         )}
 
         {hasUploading && (
-          <div className="space-y-2">
+          <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
               <span className="font-semibold" style={{ color: 'var(--primary-500)' }}>
@@ -376,52 +308,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                   backgroundColor: 'var(--primary-500)'
                 }} 
               />
-            </div>
-          </div>
-        )}
-
-        {hasFailures && (
-          <div className="rounded-xl p-4" style={{
-            backgroundColor: 'var(--error-light)',
-            border: '1px solid var(--error-dim)',
-          }}>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--error-dim)' }}>
-                <XCircle
-                  size={18}
-                  style={{ color: 'var(--error)' }}
-                  data-testid="icon-x-circle"
-                />
-              </div>
-              <div className="text-sm" style={{ color: 'var(--error)' }}>
-                <p className="font-semibold mb-1">
-                  部分文件上传失败
-                </p>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  请检查文件是否正确，然后重新选择文件上传。
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {allSuccess && (
-          <div className="rounded-xl p-4" style={{
-            backgroundColor: 'var(--success-light)',
-            border: '1px solid var(--success-dim)',
-          }}>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--success-dim)' }}>
-                <CheckCircle
-                  size={18}
-                  style={{ color: 'var(--success)' }}
-                  data-testid="icon-check-circle"
-                />
-              </div>
-              <div className="text-sm" style={{ color: 'var(--success)' }}>
-                <p className="font-semibold mb-1">所有外部参照文件上传成功</p>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>图纸现在可以正常显示了。</p>
-              </div>
             </div>
           </div>
         )}
