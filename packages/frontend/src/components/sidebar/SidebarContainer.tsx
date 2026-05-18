@@ -380,7 +380,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       <span>我的项目</span>
                     </button>
                   </Tooltip>
-                  {/* <Tooltip content="我的图纸" position="bottom" delay={100}>
+                  <Tooltip content="我的图纸" position="bottom" delay={100}>
                     <button
                       className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
                       onClick={() => handleDrawingsSubTabChange('my-drawings')}
@@ -389,7 +389,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       <FileText size={14} />
                       <span>我的图纸</span>
                     </button>
-                  </Tooltip> */}
+                  </Tooltip>
                 </>
               ) : (
                 <>
@@ -417,14 +417,14 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                     <FolderOpen size={14} />
                     <span>我的项目</span>
                   </button>
-                  {/* <button
+                  <button
                     className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
                     onClick={() => handleDrawingsSubTabChange('my-drawings')}
                     aria-label="我的图纸"
                   >
                     <FileText size={14} />
                     <span>我的图纸</span>
-                  </button> */}
+                  </button>
                 </>
               )}
             </div>

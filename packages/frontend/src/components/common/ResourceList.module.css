@@ -1135,7 +1135,13 @@
 .paginationJump {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+}
+
+.paginationJumpLabel {
+  font-size: 0.6875rem;
+  color: var(--text-secondary, #8b95a5);
+  white-space: nowrap;
 }
 
 .paginationInput {
@@ -1197,6 +1203,10 @@
 
 .paginationNarrow .paginationJump {
   gap: 2px;
+}
+
+.paginationNarrow .paginationJumpLabel {
+  font-size: 0.625rem;
 }
 
 .paginationNarrow .paginationInput {

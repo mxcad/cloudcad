@@ -585,13 +585,21 @@ const Pagination: React.FC<{
     setInputValue(e.target.value);
   };
 
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleJumpToPage = () => {
     const page = parseInt(inputValue, 10);
     if (page >= 1 && page <= totalPages && page !== currentPage) {
       onPageChange(page, 'jump');
     }
     setInputValue('');
+  };
+
+  const handleInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleJumpToPage();
+  };
+
+  const handleInputBlur = () => {
+    handleJumpToPage();
   };
 
   const visiblePages = getVisiblePages();
@@ -635,20 +643,26 @@ const Pagination: React.FC<{
         )}
       </div>
 
-      <form onSubmit={handleInputSubmit} className={`${styles.paginationJump} ${isNarrow ? styles.paginationJumpNarrow : ''}`}>
+      <div className={`${styles.paginationJump} ${isNarrow ? styles.paginationJumpNarrow : ''}`}>
+        <span className={styles.paginationJumpLabel}>前往</span>
         <input
           type="number"
           min={1}
           max={totalPages}
           value={inputValue}
           onChange={handleInputChange}
-          placeholder={isNarrow ? '页' : '跳转'}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleJumpToPage();
+            }
+          }}
+          onBlur={handleInputBlur}
+          placeholder={isNarrow ? '' : ''}
           className={styles.paginationInput}
         />
-        <button type="submit" className={`${styles.paginationJumpButton} ${isNarrow ? styles.paginationJumpButtonNarrow : ''}`}>
-          {isNarrow ? 'GO' : '跳转'}
-        </button>
-      </form>
+        <span className={styles.paginationJumpLabel}>页</span>
+      </div>
 
       <button
         className={styles.paginationButton}
