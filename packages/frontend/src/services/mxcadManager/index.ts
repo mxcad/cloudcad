@@ -60,6 +60,7 @@ import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
 import { escapeHtml } from '@/utils/sanitize';
 
 // ==================== 外部依赖 ====================
+// @ts-ignore
 import "mxcad-app/style"
 import { MxCADView } from 'mxcad-app';
 import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission, mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
@@ -1318,7 +1319,7 @@ const openFile = async (noCache?: boolean) => {
  */
 MxFun.addCommand('openFile', ()=> openFile());
 MxFun.addCommand('openFile_noCache', ()=> openFile(true));
-
+MxFun.addCommand('return-to-cloud-map-management', returnToCloudMapManagement)
 
 /**
  * Mx_NewFile 命令处理函数：新建文件

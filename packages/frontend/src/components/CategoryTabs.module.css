@@ -84,6 +84,8 @@
   gap: 6px;
   flex: 1;
   flex-wrap: wrap;
+  max-height: 166px;
+  overflow-y: auto;
 }
 
 /* ============================================
@@ -169,6 +171,8 @@
   gap: 8px;
   padding: 10px 12px;
   background: var(--bg-secondary);
+  max-height: 166px;
+  overflow-y: auto;
 }
 
 [data-theme="dark"] .categorySelectGroup {

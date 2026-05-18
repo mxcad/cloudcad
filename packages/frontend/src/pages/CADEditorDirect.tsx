@@ -952,11 +952,6 @@ export const CADEditorDirect: React.FC = () => {
       'mxcad-save-required',
       handleSaveRequired as EventListener
     );
-    // 另存为不再限制登录 — 未登录用户在 mxcad-save-as handler 中直接弹出下载格式选择框
-    // window.addEventListener(
-    //   'mxcad-saveas-required',
-    //   handleSaveRequired as EventListener
-    // );
 
     return () => {
       window.removeEventListener(
@@ -1203,35 +1198,6 @@ export const CADEditorDirect: React.FC = () => {
     };
   }, []);
 
-  // 拦截 MxPluginContext.useMessage 方法，防止显示文件打开成功的提示
-  useEffect(() => {
-    if (window.MxPluginContext) {
-      const originalUseMessage = window.MxPluginContext.useMessage;
-
-      window.MxPluginContext.useMessage = () => {
-        const originalMessage = originalUseMessage() as {
-          info: (msg: string) => void;
-          success: (msg: string) => void;
-          warning: (msg: string) => void;
-          error: (msg: string) => void;
-        };
-
-        return {
-          ...originalMessage,
-          success: (msg: string) => {
-            if (msg && (msg.includes('打开') || msg.includes('open') || msg.includes('成功'))) {
-              console.log('拦截到文件打开成功提示，不显示:', msg);
-              return;
-            }
-            originalMessage.success(msg);
-          },
-          info: originalMessage.info,
-          warning: originalMessage.warning,
-          error: originalMessage.error,
-        };
-      };
-    }
-  }, []);
 
   // 监听文件打开完成事件，隐藏底部加载状态
   useEffect(() => {

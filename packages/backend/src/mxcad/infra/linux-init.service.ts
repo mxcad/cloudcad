@@ -36,11 +36,13 @@ const execAsync = promisify(exec);
 @Injectable()
 export class LinuxInitService implements OnModuleInit {
   private readonly logger = new Logger(LinuxInitService.name);
-  private readonly mxcadAssemblyDir: string;
+  private readonly mxcadDir: string;
 
   constructor(private readonly configService: ConfigService) {
-    // 获取 mxcadassembly 目录路径
-    this.mxcadAssemblyDir = path.join(process.cwd(), 'mxcadassembly', 'linux');
+    // 从配置中获取 mxcad 目录路径
+    // conversion.binPath 指向可执行文件，取其父目录即为 mxcad 根目录
+    const binPath = this.configService.get<string>('conversion.binPath');
+    this.mxcadDir = binPath ? path.dirname(binPath) : path.join(process.cwd(), '..', '..', 'runtime', 'linux', 'mxcad');
   }
 
   /**
@@ -89,29 +91,29 @@ export class LinuxInitService implements OnModuleInit {
    * 3. 复制 locale 文件到系统目录
    */
   private async initializeLinuxEnvironment(): Promise<void> {
-    const releaseDir = path.join(this.mxcadAssemblyDir, 'release');
+    const mxcadDir = this.mxcadDir;
 
     // 检查目录是否存在
-    if (!fs.existsSync(releaseDir)) {
-      this.logger.warn(`mxcadassembly 目录不存在: ${releaseDir}`);
+    if (!fs.existsSync(mxcadDir)) {
+      this.logger.warn(`mxcad 目录不存在: ${mxcadDir}`);
       return;
     }
 
-    // 1. 设置 mxcadassembly 主程序权限
-    await this.setExecutablePermissions(releaseDir);
+    // 1. 设置 mxcad 主程序权限
+    await this.setExecutablePermissions(mxcadDir);
 
     // 2. 设置 mx/so 共享库权限
-    await this.setSharedLibraryPermissions(releaseDir);
+    await this.setSharedLibraryPermissions(mxcadDir);
 
     // 3. 复制 locale 文件到系统目录
-    await this.copyLocaleFiles(releaseDir);
+    await this.copyLocaleFiles(mxcadDir);
   }
 
   /**
    * 设置 mxcadassembly 主程序权限
    */
-  private async setExecutablePermissions(releaseDir: string): Promise<void> {
-    const mxcadAssemblyPath = path.join(releaseDir, 'mxcadassembly');
+  private async setExecutablePermissions(mxcadDir: string): Promise<void> {
+    const mxcadAssemblyPath = path.join(mxcadDir, 'mxcadassembly');
 
     if (!fs.existsSync(mxcadAssemblyPath)) {
       this.logger.warn(`mxcadassembly 程序不存在: ${mxcadAssemblyPath}`);
@@ -123,14 +125,14 @@ export class LinuxInitService implements OnModuleInit {
       await execAsync(`chmod +x "${mxcadAssemblyPath}"`);
       this.logger.log(`已设置 mxcadassembly 可执行权限`);
 
-      // 设置整个 release 目录权限
-      await execAsync(`chmod -R 755 "${releaseDir}"`);
-      this.logger.log(`已设置 release 目录权限`);
+      // 设置整个 mxcad 目录权限
+      await execAsync(`chmod -R 755 "${mxcadDir}"`);
+      this.logger.log(`已设置 mxcad 目录权限`);
     } catch (error) {
       this.logger.error(`设置 mxcadassembly 权限失败: ${error.message}`);
       // 尝试使用 sudo（可能需要无密码 sudo 配置）
       this.logger.warn(
-        '如果权限不足，请手动执行: sudo chmod -R 777 mxcadassembly'
+        '如果权限不足，请手动执行: sudo chmod -R 777 runtime/linux/mxcad'
       );
     }
   }
@@ -138,8 +140,8 @@ export class LinuxInitService implements OnModuleInit {
   /**
    * 设置 mx/so 共享库权限
    */
-  private async setSharedLibraryPermissions(releaseDir: string): Promise<void> {
-    const mxSoPath = path.join(releaseDir, 'mx', 'so');
+  private async setSharedLibraryPermissions(mxcadDir: string): Promise<void> {
+    const mxSoPath = path.join(mxcadDir, 'mx', 'so');
 
     if (!fs.existsSync(mxSoPath)) {
       this.logger.warn(`mx/so 目录不存在: ${mxSoPath}`);
@@ -159,8 +161,8 @@ export class LinuxInitService implements OnModuleInit {
   /**
    * 复制 locale 文件到系统目录
    */
-  private async copyLocaleFiles(releaseDir: string): Promise<void> {
-    const localeSourcePath = path.join(releaseDir, 'mx', 'locale');
+  private async copyLocaleFiles(mxcadDir: string): Promise<void> {
+    const localeSourcePath = path.join(mxcadDir, 'mx', 'locale');
     const localeTargetPath = '/usr/local/share/locale';
 
     if (!fs.existsSync(localeSourcePath)) {
@@ -204,8 +206,8 @@ export class LinuxInitService implements OnModuleInit {
       return { isConfigured: issues.length === 0, issues };
     }
 
-    const releaseDir = path.join(this.mxcadAssemblyDir, 'release');
-    const mxcadAssemblyPath = path.join(releaseDir, 'mxcadassembly');
+    const mxcadDir = this.mxcadDir;
+    const mxcadAssemblyPath = path.join(mxcadDir, 'mxcadassembly');
 
     // 检查主程序是否存在且可执行
     if (!fs.existsSync(mxcadAssemblyPath)) {
@@ -219,13 +221,13 @@ export class LinuxInitService implements OnModuleInit {
     }
 
     // 检查 mx/so 目录
-    const mxSoPath = path.join(releaseDir, 'mx', 'so');
+    const mxSoPath = path.join(mxcadDir, 'mx', 'so');
     if (!fs.existsSync(mxSoPath)) {
       issues.push('mx/so 共享库目录不存在');
     }
 
     // 检查 locale 文件
-    const localeSourcePath = path.join(releaseDir, 'mx', 'locale');
+    const localeSourcePath = path.join(mxcadDir, 'mx', 'locale');
     const localeTargetPath = '/usr/local/share/locale';
     if (fs.existsSync(localeSourcePath)) {
       const localeName = path.basename(localeSourcePath);
