@@ -221,9 +221,9 @@ export const CollaborateSidebar: React.FC = () => {
   return (
     <div className={styles.container} data-tour="collaborators-panel">
       {/* 标题栏 */}
-      <div className={styles.header}>
+      {/* <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.headerIcon}>
+          <div className={styles.headerIcon}> 
             <Users size={18} />
           </div>
           <span className={styles.headerTitle}>协同</span>
@@ -233,7 +233,7 @@ export const CollaborateSidebar: React.FC = () => {
             </span>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* 操作按钮区 */}
       <div className={styles.actionsBar}>
@@ -244,9 +244,9 @@ export const CollaborateSidebar: React.FC = () => {
           data-tour="create-collaborate-btn"
         >
           {creating ? (
-            <Loader2 size={16} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
           ) : (
-            <UserPlus size={16} />
+            <UserPlus size={14} />
           )}
           <span>{creating ? '创建中...' : '创建协同'}</span>
         </button>
@@ -259,7 +259,7 @@ export const CollaborateSidebar: React.FC = () => {
             aria-label="刷新列表"
           >
             <RefreshCw
-              size={18}
+              size={14}
               className={loading ? 'animate-spin' : ''}
             />
           </button>
@@ -298,7 +298,7 @@ export const CollaborateSidebar: React.FC = () => {
         ) : works.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>
-              <Users />
+              <Users size={20} />
             </div>
             <div className={styles.emptyTitle}>暂无协同会话</div>
             <div className={styles.emptyDescription}>
@@ -315,7 +315,7 @@ export const CollaborateSidebar: React.FC = () => {
             >
               <div className={styles.sessionCardLeft}>
                 <div className={styles.sessionIcon}>
-                  <Users size={18} />
+                  <Users size={14} />
                 </div>
                 <div className={styles.sessionDetails}>
                   <div className={styles.sessionName}>协同 {workId}</div>
@@ -327,7 +327,7 @@ export const CollaborateSidebar: React.FC = () => {
 
               {currentWorkId === workId ? (
                 <span className={styles.joinedBadge}>
-                  <Check size={12} />
+                  <Check size={10} />
                   已加入
                 </span>
               ) : (
@@ -340,7 +340,7 @@ export const CollaborateSidebar: React.FC = () => {
                   className={`${styles.joinButton} ${styles.ripple}`}
                 >
                   {joiningWorkId === workId ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={12} className="animate-spin" />
                   ) : (
                     '加入'
                   )}

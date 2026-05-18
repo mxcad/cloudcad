@@ -4,10 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
-import { X } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { Users } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { SidebarTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
 import { returnToCloudMapManagement } from '@/services/mxcadManager';
@@ -17,6 +16,7 @@ interface SidebarTabBarProps {
   activeTab: SidebarTab;
   onTabChange: (tab: SidebarTab) => void;
   onCloseClick: () => void;
+  isExpanded?: boolean;
 }
 
 const TABS: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
@@ -37,6 +37,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   activeTab,
   onTabChange,
   onCloseClick,
+  isExpanded = true,
 }) => {
   const handleReturnToCloudMap = () => {
     returnToCloudMapManagement();
@@ -44,13 +45,22 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
 
   return (
     <div className={styles.tabBar}>
-      <Tooltip content="返回" position="bottom" delay={100}>
+      {/* <Tooltip content="返回" position="bottom" delay={100}>
         <button
           className={styles.tabBarButton}
-          onClick={handleReturnToCloudMap}
+          onClick={ handleReturnToCloudMap}
           aria-label="返回"
         >
           <ArrowLeft size={18} />
+        </button>
+      </Tooltip> */}
+      <Tooltip content={isExpanded ? "关闭侧边栏" : "展开侧边栏"} position="bottom" delay={100}>
+        <button
+          className={styles.tabBarButton}
+          onClick={onCloseClick}
+          aria-label={isExpanded ? "关闭侧边栏" : "展开侧边栏"}
+        >
+          {isExpanded ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
         </button>
       </Tooltip>
       <div className={styles.tabList}>
@@ -74,15 +84,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
           </button>
         ))}
       </div>
-      <Tooltip content="关闭侧边栏" position="bottom" delay={100}>
-        <button
-          className={styles.tabBarButton}
-          onClick={onCloseClick}
-          aria-label="关闭侧边栏"
-        >
-          <X size={18} />
-        </button>
-      </Tooltip>
+     <div></div>
     </div>
   );
 };

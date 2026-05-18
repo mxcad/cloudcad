@@ -26,8 +26,8 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
     );
 
     // 图库模式：统一 12px 字号
-    const resolvedFontSize = fontSize || (galleryMode ? '12px' : undefined);
-
+    const resolvedFontSize = fontSize || '12px'
+    
     const descriptionText = useMemo(
       () => {
         if (isRoot) {

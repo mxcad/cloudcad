@@ -2538,10 +2538,6 @@ export type UpdatePolicyDto = {
 
 export type UploadExtReferenceDto = {
     /**
-     * 上传的文件
-     */
-    file: Blob | File;
-    /**
      * 源图纸文件的哈希值（主图纸文件的 hash）
      */
     srcFileHash: string;

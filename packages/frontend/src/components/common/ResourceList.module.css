@@ -28,7 +28,6 @@
 /* ==================== 面包屑包装器 ==================== */
 
 .breadcrumbWrapper {
-  padding: var(--space-2) var(--space-4);
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
   border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
   flex-shrink: 0;
@@ -732,7 +731,6 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
   border-top: 1px solid var(--sidebar-border, var(--border-default, #212832));
   flex-shrink: 0;

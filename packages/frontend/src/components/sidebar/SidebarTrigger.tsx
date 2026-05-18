@@ -19,16 +19,16 @@ import { FileText } from 'lucide-react';
 import { Box } from 'lucide-react';
 import { LayoutGrid } from 'lucide-react';
 import { Users } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
-import { returnToCloudMapManagement } from '@/services/mxcadManager';
 import styles from './sidebar.module.css';
 
 interface SidebarTriggerProps {
   activeTab: SidebarTab | null;
   activeDrawingsSubTab?: DrawingsSubTab;
   onTabClick: (tab: SidebarTab, subTab?: DrawingsSubTab) => void;
+  onExpandClick: () => void;
 }
 
 interface ToolButtonConfig {
@@ -93,13 +93,10 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   activeTab,
   activeDrawingsSubTab,
   onTabClick,
+  onExpandClick,
 }) => {
   const handleButtonClick = (button: ToolButtonConfig) => {
     onTabClick(button.tab, button.subTab);
-  };
-
-  const handleReturnToCloudMap = () => {
-    returnToCloudMapManagement();
   };
 
   const isButtonActive = (button: ToolButtonConfig): boolean => {
@@ -114,17 +111,17 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
       {/* 顶部装饰线 */}
       <div className={styles.sidebarAccentLine} />
 
-      {/* 返回按钮 - 固定在顶部 */}
+      {/* 展开按钮 - 固定在顶部 */}
       <div className={styles.topToolWrapper}>
-        <Tooltip content="返回" position="right" delay={100}>
+        <Tooltip content="展开侧边栏" position="right" delay={100}>
           <div className={styles.toolWrapper}>
             <button
               className={styles.toolButton}
-              onClick={handleReturnToCloudMap}
-              aria-label="返回"
+              onClick={onExpandClick}
+              aria-label="展开侧边栏"
             >
               <div className={styles.buttonGlass} />
-              <span className={styles.buttonIcon}><ArrowLeft size={18} /></span>
+              <span className={styles.buttonIcon}><ArrowRight size={18} /></span>
               <div
                 className={styles.buttonGlow}
                 style={{ background: `radial-gradient(circle, #6b728030 0%, transparent 70%)` }}

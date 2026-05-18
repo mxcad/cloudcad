@@ -353,23 +353,13 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    180deg,
-    var(--bg-secondary) 0%,
-    var(--bg-tertiary) 50%,
-    var(--bg-secondary) 100%
-  );
+  background: var(--bg-secondary);
   position: relative;
   overflow: hidden;
 }
 
 [data-theme="dark"] .narrowSidebar {
-  background: linear-gradient(
-    180deg,
-    #1a1d21 0%,
-    #141619 50%,
-    #1a1d21 100%
-  );
+  background: var(--sidebar-bg, #212832)
 }
 
 /* 顶部装饰�?*/
@@ -713,8 +703,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 1px solid var(--border-default, #e2e8f0);
   border-radius: 6px;
@@ -776,7 +766,7 @@
   align-items: center;
   flex-wrap: nowrap;
   gap: 2px;
-  padding: 10px 16px;
+  padding: 2px 4px;
   min-height: 42px;
   background: linear-gradient(
     90deg,
@@ -1624,7 +1614,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 2px 4  px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -1961,7 +1951,7 @@
 
 .projectFilterTab {
   flex: 1;
-  padding: 8px 12px;
+  padding: 2px 4px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
