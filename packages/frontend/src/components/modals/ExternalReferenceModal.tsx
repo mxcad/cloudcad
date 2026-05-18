@@ -135,15 +135,16 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       onClose={onSkip}
       title="管理外部参照文件"
       size="xl"
-      contentClassName="p-6"
+      contentClassName="p-0"
       footer={
-        <div data-tour="xref-actions">
+        <div data-tour="xref-actions" className="flex items-center justify-end gap-3">
           <Button
             variant="ghost"
             onClick={() => {
               onClose();
             }}
             disabled={loading}
+            className="min-w-[80px]"
           >
             取消
           </Button>
@@ -153,7 +154,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 onSelectAndUpload();
               }}
               disabled={hasUploading}
-              className='mr-2'
+              className="min-w-[120px]"
               variant="primary"
             >
               {hasUploading ? (
@@ -163,6 +164,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 </>
               ) : (
                 <>
+                  <Upload size={16} className="mr-2" />
                   选择并上传
                 </>
               )}
@@ -178,76 +180,79 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             }}
             disabled={loading}
             data-tour="xref-complete-btn"
+            className="min-w-[80px]"
           >
             {allSuccess ? '完成' : '关闭'}
           </Button>
         </div>
       }
     >
-      <div className="space-y-4">
-        {/* 提示信息 */}
+      <div className="space-y-5 p-6">
+        {/* 提示信息 - 优化为更轻量的样式 */}
         {files.length === 0 ? (
-          <div className="rounded-lg p-3" style={{
+          <div className="rounded-xl p-4" style={{
             backgroundColor: 'var(--info-light)',
             border: '1px solid var(--info-dim)',
           }}>
-            <div className="flex items-start gap-2">
-              <AlertTriangle
-                size={16}
-                className="mt-0.5 flex-shrink-0"
-                style={{ color: 'var(--info)' }}
-                data-testid="icon-alert-triangle"
-              />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--info-dim)' }}>
+                <AlertTriangle
+                  size={18}
+                  style={{ color: 'var(--info)' }}
+                  data-testid="icon-alert-triangle"
+                />
+              </div>
               <div className="text-sm" style={{ color: 'var(--info)' }}>
-                <p className="font-medium mb-1">
+                <p className="font-semibold mb-1">
                   该文件没有外部参照
                 </p>
-                <p>
-                  此 CAD 文件不包含任何外部参照文件。如果您需要添加外部参照，可以在 CAD 软件中插入外部参照后重新保存文件。
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  此 CAD 文件不包含任何外部参照文件。如果您需要添加外部参照,可以在 CAD 软件中插入外部参照后重新保存文件。
                 </p>
               </div>
             </div>
           </div>
         ) : missingCount > 0 ? (
-          <div className="rounded-lg p-3" style={{
+          <div className="rounded-xl p-4" style={{
             backgroundColor: 'var(--warning-light)',
             border: '1px solid var(--warning-dim)',
           }}>
-            <div className="flex items-start gap-2">
-              <AlertTriangle
-                size={16}
-                className="mt-0.5 flex-shrink-0"
-                style={{ color: 'var(--warning)' }}
-                data-testid="icon-alert-triangle"
-              />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--warning-dim)' }}>
+                <AlertTriangle
+                  size={18}
+                  style={{ color: 'var(--warning)' }}
+                  data-testid="icon-alert-triangle"
+                />
+              </div>
               <div className="text-sm" style={{ color: 'var(--warning)' }}>
-                <p className="font-medium mb-1">
-                  检测到 {missingCount} 个缺失的外部参照文件（共 {files.length}{' '}
-                  个）
+                <p className="font-semibold mb-1">
+                  检测到 {missingCount} 个缺失的外部参照文件（共 {files.length} 个）
                 </p>
-                <p>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   这些文件是图纸正常显示所必需的。您可以选择立即上传缺失的文件，也可以选择覆盖已存在的文件。
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="rounded-lg p-3" style={{
+          <div className="rounded-xl p-4" style={{
             backgroundColor: 'var(--info-light)',
             border: '1px solid var(--info-dim)',
           }}>
-            <div className="flex items-start gap-2">
-              <AlertTriangle
-                size={16}
-                className="mt-0.5 flex-shrink-0"
-                style={{ color: 'var(--info)' }}
-                data-testid="icon-alert-triangle"
-              />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--info-dim)' }}>
+                <AlertTriangle
+                  size={18}
+                  style={{ color: 'var(--info)' }}
+                  data-testid="icon-alert-triangle"
+                />
+              </div>
               <div className="text-sm" style={{ color: 'var(--info)' }}>
-                <p className="font-medium mb-1">
+                <p className="font-semibold mb-1">
                   所有外部参照文件已存在（共 {files.length} 个）
                 </p>
-                <p>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   图纸可以正常显示。如果您需要更新外部参照文件，可以选择覆盖已存在的文件。
                 </p>
               </div>
@@ -255,26 +260,26 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           </div>
         )}
 
-        {/* 文件列表 */}
+        {/* 文件列表 - 优化为卡片式列表 */}
         {files.length > 0 && (
           <div
-            className="rounded-lg overflow-hidden"
-            style={{ border: '1px solid var(--border-default)', maxHeight: '320px', overflowY: 'auto' }}
+            className="rounded-xl overflow-hidden"
+            style={{ border: '1px solid var(--border-default)', maxHeight: '360px', overflowY: 'auto' }}
             data-tour="xref-list"
           >
             <table className="w-full">
               <thead className="sticky top-0 z-10">
-                <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  <th className="px-4 py-2 text-left text-sm font-medium w-20" style={{ color: 'var(--text-secondary)' }}>
+                <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16" style={{ color: 'var(--text-tertiary)' }}>
                     状态
                   </th>
-                  <th className="px-4 py-2 text-left text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
                     文件名
                   </th>
-                  <th className="px-4 py-2 text-right text-sm font-medium w-24" style={{ color: 'var(--text-secondary)' }}>
+                  <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24" style={{ color: 'var(--text-tertiary)' }}>
                     类型
                   </th>
-                  <th className="px-4 py-2 text-right text-sm font-medium w-28" style={{ color: 'var(--text-secondary)' }}>
+                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider w-28" style={{ color: 'var(--text-tertiary)' }}>
                     进度
                   </th>
                 </tr>
@@ -283,21 +288,28 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 {files.map((file, index) => (
                   <tr
                     key={index}
-                    className="hover:bg-[var(--bg-tertiary)]"
+                    className="transition-colors duration-150"
                     style={{
-                      borderBottom: '1px solid var(--border-subtle)',
-                      backgroundColor: file.exists && file.uploadState === 'notSelected' ? 'var(--success-light)' : 'transparent',
+                      borderBottom: index < files.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                      backgroundColor: file.exists && file.uploadState === 'notSelected' ? 'var(--success-light)' : 'var(--bg-primary)',
                     }}
                   >
-                    <td className="px-4 py-2">
+                    <td className="px-5 py-3 align-middle">
                       <div className="flex items-center justify-center">
-                        {getStatusIcon(file)}
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{
+                          backgroundColor: file.uploadState === 'success' || (file.exists && file.uploadState === 'notSelected') ? 'var(--success-dim)' :
+                            file.uploadState === 'fail' ? 'var(--error-dim)' :
+                            file.uploadState === 'uploading' ? 'var(--info-dim)' :
+                            'var(--bg-tertiary)'
+                        }}>
+                          {getStatusIcon(file)}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-col gap-1">
+                    <td className="px-5 py-3 align-middle max-w-0">
+                      <div className="flex flex-col gap-0.5">
                         <span
-                          className="text-sm"
+                          className="text-sm font-medium block"
                           style={{
                             color: file.exists && file.uploadState === 'notSelected' ? 'var(--text-muted)' : 'var(--text-primary)',
                           }}
@@ -309,27 +321,35 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-right">
-                      <span className="text-xs px-2 py-1 rounded" style={{
-                        backgroundColor: 'var(--bg-secondary)',
-                        color: 'var(--text-secondary)',
-                      }}>
+                    <td className="px-5 py-3 text-center align-middle">
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
                         {file.type === 'img' ? '图片' : 'DWG'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-5 py-3 text-right align-middle">
                       {file.uploadState === 'uploading' ? (
-                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          {Math.round(file.progress)}%
-                        </span>
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
+                            <div 
+                              className="h-full rounded-full transition-all duration-300" 
+                              style={{ 
+                                width: `${file.progress}%`,
+                                backgroundColor: 'var(--primary-500)'
+                              }} 
+                            />
+                          </div>
+                          <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                            {Math.round(file.progress)}%
+                          </span>
+                        </div>
                       ) : file.uploadState === 'success' ? (
-                        <span className="text-xs" style={{ color: 'var(--success)' }}>100%</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>100%</span>
                       ) : file.uploadState === 'fail' ? (
-                        <span className="text-xs" style={{ color: 'var(--error)' }}>失败</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--error)' }}>失败</span>
                       ) : file.exists ? (
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>可覆盖</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>可覆盖</span>
                       ) : (
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>-</span>
                       )}
                     </td>
                   </tr>
@@ -342,35 +362,42 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         {hasUploading && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
-              <span style={{ color: 'var(--text-secondary)' }}>
+              <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
+              <span className="font-semibold" style={{ color: 'var(--primary-500)' }}>
                 {files.filter((f) => f.uploadState === 'success').length} /{' '}
                 {files.length}
               </span>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
-              <div className="h-full animate-pulse" style={{ backgroundColor: 'var(--primary)' }} />
+              <div 
+                className="h-full transition-all duration-300" 
+                style={{ 
+                  width: `${(files.filter((f) => f.uploadState === 'success').length / files.length) * 100}%`,
+                  backgroundColor: 'var(--primary-500)'
+                }} 
+              />
             </div>
           </div>
         )}
 
         {hasFailures && (
-          <div className="rounded-lg p-3" style={{
+          <div className="rounded-xl p-4" style={{
             backgroundColor: 'var(--error-light)',
             border: '1px solid var(--error-dim)',
           }}>
-            <div className="flex items-start gap-2">
-              <XCircle
-                size={16}
-                className="mt-0.5 flex-shrink-0"
-                style={{ color: 'var(--error)' }}
-                data-testid="icon-x-circle"
-              />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--error-dim)' }}>
+                <XCircle
+                  size={18}
+                  style={{ color: 'var(--error)' }}
+                  data-testid="icon-x-circle"
+                />
+              </div>
               <div className="text-sm" style={{ color: 'var(--error)' }}>
-                <p className="font-medium mb-1">
+                <p className="font-semibold mb-1">
                   部分文件上传失败
                 </p>
-                <p>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   请检查文件是否正确，然后重新选择文件上传。
                 </p>
               </div>
@@ -379,20 +406,21 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         )}
 
         {allSuccess && (
-          <div className="rounded-lg p-3" style={{
+          <div className="rounded-xl p-4" style={{
             backgroundColor: 'var(--success-light)',
             border: '1px solid var(--success-dim)',
           }}>
-            <div className="flex items-start gap-2">
-              <CheckCircle
-                size={16}
-                className="mt-0.5 flex-shrink-0"
-                style={{ color: 'var(--success)' }}
-                data-testid="icon-check-circle"
-              />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--success-dim)' }}>
+                <CheckCircle
+                  size={18}
+                  style={{ color: 'var(--success)' }}
+                  data-testid="icon-check-circle"
+                />
+              </div>
               <div className="text-sm" style={{ color: 'var(--success)' }}>
-                <p className="font-medium">所有外部参照文件上传成功</p>
-                <p>图纸现在可以正常显示了。</p>
+                <p className="font-semibold mb-1">所有外部参照文件上传成功</p>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>图纸现在可以正常显示了。</p>
               </div>
             </div>
           </div>
