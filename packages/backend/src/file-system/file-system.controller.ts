@@ -948,6 +948,7 @@ export class FileSystemController {
   @ApiResponse({ status: 401, description: "未登录" })
   @ApiResponse({ status: 403, description: "无权访问该节点" })
   @ApiResponse({ status: 404, description: "节点不存在或文件不存在" })
+  @RequireProjectPermission(ProjectPermission.FILE_DOWNLOAD)
   async downloadNodeWithFormat(
     @Param('nodeId') nodeId: string,
     @Request() req: ExpressRequest,

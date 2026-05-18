@@ -21,6 +21,8 @@ import { ConfigService } from '@nestjs/config';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { CadDownloadFormat } from '../dto/download-node.dto';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as archiver from 'archiver';
 import { PassThrough } from 'stream';
 
@@ -193,7 +195,7 @@ export class FileDownloadExportService {
 
       const originalFilename = node.originalName || node.name;
       const ext = path.extname(originalFilename).toLowerCase();
-      const isCadFile = ['.dwg', '.dxf'].includes(ext);
+      const isCadFile = ['.dwg', '.dxf', '.mxweb'].includes(ext);
 
       if (!isCadFile) {
         const stream = await this.getFileStream(node.path);
@@ -219,7 +221,7 @@ export class FileDownloadExportService {
       switch (format) {
         case CadDownloadFormat.MXWEB: {
           const stream = await this.getFileStream(mxwebPath);
-          const mxwebFilename = `${originalFilename}.mxweb`;
+          const mxwebFilename = ext === '.mxweb' ? originalFilename : `${originalFilename}.mxweb`;
           const mimeType = this.getMimeType(mxwebFilename);
           this.logger.log(
             `文件下载（MXWEB）: ${originalFilename} -> ${mxwebFilename} (${nodeId}) by user ${userId}`
@@ -269,8 +271,12 @@ export class FileDownloadExportService {
 
           const mxwebDir = path.dirname(node.path);
           const targetRelativePath = `${mxwebDir}/${targetFilename}`;
+          const targetFullPath = this.storageManager.getFullPath(targetRelativePath);
 
-          const targetExists = await this.storageService.fileExists(targetRelativePath);
+          const targetExists = await fsPromises
+            .access(targetFullPath)
+            .then(() => true)
+            .catch(() => false);
 
           if (!targetExists) {
             throw new NotFoundException(
@@ -278,27 +284,27 @@ export class FileDownloadExportService {
             );
           }
 
-          const convertedStream = await this.getFileStream(targetRelativePath);
+          const convertedStream = fs.createReadStream(targetFullPath);
           const convertedMimeType = this.getMimeType(targetFilename);
 
           convertedStream.on('end', async () => {
             try {
-              await this.storageService.deleteFile(targetRelativePath);
-              this.logger.log(`临时转换文件已删除: ${targetRelativePath}`);
+              await fsPromises.unlink(targetFullPath);
+              this.logger.log(`临时转换文件已删除: ${targetFullPath}`);
             } catch (error) {
               this.logger.warn(
-                `删除临时文件失败: ${targetRelativePath}, error: ${error.message}`
+                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
               );
             }
           });
 
           convertedStream.on('error', async () => {
             try {
-              await this.storageService.deleteFile(targetRelativePath);
-              this.logger.log(`流出错时删除临时文件: ${targetRelativePath}`);
+              await fsPromises.unlink(targetFullPath);
+              this.logger.log(`流出错时删除临时文件: ${targetFullPath}`);
             } catch (error) {
               this.logger.warn(
-                `删除临时文件失败: ${targetRelativePath}, error: ${error.message}`
+                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
               );
             }
           });
@@ -407,17 +413,14 @@ export class FileDownloadExportService {
       const ext = path.extname(filename).toLowerCase();
       const isCadFile = ['.dwg', '.dxf'].includes(ext);
 
-      let filePath: string;
-      if (isCadFile) {
-        const nodeDir = path.dirname(node.path);
-        filePath = `${nodeDir}/${filename}.mxweb`;
-      } else {
-        filePath = node.path;
-      }
+      const relativePath = isCadFile
+        ? `${path.dirname(node.path)}/${filename}.mxweb`
+        : node.path;
+      const fullPath = this.storageManager.getFullPath(relativePath);
       let stream: NodeJS.ReadableStream | null = null;
 
       try {
-        stream = await this.getFileStream(filePath);
+        stream = fs.createReadStream(fullPath);
         const sanitizedFileName = this.sanitizeFileName(filename);
         // @ts-expect-error - NodeJS.ReadableStream and archiver's ReadableStream type mismatch, but runtime compatible
         archive.append(stream, { name: sanitizedFileName });

@@ -136,7 +136,7 @@ export const useFileSystemNavigation = ({
   const handleDownload = useCallback(
     async (node: FileSystemNode) => {
       // 判断是否为 CAD 文件
-      const isCadFile = ['.dwg', '.dxf'].some((ext) =>
+      const isCadFile = ['.dwg', '.dxf', '.mxweb'].some((ext) =>
         node.name.toLowerCase().endsWith(ext)
       );
 
