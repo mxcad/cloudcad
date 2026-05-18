@@ -22,6 +22,13 @@ import { handleError } from '@/utils/errorHandler';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import { CategoryLevel, type CategoryItem } from '@/components/CategoryTabs';
 
+// 模块级缓存：所有组件实例共享，避免切换 tab 时重新请求
+interface CategoriesCacheEntry {
+  rootId: string;
+  categories: CategoryLevel[];
+}
+const categoriesCache = new Map<string, CategoriesCacheEntry>();
+
 // 根据选中路径过滤分类：上级选中具体分类时，下级只显示属于该父分类的项（含"全部"）
 function filterCategoriesBySelection(
   allCategories: CategoryLevel[],
@@ -88,16 +95,27 @@ export function useLibraryCategories(
   const listInitializedRef = useRef(false);
 
   // 图书馆模式：并行获取库根节点和全部三级分类（一次请求）
+  // 切换 visible 时优先使用缓存，无缓存才请求 API
   useEffect(() => {
     if (!visible || !isLibraryMode) return;
 
-    // 重置为占位分类（而非空数组），保持三级结构，消除跳动
+    const cacheKey = libraryType || '';
+    const cached = categoriesCache.get(cacheKey);
+
+    // 已有缓存，直接恢复状态（不重新请求）
+    if (cached) {
+      setLibraryRootId(cached.rootId);
+      setCategories(cached.categories);
+      setCategoriesLoaded(true);
+      return;
+    }
+
+    // 无缓存，首次加载
     setCategories(PLACEHOLDER_CATEGORIES);
     setCategoriesLoaded(false);
 
     const fetchAll = async () => {
       try {
-        // 并行获取根节点（需要其 ID 用于"全部"文件加载）和分类树
         const [rootResponse, categoriesResponse] = await Promise.all([
           libraryType === 'drawing'
             ? libraryControllerGetDrawingLibrary()
@@ -113,16 +131,22 @@ export function useLibraryCategories(
         }
 
         const catData = categoriesResponse.data as { categories?: CategoryLevel[] } | undefined;
+        let finalCategories = PLACEHOLDER_CATEGORIES;
         if (catData?.categories && catData.categories.length > 0) {
-          // 确保始终有三级分类，不足的级别填充"全部"占位
           const padded = [...catData.categories];
           while (padded.length < 3) {
             const nextLevel = padded.length;
             padded.push({ level: nextLevel, items: [{ id: 'all', name: '全部' }] });
           }
+          finalCategories = padded;
           setCategories(padded);
         }
         setCategoriesLoaded(true);
+
+        // 写入模块级缓存
+        if (libraryNode?.id) {
+          categoriesCache.set(cacheKey, { rootId: libraryNode.id, categories: finalCategories });
+        }
       } catch (error: unknown) {
         handleError(error, `useLibraryCategories: 加载${libraryType === 'drawing' ? '图纸' : '图块'}库分类失败`);
         setCategoriesLoaded(true);
@@ -132,10 +156,13 @@ export function useLibraryCategories(
     fetchAll();
   }, [visible, isLibraryMode, libraryType, categoriesRefreshKey]);
 
-  // 暴露刷新分类列表的方法
+  // 暴露刷新分类列表的方法：清除缓存并重新请求
   const refreshCategories = useCallback(() => {
+    if (libraryType) {
+      categoriesCache.delete(libraryType);
+    }
     setCategoriesRefreshKey((k) => k + 1);
-  }, []);
+  }, [libraryType]);
   const handleCategorySelect = useCallback(
     async (level: number, categoryId: string) => {
       // 使用函数式 setState 避免 stale closure。

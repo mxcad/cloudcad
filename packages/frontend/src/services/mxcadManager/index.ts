@@ -1366,8 +1366,8 @@ const handleNewFileCommand = async () => {
     // 6. 清空文件名显示
     globalThis.MxPluginContext.useFileName().fileName.value =
       formatEditorFileName('');
+    MxPluginContext.useMessage().success("已新建空白图纸")
 
-    globalShowToast('已新建空白图纸', 'success');
   } catch (error) {
     console.error('新建文件失败:', error);
     globalShowToast(
