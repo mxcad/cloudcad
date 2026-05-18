@@ -1127,7 +1127,11 @@ async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> 
       nodeId: '',
       forceUpload: true, // 公开上传始终启用强制上传模式，允许 nodeId 为空
       onProgress: (percentage: number) => {
-        setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
+        if (percentage === 100) {
+          setLoadingMessage('图纸转换中...');
+        } else {
+          setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
+        }
       },
     });
 

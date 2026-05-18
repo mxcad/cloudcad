@@ -61,19 +61,24 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
       for (const file of files) {
         try {
           setLoadingMessage(`正在上传: ${file.name}`);
-          const result = await uploadSingleFile(file, resolvedNodeId, setLoadingProgress);
+          const result = await uploadSingleFile(file, resolvedNodeId, (percentage) => {
+            setLoadingProgress(percentage);
+            if (percentage === 100) {
+              setLoadingMessage('图纸转换中...');
+            }
+          });
 
-          // 上传完成，进度条设为100%
+          // 上传完成，进度条满格（100%时隐藏百分比数字，只显示消息）
           setLoadingProgress(100);
 
           if (result.nodeId) {
             if (openAfterUpload) {
-              // 打开模式：上传100%后延迟1秒再显示"正在打开图纸中"
+              // 打开模式：上传完成后延迟1秒再显示"正在打开图纸中"
               await new Promise(resolve => setTimeout(resolve, 1000));
               setLoadingMessage('正在打开图纸中...');
               await openUploadedFile(result.nodeId, resolvedNodeId);
             } else {
-              // 列表页模式：转换完成后直接隐藏进度条
+              // 列表页模式：上传完成直接显示"图纸转换中"
               setLoadingMessage('图纸转换中...');
               await waitForFileReady(result.nodeId);
               setGlobalLoading(false);

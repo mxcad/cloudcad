@@ -44,8 +44,8 @@ export const LoadingOverlay = () => {
             {loadingMessage || '加载中...'}
           </span>
 
-          {/* 进度百分比 */}
-          {loadingProgress > 0 && (
+          {/* 进度百分比 - 100%时隐藏，只显示转换消息 */}
+          {loadingProgress > 0 && loadingProgress < 100 && (
             <span className="text-white text-xs">
               {loadingProgress.toFixed(1)}%
             </span>
