@@ -990,10 +990,6 @@
   letter-spacing: normal;
 }
 
-.edit-profile-form .input-wrapper input:not([type="checkbox"]) {
-  background: var(--bg-secondary);
-}
-
 .edit-profile-form .submit-button {
   width: 100%;
   margin-top: var(--space-2);

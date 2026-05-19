@@ -848,23 +848,6 @@ export const userManagementStyles = `
     gap: var(--space-2);
   }
 
-  .quota-input {
-    flex: 1;
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-primary);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    color: var(--text-primary);
-    font-size: 0.9375rem;
-    outline: none;
-    transition: all 0.2s ease;
-  }
-
-  .quota-input:focus {
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100);
-  }
-
   .quota-unit {
     font-size: 0.875rem;
     font-weight: 500;

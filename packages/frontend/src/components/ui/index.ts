@@ -26,3 +26,10 @@ export { Toast } from './Toast';
 export { Tooltip, SimpleTooltip } from './Tooltip';
 export type { TooltipProps, TooltipPosition, TooltipTrigger, SimpleTooltipProps } from './Tooltip';
 
+export { Input } from './Input';
+export type { InputProps } from './Input';
+
+export { Menu } from './Menu';
+export { Autocomplete } from './Autocomplete';
+export type { AutocompleteItem } from './Autocomplete';
+

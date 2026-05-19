@@ -19,6 +19,14 @@ interface ModalProps {
   className?: string;
   /** 额外的 CSS 类名，应用于内容滚动区域 */
   contentClassName?: string;
+  /** 隐藏头部标题栏 */
+  hideHeader?: boolean;
+  /** 跳过卡片容器，直接渲染 children（全屏模式），同时隐式启用 hideHeader */
+  hideCard?: boolean;
+  /** 遮罩层额外的 CSS 类名 */
+  overlayClassName?: string;
+  /** 点击遮罩层是否可关闭，默认 true */
+  closeOnOverlayClick?: boolean;
 }
 
 const sizeToMaxWidth: Record<string, string> = {
@@ -58,6 +66,10 @@ export const Modal: React.FC<ModalProps> = ({
   zIndex = 9999,
   className,
   contentClassName,
+  hideHeader,
+  hideCard,
+  overlayClassName,
+  closeOnOverlayClick = true,
 }) => {
   const defaultMaxWidth = 'max-w-md';
   const hasCustomWidth =
@@ -69,41 +81,49 @@ export const Modal: React.FC<ModalProps> = ({
     : defaultMaxWidth;
   const effectiveMaxHeight = size ? sizeToMaxHeight[size] : 'max-h-[70vh]';
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  const modalContent = (
+  const renderOverlay = () => (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4 modal-enter"
-      style={{ zIndex: zIndex }}
+      className={`absolute inset-0 transition-opacity duration-300${overlayClassName ? ` ${overlayClassName}` : ''}`}
+      style={{
+        background: overlayClassName ? undefined : 'var(--bg-overlay)',
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!closeOnOverlayClick) return;
+        if (isTourModeActive()) return;
+        onClose();
+      }}
+    />
+  );
+
+  const renderCard = () => (
+    <div
+      className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col${className ? ` ${className}` : ''}`}
+      style={{
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--shadow-xl)',
+        zIndex: zIndex + 1,
+      }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* 遮罩层 - 使用主题变量 */}
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={{
-          background: 'var(--bg-overlay)',
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          // 引导模式下禁止点击外部关闭弹框
-          if (isTourModeActive()) return;
-          onClose();
-        }}
-      />
-
-      {/* 模态框内容 */}
-      <div
-        className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col${className ? ` ${className}` : ''}`}
-        style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-xl)',
-          boxShadow: 'var(--shadow-xl)',
-          zIndex: zIndex + 1,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 头部 */}
+      {!hideHeader && (
         <div
           className="flex items-center justify-between px-6 py-4"
           style={{
@@ -135,28 +155,38 @@ export const Modal: React.FC<ModalProps> = ({
             <X size={20} />
           </button>
         </div>
+      )}
 
-        {/* 内容区域 */}
-        <div
-          className={`${contentClassName ? `${contentClassName} overflow-y-auto flex-1` : 'p-6 overflow-y-auto flex-1'}`}
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {children}
-        </div>
-
-        {/* 底部 */}
-        {footer && (
-          <div
-            className="px-6 py-4 flex justify-end gap-3"
-            style={{
-              background: 'var(--bg-tertiary)',
-              borderTop: '1px solid var(--border-default)',
-            }}
-          >
-            {footer}
-          </div>
-        )}
+      <div
+        className={`${contentClassName ? `${contentClassName} overflow-y-auto flex-1` : 'p-6 overflow-y-auto flex-1'}`}
+        style={{ color: 'var(--text-secondary)' }}
+      >
+        {children}
       </div>
+
+      {footer && (
+        <div
+          className="px-6 py-4 flex justify-end gap-3"
+          style={{
+            background: 'var(--bg-tertiary)',
+            borderTop: '1px solid var(--border-default)',
+          }}
+        >
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+
+  const modalContent = (
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4 modal-enter"
+      style={{ zIndex: zIndex }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {renderOverlay()}
+
+      {hideCard ? children : renderCard()}
 
       <style>{`
         .modal-enter {

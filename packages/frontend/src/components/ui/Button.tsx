@@ -2,21 +2,12 @@ import type React from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'icon';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   icon?: React.ElementType;
   loading?: boolean;
 }
 
-/**
- * Button 组件 - CloudCAD
- * 
- * 设计特色：
- * - 支持主题变量适配深色/亮色主题
- * - 渐变主按钮效果
- * - 流畅的悬停和点击动画
- * - 加载状态支持
- */
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
@@ -27,7 +18,6 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  // 基础样式
   const baseStyles = `
     inline-flex 
     items-center 
@@ -45,7 +35,6 @@ export const Button: React.FC<ButtonProps> = ({
     active:scale-[0.98]
   `;
 
-  // 变体样式 - 使用 CSS 变量
   const variants = {
     primary: `
       bg-gradient-to-r from-[var(--primary-600)] to-[var(--accent-600)]
@@ -89,17 +78,25 @@ export const Button: React.FC<ButtonProps> = ({
       border border-transparent
       hover:-translate-y-0.5
     `,
+    icon: `
+      bg-transparent
+      text-[var(--text-tertiary)]
+      hover:bg-[var(--bg-tertiary)]
+      hover:text-[var(--text-secondary)]
+      focus:ring-[var(--border-strong)]
+      border border-transparent
+    `,
   };
 
-  // 尺寸样式
   const sizes = {
+    xs: 'px-1.5 py-0.5 text-xs gap-1 min-h-[26px] rounded-[var(--radius-md)]',
     sm: 'px-3 py-2 text-xs gap-1.5',
     md: 'px-4 py-2.5 text-sm gap-2',
     lg: 'px-6 py-3 text-base gap-2.5',
   };
 
-  // 图标尺寸
   const iconSizes = {
+    xs: 14,
     sm: 14,
     md: 16,
     lg: 20,
