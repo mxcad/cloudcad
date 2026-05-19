@@ -149,6 +149,10 @@ export const CADEditorDirect: React.FC = () => {
   
   // 外部参照上传 hook
   const externalReferenceUpload = useExternalReferenceUpload(externalReferenceConfig);
+  
+  // 用 ref 包装避免 effect 依赖不稳定对象导致重复执行
+  const externalReferenceUploadRef = useRef(externalReferenceUpload);
+  externalReferenceUploadRef.current = externalReferenceUpload;
 
   // 当前文件 ID
   const currentFileIdRef = useRef<string | null>(null);
@@ -801,7 +805,7 @@ export const CADEditorDirect: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [fileId, isActive, versionParam, navigate, externalReferenceUpload, isAuthenticated, personalSpaceId]);
+  }, [fileId, isActive, versionParam, navigate, isAuthenticated, personalSpaceId]);
   
   // 监听公开文件上传事件，上传完成后检查外部参照
   useEffect(() => {
@@ -830,7 +834,7 @@ export const CADEditorDirect: React.FC = () => {
        try {
           // shouldRetry = true，因为刚上传文件，需要等待生成 preloading.json
           // forceOpen = false，如果没有外部参照不弹框
-          const hasMissingReferences = await externalReferenceUpload.checkMissingReferences(fileHash, true, false);
+          const hasMissingReferences = await externalReferenceUploadRef.current.checkMissingReferences(fileHash, true, false);
 
           if (!hasMissingReferences) {
             // 如果没有外部参照，直接调用回调打开文件
@@ -855,7 +859,7 @@ export const CADEditorDirect: React.FC = () => {
     return () => {
       window.removeEventListener('public-file-uploaded', handlePublicFileUploaded as unknown as EventListener);
     };
-  }, [externalReferenceUpload]);
+  }, []);
 
   // 监听已登录用户上传完成事件，检查外部参照（替代 mxcadManager 中的直接 hook 调用）
   useEffect(() => {
@@ -869,7 +873,7 @@ export const CADEditorDirect: React.FC = () => {
 
       // shouldRetry = true, wait for backend to generate preloading.json after upload
       // forceOpen = false, don't show dialog if no missing external refs
-      externalReferenceUpload.checkMissingReferences(nodeId, true, false)
+      externalReferenceUploadRef.current.checkMissingReferences(nodeId, true, false)
         .then((hasMissing) => {
           if (!hasMissing && openFileCallbackRef.current) {
             // No missing external refs, open file directly
@@ -891,7 +895,7 @@ export const CADEditorDirect: React.FC = () => {
     return () => {
       window.removeEventListener('mxcad-upload-completed', handleUploadCompleted as EventListener);
     };
-  }, [externalReferenceUpload]);
+  }, []);
 
   // 主页模式初始化守卫 — 使用组件级 ref 替代全局 window 属性
   // 原因：React Strict Mode 会双挂载组件。全局 window 属性在第一次挂载时被设为 true，
@@ -1004,7 +1008,7 @@ export const CADEditorDirect: React.FC = () => {
       );
       saveRequiredHandlerRef.current = null;
     };
-  }, [isAuthenticated, showToast]);
+  }, [isAuthenticated]);
 
   // 处理登录提示的登录按钮
   const handleLoginClick = async () => {
