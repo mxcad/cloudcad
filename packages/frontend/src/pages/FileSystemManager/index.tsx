@@ -14,7 +14,6 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { useFileSystem } from '@/hooks/file-system';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
@@ -88,7 +87,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     isMultiSelectMode,
     setIsMultiSelectMode,
     toasts,
-    confirmDialog,
     showToast,
     isProjectRootMode,
     isPersonalSpaceMode,
@@ -107,7 +105,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setEditingNode,
     setDownloadingNode,
     removeToast,
-    closeConfirm,
     handleRefresh,
     handleGoBack,
     handleNodeSelect,
@@ -404,19 +401,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         document.body
       )}
 
-      {createPortal(
-        <ConfirmDialog
-          isOpen={confirmDialog.isOpen}
-          title={confirmDialog.title}
-          message={confirmDialog.message}
-          confirmText={confirmDialog.confirmText || '确定'}
-          onConfirm={confirmDialog.onConfirm}
-          onCancel={closeConfirm}
-          type={confirmDialog.type}
-        />,
-        document.body
-      )}
-
       <div className="max-w-7xl mx-auto space-y-6 relative">
         <FileSystemHeader
           mode={mode}
@@ -550,80 +534,71 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
 
             {(isTrashView || isProjectTrashView) && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleBatchRestore}
-                className="text-emerald-400 hover:text-white text-sm font-medium transition-colors"
+                className="text-emerald-400 hover:text-white"
               >
                 恢复
-              </button>
+              </Button>
             )}
 
             {!isTrashView && !isProjectTrashView && (
               <>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     setMoveSourceNode({ id: 'batch' });
                     setCopySourceNode(null);
                     setShowSelectFolderModal(true);
                   }}
-                  className="text-sm font-medium transition-colors"
                   style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary-500)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   移动
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     setMoveSourceNode(null);
                     setCopySourceNode({ id: 'batch' });
                     setShowSelectFolderModal(true);
                   }}
-                  className="text-sm font-medium transition-colors"
                   style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary-500)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   复制
-                </button>
+                </Button>
               </>
             )}
 
             {(isTrashView || isProjectTrashView) && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => handleBatchDelete(true)}
-                className="text-sm font-medium transition-colors"
                 style={{ color: 'var(--error)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
               >
                 彻底删除
-              </button>
+              </Button>
             )}
 
             {!isTrashView && !isProjectTrashView && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => handleBatchDelete(false)}
-                className="text-sm font-medium transition-colors"
                 style={{ color: 'var(--error)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
               >
                 删除
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 selectedNodes.clear();
                 setIsMultiSelectMode(false);
               }}
-              className="text-sm font-medium transition-colors"
               style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
               取消
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -17,6 +17,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { Shield } from 'lucide-react';
 import { Info } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 // 辅助函数：安全地将 message 转为字符串
 function safeMessage(msg: unknown, fallback: string): string {
@@ -223,14 +224,15 @@ export const SystemMonitorPage: React.FC = () => {
             </span>
           </div>
           
-          <button 
-            className="refresh-button" 
-            onClick={fetchSystemHealth} 
-            disabled={loading}
+          <Button
+            variant="primary"
+            className="refresh-button"
+            onClick={fetchSystemHealth}
+            loading={loading}
+            icon={RefreshCw}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            <span>{loading ? '刷新中...' : '立即刷新'}</span>
-          </button>
+            {loading ? '刷新中...' : '立即刷新'}
+          </Button>
         </div>
       </header>
 
@@ -239,7 +241,7 @@ export const SystemMonitorPage: React.FC = () => {
         <div className="error-banner">
           <AlertTriangle size={20} />
           <span>{error}</span>
-          <button onClick={fetchSystemHealth}>重试</button>
+          <Button variant="ghost" onClick={fetchSystemHealth}>重试</Button>
         </div>
       )}
 
@@ -366,14 +368,15 @@ export const SystemMonitorPage: React.FC = () => {
             
             {/* 清理操作 */}
             <div className="cleanup-actions">
-              <button 
-                className="cleanup-button" 
-                onClick={handleCleanupStorage} 
-                disabled={cleanupLoading}
+              <Button
+                variant="primary"
+                className="cleanup-button"
+                onClick={handleCleanupStorage}
+                loading={cleanupLoading}
+                icon={HardDrive}
               >
-                <HardDrive size={16} className={cleanupLoading ? 'animate-spin' : ''} />
-                <span>{cleanupLoading ? '清理中...' : '立即清理存储'}</span>
-              </button>
+                {cleanupLoading ? '清理中...' : '立即清理存储'}
+              </Button>
               <p className="cleanup-hint">
                 清理已标记为删除的文件，释放存储空间
               </p>

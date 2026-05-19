@@ -25,16 +25,17 @@ import { Phone } from 'lucide-react';
 import { Cpu } from 'lucide-react';
 import { Boxes } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 忘记密码页面 - CloudCAD
  *
- * 设计特色：
+ * 设计特色�?
  * - 居中卡片布局
  * - 统一渐变网格背景
- * - 玻璃态效果
- * - 多种状态页面（表单/成功/客服联系）
- * - 支持邮箱/手机号两种方式
+ * - 玻璃态效�?
+ * - 多种状态页面（表单/成功/客服联系�?
+ * - 支持邮箱/手机号两种方�?
  * - 完美主题适配
  */
 export const ForgotPassword: React.FC = () => {
@@ -47,12 +48,12 @@ export const ForgotPassword: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
   const appLogo = brandConfig?.logo || '/logo.png';
 
-  // 根据运行时配置判断可用渠道
+  // 根据运行时配置判断可用渠�?
   const mailAvailable = runtimeConfig.mailEnabled;
   const phoneAvailable = runtimeConfig.smsEnabled;
   const noChannelAvailable = !mailAvailable && !phoneAvailable;
 
-  // 初始化 contactType：优先邮箱，邮箱不可用则用手机
+  // 初始�?contactType：优先邮箱，邮箱不可用则用手�?
   const [contactType, setContactType] = useState<'email' | 'phone'>(
     mailAvailable ? 'email' : 'phone'
   );
@@ -116,7 +117,7 @@ export const ForgotPassword: React.FC = () => {
     setLocalError(null);
   };
 
-  // 两个渠道都未启用 - 直接显示客服联系页面（不发 API）
+  // 两个渠道都未启用 - 直接显示客服联系页面（不�?API�?
   if (noChannelAvailable) {
     const noChannelInfo = {
       supportEmail: runtimeConfig.supportEmail || undefined,
@@ -141,7 +142,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
               <h2 className="support-title">找回密码</h2>
               <p className="support-subtitle">
-                邮件和短信服务均未启用，请联系客服重置密码
+                邮件和短信服务均未启用，请联系客服重置密�?
               </p>
               <div className="support-card">
                 <h3 className="support-card-title">客服联系方式</h3>
@@ -159,14 +160,14 @@ export const ForgotPassword: React.FC = () => {
                     </a>
                   )}
                   {!noChannelInfo.supportEmail && !noChannelInfo.supportPhone && (
-                    <p className="support-empty">暂无客服联系方式，请联系系统管理员</p>
+                    <p className="support-empty">暂无客服联系方式，请联系系统管理�?/p>
                   )}
                 </div>
               </div>
-              <button onClick={() => navigate('/login')} className="back-button">
+              <Button variant="secondary" className="w-full" onClick={() => navigate('/login')}>
                 <ArrowLeft size={18} />
                 <span>返回登录</span>
-              </button>
+              </Button>
             </div>
           </div>
           <p className="copyright">© 2026 {appName}. All rights reserved.</p>
@@ -194,8 +195,6 @@ export const ForgotPassword: React.FC = () => {
           .support-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--primary-500); text-decoration: none; transition: all 0.2s; }
           .support-item:hover { background: var(--bg-elevated); border-color: var(--border-strong); transform: translateX(4px); }
           .support-empty { color: var(--text-muted); font-size: 0.875rem; }
-          .back-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-          .back-button:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
           .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
           [data-theme="dark"] .auth-card { background: rgba(26, 29, 33, 0.9); backdrop-filter: blur(20px); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; }
           @media (max-width: 480px) { .auth-container { padding: 1rem; } .auth-card { padding: 1.75rem; border-radius: 20px; } }
@@ -204,7 +203,7 @@ export const ForgotPassword: React.FC = () => {
     );
   }
 
-  // 邮件服务未启用 - 客服联系页面（API 返回）
+  // 邮件服务未启�?- 客服联系页面（API 返回�?
   if (supportInfo) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
@@ -232,7 +231,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
               <h2 className="support-title">找回密码</h2>
               <p className="support-subtitle">
-                该找回方式暂不可用，请联系客服重置密码
+                该找回方式暂不可用，请联系客服重置密�?
               </p>
 
               <div className="support-card">
@@ -258,7 +257,7 @@ export const ForgotPassword: React.FC = () => {
                   )}
                   {!supportInfo.supportEmail && !supportInfo.supportPhone && (
                     <p className="support-empty">
-                      暂无客服联系方式，请联系系统管理员
+                      暂无客服联系方式，请联系系统管理�?
                     </p>
                   )}
                 </div>
@@ -299,8 +298,6 @@ export const ForgotPassword: React.FC = () => {
           .support-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--primary-500); text-decoration: none; transition: all 0.2s; }
           .support-item:hover { background: var(--bg-elevated); border-color: var(--border-strong); transform: translateX(4px); }
           .support-empty { color: var(--text-muted); font-size: 0.875rem; }
-          .back-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-          .back-button:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
           .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
           [data-theme="dark"] .auth-card { background: rgba(26, 29, 33, 0.9); backdrop-filter: blur(20px); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; }
           @media (max-width: 480px) { .auth-container { padding: 1rem; } .auth-card { padding: 1.75rem; border-radius: 20px; } }
@@ -309,7 +306,7 @@ export const ForgotPassword: React.FC = () => {
     );
   }
 
-  // 发送成功状态
+  // 发送成功状�?
   if (success) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
@@ -335,13 +332,13 @@ export const ForgotPassword: React.FC = () => {
               <div className="success-icon">
                 <CheckCircle size={32} />
               </div>
-              <h2 className="success-title">验证码已发送</h2>
+              <h2 className="success-title">验证码已发�?/h2>
               <p className="success-subtitle">
                 我们已向{' '}
                 <span className="success-email">
                   {successContact}
                 </span>{' '}
-                发送了验证码
+                发送了验证�?
               </p>
 
               <div className="success-card">
@@ -379,15 +376,15 @@ export const ForgotPassword: React.FC = () => {
               </div>
             </div>
 
-            {/* 特性图标 */}
+            {/* 特性图�?*/}
             <div className="features-bar">
               <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
                 <Cpu size={14} />
               </div>
-              <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+              <div className="feature-dot" data-tooltip="多用户实时协同编�?>
                 <Boxes size={14} />
               </div>
-              <div className="feature-dot" data-tooltip="企业级数据安全保障">
+              <div className="feature-dot" data-tooltip="企业级数据安全保�?>
                 <ShieldCheck size={14} />
               </div>
             </div>
@@ -434,7 +431,7 @@ export const ForgotPassword: React.FC = () => {
     );
   }
 
-  // 默认表单状态
+  // 默认表单状�?
   return (
     <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
       <InteractiveBackground />
@@ -460,9 +457,9 @@ export const ForgotPassword: React.FC = () => {
             <h2 className="form-title">忘记密码</h2>
             <p className="form-subtitle">
               {mailAvailable && phoneAvailable
-                ? `使用${contactType === 'email' ? '邮箱' : '手机号'}接收验证码`
+                ? `使用${contactType === 'email' ? '邮箱' : '手机�?}接收验证码`
                 : mailAvailable
-                  ? '使用邮箱接收验证码'
+                  ? '使用邮箱接收验证�?
                   : '使用手机号接收验证码'}
             </p>
           </div>
@@ -484,7 +481,7 @@ export const ForgotPassword: React.FC = () => {
               onClick={() => switchContactType('phone')}
             >
               <Phone size={16} />
-              <span>手机号</span>
+              <span>手机�?/span>
             </button>
           </div>
           )}
@@ -497,7 +494,7 @@ export const ForgotPassword: React.FC = () => {
                 className="forgot-link"
                 onClick={() => setShowSupportModal(true)}
               >
-                忘记邮箱？
+                忘记邮箱�?
               </button>
             )}
             {contactType === 'phone' && (
@@ -551,7 +548,7 @@ export const ForgotPassword: React.FC = () => {
                     type="tel"
                     autoComplete="tel"
                     className="input-field"
-                    placeholder="请输入手机号码"
+                    placeholder="请输入手机号�?
                     {...register('phone')}
                   />
                   <div className="input-glow" />
@@ -559,10 +556,9 @@ export const ForgotPassword: React.FC = () => {
               </div>
             )}
 
-            <button type="submit" disabled={forgotPassword.loading} className="submit-button">
+            <Button variant="primary" loading={forgotPassword.loading} className="w-full">
               {forgotPassword.loading ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
                   <span>发送中...</span>
                 </>
               ) : (
@@ -571,7 +567,7 @@ export const ForgotPassword: React.FC = () => {
                   <ArrowRight size={18} className="button-arrow" />
                 </>
               )}
-            </button>
+            </Button>
           </form>
 
           {/* 返回登录 */}
@@ -582,15 +578,15 @@ export const ForgotPassword: React.FC = () => {
             </button>
           </div>
 
-          {/* 特性图标 */}
+          {/* 特性图�?*/}
           <div className="features-bar">
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip="多用户实时协同编�?>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip="企业级数据安全保�?>
               <ShieldCheck size={14} />
             </div>
           </div>
@@ -614,25 +610,25 @@ export const ForgotPassword: React.FC = () => {
             </div>
             <div className="support-modal-content">
               <p className="support-modal-message">
-                如需帮助，请联系客服人员获取支持。
+                如需帮助，请联系客服人员获取支持�?
               </p>
               <div className="support-contact-info">
                 <div className="support-contact-item">
-                  <span className="support-contact-label">客服邮箱：</span>
+                  <span className="support-contact-label">客服邮箱�?/span>
                   <a href="mailto:support@cloudcad.com" className="support-contact-link">
                     support@cloudcad.com
                   </a>
                 </div>
                 <div className="support-contact-item">
-                  <span className="support-contact-label">客服电话：</span>
+                  <span className="support-contact-label">客服电话�?/span>
                   <a href="tel:400-123-4567" className="support-contact-link">
                     400-123-4567
                   </a>
                 </div>
                 <div className="support-contact-item">
-                  <span className="support-contact-label">工作时间：</span>
+                  <span className="support-contact-label">工作时间�?/span>
                   <span className="support-contact-value">
-                    周一至周五 9:00-18:00
+                    周一至周�?9:00-18:00
                   </span>
                 </div>
               </div>
@@ -685,11 +681,7 @@ export const ForgotPassword: React.FC = () => {
         .input-field:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
         .input-glow { position: absolute; inset: -2px; border-radius: 14px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); opacity: 0; z-index: -1; transition: opacity 0.3s; filter: blur(8px); }
         .input-wrapper:focus-within .input-glow { opacity: 0.3; }
-        .submit-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); border: none; border-radius: 12px; color: white; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-        .submit-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); }
-        .submit-button:disabled { opacity: 0.7; cursor: not-allowed; }
         .button-arrow { transition: transform 0.2s; }
-        .submit-button:hover:not(:disabled) .button-arrow { transform: translateX(4px); }
         .form-footer { margin-top: 1.5rem; text-align: center; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); }
         .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-tertiary); background: none; border: none; font-size: 0.875rem; cursor: pointer; transition: color 0.2s; }
         .back-link:hover { color: var(--primary-500); }

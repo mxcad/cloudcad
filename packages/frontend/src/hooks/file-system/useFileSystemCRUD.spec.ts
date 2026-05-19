@@ -8,6 +8,10 @@ import { renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { useFileSystemCRUD } from './useFileSystemCRUD';
 
+vi.mock('@/contexts/NotificationContext', () => ({
+  useConfirmDialog: () => ({ showConfirm: vi.fn().mockResolvedValue(true) }),
+}));
+
 vi.mock('@/api-sdk', () => ({
   fileSystemControllerCreateProject: vi.fn(),
   fileSystemControllerCreateFolder: vi.fn(),
@@ -28,7 +32,6 @@ describe('useFileSystemCRUD', () => {
     currentNode: null,
     loadData: vi.fn(),
     showToast: vi.fn(),
-    showConfirm: vi.fn(),
     selectedNodes: new Set(),
     nodes: [],
     clearSelection: vi.fn(),

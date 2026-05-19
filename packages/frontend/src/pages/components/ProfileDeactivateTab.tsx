@@ -8,6 +8,8 @@ import {
   CheckCircle,
   Loader2,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { WechatDeactivateConfirm } from '../Profile/WechatDeactivateConfirm';
 
 interface ProfileDeactivateTabProps {
@@ -165,15 +167,14 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                 密码验证
               </label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type={showPassword.confirm ? 'text' : 'password'}
                   value={deactivateForm.password}
                   onChange={(e) => onPasswordChange(e.target.value)}
                   placeholder="请输入密码"
                 />
-                <button
-                  type="button"
-                  className="toggle-password"
+                <Button
+                  variant="ghost"
                   onClick={() => onTogglePassword('confirm')}
                 >
                   {showPassword.confirm ? (
@@ -181,7 +182,7 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                   ) : (
                     <Lock size={16} />
                   )}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -194,22 +195,21 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                 手机验证码
               </label>
               <div className="input-wrapper has-button">
-                <input
+                <Input
                   type="text"
                   value={deactivateForm.phoneCode}
                   onChange={(e) => onPhoneCodeChange(e.target.value)}
                   placeholder="请输入手机验证码"
                 />
-                <button
-                  type="button"
-                  className="send-code-button"
+                <Button
+                  variant="ghost"
                   disabled={deactivateCountdown > 0}
                   onClick={onSendPhoneCode}
                 >
                   {deactivateCountdown > 0
                     ? `${deactivateCountdown}s`
                     : '获取验证码'}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -222,22 +222,21 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                 邮箱验证码
               </label>
               <div className="input-wrapper has-button">
-                <input
+                <Input
                   type="text"
                   value={deactivateForm.emailCode}
                   onChange={(e) => onEmailCodeChange(e.target.value)}
                   placeholder="请输入邮箱验证码"
                 />
-                <button
-                  type="button"
-                  className="send-code-button"
+                <Button
+                  variant="ghost"
                   disabled={deactivateCountdown > 0}
                   onClick={onSendEmailCode}
                 >
                   {deactivateCountdown > 0
                     ? `${deactivateCountdown}s`
                     : '获取验证码'}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -268,24 +267,15 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
             </label>
           </div>
 
-          <button
-            type="button"
-            className="submit-button danger"
-            disabled={deactivateLoading || !canSubmit()}
+          <Button
+            variant="danger"
+            loading={deactivateLoading}
+            disabled={!canSubmit()}
             onClick={handleDeactivate}
+            icon={AlertTriangle}
           >
-            {deactivateLoading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                <span>注销中...</span>
-              </>
-            ) : (
-              <>
-                <AlertTriangle size={18} />
-                <span>确认注销</span>
-              </>
-            )}
-          </button>
+            <span>{deactivateLoading ? '注销中...' : '确认注销'}</span>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../../components/ui/Button';
-import { SearchIcon, GridIcon, ListIcon, RefreshIcon } from '../../components/FileIcons';
+import { GridIcon, ListIcon, RefreshIcon } from '../../components/FileIcons';
+import { SearchInput } from '@/components/search/SearchInput';
 import { FileSystemNode } from '../../types/filesystem';
 import { PaginationMeta } from '../../components/ui/Pagination';
 
@@ -42,54 +43,12 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2"
       style={{ borderTop: '1px solid var(--border-subtle)' }}
     >
-      <div className="relative group flex-1 max-w-xs" data-tour="search-input">
-        <SearchIcon
-          size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors"
-          style={{ color: 'var(--text-muted)' }}
-        />
-        <input
-          type="text"
-          placeholder={isTrashView ? '搜索已删除的项目...' : '搜索文件或项目...'}
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onSearchSubmit();
-            }
-          }}
-          className="w-full pl-9 pr-20 py-2 text-sm rounded-xl transition-all outline-none"
-          style={{
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border-default)',
-            color: 'var(--text-primary)',
-          }}
-        />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {searchTerm && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="transition-colors p-1"
-              style={{ color: 'var(--text-muted)' }}
-              title="清除搜索"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-          <button
-            onClick={onSearchSubmit}
-            className="text-primary-500 hover:text-primary-600 transition-colors p-1"
-            title="搜索"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </button>
-        </div>
-      </div>
+      <SearchInput
+        placeholder={isTrashView ? '搜索已删除的项目...' : '搜索文件或项目...'}
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        onSearch={() => onSearchSubmit()}
+      />
 
       <div className="flex items-center gap-3">
         {!isAtRoot && (
@@ -144,7 +103,9 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
             border: '1px solid var(--border-default)',
           }}
         >
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onViewModeChange('grid')}
             className="p-2 transition-colors"
             style={{
@@ -153,9 +114,11 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
             }}
           >
             <GridIcon size={14} />
-          </button>
+          </Button>
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onViewModeChange('list')}
             className="p-2 transition-colors"
             data-tour="view-toggle-list"
@@ -165,7 +128,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
             }}
           >
             <ListIcon size={14} />
-          </button>
+          </Button>
         </div>
 
         {isTrashView && nodesCount > 0 && onClearTrash && (

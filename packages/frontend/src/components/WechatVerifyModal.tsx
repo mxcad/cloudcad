@@ -1,9 +1,6 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
 import React from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
 interface WechatVerifyModalProps {
   open: boolean;
@@ -11,15 +8,27 @@ interface WechatVerifyModalProps {
   onSuccess: (token: string) => void;
 }
 
-/**
- * 微信验证弹窗 - 占位组件
- */
 export const WechatVerifyModal: React.FC<WechatVerifyModalProps> = ({
   open,
   onClose,
   onSuccess,
 }) => {
-  if (!open) return null;
-
-  return null;
+  return (
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title="微信验证"
+      footer={
+        <Button variant="ghost" onClick={onClose}>
+          关闭
+        </Button>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          微信验证功能开发中，敬请期待。
+        </p>
+      </div>
+    </Modal>
+  );
 };

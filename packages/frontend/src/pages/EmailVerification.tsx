@@ -18,6 +18,7 @@ import { RefreshCw } from 'lucide-react';
 import { Cpu } from 'lucide-react';
 import { Boxes } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -356,23 +357,22 @@ export const EmailVerification: React.FC = () => {
           )}
 
           {/* 验证按钮 - 有邮箱且有验证码时才能点击 */}
-          <button
+          <Button
             onClick={handleVerifyCode}
-            disabled={loading || !email || verificationCode.length !== 6}
-            className="verify-button"
+            variant="primary"
+            loading={loading}
+            disabled={!email || verificationCode.length !== 6}
+            className="w-full mb-5"
           >
             {loading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                <span>验证中...</span>
-              </>
+              <span>验证中...</span>
             ) : (
               <>
                 <span>验证</span>
                 <CheckCircle size={18} />
               </>
             )}
-          </button>
+          </Button>
 
           {/* 帮助信息 */}
           <div className="help-section">
@@ -386,17 +386,14 @@ export const EmailVerification: React.FC = () => {
 
           {/* 重发和返回按钮 */}
           <div className="action-buttons">
-            <button
+            <Button
               onClick={handleResendEmail}
-              disabled={resendCooldown > 0 || resendLoading || !email}
-              className="resend-button"
+              variant="secondary"
+              loading={resendLoading}
+              disabled={resendCooldown > 0 || !email}
+              className="w-full"
             >
-              {resendLoading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>发送中...</span>
-                </>
-              ) : resendCooldown > 0 ? (
+              {resendCooldown > 0 ? (
                 <>
                   <RefreshCw size={16} />
                   <span>{resendCooldown}秒后可重新发送</span>
@@ -407,12 +404,12 @@ export const EmailVerification: React.FC = () => {
                   <span>{!emailSent && (bindMode || phoneRegisterData) ? '发送验证邮件' : '重新发送验证邮件'}</span>
                 </>
               )}
-            </button>
+            </Button>
 
-            <button onClick={() => navigate('/login')} className="back-button">
+            <Button variant="secondary" onClick={() => navigate('/login')}>
               <ArrowLeft size={16} />
               <span>返回登录</span>
-            </button>
+            </Button>
           </div>
 
           {/* 特性图标 */}
@@ -462,19 +459,11 @@ export const EmailVerification: React.FC = () => {
         .code-input:hover { border-color: var(--border-strong); }
         .code-input:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
         .code-hint { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem; }
-        .verify-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); border: none; border-radius: 12px; color: white; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); margin-bottom: 1.25rem; }
-        .verify-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); }
-        .verify-button:disabled { opacity: 0.5; cursor: not-allowed; }
         .help-section { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem; }
         .help-title { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; }
         .help-list { list-style: none; padding: 0; margin: 0; }
         .help-list li { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; }
         .action-buttons { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
-        .resend-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .resend-button:hover:not(:disabled) { background: var(--bg-elevated); border-color: var(--border-strong); }
-        .resend-button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .back-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem 1rem; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .back-button:hover { background: var(--bg-tertiary); }
         .features-bar { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); }
         .feature-dot { position: relative; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-tertiary); border: 1px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); transition: all 0.2s; cursor: pointer; }
         .feature-dot:hover { background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); border-color: transparent; color: white; transform: translateY(-2px); }

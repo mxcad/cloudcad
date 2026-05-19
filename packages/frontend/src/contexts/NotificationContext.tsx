@@ -8,17 +8,18 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { ToastContainer } from '../components/ui/Toast';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Z_LAYERS } from '../constants/layers';
 import type { ToastType } from '../components/ui/Toast';
 
-// Toast 接口
 interface ToastItem {
   id: string;
   type: ToastType;
   message: string;
 }
 
-// Confirm 选项
 interface ConfirmOptions {
   title: string;
   message: string;
@@ -27,24 +28,43 @@ interface ConfirmOptions {
   type?: 'danger' | 'warning' | 'info';
 }
 
-// Context 值类型
+interface AlertOptions {
+  title: string;
+  message: string;
+  confirmText?: string;
+  type?: 'danger' | 'warning' | 'info' | 'success';
+}
+
+interface PromptOptions {
+  title: string;
+  label: string;
+  defaultValue?: string;
+  confirmText?: string;
+  cancelText?: string;
+  multiline?: boolean;
+}
+
 interface NotificationContextValue {
   showToast: (message: string, type?: ToastType) => void;
   showConfirm: (options: ConfirmOptions) => Promise<boolean>;
+  showAlert: (options: AlertOptions) => Promise<void>;
+  showPrompt: (options: PromptOptions) => Promise<string | null>;
 }
 
-// 全局事件名称
 export const TOAST_EVENT = 'cloudcad:toast';
 export const CONFIRM_EVENT = 'cloudcad:confirm';
+export const ALERT_EVENT = 'cloudcad:alert';
+export const PROMPT_EVENT = 'cloudcad:prompt';
+const CONFIRM_RESPONSE_EVENT = 'cloudcad:confirm-response';
+const ALERT_RESPONSE_EVENT = 'cloudcad:alert-response';
+const PROMPT_RESPONSE_EVENT = 'cloudcad:prompt-response';
 
-// 全局 Toast 触发函数（供非 React 代码使用）
 export const globalShowToast = (message: string, type: ToastType = 'info') => {
   window.dispatchEvent(
     new CustomEvent(TOAST_EVENT, { detail: { message, type } })
   );
 };
 
-// 全局 Confirm 触发函数（供非 React 代码使用）
 export const globalShowConfirm = (
   options: ConfirmOptions
 ): Promise<boolean> => {
@@ -53,15 +73,52 @@ export const globalShowConfirm = (
       const customEvent = e as CustomEvent<{ confirmed: boolean }>;
       resolve(customEvent.detail.confirmed);
       window.removeEventListener(
-        'cloudcad:confirm-response',
+        CONFIRM_RESPONSE_EVENT,
         handleResponse as EventListener
       );
     };
     window.addEventListener(
-      'cloudcad:confirm-response',
+      CONFIRM_RESPONSE_EVENT,
       handleResponse as EventListener
     );
     window.dispatchEvent(new CustomEvent(CONFIRM_EVENT, { detail: options }));
+  });
+};
+
+export const globalShowAlert = (options: AlertOptions): Promise<void> => {
+  return new Promise((resolve) => {
+    const handleResponse = () => {
+      resolve();
+      window.removeEventListener(
+        ALERT_RESPONSE_EVENT,
+        handleResponse as EventListener
+      );
+    };
+    window.addEventListener(
+      ALERT_RESPONSE_EVENT,
+      handleResponse as EventListener
+    );
+    window.dispatchEvent(new CustomEvent(ALERT_EVENT, { detail: options }));
+  });
+};
+
+export const globalShowPrompt = (
+  options: PromptOptions
+): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const handleResponse = (e: Event) => {
+      const customEvent = e as CustomEvent<{ value: string | null }>;
+      resolve(customEvent.detail.value);
+      window.removeEventListener(
+        PROMPT_RESPONSE_EVENT,
+        handleResponse as EventListener
+      );
+    };
+    window.addEventListener(
+      PROMPT_RESPONSE_EVENT,
+      handleResponse as EventListener
+    );
+    window.dispatchEvent(new CustomEvent(PROMPT_EVENT, { detail: options }));
   });
 };
 
@@ -73,30 +130,105 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timerRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const alertResolveRef = useRef<(() => void) | null>(null);
+  const promptResolveRef = useRef<((value: string | null) => void) | null>(null);
+
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
     message: string;
     confirmText: string;
     cancelText: string;
-    type: 'danger' | 'warning' | 'info';
-    onConfirm: () => void;
-    onCancel: () => void;
+    dialogType: 'danger' | 'warning' | 'info';
   }>({
     isOpen: false,
     title: '',
     message: '',
     confirmText: '确定',
     cancelText: '取消',
-    type: 'warning',
-    onConfirm: () => {},
-    onCancel: () => {},
+    dialogType: 'warning',
   });
 
-  const timerRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    dialogType: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '确定',
+    dialogType: 'info',
+  });
 
-  // 显示 Toast
+  const [promptState, setPromptState] = useState<{
+    isOpen: boolean;
+    title: string;
+    label: string;
+    defaultValue: string;
+    confirmText: string;
+    cancelText: string;
+    multiline: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    label: '',
+    defaultValue: '',
+    confirmText: '确定',
+    cancelText: '取消',
+    multiline: false,
+  });
+  const [promptInputValue, setPromptInputValue] = useState('');
+
+  const handleConfirm = useCallback(() => {
+    const resolve = confirmResolveRef.current;
+    if (resolve) {
+      resolve(true);
+      confirmResolveRef.current = null;
+    }
+    setConfirmState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    const resolve = confirmResolveRef.current;
+    if (resolve) {
+      resolve(false);
+      confirmResolveRef.current = null;
+    }
+    setConfirmState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleAlertClose = useCallback(() => {
+    const resolve = alertResolveRef.current;
+    if (resolve) {
+      resolve();
+      alertResolveRef.current = null;
+    }
+    setAlertState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handlePromptConfirm = useCallback(() => {
+    const resolve = promptResolveRef.current;
+    if (resolve) {
+      resolve(promptInputValue);
+      promptResolveRef.current = null;
+    }
+    setPromptState((prev) => ({ ...prev, isOpen: false }));
+  }, [promptInputValue]);
+
+  const handlePromptCancel = useCallback(() => {
+    const resolve = promptResolveRef.current;
+    if (resolve) {
+      resolve(null);
+      promptResolveRef.current = null;
+    }
+    setPromptState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -108,12 +240,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     timerRefs.current.add(timerId);
   }, []);
 
-  // 移除 Toast
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  // 显示确认对话框
   const showConfirm = useCallback(
     (options: ConfirmOptions): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -124,22 +254,49 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           message: options.message,
           confirmText: options.confirmText || '确定',
           cancelText: options.cancelText || '取消',
-          type: options.type || 'warning',
-          onConfirm: () => {
-            resolve(true);
-            setConfirmState((prev) => ({ ...prev, isOpen: false }));
-          },
-          onCancel: () => {
-            resolve(false);
-            setConfirmState((prev) => ({ ...prev, isOpen: false }));
-          },
+          dialogType: options.type || 'warning',
         });
       });
     },
     []
   );
 
-  // 监听全局 Toast 事件（供非 React 代码使用）
+  const showAlert = useCallback(
+    (options: AlertOptions): Promise<void> => {
+      return new Promise((resolve) => {
+        alertResolveRef.current = resolve;
+        setAlertState({
+          isOpen: true,
+          title: options.title,
+          message: options.message,
+          confirmText: options.confirmText || '确定',
+          dialogType: options.type || 'info',
+        });
+      });
+    },
+    []
+  );
+
+  const showPrompt = useCallback(
+    (options: PromptOptions): Promise<string | null> => {
+      return new Promise((resolve) => {
+        promptResolveRef.current = resolve;
+        const defaultValue = options.defaultValue || '';
+        setPromptState({
+          isOpen: true,
+          title: options.title,
+          label: options.label,
+          defaultValue,
+          confirmText: options.confirmText || '确定',
+          cancelText: options.cancelText || '取消',
+          multiline: options.multiline || false,
+        });
+        setPromptInputValue(defaultValue);
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{
@@ -153,8 +310,26 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       const customEvent = e as CustomEvent<ConfirmOptions>;
       showConfirm(customEvent.detail).then((confirmed) => {
         window.dispatchEvent(
-          new CustomEvent('cloudcad:confirm-response', {
+          new CustomEvent(CONFIRM_RESPONSE_EVENT, {
             detail: { confirmed },
+          })
+        );
+      });
+    };
+
+    const handleAlertEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<AlertOptions>;
+      showAlert(customEvent.detail).then(() => {
+        window.dispatchEvent(new CustomEvent(ALERT_RESPONSE_EVENT));
+      });
+    };
+
+    const handlePromptEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<PromptOptions>;
+      showPrompt(customEvent.detail).then((value) => {
+        window.dispatchEvent(
+          new CustomEvent(PROMPT_RESPONSE_EVENT, {
+            detail: { value },
           })
         );
       });
@@ -162,20 +337,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
     window.addEventListener(TOAST_EVENT, handleToastEvent as EventListener);
     window.addEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
+    window.addEventListener(ALERT_EVENT, handleAlertEvent as EventListener);
+    window.addEventListener(PROMPT_EVENT, handlePromptEvent as EventListener);
 
     return () => {
-      window.removeEventListener(
-        TOAST_EVENT,
-        handleToastEvent as EventListener
-      );
-      window.removeEventListener(
-        CONFIRM_EVENT,
-        handleConfirmEvent as EventListener
-      );
+      window.removeEventListener(TOAST_EVENT, handleToastEvent as EventListener);
+      window.removeEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
+      window.removeEventListener(ALERT_EVENT, handleAlertEvent as EventListener);
+      window.removeEventListener(PROMPT_EVENT, handlePromptEvent as EventListener);
     };
-  }, [showToast, showConfirm]);
+  }, [showToast, showConfirm, showAlert, showPrompt]);
 
-  // 清理定时器
   useEffect(() => {
     return () => {
       timerRefs.current.forEach((timerId) => clearTimeout(timerId));
@@ -183,35 +355,170 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
+  const renderConfirmIcon = (dialogType: 'danger' | 'warning' | 'info') => {
+    const iconColor =
+      dialogType === 'danger'
+        ? 'var(--error)'
+        : dialogType === 'warning'
+          ? 'var(--warning)'
+          : 'var(--info)';
+    const bgColor =
+      dialogType === 'danger'
+        ? 'var(--error-dim)'
+        : dialogType === 'warning'
+          ? 'var(--warning-dim)'
+          : 'var(--info-dim)';
+
+    return (
+      <div
+        className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+        style={{ background: bgColor }}
+      >
+        <svg
+          className="w-6 h-6"
+          style={{ color: iconColor }}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d={
+              dialogType === 'info'
+                ? 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z'
+            }
+          />
+        </svg>
+      </div>
+    );
+  };
+
   return (
-    <NotificationContext.Provider value={{ showToast, showConfirm }}>
+    <NotificationContext.Provider
+      value={{ showToast, showConfirm, showAlert, showPrompt }}
+    >
       {children}
 
-      {/* 全局 Toast 容器 - 渲染到 body */}
       {createPortal(
         <ToastContainer toasts={toasts} onRemove={removeToast} />,
         document.body
       )}
 
-      {/* 全局确认对话框 - 渲染到 body */}
-      {createPortal(
-        <ConfirmDialog
-          isOpen={confirmState.isOpen}
+      {confirmState.isOpen && (
+        <Modal
+          isOpen={true}
+          onClose={handleCancel}
           title={confirmState.title}
-          message={confirmState.message}
-          confirmText={confirmState.confirmText}
-          cancelText={confirmState.cancelText}
-          type={confirmState.type}
-          onConfirm={confirmState.onConfirm}
-          onCancel={confirmState.onCancel}
-        />,
-        document.body
+          zIndex={Z_LAYERS.TOAST - 1}
+          footer={
+            <>
+              <Button variant="ghost" onClick={handleCancel}>
+                {confirmState.cancelText}
+              </Button>
+              <Button onClick={handleConfirm}>
+                {confirmState.confirmText}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex items-start gap-4">
+            {renderConfirmIcon(confirmState.dialogType)}
+            <p
+              className="text-sm"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {confirmState.message}
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {alertState.isOpen && (
+        <Modal
+          isOpen={true}
+          onClose={handleAlertClose}
+          title={alertState.title}
+          zIndex={Z_LAYERS.TOAST - 1}
+          footer={
+            <Button onClick={handleAlertClose}>
+              {alertState.confirmText}
+            </Button>
+          }
+        >
+          <div className="flex items-start gap-4">
+            {renderConfirmIcon(alertState.dialogType as 'danger' | 'warning' | 'info')}
+            <p
+              className="text-sm"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {alertState.message}
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {promptState.isOpen && (
+        <Modal
+          isOpen={true}
+          onClose={handlePromptCancel}
+          title={promptState.title}
+          zIndex={Z_LAYERS.TOAST - 1}
+          footer={
+            <>
+              <Button variant="ghost" onClick={handlePromptCancel}>
+                {promptState.cancelText}
+              </Button>
+              <Button
+                onClick={handlePromptConfirm}
+                disabled={!promptInputValue.trim()}
+              >
+                {promptState.confirmText}
+              </Button>
+            </>
+          }
+        >
+          <label
+            className="block text-sm font-medium mb-2"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {promptState.label}
+          </label>
+          {promptState.multiline ? (
+            <textarea
+              autoFocus
+              value={promptInputValue}
+              onChange={(e) => setPromptInputValue(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg resize-y focus:outline-none"
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-primary)',
+                minHeight: '100px',
+              }}
+              placeholder={promptState.label}
+            />
+          ) : (
+            <Input
+              autoFocus
+              type="text"
+              value={promptInputValue}
+              onChange={(e) => setPromptInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && promptInputValue.trim()) {
+                  handlePromptConfirm();
+                }
+              }}
+            />
+          )}
+        </Modal>
       )}
     </NotificationContext.Provider>
   );
 };
 
-// Hook
 export const useNotification = (): NotificationContextValue => {
   const context = useContext(NotificationContext);
   if (!context) {
@@ -222,7 +529,6 @@ export const useNotification = (): NotificationContextValue => {
   return context;
 };
 
-// 便捷导出
 export const useToast = () => {
   const { showToast } = useNotification();
   return { showToast };
@@ -231,4 +537,14 @@ export const useToast = () => {
 export const useConfirmDialog = () => {
   const { showConfirm } = useNotification();
   return { showConfirm };
+};
+
+export const useAlertDialog = () => {
+  const { showAlert } = useNotification();
+  return { showAlert };
+};
+
+export const usePromptDialog = () => {
+  const { showPrompt } = useNotification();
+  return { showPrompt };
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Input } from '@/components/ui/Input';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface ProjectModalProps {
@@ -52,14 +53,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           <label className="block text-sm font-medium text-slate-700 mb-1">
             名称 *
           </label>
-          <input
-            type="text"
+          <Input
             required
             value={formData.name}
             onChange={(e) =>
               onFormDataChange({ ...formData, name: e.target.value })
             }
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap"
+            className="overflow-hidden text-ellipsis whitespace-nowrap"
             placeholder="请输入名称"
             autoFocus
             maxLength={100}

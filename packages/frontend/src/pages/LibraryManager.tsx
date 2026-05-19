@@ -9,13 +9,14 @@ import { FolderPlus } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { CheckSquare } from 'lucide-react';
 import { Square } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { Input } from '../components/ui/Input';
+import { SearchInput } from '../components/search/SearchInput';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { RenameModal } from '../components/modals/RenameModal';
 import { LibrarySelectFolderModal } from '../components/modals/LibrarySelectFolderModal';
-import { useNotification } from '../contexts/NotificationContext';
+import { useNotification, useConfirmDialog } from '../contexts/NotificationContext';
 import { Pagination } from '../components/ui/Pagination';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
@@ -32,7 +33,6 @@ import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import {
   EmptyFolderIcon,
   RefreshIcon,
-  SearchIcon,
   GridIcon,
   ListIcon,
 } from '../components/FileIcons';
@@ -40,7 +40,7 @@ import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
 import { formatFileSize } from '../utils/fileUtils';
-import { HardDrive, Save, Loader2 } from 'lucide-react';
+import { HardDrive, Save } from 'lucide-react';
 
 /**
  * 公共资源库管理页面
@@ -148,9 +148,6 @@ export const LibraryManager: React.FC = () => {
     openBatchMoveModal,
     openBatchCopyModal,
     closeSelectFolderModal,
-    confirmDialog,
-    showConfirm,
-    closeConfirmDialog,
     showDownloadFormatModal,
     downloadingNodeId,
     downloadingFileName,
@@ -400,37 +397,42 @@ export const LibraryManager: React.FC = () => {
               </h1>
               {/* 库类型切换 */}
               <div className="flex rounded-xl bg-slate-100 p-1">
-                <button
+                <Button
                   onClick={() => handleSwitchLibrary('drawing')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  variant="ghost"
+                  size="sm"
+                  className={`${
                     libraryType === 'drawing'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   图纸库
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleSwitchLibrary('block')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  variant="ghost"
+                  size="sm"
+                  className={`${
                     libraryType === 'block'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   图块库
-                </button>
+                </Button>
               </div>
               {/* 存储配额按钮 */}
               {canManage && (
-                <button
+                <Button
                   onClick={openQuotaModal}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+                  variant="secondary"
+                  size="sm"
+                  icon={HardDrive}
                   title="配置存储配额"
                 >
-                  <HardDrive size={16} />
-                  <span>存储配额</span>
-                </button>
+                  存储配额
+                </Button>
               )}
             </div>
 
@@ -499,47 +501,20 @@ export const LibraryManager: React.FC = () => {
             {/* 工具栏 */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* 搜索框 */}
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-                  placeholder="搜索文件..."
-                  className="w-48 pl-10 pr-10 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <SearchIcon
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                    title="清除搜索"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  onClick={handleSearchSubmit}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 transition-colors p-1"
-                  title="搜索"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                  </svg>
-                </button>
-              </div>
+              <SearchInput
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onSearch={() => handleSearchSubmit()}
+                placeholder="搜索文件..."
+              />
 
               {/* 视图切换 */}
               <div className="flex rounded-xl bg-slate-100 p-1">
-                <button
+                <Button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all ${
+                  variant="ghost"
+                  size="sm"
+                  className={`${
                     viewMode === 'grid'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -547,10 +522,12 @@ export const LibraryManager: React.FC = () => {
                   title="网格视图"
                 >
                   <GridIcon size={18} />
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all ${
+                  variant="ghost"
+                  size="sm"
+                  className={`${
                     viewMode === 'list'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -558,26 +535,25 @@ export const LibraryManager: React.FC = () => {
                   title="列表视图"
                 >
                   <ListIcon size={18} />
-                </button>
+                </Button>
               </div>
 
               {/* 刷新按钮 */}
-              <button
+              <Button
                 onClick={refresh}
-                disabled={isFetching}
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all disabled:opacity-50"
+                loading={isFetching}
+                variant="ghost"
+                size="sm"
                 title="刷新"
               >
-                <RefreshIcon
-                  size={18}
-                  className={isFetching ? 'animate-spin' : ''}
-                />
-              </button>
+                <RefreshIcon size={18} />
+              </Button>
 
               {/* 多选模式切换按钮 */}
-              <button
+              <Button
                 onClick={toggleMultiSelectMode}
-                className="p-2 rounded-xl transition-all"
+                variant="ghost"
+                size="sm"
                 style={{
                   background: isMultiSelectMode
                     ? 'var(--primary-100)'
@@ -593,13 +569,14 @@ export const LibraryManager: React.FC = () => {
                 ) : (
                   <CheckSquare size={18} />
                 )}
-              </button>
+              </Button>
 
               {/* 全选按钮 - 仅在多选模式下显示 */}
               {isMultiSelectMode && nodes.length > 0 && (
-                <button
+                <Button
                   onClick={handleSelectAll}
-                  className="p-2 rounded-xl transition-all hover:bg-[var(--bg-tertiary)]"
+                  variant="ghost"
+                  size="sm"
                   style={{ color: 'var(--text-tertiary)' }}
                   title={
                     selectedNodes.size === nodes.length ? '取消全选' : '全选'
@@ -630,7 +607,7 @@ export const LibraryManager: React.FC = () => {
                       <path d="M9 12l2 2 4-4" />
                     </svg>
                   )}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -645,12 +622,14 @@ export const LibraryManager: React.FC = () => {
               <div className="flex-1">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
-              <button
+              <Button
                 onClick={clearError}
-                className="text-red-500 hover:text-red-700 text-sm font-medium"
+                variant="ghost"
+                size="sm"
+                className="text-red-500 hover:text-red-700"
               >
                 关闭
-              </button>
+              </Button>
             </div>
           )}
 
@@ -773,9 +752,10 @@ export const LibraryManager: React.FC = () => {
             />
             {canManage && (
               <>
-                <button
+                <Button
                   onClick={() => openBatchMoveModal(selectedNodes.size)}
-                  className="text-sm font-medium transition-colors"
+                  variant="ghost"
+                  size="sm"
                   style={{ color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = 'var(--primary-500)';
@@ -785,10 +765,11 @@ export const LibraryManager: React.FC = () => {
                   }}
                 >
                   移动
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => openBatchCopyModal(selectedNodes.size)}
-                  className="text-sm font-medium transition-colors"
+                  variant="ghost"
+                  size="sm"
                   style={{ color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = 'var(--primary-500)';
@@ -798,8 +779,8 @@ export const LibraryManager: React.FC = () => {
                   }}
                 >
                   复制
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => {
                     const nodeIds = Array.from(selectedNodes);
                     const count = nodeIds.length;
@@ -825,7 +806,8 @@ export const LibraryManager: React.FC = () => {
                       }
                     );
                   }}
-                  className="text-sm font-medium transition-colors"
+                  variant="ghost"
+                  size="sm"
                   style={{ color: 'var(--error)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = '0.8';
@@ -835,12 +817,13 @@ export const LibraryManager: React.FC = () => {
                   }}
                 >
                   批量删除
-                </button>
+                </Button>
               </>
             )}
-            <button
+            <Button
               onClick={clearSelection}
-              className="text-sm font-medium transition-colors"
+              variant="ghost"
+              size="sm"
               style={{ color: 'var(--text-secondary)' }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = 'var(--primary-500)';
@@ -850,7 +833,7 @@ export const LibraryManager: React.FC = () => {
               }}
             >
               取消选择
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -879,12 +862,11 @@ export const LibraryManager: React.FC = () => {
               >
                 文件夹名称
               </label>
-              <input
+              <Input
                 type="text"
                 id="folderName"
                 name="name"
                 required
-                className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="请输入文件夹名称"
               />
             </div>
@@ -903,15 +885,6 @@ export const LibraryManager: React.FC = () => {
           </div>
         </form>
       </Modal>
-
-      {/* 确认对话框 */}
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={closeConfirmDialog}
-      />
 
       {/* 重命名模态框 */}
       <RenameModal
@@ -970,20 +943,11 @@ export const LibraryManager: React.FC = () => {
             </Button>
             <Button
               onClick={saveLibraryQuota}
-              disabled={quotaLoading}
+              loading={quotaLoading}
+              icon={Save}
               className="submit-btn"
             >
-              {quotaLoading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  保存中...
-                </>
-              ) : (
-                <>
-                  <Save size={16} className="mr-1" />
-                  保存
-                </>
-              )}
+              保存
             </Button>
           </div>
         }
@@ -1007,7 +971,7 @@ export const LibraryManager: React.FC = () => {
               <span>库存储配额</span>
             </label>
             <div className="quota-input-wrapper">
-              <input
+              <Input
                 type="number"
                 value={libraryQuota}
                 onChange={(e) => {
@@ -1016,7 +980,6 @@ export const LibraryManager: React.FC = () => {
                     setLibraryQuota(gb);
                   }
                 }}
-                className="quota-input"
                 min="0"
                 step="1"
               />

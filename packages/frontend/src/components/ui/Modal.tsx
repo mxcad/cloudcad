@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
+import { Input } from '@/components/ui/Input';
 import { isTourModeActive } from '../../contexts/TourContext';
 
 interface ModalProps {
@@ -241,25 +242,10 @@ export const PromptModal: React.FC<PromptModalProps> = ({
         >
           {label}
         </label>
-        <input
+        <Input
           autoFocus
-          type="text"
-          className="w-full px-4 py-2.5 rounded-xl transition-all duration-200 outline-none"
-          style={{
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border-default)',
-            color: 'var(--text-primary)',
-          }}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onFocus={(e) => {
-            e.target.style.borderColor = 'var(--primary-500)';
-            e.target.style.boxShadow = '0 0 0 3px var(--primary-100)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = 'var(--border-default)';
-            e.target.style.boxShadow = 'none';
-          }}
         />
       </form>
     </Modal>

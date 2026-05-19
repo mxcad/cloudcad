@@ -290,26 +290,6 @@ export const loginStyles = `
 
 .input-group.focused .input-glow { opacity: 0.3; }
 
-/* ===== 密码显示/隐藏按钮 ===== */
-.password-toggle {
-  position: absolute;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  z-index: 2;
-}
-
-.password-toggle:hover {
-  color: var(--text-secondary);
-}
-
 /* ===== 验证码按钮 ===== */
 .input-wrapper.has-button {
   position: relative;

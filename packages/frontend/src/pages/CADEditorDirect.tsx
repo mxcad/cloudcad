@@ -12,7 +12,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotification } from '../contexts/NotificationContext';
+import { useNotification, useConfirmDialog } from '../contexts/NotificationContext';
 import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
@@ -20,7 +20,6 @@ import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSyste
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
@@ -199,11 +198,7 @@ export const CADEditorDirect: React.FC = () => {
   >(null);
 
   // 另存为成功后确认打开新标签页
-  const [showSaveAsOpenConfirm, setShowSaveAsOpenConfirm] = useState(false);
-  const [saveAsResult, setSaveAsResult] = useState<{
-    nodeId: string;
-    parentId: string;
-  } | null>(null);
+  const showConfirm = useConfirmDialog().showConfirm;
 
   // 路由变化时重置登录提示弹框（非主页模式下关闭）
   useEffect(() => {
@@ -1112,14 +1107,17 @@ export const CADEditorDirect: React.FC = () => {
     setSaveAsBlob(null);
     showToast('另存为成功', 'success');
 
-    // 保存结果用于确认弹窗
-    setSaveAsResult({ nodeId: result.nodeId, parentId: result.parentId });
-    setShowSaveAsOpenConfirm(true);
+    // 显示确认弹窗（与缩略图生成并发执行）
+    const confirmPromise = showConfirm({
+      title: '打开新图纸',
+      message: `"${saveAsFileName}" 已保存成功，是否在新标签页中打开？`,
+      confirmText: '打开',
+      cancelText: '关闭',
+      type: 'info',
+    });
 
     // 立即生成并上传缩略图（失败不影响主流程）
-    try {
-      console.log(`[handleSaveAsSuccess] 开始生成缩略图: ${result.nodeId}`);
-      const imageData = await generateThumbnail();
+    const thumbnailPromise = generateThumbnail().then(async (imageData) => {
       if (!imageData) {
         console.warn(`[handleSaveAsSuccess] 缩略图生成失败(无数据): ${result.nodeId}`);
         return;
@@ -1131,9 +1129,16 @@ export const CADEditorDirect: React.FC = () => {
       } else {
         console.warn(`[handleSaveAsSuccess] 缩略图上传失败: ${result.nodeId}`);
       }
-    } catch (err) {
+    }).catch((err) => {
       console.error('[handleSaveAsSuccess] 缩略图生成/上传异常:', err);
+    });
+
+    const confirmed = await confirmPromise;
+    if (confirmed) {
+      window.open(`/cad-editor/${result.nodeId}?nodeId=${result.parentId}`, '_blank');
     }
+
+    await thumbnailPromise;
   };
 
   // 登录用户点击"另存为到本地"按钮
@@ -1143,22 +1148,6 @@ export const CADEditorDirect: React.FC = () => {
     setShowDownloadFormatModal(true);
     setShowSaveAsModal(false);
   }, [saveAsFileName]);
-
-  // 另存为成功后打开新标签页
-  const handleSaveAsOpenInNewTab = useCallback(() => {
-    if (saveAsResult) {
-      const url = `/cad-editor/${saveAsResult.nodeId}?nodeId=${saveAsResult.parentId}`;
-      window.open(url, '_blank');
-    }
-    setShowSaveAsOpenConfirm(false);
-    setSaveAsResult(null);
-  }, [saveAsResult]);
-
-  // 另存为成功后取消打开
-  const handleSaveAsOpenCancel = useCallback(() => {
-    setShowSaveAsOpenConfirm(false);
-    setSaveAsResult(null);
-  }, []);
 
 // 监听文件打开事件，更新 URL（保留 mode 参数）
   useEffect(() => {
@@ -1539,18 +1528,6 @@ export const CADEditorDirect: React.FC = () => {
           onDownloadLocal={handleSaveAsDownloadLocal}
         />
       )}
-
-      {/* 另存为成功后确认打开新标签页 */}
-      <ConfirmDialog
-        isOpen={showSaveAsOpenConfirm}
-        title="打开新图纸"
-        message={`"${saveAsFileName}" 已保存成功，是否在新标签页中打开？`}
-        confirmText="打开"
-        cancelText="关闭"
-        onConfirm={handleSaveAsOpenInNewTab}
-        onCancel={handleSaveAsOpenCancel}
-        type="info"
-      />
 
       {/* 外部参照上传弹窗 */}
       <ExternalReferenceModal

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Mail, Shield, CheckCircle, Loader2, Send } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
+import { Input } from '@/components/ui/Input';
 
 
 interface EmailForm {
@@ -109,7 +110,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               原邮箱验证码
             </label>
             <div className="input-wrapper has-button">
-              <input
+              <Input
                 type="text"
                 name="code"
                 value={emailForm.code}
@@ -180,7 +181,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               {emailStep === 'verifyNew' ? '新邮箱地址' : '邮箱地址'}
             </label>
             <div className="input-wrapper has-button">
-              <input
+              <Input
                 type="email"
                 name="email"
                 value={emailForm.email}
@@ -215,7 +216,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 验证码
               </label>
               <div className="input-wrapper has-button">
-                <input
+                <Input
                   type="text"
                   name="code"
                   value={emailForm.code}
@@ -293,7 +294,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 邮箱地址
               </label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type="email"
                   name="email"
                   value={emailForm.email}
@@ -332,7 +333,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 验证码
               </label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type="text"
                   name="code"
                   value={emailForm.code}

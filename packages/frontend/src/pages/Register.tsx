@@ -27,6 +27,7 @@ import { Eye } from 'lucide-react';
 import { EyeOff } from 'lucide-react';
 import { Phone } from 'lucide-react';
 import { MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 /**
  * 注册页面 - CloudCAD
@@ -129,10 +130,9 @@ export const Register: React.FC = () => {
               <br />
               如有疑问，请联系管理员。
             </p>
-            <button onClick={() => navigate('/login')} className="back-button">
-              <ArrowLeft size={18} />
-              <span>返回登录</span>
-            </button>
+            <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate('/login')}>
+              返回登录
+            </Button>
           </div>
         </div>
 
@@ -420,24 +420,17 @@ export const Register: React.FC = () => {
                           onFocus={() => setFocusedField('code')}
                           onBlur={() => setFocusedField(null)}
                         />
-                        <button
+                        <Button
                           type="button"
-                          className="code-button"
+                          variant="primary"
+                          size="sm"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 z-2 min-w-[5.5rem]"
                           onClick={handleSendCode}
-                          disabled={
-                            countdown > 0 ||
-                            sendingCode ||
-                            phoneForm.phone.length !== 11
-                          }
+                          disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}
+                          loading={sendingCode}
                         >
-                          {sendingCode ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : countdown > 0 ? (
-                            `${countdown}s`
-                          ) : (
-                            '获取验证码'
-                          )}
-                        </button>
+                          {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                        </Button>
                         <div className="input-glow" />
                       </div>
                       {fieldErrors.code && (
@@ -447,14 +440,14 @@ export const Register: React.FC = () => {
                   </>
                 )}
 
-                <button
+                <Button
                   type="button"
+                  variant="primary"
                   onClick={onNext}
-                  className="submit-button"
+                  icon={ArrowRight}
                 >
-                  <span>下一步</span>
-                  <ArrowRight size={18} className="button-arrow" />
-                </button>
+                  下一步
+                </Button>
               </div>
             )}
 
@@ -482,18 +475,15 @@ export const Register: React.FC = () => {
                       {...register('password')}
                       onFocus={() => setFocusedField('password')}
                     />
-                    <button
+                    <Button
                       type="button"
-                      className="password-toggle"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-4"
+                      icon={showPassword ? EyeOff : Eye}
                       onClick={() => setShowPassword(!showPassword)}
                       tabIndex={-1}
-                    >
-                      {showPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
+                    />
                     <div className="input-glow" />
                   </div>
                   {passwordValue && (
@@ -541,20 +531,17 @@ export const Register: React.FC = () => {
                       {...register('confirmPassword')}
                       onFocus={() => setFocusedField('confirmPassword')}
                     />
-                    <button
+                    <Button
                       type="button"
-                      className="password-toggle"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-4"
+                      icon={showConfirmPassword ? EyeOff : Eye}
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
                       tabIndex={-1}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
+                    />
                     <div className="input-glow" />
                   </div>
                   {fieldErrors.confirmPassword && (
@@ -565,31 +552,22 @@ export const Register: React.FC = () => {
                 </div>
 
                 <div className="button-group">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    icon={ArrowLeft}
                     onClick={handleBack}
-                    className="back-button-step"
                   >
-                    <ArrowLeft size={18} />
-                    <span>返回</span>
-                  </button>
-                  <button
+                    返回
+                  </Button>
+                  <Button
                     type="submit"
-                    disabled={loading}
-                    className="submit-button"
+                    variant="primary"
+                    loading={loading}
+                    icon={ArrowRight}
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        <span>注册中...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>立即注册</span>
-                        <ArrowRight size={18} className="button-arrow" />
-                      </>
-                    )}
-                  </button>
+                    立即注册
+                  </Button>
                 </div>
               </div>
             )}
@@ -599,9 +577,9 @@ export const Register: React.FC = () => {
           <div className="form-footer">
             <p className="login-text">
               已有账户？
-              <button onClick={() => navigate('/login')} className="login-link">
+              <Button variant="ghost" onClick={() => navigate('/login')}>
                 立即登录
-              </button>
+              </Button>
             </p>
           </div>
 

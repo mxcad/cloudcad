@@ -262,31 +262,7 @@
   align-items: center;
 }
 
-.input-wrapper input:not([type="checkbox"]) {
-  width: 100%;
-  padding: var(--space-4);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  color: var(--text-primary);
-  font-size: 0.9375rem;
-  font-family: var(--font-family-base);
-  transition: all var(--transition-base);
-  outline: none;
-}
 
-.input-wrapper input:not([type="checkbox"]):hover {
-  border-color: var(--border-strong);
-}
-
-.input-wrapper input:not([type="checkbox"]):focus {
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.input-wrapper input:not([type="checkbox"])::placeholder {
-  color: var(--text-muted);
-}
 
 .input-group.focused .input-label {
   color: var(--primary-500);
@@ -347,11 +323,6 @@
 .forgot-password-link:hover {
   color: var(--primary-600);
   text-decoration: underline;
-}
-
-/* 带按钮的输入框 */
-.input-wrapper.has-button input:not([type="checkbox"]) {
-  padding-right: 100px;
 }
 
 .code-button,

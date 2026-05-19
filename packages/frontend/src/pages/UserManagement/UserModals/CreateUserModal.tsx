@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -57,22 +58,20 @@ export function CreateUserModal({
         <div className="form-row">
           <div className={`form-group ${formErrors.username ? 'has-error' : ''}`}>
             <label className="form-label">用户名 <span className="required">*</span></label>
-            <input
+            <Input
               type="text"
               value={formData.username}
               onChange={(e) => onFormChange('username', e.target.value)}
-              className="form-input"
               placeholder="3-20个字符，只能包含字母、数字和下划线"
             />
             {formErrors.username && <span className="error-text">{formErrors.username}</span>}
           </div>
           <div className={`form-group ${formErrors.email ? 'has-error' : ''}`}>
             <label className="form-label">邮箱 {mailEnabled && <span className="required">*</span>}</label>
-            <input
+            <Input
               type="email"
               value={formData.email}
               onChange={(e) => onFormChange('email', e.target.value)}
-              className="form-input"
               placeholder={mailEnabled ? '请输入邮箱地址' : '可选，用于接收通知'}
             />
             {formErrors.email && <span className="error-text">{formErrors.email}</span>}
@@ -81,22 +80,20 @@ export function CreateUserModal({
         <div className="form-row">
           <div className={`form-group ${formErrors.password ? 'has-error' : ''}`}>
             <label className="form-label">密码 <span className="required">*</span></label>
-            <input
+            <Input
               type="password"
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
-              className="form-input"
               placeholder="至少8个字符"
             />
             {formErrors.password && <span className="error-text">{formErrors.password}</span>}
           </div>
           <div className="form-group">
             <label className="form-label">昵称</label>
-            <input
+            <Input
               type="text"
               value={formData.nickname}
               onChange={(e) => onFormChange('nickname', e.target.value)}
-              className="form-input"
               placeholder="请输入昵称"
             />
           </div>

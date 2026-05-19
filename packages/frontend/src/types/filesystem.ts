@@ -124,17 +124,6 @@ export interface BreadcrumbItem {
 }
 
 /**
- * 确认对话框状态
- */
-export interface ConfirmDialogState {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  onConfirm: () => void;
-  type?: 'danger' | 'warning' | 'info';
-}
-
-/**
  * 外部参照文件上传状态
  */
 export type UploadState = 'notSelected' | 'uploading' | 'success' | 'fail';

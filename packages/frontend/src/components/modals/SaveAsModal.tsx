@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Input } from '@/components/ui/Input';
 import { Folder } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
 import { useSaveAs } from './hooks/useSaveAs';
@@ -180,12 +181,10 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
               文件名
             </label>
             <div className="flex items-center gap-2">
-              <input
-                type="text"
+              <Input
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
                 placeholder="请输入文件名"
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 disabled={saving}
               />
               <span className="text-slate-500">.{format}</span>

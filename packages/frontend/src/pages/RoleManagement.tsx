@@ -12,7 +12,7 @@ import { Shield } from 'lucide-react';
 import { Plus } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
-import { Search } from 'lucide-react';
+import { SearchInput } from '@/components/search/SearchInput';
 import { Users } from 'lucide-react';
 import { CheckCircle2 } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
@@ -432,46 +432,36 @@ export const RoleManagement = () => {
         </div>
         
         {/* 搜索框 */}
-        <div className="search-input-wrapper">
-          <Search className="search-icon" size={20} />
-          <input
-            type="text"
-            placeholder="搜索角色..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
+        <SearchInput
+          placeholder="搜索角色..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
 
         {/* 刷新按钮 */}
-        <button
-          onClick={initialize}
-          disabled={loading}
-          className="refresh-button"
-          title="刷新角色数据"
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-        </button>
+        <Button variant="ghost" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" title="刷新角色数据" />
       </div>
 
       {/* Tab 切换 */}
       <div className="tabs-container">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setActiveTab('project')}
           className={`tab-button ${activeTab === 'project' ? 'active' : ''}`}
         >
           <Users size={16} />
           项目角色
-        </button>
+        </Button>
         {canReadSystemRoles && (
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab('system')}
             className={`tab-button ${activeTab === 'system' ? 'active' : ''}`}
             data-tour="system-roles-tab"
           >
             <Shield size={16} />
             系统角色
-          </button>
+          </Button>
         )}
       </div>
 
@@ -508,13 +498,14 @@ export const RoleManagement = () => {
                     )}
                   </div>
                   {!role.isSystem && canDeleteRoles && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDeleteProjectRole(role.id)}
                       className="delete-btn"
                       title="删除角色"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                      icon={Trash2}
+                    />
                   )}
                 </div>
 
@@ -581,13 +572,14 @@ export const RoleManagement = () => {
                     <p className="role-description">{role.description || '暂无描述'}</p>
                   </div>
                   {!role.isSystem && canDeleteRoles && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDeleteSystemRole(role.id)}
                       className="delete-btn"
                       title="删除角色"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                      icon={Trash2}
+                    />
                   )}
                 </div>
 

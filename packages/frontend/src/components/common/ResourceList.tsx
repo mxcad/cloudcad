@@ -11,17 +11,16 @@
  */
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { SearchInput } from '@/components/search/SearchInput';
 import { Grid3x3 } from 'lucide-react';
 import { List } from 'lucide-react';
 import { FileImage } from 'lucide-react';
 import { ChevronRight } from 'lucide-react';
-import { ChevronLeft } from 'lucide-react';
-import { ChevronsLeft } from 'lucide-react';
-import { ChevronsRight } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
+import { Pagination } from '@/components/ui/Pagination';
 import styles from './ResourceList.module.css';
 import sidebarStyles from '@/components/sidebar/sidebar.module.css';
 
@@ -386,7 +385,8 @@ const CascadeCategorySelector: React.FC<{
         /* 宽屏布局：使用下拉面板 */
         <>
           {/* 选择按钮 */}
-          <button
+          <Button
+            variant="ghost"
             className={`${styles.cascadeButton} ${isOpen ? styles.open : ''} ${selectedPath.length > 0 ? styles.active : ''}`}
             onClick={() => setIsOpen(!isOpen)}
           >
@@ -406,7 +406,7 @@ const CascadeCategorySelector: React.FC<{
             ) : (
               <ChevronRight size={14} className={styles.arrowIcon} />
             )}
-          </button>
+          </Button>
 
           {/* 级联面板 */}
           {isOpen && (
@@ -506,182 +506,6 @@ const CascadeCategorySelector: React.FC<{
             </div>
           )}
         </>
-      )}
-    </div>
-  );
-};
-
-/** 分页控件组件 */
-const Pagination: React.FC<{
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number, direction: 'prev' | 'next' | 'jump') => void;
-  loading?: boolean;
-}> = ({ currentPage, totalPages, onPageChange, loading }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [isNarrow, setIsNarrow] = useState(false);
-  const [maxVisiblePages, setMaxVisiblePages] = useState(9);
-  const paginationRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const checkWidth = () => {
-      const container = paginationRef.current;
-      if (container) {
-        const containerWidth = container.offsetWidth;
-        setIsNarrow(containerWidth < 400);
-        const buttonWidth = 23;
-        const availableWidth = containerWidth - 120;
-        const calculated = Math.floor(availableWidth / buttonWidth);
-        setMaxVisiblePages(Math.max(5, Math.min(15, calculated)));
-      } else {
-        setIsNarrow(window.innerWidth < 450);
-        setMaxVisiblePages(9);
-      }
-    };
-
-    checkWidth();
-    window.addEventListener('resize', checkWidth);
-    return () => window.removeEventListener('resize', checkWidth);
-  }, []);
-
-  const getVisiblePages = (): (number | 'ellipsis')[] => {
-    if (totalPages <= maxVisiblePages) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-
-    const pages: (number | 'ellipsis')[] = [];
-    const sideCount = Math.floor((maxVisiblePages - 3) / 2);
-
-    let left = Math.max(2, currentPage - sideCount);
-    let right = Math.min(totalPages - 1, currentPage + sideCount);
-
-    if (left === 2) {
-      right = Math.min(totalPages - 1, left + maxVisiblePages - 4);
-    }
-    if (right === totalPages - 1) {
-      left = Math.max(2, right - maxVisiblePages + 4);
-    }
-
-    pages.push(1);
-
-    if (left > 2) {
-      pages.push('ellipsis');
-    }
-
-    for (let i = left; i <= right; i++) {
-      pages.push(i);
-    }
-
-    if (right < totalPages - 1) {
-      pages.push('ellipsis');
-    }
-
-    pages.push(totalPages);
-
-    return pages;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleJumpToPage = () => {
-    const page = parseInt(inputValue, 10);
-    if (page >= 1 && page <= totalPages && page !== currentPage) {
-      onPageChange(page, 'jump');
-    }
-    setInputValue('');
-  };
-
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleJumpToPage();
-  };
-
-  const handleInputBlur = () => {
-    handleJumpToPage();
-  };
-
-  const visiblePages = getVisiblePages();
-
-  return (
-    <div ref={paginationRef} className={`${styles.pagination} ${isNarrow ? styles.paginationNarrow : ''}`}>
-      {!isNarrow && (
-        <button
-          className={styles.paginationButton}
-          onClick={() => onPageChange(1, 'jump')}
-          disabled={currentPage === 1 || loading}
-          title="首页"
-        >
-          <ChevronsLeft size={12} />
-        </button>
-      )}
-
-      <button
-        className={styles.paginationButton}
-        onClick={() => onPageChange(currentPage - 1, 'jump')}
-        disabled={currentPage === 1 || loading}
-        title="上一页"
-      >
-        <ChevronLeft size={12} />
-      </button>
-
-      <div className={styles.paginationNumbers}>
-        {visiblePages.map((page, index) =>
-          page === 'ellipsis' ? (
-            <span key={`ellipsis-${index}`} className={styles.paginationEllipsis}>···</span>
-          ) : (
-            <button
-              key={page}
-              className={`${styles.paginationButton} ${page === currentPage ? styles.paginationButtonActive : ''}`}
-              onClick={() => page !== currentPage && onPageChange(page, 'jump')}
-              disabled={loading || page === currentPage}
-            >
-              {page}
-            </button>
-          )
-        )}
-      </div>
-
-      <div className={`${styles.paginationJump} ${isNarrow ? styles.paginationJumpNarrow : ''}`}>
-        <span className={styles.paginationJumpLabel}>前往</span>
-        <input
-          type="number"
-          min={1}
-          max={totalPages}
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleJumpToPage();
-            }
-          }}
-          onBlur={handleInputBlur}
-          placeholder={isNarrow ? '' : ''}
-          className={styles.paginationInput}
-        />
-        <span className={styles.paginationJumpLabel}>页</span>
-      </div>
-
-      <button
-        className={styles.paginationButton}
-        onClick={() => onPageChange(currentPage + 1, 'jump')}
-        disabled={currentPage === totalPages || loading}
-        title="下一页"
-      >
-        <ChevronRight size={12} />
-      </button>
-
-      {!isNarrow && (
-        <button
-          className={styles.paginationButton}
-          onClick={() => onPageChange(totalPages, 'jump')}
-          disabled={currentPage === totalPages || loading}
-          title="末页"
-        >
-          <ChevronsRight size={12} />
-        </button>
       )}
     </div>
   );
@@ -928,16 +752,11 @@ export const ResourceList: React.FC<ResourceListProps> = ({
 
       {/* 工具栏：搜索 + 视图切换 */}
       <div className={styles.toolbar}>
-        <div className={styles.searchBox}>
-          <Search size={16} className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="搜索..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className={styles.searchInput}
-          />
-        </div>
+        <SearchInput
+          placeholder="搜索..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
         <div className={styles.toolbarActions}>
           {/* 总数显示 */}
           {total !== undefined && total > 0 && (
@@ -949,20 +768,22 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           {toolbarExtra}
           {showViewToggle && (
             <div className={styles.viewToggle}>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={List}
                 className={`${styles.viewButton} ${viewMode === 'list' ? styles.active : ''}`}
                 onClick={() => setViewMode('list')}
                 title="列表视图"
-              >
-                <List size={16} />
-              </button>
-              <button
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={Grid3x3}
                 className={`${styles.viewButton} ${viewMode === 'grid' ? styles.active : ''}`}
                 onClick={() => setViewMode('grid')}
                 title="网格视图"
-              >
-                <Grid3x3 size={16} />
-              </button>
+              />
             </div>
           )}
         </div>
@@ -1042,9 +863,14 @@ export const ResourceList: React.FC<ResourceListProps> = ({
         {/* 分页控件（启用分页模式时显示） */}
         {paginationEnabled && totalPages && totalPages > 1 && onPageChange && (
           <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={onPageChange}
+            meta={{
+              total: total ?? 0,
+              page: currentPage,
+              limit: 20,
+              totalPages: totalPages || 1,
+            }}
+            onPageChange={(page) => onPageChange(page, 'jump')}
+            showQuickJumper
             loading={loading}
           />
         )}

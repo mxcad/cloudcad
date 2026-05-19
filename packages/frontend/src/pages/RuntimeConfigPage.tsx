@@ -5,6 +5,8 @@ import {
   runtimeConfigControllerResetConfig,
 } from '@/api-sdk';
 import type { RuntimeConfigResponseDto, UpdateRuntimeConfigDto } from '@/api-sdk';
+import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
 import { useNotification } from '../contexts/NotificationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
@@ -236,25 +238,24 @@ export const RuntimeConfigPage: React.FC = () => {
 
     if (item.type === 'boolean') {
       return (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => handleValueChange(item.key, !value)}
           className={`toggle-switch ${value ? 'active' : ''}`}
           disabled={!canManageConfig}
         >
           <span className="toggle-handle" />
-        </button>
+        </Button>
       );
     }
 
     if (item.type === 'number') {
       return (
         <div className="number-input-wrapper">
-          <input
+          <Input
             type="number"
             value={value as number}
             onChange={(e) => handleValueChange(item.key, Number(e.target.value))}
-            className={`config-input number-input ${unit ? 'has-unit' : ''}`}
             disabled={!canManageConfig}
             min={0}
           />
@@ -266,32 +267,30 @@ export const RuntimeConfigPage: React.FC = () => {
     if (isSensitive) {
       return (
         <div className="sensitive-input-wrapper">
-          <input
+          <Input
             type={isHidden ? 'password' : 'text'}
             value={value as string}
             onChange={(e) => handleValueChange(item.key, e.target.value)}
-            className="config-input sensitive-input"
             disabled={!canManageConfig}
             placeholder="••••••••"
           />
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={isHidden ? EyeOff : Eye}
             onClick={() => toggleValueVisibility(item.key)}
             className="visibility-toggle"
             tabIndex={-1}
-          >
-            {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
+          />
         </div>
       );
     }
 
     return (
-      <input
+      <Input
         type="text"
         value={value as string}
         onChange={(e) => handleValueChange(item.key, e.target.value)}
-        className="config-input"
         disabled={!canManageConfig}
         placeholder="请输入..."
       />
@@ -438,29 +437,26 @@ export const RuntimeConfigPage: React.FC = () => {
                           <div className="action-buttons">
                             {item.type === 'boolean' && renderConfigInput(item)}
 
-                            <button
-                              type="button"
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={Save}
                               onClick={() => handleSave(item.key)}
-                              disabled={!hasChanges || isSavingItem || !canManageConfig}
+                              disabled={!hasChanges || !canManageConfig}
+                              loading={isSavingItem}
                               className={`action-btn save-btn ${hasChanges && !isSavingItem ? 'active' : ''}`}
                               title="保存"
-                            >
-                              {isSavingItem ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <Save size={16} />
-                              )}
-                            </button>
+                            />
 
-                            <button
-                              type="button"
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={RotateCcw}
                               onClick={() => handleReset(item.key)}
                               disabled={isSavingItem || !canManageConfig}
                               className="action-btn reset-btn"
                               title="重置为默认值"
-                            >
-                              <RotateCcw size={16} />
-                            </button>
+                            />
                           </div>
                         </div>
                       </div>

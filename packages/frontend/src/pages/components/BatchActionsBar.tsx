@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '@/components/ui/Button';
 
 interface BatchActionsBarProps {
   selectedCount: number;
@@ -36,60 +37,67 @@ export const BatchActionsBar: React.FC<BatchActionsBarProps> = ({
       <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
 
       {showRestore && onRestore && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onRestore}
-          className="text-emerald-400 hover:text-white text-sm font-medium transition-colors"
+          className="text-emerald-400 hover:text-white"
         >
           恢复
-        </button>
+        </Button>
       )}
 
       {!showRestore && (
         <>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onMove}
-            className="text-sm font-medium transition-colors"
             style={{ color: 'var(--text-secondary)' }}
           >
             移动
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onCopy}
-            className="text-sm font-medium transition-colors"
             style={{ color: 'var(--text-secondary)' }}
           >
             复制
-          </button>
+          </Button>
         </>
       )}
 
       {showPermanentDelete && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onDelete}
-          className="text-sm font-medium transition-colors"
           style={{ color: 'var(--error)' }}
         >
           彻底删除
-        </button>
+        </Button>
       )}
 
       {!showPermanentDelete && (
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onDelete}
-          className="text-sm font-medium transition-colors"
           style={{ color: 'var(--error)' }}
         >
           删除
-        </button>
+        </Button>
       )}
 
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onClear}
-        className="text-sm font-medium transition-colors"
         style={{ color: 'var(--text-muted)' }}
       >
         取消
-      </button>
+      </Button>
     </div>
   );
 };

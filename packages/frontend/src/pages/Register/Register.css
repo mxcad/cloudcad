@@ -84,25 +84,6 @@
   line-height: 1.6;
 }
 
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.back-button:hover {
-  background: var(--bg-elevated);
-  border-color: var(--border-strong);
-}
-
 /* ===== Logo 区域 ===== */
 .logo-section {
   text-align: center;
@@ -350,26 +331,6 @@
   padding-right: 2.75rem;
 }
 
-/* 密码显示/隐藏按钮 */
-.password-toggle {
-  position: absolute;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  z-index: 2;
-}
-
-.password-toggle:hover {
-  color: var(--text-secondary);
-}
-
 .input-glow {
   position: absolute;
   inset: -2px;
@@ -468,55 +429,7 @@
   margin-top: 0.25rem;
 }
 
-.submit-button {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-}
-
-.submit-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-}
-
-.submit-button:active:not(:disabled) { transform: translateY(0); }
-.submit-button:disabled { opacity: 0.7; cursor: not-allowed; }
-
 .button-arrow { transition: transform 0.2s; }
-.submit-button:hover:not(:disabled) .button-arrow { transform: translateX(4px); }
-
-.back-button-step {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: 10px;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.back-button-step:hover {
-  background: var(--bg-elevated);
-  border-color: var(--border-strong);
-}
 
 /* 表单底部 */
 .form-footer {
@@ -637,7 +550,6 @@
   .step-label { display: none; }
   .theme-toggle-wrapper { top: 1rem; right: 1rem; }
   .button-group { flex-direction: column; }
-  .back-button-step { order: 2; }
 }
 
 /* 隐藏浏览器自带的密码显示按钮 */

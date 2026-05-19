@@ -49,15 +49,6 @@ vi.mock('@/components/ui/Modal', () => ({
   }: { children?: React.ReactNode; isOpen?: boolean } & React.HTMLAttributes<HTMLDivElement>) =>
     isOpen ? <div {...props}>{children}</div> : null,
 }));
-vi.mock('@/components/ui/ConfirmDialog', () => ({
-  ConfirmDialog: ({
-    children,
-    isOpen,
-    ...props
-  }: { children?: React.ReactNode; isOpen?: boolean } & React.HTMLAttributes<HTMLDivElement>) =>
-    isOpen ? <div {...props}>{children}</div> : null,
-}));
-
 vi.mock('@/components/BreadcrumbNavigation', () => ({
   BreadcrumbNavigation: () => <div>Breadcrumb</div>,
 }));
@@ -148,9 +139,7 @@ describe('FileSystemManager', () => {
       isMultiSelectMode: false,
       setIsMultiSelectMode: vi.fn(),
       toasts: [],
-      confirmDialog: { isOpen: false, title: '', message: '', confirmText: undefined, onConfirm: vi.fn(), type: 'warning' as const },
       showToast: vi.fn(),
-      showConfirm: vi.fn(),
       isProjectRootMode: true,
       isFolderMode: false,
       isPersonalSpaceMode: false,
@@ -169,7 +158,6 @@ describe('FileSystemManager', () => {
       setEditingNode: vi.fn(),
       setDownloadingNode: vi.fn(),
       removeToast: vi.fn(),
-      closeConfirm: vi.fn(),
       loadCurrentNode: vi.fn(),
       loadChildren: vi.fn(),
       buildBreadcrumbs: vi.fn(),

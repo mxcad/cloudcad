@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { RefreshCw, X, UserPlus, AlertCircle, Loader2, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Autocomplete } from '@/components/ui/Autocomplete';
 import { TruncateText } from '@/components/ui/TruncateText';
 import { fileSystemControllerGetProjectMembers, fileSystemControllerAddProjectMember, fileSystemControllerRemoveProjectMember, fileSystemControllerUpdateProjectMember, fileSystemControllerTransferProject } from '@/api-sdk';
 import { usersControllerSearchUsers } from '@/api-sdk';
@@ -57,7 +58,6 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const [loadingPermissions, setLoadingPermissions] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const isInitializedRef = useRef(false);
   const { checkPermission } = useProjectPermission();
 
@@ -409,87 +409,62 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               </div>
               <div className="space-y-3">
                 {/* 用户搜索输入框 */}
-                <div className="relative">
-                  <input
-                    data-tour="member-search-input"
-                    ref={searchInputRef}
-                    type="text"
-                    value={newEmail}
-                    onChange={(e) => {
-                      setNewEmail(e.target.value);
-                      setSelectedUser(null);
-                    }}
-                    placeholder="搜索用户（邮箱或用户名）"
-                    className="w-full px-3 py-2 rounded-lg text-sm input-theme"
-                    autoComplete="off"
-                  />
-                  {searching && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Loader2
-                        size={16}
-                        className="animate-spin"
-                        style={{ color: 'var(--text-muted)' }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* 搜索结果下拉列表 */}
-                {searchResults.length > 0 && !selectedUser && (
-                  <div
-                    className="absolute z-10 w-full rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                    style={{
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-default)',
-                    }}
-                  >
-                    {searchResults.map((user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setNewEmail(user.email);
-                          setSearchResults([]);
-                        }}
-                        className="w-full px-3 py-2 text-left last:border-b-0 dropdown-item-theme"
-                        style={{
-                          borderBottom: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-                            style={{
-                              background: 'var(--primary-100)',
-                              color: 'var(--primary-600)',
-                            }}
-                          >
-                            {(user?.nickname ||
-                              user?.username ||
-                              user?.email)?.[0]?.toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className="text-sm font-medium"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              <TruncateText>
-                                {user.nickname || user.username}
-                              </TruncateText>
-                            </p>
-                            <p
-                              className="text-xs"
-                              style={{ color: 'var(--text-tertiary)' }}
-                            >
-                              <TruncateText>{user.email}</TruncateText>
-                            </p>
-                          </div>
+                <Autocomplete
+                  value={newEmail}
+                  onChange={(value) => {
+                    setNewEmail(value);
+                    setSelectedUser(null);
+                  }}
+                  onSearch={(value) => searchUsers(value)}
+                  loading={searching}
+                  items={searchResults.map((u) => ({
+                    key: u.id,
+                    label: u.email || u.username || '',
+                    ...u,
+                  }))}
+                  onSelectItem={(item) => {
+                    const user = item as unknown as UserSearchResult;
+                    setSelectedUser(user);
+                    setNewEmail(user.email);
+                    setSearchResults([]);
+                  }}
+                  placeholder="搜索用户（邮箱或用户名）"
+                  open={searchResults.length > 0 && !selectedUser}
+                  renderItem={(item) => {
+                    const user = item as unknown as UserSearchResult;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                          style={{
+                            background: 'var(--primary-100)',
+                            color: 'var(--primary-600)',
+                          }}
+                        >
+                          {(user?.nickname ||
+                            user?.username ||
+                            user?.email)?.[0]?.toUpperCase()}
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: 'var(--text-primary)' }}
+                          >
+                            <TruncateText>
+                              {user.nickname || user.username}
+                            </TruncateText>
+                          </p>
+                          <p
+                            className="text-xs"
+                            style={{ color: 'var(--text-tertiary)' }}
+                          >
+                            <TruncateText>{user.email}</TruncateText>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
 
                 {/* 已选用户显示 */}
                 {selectedUser && (

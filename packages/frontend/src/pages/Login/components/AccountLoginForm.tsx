@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface AccountLoginFormProps {
   formData: { account: string; password: string };
@@ -85,41 +86,35 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
             onFocus={() => onFocus('password')}
             onBlur={onBlur}
           />
-          <button
+          <Button
             type="button"
-            className="password-toggle"
+            variant="icon"
+            size="xs"
             onClick={onTogglePassword}
             tabIndex={-1}
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+            className="absolute right-4"
+            icon={showPassword ? EyeOff : Eye}
+          />
           <div className="input-glow" />
         </div>
       </div>
 
       <div className="form-options">
-        <button
-          type="button"
-          onClick={onForgotPassword}
-          className="forgot-password-link"
-        >
+        <Button variant="ghost" size="sm" onClick={onForgotPassword}>
           忘记密码？
-        </button>
+        </Button>
       </div>
 
-      <button type="submit" disabled={loading} className="submit-button">
+      <Button type="submit" variant="primary" loading={loading} className="w-full">
         {loading ? (
-          <>
-            <Loader2 size={18} className="animate-spin" />
-            <span>登录中...</span>
-          </>
+          <span>登录中...</span>
         ) : (
           <>
             <span>立即登录</span>
             <ArrowRight size={18} className="button-arrow" />
           </>
         )}
-      </button>
+      </Button>
     </form>
   );
 };

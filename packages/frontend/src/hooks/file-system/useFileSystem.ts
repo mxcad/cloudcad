@@ -106,14 +106,11 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     setSearchTerm: setStoreSearchTerm,
   } = useFileSystemStore();
 
-  // UI Hook (Toast, Confirm)
+  // UI Hook (Toast)
   const {
     toasts,
-    confirmDialog,
     showToast,
     removeToast,
-    showConfirm,
-    closeConfirm,
   } = useFileSystemUI();
 
   // Search Hook
@@ -239,7 +236,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     currentNode,
     loadData,
     showToast,
-    showConfirm,
     selectedNodes,
     nodes,
     clearSelection,
@@ -407,7 +403,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     isMultiSelectMode,
     setIsMultiSelectMode,
     toasts,
-    confirmDialog,
     showCreateFolderModal,
     showRenameModal,
     showDownloadFormatModal,
@@ -430,8 +425,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     setDownloadingNode,
     showToast,
     removeToast,
-    showConfirm,
-    closeConfirm,
     loadCurrentNode,
     loadChildren,
     buildBreadcrumbs,

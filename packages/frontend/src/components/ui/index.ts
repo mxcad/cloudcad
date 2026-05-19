@@ -23,7 +23,6 @@ export type { TruncateTextProps, TruncateMode } from './TruncateText';
 
 export { Button } from './Button';
 export { Toast } from './Toast';
-export { ConfirmDialog } from './ConfirmDialog';
 export { Tooltip, SimpleTooltip } from './Tooltip';
 export type { TooltipProps, TooltipPosition, TooltipTrigger, SimpleTooltipProps } from './Tooltip';
 

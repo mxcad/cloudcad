@@ -20,6 +20,8 @@ import { FolderOpen } from 'lucide-react';
 import { Layers } from 'lucide-react';
 import { Palette } from 'lucide-react';
 import { Shapes } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { SearchInput } from '@/components/search/SearchInput';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/filesystem';
 import { usePermission } from '../hooks/usePermission';
@@ -443,14 +445,11 @@ export default function FontLibrary(props: FontLibraryProps) {
         <div className="card-theme mb-6">
           <div className="flex flex-wrap items-center gap-4">
             {/* 搜索框 */}
-            <div className="flex-1 min-w-[240px] relative">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none z-10" />
-              <input
-                type="text"
+            <div className="flex-1 min-w-[240px]">
+              <SearchInput
                 placeholder="搜索字体名称..."
                 value={filters.name}
                 onChange={(e) => handleFilterChange('name', e.target.value)}
-                className="input-theme !pl-12"
               />
             </div>
 
@@ -527,11 +526,10 @@ export default function FontLibrary(props: FontLibraryProps) {
                     <Calendar size={14} className="inline mr-1" />
                     开始日期
                   </label>
-                  <input
+                  <Input
                     type="date"
                     value={filters.startTime}
                     onChange={(e) => handleFilterChange('startTime', e.target.value)}
-                    className="input-theme w-40"
                   />
                 </div>
                 <div>
@@ -539,11 +537,10 @@ export default function FontLibrary(props: FontLibraryProps) {
                     <Calendar size={14} className="inline mr-1" />
                     结束日期
                   </label>
-                  <input
+                  <Input
                     type="date"
                     value={filters.endTime}
                     onChange={(e) => handleFilterChange('endTime', e.target.value)}
-                    className="input-theme w-40"
                   />
                 </div>
               </div>

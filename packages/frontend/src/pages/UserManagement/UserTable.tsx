@@ -1,5 +1,6 @@
 import { User } from 'lucide-react';
 import { TruncateText } from '@/components/ui/TruncateText';
+import { Button } from '@/components/ui/Button';
 
 export interface UserTableUser {
   id: string;
@@ -112,13 +113,15 @@ export function UserTable({
                 </span>
               </td>
               <td className="cell-quota">
-                <button
+                <Button
                   onClick={() => onOpenQuota(user)}
                   className="quota-btn"
                   title="配置存储配额"
+                  variant="ghost"
+                  size="sm"
                 >
                   配额
-                </button>
+                </Button>
               </td>
               <td className="cell-status">
                 <span className={`status-badge status-${(user.status || 'ACTIVE').toLowerCase()}`}>
@@ -131,29 +134,35 @@ export function UserTable({
               </td>
               <td className="cell-actions">
                 <div className="action-buttons">
-                  <button
+                  <Button
                     onClick={() => onEdit(user)}
                     className="action-btn edit"
                     title="编辑用户"
+                    variant="ghost"
+                    size="sm"
                   >
                     编辑
-                  </button>
+                  </Button>
                   {userTab === 'deleted' ? (
-                    <button
+                    <Button
                       onClick={() => onRestore(user.id)}
                       className="action-btn restore"
                       title="恢复用户"
+                      variant="ghost"
+                      size="sm"
                     >
                       恢复
-                    </button>
+                    </Button>
                   ) : (
-                    <button
+                    <Button
                       onClick={() => onDelete(user.id)}
                       className="action-btn delete"
                       title="注销"
+                      variant="ghost"
+                      size="sm"
                     >
                       注销
-                    </button>
+                    </Button>
                   )}
                 </div>
               </td>

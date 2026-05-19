@@ -86,12 +86,14 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleBackClick}
-            className="p-2 rounded-xl transition-all flex-shrink-0"
+            className="p-2 rounded-xl flex-shrink-0"
             style={{ color: 'var(--text-tertiary)' }}
             title={
-              isPersonalSpaceMode
+              isPersonalSpace
                 ? isAtRoot
                   ? '返回我的图纸'
                   : '返回上一级'
@@ -110,7 +112,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             >
               <path d="M19 12H5M5 12L12 19M5 12L12 5" />
             </svg>
-          </button>
+          </Button>
 
           <div
             ref={null}

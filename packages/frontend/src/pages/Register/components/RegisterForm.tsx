@@ -9,6 +9,7 @@ import {
   Loader2, AlertCircle, CheckCircle, ShieldCheck,
   Cpu, Boxes, Eye, EyeOff, Phone, MessageSquare,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface RegisterFormProps {
   mailEnabled: boolean;
@@ -207,19 +208,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                       onFocus={() => form.setFocusedField('code')}
                       onBlur={() => form.setFocusedField(null)}
                     />
-                    <button
-                      type="button" className="code-button"
+                    <Button
+                      type="button"
+                      className="code-button"
                       onClick={phone.handleSendCode}
-                      disabled={phone.countdown > 0 || phone.sendingCode || phone.phoneForm.phone.length !== 11}
+                      disabled={phone.countdown > 0 || phone.phoneForm.phone.length !== 11}
+                      loading={phone.sendingCode}
                     >
-                      {phone.sendingCode ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : phone.countdown > 0 ? (
-                        `${phone.countdown}s`
-                      ) : (
-                        '获取验证码'
-                      )}
-                    </button>
+                      {phone.countdown > 0 ? `${phone.countdown}s` : '获取验证码'}
+                    </Button>
                     <div className="input-glow" />
                   </div>
                   {form.fieldErrors.code && <p className="error-message">{form.fieldErrors.code}</p>}
@@ -227,10 +224,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               </>
             )}
 
-            <button type="button" onClick={onNext} className="submit-button" data-testid="next-button">
+            <Button type="button" onClick={onNext} variant="primary" data-testid="next-button">
               <span>下一步</span>
               <ArrowRight size={18} className="button-arrow" />
-            </button>
+            </Button>
           </div>
         )}
 
@@ -252,13 +249,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   placeholder="至少8位，包含大小写字母、数字和特殊字符"
                   {...fieldProps('password')}
                 />
-                <button
-                  type="button" className="password-toggle"
+                <Button
+                  type="button"
+                  className="password-toggle"
                   onClick={() => form.setShowPassword(!form.showPassword)}
                   tabIndex={-1}
                 >
                   {form.showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
               {watchedPassword && (
@@ -295,36 +293,34 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   placeholder="请再次输入密码"
                   {...fieldProps('confirmPassword')}
                 />
-                <button
-                  type="button" className="password-toggle"
+                <Button
+                  type="button"
+                  className="password-toggle"
                   onClick={() => form.setShowConfirmPassword(!form.showConfirmPassword)}
                   tabIndex={-1}
                 >
                   {form.showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
               {form.fieldErrors.confirmPassword && <p className="error-message">{form.fieldErrors.confirmPassword}</p>}
             </div>
 
             <div className="button-group">
-              <button type="button" onClick={form.handleBack} className="back-button-step" data-testid="back-button">
+              <Button type="button" onClick={form.handleBack} variant="secondary" data-testid="back-button">
                 <ArrowLeft size={18} />
                 <span>返回</span>
-              </button>
-              <button type="submit" disabled={form.loading} className="submit-button">
+              </Button>
+              <Button type="submit" variant="primary" loading={form.loading}>
                 {form.loading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>注册中...</span>
-                  </>
+                  <span>注册中...</span>
                 ) : (
                   <>
                     <span>立即注册</span>
                     <ArrowRight size={18} className="button-arrow" />
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -334,9 +330,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       <div className="form-footer">
         <p className="login-text">
           已有账户？
-          <button onClick={() => navigate('/login')} className="login-link">
-            立即登录
-          </button>
+          <Button onClick={() => navigate('/login')} variant="ghost" className="login-link">
+             立即登录
+           </Button>
         </p>
       </div>
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Input } from '@/components/ui/Input';
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -43,13 +44,11 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
           <label className="block text-sm font-medium text-slate-700 mb-1">
             名称 *
           </label>
-          <input
+          <Input
             data-tour="folder-name-input"
-            type="text"
             value={folderName}
             onChange={(e) => onFolderNameChange(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && onCreate()}
-            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg"
             placeholder="请输入文件夹名称"
             autoFocus
           />

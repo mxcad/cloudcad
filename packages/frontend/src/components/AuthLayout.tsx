@@ -6,9 +6,10 @@ import { useBrandConfig } from '../contexts/BrandContext';
 import { Link } from 'react-router-dom';
 
 // 导入 lucide 图标
-import { Cpu } from 'lucide-react';
+import { Cpu, ArrowLeft } from 'lucide-react';
 import { Boxes } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -54,22 +55,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
       {/* 返回按钮 */}
       {showBackButton && onBack && (
-        <button className="back-button" onClick={onBack}>
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5" />
-            <path d="M12 19l-7-7 7-7" />
-          </svg>
+        <Button variant="ghost" icon={ArrowLeft} onClick={onBack} className="fixed top-6 left-6">
           <span>{backText}</span>
-        </button>
+        </Button>
       )}
 
       {/* 主内容区 */}
@@ -114,33 +102,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           top: 1.5rem;
           right: 1.5rem;
           z-index: 100; /* theme-toggle: local stacking */
-        }
-
-        /* ===== 返回按钮 ===== */
-        .back-button {
-          position: fixed;
-          top: 1.5rem;
-          left: 1.5rem;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.625rem 1rem;
-          background: var(--bg-secondary);
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-lg);
-          color: var(--text-secondary);
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          z-index: 100; /* theme-toggle: local stacking */
-          backdrop-filter: blur(10px);
-        }
-
-        .back-button:hover {
-          background: var(--bg-tertiary);
-          border-color: var(--border-strong);
-          transform: translateX(-2px);
         }
 
         /* ===== 主容器 - 居中布局 ===== */
@@ -281,11 +242,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           .theme-toggle-wrapper { 
             top: 1rem; 
             right: 1rem; 
-          }
-          
-          .back-button {
-            top: 1rem;
-            left: 1rem;
           }
         }
       `}</style>

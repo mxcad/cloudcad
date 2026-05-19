@@ -9,6 +9,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
+import { Input } from '@/components/ui/Input';
 
 
 interface ProfilePasswordTabProps {
@@ -54,7 +55,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               当前密码
             </label>
             <div className="input-wrapper">
-              <input
+              <Input
                 type={showPassword.old ? 'text' : 'password'}
                 name="oldPassword"
                 value={passwordForm.oldPassword}
@@ -108,7 +109,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             新密码
           </label>
           <div className="input-wrapper">
-            <input
+            <Input
               type={showPassword.new ? 'text' : 'password'}
               name="newPassword"
               value={passwordForm.newPassword}
@@ -156,7 +157,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             确认新密码
           </label>
           <div className="input-wrapper">
-            <input
+            <Input
               type={showPassword.confirm ? 'text' : 'password'}
               name="confirmPassword"
               value={passwordForm.confirmPassword}

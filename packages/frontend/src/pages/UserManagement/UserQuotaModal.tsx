@@ -4,6 +4,7 @@ import { User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
 
 interface UserQuotaModalProps {
   isOpen: boolean;
@@ -71,7 +72,7 @@ export function UserQuotaModal({
             <span>个人空间存储配额</span>
           </label>
           <div className="quota-input-wrapper">
-            <input
+            <Input
               type="number"
               value={quota}
               onChange={(e) => {
@@ -80,7 +81,6 @@ export function UserQuotaModal({
                   onQuotaChange(gb);
                 }
               }}
-              className="quota-input"
               min="0"
               step="1"
             />

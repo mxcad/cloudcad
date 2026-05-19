@@ -39,9 +39,10 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
       className="flex items-center gap-2 border-b"
       style={{ borderColor: 'var(--border-default)' }}
     >
-      <button
+      <Button
+        variant="ghost"
         onClick={() => isProjectTrashView && onToggleProjectTrashView()}
-        className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+        className={`border-b-2 ${
           !isProjectTrashView ? 'border-primary-600' : 'border-transparent'
         }`}
         style={{
@@ -49,10 +50,11 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
         }}
       >
         我的项目
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
         onClick={() => !isProjectTrashView && onToggleProjectTrashView()}
-        className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+        className={`border-b-2 ${
           isProjectTrashView ? 'border-primary-600' : 'border-transparent'
         }`}
         style={{
@@ -60,7 +62,7 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
         }}
       >
         项目回收站
-      </button>
+      </Button>
 
       {!isProjectTrashView && isProjectRootMode && (
         <div
@@ -68,17 +70,18 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
           style={{ borderColor: 'var(--border-default)' }}
         >
           {projectFilterTabs.map((tab) => (
-            <button
+            <Button
               key={tab.key}
+              variant="ghost"
+              size="sm"
               onClick={() => onProjectFilterChange(tab.key)}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
               style={{
                 background: projectFilter === tab.key ? 'var(--bg-tertiary)' : 'transparent',
                 color: projectFilter === tab.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
               }}
             >
               {tab.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}

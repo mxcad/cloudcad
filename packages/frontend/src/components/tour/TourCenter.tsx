@@ -15,6 +15,7 @@ import { useTour } from '../../contexts/TourContext';
 import type { TourGuide, TourCategory } from '../../types/tour';
 
 // Lucide 图标导入
+import { SearchInput } from '@/components/search/SearchInput';
 import { Search } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 import { Circle } from 'lucide-react';
@@ -282,33 +283,11 @@ export const TourCenter: React.FC<TourCenterProps> = ({
         </div>
 
         {/* 搜索框 */}
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--text-muted)' }}
-          />
-          <input
-            type="text"
-            placeholder="搜索引导流程..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 rounded-xl transition-all duration-200 outline-none"
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'var(--primary-500)';
-              e.target.style.boxShadow = '0 0 0 3px var(--primary-100)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'var(--border-default)';
-              e.target.style.boxShadow = 'none';
-            }}
-          />
-        </div>
+        <SearchInput
+          placeholder="搜索引导流程..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
 
         {/* 分类筛选 */}
         <div className="flex items-center gap-2 flex-wrap">

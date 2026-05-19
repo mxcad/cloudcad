@@ -28,6 +28,7 @@ import { Phone } from 'lucide-react';
 import { Cpu } from 'lucide-react';
 import { Boxes } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface LocationState {
   email?: string;
@@ -243,13 +244,14 @@ export const ResetPassword: React.FC = () => {
                   placeholder="新密码（至少8个字符）"
                   {...register('newPassword')}
                 />
-                <button
+                <Button
                   type="button"
-                  className="password-toggle"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-4"
+                  icon={showPassword ? EyeOff : Eye}
                   onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                />
                 <div className="input-glow" />
               </div>
             </div>
@@ -268,42 +270,28 @@ export const ResetPassword: React.FC = () => {
                   placeholder="请再次输入新密码"
                   {...register('confirmPassword')}
                 />
-                <button
+                <Button
                   type="button"
-                  className="password-toggle"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-4"
+                  icon={showConfirmPassword ? EyeOff : Eye}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
-                </button>
+                />
                 <div className="input-glow" />
               </div>
             </div>
 
-            <button type="submit" disabled={resetPassword.loading} className="submit-button">
-              {resetPassword.loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>重置中...</span>
-                </>
-              ) : (
-                <>
-                  <span>重置密码</span>
-                  <ArrowRight size={18} className="button-arrow" />
-                </>
-              )}
-            </button>
+            <Button type="submit" variant="primary" loading={resetPassword.loading} icon={ArrowRight}>
+              重置密码
+            </Button>
           </form>
 
           {/* 返回登录 */}
           <div className="form-footer">
-            <button onClick={() => navigate('/login')} className="back-link">
-              <ArrowLeft size={16} />
-              <span>返回登录</span>
-            </button>
+            <Button variant="ghost" icon={ArrowLeft} onClick={() => navigate('/login')}>
+              返回登录
+            </Button>
           </div>
 
           {/* 特性图标 */}
@@ -355,13 +343,7 @@ export const ResetPassword: React.FC = () => {
         .input-field:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
         .input-glow { position: absolute; inset: -2px; border-radius: 14px; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); opacity: 0; z-index: -1; transition: opacity 0.3s; filter: blur(8px); }
         .input-wrapper:focus-within .input-glow { opacity: 0.3; }
-        .password-toggle { position: absolute; right: 1rem; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: color 0.2s; z-index: 2; }
-        .password-toggle:hover { color: var(--text-secondary); }
-        .submit-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); border: none; border-radius: 12px; color: white; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
-        .submit-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); }
-        .submit-button:disabled { opacity: 0.7; cursor: not-allowed; }
         .button-arrow { transition: transform 0.2s; }
-        .submit-button:hover:not(:disabled) .button-arrow { transform: translateX(4px); }
         .form-footer { margin-top: 1.5rem; text-align: center; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); }
         .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-tertiary); background: none; border: none; font-size: 0.875rem; cursor: pointer; transition: color 0.2s; }
         .back-link:hover { color: var(--primary-500); }

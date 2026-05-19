@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Filter } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
+import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Pagination } from '../components/ui/Pagination';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
@@ -182,7 +184,7 @@ export const AuditLogPage: React.FC = () => {
     return RESOURCE_TYPE_MAP[resourceType] || resourceType;
   };
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil((total || 0) / limit);
 
   return (
     <div className="audit-page">
@@ -230,9 +232,8 @@ export const AuditLogPage: React.FC = () => {
             <label className="audit-label">
               用户 ID
             </label>
-            <input
+            <Input
               type="text"
-              className="audit-input"
               placeholder="输入用户 ID"
               value={filters.userId}
               onChange={(e) => handleFilterChange('userId', e.target.value)}
@@ -278,9 +279,8 @@ export const AuditLogPage: React.FC = () => {
             <label className="audit-label">
               资源 ID
             </label>
-            <input
+            <Input
               type="text"
-              className="audit-input"
               placeholder="输入资源 ID"
               value={filters.resourceId}
               onChange={(e) => handleFilterChange('resourceId', e.target.value)}
@@ -290,9 +290,8 @@ export const AuditLogPage: React.FC = () => {
             <label className="audit-label">
               开始日期
             </label>
-            <input
+            <Input
               type="date"
-              className="audit-input"
               value={filters.startDate}
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
             />
@@ -301,9 +300,8 @@ export const AuditLogPage: React.FC = () => {
             <label className="audit-label">
               结束日期
             </label>
-            <input
+            <Input
               type="date"
-              className="audit-input"
               value={filters.endDate}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
             />
@@ -430,33 +428,16 @@ export const AuditLogPage: React.FC = () => {
 
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="audit-pagination">
-            <div className="audit-pagination-info">
-              显示第 {(page - 1) * limit + 1} 到{' '}
-              {Math.min(page * limit, total)} 条，共 {total} 条
-            </div>
-            <div className="audit-pagination-controls">
-              <Button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                variant="outline"
-                size="sm"
-              >
-                上一页
-              </Button>
-              <span className="audit-page-indicator">
-                第 {page} / {totalPages} 页
-              </span>
-              <Button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                variant="outline"
-                size="sm"
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+          <Pagination
+            meta={{
+              total: total || 0,
+              page: page,
+              limit: limit,
+              totalPages: totalPages,
+            }}
+            onPageChange={(p) => setPage(p)}
+            simple
+          />
         )}
       </div>
     </div>

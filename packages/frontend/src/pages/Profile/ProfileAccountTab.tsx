@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
 import { WechatVerifyModal } from '../../components/WechatVerifyModal';
 import {
   authControllerSendSmsCode,
@@ -204,7 +205,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 密码验证
               </label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type={showPassword.confirm ? 'text' : 'password'}
                   value={deactivateForm.password}
                   onChange={(e) =>
@@ -281,7 +282,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 手机验证码
               </label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type="text"
                   value={deactivateForm.phoneCode}
                   onChange={(e) =>
@@ -347,7 +348,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 邮箱验证码
               </label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type="text"
                   value={deactivateForm.emailCode}
                   onChange={(e) =>

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Search } from 'lucide-react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 import { getRoleDisplayName } from '@/constants/permissions';
+import { SearchInput } from '@/components/search/SearchInput';
 
 interface RoleDto {
   id: string;
@@ -49,12 +50,10 @@ export function UserSearchBar({
       <div className="filters-grid">
         <div className="search-input-wrapper">
           <Search className="search-icon" size={20} />
-          <input
-            type="text"
+          <SearchInput
             placeholder="搜索用户（邮箱、用户名、昵称）"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="search-input"
           />
         </div>
 
@@ -93,30 +92,17 @@ export function UserSearchBar({
         </div>
       </div>
 
-      <div className="pagination-info">
-        <span className="pagination-text">
-          共 <strong>{totalUsers}</strong> 位用户，每页 {pageSize} 条
-        </span>
-        <div className="pagination-controls">
-          <button
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1 || loading}
-            className="pagination-btn"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="pagination-current">
-            {currentPage} / {totalPages || 1}
-          </span>
-          <button
-            onClick={() => onPageChange(Math.min(totalPages || 1, currentPage + 1))}
-            disabled={currentPage >= totalPages || loading}
-            className="pagination-btn"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        meta={{
+          total: totalUsers,
+          page: currentPage,
+          limit: pageSize,
+          totalPages: totalPages || 1,
+        }}
+        onPageChange={onPageChange}
+        simple
+        loading={loading}
+      />
     </div>
   );
 }

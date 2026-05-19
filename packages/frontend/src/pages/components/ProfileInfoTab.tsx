@@ -14,8 +14,10 @@ import {
   Save,
   X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { usePermission } from '../../hooks/usePermission';
 import { useProfileUpdate } from '../Profile/hooks/useProfileUpdate';
+import { Input } from '@/components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface ProfileInfoTabProps {
@@ -110,13 +112,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
         <>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-text-primary">个人信息</h2>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
-            >
-              <Edit size={16} />
+            <Button onClick={() => setIsEditing(true)} icon={Edit}>
               <span>编辑</span>
-            </button>
+            </Button>
           </div>
 
           <div className="info-grid">
@@ -242,7 +240,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
         <div className="edit-profile-form">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-text-primary">编辑个人信息</h2>
-            <button
+            <Button
+              variant="secondary"
+              icon={X}
               onClick={() => {
                 setIsEditing(false);
                 setFormData({
@@ -252,18 +252,16 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 setError(null);
                 setSuccess(null);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
             >
-              <X size={16} />
               <span>取消</span>
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="input-group">
               <label className="input-label">用户名</label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type="text"
                   name="username"
                   value={formData.username}
@@ -280,7 +278,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
             <div className="input-group">
               <label className="input-label">昵称</label>
               <div className="input-wrapper">
-                <input
+                <Input
                   type="text"
                   name="nickname"
                   value={formData.nickname}
@@ -292,26 +290,14 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
             </div>
 
             <div className="button-group">
-              <button
+              <Button
                 type="submit"
-                className="submit-button"
-                disabled={loading}
+                variant="primary"
+                loading={loading}
+                icon={Save}
               >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <span>保存中...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    <span>保存</span>
-                  </>
-                )}
-              </button>
+                {loading ? <span>保存中...</span> : <span>保存</span>}
+              </Button>
             </div>
           </form>
         </div>
@@ -351,27 +337,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
           color: var(--text-secondary);
           margin-bottom: 0.5rem;
         }
-        .input-wrapper input {
-          width: 100%;
-          padding: 0.875rem 1rem;
-          background: var(--bg-secondary);
-          border: 1px solid var(--border-default);
-          border-radius: 12px;
-          color: var(--text-primary);
-          font-size: 0.9375rem;
-          transition: all 0.2s;
-          outline: none;
-        }
-        .input-wrapper input:hover {
-          border-color: var(--border-strong);
-        }
-        .input-wrapper input:focus {
-          border-color: var(--primary-500);
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-        .input-wrapper input::placeholder {
-          color: var(--text-muted);
-        }
+
         .button-group {
           display: flex;
           gap: 1rem;

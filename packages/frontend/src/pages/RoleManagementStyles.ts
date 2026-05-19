@@ -109,56 +109,6 @@ export const roleManagementStyles = `
   }
 
   /* ===== 搜索框 ===== */
-  .search-input-wrapper {
-    position: relative;
-    flex: 0 0 320px;
-  }
-
-  .search-icon {
-    position: absolute;
-    left: var(--space-4);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    transition: all 0.2s ease;
-  }
-
-  .search-input-wrapper:focus-within .search-icon {
-    color: var(--primary-500);
-    transform: translateY(-50%) scale(1.1);
-  }
-
-  .search-input {
-    width: 100%;
-    padding: var(--space-3) var(--space-4) var(--space-3) 2.75rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-    color: var(--text-primary);
-    font-size: 0.9375rem;
-    transition: all 0.25s ease;
-    outline: none;
-  }
-
-  .search-input::placeholder {
-    color: var(--text-muted);
-  }
-
-  .search-input:hover {
-    border-color: var(--border-strong);
-    background: var(--bg-secondary);
-  }
-
-  .search-input:focus {
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100), var(--shadow-md);
-    background: var(--bg-secondary);
-  }
-
-  [data-theme="dark"] .search-input:focus {
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), var(--shadow-md);
-  }
-
   /* ===== Tab 切换 ===== */
   .tabs-container {
     display: flex;
@@ -600,11 +550,6 @@ export const roleManagementStyles = `
     .page-title-icon {
       width: 48px;
       height: 48px;
-    }
-
-    .search-input-wrapper {
-      flex: 1;
-      width: 100%;
     }
 
     .tabs-container {

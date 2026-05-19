@@ -154,7 +154,6 @@
   margin-bottom: var(--space-1);
 }
 
-.audit-input,
 .audit-select {
   width: 100%;
   padding: var(--space-2) var(--space-3);
@@ -168,23 +167,16 @@
   box-sizing: border-box;
 }
 
-.audit-input::placeholder {
-  color: var(--text-muted);
-}
-
-.audit-input:hover,
 .audit-select:hover {
   border-color: var(--border-strong);
 }
 
-.audit-input:focus,
 .audit-select:focus {
   outline: none;
   border-color: var(--primary-500);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
-[data-theme="dark"] .audit-input:focus,
 [data-theme="dark"] .audit-select:focus {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
 }
@@ -305,51 +297,17 @@
 }
 
 /* ----------------------------------------
-   10. 分页
-   ---------------------------------------- */
-.audit-pagination {
-  background: var(--bg-tertiary);
-  padding: var(--space-3) var(--space-6);
-  border-top: 1px solid var(--border-default);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.audit-pagination-info {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.audit-pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.audit-page-indicator {
-  padding: 0 var(--space-3);
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-/* ----------------------------------------
-   11. 加载/空状态
+   10. 加载/空状态
    ---------------------------------------- */
 .audit-loading-text {
   color: var(--text-muted);
 }
 
 /* ----------------------------------------
-   12. 响应式
+   11. 响应式
    ---------------------------------------- */
 @media (max-width: 640px) {
   .audit-page {
     padding: var(--space-4);
-  }
-
-  .audit-pagination {
-    flex-direction: column;
-    gap: var(--space-3);
   }
 }

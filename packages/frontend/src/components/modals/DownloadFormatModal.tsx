@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Input } from '@/components/ui/Input';
 import { File } from 'lucide-react';
 import { Download } from 'lucide-react';
 
@@ -211,18 +212,11 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                 >
                   宽度（像素）
                 </label>
-                <input
-                  type="text"
+                <Input
                   value={pdfOptions.width}
                   onChange={(e) =>
                     setPdfOptions({ ...pdfOptions, width: e.target.value })
                   }
-                  className="w-full px-3 py-2 rounded-md text-sm"
-                  style={{
-                    backgroundColor: 'var(--bg-secondary, #ffffff)',
-                    border: '1px solid var(--border-default, #e2e8f0)',
-                    color: 'var(--text-primary, #0f172a)',
-                  }}
                   placeholder="2000"
                 />
               </div>
@@ -233,18 +227,11 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                 >
                   高度（像素）
                 </label>
-                <input
-                  type="text"
+                <Input
                   value={pdfOptions.height}
                   onChange={(e) =>
                     setPdfOptions({ ...pdfOptions, height: e.target.value })
                   }
-                  className="w-full px-3 py-2 rounded-md text-sm"
-                  style={{
-                    backgroundColor: 'var(--bg-secondary, #ffffff)',
-                    border: '1px solid var(--border-default, #e2e8f0)',
-                    color: 'var(--text-primary, #0f172a)',
-                  }}
                   placeholder="2000"
                 />
               </div>

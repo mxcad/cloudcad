@@ -7,6 +7,7 @@ import React from 'react';
 import { Save, RotateCcw, Loader2, Eye, Sparkles } from 'lucide-react';
 import type { ConfigGroup } from './hooks/useRuntimeConfig';
 import { ConfigInput } from './ConfigInput';
+import { Button } from '@/components/ui/Button';
 
 interface ConfigCardProps {
   group: ConfigGroup;
@@ -110,19 +111,16 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                   )}
 
                   <div className="action-buttons">
-                    <button
-                      type="button"
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={Save}
                       onClick={() => { void onSave(item.key); }}
-                      disabled={!hasChanges || isSavingItem || !canManageConfig}
+                      disabled={!hasChanges || !canManageConfig}
+                      loading={isSavingItem}
                       className={`action-btn save-btn ${hasChanges && !isSavingItem ? 'active' : ''}`}
                       title="保存"
-                    >
-                      {isSavingItem ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Save size={16} />
-                      )}
-                    </button>
+                    />
 
                     {item.type === 'boolean' && (
                       <ConfigInput
@@ -135,15 +133,15 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                       />
                     )}
 
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={RotateCcw}
                       onClick={() => { void onReset(item.key); }}
                       disabled={isSavingItem || !canManageConfig}
                       className="action-btn reset-btn"
                       title="重置为默认值"
-                    >
-                      <RotateCcw size={16} />
-                    </button>
+                    />
                   </div>
                 </div>
               </div>

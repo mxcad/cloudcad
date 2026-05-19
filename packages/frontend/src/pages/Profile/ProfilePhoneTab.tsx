@@ -1,6 +1,7 @@
 import React from 'react';
 import { Phone, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
+import { Input } from '@/components/ui/Input';
 
 
 interface ProfilePhoneTabProps {
@@ -96,7 +97,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               验证码
             </label>
             <div className="input-wrapper has-button">
-              <input
+              <Input
                 type="text"
                 name="code"
                 value={phoneForm.code}
@@ -176,7 +177,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               {isRebind && phoneStep === 'verifyNew' ? '新手机号' : '手机号'}
             </label>
             <div className="input-wrapper has-button">
-              <input
+              <Input
                 type="text"
                 name="phone"
                 value={phoneForm.phone}
@@ -214,7 +215,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 验证码
               </label>
               <div className="input-wrapper has-button">
-                <input
+                <Input
                   type="text"
                   name="code"
                   value={phoneForm.code}

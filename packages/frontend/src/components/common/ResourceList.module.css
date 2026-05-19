@@ -1,4 +1,4 @@
-/* ==================== 资源列表组件 - 主题适配�?==================== */
+﻿/* ==================== 璧勬簮鍒楄〃缁勪欢 - 涓婚閫傞厤锟?==================== */
 
 .resourceList {
   display: flex;
@@ -10,7 +10,7 @@
   border: none;
 }
 
-/* ==================== 标题�?==================== */
+/* ==================== 鏍囬锟?==================== */
 
 .header {
   display: flex;
@@ -25,7 +25,7 @@
   border-radius: 0;
 }
 
-/* ==================== 面包屑包装器 ==================== */
+/* ==================== 闈㈠寘灞戝寘瑁呭櫒 ==================== */
 
 .breadcrumbWrapper {
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
@@ -35,7 +35,7 @@
   white-space: nowrap;
 }
 
-/* ==================== 工具�?==================== */
+/* ==================== 宸ュ叿锟?==================== */
 
 .toolbar {
   display: flex;
@@ -119,7 +119,7 @@
   box-shadow: 0 1px 3px rgba(0, 156, 255, 0.2);
 }
 
-/* ==================== 分类筛�?==================== */
+/* ==================== 鍒嗙被绛涳拷?==================== */
 
 .categoryFilter {
   display: flex;
@@ -146,7 +146,7 @@
 }
 
 
-/* ==================== 内容区域 ==================== */
+/* ==================== 鍐呭鍖哄煙 ==================== */
 
 .content {
   flex: 1;
@@ -155,7 +155,7 @@
   background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
 }
 
-/* ==================== 加载状�?==================== */
+/* ==================== 鍔犺浇鐘讹拷?==================== */
 
 .loadingState {
   display: flex;
@@ -180,7 +180,7 @@
   }
 }
 
-/* ==================== 空状�?==================== */
+/* ==================== 绌虹姸锟?==================== */
 
 .emptyState {
   display: flex;
@@ -201,7 +201,7 @@
   text-align: center;
 }
 
-/* ==================== 列表视图 ==================== */
+/* ==================== 鍒楄〃瑙嗗浘 ==================== */
 
 .listView {
   display: flex;
@@ -209,7 +209,7 @@
   gap: 4px;
 }
 
-/* 图库模式列表视图 */
+/* 鍥惧簱妯″紡鍒楄〃瑙嗗浘 */
 .listViewGallery {
   display: flex;
   flex-direction: column;
@@ -228,14 +228,14 @@
   position: relative;
 }
 
-/* 图库模式列表�?- 更小的内边距和间�?*/
+/* 鍥惧簱妯″紡鍒楄〃锟?- 鏇村皬鐨勫唴杈硅窛鍜岄棿锟?*/
 .listViewGallery .listItem {
   gap: var(--space-2);
   padding: 6px 10px;
   border-radius: var(--radius-md);
 }
 
-/* 悬停光效背景 */
+/* 鎮仠鍏夋晥鑳屾櫙 */
 .listItem::before {
   content: '';
   position: absolute;
@@ -256,7 +256,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* 深色主题悬停效果 */
+/* 娣辫壊涓婚鎮仠鏁堟灉 */
 [data-theme="dark"] .listItem:hover {
   background: rgba(0, 156, 255, 0.08);
   border-color: rgba(0, 156, 255, 0.2);
@@ -268,7 +268,7 @@
   box-shadow: inset 3px 0 0 var(--info);
 }
 
-/* 深色主题激活状�?*/
+/* 娣辫壊涓婚婵€娲荤姸锟?*/
 [data-theme="dark"] .listItem.active {
   background: rgba(0, 156, 255, 0.12);
   border-color: rgba(0, 156, 255, 0.25);
@@ -293,7 +293,7 @@
   transition: all 0.2s ease;
 }
 
-/* 图库模式列表项图�?- 更大的图�?*/
+/* 鍥惧簱妯″紡鍒楄〃椤瑰浘锟?- 鏇村ぇ鐨勫浘锟?*/
 .listViewGallery .itemIcon {
   width: 64px;
   height: 64px;
@@ -306,7 +306,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* 深色主题图标背景 */
+/* 娣辫壊涓婚鍥炬爣鑳屾櫙 */
 [data-theme="dark"] .itemIcon {
   background: linear-gradient(
     135deg,
@@ -360,7 +360,7 @@
   flex-shrink: 0;
 }
 
-/* 操作按钮区域 */
+/* 鎿嶄綔鎸夐挳鍖哄煙 */
 .listItemActions {
   display: flex;
   align-items: center;
@@ -369,7 +369,7 @@
   z-index: 1;
 }
 
-/* 下载按钮 */
+/* 涓嬭浇鎸夐挳 */
 .downloadButton {
   display: flex;
   align-items: center;
@@ -407,7 +407,7 @@
   box-shadow: 0 0 8px rgba(0, 156, 255, 0.2);
 }
 
-/* 删除按钮 */
+/* 鍒犻櫎鎸夐挳 */
 .deleteButton {
   display: flex;
   align-items: center;
@@ -445,7 +445,7 @@
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
 }
 
-/* ==================== 网格视图 ==================== */
+/* ==================== 缃戞牸瑙嗗浘 ==================== */
 
 .gridView {
   display: grid;
@@ -453,7 +453,7 @@
   gap: var(--space-3);
 }
 
-/* 图库模式网格视图 - 固定宽度卡片 */
+/* 鍥惧簱妯″紡缃戞牸瑙嗗浘 - 鍥哄畾瀹藉害鍗＄墖 */
 .gridViewGallery {
   display: flex;
   flex-wrap: wrap;
@@ -461,7 +461,7 @@
   gap: 8px;
 }
 
-/* 图库模式网格视图中的卡片 - 固定宽度 */
+/* 鍥惧簱妯″紡缃戞牸瑙嗗浘涓殑鍗＄墖 - 鍥哄畾瀹藉害 */
 .gridViewGallery > * {
   width: 120px;
   flex-shrink: 0;
@@ -479,7 +479,7 @@
   position: relative;
 }
 
-/* 悬停光效 */
+/* 鎮仠鍏夋晥 */
 .gridItem::after {
   content: '';
   position: absolute;
@@ -502,7 +502,7 @@
   transform: translateY(-3px);
 }
 
-/* 深色主题悬停 */
+/* 娣辫壊涓婚鎮仠 */
 [data-theme="dark"] .gridItem:hover {
   border-color: rgba(0, 156, 255, 0.4);
   box-shadow: 
@@ -518,7 +518,7 @@
     0 4px 16px rgba(0, 156, 255, 0.15);
 }
 
-/* 深色主题激活状�?*/
+/* 娣辫壊涓婚婵€娲荤姸锟?*/
 [data-theme="dark"] .gridItem.active {
   background: rgba(0, 156, 255, 0.12);
   border-color: rgba(0, 156, 255, 0.5);
@@ -544,7 +544,7 @@
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 图库模式网格�?*/
+/* 鍥惧簱妯″紡缃戞牸锟?*/
 .gridItemGallery {
   display: flex;
   flex-direction: column;
@@ -619,7 +619,7 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-/* 网格视图删除按钮 */
+/* 缃戞牸瑙嗗浘鍒犻櫎鎸夐挳 */
 .gridDeleteButton {
   position: absolute;
   top: 6px;
@@ -652,7 +652,7 @@
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
-/* 网格视图版本历史按钮 */
+/* 缃戞牸瑙嗗浘鐗堟湰鍘嗗彶鎸夐挳 */
 .gridVersionButton {
   position: absolute;
   top: 6px;
@@ -667,7 +667,7 @@
   transform: scale(1);
 }
 
-/* 网格视图下载按钮 */
+/* 缃戞牸瑙嗗浘涓嬭浇鎸夐挳 */
 .gridDownloadButton {
   position: absolute;
   top: 6px;
@@ -724,7 +724,7 @@
   gap: var(--space-2);
 }
 
-/* ==================== 底部分页�?==================== */
+/* ==================== 搴曢儴鍒嗛〉锟?==================== */
 
 .footer {
   display: flex;
@@ -741,7 +741,7 @@
   display: none;
 }
 
-/* ==================== 滚动加载 ==================== */
+/* ==================== 婊氬姩鍔犺浇 ==================== */
 
 .loadMoreTrigger {
   display: flex;
@@ -769,7 +769,7 @@
   padding: var(--space-2) 0;
 }
 
-/* ==================== 级联分类选择�?==================== */
+/* ==================== 绾ц仈鍒嗙被閫夋嫨锟?==================== */
 
 .cascadeSelector {
   position: relative;
@@ -849,7 +849,7 @@
   transform: scale(1.1);
 }
 
-/* 级联面板 */
+/* 绾ц仈闈㈡澘 */
 .cascadePanel {
   position: absolute;
   top: calc(100% + 6px);
@@ -867,13 +867,13 @@
   overflow: hidden;
 }
 
-/* 向上弹出 */
+/* 鍚戜笂寮瑰嚭 */
 .cascadePanel.openUp {
   top: auto;
   bottom: calc(100% + 6px);
 }
 
-/* 紧凑布局：垂直堆叠 */
+/* 绱у噾甯冨眬锛氬瀭鐩村爢鍙?*/
 .cascadePanel.compact {
   flex-direction: column;
   min-width: 100%;
@@ -892,7 +892,7 @@
   border-right: none;
 }
 
-/* 紧凑布局下的列样�?*/
+/* 绱у噾甯冨眬涓嬬殑鍒楁牱锟?*/
 .cascadePanel.compact .cascadeColumn {
   max-width: 100%;
   border-right: none;
@@ -920,7 +920,7 @@
   max-height: 300px;
 }
 
-/* 紧凑布局下减小每列高度 */
+/* 绱у噾甯冨眬涓嬪噺灏忔瘡鍒楅珮搴?*/
 .cascadePanel.compact .cascadeColumnContent {
   max-height: 240px;
 }
@@ -971,7 +971,7 @@
   color: var(--info);
 }
 
-/* 响应式：小屏幕时垂直排列 */
+/* 鍝嶅簲寮忥細灏忓睆骞曟椂鍨傜洿鎺掑垪 */
 @media (max-width: 480px) {
   .cascadePanel {
     flex-direction: column;
@@ -996,13 +996,13 @@
   }
 }
 
-/* ==================== 自定义渲染项包装�?==================== */
+/* ==================== 鑷畾涔夋覆鏌撻」鍖呰锟?==================== */
 
 .renderItemWrapper {
   cursor: pointer;
 }
 
-/* ==================== 双击提示 ==================== */
+/* ==================== 鍙屽嚮鎻愮ず ==================== */
 
 .doubleClickTip {
   position: fixed;
@@ -1033,7 +1033,7 @@
   }
 }
 
-/* ==================== 总数显示 ==================== */
+/* ==================== 鎬绘暟鏄剧ず ==================== */
 
 .totalCount {
   display: flex;
@@ -1049,176 +1049,8 @@
   color: var(--text-secondary, #8b95a5);
 }
 
-/* ==================== 分页控件 ==================== */
 
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex: 1;
-  justify-content: center;
-}
-
-.paginationNumbers {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-  justify-content: center;
-  min-width: 0;
-}
-
-.paginationEllipsis {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 21px;
-  color: var(--text-muted, #5a6a7a);
-  font-size: 0.6875rem;
-  user-select: none;
-}
-
-.paginationButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 21px;
-  height: 21px;
-  padding: 0 var(--space-1);
-  color: var(--text-secondary, #8b95a5);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-
-.paginationButton:hover:not(:disabled) {
-  color: var(--text-primary, #e8eaed);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.paginationButton:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.paginationButtonActive {
-  color: var(--primary-500, #009cff);
-  background: rgba(0, 156, 255, 0.15);
-  font-weight: 600;
-}
-
-.paginationButtonActive:hover:not(:disabled) {
-  color: var(--primary-400, #33b4ff);
-  background: rgba(0, 156, 255, 0.25);
-}
-
-.paginationInfo {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.6875rem;
-  color: var(--text-muted, #5a6a7a);
-  white-space: nowrap;
-  padding: 0 var(--space-2);
-}
-
-.paginationCurrent {
-  font-weight: 600;
-  color: var(--text-secondary, #8b95a5);
-}
-
-.paginationJump {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.paginationJumpLabel {
-  font-size: 0.6875rem;
-  color: var(--text-secondary, #8b95a5);
-  white-space: nowrap;
-}
-
-.paginationInput {
-  width: 36px;
-  height: 21px;
-  padding: 0 var(--space-1);
-  font-size: 0.6875rem;
-  color: var(--text-primary, #e8eaed);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--sidebar-border, #212832);
-  border-radius: var(--radius-sm);
-  outline: none;
-  text-align: center;
-  transition: all 0.15s ease;
-}
-
-.paginationInput::placeholder {
-  color: var(--text-muted, #5a6a7a);
-  font-size: 0.625rem;
-}
-
-.paginationInput:focus {
-  border-color: rgba(0, 156, 255, 0.5);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.paginationInput::-webkit-outer-spin-button,
-.paginationInput::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.paginationInput[type="number"] {
-  -moz-appearance: textfield;
-}
-
-.paginationJumpButton {
-  height: 21px;
-  padding: 0 var(--space-2);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--text-secondary, #8b95a5);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.paginationJumpButton:hover {
-  color: var(--text-primary, #e8eaed);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* 窄屏幕模式样�?*/
-.paginationNarrow {
-  gap: 2px;
-}
-
-.paginationNarrow .paginationJump {
-  gap: 2px;
-}
-
-.paginationNarrow .paginationJumpLabel {
-  font-size: 0.625rem;
-}
-
-.paginationNarrow .paginationInput {
-  width: 32px;
-}
-
-.paginationJumpButtonNarrow {
-  padding: 0 var(--space-1);
-  font-size: 0.625rem;
-}
-
-/* ==================== 紧凑布局分类选择�?==================== */
+/* ==================== 绱у噾甯冨眬鍒嗙被閫夋嫨锟?==================== */
 
 .cascadeSelectGroup {
   display: flex;

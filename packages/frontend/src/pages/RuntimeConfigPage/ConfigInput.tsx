@@ -5,6 +5,8 @@
 
 import React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import type { RuntimeConfigResponseDto } from '@/api-sdk';
 import { isSensitiveKey, getConfigUnit, parseValue } from './hooks/useRuntimeConfig';
 
@@ -32,25 +34,24 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
 
   if (item.type === 'boolean') {
     return (
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={() => onValueChange(item.key, !value)}
         className={`toggle-switch ${value ? 'active' : ''}`}
         disabled={!canManageConfig}
       >
         <span className="toggle-handle" />
-      </button>
+      </Button>
     );
   }
 
   if (item.type === 'number') {
     return (
       <div className="number-input-wrapper">
-        <input
+        <Input
           type="number"
           value={value as number}
           onChange={(e) => onValueChange(item.key, Number(e.target.value))}
-          className={`config-input number-input ${unit ? 'has-unit' : ''}`}
           disabled={!canManageConfig}
           min={0}
         />
@@ -62,32 +63,30 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   if (isSensitive) {
     return (
       <div className="sensitive-input-wrapper">
-        <input
+        <Input
           type={isHidden ? 'password' : 'text'}
           value={value as string}
           onChange={(e) => onValueChange(item.key, e.target.value)}
-          className="config-input sensitive-input"
           disabled={!canManageConfig}
           placeholder="••••••••"
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={isHidden ? EyeOff : Eye}
           onClick={() => onToggleVisibility(item.key)}
           className="visibility-toggle"
           tabIndex={-1}
-        >
-          {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
+        />
       </div>
     );
   }
 
   return (
-    <input
+    <Input
       type="text"
       value={value as string}
       onChange={(e) => onValueChange(item.key, e.target.value)}
-      className="config-input"
       disabled={!canManageConfig}
       placeholder="请输入..."
     />

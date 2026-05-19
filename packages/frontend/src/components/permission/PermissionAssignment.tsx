@@ -15,6 +15,7 @@ import { AlertCircle } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Input } from '@/components/ui/Input';
 import {
   PERMISSION_GROUPS,
   isPermissionEnabled,
@@ -235,11 +236,9 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
           <div className="form-grid">
             <div className="form-field">
               <label className="field-label">角色名称</label>
-              <input
+              <Input
                 data-tour="role-name-input"
-                type="text"
                 placeholder="请输入角色名称"
-                className="field-input"
                 value={roleName}
                 onChange={(e) => onNameChange(e.target.value)}
                 disabled={isSystemRole && isEditingSystemRole}
@@ -247,10 +246,8 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
             </div>
             <div className="form-field">
               <label className="field-label">角色描述</label>
-              <input
-                type="text"
+              <Input
                 placeholder="请输入角色描述（可选）"
-                className="field-input"
                 value={roleDesc}
                 onChange={(e) => onDescChange(e.target.value)}
                 disabled={isSystemRole && isEditingSystemRole}

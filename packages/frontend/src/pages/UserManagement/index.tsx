@@ -342,10 +342,9 @@ export const UserManagement = () => {
         <div className="error-banner">
           <XCircle size={18} />
           <span>{error}</span>
-          <button onClick={loadUsers} disabled={loading} className="error-retry-btn">
-            <RefreshCw size={14} />
+          <Button onClick={loadUsers} loading={loading} variant="secondary" icon={RefreshCw} className="error-retry-btn">
             重试
-          </button>
+          </Button>
         </div>
       )}
 
@@ -380,18 +379,20 @@ export const UserManagement = () => {
 
       {hasPermission(SystemPermission.SYSTEM_USER_READ) && (
         <div className="user-tabs">
-          <button
+          <Button
+            variant="ghost"
             className={`user-tab ${userTab === 'active' ? 'active' : ''}`}
             onClick={() => { setUserTab('active'); setCurrentPage(1); }}
           >
             活跃用户
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             className={`user-tab ${userTab === 'deleted' ? 'active' : ''}`}
             onClick={() => { setUserTab('deleted'); setCurrentPage(1); }}
           >
             已注销
-          </button>
+          </Button>
         </div>
       )}
 

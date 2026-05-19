@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
 import { getRoleDisplayName } from '@/constants/permissions';
+import { Input } from '@/components/ui/Input';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -61,15 +62,14 @@ export function EditUserModal({
         <div className="form-row">
           <div className={`form-group ${formErrors.username ? 'has-error' : ''}`}>
             <label className="form-label">用户名</label>
-            <input type="text" value={formData.username} disabled className="form-input" />
+            <Input type="text" value={formData.username} disabled />
           </div>
           <div className={`form-group ${formErrors.email ? 'has-error' : ''}`}>
             <label className="form-label">邮箱 {mailEnabled && <span className="required">*</span>}</label>
-            <input
+            <Input
               type="email"
               value={formData.email}
               onChange={(e) => onFormChange('email', e.target.value)}
-              className="form-input"
             />
             {formErrors.email && <span className="error-text">{formErrors.email}</span>}
           </div>
@@ -77,22 +77,20 @@ export function EditUserModal({
         <div className="form-row">
           <div className={`form-group ${formErrors.password ? 'has-error' : ''}`}>
             <label className="form-label">新密码 <span className="optional">（留空则不修改）</span></label>
-            <input
+            <Input
               type="password"
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
-              className="form-input"
               placeholder="留空保持原密码"
             />
             {formErrors.password && <span className="error-text">{formErrors.password}</span>}
           </div>
           <div className="form-group">
             <label className="form-label">昵称</label>
-            <input
+            <Input
               type="text"
               value={formData.nickname}
               onChange={(e) => onFormChange('nickname', e.target.value)}
-              className="form-input"
             />
           </div>
         </div>

@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
-import { RefreshIcon, SearchIcon, GridIcon, ListIcon } from '../FileIcons';
+import { RefreshIcon, GridIcon, ListIcon } from '../FileIcons';
+import { SearchInput } from '@/components/search/SearchInput';
 import { FolderPlus } from 'lucide-react';
 import { BreadcrumbNavigation } from '../BreadcrumbNavigation';
 import { BreadcrumbItem } from '../../types/filesystem';
@@ -167,61 +168,12 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
-        <div className="relative group flex-1 max-w-xs">
-          <SearchIcon
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors"
-          />
-          <input
-            type="text"
-            placeholder="搜索文件或项目..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSearchSubmit();
-              }
-            }}
-            className="w-full pl-9 pr-20 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                title="清除搜索"
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={handleSearchSubmit}
-              className="text-primary-500 hover:text-primary-600 transition-colors p-1"
-              title="搜索"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <SearchInput
+          placeholder="搜索文件或项目..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onSearch={() => handleSearchSubmit()}
+        />
 
         <div className="flex items-center gap-3">
           <Button

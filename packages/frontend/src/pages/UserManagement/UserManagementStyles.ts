@@ -234,56 +234,6 @@ export const userManagementStyles = `
     flex-wrap: wrap;
   }
 
-  .search-input-wrapper {
-    position: relative;
-    flex: 0 0 320px;
-  }
-
-  .search-icon {
-    position: absolute;
-    left: var(--space-4);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    transition: all 0.2s ease;
-  }
-
-  .search-input-wrapper:focus-within .search-icon {
-    color: var(--primary-500);
-    transform: translateY(-50%) scale(1.1);
-  }
-
-  .search-input {
-    width: 100%;
-    padding: var(--space-3) var(--space-4) var(--space-3) 2.75rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-    color: var(--text-primary);
-    font-size: 0.9375rem;
-    transition: all 0.25s ease;
-    outline: none;
-  }
-
-  .search-input::placeholder {
-    color: var(--text-muted);
-  }
-
-  .search-input:hover {
-    border-color: var(--border-strong);
-    background: var(--bg-secondary);
-  }
-
-  .search-input:focus {
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100), var(--shadow-md);
-    background: var(--bg-secondary);
-  }
-
-  [data-theme="dark"] .search-input:focus {
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), var(--shadow-md);
-  }
-
   .filter-select-wrapper {
     flex: 0 0 180px;
   }
@@ -314,66 +264,6 @@ export const userManagementStyles = `
   .filter-select:focus {
     border-color: var(--primary-500);
     box-shadow: 0 0 0 3px var(--primary-100);
-  }
-
-  /* ===== 分页 ===== */
-  .pagination-info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: var(--space-4);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--border-subtle);
-  }
-
-  .pagination-text {
-    font-size: 0.875rem;
-    color: var(--text-tertiary);
-  }
-
-  .pagination-text strong {
-    color: var(--text-primary);
-    font-weight: 600;
-  }
-
-  .pagination-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .pagination-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .pagination-btn:hover:not(:disabled) {
-    border-color: var(--primary-300);
-    color: var(--primary-600);
-    background: var(--primary-50);
-  }
-
-  .pagination-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .pagination-current {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-primary);
-    padding: 0 var(--space-2);
-    min-width: 60px;
-    text-align: center;
   }
 
   /* ===== 用户表格容器 ===== */
@@ -783,7 +673,6 @@ export const userManagementStyles = `
     gap: var(--space-2);
   }
 
-  .form-group.has-error .form-input,
   .form-group.has-error .form-select {
     border-color: var(--error);
     box-shadow: 0 0 0 3px var(--error-dim);
@@ -805,7 +694,6 @@ export const userManagementStyles = `
     font-size: 0.8125rem;
   }
 
-  .form-input,
   .form-select {
     width: 100%;
     padding: var(--space-3) var(--space-4);
@@ -818,25 +706,13 @@ export const userManagementStyles = `
     outline: none;
   }
 
-  .form-input::placeholder {
-    color: var(--text-muted);
-  }
-
-  .form-input:hover,
   .form-select:hover {
     border-color: var(--border-strong);
   }
 
-  .form-input:focus,
   .form-select:focus {
     border-color: var(--primary-500);
     box-shadow: 0 0 0 3px var(--primary-100);
-  }
-
-  .form-input:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: var(--bg-tertiary);
   }
 
   .error-text {
@@ -1054,11 +930,6 @@ export const userManagementStyles = `
       height: 48px;
     }
 
-    .search-input-wrapper {
-      flex: 1;
-      width: 100%;
-    }
-
     .filter-select-wrapper {
       flex: 1;
       width: 100%;
@@ -1079,16 +950,6 @@ export const userManagementStyles = `
 
     .form-row {
       grid-template-columns: 1fr;
-    }
-
-    .pagination-info {
-      flex-direction: column;
-      gap: var(--space-3);
-      align-items: stretch;
-    }
-
-    .pagination-controls {
-      justify-content: center;
     }
   }
 

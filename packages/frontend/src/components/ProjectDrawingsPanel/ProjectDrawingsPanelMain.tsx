@@ -33,9 +33,10 @@ import { useFileSystemUI } from '@/hooks/file-system/useFileSystemUI';
 import { useFileSystemCRUD } from '@/hooks/file-system/useFileSystemCRUD';
 import { useFileSystemNavigation } from '@/hooks/file-system/useFileSystemNavigation';
 import { useLibraryOperations } from '@/hooks/library/useLibraryOperations';
+import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 import { DownloadFormatModal } from '@/components/modals/DownloadFormatModal';
 import { RenameModal } from '@/components/modals/RenameModal';
 import { MembersModal } from '@/components/modals/MembersModal';
@@ -136,14 +137,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   // UI hook
-  const { toasts, confirmDialog, showToast, removeToast, showConfirm: showConfirmUI, closeConfirm } = useFileSystemUI();
-
-  const showConfirm = useCallback(
-    (title: string, message: string, onConfirm: () => Promise<void> | void, type?: 'danger' | 'warning' | 'info' | 'success', confirmText?: string) => {
-      showConfirmUI(title, message, () => { onConfirm(); }, type === 'success' ? 'warning' : type, confirmText);
-    },
-    [showConfirmUI]
-  );
+  const { toasts, showToast, removeToast } = useFileSystemUI();
+  const { showConfirm } = useConfirmDialog();
 
   const isProjectTrashViewRef = React.useRef(false);
 
@@ -602,8 +597,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         document.body
       )}
 
-      <ConfirmDialog isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} confirmText={confirmDialog.confirmText || '确定'} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm} type={confirmDialog.type} />
-
       {/* 项目列表视图 — 我的项目 tab 初始状态 */}
       <div className={`${styles.subTabPanel} ${showProjectList ? styles.active : ''}`}>
         <ProjectListView
@@ -611,14 +604,18 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           onProjectFilterChange={setProjectFilter} nodePermissions={nodePermissions}
           onEnterProject={handleEnterProject} onEditProject={handleEditProject}
           onShowMembers={handleShowMembers} onShowRoles={handleShowRoles}
-          onDeleteProject={(project) => {
+          onDeleteProject={async (project) => {
             const perms = nodePermissions.get(project.id);
-            if (perms?.canDelete) {
-              showConfirm('删除项目', `确定要删除项目"${project.name}"吗？删除后将移至回收站。`, async () => {
-                await handleDelete(project, false);
-                refreshNodes();
-              }, 'danger', '删除');
-            }
+            if (!perms?.canDelete) return;
+            const confirmed = await showConfirm({
+              title: '删除项目',
+              message: `确定要删除项目"${project.name}"吗？删除后将移至回收站。`,
+              type: 'danger',
+              confirmText: '删除',
+            });
+            if (!confirmed) return;
+            await handleDelete(project, false);
+            refreshNodes();
           }}
           onRefresh={refreshNodes}
         />
@@ -654,7 +651,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           ) : undefined
           }
           renderItem={renderFileItem}
-          toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><button onClick={refreshNodes} disabled={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button></Tooltip>}
+          toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><Button variant="ghost" size="sm" onClick={refreshNodes} loading={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></Button></Tooltip>}
           loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
         />
         <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />
