@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { RefreshCw, X, UserPlus, AlertCircle, Loader2, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 import { Modal } from '@/components/ui/Modal';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { TruncateText } from '@/components/ui/TruncateText';
@@ -656,15 +657,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       </p>
                     </div>
                     {isOwner ? (
-                      <span
-                        className="px-2 py-1 text-xs rounded flex-shrink-0 font-medium"
-                        style={{
-                          background: 'var(--primary-100)',
-                          color: 'var(--primary-700)',
-                        }}
-                      >
+                      <Tag variant="primary" size="sm" className="flex-shrink-0">
                         项目所有者
-                      </span>
+                      </Tag>
                     ) : (
                       <select
                         value={member.projectRoleId}

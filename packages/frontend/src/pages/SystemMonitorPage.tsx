@@ -17,7 +17,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { Shield } from 'lucide-react';
 import { Info } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button, Tag } from '@/components/ui';
 
 // 辅助函数：安全地将 message 转为字符串
 function safeMessage(msg: unknown, fallback: string): string {
@@ -217,12 +217,13 @@ export const SystemMonitorPage: React.FC = () => {
         </div>
         
         <div className="header-right">
-          <div className="status-badge" data-status={overallStatus}>
-            <span className="status-dot" />
-            <span className="status-label">
-              {overallStatus === 'healthy' ? '系统正常' : overallStatus === 'degraded' ? '系统降级' : '检测中'}
-            </span>
-          </div>
+          <Tag
+            dot
+            variant={overallStatus === 'healthy' ? 'success' : overallStatus === 'degraded' ? 'warning' : 'neutral'}
+            className="px-3 py-1.5 text-sm"
+          >
+            {overallStatus === 'healthy' ? '系统正常' : overallStatus === 'degraded' ? '系统降级' : '检测中'}
+          </Tag>
           
           <Button
             variant="primary"
@@ -456,10 +457,9 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           <h3>{title}</h3>
           <p>{description}</p>
         </div>
-        <div className={`service-status-badge ${isUp ? 'up' : 'down'}`}>
-          {isUp ? <CheckCircle size={16} /> : <XCircle size={16} />}
-          <span>{isUp ? '正常' : '异常'}</span>
-        </div>
+        <Tag variant={isUp ? 'success' : 'error'} icon={isUp ? CheckCircle : XCircle} size="sm">
+          {isUp ? '正常' : '异常'}
+        </Tag>
       </div>
       
       <div className="service-details">
@@ -604,49 +604,6 @@ const baseStyles = `
     display: flex;
     align-items: center;
     gap: 1rem;
-  }
-
-  /* 状态徽章 */
-  .status-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-default);
-    border-radius: 100px;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-
-  .status-badge[data-status="healthy"] .status-dot {
-    background: var(--success);
-    box-shadow: 0 0 8px var(--success);
-  }
-
-  .status-badge[data-status="degraded"] .status-dot {
-    background: var(--warning);
-    box-shadow: 0 0 8px var(--warning);
-  }
-
-  .status-badge[data-status="unknown"] .status-dot {
-    background: var(--text-muted);
-  }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  .status-label {
-    color: var(--text-secondary);
   }
 
   /* 刷新按钮 */
@@ -1117,27 +1074,6 @@ const componentStyles = `
     font-size: 0.8125rem;
     color: var(--text-tertiary);
     margin: 0;
-  }
-
-  .service-status-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    border-radius: 100px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    flex-shrink: 0;
-  }
-
-  .service-status-badge.up {
-    background: var(--success-dim);
-    color: var(--success);
-  }
-
-  .service-status-badge.down {
-    background: var(--error-dim);
-    color: var(--error);
   }
 
   .service-details {

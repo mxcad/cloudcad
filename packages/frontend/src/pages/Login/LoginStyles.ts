@@ -137,49 +137,6 @@ export const loginStyles = `
   color: var(--text-tertiary);
 }
 
-/* ===== Tab 切换 ===== */
-.login-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  padding: 0.25rem;
-  background: var(--bg-tertiary);
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-}
-
-.login-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  border: none;
-  border-radius: 10px;
-  color: var(--text-tertiary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.login-tab:hover {
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-}
-
-.login-tab.active {
-  background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.login-tab svg {
-  flex-shrink: 0;
-}
-
 /* ===== 消息提示 ===== */
 .alert {
   display: flex;

@@ -31,34 +31,7 @@
 }
 
 /* ============================================
-   2. 返回按钮
-   ============================================ */
-
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-6);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.back-button:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-  transform: translateX(-2px);
-}
-
-/* ============================================
-   3. 头像区域
+   2. 头像区域
    ============================================ */
 
 .profile-header {
@@ -151,50 +124,7 @@
 }
 
 /* ============================================
-   4. Tab 导航栏
-   ============================================ */
-
-.tabs-container {
-  position: relative;
-  display: flex;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-6);
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-default);
-  overflow-x: auto;
-}
-
-.tab-button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-lg);
-  color: var(--text-tertiary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  white-space: nowrap;
-  position: relative;
-  z-index: 1;
-}
-
-.tab-button:hover {
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-}
-
-.tab-button.active {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ============================================
-   5. 提示消息 (Alert)
+   4. 提示消息 (Alert)
    ============================================ */
 
 .alert {
@@ -937,39 +867,6 @@
   color: var(--text-muted);
 }
 
-.role-badge {
-  display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  background: linear-gradient(135deg, var(--primary-100), var(--accent-100));
-  color: var(--primary-700);
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.status-badge.active {
-  background: var(--success-dim);
-  color: var(--success);
-}
-
-.status-badge.inactive {
-  background: var(--warning-dim);
-  color: var(--warning);
-}
-
-.status-badge.disabled {
-  background: var(--error-dim);
-  color: var(--error);
-}
-
 /* ============================================
    16. 编辑个人信息表单
    ============================================ */
@@ -1018,11 +915,6 @@
   color: #a78bfa;
 }
 
-[data-theme="dark"] .role-badge {
-  background: linear-gradient(135deg, var(--primary-100), var(--accent-100));
-  color: var(--primary-500);
-}
-
 [data-theme="dark"] .verification-select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8a99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
@@ -1055,16 +947,6 @@
 
   .content-area {
     padding: var(--space-4);
-  }
-
-  .tabs-container {
-    padding: var(--space-2) var(--space-3);
-    gap: 0;
-  }
-
-  .tab-button {
-    padding: var(--space-2) var(--space-3);
-    font-size: 0.75rem;
   }
 
   .info-grid {

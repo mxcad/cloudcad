@@ -22,10 +22,6 @@ export const profileStyles = `
         .user-name { font-weight: 700; color: var(--text-primary); margin-bottom: 0.375rem; }
         .user-role { display: flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; color: var(--text-tertiary); }
         .tabs-container { position: relative; display: flex; padding: 0.5rem; background: var(--bg-tertiary); margin: 1.5rem 2rem 0; border-radius: var(--radius-xl); }
-        .tab-button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: transparent; border: none; border-radius: var(--radius-lg); color: var(--text-tertiary); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease; position: relative; z-index: 1; }
-        .tab-button:hover { color: var(--text-secondary); }
-        .tab-button.active { color: var(--text-primary); }
-        .tab-indicator { position: absolute; top: 0.5rem; left: 0; height: calc(100% - 1rem); background: var(--bg-secondary); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 0; }
         .alert { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.25rem; border-radius: 12px; margin: 1.5rem 2rem 0; font-size: 0.875rem; animation: slide-up 0.3s ease-out; }
         .alert-success { background: var(--success-dim); border: 1px solid var(--success); color: var(--success); }
         .alert-error { background: var(--error-dim); border: 1px solid var(--error); color: var(--error); }
@@ -47,11 +43,7 @@ export const profileStyles = `
         .info-content { flex: 1; min-width: 0; }
         .info-content label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
         .info-content span { display: block; font-size: 0.9375rem; color: var(--text-primary); font-weight: 500; }
-        .role-badge, .status-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-        .role-badge { background: linear-gradient(135deg, var(--primary-100), var(--primary-200)); color: var(--primary-700); }
-        .status-badge.active { background: var(--success-dim); color: var(--success); }
-        .status-badge.inactive { background: var(--warning-dim); color: var(--warning); }
-        .status-badge.disabled { background: var(--error-dim); color: var(--error); }
+
         .password-form, .email-form { max-width: 400px; margin: 0 auto; }
         .input-group { margin-bottom: 1.25rem; }
         .input-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; transition: color 0.2s; }
@@ -161,8 +153,6 @@ export const profileStyles = `
           .profile-header { padding: 1.5rem 1.25rem 1rem; }
           .avatar-section { flex-direction: column; text-align: center; }
           .tabs-container { margin: 1rem 1.25rem 0; }
-          .tab-button { padding: 0.625rem 0.5rem; font-size: 0.8125rem; }
-          .tab-button span { display: none; }
           .alert { margin: 1rem 1.25rem 0; }
           .content-area { padding: 1.25rem; }
           .info-grid { grid-template-columns: 1fr; }

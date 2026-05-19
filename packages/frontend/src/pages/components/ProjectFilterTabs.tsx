@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../../components/ui/Button';
+import { Select, Button } from '@/components/ui';
 import { RefreshIcon } from '../../components/FileIcons';
 import type { ProjectFilterType } from '@/types/project';
 
@@ -39,51 +39,27 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
       className="flex items-center gap-2 border-b"
       style={{ borderColor: 'var(--border-default)' }}
     >
-      <Button
-        variant="ghost"
-        onClick={() => isProjectTrashView && onToggleProjectTrashView()}
-        className={`border-b-2 ${
-          !isProjectTrashView ? 'border-primary-600' : 'border-transparent'
-        }`}
-        style={{
-          color: !isProjectTrashView ? 'var(--primary-500)' : 'var(--text-tertiary)',
+      <Select
+        value={isProjectTrashView ? 'trash' : 'projects'}
+        onChange={(val) => {
+          if ((val === 'trash') !== isProjectTrashView) {
+            onToggleProjectTrashView();
+          }
         }}
-      >
-        我的项目
-      </Button>
-      <Button
-        variant="ghost"
-        onClick={() => !isProjectTrashView && onToggleProjectTrashView()}
-        className={`border-b-2 ${
-          isProjectTrashView ? 'border-primary-600' : 'border-transparent'
-        }`}
-        style={{
-          color: isProjectTrashView ? 'var(--primary-500)' : 'var(--text-tertiary)',
-        }}
-      >
-        项目回收站
-      </Button>
+        options={[
+          { value: 'projects', label: '我的项目' },
+          { value: 'trash', label: '项目回收站' },
+        ]}
+        size="sm"
+      />
 
       {!isProjectTrashView && isProjectRootMode && (
-        <div
-          className="flex items-center gap-1 ml-4 pl-4 border-l"
-          style={{ borderColor: 'var(--border-default)' }}
-        >
-          {projectFilterTabs.map((tab) => (
-            <Button
-              key={tab.key}
-              variant="ghost"
-              size="sm"
-              onClick={() => onProjectFilterChange(tab.key)}
-              style={{
-                background: projectFilter === tab.key ? 'var(--bg-tertiary)' : 'transparent',
-                color: projectFilter === tab.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              }}
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </div>
+        <Select
+          value={projectFilter}
+          onChange={(val) => onProjectFilterChange(val as ProjectFilterType)}
+          options={projectFilterTabs}
+          size="sm"
+        />
       )}
 
       {isProjectTrashView && nodesCount > 0 && (

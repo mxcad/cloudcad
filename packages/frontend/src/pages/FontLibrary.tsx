@@ -1,29 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fontsControllerGetFonts, fontsControllerUploadFont, fontsControllerDeleteFont, fontsControllerDownloadFont } from '@/api-sdk';
 import type { FontUploadTarget } from '@/api-sdk';
-import { Trash2 } from 'lucide-react';
-import { Download } from 'lucide-react';
-import { Upload } from 'lucide-react';
-import { Search } from 'lucide-react';
-import { Filter } from 'lucide-react';
-import { FileType } from 'lucide-react';
-import { Calendar } from 'lucide-react';
-import { HardDrive } from 'lucide-react';
-import { Type } from 'lucide-react';
-import { X } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
-import { FileText } from 'lucide-react';
-import { FileCode } from 'lucide-react';
-import { FileDigit } from 'lucide-react';
-import { FileBox } from 'lucide-react';
-import { FolderOpen } from 'lucide-react';
-import { Layers } from 'lucide-react';
-import { Palette } from 'lucide-react';
-import { Shapes } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
+import { Trash2, Download, Upload, Search, Filter, FileType, Calendar, HardDrive, Type, X, ChevronDown, FileText, FileCode, FileDigit, FileBox, FolderOpen, Layers, Palette, Shapes, LayoutGrid, List } from 'lucide-react';
+import { Button, Input, Select, Tab, Tabs, Tag } from '@/components/ui';
 import { SearchInput } from '@/components/search/SearchInput';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/filesystem';
+import type { TagVariant } from '@/components/ui/Tag';
 import { usePermission } from '../hooks/usePermission';
 import { useNotification } from '../contexts/NotificationContext';
 import { SystemPermission } from '../constants/permissions';
@@ -42,6 +25,20 @@ const FONT_TYPES = [
   { value: '.ttc', label: 'TTC', color: '#ec4899', Icon: Layers },
   { value: '.shx', label: 'SHX', color: '#06b6d4', Icon: Shapes },
 ];
+
+const fontTypeVariants: Record<string, TagVariant> = {
+  '.ttf': 'success',
+  '.otf': 'info',
+  '.woff': 'warning',
+  '.woff2': 'warning',
+  '.eot': 'primary',
+  '.ttc': 'error',
+  '.shx': 'info',
+};
+
+const getFontTypeVariant = (extension: string): TagVariant => {
+  return fontTypeVariants[extension.toLowerCase()] || 'primary';
+};
 
 // 字体类型图标映射
 const getFontIcon = (extension: string): { color: string; label: string; Icon: React.ComponentType<{size?: number, className?: string, style?: React.CSSProperties}> } => {
@@ -371,13 +368,9 @@ export default function FontLibrary(props: FontLibraryProps) {
               <p className="text-text-tertiary text-sm">管理和维护 CAD 字体文件</p>
             </div>
             {canUploadFonts && (
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Upload size={18} />
+              <Button icon={Upload} size="sm" onClick={() => setShowUploadModal(true)}>
                 上传字体
-              </button>
+              </Button>
             )}
           </div>
 
@@ -414,32 +407,28 @@ export default function FontLibrary(props: FontLibraryProps) {
         </div>
 
         {/* 标签页切换 */}
-        <div className="tabs-theme mb-6 inline-flex">
-          <button
+        <Tabs className="mb-6">
+          <Tab
+            active={activeTab === 'backend'}
+            icon={HardDrive}
             onClick={() => {
               setActiveTab('backend');
               setSelectedFonts(new Set());
             }}
-            className={`tab-theme ${activeTab === 'backend' ? 'active' : ''}`}
           >
-            <div className="flex items-center gap-2">
-              <HardDrive size={16} />
-              后端字体（转换程序）
-            </div>
-          </button>
-          <button
+            后端字体（转换程序）
+          </Tab>
+          <Tab
+            active={activeTab === 'frontend'}
+            icon={Type}
             onClick={() => {
               setActiveTab('frontend');
               setSelectedFonts(new Set());
             }}
-            className={`tab-theme ${activeTab === 'frontend' ? 'active' : ''}`}
           >
-            <div className="flex items-center gap-2">
-              <Type size={16} />
-              前端字体（资源目录）
-            </div>
-          </button>
-        </div>
+            前端字体（资源目录）
+          </Tab>
+        </Tabs>
 
         {/* 筛选和搜索栏 */}
         <div className="card-theme mb-6">
@@ -455,65 +444,37 @@ export default function FontLibrary(props: FontLibraryProps) {
 
             {/* 格式筛选 */}
             <div className="w-40">
-              <select
+              <Select
                 value={filters.extension}
-                onChange={(e) => handleFilterChange('extension', e.target.value)}
-                className="input-theme"
-              >
-                {FONT_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleFilterChange('extension', val)}
+                options={FONT_TYPES.map(t => ({ value: t.value, label: t.label }))}
+              />
             </div>
 
             {/* 展开筛选按钮 */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`btn-secondary flex items-center gap-2 ${showFilters ? 'bg-bg-tertiary' : ''}`}
-            >
-              <Filter size={16} />
+            <Button variant="ghost" size="sm" icon={Filter} onClick={() => setShowFilters(!showFilters)}>
               筛选
               <ChevronDown size={14} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
+            </Button>
 
             {/* 重置按钮 */}
             {(filters.name || filters.extension || filters.startTime || filters.endTime) && (
-              <button
-                onClick={handleReset}
-                className="btn-ghost flex items-center gap-1"
-              >
-                <X size={14} />
+              <Button variant="ghost" size="xs" icon={X} onClick={handleReset}>
                 清除
-              </button>
+              </Button>
             )}
 
             {/* 视图切换 */}
-            <div className="flex items-center gap-1 bg-bg-tertiary rounded-lg p-1 ml-auto">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
-                title="网格视图"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="1" width="6" height="6" rx="1" />
-                  <rect x="9" y="1" width="6" height="6" rx="1" />
-                  <rect x="1" y="9" width="6" height="6" rx="1" />
-                  <rect x="9" y="9" width="6" height="6" rx="1" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-bg-secondary shadow-sm text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}
-                title="列表视图"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="2" width="14" height="2" rx="1" />
-                  <rect x="1" y="7" width="14" height="2" rx="1" />
-                  <rect x="1" y="12" width="14" height="2" rx="1" />
-                </svg>
-              </button>
+            <div className="ml-auto">
+              <Select
+                value={viewMode}
+                onChange={(val) => setViewMode(val as 'grid' | 'list')}
+                options={[
+                  { value: 'grid', label: '网格视图', icon: LayoutGrid },
+                  { value: 'list', label: '列表视图', icon: List },
+                ]}
+                size="sm"
+              />
             </div>
           </div>
 
@@ -563,20 +524,13 @@ export default function FontLibrary(props: FontLibraryProps) {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSelectedFonts(new Set())}
-                className="btn-ghost text-sm"
-              >
+              <Button variant="ghost" size="xs" onClick={() => setSelectedFonts(new Set())}>
                 取消选择
-              </button>
+              </Button>
               {canDeleteFonts && (
-                <button
-                  onClick={handleBatchDelete}
-                  className="btn-danger flex items-center gap-2 text-sm"
-                >
-                  <Trash2 size={14} />
+                <Button variant="danger" size="sm" icon={Trash2} onClick={handleBatchDelete}>
                   批量删除
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -590,14 +544,12 @@ export default function FontLibrary(props: FontLibraryProps) {
             { key: 'name', label: '名称' },
             { key: 'size', label: '大小' },
           ].map(({ key, label }) => (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               key={key}
               onClick={() => handleSort(key as 'name' | 'size' | 'createdAt')}
-              className={`flex items-center gap-1 transition-colors ${
-                sortBy === key 
-                  ? 'text-primary-600 font-medium' 
-                  : 'text-text-tertiary hover:text-text-secondary'
-              }`}
+              className={sortBy === key ? 'text-primary-600 font-medium' : ''}
             >
               {label}
               {sortBy === key && (
@@ -606,7 +558,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                   className={`transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
                 />
               )}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -635,12 +587,9 @@ export default function FontLibrary(props: FontLibraryProps) {
                   {filters.name || filters.extension ? '没有找到匹配的字体' : '当前位置没有字体文件'}
                 </p>
                 {canUploadFonts && !filters.name && !filters.extension && (
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="btn-primary"
-                  >
+                  <Button icon={Upload} size="md" onClick={() => setShowUploadModal(true)}>
                     上传第一个字体
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -667,22 +616,10 @@ export default function FontLibrary(props: FontLibraryProps) {
                                   {/* 操作按钮 */}
                                   <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     {canDownloadFonts && (
-                                      <button
-                                        onClick={() => handleDownload(font.name)}
-                                        className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-primary-600 shadow-sm transition-all"
-                                        title="下载"
-                                      >
-                                        <Download size={16} />
-                                      </button>
+                                      <Button variant="ghost" size="sm" icon={Download} onClick={() => handleDownload(font.name)} title="下载" />
                                     )}
                                     {canDeleteFonts && (
-                                      <button
-                                        onClick={() => handleDelete(font.name)}
-                                        className="p-1.5 rounded-lg bg-bg-elevated text-text-tertiary hover:text-error shadow-sm transition-all"
-                                        title="删除"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
+                                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(font.name)} title="删除" />
                                     )}
                                   </div>
               
@@ -700,15 +637,9 @@ export default function FontLibrary(props: FontLibraryProps) {
                                       <FileNameText>{font.name}</FileNameText>
                                     </h3>
                                     <div className="flex items-center justify-center gap-3 text-xs text-text-tertiary">
-                                      <span 
-                                        className="px-2 py-0.5 rounded-full font-medium"
-                                        style={{ 
-                                          backgroundColor: `${typeInfo.color}20`,
-                                          color: typeInfo.color 
-                                        }}
-                                      >
+                                      <Tag variant={getFontTypeVariant(font.extension)}>
                                         {typeInfo.label}
-                                      </span>
+                                      </Tag>
                                       <span>{formatFileSize(font.size)}</span>
                                     </div>
                                     <p className="text-xs text-text-muted mt-3">
@@ -801,37 +732,19 @@ export default function FontLibrary(props: FontLibraryProps) {
                           </div>
                         </td>
                         <td>
-                          <span 
-                            className="inline-flex px-2 py-1 rounded-full text-xs font-medium"
-                            style={{ 
-                              backgroundColor: `${typeInfo.color}20`,
-                              color: typeInfo.color 
-                            }}
-                          >
+                          <Tag variant={getFontTypeVariant(font.extension)}>
                             {typeInfo.label}
-                          </span>
+                          </Tag>
                         </td>
                         <td className="text-text-secondary">{formatFileSize(font.size)}</td>
                         <td className="text-text-tertiary text-sm">{formatDate(font.createdAt)}</td>
                         <td className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             {canDownloadFonts && (
-                              <button
-                                onClick={() => handleDownload(font.name)}
-                                className="p-2 rounded-lg text-text-tertiary hover:text-primary-600 hover:bg-primary-50 transition-all"
-                                title="下载"
-                              >
-                                <Download size={16} />
-                              </button>
+                              <Button variant="ghost" size="sm" icon={Download} onClick={() => handleDownload(font.name)} title="下载" />
                             )}
                             {canDeleteFonts && (
-                              <button
-                                onClick={() => handleDelete(font.name)}
-                                className="p-2 rounded-lg text-text-tertiary hover:text-error hover:bg-error-dim transition-all"
-                                title="删除"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                              <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(font.name)} title="删除" />
                             )}
                           </div>
                         </td>
@@ -965,12 +878,7 @@ function UploadFontModal({
               <p className="text-sm text-text-tertiary">支持 TTF、OTF、WOFF 等格式</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-bg-tertiary transition-all"
-          >
-            <X size={20} />
-          </button>
+          <Button variant="ghost" size="sm" icon={X} onClick={onClose} />
         </div>
 
         {/* 内容 */}
@@ -1006,15 +914,17 @@ function UploadFontModal({
                 <p className="text-sm text-text-tertiary">
                   {(file.size / 1024 / 1024).toFixed(2)} MB
                 </p>
-                <button
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={(e) => {
                     e.stopPropagation();
                     setFile(null);
                   }}
-                  className="mt-3 text-sm text-error hover:underline"
+                  className="mt-3 text-error"
                 >
                   移除文件
-                </button>
+                </Button>
               </div>
             ) : (
               <div>
@@ -1041,62 +951,26 @@ function UploadFontModal({
             <label className="block text-sm font-medium text-text-secondary mb-3">
               上传位置
             </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { value: 'both', label: '同时上传', desc: '后端和前端', icon: <HardDrive size={16} /> },
-                { value: 'backend', label: '仅后端', desc: '转换程序', icon: <HardDrive size={16} /> },
-                { value: 'frontend', label: '仅前端', desc: 'Web 显示', icon: <Type size={16} /> },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTarget(option.value as 'backend' | 'frontend' | 'both')}
-                  className={`p-3 rounded-xl border-2 text-left transition-all ${
-                    target === option.value
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-border-default hover:border-border-strong bg-bg-secondary'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${
-                    target === option.value ? 'bg-primary-100 text-primary-600' : 'bg-bg-tertiary text-text-tertiary'
-                  }`}>
-                    {option.icon}
-                  </div>
-                  <p className={`font-medium text-sm ${target === option.value ? 'text-text-primary' : 'text-text-secondary'}`}>
-                    {option.label}
-                  </p>
-                  <p className="text-xs text-text-muted mt-0.5">{option.desc}</p>
-                </button>
-              ))}
-            </div>
+            <Select
+              value={target}
+              onChange={(val) => setTarget(val as 'backend' | 'frontend' | 'both')}
+              options={[
+                { value: 'both', label: '同时上传（后端和前端）' },
+                { value: 'backend', label: '仅后端（转换程序）' },
+                { value: 'frontend', label: '仅前端（Web 显示）' },
+              ]}
+            />
           </div>
         </div>
 
         {/* 底部按钮 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default">
-          <button
-            onClick={onClose}
-            disabled={uploading}
-            className="btn-secondary"
-          >
+          <Button variant="outline" size="md" onClick={onClose} disabled={uploading}>
             取消
-          </button>
-          <button
-            onClick={handleUpload}
-            disabled={!file || uploading}
-            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {uploading ? (
-              <>
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                上传中...
-              </>
-            ) : (
-              <>
-                <Upload size={18} />
-                上传
-              </>
-            )}
-          </button>
+          </Button>
+          <Button icon={Upload} size="md" loading={uploading} disabled={!file} onClick={handleUpload}>
+            {uploading ? '上传中...' : '上传'}
+          </Button>
         </div>
       </div>
     </div>

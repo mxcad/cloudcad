@@ -16,6 +16,7 @@ import type { UserDashboardStatsDto } from '@/api-sdk';
 
 // Lucide 图标
 import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { HardDrive } from 'lucide-react';
@@ -331,44 +332,17 @@ export const Dashboard: React.FC = () => {
 
           {/* 快捷操作按钮 */}
           <div className="flex gap-3">
-            <button
-              onClick={() => setIsProjectModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm text-white transition-all duration-200 hover:shadow-lg"
-              style={{
-                background:
-                  'linear-gradient(135deg, var(--primary-600), var(--primary-500))',
-                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
-              }}
-            >
+            <Button variant="primary" size="md" onClick={() => setIsProjectModalOpen(true)}>
               <Plus size={16} />
               新建项目
-            </button>
-            <button
-              onClick={() => navigate('/personal-space?action=upload')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 hover:shadow-md"
-              style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)',
-              }}
-            >
+            </Button>
+            <Button variant="outline" size="md" onClick={() => navigate('/personal-space?action=upload')}>
               <Upload size={16} />
               上传图纸
-            </button>
-            <button
-              onClick={handleRefreshDashboard}
-              disabled={loading || isRefreshing || isBackgroundFetching}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 hover:shadow-md"
-              style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)',
-              }}
-              title="刷新仪表盘数据"
-            >
-              <RefreshCw size={16} className={(loading || isRefreshing || isBackgroundFetching) ? 'animate-spin' : ''} />
+            </Button>
+            <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
               刷新
-            </button>
+            </Button>
           </div>
         </div>
       </div>

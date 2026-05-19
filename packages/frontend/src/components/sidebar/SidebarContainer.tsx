@@ -35,7 +35,7 @@ import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
 import { ProjectDrawingsPanel } from '../ProjectDrawingsPanel';
 import { CollaborateSidebar } from '../CollaborateSidebar';
-import { Tooltip } from '../ui/Tooltip';
+import { Button, Tab } from '../ui';
 import { FileSystemNode } from '../../types/filesystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginPrompt } from '../auth/LoginPrompt';
@@ -46,6 +46,13 @@ export interface InsertFileParams {
   nodeId: string;
   filename: string;
 }
+
+const SUB_TABS: { id: DrawingsSubTab; label: string; icon: React.ElementType }[] = [
+  { id: 'drawings-gallery', label: '图纸库', icon: LayoutTemplate },
+  { id: 'blocks-gallery', label: '图块库', icon: Layers },
+  { id: 'my-project', label: '我的项目', icon: FolderOpen },
+  { id: 'my-drawings', label: '我的图纸', icon: FileText },
+];
 
 interface SidebarContainerProps {
   /** 项目 ID */
@@ -120,10 +127,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [loginPromptAction, setLoginPromptAction] = useState<string>('');
 
-  // 子 Tab 栏宽度状态（用于判断是否显示 tooltip）
-  const [subTabBarWidth, setSubTabBarWidth] = useState<number>(400);
-  const subTabBarRef = useRef<HTMLDivElement>(null);
-
   // 当前文件是否属于公开资源库
   const [isLibraryFile, setIsLibraryFile] = useState(false);
 
@@ -132,24 +135,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ==================== Effects ====================
-
-  // 监听子 Tab 栏宽度变化（用于判断是否显示 tooltip）
-  useEffect(() => {
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width } = entry.contentRect;
-        setSubTabBarWidth(width);
-      }
-    });
-
-    if (subTabBarRef.current) {
-      observer.observe(subTabBarRef.current);
-    }
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   // 引导模式下默认关闭侧边栏
   useEffect(() => {
@@ -346,87 +331,21 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
       case 'drawings':
         return (
           <div className={styles.drawingsPanel}>
-            {/* 子 Tab 切换 - 始终显示所有 sub-tab */}
-            <div className={styles.subTabBar} ref={subTabBarRef}>
-              {subTabBarWidth <= 390 ? (
-                <>
-                  <Tooltip content="图纸库" position="bottom" delay={100}>
-                    <button
-                      className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
-                      onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
-                      aria-label="图纸库"
-                    >
-                      <LayoutTemplate size={14} />
-                      <span>图纸库</span>
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="图块库" position="bottom" delay={100}>
-                    <button
-                      className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
-                      onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
-                      aria-label="图块库"
-                    >
-                      <Layers size={14} />
-                      <span>图块库</span>
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="我的项目" position="bottom" delay={100}>
-                    <button
-                      className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
-                      onClick={() => handleDrawingsSubTabChange('my-project')}
-                      aria-label="我的项目"
-                    >
-                      <FolderOpen size={14} />
-                      <span>我的项目</span>
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="我的图纸" position="bottom" delay={100}>
-                    <button
-                      className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
-                      onClick={() => handleDrawingsSubTabChange('my-drawings')}
-                      aria-label="我的图纸"
-                    >
-                      <FileText size={14} />
-                      <span>我的图纸</span>
-                    </button>
-                  </Tooltip>
-                </>
-              ) : (
-                <>
-                  <button
-                    className={`${styles.subTab} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
-                    onClick={() => handleDrawingsSubTabChange('drawings-gallery')}
-                    aria-label="图纸库"
-                  >
-                    <LayoutTemplate size={14} />
-                    <span>图纸库</span>
-                  </button>
-                  <button
-                    className={`${styles.subTab} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
-                    onClick={() => handleDrawingsSubTabChange('blocks-gallery')}
-                    aria-label="图块库"
-                  >
-                    <Layers size={14} />
-                    <span>图块库</span>
-                  </button>
-                  <button
-                    className={`${styles.subTab} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
-                    onClick={() => handleDrawingsSubTabChange('my-project')}
-                    aria-label="我的项目"
-                  >
-                    <FolderOpen size={14} />
-                    <span>我的项目</span>
-                  </button>
-                  <button
-                    className={`${styles.subTab} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
-                    onClick={() => handleDrawingsSubTabChange('my-drawings')}
-                    aria-label="我的图纸"
-                  >
-                    <FileText size={14} />
-                    <span>我的图纸</span>
-                  </button>
-                </>
-              )}
+            {/* 子 Tab 切换 */}
+            <div className={styles.subTabBar}>
+              {SUB_TABS.map((tab) => (
+                <Tab
+                  key={tab.id}
+                  active={activeDrawingsSubTab === tab.id}
+                  tabVariant="primary"
+                  size="xs"
+                  icon={tab.icon}
+                  onClick={() => handleDrawingsSubTabChange(tab.id)}
+                  aria-label={tab.label}
+                >
+                  {tab.label}
+                </Tab>
+              ))}
             </div>
             {/* 子 Tab 内容 */}
             <div className={styles.subTabContent}>
@@ -473,12 +392,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       <p className={styles.loginPromptDescription}>
                         登录后可以查看和管理您的项目
                       </p>
-                      <button
-                        className={styles.loginPromptButton}
-                        onClick={handleLoginClick}
-                      >
+                      <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
                         立即登录
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -505,12 +421,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       <p className={styles.loginPromptDescription}>
                         登录后可以查看和管理您的私人图纸
                       </p>
-                      <button
-                        className={styles.loginPromptButton}
-                        onClick={handleLoginClick}
-                      >
+                      <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
                         立即登录
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -531,12 +444,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                 <p className={styles.loginPromptDescription}>
                   登录后可以使用我的图纸、我的项目、协同等功能
                 </p>
-                <button
-                  className={styles.loginPromptButton}
-                  onClick={handleLoginClick}
-                >
+                <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
                   立即登录
-                </button>
+                </Button>
               </div>
             </div>
           );

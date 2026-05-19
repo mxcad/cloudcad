@@ -10,8 +10,10 @@ import { AlertCircle } from 'lucide-react';
 import { CheckSquare } from 'lucide-react';
 import { Square } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { FileNameInput } from '../components/ui/FileNameInput';
 import { SearchInput } from '../components/search/SearchInput';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { RenameModal } from '../components/modals/RenameModal';
@@ -127,7 +129,7 @@ export const LibraryManager: React.FC = () => {
       : hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE);
 
   // 使用全局通知
-  const { showToast } = useNotification();
+  const { showToast, showConfirm } = useNotification();
 
   // UI 状态 - useLibraryModals hook
   const {
@@ -396,32 +398,15 @@ export const LibraryManager: React.FC = () => {
                 公共资源库
               </h1>
               {/* 库类型切换 */}
-              <div className="flex rounded-xl bg-slate-100 p-1">
-                <Button
-                  onClick={() => handleSwitchLibrary('drawing')}
-                  variant="ghost"
-                  size="sm"
-                  className={`${
-                    libraryType === 'drawing'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  图纸库
-                </Button>
-                <Button
-                  onClick={() => handleSwitchLibrary('block')}
-                  variant="ghost"
-                  size="sm"
-                  className={`${
-                    libraryType === 'block'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  图块库
-                </Button>
-              </div>
+              <Select
+                value={libraryType}
+                onChange={(val) => handleSwitchLibrary(val as 'drawing' | 'block')}
+                options={[
+                  { value: 'drawing', label: '图纸库' },
+                  { value: 'block', label: '图块库' },
+                ]}
+                size="sm"
+              />
               {/* 存储配额按钮 */}
               {canManage && (
                 <Button
@@ -970,21 +955,19 @@ export const LibraryManager: React.FC = () => {
               <HardDrive size={16} />
               <span>库存储配额</span>
             </label>
-            <div className="quota-input-wrapper">
-              <Input
-                type="number"
-                value={libraryQuota}
-                onChange={(e) => {
-                  const gb = parseInt(e.target.value, 10);
-                  if (!isNaN(gb) && gb >= 0) {
-                    setLibraryQuota(gb);
-                  }
-                }}
-                min="0"
-                step="1"
-              />
-              <span className="quota-unit">GB</span>
-            </div>
+            <FileNameInput
+              type="number"
+              value={libraryQuota}
+              onChange={(e) => {
+                const gb = parseInt(e.target.value, 10);
+                if (!isNaN(gb) && gb >= 0) {
+                  setLibraryQuota(gb);
+                }
+              }}
+              min="0"
+              step="1"
+              suffix="GB"
+            />
             <p className="quota-hint">默认配额：{defaultLibraryQuota} GB</p>
             {libraryStorageInfo && (
               <div className="quota-preview">

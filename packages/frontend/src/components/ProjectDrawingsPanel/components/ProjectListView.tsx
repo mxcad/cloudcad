@@ -9,6 +9,7 @@ import type { FileSystemNode } from '@/types/filesystem';
 import { FileItem } from '@/components/FileItem';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
 import type { ProjectFilterType } from '@/types/project';
+import { Tab, Tabs } from '@/components/ui';
 import styles from '@/components/sidebar/sidebar.module.css';
 
 interface ProjectListViewProps {
@@ -66,21 +67,21 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       </div>
 
       {/* 项目过滤 Tab */}
-      <div className={styles.projectFilterTabs}>
+      <Tabs>
         {[
           { key: 'all', label: '全部' },
           { key: 'owned', label: '我创建的' },
           { key: 'joined', label: '我加入的' },
         ].map((tab) => (
-          <button
+          <Tab
             key={tab.key}
-            className={`${styles.projectFilterTab} ${projectFilter === tab.key ? styles.active : ''}`}
+            active={projectFilter === tab.key}
             onClick={() => onProjectFilterChange(tab.key as ProjectFilterType)}
           >
             {tab.label}
-          </button>
+          </Tab>
         ))}
-      </div>
+      </Tabs>
 
       {/* 项目列表 */}
       <div className={styles.drawingList}>

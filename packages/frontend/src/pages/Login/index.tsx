@@ -10,6 +10,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useBrandConfig } from '@/contexts/BrandContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
+import { Tab, Tabs, Button } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { CheckCircle, AlertCircle, Cpu, Boxes, ShieldCheck, Mail, Phone } from 'lucide-react';
@@ -143,24 +144,24 @@ export const Login: React.FC = () => {
 
           {/* 登录方式 Tab 切换 */}
           {smsEnabled && (
-            <div className="login-tabs">
-              <button
-                type="button"
-                className={`login-tab ${form.activeTab === 'account' ? 'active' : ''}`}
+            <Tabs>
+              <Tab
+                active={form.activeTab === 'account'}
+                tabVariant="primary"
+                icon={Mail}
                 onClick={() => handleTabSwitch('account')}
               >
-                <Mail size={16} />
-                <span>账号登录</span>
-              </button>
-              <button
-                type="button"
-                className={`login-tab ${form.activeTab === 'phone' ? 'active' : ''}`}
+                账号登录
+              </Tab>
+              <Tab
+                active={form.activeTab === 'phone'}
+                tabVariant="primary"
+                icon={Phone}
                 onClick={() => handleTabSwitch('phone')}
               >
-                <Phone size={16} />
-                <span>手机登录</span>
-              </button>
-            </div>
+                手机登录
+              </Tab>
+            </Tabs>
           )}
 
           {/* 消息提示 */}
@@ -216,12 +217,9 @@ export const Login: React.FC = () => {
           <div className="form-footer">
             <p className="register-text">
               还没有账户？
-              <button
-                onClick={() => navigate('/register')}
-                className="register-link"
-              >
+              <Button variant="ghost" size="xs" onClick={() => navigate('/register')}>
                 立即注册
-              </button>
+              </Button>
             </p>
           </div>
 

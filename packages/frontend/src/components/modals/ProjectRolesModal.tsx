@@ -8,7 +8,9 @@ import { Edit } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Tag } from '../ui/Tag';
 import { Modal } from '../ui/Modal';
+import { Select } from '../ui';
 import { DescriptionText } from '../ui/TruncateText';
 import { PermissionConfigModal } from '../permission/PermissionAssignment';
 import { useProjectRoleCRUD } from './hooks/useProjectRoleCRUD';
@@ -196,41 +198,14 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
       >
         <div className="space-y-6">
           {/* Tab 切换 */}
-          <div className="flex gap-2 border-b border-slate-200">
-            <button
-              onClick={() => setActiveTab('custom')}
-              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === 'custom'
-                  ? 'border-indigo-600 text-indigo-700'
-                  : 'border-transparent text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Settings size={16} />
-                自定义角色
-                <span className="text-xs text-slate-400">
-                  ({customRoles.length})
-                </span>
-              </div>
-            </button>
-            <button
-              data-tour="system-roles-tab-btn"
-              onClick={() => setActiveTab('system')}
-              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === 'system'
-                  ? 'border-indigo-600 text-indigo-700'
-                  : 'border-transparent text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Shield size={16} />
-                系统角色
-                <span className="text-xs text-slate-400">
-                  ({systemRoles.length})
-                </span>
-              </div>
-            </button>
-          </div>
+          <Select
+            value={activeTab}
+            onChange={(val) => setActiveTab(val as 'custom' | 'system')}
+            options={[
+              { value: 'custom', label: `自定义角色 (${customRoles.length})` },
+              { value: 'system', label: `系统角色 (${systemRoles.length})` },
+            ]}
+          />
 
           {/* 错误提示 */}
           {hookError && (
@@ -352,9 +327,9 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                                 <h4 className="text-sm font-semibold text-slate-900 truncate">
                                   {getRoleDisplayName(role.name)}
                                 </h4>
-                                <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100 flex-shrink-0">
+                                <Tag variant="primary" className="flex-shrink-0">
                                   系统
-                                </span>
+                                </Tag>
                               </div>
                               {role.description && (
                                 <p className="text-xs text-slate-500 mt-1">

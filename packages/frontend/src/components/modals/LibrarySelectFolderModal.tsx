@@ -156,14 +156,16 @@ export const LibrarySelectFolderModal: React.FC<
           onClick={() => handleSelectFolder(node.id)}
         >
           {node.isRoot || node.hasChildren ? (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={(e) => {
                 e.stopPropagation();
                 if (!node.loading) {
                   handleToggleFolder(node.id);
                 }
               }}
-              className="p-0.5 hover:bg-gray-200 rounded"
+              className="p-0.5"
               disabled={node.loading}
             >
               {node.loading ? (
@@ -173,7 +175,7 @@ export const LibrarySelectFolderModal: React.FC<
               ) : (
                 <ChevronRight size={14} className="text-gray-400" />
               )}
-            </button>
+            </Button>
           ) : (
             <span className="w-[14px]" />
           )}

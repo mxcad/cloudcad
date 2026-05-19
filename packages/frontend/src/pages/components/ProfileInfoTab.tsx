@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 import { usePermission } from '../../hooks/usePermission';
 import { useProfileUpdate } from '../Profile/hooks/useProfileUpdate';
 import { Input } from '@/components/ui/Input';
@@ -191,7 +192,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
               </div>
               <div className="info-content">
                 <label>账户角色</label>
-                <span className="role-badge">{isAdmin() ? '系统管理员' : '普通用户'}</span>
+                <Tag variant="primary">{isAdmin() ? '系统管理员' : '普通用户'}</Tag>
               </div>
             </div>
 
@@ -201,13 +202,13 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
               </div>
               <div className="info-content">
                 <label>账户状态</label>
-                <span className={`status-badge ${user?.status?.toLowerCase() || 'active'}`}>
+                <Tag variant={user?.status === 'ACTIVE' ? 'success' : user?.status === 'INACTIVE' ? 'warning' : 'error'}>
                   {user?.status === 'ACTIVE'
                     ? '正常'
                     : user?.status === 'INACTIVE'
                       ? '未激活'
                       : '已禁用'}
-                </span>
+                </Tag>
               </div>
             </div>
 

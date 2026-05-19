@@ -7,6 +7,7 @@ import {
 import type { RuntimeConfigResponseDto, UpdateRuntimeConfigDto } from '@/api-sdk';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Tag } from '../components/ui/Tag';
 import { useNotification } from '../contexts/NotificationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
@@ -388,7 +389,7 @@ export const RuntimeConfigPage: React.FC = () => {
                 </div>
                 <div className="card-actions">
                   {modifiedItems.length > 0 && (
-                    <span className="modified-badge">{modifiedItems.length} 项修改</span>
+                    <Tag variant="warning">{modifiedItems.length} 项修改</Tag>
                   )}
                 </div>
               </div>
@@ -411,16 +412,10 @@ export const RuntimeConfigPage: React.FC = () => {
                             <span className="config-key">{item.key}</span>
                             <div className="config-badges">
                               {item.isPublic && (
-                                <span className="badge public-badge" title="对外公开">
-                                  <Eye size={12} />
-                                  公开
-                                </span>
+                    <Tag variant="success" icon={Eye}>公开</Tag>
                               )}
                               {hasChanges && (
-                                <span className="badge modified-badge">
-                                  <Sparkles size={12} />
-                                  已修改
-                                </span>
+                    <Tag variant="warning" icon={Sparkles}>已修改</Tag>
                               )}
                             </div>
                           </div>
@@ -698,20 +693,6 @@ const styles = `
     gap: var(--space-3);
   }
 
-  .modified-badge {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: var(--warning-dim);
-    color: var(--warning);
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
-    font-weight: 500;
-    animation: pulse-soft 2s ease-in-out infinite;
-  }
-
-  /* ===== 卡片内容 ===== */
   .card-content {
     display: block;
   }
@@ -782,26 +763,6 @@ const styles = `
     display: flex;
     align-items: center;
     gap: var(--space-2);
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: var(--radius-full);
-    font-size: 0.6875rem;
-    font-weight: 500;
-  }
-
-  .public-badge {
-    background: var(--success-dim);
-    color: var(--success);
-  }
-
-  .modified-badge {
-    background: var(--warning-dim);
-    color: var(--warning);
   }
 
   .config-description {

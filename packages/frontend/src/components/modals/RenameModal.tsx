@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Input } from '@/components/ui/Input';
+import { FileNameInput } from '@/components/ui/FileNameInput';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface RenameModalProps {
@@ -57,31 +57,14 @@ export const RenameModal: React.FC<RenameModalProps> = ({
           <label className="block text-sm font-medium text-slate-700 mb-1">
             新名称 *
           </label>
-          {editingNode && !editingNode.isFolder && extension ? (
-            // 文件：显示输入框 + 扩展名
-            <div className="flex items-center">
-              <Input
-                value={newName}
-                onChange={(e) => onNameChange(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && onRename()}
-                placeholder="请输入新名称"
-                autoFocus
-                className="rounded-r-none"
-              />
-              <div className="px-4 py-2.5 bg-slate-100 border border-l-0 border-slate-300 rounded-r-lg text-slate-600">
-                {extension}
-              </div>
-            </div>
-          ) : (
-            // 文件夹：显示完整输入框
-            <Input
-              value={newName}
-              onChange={(e) => onNameChange(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && onRename()}
-              placeholder="请输入新名称"
-              autoFocus
-            />
-          )}
+          <FileNameInput
+            value={newName}
+            onChange={(e) => onNameChange(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && onRename()}
+            placeholder="请输入新名称"
+            autoFocus
+            suffix={editingNode && !editingNode.isFolder ? extension : undefined}
+          />
         </div>
       </div>
     </Modal>

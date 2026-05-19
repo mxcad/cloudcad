@@ -61,71 +61,6 @@
   border-bottom: 1px solid var(--sidebar-border, #3A4352);
 }
 
-.tabList {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background-color: var(--bg-tertiary);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle);
-}
-
-[data-theme="dark"] .tabList {
-  /* 半透明的深色背�?*/
-  background-color: rgba(0, 0, 0, 0.25);
-  border-color: var(--sidebar-border, #3A4352);
-}
-
-/* Tab 按钮 */
-.tab {
-  position: relative;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  background-color: transparent;
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-[data-theme="dark"] .tab {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.tab:hover {
-  color: var(--text-secondary);
-  background-color: var(--bg-tertiary);
-}
-
-[data-theme="dark"] .tab:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.tab.active {
-  color: white;
-  background-color: var(--info);
-  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.3);
-}
-
-[data-theme="dark"] .tab.active {
-  background-color: var(--info);
-  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.4);
-}
-
-/* Tab 文字层级 */
-.tab span,
-.tab {
-  position: relative;
-  z-index: 1;
-}
-
 /* 关闭按钮 */
 .tabBarButton {
   display: flex;
@@ -218,89 +153,6 @@
     var(--sidebar-bg, #212832) 100%
   );
   border-bottom-color: var(--sidebar-border, #3A4352);
-}
-
-.subTab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  overflow: hidden;
-}
-
-[data-theme="dark"] .subTab {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.subTab:hover {
-  color: var(--text-secondary);
-  background-color: var(--bg-tertiary);
-  border-color: var(--border-default);
-}
-
-[data-theme="dark"] .subTab:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.subTab.active {
-  color: white;
-  background-color: var(--info);
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.3);
-}
-
-[data-theme="dark"] .subTab.active {
-  background-color: var(--info);
-  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.4);
-}
-
-/* �?Tab 图标 */
-.subTab svg {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.subTab:hover svg {
-  transform: scale(1.1) rotate(-3deg);
-}
-
-.subTab.active svg {
-  transform: scale(1.05);
-}
-
-.subTab span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 响应�?*/
-@container subTabBar (max-width: 360px) {
-
-  .subTab span {
-    display: none;
-  }
-
-  .subTab svg {
-    width: 16px;
-    height: 16px;
-  }
 }
 
 .subTabContent {
@@ -1868,24 +1720,6 @@
     max-width: 100vw;
   }
   
-  .tab {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-  
-  .subTab {
-    padding: 10px 8px;
-    font-size: 11px;
-  }
-  
-  .subTab span {
-    display: none;
-  }
-  
-  .subTab svg {
-    width: 16px;
-    height: 16px;
-  }
 }
 
 /* ============================================
@@ -1922,73 +1756,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-/* ============================================
-   20. 项目过滤 Tab
-   ============================================ */
-
-.projectFilterTabs {
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  background: linear-gradient(
-    180deg,
-    var(--bg-tertiary) 0%,
-    var(--bg-secondary) 100%
-  );
-  border-bottom: 1px solid var(--border-default);
-}
-
-[data-theme="dark"] .projectFilterTabs {
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.2) 0%,
-    var(--sidebar-bg, #212832) 100%
-  );
-  border-bottom-color: var(--sidebar-border, #3A4352);
-}
-
-.projectFilterTab {
-  flex: 1;
-  padding: 2px 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: center;
-}
-
-[data-theme="dark"] .projectFilterTab {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.projectFilterTab:hover {
-  color: var(--info);
-  background-color: var(--bg-tertiary);
-  border-color: var(--border-default);
-}
-
-[data-theme="dark"] .projectFilterTab:hover {
-  color: var(--info);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.projectFilterTab.active {
-  color: white;
-  background-color: var(--info);
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.3);
-}
-
-[data-theme="dark"] .projectFilterTab.active {
-  background-color: var(--info);
-  box-shadow: 0 2px 8px rgba(0, 156, 255, 0.4);
 }
 
 /* ============================================

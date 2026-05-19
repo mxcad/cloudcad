@@ -9,6 +9,7 @@ import { SystemPermission } from '../constants/permissions';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { Tag } from './ui/Tag';
 import { TruncateText } from './ui/TruncateText';
 import { formatFileSize } from '../utils/fileUtils';
 import { ThemeToggle } from './ThemeToggle';
@@ -411,12 +412,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </Link>
 
             {/* 移动端关闭按钮 */}
-            <button
-              className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={X}
+              className="lg:hidden"
               onClick={() => setSidebarOpen(false)}
-            >
-              <X size={20} style={{ color: 'var(--text-tertiary)' }} />
-            </button>
+            />
           </div>
 
           {/* 导航菜单 */}
@@ -537,44 +539,29 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
           {/* 帮助引导入口 */}
           <div className="px-4 mb-2">
-            <button
+            <Button
+              variant="outline"
+              size="md"
+              className="w-full justify-start gap-3"
               onClick={openTourCenter}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)] group"
-              style={{ border: '1px solid var(--border-default)' }}
               title="查看引导中心"
             >
-              <div className="relative">
-                <HelpCircle
-                  size={18}
-                  className="transition-colors group-hover:text-[var(--primary-500)]"
-                  style={{ color: 'var(--text-tertiary)' }}
-                />
-                {/* 引导进行中指示器 */}
+              <span className="relative">
+                <HelpCircle size={18} />
                 {isTourActive && (
                   <span
                     className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse"
                     style={{ background: 'var(--primary-500)' }}
                   />
                 )}
-              </div>
-              <span
-                className="text-sm font-medium transition-colors group-hover:text-[var(--text-primary)]"
-                style={{ color: 'var(--text-secondary)' }}
-              >
+              </span>
+              <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>
                 帮助引导
               </span>
               {isTourActive && (
-                <span
-                  className="ml-auto text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: 'var(--primary-100)',
-                    color: 'var(--primary-600)',
-                  }}
-                >
-                  进行中
-                </span>
+                <Tag variant="primary" className="ml-auto">进行中</Tag>
               )}
-            </button>
+            </Button>
           </div>
 
           {/* 用户信息区域 */}
@@ -583,7 +570,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             style={{ borderColor: 'var(--border-default)' }}
           >
             <div className="relative">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -650,7 +639,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
                   style={{ color: 'var(--text-muted)' }}
                 />
-              </button>
+              </Button>
 
               {/* 用户下拉菜单 */}
               {showUserMenu && (
@@ -671,8 +660,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     <Settings size={16} />
                     个人设置
                   </Link>
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--error-dim)]"
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    className="w-full justify-start gap-3 px-4"
                     style={{ color: 'var(--error)' }}
                     onClick={() => {
                       setShowUserMenu(false);
@@ -681,7 +672,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   >
                     <LogOut size={16} />
                     退出登录
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -705,12 +696,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           {/* 左侧：菜单按钮 */}
           <div className="flex items-center gap-4 flex-1">
             {/* 移动端菜单按钮 */}
-            <button
-              className="lg:hidden p-2 -ml-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Menu}
+              className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
-            >
-              <Menu size={22} style={{ color: 'var(--text-secondary)' }} />
-            </button>
+            />
           </div>
 
           {/* 右侧工具栏 */}
@@ -738,22 +730,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
             {/* 设置按钮 */}
             <div className="relative">
-              <button
-                className={`
-                  p-2.5 rounded-xl transition-all duration-200
-                  ${
-                    showSettings
-                      ? 'text-[var(--primary-500)] bg-[var(--primary-50)]'
-                      : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)]'
-                  }
-                `}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={Settings2}
+                className={showSettings ? '!text-[var(--primary-500)] !bg-[var(--primary-50)]' : ''}
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowSettings(!showSettings);
                 }}
-              >
-                <Settings2 size={20} />
-              </button>
+              />
 
               {/* 设置下拉菜单 */}
               {showSettings && (
@@ -789,8 +775,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     className="h-px mx-4"
                     style={{ background: 'var(--border-subtle)' }}
                   />
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--error-dim)]"
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    className="w-full justify-start gap-3 px-4"
                     style={{ color: 'var(--error)' }}
                     onClick={() => {
                       setShowLogoutConfirm(true);
@@ -799,7 +787,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   >
                     <LogOut size={16} />
                     退出登录
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

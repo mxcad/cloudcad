@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
+import { Button } from '@/components/ui';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -68,20 +69,9 @@ export class ErrorBoundary extends React.Component<
           <p style={{ color: '#94a3b8', marginBottom: 24, maxWidth: 480 }}>
             {this.state.error?.message || '未知错误'}
           </p>
-          <button
-            onClick={this.handleReset}
-            style={{
-              padding: '10px 24px',
-              background: '#6366f1',
-              color: 'white',
-              border: 'none',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontSize: 14,
-            }}
-          >
+          <Button variant="primary" size="sm" onClick={this.handleReset}>
             重试
-          </button>
+          </Button>
         </div>
       );
     }

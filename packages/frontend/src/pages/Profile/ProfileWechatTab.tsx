@@ -1,6 +1,6 @@
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
+import { MessageCircle, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface ProfileWechatTabProps {
   wechatId?: string | null | undefined;
@@ -39,13 +39,13 @@ export const ProfileWechatTab: React.FC<ProfileWechatTabProps> = ({
                 <span>账户安全提升</span>
               </div>
             </div>
-            <button
-              type="button"
-              className="submit-button danger"
+            <Button
+              variant="danger"
+              size="md"
               onClick={onUnbind}
             >
-              <span>解绑微信</span>
-            </button>
+              解绑微信
+            </Button>
           </div>
         ) : (
           <div className="wechat-unbound">
@@ -70,15 +70,15 @@ export const ProfileWechatTab: React.FC<ProfileWechatTabProps> = ({
                 <span>实时消息通知</span>
               </div>
             </div>
-            <button
-              type="button"
-              className="submit-button wechat"
+            <Button
+              variant="primary"
+              size="md"
+              icon={MessageCircle}
               disabled={loading}
               onClick={onBind}
             >
-              <MessageCircle size={20} />
-              <span>绑定微信</span>
-            </button>
+              绑定微信
+            </Button>
           </div>
         )}
       </div>

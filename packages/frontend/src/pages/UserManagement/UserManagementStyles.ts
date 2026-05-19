@@ -175,49 +175,6 @@ export const userManagementStyles = `
     background: var(--primary-50);
   }
 
-  /* ===== Tab 切换 ===== */
-  .user-tabs {
-    display: flex;
-    gap: var(--space-1);
-    padding: var(--space-1);
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--space-6);
-    width: fit-content;
-    border: 1px solid var(--border-subtle);
-  }
-
-  .user-tab {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-5);
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-lg);
-    color: var(--text-tertiary);
-    font-size: 0.9375rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s ease;
-  }
-
-  .user-tab:hover {
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-  }
-
-  .user-tab.active {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-    color: white;
-    box-shadow: var(--shadow-md);
-  }
-
-  .user-tab.active:hover {
-    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-    transform: translateY(-1px);
-  }
-
   /* ===== 筛选栏 ===== */
   .filters-card {
     background: var(--bg-secondary);
@@ -379,23 +336,6 @@ export const userManagementStyles = `
     font-style: italic;
   }
 
-  /* 角色列 */
-  .role-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    background: var(--primary-50);
-    color: var(--primary-700);
-    border-radius: var(--radius-full);
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
-
-  [data-theme="dark"] .role-badge {
-    background: rgba(99, 102, 241, 0.15);
-    color: var(--primary-400);
-  }
-
   /* 配额按钮 */
   .quota-btn {
     padding: var(--space-1) var(--space-3);
@@ -412,31 +352,6 @@ export const userManagementStyles = `
     border-color: var(--primary-300);
     color: var(--primary-600);
     background: var(--primary-50);
-  }
-
-  /* 状态标签 */
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-full);
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
-
-  .status-active {
-    background: var(--success-dim);
-    color: var(--success);
-  }
-
-  .status-inactive {
-    background: var(--warning-dim);
-    color: var(--warning);
-  }
-
-  .status-suspended {
-    background: var(--error-dim);
-    color: var(--error);
   }
 
   /* 操作按钮 */
@@ -600,28 +515,6 @@ export const userManagementStyles = `
     margin-top: var(--space-4);
     flex-wrap: wrap;
     justify-content: center;
-  }
-
-  .permission-badge {
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-full);
-    font-size: 0.8125rem;
-    font-weight: 500;
-  }
-
-  .permission-badge.create {
-    background: var(--success-dim);
-    color: var(--success);
-  }
-
-  .permission-badge.update {
-    background: var(--primary-50);
-    color: var(--primary-600);
-  }
-
-  .permission-badge.delete {
-    background: var(--error-dim);
-    color: var(--error);
   }
 
   /* ===== 模态框共用 ===== */
@@ -920,15 +813,6 @@ export const userManagementStyles = `
 
     .filters-grid {
       flex-direction: column;
-    }
-
-    .user-tabs {
-      width: 100%;
-    }
-
-    .user-tab {
-      flex: 1;
-      justify-content: center;
     }
 
     .form-row {

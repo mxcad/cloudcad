@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
-import { File } from 'lucide-react';
 import { Download } from 'lucide-react';
 
 export type DownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
@@ -51,28 +51,6 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     } else {
       onDownload(format);
     }
-  };
-
-  const formatLabels: Record<
-    DownloadFormat,
-    { label: string; icon: React.ReactNode }
-  > = {
-    dwg: {
-      label: 'DWG 格式',
-      icon: <File className="w-4 h-4" />,
-    },
-    dxf: {
-      label: 'DXF 格式',
-      icon: <File className="w-4 h-4" />,
-    },
-    mxweb: {
-      label: 'MXWEB 格式（默认）',
-      icon: <File className="w-4 h-4" />,
-    },
-    pdf: {
-      label: 'PDF 格式',
-      icon: <File className="w-4 h-4" />,
-    },
   };
 
   // 根据选择的格式动态调整文件名
@@ -130,61 +108,16 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
           >
             选择下载格式 *
           </label>
-          <div className="space-y-2">
-            {(Object.keys(formatLabels) as DownloadFormat[]).map((f) => (
-              <label
-                key={f}
-                className="flex items-center p-4 border rounded-lg cursor-pointer transition-all"
-                style={{
-                  borderColor:
-                    format === f
-                      ? 'var(--primary-500, #6366f1)'
-                      : 'var(--border-default, #e2e8f0)',
-                  backgroundColor:
-                    format === f
-                      ? 'rgba(99, 102, 241, 0.1)'
-                      : 'transparent',
-                  boxShadow:
-                    format === f ? '0 0 0 2px rgba(99, 102, 241, 0.2)' : 'none',
-                }}
-                onMouseEnter={(e) => {
-                  if (format !== f) {
-                    e.currentTarget.style.borderColor =
-                      'var(--border-strong, #cbd5e1)';
-                    e.currentTarget.style.backgroundColor =
-                      'var(--bg-tertiary, #f1f5f9)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (format !== f) {
-                    e.currentTarget.style.borderColor =
-                      'var(--border-default, #e2e8f0)';
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <input
-                  type="radio"
-                  name="format"
-                  value={f}
-                  checked={format === f}
-                  onChange={(e) =>
-                    setFormat(e.target.value as DownloadFormat)
-                  }
-                  className="w-4 h-4"
-                  style={{
-                    accentColor: 'var(--primary-500, #6366f1)',
-                  }}
-                />
-                <span
-                  className="ml-3"
-                  style={{ color: 'var(--text-primary, #0f172a)' }}
-                >
-                  {formatLabels[f].label}
-                </span>
-              </label>
-            ))}
-          </div>
+          <Select
+            value={format}
+            onChange={(val) => setFormat(val as DownloadFormat)}
+            options={[
+              { value: 'mxweb', label: 'MXWEB 格式（默认）' },
+              { value: 'dwg', label: 'DWG 格式' },
+              { value: 'dxf', label: 'DXF 格式' },
+              { value: 'pdf', label: 'PDF 格式' },
+            ]}
+          />
         </div>
 
         {/* PDF 参数（仅在选择 PDF 格式时显示） */}
@@ -245,24 +178,20 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
               >
                 颜色策略
               </label>
-              <select
+              <Select
                 value={pdfOptions.colorPolicy}
-                onChange={(e) =>
+                onChange={(val) =>
                   setPdfOptions({
                     ...pdfOptions,
-                    colorPolicy: e.target.value as 'mono' | 'color',
+                    colorPolicy: val as 'mono' | 'color',
                   })
                 }
-                className="w-full px-3 py-2 rounded-md text-sm"
-                style={{
-                  backgroundColor: 'var(--bg-secondary, #ffffff)',
-                  border: '1px solid var(--border-default, #e2e8f0)',
-                  color: 'var(--text-primary, #0f172a)',
-                }}
-              >
-                <option value="mono">黑白（单色）</option>
-                <option value="color">彩色</option>
-              </select>
+                options={[
+                  { value: 'mono', label: '黑白（单色）' },
+                  { value: 'color', label: '彩色' },
+                ]}
+                size="sm"
+              />
             </div>
           </div>
         )}

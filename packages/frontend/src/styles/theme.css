@@ -409,12 +409,14 @@
 /* 4.5 输入框 */
 .input-theme {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: 0.25rem 0.5rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: 3px;
   color: var(--text-primary);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  height: 1.5rem;
   transition: all var(--transition-base);
 }
 
@@ -429,12 +431,6 @@
 .input-theme:focus {
   outline: none;
   border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px var(--primary-100);
-}
-
-/* 深色主题聚焦效果 */
-[data-theme="dark"] .input-theme:focus {
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
 .input-theme option {
@@ -562,36 +558,6 @@
 [data-theme="dark"] .dropdown-item-theme.active {
   background: var(--primary-100);
   color: var(--primary-500);
-}
-
-/* 4.11 标签页 */
-.tabs-theme {
-  display: flex;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-lg);
-}
-
-.tab-theme {
-  padding: var(--space-2) var(--space-4);
-  color: var(--text-tertiary);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-base);
-  font-weight: 500;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.tab-theme:hover {
-  color: var(--text-secondary);
-}
-
-.tab-theme.active {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
 }
 
 /* 4.12 开关 */
@@ -856,37 +822,3 @@
   background: var(--border-default);
 }
 
-/* 8.5 徽章 */
-.badge-theme {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.badge-primary {
-  background: var(--primary-100);
-  color: var(--primary-700);
-}
-
-.badge-success {
-  background: var(--success-dim);
-  color: var(--success);
-}
-
-.badge-warning {
-  background: var(--warning-dim);
-  color: var(--warning);
-}
-
-.badge-error {
-  background: var(--error-dim);
-  color: var(--error);
-}
-
-[data-theme="dark"] .badge-primary {
-  background: var(--primary-100);
-  color: var(--primary-500);
-}

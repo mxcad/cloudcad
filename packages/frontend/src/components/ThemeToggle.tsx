@@ -6,12 +6,15 @@ import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Sun } from 'lucide-react';
 import { Moon } from 'lucide-react';
+import { Button } from '../ui';
 
 export const ThemeToggle: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="md"
       onClick={toggleTheme}
       className="relative p-2 rounded-xl transition-all duration-300 ease-out
                  hover:scale-110 active:scale-95
@@ -50,7 +53,7 @@ export const ThemeToggle: React.FC = () => {
                    ${isDark ? 'group-hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]'}
                    opacity-0 group-hover:opacity-100 pointer-events-none`}
       />
-    </button>
+    </Button>
   );
 };
 

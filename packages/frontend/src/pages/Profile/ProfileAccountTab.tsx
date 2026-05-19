@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui';
 import { WechatVerifyModal } from '../../components/WechatVerifyModal';
 import {
   authControllerSendSmsCode,
@@ -216,9 +217,9 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   }
                   placeholder="请输入密码"
                 />
-                <button
-                  type="button"
-                  className="toggle-password"
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={() =>
                     onSetShowPassword((p) => ({
                       ...p,
@@ -257,7 +258,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   )}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -293,9 +294,9 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   }
                   placeholder="请输入手机验证码"
                 />
-                <button
-                  type="button"
-                  className="send-code-button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={deactivateCountdown > 0}
                   onClick={async () => {
                     try {
@@ -322,7 +323,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   {deactivateCountdown > 0
                     ? `${deactivateCountdown}s`
                     : '获取验证码'}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -359,9 +360,9 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   }
                   placeholder="请输入邮箱验证码"
                 />
-                <button
-                  type="button"
-                  className="send-code-button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={deactivateCountdown > 0}
                   onClick={async () => {
                     try {
@@ -388,7 +389,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   {deactivateCountdown > 0
                     ? `${deactivateCountdown}s`
                     : '获取验证码'}
-                </button>
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
@@ -405,14 +406,14 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 <div className="wechat-warning">
                   <MessageCircle size={28} strokeWidth={1.5} />
                   <p>您是通过微信登录的账户，请使用微信扫码确认注销</p>
-                  <button
-                    type="button"
-                    className="submit-button"
+                  <Button
+                    variant="primary"
+                    size="md"
+                    icon={MessageCircle}
                     onClick={() => setShowWechatModal(true)}
                   >
-                    <MessageCircle size={16} />
-                    <span>微信扫码确认</span>
-                  </button>
+                    微信扫码确认
+                  </Button>
                 </div>
               )}
             </>
@@ -435,11 +436,11 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
             </label>
           </div>
 
-          <button
-            type="button"
-            className="submit-button danger"
+          <Button
+            variant="danger"
+            size="md"
+            loading={deactivateLoading}
             disabled={
-              deactivateLoading ||
               !deactivateForm.confirmed ||
               !deactivateForm.verificationMethod ||
               (deactivateForm.verificationMethod === 'password' &&
@@ -482,45 +483,8 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
               }
             }}
           >
-            {deactivateLoading ? (
-              <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="animate-spin"
-                >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                <span>注销中...</span>
-              </>
-            ) : (
-              <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                  <path d="M12 9v4" />
-                  <path d="M12 17h.01" />
-                </svg>
-                <span>确认注销</span>
-              </>
-            )}
-          </button>
+            {deactivateLoading ? '注销中...' : '确认注销'}
+          </Button>
         </div>
         <WechatVerifyModal
           open={showWechatModal}

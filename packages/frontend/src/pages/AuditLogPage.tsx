@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Pagination } from '../components/ui/Pagination';
+import { Tag } from '../components/ui/Tag';
 import { DescriptionText } from '../components/ui/TruncateText';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
@@ -400,13 +401,9 @@ export const AuditLogPage: React.FC = () => {
                     </td>
                     <td>
                       {log.success ? (
-                        <span className="audit-badge audit-badge--success">
-                          成功
-                        </span>
+                        <Tag variant="success">成功</Tag>
                       ) : (
-                        <span className="audit-badge audit-badge--error">
-                          失败
-                        </span>
+                        <Tag variant="error">失败</Tag>
                       )}
                     </td>
                     <td>

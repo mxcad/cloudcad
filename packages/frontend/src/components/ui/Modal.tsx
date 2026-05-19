@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
+import { Card } from './Card';
 import { Input } from '@/components/ui/Input';
 import { isTourModeActive } from '../../contexts/TourContext';
 
@@ -112,30 +113,15 @@ export const Modal: React.FC<ModalProps> = ({
   );
 
   const renderCard = () => (
-    <div
-      className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden modal-content flex flex-col${className ? ` ${className}` : ''}`}
-      style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-xl)',
-        boxShadow: 'var(--shadow-xl)',
-        zIndex: zIndex + 1,
-      }}
+    <Card
+      variant="elevated"
+      className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden flex flex-col modal-content${className ? ` ${className}` : ''}`}
+      style={{ zIndex: zIndex + 1 }}
       onClick={(e) => e.stopPropagation()}
     >
       {!hideHeader && (
-        <div
-          className="flex items-center justify-between px-6 py-4"
-          style={{
-            borderBottom: '1px solid var(--border-default)',
-          }}
-        >
-          <h3
-            className="text-lg font-semibold"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            {title}
-          </h3>
+        <Card.Header>
+          <Card.Title as="h3">{title}</Card.Title>
           <button
             data-tour="modal-close-btn"
             onClick={onClose}
@@ -154,28 +140,17 @@ export const Modal: React.FC<ModalProps> = ({
           >
             <X size={20} />
           </button>
-        </div>
+        </Card.Header>
       )}
 
-      <div
-        className={`${contentClassName ? `${contentClassName} overflow-y-auto flex-1` : 'p-6 overflow-y-auto flex-1'}`}
-        style={{ color: 'var(--text-secondary)' }}
-      >
+      <Card.Body className={`overflow-y-auto flex-1${contentClassName ? ` ${contentClassName}` : ''}`}>
         {children}
-      </div>
+      </Card.Body>
 
       {footer && (
-        <div
-          className="px-6 py-4 flex justify-end gap-3"
-          style={{
-            background: 'var(--bg-tertiary)',
-            borderTop: '1px solid var(--border-default)',
-          }}
-        >
-          {footer}
-        </div>
+        <Card.Footer style={{ background: 'var(--bg-tertiary)' }}>{footer}</Card.Footer>
       )}
-    </div>
+    </Card>
   );
 
   const modalContent = (

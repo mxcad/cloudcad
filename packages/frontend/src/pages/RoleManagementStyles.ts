@@ -108,52 +108,6 @@ export const roleManagementStyles = `
     margin: 0.375rem 0 0;
   }
 
-  /* ===== 搜索框 ===== */
-  /* ===== Tab 切换 ===== */
-  .tabs-container {
-    display: flex;
-    gap: var(--space-1);
-    padding: var(--space-1);
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--space-6);
-    width: fit-content;
-    border: 1px solid var(--border-subtle);
-  }
-
-  .tab-button {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-5);
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-lg);
-    color: var(--text-tertiary);
-    font-size: 0.9375rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .tab-button:hover {
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-  }
-
-  .tab-button.active {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-    color: white;
-    box-shadow: var(--shadow-md);
-  }
-
-  .tab-button.active:hover {
-    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-    transform: translateY(-1px);
-  }
-
   /* ===== 角色模块 ===== */
   .roles-section {
     margin-bottom: var(--space-8);
@@ -294,22 +248,6 @@ export const roleManagementStyles = `
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
-  }
-
-  .system-badge {
-    font-size: 0.625rem;
-    padding: 0.125rem 0.5rem;
-    background: var(--primary-100);
-    color: var(--primary-600);
-    border-radius: var(--radius-full);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  [data-theme="dark"] .system-badge {
-    background: var(--primary-100);
-    color: var(--primary-400);
   }
 
   .role-description {
@@ -550,15 +488,6 @@ export const roleManagementStyles = `
     .page-title-icon {
       width: 48px;
       height: 48px;
-    }
-
-    .tabs-container {
-      width: 100%;
-    }
-
-    .tab-button {
-      flex: 1;
-      justify-content: center;
     }
 
     .section-header {

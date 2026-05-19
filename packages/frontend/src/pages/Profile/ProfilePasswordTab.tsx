@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui';
 
 
 interface ProfilePasswordTabProps {
@@ -65,23 +66,22 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
                 placeholder="请输入当前密码"
                 required={!user || user.hasPassword === true}
               />
-              <button
-                type="button"
-                className="toggle-password"
+              <Button
+                variant="ghost"
+                size="xs"
+                icon={showPassword.old ? EyeOff : Eye}
                 onClick={() => onTogglePassword('old')}
-              >
-                {showPassword.old ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              />
               <div className="input-glow" />
             </div>
             <div className="field-hint">
-              <button
-                type="button"
-                className="forgot-password-link"
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => onNavigate('/forgot-password')}
               >
                 忘记密码？
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -119,13 +119,12 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               placeholder="至少8位，包含大小写字母和数字"
               required
             />
-            <button
-              type="button"
-              className="toggle-password"
+            <Button
+              variant="ghost"
+              size="xs"
+              icon={showPassword.new ? EyeOff : Eye}
               onClick={() => onTogglePassword('new')}
-            >
-              {showPassword.new ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            />
             <div className="input-glow" />
           </div>
           {passwordForm.newPassword && (
@@ -167,32 +166,19 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               placeholder="再次输入新密码"
               required
             />
-            <button
-              type="button"
-              className="toggle-password"
+            <Button
+              variant="ghost"
+              size="xs"
+              icon={showPassword.confirm ? EyeOff : Eye}
               onClick={() => onTogglePassword('confirm')}
-            >
-              {showPassword.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            />
             <div className="input-glow" />
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="submit-button">
-          {loading ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              <span>提交中...</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle size={18} />
-              <span>
-                {user?.hasPassword === false ? '设置密码' : '修改密码'}
-              </span>
-            </>
-          )}
-        </button>
+        <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle} className="w-full">
+          {loading ? '提交中...' : (user?.hasPassword === false ? '设置密码' : '修改密码')}
+        </Button>
 
         <div className="security-tips">
           <h4>

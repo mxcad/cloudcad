@@ -45,7 +45,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         <button
           type="button"
           onClick={handleClear}
-          className="p-1 rounded-lg transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
+          className="p-1 rounded-[3px] transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
           style={{ color: 'var(--text-muted)' }}
           title="清除"
         >

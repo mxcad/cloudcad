@@ -26,6 +26,7 @@ import { Cpu } from 'lucide-react';
 import { Boxes } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Tabs, Tab } from '@/components/ui';
 
 /**
  * 忘记密码页面 - CloudCAD
@@ -160,7 +161,7 @@ export const ForgotPassword: React.FC = () => {
                     </a>
                   )}
                   {!noChannelInfo.supportEmail && !noChannelInfo.supportPhone && (
-                    <p className="support-empty">暂无客服联系方式，请联系系统管理�?/p>
+                    <p className="support-empty">暂无客服联系方式，请联系系统管理员</p>
                   )}
                 </div>
               </div>
@@ -263,13 +264,9 @@ export const ForgotPassword: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => navigate('/login')}
-                className="back-button"
-              >
-                <ArrowLeft size={18} />
-                <span>返回登录</span>
-              </button>
+              <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/login')}>
+                返回登录
+              </Button>
             </div>
           </div>
           <p className="copyright">© 2026 {appName}. All rights reserved.</p>
@@ -381,7 +378,7 @@ export const ForgotPassword: React.FC = () => {
               <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
                 <Cpu size={14} />
               </div>
-              <div className="feature-dot" data-tooltip="多用户实时协同编�?>
+              <div className="feature-dot" data-tooltip="多用户实时协同编辑">
                 <Boxes size={14} />
               </div>
               <div className="feature-dot" data-tooltip="企业级数据安全保�?>
@@ -457,33 +454,23 @@ export const ForgotPassword: React.FC = () => {
             <h2 className="form-title">忘记密码</h2>
             <p className="form-subtitle">
               {mailAvailable && phoneAvailable
-                ? `使用${contactType === 'email' ? '邮箱' : '手机�?}接收验证码`
+                ? `使用${contactType === 'email' ? '邮箱' : '手机号'}接收验证码`
                 : mailAvailable
-                  ? '使用邮箱接收验证�?
+                  ? '使用邮箱接收验证码'
                   : '使用手机号接收验证码'}
             </p>
           </div>
 
           {/* 联系方式切换 - 仅在两个渠道都可用时显示 */}
           {mailAvailable && phoneAvailable && (
-          <div className="contact-type-toggle">
-            <button
-              type="button"
-              className={`toggle-btn ${contactType === 'email' ? 'active' : ''}`}
-              onClick={() => switchContactType('email')}
-            >
-              <Mail size={16} />
-              <span>邮箱</span>
-            </button>
-            <button
-              type="button"
-              className={`toggle-btn ${contactType === 'phone' ? 'active' : ''}`}
-              onClick={() => switchContactType('phone')}
-            >
-              <Phone size={16} />
-              <span>手机�?/span>
-            </button>
-          </div>
+          <Tabs>
+            <Tab active={contactType === 'email'} icon={Mail} onClick={() => switchContactType('email')}>
+              邮箱
+            </Tab>
+            <Tab active={contactType === 'phone'} icon={Phone} onClick={() => switchContactType('phone')}>
+              手机号
+            </Tab>
+          </Tabs>
           )}
 
           {/* 忘记联系方式 */}
@@ -548,7 +535,7 @@ export const ForgotPassword: React.FC = () => {
                     type="tel"
                     autoComplete="tel"
                     className="input-field"
-                    placeholder="请输入手机号�?
+                    placeholder="请输入手机号
                     {...register('phone')}
                   />
                   <div className="input-glow" />
@@ -572,10 +559,9 @@ export const ForgotPassword: React.FC = () => {
 
           {/* 返回登录 */}
           <div className="form-footer">
-            <button onClick={() => navigate('/login')} className="back-link">
-              <ArrowLeft size={16} />
-              <span>返回登录</span>
-            </button>
+            <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/login')}>
+              返回登录
+            </Button>
           </div>
 
           {/* 特性图�?*/}
@@ -662,10 +648,7 @@ export const ForgotPassword: React.FC = () => {
         .form-header { text-align: center; margin-bottom: 1.5rem; }
         .form-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
         .form-subtitle { font-size: 0.875rem; color: var(--text-tertiary); }
-        .contact-type-toggle { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
-        .toggle-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex: 1; padding: 0.625rem 1rem; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .toggle-btn:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
-        .toggle-btn.active { background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); border-color: transparent; color: white; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3); }
+
         .alert { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: 0.875rem; animation: slide-up 0.3s ease-out; }
         .alert-error { background: var(--error-dim); border: 1px solid var(--error); color: var(--error); }
         .alert-icon { flex-shrink: 0; }

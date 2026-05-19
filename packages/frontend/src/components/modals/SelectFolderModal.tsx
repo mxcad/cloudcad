@@ -177,12 +177,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         >
           {/* 展开/折叠图标 */}
           {node.hasChildren ? (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleExpand(node.id);
               }}
-              className="p-0.5 hover:bg-slate-200 rounded transition-colors flex-shrink-0"
+              className="p-0.5 flex-shrink-0"
               disabled={node.loading}
             >
               {node.loading ? (
@@ -192,7 +194,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
               ) : (
                 <ChevronRight size={14} className="text-slate-500" />
               )}
-            </button>
+            </Button>
           ) : (
             <div className="w-5 h-5 flex-shrink-0" />
           )}

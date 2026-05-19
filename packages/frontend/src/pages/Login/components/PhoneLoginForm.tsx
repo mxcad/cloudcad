@@ -4,7 +4,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
-import { Phone, MessageSquare, ArrowRight, Loader2 } from 'lucide-react';
+import { Phone, MessageSquare, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface PhoneLoginFormProps {
   phoneForm: { phone: string; code: string };
@@ -83,37 +84,17 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             onFocus={() => onFocus('code')}
             onBlur={onBlur}
           />
-          <button
-            type="button"
-            className="code-button"
-            onClick={onSendCode}
-            disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}
-          >
-            {sendingCode ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : countdown > 0 ? (
-              `${countdown}s`
-            ) : (
-              '获取验证码'
-            )}
-          </button>
+          <Button type="button" variant="secondary" size="sm" onClick={onSendCode} disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11} loading={sendingCode}>
+            {countdown > 0 ? `${countdown}s` : '获取验证码'}
+          </Button>
           <div className="input-glow" />
         </div>
       </div>
 
-      <button type="submit" disabled={loading} className="submit-button">
-        {loading ? (
-          <>
-            <Loader2 size={18} className="animate-spin" />
-            <span>登录中...</span>
-          </>
-        ) : (
-          <>
-            <span>立即登录</span>
-            <ArrowRight size={18} className="button-arrow" />
-          </>
-        )}
-      </button>
+      <Button type="submit" variant="primary" size="md" loading={loading} className="w-full submit-button">
+        <span>立即登录</span>
+        <ArrowRight size={18} className="button-arrow" />
+      </Button>
     </form>
   );
 };

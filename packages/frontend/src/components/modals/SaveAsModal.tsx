@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { FileNameInput } from '@/components/ui/FileNameInput';
 import { Folder } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
 import { useSaveAs } from './hooks/useSaveAs';
@@ -180,61 +181,36 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-2">
               文件名
             </label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder="请输入文件名"
-                disabled={saving}
-              />
-              <span className="text-slate-500">.{format}</span>
-            </div>
+            <FileNameInput
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              placeholder="请输入文件名"
+              disabled={saving}
+              suffix={`.${format}`}
+              suffixVariant="text"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               保存到
             </label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetType('personal');
+            <Select
+              value={targetType}
+              onChange={(val) => {
+                setTargetType(val as 'personal' | 'project' | 'library');
+                if (val === 'personal') {
                   setSelectedParentId(personalSpaceId || '');
-                }}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                  targetType === 'personal'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                我的图纸
-              </button>
-              <button
-                type="button"
-                onClick={() => setTargetType('project')}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                  targetType === 'project'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                项目文件夹
-              </button>
-              {hasLibraryPermission && (
-                <button
-                  type="button"
-                  onClick={() => setTargetType('library')}
-                  className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                    targetType === 'library'
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  公开资源库
-                </button>
-              )}
-            </div>
+                } else {
+                  setSelectedParentId(val);
+                }
+              }}
+              options={[
+                { value: 'personal', label: '我的图纸' },
+                { value: 'project', label: '项目文件夹' },
+                ...(hasLibraryPermission ? [{ value: 'library' as const, label: '公开资源库' }] : []),
+              ]}
+            />
           </div>
 
           {targetType === 'project' && (
@@ -242,22 +218,16 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 选择项目
               </label>
-              <select
+              <Select
                 value={selectedProjectId}
-                onChange={(e) => {
-                  setSelectedProjectId(e.target.value);
-                  setSelectedParentId(e.target.value);
+                onChange={(val) => {
+                  setSelectedProjectId(val);
+                  setSelectedParentId(val);
                 }}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="请选择项目"
+                options={projects.map((p) => ({ value: p.id, label: p.name }))}
                 disabled={saving}
-              >
-                <option value="">请选择项目</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           )}
 
@@ -266,17 +236,15 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 选择资源库
               </label>
-              <select
+              <Select
                 value={libraryType}
-                onChange={(e) => {
-                  setLibraryType(e.target.value as 'drawing' | 'block');
-                }}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                onChange={(val) => setLibraryType(val as 'drawing' | 'block')}
+                options={[
+                  { value: 'drawing', label: '图纸库' },
+                  { value: 'block', label: '图块库' },
+                ]}
                 disabled={saving}
-              >
-                <option value="drawing">图纸库</option>
-                <option value="block">图块库</option>
-              </select>
+              />
             </div>
           )}
 
@@ -284,12 +252,13 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-2">
               保存位置
             </label>
-            <button
+            <Button
+              variant="outline"
               type="button"
               onClick={() => {
                 setShowFolderPicker(true);
               }}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg flex items-center gap-3 hover:bg-slate-50"
+              className="w-full"
             >
               <Folder className="w-5 h-5 text-slate-400" />
               <span className="flex-1 text-left truncate">
@@ -300,59 +269,24 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                       '选择文件夹'
                   : '点击选择文件夹'}
               </span>
-            </button>
+            </Button>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               保存格式
             </label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setFormat('dwg')}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                  format === 'dwg'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                DWG
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormat('dxf')}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                  format === 'dxf'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                DXF
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormat('pdf')}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                  format === 'pdf'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormat('mxweb')}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-                  format === 'mxweb'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                MXWEB
-              </button>
-            </div>
+            <Select
+              value={format}
+              onChange={(val) => setFormat(val as 'dwg' | 'dxf' | 'pdf' | 'mxweb')}
+              options={[
+                { value: 'dwg', label: 'DWG' },
+                { value: 'dxf', label: 'DXF' },
+                { value: 'pdf', label: 'PDF' },
+                { value: 'mxweb', label: 'MXWEB' },
+              ]}
+              disabled={saving}
+            />
           </div>
         </div>
       </Modal>

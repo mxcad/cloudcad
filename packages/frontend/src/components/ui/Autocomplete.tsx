@@ -1,6 +1,7 @@
 import type React from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import { Z_LAYERS } from '@/constants/layers';
 
 export interface AutocompleteItem {
   key: string;
@@ -25,7 +26,7 @@ interface AutocompleteProps {
 }
 
 export const Autocomplete: React.FC<AutocompleteProps> = ({
-  value,
+  value = '',
   onChange,
   onSearch,
   loading = false,
@@ -78,46 +79,56 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
               <button
                 type="button"
                 onClick={handleClear}
-                className="p-1 rounded-lg transition-all duration-200"
-                style={{ color: 'var(--text-muted)' }}
+                className="flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-[rgba(255,255,255,0.1)]"
+                style={{ color: 'var(--text-muted)', width: 18, height: 18 }}
                 title="清除"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <X size={12} />
               </button>
             )}
           </>
         }
       />
-      {open && items.length > 0 && (
+      {open && (
         <div
-          className="absolute z-10 w-full mt-1 rounded-xl shadow-lg max-h-60 overflow-y-auto"
+          className="absolute w-full mt-1 rounded-xl p-1 shadow-xl overflow-hidden"
           style={{
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
+            zIndex: Z_LAYERS.OVERLAY,
+            maxHeight: 280,
+            overflowY: 'auto',
           }}
         >
-          {items.map((item) => (
-            <button
-              key={getItemKey?.(item) ?? item.key}
-              type="button"
-              className="w-full px-3 py-2 text-left text-sm transition-colors duration-150 last:border-b-0"
-              style={{
-                color: 'var(--text-secondary)',
-                borderBottom: '1px solid var(--border-subtle)',
-              }}
-              onClick={() => onSelectItem(item)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--bg-tertiary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              {renderItem ? renderItem(item) : item.label}
-            </button>
-          ))}
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="text-xs py-2 text-center" style={{ color: 'var(--text-muted)' }}>
+              暂无数据
+            </div>
+          ) : (
+            items.map((item) => (
+              <button
+                key={getItemKey?.(item) ?? item.key}
+                type="button"
+                className="w-full flex items-center px-2.5 py-1.5 text-xs rounded-md transition-colors duration-150"
+                style={{ color: 'var(--text-secondary)' }}
+                onClick={() => onSelectItem(item)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+              >
+                {renderItem ? renderItem(item) : item.label}
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { User } from 'lucide-react';
 import { TruncateText } from '@/components/ui/TruncateText';
 import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 
 export interface UserTableUser {
   id: string;
@@ -108,9 +109,9 @@ export function UserTable({
                 </td>
               )}
               <td className="cell-role">
-                <span className="role-badge">
+                <Tag variant="primary">
                   {user.role?.name || '未知角色'}
-                </span>
+                </Tag>
               </td>
               <td className="cell-quota">
                 <Button
@@ -124,13 +125,13 @@ export function UserTable({
                 </Button>
               </td>
               <td className="cell-status">
-                <span className={`status-badge status-${(user.status || 'ACTIVE').toLowerCase()}`}>
+                <Tag variant={user.status === 'ACTIVE' ? 'success' : user.status === 'INACTIVE' ? 'warning' : 'error'}>
                   {user.status === 'ACTIVE'
                     ? '正常'
                     : user.status === 'INACTIVE'
                       ? '未激活'
                       : '已禁用'}
-                </span>
+                </Tag>
               </td>
               <td className="cell-actions">
                 <div className="action-buttons">

@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useWechatAuth } from '../../hooks/useWechatAuth';
 import { useWechatBind } from './hooks/useWechatBind';
-import { MessageCircle } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
+import { MessageCircle, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface WechatDeactivateConfirmProps {
   onConfirm: () => void;
@@ -67,15 +67,15 @@ export function WechatDeactivateConfirm({
     <div className="wechat-warning">
       <MessageCircle size={28} strokeWidth={1.5} />
       <p>您是通过微信登录的账户，请使用微信扫码确认注销</p>
-      <button
-        type="button"
-        className="submit-button"
-        disabled={loading}
+      <Button
+        variant="primary"
+        size="md"
+        icon={MessageCircle}
+        loading={loading}
         onClick={handleClick}
       >
-        <MessageCircle size={16} />
-        <span>{loading ? '等待授权...' : '微信扫码确认'}</span>
-      </button>
+        {loading ? '等待授权...' : '微信扫码确认'}
+      </Button>
       {error && <p className="error-text">{error}</p>}
     </div>
   );

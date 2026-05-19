@@ -7,7 +7,7 @@ import { Users } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button, Tab, Tabs, Tag } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
@@ -314,13 +314,13 @@ export const UserManagement = () => {
           <h2 className="limited-access-title">无法查看用户列表</h2>
           <div className="permission-badges">
             {hasPermission(SystemPermission.SYSTEM_USER_CREATE) && (
-              <span className="permission-badge create">创建用户</span>
+              <Tag variant="success">创建用户</Tag>
             )}
             {hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
-              <span className="permission-badge update">更新用户</span>
+              <Tag variant="primary">更新用户</Tag>
             )}
             {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
-              <span className="permission-badge delete">删除用户</span>
+              <Tag variant="error">删除用户</Tag>
             )}
           </div>
         </div>
@@ -378,22 +378,20 @@ export const UserManagement = () => {
       </div>
 
       {hasPermission(SystemPermission.SYSTEM_USER_READ) && (
-        <div className="user-tabs">
-          <Button
-            variant="ghost"
-            className={`user-tab ${userTab === 'active' ? 'active' : ''}`}
+        <Tabs>
+          <Tab
+            active={userTab === 'active'}
             onClick={() => { setUserTab('active'); setCurrentPage(1); }}
           >
             活跃用户
-          </Button>
-          <Button
-            variant="ghost"
-            className={`user-tab ${userTab === 'deleted' ? 'active' : ''}`}
+          </Tab>
+          <Tab
+            active={userTab === 'deleted'}
             onClick={() => { setUserTab('deleted'); setCurrentPage(1); }}
           >
             已注销
-          </Button>
-        </div>
+          </Tab>
+        </Tabs>
       )}
 
       <UserSearchBar

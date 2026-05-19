@@ -1,5 +1,6 @@
 import type React from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Z_LAYERS } from '@/constants/layers';
 
 export interface MenuItemData {
   key: string;
@@ -35,6 +36,7 @@ interface MenuItemProps {
   disabled?: boolean;
   onClick?: (e: Event) => void;
   className?: string;
+  danger?: boolean;
 }
 
 export const Menu: React.FC<MenuProps> & {
@@ -62,13 +64,14 @@ Menu.Content = ({ children, align = 'start', sideOffset = 4, className = '' }) =
       align={align}
       sideOffset={sideOffset}
       className={`
-        min-w-[180px] rounded-xl p-1.5 shadow-lg
+        min-w-[160px] rounded-xl p-1 shadow-xl
         animate-in fade-in-0 zoom-in-95
         ${className}
       `}
       style={{
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-default)',
+        zIndex: Z_LAYERS.OVERLAY,
       }}
     >
       {children}
@@ -76,22 +79,23 @@ Menu.Content = ({ children, align = 'start', sideOffset = 4, className = '' }) =
   </DropdownMenu.Portal>
 );
 
-Menu.Item = ({ children, disabled, onClick, className = '' }) => (
+Menu.Item = ({ children, disabled, onClick, className = '', danger }) => (
   <DropdownMenu.Item
     disabled={disabled}
     onSelect={onClick}
     className={`
-      flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg
-      outline-none cursor-pointer
+      flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md
+      outline-none cursor-pointer select-none
       transition-colors duration-150
       data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed
+      data-[highlighted]:bg-[rgba(255,255,255,0.05)]
+      data-[highlighted]:text-[var(--text-primary)]
+      ${danger ? 'data-[highlighted]:text-[var(--error)]' : ''}
       ${className}
     `}
     style={{
-      color: 'var(--text-secondary)',
+      color: danger ? 'var(--error)' : 'var(--text-secondary)',
     }}
-    onFocus={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-    onBlur={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
   >
     {children}
   </DropdownMenu.Item>

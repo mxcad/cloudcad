@@ -15,7 +15,10 @@ import { useFileSystemStore } from '@/stores/fileSystemStore';
 // Mock dependencies
 vi.mock('@/hooks/file-system');
 vi.mock('@/hooks/useProjectManagement');
-vi.mock('@/contexts/AuthContext');
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 vi.mock('@/stores/fileSystemStore');
 vi.mock('@/components/MxCadUploader', () => ({
   default: vi.fn(() => null),

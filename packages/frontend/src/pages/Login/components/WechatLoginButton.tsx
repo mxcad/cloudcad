@@ -1,10 +1,6 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface WechatLoginButtonProps {
   onWechatLogin: () => void;
@@ -16,10 +12,15 @@ export const WechatLoginButton: React.FC<WechatLoginButtonProps> = ({ onWechatLo
       <div className="divider">
         <span>其他登录方式</span>
       </div>
-      <button type="button" onClick={onWechatLogin} className="wechat-login-button">
-        <MessageCircle size={20} />
-        <span>微信登录</span>
-      </button>
+      <Button
+        variant="secondary"
+        size="md"
+        icon={MessageCircle}
+        onClick={onWechatLogin}
+        className="w-full justify-center"
+      >
+        微信登录
+      </Button>
     </>
   );
 };

@@ -10,18 +10,39 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   wrapperClassName?: string;
 }
 
-const sizeClasses = {
-  xs: 'px-1.5 py-0 text-xs gap-1 h-[24px] rounded-[var(--radius-sm)]',
-  sm: 'px-3 py-2 text-xs gap-1.5',
-  md: 'px-4 py-2.5 text-sm gap-2',
-  lg: 'px-5 py-3 text-base gap-2.5',
-};
-
-const iconSizes = {
-  xs: 12,
-  sm: 14,
-  md: 16,
-  lg: 18,
+const sizeConfig = {
+  xs: {
+    cls: 'px-1.5 py-0 text-xs gap-1 h-[20px] rounded-[2px]',
+    iconSize: 10,
+    pl: 'pl-5',
+    pr: 'pr-5',
+    leftOffset: 'left-1',
+    rightOffset: 'right-1',
+  },
+  sm: {
+    cls: 'px-2 py-0.5 text-xs gap-1 h-[22px] rounded-[3px]',
+    iconSize: 12,
+    pl: 'pl-6',
+    pr: 'pr-6',
+    leftOffset: 'left-1.5',
+    rightOffset: 'right-1.5',
+  },
+  md: {
+    cls: 'px-2 py-1 text-xs gap-1.5 h-[24px] rounded-[3px]',
+    iconSize: 14,
+    pl: 'pl-7',
+    pr: 'pr-7',
+    leftOffset: 'left-2',
+    rightOffset: 'right-2',
+  },
+  lg: {
+    cls: 'px-2.5 py-1 text-sm gap-2 h-[28px] rounded-[4px]',
+    iconSize: 16,
+    pl: 'pl-8',
+    pr: 'pr-8',
+    leftOffset: 'left-2.5',
+    rightOffset: 'right-2.5',
+  },
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -36,19 +57,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     disabled,
     ...props
   }, ref) => {
+    const cfg = sizeConfig[size];
     const hasLeftIcon = !!LeftIcon;
     const hasRightContent = !!RightIcon || !!rightNode;
 
-    const paddingLeftClass = hasLeftIcon ? 'pl-10' : '';
-    const paddingRightClass = hasRightContent ? 'pr-10' : '';
+    const paddingLeftClass = hasLeftIcon ? cfg.pl : '';
+    const paddingRightClass = hasRightContent ? cfg.pr : '';
 
     return (
       <div
         className={`relative flex items-center w-full flex-1 ${wrapperClassName}`}
       >
         {LeftIcon && (
-          <span className="absolute left-3 pointer-events-none" style={{ color: 'var(--text-muted)' }}>
-            <LeftIcon size={iconSizes[size]} />
+          <span className={`absolute ${cfg.leftOffset} pointer-events-none`} style={{ color: 'var(--text-muted)' }}>
+            <LeftIcon size={cfg.iconSize} />
           </span>
         )}
         <input
@@ -56,11 +78,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           disabled={disabled}
           className={`
             w-full
-            rounded-xl
             transition-all
             duration-200
             outline-none
-            ${sizeClasses[size]}
+            ${cfg.cls}
             ${paddingLeftClass}
             ${paddingRightClass}
             disabled:opacity-50
@@ -74,23 +95,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           }}
           onFocus={(e) => {
             e.target.style.borderColor = 'var(--primary-500)';
-            e.target.style.boxShadow = '0 0 0 3px var(--primary-100)';
             props.onFocus?.(e);
           }}
           onBlur={(e) => {
             e.target.style.borderColor = 'var(--border-default)';
-            e.target.style.boxShadow = 'none';
             props.onBlur?.(e);
           }}
           {...props}
         />
         {RightIcon && (
-          <span className="absolute right-3 pointer-events-none" style={{ color: 'var(--text-muted)' }}>
-            <RightIcon size={iconSizes[size]} />
+          <span className={`absolute ${cfg.rightOffset} pointer-events-none`} style={{ color: 'var(--text-muted)' }}>
+            <RightIcon size={cfg.iconSize} />
           </span>
         )}
         {rightNode && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className={`absolute ${cfg.rightOffset} top-1/2 -translate-y-1/2 flex items-center gap-0.5`}>
             {rightNode}
           </div>
         )}

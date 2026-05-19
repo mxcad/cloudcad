@@ -36,6 +36,7 @@ import { ProfileEmailTab } from './Profile/ProfileEmailTab';
 import { ProfilePhoneTab } from './Profile/ProfilePhoneTab';
 import { ProfileWechatTab } from './Profile/ProfileWechatTab';
 import { ProfileDeactivateTab } from './components/ProfileDeactivateTab';
+import { Button, TabButton, Tabs } from '@/components/ui';
 import './Profile/Profile.css';
 
 type TabType =
@@ -856,10 +857,9 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen p-6 profile-page" data-theme={isDark ? 'dark' : 'light'}>
-      <button className="back-button" onClick={() => navigate(-1)}>
-        <ArrowLeft size={18} />
-        <span>返回</span>
-      </button>
+      <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate(-1)}>
+        返回
+      </Button>
 
       <div className="profile-container">
         <div className="profile-card">
@@ -894,58 +894,56 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          <div className="tabs-container">
-            <button
+          <Tabs className="ml-6 mr-6 mt-6">
+            <TabButton
+              active={activeTab === 'info'}
+              icon={User}
               onClick={() => switchTab('info')}
-              className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
             >
-              <User size={16} />
-              <span>个人信息</span>
-            </button>
-            <button
+              个人信息
+            </TabButton>
+            <TabButton
+              active={activeTab === 'password'}
+              icon={Key}
               onClick={() => switchTab('password')}
-              className={`tab-button ${activeTab === 'password' ? 'active' : ''}`}
             >
-              <Key size={16} />
-              <span>
-                {user?.hasPassword === false ? '设置密码' : '修改密码'}
-              </span>
-            </button>
+              {user?.hasPassword === false ? '设置密码' : '修改密码'}
+            </TabButton>
             {mailEnabled && (
-              <button
+              <TabButton
+                active={activeTab === 'email'}
+                icon={Mail}
                 onClick={() => switchTab('email')}
-                className={`tab-button ${activeTab === 'email' ? 'active' : ''}`}
               >
-                <Mail size={16} />
-                <span>邮箱绑定</span>
-              </button>
+                邮箱绑定
+              </TabButton>
             )}
             {smsEnabled && (
-              <button
+              <TabButton
+                active={activeTab === 'phone'}
+                icon={Phone}
                 onClick={() => switchTab('phone')}
-                className={`tab-button ${activeTab === 'phone' ? 'active' : ''}`}
               >
-                <Phone size={16} />
-                <span>手机绑定</span>
-              </button>
+                手机绑定
+              </TabButton>
             )}
             {wechatEnabled && (
-              <button
+              <TabButton
+                active={activeTab === 'wechat'}
+                icon={MessageCircle}
                 onClick={() => switchTab('wechat')}
-                className={`tab-button ${activeTab === 'wechat' ? 'active' : ''}`}
               >
-                <MessageCircle size={16} />
-                <span>微信绑定</span>
-              </button>
+                微信绑定
+              </TabButton>
             )}
-            <button
+            <TabButton
+              active={activeTab === 'deactivate'}
+              icon={AlertTriangle}
               onClick={() => switchTab('deactivate')}
-              className={`tab-button ${activeTab === 'deactivate' ? 'active' : ''}`}
             >
-              <AlertTriangle size={16} />
-              <span>注销账户</span>
-            </button>
-          </div>
+              注销账户
+            </TabButton>
+          </Tabs>
 
           {success && (
             <div className="alert alert-success">

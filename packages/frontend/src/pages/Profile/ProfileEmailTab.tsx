@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, Shield, CheckCircle, Loader2, Send } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui';
 
 
 interface EmailForm {
@@ -80,14 +81,14 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             </div>
           </div>
           {mailEnabled && (
-            <button
-              type="button"
-              className="submit-button"
+            <Button
+              variant="primary"
+              size="md"
+              icon={Mail}
               onClick={() => onSetEditingEmail(true)}
             >
-              <Mail size={18} />
-              <span>换绑邮箱</span>
-            </button>
+              换绑邮箱
+            </Button>
           )}
         </div>
       </div>
@@ -121,44 +122,30 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 maxLength={6}
                 required
               />
-              <button
-                type="button"
-                className="send-code-button"
-                disabled={countdown > 0 || sendingCode}
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={countdown > 0}
+                loading={sendingCode}
                 onClick={onSendUnbindCode}
               >
-                {sendingCode ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : countdown > 0 ? (
-                  `${countdown}s`
-                ) : (
-                  '获取验证码'
-                )}
-              </button>
+                {countdown > 0 ? `${countdown}s` : '获取验证码'}
+              </Button>
               <div className="input-glow" />
             </div>
           </div>
           <div className="button-group">
-            <button
-              type="button"
-              className="back-button-form"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
               onClick={() => onSetEditingEmail(false)}
             >
               取消
-            </button>
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>验证中...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={18} />
-                  <span>验证</span>
-                </>
-              )}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+              {loading ? '验证中...' : '验证'}
+            </Button>
           </div>
         </form>
       </div>
@@ -192,20 +179,15 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 readOnly={emailStep === 'verifyNew'}
                 required
               />
-              <button
-                type="button"
-                className="send-code-button"
-                disabled={countdown > 0 || sendingCode}
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={countdown > 0}
+                loading={sendingCode}
                 onClick={onSendNewEmailCode}
               >
-                {sendingCode ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : countdown > 0 ? (
-                  `${countdown}s`
-                ) : (
-                  '获取验证码'
-                )}
-              </button>
+                {countdown > 0 ? `${countdown}s` : '获取验证码'}
+              </Button>
               <div className="input-glow" />
             </div>
           </div>
@@ -232,47 +214,30 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             </div>
           )}
           <div className="button-group">
-            <button
-              type="button"
-              className="back-button-form"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
               onClick={() => onSetEditingEmail(false)}
             >
               取消
-            </button>
+            </Button>
             {emailStep === 'inputNew' && (
-              <button
-                type="button"
-                disabled={!emailForm.email || sendingCode}
-                className="submit-button"
+              <Button
+                variant="primary"
+                size="md"
+                icon={Mail}
+                disabled={!emailForm.email}
+                loading={sendingCode}
                 onClick={onSendNewEmailCode}
               >
-                {sendingCode ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>发送中...</span>
-                  </>
-                ) : (
-                  <>
-                    <Mail size={18} />
-                    <span>发送验证码</span>
-                  </>
-                )}
-              </button>
+                {sendingCode ? '发送中...' : '发送验证码'}
+              </Button>
             )}
             {emailStep === 'verifyNew' && (
-              <button type="submit" disabled={loading} className="submit-button">
-                {loading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>换绑中...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={18} />
-                    <span>确认换绑</span>
-                  </>
-                )}
-              </button>
+              <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+                {loading ? '换绑中...' : '确认换绑'}
+              </Button>
             )}
           </div>
         </form>
@@ -307,19 +272,9 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 <div className="input-glow" />
               </div>
             </div>
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>发送中...</span>
-                </>
-              ) : (
-                <>
-                  <Send size={18} />
-                  <span>发送验证码</span>
-                </>
-              )}
-            </button>
+            <Button type="submit" variant="primary" size="md" loading={loading} icon={Send} className="w-full">
+              {loading ? '发送中...' : '发送验证码'}
+            </Button>
           </form>
         ) : (
           <form onSubmit={onVerifyBindEmail}>
@@ -348,29 +303,20 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               </div>
             </div>
             <div className="button-group">
-              <button
-                type="button"
-                className="back-button-form"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
                 onClick={() => {
                   onEmailChange(createChangeEvent('email', ''));
                   onEmailChange(createChangeEvent('code', ''));
                 }}
               >
                 返回修改
-              </button>
-              <button type="submit" disabled={loading} className="submit-button">
-                {loading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>验证中...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={18} />
-                    <span>确认绑定</span>
-                  </>
-                )}
-              </button>
+              </Button>
+              <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+                {loading ? '验证中...' : '确认绑定'}
+              </Button>
             </div>
           </form>
         )}

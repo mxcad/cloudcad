@@ -8,6 +8,7 @@ import { Save, RotateCcw, Loader2, Eye, Sparkles } from 'lucide-react';
 import type { ConfigGroup } from './hooks/useRuntimeConfig';
 import { ConfigInput } from './ConfigInput';
 import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 
 interface ConfigCardProps {
   group: ConfigGroup;
@@ -55,7 +56,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
         </div>
         <div className="card-actions">
           {modifiedItems.length > 0 && (
-            <span className="modified-badge">{modifiedItems.length} 项修改</span>
+            <Tag variant="warning">{modifiedItems.length} 项修改</Tag>
           )}
         </div>
       </div>
@@ -78,16 +79,10 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                     <span className="config-key">{item.key}</span>
                     <div className="config-badges">
                       {item.isPublic && (
-                        <span className="badge public-badge" title="对外公开">
-                          <Eye size={12} />
-                          公开
-                        </span>
+                        <Tag variant="success" icon={Eye}>公开</Tag>
                       )}
                       {hasChanges && (
-                        <span className="badge modified-badge">
-                          <Sparkles size={12} />
-                          已修改
-                        </span>
+                        <Tag variant="warning" icon={Sparkles}>已修改</Tag>
                       )}
                     </div>
                   </div>

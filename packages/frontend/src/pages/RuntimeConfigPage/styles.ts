@@ -213,19 +213,6 @@ export const runtimeConfigStyles = `
     gap: var(--space-3);
   }
 
-  .modified-badge {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: var(--warning-dim);
-    color: var(--warning);
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
-    font-weight: 500;
-    animation: pulse-soft 2s ease-in-out infinite;
-  }
-
   /* ===== 卡片内容 ===== */
   .card-content {
     display: block;
@@ -297,21 +284,6 @@ export const runtimeConfigStyles = `
     display: flex;
     align-items: center;
     gap: var(--space-2);
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: var(--radius-full);
-    font-size: 0.6875rem;
-    font-weight: 500;
-  }
-
-  .public-badge {
-    background: var(--success-dim);
-    color: var(--success);
   }
 
   .config-description {

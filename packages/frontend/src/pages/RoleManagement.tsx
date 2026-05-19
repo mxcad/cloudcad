@@ -17,7 +17,7 @@ import { Users } from 'lucide-react';
 import { CheckCircle2 } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { Button } from '../components/ui/Button';
+import { Button, Tab, Tabs, Tag } from '@/components/ui';
 import { Modal } from '../components/ui/Modal';
 import { PermissionConfigModal } from '../components/permission/PermissionAssignment';
 import { rolesControllerCreate, rolesControllerFindAll, rolesControllerUpdate, rolesControllerRemove, rolesControllerCreateProjectRole, rolesControllerGetSystemProjectRoles, rolesControllerUpdateProjectRole, rolesControllerDeleteProjectRole } from '@/api-sdk';
@@ -443,27 +443,25 @@ export const RoleManagement = () => {
       </div>
 
       {/* Tab 切换 */}
-      <div className="tabs-container">
-        <Button
-          variant="ghost"
+      <Tabs>
+        <Tab
+          active={activeTab === 'project'}
+          icon={Users}
           onClick={() => setActiveTab('project')}
-          className={`tab-button ${activeTab === 'project' ? 'active' : ''}`}
         >
-          <Users size={16} />
           项目角色
-        </Button>
+        </Tab>
         {canReadSystemRoles && (
-          <Button
-            variant="ghost"
+          <Tab
+            active={activeTab === 'system'}
+            icon={Shield}
             onClick={() => setActiveTab('system')}
-            className={`tab-button ${activeTab === 'system' ? 'active' : ''}`}
             data-tour="system-roles-tab"
           >
-            <Shield size={16} />
             系统角色
-          </Button>
+          </Tab>
         )}
-      </div>
+      </Tabs>
 
       {/* 项目角色模块 */}
       {activeTab === 'project' && (
@@ -488,7 +486,7 @@ export const RoleManagement = () => {
                   <div className="role-info">
                     <h3 className="role-name">
                       {getRoleDisplayName(role.name, role.isSystem)}
-                      {role.isSystem && <span className="system-badge">系统</span>}
+                      {role.isSystem && <Tag variant="primary" size="xs">系统</Tag>}
                     </h3>
                     <p className="role-description">{role.description || '暂无描述'}</p>
                     {!role.isSystem && (
@@ -567,7 +565,7 @@ export const RoleManagement = () => {
                   <div className="role-info">
                     <h3 className="role-name">
                       {getRoleDisplayName(role.name, role.isSystem)}
-                      {role.isSystem && <span className="system-badge">系统</span>}
+                      {role.isSystem && <Tag variant="primary" size="xs">系统</Tag>}
                     </h3>
                     <p className="role-description">{role.description || '暂无描述'}</p>
                   </div>

@@ -8,6 +8,7 @@ import { FileText } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { SidebarTab } from '../../types/sidebar';
+import { Button, Tab, Tabs } from '../ui';
 import { Tooltip } from '../ui/Tooltip';
 import { returnToCloudMapManagement } from '@/services/mxcadManager';
 import styles from './sidebar.module.css';
@@ -19,9 +20,9 @@ interface SidebarTabBarProps {
   isExpanded?: boolean;
 }
 
-const TABS: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'drawings', label: '图纸', icon: <FileText size={14} /> },
-  { id: 'collaborate', label: '实时协同', icon: <Users size={14} /> },
+const TABS: { id: SidebarTab; label: string; icon: React.ElementType }[] = [
+  { id: 'drawings', label: '图纸', icon: FileText },
+  { id: 'collaborate', label: '实时协同', icon: Users },
 ];
 
 /**
@@ -55,35 +56,31 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
         </button>
       </Tooltip> */}
       <Tooltip content={isExpanded ? "关闭侧边栏" : "展开侧边栏"} position="bottom" delay={100}>
-        <button
-          className={styles.tabBarButton}
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onCloseClick}
           aria-label={isExpanded ? "关闭侧边栏" : "展开侧边栏"}
+          className={styles.tabBarButton}
         >
           {isExpanded ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
-        </button>
+        </Button>
       </Tooltip>
-      <div className={styles.tabList}>
+      <Tabs>
         {TABS.map((tab) => (
-          <button
+          <Tab
             key={tab.id}
-            className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
+            active={activeTab === tab.id}
+            tabVariant="primary"
+            size="xs"
+            icon={tab.icon}
             onClick={() => onTabChange(tab.id)}
             title={tab.label}
           >
-            <span style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              position: 'relative',
-              zIndex: 1 /* tab label */
-            }}>
-              {tab.icon}
-              {tab.label}
-            </span>
-          </button>
+            {tab.label}
+          </Tab>
         ))}
-      </div>
+      </Tabs>
      <div></div>
     </div>
   );

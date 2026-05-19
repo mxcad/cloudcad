@@ -25,6 +25,7 @@ import React, {
   useCallback,
   useState,
 } from 'react';
+import { Select } from '@/components/ui';
 import styles from './CategoryTabs.module.css';
 
 /** 分类项 */
@@ -111,13 +112,14 @@ const CategoryLevelRow: React.FC<{
         {items.map((item) => {
             const displayName = getDisplayName(categories, selectedPath, item);
             return (
-              <button
+              <Tab
                 key={item.id}
-                className={`${styles.categoryButton} ${item.id === selectedId ? styles.active : ''}`}
+                active={item.id === selectedId}
+                tabVariant="primary"
                 onClick={() => handleSelect(item.id)}
               >
                 {displayName}
-              </button>
+              </Tab>
             );
           })}
       </div>
@@ -229,15 +231,16 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {!isOnlyAll(0) && (
             <div className={styles.categorySelectRow}>
               <span className={styles.categorySelectLabel}>一级分类</span>
-              <select
+              <Select
                 value={getSelectedId(0)}
-                onChange={(e) => handleSelectChange(0, e.target.value)}
-                className={styles.categorySelect}
-              >
-                {getLevelItems(0).map(item => (
-                  <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
-                ))}
-              </select>
+                onChange={(val) => handleSelectChange(0, val)}
+                options={getLevelItems(0).map(item => ({
+                  value: item.id,
+                  label: getDisplayName(categories, selectedPath, item),
+                }))}
+                size="sm"
+                wrapperClassName="flex-1"
+              />
             </div>
           )}
 
@@ -245,15 +248,16 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {!isOnlyAll(1) && (
             <div className={styles.categorySelectRow}>
               <span className={styles.categorySelectLabel}>二级分类</span>
-              <select
+              <Select
                 value={getSelectedId(1)}
-                onChange={(e) => handleSelectChange(1, e.target.value)}
-                className={styles.categorySelect}
-              >
-                {getLevelItems(1).map(item => (
-                  <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
-                ))}
-              </select>
+                onChange={(val) => handleSelectChange(1, val)}
+                options={getLevelItems(1).map(item => ({
+                  value: item.id,
+                  label: getDisplayName(categories, selectedPath, item),
+                }))}
+                size="sm"
+                wrapperClassName="flex-1"
+              />
             </div>
           )}
 
@@ -261,15 +265,16 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {!isOnlyAll(2) && (
             <div className={styles.categorySelectRow}>
               <span className={styles.categorySelectLabel}>三级分类</span>
-              <select
+              <Select
                 value={getSelectedId(2)}
-                onChange={(e) => handleSelectChange(2, e.target.value)}
-                className={styles.categorySelect}
-              >
-                {getLevelItems(2).map(item => (
-                  <option key={item.id} value={item.id}>{getDisplayName(categories, selectedPath, item)}</option>
-                ))}
-              </select>
+                onChange={(val) => handleSelectChange(2, val)}
+                options={getLevelItems(2).map(item => ({
+                  value: item.id,
+                  label: getDisplayName(categories, selectedPath, item),
+                }))}
+                size="sm"
+                wrapperClassName="flex-1"
+              />
             </div>
           )}
 

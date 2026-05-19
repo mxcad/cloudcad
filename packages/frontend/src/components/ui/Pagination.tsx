@@ -147,10 +147,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 
   if (simple || layout === 'compact') {
     return (
-      <div ref={containerRef} className={`w-full flex items-center justify-between ${className}`} style={{ height: 24 }}>
-        <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-          共 {total} 项&nbsp;{page}/{totalPages || 1}
-        </span>
+      <div ref={containerRef} className={`w-full flex items-center justify-center ${className}`} style={{ height: 24 }}>
         <div className="flex items-center gap-0.5">
           {showFirstLast && (
             <Button variant="ghost" size="xs" onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" className="!px-0.5">
@@ -173,16 +170,12 @@ export const Pagination: React.FC<PaginationProps> = ({
     );
   }
 
-  const showJumper = showQuickJumper && layout === 'full';
+  const showJumper = showQuickJumper;
   const showSize = showSizeChanger;
 
   return (
-    <div ref={containerRef} className={`w-full flex items-center gap-1.5 ${className}`} style={{ height: 24 }}>
-      <span className="text-[11px] whitespace-nowrap shrink-0" style={{ color: 'var(--text-secondary)' }}>
-        共 {total} 项
-      </span>
-
-      <div className="flex-1 flex items-center justify-end gap-0.5 min-w-0">
+    <div ref={containerRef} className={`w-full flex items-center ${className}`} style={{ height: 24 }}>
+      <div className="flex-1 flex items-center justify-center gap-0.5 min-w-0">
         {showFirstLast && (
           <Button variant="ghost" size="xs" onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" className="shrink-0 !px-0.5">
             <ChevronsLeft size={13} />
@@ -251,7 +244,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             <select
               value={meta.limit}
               onChange={handlePageSizeChange}
-              className="text-[11px] rounded-[var(--radius-sm)] border cursor-pointer shrink-0"
+              className="text-[11px] rounded-[3px] border cursor-pointer shrink-0"
               style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)', color: 'var(--text-primary)', height: 24, paddingInline: 3 }}
             >
               {pageSizeOptions.map(size => (

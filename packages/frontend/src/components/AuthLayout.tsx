@@ -10,6 +10,7 @@ import { Cpu, ArrowLeft } from 'lucide-react';
 import { Boxes } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -62,7 +63,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
       {/* 主内容区 */}
       <div className="auth-container">
-        <div className="auth-card">
+        <Card variant="outlined" padding="none" className="auth-card">
           {children}
 
           {/* 特性图标栏 */}
@@ -79,7 +80,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* 版权信息 */}
         <p className="copyright">© 2026 {appName}. All rights reserved.</p>

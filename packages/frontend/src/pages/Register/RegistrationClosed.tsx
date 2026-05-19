@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { InteractiveBackground } from '@/components/InteractiveBackground';
+import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import './Register.css';
 
@@ -28,10 +29,9 @@ export const RegistrationClosed: React.FC = () => {
             <br />
             如有疑问，请联系管理员。
           </p>
-          <button onClick={() => navigate('/login')} className="back-button">
-            <ArrowLeft size={18} />
-            <span>返回登录</span>
-          </button>
+          <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/login')}>
+            返回登录
+          </Button>
         </div>
       </div>
     </div>

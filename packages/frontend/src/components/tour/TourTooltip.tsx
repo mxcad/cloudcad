@@ -351,33 +351,19 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
             {displayContent.title}
           </h4>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={onSkip}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             width: 24,
             height: 24,
-            border: 'none',
-            background: 'transparent',
             color: 'var(--text-muted)',
-            cursor: 'pointer',
-            borderRadius: 'var(--radius-md)',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--bg-tertiary)';
-            e.currentTarget.style.color = 'var(--text-primary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = 'var(--text-muted)';
           }}
           title="跳过引导"
         >
           <X size={16} />
-        </button>
+        </Button>
       </div>
 
       {/* 内容 */}

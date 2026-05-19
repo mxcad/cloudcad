@@ -2,6 +2,7 @@ import React from 'react';
 import { Phone, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui';
 
 
 interface ProfilePhoneTabProps {
@@ -68,14 +69,14 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               <span>找回密码</span>
             </div>
           </div>
-          <button
-            type="button"
-            className="submit-button"
+          <Button
+            variant="primary"
+            size="md"
+            icon={Phone}
             onClick={() => onSetEditingPhone(true)}
           >
-            <Phone size={18} />
-            <span>换绑手机号</span>
-          </button>
+            换绑手机号
+          </Button>
         </div>
       </div>
     );
@@ -108,44 +109,30 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 maxLength={6}
                 required
               />
-              <button
-                type="button"
-                className="send-code-button"
-                disabled={countdown > 0 || sendingCode}
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={countdown > 0}
+                loading={sendingCode}
                 onClick={onSendUnbindCode}
               >
-                {sendingCode ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : countdown > 0 ? (
-                  `${countdown}s`
-                ) : (
-                  '获取验证码'
-                )}
-              </button>
+                {countdown > 0 ? `${countdown}s` : '获取验证码'}
+              </Button>
               <div className="input-glow" />
             </div>
           </div>
           <div className="button-group">
-            <button
-              type="button"
-              className="back-button-form"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
               onClick={() => onSetEditingPhone(false)}
             >
               取消
-            </button>
-            <button type="submit" disabled={loading} className="submit-button">
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>验证中...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={18} />
-                  <span>确认验证</span>
-                </>
-              )}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+              {loading ? '验证中...' : '确认验证'}
+            </Button>
           </div>
         </form>
       ) : (
@@ -191,20 +178,15 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 readOnly={phoneStep === 'verifyNew'}
                 required
               />
-              <button
-                type="button"
-                className="send-code-button"
-                disabled={countdown > 0 || sendingCode}
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={countdown > 0}
+                loading={sendingCode}
                 onClick={isRebind ? onSendNewPhoneCode : onSendPhoneCode}
               >
-                {sendingCode ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : countdown > 0 ? (
-                  `${countdown}s`
-                ) : (
-                  '获取验证码'
-                )}
-              </button>
+                {countdown > 0 ? `${countdown}s` : '获取验证码'}
+              </Button>
               <div className="input-glow" />
             </div>
           </div>
@@ -232,17 +214,19 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
           )}
           <div className="button-group">
             {isRebind ? (
-              <button
-                type="button"
-                className="back-button-form"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
                 onClick={() => onSetEditingPhone(false)}
               >
                 取消
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
-                className="back-button-form"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
                 onClick={() => {
                   onPhoneChange({
                     target: { name: 'phone', value: '' },
@@ -250,22 +234,12 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 }}
               >
                 返回
-              </button>
+              </Button>
             )}
             {phoneStep === 'verifyNew' && (
-              <button type="submit" disabled={loading} className="submit-button">
-                {loading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>{isRebind ? '换绑中...' : '绑定中...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={18} />
-                    <span>{isRebind ? '确认换绑' : '确认绑定'}</span>
-                  </>
-                )}
-              </button>
+              <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+                {loading ? (isRebind ? '换绑中...' : '绑定中...') : (isRebind ? '确认换绑' : '确认绑定')}
+              </Button>
             )}
           </div>
         </form>

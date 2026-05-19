@@ -11,6 +11,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Select } from '../ui';
+import { Card } from '../ui/Card';
+import { Tag } from '../ui/Tag';
 import { useTour } from '../../contexts/TourContext';
 import type { TourGuide, TourCategory } from '../../types/tour';
 
@@ -45,12 +48,9 @@ const TourCard: React.FC<{
   onStart: () => void;
 }> = ({ guide, isCompleted, onStart }) => {
   return (
-    <div
-      className="group relative p-4 rounded-xl transition-all duration-300 cursor-pointer"
-      style={{
-        background: 'var(--bg-tertiary)',
-        border: '1px solid var(--border-default)',
-      }}
+    <Card
+      variant="filled"
+      className="border border-[var(--border-default)] group relative cursor-pointer p-4 transition-all duration-300"
       onClick={onStart}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'var(--primary-400)';
@@ -140,7 +140,7 @@ const TourCard: React.FC<{
           {isCompleted ? '重新开始' : '开始引导'}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -290,37 +290,18 @@ export const TourCenter: React.FC<TourCenterProps> = ({
         />
 
         {/* 分类筛选 */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-            style={{
-              background: selectedCategory === 'all' ? 'var(--primary-500)' : 'var(--bg-tertiary)',
-              color: selectedCategory === 'all' ? 'white' : 'var(--text-secondary)',
-              border: '1px solid transparent',
-            }}
-          >
-            全部
-          </button>
-          {categories.map(category => {
-            const count = guidesByCategory[category]?.length || 0;
-            if (count === 0) return null;
-            return (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{
-                  background: selectedCategory === category ? 'var(--primary-500)' : 'var(--bg-tertiary)',
-                  color: selectedCategory === category ? 'white' : 'var(--text-secondary)',
-                  border: '1px solid transparent',
-                }}
-              >
-                {category} ({count})
-              </button>
-            );
-          })}
-        </div>
+        <Select
+          value={selectedCategory}
+          onChange={(val) => setSelectedCategory(val as typeof selectedCategory)}
+          options={[
+            { value: 'all', label: `全部 (${stats.total})` },
+            ...categories
+              .map(category => ({
+                value: category,
+                label: `${category} (${guidesByCategory[category]?.length || 0})`,
+              })),
+          ]}
+        />
       </div>
 
       {/* 引导列表 */}
@@ -347,15 +328,9 @@ export const TourCenter: React.FC<TourCenterProps> = ({
                   >
                     {category}
                   </h3>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full"
-                    style={{
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-muted)',
-                    }}
-                  >
+                  <Tag variant="neutral">
                     {categoryGuides.length}
-                  </span>
+                  </Tag>
                 </div>
                 
                 {/* 引导卡片网格 */}
