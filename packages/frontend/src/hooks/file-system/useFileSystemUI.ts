@@ -12,8 +12,10 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Toast } from '../../components/ui/Toast';
+import { useCADEditorStore } from '../../stores/useCADEditorStore';
 
 export const useFileSystemUI = () => {
+  const { isActive } = useCADEditorStore();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -42,6 +44,10 @@ export const useFileSystemUI = () => {
 
   const showToast = useCallback(
     (message: string, type: Toast['type'] = 'info') => {
+      if (isActive && MxPluginContext && MxPluginContext.useMessage) {
+        MxPluginContext.useMessage()[type](message);
+        return;
+      }
       const id = Date.now().toString();
       setToasts((prev) => [...prev, { id, type, message }]);
 
@@ -51,7 +57,7 @@ export const useFileSystemUI = () => {
       }, 5000);
       timerRefs.current.add(timerId);
     },
-    []
+    [isActive]
   );
 
   const removeToast = useCallback((id: string) => {

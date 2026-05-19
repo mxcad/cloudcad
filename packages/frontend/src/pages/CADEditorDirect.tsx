@@ -21,12 +21,14 @@ import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
 import { hideGlobalLoading } from '../utils/loadingUtils';
+import { useCADEditorStore } from '../stores/useCADEditorStore';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
@@ -81,6 +83,7 @@ export const CADEditorDirect: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotification();
   const { hasPermission } = usePermission();
+  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode } = useCADEditorStore();
 
   // 主页模式（/ 路由，无 fileId）- 在组件顶部计算，用于初始化 isActive
   const isHomeMode = isHomeRoute(location.pathname);
@@ -95,7 +98,7 @@ export const CADEditorDirect: React.FC = () => {
 
   // 是否激活（路由匹配 /cad-editor/:fileId 或主页模式）
   // 不再依赖 isAuthenticated，因为公开资源库可以免登录访问
-  const [isActive, setIsActive] = useState(() => {
+  const [isActive, setIsActiveLocal] = useState(() => {
     return !!fileId || isHomeMode;
   });
   // 始终以 loading 状态初始化，确保 CAD 引擎异步初始化期间
@@ -275,12 +278,18 @@ export const CADEditorDirect: React.FC = () => {
     return currentProjectId === personalSpaceId;
   }, [personalSpaceId, currentProjectId]);
 
+  // 同步 isPersonalSpaceMode 到 store
+  useEffect(() => {
+    setIsPersonalSpaceMode(isPersonalSpaceMode);
+  }, [isPersonalSpaceMode]);
+
   // 加载 CAD 权限
   useEffect(() => {
     if (!urlProjectId) {
       setCanSave(false);
       setCanExport(false);
       setCanManageExternalRef(false);
+      setPermissions({ canSave: false, canExport: false, canManageExternalRef: false });
       return;
     }
 
@@ -291,16 +300,20 @@ export const CADEditorDirect: React.FC = () => {
           fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.FILE_DOWNLOAD } }),
           fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.CAD_EXTERNAL_REFERENCE } }),
         ]);
-        setCanSave(saveRes.data?.hasPermission || false);
-        setCanExport(exportRes.data?.hasPermission || false);
-        setCanManageExternalRef(externalRefRes.data?.hasPermission || false);
+        const save = saveRes.data?.hasPermission || false;
+        const export_ = exportRes.data?.hasPermission || false;
+        const externalRef = externalRefRes.data?.hasPermission || false;
+        setCanSave(save);
+        setCanExport(export_);
+        setCanManageExternalRef(externalRef);
+        setPermissions({ canSave: save, canExport: export_, canManageExternalRef: externalRef });
       } catch (error) {
         console.error('加载 CAD 权限失败:', error);
       }
     };
 
     checkPermissions();
-  }, [urlProjectId]);
+  }, [urlProjectId, setPermissions]);
 
   const loadMxCADDependencies = async () => {
     const { mxcadManager } = await import('../services/mxcadManager');
@@ -414,9 +427,12 @@ export const CADEditorDirect: React.FC = () => {
 
   // 隐藏编辑器
   const hideEditor = useCallback(() => {
+    setIsActiveLocal(false);
     setIsActive(false);
     setLoading(false);
+    setStoreLoading(false);
     setError(null);
+    setStoreError(null);
 
     // 设置显示意图为隐藏
     pendingShowActionRef.current = false;
@@ -440,6 +456,7 @@ export const CADEditorDirect: React.FC = () => {
 
     if (shouldShowEditor) {
       // 路由匹配 / 或 /cad-editor/:fileId，显示编辑器
+      setIsActiveLocal(true);
       setIsActive(true);
 
       // 设置显示意图为显示
@@ -519,7 +536,9 @@ export const CADEditorDirect: React.FC = () => {
 
     const loadFile = async () => {
       setLoading(true);
+      setStoreLoading(true);
       setError(null);
+      setStoreError(null);
 
       try {
         const { mxcadManager } = await import('../services/mxcadManager');
@@ -556,32 +575,42 @@ export const CADEditorDirect: React.FC = () => {
             if (axiosError.response?.status === 401) {
               // 确实是认证错误
               setError('请登录后访问此文件');
+              setStoreError('请登录后访问此文件');
             } else if (axiosError.response?.status === 404) {
               setError('文件不存在或已被删除');
+              setStoreError('文件不存在或已被删除');
             } else {
               setError('获取文件信息失败，请检查网络连接');
+              setStoreError('获取文件信息失败，请检查网络连接');
             }
             setLoading(false);
+            setStoreLoading(false);
             return;
           }
         }
 
         if (!file) {
           setError('文件不存在');
+          setStoreError('文件不存在');
           setLoading(false);
+          setStoreLoading(false);
           return;
         }
 
         // 检查文件是否在回收站中
         if (file.deletedAt) {
           setError('文件已被删除');
+          setStoreError('文件已被删除');
           setLoading(false);
+          setStoreLoading(false);
           return;
         }
 
         if (!file.fileHash) {
           setError('文件尚未转换完成');
+          setStoreError('文件尚未转换完成');
           setLoading(false);
+          setStoreLoading(false);
           return;
         }
 
@@ -635,15 +664,18 @@ export const CADEditorDirect: React.FC = () => {
                 : undefined) as 'drawing' | 'block' | undefined,
           fromPlatform,
         });
+        setStoreFileId(file.id || null);
         setNavigateFunction(navigate);
 
         // 设置当前项目 ID（用于判断是否为私人空间模式）
         // 注意：公开资源库文件不设置 projectId，避免侧边栏"我的项目"Tab 显示资源库内容
         if (projectId && !libraryKeyParam) {
           setCurrentProjectId(projectId);
+          setStoreProjectId(projectId);
         } else if (!libraryKeyParam) {
           // 非公开资源库时，清空 projectId
           setCurrentProjectId(null);
+          setStoreProjectId(null);
         }
 
         // 构造 mxweb 文件访问 URL
@@ -747,6 +779,7 @@ export const CADEditorDirect: React.FC = () => {
 
           if (!cancelled) {
             setLoading(false);
+            setStoreLoading(false);
           }
         };
 
@@ -756,7 +789,9 @@ export const CADEditorDirect: React.FC = () => {
         console.error('加载文件失败:', err);
         if (!cancelled) {
           setError('CAD编辑器初始化失败');
+          setStoreError('CAD编辑器初始化失败');
           setLoading(false);
+          setStoreLoading(false);
         }
       }
     };
@@ -877,6 +912,7 @@ export const CADEditorDirect: React.FC = () => {
     homeInitStartedRef.current = true;
 
     setError(null);
+    setStoreError(null);
 
     const timer = setTimeout(async () => {
       try {
@@ -887,6 +923,7 @@ export const CADEditorDirect: React.FC = () => {
           mxcadManager.showMxCAD(true);
           isInitializedRef.current = true;
           setLoading(false);
+          setStoreLoading(false);
           return;
         }
 
@@ -913,12 +950,15 @@ export const CADEditorDirect: React.FC = () => {
         // 标记已初始化
         isInitializedRef.current = true;
         setLoading(false);
+        setStoreLoading(false);
       } catch (err) {
         console.error('初始化 CAD 编辑器失败:', err);
         // 重置组件级 ref，允许重试（替代旧版 window 全局属性）
         homeInitStartedRef.current = false;
         setError('CAD 编辑器初始化失败，请刷新页面重试');
+        setStoreError('CAD 编辑器初始化失败，请刷新页面重试');
         setLoading(false);
+        setStoreLoading(false);
       }
     }, 300);
 
@@ -1133,9 +1173,11 @@ export const CADEditorDirect: React.FC = () => {
       // 注意：公开资源库文件不设置 projectId，避免侧边栏"我的项目"Tab 显示资源库内容
       if (!libraryKey) {
         setCurrentProjectId(projectId);
+        setStoreProjectId(projectId);
       } else {
         // 公开资源库文件，清空 projectId
         setCurrentProjectId(null);
+        setStoreProjectId(null);
       }
 
       // 根据文件类型使用统一的 URL 格式
@@ -1184,8 +1226,10 @@ export const CADEditorDirect: React.FC = () => {
     const handleNewFile = () => {
       // 重置当前项目 ID
       setCurrentProjectId(null);
+      setStoreProjectId(null);
       // 重置当前文件 ID
       currentFileIdRef.current = null;
+      setStoreFileId(null);
     };
 
     window.addEventListener('mxcad-new-file', handleNewFile as EventListener);
@@ -1395,12 +1439,12 @@ export const CADEditorDirect: React.FC = () => {
       {error && (
         <div className="flex flex-col items-center justify-center h-full">
           <div className="text-red-500 text-lg mb-4">{error}</div>
-          <button
+          <Button
             onClick={handleGoBack}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            variant="primary"
           >
             {isHomeMode ? '刷新页面' : '返回项目列表'}
-          </button>
+          </Button>
         </div>
       )}
 
