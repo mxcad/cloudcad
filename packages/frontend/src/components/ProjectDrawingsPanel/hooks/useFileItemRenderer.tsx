@@ -3,7 +3,7 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { MxFun } from 'mxdraw';
 import { libraryControllerGetBlockNode } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
@@ -48,6 +48,9 @@ interface UseFileItemRendererOptions {
 }
 
 export function useFileItemRenderer(options: UseFileItemRendererOptions) {
+  const lastEnterTimeRef = useRef(0);
+  const ENTER_THROTTLE_MS = 500;
+
   const {
     nodes, isLibraryMode, libraryType, canManageLibrary, doubleClickToOpen,
     hideTypeTag, forceCompactActions,
@@ -109,6 +112,10 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
       };
 
       const handleEnter = (n: FileSystemNode) => {
+        const now = Date.now();
+        if (now - lastEnterTimeRef.current < ENTER_THROTTLE_MS) return;
+        lastEnterTimeRef.current = now;
+
         if (n.isFolder) {
           handleEnterFolder(n);
         } else if (isLibraryMode && libraryType === 'block') {

@@ -33,6 +33,7 @@ import {
   type ActionType,
 } from './file-item/fileActionConfig';
 import { FileSystemNode } from '../types/filesystem';
+import { Card } from './ui/Card';
 import { Tooltip } from './ui/Tooltip';
 
 // Lucide 图标（用于 compact 模式）
@@ -413,10 +414,13 @@ export const FileItem: React.FC<FileItemProps> = ({
     const thumbnailSize = galleryMode ? 100 : 64;
 
     return (
-      <div
+      <Card
+        variant="outlined"
+        padding="none"
+        radius={galleryMode ? 'sm' : undefined}
         data-tour="file-item"
         className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto
-          ${galleryMode ? 'w-[120px] min-h-[150px] rounded-sm' : 'rounded-xl'}
+          ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
           ${isPreviewOpen ? 'pointer-events-none' : ''}
           ${showSelection ? 'shadow-md' : ''}
           ${isDropTarget ? 'shadow-md' : ''}
@@ -433,7 +437,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             ? '2px solid var(--primary-500)'
             : isDropTarget
               ? '2px solid var(--success)'
-              : '1px solid var(--border-default)',
+              : undefined,
         }}
         onMouseEnter={(e) => {
           setIsHovered(true);
@@ -569,7 +573,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           src={previewImageSrc}
           alt={node.name}
         />
-      </div>
+      </Card>
     );
   }
 

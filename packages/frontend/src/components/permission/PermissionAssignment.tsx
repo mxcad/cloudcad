@@ -15,6 +15,7 @@ import { AlertCircle } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Section } from '@/components/ui/Section';
 import { Input } from '@/components/ui/Input';
 import {
   PERMISSION_GROUPS,
@@ -85,17 +86,13 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
   return (
     <div className={`permission-assignment-container ${className}`}>
       {groups.map((group, groupIndex) => (
-        <div
+        <Section
           key={group.label}
+          title={<span className="group-label">{group.label}</span>}
+          actions={<span className="group-count">{group.items.filter(item => permissions.includes(item.key)).length} / {group.items.length}</span>}
           className="permission-group"
-          style={{ animationDelay: `${groupIndex * 0.05}s` }}
+          style={{ animationDelay: `${groupIndex * 0.05}s`, marginBottom: 'var(--space-2)' }}
         >
-          <div className="group-header">
-            <span className="group-label">{group.label}</span>
-            <span className="group-count">
-              {group.items.filter(item => permissions.includes(item.key)).length} / {group.items.length}
-            </span>
-          </div>
           <div className="group-items">
             {group.items.map((perm) => {
               const isEnabled = isPermissionEnabled(perm.key, permissions) && !disabled;
@@ -138,7 +135,7 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
               );
             })}
           </div>
-        </div>
+        </Section>
       ))}
 
       <style>{permissionStyles}</style>

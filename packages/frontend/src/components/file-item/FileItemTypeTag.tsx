@@ -19,10 +19,10 @@ export const FileItemTypeTag: React.FC<FileItemTypeTagProps> = memo(
   ({ node }) => {
     const isRoot = node.isRoot;
 
-    const variant = useMemo<TagVariant>(() => {
-      if (isRoot) return variantMap.root;
-      if (node.isFolder) return variantMap.folder;
-      if (node.extension && variantMap[node.extension]) return variantMap[node.extension];
+    const tagVariant: TagVariant = useMemo(() => {
+      if (isRoot) return variantMap.root ?? 'neutral';
+      if (node.isFolder) return variantMap.folder ?? 'neutral';
+      if (node.extension) return variantMap[node.extension] ?? 'neutral';
       return 'neutral';
     }, [isRoot, node.isFolder, node.extension]);
 
@@ -34,7 +34,7 @@ export const FileItemTypeTag: React.FC<FileItemTypeTagProps> = memo(
 
     return (
       <div className="hidden sm:flex w-16 justify-end">
-        <Tag variant={variant}>{tagText}</Tag>
+        <Tag variant={tagVariant}>{tagText}</Tag>
       </div>
     );
   }

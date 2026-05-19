@@ -39,7 +39,7 @@ export type { FileNameInputProps } from './FileNameInput';
 
 export { Menu } from './Menu';
 export { Tag } from './Tag';
-export type { TagProps, TagVariant, TagSize } from './Tag';
+export type { TagProps, TagVariant, TagSize, TagRound } from './Tag';
 
 export { Select } from './Select';
 export type { SelectOption } from './Select';
@@ -47,7 +47,7 @@ export { Autocomplete } from './Autocomplete';
 export type { AutocompleteItem } from './Autocomplete';
 
 export { Card } from './Card';
-export type { CardProps, CardVariant, CardPadding, CardHeaderProps, CardTitleProps, CardDescriptionProps, CardBodyProps, CardFooterProps } from './Card';
+export type { CardProps, CardVariant, CardPadding, CardRadius, CardHeaderProps, CardTitleProps, CardDescriptionProps, CardBodyProps, CardFooterProps } from './Card';
 
 export { Section } from './Section';
 export type { SectionProps } from './Section';

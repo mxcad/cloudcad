@@ -7,6 +7,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
@@ -185,12 +186,10 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   };
 
   return (
-    <div
-      className="backdrop-blur-xl rounded-2xl p-4 shadow-sm space-y-3"
-      style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-default)',
-      }}
+    <Card
+      variant="outlined"
+      radius="2xl"
+      className="backdrop-blur-xl p-4 shadow-sm space-y-3"
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
@@ -377,6 +376,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         onClearTrash={onClearProjectTrash}
         isAtRoot={isAtRoot}
       />
-    </div>
+    </Card>
   );
 };

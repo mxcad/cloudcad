@@ -11,7 +11,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Select } from '../ui';
+import { Tabs, Tab } from '../ui';
 import { Card } from '../ui/Card';
 import { Tag } from '../ui/Tag';
 import { useTour } from '../../contexts/TourContext';
@@ -290,18 +290,20 @@ export const TourCenter: React.FC<TourCenterProps> = ({
         />
 
         {/* 分类筛选 */}
-        <Select
-          value={selectedCategory}
-          onChange={(val) => setSelectedCategory(val as typeof selectedCategory)}
-          options={[
-            { value: 'all', label: `全部 (${stats.total})` },
-            ...categories
-              .map(category => ({
-                value: category,
-                label: `${category} (${guidesByCategory[category]?.length || 0})`,
-              })),
-          ]}
-        />
+        <Tabs>
+          <Tab active={selectedCategory === 'all'} onClick={() => setSelectedCategory('all')}>
+            全部
+          </Tab>
+          {categories.map(category => {
+            const count = guidesByCategory[category]?.length || 0;
+            if (count === 0) return null;
+            return (
+              <Tab key={category} active={selectedCategory === category} onClick={() => setSelectedCategory(category)}>
+                {category} ({count})
+              </Tab>
+            );
+          })}
+        </Tabs>
       </div>
 
       {/* 引导列表 */}

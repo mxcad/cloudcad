@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { Box } from '../ui/Box';
 import { RefreshIcon, GridIcon, ListIcon } from '../FileIcons';
 import { SearchInput } from '@/components/search/SearchInput';
 import { FolderPlus } from 'lucide-react';
@@ -57,7 +59,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   const navigate = useNavigate();
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+    <Card variant="outlined" radius="2xl" className="backdrop-blur-xl p-4 shadow-sm space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <button
@@ -235,23 +237,23 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </Button>
           )}
 
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <Box display="flex" alignItems="center" bg="primary" border rounded="xl" className="overflow-hidden">
             <button
               onClick={() => setViewMode('grid')}
               className="p-2 transition-colors"
             >
               <GridIcon size={14} />
             </button>
-            <div className="w-px h-4 bg-slate-200" />
+            <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
             <button
               onClick={() => setViewMode('list')}
               className="p-2 transition-colors"
             >
               <ListIcon size={14} />
             </button>
-          </div>
+          </Box>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };

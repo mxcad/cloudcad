@@ -360,6 +360,7 @@ export const EmailVerification: React.FC = () => {
           <Button
             onClick={handleVerifyCode}
             variant="primary"
+            size="lg"
             loading={loading}
             disabled={!email || verificationCode.length !== 6}
             className="w-full mb-5"
@@ -389,6 +390,7 @@ export const EmailVerification: React.FC = () => {
             <Button
               onClick={handleResendEmail}
               variant="secondary"
+              size="lg"
               loading={resendLoading}
               disabled={resendCooldown > 0 || !email}
               className="w-full"
@@ -406,7 +408,7 @@ export const EmailVerification: React.FC = () => {
               )}
             </Button>
 
-            <Button variant="secondary" onClick={() => navigate('/login')}>
+            <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>
               <ArrowLeft size={16} />
               <span>返回登录</span>
             </Button>

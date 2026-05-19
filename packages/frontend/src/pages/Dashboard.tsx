@@ -17,6 +17,8 @@ import type { UserDashboardStatsDto } from '@/api-sdk';
 // Lucide 图标
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { Card } from '@/components/ui/Card';
+import { Section } from '@/components/ui/Section';
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { HardDrive } from 'lucide-react';
@@ -58,17 +60,15 @@ const StatCard: React.FC<StatCardProps> = ({
   loading,
 }) => {
   return (
-    <div
+    <Card
+      variant="outlined"
+      padding="md"
+      radius="2xl"
       onClick={onClick}
       className={`
-        relative p-5 rounded-2xl transition-all duration-300
+        relative transition-all duration-300
         ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl' : ''}
       `}
-      style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-default)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -101,7 +101,7 @@ const StatCard: React.FC<StatCardProps> = ({
           <Icon size={20} color={color} />
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -424,23 +424,9 @@ export const Dashboard: React.FC = () => {
         {/* 左侧：最近内容 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 最近访问的文件 */}
-          <div
-            className="rounded-2xl p-5"
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Clock size={18} style={{ color: 'var(--primary-500)' }} />
-                <h3
-                  className="font-semibold"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  最近文件
-                </h3>
-              </div>
+          <Section
+            title="最近文件"
+            actions={
               <Link
                 to="/personal-space"
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
@@ -449,7 +435,10 @@ export const Dashboard: React.FC = () => {
                 查看全部
                 <ArrowRight size={14} />
               </Link>
-            </div>
+            }
+            variant="outlined"
+            className="rounded-2xl"
+          >
 
             {loading ? (
               <div className="space-y-2">
@@ -491,26 +480,12 @@ export const Dashboard: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </Section>
 
           {/* 我的项目 */}
-          <div
-            className="rounded-2xl p-5"
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Layers size={18} style={{ color: 'var(--accent-500)' }} />
-                <h3
-                  className="font-semibold"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  最近项目
-                </h3>
-              </div>
+          <Section
+            title="最近项目"
+            actions={
               <Link
                 to="/projects"
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
@@ -519,7 +494,10 @@ export const Dashboard: React.FC = () => {
                 查看全部
                 <ArrowRight size={14} />
               </Link>
-            </div>
+            }
+            variant="outlined"
+            className="rounded-2xl"
+          >
 
             {loading ? (
               <div className="space-y-2">
@@ -565,25 +543,17 @@ export const Dashboard: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </Section>
         </div>
 
         {/* 右侧：快捷操作和存储 */}
         <div className="space-y-6">
           {/* 快捷操作 */}
-          <div
-            className="rounded-2xl p-5"
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-            }}
+          <Section
+            title="快捷操作"
+            variant="outlined"
+            className="rounded-2xl"
           >
-            <h3
-              className="font-semibold mb-4"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              快捷操作
-            </h3>
             <div className="space-y-1">
               <QuickAction
                 icon={Plus}
@@ -598,7 +568,7 @@ export const Dashboard: React.FC = () => {
                 onClick={() => navigate('/personal-space?action=upload')}
               />
             </div>
-          </div>
+          </Section>
         </div>
       </div>
 

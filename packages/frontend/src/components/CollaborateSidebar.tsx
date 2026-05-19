@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
 import { Tooltip } from './ui/Tooltip';
+import { Card } from '@/components/ui/Card';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
 import { mxcadManager } from '../services/mxcadManager';
 import styles from './CollaborateSidebar.module.css';
@@ -307,8 +308,9 @@ export const CollaborateSidebar: React.FC = () => {
           </div>
         ) : (
           works.map((workId, index) => (
-            <div
+            <Card
               key={workId}
+              variant="filled"
               className={`${styles.sessionCard} ${currentWorkId === workId ? styles.active : ''}`}
               style={{ animationDelay: `${Math.min(index * 0.05, 0.35)}s` }}
               onClick={() => currentWorkId !== workId && currentWorkId === null && handleJoinWork(workId)}
@@ -346,7 +348,7 @@ export const CollaborateSidebar: React.FC = () => {
                   )}
                 </button>
               )}
-            </div>
+            </Card>
           ))
         )}
       </div>

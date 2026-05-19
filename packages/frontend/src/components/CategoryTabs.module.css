@@ -89,6 +89,30 @@
 }
 
 /* ============================================
+   标签激活态
+   ============================================ */
+
+.active {
+  background: rgba(0, 156, 255, 0.15) !important;
+  color: var(--info) !important;
+  border-color: rgba(0, 156, 255, 0.25) !important;
+}
+
+.active:hover {
+  background: rgba(0, 156, 255, 0.25) !important;
+}
+
+[data-theme="light"] .active {
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #2563EB !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+[data-theme="light"] .active:hover {
+  background: rgba(59, 130, 246, 0.18) !important;
+}
+
+/* ============================================
    紧凑布局（窄屏幕）选择框样�?
    ============================================ */
 

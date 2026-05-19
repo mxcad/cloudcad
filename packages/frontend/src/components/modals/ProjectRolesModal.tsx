@@ -10,7 +10,7 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Tag } from '../ui/Tag';
 import { Modal } from '../ui/Modal';
-import { Select } from '../ui';
+import { Tabs, Tab } from '../ui';
 import { DescriptionText } from '../ui/TruncateText';
 import { PermissionConfigModal } from '../permission/PermissionAssignment';
 import { useProjectRoleCRUD } from './hooks/useProjectRoleCRUD';
@@ -198,14 +198,20 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
       >
         <div className="space-y-6">
           {/* Tab 切换 */}
-          <Select
-            value={activeTab}
-            onChange={(val) => setActiveTab(val as 'custom' | 'system')}
-            options={[
-              { value: 'custom', label: `自定义角色 (${customRoles.length})` },
-              { value: 'system', label: `系统角色 (${systemRoles.length})` },
-            ]}
-          />
+          <Tabs>
+            <Tab active={activeTab === 'custom'} icon={Settings} onClick={() => setActiveTab('custom')}>
+              自定义角色
+              <span className="text-xs text-slate-400">
+                ({customRoles.length})
+              </span>
+            </Tab>
+            <Tab active={activeTab === 'system'} icon={Shield} onClick={() => setActiveTab('system')} data-tour="system-roles-tab-btn">
+              系统角色
+              <span className="text-xs text-slate-400">
+                ({systemRoles.length})
+              </span>
+            </Tab>
+          </Tabs>
 
           {/* 错误提示 */}
           {hookError && (

@@ -320,6 +320,7 @@ export const PhoneVerification: React.FC = () => {
           <Button
             onClick={handleVerifyCode}
             variant="primary"
+            size="lg"
             loading={loading}
             disabled={verificationCode.length !== 6}
             className="w-full mb-5"
@@ -349,6 +350,7 @@ export const PhoneVerification: React.FC = () => {
             <Button
               onClick={handleResendCode}
               variant="secondary"
+              size="lg"
               loading={resendLoading}
               disabled={resendCooldown > 0 || !phone}
               className="w-full"
@@ -366,7 +368,7 @@ export const PhoneVerification: React.FC = () => {
               )}
             </Button>
 
-            <Button variant="secondary" onClick={() => navigate('/login')}>
+            <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>
               <ArrowLeft size={16} />
               <span>返回登录</span>
             </Button>

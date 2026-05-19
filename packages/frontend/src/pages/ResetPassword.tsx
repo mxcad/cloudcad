@@ -282,7 +282,7 @@ export const ResetPassword: React.FC = () => {
               </div>
             </div>
 
-            <Button type="submit" variant="primary" loading={resetPassword.loading} icon={ArrowRight}>
+            <Button type="submit" variant="primary" size="lg" loading={resetPassword.loading} icon={ArrowRight}>
               重置密码
             </Button>
           </form>

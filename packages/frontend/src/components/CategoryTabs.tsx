@@ -25,7 +25,7 @@ import React, {
   useCallback,
   useState,
 } from 'react';
-import { Select } from '@/components/ui';
+import { Select, Tag } from '@/components/ui';
 import styles from './CategoryTabs.module.css';
 
 /** 分类项 */
@@ -112,14 +112,15 @@ const CategoryLevelRow: React.FC<{
         {items.map((item) => {
             const displayName = getDisplayName(categories, selectedPath, item);
             return (
-              <Tab
+              <Tag
                 key={item.id}
-                active={item.id === selectedId}
-                tabVariant="primary"
+                variant="neutral"
+                rounded="sm"
                 onClick={() => handleSelect(item.id)}
+                className={item.id === selectedId ? styles.active : ''}
               >
                 {displayName}
-              </Tab>
+              </Tag>
             );
           })}
       </div>

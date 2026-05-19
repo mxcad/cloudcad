@@ -420,6 +420,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // Item click
   const handleItemClick = useCallback((item: ResourceItem) => {
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < CLICK_THROTTLE_MS) return;
+    lastClickTimeRef.current = now;
+
     const node = nodes.find((n) => n.id === item.id);
     if (!node) return;
     if (node.isFolder) { handleEnterFolder(node); return; }
@@ -467,6 +471,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     else if (direction === 'next') loadNodes(nodeId, page, searchQuery, true);
     else loadNodes(nodeId, page, searchQuery, 'prepend');
   }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, searchQuery, loadNodes]);
+
+  // Click throttle
+  const lastClickTimeRef = useRef(0);
+  const CLICK_THROTTLE_MS = 500;
 
   // API 错误时显示 toast
   useEffect(() => {

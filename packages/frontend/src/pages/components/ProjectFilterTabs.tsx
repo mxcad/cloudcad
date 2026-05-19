@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, Button } from '@/components/ui';
+import { Tab, Tabs, Button } from '@/components/ui';
 import { RefreshIcon } from '../../components/FileIcons';
 import type { ProjectFilterType } from '@/types/project';
 
@@ -39,27 +39,33 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
       className="flex items-center gap-2 border-b"
       style={{ borderColor: 'var(--border-default)' }}
     >
-      <Select
-        value={isProjectTrashView ? 'trash' : 'projects'}
-        onChange={(val) => {
-          if ((val === 'trash') !== isProjectTrashView) {
-            onToggleProjectTrashView();
-          }
-        }}
-        options={[
-          { value: 'projects', label: '我的项目' },
-          { value: 'trash', label: '项目回收站' },
-        ]}
-        size="sm"
-      />
+      <Tabs>
+        <Tab
+          active={!isProjectTrashView}
+          onClick={() => isProjectTrashView && onToggleProjectTrashView()}
+        >
+          我的项目
+        </Tab>
+        <Tab
+          active={isProjectTrashView}
+          onClick={() => !isProjectTrashView && onToggleProjectTrashView()}
+        >
+          项目回收站
+        </Tab>
+      </Tabs>
 
       {!isProjectTrashView && isProjectRootMode && (
-        <Select
-          value={projectFilter}
-          onChange={(val) => onProjectFilterChange(val as ProjectFilterType)}
-          options={projectFilterTabs}
-          size="sm"
-        />
+        <Tabs>
+          {projectFilterTabs.map((tab) => (
+            <Tab
+              key={tab.key}
+              active={projectFilter === tab.key}
+              onClick={() => onProjectFilterChange(tab.key)}
+            >
+              {tab.label}
+            </Tab>
+          ))}
+        </Tabs>
       )}
 
       {isProjectTrashView && nodesCount > 0 && (

@@ -165,7 +165,7 @@ export const ForgotPassword: React.FC = () => {
                   )}
                 </div>
               </div>
-              <Button variant="secondary" className="w-full" onClick={() => navigate('/login')}>
+              <Button variant="secondary" size="lg" className="w-full" onClick={() => navigate('/login')}>
                 <ArrowLeft size={18} />
                 <span>返回登录</span>
               </Button>
@@ -264,7 +264,7 @@ export const ForgotPassword: React.FC = () => {
                 </div>
               </div>
 
-              <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/login')}>
+              <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
                 返回登录
               </Button>
             </div>
@@ -329,7 +329,7 @@ export const ForgotPassword: React.FC = () => {
               <div className="success-icon">
                 <CheckCircle size={32} />
               </div>
-              <h2 className="success-title">验证码已发�?/h2>
+              <h2 className="success-title">验证码已发送</h2>
               <p className="success-subtitle">
                 我们已向{' '}
                 <span className="success-email">
@@ -381,7 +381,7 @@ export const ForgotPassword: React.FC = () => {
               <div className="feature-dot" data-tooltip="多用户实时协同编辑">
                 <Boxes size={14} />
               </div>
-              <div className="feature-dot" data-tooltip="企业级数据安全保�?>
+              <div className="feature-dot" data-tooltip="企业级数据安全保障">
                 <ShieldCheck size={14} />
               </div>
             </div>
@@ -535,7 +535,7 @@ export const ForgotPassword: React.FC = () => {
                     type="tel"
                     autoComplete="tel"
                     className="input-field"
-                    placeholder="请输入手机号
+                    placeholder="请输入手机号"
                     {...register('phone')}
                   />
                   <div className="input-glow" />
@@ -543,7 +543,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
             )}
 
-            <Button variant="primary" loading={forgotPassword.loading} className="w-full">
+            <Button variant="primary" size="lg" loading={forgotPassword.loading} className="w-full">
               {forgotPassword.loading ? (
                 <>
                   <span>发送中...</span>
@@ -569,10 +569,10 @@ export const ForgotPassword: React.FC = () => {
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编�?>
+            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保�?>
+            <div className="feature-dot" data-tooltip="企业级数据安全保障">
               <ShieldCheck size={14} />
             </div>
           </div>
@@ -600,21 +600,21 @@ export const ForgotPassword: React.FC = () => {
               </p>
               <div className="support-contact-info">
                 <div className="support-contact-item">
-                  <span className="support-contact-label">客服邮箱�?/span>
+                  <span className="support-contact-label">客服邮箱：</span>
                   <a href="mailto:support@cloudcad.com" className="support-contact-link">
                     support@cloudcad.com
                   </a>
                 </div>
                 <div className="support-contact-item">
-                  <span className="support-contact-label">客服电话�?/span>
+                  <span className="support-contact-label">客服电话：</span>
                   <a href="tel:400-123-4567" className="support-contact-link">
                     400-123-4567
                   </a>
                 </div>
                 <div className="support-contact-item">
-                  <span className="support-contact-label">工作时间�?/span>
+                  <span className="support-contact-label">工作时间：</span>
                   <span className="support-contact-value">
-                    周一至周�?9:00-18:00
+                    周一至周日 9:00-18:00
                   </span>
                 </div>
               </div>

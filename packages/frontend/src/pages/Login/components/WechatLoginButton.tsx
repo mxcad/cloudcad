@@ -14,7 +14,7 @@ export const WechatLoginButton: React.FC<WechatLoginButtonProps> = ({ onWechatLo
       </div>
       <Button
         variant="secondary"
-        size="md"
+        size="lg"
         icon={MessageCircle}
         onClick={onWechatLogin}
         className="w-full justify-center"

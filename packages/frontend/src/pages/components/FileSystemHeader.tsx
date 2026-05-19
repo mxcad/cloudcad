@@ -4,6 +4,8 @@ import { Button } from '../../components/ui/Button';
 import { RefreshIcon } from '../../components/FileIcons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
+import { Box } from '@/components/ui/Box';
 
 interface FileSystemHeaderProps {
   breadcrumbs: Array<{ id: string; name: string; isRoot: boolean }>;
@@ -77,13 +79,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   };
 
   return (
-    <div
-      className="backdrop-blur-xl rounded-2xl p-4 shadow-sm space-y-3"
-      style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-default)',
-      }}
-    >
+    <Card variant="outlined" radius="2xl" className="backdrop-blur-xl p-4 shadow-sm space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <Button
@@ -221,6 +217,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };

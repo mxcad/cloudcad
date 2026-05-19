@@ -2,6 +2,18 @@ import type React from 'react';
 
 export type CardVariant = 'elevated' | 'outlined' | 'filled' | 'ghost';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
+export type CardRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
+
+const radiusStyles: Record<CardRadius, string> = {
+  none: 'rounded-none',
+  sm: 'rounded-[var(--radius-sm)]',
+  md: 'rounded-[var(--radius-md)]',
+  lg: 'rounded-[var(--radius-lg)]',
+  xl: 'rounded-[var(--radius-xl)]',
+  '2xl': 'rounded-[var(--radius-2xl)]',
+  '3xl': 'rounded-[var(--radius-3xl)]',
+  full: 'rounded-[var(--radius-full)]',
+};
 
 const variantStyles: Record<CardVariant, string> = {
   elevated: 'bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[var(--shadow-xl)]',
@@ -22,12 +34,14 @@ const paddingStyles: Record<CardPadding, string> = {
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: CardVariant;
   padding?: CardPadding;
+  radius?: CardRadius;
   hover?: boolean;
 }
 
 const CardRoot: React.FC<CardProps> = ({
   variant = 'outlined',
   padding,
+  radius = 'xl',
   hover: enableHover = false,
   className = '',
   children,
@@ -36,7 +50,7 @@ const CardRoot: React.FC<CardProps> = ({
   return (
     <div
       className={`
-        rounded-[var(--radius-xl)]
+        ${radiusStyles[radius]}
         ${variantStyles[variant]}
         ${enableHover ? hoverStyles : ''}
         ${padding ? paddingStyles[padding] : ''}

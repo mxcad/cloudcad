@@ -91,7 +91,7 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
         </div>
       </div>
 
-      <Button type="submit" variant="primary" size="md" loading={loading} className="w-full submit-button">
+      <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full submit-button">
         <span>立即登录</span>
         <ArrowRight size={18} className="button-arrow" />
       </Button>

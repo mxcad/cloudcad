@@ -224,7 +224,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               </>
             )}
 
-            <Button type="button" onClick={onNext} variant="primary" data-testid="next-button">
+            <Button type="button" onClick={onNext} variant="primary" size="lg" data-testid="next-button">
               <span>下一步</span>
               <ArrowRight size={18} className="button-arrow" />
             </Button>
@@ -307,11 +307,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
 
             <div className="button-group">
-              <Button type="button" onClick={form.handleBack} variant="secondary" data-testid="back-button">
+              <Button type="button" onClick={form.handleBack} variant="secondary" size="lg" data-testid="back-button">
                 <ArrowLeft size={18} />
                 <span>返回</span>
               </Button>
-              <Button type="submit" variant="primary" loading={form.loading}>
+              <Button type="submit" variant="primary" size="lg" loading={form.loading}>
                 {form.loading ? (
                   <span>注册中...</span>
                 ) : (
