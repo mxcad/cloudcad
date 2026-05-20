@@ -21,11 +21,12 @@
   flex-direction: column;
   gap: 0;
   padding: 12px 0;
-  background: var(--bg-elevated);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-default);
 }
 
 [data-theme="dark"] .categoryTabsContainer {
-  background: var(--bg-elevated);
+  background: var(--bg-tertiary);
 }
 
 /* 加载遮罩 */
@@ -126,13 +127,14 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--bg-elevated);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-default);
   max-height: 166px;
   overflow-y: auto;
 }
 
 [data-theme="dark"] .categorySelectGroup {
-  background: var(--bg-elevated);
+  background: var(--bg-tertiary);
 }
 
 .categorySelectRow {
