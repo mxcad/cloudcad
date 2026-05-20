@@ -481,7 +481,7 @@ export const ForgotPassword: React.FC = () => {
                 className="forgot-link"
                 onClick={() => setShowSupportModal(true)}
               >
-                忘记邮箱�?
+                忘记邮箱?
               </button>
             )}
             {contactType === 'phone' && (

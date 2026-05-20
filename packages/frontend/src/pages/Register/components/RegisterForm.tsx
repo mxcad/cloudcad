@@ -211,6 +211,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                     />
                     <Button
                       type="button"
+                      size="lg"
                       className="code-button"
                       onClick={phone.handleSendCode}
                       disabled={phone.countdown > 0 || phone.phoneForm.phone.length !== 11}
@@ -253,6 +254,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 <Tooltip content={form.showPassword ? '隐藏密码' : '显示密码'}>
                   <Button
                     type="button"
+                    size="lg"
                     className="password-toggle"
                     onClick={() => form.setShowPassword(!form.showPassword)}
                     tabIndex={-1}
@@ -299,6 +301,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 <Tooltip content={form.showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}>
                   <Button
                     type="button"
+                    size="lg"
                     className="password-toggle"
                     onClick={() => form.setShowConfirmPassword(!form.showConfirmPassword)}
                     tabIndex={-1}
@@ -335,7 +338,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       <div className="form-footer">
         <p className="login-text">
           已有账户？
-          <Button onClick={() => navigate('/login')} variant="ghost" className="login-link">
+          <Button onClick={() => navigate('/login')} variant="ghost" size="lg" className="login-link">
              立即登录
            </Button>
         </p>
