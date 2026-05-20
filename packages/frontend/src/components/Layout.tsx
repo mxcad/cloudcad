@@ -2,6 +2,7 @@ import type React from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { fileSystemControllerGetStorageQuota, StorageInfoDto } from '@/api-sdk';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';
@@ -566,7 +567,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           >
             <div className="relative">
               <Menu open={showUserMenu} onOpenChange={setShowUserMenu}>
-                <Menu.Trigger asChild={false}>
+                <Menu.Trigger asChild>
                   <button
                     className="w-full flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 bg-transparent border-none text-left"
                   >
@@ -712,19 +713,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             {/* 设置按钮 */}
             <div className="p-0.5">
               <Menu open={showSettings} onOpenChange={setShowSettings}>
-                <Menu.Trigger>
-                  <Button
-                    variant="ghost"
-                    className="relative p-2 rounded-xl transition-all duration-300 ease-out
-                               hover:scale-110 active:scale-95
-                               hover:bg-[var(--bg-tertiary)]
-                               group"
-                    title="设置"
-                    aria-label="设置"
-                  >
-                    <Settings2 size={20} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-500)]" />
-                  </Button>
-                </Menu.Trigger>
+                <Tooltip content="设置">
+                  <Menu.Trigger>
+                    <Button
+                      variant="ghost"
+                      className="relative rounded-xl transition-all duration-300 ease-out
+                                 hover:scale-110 active:scale-95
+                                 hover:bg-[var(--bg-tertiary)]
+                                 group"
+                      aria-label="设置"
+                    >
+                      <Settings2 size={20} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-500)]" />
+                    </Button>
+                  </Menu.Trigger>
+                </Tooltip>
 
                 <Menu.Content align="end" sideOffset={8} className="w-52">
                   <Menu.Item

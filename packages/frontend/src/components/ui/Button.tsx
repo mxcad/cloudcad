@@ -1,4 +1,4 @@
-import type React from 'react';
+import React, { Children, isValidElement, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Tooltip, type TooltipPosition } from './Tooltip';
 
@@ -109,7 +109,14 @@ export const Button: React.FC<ButtonProps> = ({
     lg: 20,
   };
 
-  const isIconButton = !!Icon && !children;
+  const isIconButton = useMemo(() => {
+    if (Icon && !children) return true;
+    if (!children) return false;
+    const meaningful = Children.toArray(children).filter(
+      (child) => typeof child !== 'string' || child.trim() !== ''
+    );
+    return meaningful.length > 0 && meaningful.every((child) => isValidElement(child));
+  }, [Icon, children]);
 
   const iconButtonSizes = {
     xs: 'w-[20px] h-[20px] p-0 rounded-[var(--radius-sm)]',
