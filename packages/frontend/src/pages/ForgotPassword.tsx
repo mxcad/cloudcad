@@ -188,7 +188,7 @@ export const ForgotPassword: React.FC = () => {
           .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
           .support-content { text-align: center; }
           .support-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
-          .support-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+          .support-title { font-size: var(--text-2xl); font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
           .support-subtitle { font-size: var(--text-md); color: var(--text-tertiary); margin-bottom: 1.5rem; }
           .support-card { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
           .support-card-title { font-size: var(--text-md); font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
@@ -264,7 +264,7 @@ export const ForgotPassword: React.FC = () => {
                 </div>
               </div>
 
-              <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate('/login')}>
+              <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
                 返回登录
               </Button>
             </div>
@@ -287,7 +287,7 @@ export const ForgotPassword: React.FC = () => {
           .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
           .support-content { text-align: center; }
           .support-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
-          .support-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+          .support-title { font-size: var(--text-2xl); font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
           .support-subtitle { font-size: var(--text-md); color: var(--text-tertiary); margin-bottom: 1.5rem; }
           .support-card { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
           .support-card-title { font-size: var(--text-md); font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
@@ -404,7 +404,7 @@ export const ForgotPassword: React.FC = () => {
           .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
           .success-content { text-align: center; }
           .success-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3); }
-          .success-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+          .success-title { font-size: var(--text-2xl); font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
           .success-subtitle { font-size: var(--text-md); color: var(--text-tertiary); margin-bottom: 1.5rem; }
           .success-email { font-weight: 600; color: var(--primary-500); }
           .success-card { background: var(--success-dim); border: 1px solid var(--success); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
@@ -559,7 +559,7 @@ export const ForgotPassword: React.FC = () => {
 
           {/* 返回登录 */}
           <div className="form-footer">
-            <Button variant="ghost" icon={ArrowLeft} onClick={() => navigate('/login')}>
+            <Button variant="ghost" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
               返回登录
             </Button>
           </div>
@@ -646,7 +646,7 @@ export const ForgotPassword: React.FC = () => {
         .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; margin-bottom: 0.375rem; }
         .app-tagline { font-size: var(--text-md); color: var(--text-tertiary); font-weight: 400; }
         .form-header { text-align: center; margin-bottom: 1.5rem; }
-        .form-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
+        .form-title { font-size: var(--text-2xl); font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
         .form-subtitle { font-size: var(--text-md); color: var(--text-tertiary); }
 
         .alert { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: var(--text-md); animation: slide-up 0.3s ease-out; }

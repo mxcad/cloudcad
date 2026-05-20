@@ -282,14 +282,14 @@ export const ResetPassword: React.FC = () => {
               </div>
             </div>
 
-            <Button type="submit" variant="primary" loading={resetPassword.loading} icon={ArrowRight}>
+            <Button type="submit" variant="primary" size="lg" loading={resetPassword.loading} icon={ArrowRight}>
               重置密码
             </Button>
           </form>
 
           {/* 返回登录 */}
           <div className="form-footer">
-            <Button variant="ghost" icon={ArrowLeft} onClick={() => navigate('/login')}>
+            <Button variant="ghost" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
               返回登录
             </Button>
           </div>
@@ -326,7 +326,7 @@ export const ResetPassword: React.FC = () => {
         .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; margin-bottom: 0.375rem; }
         .app-tagline { font-size: var(--text-md); color: var(--text-tertiary); font-weight: 400; }
         .form-header { text-align: center; margin-bottom: 1.5rem; }
-        .form-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
+        .form-title { font-size: var(--text-2xl); font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
         .form-subtitle { font-size: var(--text-md); color: var(--text-tertiary); }
         .alert { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: var(--text-md); animation: slide-up 0.3s ease-out; }
         .alert-error { background: var(--error-dim); border: 1px solid var(--error); color: var(--error); }
