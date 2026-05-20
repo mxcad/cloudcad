@@ -21,13 +21,9 @@
   flex-direction: column;
   gap: 0;
   padding: 12px 0;
-  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-default);
 }
 
-[data-theme="dark"] .categoryTabsContainer {
-  background: var(--bg-tertiary);
-}
 
 /* 加载遮罩 */
 .loadingOverlay {
