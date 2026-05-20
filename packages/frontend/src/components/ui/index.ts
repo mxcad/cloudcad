@@ -32,6 +32,9 @@ export { Toast } from './Toast';
 export { Tooltip, SimpleTooltip } from './Tooltip';
 export type { TooltipProps, TooltipPosition, TooltipTrigger, SimpleTooltipProps } from './Tooltip';
 
+export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+
 export { Input } from './Input';
 export type { InputProps } from './Input';
 export { FileNameInput } from './FileNameInput';

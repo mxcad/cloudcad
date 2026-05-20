@@ -182,7 +182,7 @@ export const LibrarySelectFolderModal: React.FC<
 
           <Folder size={16} className="text-yellow-500" />
 
-          <span className="flex-1 truncate text-sm">{node.name}</span>
+          <span className="flex-1 truncate">{node.name}</span>
 
           {selectedFolderId === node.id && (
             <Check size={16} className="text-blue-500" />

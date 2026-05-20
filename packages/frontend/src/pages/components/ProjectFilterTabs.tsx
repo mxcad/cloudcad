@@ -52,21 +52,25 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
         >
           项目回收站
         </Tab>
-      </Tabs>
 
-      {!isProjectTrashView && isProjectRootMode && (
-        <Tabs>
-          {projectFilterTabs.map((tab) => (
-            <Tab
-              key={tab.key}
-              active={projectFilter === tab.key}
-              onClick={() => onProjectFilterChange(tab.key)}
-            >
-              {tab.label}
-            </Tab>
-          ))}
-        </Tabs>
-      )}
+        {!isProjectTrashView && isProjectRootMode && (
+          <>
+            <div
+              className="mx-1 h-5 w-px"
+              style={{ backgroundColor: 'var(--border-default)' }}
+            />
+            {projectFilterTabs.map((tab) => (
+              <Tab
+                key={tab.key}
+                active={projectFilter === tab.key}
+                onClick={() => onProjectFilterChange(tab.key)}
+              >
+                {tab.label}
+              </Tab>
+            ))}
+          </>
+        )}
+      </Tabs>
 
       {isProjectTrashView && nodesCount > 0 && (
         <div className="ml-auto flex items-center gap-2">

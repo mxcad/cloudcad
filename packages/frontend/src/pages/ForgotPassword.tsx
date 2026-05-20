@@ -185,18 +185,18 @@ export const ForgotPassword: React.FC = () => {
           @keyframes logo-glow-pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
           .logo-image { position: relative; width: 100%; height: 100%; object-fit: contain; border-radius: 16px; z-index: 1; animation: logo-float 3s ease-in-out infinite; }
           @keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-          .app-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+          .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
           .support-content { text-align: center; }
           .support-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
           .support-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
-          .support-subtitle { font-size: 0.875rem; color: var(--text-tertiary); margin-bottom: 1.5rem; }
+          .support-subtitle { font-size: var(--text-md); color: var(--text-tertiary); margin-bottom: 1.5rem; }
           .support-card { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
-          .support-card-title { font-size: 0.9375rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
+          .support-card-title { font-size: var(--text-md); font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
           .support-list { display: flex; flex-direction: column; gap: 0.75rem; }
           .support-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--primary-500); text-decoration: none; transition: all 0.2s; }
           .support-item:hover { background: var(--bg-elevated); border-color: var(--border-strong); transform: translateX(4px); }
-          .support-empty { color: var(--text-muted); font-size: 0.875rem; }
-          .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
+          .support-empty { color: var(--text-muted); font-size: var(--text-md); }
+          .copyright { margin-top: 2rem; font-size: var(--text-sm); color: var(--text-muted); }
           [data-theme="dark"] .auth-card { background: rgba(26, 29, 33, 0.9); backdrop-filter: blur(20px); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; }
           @media (max-width: 480px) { .auth-container { padding: 1rem; } .auth-card { padding: 1.75rem; border-radius: 20px; } }
         `}</style>
@@ -284,18 +284,18 @@ export const ForgotPassword: React.FC = () => {
           @keyframes logo-glow-pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
           .logo-image { position: relative; width: 100%; height: 100%; object-fit: contain; border-radius: 16px; z-index: 1; animation: logo-float 3s ease-in-out infinite; }
           @keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-          .app-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+          .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
           .support-content { text-align: center; }
           .support-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
           .support-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
-          .support-subtitle { font-size: 0.875rem; color: var(--text-tertiary); margin-bottom: 1.5rem; }
+          .support-subtitle { font-size: var(--text-md); color: var(--text-tertiary); margin-bottom: 1.5rem; }
           .support-card { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
-          .support-card-title { font-size: 0.9375rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
+          .support-card-title { font-size: var(--text-md); font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem; text-align: left; }
           .support-list { display: flex; flex-direction: column; gap: 0.75rem; }
           .support-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--primary-500); text-decoration: none; transition: all 0.2s; }
           .support-item:hover { background: var(--bg-elevated); border-color: var(--border-strong); transform: translateX(4px); }
-          .support-empty { color: var(--text-muted); font-size: 0.875rem; }
-          .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
+          .support-empty { color: var(--text-muted); font-size: var(--text-md); }
+          .copyright { margin-top: 2rem; font-size: var(--text-sm); color: var(--text-muted); }
           [data-theme="dark"] .auth-card { background: rgba(26, 29, 33, 0.9); backdrop-filter: blur(20px); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; }
           @media (max-width: 480px) { .auth-container { padding: 1rem; } .auth-card { padding: 1.75rem; border-radius: 20px; } }
         `}</style>
@@ -401,26 +401,26 @@ export const ForgotPassword: React.FC = () => {
           @keyframes logo-glow-pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
           .logo-image { position: relative; width: 100%; height: 100%; object-fit: contain; border-radius: 16px; z-index: 1; animation: logo-float 3s ease-in-out infinite; }
           @keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-          .app-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+          .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
           .success-content { text-align: center; }
           .success-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); display: flex; align-items: center; justify-content: center; color: white; margin: 0 auto 1.5rem; box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3); }
           .success-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
-          .success-subtitle { font-size: 0.875rem; color: var(--text-tertiary); margin-bottom: 1.5rem; }
+          .success-subtitle { font-size: var(--text-md); color: var(--text-tertiary); margin-bottom: 1.5rem; }
           .success-email { font-weight: 600; color: var(--primary-500); }
           .success-card { background: var(--success-dim); border: 1px solid var(--success); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
-          .success-tip { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--success); }
+          .success-tip { display: flex; align-items: center; gap: 0.5rem; font-size: var(--text-md); color: var(--success); }
           .button-group { display: flex; flex-direction: column; gap: 0.75rem; }
-          .primary-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); border: none; border-radius: 12px; color: white; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+          .primary-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, var(--primary-600), var(--accent-600)); border: none; border-radius: 12px; color: white; font-size: var(--text-md); font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
           .primary-button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); }
-          .secondary-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+          .secondary-button { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: var(--text-md); font-weight: 500; cursor: pointer; transition: all 0.2s; }
           .secondary-button:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
           .features-bar { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); }
           .feature-dot { position: relative; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-tertiary); border: 1px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); transition: all 0.2s; cursor: pointer; }
           .feature-dot:hover { background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); border-color: transparent; color: white; transform: translateY(-2px); }
-          .feature-dot::before { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.9); padding: 0.375rem 0.625rem; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 6px; font-size: 0.6875rem; font-weight: 500; color: var(--text-secondary); white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease; box-shadow: var(--shadow-md); z-index: 10; }
+          .feature-dot::before { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.9); padding: 0.375rem 0.625rem; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 6px; font-size: var(--text-xs); font-weight: 500; color: var(--text-secondary); white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease; box-shadow: var(--shadow-md); z-index: 10; }
           .feature-dot::after { content: ''; position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%) scale(0.9); border: 4px solid transparent; border-top-color: var(--border-default); opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 10; }
           .feature-dot:hover::before, .feature-dot:hover::after { opacity: 1; visibility: visible; transform: translateX(-50%) scale(1); }
-          .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
+          .copyright { margin-top: 2rem; font-size: var(--text-sm); color: var(--text-muted); }
           [data-theme="dark"] .auth-card { background: rgba(26, 29, 33, 0.9); backdrop-filter: blur(20px); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset; }
           @media (max-width: 480px) { .auth-container { padding: 1rem; } .auth-card { padding: 1.75rem; border-radius: 20px; } }
         `}</style>
@@ -643,22 +643,22 @@ export const ForgotPassword: React.FC = () => {
         @keyframes logo-glow-pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
         .logo-image { position: relative; width: 100%; height: 100%; object-fit: contain; border-radius: 16px; z-index: 1; animation: logo-float 3s ease-in-out infinite; }
         @keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        .app-title { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; margin-bottom: 0.375rem; }
-        .app-tagline { font-size: 0.875rem; color: var(--text-tertiary); font-weight: 400; }
+        .app-title { font-size: var(--text-3xl); font-weight: 700; background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; margin-bottom: 0.375rem; }
+        .app-tagline { font-size: var(--text-md); color: var(--text-tertiary); font-weight: 400; }
         .form-header { text-align: center; margin-bottom: 1.5rem; }
         .form-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
-        .form-subtitle { font-size: 0.875rem; color: var(--text-tertiary); }
+        .form-subtitle { font-size: var(--text-md); color: var(--text-tertiary); }
 
-        .alert { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: 0.875rem; animation: slide-up 0.3s ease-out; }
+        .alert { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: var(--text-md); animation: slide-up 0.3s ease-out; }
         .alert-error { background: var(--error-dim); border: 1px solid var(--error); color: var(--error); }
         .alert-icon { flex-shrink: 0; }
         @keyframes slide-up { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .auth-form { display: flex; flex-direction: column; gap: 1.25rem; }
         .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
-        .input-label { font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary); }
+        .input-label { font-size: var(--text-base); font-weight: 500; color: var(--text-secondary); }
         .input-wrapper { position: relative; display: flex; align-items: center; }
         .input-icon { position: absolute; left: 1rem; color: var(--text-muted); z-index: 2; }
-        .input-field { width: 100%; padding: 0.875rem 1rem 0.875rem 2.75rem; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-primary); font-size: 0.9375rem; transition: all 0.2s; outline: none; }
+        .input-field { width: 100%; padding: 0.875rem 1rem 0.875rem 2.75rem; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-primary); font-size: var(--text-md); transition: all 0.2s; outline: none; }
         .input-field::placeholder { color: var(--text-muted); }
         .input-field:hover { border-color: var(--border-strong); }
         .input-field:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
@@ -666,18 +666,18 @@ export const ForgotPassword: React.FC = () => {
         .input-wrapper:focus-within .input-glow { opacity: 0.3; }
         .button-arrow { transition: transform 0.2s; }
         .form-footer { margin-top: 1.5rem; text-align: center; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); }
-        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-tertiary); background: none; border: none; font-size: 0.875rem; cursor: pointer; transition: color 0.2s; }
+        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-tertiary); background: none; border: none; font-size: var(--text-md); cursor: pointer; transition: color 0.2s; }
         .back-link:hover { color: var(--primary-500); }
         .forgot-contact-links { text-align: right; margin-bottom: 1.25rem; }
-        .forgot-link { background: none; border: none; color: var(--primary-500); font-size: 0.8125rem; cursor: pointer; transition: color 0.2s; }
+        .forgot-link { background: none; border: none; color: var(--primary-500); font-size: var(--text-base); cursor: pointer; transition: color 0.2s; }
         .forgot-link:hover { color: var(--primary-600); text-decoration: underline; }
         .features-bar { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); }
         .feature-dot { position: relative; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-tertiary); border: 1px solid var(--border-default); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); transition: all 0.2s; cursor: pointer; }
         .feature-dot:hover { background: linear-gradient(135deg, var(--primary-500), var(--accent-500)); border-color: transparent; color: white; transform: translateY(-2px); }
-        .feature-dot::before { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.9); padding: 0.375rem 0.625rem; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 6px; font-size: 0.6875rem; font-weight: 500; color: var(--text-secondary); white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease; box-shadow: var(--shadow-md); z-index: 10; }
+        .feature-dot::before { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.9); padding: 0.375rem 0.625rem; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 6px; font-size: var(--text-xs); font-weight: 500; color: var(--text-secondary); white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease; box-shadow: var(--shadow-md); z-index: 10; }
         .feature-dot::after { content: ''; position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%) scale(0.9); border: 4px solid transparent; border-top-color: var(--border-default); opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 10; }
         .feature-dot:hover::before, .feature-dot:hover::after { opacity: 1; visibility: visible; transform: translateX(-50%) scale(1); }
-        .copyright { margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); }
+        .copyright { margin-top: 2rem; font-size: var(--text-sm); color: var(--text-muted); }
         
         /* 联系客服弹框 */
         .support-modal-overlay {
@@ -714,7 +714,7 @@ export const ForgotPassword: React.FC = () => {
         }
         
         .support-modal-header h3 {
-          font-size: 1.125rem;
+          font-size: var(--text-xl);
           font-weight: 600;
           color: var(--text-primary);
           margin: 0;
@@ -723,7 +723,7 @@ export const ForgotPassword: React.FC = () => {
         .support-modal-close {
           background: none;
           border: none;
-          font-size: 1.5rem;
+          font-size: var(--text-3xl);
           color: var(--text-muted);
           cursor: pointer;
           padding: 0;
@@ -769,7 +769,7 @@ export const ForgotPassword: React.FC = () => {
         }
         
         .support-contact-label {
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           color: var(--text-tertiary);
           width: 80px;
           flex-shrink: 0;
@@ -778,7 +778,7 @@ export const ForgotPassword: React.FC = () => {
         .support-contact-link {
           color: var(--primary-500);
           text-decoration: none;
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           transition: color 0.2s;
         }
         
@@ -789,7 +789,7 @@ export const ForgotPassword: React.FC = () => {
         
         .support-contact-value {
           color: var(--text-secondary);
-          font-size: 0.875rem;
+          font-size: var(--text-md);
         }
         
         .support-modal-footer {
@@ -805,7 +805,7 @@ export const ForgotPassword: React.FC = () => {
           border: none;
           border-radius: 8px;
           color: white;
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s;

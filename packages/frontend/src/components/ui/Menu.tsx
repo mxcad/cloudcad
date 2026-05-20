@@ -91,6 +91,9 @@ Menu.Content = ({ children, align = 'start', side = 'bottom', sideOffset = 4, co
       side={side}
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
+      data-menu-content
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       className={`
         min-w-[160px] rounded-xl p-1 shadow-xl
         animate-in fade-in-0 zoom-in-95
@@ -127,9 +130,12 @@ Menu.Item = ({ children, disabled, onClick, className = '', variant = 'default',
   return (
     <DropdownMenu.Item
       disabled={disabled}
-      onSelect={onClick}
+      onSelect={(e) => {
+        e.preventDefault();
+        onClick?.(e);
+      }}
       className={`
-        flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md
+        flex items-center gap-2 w-full px-2.5 py-1.5 text-[var(--text-sm)] rounded-md
         outline-none cursor-pointer select-none
         transition-colors duration-150
         data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed
@@ -144,7 +150,7 @@ Menu.Item = ({ children, disabled, onClick, className = '', variant = 'default',
       <div className="flex-1 min-w-0">
         <div className="truncate">{children}</div>
         {description && (
-          <div className="text-[10px] opacity-60 truncate mt-0.5">{description}</div>
+          <div className="text-[var(--text-xs)] opacity-60 truncate mt-0.5">{description}</div>
         )}
       </div>
     </DropdownMenu.Item>
@@ -157,7 +163,7 @@ Menu.Separator = () => (
 
 Menu.Submenu = ({ children, trigger }) => (
   <DropdownMenu.Sub>
-    <DropdownMenu.SubTrigger className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md outline-none cursor-pointer select-none transition-colors duration-150 data-[highlighted]:bg-[var(--bg-tertiary)] data-[highlighted]:text-[var(--text-primary)] text-[var(--text-secondary)]">
+    <DropdownMenu.SubTrigger className="flex items-center gap-2 w-full px-2.5 py-1.5 text-[var(--text-sm)] rounded-md outline-none cursor-pointer select-none transition-colors duration-150 data-[highlighted]:bg-[var(--bg-tertiary)] data-[highlighted]:text-[var(--text-primary)] text-[var(--text-secondary)]">
       {trigger}
     </DropdownMenu.SubTrigger>
     <DropdownMenu.Portal>
@@ -180,7 +186,7 @@ Menu.Submenu = ({ children, trigger }) => (
 Menu.Group = ({ children, label, className = '' }) => (
   <DropdownMenu.Group className={className}>
     {label && (
-      <div className="px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+      <div className="px-2.5 py-1.5 text-[var(--text-xs)] font-medium uppercase tracking-wider text-[var(--text-muted)]">
         {label}
       </div>
     )}
@@ -189,19 +195,19 @@ Menu.Group = ({ children, label, className = '' }) => (
 );
 
 Menu.Loading = ({ children, className = '' }) => (
-  <div className={`flex items-center justify-center gap-2 px-2.5 py-3 text-xs text-[var(--text-muted)] ${className}`}>
+  <div className={`flex items-center justify-center gap-2 px-2.5 py-3 text-[var(--text-sm)] text-[var(--text-muted)] ${className}`}>
     {children}
   </div>
 );
 
 Menu.Empty = ({ children, className = '' }) => (
-  <div className={`flex flex-col items-center justify-center gap-2 px-2.5 py-4 text-xs text-[var(--text-muted)] ${className}`}>
+  <div className={`flex flex-col items-center justify-center gap-2 px-2.5 py-4 text-[var(--text-sm)] text-[var(--text-muted)] ${className}`}>
     {children}
   </div>
 );
 
 Menu.Error = ({ children, className = '' }) => (
-  <div className={`px-2.5 py-3 text-xs text-[var(--error)] text-center ${className}`}>
+  <div className={`px-2.5 py-3 text-[var(--text-sm)] text-[var(--error)] text-center ${className}`}>
     {children}
   </div>
 );

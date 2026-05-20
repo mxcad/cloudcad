@@ -871,7 +871,7 @@ function UploadFontModal({
               <p className="text-sm text-text-tertiary">支持 TTF、OTF、WOFF 等格式</p>
             </div>
           </div>
-          <Button variant="ghost" icon={X} onClick={onClose} />
+          <Button variant="ghost" icon={X} onClick={onClose} tooltip="关闭" />
         </div>
 
         {/* 内容 */}

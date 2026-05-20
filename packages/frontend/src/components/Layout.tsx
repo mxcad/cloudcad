@@ -31,7 +31,7 @@ import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
 import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library } from 'lucide-react';
-import { Menu as DropdownMenu } from './ui/Menu';
+import { Menu } from './ui/Menu';
 
 interface NavItemProps {
   to: string;
@@ -343,7 +343,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     <div
       className="flex h-screen overflow-hidden font-[var(--font-family-base)]"
       style={{ background: 'transparent' }}
-      onClick={(e) => {
+      onMouseDown={(e) => {
         // 只有点击主内容区域时才关闭菜单，侧边栏内部点击不关闭
         const target = e.target as HTMLElement;
         if (target.closest('aside')) return;
@@ -565,85 +565,86 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             style={{ borderColor: 'var(--border-default)' }}
           >
             <div className="relative">
-              <DropdownMenu open={showUserMenu} onOpenChange={setShowUserMenu}>
-                <DropdownMenu.Trigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
+              <Menu open={showUserMenu} onOpenChange={setShowUserMenu}>
+                <Menu.Trigger asChild={false}>
+                  <button
+                    className="w-full flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 bg-transparent border-none text-left"
                   >
-                {/* 头像 */}
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
-                  style={{
-                    background:
-                      'linear-gradient(135deg, var(--primary-400), var(--accent-400))',
-                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
-                  }}
-                >
-                  {user?.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt="Avatar"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
+                    {/* 头像 */}
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, var(--primary-400), var(--accent-400))',
+                        boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
                       }}
+                    >
+                      {user?.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt="Avatar"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {!user?.avatar && (
+                        <span className="text-sm font-semibold text-white">
+                          {(user?.nickname || user?.username || user?.email || 'U')
+                            .charAt(0)
+                            .toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 用户信息 */}
+                    <div className="flex-1 min-w-0 text-left">
+                      <p
+                        className="text-sm font-semibold truncate"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        <TruncateText>
+                          {String(user?.nickname ||
+                            user?.username ||
+                            user?.email ||
+                            '用户')}
+                        </TruncateText>
+                      </p>
+                      <p
+                        className="text-xs truncate"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        {loading
+                          ? '加载中...'
+                          : user?.role?.name
+                            ? getRoleDisplayName(user.role.name)
+                            : '未知角色'}
+                      </p>
+                    </div>
+
+                    {/* 下拉箭头 */}
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
+                      style={{ color: 'var(--text-muted)' }}
                     />
-                  ) : null}
-                  {!user?.avatar && (
-                    <span className="text-sm font-semibold text-white">
-                      {(user?.nickname || user?.username || user?.email || 'U')
-                        .charAt(0)
-                        .toUpperCase()}
-                    </span>
-                  )}
-                </div>
+                </button>
+                </Menu.Trigger>
 
-                {/* 用户信息 */}
-                <div className="flex-1 min-w-0 text-left">
-                  <p
-                    className="text-sm font-semibold truncate"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
-                    <TruncateText>
-                      {String(user?.nickname ||
-                        user?.username ||
-                        user?.email ||
-                        '用户')}
-                    </TruncateText>
-                  </p>
-                  <p
-                    className="text-xs truncate"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    {loading
-                      ? '加载中...'
-                      : user?.role?.name
-                        ? getRoleDisplayName(user.role.name)
-                        : '未知角色'}
-                  </p>
-                </div>
-
-                {/* 下拉箭头 */}
-                  <ChevronDown
-                    size={16}
-                    className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
-                    style={{ color: 'var(--text-muted)' }}
-                    />
-                  </Button>
-                </DropdownMenu.Trigger>
-
-                <DropdownMenu.Content align="start" side="top" sideOffset={8} className="w-full min-w-[200px]">
-                  <DropdownMenu.Item
+                <Menu.Content align="start" side="top" sideOffset={8} className="w-full min-w-[200px]">
+                  <Menu.Item
                     icon={<Settings size={16} />}
-                    onClick={() => setShowUserMenu(false)}
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      window.location.href = '/profile';
+                    }}
                   >
-                    <Link to="/profile" className="w-full">个人设置</Link>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Separator />
-                  <DropdownMenu.Item
+                    个人设置
+                  </Menu.Item>
+                  <Menu.Separator />
+                  <Menu.Item
                     variant="danger"
                     icon={<LogOut size={16} />}
                     onClick={() => {
@@ -652,9 +653,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     }}
                   >
                     退出登录
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu>
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu>
             </div>
           </div>
         </div>
@@ -709,70 +710,56 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
 
             {/* 设置按钮 */}
-            <div className="relative p-0.5">
-              <Button
-                variant="ghost"
-                icon={Settings2}
-                className="relative p-2 rounded-xl transition-all duration-300 ease-out
-                           hover:scale-110 active:scale-95
-                           hover:bg-[var(--bg-tertiary)]
-                           group"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowSettings(!showSettings);
-                }}
-                title="设置"
-                aria-label="设置"
-              />
-
-              {/* 设置下拉菜单 */}
-              {showSettings && (
-                <div
-                  className="absolute right-0 mt-2 w-52 rounded-xl overflow-hidden animate-slide-up z-50"
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    boxShadow: 'var(--shadow-xl)',
-                  }}
-                >
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-tertiary)]"
-                    style={{ color: 'var(--text-secondary)' }}
-                    onClick={() => setShowSettings(false)}
-                  >
-                    <Settings size={16} />
-                    个人资料
-                  </Link>
-                  {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
-                    <Link
-                      to="/runtime-config"
-                      className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-tertiary)]"
-                      style={{ color: 'var(--text-secondary)' }}
-                      onClick={() => setShowSettings(false)}
-                    >
-                      <Settings2 size={16} />
-                      系统设置
-                    </Link>
-                  )}
-                  <div
-                    className="h-px mx-4"
-                    style={{ background: 'var(--border-subtle)' }}
-                  />
+            <div className="p-0.5">
+              <Menu open={showSettings} onOpenChange={setShowSettings}>
+                <Menu.Trigger>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 px-4"
-                    style={{ color: 'var(--error)' }}
+                    className="relative p-2 rounded-xl transition-all duration-300 ease-out
+                               hover:scale-110 active:scale-95
+                               hover:bg-[var(--bg-tertiary)]
+                               group"
+                    title="设置"
+                    aria-label="设置"
+                  >
+                    <Settings2 size={20} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-500)]" />
+                  </Button>
+                </Menu.Trigger>
+
+                <Menu.Content align="end" sideOffset={8} className="w-52">
+                  <Menu.Item
+                    icon={<Settings size={16} />}
                     onClick={() => {
-                      setShowLogoutConfirm(true);
                       setShowSettings(false);
+                      window.location.href = '/profile';
                     }}
                   >
-                    <LogOut size={16} />
+                    个人资料
+                  </Menu.Item>
+                  {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
+                    <Menu.Item
+                      icon={<Settings2 size={16} />}
+                      onClick={() => {
+                        setShowSettings(false);
+                        window.location.href = '/runtime-config';
+                      }}
+                    >
+                      系统设置
+                    </Menu.Item>
+                  )}
+                  <Menu.Separator />
+                  <Menu.Item
+                    variant="danger"
+                    icon={<LogOut size={16} />}
+                    onClick={() => {
+                      setShowSettings(false);
+                      setShowLogoutConfirm(true);
+                    }}
+                  >
                     退出登录
-                  </Button>
-                </div>
-              )}
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu>
             </div>
           </div>
         </header>

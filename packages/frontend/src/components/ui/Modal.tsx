@@ -101,7 +101,7 @@ export const Modal: React.FC<ModalProps> = ({
     <div
       className={`absolute inset-0 transition-opacity duration-300${overlayClassName ? ` ${overlayClassName}` : ''}`}
       style={{
-        background: overlayClassName ? undefined : 'var(--bg-overlay)',
+        background: 'var(--bg-overlay)',
       }}
       onClick={(e) => {
         e.stopPropagation();

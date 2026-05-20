@@ -234,6 +234,10 @@ export const FileItem: React.FC<FileItemProps> = ({
         return;
       }
 
+      if ((e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')) {
+        return;
+      }
+
       if (isMultiSelectMode) {
         const isCtrl = e.ctrlKey || e.metaKey;
         const isShift = e.shiftKey;

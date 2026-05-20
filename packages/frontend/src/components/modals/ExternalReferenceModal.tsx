@@ -144,7 +144,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               onClose();
             }}
             disabled={loading}
-            className="min-w-[72px] h-8 text-sm"
+            className="min-w-[72px] h-8"
           >
             取消
           </Button>
@@ -154,7 +154,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                 onSelectAndUpload();
               }}
               disabled={hasUploading}
-              className="min-w-[100px] h-8 text-sm"
+              className="min-w-[100px] h-8"
               variant="primary"
             >
               {hasUploading ? (
@@ -180,7 +180,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             }}
             disabled={loading}
             data-tour="xref-complete-btn"
-            className="min-w-[72px] h-8 text-sm"
+            className="min-w-[72px] h-8"
           >
             {allSuccess ? '完成' : '关闭'}
           </Button>

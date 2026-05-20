@@ -492,7 +492,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p
-                        className="text-sm font-medium"
+                        className="font-medium"
                         style={{ color: 'var(--text-primary)' }}
                       >
                         <TruncateText>

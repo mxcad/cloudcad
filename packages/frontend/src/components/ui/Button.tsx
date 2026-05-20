@@ -96,10 +96,10 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizes = {
-    xs: 'px-1.5 py-0 text-xs gap-1 h-[20px] rounded-[var(--radius-sm)]',
-    sm: 'px-2 py-0.5 text-xs gap-1 h-[22px] rounded-[var(--radius-md)]',
-    md: 'px-3 py-1.5 text-xs gap-1.5 h-[28px] rounded-[var(--radius-md)]',
-    lg: 'px-5 py-2.5 text-sm gap-2 h-[40px] rounded-[var(--radius-lg)]',
+    xs: 'px-1.5 py-0 text-[var(--text-xs)] gap-1 h-[20px] rounded-[var(--radius-sm)]',
+    sm: 'px-2 py-0.5 text-[var(--text-sm)] gap-1 h-[22px] rounded-[var(--radius-md)]',
+    md: 'px-3 py-1.5 text-[var(--text-base)] gap-1.5 h-[28px] rounded-[var(--radius-md)]',
+    lg: 'px-5 py-2.5 text-[var(--text-md)] gap-2 h-[40px] rounded-[var(--radius-lg)]',
   };
 
   const iconSizes = {

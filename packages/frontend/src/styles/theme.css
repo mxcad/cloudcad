@@ -22,7 +22,7 @@
   --bg-tertiary: #f1f5f9;         /* 三级背景 - 悬停 */
   --bg-card: #E5E5E5;             /* 卡片背景 - 图纸库/图块库卡片 */
   --bg-elevated: #ffffff;         /* 提升层 - 弹窗 */
-  --bg-overlay: transparent; /* 遮罩层 */
+  --bg-overlay: transparent; /* 遮罩层（默认透明，可通过 overlayClassName 自定义） */
 
   /* ----------------------------------------
      1.2 文字层次 - 从高对比到低对比
@@ -209,6 +209,18 @@
     'DejaVu Sans Mono', 'Noto Sans Mono CJK SC',
     /* 通用回退 */
     monospace;
+
+  /* ----------------------------------------
+     1.12 字体大小系统
+     ---------------------------------------- */
+  --text-xs: 0.6875rem;    /* 11px - 辅助标签、角标 */
+  --text-sm: 0.75rem;      /* 12px - 次要文字、表格内容、菜单项 */
+  --text-base: 0.8125rem;  /* 13px - 正文默认 */
+  --text-md: 0.875rem;     /* 14px - 强调文字、表单标签 */
+  --text-lg: 1rem;         /* 16px - 小标题 */
+  --text-xl: 1.125rem;     /* 18px - 标题 */
+  --text-2xl: 1.25rem;     /* 20px - 大标题 */
+  --text-3xl: 1.5rem;      /* 24px - 页面标题 */
 }
 
 /* ============================================
@@ -225,7 +237,7 @@
   --bg-tertiary: #22262b;         /* 三级背景 - 悬停、选中 */
   --bg-card: #3A4352;             /* 卡片背景 - 图纸库/图块库卡片 */
   --bg-elevated: #2a2f35;         /* 提升层 - 弹窗、下拉菜单 */
-  --bg-overlay: transparent; /* 遮罩层 */
+  --bg-overlay: transparent; /* 遮罩层（默认透明，可通过 overlayClassName 自定义） */
   
   /* CAD编辑器侧边栏专用颜色 - 与CAD画布完美融合 */
   --sidebar-bg: #3A4352;          /* 侧边栏背景 - 与CAD画布一致 */
@@ -448,7 +460,7 @@
   border: 1px solid var(--border-default);
   border-radius: 3px;
   color: var(--text-primary);
-  font-size: 0.75rem;
+  font-size: var(--text-base);
   line-height: 1.25rem;
   height: 1.5rem;
   transition: all var(--transition-base);
