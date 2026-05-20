@@ -24,10 +24,8 @@ interface FileItemMenuProps {
   node: FileSystemNode;
   isTrash: boolean;
   showMenu: boolean;
-  menuPosition?: { top: number; left: number } | null;
   menuButtonRef: React.RefObject<HTMLButtonElement | null>;
-  menuContainerRef: React.RefObject<HTMLDivElement | null>;
-  onToggleMenu: (e: React.MouseEvent) => void;
+  onOpenMenu: () => void;
   onCloseMenu: () => void;
   onDownload?: (node: FileSystemNode) => void;
   onDelete?: (node: FileSystemNode) => void;
@@ -48,7 +46,6 @@ interface FileItemMenuProps {
   canViewVersionHistory?: boolean;
   canManageExternalReference?: boolean;
   canManageTrash?: boolean;
-  galleryMode?: boolean;
 }
 
 export const FileItemMenu: React.FC<FileItemMenuProps> = ({
@@ -56,7 +53,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   isTrash,
   showMenu,
   menuButtonRef,
-  onToggleMenu,
+  onOpenMenu,
   onCloseMenu,
   onDownload,
   onDelete,
@@ -140,18 +137,23 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
 
   return (
     <>
-      <Tooltip content="更多操作" position="top">
-        <button
-          data-tour="file-item-menu-btn"
-          ref={menuButtonRef}
-          onClick={onToggleMenu}
-          className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] hover:bg-[var(--bg-tertiary)] shadow-sm border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-        >
-          <MoreIcon size={16} />
-        </button>
-      </Tooltip>
+      <Menu open={showMenu} onOpenChange={(open) => {
+        if (open) onOpenMenu();
+        else onCloseMenu();
+      }} modal={false}>
+        <Tooltip content="更多操作" position="top">
+          <Menu.Trigger>
+            <button
+              data-tour="file-item-menu-btn"
+              ref={menuButtonRef}
+              onClick={(e) => e.stopPropagation()}
+              className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] hover:bg-[var(--bg-tertiary)] shadow-sm border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+            >
+              <MoreIcon size={16} />
+            </button>
+          </Menu.Trigger>
+        </Tooltip>
 
-      <Menu open={showMenu} onOpenChange={(open) => !open && onCloseMenu()} modal={false}>
         <Menu.Content align="end" side="bottom" sideOffset={4}>
           {mainActions.map((action) => (
             <Menu.Item

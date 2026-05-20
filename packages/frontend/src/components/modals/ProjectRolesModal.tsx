@@ -201,13 +201,13 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           <Tabs>
             <Tab active={activeTab === 'custom'} icon={Settings} onClick={() => setActiveTab('custom')}>
               自定义角色
-              <span className="text-xs text-slate-400">
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 ({customRoles.length})
               </span>
             </Tab>
             <Tab active={activeTab === 'system'} icon={Shield} onClick={() => setActiveTab('system')} data-tour="system-roles-tab-btn">
               系统角色
-              <span className="text-xs text-slate-400">
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 ({systemRoles.length})
               </span>
             </Tab>
@@ -215,7 +215,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
 
           {/* 错误提示 */}
           {hookError && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--bg-error)', color: 'var(--error)' }}>
               <AlertCircle size={16} />
               {hookError}
             </div>
@@ -236,24 +236,25 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
               {activeTab === 'custom' && (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs text-slate-400">
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                       项目专属角色，可自定义创建
                     </span>
                     {canManageRoles && (
-                      <Button size="sm" icon={Plus} onClick={handleCreateRole} data-tour="create-role-btn">
+                      <Button icon={Plus} onClick={handleCreateRole} data-tour="create-role-btn">
                         新建角色
                       </Button>
                     )}
                   </div>
                   {customRoles.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
                       <Users
                         size={32}
-                        className="mx-auto mb-2 text-slate-300"
+                        className="mx-auto mb-2"
+                        style={{ color: 'var(--text-muted)' }}
                       />
-                      <p className="text-sm">暂无自定义角色</p>
+                      <p>暂无自定义角色</p>
                       {canManageRoles && (
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                           点击&ldquo;新建角色&rdquo;创建项目专属角色
                         </p>
                       )}
@@ -267,11 +268,11 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-slate-900 truncate">
+                              <h4 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                                 {getRoleDisplayName(role.name)}
                               </h4>
                               {role.description && (
-                                <p className="text-xs text-slate-500 mt-1">
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                                   <DescriptionText>
                                     {role.description}
                                   </DescriptionText>
@@ -308,17 +309,18 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
               {activeTab === 'system' && (
                 <>
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xs text-slate-400">
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                       所有项目共享使用，不可删除
                     </span>
                   </div>
                   {systemRoles.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
                       <Shield
                         size={32}
-                        className="mx-auto mb-2 text-slate-300"
+                        className="mx-auto mb-2"
+                        style={{ color: 'var(--text-muted)' }}
                       />
-                      <p className="text-sm">暂无系统角色</p>
+                      <p>暂无系统角色</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -330,7 +332,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-semibold text-slate-900 truncate">
+                                <h4 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                                   {getRoleDisplayName(role.name)}
                                 </h4>
                                 <Tag variant="primary" className="flex-shrink-0">
@@ -338,7 +340,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                                 </Tag>
                               </div>
                               {role.description && (
-                                <p className="text-xs text-slate-500 mt-1">
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                                   <DescriptionText>
                                     {role.description}
                                   </DescriptionText>
@@ -415,34 +417,35 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           }
         >
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-3 p-4 rounded-lg" style={{ background: 'var(--warning-light)', border: '1px solid var(--border-warning)' }}>
               <AlertCircle
                 size={20}
-                className="text-amber-600 flex-shrink-0 mt-0.5"
+                className="flex-shrink-0 mt-0.5"
+                style={{ color: 'var(--warning)' }}
               />
-              <div className="text-sm text-amber-900">
+              <div style={{ color: 'var(--warning-dark)' }}>
                 <p className="font-semibold mb-1">重要提示</p>
-                <p className="text-amber-800">
+                <p style={{ color: 'var(--warning-dim)' }}>
                   删除角色后，拥有该角色的成员将需要重新分配角色。如果该角色正在被使用，删除操作将被拒绝。
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">删除角色：</p>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-sm font-medium text-slate-900">
+              <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>删除角色：</p>
+              <div className="p-3 rounded-lg" style={{ background: 'var(--bg-tertiary)' }}>
+                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                   {getRoleDisplayName(roleToDelete.name)}
                 </p>
                 {roleToDelete.description && (
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                     {roleToDelete.description}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="text-xs text-slate-500">
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
               <p>• 该角色下的成员将被移除角色</p>
               <p>• 删除操作不可恢复</p>
             </div>

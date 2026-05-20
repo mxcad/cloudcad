@@ -439,7 +439,7 @@ export const RoleManagement = () => {
         />
 
         {/* 刷新按钮 */}
-        <Button variant="ghost" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" title="刷新角色数据" />
+        <Button variant="ghost" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" tooltip="刷新角色数据" />
       </div>
 
       {/* Tab 切换 */}

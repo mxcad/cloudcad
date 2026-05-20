@@ -41,7 +41,6 @@ export const ProfileWechatTab: React.FC<ProfileWechatTabProps> = ({
             </div>
             <Button
               variant="danger"
-              size="md"
               onClick={onUnbind}
             >
               解绑微信
@@ -72,7 +71,6 @@ export const ProfileWechatTab: React.FC<ProfileWechatTabProps> = ({
             </div>
             <Button
               variant="primary"
-              size="md"
               icon={MessageCircle}
               disabled={loading}
               onClick={onBind}

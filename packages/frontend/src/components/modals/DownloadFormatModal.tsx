@@ -89,12 +89,9 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             backgroundColor: 'var(--bg-secondary, #f8fafc)',
           }}
         >
-          <p
-            className="text-sm"
-            style={{ color: 'var(--text-secondary, #334155)' }}
-          >
+          <p style={{ color: 'var(--text-secondary)' }}>
             <span className="font-medium">文件：</span>
-            <span className="ml-2 font-mono text-sm">
+            <span className="ml-2 font-mono">
               {getDisplayFileName(fileName, format)}
             </span>
           </p>
@@ -103,8 +100,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
         {/* 格式选择 */}
         <div>
           <label
-            className="block text-sm font-medium mb-3"
-            style={{ color: 'var(--text-secondary, #334155)' }}
+            className="block font-medium mb-3"
+            style={{ color: 'var(--text-secondary)' }}
           >
             选择下载格式 *
           </label>
@@ -130,8 +127,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             }}
           >
             <p
-              className="text-sm font-medium"
-              style={{ color: 'var(--text-secondary, #334155)' }}
+              className="font-medium"
+              style={{ color: 'var(--text-secondary)' }}
             >
               PDF 导出参数
             </p>
@@ -140,8 +137,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label
-                  className="block text-xs font-medium mb-1"
-                  style={{ color: 'var(--text-secondary, #334155)' }}
+                  className="block font-medium mb-1"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
                   宽度（像素）
                 </label>
@@ -155,8 +152,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
               </div>
               <div>
                 <label
-                  className="block text-xs font-medium mb-1"
-                  style={{ color: 'var(--text-secondary, #334155)' }}
+                  className="block font-medium mb-1"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
                   高度（像素）
                 </label>
@@ -173,8 +170,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             {/* 颜色策略 */}
             <div>
               <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: 'var(--text-secondary, #334155)' }}
+                className="block font-medium mb-1"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 颜色策略
               </label>
@@ -198,8 +195,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
 
         {/* 格式说明 */}
         <div
-          className="text-xs space-y-1"
-          style={{ color: 'var(--text-tertiary, #64748b)' }}
+          className="space-y-1"
+          style={{ color: 'var(--text-tertiary)' }}
         >
           <p>
             • <strong>MXWEB</strong>：CloudCAD 专用格式，可直接在线编辑

@@ -1,11 +1,18 @@
 import type React from 'react';
 import { Loader2 } from 'lucide-react';
+import { Tooltip, type TooltipPosition } from './Tooltip';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'icon';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   icon?: React.ElementType;
   loading?: boolean;
+  /** 图标按钮提示文本 */
+  tooltip?: string;
+  /** 提示框位置 */
+  tooltipPosition?: TooltipPosition;
+  /** 提示延迟（毫秒） */
+  tooltipDelay?: number;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -16,6 +23,9 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   className = '',
   disabled,
+  tooltip,
+  tooltipPosition = 'top',
+  tooltipDelay = 300,
   ...props
 }) => {
   const baseStyles = `
@@ -26,8 +36,6 @@ export const Button: React.FC<ButtonProps> = ({
     transition-all
     duration-200
     focus:outline-none
-    focus:ring-2
-    focus:ring-offset-2
     disabled:opacity-50
     disabled:cursor-not-allowed
     disabled:transform-none
@@ -36,54 +44,54 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     primary: `
-      bg-gradient-to-r from-[var(--primary-600)] to-[var(--accent-600)]
+      bg-[var(--btn-primary-bg)]
       text-white
+      hover:bg-[var(--btn-primary-hover)]
       hover:shadow-lg hover:shadow-[var(--primary-500)]/30
-      focus:ring-[var(--primary-500)]
       border border-transparent
       hover:-translate-y-0.5
+      active:bg-[var(--btn-primary-active)]
     `,
     secondary: `
-      bg-[var(--bg-tertiary)]
+      bg-[var(--btn-default-bg)]
       text-[var(--text-secondary)]
-      hover:bg-[var(--bg-elevated)]
+      hover:bg-[var(--btn-default-hover)]
       hover:shadow-md
-      focus:ring-[var(--border-strong)]
       border border-[var(--border-default)]
+      active:bg-[var(--btn-default-active)]
     `,
     outline: `
       bg-transparent
       text-[var(--text-secondary)]
       border border-[var(--border-default)]
-      hover:bg-[var(--bg-tertiary)]
+      hover:bg-[var(--btn-default-bg)]
       hover:border-[var(--border-strong)]
       hover:text-[var(--text-primary)]
-      focus:ring-[var(--primary-500)]
+      active:bg-[var(--btn-default-active)]
     `,
     ghost: `
       bg-transparent
       text-[var(--text-tertiary)]
-      hover:bg-[var(--bg-tertiary)]
+      hover:bg-[var(--btn-default-bg)]
       hover:text-[var(--text-secondary)]
-      focus:ring-[var(--border-strong)]
       border border-transparent
+      active:bg-[var(--btn-default-active)]
     `,
     danger: `
       bg-[var(--error)]
       text-white
       hover:bg-red-600
       hover:shadow-lg hover:shadow-red-500/30
-      focus:ring-red-500
       border border-transparent
       hover:-translate-y-0.5
     `,
     icon: `
       bg-transparent
       text-[var(--text-tertiary)]
-      hover:bg-[var(--bg-tertiary)]
+      hover:bg-[var(--btn-default-bg)]
       hover:text-[var(--text-secondary)]
-      focus:ring-[var(--border-strong)]
       border border-transparent
+      active:bg-[var(--btn-default-active)]
     `,
   };
 
@@ -101,9 +109,20 @@ export const Button: React.FC<ButtonProps> = ({
     lg: 20,
   };
 
-  return (
+  const isIconButton = !!Icon && !children;
+
+  const iconButtonSizes = {
+    xs: 'w-[20px] h-[20px] p-0 rounded-[var(--radius-sm)]',
+    sm: 'w-[22px] h-[22px] p-0 rounded-[var(--radius-md)]',
+    md: 'w-[28px] h-[28px] p-0 rounded-[var(--radius-md)]',
+    lg: 'w-[40px] h-[40px] p-0 rounded-[var(--radius-lg)]',
+  };
+
+  const sizeClasses = isIconButton ? iconButtonSizes[size] : sizes[size];
+
+  const buttonContent = (
     <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${sizeClasses} ${className}`}
       disabled={disabled || loading}
       {...props}
     >
@@ -122,6 +141,16 @@ export const Button: React.FC<ButtonProps> = ({
       {children}
     </button>
   );
+
+  if (isIconButton && tooltip) {
+    return (
+      <Tooltip content={tooltip} position={tooltipPosition} delay={tooltipDelay}>
+        {buttonContent}
+      </Tooltip>
+    );
+  }
+
+  return buttonContent;
 };
 
 export default Button;

@@ -365,7 +365,7 @@
           "cmd": "openFile"
         },
          {
-          "tab": "打开文件_无缓存(D)",
+          "tab": "打开文件(不使用缓存)(D)",
           "icon": "dakaidwg",
           "cmd": "openFile_noCache"
         },
@@ -1259,79 +1259,6 @@
           "tab": "恢复批注",
           "icon": "huifupizhu",
           "cmd": "BR_LoadAllMxEntity"
-        }
-      ]
-    },
-    {
-      "tab": "地图(T)",
-      "list": [
-        {
-          "tab": "谷歌地图",
-          "icon": "a-9-1gugeditu",
-          "cmd": "Mx_Open_Map_googlecn"
-        },
-        {
-          "tab": "高德矢量",
-          "icon": "a-9-2gaodeshiliang",
-          "cmd": "Mx_Open_Map_gdslwzj"
-        },
-        {
-          "tab": "高德影像",
-          "icon": "a-9-3gaodeyingxiang",
-          "cmd": "Mx_Open_Map_gdyx"
-        },
-        {
-          "tab": "天地图地图",
-          "icon": "a-9-4tiandituditu",
-          "cmd": "Mx_Open_Map_tdtsl"
-        },
-        {
-          "tab": "百度地图",
-          "icon": "a-9-5baiduditu",
-          "cmd": "Mx_Open_Map_bdsl"
-        },
-        {
-          "tab": "OSM地图",
-          "icon": "a-9-6OSMditu",
-          "cmd": "Mx_Open_Map_geoq"
-        },
-        {
-          "tab": "地图下载",
-          "icon": "a-9-7dituxiazai",
-          "cmd": "MxTest_Map_Download"
-        },
-        {
-          "type": "divider"
-        },
-        {
-          "tab": "绘GIS Point",
-          "icon": "a-9-8huiGISPoint",
-          "cmd": "MxGis_DrawPoint"
-        },
-        {
-          "tab": "绘GIS MultPoint",
-          "icon": "a-9-9huiGISMultPoint",
-          "cmd": "MxGis_DrawMultiPoint"
-        },
-        {
-          "tab": "绘GIS LineString",
-          "icon": "a-9-10huiGISLineString",
-          "cmd": "MxGis_DrawLineString"
-        },
-        {
-          "tab": "绘GIS MultiLineString",
-          "icon": "a-9-11huiGISMultLineString",
-          "cmd": "MxGis_DrawMultiLineString"
-        },
-        {
-          "tab": "绘GIS DrawPolygon",
-          "icon": "a-9-12huiGISDrawPolygon  ",
-          "cmd": "MxGis_DrawPolygon"
-        },
-        {
-          "tab": "输出geojson",
-          "icon": "a-9-13shuchugeojson",
-          "cmd": "MxGis_Get_geojson"
         }
       ]
     },

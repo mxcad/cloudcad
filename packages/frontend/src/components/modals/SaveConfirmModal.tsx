@@ -63,7 +63,7 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
             修改说明（可选）
           </label>
           <textarea
@@ -77,7 +77,7 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
             disabled={loading}
           />
         </div>
-        <p className="text-sm text-slate-500">
+        <p className="text-slate-500" style={{ color: 'var(--text-muted)' }}>
           此说明将记录在版本历史中，方便后续查看修改内容。
           <br />
           <span className="text-slate-400">提示：按 Ctrl+Enter 快速保存</span>

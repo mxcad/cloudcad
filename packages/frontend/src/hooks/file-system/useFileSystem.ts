@@ -35,6 +35,7 @@ import { useFileSystemNavigation } from './useFileSystemNavigation';
 import { useFileSystemSearch } from './useFileSystemSearch';
 import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
+import { useConfirmDialog } from '@/contexts/NotificationContext';
 import type { ProjectFilterType } from '@/types/project';
 
 interface UseFileSystemOptions {
@@ -112,6 +113,27 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     showToast,
     removeToast,
   } = useFileSystemUI();
+
+  // Confirm Dialog - adapt Promise-based API to callback-style
+  const { showConfirm: showConfirmPromise } = useConfirmDialog();
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void | Promise<void>,
+      type?: 'danger' | 'warning' | 'info' | 'success',
+      confirmText?: string
+    ) => {
+      showConfirmPromise({ title, message, type, confirmText }).then(
+        (confirmed) => {
+          if (confirmed) {
+            onConfirm();
+          }
+        }
+      );
+    },
+    [showConfirmPromise]
+  );
 
   // Search Hook
   const {
@@ -238,6 +260,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     currentNode,
     loadData,
     showToast,
+    showConfirm,
     selectedNodes,
     nodes,
     clearSelection,

@@ -369,7 +369,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               <p className="text-text-tertiary text-sm">管理和维护 CAD 字体文件</p>
             </div>
             {canUploadFonts && (
-              <Button icon={Upload} size="sm" onClick={() => setShowUploadModal(true)}>
+              <Button icon={Upload} onClick={() => setShowUploadModal(true)}>
                 上传字体
               </Button>
             )}
@@ -453,21 +453,21 @@ export default function FontLibrary(props: FontLibraryProps) {
             </div>
 
             {/* 展开筛选按钮 */}
-            <Button variant="ghost" size="sm" icon={Filter} onClick={() => setShowFilters(!showFilters)}>
+            <Button variant="ghost" icon={Filter} onClick={() => setShowFilters(!showFilters)}>
               筛选
               <ChevronDown size={14} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </Button>
 
             {/* 重置按钮 */}
             {(filters.name || filters.extension || filters.startTime || filters.endTime) && (
-              <Button variant="ghost" size="xs" icon={X} onClick={handleReset}>
+              <Button variant="ghost" icon={X} onClick={handleReset}>
                 清除
               </Button>
             )}
 
             {/* 视图切换 */}
             <div className="ml-auto">
-              <ViewToggle viewMode={viewMode} onChange={setViewMode} size="md" />
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
             </div>
           </div>
 
@@ -521,7 +521,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 取消选择
               </Button>
               {canDeleteFonts && (
-                <Button variant="danger" size="sm" icon={Trash2} onClick={handleBatchDelete}>
+                <Button variant="danger" icon={Trash2} onClick={handleBatchDelete}>
                   批量删除
                 </Button>
               )}
@@ -580,7 +580,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                   {filters.name || filters.extension ? '没有找到匹配的字体' : '当前位置没有字体文件'}
                 </p>
                 {canUploadFonts && !filters.name && !filters.extension && (
-                  <Button icon={Upload} size="md" onClick={() => setShowUploadModal(true)}>
+                  <Button icon={Upload} onClick={() => setShowUploadModal(true)}>
                     上传第一个字体
                   </Button>
                 )}
@@ -609,10 +609,10 @@ export default function FontLibrary(props: FontLibraryProps) {
                                   {/* 操作按钮 */}
                                   <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     {canDownloadFonts && (
-                                      <Button variant="ghost" size="sm" icon={Download} onClick={() => handleDownload(font.name)} title="下载" />
+                                      <Button variant="ghost" icon={Download} onClick={() => handleDownload(font.name)} tooltip="下载" />
                                     )}
                                     {canDeleteFonts && (
-                                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(font.name)} title="删除" />
+                                      <Button variant="ghost" icon={Trash2} onClick={() => handleDelete(font.name)} tooltip="删除" />
                                     )}
                                   </div>
               
@@ -734,10 +734,10 @@ export default function FontLibrary(props: FontLibraryProps) {
                         <td className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             {canDownloadFonts && (
-                              <Button variant="ghost" size="sm" icon={Download} onClick={() => handleDownload(font.name)} title="下载" />
+                              <Button variant="ghost" icon={Download} onClick={() => handleDownload(font.name)} tooltip="下载" />
                             )}
                             {canDeleteFonts && (
-                              <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(font.name)} title="删除" />
+                              <Button variant="ghost" icon={Trash2} onClick={() => handleDelete(font.name)} tooltip="删除" />
                             )}
                           </div>
                         </td>
@@ -871,7 +871,7 @@ function UploadFontModal({
               <p className="text-sm text-text-tertiary">支持 TTF、OTF、WOFF 等格式</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" icon={X} onClick={onClose} />
+          <Button variant="ghost" icon={X} onClick={onClose} />
         </div>
 
         {/* 内容 */}
@@ -958,10 +958,10 @@ function UploadFontModal({
 
         {/* 底部按钮 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default">
-          <Button variant="outline" size="md" onClick={onClose} disabled={uploading}>
+          <Button variant="outline" onClick={onClose} disabled={uploading}>
             取消
           </Button>
-          <Button icon={Upload} size="md" loading={uploading} disabled={!file} onClick={handleUpload}>
+          <Button icon={Upload} loading={uploading} disabled={!file} onClick={handleUpload}>
             {uploading ? '上传中...' : '上传'}
           </Button>
         </div>

@@ -28,7 +28,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       />
 
       {/* 视图切换 */}
-      <ViewToggle viewMode={viewMode} onChange={onViewModeChange} size="md" />
+      <ViewToggle viewMode={viewMode} onChange={onViewModeChange} />
     </div>
   );
 };

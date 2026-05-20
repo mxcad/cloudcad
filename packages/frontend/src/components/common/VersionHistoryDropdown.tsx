@@ -110,18 +110,6 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
     }
   }, [projectId, filePath]);
 
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    if (disabled) return;
-
-    if (!isOpen) {
-      loadVersionHistory();
-    }
-    setIsOpen(!isOpen);
-  };
-
   const handleVersionClick = (entry: SvnLogEntryDto) => {
     if (onViewVersion) {
       onViewVersion(entry.revision, fileId, parentId);
@@ -136,24 +124,29 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
 
   return (
     <>
-      <Tooltip content="版本历史" position="bottom" delay={100} disabled={disabled}>
-        <button
-          ref={buttonRef}
-          onClick={handleButtonClick}
-          disabled={disabled}
-          className={`${styles.historyButton} ${isOpen ? styles.open : ''} ${disabled ? styles.disabled : ''}`}
-          aria-label="查看版本历史"
-          aria-expanded={isOpen}
-          aria-haspopup="menu"
-        >
-          <History size={size === 'sm' ? 14 : 16} />
-        </button>
-      </Tooltip>
-
       <Menu open={isOpen} onOpenChange={(open) => {
         setIsOpen(open);
         if (!open) setHoveredEntry(null);
+        if (open && !loading && entries.length === 0) {
+          loadVersionHistory();
+        }
       }}>
+        <Tooltip content="版本历史" position="bottom" delay={100} disabled={disabled}>
+          <Menu.Trigger>
+            <button
+              ref={buttonRef}
+              disabled={disabled}
+              onClick={(e) => e.stopPropagation()}
+              className={`${styles.historyButton} ${isOpen ? styles.open : ''} ${disabled ? styles.disabled : ''}`}
+              aria-label="查看版本历史"
+              aria-expanded={isOpen}
+              aria-haspopup="menu"
+            >
+              <History size={size === 'sm' ? 14 : 16} />
+            </button>
+          </Menu.Trigger>
+        </Tooltip>
+
         <Menu.Content align="start" side="bottom" sideOffset={4} className="min-w-[200px] max-w-[280px]">
           {loading && (
             <Menu.Loading>

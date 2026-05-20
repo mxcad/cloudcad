@@ -83,7 +83,6 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
           {mailEnabled && (
             <Button
               variant="primary"
-              size="md"
               icon={Mail}
               onClick={() => onSetEditingEmail(true)}
             >
@@ -143,7 +142,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             >
               取消
             </Button>
-            <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+            <Button type="submit" variant="primary" loading={loading} icon={CheckCircle}>
               {loading ? '验证中...' : '验证'}
             </Button>
           </div>
@@ -225,7 +224,6 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             {emailStep === 'inputNew' && (
               <Button
                 variant="primary"
-                size="md"
                 icon={Mail}
                 disabled={!emailForm.email}
                 loading={sendingCode}
@@ -235,7 +233,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               </Button>
             )}
             {emailStep === 'verifyNew' && (
-              <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+              <Button type="submit" variant="primary" loading={loading} icon={CheckCircle}>
                 {loading ? '换绑中...' : '确认换绑'}
               </Button>
             )}
@@ -272,7 +270,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 <div className="input-glow" />
               </div>
             </div>
-            <Button type="submit" variant="primary" size="md" loading={loading} icon={Send} className="w-full">
+            <Button type="submit" variant="primary" loading={loading} icon={Send} className="w-full">
               {loading ? '发送中...' : '发送验证码'}
             </Button>
           </form>
@@ -314,7 +312,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
               >
                 返回修改
               </Button>
-              <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+              <Button type="submit" variant="primary" loading={loading} icon={CheckCircle}>
                 {loading ? '验证中...' : '确认绑定'}
               </Button>
             </div>

@@ -100,7 +100,6 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
         <ViewToggle
           viewMode={viewMode}
           onChange={onViewModeChange}
-          size="sm"
           className="data-tour-view-toggle"
         />
 

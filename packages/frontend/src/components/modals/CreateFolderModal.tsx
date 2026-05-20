@@ -41,7 +41,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
             名称 *
           </label>
           <Input

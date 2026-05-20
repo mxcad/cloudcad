@@ -198,16 +198,16 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             <table className="w-full">
               <thead className="sticky top-0 z-10">
                 <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <th className="px-3 py-2 text-left text-xs font-medium w-12" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-left font-medium w-12" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
                     状态
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-left font-medium" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
                     文件名
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-medium w-20" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-center font-medium w-20" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
                     类型
                   </th>
-                  <th className="px-3 py-2 text-right text-xs font-medium w-24" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="px-3 py-2 text-right font-medium w-24" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
                     进度
                   </th>
                 </tr>
@@ -237,20 +237,21 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                     <td className="px-3 py-2 align-middle max-w-0">
                       <div className="flex flex-col gap-0.5">
                         <span
-                          className="text-sm font-medium block truncate"
+                          className="font-medium block truncate"
                           style={{
                             color: file.exists && file.uploadState === 'notSelected' ? 'var(--text-muted)' : 'var(--text-primary)',
+                            fontSize: '0.875rem'
                           }}
                         >
                           <FileNameText>{file.name}</FileNameText>
                         </span>
-                        <span className={`text-xs ${getStatusColor(file)}`}>
+                        <span style={{ fontSize: '0.75rem' }}>
                           {getStatusText(file)}
                         </span>
                       </div>
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
-                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                         {file.type === 'img' ? '图片' : 'DWG'}
                       </span>
                     </td>
@@ -266,18 +267,18 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                               }} 
                             />
                           </div>
-                          <span className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                             {Math.round(file.progress)}%
                           </span>
                         </div>
                       ) : file.uploadState === 'success' ? (
-                        <span className="text-xs" style={{ color: 'var(--success)' }}>100%</span>
+                        <span style={{ color: 'var(--success)', fontSize: '0.75rem' }}>100%</span>
                       ) : file.uploadState === 'fail' ? (
-                        <span className="text-xs" style={{ color: 'var(--error)' }}>失败</span>
+                        <span style={{ color: 'var(--error)', fontSize: '0.75rem' }}>失败</span>
                       ) : file.exists ? (
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>可覆盖</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>可覆盖</span>
                       ) : (
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>-</span>
                       )}
                     </td>
                   </tr>
@@ -286,14 +287,14 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             </table>
           </div>
         ) : (
-          <div className="rounded-lg p-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+          <div className="rounded-lg p-6 text-center" style={{ color: 'var(--text-muted)' }}>
             暂无外部参照文件
           </div>
         )}
 
         {hasUploading && (
           <div className="mt-3 space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between" style={{ fontSize: '0.75rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
               <span style={{ color: 'var(--primary-500)' }}>
                 {files.filter((f) => f.uploadState === 'success').length} /{' '}

@@ -200,7 +200,7 @@ export const LibrarySelectFolderModal: React.FC<
     <Modal isOpen={isOpen} onClose={onClose} title={`选择目标文件夹`}>
       <div className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          <div className="p-3 rounded-lg" style={{ background: 'var(--bg-error)', border: '1px solid var(--border-error)', color: 'var(--error)' }}>
             {error}
           </div>
         )}
@@ -211,7 +211,7 @@ export const LibrarySelectFolderModal: React.FC<
               <Loader2 size={24} className="animate-spin text-gray-400" />
             </div>
           ) : folderTree.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 text-sm">
+            <div className="p-4 text-center" style={{ color: 'var(--text-muted)' }}>
               暂无文件夹
             </div>
           ) : (

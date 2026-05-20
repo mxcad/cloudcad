@@ -16,7 +16,6 @@
 import React, {
   useState, useMemo, useEffect, useCallback, useRef,
 } from 'react';
-import { RefreshCw } from 'lucide-react';
 import { MxFun } from 'mxdraw';
 import {
   fileSystemControllerGetProjects,
@@ -138,7 +137,27 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   // UI hook
   const { toasts, showToast, removeToast } = useFileSystemUI();
-  const { showConfirm } = useConfirmDialog();
+  const { showConfirm: showConfirmPromise } = useConfirmDialog();
+  
+  // Adapt Promise-based showConfirm to callback-style
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void | Promise<void>,
+      type?: 'danger' | 'warning' | 'info' | 'success',
+      confirmText?: string
+    ) => {
+      showConfirmPromise({ title, message, type, confirmText }).then(
+        (confirmed) => {
+          if (confirmed) {
+            onConfirm();
+          }
+        }
+      );
+    },
+    [showConfirmPromise]
+  );
 
   const isProjectTrashViewRef = React.useRef(false);
 

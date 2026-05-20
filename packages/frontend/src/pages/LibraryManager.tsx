@@ -128,7 +128,27 @@ export const LibraryManager: React.FC = () => {
       : hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE);
 
   // 使用全局通知
-  const { showToast, showConfirm } = useNotification();
+  const { showToast, showConfirm: showConfirmPromise } = useNotification();
+  
+  // Adapt Promise-based showConfirm to callback-style
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void | Promise<void>,
+      type?: 'danger' | 'warning' | 'info' | 'success',
+      confirmText?: string
+    ) => {
+      showConfirmPromise({ title, message, type, confirmText }).then(
+        (confirmed) => {
+          if (confirmed) {
+            onConfirm();
+          }
+        }
+      );
+    },
+    [showConfirmPromise]
+  );
 
   // UI 状态 - useLibraryModals hook
   const {
@@ -411,7 +431,6 @@ export const LibraryManager: React.FC = () => {
                 <Button
                   onClick={openQuotaModal}
                   variant="secondary"
-                  size="sm"
                   icon={HardDrive}
                   title="配置存储配额"
                 >
@@ -426,7 +445,6 @@ export const LibraryManager: React.FC = () => {
                 <Button
                   onClick={openCreateFolderModal}
                   variant="outline"
-                  size="sm"
                   className="flex items-center gap-2"
                 >
                   <FolderPlus size={18} />
@@ -435,7 +453,6 @@ export const LibraryManager: React.FC = () => {
                 <Button
                   onClick={() => setShowDirectoryImport(true)}
                   variant="outline"
-                  size="sm"
                   className="flex items-center gap-2"
                 >
                   <FolderPlus size={18} />
@@ -493,14 +510,13 @@ export const LibraryManager: React.FC = () => {
               />
 
               {/* 视图切换 */}
-              <ViewToggle viewMode={viewMode} onChange={setViewMode} size="lg" />
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
               {/* 刷新按钮 */}
               <Button
                 onClick={refresh}
                 loading={isFetching}
                 variant="ghost"
-                size="sm"
                 title="刷新"
               >
                 <RefreshIcon size={18} />
@@ -510,7 +526,6 @@ export const LibraryManager: React.FC = () => {
               <Button
                 onClick={toggleMultiSelectMode}
                 variant="ghost"
-                size="sm"
                 style={{
                   background: isMultiSelectMode
                     ? 'var(--primary-100)'
@@ -533,7 +548,6 @@ export const LibraryManager: React.FC = () => {
                 <Button
                   onClick={handleSelectAll}
                   variant="ghost"
-                  size="sm"
                   style={{ color: 'var(--text-tertiary)' }}
                   title={
                     selectedNodes.size === nodes.length ? '取消全选' : '全选'
@@ -582,7 +596,6 @@ export const LibraryManager: React.FC = () => {
               <Button
                 onClick={clearError}
                 variant="ghost"
-                size="sm"
                 className="text-red-500 hover:text-red-700"
               >
                 关闭
@@ -614,7 +627,6 @@ export const LibraryManager: React.FC = () => {
                   <Button
                     onClick={openCreateFolderModal}
                     variant="outline"
-                    size="sm"
                   >
                     创建文件夹
                   </Button>
@@ -712,7 +724,6 @@ export const LibraryManager: React.FC = () => {
                 <Button
                   onClick={() => openBatchMoveModal(selectedNodes.size)}
                   variant="ghost"
-                  size="sm"
                   style={{ color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = 'var(--primary-500)';
@@ -726,7 +737,6 @@ export const LibraryManager: React.FC = () => {
                 <Button
                   onClick={() => openBatchCopyModal(selectedNodes.size)}
                   variant="ghost"
-                  size="sm"
                   style={{ color: 'var(--text-secondary)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = 'var(--primary-500)';
@@ -764,7 +774,6 @@ export const LibraryManager: React.FC = () => {
                     );
                   }}
                   variant="ghost"
-                  size="sm"
                   style={{ color: 'var(--error)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = '0.8';
@@ -780,7 +789,6 @@ export const LibraryManager: React.FC = () => {
             <Button
               onClick={clearSelection}
               variant="ghost"
-              size="sm"
               style={{ color: 'var(--text-secondary)' }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = 'var(--primary-500)';

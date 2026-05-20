@@ -83,6 +83,7 @@ const CardHeader: React.FC<CardHeaderProps> = ({
         ${paddingStyles[padding]}
         ${className}
       `}
+      style={{ padding: '10px 16px' }}
       {...props}
     >
       {children}
@@ -104,7 +105,7 @@ const CardTitle: React.FC<CardTitleProps> = ({
 }) => {
   return (
     <Tag
-      className={`text-base font-semibold ${className}`}
+      className={`text-sm font-semibold ${className}`}
       style={{ color: 'var(--text-primary)' }}
       {...props}
     >
@@ -148,7 +149,7 @@ const CardBody: React.FC<CardBodyProps> = ({
   return (
     <div
       className={`${paddingStyles[padding]} ${className}`}
-      style={{ color: 'var(--text-secondary)' }}
+      style={{ color: 'var(--text-secondary)', padding: '12px 16px' }}
       {...props}
     >
       {children}

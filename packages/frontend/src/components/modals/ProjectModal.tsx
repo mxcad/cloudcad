@@ -50,7 +50,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
             名称 *
           </label>
           <Input
@@ -65,12 +65,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             maxLength={100}
             data-tour="project-name-input"
           />
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
             {formData.name.length}/100
           </p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
             描述
           </label>
           <textarea
@@ -84,7 +84,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             maxLength={500}
             data-tour="project-desc-input"
           />
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
             {formData.description.length}/500
           </p>
         </div>

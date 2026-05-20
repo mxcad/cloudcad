@@ -69,7 +69,6 @@ export function WechatDeactivateConfirm({
       <p>您是通过微信登录的账户，请使用微信扫码确认注销</p>
       <Button
         variant="primary"
-        size="md"
         icon={MessageCircle}
         loading={loading}
         onClick={handleClick}

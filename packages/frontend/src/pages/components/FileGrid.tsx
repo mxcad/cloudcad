@@ -93,7 +93,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
           </span>
         </label>
 
-        <ViewToggle viewMode={viewMode} onChange={onSetViewMode} size="md" />
+        <ViewToggle viewMode={viewMode} onChange={onSetViewMode} />
       </div>
 
       {nodes.length === 0 && !loading ? (

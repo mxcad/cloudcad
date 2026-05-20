@@ -857,7 +857,7 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen p-6 profile-page" data-theme={isDark ? 'dark' : 'light'}>
-      <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate(-1)}>
+      <Button variant="ghost" icon={ArrowLeft} onClick={() => navigate(-1)}>
         返回
       </Button>
 

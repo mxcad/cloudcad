@@ -18,7 +18,11 @@ export const TabButton: React.FC<TabButtonProps> = ({
     <Button
       variant={active ? tabVariant : 'ghost'}
       size={size}
-      className={`font-medium ${active ? '' : 'border-transparent'} ${className}`}
+      className={`font-medium transition-all duration-200 ${
+        active
+          ? 'bg-[var(--tab-active-bg)] text-[var(--tab-active-text)] shadow-sm border-[var(--border-default)]'
+          : 'border-transparent'
+      } ${className}`}
       {...props}
     >
       {children}

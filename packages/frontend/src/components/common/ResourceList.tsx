@@ -763,7 +763,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           {/* 工具栏额外内容（如刷新按钮） */}
           {toolbarExtra}
           {showViewToggle && (
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} size="sm" />
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
           )}
         </div>
       </div>

@@ -99,7 +99,7 @@ Menu.Content = ({ children, align = 'start', side = 'bottom', sideOffset = 4, co
       style={{
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-default)',
-        zIndex: Z_LAYERS.OVERLAY,
+        zIndex: Z_LAYERS.POPUP,
       }}
     >
       {children}

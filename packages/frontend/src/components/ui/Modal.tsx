@@ -125,7 +125,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             data-tour="modal-close-btn"
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+            className="p-1 rounded-lg transition-all duration-200 hover:scale-110"
             style={{
               color: 'var(--text-muted)',
             }}
@@ -138,7 +138,7 @@ export const Modal: React.FC<ModalProps> = ({
               e.currentTarget.style.color = 'var(--text-muted)';
             }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </Card.Header>
       )}

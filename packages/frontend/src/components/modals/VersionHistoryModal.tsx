@@ -81,20 +81,20 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded text-sm">
+          <div className="rounded-lg px-3 py-2" style={{ background: 'var(--bg-error)', border: '1px solid var(--border-error)', color: 'var(--error)' }}>
             {error}
           </div>
         )}
 
         {!loading && !error && entries.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-8" style={{ color: 'var(--text-muted)' }}>
             <History className="w-10 h-10 mb-2 opacity-50" />
-            <p className="text-sm">暂无版本历史</p>
+            <p>暂无版本历史</p>
           </div>
         )}
 
         {!loading && !error && entries.length > 0 && (
-          <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-72 overflow-y-auto">
+          <div className="border rounded-lg max-h-72 overflow-y-auto" style={{ borderColor: 'var(--border-default)' }}>
             {entries.map((entry) => {
               const displayName = entry.userName || entry.author || '系统';
               const userNote = extractUserNote(entry.message);
@@ -102,31 +102,36 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
               return (
                 <div
                   key={entry.revision}
-                  className="flex items-center justify-between px-3 py-2.5 hover:bg-slate-50 transition-colors"
+                  className="flex items-center justify-between px-3 py-2.5 transition-colors"
+                  style={{ '--hover-bg': 'var(--bg-tertiary)' } as React.CSSProperties}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* 版本号 */}
-                    <span className="font-mono text-sm font-medium text-slate-700 flex-shrink-0">
+                    <span className="font-mono font-medium flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
                       r{entry.revision}
                     </span>
 
                     {/* 操作人 */}
                     <span
-                      className="text-sm text-slate-600 truncate max-w-[100px]"
+                      className="truncate max-w-[100px]"
+                      style={{ color: 'var(--text-secondary)' }}
                       title={displayName}
                     >
                       {displayName}
                     </span>
 
                     {/* 时间 */}
-                    <span className="text-xs text-slate-400 flex-shrink-0">
+                    <span className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                       {formatDate(entry.date)}
                     </span>
 
                     {/* 用户说明 */}
                     {userNote && (
                       <span
-                        className="text-sm text-slate-500 truncate flex-1"
+                        className="truncate flex-1"
+                        style={{ color: 'var(--text-tertiary)' }}
                         title={userNote}
                       >
                         · {userNote}
@@ -139,7 +144,8 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => onOpenVersion(entry.revision)}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 ml-2"
+                    className="flex-shrink-0 ml-2"
+                    style={{ color: 'var(--primary-600)' }}
                   >
                     查看
                   </Button>

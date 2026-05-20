@@ -211,9 +211,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
           {/* 文件夹名称 */}
           <FileNameText
-            className={`flex-1 text-sm transition-colors ${
-              selectedFolderId === node.id ? 'font-medium' : 'text-slate-700'
+            className={`flex-1 transition-colors ${
+              selectedFolderId === node.id ? 'font-medium' : ''
             }`}
+            style={{ color: selectedFolderId === node.id ? 'var(--primary-700)' : 'var(--text-secondary)' }}
           >
             {node.name}
           </FileNameText>
@@ -277,10 +278,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
               size={16} 
               className={selectedFolderId === projectId ? 'text-indigo-600' : 'text-amber-500'} 
             />
-            <span className={`text-sm font-medium ${selectedFolderId === projectId ? 'text-indigo-700' : 'text-slate-700'}`}>
+            <span className={`font-medium ${selectedFolderId === projectId ? 'text-indigo-700' : ''}`} style={{ color: selectedFolderId === projectId ? 'var(--primary-700)' : 'var(--text-secondary)' }}>
               {projectName}
             </span>
-            <span className="text-xs text-slate-500 ml-auto">项目根目录</span>
+            <span className="ml-auto" style={{ color: 'var(--text-muted)' }}>项目根目录</span>
             {selectedFolderId === projectId && (
               <Check size={16} className="text-indigo-600" />
             )}
@@ -291,14 +292,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 size={32} className="text-indigo-600 animate-spin mb-3" />
-            <p className="text-slate-500 text-sm">加载文件夹列表...</p>
+            <p style={{ color: 'var(--text-tertiary)' }}>加载文件夹列表...</p>
           </div>
         )}
 
         {/* 错误状态 */}
         {error && (
           <div className="flex items-center justify-center py-8">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p style={{ color: 'var(--error)' }}>{error}</p>
           </div>
         )}
 
@@ -306,14 +307,14 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {!loading && !error && folderTree.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12">
             <Folder size={48} className="text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">暂无可用文件夹</p>
+            <p style={{ color: 'var(--text-tertiary)' }}>暂无可用文件夹</p>
           </div>
         )}
 
         {/* 文件夹树 */}
         {!loading && !error && folderTree.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-slate-500 px-1">
+            <p style={{ color: 'var(--text-muted)' }}>
               点击文件夹名称选择，点击箭头展开/折叠
             </p>
             <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-lg bg-white">

@@ -242,12 +242,23 @@ export class FileMergeService {
             this.logger.log(`[mergeConvertFile] 状态转换: UPLOADING → PROCESSING (${newNodeId})`);
           }
 
-          // Step 2: 格式转换
-          const { isOk, ret } = await this.fileConversionService.convertFile({
-            srcPath: filepath,
-            fileHash: fileMd5,
-            createPreloadingData: true,
-          });
+          // Step 2: 格式转换（.mxweb 文件无需转换）
+          const extension = path.extname(fileName).toLowerCase();
+          const isMxwebFile = extension === '.mxweb';
+          let isOk = true;
+          let ret = MxUploadReturn.kOk;
+
+          if (!isMxwebFile) {
+            const convertResult = await this.fileConversionService.convertFile({
+              srcPath: filepath,
+              fileHash: fileMd5,
+              createPreloadingData: true,
+            });
+            isOk = convertResult.isOk;
+            ret = convertResult.ret;
+          } else {
+            this.logger.log(`[mergeConvertFile] .mxweb 文件，跳过转换: ${fileName}`);
+          }
 
           // Step 3: 根据转换结果更新状态
           if (!isOk) {

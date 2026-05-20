@@ -174,14 +174,17 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({
 
           {/* 折叠指示器 + 下拉菜单 */}
           <Menu open={isBreadcrumbExpanded} onOpenChange={setIsBreadcrumbExpanded}>
-            <button
-              data-breadcrumb-collapse-btn
-              className={`${styles.breadcrumbItem} ${styles.breadcrumbCollapse}`}
-              aria-expanded={isBreadcrumbExpanded}
-              aria-haspopup="menu"
-            >
-              ...
-            </button>
+            <Menu.Trigger>
+              <button
+                data-breadcrumb-collapse-btn
+                onClick={(e) => e.stopPropagation()}
+                className={`${styles.breadcrumbItem} ${styles.breadcrumbCollapse}`}
+                aria-expanded={isBreadcrumbExpanded}
+                aria-haspopup="menu"
+              >
+                ...
+              </button>
+            </Menu.Trigger>
 
             <Menu.Content align="start" side="bottom" sideOffset={4}>
               {collapsedBreadcrumb.collapsed.map((item, idx) => {

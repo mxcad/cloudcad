@@ -135,23 +135,25 @@ const SimpleSelect: React.FC<SelectProps> = ({
               </div>
             ) : (
               <SelectPrimitive.Viewport className="max-h-60">
-                {options.map((option) => (
-                  <SelectPrimitive.Item
-                    key={option.value}
-                    value={option.value}
-                    disabled={option.disabled}
-                    className={`${itemBaseCls} ${cfg.itemCls} ${cfg.itemGap}`}
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    {option.icon && <option.icon size={14} style={{ flexShrink: 0 }} />}
-                    <SelectPrimitive.ItemText>
-                      {renderOption ? renderOption(option) : option.label}
-                    </SelectPrimitive.ItemText>
-                    <SelectPrimitive.ItemIndicator className="ml-auto flex-shrink-0">
-                      <Check size={14} style={{ color: 'var(--info)' }} />
-                    </SelectPrimitive.ItemIndicator>
-                  </SelectPrimitive.Item>
-                ))}
+                {options
+                  .filter((option) => option.value !== '')
+                  .map((option) => (
+                    <SelectPrimitive.Item
+                      key={option.value}
+                      value={option.value}
+                      disabled={option.disabled}
+                      className={`${itemBaseCls} ${cfg.itemCls} ${cfg.itemGap}`}
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      {option.icon && <option.icon size={14} style={{ flexShrink: 0 }} />}
+                      <SelectPrimitive.ItemText>
+                        {renderOption ? renderOption(option) : option.label}
+                      </SelectPrimitive.ItemText>
+                      <SelectPrimitive.ItemIndicator className="ml-auto flex-shrink-0">
+                        <Check size={14} style={{ color: 'var(--info)' }} />
+                      </SelectPrimitive.ItemIndicator>
+                    </SelectPrimitive.Item>
+                  ))}
               </SelectPrimitive.Viewport>
             )}
           </SelectPrimitive.Content>

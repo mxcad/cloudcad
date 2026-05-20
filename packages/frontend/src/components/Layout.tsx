@@ -31,7 +31,7 @@ import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
 import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library } from 'lucide-react';
-import { Menu } from './ui/Menu';
+import { Menu as DropdownMenu } from './ui/Menu';
 
 interface NavItemProps {
   to: string;
@@ -386,7 +386,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               title={appName}
             >
               {/* Logo 组件 - 仅图标模式 */}
-              <Logo size="md" iconOnly={true} animated={false} />
+              <Logo iconOnly={true} animated={false} />
 
               {/* 品牌名称 */}
               <div className="flex flex-col">
@@ -537,7 +537,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           <div className="px-4 mb-2">
             <Button
               variant="outline"
-              size="md"
               className="w-full justify-start gap-3"
               onClick={openTourCenter}
               title="查看引导中心"
@@ -566,12 +565,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             style={{ borderColor: 'var(--border-default)' }}
           >
             <div className="relative">
-              <Menu open={showUserMenu} onOpenChange={setShowUserMenu}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
-                >
+              <DropdownMenu open={showUserMenu} onOpenChange={setShowUserMenu}>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
+                  >
                 {/* 头像 */}
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -592,7 +592,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                       }}
                     />
                   ) : null}
-                  {!user?.avatar || (
+                  {!user?.avatar && (
                     <span className="text-sm font-semibold text-white">
                       {(user?.nickname || user?.username || user?.email || 'U')
                         .charAt(0)
@@ -631,18 +631,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     size={16}
                     className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
                     style={{ color: 'var(--text-muted)' }}
-                  />
-                </Button>
+                    />
+                  </Button>
+                </DropdownMenu.Trigger>
 
-                <Menu.Content align="start" side="top" sideOffset={8} className="w-full min-w-[200px]">
-                  <Menu.Item
+                <DropdownMenu.Content align="start" side="top" sideOffset={8} className="w-full min-w-[200px]">
+                  <DropdownMenu.Item
                     icon={<Settings size={16} />}
                     onClick={() => setShowUserMenu(false)}
                   >
                     <Link to="/profile" className="w-full">个人设置</Link>
-                  </Menu.Item>
-                  <Menu.Separator />
-                  <Menu.Item
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator />
+                  <DropdownMenu.Item
                     variant="danger"
                     icon={<LogOut size={16} />}
                     onClick={() => {
@@ -651,9 +652,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     }}
                   >
                     退出登录
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu>
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -678,7 +679,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <Button
               variant="ghost"
               size="sm"
-              icon={Menu}
+              icon={MenuIcon}
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
             />
@@ -708,16 +709,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
 
             {/* 设置按钮 */}
-            <div className="relative">
+            <div className="relative p-0.5">
               <Button
                 variant="ghost"
-                size="sm"
                 icon={Settings2}
-                className={showSettings ? '!text-[var(--primary-500)] !bg-[var(--primary-50)]' : ''}
+                className="relative p-2 rounded-xl transition-all duration-300 ease-out
+                           hover:scale-110 active:scale-95
+                           hover:bg-[var(--bg-tertiary)]
+                           group"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowSettings(!showSettings);
                 }}
+                title="设置"
+                aria-label="设置"
               />
 
               {/* 设置下拉菜单 */}
@@ -756,7 +761,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   />
                   <Button
                     variant="ghost"
-                    size="md"
                     className="w-full justify-start gap-3 px-4"
                     style={{ color: 'var(--error)' }}
                     onClick={() => {

@@ -332,15 +332,15 @@ export const Dashboard: React.FC = () => {
 
           {/* 快捷操作按钮 */}
           <div className="flex gap-3">
-            <Button variant="primary" size="md" onClick={() => setIsProjectModalOpen(true)}>
+            <Button variant="primary" onClick={() => setIsProjectModalOpen(true)}>
               <Plus size={16} />
               新建项目
             </Button>
-            <Button variant="outline" size="md" onClick={() => navigate('/personal-space?action=upload')}>
+            <Button variant="outline" onClick={() => navigate('/personal-space?action=upload')}>
               <Upload size={16} />
               上传图纸
             </Button>
-            <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
+            <Button variant="ghost" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
               刷新
             </Button>
           </div>

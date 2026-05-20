@@ -382,7 +382,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   style={{ color: 'var(--text-tertiary)' }}
                 />
                 <span
-                  className="text-sm font-medium"
+                  className="font-medium"
                   style={{ color: 'var(--text-secondary)' }}
                 >
                   添加新成员
@@ -436,10 +436,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     return (
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                          className="w-6 h-6 rounded-full flex items-center justify-center font-medium flex-shrink-0"
                           style={{
                             background: 'var(--primary-100)',
                             color: 'var(--primary-600)',
+                            fontSize: '0.75rem'
                           }}
                         >
                           {(user?.nickname ||
@@ -448,7 +449,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p
-                            className="text-sm font-medium"
+                            className="font-medium"
                             style={{ color: 'var(--text-primary)' }}
                           >
                             <TruncateText>
@@ -456,8 +457,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                             </TruncateText>
                           </p>
                           <p
-                            className="text-xs"
-                            style={{ color: 'var(--text-tertiary)' }}
+                            style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}
                           >
                             <TruncateText>{user.email}</TruncateText>
                           </p>
@@ -632,24 +632,24 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     style={{ background: 'var(--bg-tertiary)' }}
                   >
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+                      className="w-8 h-8 rounded-full flex items-center justify-center font-medium flex-shrink-0"
                       style={{
                         background: 'var(--primary-100)',
                         color: 'var(--primary-600)',
+                        fontSize: '0.875rem'
                       }}
                     >
                       {avatarLetter}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p
-                        className="text-sm font-medium"
+                        className="font-medium"
                         style={{ color: 'var(--text-primary)' }}
                       >
                         <TruncateText>{displayName}</TruncateText>
                       </p>
                       <p
-                        className="text-xs"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}
                       >
                         <TruncateText>
                           {member.email || '无邮箱'}
@@ -782,7 +782,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 className="flex-shrink-0 mt-0.5"
                 style={{ color: 'var(--warning)' }}
               />
-              <div className="text-sm" style={{ color: 'var(--text-primary)' }}>
+              <div style={{ color: 'var(--text-primary)' }}>
                 <p className="font-semibold mb-1">重要提示</p>
                 <p style={{ color: 'var(--text-secondary)' }}>
                   转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。
@@ -792,7 +792,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
             <div className="space-y-2">
               <p
-                className="text-sm font-medium"
+                className="font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 转让给：
@@ -802,10 +802,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 style={{ background: 'var(--bg-tertiary)' }}
               >
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-medium flex-shrink-0"
                   style={{
                     background: 'var(--primary-100)',
                     color: 'var(--primary-600)',
+                    fontSize: '0.875rem'
                   }}
                 >
                   {(
@@ -816,14 +817,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 </div>
                 <div>
                   <p
-                    className="text-sm font-medium"
+                    className="font-medium"
                     style={{ color: 'var(--text-primary)' }}
                   >
                     {transferTarget.nickname || transferTarget.username}
                   </p>
                   <p
-                    className="text-xs"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}
                   >
                     {transferTarget.email}
                   </p>
@@ -832,8 +832,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             </div>
 
             <div
-              className="text-xs"
-              style={{ color: 'var(--text-tertiary)' }}
+              style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}
             >
               <p>• 新所有者将获得项目的完全控制权</p>
               <p>• 您将成为该项目的管理员</p>

@@ -172,13 +172,13 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       >
         <div className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <div className="p-3 rounded-lg" style={{ background: 'var(--bg-error)', border: '1px solid var(--border-error)', color: 'var(--error)' }}>
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               文件名
             </label>
             <FileNameInput
@@ -192,7 +192,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               保存到
             </label>
             <Select
@@ -215,7 +215,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           {targetType === 'project' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 选择项目
               </label>
               <Select
@@ -233,7 +233,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           {targetType === 'library' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 选择资源库
               </label>
               <Select
@@ -249,7 +249,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               保存位置
             </label>
             <Button
@@ -273,7 +273,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
               保存格式
             </label>
             <Select

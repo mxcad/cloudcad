@@ -176,7 +176,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
           </div>
         </div>
 
-        <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle} className="w-full">
+        <Button type="submit" variant="primary" loading={loading} icon={CheckCircle} className="w-full">
           {loading ? '提交中...' : (user?.hasPassword === false ? '设置密码' : '修改密码')}
         </Button>
 

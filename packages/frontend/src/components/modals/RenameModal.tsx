@@ -54,7 +54,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
             新名称 *
           </label>
           <FileNameInput

@@ -238,7 +238,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </Button>
           )}
 
-          <ViewToggle viewMode={viewMode} onChange={setViewMode} size="sm" />
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
         </div>
       </div>
     </Card>

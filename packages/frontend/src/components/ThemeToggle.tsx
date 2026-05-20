@@ -14,7 +14,6 @@ export const ThemeToggle: React.FC = () => {
   return (
     <Button
       variant="ghost"
-      size="md"
       onClick={toggleTheme}
       className="relative p-2 rounded-xl transition-all duration-300 ease-out
                  hover:scale-110 active:scale-95

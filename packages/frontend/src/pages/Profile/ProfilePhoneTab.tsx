@@ -71,7 +71,6 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
           </div>
           <Button
             variant="primary"
-            size="md"
             icon={Phone}
             onClick={() => onSetEditingPhone(true)}
           >
@@ -130,7 +129,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
             >
               取消
             </Button>
-            <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+            <Button type="submit" variant="primary" loading={loading} icon={CheckCircle}>
               {loading ? '验证中...' : '确认验证'}
             </Button>
           </div>
@@ -237,7 +236,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               </Button>
             )}
             {phoneStep === 'verifyNew' && (
-              <Button type="submit" variant="primary" size="md" loading={loading} icon={CheckCircle}>
+              <Button type="submit" variant="primary" loading={loading} icon={CheckCircle}>
                 {loading ? (isRebind ? '换绑中...' : '绑定中...') : (isRebind ? '确认换绑' : '确认绑定')}
               </Button>
             )}

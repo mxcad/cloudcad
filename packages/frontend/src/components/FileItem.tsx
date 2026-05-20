@@ -293,13 +293,9 @@ export const FileItem: React.FC<FileItemProps> = ({
     [node, onEnter, isPreviewOpen, isImageFile, handleImagePreview]
   );
 
-  const handleToggleMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setShowMenu(!showMenu);
-    },
-    [showMenu]
-  );
+  const handleToggleMenu = useCallback(() => {
+    setShowMenu((prev) => !prev);
+  }, []);
 
   const handleCloseMenu = useCallback(() => {
     setShowMenu(false);
@@ -532,8 +528,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             isTrash={isTrash}
             showMenu={showMenu}
             menuButtonRef={menuButtonRef}
-            menuContainerRef={menuContainerRef}
-            onToggleMenu={handleToggleMenu}
+            onOpenMenu={handleToggleMenu}
             onCloseMenu={handleCloseMenu}
             onDownload={onDownload}
             onDelete={onDelete}
@@ -714,13 +709,12 @@ export const FileItem: React.FC<FileItemProps> = ({
         {(forceCompactActions || useCompactActions) ? (
           // 紧凑模式 / 强制紧凑：悬停时显示菜单按钮（与网格模式一致）
           <div className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}>
-            <FileItemMenu
+          <FileItemMenu
             node={node}
             isTrash={isTrash}
             showMenu={showMenu}
             menuButtonRef={menuButtonRef}
-            menuContainerRef={menuContainerRef}
-            onToggleMenu={handleToggleMenu}
+            onOpenMenu={handleToggleMenu}
             onCloseMenu={handleCloseMenu}
             onDownload={onDownload}
             onDelete={onDelete}
