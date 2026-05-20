@@ -70,7 +70,7 @@ export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const CardHeader: React.FC<CardHeaderProps> = ({
-  padding = 'md',
+  padding = 'sm',
   className = '',
   children,
   ...props
@@ -104,7 +104,7 @@ const CardTitle: React.FC<CardTitleProps> = ({
 }) => {
   return (
     <Tag
-      className={`text-lg font-semibold ${className}`}
+      className={`text-base font-semibold ${className}`}
       style={{ color: 'var(--text-primary)' }}
       {...props}
     >

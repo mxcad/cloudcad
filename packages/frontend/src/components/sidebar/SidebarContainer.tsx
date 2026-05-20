@@ -338,7 +338,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   key={tab.id}
                   active={activeDrawingsSubTab === tab.id}
                   tabVariant="primary"
-                  size="xs"
                   icon={tab.icon}
                   onClick={() => handleDrawingsSubTabChange(tab.id)}
                   aria-label={tab.label}

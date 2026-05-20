@@ -30,12 +30,8 @@ import { ScrollText } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
-import { Menu } from 'lucide-react';
-import { X } from 'lucide-react';
-import { HardDrive } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
-import { HelpCircle } from 'lucide-react';
-import { Library } from 'lucide-react';
+import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library } from 'lucide-react';
+import { Menu } from './ui/Menu';
 
 interface NavItemProps {
   to: string;
@@ -570,15 +566,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             style={{ borderColor: 'var(--border-default)' }}
           >
             <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowUserMenu(!showUserMenu);
-                }}
-              >
+              <Menu open={showUserMenu} onOpenChange={setShowUserMenu}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:bg-[var(--bg-tertiary)]"
+                >
                 {/* 头像 */}
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -634,47 +627,33 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 </div>
 
                 {/* 下拉箭头 */}
-                <ChevronDown
-                  size={16}
-                  className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
-                  style={{ color: 'var(--text-muted)' }}
-                />
-              </Button>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
+                    style={{ color: 'var(--text-muted)' }}
+                  />
+                </Button>
 
-              {/* 用户下拉菜单 */}
-              {showUserMenu && (
-                <div
-                  className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden animate-scale-in"
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-default)',
-                    boxShadow: 'var(--shadow-xl)',
-                  }}
-                >
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-[var(--bg-tertiary)]"
-                    style={{ color: 'var(--text-secondary)' }}
+                <Menu.Content align="start" side="top" sideOffset={8} className="w-full min-w-[200px]">
+                  <Menu.Item
+                    icon={<Settings size={16} />}
                     onClick={() => setShowUserMenu(false)}
                   >
-                    <Settings size={16} />
-                    个人设置
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    className="w-full justify-start gap-3 px-4"
-                    style={{ color: 'var(--error)' }}
+                    <Link to="/profile" className="w-full">个人设置</Link>
+                  </Menu.Item>
+                  <Menu.Separator />
+                  <Menu.Item
+                    variant="danger"
+                    icon={<LogOut size={16} />}
                     onClick={() => {
                       setShowUserMenu(false);
                       setShowLogoutConfirm(true);
                     }}
                   >
-                    <LogOut size={16} />
                     退出登录
-                  </Button>
-                </div>
-              )}
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu>
             </div>
           </div>
         </div>

@@ -162,6 +162,8 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     isPersonalSpaceMode,
     personalSpaceId,
     searchQuery,
+    pagination,
+    setPagination,
     paginationRef,
     showToast,
     clearSelection: selectionClearFn,

@@ -59,17 +59,20 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
 
     return (
       <div
-        className="relative group/thumb flex items-center justify-center"
+        className="relative group/thumb"
         style={{ width: size, height: size }}
       >
         <img
           src={thumbnailSrc}
           alt={node.name}
-          className="w-full h-full transition-all duration-200 rounded-lg object-contain"
+          className="object-contain"
           style={{
-            width: size,
-            height: size,
-            backgroundColor: 'var(--bg-card)'
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            imageRendering: '-webkit-optimize-contrast',
           }}
           onError={() => setImageLoadError(true)}
           onClick={(e) => {

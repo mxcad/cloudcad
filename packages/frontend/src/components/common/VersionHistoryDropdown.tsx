@@ -1,46 +1,26 @@
-///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
 // 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
-///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
 
-/**
- * VersionHistoryDropdown - 版本历史下拉菜单组件
- *
- * 功能：
- * - 显示历史版本图标按钮
- * - 点击后展示下拉菜单，显示版本列表
- * - 鼠标移入版本项时显示版本详情tooltip
- * - 点击版本项打开该版本
- */
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { History } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
-import { ExternalLink } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { History, Loader2, ExternalLink } from 'lucide-react';
 import { versionControlControllerGetFileHistory, SvnLogEntryDto } from '@/api-sdk';
 import { Tooltip } from '../ui/Tooltip';
+import { Menu } from '../ui/Menu';
 
 import styles from './VersionHistoryDropdown.module.css';
 
 interface VersionHistoryDropdownProps {
-  /** 文件ID */
   fileId: string;
-  /** 父节点ID（项目ID或文件夹ID） */
   parentId: string | null;
-  /** 文件路径（SVN路径） */
   filePath: string;
-  /** 项目ID */
   projectId: string;
-  /** 是否禁用 */
   disabled?: boolean;
-  /** 按钮尺寸 */
   size?: 'sm' | 'md';
-  /** 查看版本回调（可选，默认打开新标签页） */
   onViewVersion?: (revision: number, fileId: string, parentId: string | null) => void;
 }
 
-/** 格式化日期 */
 function formatDate(date: string | Date): string {
   const d = new Date(date);
   const now = new Date();
@@ -68,7 +48,6 @@ function formatDate(date: string | Date): string {
   });
 }
 
-/** 格式化完整日期时间 */
 function formatFullDate(date: string | Date): string {
   const d = new Date(date);
   return d.toLocaleString('zh-CN', {
@@ -81,7 +60,6 @@ function formatFullDate(date: string | Date): string {
   });
 }
 
-/** 从消息中提取用户说明 */
 function extractUserNote(message: string): string | null {
   if (!message) return null;
   const saveMatch = message.match(/^Save:\s*.+?\s*-\s*(.+)$/i);
@@ -105,13 +83,9 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<SvnLogEntryDto[]>([]);
   const [hoveredEntry, setHoveredEntry] = useState<SvnLogEntryDto | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
 
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // 加载版本历史
   const loadVersionHistory = useCallback(async () => {
     if (!projectId || !filePath) {
       setError('缺少必要参数');
@@ -136,7 +110,6 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
     }
   }, [projectId, filePath]);
 
-  // 点击按钮时加载并显示下拉菜单
   const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -149,91 +122,20 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
     setIsOpen(!isOpen);
   };
 
-  // 点击版本项
-  const handleVersionClick = (e: React.MouseEvent, entry: SvnLogEntryDto) => {
-    e.stopPropagation();
-    e.preventDefault();
-
+  const handleVersionClick = (entry: SvnLogEntryDto) => {
     if (onViewVersion) {
       onViewVersion(entry.revision, fileId, parentId);
     } else {
-      // 默认在新标签页打开
       const url = `/cad-editor/${fileId}?nodeId=${parentId || ''}&v=${entry.revision}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       window.open(url, '_blank');
     }
     setIsOpen(false);
   };
 
-  // 鼠标移入版本项
-  const handleEntryHover = (e: React.MouseEvent, entry: SvnLogEntryDto) => {
-    setHoveredEntry(entry);
-
-    // 计算tooltip位置
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const dropdownRect = dropdownRef.current?.getBoundingClientRect();
-
-    if (dropdownRect) {
-      setTooltipPosition({
-        top: rect.top - dropdownRect.top,
-        left: dropdownRect.width + 8,
-      });
-    }
-  };
-
-  // 点击外部关闭
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const isClickInButton = buttonRef.current?.contains(e.target as Node);
-      const isClickInDropdown = dropdownRef.current?.contains(e.target as Node);
-
-      if (!isClickInButton && !isClickInDropdown) {
-        setIsOpen(false);
-      }
-    };
-
-    // 延迟添加监听器，避免立即关闭
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // 按ESC关闭
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  // 计算下拉菜单位置
-  const getDropdownPosition = () => {
-    if (!buttonRef.current) return { top: 0, left: 0 };
-    const rect = buttonRef.current.getBoundingClientRect();
-    return {
-      top: rect.bottom + 4,
-      left: rect.left,
-    };
-  };
-
-  const position = getDropdownPosition();
   const buttonSize = size === 'sm' ? 24 : 28;
 
   return (
     <>
-      {/* 历史版本按钮 */}
       <Tooltip content="版本历史" position="bottom" delay={100} disabled={disabled}>
         <button
           ref={buttonRef}
@@ -248,42 +150,29 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
         </button>
       </Tooltip>
 
-      {/* 下拉菜单 */}
-      {isOpen && createPortal(
-        <div
-          ref={dropdownRef}
-          className={styles.dropdown}
-          style={{
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-          }}
-          role="menu"
-          aria-label="版本历史列表"
-        >
-          {/* 加载状态 */}
+      <Menu open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) setHoveredEntry(null);
+      }}>
+        <Menu.Content align="start" side="bottom" sideOffset={4} className="min-w-[200px] max-w-[280px]">
           {loading && (
-            <div className={styles.loading}>
+            <Menu.Loading>
               <Loader2 className={styles.loadingIcon} size={16} />
               <span>加载中...</span>
-            </div>
+            </Menu.Loading>
           )}
 
-          {/* 错误状态 */}
-          {error && (
-            <div className={styles.error}>
-              {error}
-            </div>
+          {error && !loading && (
+            <Menu.Error>{error}</Menu.Error>
           )}
 
-          {/* 空状态 */}
           {!loading && !error && entries.length === 0 && (
-            <div className={styles.empty}>
+            <Menu.Empty>
               <History size={20} className={styles.emptyIcon} />
               <span>暂无版本历史</span>
-            </div>
+            </Menu.Empty>
           )}
 
-          {/* 版本列表 */}
           {!loading && !error && entries.length > 0 && (
             <div className={styles.versionList}>
               {entries.map((entry) => {
@@ -291,77 +180,65 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
                 const userNote = extractUserNote(entry.message);
 
                 return (
-                  <div
+                  <Menu.Item
                     key={entry.revision}
-                    className={styles.versionItem}
-                    onClick={(e) => handleVersionClick(e, entry)}
-                    onMouseEnter={(e) => handleEntryHover(e, entry)}
-                    onMouseLeave={() => setHoveredEntry(null)}
-                    role="menuitem"
-                    title={`版本 r${entry.revision}`}
+                    variant="info"
+                    onClick={() => handleVersionClick(entry)}
+                    className="relative"
                   >
-                    {/* 版本号 */}
-                    <span className={styles.versionNumber}>
-                      r{entry.revision}
-                    </span>
+                    <div
+                      className="flex items-center gap-2 w-full"
+                      onMouseEnter={() => setHoveredEntry(entry)}
+                      onMouseLeave={() => setHoveredEntry(null)}
+                    >
+                      <span className={styles.versionNumber}>r{entry.revision}</span>
+                      <span className={styles.versionAuthor} title={displayName}>{displayName}</span>
+                      <span className={styles.versionTime}>{formatDate(entry.date)}</span>
+                      <ExternalLink size={12} className={styles.openIcon} />
+                    </div>
 
-                    {/* 操作人 */}
-                    <span className={styles.versionAuthor} title={displayName}>
-                      {displayName}
-                    </span>
-
-                    {/* 时间 */}
-                    <span className={styles.versionTime}>
-                      {formatDate(entry.date)}
-                    </span>
-
-                    {/* 打开图标 */}
-                    <ExternalLink size={12} className={styles.openIcon} />
-                  </div>
+                    {hoveredEntry?.revision === entry.revision && (
+                      <div
+                        className={styles.tooltip}
+                        style={{
+                          top: '0',
+                          left: '100%',
+                          marginLeft: '8px',
+                        }}
+                      >
+                        <div className={styles.tooltipHeader}>
+                          <span className={styles.tooltipTitle}>版本 r{hoveredEntry.revision}</span>
+                        </div>
+                        <div className={styles.tooltipContent}>
+                          <div className={styles.tooltipRow}>
+                            <span className={styles.tooltipLabel}>操作人：</span>
+                            <span>{hoveredEntry.userName || hoveredEntry.author || '系统'}</span>
+                          </div>
+                          <div className={styles.tooltipRow}>
+                            <span className={styles.tooltipLabel}>时间：</span>
+                            <span>{formatFullDate(hoveredEntry.date)}</span>
+                          </div>
+                          {extractUserNote(hoveredEntry.message) && (
+                            <div className={styles.tooltipRow}>
+                              <span className={styles.tooltipLabel}>备注：</span>
+                              <span className={styles.tooltipNote}>
+                                {extractUserNote(hoveredEntry.message)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className={styles.tooltipFooter}>
+                          点击在新标签页打开此版本
+                        </div>
+                      </div>
+                    )}
+                  </Menu.Item>
                 );
               })}
             </div>
           )}
-
-          {/* 版本详情tooltip */}
-          {hoveredEntry && (
-            <div
-              ref={tooltipRef}
-              className={styles.tooltip}
-              style={{
-                top: `${tooltipPosition.top}px`,
-                left: `${tooltipPosition.left}px`,
-              }}
-            >
-              <div className={styles.tooltipHeader}>
-                <span className={styles.tooltipTitle}>版本 r{hoveredEntry.revision}</span>
-              </div>
-              <div className={styles.tooltipContent}>
-                <div className={styles.tooltipRow}>
-                  <span className={styles.tooltipLabel}>操作人：</span>
-                  <span>{hoveredEntry.userName || hoveredEntry.author || '系统'}</span>
-                </div>
-                <div className={styles.tooltipRow}>
-                  <span className={styles.tooltipLabel}>时间：</span>
-                  <span>{formatFullDate(hoveredEntry.date)}</span>
-                </div>
-                {extractUserNote(hoveredEntry.message) && (
-                  <div className={styles.tooltipRow}>
-                    <span className={styles.tooltipLabel}>备注：</span>
-                    <span className={styles.tooltipNote}>
-                      {extractUserNote(hoveredEntry.message)}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className={styles.tooltipFooter}>
-                点击在新标签页打开此版本
-              </div>
-            </div>
-          )}
-        </div>,
-        document.body
-      )}
+        </Menu.Content>
+      </Menu>
     </>
   );
 };

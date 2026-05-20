@@ -119,7 +119,7 @@ const SimpleSelect: React.FC<SelectProps> = ({
             style={{
               background: 'var(--bg-elevated)',
               border: '1px solid var(--border-default)',
-              zIndex: Z_LAYERS.OVERLAY,
+            zIndex: Z_LAYERS.POPUP,
             }}
             position="popper"
             sideOffset={4}
@@ -277,7 +277,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
           style={{
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
-            zIndex: Z_LAYERS.OVERLAY,
+            zIndex: Z_LAYERS.POPUP,
           }}
         >
           <div

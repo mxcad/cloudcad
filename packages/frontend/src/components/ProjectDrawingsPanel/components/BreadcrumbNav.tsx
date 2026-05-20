@@ -4,10 +4,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import type { BreadcrumbItem } from '@/components/ProjectDrawingsPanel/types';
 import styles from '@/components/sidebar/sidebar.module.css';
+import { Menu } from '@/components/ui/Menu';
 
 interface BreadcrumbNavProps {
   breadcrumb: BreadcrumbItem[];
@@ -28,44 +28,11 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({
 }) => {
   // 面包屑折叠状态
   const [isBreadcrumbExpanded, setIsBreadcrumbExpanded] = useState(false);
-  const breadcrumbDropdownRef = useRef<HTMLDivElement>(null);
   const breadcrumbContainerRef = useRef<HTMLDivElement>(null);
 
   // 面包屑动态折叠状态
   const [visibleItemCount, setVisibleItemCount] = useState<number>(0);
   const [needsCollapse, setNeedsCollapse] = useState(false);
-
-  // 点击外部关闭面包屑下拉菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (breadcrumbDropdownRef.current?.contains(target)) return;
-      const isDropdownContent = target.closest?.('[data-breadcrumb-dropdown]');
-      if (isDropdownContent) return;
-      setIsBreadcrumbExpanded(false);
-    };
-
-    if (isBreadcrumbExpanded) {
-      document.addEventListener('click', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [isBreadcrumbExpanded]);
-
-  // 窗口滚动或调整大小时关闭下拉菜单
-  useEffect(() => {
-    if (!isBreadcrumbExpanded) return;
-    const handleScrollOrResize = () => {
-      setIsBreadcrumbExpanded(false);
-    };
-    window.addEventListener('scroll', handleScrollOrResize, true);
-    window.addEventListener('resize', handleScrollOrResize);
-    return () => {
-      window.removeEventListener('scroll', handleScrollOrResize, true);
-      window.removeEventListener('resize', handleScrollOrResize);
-    };
-  }, [isBreadcrumbExpanded]);
 
   // 使用 ResizeObserver 监听面包屑容器宽度，动态计算是否需要折叠
   useEffect(() => {
@@ -206,60 +173,30 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({
           )}
 
           {/* 折叠指示器 + 下拉菜单 */}
-          <div
-            ref={breadcrumbDropdownRef}
-            className={styles.breadcrumbCollapseWrapper}
-          >
+          <Menu open={isBreadcrumbExpanded} onOpenChange={setIsBreadcrumbExpanded}>
             <button
               data-breadcrumb-collapse-btn
               className={`${styles.breadcrumbItem} ${styles.breadcrumbCollapse}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsBreadcrumbExpanded(!isBreadcrumbExpanded);
-              }}
               aria-expanded={isBreadcrumbExpanded}
               aria-haspopup="menu"
             >
               ...
             </button>
 
-            {/* 下拉菜单 - 使用 Portal 渲染到 body 避免被裁剪 */}
-            {isBreadcrumbExpanded &&
-              createPortal(
-                <div
-                  data-breadcrumb-dropdown
-                  className={styles.breadcrumbDropdown}
-                  role="menu"
-                  style={{
-                    position: 'absolute',
-                    top:
-                      (breadcrumbDropdownRef.current?.getBoundingClientRect()
-                        .bottom ?? 0) + 4,
-                    left:
-                      breadcrumbDropdownRef.current?.getBoundingClientRect()
-                        .left ?? 0,
-                  }}
-                >
-                  {collapsedBreadcrumb.collapsed.map((item, idx) => {
-                    const originalIndex = idx + 1;
-                    return (
-                      <button
-                        key={item.id}
-                        className={styles.breadcrumbDropdownItem}
-                        onClick={() => {
-                          handleBreadcrumbClick(originalIndex);
-                          setIsBreadcrumbExpanded(false);
-                        }}
-                        role="menuitem"
-                      >
-                        {item.name}
-                      </button>
-                    );
-                  })}
-                </div>,
-                document.body
-              )}
-          </div>
+            <Menu.Content align="start" side="bottom" sideOffset={4}>
+              {collapsedBreadcrumb.collapsed.map((item, idx) => {
+                const originalIndex = idx + 1;
+                return (
+                  <Menu.Item
+                    key={item.id}
+                    onClick={() => handleBreadcrumbClick(originalIndex)}
+                  >
+                    {item.name}
+                  </Menu.Item>
+                );
+              })}
+            </Menu.Content>
+          </Menu>
           {sepHiddenOr(0, false)}
 
           {/* 最后可见项 */}

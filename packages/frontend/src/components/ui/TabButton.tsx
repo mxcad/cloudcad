@@ -8,7 +8,7 @@ export interface TabButtonProps extends Omit<ButtonProps, 'variant'> {
 
 export const TabButton: React.FC<TabButtonProps> = ({
   active = false,
-  size = 'xs',
+  size = 'md',
   tabVariant = 'secondary',
   className = '',
   children,

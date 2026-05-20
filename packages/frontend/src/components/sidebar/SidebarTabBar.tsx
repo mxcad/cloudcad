@@ -72,7 +72,6 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
             key={tab.id}
             active={activeTab === tab.id}
             tabVariant="primary"
-            size="xs"
             icon={tab.icon}
             onClick={() => onTabChange(tab.id)}
             title={tab.label}

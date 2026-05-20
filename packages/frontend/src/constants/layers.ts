@@ -33,6 +33,8 @@ export const Z_LAYERS = {
   OVERLAY: 5000,
   /** Modal dialogs (via <Modal> component or direct createPortal) */
   MODAL: 10000,
+  /** Dropdown popups (select, autocomplete, etc.) — above modals */
+  POPUP: 15000,
   /** Tooltips */
   TOOLTIP: 50000,
   /** Toast notifications — highest priority, always on top */

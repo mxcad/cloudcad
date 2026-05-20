@@ -95,7 +95,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
           style={{
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
-            zIndex: Z_LAYERS.OVERLAY,
+            zIndex: Z_LAYERS.POPUP,
             maxHeight: 280,
             overflowY: 'auto',
           }}

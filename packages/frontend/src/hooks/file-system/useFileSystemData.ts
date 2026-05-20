@@ -45,6 +45,8 @@ interface UseFileSystemDataProps {
   isPersonalSpaceMode?: boolean;
   personalSpaceId?: string | null;
   searchQuery: string;
+  pagination: { page: number; limit: number };
+  setPagination: React.Dispatch<React.SetStateAction<{ page: number; limit: number }>>;
   paginationRef: React.MutableRefObject<{ page: number; limit: number }>;
   showToast: (
     message: string,
@@ -63,6 +65,8 @@ export const useFileSystemData = ({
   isPersonalSpaceMode = false,
   personalSpaceId,
   searchQuery,
+  pagination,
+  setPagination,
   paginationRef,
   showToast,
   clearSelection,
@@ -71,12 +75,6 @@ export const useFileSystemData = ({
 }: UseFileSystemDataProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  // ── Pagination state (source of truth for query params) ──────────────
-  const [pagination, setPagination] = useState(() => ({
-    page: paginationRef.current.page,
-    limit: paginationRef.current.limit,
-  }));
 
   // Keep paginationRef in sync for backward compatibility
   useEffect(() => {
