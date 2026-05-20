@@ -150,20 +150,12 @@ export const Pagination: React.FC<PaginationProps> = ({
       <div ref={containerRef} className={`w-full flex items-center justify-center ${className}`} style={{ height: 24 }}>
         <div className="flex items-center gap-0.5">
           {showFirstLast && (
-            <Button variant="ghost" size="xs" onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" className="!px-0.5">
-              <ChevronsLeft size={13} />
-            </Button>
+            <Button variant="ghost" icon={ChevronsLeft} onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" tooltip="第一页" />
           )}
-          <Button variant="ghost" size="xs" onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label="上一页" className="!px-0.5">
-            <ChevronLeft size={13} />
-          </Button>
-          <Button variant="ghost" size="xs" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label="下一页" className="!px-0.5">
-            <ChevronRight size={13} />
-          </Button>
+          <Button variant="ghost" icon={ChevronLeft} onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label="上一页" tooltip="上一页" />
+          <Button variant="ghost" icon={ChevronRight} onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label="下一页" tooltip="下一页" />
           {showFirstLast && (
-            <Button variant="ghost" size="xs" onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label="最后一页" className="!px-0.5">
-              <ChevronsRight size={13} />
-            </Button>
+            <Button variant="ghost" icon={ChevronsRight} onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label="最后一页" tooltip="最后一页" />
           )}
         </div>
       </div>
@@ -177,14 +169,10 @@ export const Pagination: React.FC<PaginationProps> = ({
     <div ref={containerRef} className={`w-full flex items-center ${className}`} style={{ height: 24 }}>
       <div className="flex-1 flex items-center justify-center gap-0.5 min-w-0">
         {showFirstLast && (
-          <Button variant="ghost" size="xs" onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" className="shrink-0 !px-0.5">
-            <ChevronsLeft size={13} />
-          </Button>
+          <Button variant="ghost" icon={ChevronsLeft} onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" tooltip="第一页" />
         )}
 
-        <Button variant="ghost" size="xs" onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label="上一页" className="shrink-0 !px-0.5">
-          <ChevronLeft size={13} />
-        </Button>
+        <Button variant="ghost" icon={ChevronLeft} onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label="上一页" tooltip="上一页" />
 
         {pageList.map((item, idx) =>
           typeof item === 'number' ? (
@@ -209,14 +197,10 @@ export const Pagination: React.FC<PaginationProps> = ({
           ),
         )}
 
-        <Button variant="ghost" size="xs" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label="下一页" className="shrink-0 !px-0.5">
-          <ChevronRight size={13} />
-        </Button>
+        <Button variant="ghost" icon={ChevronRight} onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label="下一页" tooltip="下一页" />
 
         {showFirstLast && (
-          <Button variant="ghost" size="xs" onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label="最后一页" className="shrink-0 !px-0.5">
-            <ChevronsRight size={13} />
-          </Button>
+          <Button variant="ghost" icon={ChevronsRight} onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label="最后一页" tooltip="最后一页" />
         )}
 
         {showJumper && (

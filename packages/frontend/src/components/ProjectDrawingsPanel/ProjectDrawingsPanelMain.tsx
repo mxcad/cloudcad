@@ -16,6 +16,7 @@
 import React, {
   useState, useMemo, useEffect, useCallback, useRef,
 } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { MxFun } from 'mxdraw';
 import {
   fileSystemControllerGetProjects,
@@ -678,7 +679,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           ) : undefined
           }
           renderItem={renderFileItem}
-          toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><Button variant="ghost" size="sm" onClick={refreshNodes} loading={loading} className={styles.refreshButton}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></Button></Tooltip>}
+          toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><Button variant="ghost" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" /></Tooltip>}
           loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
         />
         <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />
