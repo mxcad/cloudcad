@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fontsControllerGetFonts, fontsControllerUploadFont, fontsControllerDeleteFont, fontsControllerDownloadFont } from '@/api-sdk';
 import type { FontUploadTarget } from '@/api-sdk';
-import { Trash2, Download, Upload, Search, Filter, FileType, Calendar, HardDrive, Type, X, ChevronDown, FileText, FileCode, FileDigit, FileBox, FolderOpen, Layers, Palette, Shapes, LayoutGrid, List } from 'lucide-react';
+import { Trash2, Download, Upload, Search, Filter, FileType, Calendar, HardDrive, Type, X, ChevronDown, FileText, FileCode, FileDigit, FileBox, FolderOpen, Layers, Palette, Shapes } from 'lucide-react';
 import { Button, Input, Select, Tab, Tabs, Tag } from '@/components/ui';
 import { SearchInput } from '@/components/search/SearchInput';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import { FileNameText } from '../components/ui/TruncateText';
 import type { FontInfo } from '../types/filesystem';
 import type { TagVariant } from '@/components/ui/Tag';
@@ -466,15 +467,7 @@ export default function FontLibrary(props: FontLibraryProps) {
 
             {/* 视图切换 */}
             <div className="ml-auto">
-              <Select
-                value={viewMode}
-                onChange={(val) => setViewMode(val as 'grid' | 'list')}
-                options={[
-                  { value: 'grid', label: '网格视图', icon: LayoutGrid },
-                  { value: 'list', label: '列表视图', icon: List },
-                ]}
-                size="sm"
-              />
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} size="md" />
             </div>
           </div>
 

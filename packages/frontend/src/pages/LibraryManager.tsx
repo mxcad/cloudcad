@@ -35,9 +35,8 @@ import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import {
   EmptyFolderIcon,
   RefreshIcon,
-  GridIcon,
-  ListIcon,
 } from '../components/FileIcons';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
@@ -494,34 +493,7 @@ export const LibraryManager: React.FC = () => {
               />
 
               {/* 视图切换 */}
-              <div className="flex rounded-xl bg-slate-100 p-1">
-                <Button
-                  onClick={() => setViewMode('grid')}
-                  variant="ghost"
-                  size="sm"
-                  className={`${
-                    viewMode === 'grid'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="网格视图"
-                >
-                  <GridIcon size={18} />
-                </Button>
-                <Button
-                  onClick={() => setViewMode('list')}
-                  variant="ghost"
-                  size="sm"
-                  className={`${
-                    viewMode === 'list'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="列表视图"
-                >
-                  <ListIcon size={18} />
-                </Button>
-              </div>
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} size="lg" />
 
               {/* 刷新按钮 */}
               <Button

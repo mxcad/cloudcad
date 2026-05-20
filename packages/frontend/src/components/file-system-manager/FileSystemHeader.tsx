@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Box } from '../ui/Box';
-import { RefreshIcon, GridIcon, ListIcon } from '../FileIcons';
+import { RefreshIcon } from '../FileIcons';
 import { SearchInput } from '@/components/search/SearchInput';
 import { FolderPlus } from 'lucide-react';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import { BreadcrumbNavigation } from '../BreadcrumbNavigation';
 import { BreadcrumbItem } from '../../types/filesystem';
 
@@ -237,21 +238,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </Button>
           )}
 
-          <Box display="flex" alignItems="center" bg="primary" border rounded="xl" className="overflow-hidden">
-            <button
-              onClick={() => setViewMode('grid')}
-              className="p-2 transition-colors"
-            >
-              <GridIcon size={14} />
-            </button>
-            <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-            <button
-              onClick={() => setViewMode('list')}
-              className="p-2 transition-colors"
-            >
-              <ListIcon size={14} />
-            </button>
-          </Box>
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} size="sm" />
         </div>
       </div>
     </Card>

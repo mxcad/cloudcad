@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { FileItem } from '../../components/FileItem';
-import {
-  EmptyFolderIcon,
-  GridIcon,
-  ListIcon,
-} from '../../components/FileIcons';
+import { EmptyFolderIcon } from '../../components/FileIcons';
 import { Pagination } from '../../components/ui/Pagination';
 import { Button } from '../../components/ui/Button';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import { FileSystemNode } from '../../types/filesystem';
 import { getFileItemPermissionProps } from '../../hooks/useFileItemProps';
 
@@ -96,22 +93,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
           </span>
         </label>
 
-        <div className="flex items-center gap-1">
-          <Button
-            variant={viewMode === 'grid' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => onSetViewMode('grid')}
-          >
-            <GridIcon size={16} />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => onSetViewMode('list')}
-          >
-            <ListIcon size={16} />
-          </Button>
-        </div>
+        <ViewToggle viewMode={viewMode} onChange={onSetViewMode} size="md" />
       </div>
 
       {nodes.length === 0 && !loading ? (

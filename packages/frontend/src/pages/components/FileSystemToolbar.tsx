@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button } from '../../components/ui/Button';
-import { GridIcon, ListIcon, RefreshIcon } from '../../components/FileIcons';
+import { RefreshIcon } from '../../components/FileIcons';
 import { SearchInput } from '@/components/search/SearchInput';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import { FileSystemNode } from '../../types/filesystem';
 import { PaginationMeta } from '../../components/ui/Pagination';
 
@@ -96,40 +97,12 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
           </>
         )}
 
-        <div
-          className="flex items-center rounded-xl overflow-hidden"
-          style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-default)',
-          }}
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onViewModeChange('grid')}
-            className="p-2 transition-colors"
-            style={{
-              background: viewMode === 'grid' ? 'var(--primary-50)' : 'transparent',
-              color: viewMode === 'grid' ? 'var(--primary-600)' : 'var(--text-tertiary)',
-            }}
-          >
-            <GridIcon size={14} />
-          </Button>
-          <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onViewModeChange('list')}
-            className="p-2 transition-colors"
-            data-tour="view-toggle-list"
-            style={{
-              background: viewMode === 'list' ? 'var(--primary-50)' : 'transparent',
-              color: viewMode === 'list' ? 'var(--primary-600)' : 'var(--text-tertiary)',
-            }}
-          >
-            <ListIcon size={14} />
-          </Button>
-        </div>
+        <ViewToggle
+          viewMode={viewMode}
+          onChange={onViewModeChange}
+          size="sm"
+          className="data-tour-view-toggle"
+        />
 
         {isTrashView && nodesCount > 0 && onClearTrash && (
           <Button

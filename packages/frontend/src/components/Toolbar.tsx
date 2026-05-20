@@ -1,8 +1,6 @@
 import React from 'react';
-import { GridIcon, ListIcon } from './FileIcons';
 import { SearchInput } from '@/components/search/SearchInput';
-import { Tooltip } from './ui/Tooltip';
-import { Tabs, Tab } from './ui';
+import { ViewToggle } from '@/components/common/ViewToggle';
 
 interface ToolbarProps {
   searchQuery: string;
@@ -30,26 +28,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       />
 
       {/* 视图切换 */}
-      <Tabs>
-        <Tooltip content="网格视图" position="bottom" delay={100}>
-          <Tab
-            active={viewMode === 'grid'}
-            onClick={() => onViewModeChange('grid')}
-            aria-label="网格视图"
-          >
-            <GridIcon size={18} />
-          </Tab>
-        </Tooltip>
-        <Tooltip content="列表视图" position="bottom" delay={100}>
-          <Tab
-            active={viewMode === 'list'}
-            onClick={() => onViewModeChange('list')}
-            aria-label="列表视图"
-          >
-            <ListIcon size={18} />
-          </Tab>
-        </Tooltip>
-      </Tabs>
+      <ViewToggle viewMode={viewMode} onChange={onViewModeChange} size="md" />
     </div>
   );
 };

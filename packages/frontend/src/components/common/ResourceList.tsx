@@ -12,15 +12,11 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { SearchInput } from '@/components/search/SearchInput';
-import { Grid3x3 } from 'lucide-react';
-import { List } from 'lucide-react';
-import { FileImage } from 'lucide-react';
-import { ChevronRight } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
-import { X } from 'lucide-react';
+import { FileImage, ChevronRight, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { Pagination } from '@/components/ui/Pagination';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import styles from './ResourceList.module.css';
 import sidebarStyles from '@/components/sidebar/sidebar.module.css';
 
@@ -767,24 +763,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           {/* 工具栏额外内容（如刷新按钮） */}
           {toolbarExtra}
           {showViewToggle && (
-            <div className={styles.viewToggle}>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={List}
-                className={`${styles.viewButton} ${viewMode === 'list' ? styles.active : ''}`}
-                onClick={() => setViewMode('list')}
-                title="列表视图"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={Grid3x3}
-                className={`${styles.viewButton} ${viewMode === 'grid' ? styles.active : ''}`}
-                onClick={() => setViewMode('grid')}
-                title="网格视图"
-              />
-            </div>
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} size="sm" />
           )}
         </div>
       </div>
