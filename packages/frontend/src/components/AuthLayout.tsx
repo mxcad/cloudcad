@@ -180,7 +180,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           background: var(--bg-elevated);
           border: 1px solid var(--border-default);
           border-radius: 6px;
-          font-size: 0.6875rem;
+          font-size: var(--text-xs);
           font-weight: 500;
           color: var(--text-secondary);
           white-space: nowrap;
@@ -216,7 +216,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         /* ===== 版权信息 ===== */
         .copyright {
           margin-top: 2rem;
-          font-size: 0.75rem;
+          font-size: var(--text-sm);
           color: var(--text-muted);
         }
 

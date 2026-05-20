@@ -407,9 +407,9 @@ export const LibraryManager: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="h-full flex flex-col overflow-hidden p-6">
       {/* 顶部导航栏 */}
-      <div className="max-w-7xl mx-auto mb-6">
+      <div className="flex-shrink-0 max-w-7xl mx-auto w-full mb-6">
         <div className="card-theme p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -475,8 +475,8 @@ export const LibraryManager: React.FC = () => {
       </div>
 
       {/* 主内容区 */}
-      <div className="max-w-7xl mx-auto">
-        <div className="card-theme p-4">
+      <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full">
+        <div className="card-theme p-4 flex flex-col h-full">
           {/* 面包屑和工具栏 */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             {/* 面包屑导航 */}
@@ -604,85 +604,128 @@ export const LibraryManager: React.FC = () => {
           )}
 
           {/* 文件列表 */}
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            </div>
-          ) : nodes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <EmptyFolderIcon
-                size={80}
-                className="text-slate-300 mb-6 animate-float"
-              />
-              <h3 className="text-xl font-bold text-slate-900 mb-2">
-                {isFolderMode ? '文件夹是空的' : '资源库暂无内容'}
-              </h3>
-              <p className="text-slate-500 text-sm mb-6">
-                {canManage
-                  ? '上传文件或创建文件夹开始使用'
-                  : '资源库暂无内容，请稍后再来'}
-              </p>
-              {canManage && (
-                <div className="flex gap-2">
-                  <Button
-                    onClick={openCreateFolderModal}
-                    variant="outline"
-                  >
-                    创建文件夹
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div
-              className={
-                viewMode === 'grid'
-                  ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
-                  : 'space-y-2 p-6'
-              }
-            >
-              {nodes.map((node) => (
-                <FileItem
-                  key={node.id}
-                  node={node}
-                  viewMode={viewMode}
-                  canDownload={true}
-                  canDelete={canManage}
-                  canEdit={canManage}
-                  canManageExternalReference={canManage}
-                  isMultiSelectMode={isMultiSelectMode}
-                  isSelected={selectedNodes.has(node.id)}
-                  onSelect={(nodeId, isMultiSelect, isShift) => {
-                    handleNodeSelect(nodeId, isMultiSelect, isShift);
-                  }}
-                  onEnter={(node) => {
-                    if (isMultiSelectMode) {
-                      handleNodeSelect(node.id, true, false);
-                    } else if (node.isFolder) {
-                      enterNode(node);
-                    } else {
-                      handleOpenInEditor(node);
-                    }
-                  }}
-                  onDownload={(node) => {
-                    if (!node.isFolder) {
-                      openDownloadFormatModal(node.id, node.name);
-                    }
-                  }}
-                  onDelete={() => handleDeleteConfirm(node.id, node.name)}
-                  onRename={() =>
-                    handleRename({ id: node.id, name: node.name })
-                  }
-                  onMove={() => handleMove({ id: node.id, name: node.name })}
-                  onCopy={() => handleCopy({ id: node.id, name: node.name })}
-                  compact={false}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+              </div>
+            ) : nodes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <EmptyFolderIcon
+                  size={80}
+                  className="text-slate-300 mb-6 animate-float"
                 />
-              ))}
+                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                  {isFolderMode ? '文件夹是空的' : '资源库暂无内容'}
+                </h3>
+                <p className="text-slate-500 text-sm mb-6">
+                  {canManage
+                    ? '上传文件或创建文件夹开始使用'
+                    : '资源库暂无内容，请稍后再来'}
+                </p>
+                {canManage && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={openCreateFolderModal}
+                      variant="outline"
+                    >
+                      创建文件夹
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                className={
+                  viewMode === 'grid'
+                    ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
+                    : 'space-y-2 p-6'
+                }
+              >
+                {nodes.map((node) => (
+                  <FileItem
+                    key={node.id}
+                    node={node}
+                    viewMode={viewMode}
+                    canDownload={true}
+                    canDelete={canManage}
+                    canEdit={canManage}
+                    canManageExternalReference={canManage}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedNodes.has(node.id)}
+                    onSelect={(nodeId, isMultiSelect, isShift) => {
+                      handleNodeSelect(nodeId, isMultiSelect, isShift);
+                    }}
+                    onEnter={(node) => {
+                      if (isMultiSelectMode) {
+                        handleNodeSelect(node.id, true, false);
+                      } else if (node.isFolder) {
+                        enterNode(node);
+                      } else {
+                        handleOpenInEditor(node);
+                      }
+                    }}
+                    onDownload={(node) => {
+                      if (!node.isFolder) {
+                        openDownloadFormatModal(node.id, node.name);
+                      }
+                    }}
+                    onDelete={() => handleDeleteConfirm(node.id, node.name)}
+                    onRename={() =>
+                      handleRename({ id: node.id, name: node.name })
+                    }
+                    onMove={() => handleMove({ id: node.id, name: node.name })}
+                    onCopy={() => handleCopy({ id: node.id, name: node.name })}
+                    compact={false}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 多选操作条 */}
+          {isMultiSelectMode && selectedNodes.size > 0 && (
+            <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+                  已选中 {selectedNodes.size} 项
+                </span>
+                <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
+                {canManage && (
+                  <>
+                    <Button onClick={() => openBatchMoveModal(selectedNodes.size)} variant="ghost" style={{ color: 'var(--text-secondary)' }}>移动</Button>
+                    <Button onClick={() => openBatchCopyModal(selectedNodes.size)} variant="ghost" style={{ color: 'var(--text-secondary)' }}>复制</Button>
+                    <Button
+                      onClick={() => {
+                        const nodeIds = Array.from(selectedNodes);
+                        const count = nodeIds.length;
+                        showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
+                          try {
+                            for (const nodeId of nodeIds) {
+                              const apiMethod = libraryType === 'drawing' ? deleteDrawingNode : deleteBlockNode;
+                              await apiMethod(nodeId, true);
+                            }
+                            showToast(`成功删除 ${count} 个项目`, 'success');
+                            clearSelection();
+                            await refresh();
+                          } catch (error) {
+                            console.error('批量删除失败:', error);
+                            showToast('批量删除失败', 'error');
+                          }
+                        });
+                      }}
+                      variant="ghost"
+                      style={{ color: 'var(--error)' }}
+                    >批量删除</Button>
+                  </>
+                )}
+                <Button onClick={clearSelection} variant="ghost" style={{ color: 'var(--text-secondary)' }}>取消选择</Button>
+              </div>
             </div>
           )}
 
-          {/* 分页 - 始终显示 */}
-          <div className="mt-6 flex justify-center">
+          {/* 分页 */}
+          <div className="flex-shrink-0 mt-4 flex justify-center">
             <Pagination
               meta={{
                 total,
@@ -695,112 +738,12 @@ export const LibraryManager: React.FC = () => {
               }}
               onPageSizeChange={(newPageSize: number) => {
                 setPageSize(newPageSize);
-                setCurrentPage(1); // 切换每页数量时重置到第一页
+                setCurrentPage(1);
               }}
               showSizeChanger={true}
             />
           </div>
         </div>
-
-        {/* 批量操作栏 - 固定在底部 */}
-        {isMultiSelectMode && selectedNodes.size > 0 && (
-          <div
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up"
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            <span className="text-sm font-semibold">
-              已选中 {selectedNodes.size} 项
-            </span>
-            <div
-              className="w-px h-4"
-              style={{ background: 'var(--border-default)' }}
-            />
-            {canManage && (
-              <>
-                <Button
-                  onClick={() => openBatchMoveModal(selectedNodes.size)}
-                  variant="ghost"
-                  style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--primary-500)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--text-secondary)';
-                  }}
-                >
-                  移动
-                </Button>
-                <Button
-                  onClick={() => openBatchCopyModal(selectedNodes.size)}
-                  variant="ghost"
-                  style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--primary-500)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--text-secondary)';
-                  }}
-                >
-                  复制
-                </Button>
-                <Button
-                  onClick={() => {
-                    const nodeIds = Array.from(selectedNodes);
-                    const count = nodeIds.length;
-                    showConfirm(
-                      '确认删除',
-                      `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`,
-                      async () => {
-                        try {
-                          for (const nodeId of nodeIds) {
-                            const apiMethod =
-                              libraryType === 'drawing'
-                                ? deleteDrawingNode
-                                : deleteBlockNode;
-                            await apiMethod(nodeId, true);
-                          }
-                          showToast(`成功删除 ${count} 个项目`, 'success');
-                          clearSelection();
-                          await refresh();
-                        } catch (error) {
-                          console.error('批量删除失败:', error);
-                          showToast('批量删除失败', 'error');
-                        }
-                      }
-                    );
-                  }}
-                  variant="ghost"
-                  style={{ color: 'var(--error)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  批量删除
-                </Button>
-              </>
-            )}
-            <Button
-              onClick={clearSelection}
-              variant="ghost"
-              style={{ color: 'var(--text-secondary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--primary-500)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }}
-            >
-              取消选择
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* 弹窗 */}

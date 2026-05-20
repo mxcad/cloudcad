@@ -100,9 +100,6 @@ export const Modal: React.FC<ModalProps> = ({
   const renderOverlay = () => (
     <div
       className={`absolute inset-0 transition-opacity duration-300${overlayClassName ? ` ${overlayClassName}` : ''}`}
-      style={{
-        background: 'var(--bg-overlay)',
-      }}
       onClick={(e) => {
         e.stopPropagation();
         if (!closeOnOverlayClick) return;
@@ -148,7 +145,7 @@ export const Modal: React.FC<ModalProps> = ({
       </Card.Body>
 
       {footer && (
-        <Card.Footer style={{ background: 'var(--bg-tertiary)' }}>{footer}</Card.Footer>
+        <Card.Footer padding="sm" style={{ background: 'var(--bg-tertiary)' }}>{footer}</Card.Footer>
       )}
     </Card>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { Textarea } from '../ui/Textarea';
 
 interface SaveConfirmModalProps {
   isOpen: boolean;
@@ -66,12 +67,12 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
           <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
             修改说明（可选）
           </label>
-          <textarea
+          <Textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg resize-y focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            size="lg"
             placeholder="请输入本次修改的内容说明..."
             rows={4}
             disabled={loading}

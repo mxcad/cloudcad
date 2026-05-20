@@ -977,12 +977,27 @@ export class FileSystemController {
             }
           : undefined;
 
+      // 范围导出参数（可选坐标）
+      const range =
+        query.bd_pt1_x !== undefined &&
+        query.bd_pt1_y !== undefined &&
+        query.bd_pt2_x !== undefined &&
+        query.bd_pt2_y !== undefined
+          ? {
+              pt1X: query.bd_pt1_x,
+              pt1Y: query.bd_pt1_y,
+              pt2X: query.bd_pt2_x,
+              pt2Y: query.bd_pt2_y,
+            }
+          : undefined;
+
       const { stream, filename, mimeType } =
         await this.fileDownloadExportService.downloadNodeWithFormat(
           nodeId,
           userId,
           format,
           pdfParams,
+          range,
         );
 
       const origin = req.headers.origin || "*";

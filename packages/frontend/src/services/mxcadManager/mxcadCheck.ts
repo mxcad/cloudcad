@@ -99,7 +99,7 @@ export function showDuplicateFileDialog(
           align-items: center;
           justify-content: space-between;
         ">
-          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">发现相同文件</h3>
+          <h3 style="margin: 0; font-size: var(--text-xl); font-weight: 600; color: #1f2937;">发现相同文件</h3>
           <button id="mxcad-duplicate-dialog-close" style="
             background: none;
             border: none;
@@ -135,15 +135,15 @@ export function showDuplicateFileDialog(
               </svg>
             </div>
             <div>
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #374151;">
+              <p style="margin: 0 0 8px 0; font-size: var(--text-md); color: #374151;">
                 当前目录中已存在相同的文件：
               </p>
-              <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937; word-break: break-all;">
+              <p style="margin: 0; font-size: var(--text-md); font-weight: 600; color: #1f2937; word-break: break-all;">
                 ${escapeHtml(filename)}
               </p>
             </div>
           </div>
-          <p style="margin: 0; font-size: 13px; color: #6b7280;">
+          <p style="margin: 0; font-size: var(--text-base); color: #6b7280;">
             您可以选择直接打开已存在的文件，或上传新文件。
           </p>
         </div>
@@ -161,7 +161,7 @@ export function showDuplicateFileDialog(
             border-radius: 8px;
             background: transparent;
             color: #6b7280;
-            font-size: 14px;
+            font-size: var(--text-md);
             font-weight: 500;
             cursor: pointer;
           ">
@@ -173,7 +173,7 @@ export function showDuplicateFileDialog(
             border-radius: 8px;
             background: #6b7280;
             color: white;
-            font-size: 14px;
+            font-size: var(--text-md);
             font-weight: 500;
             cursor: pointer;
           ">
@@ -185,7 +185,7 @@ export function showDuplicateFileDialog(
             border-radius: 8px;
             background: #4f46e5;
             color: white;
-            font-size: 14px;
+            font-size: var(--text-md);
             font-weight: 500;
             cursor: pointer;
           ">

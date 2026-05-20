@@ -963,7 +963,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'password' && (
               <ProfilePasswordTab
-                user={user as any}
+                user={user}
                 passwordForm={passwordForm}
                 showPassword={showPassword}
                 focusedField={focusedField}
@@ -982,7 +982,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'email' && (
               <ProfileEmailTab
-                user={user as any}
+                user={user}
                 emailForm={emailForm}
                 emailStep={emailStep}
                 isEditingEmail={isEditingEmail}
@@ -1007,7 +1007,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'phone' && smsEnabled && (
               <ProfilePhoneTab
-                user={user as any}
+                user={user}
                 phoneForm={phoneForm}
                 phoneStep={phoneStep}
                 isEditingPhone={isEditingPhone}
@@ -1039,7 +1039,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'deactivate' && (
               <ProfileDeactivateTab
-                user={user as any}
+                user={user}
                 deactivateForm={deactivateForm}
                 showPassword={showPassword}
                 deactivateLoading={deactivateLoading}
@@ -1088,9 +1088,6 @@ export const Profile: React.FC = () => {
         </div>
       </div>
 
-      <style>{`
-        .profile-page { min-height: 100vh; position: relative; overflow: hidden; font-family: var(--font-family-base); background: transparent; padding: 2rem; }
-      `}</style>
       </div>
   );
 };

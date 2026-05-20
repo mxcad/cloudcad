@@ -37,6 +37,8 @@ export type { CheckboxProps } from './Checkbox';
 
 export { Input } from './Input';
 export type { InputProps } from './Input';
+export { Textarea } from './Textarea';
+export type { TextareaProps } from './Textarea';
 export { FileNameInput } from './FileNameInput';
 export type { FileNameInputProps } from './FileNameInput';
 

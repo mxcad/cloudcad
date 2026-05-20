@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { FileItem } from '@/components/FileItem';
 import { Pagination } from '@/components/ui/Pagination';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
@@ -53,6 +53,8 @@ interface FileSystemContentProps {
   };
   /** 是否显示拖拽上传提示 */
   isFileDragOver?: boolean;
+  /** 底部操作条（多选时替换分页） */
+  bottomBar?: ReactNode;
 }
 
 export const FileSystemContent: React.FC<FileSystemContentProps> = ({
@@ -92,6 +94,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onPermanentlyDeleteProject,
   fileDropHandlers,
   isFileDragOver,
+  bottomBar,
 }) => {
   // 获取节点权限信息
   const getNodePermissionProps = (node: FileSystemNode) => {
@@ -153,91 +156,100 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     };
   };
 
+  const showPaginationBorder = !bottomBar;
+
   return (
-    <>
-      <div
-        className={`relative ${isFileDragOver ? 'ring-2 ring-green-500 ring-inset bg-green-50/10' : ''}`}
-        style={{ minHeight: 200 }}
-      >
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="relative">
+          <div
+            data-view-mode={viewMode}
+            className={
+              viewMode === 'grid'
+                ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
+                : 'divide-y'
+            }
+            style={
+              viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
+            }
+          >
+          {nodes.map((node) => {
+            const extraProps = getNodePermissionProps(node);
 
-        <div
-          data-view-mode={viewMode}
-          className={
-            viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
-              : 'divide-y'
-          }
-          style={
-            viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
-          }
-        >
-        {nodes.map((node) => {
-          const extraProps = getNodePermissionProps(node);
-
-          return (
-            <FileItem
-              key={node.id}
-              node={node}
-              isSelected={selectedNodes.has(node.id)}
-              viewMode={viewMode}
-              isMultiSelectMode={isMultiSelectMode}
-              isTrash={isTrashView || isProjectTrashView}
-              onSelect={onNodeSelect}
-              onEnter={onFileOpen}
-              onDownload={onDownload}
-              onDelete={onDelete}
-              onPermanentlyDelete={onPermanentlyDelete}
-              onRename={onRename}
-              onRefresh={onRefresh}
-              onRestore={
-                isTrashView || isProjectTrashView
-                  ? onRestore
-                  : undefined
-              }
-              onEdit={extraProps.onEdit}
-              onDeleteNode={extraProps.onDeleteNode}
-              onShowMembers={extraProps.onShowMembers}
-              onShowRoles={extraProps.onShowRoles}
-              onMove={
-                !node.isRoot &&
-                projectPermissions['FILE_MOVE' as keyof typeof projectPermissions]
-                  ? onMove
-                  : undefined
-              }
-              onCopy={
-                !node.isRoot &&
-                projectPermissions['FILE_COPY' as keyof typeof projectPermissions]
-                  ? onCopy
-                  : undefined
-              }
-              onShowVersionHistory={
-                !node.isFolder &&
-                !isTrashView &&
-                (node.extension === '.dwg' || node.extension === '.dxf')
-                  ? onShowVersionHistory
-                  : undefined
-              }
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              isDropTarget={dropTargetId === node.id}
-              canUpload={extraProps.canUpload}
-              canEdit={extraProps.canEdit}
-              canDelete={extraProps.canDelete}
-              canDownload={extraProps.canDownload}
-              canViewVersionHistory={extraProps.canViewVersionHistory}
-              canManageExternalReference={extraProps.canManageExternalReference}
-            />
-          );
-        })}
+            return (
+              <FileItem
+                key={node.id}
+                node={node}
+                isSelected={selectedNodes.has(node.id)}
+                viewMode={viewMode}
+                isMultiSelectMode={isMultiSelectMode}
+                isTrash={isTrashView || isProjectTrashView}
+                onSelect={onNodeSelect}
+                onEnter={onFileOpen}
+                onDownload={onDownload}
+                onDelete={onDelete}
+                onPermanentlyDelete={onPermanentlyDelete}
+                onRename={onRename}
+                onRefresh={onRefresh}
+                onRestore={
+                  isTrashView || isProjectTrashView
+                    ? onRestore
+                    : undefined
+                }
+                onEdit={extraProps.onEdit}
+                onDeleteNode={extraProps.onDeleteNode}
+                onShowMembers={extraProps.onShowMembers}
+                onShowRoles={extraProps.onShowRoles}
+                onMove={
+                  !node.isRoot &&
+                  projectPermissions['FILE_MOVE' as keyof typeof projectPermissions]
+                    ? onMove
+                    : undefined
+                }
+                onCopy={
+                  !node.isRoot &&
+                  projectPermissions['FILE_COPY' as keyof typeof projectPermissions]
+                    ? onCopy
+                    : undefined
+                }
+                onShowVersionHistory={
+                  !node.isFolder &&
+                  !isTrashView &&
+                  (node.extension === '.dwg' || node.extension === '.dxf')
+                    ? onShowVersionHistory
+                    : undefined
+                }
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                isDropTarget={dropTargetId === node.id}
+                canUpload={extraProps.canUpload}
+                canEdit={extraProps.canEdit}
+                canDelete={extraProps.canDelete}
+                canDownload={extraProps.canDownload}
+                canViewVersionHistory={extraProps.canViewVersionHistory}
+                canManageExternalReference={extraProps.canManageExternalReference}
+              />
+            );
+          })}
+          </div>
         </div>
       </div>
 
-      {/* 分页组件 */}
+      {/* 多选操作条 */}
+      {bottomBar && (
+        <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+            {bottomBar}
+          </div>
+        </div>
+      )}
+
+      {/* 分页 */}
       <div
-        className="px-6 py-4"
-        style={{ borderTop: '1px solid var(--border-subtle)' }}
+        className="flex-shrink-0 px-6 py-4"
+        style={{ borderTop: showPaginationBorder ? '1px solid var(--border-subtle)' : undefined }}
       >
         <Pagination
           meta={
@@ -248,6 +260,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
           showSizeChanger={true}
         />
       </div>
-    </>
+    </div>
   );
 };

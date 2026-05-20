@@ -77,6 +77,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           onClick={() => onToggleVisibility(item.key)}
           className="visibility-toggle"
           tabIndex={-1}
+          tooltip={isHidden ? '显示值' : '隐藏值'}
         />
       </div>
     );

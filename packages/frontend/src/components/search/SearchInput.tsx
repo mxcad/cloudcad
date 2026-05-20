@@ -1,5 +1,6 @@
 import type React from 'react';
 import { Search, X } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/ui/Input';
 import type { InputProps } from '@/components/ui/Input';
 
@@ -42,15 +43,16 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       rightNode={showClear ? (
-        <button
-          type="button"
-          onClick={handleClear}
-          className="p-1 rounded-[3px] transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
-          style={{ color: 'var(--text-muted)' }}
-          title="清除"
-        >
-          <X size={14} />
-        </button>
+        <Tooltip content="清除">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="p-1 rounded-[3px] transition-all duration-200 hover:bg-[var(--bg-tertiary)]"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <X size={14} />
+          </button>
+        </Tooltip>
       ) : undefined}
       {...props}
     />

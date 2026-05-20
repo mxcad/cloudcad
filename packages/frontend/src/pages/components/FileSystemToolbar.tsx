@@ -5,6 +5,7 @@ import { SearchInput } from '@/components/search/SearchInput';
 import { ViewToggle } from '@/components/common/ViewToggle';
 import { FileSystemNode } from '../../types/filesystem';
 import { PaginationMeta } from '../../components/ui/Pagination';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface FileSystemToolbarProps {
   searchTerm: string;
@@ -54,45 +55,47 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
       <div className="flex items-center gap-3">
         {!isAtRoot && (
           <>
-            <Button
-              variant={isMultiSelectMode ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                onMultiSelectModeChange(!isMultiSelectMode);
-                if (isMultiSelectMode) {
-                  selectedNodes.clear();
-                }
-              }}
-              className={isMultiSelectMode ? '' : 'hover:bg-[var(--bg-tertiary)]'}
-              style={isMultiSelectMode ? {} : { color: 'var(--text-tertiary)' }}
-              title="多选模式"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
-              </svg>
-            </Button>
+            <Tooltip content="多选模式">
+              <Button
+                variant={isMultiSelectMode ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => {
+                  onMultiSelectModeChange(!isMultiSelectMode);
+                  if (isMultiSelectMode) {
+                    selectedNodes.clear();
+                  }
+                }}
+                className={isMultiSelectMode ? '' : 'hover:bg-[var(--bg-tertiary)]'}
+                style={isMultiSelectMode ? {} : { color: 'var(--text-tertiary)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
+                </svg>
+              </Button>
+            </Tooltip>
 
             {isMultiSelectMode && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onSelectAll}
-                className="hover:bg-[var(--bg-tertiary)]"
-                style={{ color: 'var(--text-tertiary)' }}
-                title={selectedNodes.size === nodesCount ? '取消全选' : '全选'}
-              >
-                {selectedNodes.size === nodesCount ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <path d="M9 9l6 6M15 9l-6 6" />
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <path d="M9 12l2 2 4-4" />
-                  </svg>
-                )}
-              </Button>
+              <Tooltip content={selectedNodes.size === nodesCount ? '取消全选' : '全选'}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onSelectAll}
+                  className="hover:bg-[var(--bg-tertiary)]"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  {selectedNodes.size === nodesCount ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <path d="M9 9l6 6M15 9l-6 6" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <path d="M9 12l2 2 4-4" />
+                    </svg>
+                  )}
+                </Button>
+              </Tooltip>
             )}
           </>
         )}
@@ -104,18 +107,19 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
         />
 
         {isTrashView && nodesCount > 0 && onClearTrash && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClearTrash}
-            style={{ color: 'var(--error)', borderColor: 'var(--error-dim)' }}
-            className="hover:bg-[var(--error-dim)]"
-            title="清空回收站"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
-          </Button>
+          <Tooltip content="清空回收站">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClearTrash}
+              style={{ color: 'var(--error)', borderColor: 'var(--error-dim)' }}
+              className="hover:bg-[var(--error-dim)]"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </Button>
+          </Tooltip>
         )}
       </div>
     </div>

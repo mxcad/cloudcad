@@ -634,7 +634,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 </button>
                 </Menu.Trigger>
 
-                <Menu.Content align="start" side="top" sideOffset={8} className="w-full min-w-[200px]">
+                <Menu.Content align="end" side="top" sideOffset={8}>
                   <Menu.Item
                     icon={<Settings size={16} />}
                     onClick={() => {
@@ -798,10 +798,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
         {/* 页面内容 */}
         <main
-          className="flex-1 overflow-y-auto overflow-x-hidden"
+          className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden"
           style={{ background: 'transparent' }}
         >
-          <div className="animate-fade-in">{children}</div>
+          <div className="flex-1 min-h-0 animate-fade-in">{children}</div>
         </main>
       </div>
 

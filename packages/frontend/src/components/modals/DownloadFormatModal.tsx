@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
-import { Download } from 'lucide-react';
+import { Download, Crop } from 'lucide-react';
+import { useRangeExportStore } from '@/stores/rangeExportStore';
+import { useLocation } from 'react-router-dom';
 
 export type DownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
 
@@ -19,6 +21,8 @@ interface DownloadFormatModalProps {
   onClose: () => void;
   onDownload: (format: DownloadFormat, pdfOptions?: PdfOptions) => void;
   loading?: boolean;
+  /** 可选：文件节点 ID，用于范围导出跳转 */
+  nodeId?: string;
 }
 
 export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
@@ -27,6 +31,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
   onClose,
   onDownload,
   loading = false,
+  nodeId,
 }) => {
   const [format, setFormat] = useState<DownloadFormat>('mxweb');
   const [pdfOptions, setPdfOptions] = useState<PdfOptions>({
@@ -52,6 +57,20 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
       onDownload(format);
     }
   };
+
+  const handleRangeExport = useCallback(() => {
+    // 检查当前是否在 CAD 编辑器页面
+    const isOnCadEditor = window.location.pathname.includes('/cad-editor');
+
+    if (isOnCadEditor) {
+      // 直接打开范围导出对话框
+      onClose();
+      useRangeExportStore.getState().setOpen(true);
+    } else if (nodeId) {
+      // 非 CAD 编辑器页面：在新标签页打开 CAD 编辑器并传入参数
+      window.open(`/cad-editor/${nodeId}?openRangeExport=true`, '_blank');
+    }
+  }, [nodeId, onClose]);
 
   // 根据选择的格式动态调整文件名
   const getDisplayFileName = (
@@ -192,6 +211,31 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             </div>
           </div>
         )}
+
+        {/* 范围裁剪/打印入口 */}
+        <div
+          className="rounded-lg p-3"
+          style={{
+            backgroundColor: 'var(--bg-secondary, #f8fafc)',
+            border: '1px dashed var(--border-default, #e2e8f0)',
+          }}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleRangeExport}
+          >
+            <Crop className="w-4 h-4 mr-2" />
+            范围裁剪 / 打印
+          </Button>
+          <p
+            className="text-xs mt-1 text-center"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            选择图纸区域后导出为 DWG/DXF/PDF/MXWEB
+          </p>
+        </div>
 
         {/* 格式说明 */}
         <div

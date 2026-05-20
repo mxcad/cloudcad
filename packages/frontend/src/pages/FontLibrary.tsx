@@ -22,7 +22,7 @@ const FONT_TYPES = [
   { value: '.otf', label: 'OTF', color: '#009cff', Icon: FileText },
   { value: '.woff', label: 'WOFF', color: '#f59e0b', Icon: FileBox },
   { value: '.woff2', label: 'WOFF2', color: '#f97316', Icon: FileBox },
-  { value: '.eot', label: 'EOT', color: '#8b5cf6', Icon: FileDigit },
+  { value: '.eot', label: 'EOT', color: '#6366f1', Icon: FileDigit },
   { value: '.ttc', label: 'TTC', color: '#ec4899', Icon: Layers },
   { value: '.shx', label: 'SHX', color: '#06b6d4', Icon: Shapes },
 ];
@@ -542,7 +542,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               size="xs"
               key={key}
               onClick={() => handleSort(key as 'name' | 'size' | 'createdAt')}
-              className={sortBy === key ? 'text-primary-600 font-medium' : ''}
+              className={sortBy === key ? 'text-[var(--primary-500)] font-medium' : ''}
             >
               {label}
               {sortBy === key && (
@@ -626,8 +626,8 @@ export default function FontLibrary(props: FontLibraryProps) {
                                     >
                                       <IconComponent size={32} style={{ color: typeInfo.color }} />
                                     </div>
-                                    <h3 className="font-medium text-text-primary mb-1 truncate px-4" title={font.name}>
-                                      <FileNameText>{font.name}</FileNameText>
+                                    <h3 className="font-medium text-text-primary mb-1 px-4" title={font.name}>
+                                      <FileNameText className="justify-center">{font.name}</FileNameText>
                                     </h3>
                                     <div className="flex items-center justify-center gap-3 text-xs text-text-tertiary">
                                       <Tag variant={getFontTypeVariant(font.extension)}>

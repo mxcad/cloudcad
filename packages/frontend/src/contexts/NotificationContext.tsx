@@ -11,6 +11,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Textarea } from '../components/ui/Textarea';
 import { Z_LAYERS } from '../constants/layers';
 import type { ToastType } from '../components/ui/Toast';
 
@@ -487,17 +488,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
             {promptState.label}
           </label>
           {promptState.multiline ? (
-            <textarea
+            <Textarea
               autoFocus
               value={promptInputValue}
               onChange={(e) => setPromptInputValue(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg resize-y focus:outline-none"
-              style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
-                minHeight: '100px',
-              }}
+              size="lg"
+              style={{ minHeight: '100px' }}
               placeholder={promptState.label}
             />
           ) : (

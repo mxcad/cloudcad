@@ -16,6 +16,7 @@ import { useUIStore } from '../stores/uiStore';
 import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
 import { globalShowToast } from '../contexts/NotificationContext';
 import { Button } from './ui/Button';
+import { Tooltip } from './ui/Tooltip';
 
 interface MxCadUploaderProps {
   /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
@@ -185,18 +186,19 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
     return (
       <div className="mxcad-uploader">
-        <Button
-          onClick={handleSelectFiles}
-          disabled={globalLoading || !isAuthenticated}
-          variant="outline"
-          size="sm"
-          loading={globalLoading}
-          icon={globalLoading ? undefined : (isAuthenticated ? Upload : undefined)}
-          className={buttonClassName}
-          title={!isAuthenticated ? '请先登录后再上传文件' : ''}
-        >
-          {globalLoading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
-        </Button>
+        <Tooltip content={!isAuthenticated ? '请先登录后再上传文件' : '上传 CAD 文件'}>
+          <Button
+            onClick={handleSelectFiles}
+            disabled={globalLoading || !isAuthenticated}
+            variant="outline"
+            size="sm"
+            loading={globalLoading}
+            icon={globalLoading ? undefined : (isAuthenticated ? Upload : undefined)}
+            className={buttonClassName}
+          >
+            {globalLoading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
+          </Button>
+        </Tooltip>
 
         {/* 外部参照上传模态框 */}
         <ExternalReferenceModal

@@ -39,7 +39,7 @@ const itemBaseCls = `
   outline-none cursor-pointer select-none
   transition-colors duration-150
   data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed
-  data-[highlighted]:bg-[rgba(255,255,255,0.05)]
+  data-[highlighted]:bg-[var(--menu-highlight)]
   data-[highlighted]:text-[var(--text-primary)]
   data-[state=checked]:text-[var(--info)]
   data-[state=checked]:bg-[rgba(0,156,255,0.1)]
@@ -117,7 +117,7 @@ const SimpleSelect: React.FC<SelectProps> = ({
           <SelectPrimitive.Content
             className="min-w-[var(--radix-select-trigger-width)] rounded-xl p-1 shadow-xl overflow-hidden"
             style={{
-              background: 'var(--bg-elevated)',
+              background: 'var(--menu-bg)',
               border: '1px solid var(--border-default)',
             zIndex: Z_LAYERS.POPUP,
             }}
@@ -277,7 +277,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
         <div
           className="absolute w-full mt-1 rounded-xl p-1 shadow-xl overflow-hidden"
           style={{
-            background: 'var(--bg-elevated)',
+            background: 'var(--menu-bg)',
             border: '1px solid var(--border-default)',
             zIndex: Z_LAYERS.POPUP,
           }}
@@ -351,13 +351,13 @@ const SearchableSelect: React.FC<SelectProps> = ({
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && !option.disabled) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                        e.currentTarget.style.color = 'var(--text-primary)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected && !option.disabled) {
-                        e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.background = 'var(--menu-highlight)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected && !option.disabled) {
+                      e.currentTarget.style.background = 'transparent';
                         e.currentTarget.style.color = 'var(--text-secondary)';
                       }
                     }}

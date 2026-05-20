@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
-import { MessageCircle } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import {
+  AlertTriangle,
+  Lock,
+  Phone,
+  Mail,
+  Eye,
+  EyeOff,
+  MessageCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui';
+import { Button, Select, Checkbox } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 import { WechatVerifyModal } from '../../components/WechatVerifyModal';
 import {
   authControllerSendSmsCode,
@@ -73,25 +82,19 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
   onShowToast,
 }) => {
   const [showWechatModal, setShowWechatModal] = useState(false);
+  const verificationOptions = useMemo<SelectOption[]>(() => {
+    const opts: SelectOption[] = [];
+    if (user?.hasPassword) opts.push({ value: 'password', label: '密码验证' });
+    if (user?.phone && user.phoneVerified) opts.push({ value: 'phone', label: '手机验证码' });
+    if (user?.email) opts.push({ value: 'email', label: '邮箱验证码' });
+    if (user?.wechatId) opts.push({ value: 'wechat', label: '微信扫码验证' });
+    return opts;
+  }, [user?.hasPassword, user?.phone, user?.phoneVerified, user?.email, user?.wechatId]);
   return (
     <div className="tab-content animate-fade-in">
       <div className="deactivate-content">
         <div className="warning-icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-          </svg>
+          <AlertTriangle size={48} />
         </div>
         <h3>注销账户</h3>
         <p className="warning-text">
@@ -99,57 +102,15 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
         </p>
         <div className="warning-list">
           <div className="warning-item">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <path d="M12 9v4" />
-              <path d="M12 17h.01" />
-            </svg>
+            <AlertTriangle size={14} />
             <span>所有项目文件将被永久删除</span>
           </div>
           <div className="warning-item">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <path d="M12 9v4" />
-              <path d="M12 17h.01" />
-            </svg>
+            <AlertTriangle size={14} />
             <span>所有收藏和历史记录将被清除</span>
           </div>
           <div className="warning-item">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <path d="M12 9v4" />
-              <path d="M12 17h.01" />
-            </svg>
+            <AlertTriangle size={14} />
             <span>账户信息将无法再恢复</span>
           </div>
         </div>
@@ -157,52 +118,27 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
         <div className="deactivate-form">
           <div className="input-group">
             <label className="input-label">选择验证方式</label>
-            <select
+            <Select
               value={deactivateForm.verificationMethod}
-              onChange={(e) =>
+              onChange={(val) =>
                 onSetDeactivateForm((f) => ({
                   ...f,
-                  verificationMethod: e.target.value as
-                    | 'password'
-                    | 'phone'
-                    | 'email'
-                    | 'wechat'
-                    | '',
+                  verificationMethod: val as 'password' | 'phone' | 'email' | 'wechat' | '',
                   password: '',
                   phoneCode: '',
                   emailCode: '',
                   wechatConfirm: '',
                 }))
               }
-              className="verification-select"
-            >
-              <option value="">请选择验证方式</option>
-              {user?.hasPassword && <option value="password">密码验证</option>}
-              {user?.phone && user.phoneVerified && (
-                <option value="phone">手机验证码</option>
-              )}
-              {user?.email && <option value="email">邮箱验证码</option>}
-              {user?.wechatId && <option value="wechat">微信扫码验证</option>}
-            </select>
+              options={verificationOptions}
+              placeholder="请选择验证方式"
+            />
           </div>
 
           {deactivateForm.verificationMethod === 'password' && (
             <div className="input-group">
               <label className="input-label">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
+                <Lock size={14} />
                 密码验证
               </label>
               <div className="input-wrapper">
@@ -220,45 +156,15 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 <Button
                   variant="ghost"
                   size="xs"
+                  icon={showPassword.confirm ? EyeOff : Eye}
                   onClick={() =>
                     onSetShowPassword((p) => ({
                       ...p,
                       confirm: !p.confirm,
                     }))
                   }
-                >
-                  {showPassword.confirm ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" x2="23" y1="1" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </Button>
+                  tooltip={showPassword.confirm ? '隐藏密码' : '显示密码'}
+                />
                 <div className="input-glow" />
               </div>
             </div>
@@ -267,19 +173,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
           {deactivateForm.verificationMethod === 'phone' && (
             <div className="input-group">
               <label className="input-label">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                </svg>
+                <Phone size={14} />
                 手机验证码
               </label>
               <div className="input-wrapper">
@@ -332,20 +226,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
           {deactivateForm.verificationMethod === 'email' && (
             <div className="input-group">
               <label className="input-label">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect width="20" height="16" x="2" y="4" rx="2" />
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                </svg>
+                <Mail size={14} />
                 邮箱验证码
               </label>
               <div className="input-wrapper">
@@ -419,8 +300,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
           )}
 
           <div className="confirm-checkbox">
-            <input
-              type="checkbox"
+            <Checkbox
               id="confirmDeactivate"
               checked={deactivateForm.confirmed}
               onChange={(e) =>
@@ -429,10 +309,8 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   confirmed: e.target.checked,
                 }))
               }
+              label="我已了解注销的后果，并确认注销"
             />
-            <label htmlFor="confirmDeactivate">
-              我已了解注销的后果，并确认注销
-            </label>
           </div>
 
           <Button

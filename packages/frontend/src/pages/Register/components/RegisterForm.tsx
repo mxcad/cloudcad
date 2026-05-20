@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRegisterForm } from '../hooks/useRegisterForm';
 import { usePhoneVerification } from '../hooks/usePhoneVerification';
 import { getPasswordStrength } from '../utils/passwordStrength';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 import {
   User, Mail, Lock, Sparkles, ArrowRight, ArrowLeft,
@@ -249,14 +250,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   placeholder="至少8位，包含大小写字母、数字和特殊字符"
                   {...fieldProps('password')}
                 />
-                <Button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => form.setShowPassword(!form.showPassword)}
-                  tabIndex={-1}
-                >
-                  {form.showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </Button>
+                <Tooltip content={form.showPassword ? '隐藏密码' : '显示密码'}>
+                  <Button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => form.setShowPassword(!form.showPassword)}
+                    tabIndex={-1}
+                  >
+                    {form.showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </Button>
+                </Tooltip>
                 <div className="input-glow" />
               </div>
               {watchedPassword && (
@@ -293,14 +296,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   placeholder="请再次输入密码"
                   {...fieldProps('confirmPassword')}
                 />
-                <Button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => form.setShowConfirmPassword(!form.showConfirmPassword)}
-                  tabIndex={-1}
-                >
-                  {form.showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </Button>
+                <Tooltip content={form.showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}>
+                  <Button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => form.setShowConfirmPassword(!form.showConfirmPassword)}
+                    tabIndex={-1}
+                  >
+                    {form.showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </Button>
+                </Tooltip>
                 <div className="input-glow" />
               </div>
               {form.fieldErrors.confirmPassword && <p className="error-message">{form.fieldErrors.confirmPassword}</p>}

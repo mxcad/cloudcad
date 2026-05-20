@@ -63,7 +63,7 @@ export const userManagementStyles = `
     color: white;
     border: none;
     border-radius: var(--radius-lg);
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     cursor: pointer;
     transition: all 0.2s;
     margin-left: auto;
@@ -114,7 +114,7 @@ export const userManagementStyles = `
   }
 
   .page-title {
-    font-size: 1.875rem;
+    font-size: var(--text-3xl);
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
@@ -126,7 +126,7 @@ export const userManagementStyles = `
   }
 
   .page-subtitle {
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     color: var(--text-tertiary);
     margin: 0.375rem 0 0;
   }
@@ -141,7 +141,7 @@ export const userManagementStyles = `
     color: white;
     border: none;
     border-radius: var(--radius-xl);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.25s ease;
@@ -163,7 +163,7 @@ export const userManagementStyles = `
     color: var(--text-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-xl);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.25s ease;
@@ -195,34 +195,6 @@ export const userManagementStyles = `
     flex: 0 0 180px;
   }
 
-  .filter-select {
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-primary);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-    color: var(--text-primary);
-    font-size: 0.9375rem;
-    transition: all 0.25s ease;
-    outline: none;
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 3.5L11.5 6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    padding-right: 2.5rem;
-  }
-
-  .filter-select:hover {
-    border-color: var(--border-strong);
-    background-color: var(--bg-secondary);
-  }
-
-  .filter-select:focus {
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100);
-  }
-
   /* ===== 用户表格容器 ===== */
   .users-table-card {
     background: var(--bg-secondary);
@@ -248,7 +220,7 @@ export const userManagementStyles = `
   .users-table th {
     padding: var(--space-4) var(--space-5);
     text-align: left;
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -259,7 +231,7 @@ export const userManagementStyles = `
 
   .users-table td {
     padding: var(--space-4) var(--space-5);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border-subtle);
     vertical-align: middle;
@@ -318,7 +290,7 @@ export const userManagementStyles = `
   }
 
   .user-username {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     color: var(--text-muted);
     line-height: 1.3;
   }
@@ -343,7 +315,7 @@ export const userManagementStyles = `
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     color: var(--text-secondary);
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -369,7 +341,7 @@ export const userManagementStyles = `
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     background: transparent;
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -405,6 +377,12 @@ export const userManagementStyles = `
     border-color: var(--success);
   }
 
+  .pagination-bar {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-4) 0;
+  }
+
   /* ===== 加载/空状态 ===== */
   .loading-state {
     display: flex;
@@ -412,7 +390,7 @@ export const userManagementStyles = `
     justify-content: center;
     padding: var(--space-16);
     color: var(--text-muted);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
   }
 
   .empty-state {
@@ -437,7 +415,7 @@ export const userManagementStyles = `
   }
 
   .empty-title {
-    font-size: 1.125rem;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--text-secondary);
     margin: 0;
@@ -466,14 +444,14 @@ export const userManagementStyles = `
   }
 
   .access-denied-title {
-    font-size: 1.5rem;
+    font-size: var(--text-3xl);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
   }
 
   .access-denied-text {
-    font-size: 1rem;
+    font-size: var(--text-lg);
     color: var(--text-secondary);
     margin: var(--space-3) 0 0;
   }
@@ -503,7 +481,7 @@ export const userManagementStyles = `
   }
 
   .limited-access-title {
-    font-size: 1.5rem;
+    font-size: var(--text-3xl);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -572,7 +550,7 @@ export const userManagementStyles = `
   }
 
   .form-label {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     font-weight: 500;
     color: var(--text-secondary);
   }
@@ -584,7 +562,7 @@ export const userManagementStyles = `
   .form-label .optional {
     font-weight: 400;
     color: var(--text-muted);
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
   }
 
   .form-select {
@@ -594,7 +572,7 @@ export const userManagementStyles = `
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     color: var(--text-primary);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     transition: all 0.2s ease;
     outline: none;
   }
@@ -609,7 +587,7 @@ export const userManagementStyles = `
   }
 
   .error-text {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     color: var(--error);
     margin-top: 0.125rem;
   }
@@ -636,19 +614,19 @@ export const userManagementStyles = `
   .delete-warning-title {
     font-weight: 600;
     margin: 0 0 var(--space-1);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     color: var(--text-primary);
   }
 
   .delete-warning-text {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-secondary);
     line-height: 1.5;
   }
 
   .delete-confirm-text {
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     color: var(--text-secondary);
     margin: 0;
   }
@@ -670,7 +648,7 @@ export const userManagementStyles = `
   }
 
   .delete-option-label {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-secondary);
     cursor: pointer;
   }
@@ -716,7 +694,7 @@ export const userManagementStyles = `
   }
 
   .user-info-text .user-username {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     color: var(--text-muted);
   }
 
@@ -730,7 +708,7 @@ export const userManagementStyles = `
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     font-weight: 500;
     color: var(--text-secondary);
   }
@@ -742,14 +720,14 @@ export const userManagementStyles = `
   }
 
   .quota-unit {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     font-weight: 500;
     color: var(--text-tertiary);
     min-width: 30px;
   }
 
   .quota-hint {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     color: var(--text-muted);
     margin: 0;
   }
@@ -775,12 +753,12 @@ export const userManagementStyles = `
   }
 
   .cleanup-stat-label {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-secondary);
   }
 
   .cleanup-stat-value {
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     font-weight: 600;
     color: var(--text-primary);
   }
@@ -798,7 +776,7 @@ export const userManagementStyles = `
     }
 
     .page-title {
-      font-size: 1.5rem;
+      font-size: var(--text-3xl);
     }
 
     .page-title-icon {
@@ -835,17 +813,17 @@ export const userManagementStyles = `
     }
 
     .page-title {
-      font-size: 1.25rem;
+      font-size: var(--text-2xl);
     }
 
     .page-subtitle {
-      font-size: 0.875rem;
+      font-size: var(--text-md);
     }
 
     .users-table th,
     .users-table td {
       padding: var(--space-3);
-      font-size: 0.8125rem;
+      font-size: var(--text-base);
     }
 
     .modal-footer {

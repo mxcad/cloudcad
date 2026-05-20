@@ -9,6 +9,7 @@ import { FolderPlus } from 'lucide-react';
 import { ViewToggle } from '@/components/common/ViewToggle';
 import { BreadcrumbNavigation } from '../BreadcrumbNavigation';
 import { BreadcrumbItem } from '../../types/filesystem';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface FileSystemHeaderProps {
   isAtRoot: boolean;
@@ -63,38 +64,38 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
     <Card variant="outlined" radius="2xl" className="backdrop-blur-xl p-4 shadow-sm space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-          <button
-            onClick={
-              isPersonalSpaceMode
-                ? isAtRoot
-                  ? () => navigate('/personal-space')
-                  : onGoBack
-                : isAtRoot
-                  ? () => navigate('/projects')
-                  : onGoBack
-            }
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
-            title={
-              isPersonalSpaceMode
-                ? isAtRoot
-                  ? '返回我的图纸'
-                  : '返回上一级'
-                : isAtRoot
-                  ? '返回项目列表'
-                  : '返回上一级'
-            }
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          <Tooltip content={isPersonalSpaceMode
+            ? isAtRoot
+              ? '返回我的图纸'
+              : '返回上一级'
+            : isAtRoot
+              ? '返回项目列表'
+              : '返回上一级'
+          }>
+            <button
+              onClick={
+                isPersonalSpaceMode
+                  ? isAtRoot
+                    ? () => navigate('/personal-space')
+                    : onGoBack
+                  : isAtRoot
+                    ? () => navigate('/projects')
+                    : onGoBack
+              }
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
             >
-              <path d="M19 12H5M5 12L12 19M5 12L12 5" />
-            </svg>
-          </button>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M19 12H5M5 12L12 19M5 12L12 5" />
+              </svg>
+            </button>
+          </Tooltip>
 
           <div
             ref={breadcrumbRef}
@@ -122,49 +123,52 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isFetching}
-            className="text-slate-600 hover:bg-slate-100"
-            title="刷新"
-          >
-            <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
-          </Button>
-
-          {isAtRoot ? (
+          <Tooltip content="刷新">
             <Button
               variant="ghost"
               size="sm"
-              onClick={onCreateProject}
+              onClick={onRefresh}
+              disabled={isFetching}
               className="text-slate-600 hover:bg-slate-100"
-              title="新建项目"
             >
-              <FolderPlus size={16} />
+              <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
             </Button>
-          ) : (
-            <>
+          </Tooltip>
+
+          {isAtRoot ? (
+            <Tooltip content="新建项目">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onCreateFolder}
-                disabled={loading}
+                onClick={onCreateProject}
                 className="text-slate-600 hover:bg-slate-100"
-                title="新建文件夹"
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                  <path d="M12 11v6M9 14h6" />
-                </svg>
+                <FolderPlus size={16} />
               </Button>
+            </Tooltip>
+          ) : (
+            <>
+              <Tooltip content="新建文件夹">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onCreateFolder}
+                  disabled={loading}
+                  className="text-slate-600 hover:bg-slate-100"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                    <path d="M12 11v6M9 14h6" />
+                  </svg>
+                </Button>
+              </Tooltip>
             </>
           )}
         </div>
@@ -179,63 +183,65 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         />
 
         <div className="flex items-center gap-3">
-          <Button
-            variant={isMultiSelectMode ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => {
-              setIsMultiSelectMode(!isMultiSelectMode);
-            }}
-            className={
-              isMultiSelectMode ? '' : 'text-slate-600 hover:bg-slate-100'
-            }
-            title="多选模式"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          <Tooltip content="多选模式">
+            <Button
+              variant={isMultiSelectMode ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => {
+                setIsMultiSelectMode(!isMultiSelectMode);
+              }}
+              className={
+                isMultiSelectMode ? '' : 'text-slate-600 hover:bg-slate-100'
+              }
             >
-              <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
-            </svg>
-          </Button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
+              </svg>
+            </Button>
+          </Tooltip>
 
           {isMultiSelectMode && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSelectAll}
-              className="text-slate-600 hover:bg-slate-100"
-              title={selectedNodes.size === nodesCount ? '取消全选' : '全选'}
-            >
-              {selectedNodes.size === nodesCount ? (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <path d="M9 9l6 6M15 9l-6 6" />
-                </svg>
-              ) : (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
-              )}
-            </Button>
+            <Tooltip content={selectedNodes.size === nodesCount ? '取消全选' : '全选'}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSelectAll}
+                className="text-slate-600 hover:bg-slate-100"
+              >
+                {selectedNodes.size === nodesCount ? (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <path d="M9 9l6 6M15 9l-6 6" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                )}
+              </Button>
+            </Tooltip>
           )}
 
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />

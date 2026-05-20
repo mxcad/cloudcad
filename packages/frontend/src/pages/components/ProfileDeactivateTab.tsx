@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AlertTriangle,
   Lock,
@@ -7,8 +7,11 @@ import {
   MessageCircle,
   CheckCircle,
   Loader2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button, Select, Checkbox } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 import { Input } from '@/components/ui/Input';
 import { WechatDeactivateConfirm } from '../Profile/WechatDeactivateConfirm';
 
@@ -76,6 +79,15 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
   onShowConfirm,
   onLogout,
 }) => {
+  const verificationOptions = useMemo<SelectOption[]>(() => {
+    const opts: SelectOption[] = [];
+    if (user?.hasPassword) opts.push({ value: 'password', label: '密码验证' });
+    if (user?.phone && user.phoneVerified) opts.push({ value: 'phone', label: '手机验证码' });
+    if (user?.email) opts.push({ value: 'email', label: '邮箱验证码' });
+    if (user?.wechatId) opts.push({ value: 'wechat', label: '微信扫码验证' });
+    return opts;
+  }, [user?.hasPassword, user?.phone, user?.phoneVerified, user?.email, user?.wechatId]);
+
   const canSubmit = () => {
     if (!deactivateForm.confirmed || !deactivateForm.verificationMethod)
       return false;
@@ -143,21 +155,12 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
         <div className="deactivate-form">
           <div className="input-group">
             <label className="input-label">选择验证方式</label>
-            <select
+            <Select
               value={deactivateForm.verificationMethod}
-              onChange={(e) =>
-                onVerificationMethodChange(e.target.value as 'password' | 'phone' | 'email' | 'wechat' | '')
-              }
-              className="verification-select"
-            >
-              <option value="">请选择验证方式</option>
-              {user?.hasPassword && <option value="password">密码验证</option>}
-              {user?.phone && user.phoneVerified && (
-                <option value="phone">手机验证码</option>
-              )}
-              {user?.email && <option value="email">邮箱验证码</option>}
-              {user?.wechatId && <option value="wechat">微信扫码验证</option>}
-            </select>
+              onChange={(val) => onVerificationMethodChange(val as 'password' | 'phone' | 'email' | 'wechat' | '')}
+              options={verificationOptions}
+              placeholder="请选择验证方式"
+            />
           </div>
 
           {deactivateForm.verificationMethod === 'password' && (
@@ -175,14 +178,11 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                 />
                 <Button
                   variant="ghost"
+                  size="xs"
+                  icon={showPassword.confirm ? EyeOff : Eye}
                   onClick={() => onTogglePassword('confirm')}
-                >
-                  {showPassword.confirm ? (
-                    <AlertTriangle size={16} />
-                  ) : (
-                    <Lock size={16} />
-                  )}
-                </Button>
+                  tooltip={showPassword.confirm ? '隐藏密码' : '显示密码'}
+                />
                 <div className="input-glow" />
               </div>
             </div>
@@ -202,7 +202,8 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                   placeholder="请输入手机验证码"
                 />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
+                  size="sm"
                   disabled={deactivateCountdown > 0}
                   onClick={onSendPhoneCode}
                 >
@@ -229,7 +230,8 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                   placeholder="请输入邮箱验证码"
                 />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
+                  size="sm"
                   disabled={deactivateCountdown > 0}
                   onClick={onSendEmailCode}
                 >
@@ -256,15 +258,12 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
           )}
 
           <div className="confirm-checkbox">
-            <input
-              type="checkbox"
+            <Checkbox
               id="confirmDeactivate"
               checked={deactivateForm.confirmed}
               onChange={(e) => onConfirmedChange(e.target.checked)}
+              label="我已了解注销的后果，并确认注销"
             />
-            <label htmlFor="confirmDeactivate">
-              我已了解注销的后果，并确认注销
-            </label>
           </div>
 
           <Button

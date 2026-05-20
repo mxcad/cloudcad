@@ -1,5 +1,6 @@
 import type React from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ChevronRight } from 'lucide-react';
 import { Z_LAYERS } from '@/constants/layers';
 
 export interface MenuItemData {
@@ -46,7 +47,9 @@ interface MenuItemProps {
 
 interface MenuSubmenuProps {
   children: React.ReactNode;
-  trigger: React.ReactNode;
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 interface MenuGroupProps {
@@ -59,6 +62,14 @@ interface MenuStateProps {
   children: React.ReactNode;
   className?: string;
 }
+
+const variantClasses: Record<string, string> = {
+  default: 'dropdown-item-theme',
+  danger: 'dropdown-item-theme dropdown-item-danger',
+  success: 'dropdown-item-theme dropdown-item-success',
+  info: 'dropdown-item-theme dropdown-item-info',
+  warning: 'dropdown-item-theme dropdown-item-warning',
+};
 
 export const Menu: React.FC<MenuProps> & {
   Trigger: React.FC<MenuTriggerProps>;
@@ -94,16 +105,8 @@ Menu.Content = ({ children, align = 'start', side = 'bottom', sideOffset = 4, co
       data-menu-content
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
-      className={`
-        min-w-[160px] rounded-xl p-1 shadow-xl
-        animate-in fade-in-0 zoom-in-95
-        ${className}
-      `}
-      style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-default)',
-        zIndex: Z_LAYERS.POPUP,
-      }}
+      className={`dropdown-menu-theme ${className}`}
+      style={{ zIndex: Z_LAYERS.POPUP }}
     >
       {children}
     </DropdownMenu.Content>
@@ -111,22 +114,6 @@ Menu.Content = ({ children, align = 'start', side = 'bottom', sideOffset = 4, co
 );
 
 Menu.Item = ({ children, disabled, onClick, className = '', variant = 'default', icon, description }) => {
-  const variantStyles = {
-    default: 'data-[highlighted]:bg-[var(--bg-tertiary)] data-[highlighted]:text-[var(--text-primary)]',
-    danger: 'data-[highlighted]:bg-[rgba(239,68,68,0.1)]',
-    success: 'data-[highlighted]:bg-[rgba(34,197,94,0.1)]',
-    info: 'data-[highlighted]:bg-[rgba(59,130,246,0.1)]',
-    warning: 'data-[highlighted]:bg-[rgba(245,158,11,0.1)]',
-  };
-
-  const variantColors = {
-    default: 'var(--text-secondary)',
-    danger: 'var(--error)',
-    success: 'var(--success)',
-    info: 'var(--info)',
-    warning: 'var(--warning)',
-  };
-
   return (
     <DropdownMenu.Item
       disabled={disabled}
@@ -134,48 +121,37 @@ Menu.Item = ({ children, disabled, onClick, className = '', variant = 'default',
         e.preventDefault();
         onClick?.(e);
       }}
-      className={`
-        flex items-center gap-2 w-full px-2.5 py-1.5 text-[var(--text-sm)] rounded-md
-        outline-none cursor-pointer select-none
-        transition-colors duration-150
-        data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed
-        ${variantStyles[variant]}
-        ${className}
-      `}
-      style={{
-        color: variantColors[variant],
-      }}
+      className={`${variantClasses[variant]} ${className}`}
     >
-      {icon && <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center">{icon}</span>}
-      <div className="flex-1 min-w-0">
-        <div className="truncate">{children}</div>
-        {description && (
-          <div className="text-[var(--text-xs)] opacity-60 truncate mt-0.5">{description}</div>
-        )}
+      {icon && <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-[var(--text-tertiary)]">{icon}</span>}
+      <div className="flex-1">
+        <div className="whitespace-nowrap">{children}</div>
+        {description && <div className="text-[var(--text-xs)] text-[var(--text-muted)] whitespace-nowrap mt-0.5">{description}</div>}
       </div>
     </DropdownMenu.Item>
   );
 };
 
 Menu.Separator = () => (
-  <DropdownMenu.Separator style={{ height: 1, margin: '4px 8px', background: 'var(--border-subtle)' }} />
+  <DropdownMenu.Separator className="h-[1px] my-1 mx-1.5 bg-[var(--border-subtle)]" />
 );
 
-Menu.Submenu = ({ children, trigger }) => (
+Menu.Submenu = ({ children, label, icon, disabled }) => (
   <DropdownMenu.Sub>
-    <DropdownMenu.SubTrigger className="flex items-center gap-2 w-full px-2.5 py-1.5 text-[var(--text-sm)] rounded-md outline-none cursor-pointer select-none transition-colors duration-150 data-[highlighted]:bg-[var(--bg-tertiary)] data-[highlighted]:text-[var(--text-primary)] text-[var(--text-secondary)]">
-      {trigger}
+    <DropdownMenu.SubTrigger
+      disabled={disabled}
+      className="dropdown-item-theme group"
+    >
+      {icon && <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-[var(--text-tertiary)]">{icon}</span>}
+      <span className="flex-1 whitespace-nowrap text-left">{label}</span>
+      <ChevronRight size={14} className="flex-shrink-0 text-[var(--text-muted)] group-data-[highlighted]:text-[var(--text-secondary)] transition-colors duration-150" />
     </DropdownMenu.SubTrigger>
     <DropdownMenu.Portal>
       <DropdownMenu.SubContent
         sideOffset={4}
         collisionPadding={8}
-        className="min-w-[160px] rounded-xl p-1 shadow-xl animate-in fade-in-0 zoom-in-95"
-        style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-default)',
-          zIndex: Z_LAYERS.POPUP,
-        }}
+        className="dropdown-menu-theme"
+        style={{ zIndex: Z_LAYERS.POPUP }}
       >
         {children}
       </DropdownMenu.SubContent>
@@ -185,31 +161,21 @@ Menu.Submenu = ({ children, trigger }) => (
 
 Menu.Group = ({ children, label, className = '' }) => (
   <DropdownMenu.Group className={className}>
-    {label && (
-      <div className="px-2.5 py-1.5 text-[var(--text-xs)] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-        {label}
-      </div>
-    )}
+    {label && <div className="px-2.5 py-1.5 text-[var(--text-xs)] font-medium uppercase tracking-wider text-[var(--text-muted)]">{label}</div>}
     {children}
   </DropdownMenu.Group>
 );
 
 Menu.Loading = ({ children, className = '' }) => (
-  <div className={`flex items-center justify-center gap-2 px-2.5 py-3 text-[var(--text-sm)] text-[var(--text-muted)] ${className}`}>
-    {children}
-  </div>
+  <div className={`flex items-center justify-center gap-2 px-2.5 py-3 text-[var(--text-sm)] text-[var(--text-muted)] ${className}`}>{children}</div>
 );
 
 Menu.Empty = ({ children, className = '' }) => (
-  <div className={`flex flex-col items-center justify-center gap-2 px-2.5 py-4 text-[var(--text-sm)] text-[var(--text-muted)] ${className}`}>
-    {children}
-  </div>
+  <div className={`flex flex-col items-center justify-center gap-2 px-2.5 py-4 text-[var(--text-sm)] text-[var(--text-muted)] ${className}`}>{children}</div>
 );
 
 Menu.Error = ({ children, className = '' }) => (
-  <div className={`px-2.5 py-3 text-[var(--text-sm)] text-[var(--error)] text-center ${className}`}>
-    {children}
-  </div>
+  <div className={`px-2.5 py-3 text-[var(--text-sm)] text-[var(--error)] text-center ${className}`}>{children}</div>
 );
 
 Menu.displayName = 'Menu';

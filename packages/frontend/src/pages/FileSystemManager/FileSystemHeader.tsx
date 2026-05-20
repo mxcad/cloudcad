@@ -5,9 +5,10 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderPlus } from 'lucide-react';
+import { FolderPlus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Tooltip } from '@/components/ui/Tooltip';
 import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
@@ -193,39 +194,39 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-          <button
-            onClick={handleBackButton}
-            className="p-2 rounded-xl transition-all flex-shrink-0"
-            style={{ color: 'var(--text-tertiary)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-secondary)';
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-tertiary)';
-              e.currentTarget.style.background = 'transparent';
-            }}
-            title={
-              isPersonalSpaceMode
-                ? isAtRoot
-                  ? '返回我的图纸'
-                  : '返回上一级'
-                : isAtRoot
-                  ? '返回项目列表'
-                  : '返回上一级'
-            }
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          <Tooltip content={isPersonalSpaceMode
+            ? isAtRoot
+              ? '返回我的图纸'
+              : '返回上一级'
+            : isAtRoot
+              ? '返回项目列表'
+              : '返回上一级'
+          }>
+            <button
+              onClick={handleBackButton}
+              className="p-2 rounded-xl transition-all flex-shrink-0"
+              style={{ color: 'var(--text-tertiary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.background = 'var(--bg-tertiary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-tertiary)';
+                e.currentTarget.style.background = 'transparent';
+              }}
             >
-              <path d="M19 12H5M5 12L12 19M5 12L12 5" />
-            </svg>
-          </button>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M19 12H5M5 12L12 19M5 12L12 5" />
+              </svg>
+            </button>
+          </Tooltip>
 
           <div
             ref={breadcrumbRef}
@@ -239,17 +240,18 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isFetching}
-            style={{ color: 'var(--text-tertiary)' }}
-            className="hover:bg-[var(--bg-tertiary)]"
-            title="刷新"
-          >
-            <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
-          </Button>
+          <Tooltip content="刷新">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isFetching}
+              style={{ color: 'var(--text-tertiary)' }}
+              className="hover:bg-[var(--bg-tertiary)]"
+            >
+              <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
+            </Button>
+          </Tooltip>
 
           {/* 回收站按钮 */}
           {!isAtRoot && (
@@ -283,45 +285,47 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                 !isPersonalSpaceMode &&
                 !isProjectTrashView &&
                 projectFilter !== 'joined' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onCreateProject}
-                    className="hover:bg-[var(--bg-tertiary)]"
-                    style={{ color: 'var(--text-tertiary)' }}
-                    title="新建项目"
-                    data-tour="create-project-btn"
-                  >
-                    <FolderPlus size={16} />
-                  </Button>
+                  <Tooltip content="新建项目">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onCreateProject}
+                      className="hover:bg-[var(--bg-tertiary)]"
+                      style={{ color: 'var(--text-tertiary)' }}
+                      data-tour="create-project-btn"
+                    >
+                      <FolderPlus size={16} />
+                    </Button>
+                  </Tooltip>
                 )}
             </>
           ) : (
             <>
               {!isTrashView && (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onCreateFolder}
-                    disabled={loading}
-                    className="hover:bg-[var(--bg-tertiary)]"
-                    style={{ color: 'var(--text-tertiary)' }}
-                    title="新建文件夹"
-                    data-tour="create-folder-btn"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
+                  <Tooltip content="新建文件夹">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onCreateFolder}
+                      disabled={loading}
+                      className="hover:bg-[var(--bg-tertiary)]"
+                      style={{ color: 'var(--text-tertiary)' }}
+                      data-tour="create-folder-btn"
                     >
-                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                      <path d="M12 11v6M9 14h6" />
-                    </svg>
-                  </Button>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                        <path d="M12 11v6M9 14h6" />
+                      </svg>
+                    </Button>
+                  </Tooltip>
                 </>
               )}
             </>

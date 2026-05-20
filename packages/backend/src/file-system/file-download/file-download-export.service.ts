@@ -172,6 +172,12 @@ export class FileDownloadExportService {
       width?: string;
       height?: string;
       colorPolicy?: string;
+    },
+    range?: {
+      pt1X: number;
+      pt1Y: number;
+      pt2X: number;
+      pt2Y: number;
     }
   ): Promise<{
     stream: NodeJS.ReadableStream;
@@ -254,6 +260,15 @@ export class FileDownloadExportService {
             conversionOptions.width = pdfParams?.width || '2000';
             conversionOptions.height = pdfParams?.height || '2000';
             conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
+          }
+
+          // 有坐标 → 范围导出（裁剪/打印）
+          if (range) {
+            conversionOptions.cmd = format === CadDownloadFormat.PDF ? 'print_to_pdf' : 'cut_dwg';
+            conversionOptions.bd_pt1_x = String(range.pt1X);
+            conversionOptions.bd_pt1_y = String(range.pt1Y);
+            conversionOptions.bd_pt2_x = String(range.pt2X);
+            conversionOptions.bd_pt2_y = String(range.pt2Y);
           }
 
           this.logger.log(

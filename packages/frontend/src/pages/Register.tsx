@@ -142,7 +142,7 @@ export const Register: React.FC = () => {
           .register-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; position: relative; z-index: 1; }
           .closed-card { background: var(--bg-secondary); border: 1px solid var(--border-default); border-radius: 24px; padding: 3rem; text-align: center; max-width: 400px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2); }
           .closed-icon { width: 64px; height: 64px; background: linear-gradient(135deg, #f59e0b, #fbbf24); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; }
-          .closed-title { font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.75rem; }
+          .closed-title { font-size: var(--text-3xl); font-weight: 600; color: var(--text-primary); margin-bottom: 0.75rem; }
           .closed-message { color: var(--text-tertiary); margin-bottom: 1.5rem; line-height: 1.6; }
           .back-button { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.2s; }
           .back-button:hover { background: var(--bg-elevated); border-color: var(--border-strong); }
@@ -695,7 +695,7 @@ export const Register: React.FC = () => {
         }
 
         .app-title {
-          font-size: 1.75rem;
+          font-size: var(--text-3xl);
           font-weight: 700;
           background: linear-gradient(135deg, var(--accent-500), var(--primary-500));
           -webkit-background-clip: text;
@@ -706,7 +706,7 @@ export const Register: React.FC = () => {
         }
 
         .app-tagline {
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           color: var(--text-tertiary);
           font-weight: 400;
         }
@@ -741,7 +741,7 @@ export const Register: React.FC = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.75rem;
+          font-size: var(--text-sm);
           font-weight: 600;
           color: var(--text-tertiary);
           transition: all 0.3s;
@@ -761,7 +761,7 @@ export const Register: React.FC = () => {
         }
 
         .step-label {
-          font-size: 0.6875rem;
+          font-size: var(--text-xs);
           font-weight: 500;
           color: var(--text-tertiary);
         }
@@ -786,14 +786,14 @@ export const Register: React.FC = () => {
         }
 
         .form-title {
-          font-size: 1.125rem;
+          font-size: var(--text-xl);
           font-weight: 600;
           color: var(--text-primary);
           margin-bottom: 0.25rem;
         }
 
         .form-subtitle {
-          font-size: 0.8125rem;
+          font-size: var(--text-base);
           color: var(--text-tertiary);
         }
 
@@ -805,7 +805,7 @@ export const Register: React.FC = () => {
           padding: 0.75rem 1rem;
           border-radius: 10px;
           margin-bottom: 1rem;
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           animation: slide-up 0.3s ease-out;
         }
 
@@ -844,7 +844,7 @@ export const Register: React.FC = () => {
         }
 
         .input-label {
-          font-size: 0.8125rem;
+          font-size: var(--text-base);
           font-weight: 500;
           color: var(--text-secondary);
           transition: color 0.2s;
@@ -882,7 +882,7 @@ export const Register: React.FC = () => {
           border: 1px solid var(--border-default);
           border-radius: 10px;
           color: var(--text-primary);
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           transition: all 0.2s;
           outline: none;
         }
@@ -932,7 +932,7 @@ export const Register: React.FC = () => {
         .input-group.focused .input-glow { opacity: 0.3; }
 
         .error-message {
-          font-size: 0.75rem;
+          font-size: var(--text-sm);
           color: var(--error);
           display: flex;
           align-items: center;
@@ -962,7 +962,7 @@ export const Register: React.FC = () => {
         }
 
         .strength-label {
-          font-size: 0.6875rem;
+          font-size: var(--text-xs);
           font-weight: 500;
         }
 
@@ -985,7 +985,7 @@ export const Register: React.FC = () => {
           border: none;
           border-radius: 8px;
           color: white;
-          font-size: 0.75rem;
+          font-size: var(--text-sm);
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s;
@@ -1027,7 +1027,7 @@ export const Register: React.FC = () => {
           border: none;
           border-radius: 10px;
           color: white;
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s;
@@ -1055,7 +1055,7 @@ export const Register: React.FC = () => {
           border: 1px solid var(--border-default);
           border-radius: 10px;
           color: var(--text-secondary);
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
@@ -1075,7 +1075,7 @@ export const Register: React.FC = () => {
         }
 
         .login-text {
-          font-size: 0.875rem;
+          font-size: var(--text-md);
           color: var(--text-tertiary);
         }
 
@@ -1137,7 +1137,7 @@ export const Register: React.FC = () => {
           background: var(--bg-elevated);
           border: 1px solid var(--border-default);
           border-radius: 6px;
-          font-size: 0.6875rem;
+          font-size: var(--text-xs);
           font-weight: 500;
           color: var(--text-secondary);
           white-space: nowrap;
@@ -1173,7 +1173,7 @@ export const Register: React.FC = () => {
         /* 版权信息 */
         .copyright {
           margin-top: 2rem;
-          font-size: 0.75rem;
+          font-size: var(--text-sm);
           color: var(--text-muted);
         }
 
@@ -1182,7 +1182,7 @@ export const Register: React.FC = () => {
           .register-container { padding: 1rem; }
           .register-card { padding: 1.5rem; border-radius: 20px; }
           .logo-wrapper { width: 64px; height: 64px; }
-          .app-title { font-size: 1.5rem; }
+          .app-title { font-size: var(--text-3xl); }
           .step-label { display: none; }
           .theme-toggle-wrapper { top: 1rem; right: 1rem; }
           .button-group { flex-direction: column; }

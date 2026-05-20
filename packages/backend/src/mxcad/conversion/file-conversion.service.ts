@@ -189,6 +189,19 @@ export class FileConversionService implements IFileConversionService {
 				param.colorPolicy = colorPolicy;
 			}
 
+			if (options.bd_pt1_x !== undefined) {
+				param.bd_pt1_x = options.bd_pt1_x;
+			}
+			if (options.bd_pt1_y !== undefined) {
+				param.bd_pt1_y = options.bd_pt1_y;
+			}
+			if (options.bd_pt2_x !== undefined) {
+				param.bd_pt2_x = options.bd_pt2_x;
+			}
+			if (options.bd_pt2_y !== undefined) {
+				param.bd_pt2_y = options.bd_pt2_y;
+			}
+
 			if (outjpg) {
 				param.outjpg = outjpg;
 			}

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface ImagePreviewModalProps {
   isOpen: boolean;
@@ -40,42 +41,48 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       zIndex={10001}
     >
       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-        <button
-          onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-          title="放大"
-        >
-          <ZoomIn size={20} className="text-white" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-          title="缩小"
-        >
-          <ZoomOut size={20} className="text-white" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleRotate(); }}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-          title="旋转"
-        >
-          <RotateCw size={20} className="text-white" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleReset(); }}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-          title="重置"
-        >
-          <span className="text-white text-sm font-medium">重置</span>
-        </button>
+        <Tooltip content="放大">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <ZoomIn size={20} className="text-white" />
+          </button>
+        </Tooltip>
+        <Tooltip content="缩小">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <ZoomOut size={20} className="text-white" />
+          </button>
+        </Tooltip>
+        <Tooltip content="旋转">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleRotate(); }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <RotateCw size={20} className="text-white" />
+          </button>
+        </Tooltip>
+        <Tooltip content="重置">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleReset(); }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <span className="text-white text-sm font-medium">重置</span>
+          </button>
+        </Tooltip>
       </div>
 
-      <button
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
-      >
-        <X size={24} className="text-white" />
-      </button>
+      <Tooltip content="关闭">
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
+        >
+          <X size={24} className="text-white" />
+        </button>
+      </Tooltip>
 
       <div className="relative max-w-[90vw] max-h-[85vh]">
         <img

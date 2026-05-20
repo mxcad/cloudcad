@@ -91,7 +91,7 @@ export const roleManagementStyles = `
   }
 
   .page-title {
-    font-size: 1.875rem;
+    font-size: var(--text-3xl);
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
@@ -103,7 +103,7 @@ export const roleManagementStyles = `
   }
 
   .page-subtitle {
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     color: var(--text-tertiary);
     margin: 0.375rem 0 0;
   }
@@ -121,14 +121,14 @@ export const roleManagementStyles = `
   }
 
   .section-title {
-    font-size: 1.25rem;
+    font-size: var(--text-2xl);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
   }
 
   .section-subtitle {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-tertiary);
     margin: 0.25rem 0 0;
   }
@@ -244,14 +244,14 @@ export const roleManagementStyles = `
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-size: 1.125rem;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
   }
 
   .role-description {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-tertiary);
     margin: var(--space-2) 0 0;
     overflow: hidden;
@@ -260,7 +260,7 @@ export const roleManagementStyles = `
   }
 
   .role-members {
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     margin: var(--space-2) 0 0;
   }
@@ -288,7 +288,7 @@ export const roleManagementStyles = `
   }
 
   .permissions-title {
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -309,7 +309,7 @@ export const roleManagementStyles = `
     background: var(--bg-secondary);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-full);
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     color: var(--text-secondary);
     transition: all 0.2s ease;
     font-weight: 500;
@@ -335,7 +335,7 @@ export const roleManagementStyles = `
     background: var(--bg-elevated);
     border: 1px dashed var(--border-default);
     border-radius: var(--radius-md);
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
   }
 
@@ -368,20 +368,20 @@ export const roleManagementStyles = `
   }
 
   .access-denied-title {
-    font-size: 1.5rem;
+    font-size: var(--text-3xl);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
   }
 
   .access-denied-text {
-    font-size: 1rem;
+    font-size: var(--text-lg);
     color: var(--text-secondary);
     margin: var(--space-3) 0 0;
   }
 
   .access-denied-hint {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-tertiary);
     margin: var(--space-2) 0 0;
   }
@@ -439,12 +439,12 @@ export const roleManagementStyles = `
   .delete-warning-title {
     font-weight: 600;
     margin: 0 0 var(--space-1);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
   }
 
   .delete-warning-text {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     opacity: 0.9;
   }
 
@@ -482,7 +482,7 @@ export const roleManagementStyles = `
     }
 
     .page-title {
-      font-size: 1.5rem;
+      font-size: var(--text-3xl);
     }
 
     .page-title-icon {
@@ -512,11 +512,11 @@ export const roleManagementStyles = `
     }
 
     .page-title {
-      font-size: 1.25rem;
+      font-size: var(--text-2xl);
     }
 
     .page-subtitle {
-      font-size: 0.875rem;
+      font-size: var(--text-md);
     }
 
     .role-card-header {
@@ -528,7 +528,7 @@ export const roleManagementStyles = `
     }
 
     .permission-tag {
-      font-size: 0.6875rem;
+      font-size: var(--text-xs);
       padding: 0.25rem 0.5rem;
     }
   }
@@ -536,15 +536,15 @@ export const roleManagementStyles = `
   /* 小屏手机适配 */
   @media (max-width: 375px) {
     .page-title {
-      font-size: 1.125rem;
+      font-size: var(--text-xl);
     }
 
     .role-name {
-      font-size: 1rem;
+      font-size: var(--text-lg);
     }
 
     .section-title {
-      font-size: 1.125rem;
+      font-size: var(--text-xl);
     }
   }
 `;

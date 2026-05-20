@@ -17,7 +17,7 @@
 }
 
 .audit-page-title {
-  font-size: 1.875rem;
+  font-size: var(--text-3xl);
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: var(--space-2);
@@ -67,13 +67,13 @@
 }
 
 .audit-stat-label {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
   margin-bottom: var(--space-1);
 }
 
 .audit-stat-value {
-  font-size: 1.5rem;
+  font-size: var(--text-3xl);
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -110,7 +110,7 @@
 }
 
 .audit-filter-title h2 {
-  font-size: 1.125rem;
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -148,7 +148,7 @@
    ---------------------------------------- */
 .audit-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: var(--space-1);
@@ -161,7 +161,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   font-family: var(--font-family-base);
   transition: all var(--transition-base);
   box-sizing: border-box;
@@ -209,7 +209,7 @@
 .audit-table th {
   padding: var(--space-3) var(--space-6);
   text-align: left;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-tertiary);
   text-transform: uppercase;
@@ -220,7 +220,7 @@
 
 .audit-table td {
   padding: var(--space-4) var(--space-6);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
@@ -244,7 +244,7 @@
   padding: var(--space-4) var(--space-6);
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
 /* ----------------------------------------
@@ -263,7 +263,7 @@
 }
 
 .audit-user-email {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
@@ -272,7 +272,7 @@
    ---------------------------------------- */
 .audit-error-msg {
   color: var(--error);
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   margin-top: var(--space-1);
 }
 

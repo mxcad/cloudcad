@@ -16,6 +16,7 @@ import { Button } from '../ui/Button';
 import { ChevronRight } from 'lucide-react';
 import { X } from 'lucide-react';
 import { MousePointerClick } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface TourTooltipProps {
   /** 当前步骤配置 */
@@ -351,19 +352,20 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
             {displayContent.title}
           </h4>
         </div>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={onSkip}
-          style={{
-            width: 24,
-            height: 24,
-            color: 'var(--text-muted)',
-          }}
-          title="跳过引导"
-        >
-          <X size={16} />
-        </Button>
+        <Tooltip content="跳过引导">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={onSkip}
+            style={{
+              width: 24,
+              height: 24,
+              color: 'var(--text-muted)',
+            }}
+          >
+            <X size={16} />
+          </Button>
+        </Tooltip>
       </div>
 
       {/* 内容 */}

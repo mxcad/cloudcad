@@ -110,12 +110,14 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const isIconButton = useMemo(() => {
-    if (Icon && !children) return true;
-    if (!children) return false;
-    const meaningful = Children.toArray(children).filter(
-      (child) => typeof child !== 'string' || child.trim() !== ''
-    );
-    return meaningful.length > 0 && meaningful.every((child) => isValidElement(child));
+    if (!Icon) return false;
+    if (!children) return true;
+    const hasElementChild = Children.toArray(children).some(isValidElement);
+    if (hasElementChild) return false;
+    const textContent = Children.toArray(children)
+      .filter((child): child is string => typeof child === 'string')
+      .join('');
+    return textContent.trim() === '';
   }, [Icon, children]);
 
   const iconButtonSizes = {

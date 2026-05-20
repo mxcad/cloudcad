@@ -103,7 +103,7 @@ export const loginStyles = `
 }
 
 .app-title {
-  font-size: 1.5rem;
+  font-size: var(--text-3xl);
   font-weight: 700;
   background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
   -webkit-background-clip: text;
@@ -114,7 +114,7 @@ export const loginStyles = `
 }
 
 .app-tagline {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
   font-weight: 400;
 }
@@ -126,14 +126,14 @@ export const loginStyles = `
 }
 
 .form-title {
-  font-size: 1.25rem;
+  font-size: var(--text-2xl);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .form-subtitle {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
 }
 
@@ -145,7 +145,7 @@ export const loginStyles = `
   padding: 0.875rem 1rem;
   border-radius: 10px;
   margin-bottom: 1.25rem;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   animation: slide-up 0.3s ease-out;
 }
 
@@ -182,7 +182,7 @@ export const loginStyles = `
 }
 
 .input-label {
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text-secondary);
   transition: color 0.2s;
@@ -218,7 +218,7 @@ export const loginStyles = `
   border: 1px solid var(--border-default);
   border-radius: 12px;
   color: var(--text-primary);
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   transition: all 0.2s;
   outline: none;
 }
@@ -266,7 +266,7 @@ export const loginStyles = `
   border: none;
   border-radius: 8px;
   color: white;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -298,7 +298,7 @@ export const loginStyles = `
 }
 
 .forgot-password-link {
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   color: var(--primary-500);
   background: none;
   border: none;
@@ -324,7 +324,7 @@ export const loginStyles = `
   border: none;
   border-radius: 12px;
   color: white;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -351,7 +351,7 @@ export const loginStyles = `
 }
 
 .register-text {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
 }
 
@@ -413,7 +413,7 @@ export const loginStyles = `
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: 6px;
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -452,7 +452,7 @@ export const loginStyles = `
   align-items: center;
   margin: 1.5rem 0;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
 }
 
 .divider::before,
@@ -474,7 +474,7 @@ export const loginStyles = `
   border-radius: 12px;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -499,7 +499,7 @@ export const loginStyles = `
 /* ===== 版权信息 ===== */
 .copyright {
   margin-top: 2rem;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   color: var(--text-muted);
 }
 
@@ -508,7 +508,7 @@ export const loginStyles = `
   .login-container { padding: 1rem; }
   .login-card { padding: 1.75rem; border-radius: 20px; }
   .logo-wrapper { width: 64px; height: 64px; }
-  .app-title { font-size: 1.375rem; }
+  .app-title { font-size: var(--text-2xl); }
   .theme-toggle-wrapper { top: 1rem; right: 1rem; }
 }
 
@@ -562,7 +562,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
 }
 
 .support-modal-header h3 {
-  font-size: 1.125rem;
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -571,7 +571,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
 .support-modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--text-3xl);
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
@@ -594,7 +594,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
 }
 
 .support-modal-message {
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: 1.5rem;
@@ -609,7 +609,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
 .support-contact-item {
   display: flex;
   align-items: center;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
 .support-contact-label {
@@ -645,7 +645,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
   border: none;
   border-radius: 12px;
   color: white;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;

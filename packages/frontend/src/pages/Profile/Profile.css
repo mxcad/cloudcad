@@ -93,7 +93,7 @@
   right: 0;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #f59e0b, #f97316);
+  background: linear-gradient(135deg, var(--warning), var(--warning));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -118,7 +118,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
   margin: 0;
 }
@@ -134,7 +134,7 @@
   padding: var(--space-4) var(--space-6);
   margin: var(--space-4) var(--space-6);
   border-radius: var(--radius-xl);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   animation: fade-in var(--transition-base) ease-out;
 }
 
@@ -166,6 +166,12 @@
   animation: fade-in var(--transition-slow) ease-out;
 }
 
+.password-form,
+.phone-form {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
 /* ============================================
    7. 表单输入
    ============================================ */
@@ -178,7 +184,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: var(--space-2);
@@ -190,6 +196,11 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.input-wrapper.has-button {
+  flex-wrap: nowrap;
 }
 
 
@@ -244,7 +255,7 @@
   background: none;
   border: none;
   color: var(--primary-500);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   cursor: pointer;
   padding: 0;
   transition: color var(--transition-base);
@@ -266,7 +277,7 @@
   color: white;
   border: none;
   border-radius: var(--radius-lg);
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-base);
@@ -298,18 +309,18 @@
   border: none;
   border-radius: var(--radius-xl);
   color: white;
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+  box-shadow: var(--shadow-md);
   width: 100%;
   margin-top: var(--space-4);
 }
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35);
+  box-shadow: var(--shadow-lg);
   background: linear-gradient(135deg, var(--primary-700), var(--primary-600));
 }
 
@@ -324,23 +335,23 @@
 }
 
 .submit-button.danger {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+  background: linear-gradient(135deg, var(--error), var(--error));
+  box-shadow: var(--shadow-md);
 }
 
 .submit-button.danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b91c1c, #dc2626);
-  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35);
+  background: linear-gradient(135deg, var(--error), var(--error));
+  box-shadow: var(--shadow-lg);
 }
 
 .submit-button.wechat {
-  background: linear-gradient(135deg, #07c160, #06ae56);
-  box-shadow: 0 4px 15px rgba(7, 193, 96, 0.25);
+  background: linear-gradient(135deg, var(--success), var(--success));
+  box-shadow: var(--shadow-md);
 }
 
 .submit-button.wechat:hover:not(:disabled) {
-  background: linear-gradient(135deg, #06ae56, #059647);
-  box-shadow: 0 8px 25px rgba(7, 193, 96, 0.35);
+  background: linear-gradient(135deg, var(--success), var(--success));
+  box-shadow: var(--shadow-lg);
 }
 
 .button-group {
@@ -360,7 +371,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-base);
@@ -398,7 +409,7 @@
 }
 
 .strength-label {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -406,6 +417,47 @@
 /* ============================================
    10. 安全提示
    ============================================ */
+
+.no-password-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--info-light);
+  border: 1px solid var(--info-dim);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.no-password-hint .hint-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  background: var(--info);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.no-password-hint .hint-content {
+  flex: 1;
+}
+
+.no-password-hint .hint-content h4 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1);
+}
+
+.no-password-hint .hint-content p {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
 
 .security-tips {
   margin-top: var(--space-6);
@@ -419,7 +471,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--text-secondary);
   margin: 0 0 var(--space-3);
@@ -433,7 +485,7 @@
 
 .security-tips li {
   position: relative;
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
   line-height: 1.8;
 }
@@ -467,13 +519,13 @@
   align-items: center;
   justify-content: center;
   color: var(--success);
-  box-shadow: 0 0 30px rgba(34, 197, 94, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .email-bound h3,
 .phone-bound h3,
 .wechat-bound h3 {
-  font-size: 1.25rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 var(--space-2);
@@ -482,7 +534,7 @@
 .bound-email,
 .bound-phone,
 .bound-info {
-  font-size: 1rem;
+  font-size: var(--text-lg);
   color: var(--text-secondary);
   margin: 0 0 var(--space-6);
 }
@@ -502,7 +554,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-secondary);
 }
 
@@ -537,7 +589,7 @@
 }
 
 .email-preview span {
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -549,9 +601,33 @@
   border: 1px solid var(--info-dim);
   border-radius: var(--radius-lg);
   color: var(--info);
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   font-weight: 500;
   margin-bottom: var(--space-5);
+}
+
+.verify-notice,
+.verify-success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-md);
+  font-weight: 500;
+  margin-bottom: var(--space-5);
+}
+
+.verify-notice {
+  background: var(--info-light);
+  border: 1px solid var(--info-dim);
+  color: var(--info);
+}
+
+.verify-success {
+  background: var(--success-light);
+  border: 1px solid var(--success-dim);
+  color: var(--success);
 }
 
 /* ============================================
@@ -572,24 +648,24 @@
   width: 96px;
   height: 96px;
   margin: 0 auto var(--space-4);
-  background: linear-gradient(135deg, #07c160, #06ae56);
+  background: linear-gradient(135deg, var(--success), var(--success));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 0 30px rgba(7, 193, 96, 0.2);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
 }
 
 .wechat-unbound h3 {
-  font-size: 1.25rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 var(--space-2);
 }
 
 .unbound-desc {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
   margin: 0 0 var(--space-6);
 }
@@ -599,7 +675,7 @@
    ============================================ */
 
 .deactivate-content {
-  max-width: 560px;
+  max-width: 480px;
   margin: 0 auto;
   text-align: center;
 }
@@ -614,18 +690,18 @@
   align-items: center;
   justify-content: center;
   color: var(--error);
-  box-shadow: 0 0 30px rgba(239, 68, 68, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .deactivate-content h3 {
-  font-size: 1.25rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 var(--space-2);
 }
 
 .warning-text {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
   margin: 0 0 var(--space-5);
   line-height: 1.6;
@@ -646,7 +722,7 @@
   padding: var(--space-3) var(--space-4);
   background: var(--bg-tertiary);
   border-radius: var(--radius-lg);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   color: var(--text-secondary);
 }
 
@@ -659,34 +735,6 @@
   text-align: left;
 }
 
-.verification-select {
-  width: 100%;
-  padding: var(--space-4);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  color: var(--text-primary);
-  font-size: 0.9375rem;
-  font-family: var(--font-family-base);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  outline: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  padding-right: 3rem;
-}
-
-.verification-select:hover {
-  border-color: var(--border-strong);
-}
-
-.verification-select:focus {
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
 .confirm-checkbox {
   display: flex;
   align-items: flex-start;
@@ -695,22 +743,6 @@
   padding: var(--space-3) var(--space-4);
   background: var(--bg-tertiary);
   border-radius: var(--radius-lg);
-}
-
-.confirm-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
-  accent-color: var(--primary-500);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.confirm-checkbox label {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  line-height: 1.5;
 }
 
 .wechat-warning {
@@ -731,7 +763,7 @@
 }
 
 .wechat-warning p {
-  font-size: 0.875rem;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.6;
@@ -815,8 +847,8 @@
 }
 
 .info-icon-wrapper.purple {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+  background: var(--info-dim);
+  color: var(--info);
 }
 
 .info-icon-wrapper.warning {
@@ -831,7 +863,7 @@
 
 .info-content label {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -840,7 +872,7 @@
 }
 
 .info-content span {
-  font-size: 0.9375rem;
+  font-size: var(--text-md);
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -892,6 +924,14 @@
   margin-top: var(--space-2);
 }
 
+.text-text-primary {
+  color: var(--text-primary);
+}
+
+.text-text-muted {
+  color: var(--text-muted);
+}
+
 /* ============================================
    17. 深色主题覆盖
    ============================================ */
@@ -911,12 +951,8 @@
 }
 
 [data-theme="dark"] .info-icon-wrapper.purple {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
-}
-
-[data-theme="dark"] .verification-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8a99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background: var(--info-dim);
+  color: var(--info);
 }
 
 [data-theme="dark"] .input-glow {

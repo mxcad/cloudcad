@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { FileSystemNode } from '../../types/filesystem';
 
 interface ProjectModalProps {
@@ -73,13 +74,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
             描述
           </label>
-          <textarea
+          <Textarea
             value={formData.description}
             onChange={(e) =>
               onFormDataChange({ ...formData, description: e.target.value })
             }
             rows={3}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none overflow-hidden"
+            resize="none"
             placeholder="请输入描述（可选）"
             maxLength={500}
             data-tour="project-desc-input"

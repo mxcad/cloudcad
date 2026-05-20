@@ -392,6 +392,35 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       showToast,
     });
 
+  const multiSelectBar = isMultiSelectMode && selectedNodes.size > 0 ? (
+    <div className="flex items-center gap-4">
+      <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
+      <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
+
+      {(isTrashView || isProjectTrashView) && (
+        <Button variant="ghost" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
+      )}
+
+      {!isTrashView && !isProjectTrashView && (
+        <>
+          <Button variant="ghost" onClick={() => { setMoveSourceNode({ id: 'batch' }); setCopySourceNode(null); setShowSelectFolderModal(true); }} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+          <Button variant="ghost" onClick={() => { setMoveSourceNode(null); setCopySourceNode({ id: 'batch' }); setShowSelectFolderModal(true); }} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+        </>
+      )}
+
+      {(isTrashView || isProjectTrashView) && (
+        <Button variant="ghost" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
+      )}
+
+      {!isTrashView && !isProjectTrashView && (
+        <Button variant="ghost" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
+      )}
+      <Button variant="ghost" onClick={() => { selectedNodes.clear(); setIsMultiSelectMode(false); }} style={{ color: 'var(--text-muted)' }}>
+        取消
+      </Button>
+    </div>
+  ) : undefined;
+
   const showEmpty = displayNodes.length === 0 && !loading && !error;
 
   return (
@@ -401,206 +430,146 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         document.body
       )}
 
-      <div className="max-w-7xl mx-auto space-y-6 relative">
-        <FileSystemHeader
-          mode={mode}
-          isAtRoot={isAtRoot}
-          isTrashView={isTrashView}
-          isProjectTrashView={isProjectTrashView}
-          isPersonalSpaceMode={isPersonalSpaceMode}
-          isProjectRootMode={isProjectRootMode}
-          loading={loading}
-          isFetching={isFetching}
-          searchTerm={searchTerm}
-          viewMode={viewMode}
-          isMultiSelectMode={isMultiSelectMode}
-          selectedNodes={selectedNodes}
-          nodesCount={nodes.length}
-          projectFilter={projectFilter}
-          breadcrumbs={breadcrumbs}
-          canCreateProject={canCreateProject}
-          uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
-          getCurrentParentId={getCurrentParentId}
-          onSetSearchTerm={setSearchTerm}
-          onSetViewMode={setViewMode}
-          onSetIsMultiSelectMode={setIsMultiSelectMode}
-          onSearchSubmit={handleSearchSubmit}
-          onSelectAll={handleSelectAll}
-          onToggleTrashView={handleToggleTrashView}
-          onToggleProjectTrashView={handleToggleProjectTrashView}
-          onClearProjectTrash={handleClearProjectTrash}
-          onClearTrash={handleClearTrash}
-          onProjectFilterChange={setProjectFilter}
-          onRefresh={handleRefresh}
-          onCreateFolder={() => setShowCreateFolderModal(true)}
-          onCreateProject={openCreateProject}
-          onGoBack={handleGoBack}
-          onBreadcrumbNavigate={() => {}}
-          showToast={showToast}
-        />
-      </div>
-
-      <div
-        className="max-w-7xl mx-auto mt-6 rounded-2xl relative min-h-[400px] shadow-sm overflow-visible"
-        style={{
-          background: 'transparent',
-          border: '1px solid var(--border-default)',
-        }}
-      >
-        <div
-          className="overflow-hidden h-full rounded-2xl"
-          {...(!isAtRoot ? fileDropHandlers : {})}
-        >
-          {/* 拖拽上传提示覆盖层 */}
-          {isFileDragOver && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-500/10 border-2 border-dashed border-green-500 rounded-2xl pointer-events-none m-0">
-              <div className="text-green-600 font-medium text-lg">
-                释放文件以上传到当前目录
-              </div>
-            </div>
-          )}
-          <FileSystemStates
-            loading={loading}
-            error={error}
-            isEmpty={showEmpty}
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-shrink-0 max-w-7xl mx-auto w-full space-y-6 relative">
+          <FileSystemHeader
+            mode={mode}
             isAtRoot={isAtRoot}
             isTrashView={isTrashView}
             isProjectTrashView={isProjectTrashView}
+            isPersonalSpaceMode={isPersonalSpaceMode}
+            isProjectRootMode={isProjectRootMode}
+            loading={loading}
+            isFetching={isFetching}
             searchTerm={searchTerm}
-            canCreateProject={canCreateProject}
+            viewMode={viewMode}
+            isMultiSelectMode={isMultiSelectMode}
+            selectedNodes={selectedNodes}
+            nodesCount={nodes.length}
             projectFilter={projectFilter}
+            breadcrumbs={breadcrumbs}
+            canCreateProject={canCreateProject}
+            uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
+            getCurrentParentId={getCurrentParentId}
+            onSetSearchTerm={setSearchTerm}
+            onSetViewMode={setViewMode}
+            onSetIsMultiSelectMode={setIsMultiSelectMode}
+            onSearchSubmit={handleSearchSubmit}
+            onSelectAll={handleSelectAll}
+            onToggleTrashView={handleToggleTrashView}
+            onToggleProjectTrashView={handleToggleProjectTrashView}
+            onClearProjectTrash={handleClearProjectTrash}
+            onClearTrash={handleClearTrash}
+            onProjectFilterChange={setProjectFilter}
             onRefresh={handleRefresh}
+            onCreateFolder={() => setShowCreateFolderModal(true)}
             onCreateProject={openCreateProject}
+            onGoBack={handleGoBack}
+            onBreadcrumbNavigate={() => {}}
+            showToast={showToast}
           />
-
-          {!loading && !error && !showEmpty && (
-            <FileSystemContent
-              nodes={displayNodes}
-              viewMode={viewMode}
-              isMultiSelectMode={isMultiSelectMode}
-              isTrashView={isTrashView}
-              isProjectTrashView={isProjectTrashView}
-              isAtRoot={isAtRoot}
-              selectedNodes={selectedNodes}
-              dropTargetId={dropTargetId}
-              nodePermissions={nodePermissions}
-              projectPermissions={projectPermissionsRecord}
-              paginationMeta={paginationMeta}
-              onNodeSelect={handleNodeSelect}
-              onFileOpen={handleFileOpen}
-              onDownload={handleDownload}
-              onDelete={handleDelete}
-              onPermanentlyDelete={handlePermanentlyDelete}
-              onRename={handleOpenRename}
-              onRefresh={handleRefresh}
-              onRestore={isTrashView || isProjectTrashView ? handleRestoreNode : undefined}
-              onEdit={isAtRoot ? (node: FileSystemNode) => openEditProject(node) : undefined}
-              onDeleteNode={isAtRoot ? (node: FileSystemNode) => {
-                if (isProjectTrashView) {
-                  handlePermanentlyDeleteProject(node.id, node.name);
-                } else {
-                  handleDeleteProject(node.id, node.name);
-                }
-              } : undefined}
-              onShowMembers={isAtRoot ? (node: FileSystemNode) => handleShowMembers(node) : undefined}
-              onShowRoles={isAtRoot ? (node: FileSystemNode) => handleShowRoles(node) : undefined}
-              onMove={handleMove}
-              onCopy={handleCopy}
-              onShowVersionHistory={handleShowVersionHistory}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              fileDropHandlers={fileDropHandlers}
-              isFileDragOver={isFileDragOver}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-              onDeleteProject={handleDeleteProject}
-              onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
-            />
-          )}
         </div>
 
-        {isMultiSelectMode && selectedNodes.size > 0 && (
+        <div
+          className="flex-1 min-h-0 max-w-7xl mx-auto w-full mt-6 rounded-2xl shadow-sm overflow-hidden"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border-default)',
+          }}
+        >
           <div
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-slide-up"
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
-            }}
+            className="h-full rounded-2xl flex flex-col overflow-hidden"
+            {...(!isAtRoot ? fileDropHandlers : {})}
           >
-            <span className="text-sm font-semibold">已选中 {selectedNodes.size} 项</span>
-            <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-
-            {(isTrashView || isProjectTrashView) && (
-              <Button
-                variant="ghost"
-                onClick={handleBatchRestore}
-                className="text-emerald-400 hover:text-white"
+            {/* 拖拽上传提示覆盖层 */}
+            {isFileDragOver && (
+              <div
+                className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl pointer-events-none m-0"
+                style={{
+                  background: 'color-mix(in srgb, var(--primary-500) 8%, transparent)',
+                  border: '2px dashed var(--primary-400)',
+                }}
               >
-                恢复
-              </Button>
-            )}
-
-            {!isTrashView && !isProjectTrashView && (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setMoveSourceNode({ id: 'batch' });
-                    setCopySourceNode(null);
-                    setShowSelectFolderModal(true);
+                <div
+                  className="flex items-center gap-3 px-6 py-3 rounded-xl"
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                   }}
-                  style={{ color: 'var(--text-secondary)' }}
                 >
-                  移动
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setMoveSourceNode(null);
-                    setCopySourceNode({ id: 'batch' });
-                    setShowSelectFolderModal(true);
-                  }}
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  复制
-                </Button>
-              </>
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--primary-500)' }} />
+                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>释放文件以上传到当前目录</span>
+                </div>
+              </div>
             )}
 
-            {(isTrashView || isProjectTrashView) && (
-              <Button
-                variant="ghost"
-                onClick={() => handleBatchDelete(true)}
-                style={{ color: 'var(--error)' }}
-              >
-                彻底删除
-              </Button>
+            {loading || error || showEmpty ? (
+              <div className="flex-1 flex items-center justify-center">
+                <FileSystemStates
+                  loading={loading}
+                  error={error}
+                  isEmpty={showEmpty}
+                  isAtRoot={isAtRoot}
+                  isTrashView={isTrashView}
+                  isProjectTrashView={isProjectTrashView}
+                  searchTerm={searchTerm}
+                  canCreateProject={canCreateProject}
+                  projectFilter={projectFilter}
+                  onRefresh={handleRefresh}
+                  onCreateProject={openCreateProject}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 flex flex-col">
+                <FileSystemContent
+                  nodes={displayNodes}
+                  viewMode={viewMode}
+                  isMultiSelectMode={isMultiSelectMode}
+                  isTrashView={isTrashView}
+                  isProjectTrashView={isProjectTrashView}
+                  isAtRoot={isAtRoot}
+                  selectedNodes={selectedNodes}
+                  dropTargetId={dropTargetId}
+                  nodePermissions={nodePermissions}
+                  projectPermissions={projectPermissionsRecord}
+                  paginationMeta={paginationMeta}
+                  onNodeSelect={handleNodeSelect}
+                  onFileOpen={handleFileOpen}
+                  onDownload={handleDownload}
+                  onDelete={handleDelete}
+                  onPermanentlyDelete={handlePermanentlyDelete}
+                  onRename={handleOpenRename}
+                  onRefresh={handleRefresh}
+                  onRestore={isTrashView || isProjectTrashView ? handleRestoreNode : undefined}
+                  onEdit={isAtRoot ? (node: FileSystemNode) => openEditProject(node) : undefined}
+                  onDeleteNode={isAtRoot ? (node: FileSystemNode) => {
+                    if (isProjectTrashView) {
+                      handlePermanentlyDeleteProject(node.id, node.name);
+                    } else {
+                      handleDeleteProject(node.id, node.name);
+                    }
+                  } : undefined}
+                  onShowMembers={isAtRoot ? (node: FileSystemNode) => handleShowMembers(node) : undefined}
+                  onShowRoles={isAtRoot ? (node: FileSystemNode) => handleShowRoles(node) : undefined}
+                  onMove={handleMove}
+                  onCopy={handleCopy}
+                  onShowVersionHistory={handleShowVersionHistory}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  fileDropHandlers={fileDropHandlers}
+                  isFileDragOver={isFileDragOver}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                  onDeleteProject={handleDeleteProject}
+                  onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
+                  bottomBar={multiSelectBar}
+                />
+              </div>
             )}
-
-            {!isTrashView && !isProjectTrashView && (
-              <Button
-                variant="ghost"
-                onClick={() => handleBatchDelete(false)}
-                style={{ color: 'var(--error)' }}
-              >
-                删除
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              onClick={() => {
-                selectedNodes.clear();
-                setIsMultiSelectMode(false);
-              }}
-              style={{ color: 'var(--text-muted)' }}
-            >
-              取消
-            </Button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Modals */}

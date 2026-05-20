@@ -96,7 +96,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
 }
 
 .loadingIcon {
@@ -112,7 +112,7 @@
 .error {
   padding: var(--space-3) var(--space-4);
   color: var(--error);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   text-align: center;
 }
 
@@ -125,7 +125,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   color: var(--text-muted);
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
 }
 
 .emptyIcon {
@@ -167,7 +167,7 @@
 /* 版本号 */
 .versionNumber {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--info);
   min-width: 36px;
@@ -176,7 +176,7 @@
 
 /* 操作人 */
 .versionAuthor {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   max-width: 60px;
   overflow: hidden;
@@ -186,7 +186,7 @@
 
 /* 时间 */
 .versionTime {
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   margin-left: auto;
   flex-shrink: 0;
@@ -248,7 +248,7 @@
 }
 
 .tooltipTitle {
-  font-size: 0.8125rem;
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--info);
 }
@@ -262,7 +262,7 @@
   align-items: flex-start;
   gap: var(--space-2);
   padding: 2px 0;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
 }
 
 .tooltipLabel {
@@ -287,7 +287,7 @@
 
 .tooltipFooter {
   padding: var(--space-2) var(--space-3);
-  font-size: 0.6875rem;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border-subtle);

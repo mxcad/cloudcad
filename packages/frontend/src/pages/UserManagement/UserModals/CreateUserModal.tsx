@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -100,15 +101,12 @@ export function CreateUserModal({
         </div>
         <div className="form-group">
           <label className="form-label">角色 <span className="required">*</span></label>
-          <select
+          <Select
             value={formData.roleId}
-            onChange={(e) => onFormChange('roleId', e.target.value)}
-            className="form-select"
-          >
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>{role.name}</option>
-            ))}
-          </select>
+            onChange={(value) => onFormChange('roleId', value)}
+            options={roles.map((role) => ({ value: role.id, label: role.name }))}
+            placeholder="请选择角色"
+          />
         </div>
       </form>
     </Modal>

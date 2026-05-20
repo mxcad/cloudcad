@@ -23,6 +23,8 @@ import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
+import { RangeExportDialog } from '../components/range-export/RangeExportDialog';
+import { useRangeExportStore } from '@/stores/rangeExportStore';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
@@ -188,6 +190,35 @@ export const CADEditorDirect: React.FC = () => {
   // 登录提示状态
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [loginPromptAction, setLoginPromptAction] = useState<string>('');
+
+  // 范围导出弹窗状态
+  const [showRangeExport, setShowRangeExport] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('openRangeExport') === 'true';
+  });
+
+  // 打开范围导出 + 联动 store
+  const openRangeExport = useCallback(() => {
+    setShowRangeExport(true);
+    useRangeExportStore.getState().setOpen(true);
+  }, []);
+
+  // URL 中带有 openRangeExport=true → 文件加载完成后自动打开
+  useEffect(() => {
+    if (!showRangeExport) return;
+    const handleLoadComplete = () => {
+      useRangeExportStore.getState().setOpen(true);
+    };
+    window.addEventListener('mxcad-file-open-complete', handleLoadComplete);
+    return () => window.removeEventListener('mxcad-file-open-complete', handleLoadComplete);
+  }, [showRangeExport]);
+
+  // 监听 open-range-export 事件
+  useEffect(() => {
+    const handler = () => openRangeExport();
+    window.addEventListener('open-range-export', handler);
+    return () => window.removeEventListener('open-range-export', handler);
+  }, [openRangeExport]);
 
   // 另存为弹窗状态
   const [showSaveAsModal, setShowSaveAsModal] = useState(false);
@@ -1490,6 +1521,14 @@ export const CADEditorDirect: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* 范围导出弹窗 */}
+            <RangeExportDialog
+              isOpen={showRangeExport && useRangeExportStore.getState().isOpen}
+              onClose={() => {
+                setShowRangeExport(false);
+                useRangeExportStore.getState().setOpen(false);
+              }}
+            />
             {/* 下载格式选择弹窗 */}
             <DownloadFormatModal
               isOpen={showDownloadFormatModal}

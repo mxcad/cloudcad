@@ -2,6 +2,7 @@ import type React from 'react';
 import { Search, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Z_LAYERS } from '@/constants/layers';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 export interface AutocompleteItem {
   key: string;
@@ -76,15 +77,16 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
               />
             )}
             {showClear && !loading && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-[rgba(255,255,255,0.1)]"
-                style={{ color: 'var(--text-muted)', width: 18, height: 18 }}
-                title="清除"
-              >
-                <X size={12} />
-              </button>
+              <Tooltip content="清除">
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-[rgba(255,255,255,0.1)]"
+                  style={{ color: 'var(--text-muted)', width: 18, height: 18 }}
+                >
+                  <X size={12} />
+                </button>
+              </Tooltip>
             )}
           </>
         }

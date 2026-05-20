@@ -243,10 +243,10 @@ export function showUnsavedChangesDialog(): Promise<
               <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
             </svg>
           </div>
-          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});">
+          <h3 style="margin: 0 0 8px 0; font-size: var(--text-xl); font-weight: 600; color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});">
             未保存的更改
           </h3>
-          <p style="margin: 0; font-size: 14px; color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});">
+          <p style="margin: 0; font-size: var(--text-md); color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});">
             当前图纸有未保存的更改，是否保存？
           </p>
         </div>
@@ -264,7 +264,7 @@ export function showUnsavedChangesDialog(): Promise<
             border-radius: 12px;
             background: transparent;
             color: var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'});
-            font-size: 14px;
+            font-size: var(--text-md);
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -277,7 +277,7 @@ export function showUnsavedChangesDialog(): Promise<
             border-radius: 12px;
             background: transparent;
             color: var(--error, #ef4444);
-            font-size: 14px;
+            font-size: var(--text-md);
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -290,7 +290,7 @@ export function showUnsavedChangesDialog(): Promise<
             border-radius: 12px;
             background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#33adff' : '#0080cc'}), var(--accent-600, ${isDark ? '#22d3ee' : '#0891b2'}));
             color: white;
-            font-size: 14px;
+            font-size: var(--text-md);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -2705,6 +2705,13 @@ MxFun.addCommand('Mx_InsertImageWithUpload', () => {
 
     globalShowToast('图片已插入，将在保存时自动上传', 'success');
   });
+});
+
+/**
+ * Mx_RangeExport 命令：打开范围导出对话框
+ */
+MxFun.addCommand('Mx_RangeExport', () => {
+  window.dispatchEvent(new CustomEvent('open-range-export'));
 });
 
 /**

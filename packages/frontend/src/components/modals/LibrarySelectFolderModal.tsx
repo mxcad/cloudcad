@@ -147,12 +147,14 @@ export const LibrarySelectFolderModal: React.FC<
     return nodes.map((node) => (
       <div key={node.id}>
         <div
-          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
-            selectedFolderId === node.id
-              ? 'bg-blue-100 text-blue-700'
-              : 'hover:bg-gray-100'
-          }`}
-          style={{ paddingLeft: `${depth * 20 + 8}px` }}
+          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-100`}
+          style={{
+            paddingLeft: `${depth * 20 + 8}px`,
+            ...(selectedFolderId === node.id && {
+              background: 'var(--primary-50)',
+              color: 'var(--primary-700)',
+            }),
+          }}
           onClick={() => handleSelectFolder(node.id)}
         >
           {node.isRoot || node.hasChildren ? (
@@ -185,7 +187,7 @@ export const LibrarySelectFolderModal: React.FC<
           <span className="flex-1 truncate">{node.name}</span>
 
           {selectedFolderId === node.id && (
-            <Check size={16} className="text-blue-500" />
+            <Check size={16} style={{ color: 'var(--primary-600)' }} />
           )}
         </div>
 

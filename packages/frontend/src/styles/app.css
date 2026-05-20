@@ -4,11 +4,11 @@
 @theme {
   --text-xs: 0.6875rem;
   --text-sm: 0.75rem;
-  --text-base: 0.8125rem;
-  --text-lg: 1rem;
-  --text-xl: 1.125rem;
-  --text-2xl: 1.25rem;
-  --text-3xl: 1.5rem;
+  --text-base: 0.75rem;
+  --text-lg: 0.875rem;
+  --text-xl: 1rem;
+  --text-2xl: 1.125rem;
+  --text-3xl: 1.25rem;
 }
 
 /* CloudCAD 主题设计 - 工程蓝专业风格 */
@@ -106,6 +106,7 @@
   }
 
   body {
+    font-size: var(--text-base);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -837,6 +838,16 @@ body {
   color: var(--text-muted);
 }
 
+/* Date 输入框日历图标主题适配 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+  cursor: pointer;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
 /* 深色主题下的模态框 - 排除 mxcad-app 内部的对话框 */
 [data-theme="dark"] [role="dialog"]:not(#mxcad-global-container [role="dialog"]) {
   background-color: var(--bg-elevated);
@@ -899,4 +910,13 @@ body {
 /* 深色主题下的 glass 效果 */
 [data-theme="dark"] .backdrop-blur-xl {
   background: rgba(26, 29, 33, 0.8) !important;
+}
+
+/* ============================================
+   菜单宽度自适应覆盖 - 确保不受 Radix 内部动态样式干扰
+   ============================================ */
+[data-radix-dropdown-menu-content],
+[data-menu-content] {
+  min-width: 0 !important;
+  width: auto !important;
 }

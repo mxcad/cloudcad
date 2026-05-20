@@ -3,6 +3,7 @@ import { RefreshCw, X, UserPlus, AlertCircle, Loader2, ArrowUpRight } from 'luci
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
 import { Modal } from '@/components/ui/Modal';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { TruncateText } from '@/components/ui/TruncateText';
 import { fileSystemControllerGetProjectMembers, fileSystemControllerAddProjectMember, fileSystemControllerRemoveProjectMember, fileSystemControllerUpdateProjectMember, fileSystemControllerTransferProject } from '@/api-sdk';
@@ -686,50 +687,52 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       </select>
                     )}
                     {!isOwner && canManageMembers && (
-                      <button
-                        onClick={() => {
-                          setTransferTarget(member);
-                          setShowTransferModal(true);
-                        }}
-                        className="p-1.5 rounded flex-shrink-0"
-                        style={{ color: 'var(--text-muted)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color =
-                            'var(--primary-600)';
-                          e.currentTarget.style.background =
-                            'var(--primary-50)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color =
-                            'var(--text-muted)';
-                          e.currentTarget.style.background =
-                            'transparent';
-                        }}
-                        title="转让项目所有权"
-                      >
-                        <ArrowUpRight size={16} />
-                      </button>
+                      <Tooltip content="转让项目所有权">
+                        <button
+                          onClick={() => {
+                            setTransferTarget(member);
+                            setShowTransferModal(true);
+                          }}
+                          className="p-1.5 rounded flex-shrink-0"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color =
+                              'var(--primary-600)';
+                            e.currentTarget.style.background =
+                              'var(--primary-50)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color =
+                              'var(--text-muted)';
+                            e.currentTarget.style.background =
+                              'transparent';
+                          }}
+                        >
+                          <ArrowUpRight size={16} />
+                        </button>
+                      </Tooltip>
                     )}
                     {!isOwner && canManageMembers && (
-                      <button
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="p-1.5 rounded flex-shrink-0"
-                        style={{ color: 'var(--text-muted)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = 'var(--error)';
-                          e.currentTarget.style.background =
-                            'var(--error-light)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color =
-                            'var(--text-muted)';
-                          e.currentTarget.style.background =
-                            'transparent';
-                        }}
-                        title="移除成员"
-                      >
-                        <X size={16} />
-                      </button>
+                      <Tooltip content="移除成员">
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="p-1.5 rounded flex-shrink-0"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--error)';
+                            e.currentTarget.style.background =
+                              'var(--error-light)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color =
+                              'var(--text-muted)';
+                            e.currentTarget.style.background =
+                              'transparent';
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 );

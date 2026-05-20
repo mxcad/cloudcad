@@ -70,6 +70,7 @@
     "handlebars": "^4.7.8",
     "http-proxy-middleware": "^3.0.5",
     "ioredis": "^5.8.2",
+    "jszip": "^3.10.1",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.11",
     "passport": "^0.7.0",

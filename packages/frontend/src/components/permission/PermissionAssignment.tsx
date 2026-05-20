@@ -329,7 +329,7 @@ const permissionStyles = `
   }
 
   .group-label {
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -337,7 +337,7 @@ const permissionStyles = `
   }
 
   .group-count {
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--primary-600);
     padding: 0.25rem 0.75rem;
@@ -435,7 +435,7 @@ const permissionStyles = `
 
   /* 权限标签 */
   .permission-label {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
@@ -490,7 +490,7 @@ const permissionStyles = `
     }
 
     .group-label {
-      font-size: 0.8125rem;
+      font-size: var(--text-base);
     }
   }
 `;
@@ -540,7 +540,7 @@ const configModalStyles = `
   }
 
   .section-label {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -562,7 +562,7 @@ const configModalStyles = `
   }
 
   .field-label {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     font-weight: 500;
     color: var(--text-secondary);
   }
@@ -574,7 +574,7 @@ const configModalStyles = `
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     color: var(--text-primary);
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
     transition: all 0.25s ease;
     outline: none;
   }
@@ -613,7 +613,7 @@ const configModalStyles = `
     border: 1px solid var(--warning);
     border-radius: var(--radius-lg);
     color: var(--warning);
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     font-weight: 500;
   }
 
@@ -638,7 +638,7 @@ const configModalStyles = `
   }
 
   .permissions-count {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     font-weight: 600;
     color: var(--primary-600);
     padding: 0.375rem 1rem;

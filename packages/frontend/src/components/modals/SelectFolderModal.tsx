@@ -165,14 +165,15 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     return nodes.map((node) => (
       <div key={node.id}>
         <div
-          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200
-            ${
-              selectedFolderId === node.id
-                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                : 'hover:bg-slate-50 border border-transparent'
-            }
-          `}
-          style={{ paddingLeft: `${level * 20 + 8}px` }}
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 hover:bg-slate-50 border border-transparent`}
+          style={{
+            paddingLeft: `${level * 20 + 8}px`,
+            ...(selectedFolderId === node.id && {
+              background: 'var(--primary-50)',
+              color: 'var(--primary-700)',
+              borderColor: 'var(--primary-200)',
+            }),
+          }}
           onClick={() => selectFolder(node.id)}
         >
           {/* 展开/折叠图标 */}
@@ -203,10 +204,9 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
           <Folder
             size={18}
             className={`flex-shrink-0 transition-colors ${
-              selectedFolderId === node.id
-                ? 'text-indigo-600'
-                : 'text-amber-500'
+              selectedFolderId === node.id ? '' : 'text-amber-500'
             }`}
+            style={{ color: selectedFolderId === node.id ? 'var(--primary-600)' : undefined }}
           />
 
           {/* 文件夹名称 */}
@@ -221,7 +221,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
           {/* 选中标记 */}
           {selectedFolderId === node.id && (
-            <Check size={18} className="text-indigo-600 flex-shrink-0" />
+            <Check size={18} className="flex-shrink-0" style={{ color: 'var(--primary-600)' }} />
           )}
         </div>
 
@@ -269,21 +269,27 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {/* 项目信息 */}
         {projectName && projectId && (
           <div 
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer
-              ${selectedFolderId === projectId ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 border-slate-200'}
-            `}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer bg-slate-50 border-slate-200`}
+            style={{
+              ...(selectedFolderId === projectId && {
+                background: 'var(--primary-50)',
+                color: 'var(--primary-700)',
+                borderColor: 'var(--primary-200)',
+              }),
+            }}
             onClick={() => selectFolder(projectId)}
           >
             <Folder 
               size={16} 
-              className={selectedFolderId === projectId ? 'text-indigo-600' : 'text-amber-500'} 
+              className={selectedFolderId === projectId ? '' : 'text-amber-500'} 
+              style={{ color: selectedFolderId === projectId ? 'var(--primary-600)' : undefined }}
             />
-            <span className={`font-medium ${selectedFolderId === projectId ? 'text-indigo-700' : ''}`} style={{ color: selectedFolderId === projectId ? 'var(--primary-700)' : 'var(--text-secondary)' }}>
+            <span className="font-medium" style={{ color: selectedFolderId === projectId ? 'var(--primary-700)' : 'var(--text-secondary)' }}>
               {projectName}
             </span>
             <span className="ml-auto" style={{ color: 'var(--text-muted)' }}>项目根目录</span>
             {selectedFolderId === projectId && (
-              <Check size={16} className="text-indigo-600" />
+              <Check size={16} style={{ color: 'var(--primary-600)' }} />
             )}
           </div>
         )}
@@ -291,7 +297,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {/* 加载状态 */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 size={32} className="text-indigo-600 animate-spin mb-3" />
+            <Loader2 size={32} className="animate-spin mb-3" style={{ color: 'var(--primary-600)' }} />
             <p style={{ color: 'var(--text-tertiary)' }}>加载文件夹列表...</p>
           </div>
         )}

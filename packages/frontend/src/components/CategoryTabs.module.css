@@ -21,11 +21,11 @@
   flex-direction: column;
   gap: 0;
   padding: 12px 0;
-  background: var(--bg-secondary);
+  background: var(--bg-elevated);
 }
 
 [data-theme="dark"] .categoryTabsContainer {
-  background: var(--sidebar-bg, #212832);
+  background: var(--bg-elevated);
 }
 
 /* 加载遮罩 */
@@ -75,7 +75,7 @@
 }
 
 [data-theme="dark"] .categoryRow {
-  border-bottom-color: rgba(58, 67, 82, 0.5);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .categoryContainer {
@@ -86,6 +86,11 @@
   flex-wrap: wrap;
   max-height: 166px;
   overflow-y: auto;
+}
+
+.categoryContainer button,
+.categoryContainer span[class*="rounded"] {
+  border-radius: 2px !important;
 }
 
 /* ============================================
@@ -121,13 +126,13 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--bg-secondary);
+  background: var(--bg-elevated);
   max-height: 166px;
   overflow-y: auto;
 }
 
 [data-theme="dark"] .categorySelectGroup {
-  background: var(--sidebar-bg, #212832);
+  background: var(--bg-elevated);
 }
 
 .categorySelectRow {
@@ -138,7 +143,7 @@
 
 .categorySelectLabel {
   width: 52px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-secondary, #8b95a5);
   flex-shrink: 0;
 }
@@ -146,7 +151,7 @@
 .categorySelect {
   flex: 1;
   padding: 2px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-primary, #e5e7eb);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, #212832);
@@ -166,7 +171,7 @@
 .categoryClearBtn {
   flex: 1;
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-secondary, #8b95a5);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sidebar-border, #212832);

@@ -48,14 +48,14 @@ export const runtimeConfigStyles = `
   }
 
   .page-title {
-    font-size: 1.75rem;
+    font-size: var(--text-3xl);
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.02em;
   }
 
   .page-subtitle {
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     color: var(--text-tertiary);
   }
 
@@ -84,7 +84,7 @@ export const runtimeConfigStyles = `
   }
 
   .stat-value {
-    font-size: 1.5rem;
+    font-size: var(--text-3xl);
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1;
@@ -99,7 +99,7 @@ export const runtimeConfigStyles = `
   }
 
   .stat-label {
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -197,13 +197,13 @@ export const runtimeConfigStyles = `
   }
 
   .card-title {
-    font-size: 1.125rem;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--text-primary);
   }
 
   .card-count {
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     color: var(--text-tertiary);
   }
 
@@ -275,7 +275,7 @@ export const runtimeConfigStyles = `
 
   .config-key {
     font-family: var(--font-family-mono);
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     font-weight: 600;
     color: var(--text-primary);
   }
@@ -287,7 +287,7 @@ export const runtimeConfigStyles = `
   }
 
   .config-description {
-    font-size: 0.8125rem;
+    font-size: var(--text-base);
     color: var(--text-tertiary);
     line-height: 1.5;
     margin: 0;
@@ -312,7 +312,7 @@ export const runtimeConfigStyles = `
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     color: var(--text-primary);
-    font-size: 0.875rem;
+    font-size: var(--text-md);
     font-family: var(--font-family-mono);
     transition: all 0.2s ease;
   }
@@ -354,7 +354,7 @@ export const runtimeConfigStyles = `
   }
 
   .input-unit {
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-tertiary);
     background: var(--bg-tertiary);
@@ -543,7 +543,7 @@ export const runtimeConfigStyles = `
   }
 
   .empty-state h3 {
-    font-size: 1.25rem;
+    font-size: var(--text-2xl);
     font-weight: 600;
     color: var(--text-secondary);
     margin: 0 0 var(--space-2);
@@ -551,7 +551,7 @@ export const runtimeConfigStyles = `
 
   .empty-state p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-md);
   }
 
   /* ===== 动画 ===== */

@@ -94,6 +94,7 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
             tabIndex={-1}
             className="absolute right-4"
             icon={showPassword ? EyeOff : Eye}
+            tooltip={showPassword ? '隐藏密码' : '显示密码'}
           />
           <div className="input-glow" />
         </div>

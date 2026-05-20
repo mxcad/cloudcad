@@ -428,16 +428,12 @@ export const FileItem: React.FC<FileItemProps> = ({
           ${!showSelection && !isDropTarget && galleryMode ? 'hover:shadow-lg' : ''}
         `}
         style={{
-          background: showSelection
+          background: showSelection || isDropTarget
             ? 'var(--primary-50)'
-            : isDropTarget
-              ? 'var(--success-light)'
-              : 'var(--bg-drawing-card)',
-          border: showSelection
+            : 'var(--bg-drawing-card)',
+          border: showSelection || isDropTarget
             ? '2px solid var(--primary-500)'
-            : isDropTarget
-              ? '2px solid var(--success)'
-              : undefined,
+            : undefined,
         }}
         onMouseEnter={(e) => {
           setIsHovered(true);

@@ -71,6 +71,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
                 size="xs"
                 icon={showPassword.old ? EyeOff : Eye}
                 onClick={() => onTogglePassword('old')}
+                tooltip={showPassword.old ? '隐藏密码' : '显示密码'}
               />
               <div className="input-glow" />
             </div>
@@ -124,6 +125,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               size="xs"
               icon={showPassword.new ? EyeOff : Eye}
               onClick={() => onTogglePassword('new')}
+              tooltip={showPassword.new ? '隐藏密码' : '显示密码'}
             />
             <div className="input-glow" />
           </div>
@@ -171,6 +173,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               size="xs"
               icon={showPassword.confirm ? EyeOff : Eye}
               onClick={() => onTogglePassword('confirm')}
+              tooltip={showPassword.confirm ? '隐藏密码' : '显示密码'}
             />
             <div className="input-glow" />
           </div>

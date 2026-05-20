@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
 import { getRoleDisplayName } from '@/constants/permissions';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -96,27 +97,25 @@ export function EditUserModal({
         </div>
         <div className="form-group">
           <label className="form-label">角色 <span className="required">*</span></label>
-          <select
+          <Select
             value={formData.roleId}
-            onChange={(e) => onFormChange('roleId', e.target.value)}
-            className="form-select"
-          >
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>{getRoleDisplayName(role.name, role.isSystem ?? false)}</option>
-            ))}
-          </select>
+            onChange={(value) => onFormChange('roleId', value)}
+            options={roles.map((role) => ({ value: role.id, label: getRoleDisplayName(role.name, role.isSystem ?? false) }))}
+            placeholder="请选择角色"
+          />
         </div>
         <div className="form-group">
           <label className="form-label">账户状态</label>
-          <select
+          <Select
             value={formData.status}
-            onChange={(e) => onFormChange('status', e.target.value)}
-            className="form-select"
-          >
-            <option value="ACTIVE">正常</option>
-            <option value="INACTIVE">未激活</option>
-            <option value="SUSPENDED">已禁用</option>
-          </select>
+            onChange={(value) => onFormChange('status', value)}
+            options={[
+              { value: 'ACTIVE', label: '正常' },
+              { value: 'INACTIVE', label: '未激活' },
+              { value: 'SUSPENDED', label: '已禁用' },
+            ]}
+            placeholder="请选择状态"
+          />
         </div>
       </form>
     </Modal>

@@ -22,7 +22,10 @@
   --bg-tertiary: #f1f5f9;         /* 三级背景 - 悬停 */
   --bg-card: #E5E5E5;             /* 卡片背景 - 图纸库/图块库卡片 */
   --bg-elevated: #ffffff;         /* 提升层 - 弹窗 */
-  --bg-overlay: transparent; /* 遮罩层（默认透明，可通过 overlayClassName 自定义） */
+  --bg-overlay: rgba(15, 23, 42, 0.4); /* 遮罩层 */
+
+  --menu-bg: #ffffff;             /* 菜单列表背景 */
+  --menu-highlight: #D3D3D3;      /* 菜单列表高亮 */
 
   /* ----------------------------------------
      1.2 文字层次 - 从高对比到低对比
@@ -214,13 +217,13 @@
      1.12 字体大小系统
      ---------------------------------------- */
   --text-xs: 0.6875rem;    /* 11px - 辅助标签、角标 */
-  --text-sm: 0.75rem;      /* 12px - 次要文字、表格内容、菜单项 */
-  --text-base: 0.8125rem;  /* 13px - 正文默认 */
-  --text-md: 0.875rem;     /* 14px - 强调文字、表单标签 */
-  --text-lg: 1rem;         /* 16px - 小标题 */
-  --text-xl: 1.125rem;     /* 18px - 标题 */
-  --text-2xl: 1.25rem;     /* 20px - 大标题 */
-  --text-3xl: 1.5rem;      /* 24px - 页面标题 */
+  --text-sm: 0.75rem;      /* 12px - 次要文字 */
+  --text-base: 0.75rem;    /* 12px - 正文默认（全局基准字体） */
+  --text-md: 0.8125rem;    /* 13px - 强调文字 */
+  --text-lg: 0.875rem;     /* 14px - 小标题 */
+  --text-xl: 1rem;         /* 16px - 标题 */
+  --text-2xl: 1.125rem;    /* 18px - 大标题 */
+  --text-3xl: 1.25rem;     /* 20px - 页面标题 */
 }
 
 /* ============================================
@@ -237,8 +240,11 @@
   --bg-tertiary: #22262b;         /* 三级背景 - 悬停、选中 */
   --bg-card: #3A4352;             /* 卡片背景 - 图纸库/图块库卡片 */
   --bg-elevated: #2a2f35;         /* 提升层 - 弹窗、下拉菜单 */
-  --bg-overlay: transparent; /* 遮罩层（默认透明，可通过 overlayClassName 自定义） */
-  
+  --bg-overlay: rgba(0, 0, 0, 0.6); /* 遮罩层 */
+
+  --menu-bg: #212832;             /* 菜单列表背景 */
+  --menu-highlight: #474D55;      /* 菜单列表高亮 */
+
   /* CAD编辑器侧边栏专用颜色 - 与CAD画布完美融合 */
   --sidebar-bg: #3A4352;          /* 侧边栏背景 - 与CAD画布一致 */
   --sidebar-border: #212832;      /* 侧边栏边框 - 微妙的分割线 */
@@ -570,29 +576,34 @@
   border-bottom: none;
 }
 
-/* 4.10 下拉菜单 */
+/* 4.10 下拉菜单 / 弹出菜单 */
 .dropdown-menu-theme {
-  background: var(--bg-elevated);
+  background: var(--menu-bg);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   min-width: 12rem;
-  padding: var(--space-2);
+  padding: 4px;
 }
 
 .dropdown-item-theme {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  width: 100%;
+  padding: 5px var(--space-2);
+  border-radius: 4px;
   color: var(--text-secondary);
-  border-radius: var(--radius-md);
-  transition: all 0.15s ease;
-  text-decoration: none;
+  font-size: var(--text-sm);
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
 }
 
-.dropdown-item-theme:hover {
-  background: var(--bg-tertiary);
+.dropdown-item-theme:hover,
+.dropdown-item-theme[data-highlighted] {
+  background: var(--menu-highlight);
   color: var(--text-primary);
 }
 

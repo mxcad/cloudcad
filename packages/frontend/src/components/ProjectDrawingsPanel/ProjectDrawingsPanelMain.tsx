@@ -679,7 +679,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           ) : undefined
           }
           renderItem={renderFileItem}
-          toolbarExtra={isLibraryMode ? undefined : <Tooltip content="刷新" position="bottom"><Button variant="ghost" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" /></Tooltip>}
+          toolbarExtra={isLibraryMode ? undefined : <Button variant="ghost" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" />}
           loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
         />
         <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />

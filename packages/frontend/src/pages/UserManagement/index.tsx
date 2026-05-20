@@ -1,14 +1,8 @@
-import { AlertCircle } from 'lucide-react';
-import { UserPlus } from 'lucide-react';
-import { CheckCircle2 } from 'lucide-react';
-import { XCircle } from 'lucide-react';
-import { RefreshCw } from 'lucide-react';
-import { Users } from 'lucide-react';
-import { Sparkles } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, UserPlus, CheckCircle2, XCircle, RefreshCw, Users, Sparkles, Loader2 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Tab, Tabs, Tag } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -404,12 +398,6 @@ export const UserManagement = () => {
         onSortByChange={setSortBy}
         sortOrder={sortOrder}
         onSortOrderChange={setSortOrder}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalUsers={totalUsers}
-        pageSize={pageSize}
-        loading={loading}
-        onPageChange={setCurrentPage}
       />
 
       <div className="users-table-card">
@@ -422,6 +410,19 @@ export const UserManagement = () => {
           onRestore={handleRestore}
           onOpenQuota={handleOpenQuota}
           userTab={userTab}
+          loading={loading}
+        />
+      </div>
+
+      <div className="pagination-bar">
+        <Pagination
+          meta={{
+            total: totalUsers,
+            page: currentPage,
+            limit: pageSize,
+            totalPages: totalPages || 1,
+          }}
+          onPageChange={setCurrentPage}
           loading={loading}
         />
       </div>

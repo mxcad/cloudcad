@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Filter } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Button } from '../components/ui/Button';
 import { Pagination } from '../components/ui/Pagination';
 import { Tag } from '../components/ui/Tag';
@@ -244,37 +245,31 @@ export const AuditLogPage: React.FC = () => {
             <label className="audit-label">
               操作类型
             </label>
-            <select
-              className="audit-select"
+            <Select
               value={filters.action}
-              onChange={(e) => handleFilterChange('action', e.target.value)}
-            >
-              <option value="">全部</option>
-              {Object.values(AuditAction).map((action) => (
-                <option key={action} value={action}>
-                  {getActionDisplayName(action)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => handleFilterChange('action', value)}
+              options={Object.values(AuditAction).map((action) => ({
+                value: action,
+                label: getActionDisplayName(action),
+              }))}
+              placeholder="全部"
+              clearable
+            />
           </div>
           <div>
             <label className="audit-label">
               资源类型
             </label>
-            <select
-              className="audit-select"
+            <Select
               value={filters.resourceType}
-              onChange={(e) =>
-                handleFilterChange('resourceType', e.target.value)
-              }
-            >
-              <option value="">全部</option>
-              {Object.values(ResourceType).map((type) => (
-                <option key={type} value={type}>
-                  {getResourceTypeDisplayName(type)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => handleFilterChange('resourceType', value)}
+              options={Object.values(ResourceType).map((type) => ({
+                value: type,
+                label: getResourceTypeDisplayName(type),
+              }))}
+              placeholder="全部"
+              clearable
+            />
           </div>
           <div>
             <label className="audit-label">
@@ -311,15 +306,16 @@ export const AuditLogPage: React.FC = () => {
             <label className="audit-label">
               状态
             </label>
-            <select
-              className="audit-select"
+            <Select
               value={filters.success}
-              onChange={(e) => handleFilterChange('success', e.target.value)}
-            >
-              <option value="">全部</option>
-              <option value="true">成功</option>
-              <option value="false">失败</option>
-            </select>
+              onChange={(value) => handleFilterChange('success', value)}
+              options={[
+                { value: 'true', label: '成功' },
+                { value: 'false', label: '失败' },
+              ]}
+              placeholder="全部"
+              clearable
+            />
           </div>
         </div>
         <div className="audit-filter-actions">
