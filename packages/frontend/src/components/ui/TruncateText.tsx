@@ -213,7 +213,7 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
           ...style,
           overflow: 'hidden',
           whiteSpace: 'nowrap',
-          textOverflow: showEllipsis ? ellipsis : 'clip',
+          textOverflow: showEllipsis ? 'ellipsis' : 'clip',
         }}
       >
         {truncatedText}
@@ -230,7 +230,8 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
     return textElement;
   }
 
-  // --- CSS 截断路径（默认）：使用 CSS text-overflow ---
+  // --- CSS 截断路径（默认）：使用 CSS text-overflow + native title ---
+  // 注意：不使用 <Tooltip> 包装，避免 inline-flex 容器破坏 width:100% 约束
   const cssStyle: React.CSSProperties = {
     ...style,
     overflow: 'hidden',
@@ -240,33 +241,23 @@ export const TruncateText: React.FC<TruncateTextProps> = ({
   if (mode === 'start') {
     cssStyle.direction = 'rtl';
     cssStyle.textAlign = 'left';
-    cssStyle.textOverflow = showEllipsis ? ellipsis : 'clip';
+    cssStyle.textOverflow = showEllipsis ? 'ellipsis' : 'clip';
   } else if (mode === 'end') {
-    cssStyle.textOverflow = showEllipsis ? ellipsis : 'clip';
+    cssStyle.textOverflow = showEllipsis ? 'ellipsis' : 'clip';
   } else if (mode === 'clip') {
     cssStyle.textOverflow = 'clip';
   }
 
-  const textElement = (
+  return (
     <span
       ref={textRef}
       className={`${className} ${responsiveClasses.join(' ')}`}
       style={cssStyle}
+      title={showTooltip && tooltipDisplayText ? tooltipDisplayText : undefined}
     >
       {children}
     </span>
   );
-
-  // CSS 截断路径：基于实际溢出检测决定是否显示 tooltip
-  if (showTooltip && tooltipDisplayText) {
-    return (
-      <Tooltip content={tooltipDisplayText} position="top" delay={300}>
-        {textElement}
-      </Tooltip>
-    );
-  }
-
-  return textElement;
 };
 
 export const FileNameText: React.FC<Omit<TruncateTextProps, 'mode'>> = (

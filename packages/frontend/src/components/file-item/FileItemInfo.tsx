@@ -59,11 +59,8 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             className="font-medium overflow-hidden w-full"
             style={{
               minWidth: 0,
-              display: 'flex',
-              justifyContent: 'center',
               fontSize: resolvedFontSize,
               color: 'var(--text-primary)',
-              textOverflow: 'ellipsis',
             }}
           >
             {galleryMode ? (
