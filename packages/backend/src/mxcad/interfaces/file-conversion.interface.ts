@@ -83,14 +83,6 @@ export interface ConversionOptions {
    * - "color" - 彩色
    */
   colorPolicy?: string;
-  /** 打印范围左下角 X 坐标（用于 print_to_pdf 命令） */
-  bd_pt1_x?: string;
-  /** 打印范围左下角 Y 坐标（用于 print_to_pdf 命令） */
-  bd_pt1_y?: string;
-  /** 打印范围右上角 X 坐标（用于 print_to_pdf 命令） */
-  bd_pt2_x?: string;
-  /** 打印范围右上角 Y 坐标（用于 print_to_pdf 命令） */
-  bd_pt2_y?: string;
   /** JPG 输出参数（传递给 cadtojpg 工具）
    * 用于 /convert 接口，生成 JPG 预览图
    * 参数格式：命令行参数字符串，多个参数用空格分隔

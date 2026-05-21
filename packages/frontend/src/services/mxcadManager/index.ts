@@ -1061,7 +1061,7 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
  * @param file 要上传的文件
  * @param noCache 是否无缓存打开（强制重新上传）
  */
-async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> {
+export async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> {
   try {
     showGlobalLoading('正在计算文件哈希...');
     const hash = await calculateFileHash(file);
@@ -2705,13 +2705,6 @@ MxFun.addCommand('Mx_InsertImageWithUpload', () => {
 
     globalShowToast('图片已插入，将在保存时自动上传', 'success');
   });
-});
-
-/**
- * Mx_RangeExport 命令：打开范围导出对话框
- */
-MxFun.addCommand('Mx_RangeExport', () => {
-  window.dispatchEvent(new CustomEvent('open-range-export'));
 });
 
 /**

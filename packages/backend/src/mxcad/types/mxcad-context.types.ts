@@ -79,15 +79,4 @@ export interface ConvertServerFileParam {
   async?: string;
   /** 结果回调 URL */
   resultposturl?: string;
-
-  // ========== 范围导出参数 ==========
-
-  /** 范围导出：左下角 X 坐标 */
-  bd_pt1_x?: string;
-  /** 范围导出：左下角 Y 坐标 */
-  bd_pt1_y?: string;
-  /** 范围导出：右上角 X 坐标 */
-  bd_pt2_x?: string;
-  /** 范围导出：右上角 Y 坐标 */
-  bd_pt2_y?: string;
 }

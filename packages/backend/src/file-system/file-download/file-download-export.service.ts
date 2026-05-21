@@ -172,12 +172,6 @@ export class FileDownloadExportService {
       width?: string;
       height?: string;
       colorPolicy?: string;
-    },
-    range?: {
-      pt1X: number;
-      pt1Y: number;
-      pt2X: number;
-      pt2Y: number;
     }
   ): Promise<{
     stream: NodeJS.ReadableStream;
@@ -262,15 +256,6 @@ export class FileDownloadExportService {
             conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
           }
 
-          // 有坐标 → 范围导出（裁剪/打印）
-          if (range) {
-            conversionOptions.cmd = format === CadDownloadFormat.PDF ? 'print_to_pdf' : 'cut_dwg';
-            conversionOptions.bd_pt1_x = String(range.pt1X);
-            conversionOptions.bd_pt1_y = String(range.pt1Y);
-            conversionOptions.bd_pt2_x = String(range.pt2X);
-            conversionOptions.bd_pt2_y = String(range.pt2Y);
-          }
-
           this.logger.log(
             `开始转换文件: ${originalFilename} -> ${targetFilename}`
           );
@@ -278,28 +263,24 @@ export class FileDownloadExportService {
           const result =
             await mxCadService.convertServerFile(conversionOptions);
 
-          const resultObj = result as { code?: number; message?: string };
-          if (resultObj.code !== 0) {
-            this.logger.error(`文件转换失败: ${resultObj.message}`);
-            throw new BadRequestException(`文件转换失败: ${resultObj.message}`);
+          const resultObj = result as Record<string, unknown>;
+          if (!resultObj || typeof resultObj.code !== 'number' || resultObj.code !== 0) {
+            const errMsg = resultObj?.message || '文件转换失败';
+            this.logger.error(`文件转换失败: ${errMsg}`);
+            throw new BadRequestException(`文件转换失败: ${errMsg}`);
           }
 
           const mxwebDir = path.dirname(node.path);
           const targetRelativePath = `${mxwebDir}/${targetFilename}`;
           const targetFullPath = this.storageManager.getFullPath(targetRelativePath);
 
-          const targetExists = await fsPromises
-            .access(targetFullPath)
-            .then(() => true)
-            .catch(() => false);
-
-          if (!targetExists) {
-            throw new NotFoundException(
-              `转换后的文件不存在: ${targetFilename}`
-            );
+          let convertedStream: fs.ReadStream;
+          try {
+            convertedStream = fs.createReadStream(targetFullPath);
+          } catch (streamErr) {
+            throw new NotFoundException(`转换后的文件不存在: ${targetFilename}`);
           }
 
-          const convertedStream = fs.createReadStream(targetFullPath);
           const convertedMimeType = this.getMimeType(targetFilename);
 
           convertedStream.on('end', async () => {
@@ -591,4 +572,5 @@ export class FileDownloadExportService {
   async isLibraryNode(nodeId: string): Promise<boolean> {
     return await this.permissionService.isLibraryNode(nodeId);
   }
+
 }

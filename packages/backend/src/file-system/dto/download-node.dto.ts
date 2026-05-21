@@ -10,8 +10,8 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsIn } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional, IsIn } from 'class-validator';
 
 /**
  * CAD 文件下载格式枚举
@@ -100,28 +100,4 @@ export class DownloadNodeQueryDto {
   @IsOptional()
   @IsString()
   colorPolicy?: string;
-
-  // ========== 范围导出参数（可选，有坐标则走范围导出） ==========
-
-  @ApiPropertyOptional({
-    description: '范围导出：左下角 X 坐标，与 pt1Y/pt2X/pt2Y 同时存在时走范围导出',
-  })
-  @IsOptional()
-  @IsNumber()
-  bd_pt1_x?: number;
-
-  @ApiPropertyOptional({ description: '范围导出：左下角 Y 坐标' })
-  @IsOptional()
-  @IsNumber()
-  bd_pt1_y?: number;
-
-  @ApiPropertyOptional({ description: '范围导出：右上角 X 坐标' })
-  @IsOptional()
-  @IsNumber()
-  bd_pt2_x?: number;
-
-  @ApiPropertyOptional({ description: '范围导出：右上角 Y 坐标' })
-  @IsOptional()
-  @IsNumber()
-  bd_pt2_y?: number;
 }

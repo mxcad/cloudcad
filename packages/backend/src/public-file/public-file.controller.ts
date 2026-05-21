@@ -344,17 +344,13 @@ export class PublicFileController {
         width: { type: 'string', description: 'PDF 宽度（像素）' },
         height: { type: 'string', description: 'PDF 高度（像素）' },
         colorPolicy: { type: 'string', enum: ['mono', 'color'], description: '颜色策略' },
-        bd_pt1_x: { type: 'number', description: '范围导出：左下角 X 坐标（可选）' },
-        bd_pt1_y: { type: 'number', description: '范围导出：左下角 Y 坐标（可选）' },
-        bd_pt2_x: { type: 'number', description: '范围导出：右上角 X 坐标（可选）' },
-        bd_pt2_y: { type: 'number', description: '范围导出：右上角 Y 坐标（可选）' },
       },
     },
   })
   @ApiResponse({ status: 200, description: '返回转换后的文件' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   async convertAndDownload(
-    @Body() body: { file: string; format: string; width?: string; height?: string; colorPolicy?: string; bd_pt1_x?: number; bd_pt1_y?: number; bd_pt2_x?: number; bd_pt2_y?: number },
+    @Body() body: { file: string; format: string; width?: string; height?: string; colorPolicy?: string },
     @Res() res: Response,
   ): Promise<void> {
     if (!body?.file) {
@@ -367,20 +363,11 @@ export class PublicFileController {
       );
     }
 
-    const range =
-      body.bd_pt1_x !== undefined &&
-      body.bd_pt1_y !== undefined &&
-      body.bd_pt2_x !== undefined &&
-      body.bd_pt2_y !== undefined
-        ? { pt1X: body.bd_pt1_x, pt1Y: body.bd_pt1_y, pt2X: body.bd_pt2_x, pt2Y: body.bd_pt2_y }
-        : undefined;
-
     try {
       const result = await this.publicFileService.convertMxwebToFormat(
         body.file,
         body.format,
         { width: body.width, height: body.height, colorPolicy: body.colorPolicy as 'mono' | 'color' | undefined },
-        range,
       );
 
       res.setHeader('Content-Type', result.mimeType);

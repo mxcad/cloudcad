@@ -306,8 +306,7 @@ export class PublicFileService {
   async convertMxwebToFormat(
     base64File: string,
     targetFormat: string,
-    pdfOptions?: { width?: string; height?: string; colorPolicy?: string },
-    range?: { pt1X: number; pt1Y: number; pt2X: number; pt2Y: number }
+    pdfOptions?: { width?: string; height?: string; colorPolicy?: string }
   ): Promise<{ buffer: Buffer; filename: string; mimeType: string }> {
     if (!this.fileConversionService) {
       throw new Error('文件转换服务不可用');
@@ -346,11 +345,9 @@ export class PublicFileService {
       switch (targetFormat) {
         case 'dwg':
           outname = `${hash}_${timestamp}.dwg`;
-          cmd = range ? 'cut_dwg' : undefined;
           break;
         case 'dxf':
           outname = `${hash}_${timestamp}.dxf`;
-          cmd = range ? 'cut_dwg' : undefined;
           break;
         case 'pdf':
           outname = `${hash}_${timestamp}.pdf`;
@@ -365,7 +362,7 @@ export class PublicFileService {
 
       outputFile = path.join(tmpDir, outname);
 
-      const conversionOptions: Record<string, unknown> = {
+      const result = await this.fileConversionService.convertFile({
         srcPath: inputFile,
         fileHash: hash,
         createPreloadingData: false,
@@ -374,16 +371,7 @@ export class PublicFileService {
         width,
         height,
         colorPolicy,
-      };
-
-      if (range) {
-        conversionOptions.bd_pt1_x = String(range.pt1X);
-        conversionOptions.bd_pt1_y = String(range.pt1Y);
-        conversionOptions.bd_pt2_x = String(range.pt2X);
-        conversionOptions.bd_pt2_y = String(range.pt2Y);
-      }
-
-      const result = await this.fileConversionService.convertFile(conversionOptions as any);
+      });
 
       if (!result.isOk) {
         throw new Error(
