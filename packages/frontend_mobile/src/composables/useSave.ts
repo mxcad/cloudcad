@@ -2,6 +2,7 @@ import { ref, readonly } from 'vue';
 import { useEditorState } from './useEditorState';
 import { useUser } from './useUser';
 import { getMxwebBlob, saveToNode, saveLibraryDrawing, saveLibraryBlock } from '../services/saveService';
+import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { showToast } from 'vant';
 
 const saving = ref(false);
@@ -27,6 +28,7 @@ export function useSave() {
       if (state.fileId && state.permissions.canSave) {
         await saveToNode(state.fileId, blob, commitMessage);
         showToast('保存成功');
+        uploadThumbnailForNode(state.fileId).catch(() => {});
         saving.value = false;
         return true;
       }
@@ -37,6 +39,7 @@ export function useSave() {
           if (state.permissions.canSave) {
             await saveLibraryDrawing(state.fileId, blob);
             showToast('保存成功');
+            uploadThumbnailForNode(state.fileId).catch(() => {});
             saving.value = false;
             return true;
           }
@@ -44,6 +47,7 @@ export function useSave() {
           if (state.permissions.canSave) {
             await saveLibraryBlock(state.fileId, blob);
             showToast('保存成功');
+            uploadThumbnailForNode(state.fileId).catch(() => {});
             saving.value = false;
             return true;
           }
