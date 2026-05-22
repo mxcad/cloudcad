@@ -41,11 +41,6 @@
       "prompt": "保存",
       "icon": "baocun",
       "cmd": "Mx_Save"
-    },
-    {
-      "label": "打印",
-      "tips": "Print",
-      "cmd": "Mx_PrintDialog"
     }
   ],
   "isShowTopButtonBar": true,
@@ -369,7 +364,7 @@
           "icon": "dakaidwg",
           "cmd": "openFile"
         },
-         {
+        {
           "tab": "打开文件(不使用缓存)(D)",
           "icon": "dakaidwg",
           "cmd": "openFile_noCache"
@@ -378,6 +373,11 @@
           "tab": "另存为",
           "icon": "lingcunweiDWG",
           "cmd": "exportFile"
+        },
+        {
+          "label": "打印",
+          "tips": "Print",
+          "cmd": "Mx_PrintDialog"
         }
       ]
     },

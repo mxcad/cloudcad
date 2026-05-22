@@ -18,6 +18,7 @@ import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
 import { useFooterToolbar } from './hooks/useFooterToolbar';
 import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
 import { useFileLoader, checkFileExternalRefs } from '../../composables/useFileLoader';
+import { checkLibraryPermissions } from '../../services/permissionService';
 import { useEditorState } from '../../composables/useEditorState';
 import { useSave } from '../../composables/useSave';
 import { useUser } from '../../composables/useUser';
@@ -149,10 +150,15 @@ const { isAuthenticated } = useUser()
 const showCommitDialog = ref(false)
 const showSaveAsSheet = ref(false)
 const pendingCommitMessage = ref('')
+const canManageLibrary = ref(false)
+
+checkLibraryPermissions().then(result => {
+  canManageLibrary.value = result.canManageDrawing || result.canManageBlock
+})
 
 async function onSaveClick() {
   if (!isAuthenticated.value) {
-    showToast('请先登录')
+    showSaveAsSheet.value = true
     return
   }
   showCommitDialog.value = true
@@ -304,6 +310,7 @@ setViewportHeight();
         <SaveAsSheet
           :show="showSaveAsSheet"
           :current-file-name="editorState.state.fileName"
+          :can-manage-library="canManageLibrary"
           @close="onSaveAsClose"
           @success="onSaveAsSuccess"
         />

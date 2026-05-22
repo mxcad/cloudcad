@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { fileSystemControllerGetStorageQuota, StorageInfoDto } from '@/api-sdk';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -158,6 +158,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userMenuWidth, setUserMenuWidth] = useState(0);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -203,6 +205,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // 测量用户触发器宽度
+  useEffect(() => {
+    if (showUserMenu && userMenuRef.current) {
+      setUserMenuWidth(userMenuRef.current.offsetWidth);
+    }
+  }, [showUserMenu]);
 
   // 处理登出
   const handleLogout = async () => {
@@ -565,7 +574,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             className="p-4 border-t"
             style={{ borderColor: 'var(--border-default)' }}
           >
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <Menu open={showUserMenu} onOpenChange={setShowUserMenu}>
                 <Menu.Trigger asChild>
                   <button
@@ -634,7 +643,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 </button>
                 </Menu.Trigger>
 
-                <Menu.Content align="end" side="top" sideOffset={8} style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                <Menu.Content align="end" side="top" sideOffset={8} style={{ width: userMenuWidth || undefined }}>
                   <Menu.Item
                     icon={<Settings size={16} />}
                     onClick={() => {

@@ -33,6 +33,7 @@ interface MenuContentProps {
   sideOffset?: number;
   collisionPadding?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 interface MenuItemProps {
@@ -95,23 +96,28 @@ Menu.Trigger = ({ children, asChild = true, className = '' }) => (
   </DropdownMenu.Trigger>
 );
 
-Menu.Content = ({ children, align = 'start', side = 'bottom', sideOffset = 4, collisionPadding = 8, className = '' }) => (
-  <DropdownMenu.Portal>
-    <DropdownMenu.Content
-      align={align}
-      side={side}
-      sideOffset={sideOffset}
-      collisionPadding={collisionPadding}
-      data-menu-content
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      className={`dropdown-menu-theme ${className}`}
-      style={{ zIndex: Z_LAYERS.POPUP }}
-    >
-      {children}
-    </DropdownMenu.Content>
-  </DropdownMenu.Portal>
-);
+Menu.Content = ({ children, align = 'start', side = 'bottom', sideOffset = 4, collisionPadding = 8, className = '', style }) => {
+  const { width, ...restStyle } = style ?? {};
+  return (
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content
+        align={align}
+        side={side}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        data-menu-content
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className={`dropdown-menu-theme ${className}`}
+        style={{ zIndex: Z_LAYERS.POPUP, ...restStyle }}
+      >
+        <div style={{ width, minWidth: width || undefined }}>
+          {children}
+        </div>
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  );
+};
 
 Menu.Item = ({ children, disabled, onClick, className = '', variant = 'default', icon, description }) => {
   return (

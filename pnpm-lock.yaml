@@ -489,6 +489,9 @@ importers:
       mxdraw:
         specifier: latest
         version: 0.1.372(three@0.113.2)
+      spark-md5:
+        specifier: ^3.0.2
+        version: 3.0.2
       vant:
         specifier: ^4.1.2
         version: 4.9.24(vue@3.5.34(typescript@5.9.3))
