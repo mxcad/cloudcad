@@ -2,6 +2,13 @@ import { ref, readonly } from 'vue';
 import { getNodeInfo, buildMxwebUrl } from '../services/fileService';
 import { useEditorState } from './useEditorState';
 import { openMxWeb } from '../plugins/mxcad/openMxWeb';
+import {
+  getPreloadingData,
+  checkExternalReferences,
+  uploadExtRefImage,
+  uploadExtRefDwg,
+} from '../services/extRefService';
+import { showDialog, showToast } from 'vant';
 
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -82,4 +89,58 @@ export function useFileLoader() {
     loadFromUrl,
     getFileIdFromUrl,
   };
+}
+
+export async function checkFileExternalRefs(nodeId: string): Promise<void> {
+  try {
+    const preloadData = await getPreloadingData(nodeId);
+    if (!preloadData) return;
+
+    const missingRefs = await checkExternalReferences(nodeId);
+    if (!missingRefs || missingRefs.length === 0) return;
+
+    const fileList = missingRefs.map(f => f.name).join('\n');
+    showDialog({
+      title: '缺失外部参照文件',
+      message: `以下文件需要上传:\n${fileList}`,
+      showCancelButton: true,
+      confirmButtonText: '上传文件',
+      cancelButtonText: '跳过',
+    }).then(async () => {
+      for (const ref of missingRefs) {
+        const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
+        if (file) {
+          if (ref.type === 'img') {
+            await uploadExtRefImage({
+              file,
+              srcDwgfileHash: preloadData.hash,
+              extRefFile: ref.name,
+            });
+          } else {
+            await uploadExtRefDwg({ nodeId, file });
+          }
+        }
+      }
+      showToast('外部参照上传完成');
+    }).catch(() => {
+      // User skipped
+    });
+  } catch {
+    // Silently fail - file can still open without refs
+  }
+}
+
+function pickFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const el = document.createElement('input');
+    el.type = 'file';
+    el.accept = accept;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    el.onchange = () => {
+      document.body.removeChild(el);
+      resolve(el.files?.[0] || null);
+    };
+    el.click();
+  });
 }

@@ -17,7 +17,7 @@ import { useSimulatedMouse } from './hooks/useSimulatedMouse';
 import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
 import { useFooterToolbar } from './hooks/useFooterToolbar';
 import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
-import { useFileLoader } from '../../composables/useFileLoader';
+import { useFileLoader, checkFileExternalRefs } from '../../composables/useFileLoader';
 import { useEditorState } from '../../composables/useEditorState';
 import { useSave } from '../../composables/useSave';
 import { useUser } from '../../composables/useUser';
@@ -190,6 +190,7 @@ onMounted(async () => {
             await loadByNodeId(fileId)
             if (!fileError.value) {
                 drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+                checkFileExternalRefs(fileId)
             }
         })
     } else {
