@@ -10,13 +10,15 @@
  * 用于：我的项目、我的图纸、图纸库、图块库
  */
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { SearchInput } from '@/components/search/SearchInput';
 import { FileImage, ChevronRight, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { Pagination } from '@/components/ui/Pagination';
 import { ViewToggle } from '@/components/common/ViewToggle';
+
+const PaginationMemo = React.memo(Pagination);
 import styles from './ResourceList.module.css';
 import sidebarStyles from '@/components/sidebar/sidebar.module.css';
 
@@ -561,20 +563,32 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const lastScrollTopRef = useRef<number>(0);
-  const isLoadingRef = useRef(false);
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
   const previousPageRef = useRef(currentPage);
   // 保存加载前的状态
   const beforeLoad = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
   // 由按钮点击（非滚动）触发的翻页，加载完成后应滚动到新页内容
   const buttonPaginateRef = useRef(false);
+  // 用 ref 稳定回调引用，避免 useEffect 因回调重建而反复重跑
+  const onPageChangeRef = useRef(onPageChange);
+  const onLoadMoreRef = useRef(onLoadMore);
+  const loadDirectionRef = useRef(loadDirection);
+  const onLoadCompleteRef = useRef(onLoadComplete);
+  onPageChangeRef.current = onPageChange;
+  onLoadMoreRef.current = onLoadMore;
+  loadDirectionRef.current = loadDirection;
+  onLoadCompleteRef.current = onLoadComplete;
 
   // 加载超时计时器
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const itemsLengthRef = useRef(items.length);
+  itemsLengthRef.current = items.length;
 
   // 首次加载超时检测（items 为空 + loading 超过 10 秒 → 静默 fallback 到空状态）
   useEffect(() => {
-    if (!loading || items.length > 0) {
+    if (!loading || itemsLengthRef.current > 0) {
       // 加载结束或有数据，清除计时器
       if (loadingTimerRef.current) {
         clearTimeout(loadingTimerRef.current);
@@ -595,10 +609,25 @@ export const ResourceList: React.FC<ResourceListProps> = ({
         loadingTimerRef.current = null;
       }
     };
-  }, [loading, items.length]);
+  }, [loading]);
 
   // 是否显示分类筛选
   const hasCategories = showCategoryFilter && categories && categories.length > 0;
+
+  // 用 useMemo 稳定 Pagination 的 meta 对象，避免每次渲染创建新引用
+  const paginationMetaMemo = useMemo(() => ({
+    total: total ?? 0,
+    page: currentPage,
+    limit: 20,
+    totalPages: totalPages || 1,
+  }), [total, currentPage, totalPages]);
+
+  // 用 ref + useCallback 稳定 Pagination 的 onPageChange 回调
+  const onPageJumpRef = useRef(onPageChange);
+  onPageJumpRef.current = onPageChange;
+  const handlePaginationJump = useCallback((page: number) => {
+    onPageJumpRef.current?.(page, 'jump');
+  }, []);
 
   // 在加载前保存状态
   useEffect(() => {
@@ -611,6 +640,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   }, [loading]);
 
   // 数据更新后调整滚动位置
+  // 通过 ref 读取最新值，避免 deps 变化导致 effect 反复触发
   useEffect(() => {
     // 只在 loading 刚结束，且 beforeLoad 有数据时处理
     if (loading || !beforeLoad.current || !contentRef.current) return;
@@ -619,23 +649,22 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     const { scrollTop: oldTop, scrollHeight: oldHeight } = beforeLoad.current;
     const newHeight = content.scrollHeight;
     const heightDiff = newHeight - oldHeight;
+    const dir = loadDirectionRef.current;
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!content) return;
 
         const isButton = buttonPaginateRef.current;
-        // 注意：不在这里清 buttonPaginateRef！只有在实际调整了滚动后才清，
-        // 否则 heightDiff=0 时提前返回会丢失按钮标识，导致后续数据合并后无法正确跳转。
 
-        if (loadDirection === 'jump') {
+        if (dir === 'jump') {
           const targetScrollTop = Math.min(200, newHeight * 0.3);
           content.scrollTop = targetScrollTop;
           lastScrollTopRef.current = targetScrollTop;
-        } else if (loadDirection === 'up' && heightDiff > 0 && isButton) {
+        } else if (dir === 'up' && heightDiff > 0 && isButton) {
           content.scrollTop = 0;
           lastScrollTopRef.current = 0;
-        } else if (loadDirection === 'up' && heightDiff > 0) {
+        } else if (dir === 'up' && heightDiff > 0) {
           content.scrollTop = oldTop + heightDiff;
           lastScrollTopRef.current = oldTop + heightDiff;
         } else if (heightDiff > 0 && isButton) {
@@ -643,32 +672,27 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           content.scrollTop = target;
           lastScrollTopRef.current = target;
         } else {
-          // 数据尚未合并（heightDiff=0）或无需调整，保留 beforeLoad/buttonPaginateRef
           lastScrollTopRef.current = content.scrollTop;
           return;
         }
 
-        // 真正调整了滚动位置后才清按钮标识、通知完成、清理 beforeLoad
         buttonPaginateRef.current = false;
-        onLoadComplete?.();
+        onLoadCompleteRef.current?.();
         beforeLoad.current = null;
       });
     });
-  }, [loading, items.length, loadDirection, onLoadComplete]);
-
-  // loading 变化时释放滚动节流
-  useEffect(() => {
-    if (!loading) isLoadingRef.current = false;
   }, [loading]);
 
   // 滚动方向检测和分页加载
+  // 通过 ref 获取最新回调，避免回调引用变化导致 effect 反复重跑
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
 
     const handleScroll = () => {
       // loading=true 时阻塞（包括 keepPreviousData 下的 isFetching 过渡期）
-      if (loading) return;
+      // 通过 ref 读取最新 loading 值，避免 effect 重跑前闭包 stale 问题
+      if (loadingRef.current) return;
 
       const currentScrollTop = content.scrollTop;
       const scrollHeight = content.scrollHeight;
@@ -681,42 +705,46 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       const scrollDirection = currentScrollTop > lastScrollTopRef.current ? 'down' : 'up';
       lastScrollTopRef.current = currentScrollTop;
 
+      // 从 ref 取最新回调
+      const cb = onPageChangeRef.current;
+      const lm = onLoadMoreRef.current;
+
       // 分页模式：使用 onPageChange 进行分页加载
       // 提前量设为 200px，在用户到达底部/顶部前就开始加载，保证流畅体验
-      if (paginationEnabled && onPageChange && totalPages && currentPage) {
+      if (paginationEnabled && cb && totalPages && currentPage) {
         // 向下滚动到底部附近时加载下一页
         if (scrollDirection === 'down' && currentScrollTop + clientHeight >= scrollHeight - 200) {
           if (currentPage < totalPages) {
-            onPageChange(currentPage + 1, 'next');
+            cb(currentPage + 1, 'next');
           }
         }
         // 向上滚动到顶部附近时加载上一页
         else if (scrollDirection === 'up' && currentScrollTop <= 200) {
           if (currentPage > 1) {
-            onPageChange(currentPage - 1, 'prev');
+            cb(currentPage - 1, 'prev');
           }
         }
-      } else if (!paginationEnabled && onLoadMore && hasMore) {
+      } else if (!paginationEnabled && lm && hasMore) {
         // 非分页模式：传统滚动加载
         if (currentScrollTop + clientHeight >= scrollHeight - 200) {
-          onLoadMore();
+          lm();
         }
       }
     };
 
     content.addEventListener('scroll', handleScroll, { passive: true });
     return () => content.removeEventListener('scroll', handleScroll);
-  }, [hasMore, onLoadMore, onPageChange, paginationEnabled, totalPages, currentPage, loading]);
+  }, [paginationEnabled, totalPages, currentPage, hasMore]);
 
   // 传统滚动加载：使用 Intersection Observer 监听底部加载元素（非分页模式）
   useEffect(() => {
-    if (!onLoadMore || !hasMore || paginationEnabled) return;
+    if (!hasMore || paginationEnabled) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry?.isIntersecting && hasMore && !loading) {
-          onLoadMore();
+        if (entry?.isIntersecting && !loading) {
+          onLoadMoreRef.current?.();
         }
       },
       {
@@ -736,7 +764,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
         observer.unobserve(loadMoreElement);
       }
     };
-  }, [hasMore, loading, onLoadMore, paginationEnabled]);
+  }, [hasMore, loading, paginationEnabled]);
 
   return (
     <div className={styles.resourceList}>
@@ -841,14 +869,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       <div className={`${styles.footer} ${items.length === 0 ? styles.footerHidden : ''}`}>
         {/* 分页控件（启用分页模式时显示） */}
         {paginationEnabled && totalPages && totalPages > 1 && onPageChange && (
-          <Pagination
-            meta={{
-              total: total ?? 0,
-              page: currentPage,
-              limit: 20,
-              totalPages: totalPages || 1,
-            }}
-            onPageChange={(page) => onPageChange(page, 'jump')}
+          <PaginationMemo
+            meta={paginationMetaMemo}
+            onPageChange={handlePaginationJump}
             showQuickJumper
             loading={loading}
           />

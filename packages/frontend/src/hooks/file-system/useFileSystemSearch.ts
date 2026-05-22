@@ -56,6 +56,7 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   }, [loadData]);
 
   const handlePageChange = useCallback((newPage: number) => {
+    if (newPage === paginationRef.current.page) return;
     paginationRef.current = { ...paginationRef.current, page: newPage };
     shouldLoadDataRef.current = true;
     setPagination(paginationRef.current);

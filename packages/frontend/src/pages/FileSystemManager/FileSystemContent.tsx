@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { type ReactNode } from 'react';
+import React, { useCallback, useRef, type ReactNode } from 'react';
 import { FileItem } from '@/components/FileItem';
 import { Pagination } from '@/components/ui/Pagination';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
@@ -158,9 +158,33 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
 
   const showPaginationBorder = !bottomBar;
 
+  const lastLoadTimeRef = useRef(0);
+  const paginationMetaRef = useRef(paginationMeta);
+  paginationMetaRef.current = paginationMeta;
+  const onPageChangeRef = useRef(onPageChange);
+  onPageChangeRef.current = onPageChange;
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const now = Date.now();
+    if (now - lastLoadTimeRef.current < 1000) return;
+
+    const meta = paginationMetaRef.current;
+    if (!meta) return;
+
+    const target = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+
+    if (scrollHeight - scrollTop - clientHeight < 300) {
+      if (meta.page < meta.totalPages) {
+        lastLoadTimeRef.current = now;
+        onPageChangeRef.current(meta.page + 1);
+      }
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto" onScroll={handleScroll}>
         <div className="relative">
           <div
             data-view-mode={viewMode}

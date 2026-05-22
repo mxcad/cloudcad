@@ -3,12 +3,13 @@
 // Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fileSystemControllerGetChildren, fileSystemControllerSearch } from '@/api-sdk';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
 import { queryKeys } from '@/lib/queryKeys';
 import { PAGE_SIZE } from '@/components/ProjectDrawingsPanel/constants';
+
+const EMPTY_NODES: FileSystemNode[] = [];
 
 interface UseFileSystemChildrenOptions {
   /** 当前目录 nodeId */
@@ -35,6 +36,7 @@ interface UseFileSystemChildrenReturn {
   totalPages: number;
   loading: boolean;
   isFetching: boolean;
+  isPlaceholderData: boolean;
   error: Error | null;
 }
 
@@ -54,7 +56,7 @@ export function useFileSystemChildren({
   const effectiveNodeId = nodeId || '__disabled__';
   const isSearchActive = !!search && search.trim().length > 0;
 
-  const { data, isLoading, isFetching, error } = useQuery<FileSystemChildrenData>({
+  const { data, isLoading, isFetching, isPlaceholderData, error } = useQuery<FileSystemChildrenData>({
     queryKey: [...queryKeys.fileSystem.children(effectiveNodeId), { page, search, projectId }] as const,
     queryFn: async () => {
       if (isSearchActive && projectId) {
@@ -87,15 +89,17 @@ export function useFileSystemChildren({
     // staleTime: 0 确保侧边栏面板每次挂载和查询键变化时都立即获取最新数据，
     // 不受全局 30s staleTime 影响。这解决了"我的图纸"面板首次加载为空的问题。
     staleTime: 0,
+    placeholderData: keepPreviousData,
     throwOnError: false,
   });
 
   return {
-    nodes: data?.nodes ?? [],
+    nodes: data?.nodes ?? EMPTY_NODES,
     total: data?.total ?? 0,
     totalPages: data?.totalPages ?? 1,
     loading: isLoading || (isFetching && !data),
     isFetching,
+    isPlaceholderData,
     error: error as Error | null,
   };
 }

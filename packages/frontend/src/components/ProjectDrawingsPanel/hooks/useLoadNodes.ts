@@ -71,7 +71,7 @@ export function useLoadNodes(
 
   // ── File system mode: 使用 useFileSystemChildren ──
   const [fsNodeId, setFsNodeId] = useState<string | undefined>();
-  const [fsSearch, setFsSearch] = useState<string>();
+  const [fsSearch, setFsSearch] = useState('');
 
   const fsQuery = useFileSystemChildren({
     nodeId: fsNodeId,
@@ -127,18 +127,48 @@ export function useLoadNodes(
     }
   }, [isLibraryMode, libraryQuery.nodes, libraryQuery.isPlaceholderData]);
 
-  // ── 合并结果 ──
-  const nodes = useMemo(() => {
-    if (isLibraryMode) return displayNodes;
-    return fsQuery.nodes;
-  }, [isLibraryMode, displayNodes, fsQuery.nodes]);
+  // ── File system 模式：使用 displayNodes 支持 append/prepend/replace ──
+  // 节点ID或搜索变更时重置 displayNodes
+  useEffect(() => {
+    if (isLibraryMode) return;
+    setDisplayNodes([]);
+  }, [isLibraryMode, fsNodeId, fsSearch]);
+
+  // 监听 useFileSystemChildren 返回的新数据，按模式合并到 displayNodes
+  useEffect(() => {
+    if (isLibraryMode) return;
+    if (fsQuery.isPlaceholderData) return;
+
+    const newNodes = fsQuery.nodes;
+
+    if (loadModeRef.current === 'replace') {
+      setDisplayNodes(newNodes);
+    } else if (loadModeRef.current === 'append') {
+      setDisplayNodes((prev) => {
+        const map = new Map<string, FileSystemNode>();
+        prev.forEach((n) => map.set(n.id, n));
+        newNodes.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        return Array.from(map.values());
+      });
+    } else if (loadModeRef.current === 'prepend') {
+      setDisplayNodes((prev) => {
+        const map = new Map<string, FileSystemNode>();
+        newNodes.forEach((n) => map.set(n.id, n));
+        prev.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        return Array.from(map.values());
+      });
+    }
+  }, [isLibraryMode, fsQuery.nodes, fsQuery.isPlaceholderData]);
+
+  // ── 合并结果（两种模式均使用 displayNodes） ──
+  const nodes = useMemo(() => displayNodes, [displayNodes]);
 
   // library 模式用 isFetching（keepPreviousData 下 isLoading 换页时不更新），
   // 确保滚动节流能正确判断"正在加载中"。
   const loading = useMemo(() => {
     if (isLibraryMode) return libraryQuery.loading || libraryQuery.isFetching;
-    return fsQuery.loading;
-  }, [isLibraryMode, libraryQuery.loading, libraryQuery.isFetching, fsQuery.loading]);
+    return fsQuery.loading || fsQuery.isFetching;
+  }, [isLibraryMode, libraryQuery.loading, libraryQuery.isFetching, fsQuery.loading, fsQuery.isFetching]);
 
   const isFetching = useMemo(() => {
     if (isLibraryMode) return libraryQuery.isFetching;
@@ -154,12 +184,15 @@ export function useLoadNodes(
   // ── File system mode: 同步分页信息 ──
   useEffect(() => {
     if (isLibraryMode) return;
+    if (fsQuery.isPlaceholderData) return;
     setTotal(fsQuery.total);
     setTotalPages(fsQuery.totalPages);
     setHasMore(currentPage < fsQuery.totalPages);
-  }, [isLibraryMode, fsQuery.total, fsQuery.totalPages, currentPage]);
+  }, [isLibraryMode, fsQuery.total, fsQuery.totalPages, currentPage, fsQuery.isPlaceholderData]);
 
   // ── 加载节点（统一入口） ──
+  // 注意：page 由调用方通过 setCurrentPage 管理，
+  // loadNodes 内不再 setCurrentPage 以避免重复 state 更新
   const loadNodes = useCallback(
     async (
       nodeId: string,
@@ -167,8 +200,6 @@ export function useLoadNodes(
       search?: string,
       append: boolean | 'prepend' = false
     ) => {
-      setCurrentPage(page);
-
       // 记录加载模式，用于 displayNodes 的合并策略
       if (append === 'prepend') loadModeRef.current = 'prepend';
       else if (append === true) loadModeRef.current = 'append';
@@ -179,7 +210,7 @@ export function useLoadNodes(
         setLibrarySearch(search || '');
       } else {
         setFsNodeId(nodeId);
-        setFsSearch(search);
+        setFsSearch(search || '');
       }
     },
     [isLibraryMode]
@@ -196,11 +227,13 @@ export function useLoadNodes(
     setLibraryNodeId(undefined);
     setLibrarySearch('');
     setFsNodeId(undefined);
-    setFsSearch(undefined);
+    setFsSearch('');
   }, []);
 
   const loadNodesRef = useRef(loadNodes);
+  loadNodesRef.current = loadNodes;
   const buildBreadcrumbPathRef = useRef(buildBreadcrumbPath);
+  buildBreadcrumbPathRef.current = buildBreadcrumbPath;
 
   // ── API 错误 ──
   const error: string | null = useMemo(() => {

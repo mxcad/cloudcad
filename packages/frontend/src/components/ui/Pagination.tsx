@@ -84,6 +84,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const [inputValue, setInputValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<Layout>('full');
+  const layoutRef = useRef(layout);
   const [maxPageSlots, setMaxPageSlots] = useState(7);
 
   useEffect(() => {
@@ -92,20 +93,25 @@ export const Pagination: React.FC<PaginationProps> = ({
 
     const measure = () => {
       const w = el.clientWidth;
+      let newLayout: Layout;
       if (w < 220) {
-        setLayout('compact');
+        newLayout = 'compact';
       } else if (w < 400) {
-        setLayout('medium');
+        newLayout = 'medium';
       } else {
-        setLayout('full');
+        newLayout = 'full';
+      }
+      if (newLayout !== layoutRef.current) {
+        layoutRef.current = newLayout;
+        setLayout(newLayout);
       }
 
       let fixed = TOTAL_TEXT_W + GAP;
       fixed += (showFirstLast ? ARROW_W + GAP : 0) * 2;
       if (!showFirstLast) fixed += ARROW_W + GAP;
       if (showFirstLast) fixed += ARROW_W + GAP;
-      if (layout === 'full' && showQuickJumper) fixed += JUMPER_W + GAP;
-      if (layout !== 'compact' && showSizeChanger) fixed += SIZE_CHANGER_W + GAP;
+      if (newLayout === 'full' && showQuickJumper) fixed += JUMPER_W + GAP;
+      if (newLayout !== 'compact' && showSizeChanger) fixed += SIZE_CHANGER_W + GAP;
 
       const remaining = w - fixed;
       const count = Math.max(3, Math.floor(remaining / (BTN_W + GAP)));
@@ -116,7 +122,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     observer.observe(el);
     measure();
     return () => observer.disconnect();
-  }, [showFirstLast, showQuickJumper, showSizeChanger, layout]);
+  }, [showFirstLast, showQuickJumper, showSizeChanger]);
 
   const pageList = useMemo(
     () => buildPageList(totalPages, page, maxPageSlots),
