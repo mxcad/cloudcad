@@ -24,11 +24,6 @@ import { Layers } from 'lucide-react';
 import { LayoutTemplate } from 'lucide-react';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { useSidebarSettings } from '../../hooks/useSidebarSettings';
-import {
-  mxcadManager,
-  isDocumentModified,
-  checkAndConfirmUnsavedChanges,
-} from '../../services/mxcadManager';
 import { isTourModeActive } from '../../contexts/TourContext';
 import { useFileSystemNavigation } from './hooks/useFileSystemNavigation';
 import { SidebarTabBar } from './SidebarTabBar';
@@ -143,53 +138,55 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     }
   }, [setIsVisible]);
 
-  // 监听当前打开的文件和修改状态
+  // 监听当前打开的文件和修改状态（mxcadManager 动态导入，避免静态链导致 SDK 提前求值）
   useEffect(() => {
-    const updateFileInfo = () => {
-      const fileInfo = mxcadManager.getCurrentFileInfo();
-      setCurrentOpenFileId(fileInfo?.fileId || null);
-      setCurrentOpenFileParentId(fileInfo?.parentId || null);
-      setIsModified(isDocumentModified());
-      
-      // 检查当前文件是否属于公开资源库
-      const isLib = fileInfo?.libraryKey === 'drawing' || fileInfo?.libraryKey === 'block';
-      setIsLibraryFile(isLib);
-    };
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
 
-    // 初始更新
-    updateFileInfo();
+    import('../../services/mxcadManager').then(({ mxcadManager, isDocumentModified: checkModified }) => {
+      if (cancelled) return;
 
-    // 监听文件打开事件
-    const handleFileOpened = () => {
+      const updateFileInfo = () => {
+        const fileInfo = mxcadManager.getCurrentFileInfo();
+        setCurrentOpenFileId(fileInfo?.fileId || null);
+        setCurrentOpenFileParentId(fileInfo?.parentId || null);
+        setIsModified(checkModified());
+        const isLib = fileInfo?.libraryKey === 'drawing' || fileInfo?.libraryKey === 'block';
+        setIsLibraryFile(isLib);
+      };
+
       updateFileInfo();
-    };
 
-    // 监听文档修改事件
-    const handleDatabaseModify = () => {
-      setIsModified(true);
-    };
+      const handleFileOpened = () => { updateFileInfo(); };
+      const handleDatabaseModify = () => { setIsModified(true); };
 
-    window.addEventListener('mxcad-file-opened', handleFileOpened);
-    window.addEventListener('mxcad-database-modify', handleDatabaseModify);
+      window.addEventListener('mxcad-file-opened', handleFileOpened);
+      window.addEventListener('mxcad-database-modify', handleDatabaseModify);
 
-    // 定期轮询修改状态（作为后备机制）
-    const intervalId = setInterval(() => {
-      setIsModified(isDocumentModified());
-    }, 1000);
+      const intervalId = setInterval(() => {
+        setIsModified(checkModified());
+      }, 1000);
+
+      cleanup = () => {
+        window.removeEventListener('mxcad-file-opened', handleFileOpened);
+        window.removeEventListener('mxcad-database-modify', handleDatabaseModify);
+        clearInterval(intervalId);
+      };
+    });
 
     return () => {
-      window.removeEventListener('mxcad-file-opened', handleFileOpened);
-      window.removeEventListener('mxcad-database-modify', handleDatabaseModify);
-      clearInterval(intervalId);
+      cancelled = true;
+      cleanup?.();
     };
   }, []);
 
-  // 宽度变化时更新 CAD 容器位置
+  // 宽度变化时更新 CAD 容器位置（mxcadManager 动态导入）
   useEffect(() => {
-    // 侧边栏关闭时保留 48px 窄条，CAD 编辑器需要让出这部分空间
-    mxcadManager.adjustContainerPosition(
-      settings.isVisible ? settings.width : 48
-    );
+    import('../../services/mxcadManager').then(({ mxcadManager }) => {
+      mxcadManager.adjustContainerPosition(
+        settings.isVisible ? settings.width : 48
+      );
+    });
   }, [settings.width, settings.isVisible]);
 
   // 监听 mxcad-open-sidebar 事件（Mx_ShowSidebar 和 Mx_ShowCollaborate 命令触发）
@@ -285,7 +282,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // ==================== 图纸打开处理 ====================
 
   const handleDrawingOpen = useCallback(async (node: FileSystemNode, libraryType?: 'drawing' | 'block') => {
-    // 先检查当前文档是否有未保存的修改
+    // 先检查当前文档是否有未保存的修改（mxcadManager 动态导入）
+    const { checkAndConfirmUnsavedChanges } = await import('../../services/mxcadManager');
     const canProceed = await checkAndConfirmUnsavedChanges();
     if (!canProceed) {
       return;

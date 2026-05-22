@@ -9,7 +9,7 @@
  *
  * 使用 visibility: hidden + z-index 方案控制显示，保护 WebGL 上下文不被销毁。
  */
-import React, { useEffect, useRef, useState, useCallback, useMemo, Suspense } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification, useConfirmDialog } from '../contexts/NotificationContext';
@@ -22,6 +22,7 @@ import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
+import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
@@ -78,12 +79,6 @@ function parseCADEditorRoute(pathname: string): string | null {
 function isHomeRoute(pathname: string): boolean {
   return pathname === '/' || pathname === '' || pathname === '/cad-editor';
 }
-
-// 侧边栏使用 React.lazy 延迟加载 — 切断 SidebarContainer → mxcadManager 的静态导入链
-// 避免 mxcad-app SDK 在 bundle 加载时同步求值，与 mxweb 引擎抢占主线程
-const LazySidebarContainer = React.lazy(
-  () => import('../components/sidebar/SidebarContainer').then(m => ({ default: m.SidebarContainer }))
-);
 
 export const CADEditorDirect: React.FC = () => {
   const navigate = useNavigate();
@@ -1468,38 +1463,13 @@ export const CADEditorDirect: React.FC = () => {
 
       {!error && isActive && (
         <div className="flex w-full h-screen relative">
-          {/* CAD侧边栏 */}
-          {/* 初始加载期间：渲染轻量骨架占位（纯 Tailwind，无 mxcadManager 依赖） */}
-          {/* 加载完成后：渲染真正的 SidebarContainer（React.lazy，mxcadManager SDK 才求值） */}
-          {loading ? (
-            <div className="w-[320px] h-screen flex-shrink-0 bg-[var(--bg-primary)] border-r border-[var(--border-color)] overflow-hidden">
-              <div className="flex gap-2 p-3 border-b border-[var(--border-color)]">
-                <div className="h-8 w-16 rounded bg-[var(--bg-tertiary)] animate-pulse" />
-                <div className="h-8 w-16 rounded bg-[var(--bg-tertiary)] animate-pulse" />
-              </div>
-              <div className="p-3 space-y-3">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 animate-pulse">
-                    <div className="h-8 w-8 rounded bg-[var(--bg-tertiary)]" />
-                    <div className="flex-1 space-y-1">
-                      <div className="h-3 w-3/5 rounded bg-[var(--bg-tertiary)]" />
-                      <div className="h-3 w-2/5 rounded bg-[var(--bg-tertiary)]" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <Suspense fallback={null}>
-              <LazySidebarContainer
-                projectId={
-                  isHomeMode ? personalSpaceId || '' : currentProjectId || ''
-                }
-                onInsertFile={handleInsertFile}
-                loading={loading}
-              />
-            </Suspense>
-          )}
+          <SidebarContainer
+            projectId={
+              isHomeMode ? personalSpaceId || '' : currentProjectId || ''
+            }
+            onInsertFile={handleInsertFile}
+            loading={loading}
+          />
 
           {/* CAD编辑器内容区域 */}
           <div className="flex-1 relative" style={{ background: 'transparent' }}>

@@ -3,7 +3,6 @@ import {
   fileSystemControllerGetNode,
   fileSystemControllerGetRootNode,
 } from '@/api-sdk';
-import { openUploadedFile } from '../../../services/mxcadManager';
 import type { FileSystemNode } from '../../../types/filesystem';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 
@@ -68,6 +67,7 @@ export const useFileSystemNavigation = (isAuthenticated: boolean) => {
           targetProjectId = file.id;
         }
 
+        const { openUploadedFile } = await import('../../../services/mxcadManager');
         await openUploadedFile(node.id, file.parentId || targetProjectId || '');
       } catch (error) {
         console.error('打开图纸失败:', error);
