@@ -59,6 +59,7 @@ i18nScope.ready(()=> {
     app.use(router)
     app.use(plugins)
 
+    setupApiClient()
 
     const { debug } = getParamsFromUrl()
 
