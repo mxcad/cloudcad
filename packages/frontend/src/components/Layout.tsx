@@ -634,7 +634,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 </button>
                 </Menu.Trigger>
 
-                <Menu.Content align="end" side="top" sideOffset={8}>
+                <Menu.Content align="end" side="top" sideOffset={8} style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
                   <Menu.Item
                     icon={<Settings size={16} />}
                     onClick={() => {
