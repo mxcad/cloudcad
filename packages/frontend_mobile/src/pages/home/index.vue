@@ -23,7 +23,7 @@ import { useSave } from '../../composables/useSave';
 import { useUser } from '../../composables/useUser';
 import { showToast, showConfirmDialog } from 'vant';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
-import SaveAsActionSheet from './components/SaveAsActionSheet.vue';
+import SaveAsSheet from './components/SaveAsSheet.vue';
 import MxToolbar from '@/components/MxToolbar.vue';
 
 BScroll.use(ObserveDOM)
@@ -171,14 +171,11 @@ async function executeSave() {
   }
 }
 
-const saveAsOptions = [
-  { label: '个人文件', value: 'personal' },
-  { label: '项目文件', value: 'project' },
-  { label: '图库-图纸', value: 'library-drawing' },
-  { label: '图库-图块', value: 'library-block' },
-]
+function onSaveAsClose() {
+  showSaveAsSheet.value = false
+}
 
-function onSaveAsSelect(value: string) {
+function onSaveAsSuccess() {
   showSaveAsSheet.value = false
 }
 
@@ -303,11 +300,11 @@ setViewportHeight();
           @confirm="onCommitConfirm"
           @cancel="showCommitDialog = false"
         />
-        <SaveAsActionSheet
-          v-if="showSaveAsSheet"
-          :options="saveAsOptions"
-          @select="onSaveAsSelect"
-          @cancel="showSaveAsSheet = false"
+        <SaveAsSheet
+          :show="showSaveAsSheet"
+          :current-file-name="editorState.state.fileName"
+          @close="onSaveAsClose"
+          @success="onSaveAsSuccess"
         />
         <canvas id="mxCanvas"></canvas>
         <div class="history_box">
