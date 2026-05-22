@@ -15,6 +15,12 @@ const routes: RouteRecordRaw[] = [
         component:  Home,
         meta: { title: t('首页'), keepAlive: true }
     },
+    {
+        path: '/editor',
+        name: "editor",
+        component: () => import('./pages/editor/index.vue'),
+        meta: { title: 'CAD Editor', keepAlive: true }
+    },
 ]
 
 const router = createRouter({

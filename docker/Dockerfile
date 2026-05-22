@@ -15,6 +15,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./ 
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/frontend_mobile/package.json ./packages/frontend_mobile/
 COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
 
 # 安装所有依赖（单独一层，代码改动不会触发重新安装）
@@ -77,6 +78,13 @@ COPY packages/frontend/metadata.json ./packages/frontend/
 WORKDIR /app/packages/frontend
 RUN pnpm run build
 
+# 复制移动端源代码（.dockerignore 排除 node_modules/.env/.vscode 等）
+COPY packages/frontend_mobile ./packages/frontend_mobile
+
+# 构建移动端
+WORKDIR /app/packages/frontend_mobile
+RUN pnpm run build
+
 # ==================== 生产镜像 ====================
 FROM node:20.19.5-alpine AS production
 WORKDIR /app
@@ -115,6 +123,7 @@ COPY packages/svnVersionTool ./packages/svnVersionTool
 # 复制构建产物（只有构建结果变化才会更新）
 COPY --from=backend-builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=frontend-builder /app/packages/frontend/dist /var/www/html
+COPY --from=frontend-builder /app/packages/frontend_mobile/dist /var/www/html/mxcad_mobile
 
 # 复制 mxcadassembly (Linux 运行时)
 COPY runtime/linux/mxcad ./runtime/linux/mxcad

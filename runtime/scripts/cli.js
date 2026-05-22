@@ -1573,22 +1573,24 @@ async function devMode() {
 
   runInNewWindow('CloudCAD Backend', 'pnpm', ['--filter', 'backend', 'dev']);
   runInNewWindow('CloudCAD Frontend', 'pnpm', ['--filter', 'frontend', 'dev']);
+  runInNewWindow('CloudCAD Mobile', 'pnpm', ['--filter', 'frontend_mobile', 'dev']);
 
   console.log('');
-  log('green', '╔════════════════════════════════════════╗');
-  log('green', '║        开发环境已就绪                   ║');
-  log('green', '╠════════════════════════════════════════╣');
+  log('green', '╔══════════════════════════════════════════════════════════╗');
+  log('green', '║        开发环境已就绪                                     ║');
+  log('green', '╠══════════════════════════════════════════════════════════╣');
   log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
   log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
+  log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/mxcad_mobile/  ║');
   log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
   log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
   log(
     'green',
     '║  配置:  http://localhost:' + PORTS.configService + '           ║'
   );
-  log('green', '╠════════════════════════════════════════╣');
-  log('green', '║  停止:  选择菜单 [停止服务]             ║');
-  log('green', '╚════════════════════════════════════════╝');
+  log('green', '╠══════════════════════════════════════════════════════════╣');
+  log('green', '║  停止:  选择菜单 [停止服务]                               ║');
+  log('green', '╚══════════════════════════════════════════════════════════╝');
 
   await waitAndOpenBrowsers();
 }
@@ -1675,12 +1677,15 @@ async function deployMode(skipBuild = false) {
   // 3. 检测是否已有构建产物
   const backendDist = path.join(PROJECT_ROOT, 'packages', 'backend', 'dist');
   const frontendDist = path.join(PROJECT_ROOT, 'packages', 'frontend', 'dist');
+  const mobileDist = path.join(PROJECT_ROOT, 'packages', 'frontend_mobile', 'dist');
 
   const hasBackendDist =
     fs.existsSync(backendDist) && fs.readdirSync(backendDist).length > 0;
   const hasFrontendDist =
     fs.existsSync(frontendDist) && fs.readdirSync(frontendDist).length > 0;
-  const hasDist = hasBackendDist && hasFrontendDist;
+  const hasMobileDist =
+    fs.existsSync(mobileDist) && fs.readdirSync(mobileDist).length > 0;
+  const hasDist = hasBackendDist && hasFrontendDist && hasMobileDist;
 
   let shouldBuild = true;
 
@@ -1696,6 +1701,7 @@ async function deployMode(skipBuild = false) {
     console.log('');
     log('cyan', '  后端 dist: ' + (hasBackendDist ? '✓ 存在' : '✗ 不存在'));
     log('cyan', '  前端 dist: ' + (hasFrontendDist ? '✓ 存在' : '✗ 不存在'));
+    log('cyan', '  移动端 dist: ' + (hasMobileDist ? '✓ 存在' : '✗ 不存在'));
     console.log('');
 
     // 询问用户是否重新构建
@@ -1726,9 +1732,10 @@ async function deployMode(skipBuild = false) {
     log('blue', '[3/5] 清理旧构建文件...');
     rimdir(backendDist);
     rimdir(frontendDist);
+    rimdir(mobileDist);
     log('green', '[✓] 清理完成');
 
-    log('blue', '[4/5] 构建前后端...');
+    log('blue', '[4/5] 构建项目...');
 
     if (!runPnpm(['build'])) {
       log('red', '[错误] 构建失败');
@@ -1806,16 +1813,17 @@ async function waitForServicesForeground(backendProcess, backendStderr) {
   }
 
   console.log('');
-  log('green', '╔════════════════════════════════════════╗');
-  log('green', `║        所有服务已就绪                   ║`);
-  log('green', '╠════════════════════════════════════════╣');
+  log('green', '╔══════════════════════════════════════════════════════════╗');
+  log('green', `║        所有服务已就绪                                     ║`);
+  log('green', '╠══════════════════════════════════════════════════════════╣');
   log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
   log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
+  log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/mxcad_mobile/  ║');
   log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
   log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
-  log('green', '╠════════════════════════════════════════╣');
-  log('green', '║  停止:  Ctrl+C                        ║');
-  log('green', '╚════════════════════════════════════════╝');
+  log('green', '╠══════════════════════════════════════════════════════════╣');
+  log('green', '║  停止:  Ctrl+C                                          ║');
+  log('green', '╚══════════════════════════════════════════════════════════╝');
 
   // 打开浏览器
   openBrowser(`http://localhost:${PORTS.frontend}`);
@@ -1950,23 +1958,24 @@ async function startAppServices(mode) {
   //（前台模式已经在 waitForServicesForeground 中处理了）
   if (mode === 'pm2') {
     console.log('');
-    log('green', '╔════════════════════════════════════════╗');
+    log('green', '╔══════════════════════════════════════════════════════════╗');
     log(
       'green',
-      `║        服务已启动 (${modeLabel})${' '.repeat(Math.max(0, 20 - modeLabel.length))}║`
+      `║        服务已启动 (${modeLabel})${' '.repeat(Math.max(0, 30 - modeLabel.length))}║`
     );
-    log('green', '╠════════════════════════════════════════╣');
+    log('green', '╠══════════════════════════════════════════════════════════╣');
     log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
     log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
+    log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/mxcad_mobile/  ║');
     log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
     log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
     log(
       'green',
       '║  配置:  http://localhost:' + PORTS.configService + '           ║'
     );
-    log('green', '╠════════════════════════════════════════╣');
-    log('green', '║  停止:  选择菜单 [停止服务]             ║');
-    log('green', '╚════════════════════════════════════════╝');
+    log('green', '╠══════════════════════════════════════════════════════════╣');
+    log('green', '║  停止:  选择菜单 [停止服务]                               ║');
+    log('green', '╚══════════════════════════════════════════════════════════╝');
 
     await waitAndOpenBrowsers();
   }

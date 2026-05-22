@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   fileSystemControllerGetProjects,
   fileSystemControllerGetTrash,
@@ -137,7 +137,7 @@ export const useFileSystemData = ({
         });
 
         const data = response.data;
-        if (data && 'nodes' in data && Array.isArray(data.nodes)) {
+        if (data && typeof data === 'object' && 'nodes' in data && Array.isArray(data.nodes)) {
           return {
             nodes: data.nodes.map((n) => projectToNode(n)),
             total: data.total,
@@ -172,7 +172,7 @@ export const useFileSystemData = ({
       });
 
       const data = response.data;
-      if (data) {
+      if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
         const childrenData = data.nodes.map(toFileSystemNode);
         return {
           nodes: childrenData,
@@ -192,6 +192,7 @@ export const useFileSystemData = ({
     },
     enabled:
       (!!effectiveNodeId && !isTrash && !hasSearch) || isProjectRootMode,
+    placeholderData: keepPreviousData,
   });
 
   // ── Query 3: Search results ────────────────────────────────────────
@@ -236,7 +237,7 @@ export const useFileSystemData = ({
       });
 
       const data = response.data;
-      if (data) {
+      if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
         return {
           nodes: data.nodes.map(toFileSystemNode),
           total: data.total,
@@ -254,6 +255,7 @@ export const useFileSystemData = ({
       };
     },
     enabled: hasSearch,
+    placeholderData: keepPreviousData,
   });
 
   // ── Query 4: Trash ────────────────────────────────────────────────
@@ -273,7 +275,7 @@ export const useFileSystemData = ({
         });
 
         const data = response.data;
-        if (data) {
+        if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
           const trashNodes = data.nodes.map(toFileSystemNode);
           return {
             nodes: trashNodes,
@@ -296,7 +298,7 @@ export const useFileSystemData = ({
       const response = await fileSystemControllerGetTrash();
 
       const data = response.data;
-      if (data) {
+      if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
         const trashNodes = data.nodes.map(toFileSystemNode);
         return {
           nodes: trashNodes,

@@ -30,7 +30,7 @@ import 'vant/es/icon/style'
 
 import { createApp } from 'vue'
 import App from './App.vue'
-// import router from './route'
+import router from './route'
 
 import 'lib-flexible'
 
@@ -40,10 +40,11 @@ import { initConfig } from './config';
 import "./command"
 import { setToastDefaultOptions } from 'vant';
 import VConsole from "vconsole";
-import i18nPlugin, { VoerkaI18nPluginOptions } from '@voerkai18n/vue'
+import { i18nPlugin, VoerkaI18nPluginOptions } from '@voerkai18n/vue'
 import { i18nScope } from './languages'
 import "./styles/index.scss"
 import { getParamsFromUrl } from './utils/paramsFromUrl.js';
+import { setupApiClient } from './utils/apiConfig';
 setToastDefaultOptions({
     position: "top",
 })
@@ -55,7 +56,7 @@ i18nScope.ready(()=> {
     app.use<VoerkaI18nPluginOptions>(i18nPlugin as any,{
         i18nScope
     })
-    // app.use(router)
+    app.use(router)
     app.use(plugins)
 
 

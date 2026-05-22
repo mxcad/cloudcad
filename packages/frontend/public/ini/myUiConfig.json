@@ -41,6 +41,11 @@
       "prompt": "保存",
       "icon": "baocun",
       "cmd": "Mx_Save"
+    },
+    {
+      "label": "打印",
+      "tips": "Print",
+      "cmd": "Mx_PrintDialog"
     }
   ],
   "isShowTopButtonBar": true,
@@ -1287,17 +1292,17 @@
     {
       "label": "打开",
       "tips": "Open",
-      "cmd": "OpenDwg",
+      "cmd": "openFile",
       "children": [
         {
           "label": "使用缓存",
           "tips": "快速打开",
-          "cmd": "OpenDwg"
+          "cmd": "openFile"
         },
         {
           "label": "忽略缓存",
           "tips": "重新转换",
-          "cmd": "OpenDwg_DoNotUseCache"
+          "cmd": "openFile_noCache"
         }
       ]
     },

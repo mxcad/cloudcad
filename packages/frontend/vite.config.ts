@@ -29,6 +29,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/mxcad_mobile': {
+          target: 'http://localhost:7001',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/mxcad_mobile/, ''),
+          ws: true,
+        },
       },
     },
     plugins: [

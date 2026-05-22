@@ -270,7 +270,7 @@ export const Dashboard: React.FC = () => {
 
   // 统计数据
   const stats = useMemo(() => {
-    if (!finalStats) {
+    if (!finalStats || !finalStats.storage || !finalStats.fileTypeStats) {
       return {
         projects: 0,
         files: 0,

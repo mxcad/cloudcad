@@ -2549,7 +2549,6 @@ MxFun.addCommand('Mx_InsertImageWithUpload', () => {
   // 调用内置 _InsertImage 命令，并在回调中记录图片信息
   MxFun.sendStringToExecute('_InsertImage', async (data: { url: string; fileName: string; entity: unknown }) => {
     if (!data) {
-      handleError(new Error('插入图片失败：未收到数据'), 'mxcadManager: Mx_InsertImageWithUpload');
       return;
     }
 

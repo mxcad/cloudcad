@@ -9,6 +9,9 @@
     "removeComments": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "@nestjs-modules/mailer/adapters/*": ["./node_modules/@nestjs-modules/mailer/dist/adapters/*"]
+    },
     "isolatedModules": false,
     "skipLibCheck": true,
     "rootDir": null,

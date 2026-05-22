@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { DocumentBuilder, SwaggerModule } = require('@nestjs/swagger');
 
-const ROOT_DIR = path.join(__dirname, '..', '..');
+const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const OUTPUT_PATH = path.join(ROOT_DIR, 'swagger_json.json');
 
 function buildSwaggerDocument(app) {

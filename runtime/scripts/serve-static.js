@@ -6,6 +6,7 @@
  * 选项:
  *   --port <number>     服务端口 (默认: 3000)
  *   --dir <path>        静态文件目录 (默认: ../../packages/frontend/dist)
+ *   --mobile-dir <path> 移动端静态文件目录 (默认: ../../packages/frontend_mobile/dist)
  *   --api-target <url>  API 代理目标 (默认: http://localhost:3001)
  *   --spa               SPA 模式，所有路由返回 index.html
  */
@@ -22,6 +23,7 @@ function parseArgs() {
   const options = {
     port: parseInt(process.env.FRONTEND_PORT || '3000', 10),
     dir: path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist'),
+    mobileDir: path.resolve(__dirname, '..', '..', 'packages', 'frontend_mobile', 'dist'),
     apiTarget: process.env.BACKEND_URL || 'http://localhost:3001',
     spa: true,
   };
@@ -32,6 +34,9 @@ function parseArgs() {
       i++;
     } else if (args[i] === '--dir' && args[i + 1]) {
       options.dir = path.resolve(args[i + 1]);
+      i++;
+    } else if (args[i] === '--mobile-dir' && args[i + 1]) {
+      options.mobileDir = path.resolve(args[i + 1]);
       i++;
     } else if (args[i] === '--api-target' && args[i + 1]) {
       options.apiTarget = args[i + 1];
@@ -140,6 +145,63 @@ function proxyRequest(req, res, target) {
   req.pipe(proxyReq);
 }
 
+// 从指定目录提供静态文件
+function serveStaticFile(res, filePath, urlPath, options) {
+  // 如果是目录，尝试 index.html
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(filePath, 'index.html');
+  }
+
+  // 检查文件是否存在
+  if (!fs.existsSync(filePath)) {
+    // SPA 模式：返回 index.html
+    if (options.spa) {
+      const indexHtml = path.join(options.dir, 'index.html');
+      if (fs.existsSync(indexHtml)) {
+        filePath = indexHtml;
+      } else {
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+    } else {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+  }
+
+  // 读取并返回文件
+  const mimeType = getMimeType(filePath);
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(500);
+      res.end('Internal Server Error');
+      return;
+    }
+
+    // WASM 需要特殊响应头
+    const headers = {
+      'Content-Type': mimeType,
+    };
+
+    // 静态资源缓存
+    if (!filePath.endsWith('.html')) {
+      headers['Cache-Control'] = 'public, max-age=31536000';
+    }
+
+    // WASM 支持
+    if (filePath.endsWith('.wasm')) {
+      headers['Cross-Origin-Opener-Policy'] = 'same-origin';
+      headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
+    }
+
+    res.writeHead(200, headers);
+    res.end(data);
+  });
+}
+
 // 创建服务器
 function createServer(options) {
   const server = http.createServer((req, res) => {
@@ -159,62 +221,38 @@ function createServer(options) {
       return;
     }
 
-    // 构建文件路径
-    let filePath = path.join(options.dir, urlPath);
+    // 移动端页面：/mxcad_mobile 路径
+    if (urlPath.startsWith('/mxcad_mobile')) {
+      const mobilePath = urlPath.replace(/^\/mxcad_mobile/, '') || '/';
+      let filePath = path.join(options.mobileDir, mobilePath);
 
-    // 如果是目录，尝试 index.html
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
-      filePath = path.join(filePath, 'index.html');
-    }
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, 'index.html');
+      }
 
-    // 检查文件是否存在
-    if (!fs.existsSync(filePath)) {
-      // SPA 模式：返回 index.html
-      if (options.spa) {
-        const indexHtml = path.join(options.dir, 'index.html');
+      if (!fs.existsSync(filePath) && options.spa) {
+        const indexHtml = path.join(options.mobileDir, 'index.html');
         if (fs.existsSync(indexHtml)) {
           filePath = indexHtml;
         } else {
           res.writeHead(404);
           res.end('Not Found');
-          return;
         }
-      } else {
+      }
+
+      if (!fs.existsSync(filePath)) {
         res.writeHead(404);
         res.end('Not Found');
         return;
       }
+
+      serveStaticFile(res, filePath, urlPath, { ...options, dir: options.mobileDir });
+      return;
     }
 
-    // 读取并返回文件
-    const mimeType = getMimeType(filePath);
-
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(500);
-        res.end('Internal Server Error');
-        return;
-      }
-
-      // WASM 需要特殊响应头
-      const headers = {
-        'Content-Type': mimeType,
-      };
-
-      // 静态资源缓存
-      if (!filePath.endsWith('.html')) {
-        headers['Cache-Control'] = 'public, max-age=31536000';
-      }
-
-      // WASM 支持
-      if (filePath.endsWith('.wasm')) {
-        headers['Cross-Origin-Opener-Policy'] = 'same-origin';
-        headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
-      }
-
-      res.writeHead(200, headers);
-      res.end(data);
-    });
+    // 桌面端静态文件
+    let filePath = path.join(options.dir, urlPath);
+    serveStaticFile(res, filePath, urlPath, options);
   });
 
   return server;
@@ -235,8 +273,10 @@ function main() {
 
   server.listen(options.port, () => {
     console.log(`[静态服务] 已启动`);
-    console.log(`  目录: ${options.dir}`);
+    console.log(`  桌面端: ${options.dir}`);
+    console.log(`  移动端: ${options.mobileDir}`);
     console.log(`  地址: http://localhost:${options.port}`);
+    console.log(`  移动端: http://localhost:${options.port}/mxcad_mobile/`);
     console.log(`  API 代理: /api -> ${options.apiTarget}`);
     console.log(`  SPA:  ${options.spa ? '启用' : '禁用'}`);
   });

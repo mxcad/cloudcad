@@ -1217,5 +1217,19 @@
         "$files": [
             "plugins\\vant\\components\\leadingOut\\LeadingOutPopup.vue"
         ]
+    },
+    "上传文件": {
+        "en": "Upload file",
+        "cht": "上傳文件",
+        "$files": [
+            "plugins\\vant\\components\\popup\\ExternalReferenceUploadPopup.vue"
+        ]
+    },
+    "状态": {
+        "en": "state",
+        "cht": "狀態",
+        "$files": [
+            "plugins\\vant\\components\\popup\\ExternalReferenceUploadPopup.vue"
+        ]
     }
 }

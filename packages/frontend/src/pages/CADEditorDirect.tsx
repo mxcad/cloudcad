@@ -108,6 +108,9 @@ export const CADEditorDirect: React.FC = () => {
   // 编辑器区域显示 loading 遮罩，避免侧边栏先渲染但编辑器白屏
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 控制侧边栏是否渲染 — 初始时 defer 到 CAD 编辑器加载完成后才首次挂载
+  // 避免侧边栏的组件初始化、数据请求与 mxweb 引擎抢占资源
+  const [sidebarEnabled, setSidebarEnabled] = useState(false);
   
   // 存储当前文件的 hash（用于未登录用户的外部参照上传）
   const [currentFileHash, setCurrentFileHash] = useState('');
@@ -159,6 +162,13 @@ export const CADEditorDirect: React.FC = () => {
 
   // 文件拖拽打开
   const { isDragOver } = useFileDropToOpen();
+
+  // 初始加载完成后永久启用侧边栏 — 避免首次进入时侧边栏与 mxweb 引擎抢占资源
+  useEffect(() => {
+    if (!loading) {
+      setSidebarEnabled(true);
+    }
+  }, [loading]);
 
   // 当前文件 ID
   const currentFileIdRef = useRef<string | null>(null);
@@ -1463,14 +1473,18 @@ export const CADEditorDirect: React.FC = () => {
 
       {!error && isActive && (
         <div className="flex w-full h-screen relative">
-          {/* 侧边栏容器 */}
-          <SidebarContainer
-            projectId={
-              isHomeMode ? personalSpaceId || '' : currentProjectId || ''
-            }
-            onInsertFile={handleInsertFile}
-            loading={loading}
-          />
+          {/* CAD侧边栏 — 仅在 mxweb CAD 编辑器首次加载完成后才首次挂载 */}
+          {/* 初始加载期间完全不渲染侧边栏，避免其组件初始化/数据请求与 mxweb 抢占资源 */}
+          {/* 后续文件切换时 sidebarEnabled 为 true，侧边栏保持挂载，仅通过 loading prop 控制骨架屏 */}
+          {sidebarEnabled && (
+            <SidebarContainer
+              projectId={
+                isHomeMode ? personalSpaceId || '' : currentProjectId || ''
+              }
+              onInsertFile={handleInsertFile}
+              loading={loading}
+            />
+          )}
 
           {/* CAD编辑器内容区域 */}
           <div className="flex-1 relative" style={{ background: 'transparent' }}>
