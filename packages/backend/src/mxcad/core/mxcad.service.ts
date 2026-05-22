@@ -217,7 +217,8 @@ export class MxCadService {
     size: number,
     chunk: number,
     chunks: number,
-    context?: MxCadContext
+    context?: MxCadContext,
+    skipDb?: boolean,
   ): Promise<{ ret: MxUploadReturn; tz?: boolean; nodeId?: string }> {
     const result = await this.chunkUploadManager.uploadChunk({
       hash,
@@ -226,6 +227,7 @@ export class MxCadService {
       chunk,
       chunks,
       context: this.validateContext(context),
+      skipDb,
     });
     return result;
   }
@@ -239,7 +241,8 @@ export class MxCadService {
     size: number,
     chunks: number,
     context?: MxCadContext,
-    srcDwgNodeId?: string
+    srcDwgNodeId?: string,
+    skipDb?: boolean,
   ): Promise<{ ret: MxUploadReturn; tz?: boolean; nodeId?: string }> {
     const result = await this.chunkUploadManager.uploadChunk({
       hash,
@@ -248,6 +251,7 @@ export class MxCadService {
       chunk: chunks - 1,
       chunks,
       context: this.validateContext(context),
+      skipDb,
     });
     return result;
   }

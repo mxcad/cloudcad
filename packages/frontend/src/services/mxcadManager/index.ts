@@ -72,7 +72,7 @@ import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
-import { globalShowToast } from '../../contexts/NotificationContext';
+import { globalShowToast, globalShowThreeButtonConfirm } from '../../contexts/NotificationContext';
 import { isAuthenticated } from '../../utils/authCheck';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { cancelLoginRedirect } from '../../config/clientSetup';
@@ -183,169 +183,17 @@ setupBeforeUnloadHandler();
 export function showUnsavedChangesDialog(): Promise<
   'save' | 'discard' | 'cancel'
 > {
-  return new Promise((resolve) => {
-    const dialogId = 'mxcad-unsaved-changes-dialog';
-    let dialog = document.getElementById(dialogId) as HTMLElement;
-
-    if (dialog) {
-      document.body.removeChild(dialog);
-    }
-
-    // 获取当前主题
-    const currentTheme =
-      document.documentElement.getAttribute('data-theme') || 'light';
-    const isDark = escapeHtml(currentTheme) === 'dark';
-
-    dialog = document.createElement('div');
-    dialog.id = dialogId;
-    dialog.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--bg-overlay, ${isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(15, 23, 42, 0.5)'});
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100001; /* Z_LAYERS.TOAST + 1 - above save confirm */
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-
-    dialog.innerHTML = `
-      <div style="
-        background: var(--bg-elevated, ${isDark ? '#2a2f35' : '#ffffff'});
-        border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-        border-radius: 12px;
-        box-shadow: var(--shadow-lg, 0 10px 15px ${isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)'});
-        width: 90%;
-        max-width: 420px;
-        overflow: hidden;
-      ">
-        <div style="
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-        ">
-          <div style="
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: ${isDark ? 'rgba(245, 158, 11, 0.2)' : '#fef3c7'};
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 16px;
-          ">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${isDark ? '#f59e0b' : '#d97706'}" stroke-width="2">
-              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-            </svg>
-          </div>
-          <h3 style="margin: 0 0 8px 0; font-size: var(--text-xl); font-weight: 600; color: var(--text-primary, ${isDark ? '#f0f4f8' : '#0f172a'});">
-            未保存的更改
-          </h3>
-          <p style="margin: 0; font-size: var(--text-md); color: var(--text-tertiary, ${isDark ? '#7a8a99' : '#64748b'});">
-            当前图纸有未保存的更改，是否保存？
-          </p>
-        </div>
-        <div style="
-          padding: 16px 20px;
-          background: var(--bg-secondary, ${isDark ? '#1a1d21' : '#f8fafc'});
-          border-top: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-        ">
-          <button id="mxcad-unsaved-cancel" style="
-            padding: 10px 20px;
-            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-            border-radius: 12px;
-            background: transparent;
-            color: var(--text-secondary, ${isDark ? '#b8c5d1' : '#334155'});
-            font-size: var(--text-md);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          " onmouseover="this.style.background='var(--bg-tertiary, ${isDark ? '#22262b' : '#f1f5f9'})'" onmouseout="this.style.background='transparent'">
-            取消
-          </button>
-          <button id="mxcad-unsaved-discard" style="
-            padding: 10px 20px;
-            border: 1px solid var(--border-default, ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0'});
-            border-radius: 12px;
-            background: transparent;
-            color: var(--error, #ef4444);
-            font-size: var(--text-md);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          " onmouseover="this.style.background='var(--error-dim, #fee2e2)'" onmouseout="this.style.background='transparent'">
-            不保存
-          </button>
-          <button id="mxcad-unsaved-save" style="
-            padding: 10px 20px;
-            border: none;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--primary-600, ${isDark ? '#33adff' : '#0080cc'}), var(--accent-600, ${isDark ? '#22d3ee' : '#0891b2'}));
-            color: white;
-            font-size: var(--text-md);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-          " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(99, 102, 241, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(99, 102, 241, 0.3)'">
-            保存
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialog);
-
-    const cancelBtn = dialog.querySelector('#mxcad-unsaved-cancel');
-    const discardBtn = dialog.querySelector('#mxcad-unsaved-discard');
-    const saveBtn = dialog.querySelector('#mxcad-unsaved-save');
-
-    const cleanup = () => {
-      if (dialog && dialog.parentNode) {
-        dialog.parentNode.removeChild(dialog);
-      }
-    };
-
-    cancelBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve('cancel');
-    });
-
-    discardBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve('discard');
-    });
-
-    saveBtn?.addEventListener('click', () => {
-      cleanup();
-      resolve('save');
-    });
-
-    // 点击背景关闭
-    dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) {
-        cleanup();
-        resolve('cancel');
-      }
-    });
-
-    // ESC 键关闭
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        document.removeEventListener('keydown', handleKeyDown);
-        cleanup();
-        resolve('cancel');
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
+  return globalShowThreeButtonConfirm({
+    title: '未保存的更改',
+    message: '当前图纸有未保存的更改，是否保存？',
+    confirmText: '保存',
+    discardText: '不保存',
+    cancelText: '取消',
+    dialogType: 'warning',
+  }).then((value) => {
+    if (value === 'confirm') return 'save';
+    if (value === 'discard') return 'discard';
+    return 'cancel';
   });
 }
 
@@ -2674,14 +2522,6 @@ export const mxcadManager = MxCADManager.getInstance();
  * 3. 记录到待上传列表，等待保存时处理
  */
 MxFun.addCommand('Mx_InsertImageWithUpload', () => {
-  // 获取当前打开的图纸信息
-  const currentInfo = mxcadManager.getCurrentFileInfo();
-  
-  if (!currentInfo?.fileId) {
-    console.error('[Mx_InsertImageWithUpload] 当前没有打开的图纸文件');
-    globalShowToast('请先打开图纸后再插入图片', 'warning');
-    return;
-  }
 
   // 调用内置 _InsertImage 命令，并在回调中记录图片信息
   MxFun.sendStringToExecute('_InsertImage', async (data: { url: string; fileName: string; entity: unknown }) => {

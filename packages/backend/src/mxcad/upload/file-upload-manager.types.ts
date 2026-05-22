@@ -12,6 +12,7 @@ export interface UploadChunkOptions {
   chunk: number;
   chunks: number;
   context: import('../node/filesystem-node.service').FileSystemNodeContext;
+  skipDb?: boolean;
 }
 
 export interface MergeOptions {
@@ -21,6 +22,7 @@ export interface MergeOptions {
   chunks: number;
   context: import('../node/filesystem-node.service').FileSystemNodeContext;
   srcDwgNodeId?: string;
+  skipDb?: boolean;
 }
 
 export interface MergeResult {

@@ -30,6 +30,8 @@ import { hideGlobalLoading } from '../utils/loadingUtils';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { useFileDropToOpen } from '../hooks/useFileDropToOpen';
 import { DropIndicator } from '../components/drop-indicator/DropIndicator';
+import { uploadFile } from '../utils/mxcadUploadUtils';
+import { calculateFileHash } from '../utils/hashUtils';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/DownloadFormatModal';
@@ -406,27 +408,35 @@ export const CADEditorDirect: React.FC = () => {
       themeConfig: `${configUrl}/ini/myVuetifyThemeConfig.json`,
     });
 
-    // 设置MxCAD服务器配置
-    const serverConfig = window.MxPluginContext.getServerConfig();
-    if (serverConfig?.uploadFileConfig?.create) {
-      // 优先使用当前打开文件的父节点作为上传目标
-      // 如果没有当前文件信息，则从 URL 获取
-      let nodeId = currentFile?.parentId || '';
+    // 注册打印/剪切回调
+    mxcadApp.initPrintConfig({
+      callback: async (data: Blob, param) => {
+        const file = new File([data], 'print.mxweb', { type: 'application/octet-stream' });
+        const hash = await calculateFileHash(file);
+        await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
 
-      if (!nodeId) {
-        nodeId =
-          new URLSearchParams(location.search).get('nodeId') ||
-          new URLSearchParams(location.search).get('parent') ||
-          '';
+        const result = await publicFileControllerConvertAndDownload({
+          body: { fileHash: hash, format: 'pdf', params: param },
+        });
+
+        const blob = result?.data as Blob | undefined;
+        return blob ? URL.createObjectURL(blob) : '';
       }
+    });
+    mxcadApp.initCutConfig({
+      callback: async (data: Blob, box) => {
+        const file = new File([data], 'cut.mxweb', { type: 'application/octet-stream' });
+        const hash = await calculateFileHash(file);
+        await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
 
-      serverConfig.uploadFileConfig.create.formData = {
-        ...serverConfig.uploadFileConfig.create.formData,
-        nodeId: nodeId,
-      };
+        const result = await publicFileControllerConvertAndDownload({
+          body: { fileHash: hash, format: 'dwg', params: box.param },
+        });
 
-      // Authorization header 由 apiService 拦截器统一处理
-    }
+        const blob = result?.data as Blob | undefined;
+        return blob ? URL.createObjectURL(blob) : '';
+      }
+    });
   };
 
   // 隐藏编辑器
@@ -1344,22 +1354,27 @@ export const CADEditorDirect: React.FC = () => {
 
       // 另存为到本地模式：调用公开转换端点
       if (isSaveAsLocalModeRef.current && saveAsBlob) {
-        const arrayBuffer = await saveAsBlob.arrayBuffer();
-        const uint8 = new Uint8Array(arrayBuffer);
-        const base64File = btoa(Array.from(uint8).map(b => String.fromCharCode(b)).join(''));
+        const file = new File([saveAsBlob], 'save-as.mxweb', { type: 'application/octet-stream' });
+        const hash = await calculateFileHash(file);
+        await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
 
-        const body: Record<string, string> = { file: base64File, format };
-        if (pdfOptions?.width) body.width = pdfOptions.width;
-        if (pdfOptions?.height) body.height = pdfOptions.height;
-        if (pdfOptions?.colorPolicy) body.colorPolicy = pdfOptions.colorPolicy;
-
-        const result = await (publicFileControllerConvertAndDownload as any)({ body });
+        const result = await publicFileControllerConvertAndDownload({
+          body: {
+            fileHash: hash,
+            format,
+            params: pdfOptions ? {
+              width: pdfOptions.width,
+              height: pdfOptions.height,
+              colorPolicy: pdfOptions.colorPolicy as 'mono' | undefined,
+            } : undefined,
+          },
+        });
 
         if (result?.error) {
           throw new Error('转换失败');
         }
 
-        const { data: blob } = result;
+        const blob = result?.data as Blob | undefined;
 
         if (!blob) {
           throw new Error('转换失败：无返回数据');

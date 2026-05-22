@@ -100,6 +100,24 @@ export interface ConversionOptions {
   resultposturl?: string;
   /** 追踪 ID */
   traceid?: string;
+  /** 旋转角度（用于 print_to_pdf） */
+  roate_angle?: number;
+  /** 视角角度（用于 print_to_pdf） */
+  view_angle?: number;
+  /** 裁剪框点 1 X */
+  bd_pt1_x?: string;
+  /** 裁剪框点 1 Y */
+  bd_pt1_y?: string;
+  /** 裁剪框点 2 X */
+  bd_pt2_x?: string;
+  /** 裁剪框点 2 Y */
+  bd_pt2_y?: string;
+  /** 当前打开文件的 MD5 */
+  open_file_md5?: string;
+  /** 布局名称 */
+  layout_name?: string;
+  /** 是否创建裁剪块 */
+  create_clip_block?: boolean;
 }
 
 export interface IFileConversionService {

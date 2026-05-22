@@ -96,6 +96,7 @@ export class FileMergeService {
       size: fileSize,
       context,
       srcDwgNodeId,
+      skipDb,
     } = options;
     const fileMd5 = hashFile;
     const tmpDir = this.fileSystemService.getChunkTempDirPath(fileMd5);
@@ -129,9 +130,9 @@ export class FileMergeService {
           return { ret: MxUploadReturn.kOk };
         }
 
-        await this.cacheManager.set('file-upload', mergeKey, true);
+          await this.cacheManager.set('file-upload', mergeKey, true);
 
-        const name = fileName;
+          const name = fileName;
         const fileExtName = name.substring(name.lastIndexOf('.') + 1);
         const filename = `${fileMd5}.${fileExtName}`;
         const filepath = this.fileSystemService.getMd5Path(filename);
@@ -148,6 +149,13 @@ export class FileMergeService {
           if (!mergeResult.success) {
             await this.cacheManager.delete('file-upload', mergeKey);
             return { ret: MxUploadReturn.kConvertFileError };
+          }
+
+          if (skipDb) {
+            this.logger.log(`[mergeConvertFile] skipDb 模式，合并完成: ${fileMd5}`);
+            await this.fileSystemService.deleteDirectory(tmpDir);
+            await this.cacheManager.delete('file-upload', mergeKey);
+            return { ret: MxUploadReturn.kOk };
           }
 
           await this.fileSystemService.writeStatusFile(

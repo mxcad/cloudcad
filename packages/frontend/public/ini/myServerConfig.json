@@ -5,6 +5,7 @@
     "baseUrl": "",
     "?create": "参考WebUploader.create方法传入的参数配置",
     "create": {
+      "dnd": "",
       "swf": "https://www.mxdraw3d.com/webuploader/Uploader.swf",
       "server": "/mxcad/files/uploadFiles",
       "accept": {
@@ -18,7 +19,7 @@
     "chunkisExist": "/mxcad/files/chunkisExist",
     "?chunked": "是否分片上传",
     "chunked": true,
-    "?mxfilepath": "文件上传后前端访问路径（现在直接使用 node.path，不再需要此配置）",
+    "?mxfilepath": "文件上传后前端访问路径",
     "mxfilepath": "/mxcad/",
     "?saveUrl": "保存文件服务地址",
     "saveUrl": "/mxcad/savemxweb",

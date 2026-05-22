@@ -75,14 +75,16 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
         </Tooltip>
       </div>
 
-      <Tooltip content="关闭">
-        <button
-          onClick={(e) => { e.stopPropagation(); onClose(); }}
-          className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
-        >
-          <X size={24} className="text-white" />
-        </button>
-      </Tooltip>
+      <div className="absolute top-4 right-4 z-10">
+        <Tooltip content="关闭">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <X size={24} className="text-white" />
+          </button>
+        </Tooltip>
+      </div>
 
       <div className="relative max-w-[90vw] max-h-[85vh]">
         <img

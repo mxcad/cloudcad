@@ -22,6 +22,7 @@ import './styles/transitions.css';
 import './styles/theme.css';
 import './styles/app.css';
 import './styles/icon.css';
+import './components/drop-indicator/DropIndicator.css';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 const queryClient = new QueryClient({

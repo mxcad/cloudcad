@@ -93,7 +93,7 @@ export class ChunkUploadManagerService {
 
       if (isLastChunk) {
         this.logger.log(`[uploadChunk] 最后一个分片，触发合并: hash=${hash}`);
-        return this.fileMergeService.mergeConvertFile({ hash, chunks, name, size, context });
+        return this.fileMergeService.mergeConvertFile({ hash, chunks, name, size, context, skipDb: options.skipDb });
       } else {
         this.logger.log(`[uploadChunk] 保存分片: hash=${hash}, chunk=${chunk}`);
         return { ret: MxUploadReturn.kOk };

@@ -10,9 +10,10 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { PublicFileUploadService } from './services/public-file-upload.service';
 import { FileConversionService } from '../mxcad/conversion/file-conversion.service';
+import { ConvertFileParamsDto } from './dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -298,79 +299,56 @@ export class PublicFileService {
 
   /**
    * 将 mxweb 文件转换为指定格式（公开接口，无需认证）
-   * @param fileBuffer mxweb 文件内容
+   * @param fileHash 已通过分片上传到 uploads 目录的 mxweb 文件 MD5
    * @param targetFormat 目标格式: dwg, dxf, pdf, mxweb
-   * @param pdfOptions PDF 导出参数（仅 pdf 格式需要）
+   * @param params 转换参数（可选）
    * @returns 转换后的文件 buffer 和元信息
    */
-  async convertMxwebToFormat(
-    base64File: string,
+  async convertMxwebByHash(
+    fileHash: string,
     targetFormat: string,
-    pdfOptions?: { width?: string; height?: string; colorPolicy?: string }
+    params?: ConvertFileParamsDto,
   ): Promise<{ buffer: Buffer; filename: string; mimeType: string }> {
     if (!this.fileConversionService) {
       throw new Error('文件转换服务不可用');
     }
 
-    const fileBuffer = Buffer.from(base64File, 'base64');
+    const mxwebPath = await this.findMxwebFile(fileHash);
+    if (!mxwebPath) {
+      throw new NotFoundException(`文件不存在: ${fileHash}`);
+    }
 
-    // mxweb 格式无需转换，直接返回
     if (targetFormat === 'mxweb') {
+      const buffer = await fs.promises.readFile(mxwebPath);
       return {
-        buffer: fileBuffer,
-        filename: 'converted.mxweb',
+        buffer,
+        filename: `converted.mxweb`,
         mimeType: 'application/octet-stream',
       };
     }
 
-    const tmpDir = path.join(this.uploadService.getUploadPath(), 'tmp');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-
-    const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
     const timestamp = Date.now();
-    const inputFile = path.join(tmpDir, `${hash}_${timestamp}.mxweb`);
-    let outputFile: string;
+    const outname = `${fileHash}_${timestamp}.${targetFormat}`;
 
     try {
-      await fs.promises.writeFile(inputFile, fileBuffer);
-
-      let outname: string;
-      let cmd: string | undefined;
-      let width: string | undefined;
-      let height: string | undefined;
-      let colorPolicy: string | undefined;
-
-      switch (targetFormat) {
-        case 'dwg':
-          outname = `${hash}_${timestamp}.dwg`;
-          break;
-        case 'dxf':
-          outname = `${hash}_${timestamp}.dxf`;
-          break;
-        case 'pdf':
-          outname = `${hash}_${timestamp}.pdf`;
-          cmd = 'print_to_pdf';
-          width = pdfOptions?.width || '2000';
-          height = pdfOptions?.height || '2000';
-          colorPolicy = pdfOptions?.colorPolicy || 'mono';
-          break;
-        default:
-          throw new BadRequestException(`不支持的格式: ${targetFormat}`);
-      }
-
-      outputFile = path.join(tmpDir, outname);
-
       const result = await this.fileConversionService.convertFile({
-        srcPath: inputFile,
-        fileHash: hash,
+        srcPath: mxwebPath,
+        fileHash,
         createPreloadingData: false,
         outname,
-        cmd,
-        width,
-        height,
-        colorPolicy,
+        cmd: params?.cmd,
+        width: params?.width,
+        height: params?.height,
+        colorPolicy: params?.colorPolicy,
+        roate_angle: params?.roate_angle,
+        view_angle: params?.view_angle,
+        bd_pt1_x: params?.bd_pt1_x,
+        bd_pt1_y: params?.bd_pt1_y,
+        bd_pt2_x: params?.bd_pt2_x,
+        bd_pt2_y: params?.bd_pt2_y,
+        open_file_md5: params?.open_file_md5,
+        layout_name: params?.layout_name,
+        create_clip_block: params?.create_clip_block,
       });
 
       if (!result.isOk) {
@@ -379,6 +357,9 @@ export class PublicFileService {
         );
       }
 
+      // mxcadassembly.exe 将输出文件写到源文件同目录
+      const uploadPath = this.uploadService.getUploadPath();
+      const outputFile = path.join(uploadPath, outname);
       if (!fs.existsSync(outputFile)) {
         throw new Error('转换后的文件未生成');
       }
@@ -392,7 +373,7 @@ export class PublicFileService {
       };
 
       this.logger.log(
-        `[convertMxwebToFormat] 转换成功: ${targetFormat}, 大小: ${convertedBuffer.length} bytes`
+        `[convertMxwebByHash] 转换成功: ${targetFormat}, hash=${fileHash}, 大小: ${convertedBuffer.length} bytes`
       );
 
       return {
@@ -401,16 +382,12 @@ export class PublicFileService {
         mimeType: mimeTypes[targetFormat] || 'application/octet-stream',
       };
     } finally {
-      // 清理临时文件
       try {
-        if (fs.existsSync(inputFile)) {
-          await fs.promises.unlink(inputFile);
-        }
         if (outputFile && fs.existsSync(outputFile)) {
           await fs.promises.unlink(outputFile);
         }
       } catch (e) {
-        this.logger.warn(`[convertMxwebToFormat] 清理临时文件失败: ${e.message}`);
+        this.logger.warn(`[convertMxwebByHash] 清理临时文件失败: ${e.message}`);
       }
     }
   }

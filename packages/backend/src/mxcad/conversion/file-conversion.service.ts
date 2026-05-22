@@ -193,6 +193,34 @@ export class FileConversionService implements IFileConversionService {
 				param.outjpg = outjpg;
 			}
 
+			if (options.roate_angle !== undefined) {
+				param.roate_angle = options.roate_angle;
+			}
+			if (options.view_angle !== undefined) {
+				param.view_angle = options.view_angle;
+			}
+			if (options.bd_pt1_x) {
+				param.bd_pt1_x = options.bd_pt1_x;
+			}
+			if (options.bd_pt1_y) {
+				param.bd_pt1_y = options.bd_pt1_y;
+			}
+			if (options.bd_pt2_x) {
+				param.bd_pt2_x = options.bd_pt2_x;
+			}
+			if (options.bd_pt2_y) {
+				param.bd_pt2_y = options.bd_pt2_y;
+			}
+			if (options.open_file_md5) {
+				param.open_file_md5 = options.open_file_md5;
+			}
+			if (options.layout_name) {
+				param.layout_name = options.layout_name;
+			}
+			if (options.create_clip_block !== undefined) {
+				param.create_clip_block = options.create_clip_block;
+			}
+
 			// Linux 平台特殊处理
 			if (this.isLinux()) {
 				if (this.mxCadBinPath) {

@@ -92,4 +92,11 @@ export class UploadFilesDto {
   @IsOptional()
   @IsIn(['skip', 'overwrite', 'rename'])
   conflictStrategy?: 'skip' | 'overwrite' | 'rename';
+
+  @ApiProperty({
+    description: '跳过 DB/转换/SVN 等后续操作，仅上传文件到 uploads 目录',
+    required: false,
+  })
+  @IsOptional()
+  skipDb?: boolean;
 }

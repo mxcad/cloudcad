@@ -223,7 +223,7 @@ export class FileSystemService implements IFileSystemService {
     resultCall: (code: number) => void
   ): void {
     if (!fileList.length) {
-      fileWriteStream.end('done');
+      fileWriteStream.end();
       resultCall(0);
       return;
     }

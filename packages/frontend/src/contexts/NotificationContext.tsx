@@ -29,6 +29,15 @@ interface ConfirmOptions {
   type?: 'danger' | 'warning' | 'info';
 }
 
+interface ThreeButtonConfirmOptions {
+  title: string;
+  message: string;
+  confirmText: string;
+  discardText: string;
+  cancelText: string;
+  dialogType?: 'danger' | 'warning' | 'info';
+}
+
 interface AlertOptions {
   title: string;
   message: string;
@@ -54,9 +63,11 @@ interface NotificationContextValue {
 
 export const TOAST_EVENT = 'cloudcad:toast';
 export const CONFIRM_EVENT = 'cloudcad:confirm';
+export const THREE_BUTTON_CONFIRM_EVENT = 'cloudcad:three-button-confirm';
 export const ALERT_EVENT = 'cloudcad:alert';
 export const PROMPT_EVENT = 'cloudcad:prompt';
 const CONFIRM_RESPONSE_EVENT = 'cloudcad:confirm-response';
+const THREE_BUTTON_CONFIRM_RESPONSE_EVENT = 'cloudcad:three-button-confirm-response';
 const ALERT_RESPONSE_EVENT = 'cloudcad:alert-response';
 const PROMPT_RESPONSE_EVENT = 'cloudcad:prompt-response';
 
@@ -83,6 +94,26 @@ export const globalShowConfirm = (
       handleResponse as EventListener
     );
     window.dispatchEvent(new CustomEvent(CONFIRM_EVENT, { detail: options }));
+  });
+};
+
+export const globalShowThreeButtonConfirm = (
+  options: ThreeButtonConfirmOptions
+): Promise<'confirm' | 'discard' | 'cancel'> => {
+  return new Promise((resolve) => {
+    const handleResponse = (e: Event) => {
+      const customEvent = e as CustomEvent<{ value: 'confirm' | 'discard' | 'cancel' }>;
+      resolve(customEvent.detail.value);
+      window.removeEventListener(
+        THREE_BUTTON_CONFIRM_RESPONSE_EVENT,
+        handleResponse as EventListener
+      );
+    };
+    window.addEventListener(
+      THREE_BUTTON_CONFIRM_RESPONSE_EVENT,
+      handleResponse as EventListener
+    );
+    window.dispatchEvent(new CustomEvent(THREE_BUTTON_CONFIRM_EVENT, { detail: options }));
   });
 };
 
@@ -133,6 +164,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timerRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const threeButtonResolveRef = useRef<((value: 'confirm' | 'discard' | 'cancel') => void) | null>(null);
   const alertResolveRef = useRef<(() => void) | null>(null);
   const promptResolveRef = useRef<((value: string | null) => void) | null>(null);
 
@@ -164,6 +196,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     message: '',
     confirmText: '确定',
     dialogType: 'info',
+  });
+
+  const [threeButtonState, setThreeButtonState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    discardText: string;
+    cancelText: string;
+    dialogType: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '保存',
+    discardText: '不保存',
+    cancelText: '取消',
+    dialogType: 'warning',
   });
 
   const [promptState, setPromptState] = useState<{
@@ -210,6 +260,33 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       alertResolveRef.current = null;
     }
     setAlertState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleThreeButtonConfirm = useCallback(() => {
+    const resolve = threeButtonResolveRef.current;
+    if (resolve) {
+      resolve('confirm');
+      threeButtonResolveRef.current = null;
+    }
+    setThreeButtonState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleThreeButtonDiscard = useCallback(() => {
+    const resolve = threeButtonResolveRef.current;
+    if (resolve) {
+      resolve('discard');
+      threeButtonResolveRef.current = null;
+    }
+    setThreeButtonState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleThreeButtonCancel = useCallback(() => {
+    const resolve = threeButtonResolveRef.current;
+    if (resolve) {
+      resolve('cancel');
+      threeButtonResolveRef.current = null;
+    }
+    setThreeButtonState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
   const handlePromptConfirm = useCallback(() => {
@@ -298,6 +375,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     []
   );
 
+  const showThreeButtonConfirm = useCallback(
+    (options: ThreeButtonConfirmOptions): Promise<'confirm' | 'discard' | 'cancel'> => {
+      return new Promise((resolve) => {
+        threeButtonResolveRef.current = resolve;
+        setThreeButtonState({
+          isOpen: true,
+          title: options.title,
+          message: options.message,
+          confirmText: options.confirmText,
+          discardText: options.discardText,
+          cancelText: options.cancelText,
+          dialogType: options.dialogType || 'warning',
+        });
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{
@@ -313,6 +408,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         window.dispatchEvent(
           new CustomEvent(CONFIRM_RESPONSE_EVENT, {
             detail: { confirmed },
+          })
+        );
+      });
+    };
+
+    const handleThreeButtonConfirmEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<ThreeButtonConfirmOptions>;
+      showThreeButtonConfirm(customEvent.detail).then((value) => {
+        window.dispatchEvent(
+          new CustomEvent(THREE_BUTTON_CONFIRM_RESPONSE_EVENT, {
+            detail: { value },
           })
         );
       });
@@ -338,16 +444,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
     window.addEventListener(TOAST_EVENT, handleToastEvent as EventListener);
     window.addEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
+    window.addEventListener(THREE_BUTTON_CONFIRM_EVENT, handleThreeButtonConfirmEvent as EventListener);
     window.addEventListener(ALERT_EVENT, handleAlertEvent as EventListener);
     window.addEventListener(PROMPT_EVENT, handlePromptEvent as EventListener);
 
     return () => {
       window.removeEventListener(TOAST_EVENT, handleToastEvent as EventListener);
       window.removeEventListener(CONFIRM_EVENT, handleConfirmEvent as EventListener);
+      window.removeEventListener(THREE_BUTTON_CONFIRM_EVENT, handleThreeButtonConfirmEvent as EventListener);
       window.removeEventListener(ALERT_EVENT, handleAlertEvent as EventListener);
       window.removeEventListener(PROMPT_EVENT, handlePromptEvent as EventListener);
     };
-  }, [showToast, showConfirm, showAlert, showPrompt]);
+  }, [showToast, showConfirm, showThreeButtonConfirm, showAlert, showPrompt]);
 
   useEffect(() => {
     return () => {
@@ -432,6 +540,38 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
               style={{ color: 'var(--text-secondary)' }}
             >
               {confirmState.message}
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {threeButtonState.isOpen && (
+        <Modal
+          isOpen={true}
+          onClose={handleThreeButtonCancel}
+          title={threeButtonState.title}
+          zIndex={Z_LAYERS.TOAST - 1}
+          footer={
+            <>
+              <Button variant="ghost" onClick={handleThreeButtonCancel}>
+                {threeButtonState.cancelText}
+              </Button>
+              <Button variant="outline" onClick={handleThreeButtonDiscard}>
+                {threeButtonState.discardText}
+              </Button>
+              <Button onClick={handleThreeButtonConfirm}>
+                {threeButtonState.confirmText}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex items-start gap-4">
+            {renderConfirmIcon(threeButtonState.dialogType)}
+            <p
+              className="text-sm"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {threeButtonState.message}
             </p>
           </div>
         </Modal>

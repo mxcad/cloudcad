@@ -27,6 +27,8 @@ export interface MxCadUploadOptions {
   conflictStrategy?: 'skip' | 'overwrite' | 'rename';
   /** 强制上传，跳过秒传检查（无缓存打开时使用） */
   forceUpload?: boolean;
+  /** 跳过 DB/转换/SVN 等后续操作，仅上传文件到 uploads 目录 */
+  skipDb?: boolean;
   /** 开始上传回调 */
   onBeginUpload?: () => void;
   /** 进度回调 */
@@ -116,6 +118,7 @@ export async function uploadFile(
     nodeId,
     conflictStrategy,
     forceUpload,
+    skipDb,
     onBeginUpload,
     onProgress,
     onFileQueued,
@@ -227,7 +230,8 @@ export async function uploadFile(
         size: file.size,
         nodeId: nodeId,
         conflictStrategy: conflictStrategy,
-        file: chunk
+        file: chunk,
+        skipDb,
       }
     });
     
@@ -273,7 +277,8 @@ export async function uploadFile(
         hash: hash,
         size: file.size,
         nodeId: nodeId,
-        conflictStrategy: conflictStrategy
+        conflictStrategy: conflictStrategy,
+        skipDb,
       }
     });
 

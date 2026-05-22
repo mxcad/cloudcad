@@ -30,7 +30,7 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { PublicFileService, PreloadingData } from './public-file.service';
-import { UploadExtReferenceDto } from './dto';
+import { UploadExtReferenceDto, ConvertFileDto } from './dto';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
 
@@ -337,24 +337,40 @@ export class PublicFileController {
     description: '转换请求参数',
     schema: {
       type: 'object',
-      required: ['file', 'format'],
+      required: ['fileHash', 'format'],
       properties: {
-        file: { type: 'string', description: 'mxweb 文件的 Base64 编码内容' },
+        fileHash: { type: 'string', description: 'mxweb 文件的 MD5（已通过分片上传到 uploads 目录）' },
         format: { type: 'string', enum: ['dwg', 'dxf', 'pdf', 'mxweb'], description: '目标格式' },
-        width: { type: 'string', description: 'PDF 宽度（像素）' },
-        height: { type: 'string', description: 'PDF 高度（像素）' },
-        colorPolicy: { type: 'string', enum: ['mono', 'color'], description: '颜色策略' },
+        params: {
+          type: 'object',
+          description: '转换参数（可选，与 mxcad-app 参数一致）',
+          properties: {
+            cmd: { type: 'string', enum: ['print_to_pdf', 'cut_dwg'], description: '命令类型' },
+            width: { type: 'string', description: '宽度（像素）' },
+            height: { type: 'string', description: '高度（像素）' },
+            colorPolicy: { type: 'string', enum: ['mono', 'default'], description: '颜色策略' },
+            roate_angle: { type: 'number', description: '旋转角度' },
+            view_angle: { type: 'number', description: '视角角度' },
+            bd_pt1_x: { type: 'string' },
+            bd_pt1_y: { type: 'string' },
+            bd_pt2_x: { type: 'string' },
+            bd_pt2_y: { type: 'string' },
+            open_file_md5: { type: 'string', description: '当前打开文件的 MD5' },
+            layout_name: { type: 'string', description: '布局名称' },
+            create_clip_block: { type: 'boolean', description: '是否创建裁剪块' },
+          },
+        },
       },
     },
   })
   @ApiResponse({ status: 200, description: '返回转换后的文件' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   async convertAndDownload(
-    @Body() body: { file: string; format: string; width?: string; height?: string; colorPolicy?: string },
+    @Body() body: ConvertFileDto,
     @Res() res: Response,
   ): Promise<void> {
-    if (!body?.file) {
-      throw new BadRequestException('缺少文件内容');
+    if (!body?.fileHash) {
+      throw new BadRequestException('缺少 fileHash');
     }
 
     if (!body?.format || !['dwg', 'dxf', 'pdf', 'mxweb'].includes(body.format)) {
@@ -364,10 +380,10 @@ export class PublicFileController {
     }
 
     try {
-      const result = await this.publicFileService.convertMxwebToFormat(
-        body.file,
+      const result = await this.publicFileService.convertMxwebByHash(
+        body.fileHash,
         body.format,
-        { width: body.width, height: body.height, colorPolicy: body.colorPolicy as 'mono' | 'color' | undefined },
+        body.params,
       );
 
       res.setHeader('Content-Type', result.mimeType);

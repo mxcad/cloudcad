@@ -2099,6 +2099,10 @@ export type UploadFilesDto = {
      * 冲突策略
      */
     conflictStrategy?: 'skip' | 'overwrite' | 'rename';
+    /**
+     * 跳过 DB/转换/SVN 等后续操作，仅上传文件到 uploads 目录
+     */
+    skipDb?: boolean;
 };
 
 export type UploadFileResponseDto = {
@@ -7230,25 +7234,58 @@ export type PublicFileControllerConvertAndDownloadData = {
      */
     body: {
         /**
-         * mxweb 文件的 Base64 编码内容
+         * mxweb 文件的 MD5（已通过分片上传到 uploads 目录）
          */
-        file: string;
+        fileHash: string;
         /**
          * 目标格式
          */
         format: 'dwg' | 'dxf' | 'pdf' | 'mxweb';
         /**
-         * PDF 宽度（像素）
+         * 转换参数（可选，与 mxcad-app 参数一致）
          */
-        width?: string;
-        /**
-         * PDF 高度（像素）
-         */
-        height?: string;
-        /**
-         * 颜色策略
-         */
-        colorPolicy?: 'mono' | 'color';
+        params?: {
+            /**
+             * 命令类型
+             */
+            cmd?: 'print_to_pdf' | 'cut_dwg';
+            /**
+             * 宽度（像素）
+             */
+            width?: string;
+            /**
+             * 高度（像素）
+             */
+            height?: string;
+            /**
+             * 颜色策略
+             */
+            colorPolicy?: 'mono' | 'default';
+            /**
+             * 旋转角度
+             */
+            roate_angle?: number;
+            /**
+             * 视角角度
+             */
+            view_angle?: number;
+            bd_pt1_x?: string;
+            bd_pt1_y?: string;
+            bd_pt2_x?: string;
+            bd_pt2_y?: string;
+            /**
+             * 当前打开文件的 MD5
+             */
+            open_file_md5?: string;
+            /**
+             * 布局名称
+             */
+            layout_name?: string;
+            /**
+             * 是否创建裁剪块
+             */
+            create_clip_block?: boolean;
+        };
     };
     path?: never;
     query?: never;

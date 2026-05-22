@@ -281,6 +281,7 @@ export class MxCadController {
         body.chunks,
         context,
         body.srcDwgNodeId,
+        body.skipDb,
       );
       return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
     }
@@ -304,7 +305,8 @@ export class MxCadController {
         body.size,
         body.chunk,
         body.chunks,
-        context
+        context,
+        body.skipDb,
       );
       return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
     } else {
