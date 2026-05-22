@@ -78,6 +78,10 @@ COPY packages/frontend/metadata.json ./packages/frontend/
 WORKDIR /app/packages/frontend
 RUN pnpm run build
 
+# 构建参数（移动端继承前端阶段的 VITE_API_BASE_URL）
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # 复制移动端源代码（.dockerignore 排除 node_modules/.env/.vscode 等）
 COPY packages/frontend_mobile ./packages/frontend_mobile
 

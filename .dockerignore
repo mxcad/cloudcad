@@ -5,6 +5,7 @@ node_modules
 # 构建产物 (保留 dist 用于某些情况)
 packages/backend/dist
 packages/frontend/dist
+packages/frontend_mobile/dist
 
 # 缓存目录
 .cache

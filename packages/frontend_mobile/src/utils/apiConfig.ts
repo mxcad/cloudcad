@@ -4,7 +4,7 @@ export function getApiBaseUrl(): string {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  return 'http://localhost:3001/api';
+  return '/api';
 }
 
 export function setupApiClient(): void {

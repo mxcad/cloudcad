@@ -30,7 +30,6 @@ import 'vant/es/icon/style'
 
 import { createApp } from 'vue'
 import App from './App.vue'
-import router from './route'
 
 import 'lib-flexible'
 
@@ -56,7 +55,6 @@ i18nScope.ready(()=> {
     app.use<VoerkaI18nPluginOptions>(i18nPlugin as any,{
         i18nScope
     })
-    app.use(router)
     app.use(plugins)
 
     setupApiClient()

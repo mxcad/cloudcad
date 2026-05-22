@@ -59,6 +59,16 @@ const {
 
 const { isShowColorPicker, openColorPicker } = useColorPicker('.colorPicker')
 const color = ref("#fff")
+function goBack() {
+  if (window.history.length > 1) {
+    window.history.back()
+  } else {
+    const returnUrl = new URLSearchParams(window.location.search).get('returnUrl')
+    if (returnUrl) {
+      window.location.href = returnUrl
+    }
+  }
+}
 const selectColor = () => {
     let _color =  MxCpp.getCurrentMxCAD().getDatabase().getCurrentlyTrueColor()
     if(_color.getColorValue() === "0xFFFFFF") {
@@ -128,7 +138,7 @@ setViewportHeight();
 
     <div class="mxCanvasBox">
         <div class="header">
-            <button class="header_huitui zoomed">
+            <button class="header_huitui zoomed" @click="goBack">
                 <MxIcon icon="huitui1" isDefault></MxIcon>
             </button>
             <van-text-ellipsis class="draw_name" :content="drawName" />
