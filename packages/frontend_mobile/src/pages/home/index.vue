@@ -17,6 +17,13 @@ import { useSimulatedMouse } from './hooks/useSimulatedMouse';
 import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
 import { useFooterToolbar } from './hooks/useFooterToolbar';
 import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
+import { useFileLoader } from '../../composables/useFileLoader';
+import { useEditorState } from '../../composables/useEditorState';
+import { useSave } from '../../composables/useSave';
+import { useUser } from '../../composables/useUser';
+import { showToast, showConfirmDialog } from 'vant';
+import CommitMessageDialog from './components/CommitMessageDialog.vue';
+import SaveAsActionSheet from './components/SaveAsActionSheet.vue';
 import MxToolbar from '@/components/MxToolbar.vue';
 
 BScroll.use(ObserveDOM)
@@ -59,14 +66,30 @@ const {
 
 const { isShowColorPicker, openColorPicker } = useColorPicker('.colorPicker')
 const color = ref("#fff")
-function goBack() {
+
+function doGoBack() {
   if (window.history.length > 1) {
     window.history.back()
   } else {
-    const returnUrl = new URLSearchParams(window.location.search).get('returnUrl')
-    if (returnUrl) {
-      window.location.href = returnUrl
+    const backUrl = new URLSearchParams(window.location.search).get('back')
+    if (backUrl) {
+      window.location.href = backUrl
     }
+  }
+}
+
+function goBack() {
+  if (editorState.state.isModified) {
+    showConfirmDialog({
+      title: '未保存的更改',
+      message: '当前图纸有未保存的更改，确定要返回吗？',
+      confirmButtonText: '确定返回',
+      cancelButtonText: '取消',
+    }).then(() => {
+      doGoBack()
+    }).catch(() => {})
+  } else {
+    doGoBack()
   }
 }
 const selectColor = () => {
@@ -111,14 +134,72 @@ const {
 } = useFloatingRightBtnList()
 
 
+const {
+    loading: fileLoading,
+    error: fileError,
+    progress: fileProgress,
+    loadByNodeId,
+    getFileIdFromUrl,
+} = useFileLoader()
+const editorState = useEditorState()
 const drawName = ref("")
+
+const { saving, save: saveAction } = useSave()
+const { isAuthenticated } = useUser()
+const showCommitDialog = ref(false)
+const showSaveAsSheet = ref(false)
+const pendingCommitMessage = ref('')
+
+async function onSaveClick() {
+  if (!isAuthenticated.value) {
+    showToast('请先登录')
+    return
+  }
+  showCommitDialog.value = true
+}
+
+function onCommitConfirm(message: string) {
+  pendingCommitMessage.value = message
+  showCommitDialog.value = false
+  executeSave()
+}
+
+async function executeSave() {
+  const success = await saveAction(pendingCommitMessage.value)
+  if (!success) {
+    showSaveAsSheet.value = true
+  }
+}
+
+const saveAsOptions = [
+  { label: '个人文件', value: 'personal' },
+  { label: '项目文件', value: 'project' },
+  { label: '图库-图纸', value: 'library-drawing' },
+  { label: '图库-图块', value: 'library-block' },
+]
+
+function onSaveAsSelect(value: string) {
+  showSaveAsSheet.value = false
+}
 
 onMounted(async () => {
     const mxcad = await createMxCAD()
     initEditObjectToolbar(mxcad)
-    mxcad.on("openFileComplete", () => {
-        drawName.value = mxcad.getCurrentFileName()
-    })
+
+    const fileId = getFileIdFromUrl()
+
+    if (fileId) {
+        mxcad.on("openFileComplete", async () => {
+            await loadByNodeId(fileId)
+            if (!fileError.value) {
+                drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+            }
+        })
+    } else {
+        mxcad.on("openFileComplete", () => {
+            drawName.value = mxcad.getCurrentFileName()
+        })
+    }
 })
 // ‍  适配内容高度
 // ‍ Adaptation content height
@@ -143,7 +224,7 @@ setViewportHeight();
             </button>
             <van-text-ellipsis class="draw_name" :content="drawName" />
             <div class="top_toolbar">
-                <button class="item">
+                <button class="item" :disabled="saving" @click="onSaveClick">
                     <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
                 </button>
                 <button class="item" @click="callCommand('Mx_ZoomE')">
@@ -203,6 +284,31 @@ setViewportHeight();
         <!-- 针柄 -->
         <button class="needle-handle ring" ref="handle" @touchstart="onTouchstart"></button>
 
+        <!-- Loading overlay -->
+        <div class="loading-overlay" v-if="fileLoading">
+            <div class="loading-content">
+                <van-loading color="#fff" type="spinner" />
+                <p class="loading-text">{{ fileProgress }}</p>
+            </div>
+        </div>
+        <!-- Error overlay -->
+        <div class="loading-overlay" v-if="fileError && !fileLoading">
+            <div class="loading-content">
+                <van-icon name="warning-o" color="#ff4444" size="48" />
+                <p class="loading-text">{{ fileError }}</p>
+            </div>
+        </div>
+        <CommitMessageDialog
+          v-if="showCommitDialog"
+          @confirm="onCommitConfirm"
+          @cancel="showCommitDialog = false"
+        />
+        <SaveAsActionSheet
+          v-if="showSaveAsSheet"
+          :options="saveAsOptions"
+          @select="onSaveAsSelect"
+          @cancel="showSaveAsSheet = false"
+        />
         <canvas id="mxCanvas"></canvas>
         <div class="history_box">
             <transition name="slide">
@@ -552,6 +658,29 @@ setViewportHeight();
         position: absolute;
         bottom: 0;
     }
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.loading-text {
+    color: #fff;
+    margin-top: 16px;
+    font-size: 16px;
 }
 
 .cmd_operation_btn_list {
