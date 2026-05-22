@@ -20,23 +20,17 @@ interface ToastProps {
 }
 
 export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
-  const typeStyles = {
-    success: 'bg-[var(--success)] text-white border-[var(--success)]',
-    error: 'bg-[var(--error)] text-white border-[var(--error)]',
-    warning: 'bg-[var(--warning)] text-white border-[var(--warning)]',
-    info: 'bg-[var(--info)] text-white border-[var(--info)]',
-  };
-
   const iconColorStyles = {
-    success: 'text-white',
-    error: 'text-white',
-    warning: 'text-white',
-    info: 'text-white',
+    success: 'text-[var(--success)]',
+    error: 'text-[var(--error)]',
+    warning: 'text-[var(--warning)]',
+    info: 'text-[var(--info)]',
   };
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in-right border ${typeStyles[type]}`}
+      className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in-right border border-[var(--border-default)] bg-[var(--bg-elevated)]"
+      style={{ color: 'var(--text-primary)' }}
     >
       {type === 'success' && <CheckCircle size={20} className={iconColorStyles[type]} />}
       {type === 'error' && <AlertCircle size={20} className={iconColorStyles[type]} />}
@@ -45,7 +39,8 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
       <span className="text-sm font-medium">{message}</span>
       <button
         onClick={onClose}
-        className="text-white opacity-80 hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-white/10"
+        className="opacity-60 hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-[var(--bg-tertiary)]"
+        style={{ color: 'var(--text-tertiary)' }}
       >
         <X size={16} />
       </button>
