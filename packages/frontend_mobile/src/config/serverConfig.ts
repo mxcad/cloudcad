@@ -29,3 +29,11 @@ export function getHostUrl(): string {
   }
   return host;
 }
+
+export function getBaseUrl(): string {
+  return getHostUrl();
+}
+
+export function getUrlConfig() {
+  return { baseUrl: '', saveDwgUrl: '', mxfilepath: '', saveUrl: '', printPdfUrl: '' };
+}
