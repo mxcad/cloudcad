@@ -1,9 +1,9 @@
-import { getHostUrl, getUploadFileConfig, getUrlConfig } from "@/config/serverConfig"
 import { uiConfig } from "@/config/uiConfig"
 import { i18nScope, t } from "@/languages"
 import { addCommand, callCommand } from "@/plugins/mxcad/command"
+import { showExportDialog } from "@/services/exportService"
 import { injectVoerkaI18n } from "@voerkai18n/vue"
-import { MxCpp, MxTools } from "mxcad"
+import { MxCpp } from "mxcad"
 import { PopoverAction, showToast } from "vant"
 import { ref } from "vue"
 
@@ -72,94 +72,10 @@ export const useMenu = () => {
         }, 200)
     })
     addCommand("Mx_saveDwg", () => {
-        let {
-            baseUrl = "",
-            saveDwgUrl = "",
-            mxfilepath = ""
-        } = getUploadFileConfig() || {};
-
-        if (baseUrl.substring(0, 16) == "http://localhost") {
-            baseUrl = getHostUrl() + baseUrl.substring(16);
-        }
-
-        if (saveDwgUrl.substring(0, 16) == "http://localhost") {
-            saveDwgUrl = getHostUrl() + saveDwgUrl.substring(16);
-        }
-
-        // ‍  把mxweb文件 ，保存到服务器上，然后转换成 dwg文件 ，再下载。
-        // ‍ Save the MXWeb file to the server, convert it to a DWG file, and then download it.
-
-        MxCpp.getCurrentMxCAD().saveFileToUrl(saveDwgUrl, (iResult: number, sserverResult: string) => {
-            try {
-                let ret = JSON.parse(sserverResult);
-                if (ret.ret == "ok") {
-                    let filePath = baseUrl + mxfilepath + ret.file;
-                    fetch(filePath).then(async (res) => {
-                        const blob = await res.blob()
-                        await MxTools.saveAsFileDialog({
-                            blob,
-                            filename: ret.file,
-                            types: [{
-                                description: "dwg" + t("图纸"),
-                                accept: {
-                                    "application/octet-stream": [".dwg"],
-                                },
-                            }]
-                        })
-                    })
-                }
-                else {
-                    console.log(sserverResult);
-                }
-            } catch {
-                console.log("Mx: sserverResult error");
-            }
-        });
-
+        showExportDialog()
     })
     addCommand("Mx_exportPDF", () => {
-        const { minPt, maxPt } = MxCpp.getCurrentDatabase().currentSpace.getBoundingBox()
-        let {
-            baseUrl = "",
-            mxfilepath = "",
-            printPdfUrl = ""
-        } = getUrlConfig() || {};
-        let param = {
-            width: "210",
-            height: "297",
-            roate_angle: 0,
-            bd_pt1_x: "" + minPt.x,
-            bd_pt1_y: "" + minPt.y,
-            bd_pt2_x: "" + maxPt.x,
-            bd_pt2_y: "" + maxPt.y
-        };
-        MxCpp.getCurrentMxCAD().saveFileToUrl(printPdfUrl, (iResult: number, sserverResult: string) => {
-            try {
-                let ret = JSON.parse(sserverResult);
-                if (ret.ret == "ok") {
-                    let filePath = baseUrl + mxfilepath + ret.file;
-                    fetch(filePath).then(async (res) => {
-                        const blob = await res.blob()
-                        await MxTools.saveAsFileDialog({
-                            blob,
-                            filename: ret.file,
-                            types: [{
-                                description: "pdf" + t("文件"),
-                                accept: {
-                                    "application/octet-stream": [".pdf"],
-                                },
-                            }]
-                        })
-                    })
-                }
-                else {
-                    console.log(sserverResult);
-                }
-            } catch {
-                console.log("Mx: sserverResult error");
-            }
-        }, undefined, JSON.stringify(param));
-
+        showToast("PDF导出功能开发中")
     })
     const onSelectMenu = (action: PopoverAction) => {
         action.cmd && callCommand(action.cmd)
