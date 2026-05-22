@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } from '../../../composables/useSaveAs';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
+import type { FileSystemNodeDto } from '../../../api-sdk';
 
 interface FolderNode {
   id: string;
@@ -27,7 +28,7 @@ const error = ref<string | null>(null);
 const step = ref<'form' | 'folder'>('form');
 const showProjectPicker = ref(false);
 
-const folderPickerTitle = ref('');
+const folderPath = ref<Array<{ id: string; name: string }>>([]);
 const folderNodes = ref<FolderNode[]>([]);
 const folderLoading = ref(false);
 
@@ -147,7 +148,7 @@ async function handleSaveLocal() {
 }
 
 async function openFolderPicker() {
-  folderPickerTitle.value = saveAs.targetType.value === 'personal' ? '我的图纸' : '选择文件夹';
+  folderPath.value = [];
   folderLoading.value = true;
   step.value = 'folder';
 
@@ -168,14 +169,12 @@ async function openFolderPicker() {
 }
 
 async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
+  if (!parentId) return [];
   try {
     const { fileSystemControllerGetChildren } = await import('../../../api-sdk');
-    const result = await fileSystemControllerGetChildren({
-      path: { nodeId: parentId },
-      query: { nodeType: 'folder' },
-    });
-    if (result.error) throw result.error;
-    const data = result.data as unknown as { nodes: Array<{ id: string; name: string; isFolder: boolean }> };
+    const result = await fileSystemControllerGetChildren({ path: { nodeId: parentId }, query: { filter: 'folder' } as any });
+    if (result.error) return [];
+    const data = result.data as unknown as { nodes: FileSystemNodeDto[] };
     return (data?.nodes || []).map(n => ({
       id: n.id,
       name: n.name,
@@ -183,6 +182,29 @@ async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
     }));
   } catch {
     return [];
+  }
+}
+
+async function enterFolder(nodeId: string, nodeName: string) {
+  folderPath.value.push({ id: nodeId, name: nodeName });
+  folderLoading.value = true;
+  folderNodes.value = await loadFolderChildren(nodeId);
+  folderLoading.value = false;
+}
+
+function goUp() {
+  if (folderPath.value.length === 0) return;
+  folderPath.value.pop();
+  const parentId = folderPath.value.length > 0
+    ? folderPath.value[folderPath.value.length - 1].id
+    : (saveAs.targetType.value === 'personal' ? saveAs.personalSpaceId.value : saveAs.selectedProjectId.value);
+
+  if (parentId) {
+    folderLoading.value = true;
+    loadFolderChildren(parentId).then(nodes => {
+      folderNodes.value = nodes;
+      folderLoading.value = false;
+    });
   }
 }
 
@@ -205,20 +227,38 @@ function selectFolder(nodeId: string) {
     <template v-if="step === 'folder'">
       <div class="sheet-header">
         <button class="sheet-back" @click="step = 'form'">← 返回</button>
-        <span class="sheet-title">{{ folderPickerTitle }}</span>
+        <span class="sheet-title">选择文件夹</span>
         <span class="sheet-spacer"></span>
       </div>
       <div class="sheet-body">
-        <van-loading v-if="folderLoading" />
+        <!-- Breadcrumb -->
+        <div class="folder-breadcrumb">
+          <span class="folder-breadcrumb-item" @click="goUp">根目录</span>
+          <template v-for="(p, i) in folderPath" :key="p.id">
+            <span class="folder-breadcrumb-sep">/</span>
+            <span class="folder-breadcrumb-item" @click="folderPath.splice(i + 1); enterFolder(p.id, p.name)">{{ p.name }}</span>
+          </template>
+        </div>
+        <van-loading v-if="folderLoading" style="margin-top: 40px;" />
         <van-cell-group v-else>
           <van-cell
             v-for="node in folderNodes"
             :key="node.id"
             :title="node.name"
             is-link
-            @click="selectFolder(node.id)"
+            @click="enterFolder(node.id, node.name)"
           />
           <van-empty v-if="folderNodes.length === 0" description="无子文件夹" />
+          <!-- Select current folder button -->
+          <van-button
+            v-if="folderPath.length > 0"
+            type="primary"
+            block
+            style="margin-top: 16px;"
+            @click="selectFolder(folderPath[folderPath.length - 1].id)"
+          >
+            选择当前文件夹
+          </van-button>
         </van-cell-group>
       </div>
     </template>
@@ -402,5 +442,23 @@ function selectFolder(nodeId: string) {
 
 .footer-btn {
   flex: 1;
+}
+
+.folder-breadcrumb {
+  padding: 8px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.folder-breadcrumb-item {
+  color: #1989fa;
+  cursor: pointer;
+}
+
+.folder-breadcrumb-sep {
+  color: #999;
 }
 </style>
