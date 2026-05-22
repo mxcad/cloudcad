@@ -1504,14 +1504,26 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
 
   try {
     const filename = savedFile.filename.replace(/\.[^/.]+$/, '') + '.mxweb';
-    await saveControllerSaveMxwebToNode({
-      body: {
-        file: new File([savedFile.blob], filename, { type: savedFile.blob.type }),
-        ...(commitMessage ? { commitMessage } : {}),
-        ...(expectedTimestamp ? { expectedTimestamp } : {}),
-      },
-      path: { nodeId: fileId },
+    const file = new File([savedFile.blob], filename, { type: savedFile.blob.type });
+    const hash = await calculateFileHash(file);
+
+    await uploadMxCadFile({ file, hash, nodeId: fileId, skipDb: true });
+
+    const saveFormData = new FormData();
+    saveFormData.append('hash', hash);
+    if (commitMessage) saveFormData.append('commitMessage', commitMessage);
+    if (expectedTimestamp) saveFormData.append('expectedTimestamp', expectedTimestamp);
+
+    const token = localStorage.getItem('accessToken');
+    const response = await fetch(`/api/v1/mxcad/savemxweb/${fileId}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: saveFormData,
     });
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({ message: '上传失败，请稍后重试' }));
+      throw new Error((errBody as { message?: string }).message || '上传失败，请稍后重试');
+    }
   } catch (uploadError) {
     handleError(uploadError, 'mxcadManager: saveToCurrentFile upload');
     hideGlobalLoading();
@@ -1660,15 +1672,26 @@ async function saveLibraryFile() {
   try {
     setLoadingMessage('正在上传到服务器...');
 
-    // 通过 SDK 上传 mxweb Blob 到保存端点
-    await saveControllerSaveMxwebToNode({
-      body: {
-        file: new File([savedFile.blob], `${libraryKey}.mxweb`, { type: savedFile.blob.type }),
-        commitMessage: commitMessage || '',
-        ...(expectedTimestamp ? { expectedTimestamp } : {}),
-      },
-      path: { nodeId: fileId },
+    const file = new File([savedFile.blob], `${libraryKey}.mxweb`, { type: savedFile.blob.type });
+    const hash = await calculateFileHash(file);
+
+    await uploadMxCadFile({ file, hash, nodeId: fileId, skipDb: true });
+
+    const saveFormData = new FormData();
+    saveFormData.append('hash', hash);
+    saveFormData.append('commitMessage', commitMessage || '');
+    if (expectedTimestamp) saveFormData.append('expectedTimestamp', expectedTimestamp);
+
+    const token = localStorage.getItem('accessToken');
+    const response = await fetch(`/api/v1/mxcad/savemxweb/${fileId}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: saveFormData,
     });
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({ message: '保存失败' }));
+      throw new Error((errBody as { message?: string }).message || '保存失败');
+    }
 
     // 更新本地缓存 - 使用 node.path 构建正确的 URL
     const basePath = libraryKey === 'drawing'

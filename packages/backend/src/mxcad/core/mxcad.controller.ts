@@ -1143,7 +1143,10 @@ export class MxCadController {
                   throw new NotFoundException('历史版本目录不存在');
                 }
 
-                const binFiles = listResult.files;
+                // 过滤出真正的 .bin 文件（SVN 目录中可能同时包含 .mxweb 备份文件）
+                const binFiles = listResult.files.filter(
+                  (f: string) => f.endsWith('.bin')
+                );
 
                 if (binFiles.length === 0) {
                   // 没有 bin 分片文件，说明这是第一个版本（上传时的原始版本）

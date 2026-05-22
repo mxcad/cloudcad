@@ -362,50 +362,20 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         currentPath = path.join(currentPath, pathParts[i]);
         const isTargetDirectory = i === pathParts.length - 1;
 
-        if (isTargetDirectory) {
-          try {
+        try {
+          if (isTargetDirectory) {
             // 使用 --depth infinity 递归添加
-            // svn:global-ignores 会自动过滤匹配的文件
             await svnAddAsync([currentPath], true, false);
             this.logger.log(`递归添加目录: ${currentPath}`);
-          } catch (error) {
-            if (!error.message.includes('already under version control')) {
-              this.logger.warn(
-                `添加目录失败: ${currentPath}, 错误: ${error.message}`
-              );
-            }
-          }
-        } else {
-          try {
+          } else {
+            // 父目录只 add 不单独 commit，避免产生虚假版本
             await svnAddAsync([currentPath], false, false);
-          } catch (error) {
-            if (!error.message.includes('already under version control')) {
-              this.logger.warn(
-                `添加中间目录失败: ${currentPath}, 错误: ${error.message}`
-              );
-            }
           }
-
-          try {
-            const commitMessage = JSON.stringify({
-              type: 'add_directory',
-              message: `Add directory: ${pathParts[i]}`,
-              timestamp: new Date().toISOString(),
-            });
-            await svnCommitAsync(
-              [currentPath],
-              commitMessage,
-              false,
-              null,
-              null
+        } catch (error) {
+          if (!error.message.includes('already under version control')) {
+            this.logger.warn(
+              `添加目录失败: ${currentPath}, 错误: ${error.message}`
             );
-            this.logger.log(`中间目录提交成功: ${currentPath}`);
-          } catch (error) {
-            if (!error.message.includes('not under version control')) {
-              this.logger.warn(
-                `提交中间目录失败: ${currentPath}, 错误: ${error.message}`
-              );
-            }
           }
         }
       }
@@ -467,18 +437,11 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
 
     try {
-      // 确保文件的父目录链已被 SVN 版本控制
+      // 确保文件的父目录链已被 SVN 版本控制（只 add 不单独 commit，避免产生虚假版本）
       const parentDirs = this.collectParentDirectories(filePaths);
       for (const dir of parentDirs) {
         try {
           await svnAddAsync([dir], false, false);
-          await svnCommitAsync(
-            [dir],
-            `Add directory: ${path.basename(dir)}`,
-            false,
-            null,
-            null
-          );
         } catch (error) {
           if (!error.message.includes('already under version control')) {
             this.logger.warn(
@@ -489,8 +452,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       }
 
       await svnAddAsync(filePaths, false, true);
+      const allPaths = [...parentDirs, ...filePaths];
       const result = await svnCommitAsync(
-        filePaths,
+        allPaths,
         message,
         false,
         null,

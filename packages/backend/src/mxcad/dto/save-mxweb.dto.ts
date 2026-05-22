@@ -18,11 +18,21 @@ import { IsString, IsOptional } from 'class-validator';
  */
 export class SaveMxwebDto {
   @ApiProperty({
-    description: 'mxweb 文件',
+    description: 'mxweb 文件（与 hash 二选一）',
     type: 'string',
     format: 'binary',
+    required: false,
   })
+  @IsOptional()
   file?: Express.Multer.File;
+
+  @ApiProperty({
+    description: '文件 hash（已通过分片上传到 uploads 目录，与 file 二选一）',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  hash?: string;
 
   @ApiProperty({
     description: '提交信息',

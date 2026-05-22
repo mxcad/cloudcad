@@ -579,7 +579,8 @@ export class MxCadService {
     userName?: string,
     commitMessage?: string,
     skipBinGeneration = false,
-    expectedTimestamp?: string
+    expectedTimestamp?: string,
+    keepSourceFile = false,
   ): Promise<{ success: boolean; message: string; path?: string }> {
     try {
       this.logger.log(
@@ -758,12 +759,16 @@ export class MxCadService {
         );
       }
 
-      // 删除临时上传文件
-      try {
-        await fsPromises.unlink(file.path);
-        this.logger.log(`[saveMxwebFile] 删除临时文件: ${file.path}`);
-      } catch (error) {
-        this.logger.warn(`[saveMxwebFile] 删除临时文件失败: ${error.message}`);
+      // 删除临时上传文件（hash 模式不删除，文件在 uploads 缓存中）
+      if (!keepSourceFile) {
+        try {
+          await fsPromises.unlink(file.path);
+          this.logger.log(`[saveMxwebFile] 删除临时文件: ${file.path}`);
+        } catch (error) {
+          this.logger.warn(`[saveMxwebFile] 删除临时文件失败: ${error.message}`);
+        }
+      } else {
+        this.logger.log(`[saveMxwebFile] 保留源文件（hash 模式）: ${file.path}`);
       }
 
       return {
@@ -778,6 +783,78 @@ export class MxCadService {
       }
       this.logger.error(
         `[saveMxwebFile] 保存失败: ${error.message}`,
+        error.stack
+      );
+      return {
+        success: false,
+        message: `保存失败: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * 通过文件 hash 保存 mxweb 文件（分片上传模式下使用）
+   * 从 uploads 目录中查找 {hash}.mxweb，拷贝到节点目录
+   */
+  async saveMxwebFileByHash(
+    nodeId: string,
+    fileHash: string,
+    userId?: string,
+    userName?: string,
+    commitMessage?: string,
+    skipBinGeneration = false,
+    expectedTimestamp?: string
+  ): Promise<{ success: boolean; message: string; path?: string }> {
+    try {
+      this.logger.log(
+        `[saveMxwebFileByHash] 开始保存: nodeId=${nodeId}, hash=${fileHash}`
+      );
+
+      // 在 uploads 目录中查找 {hash}.mxweb
+      const uploadsDir = this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
+      const files = await fsPromises.readdir(uploadsDir);
+      const mxwebFile = files.find(
+        (f) => f.startsWith(fileHash) && f.endsWith('.mxweb')
+      );
+      if (!mxwebFile) {
+        return {
+          success: false,
+          message: `上传文件不存在: ${fileHash}`,
+        };
+      }
+
+      const mxwebSourcePath = path.join(uploadsDir, mxwebFile);
+
+      // 构造一个兼容的 file 对象，复用现有 saveMxwebFile 逻辑
+      const fileProxy: Express.Multer.File = {
+        fieldname: 'file',
+        originalname: mxwebFile,
+        encoding: '7bit',
+        mimetype: 'application/octet-stream',
+        destination: uploadsDir,
+        filename: mxwebFile,
+        path: mxwebSourcePath,
+        size: (await fsPromises.stat(mxwebSourcePath)).size,
+        stream: null as any,
+        buffer: null as any,
+      };
+
+      return this.saveMxwebFile(
+        nodeId,
+        fileProxy,
+        userId,
+        userName,
+        commitMessage,
+        skipBinGeneration,
+        expectedTimestamp,
+        true, // 标记为 hash 模式，不删除 uploads 中的源文件
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      this.logger.error(
+        `[saveMxwebFileByHash] 保存失败: ${error.message}`,
         error.stack
       );
       return {

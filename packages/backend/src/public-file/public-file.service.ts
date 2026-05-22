@@ -329,6 +329,8 @@ export class PublicFileService {
 
     const timestamp = Date.now();
     const outname = `${fileHash}_${timestamp}.${targetFormat}`;
+    const uploadPath = this.uploadService.getUploadPath();
+    let outputFile: string | undefined;
 
     try {
       const result = await this.fileConversionService.convertFile({
@@ -358,8 +360,7 @@ export class PublicFileService {
       }
 
       // mxcadassembly.exe 将输出文件写到源文件同目录
-      const uploadPath = this.uploadService.getUploadPath();
-      const outputFile = path.join(uploadPath, outname);
+      outputFile = path.join(uploadPath, outname);
       if (!fs.existsSync(outputFile)) {
         throw new Error('转换后的文件未生成');
       }

@@ -12,16 +12,8 @@ const fs = require('fs');
 const path = require('path');
 const { DocumentBuilder, SwaggerModule } = require('@nestjs/swagger');
 
-const FRONTEND_DIR = path.join(__dirname, '..', '..', 'frontend');
-const OUTPUT_PATH = path.join(FRONTEND_DIR, 'swagger_json.json');
-const SDK_BIN = path.join(
-  FRONTEND_DIR,
-  'node_modules',
-  '@hey-api',
-  'openapi-ts',
-  'bin',
-  'run.js',
-);
+const ROOT_DIR = path.join(__dirname, '..', '..');
+const OUTPUT_PATH = path.join(ROOT_DIR, 'swagger_json.json');
 
 function buildSwaggerDocument(app) {
   const config = new DocumentBuilder()
@@ -71,24 +63,27 @@ function writeSwaggerJson(document) {
   console.log(`[swagger] JSON 已更新: ${OUTPUT_PATH}`);
 }
 
-function triggerSdkGeneration() {
-  if (!fs.existsSync(SDK_BIN)) {
-    console.warn('[swagger] SDK binary not found, 跳过 SDK 生成');
+function triggerSdkGeneration(targetName) {
+  const targetDir = path.join(ROOT_DIR, targetName);
+  const sdkBin = path.join(ROOT_DIR, 'frontend', 'node_modules', '@hey-api', 'openapi-ts', 'bin', 'run.js');
+
+  if (!fs.existsSync(sdkBin)) {
+    console.warn(`[swagger] SDK binary not found (${targetName}), 跳过 SDK 生成`);
     return;
   }
 
   const { spawn } = require('child_process');
-  const child = spawn(process.execPath, [SDK_BIN], {
-    cwd: FRONTEND_DIR,
+  const child = spawn(process.execPath, [sdkBin], {
+    cwd: targetDir,
     stdio: 'ignore',
     detached: true,
     shell: true,
   });
   child.unref();
   child.on('error', (err) => {
-    console.warn(`[swagger] SDK 生成失败（非阻塞）: ${err.message}`);
+    console.warn(`[swagger] SDK 生成失败（${targetName}）: ${err.message}`);
   });
-  console.log('[swagger] 前端 SDK 更新已触发（非阻塞）');
+  console.log(`[swagger] SDK 更新已触发: ${targetName}`);
 }
 
 /**
@@ -98,7 +93,7 @@ function syncSwaggerAndSdk(app) {
   try {
     const document = buildSwaggerDocument(app);
     writeSwaggerJson(document);
-    triggerSdkGeneration();
+    ['frontend', 'frontend_mobile'].forEach(triggerSdkGeneration);
   } catch (err) {
     console.warn(`[swagger] 失败（不影响后端）: ${err.message}`);
   }

@@ -1,0 +1,441 @@
+{
+    "批注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "批註",
+        "en": "Annotation"
+    },
+    "手绘线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "手繪線",
+        "en": "Hand drawn lines"
+    },
+    "文字": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "文字",
+        "en": "written words"
+    },
+    "箭头": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "箭頭",
+        "en": "arrow"
+    },
+    "引线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "引線",
+        "en": "Lead wire"
+    },
+    "云线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "雲線",
+        "en": "Cloud Line"
+    },
+    "音频": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "音訊",
+        "en": "audio frequency"
+    },
+    "图片": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圖片",
+        "en": "picture"
+    },
+    "绘制": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "繪製",
+        "en": "draw"
+    },
+    "直线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "直線",
+        "en": "straight line"
+    },
+    "圆形": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圓形",
+        "en": "rotundity"
+    },
+    "圆弧": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圓弧",
+        "en": "arc"
+    },
+    "矩形": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "矩形",
+        "en": "rectangle"
+    },
+    "椭圆": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "橢圓",
+        "en": "ellipse"
+    },
+    "多线段": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "多線段",
+        "en": "pline "
+    },
+    "点": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "點",
+        "en": "spot"
+    },
+    "编辑": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "編輯",
+        "en": "edit"
+    },
+    "剪切": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "剪切",
+        "en": "shear"
+    },
+    "延伸": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "延伸",
+        "en": "extend"
+    },
+    "偏移": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "偏移",
+        "en": "deviation"
+    },
+    "圆角": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圓角",
+        "en": "fillet"
+    },
+    "倒角": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "倒角",
+        "en": "Chamfering"
+    },
+    "图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圖層",
+        "en": "layer "
+    },
+    "新建图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "新建圖層",
+        "en": "New Layer "
+    },
+    "图层列表": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圖層清單",
+        "en": "layer list "
+    },
+    "关闭图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "關閉圖層",
+        "en": "Close Layer"
+    },
+    "关闭其他": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "關閉其他",
+        "en": "Close Other"
+    },
+    "图层全开": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圖層全開",
+        "en": "Layer fully open"
+    },
+    "图层全关": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "圖層全關",
+        "en": "Layer Full Off"
+    },
+    "置为当前": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "置為當前",
+        "en": "Set as current"
+    },
+    "上一图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "上一圖層",
+        "en": "Previous layer"
+    },
+    "测量": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "量測",
+        "en": "measure"
+    },
+    "测长度": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "測長度",
+        "en": "Measure length"
+    },
+    "连续测": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "連續測",
+        "en": "Continuous testing"
+    },
+    "测面积": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "測面積",
+        "en": "Measure area"
+    },
+    "侧面积": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "側面積",
+        "en": "Side area"
+    },
+    "测坐标": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "測座標",
+        "en": "Coordinate measurement"
+    },
+    "测弧长": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "測弧長",
+        "en": "Measure arc length"
+    },
+    "测角度": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "測角度",
+        "en": "Measure angle"
+    },
+    "标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "標注",
+        "en": "tagging"
+    },
+    "对齐标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "對齊標注",
+        "en": "Align annotations"
+    },
+    "线性标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "線性標注",
+        "en": "Linear annotation"
+    },
+    "角度标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "角度標注",
+        "en": "Angle annotation"
+    },
+    "直径标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "直徑標注",
+        "en": "Diameter annotation"
+    },
+    "半径标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "半徑標注",
+        "en": "Radius annotation"
+    },
+    "工具": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "工具",
+        "en": "tool"
+    },
+    "查找文字": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "cht": "查找文字",
+        "en": "Find Text"
+    },
+    "语言": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "language",
+        "cht": "語言"
+    },
+    "打开": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "open",
+        "cht": "打開"
+    },
+    "无缓存打开": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "Open without cache",
+        "cht": "無緩存打開"
+    },
+    "设置": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "set up",
+        "cht": "設定"
+    },
+    "重绘": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "Repaint ",
+        "cht": "重繪"
+    },
+    "显示全部": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "Show all",
+        "cht": "顯示全部"
+    },
+    "布局": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "layout",
+        "cht": "佈局"
+    },
+    "保存DWG": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "Save DWG",
+        "cht": "保存DWG"
+    },
+    "导出PDF": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en": "Export PDF",
+        "cht": "匯出PDF"
+    }
+}

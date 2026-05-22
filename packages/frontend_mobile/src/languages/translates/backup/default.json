@@ -1,0 +1,591 @@
+{
+    "指定圆弧起点": {
+        "en": "指定圆弧起点",
+        "cht": "指定圆弧起点",
+        "$files": [
+            "command\\m_mx_arc.ts",
+            "command\\measurement\\m_mx_measuring_arc.ts"
+        ]
+    },
+    "指定圆弧端点": {
+        "en": "指定圆弧端点",
+        "cht": "指定圆弧端点",
+        "$files": [
+            "command\\m_mx_arc.ts",
+            "command\\measurement\\m_mx_measuring_arc.ts"
+        ]
+    },
+    "指定圆弧中间点": {
+        "en": "指定圆弧中间点",
+        "cht": "指定圆弧中间点",
+        "$files": [
+            "command\\m_mx_arc.ts",
+            "command\\measurement\\m_mx_measuring_arc.ts"
+        ]
+    },
+    "修剪": {
+        "en": "修剪",
+        "cht": "修剪",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "不修剪": {
+        "en": "不修剪",
+        "cht": "不修剪",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "模式": {
+        "en": "模式",
+        "cht": "模式",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "当前": {
+        "en": "当前",
+        "cht": "当前",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "倒角长度": {
+        "en": "倒角长度",
+        "cht": "倒角长度",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "角度": {
+        "en": "角度",
+        "cht": "角度",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "倒角距离": {
+        "en": "倒角距离",
+        "cht": "倒角距离",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "距离": {
+        "en": "距离",
+        "cht": "距离",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "指定第一个倒角距离": {
+        "en": "指定第一个倒角距离",
+        "cht": "指定第一个倒角距离",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "指定第二个倒角距离": {
+        "en": "指定第二个倒角距离",
+        "cht": "指定第二个倒角距离",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "指定第一条直线的倒角长度": {
+        "en": "指定第一条直线的倒角长度",
+        "cht": "指定第一条直线的倒角长度",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "指定第一条直线的倒角角度": {
+        "en": "指定第一条直线的倒角角度",
+        "cht": "指定第一条直线的倒角角度",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "选择一条直线": {
+        "en": "选择一条直线",
+        "cht": "选择一条直线",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "放弃": {
+        "en": "放弃",
+        "cht": "放弃",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_extend.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "多段线": {
+        "en": "多段线",
+        "cht": "多段线",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "方式": {
+        "en": "方式",
+        "cht": "方式",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "多个": {
+        "en": "多个",
+        "cht": "多个",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "选择二维多段线": {
+        "en": "选择二维多段线",
+        "cht": "选择二维多段线",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "方法": {
+        "en": "方法",
+        "cht": "方法",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "没有线可以形成倒角": {
+        "en": "没有线可以形成倒角",
+        "cht": "没有线可以形成倒角",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "倒角角度无效": {
+        "en": "倒角角度无效",
+        "cht": "倒角角度无效",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "输入修剪模式选项": {
+        "en": "输入修剪模式选项",
+        "cht": "输入修剪模式选项",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "输入剪切方法": {
+        "en": "输入剪切方法",
+        "cht": "输入剪切方法",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "图元无法用自身倒角": {
+        "en": "图元无法用自身倒角",
+        "cht": "图元无法用自身倒角",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "两直线平行": {
+        "en": "两直线平行",
+        "cht": "两直线平行",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "倒角距离太大": {
+        "en": "倒角距离太大",
+        "cht": "倒角距离太大",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "同一条直线无法倒角": {
+        "en": "同一条直线无法倒角",
+        "cht": "同一条直线无法倒角",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "多段线中的直线必须是连续的或被一条线段断开": {
+        "en": "多段线中的直线必须是连续的或被一条线段断开",
+        "cht": "多段线中的直线必须是连续的或被一条线段断开",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "选择第二条直线": {
+        "en": "选择第二条直线",
+        "cht": "选择第二条直线",
+        "$files": [
+            "command\\m_mx_chamfer.ts",
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "n倒角角度无效": {
+        "en": "n倒角角度无效",
+        "cht": "n倒角角度无效",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "共线直线不能为倒角": {
+        "en": "共线直线不能为倒角",
+        "cht": "共线直线不能为倒角",
+        "$files": [
+            "command\\m_mx_chamfer.ts"
+        ]
+    },
+    "指定圆心": {
+        "en": "指定圆心",
+        "cht": "指定圆心",
+        "$files": [
+            "command\\m_mx_circle.ts"
+        ]
+    },
+    "指定基点": {
+        "en": "指定基点",
+        "cht": "指定基点",
+        "$files": [
+            "command\\m_mx_copy.ts"
+        ]
+    },
+    "指定椭圆的轴端点": {
+        "en": "指定椭圆的轴端点",
+        "cht": "指定椭圆的轴端点",
+        "$files": [
+            "command\\m_mx_elliptical.ts"
+        ]
+    },
+    "指定轴的另一个端点": {
+        "en": "指定轴的另一个端点",
+        "cht": "指定轴的另一个端点",
+        "$files": [
+            "command\\m_mx_elliptical.ts"
+        ]
+    },
+    "指定长度": {
+        "en": "指定长度",
+        "cht": "指定长度",
+        "$files": [
+            "command\\m_mx_elliptical.ts"
+        ]
+    },
+    "选择对象": {
+        "en": "选择对象",
+        "cht": "选择对象",
+        "$files": [
+            "command\\m_mx_extend.ts",
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "或": {
+        "en": "或",
+        "cht": "或",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "全部选择": {
+        "en": "全部选择",
+        "cht": "全部选择",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "选择要延伸的对象": {
+        "en": "选择要延伸的对象",
+        "cht": "选择要延伸的对象",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "栏选": {
+        "en": "栏选",
+        "cht": "栏选",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "窗交": {
+        "en": "窗交",
+        "cht": "窗交",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "边": {
+        "en": "边",
+        "cht": "边",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "指定隐含边延伸模式": {
+        "en": "指定隐含边延伸模式",
+        "cht": "指定隐含边延伸模式",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "延伸": {
+        "en": "延伸",
+        "cht": "延伸",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "不延伸": {
+        "en": "不延伸",
+        "cht": "不延伸",
+        "$files": [
+            "command\\m_mx_extend.ts"
+        ]
+    },
+    "当前设置": {
+        "en": "当前设置",
+        "cht": "当前设置",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "半径": {
+        "en": "半径",
+        "cht": "半径",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "指定圆角半径": {
+        "en": "指定圆角半径",
+        "cht": "指定圆角半径",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "选择第一个对象": {
+        "en": "选择第一个对象",
+        "cht": "选择第一个对象",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "输入剪切模式选项": {
+        "en": "输入剪切模式选项",
+        "cht": "输入剪切模式选项",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "直线平行": {
+        "en": "直线平行",
+        "cht": "直线平行",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "共线直线不能为倒圆角角": {
+        "en": "共线直线不能为倒圆角角",
+        "cht": "共线直线不能为倒圆角角",
+        "$files": [
+            "command\\m_mx_fillet.ts"
+        ]
+    },
+    "选择圆弧或者圆": {
+        "en": "选择圆弧或者圆",
+        "cht": "选择圆弧或者圆",
+        "$files": [
+            "command\\marked\\m_mx_diametric_dimension.ts",
+            "command\\marked\\m_mx_radial_dimension.ts"
+        ]
+    },
+    "指定对角点": {
+        "en": "指定对角点",
+        "cht": "指定对角点",
+        "$files": [
+            "command\\marked\\m_mx_diametric_dimension.ts"
+        ]
+    },
+    "所选对象不是圆弧或圆": {
+        "en": "所选对象不是圆弧或圆",
+        "cht": "所选对象不是圆弧或圆",
+        "$files": [
+            "command\\marked\\m_mx_diametric_dimension.ts",
+            "command\\marked\\m_mx_radial_dimension.ts"
+        ]
+    },
+    "指定第一点": {
+        "en": "指定第一点",
+        "cht": "指定第一点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_angle.ts",
+            "command\\measurement\\m_mx_measuring_area.ts"
+        ]
+    },
+    "指定第二个角度点": {
+        "en": "指定第二个角度点",
+        "cht": "指定第二个角度点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_angle.ts"
+        ]
+    },
+    "指定最后一个点": {
+        "en": "指定最后一个点",
+        "cht": "指定最后一个点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_angle.ts"
+        ]
+    },
+    "弧长": {
+        "en": "弧长",
+        "cht": "弧长",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_arc.ts"
+        ]
+    },
+    "指定下一点": {
+        "en": "指定下一点",
+        "cht": "指定下一点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_area.ts"
+        ]
+    },
+    "指定坐标点": {
+        "en": "指定坐标点",
+        "cht": "指定坐标点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_coordinate.ts"
+        ]
+    },
+    "指定标注点": {
+        "en": "指定标注点",
+        "cht": "指定标注点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_coordinate.ts"
+        ]
+    },
+    "指定第一条尺寸界线原点": {
+        "en": "指定第一条尺寸界线原点",
+        "cht": "指定第一条尺寸界线原点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "选择标注对象": {
+        "en": "选择标注对象",
+        "cht": "选择标注对象",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "所选对象不是直线、圆弧或圆。": {
+        "en": "所选对象不是直线、圆弧或圆。",
+        "cht": "所选对象不是直线、圆弧或圆。",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "指定第二条尺寸界线原点": {
+        "en": "指定第二条尺寸界线原点",
+        "cht": "指定第二条尺寸界线原点",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "指定尺寸线位置": {
+        "en": "指定尺寸线位置",
+        "cht": "指定尺寸线位置",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "文本": {
+        "en": "文本",
+        "cht": "文本",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "输入标注文字": {
+        "en": "输入标注文字",
+        "cht": "输入标注文字",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "指定标注文字的角度": {
+        "en": "指定标注文字的角度",
+        "cht": "指定标注文字的角度",
+        "$files": [
+            "command\\measurement\\m_mx_measuring_length.ts"
+        ]
+    },
+    "打开图纸中": {
+        "en": "打开图纸中",
+        "cht": "打开图纸中",
+        "$files": [
+            "command\\open\\index.ts"
+        ]
+    },
+    "正在打开文件中": {
+        "en": "正在打开文件中",
+        "cht": "正在打开文件中",
+        "$files": [
+            "command\\open\\index.ts"
+        ]
+    },
+    "更新显示": {
+        "en": "更新显示",
+        "cht": "更新显示",
+        "$files": [
+            "command\\open\\index.ts"
+        ]
+    },
+    "打开图纸失败": {
+        "en": "打开图纸失败",
+        "cht": "打开图纸失败",
+        "$files": [
+            "command\\open\\index.ts"
+        ]
+    },
+    "删除": {
+        "en": "删除",
+        "cht": "删除",
+        "$files": [
+            "pages\\home\\hooks\\useEditObjectToolbar.ts"
+        ]
+    },
+    "复制": {
+        "en": "复制",
+        "cht": "复制",
+        "$files": [
+            "pages\\home\\hooks\\useEditObjectToolbar.ts"
+        ]
+    },
+    "移动": {
+        "en": "移动",
+        "cht": "移动",
+        "$files": [
+            "pages\\home\\hooks\\useEditObjectToolbar.ts"
+        ]
+    }
+}

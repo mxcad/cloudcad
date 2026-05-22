@@ -2252,9 +2252,13 @@ export type UploadThumbnailResponseDto = {
 
 export type SaveMxwebDto = {
     /**
-     * mxweb 文件
+     * mxweb 文件（与 hash 二选一）
      */
-    file: Blob | File;
+    file?: Blob | File;
+    /**
+     * 文件 hash（已通过分片上传到 uploads 目录，与 file 二选一）
+     */
+    hash?: string;
     /**
      * 提交信息
      */
@@ -2278,9 +2282,13 @@ export type SaveMxwebResponseDto = {
 
 export type SaveMxwebAsDto = {
     /**
-     * mxweb 文件
+     * mxweb 文件（与 hash 二选一）
      */
-    file: Blob | File;
+    file?: Blob | File;
+    /**
+     * 文件 hash（已通过分片上传到 uploads 目录，与 file 二选一）
+     */
+    hash?: string;
     /**
      * 保存类型: personal-我的图纸, project-项目, library-资源库
      */

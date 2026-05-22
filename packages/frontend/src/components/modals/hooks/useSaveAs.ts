@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { fileSystemControllerGetProjects, saveControllerSaveMxwebAs } from '@/api-sdk';
-import type { FileSystemNodeDto, SaveMxwebAsDto } from '@/api-sdk';
+import { fileSystemControllerGetProjects } from '@/api-sdk';
+import type { FileSystemNodeDto } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
+import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
+import { calculateFileHash } from '@/utils/hashUtils';
 
 interface ProjectWithPermission {
   id: string;
@@ -103,14 +105,16 @@ export const useSaveAs = ({
     mutationFn: async (params: SaveAsParams): Promise<SaveAsResult> => {
       const { targetType, libraryType, selectedProjectId, selectedParentId, format, fileName, mxwebBlob } = params;
 
-      // Build FormData manually (matching main branch mxcadApi.saveMxwebAs pattern)
-      // SDK's formDataBodySerializer strips file metadata — multer needs File with name
+      // 分片上传 mxweb 到 uploads 缓存
       const file = new File([mxwebBlob], `${fileName || 'untitled'}.mxweb`, {
         type: mxwebBlob.type || 'application/octet-stream',
       });
+      const hash = await calculateFileHash(file);
+      await uploadMxCadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
 
+      // 通过 hash 调用 save-as 端点
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('hash', hash);
       formData.append('targetType', targetType);
       formData.append('targetParentId', selectedParentId);
       if (targetType === 'project' && selectedProjectId) {
@@ -123,8 +127,6 @@ export const useSaveAs = ({
       formData.append('commitMessage', `Save as: ${fileName}.${format}`);
       formData.append('fileName', fileName.trim());
 
-      // Use raw FormData via fetch, bypassing SDK serializer
-      // SDK's formDataBodySerializer re-serializes FormData → loses file multipart boundary
       const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/v1/mxcad/save-as', {
         method: 'POST',
@@ -136,7 +138,6 @@ export const useSaveAs = ({
         throw new Error((errBody as { message?: string }).message || '保存失败');
       }
       const wrapped = await response.json();
-      // ResponseInterceptor wraps all responses: { code, message, data, timestamp }
       const saveResult: SaveAsResult = wrapped.data || wrapped;
 
       return saveResult;

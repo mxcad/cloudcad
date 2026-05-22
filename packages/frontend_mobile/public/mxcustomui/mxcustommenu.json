@@ -1,0 +1,16 @@
+
+{
+	"but1":["设置","102","mxcadset.png",""],
+	"but1":["IDM_REGEN","Mx_RegenEx","regen.png"],
+	"but1":["IDM_ZOOME","ZoomE","zoome.png"],
+	"but1":["IDM_LAYOUT","Mx_ShowLayoutMenu","layout.png"],
+	"but1":["保存DWG","100","dwg.png",""],
+	"but1":["导出PDF","101","pdf.png",""],
+	"but1":["标注","Mx_MxDrawMarking","ellipse.png"],
+	"but1":["圆","Mx_ShowButtonShowToolBar","circle.png"],
+	"but1":["圆角","Mx_EditRoundedCorners","circle.png"],
+	"but1":["圆2","Mx_Circle","circle.png"]
+	
+}
+
+	

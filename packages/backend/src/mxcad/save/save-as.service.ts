@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FileSystemService as MainFileSystemService } from '../../file-system/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../common/services/storage-manager.service';
@@ -24,9 +25,23 @@ import {
   VERSION_CONTROL_TOKEN,
 } from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
+import { AppConfig } from '../../config/app.config';
 
 export interface SaveMxwebAsOptions {
   file: Express.Multer.File;
+  targetType: 'personal' | 'project' | 'library';
+  targetParentId: string;
+  projectId: string | undefined;
+  format: 'dwg' | 'dxf' | 'mxweb';
+  userId: string;
+  userName: string;
+  commitMessage?: string;
+  fileName?: string;
+  libraryType?: 'drawing' | 'block';
+}
+
+export interface SaveMxwebAsByHashOptions {
+  fileHash: string;
   targetType: 'personal' | 'project' | 'library';
   targetParentId: string;
   projectId: string | undefined;
@@ -53,6 +68,7 @@ export class SaveAsService {
   private readonly logger = new Logger(SaveAsService.name);
 
   constructor(
+    private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemServiceMain: MainFileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly storageManager: StorageManager,
@@ -220,6 +236,153 @@ export class SaveAsService {
       };
     } catch (error) {
       this.logger.error(`[SaveAs] 保存失败: ${error.message}`, error.stack);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * 通过文件 hash 另存为（分片上传模式下使用）
+   */
+  async saveMxwebAsByHash(options: SaveMxwebAsByHashOptions): Promise<SaveMxwebAsResult> {
+    const {
+      fileHash,
+      targetType,
+      targetParentId,
+      projectId,
+      format: userFormat,
+      userId,
+      userName,
+      commitMessage,
+      fileName: userFileName,
+      libraryType,
+    } = options;
+
+    const format = targetType === 'library' ? 'mxweb' : userFormat;
+
+    try {
+      this.logger.log(
+        `[SaveAsByHash] 开始保存: targetType=${targetType}, parentId=${targetParentId}, hash=${fileHash}`
+      );
+
+      // 在 uploads 目录中查找 {hash}.mxweb
+      const uploadPath = this.configService.get('mxcadUploadPath', { infer: true })
+        || path.join(process.cwd(), 'uploads');
+      const files = await fsPromises.readdir(uploadPath);
+      const mxwebFile = files.find(
+        (f) => f.startsWith(fileHash) && f.endsWith('.mxweb')
+      );
+      if (!mxwebFile) {
+        return { success: false, message: `上传文件不存在: ${fileHash}` };
+      }
+
+      const mxwebSourcePath = path.join(uploadPath, mxwebFile);
+
+      const parentNode = await this.fileSystemServiceMain.getNode(targetParentId);
+      if (!parentNode) {
+        return { success: false, message: '目标文件夹不存在' };
+      }
+
+      if (!parentNode.isFolder) {
+        return { success: false, message: '目标必须是文件夹' };
+      }
+
+      // 同名文件处理
+      const baseFileName = userFileName
+        ? `${userFileName}.${format}`
+        : `untitled.${format}`;
+
+      const uniqueFileName = await this.generateUniqueFileName(
+        targetParentId,
+        baseFileName
+      );
+
+      if (uniqueFileName !== baseFileName) {
+        this.logger.log(
+          `[SaveAsByHash] 文件名重复，自动重命名: ${baseFileName} -> ${uniqueFileName}`
+        );
+      }
+
+      const finalFileName = uniqueFileName;
+      const extension = `.${format}`;
+      const mimeType = this.fileSystemNodeService.getMimeType(extension);
+
+      const newNode = await this.fileSystemServiceMain.createFileNode({
+        name: finalFileName,
+        fileHash: '',
+        size: 0,
+        mimeType,
+        extension,
+        parentId: targetParentId,
+        ownerId: userId,
+        skipFileCopy: true,
+      });
+
+      const newNodeId = newNode.id;
+      this.logger.log(`[SaveAsByHash] 新节点创建成功: ${newNodeId}, 文件名: ${finalFileName}`);
+
+      const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId);
+      const nodeDirectory = storageInfo.nodeDirectoryPath;
+
+      const mxwebFileName = `${newNodeId}.${format}.mxweb`;
+      const mxwebTargetPath = path.join(nodeDirectory, mxwebFileName);
+      await fsPromises.copyFile(mxwebSourcePath, mxwebTargetPath);
+      this.logger.log(`[SaveAsByHash] mxweb文件保存成功: ${mxwebTargetPath}`);
+
+      const backupFileName = `${newNodeId}.mxweb`;
+      const backupPath = path.join(nodeDirectory, backupFileName);
+      await fsPromises.copyFile(mxwebSourcePath, backupPath);
+      this.logger.log(`[SaveAsByHash] 初始备份保存成功: ${backupPath}`);
+
+      const fileBuffer = await fsPromises.readFile(mxwebTargetPath);
+      const hashSum = crypto.createHash('md5');
+      hashSum.update(fileBuffer);
+      const newFileHash = hashSum.digest('hex');
+      const stats = fs.statSync(mxwebTargetPath);
+
+      const nodePathWithFile = `${storageInfo.nodeDirectoryRelativePath}/${mxwebFileName}`;
+      await this.fileSystemServiceMain.updateNodePath(newNodeId, nodePathWithFile);
+      await this.prisma.fileSystemNode.update({
+        where: { id: newNodeId },
+        data: { size: stats.size, fileHash: newFileHash },
+      });
+      this.logger.log(`[SaveAsByHash] 文件保存成功: nodeId=${newNodeId}, fileHash=${newFileHash}`);
+
+      // SVN 提交
+      if (targetType === 'project' && projectId) {
+        try {
+          await this.versionControlService.commitFiles(
+            [backupPath],
+            commitMessage || `Save as: ${finalFileName}`,
+          );
+          this.logger.log(`[SaveAsByHash] 项目文件 SVN 提交成功`);
+        } catch (svnError) {
+          this.logger.warn(`[SaveAsByHash] SVN 提交失败: ${svnError.message}`);
+        }
+      } else if (targetType === 'personal') {
+        try {
+          await this.versionControlService.commitFiles(
+            [backupPath],
+            commitMessage || `Save as: ${finalFileName}`,
+          );
+          this.logger.log(`[SaveAsByHash] 个人空间文件 SVN 提交成功`);
+        } catch (svnError) {
+          this.logger.warn(`[SaveAsByHash] SVN 提交失败: ${svnError.message}`);
+        }
+      } else {
+        this.logger.log(`[SaveAsByHash] 跳过 SVN 提交: ${finalFileName} (图纸库/图块库文件)`);
+      }
+
+      return {
+        success: true,
+        message: '保存成功',
+        nodeId: newNodeId,
+        fileName: finalFileName,
+        path: storageInfo.nodeDirectoryRelativePath,
+        projectId,
+        parentId: targetParentId,
+      };
+    } catch (error) {
+      this.logger.error(`[SaveAsByHash] 保存失败: ${error.message}`, error.stack);
       return { success: false, message: error.message };
     }
   }

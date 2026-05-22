@@ -1,0 +1,4 @@
+linux
+vim node_modules/.bin/voerkai18n
+set fileformat=unix
+:wq

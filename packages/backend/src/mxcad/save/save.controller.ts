@@ -37,7 +37,7 @@ import { RequireProjectPermissionGuard } from '../../common/guards/require-proje
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { MxCadService } from '../core/mxcad.service';
-import { SaveAsService } from './save-as.service';
+import { SaveAsService, SaveMxwebAsResult } from './save-as.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { PermissionService } from '../../common/services/permission.service';
@@ -78,27 +78,43 @@ export class SaveController {
   async saveMxwebToNode(
     @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
-    @Body('commitMessage') commitMessage: string,
-    @Body('expectedTimestamp') expectedTimestamp: string,
+    @Body() dto: SaveMxwebDto,
     @Req() request: MxCadRequest,
   ) {
     this.logger.log(
-      `[saveMxwebToNode] 开始保存: nodeId=${nodeId}, commitMessage=${commitMessage || '(无)'}`,
+      `[saveMxwebToNode] 开始保存: nodeId=${nodeId}, commitMessage=${dto.commitMessage || '(无)'}, hash=${dto.hash || '无'}`,
     );
 
     const userId = request.user?.id;
     const userName =
       request.user?.username || request.user?.nickname || request.user?.email;
 
-    const result = await this.mxCadService.saveMxwebFile(
-      nodeId,
-      file,
-      userId,
-      userName,
-      commitMessage,
-      false,
-      expectedTimestamp,
-    );
+    let result: { success: boolean; message: string; path?: string };
+
+    if (dto.hash) {
+      this.logger.log(`[saveMxwebToNode] 使用 hash 模式: ${dto.hash}`);
+      result = await this.mxCadService.saveMxwebFileByHash(
+        nodeId,
+        dto.hash,
+        userId,
+        userName,
+        dto.commitMessage,
+        false,
+        dto.expectedTimestamp,
+      );
+    } else if (file) {
+      result = await this.mxCadService.saveMxwebFile(
+        nodeId,
+        file,
+        userId,
+        userName,
+        dto.commitMessage,
+        false,
+        dto.expectedTimestamp,
+      );
+    } else {
+      throw new BadRequestException('缺少文件或文件 hash');
+    }
 
     if (!result.success) {
       this.logger.error(`[saveMxwebToNode] 保存失败: ${result.message}`);
@@ -130,7 +146,7 @@ export class SaveController {
     @Req() request: MxCadRequest,
   ) {
     this.logger.log(
-      `[saveMxwebAs] 开始保存: targetType=${dto.targetType}, parentId=${dto.targetParentId}, format=${dto.format}`,
+      `[saveMxwebAs] 开始保存: targetType=${dto.targetType}, parentId=${dto.targetParentId}, format=${dto.format}, hash=${dto.hash || '无'}`,
     );
 
     const userId = request.user?.id;
@@ -219,18 +235,38 @@ export class SaveController {
       }
     }
 
-    const result = await this.saveAsService.saveMxwebAs({
-      file,
-      targetType: dto.targetType,
-      targetParentId: dto.targetParentId,
-      projectId: dto.projectId,
-      format: dto.format || 'dwg',
-      userId,
-      userName,
-      commitMessage: dto.commitMessage,
-      fileName: dto.fileName,
-      libraryType: dto.libraryType,
-    });
+    let result: SaveMxwebAsResult;
+
+    if (dto.hash) {
+      this.logger.log(`[saveMxwebAs] 使用 hash 模式: ${dto.hash}`);
+      result = await this.saveAsService.saveMxwebAsByHash({
+        fileHash: dto.hash,
+        targetType: dto.targetType,
+        targetParentId: dto.targetParentId,
+        projectId: dto.projectId,
+        format: dto.format || 'dwg',
+        userId,
+        userName,
+        commitMessage: dto.commitMessage,
+        fileName: dto.fileName,
+        libraryType: dto.libraryType,
+      });
+    } else if (file) {
+      result = await this.saveAsService.saveMxwebAs({
+        file,
+        targetType: dto.targetType,
+        targetParentId: dto.targetParentId,
+        projectId: dto.projectId,
+        format: dto.format || 'dwg',
+        userId,
+        userName,
+        commitMessage: dto.commitMessage,
+        fileName: dto.fileName,
+        libraryType: dto.libraryType,
+      });
+    } else {
+      throw new BadRequestException('缺少文件或文件 hash');
+    }
 
     if (!result.success) {
       this.logger.error(`[saveMxwebAs] 保存失败: ${result.message}`);

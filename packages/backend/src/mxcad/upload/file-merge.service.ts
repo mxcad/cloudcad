@@ -255,6 +255,7 @@ export class FileMergeService {
           const isMxwebFile = extension === '.mxweb';
           let isOk = true;
           let ret = MxUploadReturn.kOk;
+          let conversionRet: import('../interfaces/file-conversion.interface').MxCadConversionResult | undefined;
 
           if (!isMxwebFile) {
             const convertResult = await this.fileConversionService.convertFile({
@@ -263,7 +264,8 @@ export class FileMergeService {
               createPreloadingData: true,
             });
             isOk = convertResult.isOk;
-            ret = convertResult.ret;
+            conversionRet = convertResult.ret;
+            ret = convertResult.ret?.code === 0 ? MxUploadReturn.kOk : MxUploadReturn.kConvertFileError;
           } else {
             this.logger.log(`[mergeConvertFile] .mxweb 文件，跳过转换: ${fileName}`);
           }
@@ -458,7 +460,7 @@ export class FileMergeService {
             }
 
             await this.cacheManager.delete('file-upload', mergeKey);
-            return { ret: MxUploadReturn.kOk, tz: ret?.tz, nodeId: newNodeId };
+            return { ret: MxUploadReturn.kOk, tz: conversionRet?.tz, nodeId: newNodeId };
           } else {
             await this.cacheManager.delete('file-upload', mergeKey);
             return { ret: MxUploadReturn.kOk };

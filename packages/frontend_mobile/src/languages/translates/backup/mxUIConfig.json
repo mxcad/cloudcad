@@ -1,0 +1,237 @@
+{
+  "批注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "手绘线": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "文字": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "箭头": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "引线": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "云线": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "音频": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "图片": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "绘制": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "直线": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "圆形": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "圆弧": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "矩形": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "椭圆": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "多线段": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "点": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "编辑": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "剪切": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "延伸": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "偏移": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "圆角": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "倒角": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "图层": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "新建图层": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "图层列表": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "关闭图层": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "关闭其他": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "图层全开": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "图层全关": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "置为当前": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "上一图层": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "测量": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "测长度": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "连续测": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "测面积": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "侧面积": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "测坐标": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "测弧长": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "测角度": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "标注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "对齐标注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "线性标注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "角度标注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "直径标注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "半径标注": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "工具": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  },
+  "查找文字": {
+    "$files": [
+      "public\\mxUIConfig.json"
+    ]
+  }
+}

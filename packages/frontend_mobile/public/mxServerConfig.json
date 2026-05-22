@@ -1,0 +1,41 @@
+{
+  "?uploadFileConfig": "上传文件相关配置",
+  "uploadFileConfig": {
+    "?baseUrl": "上传服务地址",
+    "baseUrl": "http://localhost:1337",
+    "?create": "参考WebUploader.create方法传入的参数配置",
+    "create": {
+      "swf": "https://www.mxdraw3d.com/webuploader/Uploader.swf",
+      "server": "/mxcad/files/uploadFiles",
+      "accept": {
+        "extensions": "mxweb,dwg,dxf",
+        "mimeTypes": ".mxweb,.dwg,.dxf"
+      }
+    },
+    "?fileisExist": "通过文件的md5参数检查文件是否已经存在",
+    "fileisExist": "/mxcad/files/fileisExist",
+    "?chunkisExist": "用于分片检查是否已经存在",
+    "chunkisExist": "/mxcad/files/chunkisExist",
+    "?chunked": "是否分片上传",
+    "chunked": true,
+	"?mxfilepath": "文件上传后前端访问路径",
+	"mxfilepath": "/mxcad/file/",
+	"?saveUrl": "保存文件服务地址",
+	"saveUrl": "http://localhost:1337/mxcad/savemxweb",
+	"?saveDwgUrl": "保存DWG文件服务地址",
+	"saveDwgUrl": "http://localhost:1337/mxcad/savedwg",
+	"?printPdfUrl": "把指定范围输出到pdf的服务地址",
+	"printPdfUrl": "http://localhost:1337/mxcad/print_to_pdf"
+  },
+  "aiConfig": {
+	"?aiUrl": "ai服务地址",
+	"aiUrl": "http://localhost:7900"
+  },
+  "?wasmConfig": "在本项目中使用了mxcad库中提供的WebAssembly wasm文件和相关胶水代码的相关配置",
+  "wasmConfig": {
+    "?url": ":通过指定网络路径加载mxcad库中提供的wasm相关文件, 例如:https://unpkg.com/mxcad/dist/wasm/2d-st/ 程序会自动加载2d-st目录下与wasm相关的文件",
+    "url": "",
+    "?type": "如果没有设置url, 我们可以通过该项目本地存放的assets目录下wasm相关的文件， 目前可选项有: 2d和2d-st 2d是多线程加载，可能需要一些额外的服务器配置， 而2d-st是单线程的，你可以很方便的使用它,也可以通过访问地址参数调置http://xxxx/mxcad/?wasmtype=st",
+    "type": "2d"
+  }
+}
