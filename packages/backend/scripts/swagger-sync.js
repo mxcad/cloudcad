@@ -21,6 +21,7 @@ function buildSwaggerDocument(app) {
     .setDescription('图纸管理平台API文档')
     .setVersion('1.0')
     .addBearerAuth()
+    .addServer('/api/v1')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {

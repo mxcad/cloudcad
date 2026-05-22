@@ -13,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { join } from 'path';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
@@ -135,6 +136,7 @@ export class AppModule {
       .setDescription('图纸管理平台API文档')
       .setVersion('1.0')
       .addBearerAuth()
+      .addServer('/api/v1')
       .build();
 
     const document = SwaggerModule.createDocument(app, config, {

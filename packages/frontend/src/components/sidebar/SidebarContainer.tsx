@@ -330,7 +330,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
         return (
           <div className={styles.drawingsPanel}>
             {/* 子 Tab 切换 */}
-            <div className={styles.subTabBar}>
+            <div className={`${styles.subTabBar} ${settings.width < 380 ? styles.compact : ''}`}>
               {SUB_TABS.map((tab) => (
                 <Tab
                   key={tab.id}
@@ -339,8 +339,11 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   icon={tab.icon}
                   onClick={() => handleDrawingsSubTabChange(tab.id)}
                   aria-label={tab.label}
+                  tooltip={settings.width < 380 ? tab.label : undefined}
+                  tooltipPosition="bottom"
+                  tooltipDelay={200}
                 >
-                  {tab.label}
+                  {settings.width < 380 ? undefined : tab.label}
                 </Tab>
               ))}
             </div>

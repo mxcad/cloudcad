@@ -15,13 +15,13 @@ function showGlobalToast(message: string, type: 'success' | 'error' | 'info' | '
 }
 
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
-// SDK 路由已含 /api/v1/ 前缀，baseUrl 只需保留协议+主机
+// SDK 路由已含 /api/v1/ 前缀（@hey-api/openapi-ts 从 servers 字段自动添加），
+// baseUrl 只需保留协议+主机
 const apiBaseUrl = getApiBaseUrl();
 let baseUrl: string;
 try {
   baseUrl = new URL(apiBaseUrl).origin;
 } catch {
-  // 相对路径（如 /api）→ 置空，SDK 路由自带完整路径
   baseUrl = '';
 }
 client.setConfig({

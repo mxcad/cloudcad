@@ -18,14 +18,14 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
     meta?: Record<string, unknown>;
 };
 
-export const appControllerGetHello = <ThrowOnError extends boolean = false>(options?: Options<AppControllerGetHelloData, ThrowOnError>) => (options?.client ?? client).get<AppControllerGetHelloResponses, unknown, ThrowOnError>({ url: '/api/v1', ...options });
+export const appControllerGetHello = <ThrowOnError extends boolean = false>(options?: Options<AppControllerGetHelloData, ThrowOnError>) => (options?.client ?? client).get<AppControllerGetHelloResponses, unknown, ThrowOnError>({ url: '/', ...options });
 
 /**
  * 获取缓存监控摘要
  */
 export const cacheMonitorControllerGetSummary = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetSummaryData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetSummaryResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/summary',
+    url: '/cache-monitor/summary',
     ...options
 });
 
@@ -34,7 +34,7 @@ export const cacheMonitorControllerGetSummary = <ThrowOnError extends boolean = 
  */
 export const cacheMonitorControllerGetStats = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetStatsData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/stats',
+    url: '/cache-monitor/stats',
     ...options
 });
 
@@ -43,7 +43,7 @@ export const cacheMonitorControllerGetStats = <ThrowOnError extends boolean = fa
  */
 export const cacheMonitorControllerGetHealthStatus = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetHealthStatusData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetHealthStatusResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/health',
+    url: '/cache-monitor/health',
     ...options
 });
 
@@ -52,7 +52,7 @@ export const cacheMonitorControllerGetHealthStatus = <ThrowOnError extends boole
  */
 export const cacheMonitorControllerGetPerformanceMetrics = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetPerformanceMetricsData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetPerformanceMetricsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/performance',
+    url: '/cache-monitor/performance',
     ...options
 });
 
@@ -61,7 +61,7 @@ export const cacheMonitorControllerGetPerformanceMetrics = <ThrowOnError extends
  */
 export const cacheMonitorControllerGetHotData = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerGetHotDataData, ThrowOnError>) => (options.client ?? client).get<CacheMonitorControllerGetHotDataResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/hot-data',
+    url: '/cache-monitor/hot-data',
     ...options
 });
 
@@ -70,7 +70,7 @@ export const cacheMonitorControllerGetHotData = <ThrowOnError extends boolean = 
  */
 export const cacheMonitorControllerGetPerformanceTrend = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerGetPerformanceTrendData, ThrowOnError>) => (options.client ?? client).get<CacheMonitorControllerGetPerformanceTrendResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/performance-trend',
+    url: '/cache-monitor/performance-trend',
     ...options
 });
 
@@ -79,7 +79,7 @@ export const cacheMonitorControllerGetPerformanceTrend = <ThrowOnError extends b
  */
 export const cacheMonitorControllerGetSizeTrend = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerGetSizeTrendData, ThrowOnError>) => (options.client ?? client).get<CacheMonitorControllerGetSizeTrendResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/size-trend',
+    url: '/cache-monitor/size-trend',
     ...options
 });
 
@@ -88,7 +88,7 @@ export const cacheMonitorControllerGetSizeTrend = <ThrowOnError extends boolean 
  */
 export const cacheMonitorControllerGetWarnings = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetWarningsData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetWarningsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warnings',
+    url: '/cache-monitor/warnings',
     ...options
 });
 
@@ -97,7 +97,7 @@ export const cacheMonitorControllerGetWarnings = <ThrowOnError extends boolean =
  */
 export const cacheMonitorControllerDeleteValue = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerDeleteValueData, ThrowOnError>) => (options.client ?? client).delete<CacheMonitorControllerDeleteValueResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/value',
+    url: '/cache-monitor/value',
     ...options
 });
 
@@ -106,7 +106,7 @@ export const cacheMonitorControllerDeleteValue = <ThrowOnError extends boolean =
  */
 export const cacheMonitorControllerGetValue = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerGetValueData, ThrowOnError>) => (options.client ?? client).get<CacheMonitorControllerGetValueResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/value',
+    url: '/cache-monitor/value',
     ...options
 });
 
@@ -115,7 +115,7 @@ export const cacheMonitorControllerGetValue = <ThrowOnError extends boolean = fa
  */
 export const cacheMonitorControllerSetValue = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerSetValueData, ThrowOnError>) => (options.client ?? client).post<CacheMonitorControllerSetValueResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/value',
+    url: '/cache-monitor/value',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export const cacheMonitorControllerSetValue = <ThrowOnError extends boolean = fa
  */
 export const cacheMonitorControllerDeleteByPattern = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerDeleteByPatternData, ThrowOnError>) => (options.client ?? client).delete<CacheMonitorControllerDeleteByPatternResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/pattern',
+    url: '/cache-monitor/pattern',
     ...options
 });
 
@@ -137,7 +137,7 @@ export const cacheMonitorControllerDeleteByPattern = <ThrowOnError extends boole
  */
 export const cacheMonitorControllerDeleteValues = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerDeleteValuesData, ThrowOnError>) => (options.client ?? client).delete<CacheMonitorControllerDeleteValuesResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/values',
+    url: '/cache-monitor/values',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export const cacheMonitorControllerDeleteValues = <ThrowOnError extends boolean 
  */
 export const cacheMonitorControllerRefresh = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerRefreshData, ThrowOnError>) => (options.client ?? client).post<CacheMonitorControllerRefreshResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/refresh',
+    url: '/cache-monitor/refresh',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ export const cacheMonitorControllerRefresh = <ThrowOnError extends boolean = fal
  */
 export const cacheMonitorControllerCleanup = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerCleanupData, ThrowOnError>) => (options.client ?? client).post<CacheMonitorControllerCleanupResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/cleanup',
+    url: '/cache-monitor/cleanup',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -176,7 +176,7 @@ export const cacheMonitorControllerCleanup = <ThrowOnError extends boolean = fal
  */
 export const cacheMonitorControllerGetWarmupConfig = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetWarmupConfigData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetWarmupConfigResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warmup/config',
+    url: '/cache-monitor/warmup/config',
     ...options
 });
 
@@ -185,7 +185,7 @@ export const cacheMonitorControllerGetWarmupConfig = <ThrowOnError extends boole
  */
 export const cacheMonitorControllerUpdateWarmupConfig = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerUpdateWarmupConfigData, ThrowOnError>) => (options.client ?? client).post<CacheMonitorControllerUpdateWarmupConfigResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warmup/config',
+    url: '/cache-monitor/warmup/config',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ export const cacheMonitorControllerUpdateWarmupConfig = <ThrowOnError extends bo
  */
 export const cacheMonitorControllerTriggerWarmup = <ThrowOnError extends boolean = false>(options: Options<CacheMonitorControllerTriggerWarmupData, ThrowOnError>) => (options.client ?? client).post<CacheMonitorControllerTriggerWarmupResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warmup/trigger',
+    url: '/cache-monitor/warmup/trigger',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -211,7 +211,7 @@ export const cacheMonitorControllerTriggerWarmup = <ThrowOnError extends boolean
  */
 export const cacheMonitorControllerClearWarmupHistory = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerClearWarmupHistoryData, ThrowOnError>) => (options?.client ?? client).delete<CacheMonitorControllerClearWarmupHistoryResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warmup/history',
+    url: '/cache-monitor/warmup/history',
     ...options
 });
 
@@ -220,7 +220,7 @@ export const cacheMonitorControllerClearWarmupHistory = <ThrowOnError extends bo
  */
 export const cacheMonitorControllerGetWarmupHistory = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetWarmupHistoryData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetWarmupHistoryResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warmup/history',
+    url: '/cache-monitor/warmup/history',
     ...options
 });
 
@@ -229,7 +229,7 @@ export const cacheMonitorControllerGetWarmupHistory = <ThrowOnError extends bool
  */
 export const cacheMonitorControllerGetWarmupStats = <ThrowOnError extends boolean = false>(options?: Options<CacheMonitorControllerGetWarmupStatsData, ThrowOnError>) => (options?.client ?? client).get<CacheMonitorControllerGetWarmupStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/cache-monitor/warmup/stats',
+    url: '/cache-monitor/warmup/stats',
     ...options
 });
 
@@ -237,7 +237,7 @@ export const cacheMonitorControllerGetWarmupStats = <ThrowOnError extends boolea
  * 用户注册
  */
 export const authControllerRegister = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRegisterData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRegisterResponses, AuthControllerRegisterErrors, ThrowOnError>({
-    url: '/api/v1/auth/register',
+    url: '/auth/register',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ export const authControllerRegister = <ThrowOnError extends boolean = false>(opt
  * 用户登录
  */
 export const authControllerLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginData, ThrowOnError>) => (options.client ?? client).post<AuthControllerLoginResponses, AuthControllerLoginErrors, ThrowOnError>({
-    url: '/api/v1/auth/login',
+    url: '/auth/login',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ export const authControllerLogin = <ThrowOnError extends boolean = false>(option
  * 刷新Token
  */
 export const authControllerRefreshToken = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRefreshTokenData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRefreshTokenResponses, AuthControllerRefreshTokenErrors, ThrowOnError>({
-    url: '/api/v1/auth/refresh',
+    url: '/auth/refresh',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -274,7 +274,7 @@ export const authControllerRefreshToken = <ThrowOnError extends boolean = false>
  */
 export const authControllerLogout = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerLogoutData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerLogoutResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/logout',
+    url: '/auth/logout',
     ...options
 });
 
@@ -283,7 +283,7 @@ export const authControllerLogout = <ThrowOnError extends boolean = false>(optio
  */
 export const authControllerGetProfile = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerGetProfileData, ThrowOnError>) => (options?.client ?? client).get<AuthControllerGetProfileResponses, AuthControllerGetProfileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/profile',
+    url: '/auth/profile',
     ...options
 });
 
@@ -291,7 +291,7 @@ export const authControllerGetProfile = <ThrowOnError extends boolean = false>(o
  * 发送邮箱验证码
  */
 export const authControllerSendVerification = <ThrowOnError extends boolean = false>(options: Options<AuthControllerSendVerificationData, ThrowOnError>) => (options.client ?? client).post<AuthControllerSendVerificationResponses, AuthControllerSendVerificationErrors, ThrowOnError>({
-    url: '/api/v1/auth/send-verification',
+    url: '/auth/send-verification',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -303,7 +303,7 @@ export const authControllerSendVerification = <ThrowOnError extends boolean = fa
  * 验证邮箱
  */
 export const authControllerVerifyEmail = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyEmailData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyEmailResponses, AuthControllerVerifyEmailErrors, ThrowOnError>({
-    url: '/api/v1/auth/verify-email',
+    url: '/auth/verify-email',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -315,7 +315,7 @@ export const authControllerVerifyEmail = <ThrowOnError extends boolean = false>(
  * 验证邮箱并完成手机号注册
  */
 export const authControllerVerifyEmailAndRegisterPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyEmailAndRegisterPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyEmailAndRegisterPhoneResponses, AuthControllerVerifyEmailAndRegisterPhoneErrors, ThrowOnError>({
-    url: '/api/v1/auth/verify-email-and-register-phone',
+    url: '/auth/verify-email-and-register-phone',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -327,7 +327,7 @@ export const authControllerVerifyEmailAndRegisterPhone = <ThrowOnError extends b
  * 重发验证码
  */
 export const authControllerResendVerification = <ThrowOnError extends boolean = false>(options: Options<AuthControllerResendVerificationData, ThrowOnError>) => (options.client ?? client).post<AuthControllerResendVerificationResponses, AuthControllerResendVerificationErrors, ThrowOnError>({
-    url: '/api/v1/auth/resend-verification',
+    url: '/auth/resend-verification',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -339,7 +339,7 @@ export const authControllerResendVerification = <ThrowOnError extends boolean = 
  * 绑定邮箱并登录（用于已注册但没有邮箱的用户）
  */
 export const authControllerBindEmailAndLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindEmailAndLoginData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindEmailAndLoginResponses, AuthControllerBindEmailAndLoginErrors, ThrowOnError>({
-    url: '/api/v1/auth/bind-email-and-login',
+    url: '/auth/bind-email-and-login',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ export const authControllerBindEmailAndLogin = <ThrowOnError extends boolean = f
  * 绑定手机号并登录（用于已注册但没有手机号的用户）
  */
 export const authControllerBindPhoneAndLogin = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindPhoneAndLoginData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindPhoneAndLoginResponses, AuthControllerBindPhoneAndLoginErrors, ThrowOnError>({
-    url: '/api/v1/auth/bind-phone-and-login',
+    url: '/auth/bind-phone-and-login',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ export const authControllerBindPhoneAndLogin = <ThrowOnError extends boolean = f
  * 验证手机号（用于已注册但手机号未验证的用户）
  */
 export const authControllerVerifyPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyPhoneResponses, AuthControllerVerifyPhoneErrors, ThrowOnError>({
-    url: '/api/v1/auth/verify-phone',
+    url: '/auth/verify-phone',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -375,7 +375,7 @@ export const authControllerVerifyPhone = <ThrowOnError extends boolean = false>(
  * 忘记密码
  */
 export const authControllerForgotPassword = <ThrowOnError extends boolean = false>(options: Options<AuthControllerForgotPasswordData, ThrowOnError>) => (options.client ?? client).post<AuthControllerForgotPasswordResponses, AuthControllerForgotPasswordErrors, ThrowOnError>({
-    url: '/api/v1/auth/forgot-password',
+    url: '/auth/forgot-password',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -387,7 +387,7 @@ export const authControllerForgotPassword = <ThrowOnError extends boolean = fals
  * 重置密码
  */
 export const authControllerResetPassword = <ThrowOnError extends boolean = false>(options: Options<AuthControllerResetPasswordData, ThrowOnError>) => (options.client ?? client).post<AuthControllerResetPasswordResponses, AuthControllerResetPasswordErrors, ThrowOnError>({
-    url: '/api/v1/auth/reset-password',
+    url: '/auth/reset-password',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -400,7 +400,7 @@ export const authControllerResetPassword = <ThrowOnError extends boolean = false
  */
 export const authControllerSendBindEmailCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerSendBindEmailCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerSendBindEmailCodeResponses, AuthControllerSendBindEmailCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/bind-email',
+    url: '/auth/bind-email',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -413,7 +413,7 @@ export const authControllerSendBindEmailCode = <ThrowOnError extends boolean = f
  */
 export const authControllerVerifyBindEmail = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyBindEmailData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyBindEmailResponses, AuthControllerVerifyBindEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/verify-bind-email',
+    url: '/auth/verify-bind-email',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -426,7 +426,7 @@ export const authControllerVerifyBindEmail = <ThrowOnError extends boolean = fal
  */
 export const authControllerSendUnbindEmailCode = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerSendUnbindEmailCodeData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerSendUnbindEmailCodeResponses, AuthControllerSendUnbindEmailCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/send-unbind-email-code',
+    url: '/auth/send-unbind-email-code',
     ...options
 });
 
@@ -435,7 +435,7 @@ export const authControllerSendUnbindEmailCode = <ThrowOnError extends boolean =
  */
 export const authControllerVerifyUnbindEmailCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyUnbindEmailCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyUnbindEmailCodeResponses, AuthControllerVerifyUnbindEmailCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/verify-unbind-email-code',
+    url: '/auth/verify-unbind-email-code',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -448,7 +448,7 @@ export const authControllerVerifyUnbindEmailCode = <ThrowOnError extends boolean
  */
 export const authControllerRebindEmail = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRebindEmailData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRebindEmailResponses, AuthControllerRebindEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/rebind-email',
+    url: '/auth/rebind-email',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -460,7 +460,7 @@ export const authControllerRebindEmail = <ThrowOnError extends boolean = false>(
  * 发送短信验证码
  */
 export const authControllerSendSmsCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerSendSmsCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerSendSmsCodeResponses, AuthControllerSendSmsCodeErrors, ThrowOnError>({
-    url: '/api/v1/auth/send-sms-code',
+    url: '/auth/send-sms-code',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -472,7 +472,7 @@ export const authControllerSendSmsCode = <ThrowOnError extends boolean = false>(
  * 验证短信验证码
  */
 export const authControllerVerifySmsCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifySmsCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifySmsCodeResponses, AuthControllerVerifySmsCodeErrors, ThrowOnError>({
-    url: '/api/v1/auth/verify-sms-code',
+    url: '/auth/verify-sms-code',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -484,7 +484,7 @@ export const authControllerVerifySmsCode = <ThrowOnError extends boolean = false
  * 手机号注册
  */
 export const authControllerRegisterByPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRegisterByPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRegisterByPhoneResponses, AuthControllerRegisterByPhoneErrors, ThrowOnError>({
-    url: '/api/v1/auth/register-phone',
+    url: '/auth/register-phone',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -496,7 +496,7 @@ export const authControllerRegisterByPhone = <ThrowOnError extends boolean = fal
  * 手机号验证码登录
  */
 export const authControllerLoginByPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerLoginByPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerLoginByPhoneResponses, AuthControllerLoginByPhoneErrors, ThrowOnError>({
-    url: '/api/v1/auth/login-phone',
+    url: '/auth/login-phone',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -509,7 +509,7 @@ export const authControllerLoginByPhone = <ThrowOnError extends boolean = false>
  */
 export const authControllerBindPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindPhoneResponses, AuthControllerBindPhoneErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/bind-phone',
+    url: '/auth/bind-phone',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -522,7 +522,7 @@ export const authControllerBindPhone = <ThrowOnError extends boolean = false>(op
  */
 export const authControllerSendUnbindPhoneCode = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerSendUnbindPhoneCodeData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerSendUnbindPhoneCodeResponses, AuthControllerSendUnbindPhoneCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/send-unbind-phone-code',
+    url: '/auth/send-unbind-phone-code',
     ...options
 });
 
@@ -531,7 +531,7 @@ export const authControllerSendUnbindPhoneCode = <ThrowOnError extends boolean =
  */
 export const authControllerVerifyUnbindPhoneCode = <ThrowOnError extends boolean = false>(options: Options<AuthControllerVerifyUnbindPhoneCodeData, ThrowOnError>) => (options.client ?? client).post<AuthControllerVerifyUnbindPhoneCodeResponses, AuthControllerVerifyUnbindPhoneCodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/verify-unbind-phone-code',
+    url: '/auth/verify-unbind-phone-code',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -544,7 +544,7 @@ export const authControllerVerifyUnbindPhoneCode = <ThrowOnError extends boolean
  */
 export const authControllerRebindPhone = <ThrowOnError extends boolean = false>(options: Options<AuthControllerRebindPhoneData, ThrowOnError>) => (options.client ?? client).post<AuthControllerRebindPhoneResponses, AuthControllerRebindPhoneErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/rebind-phone',
+    url: '/auth/rebind-phone',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -556,7 +556,7 @@ export const authControllerRebindPhone = <ThrowOnError extends boolean = false>(
  * 检查字段唯一性（用户名、邮箱、手机号）
  */
 export const authControllerCheckFieldUniqueness = <ThrowOnError extends boolean = false>(options: Options<AuthControllerCheckFieldUniquenessData, ThrowOnError>) => (options.client ?? client).post<AuthControllerCheckFieldUniquenessResponses, unknown, ThrowOnError>({
-    url: '/api/v1/auth/check-field',
+    url: '/auth/check-field',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -567,19 +567,19 @@ export const authControllerCheckFieldUniqueness = <ThrowOnError extends boolean 
 /**
  * 获取微信授权 URL
  */
-export const authControllerGetWechatAuthUrl = <ThrowOnError extends boolean = false>(options: Options<AuthControllerGetWechatAuthUrlData, ThrowOnError>) => (options.client ?? client).get<AuthControllerGetWechatAuthUrlResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/wechat/login', ...options });
+export const authControllerGetWechatAuthUrl = <ThrowOnError extends boolean = false>(options: Options<AuthControllerGetWechatAuthUrlData, ThrowOnError>) => (options.client ?? client).get<AuthControllerGetWechatAuthUrlResponses, unknown, ThrowOnError>({ url: '/auth/wechat/login', ...options });
 
 /**
  * 微信授权回调
  */
-export const authControllerWechatCallback = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerWechatCallbackData, ThrowOnError>) => (options?.client ?? client).get<AuthControllerWechatCallbackResponses, AuthControllerWechatCallbackErrors, ThrowOnError>({ url: '/api/auth/wechat/callback', ...options });
+export const authControllerWechatCallback = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerWechatCallbackData, ThrowOnError>) => (options?.client ?? client).get<AuthControllerWechatCallbackResponses, AuthControllerWechatCallbackErrors, ThrowOnError>({ url: '/auth/wechat/callback', ...options });
 
 /**
  * 绑定微信到当前账号
  */
 export const authControllerBindWechat = <ThrowOnError extends boolean = false>(options: Options<AuthControllerBindWechatData, ThrowOnError>) => (options.client ?? client).post<AuthControllerBindWechatResponses, AuthControllerBindWechatErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/wechat/bind',
+    url: '/auth/wechat/bind',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -592,7 +592,7 @@ export const authControllerBindWechat = <ThrowOnError extends boolean = false>(o
  */
 export const authControllerUnbindWechat = <ThrowOnError extends boolean = false>(options?: Options<AuthControllerUnbindWechatData, ThrowOnError>) => (options?.client ?? client).post<AuthControllerUnbindWechatResponses, AuthControllerUnbindWechatErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/auth/wechat/unbind',
+    url: '/auth/wechat/unbind',
     ...options
 });
 
@@ -601,7 +601,7 @@ export const authControllerUnbindWechat = <ThrowOnError extends boolean = false>
  */
 export const userCleanupControllerGetStats = <ThrowOnError extends boolean = false>(options?: Options<UserCleanupControllerGetStatsData, ThrowOnError>) => (options?.client ?? client).get<UserCleanupControllerGetStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/user-cleanup/stats',
+    url: '/user-cleanup/stats',
     ...options
 });
 
@@ -610,7 +610,7 @@ export const userCleanupControllerGetStats = <ThrowOnError extends boolean = fal
  */
 export const userCleanupControllerTriggerCleanup = <ThrowOnError extends boolean = false>(options: Options<UserCleanupControllerTriggerCleanupData, ThrowOnError>) => (options.client ?? client).post<UserCleanupControllerTriggerCleanupResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/user-cleanup/trigger',
+    url: '/user-cleanup/trigger',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -621,14 +621,14 @@ export const userCleanupControllerTriggerCleanup = <ThrowOnError extends boolean
 /**
  * 获取公开配置（前端初始化使用）
  */
-export const runtimeConfigControllerGetPublicConfigs = <ThrowOnError extends boolean = false>(options?: Options<RuntimeConfigControllerGetPublicConfigsData, ThrowOnError>) => (options?.client ?? client).get<RuntimeConfigControllerGetPublicConfigsResponses, unknown, ThrowOnError>({ url: '/api/v1/runtime-config/public', ...options });
+export const runtimeConfigControllerGetPublicConfigs = <ThrowOnError extends boolean = false>(options?: Options<RuntimeConfigControllerGetPublicConfigsData, ThrowOnError>) => (options?.client ?? client).get<RuntimeConfigControllerGetPublicConfigsResponses, unknown, ThrowOnError>({ url: '/runtime-config/public', ...options });
 
 /**
  * 获取所有运行时配置
  */
 export const runtimeConfigControllerGetAllConfigs = <ThrowOnError extends boolean = false>(options?: Options<RuntimeConfigControllerGetAllConfigsData, ThrowOnError>) => (options?.client ?? client).get<RuntimeConfigControllerGetAllConfigsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/runtime-config',
+    url: '/runtime-config',
     ...options
 });
 
@@ -637,7 +637,7 @@ export const runtimeConfigControllerGetAllConfigs = <ThrowOnError extends boolea
  */
 export const runtimeConfigControllerGetDefinitions = <ThrowOnError extends boolean = false>(options?: Options<RuntimeConfigControllerGetDefinitionsData, ThrowOnError>) => (options?.client ?? client).get<RuntimeConfigControllerGetDefinitionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/runtime-config/definitions',
+    url: '/runtime-config/definitions',
     ...options
 });
 
@@ -646,7 +646,7 @@ export const runtimeConfigControllerGetDefinitions = <ThrowOnError extends boole
  */
 export const runtimeConfigControllerGetConfig = <ThrowOnError extends boolean = false>(options: Options<RuntimeConfigControllerGetConfigData, ThrowOnError>) => (options.client ?? client).get<RuntimeConfigControllerGetConfigResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/runtime-config/{key}',
+    url: '/runtime-config/{key}',
     ...options
 });
 
@@ -655,7 +655,7 @@ export const runtimeConfigControllerGetConfig = <ThrowOnError extends boolean = 
  */
 export const runtimeConfigControllerUpdateConfig = <ThrowOnError extends boolean = false>(options: Options<RuntimeConfigControllerUpdateConfigData, ThrowOnError>) => (options.client ?? client).put<RuntimeConfigControllerUpdateConfigResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/runtime-config/{key}',
+    url: '/runtime-config/{key}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -668,7 +668,7 @@ export const runtimeConfigControllerUpdateConfig = <ThrowOnError extends boolean
  */
 export const runtimeConfigControllerResetConfig = <ThrowOnError extends boolean = false>(options: Options<RuntimeConfigControllerResetConfigData, ThrowOnError>) => (options.client ?? client).post<RuntimeConfigControllerResetConfigResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/runtime-config/{key}/reset',
+    url: '/runtime-config/{key}/reset',
     ...options
 });
 
@@ -677,7 +677,7 @@ export const runtimeConfigControllerResetConfig = <ThrowOnError extends boolean 
  */
 export const usersControllerFindAll = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerFindAllData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerFindAllResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users',
+    url: '/users',
     ...options
 });
 
@@ -686,7 +686,7 @@ export const usersControllerFindAll = <ThrowOnError extends boolean = false>(opt
  */
 export const usersControllerCreate = <ThrowOnError extends boolean = false>(options: Options<UsersControllerCreateData, ThrowOnError>) => (options.client ?? client).post<UsersControllerCreateResponses, UsersControllerCreateErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users',
+    url: '/users',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -699,7 +699,7 @@ export const usersControllerCreate = <ThrowOnError extends boolean = false>(opti
  */
 export const usersControllerSearchByEmail = <ThrowOnError extends boolean = false>(options: Options<UsersControllerSearchByEmailData, ThrowOnError>) => (options.client ?? client).get<UsersControllerSearchByEmailResponses, UsersControllerSearchByEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/search/by-email',
+    url: '/users/search/by-email',
     ...options
 });
 
@@ -708,7 +708,7 @@ export const usersControllerSearchByEmail = <ThrowOnError extends boolean = fals
  */
 export const usersControllerSearchUsers = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerSearchUsersData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerSearchUsersResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/search',
+    url: '/users/search',
     ...options
 });
 
@@ -717,7 +717,7 @@ export const usersControllerSearchUsers = <ThrowOnError extends boolean = false>
  */
 export const usersControllerGetProfile = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetProfileData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetProfileResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/profile/me',
+    url: '/users/profile/me',
     ...options
 });
 
@@ -726,7 +726,7 @@ export const usersControllerGetProfile = <ThrowOnError extends boolean = false>(
  */
 export const usersControllerUpdateProfile = <ThrowOnError extends boolean = false>(options: Options<UsersControllerUpdateProfileData, ThrowOnError>) => (options.client ?? client).patch<UsersControllerUpdateProfileResponses, UsersControllerUpdateProfileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/profile/me',
+    url: '/users/profile/me',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -739,7 +739,7 @@ export const usersControllerUpdateProfile = <ThrowOnError extends boolean = fals
  */
 export const usersControllerGetDashboardStats = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetDashboardStatsData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetDashboardStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/stats/me',
+    url: '/users/stats/me',
     ...options
 });
 
@@ -748,7 +748,7 @@ export const usersControllerGetDashboardStats = <ThrowOnError extends boolean = 
  */
 export const usersControllerRemove = <ThrowOnError extends boolean = false>(options: Options<UsersControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<UsersControllerRemoveResponses, UsersControllerRemoveErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/{id}',
+    url: '/users/{id}',
     ...options
 });
 
@@ -757,7 +757,7 @@ export const usersControllerRemove = <ThrowOnError extends boolean = false>(opti
  */
 export const usersControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<UsersControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<UsersControllerFindOneResponses, UsersControllerFindOneErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/{id}',
+    url: '/users/{id}',
     ...options
 });
 
@@ -766,7 +766,7 @@ export const usersControllerFindOne = <ThrowOnError extends boolean = false>(opt
  */
 export const usersControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<UsersControllerUpdateData, ThrowOnError>) => (options.client ?? client).patch<UsersControllerUpdateResponses, UsersControllerUpdateErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/{id}',
+    url: '/users/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -779,7 +779,7 @@ export const usersControllerUpdate = <ThrowOnError extends boolean = false>(opti
  */
 export const usersControllerRestore = <ThrowOnError extends boolean = false>(options: Options<UsersControllerRestoreData, ThrowOnError>) => (options.client ?? client).post<UsersControllerRestoreResponses, UsersControllerRestoreErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/{id}/restore',
+    url: '/users/{id}/restore',
     ...options
 });
 
@@ -788,7 +788,7 @@ export const usersControllerRestore = <ThrowOnError extends boolean = false>(opt
  */
 export const usersControllerUpdateStatus = <ThrowOnError extends boolean = false>(options: Options<UsersControllerUpdateStatusData, ThrowOnError>) => (options.client ?? client).patch<UsersControllerUpdateStatusResponses, UsersControllerUpdateStatusErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/{id}/status',
+    url: '/users/{id}/status',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -801,7 +801,7 @@ export const usersControllerUpdateStatus = <ThrowOnError extends boolean = false
  */
 export const usersControllerDeleteImmediately = <ThrowOnError extends boolean = false>(options: Options<UsersControllerDeleteImmediatelyData, ThrowOnError>) => (options.client ?? client).post<UsersControllerDeleteImmediatelyResponses, UsersControllerDeleteImmediatelyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/{id}/delete-immediately',
+    url: '/users/{id}/delete-immediately',
     ...options
 });
 
@@ -810,7 +810,7 @@ export const usersControllerDeleteImmediately = <ThrowOnError extends boolean = 
  */
 export const usersControllerDeactivateAccount = <ThrowOnError extends boolean = false>(options: Options<UsersControllerDeactivateAccountData, ThrowOnError>) => (options.client ?? client).post<UsersControllerDeactivateAccountResponses, UsersControllerDeactivateAccountErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/deactivate-account',
+    url: '/users/deactivate-account',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -823,7 +823,7 @@ export const usersControllerDeactivateAccount = <ThrowOnError extends boolean = 
  */
 export const usersControllerRestoreAccount = <ThrowOnError extends boolean = false>(options: Options<UsersControllerRestoreAccountData, ThrowOnError>) => (options.client ?? client).post<UsersControllerRestoreAccountResponses, UsersControllerRestoreAccountErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/me/restore',
+    url: '/users/me/restore',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -836,7 +836,7 @@ export const usersControllerRestoreAccount = <ThrowOnError extends boolean = fal
  */
 export const usersControllerChangePassword = <ThrowOnError extends boolean = false>(options: Options<UsersControllerChangePasswordData, ThrowOnError>) => (options.client ?? client).post<UsersControllerChangePasswordResponses, UsersControllerChangePasswordErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/users/change-password',
+    url: '/users/change-password',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -849,7 +849,7 @@ export const usersControllerChangePassword = <ThrowOnError extends boolean = fal
  */
 export const rolesControllerFindAll = <ThrowOnError extends boolean = false>(options?: Options<RolesControllerFindAllData, ThrowOnError>) => (options?.client ?? client).get<RolesControllerFindAllResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles',
+    url: '/roles',
     ...options
 });
 
@@ -858,7 +858,7 @@ export const rolesControllerFindAll = <ThrowOnError extends boolean = false>(opt
  */
 export const rolesControllerCreate = <ThrowOnError extends boolean = false>(options: Options<RolesControllerCreateData, ThrowOnError>) => (options.client ?? client).post<RolesControllerCreateResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles',
+    url: '/roles',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -871,7 +871,7 @@ export const rolesControllerCreate = <ThrowOnError extends boolean = false>(opti
  */
 export const rolesControllerRemove = <ThrowOnError extends boolean = false>(options: Options<RolesControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<RolesControllerRemoveResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/{id}',
+    url: '/roles/{id}',
     ...options
 });
 
@@ -880,7 +880,7 @@ export const rolesControllerRemove = <ThrowOnError extends boolean = false>(opti
  */
 export const rolesControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<RolesControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<RolesControllerFindOneResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/{id}',
+    url: '/roles/{id}',
     ...options
 });
 
@@ -889,7 +889,7 @@ export const rolesControllerFindOne = <ThrowOnError extends boolean = false>(opt
  */
 export const rolesControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<RolesControllerUpdateData, ThrowOnError>) => (options.client ?? client).patch<RolesControllerUpdateResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/{id}',
+    url: '/roles/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -902,7 +902,7 @@ export const rolesControllerUpdate = <ThrowOnError extends boolean = false>(opti
  */
 export const rolesControllerRemovePermissions = <ThrowOnError extends boolean = false>(options: Options<RolesControllerRemovePermissionsData, ThrowOnError>) => (options.client ?? client).delete<RolesControllerRemovePermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/{id}/permissions',
+    url: '/roles/{id}/permissions',
     ...options
 });
 
@@ -911,7 +911,7 @@ export const rolesControllerRemovePermissions = <ThrowOnError extends boolean = 
  */
 export const rolesControllerGetRolePermissions = <ThrowOnError extends boolean = false>(options: Options<RolesControllerGetRolePermissionsData, ThrowOnError>) => (options.client ?? client).get<RolesControllerGetRolePermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/{id}/permissions',
+    url: '/roles/{id}/permissions',
     ...options
 });
 
@@ -920,7 +920,7 @@ export const rolesControllerGetRolePermissions = <ThrowOnError extends boolean =
  */
 export const rolesControllerAddPermissions = <ThrowOnError extends boolean = false>(options: Options<RolesControllerAddPermissionsData, ThrowOnError>) => (options.client ?? client).post<RolesControllerAddPermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/{id}/permissions',
+    url: '/roles/{id}/permissions',
     ...options
 });
 
@@ -929,7 +929,7 @@ export const rolesControllerAddPermissions = <ThrowOnError extends boolean = fal
  */
 export const rolesControllerGetAllProjectRoles = <ThrowOnError extends boolean = false>(options?: Options<RolesControllerGetAllProjectRolesData, ThrowOnError>) => (options?.client ?? client).get<RolesControllerGetAllProjectRolesResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/all',
+    url: '/roles/project-roles/all',
     ...options
 });
 
@@ -938,7 +938,7 @@ export const rolesControllerGetAllProjectRoles = <ThrowOnError extends boolean =
  */
 export const rolesControllerGetSystemProjectRoles = <ThrowOnError extends boolean = false>(options?: Options<RolesControllerGetSystemProjectRolesData, ThrowOnError>) => (options?.client ?? client).get<RolesControllerGetSystemProjectRolesResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/system',
+    url: '/roles/project-roles/system',
     ...options
 });
 
@@ -947,7 +947,7 @@ export const rolesControllerGetSystemProjectRoles = <ThrowOnError extends boolea
  */
 export const rolesControllerGetProjectRolesByProject = <ThrowOnError extends boolean = false>(options: Options<RolesControllerGetProjectRolesByProjectData, ThrowOnError>) => (options.client ?? client).get<RolesControllerGetProjectRolesByProjectResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/project/{projectId}',
+    url: '/roles/project-roles/project/{projectId}',
     ...options
 });
 
@@ -956,7 +956,7 @@ export const rolesControllerGetProjectRolesByProject = <ThrowOnError extends boo
  */
 export const rolesControllerRemoveProjectRolePermissions = <ThrowOnError extends boolean = false>(options: Options<RolesControllerRemoveProjectRolePermissionsData, ThrowOnError>) => (options.client ?? client).delete<RolesControllerRemoveProjectRolePermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/{id}/permissions',
+    url: '/roles/project-roles/{id}/permissions',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -969,7 +969,7 @@ export const rolesControllerRemoveProjectRolePermissions = <ThrowOnError extends
  */
 export const rolesControllerGetProjectRolePermissions = <ThrowOnError extends boolean = false>(options: Options<RolesControllerGetProjectRolePermissionsData, ThrowOnError>) => (options.client ?? client).get<RolesControllerGetProjectRolePermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/{id}/permissions',
+    url: '/roles/project-roles/{id}/permissions',
     ...options
 });
 
@@ -978,7 +978,7 @@ export const rolesControllerGetProjectRolePermissions = <ThrowOnError extends bo
  */
 export const rolesControllerAddProjectRolePermissions = <ThrowOnError extends boolean = false>(options: Options<RolesControllerAddProjectRolePermissionsData, ThrowOnError>) => (options.client ?? client).post<RolesControllerAddProjectRolePermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/{id}/permissions',
+    url: '/roles/project-roles/{id}/permissions',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -991,7 +991,7 @@ export const rolesControllerAddProjectRolePermissions = <ThrowOnError extends bo
  */
 export const rolesControllerCreateProjectRole = <ThrowOnError extends boolean = false>(options: Options<RolesControllerCreateProjectRoleData, ThrowOnError>) => (options.client ?? client).post<RolesControllerCreateProjectRoleResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles',
+    url: '/roles/project-roles',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1004,7 +1004,7 @@ export const rolesControllerCreateProjectRole = <ThrowOnError extends boolean = 
  */
 export const rolesControllerDeleteProjectRole = <ThrowOnError extends boolean = false>(options: Options<RolesControllerDeleteProjectRoleData, ThrowOnError>) => (options.client ?? client).delete<RolesControllerDeleteProjectRoleResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/{id}',
+    url: '/roles/project-roles/{id}',
     ...options
 });
 
@@ -1013,7 +1013,7 @@ export const rolesControllerDeleteProjectRole = <ThrowOnError extends boolean = 
  */
 export const rolesControllerUpdateProjectRole = <ThrowOnError extends boolean = false>(options: Options<RolesControllerUpdateProjectRoleData, ThrowOnError>) => (options.client ?? client).patch<RolesControllerUpdateProjectRoleResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/roles/project-roles/{id}',
+    url: '/roles/project-roles/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1026,7 +1026,7 @@ export const rolesControllerUpdateProjectRole = <ThrowOnError extends boolean = 
  */
 export const auditLogControllerFindAll = <ThrowOnError extends boolean = false>(options?: Options<AuditLogControllerFindAllData, ThrowOnError>) => (options?.client ?? client).get<AuditLogControllerFindAllResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/audit/logs',
+    url: '/audit/logs',
     ...options
 });
 
@@ -1035,7 +1035,7 @@ export const auditLogControllerFindAll = <ThrowOnError extends boolean = false>(
  */
 export const auditLogControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<AuditLogControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<AuditLogControllerFindOneResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/audit/logs/{id}',
+    url: '/audit/logs/{id}',
     ...options
 });
 
@@ -1044,7 +1044,7 @@ export const auditLogControllerFindOne = <ThrowOnError extends boolean = false>(
  */
 export const auditLogControllerGetStatistics = <ThrowOnError extends boolean = false>(options?: Options<AuditLogControllerGetStatisticsData, ThrowOnError>) => (options?.client ?? client).get<AuditLogControllerGetStatisticsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/audit/statistics',
+    url: '/audit/statistics',
     ...options
 });
 
@@ -1053,7 +1053,7 @@ export const auditLogControllerGetStatistics = <ThrowOnError extends boolean = f
  */
 export const auditLogControllerCleanupOldLogs = <ThrowOnError extends boolean = false>(options?: Options<AuditLogControllerCleanupOldLogsData, ThrowOnError>) => (options?.client ?? client).post<AuditLogControllerCleanupOldLogsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/audit/cleanup',
+    url: '/audit/cleanup',
     ...options
 });
 
@@ -1062,7 +1062,7 @@ export const auditLogControllerCleanupOldLogs = <ThrowOnError extends boolean = 
  */
 export const fileSystemControllerGetProjects = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerGetProjectsData, ThrowOnError>) => (options?.client ?? client).get<FileSystemControllerGetProjectsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects',
+    url: '/file-system/projects',
     ...options
 });
 
@@ -1071,7 +1071,7 @@ export const fileSystemControllerGetProjects = <ThrowOnError extends boolean = f
  */
 export const fileSystemControllerCreateProject = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerCreateProjectData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerCreateProjectResponses, FileSystemControllerCreateProjectErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects',
+    url: '/file-system/projects',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1084,7 +1084,7 @@ export const fileSystemControllerCreateProject = <ThrowOnError extends boolean =
  */
 export const fileSystemControllerGetDeletedProjects = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerGetDeletedProjectsData, ThrowOnError>) => (options?.client ?? client).get<FileSystemControllerGetDeletedProjectsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/trash',
+    url: '/file-system/projects/trash',
     ...options
 });
 
@@ -1093,7 +1093,7 @@ export const fileSystemControllerGetDeletedProjects = <ThrowOnError extends bool
  */
 export const fileSystemControllerGetPersonalSpace = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerGetPersonalSpaceData, ThrowOnError>) => (options?.client ?? client).get<FileSystemControllerGetPersonalSpaceResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/personal-space',
+    url: '/file-system/personal-space',
     ...options
 });
 
@@ -1102,7 +1102,7 @@ export const fileSystemControllerGetPersonalSpace = <ThrowOnError extends boolea
  */
 export const fileSystemControllerGetUserPersonalSpace = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetUserPersonalSpaceData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetUserPersonalSpaceResponses, FileSystemControllerGetUserPersonalSpaceErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/personal-space/by-user/{userId}',
+    url: '/file-system/personal-space/by-user/{userId}',
     ...options
 });
 
@@ -1111,7 +1111,7 @@ export const fileSystemControllerGetUserPersonalSpace = <ThrowOnError extends bo
  */
 export const fileSystemControllerDeleteProject = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerDeleteProjectData, ThrowOnError>) => (options.client ?? client).delete<FileSystemControllerDeleteProjectResponses, FileSystemControllerDeleteProjectErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}',
+    url: '/file-system/projects/{projectId}',
     ...options
 });
 
@@ -1120,7 +1120,7 @@ export const fileSystemControllerDeleteProject = <ThrowOnError extends boolean =
  */
 export const fileSystemControllerGetProject = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetProjectData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetProjectResponses, FileSystemControllerGetProjectErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}',
+    url: '/file-system/projects/{projectId}',
     ...options
 });
 
@@ -1129,7 +1129,7 @@ export const fileSystemControllerGetProject = <ThrowOnError extends boolean = fa
  */
 export const fileSystemControllerUpdateProject = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerUpdateProjectData, ThrowOnError>) => (options.client ?? client).patch<FileSystemControllerUpdateProjectResponses, FileSystemControllerUpdateProjectErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}',
+    url: '/file-system/projects/{projectId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1142,7 +1142,7 @@ export const fileSystemControllerUpdateProject = <ThrowOnError extends boolean =
  */
 export const fileSystemControllerClearTrash = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerClearTrashData, ThrowOnError>) => (options?.client ?? client).delete<FileSystemControllerClearTrashResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/trash',
+    url: '/file-system/trash',
     ...options
 });
 
@@ -1151,7 +1151,7 @@ export const fileSystemControllerClearTrash = <ThrowOnError extends boolean = fa
  */
 export const fileSystemControllerGetTrash = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerGetTrashData, ThrowOnError>) => (options?.client ?? client).get<FileSystemControllerGetTrashResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/trash',
+    url: '/file-system/trash',
     ...options
 });
 
@@ -1160,7 +1160,7 @@ export const fileSystemControllerGetTrash = <ThrowOnError extends boolean = fals
  */
 export const fileSystemControllerRestoreTrashItems = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerRestoreTrashItemsData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerRestoreTrashItemsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/trash/restore',
+    url: '/file-system/trash/restore',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1173,7 +1173,7 @@ export const fileSystemControllerRestoreTrashItems = <ThrowOnError extends boole
  */
 export const fileSystemControllerPermanentlyDeleteTrashItems = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerPermanentlyDeleteTrashItemsData, ThrowOnError>) => (options.client ?? client).delete<FileSystemControllerPermanentlyDeleteTrashItemsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/trash/items',
+    url: '/file-system/trash/items',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1186,7 +1186,7 @@ export const fileSystemControllerPermanentlyDeleteTrashItems = <ThrowOnError ext
  */
 export const fileSystemControllerClearProjectTrash = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerClearProjectTrashData, ThrowOnError>) => (options.client ?? client).delete<FileSystemControllerClearProjectTrashResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/trash',
+    url: '/file-system/projects/{projectId}/trash',
     ...options
 });
 
@@ -1195,7 +1195,7 @@ export const fileSystemControllerClearProjectTrash = <ThrowOnError extends boole
  */
 export const fileSystemControllerGetProjectTrash = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetProjectTrashData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetProjectTrashResponses, FileSystemControllerGetProjectTrashErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/trash',
+    url: '/file-system/projects/{projectId}/trash',
     ...options
 });
 
@@ -1204,7 +1204,7 @@ export const fileSystemControllerGetProjectTrash = <ThrowOnError extends boolean
  */
 export const fileSystemControllerCreateNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerCreateNodeData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerCreateNodeResponses, FileSystemControllerCreateNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes',
+    url: '/file-system/nodes',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1217,7 +1217,7 @@ export const fileSystemControllerCreateNode = <ThrowOnError extends boolean = fa
  */
 export const fileSystemControllerCreateFolder = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerCreateFolderData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerCreateFolderResponses, FileSystemControllerCreateFolderErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{parentId}/folders',
+    url: '/file-system/nodes/{parentId}/folders',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1230,7 +1230,7 @@ export const fileSystemControllerCreateFolder = <ThrowOnError extends boolean = 
  */
 export const fileSystemControllerGetRootNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetRootNodeData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetRootNodeResponses, FileSystemControllerGetRootNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/root',
+    url: '/file-system/nodes/{nodeId}/root',
     ...options
 });
 
@@ -1239,7 +1239,7 @@ export const fileSystemControllerGetRootNode = <ThrowOnError extends boolean = f
  */
 export const fileSystemControllerRestoreNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerRestoreNodeData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerRestoreNodeResponses, FileSystemControllerRestoreNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/restore',
+    url: '/file-system/nodes/{nodeId}/restore',
     ...options
 });
 
@@ -1248,7 +1248,7 @@ export const fileSystemControllerRestoreNode = <ThrowOnError extends boolean = f
  */
 export const fileSystemControllerDeleteNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerDeleteNodeData, ThrowOnError>) => (options.client ?? client).delete<FileSystemControllerDeleteNodeResponses, FileSystemControllerDeleteNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}',
+    url: '/file-system/nodes/{nodeId}',
     ...options
 });
 
@@ -1257,7 +1257,7 @@ export const fileSystemControllerDeleteNode = <ThrowOnError extends boolean = fa
  */
 export const fileSystemControllerGetNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetNodeData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetNodeResponses, FileSystemControllerGetNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}',
+    url: '/file-system/nodes/{nodeId}',
     ...options
 });
 
@@ -1266,7 +1266,7 @@ export const fileSystemControllerGetNode = <ThrowOnError extends boolean = false
  */
 export const fileSystemControllerUpdateNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerUpdateNodeData, ThrowOnError>) => (options.client ?? client).patch<FileSystemControllerUpdateNodeResponses, FileSystemControllerUpdateNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}',
+    url: '/file-system/nodes/{nodeId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1279,7 +1279,7 @@ export const fileSystemControllerUpdateNode = <ThrowOnError extends boolean = fa
  */
 export const fileSystemControllerGetChildren = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetChildrenData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetChildrenResponses, FileSystemControllerGetChildrenErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/children',
+    url: '/file-system/nodes/{nodeId}/children',
     ...options
 });
 
@@ -1288,7 +1288,7 @@ export const fileSystemControllerGetChildren = <ThrowOnError extends boolean = f
  */
 export const fileSystemControllerMoveNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerMoveNodeData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerMoveNodeResponses, FileSystemControllerMoveNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/move',
+    url: '/file-system/nodes/{nodeId}/move',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1301,7 +1301,7 @@ export const fileSystemControllerMoveNode = <ThrowOnError extends boolean = fals
  */
 export const fileSystemControllerCopyNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerCopyNodeData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerCopyNodeResponses, FileSystemControllerCopyNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/copy',
+    url: '/file-system/nodes/{nodeId}/copy',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1314,7 +1314,7 @@ export const fileSystemControllerCopyNode = <ThrowOnError extends boolean = fals
  */
 export const fileSystemControllerGetStorageQuota = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetStorageQuotaData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetStorageQuotaResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/quota',
+    url: '/file-system/quota',
     ...options
 });
 
@@ -1323,7 +1323,7 @@ export const fileSystemControllerGetStorageQuota = <ThrowOnError extends boolean
  */
 export const fileSystemControllerUpdateStorageQuota = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerUpdateStorageQuotaData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerUpdateStorageQuotaResponses, FileSystemControllerUpdateStorageQuotaErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/quota/update',
+    url: '/file-system/quota/update',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1336,7 +1336,7 @@ export const fileSystemControllerUpdateStorageQuota = <ThrowOnError extends bool
  */
 export const fileSystemControllerGetProjectMembers = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetProjectMembersData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetProjectMembersResponses, FileSystemControllerGetProjectMembersErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/members',
+    url: '/file-system/projects/{projectId}/members',
     ...options
 });
 
@@ -1345,7 +1345,7 @@ export const fileSystemControllerGetProjectMembers = <ThrowOnError extends boole
  */
 export const fileSystemControllerAddProjectMember = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerAddProjectMemberData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerAddProjectMemberResponses, FileSystemControllerAddProjectMemberErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/members',
+    url: '/file-system/projects/{projectId}/members',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1358,7 +1358,7 @@ export const fileSystemControllerAddProjectMember = <ThrowOnError extends boolea
  */
 export const fileSystemControllerRemoveProjectMember = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerRemoveProjectMemberData, ThrowOnError>) => (options.client ?? client).delete<FileSystemControllerRemoveProjectMemberResponses, FileSystemControllerRemoveProjectMemberErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/members/{userId}',
+    url: '/file-system/projects/{projectId}/members/{userId}',
     ...options
 });
 
@@ -1367,7 +1367,7 @@ export const fileSystemControllerRemoveProjectMember = <ThrowOnError extends boo
  */
 export const fileSystemControllerUpdateProjectMember = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerUpdateProjectMemberData, ThrowOnError>) => (options.client ?? client).patch<FileSystemControllerUpdateProjectMemberResponses, FileSystemControllerUpdateProjectMemberErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/members/{userId}',
+    url: '/file-system/projects/{projectId}/members/{userId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1380,7 +1380,7 @@ export const fileSystemControllerUpdateProjectMember = <ThrowOnError extends boo
  */
 export const fileSystemControllerTransferProject = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerTransferProjectData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerTransferProjectResponses, FileSystemControllerTransferProjectErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/transfer',
+    url: '/file-system/projects/{projectId}/transfer',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1393,7 +1393,7 @@ export const fileSystemControllerTransferProject = <ThrowOnError extends boolean
  */
 export const fileSystemControllerUpdateProjectMembersBatch = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerUpdateProjectMembersBatchData, ThrowOnError>) => (options.client ?? client).patch<FileSystemControllerUpdateProjectMembersBatchResponses, FileSystemControllerUpdateProjectMembersBatchErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/members/batch',
+    url: '/file-system/projects/{projectId}/members/batch',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1406,7 +1406,7 @@ export const fileSystemControllerUpdateProjectMembersBatch = <ThrowOnError exten
  */
 export const fileSystemControllerAddProjectMembersBatch = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerAddProjectMembersBatchData, ThrowOnError>) => (options.client ?? client).post<FileSystemControllerAddProjectMembersBatchResponses, FileSystemControllerAddProjectMembersBatchErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/members/batch',
+    url: '/file-system/projects/{projectId}/members/batch',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1419,7 +1419,7 @@ export const fileSystemControllerAddProjectMembersBatch = <ThrowOnError extends 
  */
 export const fileSystemControllerGetThumbnail = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetThumbnailData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetThumbnailResponses, FileSystemControllerGetThumbnailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/thumbnail',
+    url: '/file-system/nodes/{nodeId}/thumbnail',
     ...options
 });
 
@@ -1428,7 +1428,7 @@ export const fileSystemControllerGetThumbnail = <ThrowOnError extends boolean = 
  */
 export const fileSystemControllerDownloadNode = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerDownloadNodeData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerDownloadNodeResponses, FileSystemControllerDownloadNodeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/download',
+    url: '/file-system/nodes/{nodeId}/download',
     ...options
 });
 
@@ -1437,7 +1437,7 @@ export const fileSystemControllerDownloadNode = <ThrowOnError extends boolean = 
  */
 export const fileSystemControllerDownloadNodeOptions = <ThrowOnError extends boolean = false>(options?: Options<FileSystemControllerDownloadNodeOptionsData, ThrowOnError>) => (options?.client ?? client).options<FileSystemControllerDownloadNodeOptionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/download',
+    url: '/file-system/nodes/{nodeId}/download',
     ...options
 });
 
@@ -1448,7 +1448,7 @@ export const fileSystemControllerDownloadNodeOptions = <ThrowOnError extends boo
  */
 export const fileSystemControllerDownloadNodeWithFormat = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerDownloadNodeWithFormatData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerDownloadNodeWithFormatResponses, FileSystemControllerDownloadNodeWithFormatErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/nodes/{nodeId}/download-with-format',
+    url: '/file-system/nodes/{nodeId}/download-with-format',
     ...options
 });
 
@@ -1457,7 +1457,7 @@ export const fileSystemControllerDownloadNodeWithFormat = <ThrowOnError extends 
  */
 export const fileSystemControllerGetUserProjectPermissions = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetUserProjectPermissionsData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetUserProjectPermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/permissions',
+    url: '/file-system/projects/{projectId}/permissions',
     ...options
 });
 
@@ -1466,7 +1466,7 @@ export const fileSystemControllerGetUserProjectPermissions = <ThrowOnError exten
  */
 export const fileSystemControllerCheckProjectPermission = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerCheckProjectPermissionData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerCheckProjectPermissionResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/permissions/check',
+    url: '/file-system/projects/{projectId}/permissions/check',
     ...options
 });
 
@@ -1475,7 +1475,7 @@ export const fileSystemControllerCheckProjectPermission = <ThrowOnError extends 
  */
 export const fileSystemControllerGetUserProjectRole = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerGetUserProjectRoleData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerGetUserProjectRoleResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/projects/{projectId}/role',
+    url: '/file-system/projects/{projectId}/role',
     ...options
 });
 
@@ -1489,24 +1489,24 @@ export const fileSystemControllerGetUserProjectRole = <ThrowOnError extends bool
  */
 export const fileSystemControllerSearch = <ThrowOnError extends boolean = false>(options: Options<FileSystemControllerSearchData, ThrowOnError>) => (options.client ?? client).get<FileSystemControllerSearchResponses, FileSystemControllerSearchErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/file-system/search',
+    url: '/file-system/search',
     ...options
 });
 
 /**
  * 获取节点的 SVN 提交历史
  */
-export const versionControlControllerGetFileHistory = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerGetFileHistoryData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerGetFileHistoryResponses, VersionControlControllerGetFileHistoryErrors, ThrowOnError>({ url: '/api/v1/version-control/history', ...options });
+export const versionControlControllerGetFileHistory = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerGetFileHistoryData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerGetFileHistoryResponses, VersionControlControllerGetFileHistoryErrors, ThrowOnError>({ url: '/version-control/history', ...options });
 
 /**
  * 获取指定版本的文件内容
  */
-export const versionControlControllerGetFileContentAtRevision = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerGetFileContentAtRevisionData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerGetFileContentAtRevisionResponses, VersionControlControllerGetFileContentAtRevisionErrors, ThrowOnError>({ url: '/api/v1/version-control/file/{revision}', ...options });
+export const versionControlControllerGetFileContentAtRevision = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerGetFileContentAtRevisionData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerGetFileContentAtRevisionResponses, VersionControlControllerGetFileContentAtRevisionErrors, ThrowOnError>({ url: '/version-control/file/{revision}', ...options });
 
 /**
  * 列出指定版本目录下的文件列表
  */
-export const versionControlControllerListDirectoryAtRevision = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerListDirectoryAtRevisionData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerListDirectoryAtRevisionResponses, VersionControlControllerListDirectoryAtRevisionErrors, ThrowOnError>({ url: '/api/v1/version-control/list/{revision}', ...options });
+export const versionControlControllerListDirectoryAtRevision = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerListDirectoryAtRevisionData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerListDirectoryAtRevisionResponses, VersionControlControllerListDirectoryAtRevisionErrors, ThrowOnError>({ url: '/version-control/list/{revision}', ...options });
 
 /**
  * 获取字体列表
@@ -1515,7 +1515,7 @@ export const versionControlControllerListDirectoryAtRevision = <ThrowOnError ext
  */
 export const fontsControllerGetFonts = <ThrowOnError extends boolean = false>(options?: Options<FontsControllerGetFontsData, ThrowOnError>) => (options?.client ?? client).get<FontsControllerGetFontsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/font-management',
+    url: '/font-management',
     ...options
 });
 
@@ -1527,7 +1527,7 @@ export const fontsControllerGetFonts = <ThrowOnError extends boolean = false>(op
 export const fontsControllerUploadFont = <ThrowOnError extends boolean = false>(options: Options<FontsControllerUploadFontData, ThrowOnError>) => (options.client ?? client).post<FontsControllerUploadFontResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/font-management/upload',
+    url: '/font-management/upload',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1542,7 +1542,7 @@ export const fontsControllerUploadFont = <ThrowOnError extends boolean = false>(
  */
 export const fontsControllerDeleteFont = <ThrowOnError extends boolean = false>(options: Options<FontsControllerDeleteFontData, ThrowOnError>) => (options.client ?? client).delete<FontsControllerDeleteFontResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/font-management/{fileName}',
+    url: '/font-management/{fileName}',
     ...options
 });
 
@@ -1553,12 +1553,12 @@ export const fontsControllerDeleteFont = <ThrowOnError extends boolean = false>(
  */
 export const fontsControllerDownloadFont = <ThrowOnError extends boolean = false>(options: Options<FontsControllerDownloadFontData, ThrowOnError>) => (options.client ?? client).get<FontsControllerDownloadFontResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/font-management/download/{fileName}',
+    url: '/font-management/download/{fileName}',
     ...options
 });
 
 export const mxCadControllerCheckChunkExist = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerCheckChunkExistData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerCheckChunkExistResponses, unknown, ThrowOnError>({
-    url: '/api/v1/mxcad/files/chunkisExist',
+    url: '/mxcad/files/chunkisExist',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1567,7 +1567,7 @@ export const mxCadControllerCheckChunkExist = <ThrowOnError extends boolean = fa
 });
 
 export const mxCadControllerCheckFileExist = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerCheckFileExistData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerCheckFileExistResponses, unknown, ThrowOnError>({
-    url: '/api/v1/mxcad/files/fileisExist',
+    url: '/mxcad/files/fileisExist',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1577,7 +1577,7 @@ export const mxCadControllerCheckFileExist = <ThrowOnError extends boolean = fal
 
 export const mxCadControllerUploadFile = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerUploadFileData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerUploadFileResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/mxcad/files/uploadFiles',
+    url: '/mxcad/files/uploadFiles',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1585,10 +1585,10 @@ export const mxCadControllerUploadFile = <ThrowOnError extends boolean = false>(
     }
 });
 
-export const mxCadControllerGetPreloadingData = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerGetPreloadingDataData, ThrowOnError>) => (options.client ?? client).get<MxCadControllerGetPreloadingDataResponses, MxCadControllerGetPreloadingDataErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{nodeId}/preloading', ...options });
+export const mxCadControllerGetPreloadingData = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerGetPreloadingDataData, ThrowOnError>) => (options.client ?? client).get<MxCadControllerGetPreloadingDataResponses, MxCadControllerGetPreloadingDataErrors, ThrowOnError>({ url: '/mxcad/file/{nodeId}/preloading', ...options });
 
 export const mxCadControllerCheckExternalReference = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerCheckExternalReferenceData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerCheckExternalReferenceResponses, MxCadControllerCheckExternalReferenceErrors, ThrowOnError>({
-    url: '/api/v1/mxcad/file/{nodeId}/check-reference',
+    url: '/mxcad/file/{nodeId}/check-reference',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1596,11 +1596,11 @@ export const mxCadControllerCheckExternalReference = <ThrowOnError extends boole
     }
 });
 
-export const mxCadControllerRefreshExternalReferences = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerRefreshExternalReferencesData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerRefreshExternalReferencesResponses, MxCadControllerRefreshExternalReferencesErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{nodeId}/refresh-external-references', ...options });
+export const mxCadControllerRefreshExternalReferences = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerRefreshExternalReferencesData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerRefreshExternalReferencesResponses, MxCadControllerRefreshExternalReferencesErrors, ThrowOnError>({ url: '/mxcad/file/{nodeId}/refresh-external-references', ...options });
 
 export const mxCadControllerUploadExtReferenceDwg = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerUploadExtReferenceDwgData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerUploadExtReferenceDwgResponses, MxCadControllerUploadExtReferenceDwgErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/mxcad/up_ext_reference_dwg/{nodeId}',
+    url: '/mxcad/up_ext_reference_dwg/{nodeId}',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1610,7 +1610,7 @@ export const mxCadControllerUploadExtReferenceDwg = <ThrowOnError extends boolea
 
 export const mxCadControllerUploadExtReferenceImage = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerUploadExtReferenceImageData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerUploadExtReferenceImageResponses, MxCadControllerUploadExtReferenceImageErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/mxcad/up_ext_reference_image',
+    url: '/mxcad/up_ext_reference_image',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1620,32 +1620,32 @@ export const mxCadControllerUploadExtReferenceImage = <ThrowOnError extends bool
 
 export const mxCadControllerGetFilesDataFile = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFilesDataFileData, ThrowOnError>) => (options?.client ?? client).get<MxCadControllerGetFilesDataFileResponses, MxCadControllerGetFilesDataFileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/mxcad/filesData/{path}',
+    url: '/mxcad/filesData/{path}',
     ...options
 });
 
-export const mxCadControllerGetFilesDataFileHead = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFilesDataFileHeadData, ThrowOnError>) => (options?.client ?? client).head<MxCadControllerGetFilesDataFileHeadResponses, MxCadControllerGetFilesDataFileHeadErrors, ThrowOnError>({ url: '/api/v1/mxcad/filesData/{path}', ...options });
+export const mxCadControllerGetFilesDataFileHead = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFilesDataFileHeadData, ThrowOnError>) => (options?.client ?? client).head<MxCadControllerGetFilesDataFileHeadResponses, MxCadControllerGetFilesDataFileHeadErrors, ThrowOnError>({ url: '/mxcad/filesData/{path}', ...options });
 
-export const mxCadControllerGetFile = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFileData, ThrowOnError>) => (options?.client ?? client).get<MxCadControllerGetFileResponses, MxCadControllerGetFileErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{path}', ...options });
+export const mxCadControllerGetFile = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFileData, ThrowOnError>) => (options?.client ?? client).get<MxCadControllerGetFileResponses, MxCadControllerGetFileErrors, ThrowOnError>({ url: '/mxcad/file/{path}', ...options });
 
-export const mxCadControllerGetFileHead = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFileHeadData, ThrowOnError>) => (options?.client ?? client).head<MxCadControllerGetFileHeadResponses, MxCadControllerGetFileHeadErrors, ThrowOnError>({ url: '/api/v1/mxcad/file/{path}', ...options });
+export const mxCadControllerGetFileHead = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFileHeadData, ThrowOnError>) => (options?.client ?? client).head<MxCadControllerGetFileHeadResponses, MxCadControllerGetFileHeadErrors, ThrowOnError>({ url: '/mxcad/file/{path}', ...options });
 
 export const mxCadControllerGetNonCadFile = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerGetNonCadFileData, ThrowOnError>) => (options.client ?? client).get<MxCadControllerGetNonCadFileResponses, MxCadControllerGetNonCadFileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/mxcad/files/{storageKey}',
+    url: '/mxcad/files/{storageKey}',
     ...options
 });
 
 export const thumbnailControllerCheckThumbnail = <ThrowOnError extends boolean = false>(options: Options<ThumbnailControllerCheckThumbnailData, ThrowOnError>) => (options.client ?? client).get<ThumbnailControllerCheckThumbnailResponses, ThumbnailControllerCheckThumbnailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/mxcad/thumbnail/{nodeId}',
+    url: '/mxcad/thumbnail/{nodeId}',
     ...options
 });
 
 export const thumbnailControllerUploadThumbnail = <ThrowOnError extends boolean = false>(options: Options<ThumbnailControllerUploadThumbnailData, ThrowOnError>) => (options.client ?? client).post<ThumbnailControllerUploadThumbnailResponses, ThumbnailControllerUploadThumbnailErrors, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/mxcad/thumbnail/{nodeId}',
+    url: '/mxcad/thumbnail/{nodeId}',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1655,7 +1655,7 @@ export const thumbnailControllerUploadThumbnail = <ThrowOnError extends boolean 
 
 export const saveControllerSaveMxwebToNode = <ThrowOnError extends boolean = false>(options: Options<SaveControllerSaveMxwebToNodeData, ThrowOnError>) => (options.client ?? client).post<SaveControllerSaveMxwebToNodeResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/mxcad/savemxweb/{nodeId}',
+    url: '/mxcad/savemxweb/{nodeId}',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1665,7 +1665,7 @@ export const saveControllerSaveMxwebToNode = <ThrowOnError extends boolean = fal
 
 export const saveControllerSaveMxwebAs = <ThrowOnError extends boolean = false>(options: Options<SaveControllerSaveMxwebAsData, ThrowOnError>) => (options.client ?? client).post<SaveControllerSaveMxwebAsResponses, SaveControllerSaveMxwebAsErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/mxcad/save-as',
+    url: '/mxcad/save-as',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1678,7 +1678,7 @@ export const saveControllerSaveMxwebAs = <ThrowOnError extends boolean = false>(
  */
 export const adminControllerGetAdminStats = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetAdminStatsData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetAdminStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/stats',
+    url: '/admin/stats',
     ...options
 });
 
@@ -1687,7 +1687,7 @@ export const adminControllerGetAdminStats = <ThrowOnError extends boolean = fals
  */
 export const adminControllerGetCacheStats = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetCacheStatsData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetCacheStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/permissions/cache',
+    url: '/admin/permissions/cache',
     ...options
 });
 
@@ -1696,7 +1696,7 @@ export const adminControllerGetCacheStats = <ThrowOnError extends boolean = fals
  */
 export const adminControllerCleanupCache = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerCleanupCacheData, ThrowOnError>) => (options?.client ?? client).post<AdminControllerCleanupCacheResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/permissions/cache/cleanup',
+    url: '/admin/permissions/cache/cleanup',
     ...options
 });
 
@@ -1705,7 +1705,7 @@ export const adminControllerCleanupCache = <ThrowOnError extends boolean = false
  */
 export const adminControllerClearUserCache = <ThrowOnError extends boolean = false>(options: Options<AdminControllerClearUserCacheData, ThrowOnError>) => (options.client ?? client).delete<AdminControllerClearUserCacheResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/permissions/cache/user/{userId}',
+    url: '/admin/permissions/cache/user/{userId}',
     ...options
 });
 
@@ -1714,7 +1714,7 @@ export const adminControllerClearUserCache = <ThrowOnError extends boolean = fal
  */
 export const adminControllerGetUserPermissions = <ThrowOnError extends boolean = false>(options: Options<AdminControllerGetUserPermissionsData, ThrowOnError>) => (options.client ?? client).get<AdminControllerGetUserPermissionsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/permissions/user/{userId}',
+    url: '/admin/permissions/user/{userId}',
     ...options
 });
 
@@ -1723,7 +1723,7 @@ export const adminControllerGetUserPermissions = <ThrowOnError extends boolean =
  */
 export const adminControllerCleanupStorage = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerCleanupStorageData, ThrowOnError>) => (options?.client ?? client).post<AdminControllerCleanupStorageResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/storage/cleanup',
+    url: '/admin/storage/cleanup',
     ...options
 });
 
@@ -1732,46 +1732,46 @@ export const adminControllerCleanupStorage = <ThrowOnError extends boolean = fal
  */
 export const adminControllerGetCleanupStats = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetCleanupStatsData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetCleanupStatsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/admin/storage/cleanup/stats',
+    url: '/admin/storage/cleanup/stats',
     ...options
 });
 
 /**
  * 存活检查（Docker 健康检查）
  */
-export const healthControllerLiveness = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerLivenessData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerLivenessResponses, unknown, ThrowOnError>({ url: '/api/v1/health/live', ...options });
+export const healthControllerLiveness = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerLivenessData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerLivenessResponses, unknown, ThrowOnError>({ url: '/health/live', ...options });
 
 /**
  * 公开健康检查（轻量级）
  */
-export const healthControllerPublicHealth = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerPublicHealthData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerPublicHealthResponses, unknown, ThrowOnError>({ url: '/api/v1/health/public', ...options });
+export const healthControllerPublicHealth = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerPublicHealthData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerPublicHealthResponses, unknown, ThrowOnError>({ url: '/health/public', ...options });
 
 /**
  * 系统健康检查（详细）
  */
-export const healthControllerCheckFull = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckFullData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckFullResponses, HealthControllerCheckFullErrors, ThrowOnError>({ url: '/api/v1/health', ...options });
+export const healthControllerCheckFull = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckFullData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckFullResponses, HealthControllerCheckFullErrors, ThrowOnError>({ url: '/health', ...options });
 
 /**
  * 系统健康检查（详细）
  */
-export const healthControllerCheck = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckResponses, HealthControllerCheckErrors, ThrowOnError>({ url: '/api/v1/health/full', ...options });
+export const healthControllerCheck = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckResponses, HealthControllerCheckErrors, ThrowOnError>({ url: '/health/full', ...options });
 
 /**
  * 数据库健康检查
  */
-export const healthControllerCheckDatabase = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckDatabaseData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckDatabaseResponses, HealthControllerCheckDatabaseErrors, ThrowOnError>({ url: '/api/v1/health/db', ...options });
+export const healthControllerCheckDatabase = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckDatabaseData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckDatabaseResponses, HealthControllerCheckDatabaseErrors, ThrowOnError>({ url: '/health/db', ...options });
 
 /**
  * 存储服务健康检查
  */
-export const healthControllerCheckStorage = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckStorageData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckStorageResponses, HealthControllerCheckStorageErrors, ThrowOnError>({ url: '/api/v1/health/storage', ...options });
+export const healthControllerCheckStorage = <ThrowOnError extends boolean = false>(options?: Options<HealthControllerCheckStorageData, ThrowOnError>) => (options?.client ?? client).get<HealthControllerCheckStorageResponses, HealthControllerCheckStorageErrors, ThrowOnError>({ url: '/health/storage', ...options });
 
 /**
  * 获取所有策略配置
  */
 export const policyConfigControllerGetAllPolicies = <ThrowOnError extends boolean = false>(options?: Options<PolicyConfigControllerGetAllPoliciesData, ThrowOnError>) => (options?.client ?? client).get<PolicyConfigControllerGetAllPoliciesResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config',
+    url: '/policy-config',
     ...options
 });
 
@@ -1780,7 +1780,7 @@ export const policyConfigControllerGetAllPolicies = <ThrowOnError extends boolea
  */
 export const policyConfigControllerCreatePolicy = <ThrowOnError extends boolean = false>(options: Options<PolicyConfigControllerCreatePolicyData, ThrowOnError>) => (options.client ?? client).post<PolicyConfigControllerCreatePolicyResponses, PolicyConfigControllerCreatePolicyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config',
+    url: '/policy-config',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1793,7 +1793,7 @@ export const policyConfigControllerCreatePolicy = <ThrowOnError extends boolean 
  */
 export const policyConfigControllerDeletePolicy = <ThrowOnError extends boolean = false>(options: Options<PolicyConfigControllerDeletePolicyData, ThrowOnError>) => (options.client ?? client).delete<PolicyConfigControllerDeletePolicyResponses, PolicyConfigControllerDeletePolicyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config/{id}',
+    url: '/policy-config/{id}',
     ...options
 });
 
@@ -1802,7 +1802,7 @@ export const policyConfigControllerDeletePolicy = <ThrowOnError extends boolean 
  */
 export const policyConfigControllerGetPolicy = <ThrowOnError extends boolean = false>(options: Options<PolicyConfigControllerGetPolicyData, ThrowOnError>) => (options.client ?? client).get<PolicyConfigControllerGetPolicyResponses, PolicyConfigControllerGetPolicyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config/{id}',
+    url: '/policy-config/{id}',
     ...options
 });
 
@@ -1811,7 +1811,7 @@ export const policyConfigControllerGetPolicy = <ThrowOnError extends boolean = f
  */
 export const policyConfigControllerUpdatePolicy = <ThrowOnError extends boolean = false>(options: Options<PolicyConfigControllerUpdatePolicyData, ThrowOnError>) => (options.client ?? client).put<PolicyConfigControllerUpdatePolicyResponses, PolicyConfigControllerUpdatePolicyErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config/{id}',
+    url: '/policy-config/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1824,7 +1824,7 @@ export const policyConfigControllerUpdatePolicy = <ThrowOnError extends boolean 
  */
 export const policyConfigControllerEnablePolicy = <ThrowOnError extends boolean = false>(options: Options<PolicyConfigControllerEnablePolicyData, ThrowOnError>) => (options.client ?? client).put<PolicyConfigControllerEnablePolicyResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config/{id}/enable',
+    url: '/policy-config/{id}/enable',
     ...options
 });
 
@@ -1833,26 +1833,26 @@ export const policyConfigControllerEnablePolicy = <ThrowOnError extends boolean 
  */
 export const policyConfigControllerDisablePolicy = <ThrowOnError extends boolean = false>(options: Options<PolicyConfigControllerDisablePolicyData, ThrowOnError>) => (options.client ?? client).put<PolicyConfigControllerDisablePolicyResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/policy-config/{id}/disable',
+    url: '/policy-config/{id}/disable',
     ...options
 });
 
 /**
  * 通过文件哈希访问目录下的文件
  */
-export const publicFileControllerAccessFile = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerAccessFileData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerAccessFileResponses, PublicFileControllerAccessFileErrors, ThrowOnError>({ url: '/api/v1/public-file/access/{hash}/{filename}', ...options });
+export const publicFileControllerAccessFile = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerAccessFileData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerAccessFileResponses, PublicFileControllerAccessFileErrors, ThrowOnError>({ url: '/public-file/access/{hash}/{filename}', ...options });
 
 /**
  * 在 uploads 目录下查找 mxweb 文件（平铺存储）
  */
-export const publicFileControllerAccessFileByHashPattern = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerAccessFileByHashPatternData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerAccessFileByHashPatternResponses, PublicFileControllerAccessFileByHashPatternErrors, ThrowOnError>({ url: '/api/v1/public-file/access/{filename}', ...options });
+export const publicFileControllerAccessFileByHashPattern = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerAccessFileByHashPatternData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerAccessFileByHashPatternResponses, PublicFileControllerAccessFileByHashPatternErrors, ThrowOnError>({ url: '/public-file/access/{filename}', ...options });
 
 /**
  * 上传外部参照文件（公开接口）
  */
 export const publicFileControllerUploadExtReference = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerUploadExtReferenceData, ThrowOnError>) => (options.client ?? client).post<PublicFileControllerUploadExtReferenceResponses, PublicFileControllerUploadExtReferenceErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/public-file/ext-reference/upload',
+    url: '/public-file/ext-reference/upload',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1863,18 +1863,18 @@ export const publicFileControllerUploadExtReference = <ThrowOnError extends bool
 /**
  * 检查外部参照文件是否存在
  */
-export const publicFileControllerCheckExtReference = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerCheckExtReferenceData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerCheckExtReferenceResponses, unknown, ThrowOnError>({ url: '/api/v1/public-file/ext-reference/check', ...options });
+export const publicFileControllerCheckExtReference = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerCheckExtReferenceData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerCheckExtReferenceResponses, unknown, ThrowOnError>({ url: '/public-file/ext-reference/check', ...options });
 
 /**
  * 获取预加载数据（包含外部参照信息）
  */
-export const publicFileControllerGetPreloadingData = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerGetPreloadingDataData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerGetPreloadingDataResponses, PublicFileControllerGetPreloadingDataErrors, ThrowOnError>({ url: '/api/v1/public-file/preloading/{hash}', ...options });
+export const publicFileControllerGetPreloadingData = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerGetPreloadingDataData, ThrowOnError>) => (options.client ?? client).get<PublicFileControllerGetPreloadingDataResponses, PublicFileControllerGetPreloadingDataErrors, ThrowOnError>({ url: '/public-file/preloading/{hash}', ...options });
 
 /**
  * 将 mxweb 文件转换为指定格式并下载（公开接口）
  */
 export const publicFileControllerConvertAndDownload = <ThrowOnError extends boolean = false>(options: Options<PublicFileControllerConvertAndDownloadData, ThrowOnError>) => (options.client ?? client).post<PublicFileControllerConvertAndDownloadResponses, PublicFileControllerConvertAndDownloadErrors, ThrowOnError>({
-    url: '/api/v1/public-file/convert',
+    url: '/public-file/convert',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1885,48 +1885,48 @@ export const publicFileControllerConvertAndDownload = <ThrowOnError extends bool
 /**
  * Get drawing library details
  */
-export const libraryControllerGetDrawingLibrary = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetDrawingLibraryData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetDrawingLibraryResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing', ...options });
+export const libraryControllerGetDrawingLibrary = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetDrawingLibraryData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetDrawingLibraryResponses, unknown, ThrowOnError>({ url: '/library/drawing', ...options });
 
 /**
  * Get all three-level categories of drawing library (single request)
  */
-export const libraryControllerGetDrawingCategories = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetDrawingCategoriesData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetDrawingCategoriesResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/categories', ...options });
+export const libraryControllerGetDrawingCategories = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetDrawingCategoriesData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetDrawingCategoriesResponses, unknown, ThrowOnError>({ url: '/library/drawing/categories', ...options });
 
 /**
  * Get child nodes of drawing library
  */
-export const libraryControllerGetDrawingChildren = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingChildrenData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingChildrenResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/children/{nodeId}', ...options });
+export const libraryControllerGetDrawingChildren = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingChildrenData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingChildrenResponses, unknown, ThrowOnError>({ url: '/library/drawing/children/{nodeId}', ...options });
 
 /**
  * Recursively get all files under drawing library node
  */
-export const libraryControllerGetDrawingAllFiles = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingAllFilesData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingAllFilesResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/all-files/{nodeId}', ...options });
+export const libraryControllerGetDrawingAllFiles = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingAllFilesData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingAllFilesResponses, unknown, ThrowOnError>({ url: '/library/drawing/all-files/{nodeId}', ...options });
 
 /**
  * Serve drawing library file (unified entry)
  */
-export const libraryControllerGetDrawingFile = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingFileData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingFileResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/filesData/{path}', ...options });
+export const libraryControllerGetDrawingFile = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingFileData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingFileResponses, unknown, ThrowOnError>({ url: '/library/drawing/filesData/{path}', ...options });
 
 /**
  * Delete drawing library node
  */
 export const libraryControllerDeleteDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerDeleteDrawingNodeData, ThrowOnError>) => (options.client ?? client).delete<LibraryControllerDeleteDrawingNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/nodes/{nodeId}',
+    url: '/library/drawing/nodes/{nodeId}',
     ...options
 });
 
 /**
  * Get drawing library node details
  */
-export const libraryControllerGetDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingNodeResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/nodes/{nodeId}', ...options });
+export const libraryControllerGetDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingNodeResponses, unknown, ThrowOnError>({ url: '/library/drawing/nodes/{nodeId}', ...options });
 
 /**
  * Rename drawing library node
  */
 export const libraryControllerRenameDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerRenameDrawingNodeData, ThrowOnError>) => (options.client ?? client).patch<LibraryControllerRenameDrawingNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/nodes/{nodeId}',
+    url: '/library/drawing/nodes/{nodeId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1937,12 +1937,12 @@ export const libraryControllerRenameDrawingNode = <ThrowOnError extends boolean 
 /**
  * Download drawing library file (public)
  */
-export const libraryControllerDownloadDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerDownloadDrawingNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerDownloadDrawingNodeResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/nodes/{nodeId}/download', ...options });
+export const libraryControllerDownloadDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerDownloadDrawingNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerDownloadDrawingNodeResponses, unknown, ThrowOnError>({ url: '/library/drawing/nodes/{nodeId}/download', ...options });
 
 /**
  * Get drawing library file thumbnail
  */
-export const libraryControllerGetDrawingThumbnail = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingThumbnailData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingThumbnailResponses, unknown, ThrowOnError>({ url: '/api/v1/library/drawing/nodes/{nodeId}/thumbnail', ...options });
+export const libraryControllerGetDrawingThumbnail = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetDrawingThumbnailData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetDrawingThumbnailResponses, unknown, ThrowOnError>({ url: '/library/drawing/nodes/{nodeId}/thumbnail', ...options });
 
 /**
  * Overwrite save drawing library file
@@ -1950,7 +1950,7 @@ export const libraryControllerGetDrawingThumbnail = <ThrowOnError extends boolea
 export const libraryControllerSaveDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerSaveDrawingNodeData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerSaveDrawingNodeResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/save/{nodeId}',
+    url: '/library/drawing/save/{nodeId}',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1964,7 +1964,7 @@ export const libraryControllerSaveDrawingNode = <ThrowOnError extends boolean = 
 export const libraryControllerSaveDrawingAs = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerSaveDrawingAsData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerSaveDrawingAsResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/save-as',
+    url: '/library/drawing/save-as',
     ...options,
     headers: {
         'Content-Type': null,
@@ -1977,7 +1977,7 @@ export const libraryControllerSaveDrawingAs = <ThrowOnError extends boolean = fa
  */
 export const libraryControllerCreateDrawingFolder = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerCreateDrawingFolderData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerCreateDrawingFolderResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/folders',
+    url: '/library/drawing/folders',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1990,7 +1990,7 @@ export const libraryControllerCreateDrawingFolder = <ThrowOnError extends boolea
  */
 export const libraryControllerMoveDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerMoveDrawingNodeData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerMoveDrawingNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/nodes/{nodeId}/move',
+    url: '/library/drawing/nodes/{nodeId}/move',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -2003,7 +2003,7 @@ export const libraryControllerMoveDrawingNode = <ThrowOnError extends boolean = 
  */
 export const libraryControllerCopyDrawingNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerCopyDrawingNodeData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerCopyDrawingNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/drawing/nodes/{nodeId}/copy',
+    url: '/library/drawing/nodes/{nodeId}/copy',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -2014,48 +2014,48 @@ export const libraryControllerCopyDrawingNode = <ThrowOnError extends boolean = 
 /**
  * Get block library details
  */
-export const libraryControllerGetBlockLibrary = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetBlockLibraryData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetBlockLibraryResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block', ...options });
+export const libraryControllerGetBlockLibrary = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetBlockLibraryData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetBlockLibraryResponses, unknown, ThrowOnError>({ url: '/library/block', ...options });
 
 /**
  * Get all three-level categories of block library (single request)
  */
-export const libraryControllerGetBlockCategories = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetBlockCategoriesData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetBlockCategoriesResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/categories', ...options });
+export const libraryControllerGetBlockCategories = <ThrowOnError extends boolean = false>(options?: Options<LibraryControllerGetBlockCategoriesData, ThrowOnError>) => (options?.client ?? client).get<LibraryControllerGetBlockCategoriesResponses, unknown, ThrowOnError>({ url: '/library/block/categories', ...options });
 
 /**
  * Get child nodes of block library
  */
-export const libraryControllerGetBlockChildren = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockChildrenData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockChildrenResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/children/{nodeId}', ...options });
+export const libraryControllerGetBlockChildren = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockChildrenData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockChildrenResponses, unknown, ThrowOnError>({ url: '/library/block/children/{nodeId}', ...options });
 
 /**
  * Recursively get all files under block library node
  */
-export const libraryControllerGetBlockAllFiles = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockAllFilesData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockAllFilesResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/all-files/{nodeId}', ...options });
+export const libraryControllerGetBlockAllFiles = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockAllFilesData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockAllFilesResponses, unknown, ThrowOnError>({ url: '/library/block/all-files/{nodeId}', ...options });
 
 /**
  * Serve block library file (unified entry)
  */
-export const libraryControllerGetBlockFile = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockFileData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockFileResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/filesData/{path}', ...options });
+export const libraryControllerGetBlockFile = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockFileData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockFileResponses, unknown, ThrowOnError>({ url: '/library/block/filesData/{path}', ...options });
 
 /**
  * Delete block library node
  */
 export const libraryControllerDeleteBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerDeleteBlockNodeData, ThrowOnError>) => (options.client ?? client).delete<LibraryControllerDeleteBlockNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/nodes/{nodeId}',
+    url: '/library/block/nodes/{nodeId}',
     ...options
 });
 
 /**
  * Get block library node details
  */
-export const libraryControllerGetBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockNodeResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/nodes/{nodeId}', ...options });
+export const libraryControllerGetBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockNodeResponses, unknown, ThrowOnError>({ url: '/library/block/nodes/{nodeId}', ...options });
 
 /**
  * Rename block library node
  */
 export const libraryControllerRenameBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerRenameBlockNodeData, ThrowOnError>) => (options.client ?? client).patch<LibraryControllerRenameBlockNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/nodes/{nodeId}',
+    url: '/library/block/nodes/{nodeId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -2066,12 +2066,12 @@ export const libraryControllerRenameBlockNode = <ThrowOnError extends boolean = 
 /**
  * Download block library file (public)
  */
-export const libraryControllerDownloadBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerDownloadBlockNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerDownloadBlockNodeResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/nodes/{nodeId}/download', ...options });
+export const libraryControllerDownloadBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerDownloadBlockNodeData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerDownloadBlockNodeResponses, unknown, ThrowOnError>({ url: '/library/block/nodes/{nodeId}/download', ...options });
 
 /**
  * Get block library file thumbnail
  */
-export const libraryControllerGetBlockThumbnail = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockThumbnailData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockThumbnailResponses, unknown, ThrowOnError>({ url: '/api/v1/library/block/nodes/{nodeId}/thumbnail', ...options });
+export const libraryControllerGetBlockThumbnail = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerGetBlockThumbnailData, ThrowOnError>) => (options.client ?? client).get<LibraryControllerGetBlockThumbnailResponses, unknown, ThrowOnError>({ url: '/library/block/nodes/{nodeId}/thumbnail', ...options });
 
 /**
  * Overwrite save block library file
@@ -2079,7 +2079,7 @@ export const libraryControllerGetBlockThumbnail = <ThrowOnError extends boolean 
 export const libraryControllerSaveBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerSaveBlockNodeData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerSaveBlockNodeResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/save/{nodeId}',
+    url: '/library/block/save/{nodeId}',
     ...options,
     headers: {
         'Content-Type': null,
@@ -2093,7 +2093,7 @@ export const libraryControllerSaveBlockNode = <ThrowOnError extends boolean = fa
 export const libraryControllerSaveBlockAs = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerSaveBlockAsData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerSaveBlockAsResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/save-as',
+    url: '/library/block/save-as',
     ...options,
     headers: {
         'Content-Type': null,
@@ -2106,7 +2106,7 @@ export const libraryControllerSaveBlockAs = <ThrowOnError extends boolean = fals
  */
 export const libraryControllerCreateBlockFolder = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerCreateBlockFolderData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerCreateBlockFolderResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/folders',
+    url: '/library/block/folders',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -2119,7 +2119,7 @@ export const libraryControllerCreateBlockFolder = <ThrowOnError extends boolean 
  */
 export const libraryControllerMoveBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerMoveBlockNodeData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerMoveBlockNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/nodes/{nodeId}/move',
+    url: '/library/block/nodes/{nodeId}/move',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -2132,7 +2132,7 @@ export const libraryControllerMoveBlockNode = <ThrowOnError extends boolean = fa
  */
 export const libraryControllerCopyBlockNode = <ThrowOnError extends boolean = false>(options: Options<LibraryControllerCopyBlockNodeData, ThrowOnError>) => (options.client ?? client).post<LibraryControllerCopyBlockNodeResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/library/block/nodes/{nodeId}/copy',
+    url: '/library/block/nodes/{nodeId}/copy',
     ...options,
     headers: {
         'Content-Type': 'application/json',

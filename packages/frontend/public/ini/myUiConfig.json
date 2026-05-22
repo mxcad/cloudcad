@@ -375,8 +375,8 @@
           "cmd": "exportFile"
         },
         {
-          "label": "打印",
-          "tips": "Print",
+          "tab": "打印",
+          "icon": "dayin1",
           "cmd": "Mx_PrintDialog"
         }
       ]
