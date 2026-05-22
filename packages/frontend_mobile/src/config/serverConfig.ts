@@ -10,10 +10,22 @@ export const fetchServerConfig = async ()=> {
   }
 }
 
+export const getUploadFileConfig = ()=> {
+  return serverConfig?.uploadFileConfig
+}
+
 export const getWasmConfig = ()=> {
   return serverConfig?.wasmConfig
 }
 
 export const getAiConfig = ()=> {
   return serverConfig?.aiConfig
+}
+
+export function getHostUrl(): string {
+  let host = window.location.hostname;
+  if (host.substring(0, 4) != "http") {
+    host = document.location.protocol + "//" + host;
+  }
+  return host;
 }
