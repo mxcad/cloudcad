@@ -146,7 +146,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       title: string,
       message: string,
       onConfirm: () => void | Promise<void>,
-      type?: 'danger' | 'warning' | 'info' | 'success',
+      type?: 'danger' | 'warning' | 'info',
       confirmText?: string
     ) => {
       showConfirmPromise({ title, message, type, confirmText }).then(
@@ -635,7 +635,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           onDeleteProject={async (project) => {
             const perms = nodePermissions.get(project.id);
             if (!perms?.canDelete) return;
-            const confirmed = await showConfirm({
+            const confirmed = await showConfirmPromise({
               title: '删除项目',
               message: `确定要删除项目"${project.name}"吗？删除后将移至回收站。`,
               type: 'danger',

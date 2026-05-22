@@ -121,7 +121,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
       title: string,
       message: string,
       onConfirm: () => void | Promise<void>,
-      type?: 'danger' | 'warning' | 'info' | 'success',
+      type?: 'danger' | 'warning' | 'info',
       confirmText?: string
     ) => {
       showConfirmPromise({ title, message, type, confirmText }).then(

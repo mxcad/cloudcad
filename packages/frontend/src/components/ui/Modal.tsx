@@ -9,7 +9,7 @@ import { isTourModeActive } from '../../contexts/TourContext';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: string;

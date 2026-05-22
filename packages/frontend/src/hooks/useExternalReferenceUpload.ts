@@ -12,6 +12,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { mxCadControllerGetPreloadingData, mxCadControllerCheckExternalReference } from '@/api-sdk';
 import { publicFileControllerGetPreloadingData, publicFileControllerCheckExtReference, publicFileControllerUploadExtReference } from '@/api-sdk';
+import type { UploadExtReferenceDto } from '@/api-sdk';
 import type {
   PreloadingData,
   ExternalReferenceFile,
@@ -448,7 +449,7 @@ export const useExternalReferenceUpload = (
               file: extRefFile,
               srcFileHash: id,
               extRefFile: fileInfo.name,
-            },
+            } as UploadExtReferenceDto & { file: File },
           });
         } else {
           // 项目文件场景：使用节点 ID 上传

@@ -83,7 +83,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
     <Card variant="outlined" radius="2xl" className="backdrop-blur-xl p-4 shadow-sm space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-          <Tooltip content={isPersonalSpace
+          <Tooltip content={isPersonalSpaceMode
             ? isAtRoot
               ? '返回我的图纸'
               : '返回上一级'

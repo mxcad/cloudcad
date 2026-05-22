@@ -45,7 +45,7 @@ export interface LibraryOperationOptions {
     title: string,
     message: string,
     onConfirm: () => Promise<void> | void,
-    type?: 'danger' | 'warning' | 'info' | 'success',
+    type?: 'danger' | 'warning' | 'info',
     confirmText?: string
   ) => void;
 }

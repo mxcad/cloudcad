@@ -184,6 +184,35 @@ export async function uploadFile(
     }
   }
 
+  // 小文件（≤5MB）且非 skipDb/forceUpload 模式：直接上传，不走分片
+  if (file.size <= chunkSize && !skipDb && !forceUpload) {
+    onBeginUpload?.();
+
+    const uploadData = await mxCadControllerUploadFile({
+      body: {
+        name: file.name,
+        hash,
+        size: file.size,
+        nodeId,
+        conflictStrategy,
+        file,
+      }
+    });
+
+    onProgress?.(100);
+
+    return {
+      file,
+      hash,
+      nodeId: uploadData.data?.nodeId ?? nodeId,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      isUseServerExistingFile: false,
+      isInstantUpload: false,
+    };
+  }
+
   // 2. 开始分片上传
   onBeginUpload?.();
 

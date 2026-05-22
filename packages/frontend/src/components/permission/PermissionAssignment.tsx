@@ -91,7 +91,6 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
           title={<span className="group-label">{group.label}</span>}
           actions={<span className="group-count">{group.items.filter(item => permissions.includes(item.key)).length} / {group.items.length}</span>}
           className="permission-group"
-          style={{ animationDelay: `${groupIndex * 0.05}s`, marginBottom: 'var(--space-2)' }}
         >
           <div className="group-items">
             {group.items.map((perm) => {

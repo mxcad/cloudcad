@@ -37,7 +37,7 @@ interface UseFileSystemCRUDProps {
     title: string,
     message: string,
     onConfirm: () => void | Promise<void>,
-    type?: 'danger' | 'warning' | 'info' | 'success',
+    type?: 'danger' | 'warning' | 'info',
     confirmText?: string
   ) => void;
   selectedNodes: Set<string>;

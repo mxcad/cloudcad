@@ -58,6 +58,7 @@ const SimpleSelect: React.FC<SelectProps> = ({
   className,
   wrapperClassName,
   renderOption,
+  name,
 }) => {
   const cfg = sizeConfig[size];
 
@@ -303,7 +304,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
                   setIsOpen(false);
                 }
                 if (e.key === 'Enter' && filteredOptions.length > 0) {
-                  handleSelect(filteredOptions[0]);
+                  handleSelect(filteredOptions[0]!);
                 }
               }}
             />
