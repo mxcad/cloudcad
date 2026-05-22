@@ -4,7 +4,7 @@ import { addCommand, callCommand } from "@/plugins/mxcad/command"
 import { showExportDialog } from "@/services/exportService"
 import { injectVoerkaI18n } from "@voerkai18n/vue"
 import { MxCpp } from "mxcad"
-import { PopoverAction, showToast } from "vant"
+import { PopoverAction } from "vant"
 import { ref } from "vue"
 
 export const useMenu = () => {
@@ -75,7 +75,7 @@ export const useMenu = () => {
         showExportDialog()
     })
     addCommand("Mx_exportPDF", () => {
-        showToast("PDF导出功能开发中")
+        showExportDialog()
     })
     const onSelectMenu = (action: PopoverAction) => {
         action.cmd && callCommand(action.cmd)
