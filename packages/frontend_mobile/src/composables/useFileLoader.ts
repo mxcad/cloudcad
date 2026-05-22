@@ -1,6 +1,7 @@
 import { ref, readonly } from 'vue';
 import { getNodeInfo, buildMxwebUrl } from '../services/fileService';
 import { useEditorState } from './useEditorState';
+import { loadCADPermissions } from '../services/permissionService';
 import { openMxWeb } from '../plugins/mxcad/openMxWeb';
 import {
   getPreloadingData,
@@ -43,6 +44,7 @@ export function useFileLoader() {
       editorState.setFileInfo(nodeInfo as unknown as Record<string, unknown>);
       editorState.setFileName(nodeInfo.name);
       editorState.setProjectId(nodeInfo.parentId || null);
+      await loadCADPermissions(nodeInfo.parentId || null);
 
       if (!nodeInfo.path) {
         throw new Error('文件路径不存在');
