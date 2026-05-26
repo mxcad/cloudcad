@@ -471,15 +471,9 @@ export class FileTreeService {
       ORDER BY level, name
     `;
 
-    const level0Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [
-      { id: 'all', name: '全部', hasChildren: true },
-    ];
-    const level1Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [
-      { id: 'all', name: '全部', hasChildren: true },
-    ];
-    const level2Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [
-      { id: 'all', name: '全部', hasChildren: false },
-    ];
+    const level0Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [];
+    const level1Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [];
+    const level2Items: { id: string; name: string; parentId?: string; hasChildren: boolean }[] = [];
 
     for (const row of rows) {
       if (row.level === 0) {
@@ -494,10 +488,10 @@ export class FileTreeService {
     const categories: { level: number; items: typeof level0Items }[] = [
       { level: 0, items: level0Items },
     ];
-    if (level1Items.length > 1) {
+    if (level1Items.length > 0) {
       categories.push({ level: 1, items: level1Items });
     }
-    if (level2Items.length > 1) {
+    if (level2Items.length > 0) {
       categories.push({ level: 2, items: level2Items });
     }
 

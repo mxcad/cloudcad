@@ -22,7 +22,7 @@ export class CategoryItemDto {
   @ApiProperty({ description: '分类名称' })
   name: string;
 
-  @ApiProperty({ description: '父分类 ID（"all" 项无此字段）', required: false })
+  @ApiProperty({ description: '父分类 ID', required: false })
   parentId?: string;
 
   @ApiProperty({ description: '是否有子分类' })

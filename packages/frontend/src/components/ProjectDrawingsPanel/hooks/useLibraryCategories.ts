@@ -133,7 +133,14 @@ export function useLibraryCategories(
         const catData = categoriesResponse.data as { categories?: CategoryLevel[] } | undefined;
         let finalCategories = PLACEHOLDER_CATEGORIES;
         if (catData?.categories && catData.categories.length > 0) {
-          const padded = [...catData.categories];
+          const processed = catData.categories.map((level) => ({
+            ...level,
+            items: [
+              { id: 'all', name: '全部' },
+              ...level.items,
+            ],
+          }));
+          const padded = [...processed];
           while (padded.length < 3) {
             const nextLevel = padded.length;
             padded.push({ level: nextLevel, items: [{ id: 'all', name: '全部' }] });

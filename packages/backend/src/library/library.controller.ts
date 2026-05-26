@@ -132,11 +132,7 @@ export class LibraryController {
     @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
-    const actualNodeId =
-      nodeId === 'root'
-        ? await this.drawingLibraryProvider.getLibraryId()
-        : nodeId;
-    return this.fileSystemService.getChildren(actualNodeId, mockUserId, query);
+    return this.fileSystemService.getChildren(nodeId, mockUserId, query);
   }
 
   @Get('drawing/all-files/:nodeId')
@@ -148,11 +144,7 @@ export class LibraryController {
     @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
-    const actualNodeId =
-      nodeId === 'root'
-        ? await this.drawingLibraryProvider.getLibraryId()
-        : nodeId;
-    return this.fileSystemService.getAllFilesUnderNode(actualNodeId, mockUserId, query);
+    return this.fileSystemService.getAllFilesUnderNode(nodeId, mockUserId, query);
   }
 
   @Get('drawing/filesData/*path')
@@ -241,10 +233,7 @@ export class LibraryController {
   @ApiResponse({ status: 201, description: 'Success', type: FileSystemNodeDto })
   async createDrawingFolder(@Body() dto: CreateFolderDto, @Request() req) {
     const userId = req.user.id;
-    const parentId =
-      !dto.parentId || dto.parentId === 'root'
-        ? await this.drawingLibraryProvider.getLibraryId()
-        : dto.parentId;
+    const parentId = dto.parentId || await this.drawingLibraryProvider.getLibraryId();
     await this.validateLibraryNode(parentId, 'drawing');
     return this.fileSystemService.createFolder(userId, parentId, dto);
   }
@@ -326,11 +315,7 @@ export class LibraryController {
     @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
-    const actualNodeId =
-      nodeId === 'root'
-        ? await this.blockLibraryProvider.getLibraryId()
-        : nodeId;
-    return this.fileSystemService.getChildren(actualNodeId, mockUserId, query);
+    return this.fileSystemService.getChildren(nodeId, mockUserId, query);
   }
 
   @Get('block/all-files/:nodeId')
@@ -342,11 +327,7 @@ export class LibraryController {
     @Query() query?: QueryChildrenDto
   ) {
     const mockUserId = 'system';
-    const actualNodeId =
-      nodeId === 'root'
-        ? await this.blockLibraryProvider.getLibraryId()
-        : nodeId;
-    return this.fileSystemService.getAllFilesUnderNode(actualNodeId, mockUserId, query);
+    return this.fileSystemService.getAllFilesUnderNode(nodeId, mockUserId, query);
   }
 
   @Get('block/filesData/*path')
@@ -441,10 +422,7 @@ export class LibraryController {
   @ApiResponse({ status: 201, description: 'Success', type: FileSystemNodeDto })
   async createBlockFolder(@Body() dto: CreateFolderDto, @Request() req) {
     const userId = req.user.id;
-    const parentId =
-      !dto.parentId || dto.parentId === 'root'
-        ? await this.blockLibraryProvider.getLibraryId()
-        : dto.parentId;
+    const parentId = dto.parentId || await this.blockLibraryProvider.getLibraryId();
     await this.validateLibraryNode(parentId, 'block');
     return this.fileSystemService.createFolder(userId, parentId, dto);
   }
