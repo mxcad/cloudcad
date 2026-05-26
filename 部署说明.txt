@@ -14,14 +14,17 @@ CloudCAD 一键部署说明
    Windows: 双击 start.bat
    Linux:   ./start.sh
 
-3. 首次启动时按提示设置密码：
+3. 首次启动会自动生成密码（10位纯数字密码），请务必在终端中查看并记录：
    - 数据库密码：PostgreSQL数据库密码
+   - Redis 密码：Redis 缓存服务密码
    - 管理员密码：同时用于 3002配置中心 和 项目admin管理员账号
 
 4. 访问系统：
    前端: http://localhost:3000
    配置: http://localhost:3002
-   账号: admin / 你设置的密码
+   账号: admin / 管理员密码
+
+   ⚠ 登录后请立即在 配置中心→服务管理 中修改管理员密码
 
 【服务说明】
 

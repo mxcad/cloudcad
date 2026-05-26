@@ -179,11 +179,16 @@ function updateEnvFile(filePath, updates) {
     : '';
 
   Object.entries(updates).forEach(([key, value]) => {
-    const regex = new RegExp(`^${key}=.*$`, 'm');
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^${escapedKey}=.*$`, 'm');
+    const needsQuotes = /[#\s$`!&|;<>]/.test(value);
+    const escapedValue = needsQuotes
+      ? `"${value.replace(/"/g, '\\"')}"`
+      : value;
     if (regex.test(content)) {
-      content = content.replace(regex, `${key}=${value}`);
+      content = content.replace(regex, `${key}=${escapedValue}`);
     } else {
-      content += `\n${key}=${value}`;
+      content += `\n${key}=${escapedValue}`;
     }
   });
 
@@ -249,6 +254,19 @@ function getPostgresLibPath() {
   const isWindows = process.platform === 'win32';
   const platformDir = isWindows ? 'windows' : 'linux';
   return path.join(RUNTIME_DIR, platformDir, 'postgres', 'lib');
+}
+
+function getRedisCliPath() {
+  const isWindows = process.platform === 'win32';
+  const platformDir = isWindows ? 'windows' : 'linux';
+  const runtimePath = path.join(RUNTIME_DIR, platformDir);
+
+  if (fs.existsSync(runtimePath)) {
+    return isWindows
+      ? path.join(runtimePath, 'redis', 'redis-cli.exe')
+      : path.join(runtimePath, 'redis', 'redis-cli');
+  }
+  return isWindows ? 'redis-cli.exe' : 'redis-cli';
 }
 
 function getDbEnv() {
@@ -1008,6 +1026,191 @@ async function handleApi(req, res, pathname, searchParams) {
     log('info', '管理员密码已修改');
 
     sendJson(res, 200, { success: true, message: '密码已修改' });
+    return;
+  }
+
+  // ========== 数据库密码修改 ==========
+  if (pathname === '/api/password/database' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const { oldPassword, newPassword } = body;
+
+    if (!oldPassword || !newPassword) {
+      sendJson(res, 400, { error: '请输入旧密码和新密码' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      sendJson(res, 400, { error: '新密码长度至少 8 位' });
+      return;
+    }
+
+    const env = parseEnvFile(ENV_PATH);
+    const currentDbPassword = env.DB_PASSWORD || '';
+
+    if (oldPassword !== currentDbPassword) {
+      sendJson(res, 400, { error: '旧密码错误' });
+      return;
+    }
+
+    try {
+      const dbHost = env.DB_HOST || 'localhost';
+      const dbPort = env.DB_PORT || '5432';
+      const dbName = env.DB_DATABASE || 'cloudcad';
+      const dbUser = env.DB_USERNAME || 'postgres';
+      const escapedUser = dbUser.replace(/"/g, '""');
+      const escapedPassword = newPassword.replace(/'/g, "''");
+
+      // 1. 先通过 psql 执行 ALTER USER 修改 PostgreSQL 实际密码
+      const psqlPath = getPsqlPath();
+      let alterSucceeded = false;
+      if (fs.existsSync(psqlPath)) {
+        const alterResult = spawnSync(
+          psqlPath,
+          [
+            '-h', dbHost,
+            '-p', dbPort,
+            '-U', dbUser,
+            '-d', 'postgres',
+            '-c', `ALTER USER "${escapedUser}" PASSWORD '${escapedPassword}'`,
+          ],
+          {
+            env: { ...process.env, PGPASSWORD: currentDbPassword },
+            shell: false,
+            stdio: 'pipe',
+            timeout: 15000,
+          }
+        );
+        if (alterResult.status === 0) {
+          alterSucceeded = true;
+          log('info', 'PostgreSQL 用户密码已通过 ALTER USER 更新');
+        } else {
+          const errMsg = alterResult.stderr ? alterResult.stderr.toString() : '';
+          log('error', `ALTER USER 失败: ${errMsg}`);
+          sendJson(res, 500, { error: `ALTER USER 执行失败: ${errMsg}` });
+          return;
+        }
+      } else {
+        log('warn', `psql 不存在: ${psqlPath}，只更新 .env 配置`);
+        alterSucceeded = true;
+      }
+
+      // 2. 确认成功后更新 .env
+      const encodedPassword = encodeURIComponent(newPassword);
+      const newDatabaseUrl = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}`;
+      updateEnvFile(ENV_PATH, {
+        DB_PASSWORD: newPassword,
+        DATABASE_URL: newDatabaseUrl,
+      });
+      log('info', '数据库密码已更新到 .env');
+
+      // 3. 重启 backend 服务使新密码生效
+      const restartResult = runPm2Command(['restart', 'backend']);
+      if (restartResult.success) {
+        log('info', 'backend 服务已重启');
+      } else {
+        log('warn', 'backend 服务重启失败，请手动重启');
+      }
+
+      sendJson(res, 200, {
+        success: true,
+        message: '数据库密码已修改，后端服务正在重启',
+      });
+    } catch (err) {
+      log('error', `修改数据库密码失败: ${err.message}`);
+      sendJson(res, 500, { error: `修改失败: ${err.message}` });
+    }
+    return;
+  }
+
+  // ========== Redis 密码修改 ==========
+  if (pathname === '/api/password/redis' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return;
+
+    const body = await parseBody(req);
+    const { oldPassword, newPassword } = body;
+
+    if (!oldPassword || !newPassword) {
+      sendJson(res, 400, { error: '请输入旧密码和新密码' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      sendJson(res, 400, { error: '新密码长度至少 8 位' });
+      return;
+    }
+
+    const env = parseEnvFile(ENV_PATH);
+    const currentRedisPassword = env.REDIS_PASSWORD || '';
+
+    if (oldPassword !== currentRedisPassword) {
+      sendJson(res, 400, { error: '旧密码错误' });
+      return;
+    }
+
+    try {
+      // 1. 先通过 redis-cli 执行 CONFIG SET requirepass
+      const redisCliPath = getRedisCliPath();
+      let configSucceeded = false;
+      if (fs.existsSync(redisCliPath)) {
+        const configArgs = ['-p', env.REDIS_PORT || '6379'];
+        if (currentRedisPassword) {
+          configArgs.push('-a', currentRedisPassword);
+        }
+        configArgs.push('CONFIG', 'SET', 'requirepass', newPassword);
+
+        const configResult = spawnSync(redisCliPath, configArgs, {
+          shell: false,
+          stdio: 'pipe',
+          timeout: 15000,
+        });
+
+        if (configResult.status === 0) {
+          configSucceeded = true;
+          log('info', 'Redis requirepass 已通过 CONFIG SET 更新');
+          // 持久化到 redis.conf（如果有）
+          spawnSync(redisCliPath, [...configArgs.slice(0, -2), 'CONFIG', 'REWRITE'], {
+            shell: false,
+            stdio: 'pipe',
+            timeout: 5000,
+          });
+        } else {
+          const errMsg = configResult.stderr ? configResult.stderr.toString() : '';
+          log('error', `Redis CONFIG SET 失败: ${errMsg}`);
+          sendJson(res, 500, { error: `Redis CONFIG SET 失败: ${errMsg}` });
+          return;
+        }
+      } else {
+        log('warn', `redis-cli 不存在: ${redisCliPath}，只更新 .env 配置`);
+        configSucceeded = true;
+      }
+
+      // 2. 确认成功后更新 .env
+      updateEnvFile(ENV_PATH, { REDIS_PASSWORD: newPassword });
+      log('info', 'Redis 密码已更新到 .env');
+
+      // 3. 重启 redis 和 backend 服务
+      const servicesToRestart = ['redis', 'backend'];
+      for (const svc of servicesToRestart) {
+        const r = runPm2Command(['restart', svc]);
+        if (r.success) {
+          log('info', `${svc} 服务已重启`);
+        } else {
+          log('warn', `${svc} 服务重启失败，请手动重启`);
+        }
+      }
+
+      sendJson(res, 200, {
+        success: true,
+        message: 'Redis 密码已修改，Redis 和后端服务正在重启',
+      });
+    } catch (err) {
+      log('error', `修改 Redis 密码失败: ${err.message}`);
+      sendJson(res, 500, { error: `修改失败: ${err.message}` });
+    }
     return;
   }
 

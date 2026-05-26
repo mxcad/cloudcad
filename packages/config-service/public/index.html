@@ -1756,48 +1756,33 @@
               class="logout"
               id="changePasswordBtn"
               style="color: #00d9ff; margin-right: 16px; cursor: pointer"
-              >修改密码</span
+              onclick="showPasswordModal('admin')">修改密码</span
             >
             <span class="logout" id="logoutBtn">退出登录</span>
           </div>
         </div>
 
-        <!-- 修改密码模态框 -->
-        <div id="passwordModal" class="modal hidden">
+        <!-- 密码修改模态框（通用） -->
+        <div id="changePasswordModal" class="modal hidden">
           <div class="modal-content">
-            <h3>修改管理员密码</h3>
+            <h3 id="changePasswordTitle">修改密码</h3>
+            <div id="changePasswordDesc" style="color:#888;font-size:13px;margin-bottom:16px"></div>
             <div class="form-group">
-              <label>旧密码</label>
-              <input
-                type="password"
-                id="oldPassword"
-                placeholder="请输入旧密码"
-              />
+              <label id="changePasswordOldLabel">旧密码</label>
+              <input type="password" id="changeOldPassword" placeholder="请输入旧密码" />
             </div>
             <div class="form-group">
-              <label>新密码</label>
-              <input
-                type="password"
-                id="newPassword"
-                placeholder="请输入新密码（至少8位）"
-              />
+              <label id="changePasswordNewLabel">新密码</label>
+              <input type="password" id="changeNewPassword" placeholder="请输入新密码（至少8位）" />
             </div>
             <div class="form-group">
               <label>确认新密码</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                placeholder="请再次输入新密码"
-              />
+              <input type="password" id="changeConfirmPassword" placeholder="请再次输入新密码" />
             </div>
-            <div id="passwordError" class="error hidden"></div>
+            <div id="changePasswordError" class="error hidden"></div>
             <div class="modal-actions">
-              <button class="btn btn-secondary" id="cancelPasswordBtn">
-                取消
-              </button>
-              <button class="btn btn-primary" id="confirmPasswordBtn">
-                确认修改
-              </button>
+              <button class="btn btn-secondary" id="cancelChangePasswordBtn">取消</button>
+              <button class="btn btn-primary" id="confirmChangePasswordBtn">确认修改</button>
             </div>
           </div>
         </div>
@@ -1825,6 +1810,28 @@
               刷新
             </button>
           </div>
+          <!-- 密码管理 -->
+          <div class="password-management" style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #333">
+            <h3 style="color:#00d9ff;margin-bottom:16px;font-size:16px">🔑 密码管理</h3>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <div class="password-card" style="flex:1;min-width:200px;background:#0d0d1a;border-radius:8px;padding:16px">
+                <div style="font-size:13px;color:#888;margin-bottom:4px">数据库密码</div>
+                <div style="font-size:12px;color:#555;margin-bottom:12px">用于 PostgreSQL 连接</div>
+                <button class="btn btn-primary" style="width:100%" onclick="showPasswordModal('database')">修改密码</button>
+              </div>
+              <div class="password-card" style="flex:1;min-width:200px;background:#0d0d1a;border-radius:8px;padding:16px">
+                <div style="font-size:13px;color:#888;margin-bottom:4px">Redis 密码</div>
+                <div style="font-size:12px;color:#555;margin-bottom:12px">用于 Redis 连接</div>
+                <button class="btn btn-primary" style="width:100%" onclick="showPasswordModal('redis')">修改密码</button>
+              </div>
+              <div class="password-card" style="flex:1;min-width:200px;background:#0d0d1a;border-radius:8px;padding:16px">
+                <div style="font-size:13px;color:#888;margin-bottom:4px">管理员密码</div>
+                <div style="font-size:12px;color:#555;margin-bottom:12px">配置中心登录密码</div>
+                <button class="btn btn-primary" style="width:100%" onclick="showPasswordModal('admin')">修改密码</button>
+              </div>
+            </div>
+          </div>
+
           <div class="service-list" id="serviceList">
             <div style="text-align: center; color: #888; padding: 20px">
               加载中...
@@ -1941,28 +1948,28 @@
           .getElementById('restartBackendBtn')
           .addEventListener('click', () => restartService('backend'));
 
-        // 修改密码
+        // 密码修改（通用）
         document
-          .getElementById('changePasswordBtn')
-          .addEventListener('click', showPasswordModal);
+          .getElementById('cancelChangePasswordBtn')
+          .addEventListener('click', hideChangePasswordModal);
         document
-          .getElementById('cancelPasswordBtn')
-          .addEventListener('click', hidePasswordModal);
+          .getElementById('confirmChangePasswordBtn')
+          .addEventListener('click', submitChangePassword);
         document
-          .getElementById('confirmPasswordBtn')
-          .addEventListener('click', changePassword);
+          .getElementById('changePasswordModal')
+          .addEventListener('click', (e) => {
+            if (e.target.id === 'changePasswordModal') hideChangePasswordModal();
+          });
+        document
+          .getElementById('changeNewPassword')
+          .addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitChangePassword();
+          });
 
         document
           .getElementById('password')
           .addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
-          });
-
-        // 点击模态框背景关闭
-        document
-          .getElementById('passwordModal')
-          .addEventListener('click', (e) => {
-            if (e.target.id === 'passwordModal') hidePasswordModal();
           });
 
         // 标签页切换
@@ -2097,27 +2104,42 @@
         showLogin();
       }
 
-      // ========== 修改密码 ==========
+      // ========== 密码管理 ==========
 
-      function showPasswordModal() {
-        document.getElementById('passwordModal').classList.remove('hidden');
-        document.getElementById('oldPassword').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
-        document.getElementById('passwordError').classList.add('hidden');
-        document.getElementById('oldPassword').focus();
+      let currentPasswordType = '';
+
+      function showPasswordModal(type) {
+        currentPasswordType = type;
+        const modal = document.getElementById('changePasswordModal');
+        const title = document.getElementById('changePasswordTitle');
+        const desc = document.getElementById('changePasswordDesc');
+
+        const labels = {
+          database: { title: '修改数据库密码', desc: '修改后将更新 PostgreSQL 用户密码和 .env 配置，并重启后端服务' },
+          redis: { title: '修改 Redis 密码', desc: '修改后将更新 Redis 密码和 .env 配置，并重启 Redis 和后端服务' },
+          admin: { title: '修改管理员密码', desc: '修改配置中心（端口 3002）的登录密码' },
+        };
+        const info = labels[type] || labels.admin;
+        title.textContent = info.title;
+        desc.textContent = info.desc;
+
+        document.getElementById('changeOldPassword').value = '';
+        document.getElementById('changeNewPassword').value = '';
+        document.getElementById('changeConfirmPassword').value = '';
+        document.getElementById('changePasswordError').classList.add('hidden');
+        document.getElementById('changeOldPassword').focus();
+        modal.classList.remove('hidden');
       }
 
-      function hidePasswordModal() {
-        document.getElementById('passwordModal').classList.add('hidden');
+      function hideChangePasswordModal() {
+        document.getElementById('changePasswordModal').classList.add('hidden');
       }
 
-      async function changePassword() {
-        const oldPassword = document.getElementById('oldPassword').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword =
-          document.getElementById('confirmPassword').value;
-        const errorEl = document.getElementById('passwordError');
+      async function submitChangePassword() {
+        const oldPassword = document.getElementById('changeOldPassword').value;
+        const newPassword = document.getElementById('changeNewPassword').value;
+        const confirmPassword = document.getElementById('changeConfirmPassword').value;
+        const errorEl = document.getElementById('changePasswordError');
 
         if (!oldPassword || !newPassword || !confirmPassword) {
           errorEl.textContent = '请填写所有字段';
@@ -2137,8 +2159,20 @@
           return;
         }
 
+        // 防双击：禁用提交按钮
+        const confirmBtn = document.getElementById('confirmChangePasswordBtn');
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '提交中...';
+
+        const apiMap = {
+          database: '/api/password/database',
+          redis: '/api/password/redis',
+          admin: '/api/auth/change-password',
+        };
+        const apiUrl = apiMap[currentPasswordType] || '/api/auth/change-password';
+
         try {
-          const res = await fetch('/api/auth/change-password', {
+          const res = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -2151,7 +2185,7 @@
 
           if (res.ok) {
             toast('密码修改成功', 'success');
-            hidePasswordModal();
+            hideChangePasswordModal();
           } else {
             errorEl.textContent = data.error || '修改失败';
             errorEl.classList.remove('hidden');
@@ -2159,6 +2193,9 @@
         } catch (e) {
           errorEl.textContent = '网络错误';
           errorEl.classList.remove('hidden');
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = '确认修改';
         }
       }
 

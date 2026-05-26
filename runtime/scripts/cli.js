@@ -16,6 +16,7 @@ const { spawn, spawnSync, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 
 // 导入离线环境设置函数（异步）
 const {
@@ -2459,11 +2460,18 @@ function isPasswordWeak(password) {
  * @returns {string} 随机密码
  */
 function generateRandomPassword(length = 12) {
-  const chars =
-    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+  return generateNumericPassword(length);
+}
+
+/**
+ * 生成纯数字随机密码
+ * @param {number} length 密码长度，默认 10
+ * @returns {string} 纯数字随机密码
+ */
+function generateNumericPassword(length = 10) {
   let password = '';
   for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+    password += crypto.randomInt(0, 10).toString();
   }
   return password;
 }
@@ -2474,13 +2482,7 @@ function generateRandomPassword(length = 12) {
  * @returns {string} 随机密钥
  */
 function generateJwtSecret(length = 32) {
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{}|;:,.<>?';
-  let secret = '';
-  for (let i = 0; i < length; i++) {
-    secret += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return secret;
+  return generateNumericPassword(length);
 }
 
 /**
@@ -2783,6 +2785,61 @@ async function runSetupWizard() {
   }
 }
 
+/**
+ * 首次部署自动配置（无交互版本）
+ * 自动生成所有密码并写入 .env，然后展示在终端
+ */
+async function autoSetupAndShowPasswords() {
+  const envConfig = parseEnvFile(BACKEND_ENV_PATH);
+  const updates = {};
+
+  // JWT 密钥自动生成
+  updates.JWT_SECRET = generateJwtSecret(32);
+
+  // 数据库密码（10位纯数字）
+  const dbPassword = generateNumericPassword(10);
+  updates.DB_PASSWORD = dbPassword;
+
+  // Redis 密码（10位纯数字）
+  const redisPassword = generateNumericPassword(10);
+  updates.REDIS_PASSWORD = redisPassword;
+
+  // 管理员密码（10位纯数字）
+  const adminPassword = generateNumericPassword(10);
+  updates.INITIAL_ADMIN_PASSWORD = adminPassword;
+
+  // 同步更新 DATABASE_URL
+  const dbHost = envConfig.DB_HOST || 'localhost';
+  const dbPort = envConfig.DB_PORT || '5432';
+  const dbName = envConfig.DB_DATABASE || 'cloudcad';
+  const dbUser = envConfig.DB_USERNAME || 'postgres';
+  const encodedPassword = encodeURIComponent(dbPassword);
+  updates.DATABASE_URL = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}`;
+
+  // 写入 .env
+  updateEnvFile(BACKEND_ENV_PATH, updates);
+
+  // 显示密码
+  console.log('');
+  console.log(`${colors.cyan}╔════════════════════════════════════════╗${colors.reset}`);
+  console.log(`${colors.cyan}║      CloudCAD 首次部署配置完成         ║${colors.reset}`);
+  console.log(`${colors.cyan}╚════════════════════════════════════════╝${colors.reset}`);
+  console.log('');
+  console.log(`${colors.yellow}  ⚠ 请务必记录以下自动生成的密码：${colors.reset}`);
+  console.log('');
+  console.log(`  ${colors.bright}数据库密码:${colors.reset}     ${dbPassword}`);
+  console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${redisPassword}`);
+  console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${adminPassword}`);
+  console.log('');
+  console.log(`  管理员账号: ${colors.bright}admin${colors.reset}`);
+  console.log(`  配置中心:   http://localhost:3002`);
+  console.log('');
+  console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+  console.log(`${colors.red}  ⚠ 安全提醒：登录后请立即修改管理员密码！${colors.reset}`);
+  console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+  console.log('');
+}
+
 // ==================== 数据库备份与恢复子菜单 ====================
 
 async function databaseBackupMenu() {
@@ -2931,9 +2988,9 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  // 如果 .env 之前不存在，说明是首次部署，运行引导配置
+  // 如果 .env 之前不存在，说明是首次部署，自动生成配置
   if (!envExistedBefore) {
-    await runSetupWizard();
+    await autoSetupAndShowPasswords();
   }
 
   // 命令行参数支持
