@@ -428,7 +428,13 @@ export const Register: React.FC = () => {
                           onClick={handleSendCode}
                           disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}
                         >
-                          {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                          {sendingCode ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : countdown > 0 ? (
+                            `${countdown}s`
+                          ) : (
+                            '获取验证码'
+                          )}
                         </button>
                         <div className="input-glow" />
                       </div>

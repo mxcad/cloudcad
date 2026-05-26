@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
-import { Phone, MessageSquare, ArrowRight } from 'lucide-react';
+import { Phone, MessageSquare, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { t } from '@/languages';
 
@@ -86,7 +86,13 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             onBlur={onBlur}
           />
           <button type="button" className="code-button" onClick={onSendCode} disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}>
-            {countdown > 0 ? `${countdown}s` : t('获取验证码')}
+            {sendingCode ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : countdown > 0 ? (
+              `${countdown}s`
+            ) : (
+              t('获取验证码')
+            )}
           </button>
           <div className="input-glow" />
         </div>
