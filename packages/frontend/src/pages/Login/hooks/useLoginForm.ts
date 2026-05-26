@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { authControllerSendSmsCode } from '@/api-sdk';
+import { t } from '@/languages';
 import {
   accountLoginSchema,
   phoneLoginSchema,
@@ -143,17 +144,17 @@ export function useLoginForm(): UseLoginFormReturn {
 
   // Account login labels based on runtime config
   const getAccountLoginLabel = useCallback(() => {
-    if (smsEnabled && mailEnabled) return '手机号、邮箱或用户名';
-    if (smsEnabled) return '手机号或用户名';
-    if (mailEnabled) return '邮箱或用户名';
-    return '用户名';
+    if (smsEnabled && mailEnabled) return t('手机号、邮箱或用户名');
+    if (smsEnabled) return t('手机号或用户名');
+    if (mailEnabled) return t('邮箱或用户名');
+    return t('用户名');
   }, [smsEnabled, mailEnabled]);
 
   const getAccountLoginPlaceholder = useCallback(() => {
-    if (smsEnabled && mailEnabled) return '请输入手机号、邮箱或用户名';
-    if (smsEnabled) return '请输入手机号或用户名';
-    if (mailEnabled) return '请输入邮箱或用户名';
-    return '请输入用户名';
+    if (smsEnabled && mailEnabled) return t('请输入手机号、邮箱或用户名');
+    if (smsEnabled) return t('请输入手机号或用户名');
+    if (mailEnabled) return t('请输入邮箱或用户名');
+    return t('请输入用户名');
   }, [smsEnabled, mailEnabled]);
 
   // Send SMS code
@@ -163,7 +164,7 @@ export function useLoginForm(): UseLoginFormReturn {
     // Validate phone via zod schema manually
     const result = phoneLoginSchema.shape.phone.safeParse(phoneValue);
     if (!result.success) {
-      setError(result.error.issues[0]?.message || '请输入正确的手机号');
+      setError(result.error.issues[0]?.message || t('请输入正确的手机号'));
       return;
     }
 
@@ -175,11 +176,11 @@ export function useLoginForm(): UseLoginFormReturn {
         body: { phone: phoneValue },
       });
       if ((response as Record<string, unknown>)?.success) {
-        setSuccess('验证码已发送');
+        setSuccess(t('验证码已发送'));
         setCountdown(60);
       } else {
         setError(
-          (response as { message?: string })?.message || '发送验证码失败'
+          (response as { message?: string })?.message || t('发送验证码失败')
         );
       }
     } catch (err: unknown) {
@@ -187,7 +188,7 @@ export function useLoginForm(): UseLoginFormReturn {
         (err as { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     } finally {
       setSendingCode(false);
@@ -213,53 +214,46 @@ export function useLoginForm(): UseLoginFormReturn {
         await login(account, password);
         navigate('/');
       } catch (err: unknown) {
-        const errorData = (
-          err as Error & {
-            response?: {
-              data?: {
-                code?: string;
-                message?: string;
-                email?: string;
-                phone?: string;
-                tempToken?: string;
-              };
-            };
-          }
-        ).response?.data;
+        const errAny = err as Record<string, unknown>;
+        const errResponse = errAny?.response as Record<string, unknown> | undefined;
+        const errorData = errResponse?.data as Record<string, unknown> | undefined;
+
+        const errorBody = (errorData ?? errAny) as Record<string, unknown>;
+
         const errorMessage =
-          errorData?.message ||
+          (errorBody?.message as string) ||
           (err as Error).message ||
-          '登录失败，请检查账号和密码';
+          t('登录失败，请检查账号和密码');
 
         if (errorMessage.includes('账号已被禁用')) {
           setShowSupportModal(true);
           return;
         }
 
-        if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
+        if (errorBody?.code === 'EMAIL_NOT_VERIFIED') {
           navigate('/verify-email', {
-            state: { email: errorData.email || '' },
+            state: { email: (errorBody?.email as string) || '' },
           });
           return;
         }
 
-        if (errorData?.code === 'EMAIL_REQUIRED') {
+        if (errorBody?.code === 'EMAIL_REQUIRED') {
           navigate('/verify-email', {
-            state: { tempToken: errorData.tempToken, mode: 'bind' },
+            state: { tempToken: errorBody?.tempToken as string, mode: 'bind' },
           });
           return;
         }
 
-        if (errorData?.code === 'PHONE_NOT_VERIFIED') {
+        if (errorBody?.code === 'PHONE_NOT_VERIFIED') {
           navigate('/verify-phone', {
-            state: { phone: errorData.phone || '' },
+            state: { phone: (errorBody?.phone as string) || '' },
           });
           return;
         }
 
-        if (errorData?.code === 'PHONE_REQUIRED') {
+        if (errorBody?.code === 'PHONE_REQUIRED') {
           navigate('/verify-phone', {
-            state: { tempToken: errorData.tempToken, mode: 'bind' },
+            state: { tempToken: errorBody?.tempToken as string, mode: 'bind' },
           });
           return;
         }
@@ -300,7 +294,7 @@ export function useLoginForm(): UseLoginFormReturn {
         ).response?.data;
         const errorCode = errorData?.code;
         const errorMessage =
-          errorData?.message || (err as Error).message || '登录失败，请重试';
+          errorData?.message || (err as Error).message || t('登录失败，请重试');
 
         if (errorMessage.includes('账号已被禁用')) {
           setShowSupportModal(true);
@@ -335,7 +329,7 @@ export function useLoginForm(): UseLoginFormReturn {
         (err as Error & { response?: { data?: { message?: string } } })
           .response?.data?.message ||
         (err as Error).message ||
-        '微信登录失败';
+        t('微信登录失败');
       setAuthError(errorMessage);
     }
   }, [loginWithWechat, setAuthError]);

@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { Phone, MessageSquare, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
+import { t } from '@/languages';
 
 interface PhoneLoginFormProps {
   phoneForm: { phone: string; code: string };
@@ -36,7 +37,7 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
     <form className="login-form" onSubmit={onSubmit}>
       <div className={`input-group ${focusedField === 'phone' ? 'focused' : ''}`}>
         <label htmlFor="phone" className="input-label">
-          手机号
+          {t('手机号')}
         </label>
         <div className="input-wrapper">
           <Phone
@@ -51,7 +52,7 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             required
             maxLength={11}
             className="input-field"
-            placeholder="请输入手机号"
+            placeholder={t('请输入手机号')}
             value={phoneForm.phone}
             onChange={onChange}
             onFocus={() => onFocus('phone')}
@@ -63,7 +64,7 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
 
       <div className={`input-group ${focusedField === 'code' ? 'focused' : ''}`}>
         <label htmlFor="code" className="input-label">
-          验证码
+          {t('验证码')}
         </label>
         <div className="input-wrapper has-button">
           <MessageSquare
@@ -78,22 +79,28 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             required
             maxLength={6}
             className="input-field has-button"
-            placeholder="请输入验证码"
+            placeholder={t('请输入验证码')}
             value={phoneForm.code}
             onChange={onChange}
             onFocus={() => onFocus('code')}
             onBlur={onBlur}
           />
           <Button type="button" variant="secondary" size="sm" onClick={onSendCode} disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11} loading={sendingCode}>
-            {countdown > 0 ? `${countdown}s` : '获取验证码'}
+            {countdown > 0 ? `${countdown}s` : t('获取验证码')}
           </Button>
           <div className="input-glow" />
         </div>
       </div>
 
-      <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full submit-button">
-        <span>立即登录</span>
-        <ArrowRight size={18} className="button-arrow" />
+      <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
+        {loading ? (
+            <span>{t('登录中...')}</span>
+          ) : (
+            <>
+              <span>{t('立即登录')}</span>
+            <ArrowRight size={18} className="button-arrow" />
+          </>
+        )}
       </Button>
     </form>
   );

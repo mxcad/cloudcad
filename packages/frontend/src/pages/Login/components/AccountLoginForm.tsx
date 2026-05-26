@@ -6,6 +6,7 @@
 import React from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { t } from '@/languages';
 
 interface AccountLoginFormProps {
   formData: { account: string; password: string };
@@ -66,7 +67,7 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
 
       <div className={`input-group ${focusedField === 'password' ? 'focused' : ''}`}>
         <label htmlFor="password" className="input-label">
-          密码
+          {t('密码')}
         </label>
         <div className="input-wrapper">
           <Lock
@@ -80,7 +81,7 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
             autoComplete="current-password"
             required
             className="input-field has-toggle"
-            placeholder="请输入密码"
+            placeholder={t('请输入密码')}
             value={formData.password}
             onChange={onChange}
             onFocus={() => onFocus('password')}
@@ -92,26 +93,26 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
             size="xs"
             onClick={onTogglePassword}
             tabIndex={-1}
-            className="absolute right-4"
+            className="absolute right-4 top-1/2 -translate-y-1/2"
             icon={showPassword ? EyeOff : Eye}
-            tooltip={showPassword ? '隐藏密码' : '显示密码'}
+            tooltip={showPassword ? t('隐藏密码') : t('显示密码')}
           />
           <div className="input-glow" />
         </div>
       </div>
 
       <div className="form-options">
-        <Button variant="ghost" size="sm" onClick={onForgotPassword}>
-          忘记密码？
+        <Button type="button" variant="ghost" size="sm" onClick={onForgotPassword}>
+          {t('忘记密码？')}
         </Button>
       </div>
 
       <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
         {loading ? (
-          <span>登录中...</span>
-        ) : (
-          <>
-            <span>立即登录</span>
+            <span>{t('登录中...')}</span>
+          ) : (
+            <>
+              <span>{t('立即登录')}</span>
             <ArrowRight size={18} className="button-arrow" />
           </>
         )}

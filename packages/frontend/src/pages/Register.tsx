@@ -6,6 +6,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 import { useRegisterForm } from './Register/hooks/useRegisterForm';
 import { usePhoneVerification } from './Register/hooks/usePhoneVerification';
@@ -115,7 +116,8 @@ export const Register: React.FC = () => {
   if (!configLoading && !runtimeConfig.allowRegister) {
     return (
       <div className="register-page" data-theme={isDark ? 'dark' : 'light'}>
-        <div className="theme-toggle-wrapper">
+        <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* <LanguageSwitcher /> */}
           <ThemeToggle />
         </div>
 
@@ -130,7 +132,7 @@ export const Register: React.FC = () => {
               <br />
               如有疑问，请联系管理员。
             </p>
-            <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate('/login')}>
+            <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
               返回登录
             </Button>
           </div>
@@ -443,6 +445,8 @@ export const Register: React.FC = () => {
                 <Button
                   type="button"
                   variant="primary"
+                  size="lg"
+                  className="w-full"
                   onClick={onNext}
                   icon={ArrowRight}
                 >
@@ -479,7 +483,7 @@ export const Register: React.FC = () => {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-4"
+                      className="absolute right-4 top-1/2 -translate-y-1/2"
                       icon={showPassword ? EyeOff : Eye}
                       onClick={() => setShowPassword(!showPassword)}
                       tabIndex={-1}
@@ -535,7 +539,7 @@ export const Register: React.FC = () => {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-4"
+                      className="absolute right-4 top-1/2 -translate-y-1/2"
                       icon={showConfirmPassword ? EyeOff : Eye}
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
@@ -555,6 +559,8 @@ export const Register: React.FC = () => {
                   <Button
                     type="button"
                     variant="secondary"
+                    size="lg"
+                    className="flex-1"
                     icon={ArrowLeft}
                     onClick={handleBack}
                   >
@@ -563,6 +569,8 @@ export const Register: React.FC = () => {
                   <Button
                     type="submit"
                     variant="primary"
+                    size="lg"
+                    className="flex-1"
                     loading={loading}
                     icon={ArrowRight}
                   >
