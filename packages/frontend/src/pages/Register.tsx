@@ -425,8 +425,8 @@ export const Register: React.FC = () => {
                         <Button
                           type="button"
                           variant="primary"
-                          size="sm"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 z-2 min-w-[5.5rem]"
+                          size="lg"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 z-2 min-w-[5.5rem] h-[48px]"
                           onClick={handleSendCode}
                           disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}
                           loading={sendingCode}
