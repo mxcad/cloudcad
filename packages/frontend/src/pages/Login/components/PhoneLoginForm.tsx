@@ -85,7 +85,12 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             onFocus={() => onFocus('code')}
             onBlur={onBlur}
           />
-          <button type="button" className="code-button" onClick={onSendCode} disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}>
+          <button
+            type="button"
+            className="code-button"
+            onClick={onSendCode}
+            disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}
+          >
             {sendingCode ? (
               <Loader2 size={14} className="animate-spin" />
             ) : countdown > 0 ? (

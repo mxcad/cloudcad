@@ -992,7 +992,6 @@ export const Register: React.FC = () => {
           top: 50%;
           transform: translateY(-50%);
           padding: 0.5rem 0.75rem;
-          height: 48px;
           background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
           border: none;
           border-radius: 8px;
