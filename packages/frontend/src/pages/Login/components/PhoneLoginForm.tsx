@@ -85,9 +85,9 @@ export const PhoneLoginForm: React.FC<PhoneLoginFormProps> = ({
             onFocus={() => onFocus('code')}
             onBlur={onBlur}
           />
-          <Button type="button" variant="primary" size="lg" className="absolute right-2 top-1/2 -translate-y-1/2 min-w-[5.5rem] h-[48px]" onClick={onSendCode} disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11} loading={sendingCode}>
+          <button type="button" className="code-button" onClick={onSendCode} disabled={countdown > 0 || sendingCode || phoneForm.phone.length !== 11}>
             {countdown > 0 ? `${countdown}s` : t('获取验证码')}
-          </Button>
+          </button>
           <div className="input-glow" />
         </div>
       </div>
