@@ -23,8 +23,8 @@ interface SidebarTabBarProps {
 
 const TABS: { id: SidebarTab; label: string; icon: React.ElementType; isAction?: boolean }[] = [
   { id: 'drawings', label: '图纸', icon: FileText },
-  { id: 'project-management', label: '项目管理', icon: LayoutDashboard, isAction: true },
   { id: 'collaborate', label: '实时协同', icon: Users },
+  { id: 'project-management', label: '项目管理', icon: LayoutDashboard, isAction: true },
 ];
 
 /**

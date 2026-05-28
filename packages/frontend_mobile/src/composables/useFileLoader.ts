@@ -13,7 +13,10 @@ import {
   isHashLike,
   getPublicPreloadingData,
   buildPublicMxwebUrl,
+  checkPublicExtReference,
+  uploadPublicExtReferenceFile,
 } from '../services/publicFileService';
+import { parseExtRefFileNames } from '../services/extRefService';
 import { showDialog, showToast } from 'vant';
 
 const loading = ref(false);
@@ -114,10 +117,16 @@ export function useFileLoader() {
       progress.value = '正在加载图纸...';
       const preloadData = await getPublicPreloadingData(hash);
 
-      editorState.setFileInfo(preloadData as unknown as Record<string, unknown>);
+      editorState.setFileInfo(
+        preloadData as unknown as Record<string, unknown>
+      );
       editorState.setFileName(`${hash.slice(0, 8)}.mxweb`);
       editorState.setProjectId(null);
-      editorState.setPermissions({ canSave: false, canExport: true, canManageExternalRef: false });
+      editorState.setPermissions({
+        canSave: false,
+        canExport: true,
+        canManageExternalRef: false,
+      });
 
       const mxwebUrl = buildPublicMxwebUrl(hash);
       progress.value = '正在打开图纸...';
@@ -175,85 +184,98 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
     const preloadData = await getPreloadingData(nodeId);
     if (!preloadData) return;
 
-    const missingRefs = await checkExternalReferences(nodeId);
-    if (!missingRefs || missingRefs.length === 0) return;
+    const refNames = parseExtRefFileNames([
+      ...(preloadData.images || []),
+      ...(preloadData.externalReference || []),
+    ]);
+    if (refNames.length === 0) return;
 
-    const fileList = missingRefs.map(f => f.name).join('\n');
+    const missingRefs = await checkExternalReferences(nodeId);
+    const missingMap = new Map(missingRefs.map((r) => [r.name, r]));
+
+    const needUpload = refNames.filter(
+      (r) =>
+        !r.name.startsWith('http://') &&
+        !r.name.startsWith('https://') &&
+        missingMap.has(r.name)
+    );
+    if (needUpload.length === 0) return;
+
+    const fileList = needUpload.map((f) => f.name).join('\n');
     showDialog({
       title: '缺失外部参照文件',
       message: `以下文件需要上传:\n${fileList}`,
       showCancelButton: true,
       confirmButtonText: '上传文件',
       cancelButtonText: '跳过',
-    }).then(async () => {
-      for (const ref of missingRefs) {
-        const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
-        if (file) {
-          if (ref.type === 'img') {
-            await uploadExtRefImage({
-              file,
-              srcDwgfileHash: preloadData.hash,
-              extRefFile: ref.name,
-            });
-          } else {
-            await uploadExtRefDwg({ nodeId, file });
+    })
+      .then(async () => {
+        for (const ref of needUpload) {
+          const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
+          if (file) {
+            if (ref.type === 'img') {
+              await uploadExtRefImage({
+                file,
+                srcDwgfileHash: preloadData.hash,
+                extRefFile: ref.name,
+              });
+            } else {
+              await uploadExtRefDwg({ nodeId, file });
+            }
           }
         }
-      }
-      showToast('外部参照上传完成');
-    }).catch(() => {
-      // User skipped
-    });
+        showToast('外部参照上传完成');
+      })
+      .catch(() => {});
   } catch {
     // Silently fail - file can still open without refs
   }
 }
 
 export async function checkPublicFileExternalRefs(hash: string): Promise<void> {
-  const { getPublicPreloadingData, checkPublicExtReference, uploadPublicExtReferenceFile, buildPublicMxwebUrl } = await import('../services/publicFileService');
   try {
     const preloadData = await getPublicPreloadingData(hash);
     if (!preloadData) return;
 
-    const missingRefs: { name: string; type: 'img' | 'ref' }[] = [];
-    for (const ref of preloadData.externalReference) {
-      const exists = await checkPublicExtReference(hash, ref);
-      if (!exists) {
-        missingRefs.push({ name: ref, type: 'ref' });
-      }
-    }
-    for (const img of preloadData.images) {
-      if (img.startsWith('http://') || img.startsWith('https://')) continue;
-      const exists = await checkPublicExtReference(hash, img);
-      if (!exists) {
-        missingRefs.push({ name: img, type: 'img' });
-      }
-    }
+    const refs = parseExtRefFileNames([
+      ...(preloadData.images || []).filter(
+        (img) => !img.startsWith('http://') && !img.startsWith('https://')
+      ),
+      ...(preloadData.externalReference || []),
+    ]);
+    if (refs.length === 0) return;
 
+    const missingRefs: { name: string; type: 'img' | 'ref' }[] = [];
+    for (const ref of refs) {
+      const exists = await checkPublicExtReference(hash, ref.name);
+      if (!exists) {
+        missingRefs.push(ref);
+      }
+    }
     if (missingRefs.length === 0) return;
 
-    const fileList = missingRefs.map(f => f.name).join('\n');
+    const fileList = missingRefs.map((f) => f.name).join('\n');
     showDialog({
       title: '缺失外部参照文件',
       message: `以下公开文件外部参照需要上传:\n${fileList}`,
       showCancelButton: true,
       confirmButtonText: '上传文件',
       cancelButtonText: '跳过',
-    }).then(async () => {
-      for (const ref of missingRefs) {
-        const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
-        if (file) {
-          await uploadPublicExtReferenceFile({
-            srcHash: hash,
-            file,
-            extRefFile: ref.name,
-          });
+    })
+      .then(async () => {
+        for (const ref of missingRefs) {
+          const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
+          if (file) {
+            await uploadPublicExtReferenceFile({
+              srcHash: hash,
+              file,
+              extRefFile: ref.name,
+            });
+          }
         }
-      }
-      showToast('外部参照上传完成');
-    }).catch(() => {
-      // User skipped
-    });
+        showToast('外部参照上传完成');
+      })
+      .catch(() => {});
   } catch {
     // Silently fail
   }

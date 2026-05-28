@@ -1,13 +1,24 @@
 import { ref, readonly } from 'vue';
 import { useEditorState } from './useEditorState';
 import { useUser } from './useUser';
-import { getMxwebBlob, saveToNode, saveLibraryDrawing, saveLibraryBlock } from '../services/saveService';
+import {
+  getMxwebBlob,
+  saveToNode,
+  saveLibraryDrawing,
+  saveLibraryBlock,
+} from '../services/saveService';
 import { uploadThumbnailForNode } from '../services/thumbnailService';
+import { processPendingImages } from '../services/pendingImageService';
 import { showToast } from 'vant';
 
 const saving = ref(false);
 
-export type SaveDestination = 'current' | 'personal' | 'project' | 'library-drawing' | 'library-block';
+export type SaveDestination =
+  | 'current'
+  | 'personal'
+  | 'project'
+  | 'library-drawing'
+  | 'library-block';
 
 export function useSave() {
   const editorState = useEditorState();
@@ -27,6 +38,7 @@ export function useSave() {
 
       if (state.fileId && state.permissions.canSave) {
         await saveToNode(state.fileId, blob, commitMessage);
+        await processPendingImages(state.fileId).catch(() => {});
         showToast('保存成功');
         uploadThumbnailForNode(state.fileId).catch(() => {});
         saving.value = false;
@@ -38,6 +50,7 @@ export function useSave() {
         if (nodePath?.includes('/drawing/')) {
           if (state.permissions.canSave) {
             await saveLibraryDrawing(state.fileId, blob);
+            await processPendingImages(state.fileId).catch(() => {});
             showToast('保存成功');
             uploadThumbnailForNode(state.fileId).catch(() => {});
             saving.value = false;
@@ -46,6 +59,7 @@ export function useSave() {
         } else if (nodePath?.includes('/block/')) {
           if (state.permissions.canSave) {
             await saveLibraryBlock(state.fileId, blob);
+            await processPendingImages(state.fileId).catch(() => {});
             showToast('保存成功');
             uploadThumbnailForNode(state.fileId).catch(() => {});
             saving.value = false;

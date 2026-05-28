@@ -1,7 +1,14 @@
 import { ref, readonly, computed } from 'vue';
 import { useUser } from './useUser';
 import { getMxwebBlob, saveAs } from '../services/saveService';
-import { fileSystemControllerGetProjects, fileSystemControllerGetPersonalSpace } from '../api-sdk';
+import {
+  fileSystemControllerGetProjects,
+  fileSystemControllerGetPersonalSpace,
+} from '../api-sdk';
+import {
+  processPendingImages,
+  pendingImageCount,
+} from '../services/pendingImageService';
 import { showToast } from 'vant';
 
 export type SaveTargetType = 'personal' | 'project' | 'library';
@@ -32,10 +39,17 @@ export function useSaveAs() {
 
   async function loadProjects() {
     try {
-      const result = await fileSystemControllerGetProjects({ query: { filter: 'all' } });
+      const result = await fileSystemControllerGetProjects({
+        query: { filter: 'all' },
+      });
       if (result.error) throw result.error;
-      const nodes = (result.data as unknown as { nodes: Array<{ id: string; name: string }> })?.nodes || [];
-      projects.value = nodes.map(n => ({ id: n.id, name: n.name }));
+      const nodes =
+        (
+          result.data as unknown as {
+            nodes: Array<{ id: string; name: string }>;
+          }
+        )?.nodes || [];
+      projects.value = nodes.map((n) => ({ id: n.id, name: n.name }));
     } catch {
       projects.value = [];
     }
@@ -79,10 +93,17 @@ export function useSaveAs() {
         targetParentId: params.selectedParentId,
         fileName: params.fileName,
         format: params.format,
-        projectId: params.targetType === 'project' ? params.selectedProjectId : undefined,
-        libraryType: params.targetType === 'library' ? params.libraryType : undefined,
+        projectId:
+          params.targetType === 'project'
+            ? params.selectedProjectId
+            : undefined,
+        libraryType:
+          params.targetType === 'library' ? params.libraryType : undefined,
         commitMessage: `Save as: ${params.fileName}.${params.format}`,
       });
+      if (pendingImageCount() > 0 && result.nodeId) {
+        await processPendingImages(result.nodeId).catch(() => {});
+      }
       saving.value = false;
       return { success: true, nodeId: result.nodeId };
     } catch (e: unknown) {

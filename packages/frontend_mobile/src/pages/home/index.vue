@@ -18,7 +18,7 @@ import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
 import { useFooterToolbar } from './hooks/useFooterToolbar';
 import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
 import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs } from '../../composables/useFileLoader';
-import { isHashLike } from '../../services/publicFileService';
+import { isHashLike, resolvePublicExtRefUrl } from '../../services/publicFileService';
 import { checkLibraryPermissions } from '../../services/permissionService';
 import { useEditorState } from '../../composables/useEditorState';
 import { useSave } from '../../composables/useSave';
@@ -187,6 +187,10 @@ function onCommitConfirm(message: string) {
 async function executeSave() {
   const success = await saveAction(pendingCommitMessage.value)
   if (!success) {
+    if (!isAuthenticated.value) {
+      showLoginPrompt.value = true
+      return
+    }
     showSaveAsSheet.value = true
   }
 }
@@ -403,6 +407,7 @@ setViewportHeight();
           :can-manage-library="canManageLibrary"
           @close="onSaveAsClose"
           @success="onSaveAsSuccess"
+          @login-required="showLoginPrompt = true"
         />
         <VersionHistoryPopup
           v-if="showVersionHistory"

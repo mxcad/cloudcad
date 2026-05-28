@@ -1304,6 +1304,15 @@ MxFun.addCommand('Mx_SaveToCloud', () => {
  * Mx_SaveAsToCloud 命令：另存为到云图（选择位置保存）
  */
 MxFun.addCommand('Mx_SaveAsToCloud', async () => {
+  if (!isAuthenticated() || isAccessTokenExpired()) {
+    cancelLoginRedirect();
+    window.dispatchEvent(
+      new CustomEvent('mxcad-save-required', {
+        detail: { action: '保存文件' },
+      })
+    );
+    return;
+  }
   await triggerSaveAs();
 });
 

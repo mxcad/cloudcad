@@ -48,6 +48,15 @@ interface ToolButtonConfig {
 
 const TOOL_BUTTONS: ToolButtonConfig[] = [
   {
+    id: 'project-management',
+    tab: 'project-management',
+    icon: <LayoutDashboard size={18} />,
+    label: '项目管理',
+    color: '#10b981',
+    dataTour: 'trigger-project-management',
+    isAction: true,
+  },
+  {
     id: 'my-project',
     tab: 'drawings',
     subTab: 'my-project',
@@ -82,15 +91,6 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     label: '图块库',
     color: '#ec4899',
     dataTour: 'trigger-blocks-gallery',
-  },
-  {
-    id: 'project-management',
-    tab: 'project-management',
-    icon: <LayoutDashboard size={18} />,
-    label: '项目管理',
-    color: '#10b981',
-    dataTour: 'trigger-project-management',
-    isAction: true,
   },
   {
     id: 'collaborate',

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } from '../../../composables/useSaveAs';
+import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
 import type { FileSystemNodeDto } from '../../../api-sdk';
@@ -21,9 +22,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'success', result: { nodeId: string; fileName: string }): void;
+  (e: 'login-required'): void;
 }>();
 
 const saveAs = useSaveAs();
+const { isAuthenticated } = useUser();
 const error = ref<string | null>(null);
 const step = ref<'form' | 'folder'>('form');
 const showProjectPicker = ref(false);
@@ -74,6 +77,10 @@ function onProjectConfirm({ selectedValues }: { selectedValues: string[] }) {
 }
 
 async function handleSave() {
+  if (!isAuthenticated.value) {
+    emit('login-required');
+    return;
+  }
   if (!(saveAs.fileName.value || '').trim()) {
     error.value = '请输入文件名';
     return;
