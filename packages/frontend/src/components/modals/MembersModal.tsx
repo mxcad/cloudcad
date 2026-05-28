@@ -427,7 +427,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   onSelectItem={(item) => {
                     const user = item as unknown as UserSearchResult;
                     setSelectedUser(user);
-                    setNewEmail(user.email);
+                    setNewEmail(user.email ?? '');
                     setSearchResults([]);
                   }}
                   placeholder="搜索用户（邮箱或用户名）"

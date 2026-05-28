@@ -55,7 +55,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
     onChange('');
   };
 
-  const showClear = value.length > 0 && !loading;
+  const showClear = (value ?? '').length > 0 && !loading;
 
   return (
     <div className={`relative ${wrapperClassName}`}>
