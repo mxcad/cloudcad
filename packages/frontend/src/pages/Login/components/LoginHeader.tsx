@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import React from 'react';
+import { t } from '@/languages';
 
 interface LoginHeaderProps {
   appLogo: string;
@@ -20,13 +21,13 @@ export const LoginHeader: React.FC<LoginHeaderProps> = ({ appLogo, appName }) =>
           <img src={appLogo} alt={appName} className="logo-image" />
         </div>
         <h1 className="app-title">{appName}</h1>
-        <p className="app-tagline">专业云端 CAD 图纸管理平台</p>
+        <p className="app-tagline">{t('专业云端 CAD 图纸管理平台')}</p>
       </div>
 
       {/* 表单头部 */}
       <div className="form-header">
-        <h2 className="form-title">欢迎回来</h2>
-        <p className="form-subtitle">登录您的账户以继续</p>
+        <h2 className="form-title">{t('欢迎回来')}</h2>
+        <p className="form-subtitle">{t('登录您的账户以继续')}</p>
       </div>
     </>
   );

@@ -171,7 +171,7 @@ async function login() {
       protocol: 'http:',
       hostname: 'localhost',
       port: 3001,
-      path: '/api/auth/login',
+      path: '/api/v1/auth/login',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -281,7 +281,7 @@ async function createFolder(libraryType, parentId, folderName) {
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: `/api/library/${libraryType}/folders`,
+    path: `/api/v1/library/${libraryType}/folders`,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ async function getChildren(libraryType, parentId) {
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: `/api/library/${libraryType}/children/${parentId}`,
+    path: `/api/v1/library/${libraryType}/children/${parentId}`,
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -328,7 +328,7 @@ async function getAllChildren(libraryType, parentId) {
       protocol: 'http:',
       hostname: 'localhost',
       port: 3001,
-      path: `/api/library/${libraryType}/children/${parentId}?page=${page}&limit=${limit}`,
+      path: `/api/v1/library/${libraryType}/children/${parentId}?page=${page}&limit=${limit}`,
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -387,7 +387,7 @@ async function checkFileExist(fileSize, fileHash, filename, nodeId, conflictStra
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: '/api/mxcad/files/fileisExist',
+    path: '/api/v1/mxcad/files/fileisExist',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -417,7 +417,7 @@ async function checkChunkExist(chunk, chunks, size, fileHash, filename, nodeId) 
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: '/api/mxcad/files/chunkisExist',
+    path: '/api/v1/mxcad/files/chunkisExist',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -468,7 +468,7 @@ async function uploadChunk(formData) {
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: '/api/mxcad/files/uploadFiles',
+    path: '/api/v1/mxcad/files/uploadFiles',
     method: 'POST',
     headers: {
       'Content-Type': `multipart/form-data; boundary=${boundary}`,
@@ -1041,7 +1041,7 @@ async function processLibrary(libraryType) {
     protocol: 'http:',
     hostname: 'localhost',
     port: 3001,
-    path: `/api/library/${libraryType}`,
+    path: `/api/v1/library/${libraryType}`,
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`

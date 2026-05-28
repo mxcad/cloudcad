@@ -81,6 +81,10 @@ pnpm test             # Run Vitest tests
 pnpm test:ui          # Run UI mode tests
 pnpm test:coverage    # Generate test coverage report
 pnpm type-check       # Run TypeScript type checking
+pnpm i18n:init        # Initialize i18n language config (zh/en/cht)
+pnpm i18n:extract     # Extract translatable strings from source
+pnpm i18n:compile     # Compile translation JSON -> TS language packs
+pnpm i18n             # Full i18n pipeline: init → extract → compile
 ```
 
 ## NOTES
@@ -95,3 +99,49 @@ pnpm type-check       # Run TypeScript type checking
   - `VITE_APP_COOPERATE_URL`: WebSocket service URL
 - **Browser Support**: Modern browsers (Chrome, Firefox, Safari, Edge)
 - **Responsive Design**: Mobile-first approach with Tailwind breakpoints
+
+## i18n (VoerkaI18n)
+
+### 架构
+- **子库模式** (`library: true`)：CloudCAD 是 mxcad-app 的 VoerkaI18n 子库，语言切换跟随 mxcad-app
+- 多库联动：mxcad-app 切换语言时，通过全局 `VoerkaI18n` 单例通知所有子库 scope 同步切换
+
+### 使用方式
+```tsx
+// 在组件中使用 t 函数
+import { t } from '@/languages';
+<Button>{t("登录")}</Button>
+
+// 或使用 Translate 组件（大段文本）
+import { Translate } from '@/languages';
+<Translate message="请输入用户名" />
+
+// 语言切换（由 mxcad-app 驱动，不要手动调用 change）
+// 仅在需要读取当前语言时
+import { useVoerkaI18n } from '@voerkai18n/react';
+const { activeLanguage, languages } = useVoerkaI18n();
+```
+
+### 关键约束
+- `@voerkai18n/vite` 插件必须在 `react()` 之前注册（vite.config.ts）
+- `import "./languages"` 必须在 `VoerkaI18nProvider` 之前，确保 scope 注册到全局
+- **每次运行 `pnpm i18n:compile` 后，必须手动检查 `src/languages/index.ts` 中 `library: true` 是否被覆盖**（compile 会重置为 `false`）
+
+### 工作流
+1. 源码中使用 `t("中文文本")` 包装需翻译的内容
+2. `pnpm i18n:extract` — 扫描提取文本到 `translates/messages/default.json`
+3. 编辑 `translates/messages/default.json` 补充 en/cht 翻译（或运行 `voerkai18n translate` 自动翻译）
+4. `pnpm i18n:compile -t` — 编译为 TS 语言包
+5. 编译后手动恢复 `library: true`
+
+### 文件结构
+```
+src/languages/
+├── index.ts          # VoerkaI18nScope + t 导出（compile 自动生成，library 需手动修正）
+├── settings.json     # 语言列表（zh/en/cht）
+├── storage.ts        # localStorage 持久化（compile 自动生成）
+├── idMap.ts          # 文本 ID 映射（compile 自动生成）
+├── zh.ts / en.ts / cht.ts  # 语言包（compile 自动生成）
+├── formatters/       # 格式化器（compile 自动生成）
+└── translates/       # 翻译源文件（extract 生成）
+```

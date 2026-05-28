@@ -11,7 +11,7 @@
 /**
  * 侧边栏 Tab 类型
  */
-export type SidebarTab = 'drawings' | 'collaborate';
+export type SidebarTab = 'drawings' | 'collaborate' | 'project-management';
 
 /** 图纸子 Tab 类型 */
 export type DrawingsSubTab = 

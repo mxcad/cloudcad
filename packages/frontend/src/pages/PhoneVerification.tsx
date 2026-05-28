@@ -6,6 +6,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 
 
@@ -181,7 +182,8 @@ export const PhoneVerification: React.FC = () => {
   if (success) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
-        <div className="theme-toggle-wrapper">
+        <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* <LanguageSwitcher /> */}
           <ThemeToggle />
         </div>
 

@@ -21,7 +21,12 @@
     "check": "pnpm lint && pnpm format:check",
     "check:fix": "pnpm lint:fix && pnpm format",
     "type-check": "tsc --noEmit",
-    "generate:sdk": "npx @hey-api/openapi-ts"
+    "generate:sdk": "npx @hey-api/openapi-ts",
+    "setDefaultI18n": "voerkai18n init . -lngs zh en cht -d zh -r --library",
+    "i18n:init": "pnpm setDefaultI18n",
+    "i18n:extract": "voerkai18n extract -D -f ts,tsx,json -e !dist,!node_modules,!coverage",
+    "i18n:compile": "voerkai18n compile -t",
+    "i18n": "pnpm i18n:init && pnpm i18n:extract && pnpm i18n:compile"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -48,6 +53,8 @@
     "tailwind-merge": "^3.4.0",
     "webuploader": "^0.1.8",
     "zod": "^4.2.1",
+    "@voerkai18n/react": "^2.1.10",
+    "@voerkai18n/runtime": "^2.1.10",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
@@ -85,6 +92,8 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite": "^6.4.2",
+    "@voerkai18n/cli": "^2.1.10",
+    "@voerkai18n/vite": "^2.1.10",
     "vitest": "^4.0.16"
   }
 }

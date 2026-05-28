@@ -14,6 +14,7 @@ import { Tag } from './ui/Tag';
 import { TruncateText } from './ui/TruncateText';
 import { formatFileSize } from '../utils/fileUtils';
 import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
@@ -713,6 +714,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 {formattedDate}
               </span>
             </div>
+
+            {/* 语言切换 */}
+            {/* <div className="p-0.5">
+              <LanguageSwitcher />
+            </div> */}
 
             {/* 主题切换 */}
             <div className="p-0.5">

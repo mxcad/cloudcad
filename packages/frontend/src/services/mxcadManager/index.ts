@@ -62,7 +62,7 @@ import { escapeHtml } from '@/utils/sanitize';
 // ==================== 外部依赖 ====================
 // @ts-ignore
 import "mxcad-app/style"
-import { MxCADView } from 'mxcad-app';
+import { MxCADView, store } from 'mxcad-app';
 import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission, mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode, saveControllerSaveMxwebToNode } from '@/api-sdk';
@@ -379,8 +379,6 @@ function calculateReturnPath(
   }
   return NAVIGATION_PATHS.PROJECTS_LIST;
 }
-
-// ==================== return-to-cloud-map-management ====================
 
 /**
  * 返回到上一页面（云图管理/项目文件列表）
@@ -1165,9 +1163,9 @@ const openFile = async (noCache?: boolean) => {
  * - 已登录：上传到私人空间或项目
  * - 未登录：使用公开上传服务
  */
-MxFun.addCommand('openFile', ()=> openFile());
-MxFun.addCommand('openFile_noCache', ()=> openFile(true));
-MxFun.addCommand('return-to-cloud-map-management', returnToCloudMapManagement)
+MxFun.addCommand('openFile', () => openFile());
+MxFun.addCommand('openFile_noCache', () => openFile(true));
+
 
 /**
  * Mx_NewFile 命令处理函数：新建文件
@@ -1189,6 +1187,12 @@ const handleNewFileCommand = async () => {
     const mxcad = MxCpp.getCurrentMxCAD();
     if (mxcad) {
       mxcad.newFile();
+      const { initLayerList } = store.useLayer()
+      const { initColorIndexList } = store.useColor()
+      const { initLineTypeList } = store.useLineType()
+      initLayerList()
+      initColorIndexList()
+      initLineTypeList()
     }
 
     // 3. 重置文件信息状态
@@ -1548,12 +1552,12 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     if (fileInfo.path) {
       // 基础路径（不带 ?t=）
       const basePath = `/api/v1/mxcad/filesData/${fileInfo.path}`;
-      
+
       // 获取最新的 updatedAt 时间戳
       const timestamp = fileInfo.updatedAt
         ? new Date(fileInfo.updatedAt).getTime()
         : Date.now();
-      
+
       // 新的缓存路径（带 ?t= 参数）
       const newCachePath = `${basePath}?t=${timestamp}`;
 
@@ -1756,7 +1760,7 @@ async function getNodeUpdatedAt(
       libraryKey === 'drawing'
         ? await libraryControllerGetDrawingNode({ path: { nodeId: nodeId } })
         : await libraryControllerGetBlockNode({ path: { nodeId: nodeId } });
-    
+
     const node = response.data;
     return node?.updatedAt || null;
   } catch (error) {
@@ -2074,7 +2078,7 @@ class MxCADInstanceManager {
           },
         })
       );
-      
+
       // 文件打开完成后，重置修改状态
       resetDocumentModified();
 
@@ -2167,7 +2171,7 @@ class MxCADInstanceManager {
   private buildViewOptions(openFile?: string) {
     const containerManager = MxCADContainerManager.getInstance();
     const token = localStorage.getItem('accessToken');
-    
+
     // 构建外部参照文件解析函数
     const resolveExtReferenceUrl = (fileName: string) => {
       // 从当前打开的文件 URL 中提取 hash
@@ -2258,7 +2262,7 @@ class MxCADInstanceManager {
     if (!this.mxcadView || !this.isInitialized) {
       throw new Error('MxCADView 实例未初始化');
     }
-    
+
     currentMxwebUrl = fileUrl;
 
     const currentFileName = this.getCurrentFileName();
@@ -2575,7 +2579,7 @@ MxFun.addCommand('Mx_InsertImageWithUpload', () => {
  */
 export async function processPendingImages(): Promise<void> {
   const currentInfo = mxcadManager.getCurrentFileInfo();
-  
+
   if (!currentInfo?.fileId || pendingImages.length === 0) {
     return;
   }

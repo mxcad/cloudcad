@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { RegistrationClosed } from './RegistrationClosed';
 import { RegisterForm } from './components/RegisterForm';
@@ -85,7 +86,8 @@ export const Register: React.FC = () => {
       data-theme={isDark ? 'dark' : 'light'}
     >
       <InteractiveBackground />
-      <div className="theme-toggle-wrapper">
+      <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {/* <LanguageSwitcher /> */}
         <ThemeToggle />
       </div>
       <div className="register-container">

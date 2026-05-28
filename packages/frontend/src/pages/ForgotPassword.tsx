@@ -7,6 +7,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 import {
   forgotPasswordSchema,
@@ -127,7 +128,10 @@ export const ForgotPassword: React.FC = () => {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <InteractiveBackground />
-        <div className="theme-toggle-wrapper"><ThemeToggle /></div>
+        <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* <LanguageSwitcher /> */}
+          <ThemeToggle />
+        </div>
         <div className="auth-container">
           <div className="auth-card">
             <div className="logo-section">
@@ -210,7 +214,8 @@ export const ForgotPassword: React.FC = () => {
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <InteractiveBackground />
 
-        <div className="theme-toggle-wrapper">
+        <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* <LanguageSwitcher /> */}
           <ThemeToggle />
         </div>
 
@@ -309,7 +314,8 @@ export const ForgotPassword: React.FC = () => {
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <InteractiveBackground />
 
-        <div className="theme-toggle-wrapper">
+        <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* <LanguageSwitcher /> */}
           <ThemeToggle />
         </div>
 

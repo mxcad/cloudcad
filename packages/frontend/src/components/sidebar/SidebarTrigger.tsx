@@ -19,9 +19,11 @@ import { FileText } from 'lucide-react';
 import { Box } from 'lucide-react';
 import { LayoutGrid } from 'lucide-react';
 import { Users } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
+import { returnToCloudMapManagement } from '@/services/mxcadManager';
 import styles from './sidebar.module.css';
 
 interface SidebarTriggerProps {
@@ -40,6 +42,8 @@ interface ToolButtonConfig {
   color: string;
   /** 引导定位标识 */
   dataTour: string;
+  /** 是否直接执行动作而非切换 tab */
+  isAction?: boolean;
 }
 
 const TOOL_BUTTONS: ToolButtonConfig[] = [
@@ -80,6 +84,15 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     dataTour: 'trigger-blocks-gallery',
   },
   {
+    id: 'project-management',
+    tab: 'project-management',
+    icon: <LayoutDashboard size={18} />,
+    label: '项目管理',
+    color: '#10b981',
+    dataTour: 'trigger-project-management',
+    isAction: true,
+  },
+  {
     id: 'collaborate',
     tab: 'collaborate',
     icon: <Users size={18} />,
@@ -96,10 +109,15 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   onExpandClick,
 }) => {
   const handleButtonClick = (button: ToolButtonConfig) => {
+    if (button.isAction) {
+      returnToCloudMapManagement();
+      return;
+    }
     onTabClick(button.tab, button.subTab);
   };
 
   const isButtonActive = (button: ToolButtonConfig): boolean => {
+    if (button.isAction) return false;
     if (button.tab === 'collaborate') {
       return activeTab === 'collaborate';
     }

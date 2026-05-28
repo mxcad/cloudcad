@@ -130,7 +130,7 @@ async function generateThumbnailForFile(cadFilePath, dwg2JpgPath, tempPath) {
       }
     }
 
-    // 构建参数（与后端配置一致：宽度100px，高度100px，黑色背景）
+    // 构建参数（与后端配置一致：宽度300px，高度300px，黑色背景）
     const cadFilePathForward = finalFilePath.replace(/\\/g, '/');
     const paramStr = `file=${cadFilePathForward} width=300 height=300 background_color=0x000000`;
 

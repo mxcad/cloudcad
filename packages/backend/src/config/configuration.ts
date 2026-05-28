@@ -455,10 +455,10 @@ export default (): AppConfig => {
 			process.env.THUMBNAIL_AUTO_GENERATE_ENABLED,
 			true,
 		),
-		// 缩略图宽度（像素），默认 100
-		width: parseInt(process.env.THUMBNAIL_WIDTH || "100", 10) || 100,
-		// 缩略图高度（像素），默认100  如果是0 表示自动计算保持原始宽高比
-		height: parseInt(process.env.THUMBNAIL_HEIGHT || "100", 10) || 0,
+		// 缩略图宽度（像素），默认 300
+		width: parseInt(process.env.THUMBNAIL_WIDTH || "300", 10) || 300,
+		// 缩略图高度（像素），默认300  如果是0 表示自动计算保持原始宽高比
+		height: parseInt(process.env.THUMBNAIL_HEIGHT || "300", 10) || 300,
 		// 缩略图背景颜色，十六进制 RGB 格式，默认黑色
 		backgroundColor: process.env.THUMBNAIL_BACKGROUND_COLOR || "0x000000",
 		},

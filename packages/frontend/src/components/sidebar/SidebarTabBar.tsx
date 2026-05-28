@@ -6,6 +6,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import { Users } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { SidebarTab } from '../../types/sidebar';
 import { Button, Tab, Tabs } from '../ui';
@@ -20,8 +21,9 @@ interface SidebarTabBarProps {
   isExpanded?: boolean;
 }
 
-const TABS: { id: SidebarTab; label: string; icon: React.ElementType }[] = [
+const TABS: { id: SidebarTab; label: string; icon: React.ElementType; isAction?: boolean }[] = [
   { id: 'drawings', label: '图纸', icon: FileText },
+  { id: 'project-management', label: '项目管理', icon: LayoutDashboard, isAction: true },
   { id: 'collaborate', label: '实时协同', icon: Users },
 ];
 
@@ -40,21 +42,8 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
   onCloseClick,
   isExpanded = true,
 }) => {
-  const handleReturnToCloudMap = () => {
-    returnToCloudMapManagement();
-  };
-
   return (
     <div className={styles.tabBar}>
-      {/* <Tooltip content="返回" position="bottom" delay={100}>
-        <button
-          className={styles.tabBarButton}
-          onClick={ handleReturnToCloudMap}
-          aria-label="返回"
-        >
-          <ArrowLeft size={18} />
-        </button>
-      </Tooltip> */}
       <Tooltip content={isExpanded ? "关闭侧边栏" : "展开侧边栏"} position="bottom" delay={100}>
         <Button
           variant="ghost"
@@ -70,10 +59,16 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
         {TABS.map((tab) => (
           <Tab
             key={tab.id}
-            active={activeTab === tab.id}
+            active={tab.isAction ? false : activeTab === tab.id}
             tabVariant="primary"
             icon={tab.icon}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => {
+              if (tab.isAction) {
+                returnToCloudMapManagement();
+              } else {
+                onTabChange(tab.id);
+              }
+            }}
             title={tab.label}
           >
             {tab.label}

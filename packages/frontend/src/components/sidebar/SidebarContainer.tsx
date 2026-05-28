@@ -431,6 +431,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
             </div>
           </div>
         );
+      case 'project-management':
+        return null;
       case 'collaborate':
         // 协同 tab 未登录时显示登录提示
         if (!isAuthenticated) {

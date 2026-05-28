@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
@@ -7,6 +7,9 @@ import { NotificationProvider } from './contexts/NotificationContext';
 
 import { fetchBrandConfig } from './constants/appConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
+// import { VoerkaI18nProvider, useVoerkaI18n } from '@voerkai18n/react';
+// import { i18nScope } from './languages';
+
 
 // MSW 浏览器 worker：仅在测试环境（VITE_MSW=true）下启动
 if (import.meta.env.VITE_MSW === 'true') {
@@ -44,6 +47,12 @@ console.log('[CloudCAD] 开始初始化应用，rootElement:', !!rootElement);
 const AppInitializer: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  // const { activeLanguage } = useVoerkaI18n();
+  // const [_, forceUpdate] = useReducer(x => x + 1, 0);
+
+  // useEffect(() => {
+  //   forceUpdate();
+  // }, [activeLanguage]);
 
   useEffect(() => {
     console.log('[CloudCAD] 开始初始化 Brand Config');
@@ -118,11 +127,15 @@ const AppInitializer: React.FC = () => {
           </NotificationProvider>
         </ThemeProvider>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </ErrorBoundary>  
   );
 };
 
 // 避免 HMR 时重复 createRoot
 const root: ReactDOM.Root = ((window as unknown as Record<string, unknown>).__cloudCAD_root as ReactDOM.Root) ?? ReactDOM.createRoot(rootElement);
 (window as unknown as Record<string, unknown>).__cloudCAD_root = root;
-root.render(<AppInitializer />);
+root.render(
+  // <VoerkaI18nProvider scope={i18nScope} fallback={null}>
+    <AppInitializer />
+  // </VoerkaI18nProvider>
+);

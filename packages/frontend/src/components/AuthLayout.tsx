@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { InteractiveBackground } from './InteractiveBackground';
 import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { Link } from 'react-router-dom';
 
@@ -49,8 +50,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
       {/* 交互式动态背景 - 带鼠标视差效果 */}
       <InteractiveBackground />
 
-      {/* 主题切换按钮 */}
-      <div className="theme-toggle-wrapper">
+      {/* 右上角工具栏 */}
+      <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {/* <LanguageSwitcher /> */}
         <ThemeToggle />
       </div>
 

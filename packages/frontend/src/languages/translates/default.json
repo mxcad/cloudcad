@@ -1,0 +1,458 @@
+{
+    "请输入账号": {
+        "$files": [
+            "pages\\Login\\hooks\\loginFormSchema.ts"
+        ],
+        "zh-CN": "请输入账号",
+        "en-US": "Please enter your account",
+        "ko-KR": "계정을 입력하세요",
+        "zh-TW": "請輸入帳號"
+    },
+    "请输入密码": {
+        "$files": [
+            "pages\\Login\\hooks\\loginFormSchema.ts",
+            "pages\\Login\\components\\AccountLoginForm.tsx"
+        ],
+        "zh-CN": "请输入密码",
+        "en-US": "Please enter your password",
+        "ko-KR": "비밀번호를 입력하세요",
+        "zh-TW": "請輸入密碼"
+    },
+    "请输入手机号": {
+        "$files": [
+            "pages\\Login\\hooks\\loginFormSchema.ts",
+            "pages\\Login\\components\\PhoneLoginForm.tsx"
+        ],
+        "zh-CN": "请输入手机号",
+        "en-US": "Please enter your phone number",
+        "ko-KR": "휴대폰 번호를 입력하세요",
+        "zh-TW": "請輸入手機號"
+    },
+    "请输入正确的手机号": {
+        "$files": [
+            "pages\\Login\\hooks\\loginFormSchema.ts",
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "请输入正确的手机号",
+        "en-US": "Please enter a valid phone number",
+        "ko-KR": "올바른 휴대폰 번호를 입력하세요",
+        "zh-TW": "請輸入正確的手機號"
+    },
+    "请输入验证码": {
+        "$files": [
+            "pages\\Login\\hooks\\loginFormSchema.ts",
+            "pages\\Login\\components\\PhoneLoginForm.tsx"
+        ],
+        "zh-CN": "请输入验证码",
+        "en-US": "Please enter the verification code",
+        "ko-KR": "인증번호를 입력하세요",
+        "zh-TW": "請輸入驗證碼"
+    },
+    "请输入6位数字验证码": {
+        "$files": [
+            "pages\\Login\\hooks\\loginFormSchema.ts"
+        ],
+        "zh-CN": "请输入6位数字验证码",
+        "en-US": "Please enter the 6-digit verification code",
+        "ko-KR": "6자리 인증번호를 입력하세요",
+        "zh-TW": "請輸入6位數字驗證碼"
+    },
+    "手机号、邮箱或用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "手机号、邮箱或用户名",
+        "en-US": "Phone, email, or username",
+        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명",
+        "zh-TW": "手機號、郵箱或用戶名"
+    },
+    "手机号或用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "手机号或用户名",
+        "en-US": "Phone number or username",
+        "ko-KR": "휴대폰 번호 또는 사용자명",
+        "zh-TW": "手機號或用戶名"
+    },
+    "邮箱或用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "邮箱或用户名",
+        "en-US": "Email or username",
+        "ko-KR": "이메일 또는 사용자명",
+        "zh-TW": "郵箱或用戶名"
+    },
+    "用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "用户名",
+        "en-US": "Username",
+        "ko-KR": "사용자명",
+        "zh-TW": "用戶名"
+    },
+    "请输入手机号、邮箱或用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "请输入手机号、邮箱或用户名",
+        "en-US": "Please enter your phone, email, or username",
+        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명을 입력하세요",
+        "zh-TW": "請輸入手機號、郵箱或用戶名"
+    },
+    "请输入手机号或用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "请输入手机号或用户名",
+        "en-US": "Please enter your phone number or username",
+        "ko-KR": "휴대폰 번호 또는 사용자명을 입력하세요",
+        "zh-TW": "請輸入手機號或用戶名"
+    },
+    "请输入邮箱或用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "请输入邮箱或用户名",
+        "en-US": "Please enter your email or username",
+        "ko-KR": "이메일 또는 사용자명을 입력하세요",
+        "zh-TW": "請輸入郵箱或用戶名"
+    },
+    "请输入用户名": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "请输入用户名",
+        "en-US": "Please enter your username",
+        "ko-KR": "사용자명을 입력하세요",
+        "zh-TW": "請輸入用戶名"
+    },
+    "验证码已发送": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "验证码已发送",
+        "en-US": "Verification code sent",
+        "ko-KR": "인증번호가 전송되었습니다",
+        "zh-TW": "驗證碼已發送"
+    },
+    "发送验证码失败": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "发送验证码失败",
+        "en-US": "Failed to send verification code",
+        "ko-KR": "인증번호 전송에 실패했습니다",
+        "zh-TW": "發送驗證碼失敗"
+    },
+    "登录失败，请检查账号和密码": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "登录失败，请检查账号和密码",
+        "en-US": "Login failed. Please check your account and password",
+        "ko-KR": "로그인에 실패했습니다. 계정과 비밀번호를 확인하세요",
+        "zh-TW": "登錄失敗，請檢查帳號和密碼"
+    },
+    "登录失败，请重试": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts"
+        ],
+        "zh-CN": "登录失败，请重试",
+        "en-US": "Login failed. Please try again",
+        "ko-KR": "로그인에 실패했습니다. 다시 시도하세요",
+        "zh-TW": "登錄失敗，請重試"
+    },
+    "微信登录失败": {
+        "$files": [
+            "pages\\Login\\hooks\\useLoginForm.ts",
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "微信登录失败",
+        "en-US": "WeChat login failed",
+        "ko-KR": "WeChat 로그인에 실패했습니다",
+        "zh-TW": "微信登錄失敗"
+    },
+    "登录": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "登录",
+        "en-US": "Login",
+        "ko-KR": "로그인",
+        "zh-TW": "登錄"
+    },
+    "微信自动注册失败，请手动完成注册": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "微信自动注册失败，请手动完成注册",
+        "en-US": "WeChat auto-registration failed. Please complete registration manually",
+        "ko-KR": "WeChat 자동 가입에 실패했습니다. 수동으로 가입을 완료하세요",
+        "zh-TW": "微信自動註冊失敗，請手動完成註冊"
+    },
+    "账号登录": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "账号登录",
+        "en-US": "Account Login",
+        "ko-KR": "계정 로그인",
+        "zh-TW": "帳號登錄"
+    },
+    "手机登录": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "手机登录",
+        "en-US": "Phone Login",
+        "ko-KR": "휴대폰 로그인",
+        "zh-TW": "手機登錄"
+    },
+    "还没有账户？": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "还没有账户？",
+        "en-US": "Don't have an account?",
+        "ko-KR": "계정이 없으신가요?",
+        "zh-TW": "還沒有帳戶？"
+    },
+    "立即注册": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "立即注册",
+        "en-US": "Register Now",
+        "ko-KR": "지금 가입",
+        "zh-TW": "立即註冊"
+    },
+    "高性能 CAD 在线预览": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "高性能 CAD 在线预览",
+        "en-US": "High-performance CAD online preview",
+        "ko-KR": "고성능 CAD 온라인 미리보기",
+        "zh-TW": "高性能 CAD 在線預覽"
+    },
+    "多用户实时协同编辑": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "多用户实时协同编辑",
+        "en-US": "Multi-user real-time collaborative editing",
+        "ko-KR": "다중 사용자 실시간 협업 편집",
+        "zh-TW": "多用戶實時協同編輯"
+    },
+    "企业级数据安全保障": {
+        "$files": [
+            "pages\\Login\\index.tsx"
+        ],
+        "zh-CN": "企业级数据安全保障",
+        "en-US": "Enterprise-grade data security",
+        "ko-KR": "엔터프라이즈급 데이터 보안",
+        "zh-TW": "企業級數據安全保障"
+    },
+    "密码": {
+        "$files": [
+            "pages\\Login\\components\\AccountLoginForm.tsx"
+        ],
+        "zh-CN": "密码",
+        "en-US": "Password",
+        "ko-KR": "비밀번호",
+        "zh-TW": "密碼"
+    },
+    "隐藏密码": {
+        "$files": [
+            "pages\\Login\\components\\AccountLoginForm.tsx"
+        ],
+        "zh-CN": "隐藏密码",
+        "en-US": "Hide password",
+        "ko-KR": "비밀번호 숨기기",
+        "zh-TW": "隱藏密碼"
+    },
+    "显示密码": {
+        "$files": [
+            "pages\\Login\\components\\AccountLoginForm.tsx"
+        ],
+        "zh-CN": "显示密码",
+        "en-US": "Show password",
+        "ko-KR": "비밀번호 표시",
+        "zh-TW": "顯示密碼"
+    },
+    "忘记密码？": {
+        "$files": [
+            "pages\\Login\\components\\AccountLoginForm.tsx"
+        ],
+        "zh-CN": "忘记密码？",
+        "en-US": "Forgot password?",
+        "ko-KR": "비밀번호를 잊으셨나요?",
+        "zh-TW": "忘記密碼？"
+    },
+    "登录中...": {
+        "$files": [
+            "pages\\Login\\components\\AccountLoginForm.tsx"
+        ],
+        "zh-CN": "登录中...",
+        "en-US": "Logging in...",
+        "ko-KR": "로그인 중...",
+        "zh-TW": "登錄中..."
+    },
+    "立即登录": {
+        "$files": [
+            "pages\\Login\\components\\AccountLoginForm.tsx",
+            "pages\\Login\\components\\PhoneLoginForm.tsx"
+        ],
+        "zh-CN": "立即登录",
+        "en-US": "Login Now",
+        "ko-KR": "지금 로그인",
+        "zh-TW": "立即登錄"
+    },
+    "专业云端 CAD 图纸管理平台": {
+        "$files": [
+            "pages\\Login\\components\\LoginHeader.tsx"
+        ],
+        "zh-CN": "专业云端 CAD 图纸管理平台",
+        "en-US": "Professional Cloud CAD Drawing Management Platform",
+        "ko-KR": "전문 클라우드 CAD 도면 관리 플랫폼",
+        "zh-TW": "專業雲端 CAD 圖紙管理平台"
+    },
+    "欢迎回来": {
+        "$files": [
+            "pages\\Login\\components\\LoginHeader.tsx"
+        ],
+        "zh-CN": "欢迎回来",
+        "en-US": "Welcome back",
+        "ko-KR": "돌아오신 것을 환영합니다",
+        "zh-TW": "歡迎回來"
+    },
+    "登录您的账户以继续": {
+        "$files": [
+            "pages\\Login\\components\\LoginHeader.tsx"
+        ],
+        "zh-CN": "登录您的账户以继续",
+        "en-US": "Log in to your account to continue",
+        "ko-KR": "계속하려면 계정에 로그인하세요",
+        "zh-TW": "登錄您的帳戶以繼續"
+    },
+    "手机号": {
+        "$files": [
+            "pages\\Login\\components\\PhoneLoginForm.tsx"
+        ],
+        "zh-CN": "手机号",
+        "en-US": "Phone Number",
+        "ko-KR": "휴대폰 번호",
+        "zh-TW": "手機號"
+    },
+    "验证码": {
+        "$files": [
+            "pages\\Login\\components\\PhoneLoginForm.tsx"
+        ],
+        "zh-CN": "验证码",
+        "en-US": "Verification Code",
+        "ko-KR": "인증번호",
+        "zh-TW": "驗證碼"
+    },
+    "获取验证码": {
+        "$files": [
+            "pages\\Login\\components\\PhoneLoginForm.tsx"
+        ],
+        "zh-CN": "获取验证码",
+        "en-US": "Get Code",
+        "ko-KR": "인증번호 받기",
+        "zh-TW": "獲取驗證碼"
+    },
+    "账号已被禁用": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "账号已被禁用",
+        "en-US": "Account Disabled",
+        "ko-KR": "계정이 비활성화되었습니다",
+        "zh-TW": "帳號已被禁用"
+    },
+    "您的账号已被禁用，无法登录系统。": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "您的账号已被禁用，无法登录系统。",
+        "en-US": "Your account has been disabled and cannot log in to the system.",
+        "ko-KR": "계정이 비활성화되어 시스템에 로그인할 수 없습니다.",
+        "zh-TW": "您的帳號已被禁用，無法登錄系統。"
+    },
+    "如有疑问，请联系客服人员获取帮助。": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "如有疑问，请联系客服人员获取帮助。",
+        "en-US": "If you have any questions, please contact customer service for assistance.",
+        "ko-KR": "문의사항이 있으시면 고객센터로 연락해 주세요.",
+        "zh-TW": "如有疑問，請聯繫客服人員獲取幫助。"
+    },
+    "客服邮箱：": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "客服邮箱：",
+        "en-US": "Support Email:",
+        "ko-KR": "고객센터 이메일:",
+        "zh-TW": "客服郵箱："
+    },
+    "客服电话：": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "客服电话：",
+        "en-US": "Support Phone:",
+        "ko-KR": "고객센터 전화:",
+        "zh-TW": "客服電話："
+    },
+    "工作时间：": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "工作时间：",
+        "en-US": "Business Hours:",
+        "ko-KR": "업무 시간:",
+        "zh-TW": "工作時間："
+    },
+    "周一至周五 9:00-18:00": {
+        "$files": [
+            "pages\\Login\\components\\SupportModal.tsx"
+        ],
+        "zh-CN": "周一至周五 9:00-18:00",
+        "en-US": "Monday - Friday, 9:00 AM - 6:00 PM",
+        "ko-KR": "월요일 ~ 금요일, 09:00 - 18:00",
+        "zh-TW": "週一至週五 9:00-18:00"
+    },
+    "其他登录方式": {
+        "$files": [
+            "pages\\Login\\components\\WechatLoginButton.tsx"
+        ],
+        "zh-CN": "其他登录方式",
+        "en-US": "Other login methods",
+        "ko-KR": "다른 로그인 방식",
+        "zh-TW": "其他登錄方式"
+    },
+    "微信登录": {
+        "$files": [
+            "pages\\Login\\components\\WechatLoginButton.tsx"
+        ],
+        "zh-CN": "微信登录",
+        "en-US": "WeChat Login",
+        "ko-KR": "WeChat 로그인",
+        "zh-TW": "微信登錄"
+    },
+    "切换语言": {
+        "$files": [
+            "components\\LanguageSwitcher.tsx"
+        ],
+        "zh-CN": "切换语言",
+        "en-US": "Switch Language",
+        "ko-KR": "언어 전환",
+        "zh-TW": "切換語言"
+    }
+}

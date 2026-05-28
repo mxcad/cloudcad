@@ -12,12 +12,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { Tab, Tabs, Button } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { CheckCircle, AlertCircle, Cpu, Boxes, ShieldCheck, Mail, Phone } from 'lucide-react';
 import { useLoginForm } from './hooks/useLoginForm';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 import { getReturnUrl } from '@/config/clientSetup';
 import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
+import { t } from '@/languages';
 import { loginStyles } from './LoginStyles';
 import { LoginHeader } from './components/LoginHeader';
 import { AccountLoginForm } from './components/AccountLoginForm';
@@ -37,7 +39,7 @@ interface LocationState {
  * 装配层：组装子组件并使用 useLoginForm hook 管理所有状态和业务逻辑。
  */
 export const Login: React.FC = () => {
-  useDocumentTitle('登录');
+  useDocumentTitle(t('登录'));
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -70,14 +72,14 @@ export const Login: React.FC = () => {
           } else {
             const action = classifyWechatAuthResult(result);
             if (action?.type === 'error') {
-              form.setError(`微信登录失败：${action.message}`);
+              form.setError(`${t('微信登录失败')}：${action.message}`);
             } else if (action?.type === 'need_register') {
               sessionStorage.setItem('wechatTempToken', action.tempToken);
               // 自动注册已开启但后端仍返回 needRegister → 被 allowRegister 等策略阻断
               // 通过路由 state 传递错误信息，避免 form.setError 在 navigate 后不可见
               navigate('/register?wechat=1', {
                 state: wechatAutoRegister
-                  ? { message: '微信自动注册失败，请手动完成注册' }
+                  ? { message: t('微信自动注册失败，请手动完成注册') }
                   : undefined,
               });
             } else if (action?.type === 'bind_email') {
@@ -134,7 +136,8 @@ export const Login: React.FC = () => {
     <div className="login-page" data-theme={isDark ? 'dark' : 'light'}>
       <InteractiveBackground />
 
-      <div className="theme-toggle-wrapper">
+      <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {/* <LanguageSwitcher /> */}
         <ThemeToggle />
       </div>
 
@@ -151,7 +154,7 @@ export const Login: React.FC = () => {
                 icon={Mail}
                 onClick={() => handleTabSwitch('account')}
               >
-                账号登录
+                {t('账号登录')}
               </Tab>
               <Tab
                 active={form.activeTab === 'phone'}
@@ -159,7 +162,7 @@ export const Login: React.FC = () => {
                 icon={Phone}
                 onClick={() => handleTabSwitch('phone')}
               >
-                手机登录
+                {t('手机登录')}
               </Tab>
             </Tabs>
           )}
@@ -216,9 +219,9 @@ export const Login: React.FC = () => {
           {/* 注册链接 */}
           <div className="form-footer">
             <p className="register-text">
-              还没有账户？
+              {t('还没有账户？')}
               <Button variant="ghost" size="xs" onClick={() => navigate('/register')}>
-                立即注册
+                {t('立即注册')}
               </Button>
             </p>
           </div>
@@ -230,13 +233,13 @@ export const Login: React.FC = () => {
 
           {/* 特性图标 */}
           <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+            <div className="feature-dot" data-tooltip={t('高性能 CAD 在线预览')}>
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip={t('多用户实时协同编辑')}>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip={t('企业级数据安全保障')}>
               <ShieldCheck size={14} />
             </div>
           </div>
