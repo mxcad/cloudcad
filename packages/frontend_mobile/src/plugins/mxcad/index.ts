@@ -3,6 +3,7 @@ import { McObject, MxCpp } from "mxcad";
 import { getParamsFromUrl } from "@/utils/paramsFromUrl";
 import { useDwgUpload } from "../WebUploader/useDwgUpload";
 import { MxFun } from "mxdraw";
+import { openMxWeb } from "./openMxWeb";
 /** 创建MxCad APP控件 **/
 /**Create MxCad APP Control
 
@@ -71,5 +72,24 @@ export const createMxCAD = async () => {
   });
   return mxcad;
 };
+
+/**
+ * Open a file by node ID.
+ * Fetches node info, builds the mxweb URL, and opens it in the CAD engine.
+ */
+export async function openFileByNodeId(nodeId: string): Promise<boolean> {
+  try {
+    const { getNodeInfo, buildMxwebUrl } = await import('../../services/fileService');
+    const nodeInfo = await getNodeInfo(nodeId);
+    if (!nodeInfo.path) {
+      throw new Error('文件路径不存在');
+    }
+    const url = buildMxwebUrl(nodeInfo.path);
+    return await openMxWeb(url);
+  } catch (e) {
+    console.error('openFileByNodeId failed:', e);
+    return false;
+  }
+}
 
 export { MxCpp };

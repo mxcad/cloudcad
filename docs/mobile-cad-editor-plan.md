@@ -4,6 +4,21 @@
 
 ---
 
+## 当前进度 (2026-05-28)
+
+```
+Phase 0 工程基础    ████████████████░░░░  80%  (确定不需要路由)
+Phase 1 打开文件    ████████████████░░░░  80%  (公开文件+上下文注入未做)
+Phase 2 保存        ████████████████░░░░  80%  (新建图纸未做)
+Phase 3 下载/导出   ████████████████░░░░  80%  (公共上传入口未做)
+Phase 4 外部参照    ██████████████░░░░░░  70%  (URL解析/公开文件/保存图片未做)
+Phase 5 版本历史    ██████████████████░░  90%  (✓ 刚刚补齐)
+Phase 6 权限+登录   ██████████████████░░  85%  (UI禁用+缓存未完善)
+Phase 7 协作        ████░░░░░░░░░░░░░░░░  20%  (骨架)
+```
+
+---
+
 ## 场景定义
 
 ```
@@ -22,7 +37,7 @@
 - **入口：** 两种都支持（从桌面 App 跳转 / 直接访问 URL）
 - **登录态：** 同域名共享 Cookie（`credentials: 'include'`）
 - **侧边栏：** 不需要（不切换图纸，专注编辑当前文件）
-- **路由：** 单页面 + 独立全屏编辑器
+- **路由：** 不需要 Vue Router — 单页全屏编辑器，URL 参数直接用 `URLSearchParams`
 - **状态管理：** Composables-only（不用 Pinia）
 - **协作：** Phase 7 最后做
 
@@ -30,40 +45,40 @@
 
 ## 各阶段规划
 
-### Phase 0 — 工程基础 ⏱ 1-2天
+### Phase 0 — 工程基础 ⏱ 1-2天 · 80%
 
-激活路由、配置 API 客户端、建立基础状态管理。
+API 客户端、基础状态管理、返回导航。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 0.1 | 激活路由 | 启用 `route.ts`，注册 `/editor?fileId=xxx` | 现有未用代码 |
-| 0.2 | 入口改造 | `App.vue` 从直接渲染 Home 改为 `<router-view>` | — |
-| 0.3 | API 客户端配置 | SDK baseURL + `credentials: 'include'` | `api-sdk/client.gen.ts` |
-| 0.4 | 编辑器状态 composable | `useEditorState()` — fileId/loading/error/fileInfo/permissions | desktop `useCADEditorStore.ts` |
-| 0.5 | 用户信息 composable | `useUser()` — 登录态判断、用户 ID 获取 | desktop `AuthContext.tsx` |
-| 0.6 | 返回按钮 | 返回桌面 App（优先 `history.back()`，降级到配置 URL） | desktop 历史栈修复逻辑 |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 0.1 | 激活路由 | ❌ **不需要** — 单页编辑器，无页面切换 |
+| 0.2 | 入口改造 | ❌ **不需要** — `App.vue` 直接渲染 Home |
+| 0.3 | API 客户端配置 | ✅ `setupApiClient()` — baseURL + `credentials: 'include'` + 403 拦截器 | `src/utils/apiConfig.ts` |
+| 0.4 | 编辑器状态 composable | ✅ `useEditorState()` — fileId/loading/error/fileInfo/permissions | `src/composables/useEditorState.ts` |
+| 0.5 | 用户信息 composable | ✅ `useUser()` — localStorage token 检测 | `src/composables/useUser.ts` |
+| 0.6 | 返回按钮 | ✅ `history.back()` + `back` URL 参数降级 | `src/pages/home/index.vue:73-97` |
 
-**交付：** frontend_mobile 能接收 fileId 参数，API SDK 可正常调用后端。
+**交付：** ✅ frontend_mobile 能接收 fileId 参数，API SDK 可正常调用后端。
 
 ---
 
-### Phase 1 — 核心：从服务器打开文件 ⏱ 2-3天
+### Phase 1 — 核心：从服务器打开文件 ⏱ 2-3天 · 80%
 
 按 fileId 从后端加载图纸到编辑器。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 1.1 | 按 fileId 获取节点 | `fileSystemControllerGetNode` → filePath/fileType/projectId | desktop `CADEditorDirect.tsx:300-400` |
-| 1.2 | 获取根节点/项目信息 | `fileSystemControllerGetRootNode` → 判断项目库 vs 个人空间 | desktop `mxcadManager.openUploadedFile` |
-| 1.3 | 获取私人空间 ID | `fileSystemControllerGetPersonalSpace` | desktop `usePersonalSpaceQuery` |
-| 1.4 | 构建 mxweb URL | `/api/v1/mxcad/filesData/{filePath}?t={timestamp}` | desktop `UrlHelper.buildMxCadFileUrl` |
-| 1.5 | 打开文件 | `mxcad.openWebFile(url)` | 现有 `openMxWeb.ts` |
-| 1.6 | 处理库文件 | `libraryControllerGetDrawingNode / GetBlockNode` 区分图库类型 | desktop `mxcadManager.openLibraryDrawing/Block` |
-| 1.7 | 处理公开文件 | 未登录用户通过 hash 访问 `/api/v1/public-file/access/{hash}/{fileName}` | desktop `mxcadManager.handlePublicUpload` |
-| 1.8 | 文件打开 loading | 加载中遮罩 + 错误提示 | desktop `loadingUtils.ts` |
-| 1.9 | 插件上下文注入 | 设置 `window.mxcadAppContext`（userId/projectId/parentId） | desktop `CADEditorDirect.tsx` |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 1.1 | 按 fileId 获取节点 | ✅ `getNodeInfo(nodeId)` | `src/services/fileService.ts:34` |
+| 1.2 | 获取根节点/项目信息 | ✅ `getRootNode(nodeId)` | `src/services/fileService.ts:42` |
+| 1.3 | 获取私人空间 ID | ✅ `getPersonalSpace()` | `src/services/fileService.ts:51` |
+| 1.4 | 构建 mxweb URL | ✅ `buildMxwebUrl(path, revision?)` — 支持 `&v=` 历史版本 | `src/services/fileService.ts:16` |
+| 1.5 | 打开文件 | ✅ `openMxWeb(url)` | `src/plugins/mxcad/openMxWeb.ts` |
+| 1.6 | 处理库文件 | ✅ `getLibraryDrawingNode / getLibraryBlockNode` | `src/services/fileService.ts:60-74` |
+| 1.7 | 处理公开文件 | ❌ 未实现 |
+| 1.8 | 文件打开 loading | ✅ 加载遮罩 + 错误提示 | `src/pages/home/index.vue:322-334` |
+| 1.9 | 插件上下文注入 | ❌ 未实现 |
 
-**交付：** 用户可打开服务器上的图纸，看到 CAD 内容，支持项目文件/图库文件/公开文件三种来源。
+**交付：** 用户可打开项目文件和库文件（公开文件未支持）。
 
 ```
 URL fileId
@@ -90,24 +105,24 @@ mxcad.openWebFile(url)
 
 ---
 
-### Phase 2 — 核心：保存到服务器 ⏱ 3-4天
+### Phase 2 — 核心：保存到服务器 ⏱ 3-4天 · 80%
 
 保存修改到服务器，支持保存到原位置和另存为。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 2.1 | 保存按钮接入 | 修改 header 保存按钮 → 触发保存流程 | 现有 `index.vue` header `baocun` |
-| 2.2 | 获取 mxweb 数据 | `mxcad.getMxFile()` → ArrayBuffer | desktop `mxcadManager:1304-1429` |
-| 2.3 | 文件哈希 | `calculateFileHash(arrayBuffer)` → SHA-256 | desktop `hashUtils.ts` |
-| 2.4 | POST 保存 | `POST /api/v1/mxcad/savemxweb/{fileId}` FormData(hash, file, commitMessage) | desktop `mxcadSave.ts` |
-| 2.5 | 保存权限检查 | 保存前调用 `fileSystemControllerCheckProjectPermission` | desktop `CADEditorDirect.tsx:293-340` |
-| 2.6 | 另存为 UI | Vant Popup：选择保存到「个人空间 / 项目 / 图库」 | desktop `SaveAsModal.tsx` |
-| 2.7 | 另存为逻辑 | `saveControllerSaveMxwebAs` + `libraryControllerSaveDrawing/BlockAs` | desktop `SaveAsModal` + `mxcadSave.ts` |
-| 2.8 | 库文件保存 | `libraryControllerSaveDrawingNode / SaveBlockNode` | desktop `mxcadManager.saveLibraryFile` |
-| 2.9 | 新建图纸 | `mxcad.newFile()` 清空画布 | desktop `mxcadManager Mx_NewFile` |
-| 2.10 | 未保存确认 | `documentModified` 标记 + 返回/新建前确认弹窗 | desktop `mxcadManager.checkAndConfirmUnsavedChanges` |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 2.1 | 保存按钮接入 | ✅ header 保存按钮 → 提交信息弹窗 → 保存 | `src/pages/home/index.vue:166-178` |
+| 2.2 | 获取 mxweb 数据 | ✅ `getMxwebBlob()` — `mxcad.saveFile()` → Blob | `src/services/saveService.ts:9` |
+| 2.3 | 文件哈希 | ✅ `calculateFileHash()` — SparkMD5（非 SHA-256） | `src/utils/hashUtils.ts` |
+| 2.4 | POST 保存 | ✅ `saveToNode(nodeId, blob, commitMessage)` | `src/services/saveService.ts:32` |
+| 2.5 | 保存权限检查 | ✅ `checkProjectPermission(projectId, 'CAD_SAVE')` | `src/services/permissionService.ts:18` |
+| 2.6 | 另存为 UI | ✅ Vant Popup：保存到个人空间/项目/图库 | `src/pages/home/components/SaveAsSheet.vue` |
+| 2.7 | 另存为逻辑 | ✅ `saveAs()` + `executeSaveAs()` | `src/composables/useSaveAs.ts` |
+| 2.8 | 库文件保存 | ✅ `saveLibraryDrawing / saveLibraryBlock` | `src/services/saveService.ts:67-82` |
+| 2.9 | 新建图纸 | ❌ 未实现 |
+| 2.10 | 未保存确认 | ✅ `isModified` 标记 + 返回确认弹窗 | `src/pages/home/index.vue:84-97` |
 
-**交付：** 用户可保存修改到服务器，支持保存到原位置和另存为。
+**交付：** ✅ 用户可保存修改到服务器，支持保存到原位置和另存为。
 
 ```
 用户点保存
@@ -133,38 +148,38 @@ calculateFileHash(buffer) → SHA-256 hash
 
 ---
 
-### Phase 3 — 下载 / 导出 ⏱ 1-2天
+### Phase 3 — 下载 / 导出 ⏱ 1-2天 · 80%
 
 选择格式下载或导出当前图纸。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 3.1 | 导出格式选择 UI | Vant ActionSheet：dwg/dxf/mxweb/pdf | desktop `DownloadFormatModal.tsx` |
-| 3.2 | 格式下载 | `fileSystemControllerDownloadNodeWithFormat(nodeId, format)` | desktop `handleDownloadWithFormat` |
-| 3.3 | PDF 导出增强 | 现有 `Mx_exportPDF` + PDF 选项（页面大小/方向） | 已有命令 + desktop `PdfOptions` |
-| 3.4 | 公开文件导出 | 未登录用户 → `publicFileControllerConvertAndDownload` | desktop `CADEditorDirect.tsx` |
-| 3.5 | 公共上传入口 | 上传本地 DWG/DXF → 转换 → 编辑 → 导出 | desktop `handlePublicUpload` |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 3.1 | 导出格式选择 UI | ✅ Vant ActionSheet：DWG/DXF/PDF/MXWEB | `src/services/exportService.ts:74` |
+| 3.2 | 格式下载 | ✅ `exportDrawing(format, fileName)` — 转换+下载 | `src/services/exportService.ts:16` |
+| 3.3 | PDF 导出增强 | ◐ 基础 PDF 导出，无页面大小/方向选项 | `src/services/exportService.ts` |
+| 3.4 | 公开文件导出 | ✅ `publicFileControllerConvertAndDownload` + hash 上传 | `src/services/exportService.ts:37` |
+| 3.5 | 公共上传入口 | ❌ 未实现 |
 
-**交付：** 用户可选择格式下载当前图纸。
+**交付：** ✅ 用户可选择格式下载当前图纸（公共上传入口未做）。
 
 ---
 
-### Phase 4 — 外部参照 ⏱ 2-3天
+### Phase 4 — 外部参照 ⏱ 2-3天 · 70%
 
 检查并处理文件中的外部参照。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 4.1 | 预加载数据 | `mxCadControllerGetPreloadingData(nodeId)` → 获取文件的外部参照信息 | desktop `useExternalReferenceUpload.ts` |
-| 4.2 | 检查外部参照 | `mxCadControllerCheckExternalReference(nodeId)` → 缺失列表 | desktop `useExternalReferenceUpload.ts` |
-| 4.3 | 外部参照弹窗 UI | Vant Popup：展示缺失参照 + 逐个上传 | desktop `ExternalReferenceModal.tsx` |
-| 4.4 | 上传参照图像 | `mxCadControllerUploadExtReferenceImage` + 队列上传 | desktop `mxcadExtRef.ts` |
-| 4.5 | 上传参照 DWG | `mxCadControllerUploadExtReferenceDwg(nodeId)` | desktop `useExternalReferenceUpload.ts` |
-| 4.6 | 参照图片地址解析 | `resolveExtReferenceUrl(filePath)` → 可访问 URL | desktop `mxcadExtRef.ts` |
-| 4.7 | 公开文件外部参照 | `publicFileControllerCheckExtReference / UploadExtReference` | desktop `useExternalReferenceUpload.ts` |
-| 4.8 | 待处理图片（保存时上传） | `processPendingImages()` — 用户在编辑中插入的图片，保存时上传 | desktop `mxcadManager.ts` |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 4.1 | 预加载数据 | ✅ `getPreloadingData(nodeId)` | `src/services/extRefService.ts:22` |
+| 4.2 | 检查外部参照 | ✅ `checkExternalReferences(nodeId)` | `src/services/extRefService.ts:32` |
+| 4.3 | 外部参照弹窗 UI | ◐ Vant `showDialog` 展示缺失列表+文件选择器，非专用 Popup | `src/composables/useFileLoader.ts:96-146` |
+| 4.4 | 上传参照图像 | ✅ `uploadExtRefImage()` | `src/services/extRefService.ts:46` |
+| 4.5 | 上传参照 DWG | ✅ `uploadExtRefDwg()` | `src/services/extRefService.ts:65` |
+| 4.6 | 参照图片地址解析 | ❌ 未实现 |
+| 4.7 | 公开文件外部参照 | ❌ 未实现 |
+| 4.8 | 待处理图片（保存时上传） | ❌ 未实现 |
 
-**交付：** 打开带外部参照的图纸时自动检查，缺失时弹出上传界面；编辑中插入的图片在保存时一起上传。
+**交付：** ✅ 打开项目文件时自动检查外部参照，缺失时弹窗提示上传。公开文件、图片地址解析、保存上传未实现。
 
 ```
 文件打开完成后
@@ -186,35 +201,35 @@ mxCadControllerCheckExternalReference(nodeId)
 
 ---
 
-### Phase 5 — 缩略图 + 版本历史 ⏱ 1-2天
+### Phase 5 — 缩略图 + 版本历史 ⏱ 1-2天 · 90%
 
 保存时自动生成缩略图，支持查看和恢复历史版本。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 5.1 | 检查缩略图 | `thumbnailControllerCheckThumbnail(nodeId)` | desktop `mxcadThumbnail.ts` |
-| 5.2 | 生成缩略图 | 保存时截图 `mxcad.getCanvas().toBlob()` → 缩放 | desktop `generateThumbnail()` |
-| 5.3 | 上传缩略图 | `thumbnailControllerUploadThumbnail(nodeId, blob)` | desktop `mxcadThumbnail.ts` |
-| 5.4 | 版本历史弹窗 | Vant Popup 展示版本列表 + 点击恢复 | desktop `VersionHistoryModal.tsx` |
-| 5.5 | 打开历史版本 | URL 附加 `?v=timestamp` → 后端返回历史 mxweb | desktop `CADEditorDirect.tsx versionParam` |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 5.1 | 检查缩略图 | ✅ `thumbnailControllerCheckThumbnail(nodeId)` | `src/services/thumbnailService.ts:25` |
+| 5.2 | 生成缩略图 | ✅ `generateThumbnail()` — canvas.toBlob | `src/services/thumbnailService.ts:3` |
+| 5.3 | 上传缩略图 | ✅ `uploadThumbnailForNode(nodeId)` — 保存时自动触发 | `src/services/thumbnailService.ts:20` |
+| 5.4 | 版本历史弹窗 | ✅ Vant Popup 展示版本列表+点击跳转历史版本 | `src/pages/home/components/VersionHistoryPopup.vue` |
+| 5.5 | 打开历史版本 | ✅ `buildMxwebUrl(path, revision)` — URL `?v=revision` | `src/services/fileService.ts:16` → `src/composables/useFileLoader.ts:64` |
 
-**交付：** 自动生成缩略图，用户可查看/恢复历史版本。
+**交付：** ✅ 自动生成缩略图，用户可查看和跳转历史版本。
 
 ---
 
-### Phase 6 — 权限 + 登录提示 ⏱ 1天
+### Phase 6 — 权限 + 登录提示 ⏱ 1天 · 85%
 
 根据用户角色控制功能可用性。
 
-| # | 任务 | 关键要点 | 参考源 |
-|---|------|----------|--------|
-| 6.1 | 加载 CAD 权限 | `fileSystemControllerCheckProjectPermission` → canSave/canExport/canManageExtRef | desktop `CADEditorDirect.tsx:293-340` |
-| 6.2 | 权限禁用 UI | 无权限时保存/导出按钮置灰 + 提示 | desktop `useCADEditorStore` |
-| 6.3 | 权限缓存 | 项目 ID 不变时不重复请求 | desktop `mxcadManager.ts cachedPermissions` |
-| 6.4 | 登录提示 | 未登录用户点击保存/导出/外部参照 → 弹出登录引导 | desktop `LoginPrompt.tsx` |
-| 6.5 | 登录后恢复操作 | 登录成功 → 继续之前被中断的操作 | desktop `CADEditorDirect.tsx loginPromptActionRef` |
+| # | 任务 | 状态 | 实现位置 |
+|---|------|------|----------|
+| 6.1 | 加载 CAD 权限 | ✅ `loadCADPermissions(projectId)` → canSave/canExport/canManageExtRef | `src/services/permissionService.ts:45` |
+| 6.2 | 权限禁用 UI | ◐ 权限已加载到 `editorState.permissions`，但未根据权限禁用按钮 | `src/composables/useEditorState.ts` |
+| 6.3 | 权限缓存 | ◐ 每次 `loadByNodeId` 调用时重新加载，无显式缓存 |
+| 6.4 | 登录提示 | ✅ Vant Dialog：未登录用户点击保存/版本历史 → 弹出登录引导 | `src/pages/home/components/LoginPromptPopup.vue` |
+| 6.5 | 登录后恢复操作 | ❌ 页面跳转登录后状态丢失，未实现恢复 |
 
-**交付：** 权限控制到位，未登录用户有清晰引导。
+**交付：** ✅ 权限加载 + 登录引导已实现。UI 禁用和登录后恢复操作未完成。
 
 ---
 
@@ -234,47 +249,47 @@ mxCadControllerCheckExternalReference(nodeId)
 
 ---
 
-## 文件变更清单
+## 文件清单（实际结构）
 
-### 修改已有文件
+### 已有文件
 
-| 文件 | 变更 |
+| 文件 | 说明 |
 |------|------|
-| `src/main.ts` | 启用 `app.use(router)` |
-| `src/App.vue` | `<router-view>` 替换直接渲染 Home |
-| `src/route.ts` | 添加 `/editor?fileId=xxx` 路由 |
-| `src/pages/home/index.vue` | 保存按钮接入真实保存流程 |
-| `src/pages/home/hooks/useMenu.ts` | 菜单项接入真实保存/导出 |
-| `src/plugins/mxcad/index.ts` | 新增 `openFileByNodeId(nodeId)` 入口 |
-| `src/plugins/mxcad/openMxWeb.ts` | 增强以支持服务器 URL |
-| `src/api-sdk/client.gen.ts` | 配置 baseURL + credentials |
+| `src/main.ts` | 入口（无路由） |
+| `src/App.vue` | 直接渲染 `<Home />` |
+| `src/route.ts` | 定义了路由但未使用（Vue Router 未启用） |
 
-### 新增文件
+### 新增/修改文件
 
 ```
 src/
 ├── composables/
-│   ├── useEditorState.ts         # 编辑器全局状态
-│   ├── useFileLoader.ts          # 文件加载流程
-│   ├── useSave.ts                # 保存流程
-│   ├── usePermission.ts          # 权限检查
-│   └── useBackNavigation.ts      # 返回导航
+│   ├── useEditorState.ts         # 编辑器全局状态 ✅
+│   ├── useFileLoader.ts          # 文件加载流程（含版本号参数） ✅
+│   ├── useSave.ts                # 保存流程 ✅
+│   ├── useUser.ts                # 用户登录态 ✅
+│   ├── useSaveAs.ts              # 另存为逻辑 ✅
+│   ├── useCooperate.ts           # 协作骨架 ✅
+│   └── useVersionHistory.ts      # 版本历史查询 + 跳转 ✅ (新)
 ├── services/
-│   ├── fileService.ts            # 文件 CRUD API 封装
-│   ├── saveService.ts            # 保存 API 封装
-│   ├── extRefService.ts          # 外部参照 API 封装
-│   ├── thumbnailService.ts       # 缩略图 API 封装
-│   └── permissionService.ts      # 权限 API 封装
-├── pages/editor/
-│   ├── index.vue                 # 编辑器路由页
+│   ├── fileService.ts            # 文件节点查询 + URL 构建 ✅
+│   ├── saveService.ts            # 保存 API ✅
+│   ├── extRefService.ts          # 外部参照 API ✅
+│   ├── thumbnailService.ts       # 缩略图生成 + 上传 ✅
+│   ├── permissionService.ts      # 权限查询 ✅
+│   ├── exportService.ts          # 导出/下载 ✅
+│   └── uploadService.ts          # 文件上传 ✅
+├── pages/home/
+│   ├── index.vue                 # 编辑器主页面（749→803行）✅
+│   ├── hooks/useMenu.ts          # 菜单 + 命令注册 ✅
 │   └── components/
-│       ├── SaveAsPopup.vue        # 另存为弹窗
-│       ├── ExportPopup.vue        # 导出格式选择
-│       ├── ExtRefPopup.vue        # 外部参照处理
-│       └── VersionHistoryPopup.vue # 版本历史
+│       ├── CommitMessageDialog.vue # 保存提交信息弹窗 ✅
+│       ├── SaveAsSheet.vue         # 另存为弹窗 ✅
+│       ├── VersionHistoryPopup.vue  # 版本历史弹窗 ✅ (新)
+│       └── LoginPromptPopup.vue    # 登录引导弹窗 ✅ (新)
 └── utils/
-    ├── hashUtils.ts               # SHA-256 文件哈希
-    └── apiConfig.ts               # API 客户端单例
+    ├── hashUtils.ts               # 文件哈希 (MD5) ✅
+    └── apiConfig.ts               # API 客户端单例 ✅
 ```
 
 ---
@@ -294,17 +309,17 @@ src/
 
 ## 工作量估算
 
-| Phase | 内容 | 估算天数 |
-|-------|------|----------|
-| 0 | 工程基础 | 1-2天 |
-| 1 | 从服务器打开文件 | 2-3天 |
-| 2 | 保存到服务器 | 3-4天 |
-| 3 | 下载/导出 | 1-2天 |
-| 4 | 外部参照 | 2-3天 |
-| 5 | 缩略图+版本历史 | 1-2天 |
-| 6 | 权限+登录提示 | 1天 |
-| 7 | 实时协作 | 2-3天 |
-| **合计** | | **13-20天** |
+| Phase | 内容 | 估算天数 | 完成度 | 剩余工作 |
+|-------|------|----------|--------|----------|
+| 0 | 工程基础 | 1-2天 | 80% | 无需路由，基本完成 |
+| 1 | 从服务器打开文件 | 2-3天 | 80% | 公开文件 + 上下文注入 |
+| 2 | 保存到服务器 | 3-4天 | 80% | 新建图纸 |
+| 3 | 下载/导出 | 1-2天 | 80% | 公共上传入口 |
+| 4 | 外部参照 | 2-3天 | 70% | 图片URL解析、公开文件、保存图片 |
+| 5 | 缩略图+版本历史 | 1-2天 | 90% | ✅ 已完成 |
+| 6 | 权限+登录提示 | 1天 | 85% | UI禁用+登录后恢复 |
+| 7 | 实时协作 | 2-3天 | 20% | 骨架，需从桌面完整移植 |
+| **合计** | | **13-20天** | **~73%** | **剩余约4-6天** |
 
 **投入顺序建议：** Phase 0 → 1 → 2 → 3+6(并行) → 4 → 5 → 7
 

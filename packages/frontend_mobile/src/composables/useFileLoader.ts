@@ -27,6 +27,17 @@ export function useFileLoader() {
   }
 
   /**
+   * Read version/revision number from URL query params.
+   */
+  function getVersionFromUrl(): number | undefined {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get('v');
+    if (!v) return undefined;
+    const num = parseInt(v, 10);
+    return isNaN(num) ? undefined : num;
+  }
+
+  /**
    * Load a file by its node ID from the server.
    */
   async function loadByNodeId(nodeId: string): Promise<boolean> {
@@ -50,7 +61,8 @@ export function useFileLoader() {
         throw new Error('文件路径不存在');
       }
 
-      const mxwebUrl = buildMxwebUrl(nodeInfo.path);
+      const version = getVersionFromUrl();
+      const mxwebUrl = buildMxwebUrl(nodeInfo.path, version);
       progress.value = '正在打开图纸...';
 
       const opened = await openMxWeb(mxwebUrl);
@@ -90,6 +102,7 @@ export function useFileLoader() {
     loadByNodeId,
     loadFromUrl,
     getFileIdFromUrl,
+    getVersionFromUrl,
   };
 }
 

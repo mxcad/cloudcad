@@ -1,6 +1,6 @@
     <script setup lang="ts">
 
-import { onMounted, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { createMxCAD } from '../../plugins/mxcad';
 import { callCommand } from '@/plugins/mxcad/command';
 import { uiConfig } from '@/config/uiConfig';
@@ -25,6 +25,8 @@ import { useUser } from '../../composables/useUser';
 import { showToast, showConfirmDialog } from 'vant';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
+import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
+import LoginPromptPopup from './components/LoginPromptPopup.vue';
 import MxToolbar from '@/components/MxToolbar.vue';
 
 BScroll.use(ObserveDOM)
@@ -141,9 +143,11 @@ const {
     progress: fileProgress,
     loadByNodeId,
     getFileIdFromUrl,
+    getVersionFromUrl,
 } = useFileLoader()
 const editorState = useEditorState()
 const drawName = ref("")
+const currentVersion = ref<number | undefined>(getVersionFromUrl())
 
 const { saving, save: saveAction } = useSave()
 const { isAuthenticated } = useUser()
@@ -151,6 +155,8 @@ const showCommitDialog = ref(false)
 const showSaveAsSheet = ref(false)
 const pendingCommitMessage = ref('')
 const canManageLibrary = ref(false)
+const showVersionHistory = ref(false)
+const showLoginPrompt = ref(false)
 
 checkLibraryPermissions().then(result => {
   canManageLibrary.value = result.canManageDrawing || result.canManageBlock
@@ -158,7 +164,7 @@ checkLibraryPermissions().then(result => {
 
 async function onSaveClick() {
   if (!isAuthenticated.value) {
-    showSaveAsSheet.value = true
+    showLoginPrompt.value = true
     return
   }
   showCommitDialog.value = true
@@ -185,8 +191,32 @@ function onSaveAsSuccess() {
   showSaveAsSheet.value = false
 }
 
+function onShowVersionHistory() {
+  if (!isAuthenticated.value) {
+    showLoginPrompt.value = true
+    return
+  }
+  showVersionHistory.value = true
+}
+
+function onLoginPromptLogin() {
+  showLoginPrompt.value = false
+  const currentUrl = encodeURIComponent(window.location.href)
+  window.location.href = `/login?redirect=${currentUrl}`
+}
+
+function onLoginPromptClose() {
+  showLoginPrompt.value = false
+}
+
 onMounted(async () => {
+    window.addEventListener('open-version-history', onShowVersionHistory)
+
     const mxcad = await createMxCAD()
+
+onBeforeUnmount(() => {
+    window.removeEventListener('open-version-history', onShowVersionHistory)
+})
     initEditObjectToolbar(mxcad)
 
     const fileId = getFileIdFromUrl()
@@ -227,6 +257,7 @@ setViewportHeight();
                 <MxIcon icon="huitui1" isDefault></MxIcon>
             </button>
             <van-text-ellipsis class="draw_name" :content="drawName" />
+            <span v-if="currentVersion" class="version-badge">r{{ currentVersion }}</span>
             <div class="top_toolbar">
                 <button class="item" :disabled="saving" @click="onSaveClick">
                     <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
@@ -313,6 +344,15 @@ setViewportHeight();
           :can-manage-library="canManageLibrary"
           @close="onSaveAsClose"
           @success="onSaveAsSuccess"
+        />
+        <VersionHistoryPopup
+          v-if="showVersionHistory"
+          @close="showVersionHistory = false"
+        />
+        <LoginPromptPopup
+          v-if="showLoginPrompt"
+          @login="onLoginPromptLogin"
+          @close="onLoginPromptClose"
         />
         <canvas id="mxCanvas"></canvas>
         <div class="history_box">
@@ -686,6 +726,20 @@ setViewportHeight();
     color: #fff;
     margin-top: 16px;
     font-size: 16px;
+}
+
+.version-badge {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff6b35;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  z-index: 10;
+  white-space: nowrap;
 }
 
 .cmd_operation_btn_list {

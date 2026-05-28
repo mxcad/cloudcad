@@ -9,9 +9,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     MxIcon: typeof import('./src/components/MxIcon.vue')['default']
     MxToolbar: typeof import('./src/components/MxToolbar.vue')['default']
-    RouterLink: typeof import('vue-router')['RouterLink']
-    RouterView: typeof import('vue-router')['RouterView']
-    VanActionSheet: typeof import('vant/es')['ActionSheet']
     VanButton: typeof import('vant/es')['Button']
     VanCell: typeof import('vant/es')['Cell']
     VanCellGroup: typeof import('vant/es')['CellGroup']
@@ -22,7 +19,6 @@ declare module 'vue' {
     VanField: typeof import('vant/es')['Field']
     VanIcon: typeof import('vant/es')['Icon']
     VanLoading: typeof import('vant/es')['Loading']
-    VanNavBar: typeof import('vant/es')['NavBar']
     VanNumberKeyboard: typeof import('vant/es')['NumberKeyboard']
     VanPicker: typeof import('vant/es')['Picker']
     VanPopover: typeof import('vant/es')['Popover']

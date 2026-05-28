@@ -49,7 +49,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
     if (!shouldShowImage) {
       return (
         <div
-          className="w-full h-full flex items-center justify-center"
+          className="w-full h-full flex items-center justify-center overflow-hidden rounded-lg"
           style={{ width: size, height: size }}
         >
           {getFileIconComponent(node, size)}
@@ -59,7 +59,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
 
     return (
       <div
-        className="relative group/thumb"
+        className="relative group/thumb overflow-hidden rounded-lg"
         style={{ width: size, height: size }}
       >
         <img

@@ -1,7 +1,8 @@
 import { getBaseUrl, getUploadFileConfig } from "@/config/serverConfig";
 import { openMxWeb } from "@/plugins/mxcad/openMxWeb";
 import { LoadFileParam, uploadFile } from "@/plugins/WebUploader/useDwgUpload";
-import { showLoadingToast, showToast } from "vant";
+import { showLoadingToast } from "vant";
+import { showToastOnce } from "@/utils/toast";
 import { processorExternalFile } from "./openPreloading";
 import { FetchAttributes, MxCpp } from "mxcad";
 import $api from "@/plugins/axios"
@@ -47,7 +48,7 @@ async function OpenDwgImp(param: LoadFileParam, isUseBuffer: boolean) {
                 }
             }
 
-            showToast(t("正在打开文件中") + "...");
+            showToastOnce(t("正在打开文件中") + "...");
             var dTime1 = (new Date()).getTime();
 
             let iFetchAttrib = 0;
@@ -64,7 +65,7 @@ async function OpenDwgImp(param: LoadFileParam, isUseBuffer: boolean) {
                     res(true)
                     var dTime2 = (new Date()).getTime();
                     if (dTime2 - dTime1 > 5000) {
-                        showToast(t("更新显示") + "...")
+                        showToastOnce(t("更新显示") + "...")
                     }
                     // ‍  图纸加载完成.
 // ‍ The drawing loading is completed
@@ -79,7 +80,7 @@ async function OpenDwgImp(param: LoadFileParam, isUseBuffer: boolean) {
                     }
                 } else {
                     res(false)
-                    showToast(t("打开图纸失败"))
+                    showToastOnce(t("打开图纸失败"))
                 }
             }, undefined, undefined, iFetchAttrib, !isWaiteTzFile);
 

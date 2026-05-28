@@ -44,6 +44,11 @@
       "text": "导出PDF",
       "icon": "pdf",
       "cmd": "Mx_exportPDF"
+    },
+    {
+      "text": "版本历史",
+      "icon": "buju",
+      "cmd": "Mx_versionHistory"
     }
   ],
   "?toolbarData": "底部工具栏",

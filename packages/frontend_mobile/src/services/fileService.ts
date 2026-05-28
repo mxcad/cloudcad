@@ -13,7 +13,7 @@ import { getApiBaseUrl } from '../utils/apiConfig';
  * Regular files: /api/v1/mxcad/filesData/{path}?t={timestamp}
  * Library files use different base paths (handled outside this function).
  */
-export function buildMxwebUrl(filePath: string): string {
+export function buildMxwebUrl(filePath: string, revision?: number): string {
   const apiBaseUrl = getApiBaseUrl();
   const baseUrl = (() => {
     try {
@@ -24,7 +24,8 @@ export function buildMxwebUrl(filePath: string): string {
   })();
   const timestamp = Date.now();
   const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  return `${baseUrl}/api/v1/mxcad/filesData/${cleanPath}?t=${timestamp}`;
+  const vParam = revision !== undefined ? `&v=${revision}` : '';
+  return `${baseUrl}/api/v1/mxcad/filesData/${cleanPath}?t=${timestamp}${vParam}`;
 }
 
 /**

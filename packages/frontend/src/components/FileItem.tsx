@@ -15,6 +15,7 @@ declare global {
 }
 
 import { handleError } from '../utils/errorHandler';
+import { infoOnce } from '../utils/message';
 import {
   getOriginalFileUrl,
   formatRelativeTime,
@@ -253,7 +254,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           // 第一次点击，启动定时器
           clickTimerRef.current = setTimeout(() => {
             // 超过时间没有第二次点击，确定是单击
-            window.MxPluginContext?.useMessage()?.info('请双击打开图纸');
+            infoOnce('请双击打开图纸');
             clickCountRef.current = 0;
             clickTimerRef.current = null;
           }, 300);
@@ -474,7 +475,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         {galleryMode ? (
           <div className="flex flex-col h-full p-2">
             <div
-              className="flex-1 flex items-center justify-center overflow-hidden rounded-lg mb-2"
+              className="flex-1 flex items-center justify-center overflow-hidden mb-2"
             >
               <Thumbnail
                 node={node}
