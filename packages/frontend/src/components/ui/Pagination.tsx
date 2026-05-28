@@ -28,7 +28,7 @@ const ARROW_W = 28;
 const GAP = 2;
 const TOTAL_TEXT_W = 60;
 const JUMPER_W = 100;
-const SIZE_CHANGER_W = 85;
+const SIZE_CHANGER_W = 40;
 
 function buildPageList(
   totalPages: number,
@@ -77,7 +77,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   showFirstLast = true,
   simple = false,
   loading = false,
-  pageSizeOptions = [10, 20, 50, 100],
+  pageSizeOptions = [30, 50, 100],
   className = '',
 }) => {
   const { page, totalPages, total } = meta;
@@ -229,19 +229,17 @@ export const Pagination: React.FC<PaginationProps> = ({
         )}
 
         {showSize && onPageSizeChange && (
-          <div className="flex items-center gap-1 shrink-0 ml-0.5">
-            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>每页</span>
+          <div className="flex items-center shrink-0 ml-0.5">
             <select
               value={meta.limit}
               onChange={handlePageSizeChange}
               className="text-[11px] rounded-[3px] border cursor-pointer shrink-0"
-              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)', color: 'var(--text-primary)', height: 24, paddingInline: 3 }}
+              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-default)', color: 'var(--text-primary)', height: 22, paddingInline: 1, minWidth: 36, maxWidth: 36 }}
             >
               {pageSizeOptions.map(size => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>条</span>
           </div>
         )}
       </div>

@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 每页显示数量 */
-export const PAGE_SIZE = 20;
+export const PAGE_SIZE = 30;
 
 /** 图纸文件扩展名 */
 export const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt'];

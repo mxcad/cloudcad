@@ -78,6 +78,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const { user } = useAuth();
   const { hasPermission } = usePermission();
 
+  const [pageSize, setPageSize] = useState(30);
+
   const isLibraryMode = libraryType === 'drawing' || libraryType === 'block';
   const canManageLibrary = isLibraryMode && user !== null && (
     libraryType === 'drawing'
@@ -104,7 +106,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     loadNodesRef, buildBreadcrumbPathRef,
     reset: resetNodes,
     error: loadNodesError,
-  } = useLoadNodes(isLibraryMode, libraryType, projectId);
+  } = useLoadNodes(isLibraryMode, libraryType, projectId, pageSize);
 
   // Library categories
   const {
@@ -492,6 +494,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     else loadNodes(nodeId, page, searchQuery, 'prepend');
   }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, searchQuery, loadNodes]);
 
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+    let nodeId: string | undefined;
+    if (isLibraryMode) {
+      nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    } else nodeId = breadcrumb[breadcrumb.length - 1]?.id;
+    if (nodeId) loadNodes(nodeId, 1, searchQuery, false);
+  }, [isLibraryMode, selectedCategoryPath, libraryRootId, breadcrumb, searchQuery, loadNodes]);
+
   // Click throttle
   const lastClickTimeRef = useRef(0);
   const CLICK_THROTTLE_MS = 500;
@@ -669,6 +681,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           emptyText={searchQuery ? '未找到匹配的内容' : `当前没有${libraryType === 'drawing' ? '图纸' : libraryType === 'block' ? '图块' : '内容'}`}
           defaultViewMode="grid" total={total} totalPages={totalPages} currentPage={currentPage}
           onPageChange={handlePageChange} paginationEnabled={true}
+          pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
           breadcrumb={
             !isLibraryMode ? (
             <div className={styles.breadcrumbPlaceholder}>

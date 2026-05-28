@@ -130,6 +130,10 @@ interface ResourceListProps {
   loadDirection?: 'up' | 'down' | 'jump' | null;
   /** 加载完成后的回调 */
   onLoadComplete?: () => void;
+  /** 每页条数 */
+  pageSize?: number;
+  /** 每页条数变化回调 */
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 /** 格式化文件大小 */
@@ -545,6 +549,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   galleryMode = false,
   loadDirection,
   onLoadComplete,
+  pageSize = 30,
+  onPageSizeChange,
 }) => {
   // 使用统一的 fileSystemStore 管理视图模式
   const viewMode = useFileSystemStore((state) => state.viewMode);
@@ -618,9 +624,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   const paginationMetaMemo = useMemo(() => ({
     total: total ?? 0,
     page: currentPage,
-    limit: 20,
+    limit: pageSize ?? 30,
     totalPages: totalPages || 1,
-  }), [total, currentPage, totalPages]);
+  }), [total, currentPage, totalPages, pageSize]);
 
   // 用 ref + useCallback 稳定 Pagination 的 onPageChange 回调
   const onPageJumpRef = useRef(onPageChange);
@@ -873,6 +879,8 @@ export const ResourceList: React.FC<ResourceListProps> = ({
             meta={paginationMetaMemo}
             onPageChange={handlePaginationJump}
             showQuickJumper
+            showSizeChanger
+            onPageSizeChange={onPageSizeChange}
             loading={loading}
           />
         )}

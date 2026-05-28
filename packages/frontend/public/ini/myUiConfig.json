@@ -31,11 +31,6 @@
       "icon": "dakaidwg",
       "cmd": "openFile",
       "prompt": "打开文件"
-    },
-    {
-      "prompt": "保存",
-      "icon": "baocun",
-      "cmd": "Mx_Save"
     }
   ],
   "isShowTopButtonBar": true,
@@ -365,9 +360,42 @@
           "cmd": "openFile_noCache"
         },
         {
+          "type": "divider"
+        },
+        {
           "tab": "另存为",
+          "icon": "baocun",
+          "cmd": "Mx_SaveAs"
+        },
+        {
+          "tab": "导出",
+          "list": [
+            {
+              "tab": "PDF",
+              "cmd": "Mx_ExportPDF"
+            },
+            {
+              "tab": "DWG",
+              "cmd": "Mx_ExportDWG"
+            },
+            {
+              "tab": "DXF",
+              "cmd": "Mx_ExportDXF"
+            }
+          ]
+        },
+        {
+          "tab": "保存到云图",
+          "icon": "baocun",
+          "cmd": "Mx_SaveToCloud"
+        },
+        {
+          "tab": "另存为到云图",
           "icon": "lingcunweiDWG",
-          "cmd": "exportFile"
+          "cmd": "Mx_SaveAsToCloud"
+        },
+        {
+          "type": "divider"
         },
         {
           "tab": "打印",
@@ -1304,7 +1332,7 @@
     {
       "label": "另存为",
       "tips": "CAD",
-      "cmd": "exportFile"
+      "cmd": "Mx_SaveAs"
     },
     {
       "label": "打印",

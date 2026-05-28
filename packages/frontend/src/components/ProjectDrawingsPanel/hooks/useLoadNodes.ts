@@ -45,7 +45,8 @@ export interface UseLoadNodesReturn {
 export function useLoadNodes(
   isLibraryMode: boolean,
   libraryType: LibraryType | undefined,
-  projectId?: string
+  projectId?: string,
+  pageSize: number = PAGE_SIZE
 ): UseLoadNodesReturn {
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -63,7 +64,7 @@ export function useLoadNodes(
     libraryType: libraryType || 'drawing',
     nodeId: libraryNodeId,
     page: currentPage,
-    limit: PAGE_SIZE,
+    limit: pageSize,
     search: librarySearch,
     onTotalChange: setTotal,
     onTotalPagesChange: setTotalPages,
@@ -76,6 +77,7 @@ export function useLoadNodes(
   const fsQuery = useFileSystemChildren({
     nodeId: fsNodeId,
     page: currentPage,
+    limit: pageSize,
     search: fsSearch,
     enabled: !isLibraryMode,
     projectId,

@@ -16,6 +16,8 @@ interface UseFileSystemChildrenOptions {
   nodeId: string | undefined;
   /** 页码 */
   page: number;
+  /** 每页条数 */
+  limit?: number;
   /** 搜索关键词 */
   search?: string;
   /** 是否启用查询 */
@@ -49,6 +51,7 @@ interface UseFileSystemChildrenReturn {
 export function useFileSystemChildren({
   nodeId,
   page,
+  limit = PAGE_SIZE,
   search,
   enabled = true,
   projectId,
@@ -57,7 +60,7 @@ export function useFileSystemChildren({
   const isSearchActive = !!search && search.trim().length > 0;
 
   const { data, isLoading, isFetching, isPlaceholderData, error } = useQuery<FileSystemChildrenData>({
-    queryKey: [...queryKeys.fileSystem.children(effectiveNodeId), { page, search, projectId }] as const,
+    queryKey: [...queryKeys.fileSystem.children(effectiveNodeId), { page, limit, search, projectId }] as const,
     queryFn: async () => {
       if (isSearchActive && projectId) {
         // 搜索模式：调用统一搜索 API 递归搜索子目录
@@ -67,22 +70,22 @@ export function useFileSystemChildren({
             scope: 'project_files' as const,
             projectId,
             page,
-            limit: PAGE_SIZE,
+            limit,
           },
         });
         const nodeList = (response?.nodes || []).map(toFileSystemNode);
         const totalCount = response?.total || 0;
-        const totalPageCount = response?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
+        const totalPageCount = response?.totalPages || Math.ceil(totalCount / limit) || 1;
         return { nodes: nodeList, total: totalCount, totalPages: totalPageCount };
       }
       // 浏览模式：仅获取直接子节点
       const { data: response } = await fileSystemControllerGetChildren({
         path: { nodeId: nodeId! },
-        query: { page, limit: PAGE_SIZE } as Record<string, unknown>,
+        query: { page, limit } as Record<string, unknown>,
       });
       const nodeList = (response?.nodes || []).map(toFileSystemNode);
       const totalCount = response?.total || 0;
-      const totalPageCount = response?.totalPages || Math.ceil(totalCount / PAGE_SIZE) || 1;
+      const totalPageCount = response?.totalPages || Math.ceil(totalCount / limit) || 1;
       return { nodes: nodeList, total: totalCount, totalPages: totalPageCount };
     },
     enabled: enabled && !!nodeId,

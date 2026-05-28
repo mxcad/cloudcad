@@ -70,7 +70,7 @@ export const useFileSystemStore = create<FileSystemState>()(
       searchTerm: '',
       personalSpaceId: null,
       personalSpaceIdLoading: false,
-      pageSize: 20, // 默认 20 项每页
+      pageSize: 30, // 默认 30 项每页
 
       setPersonalSpaceId: (id) => set({ personalSpaceId: id }),
       setPersonalSpaceIdLoading: (loading) => set({ personalSpaceIdLoading: loading }),

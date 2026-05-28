@@ -1544,7 +1544,6 @@ export const CADEditorDirect: React.FC = () => {
             setSaveAsBlob(null);
           }}
           onSuccess={handleSaveAsSuccess}
-          onDownloadLocal={handleSaveAsDownloadLocal}
         />
       )}
 

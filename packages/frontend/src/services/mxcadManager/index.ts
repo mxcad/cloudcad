@@ -63,11 +63,11 @@ import { escapeHtml } from '@/utils/sanitize';
 // @ts-ignore
 import "mxcad-app/style"
 import { MxCADView, store } from 'mxcad-app';
-import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission, mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
+import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission, mxCadControllerUploadExtReferenceImage, publicFileControllerConvertAndDownload } from '@/api-sdk';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode, saveControllerSaveMxwebToNode } from '@/api-sdk';
 import { MxFun } from 'mxdraw';
-import { FetchAttributes, McGePoint3d, MxCpp } from 'mxcad';
+import { FetchAttributes, McGePoint3d, MxCpp, saveAsFileDialog } from 'mxcad';
 import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
@@ -1264,6 +1264,47 @@ MxFun.addCommand('exportFile', async () => {
   await triggerSaveAs();
 });
 
+/**
+ * Mx_SaveAs 命令：另存为当前 CAD 文件（与 exportFile 相同逻辑）
+ */
+MxFun.addCommand('Mx_SaveAs', async () => {
+  await triggerSaveAs();
+});
+
+/**
+ * Mx_ExportPDF 命令：导出为 PDF 并下载到本地
+ */
+MxFun.addCommand('Mx_ExportPDF', async () => {
+  await exportDrawingWithFormat('pdf');
+});
+
+/**
+ * Mx_ExportDWG 命令：导出为 DWG 并下载到本地
+ */
+MxFun.addCommand('Mx_ExportDWG', async () => {
+  await exportDrawingWithFormat('dwg');
+});
+
+/**
+ * Mx_ExportDXF 命令：导出为 DXF 并下载到本地
+ */
+MxFun.addCommand('Mx_ExportDXF', async () => {
+  await exportDrawingWithFormat('dxf');
+});
+
+/**
+ * Mx_SaveToCloud 命令：保存到云图（直接保存）
+ */
+MxFun.addCommand('Mx_SaveToCloud', () => {
+  MxFun.sendStringToExecute('Mx_Save');
+});
+
+/**
+ * Mx_SaveAsToCloud 命令：另存为到云图（选择位置保存）
+ */
+MxFun.addCommand('Mx_SaveAsToCloud', async () => {
+  await triggerSaveAs();
+});
 
 /**
  * Mx_ShowSidebar 命令：显示图库侧边栏
@@ -1770,15 +1811,15 @@ async function getNodeUpdatedAt(
 }
 
 /**
- * 显示保存弹窗（Save As）
+ * 将当前 CAD 图纸保存为 mxweb Blob
  */
-async function showSaveAsDialog(
-  personalSpaceId: string | null,
-  fileName: string
-) {
+async function saveCurrentDrawingToBlob(fileName: string): Promise<{
+  blob: Blob;
+  data: ArrayBuffer;
+  filename: string;
+}> {
   const name = fileName || 'untitled';
 
-  // 先保存为 mxweb 格式
   showGlobalLoading('正在保存文件...');
 
   const savedFile = await new Promise<{
@@ -1790,24 +1831,13 @@ async function showSaveAsDialog(
       name,
       (data) => {
         try {
-          let blob: Blob;
           const isSafari = /^((?!chrome|android).)*safari/i.test(
             navigator.userAgent
           );
-          if (isSafari) {
-            blob = new Blob([data.buffer], {
-              type: 'application/octet-stream',
-            });
-          } else {
-            blob = new Blob([data.buffer], {
-              type: 'application/octet-binary',
-            });
-          }
-          resolve({
-            blob,
-            data,
-            filename: name,
+          const blob = new Blob([data.buffer], {
+            type: isSafari ? 'application/octet-stream' : 'application/octet-binary',
           });
+          resolve({ blob, data, filename: name });
         } catch (e) {
           reject(e);
           console.error('保存文件失败', e);
@@ -1819,8 +1849,61 @@ async function showSaveAsDialog(
     );
   });
 
-  // 触发保存弹窗事件
   hideGlobalLoading();
+  return savedFile;
+}
+
+/**
+ * 导出当前图纸为指定格式并下载到本地
+ */
+async function exportDrawingWithFormat(format: 'dwg' | 'dxf' | 'pdf') {
+  const fileName = currentFileInfo?.name || 'untitled';
+  showGlobalLoading('正在导出文件...');
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    const file = new File([saved.blob], `${fileName}.mxweb`, { type: 'application/octet-stream' });
+    const hash = await calculateFileHash(file);
+    await uploadMxCadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
+
+    const params = format === 'pdf' ? { width: '2000', height: '2000', colorPolicy: 'mono' as const } : undefined;
+    const result = await publicFileControllerConvertAndDownload({
+      body: { fileHash: hash, format, params },
+    });
+
+    const blob = result?.data as Blob | undefined;
+    if (!blob) throw new Error('转换失败');
+
+    const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+    await saveAsFileDialog({
+      blob,
+      filename: `${nameWithoutExt}.${format}`,
+      types: [{
+        description: `${format.toUpperCase()} 文件`,
+        accept: {
+          'application/octet-stream': [`.${format}`],
+        },
+      }],
+    });
+
+    hideGlobalLoading();
+    globalShowToast('文件已保存到本地', 'success');
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'exportDrawingWithFormat');
+  }
+}
+
+/**
+ * 显示保存弹窗（Save As）
+ */
+async function showSaveAsDialog(
+  personalSpaceId: string | null,
+  fileName: string
+) {
+  const name = fileName || 'untitled';
+  const savedFile = await saveCurrentDrawingToBlob(name);
+
+  // 触发保存弹窗事件
   window.dispatchEvent(
     new CustomEvent('mxcad-save-as', {
       detail: {

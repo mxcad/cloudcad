@@ -277,7 +277,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
       >
         <Pagination
           meta={
-            paginationMeta || { total: 0, page: 1, limit: 20, totalPages: 1 }
+            paginationMeta || { total: 0, page: 1, limit: 30, totalPages: 1 }
           }
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
