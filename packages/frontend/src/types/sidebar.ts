@@ -42,7 +42,7 @@ export interface SidebarSettings {
 export const DEFAULT_SIDEBAR_SETTINGS: SidebarSettings = {
   defaultTab: 'drawings',
   defaultDrawingsSubTab: 'drawings-gallery',  // 默认显示图纸库（无需登录即可访问）
-  width: 320,
+  width: 340,
   rememberState: true,
   lastActiveTab: null,
   lastDrawingsSubTab: null,

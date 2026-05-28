@@ -263,7 +263,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
         const rect = containerRef.current.getBoundingClientRect();
         const newWidth = e.clientX - rect.left;
         // 限制宽度范围
-        const clampedWidth = Math.max(320, Math.min(600, newWidth));
+        const clampedWidth = Math.max(340, Math.min(600, newWidth));
         setWidth(clampedWidth);
       };
 
