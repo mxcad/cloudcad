@@ -8,8 +8,8 @@
 
 ```
 Phase 0 工程基础    ████████████████░░░░  80%  (确定不需要路由)
-Phase 1 打开文件    ████████████████░░░░  80%  (公开文件+上下文注入未做)
-Phase 2 保存        ████████████████░░░░  80%  (新建图纸未做)
+Phase 1 打开文件    ██████████████████░░  85%  (上下文注入未做)
+Phase 2 保存        █████████████████░░░░  85%  (✓ 新建图纸已补齐)
 Phase 3 下载/导出   ████████████████░░░░  80%  (公共上传入口未做)
 Phase 4 外部参照    ██████████████░░░░░░  70%  (URL解析/公开文件/保存图片未做)
 Phase 5 版本历史    ██████████████████░░  90%  (✓ 刚刚补齐)
@@ -74,7 +74,7 @@ API 客户端、基础状态管理、返回导航。
 | 1.4 | 构建 mxweb URL | ✅ `buildMxwebUrl(path, revision?)` — 支持 `&v=` 历史版本 | `src/services/fileService.ts:16` |
 | 1.5 | 打开文件 | ✅ `openMxWeb(url)` | `src/plugins/mxcad/openMxWeb.ts` |
 | 1.6 | 处理库文件 | ✅ `getLibraryDrawingNode / getLibraryBlockNode` | `src/services/fileService.ts:60-74` |
-| 1.7 | 处理公开文件 | ❌ 未实现 |
+| 1.7 | 处理公开文件 | ✅ `publicFileService.ts` — hash检测、预加载、外部参照、公开文件URL构建 | `src/services/publicFileService.ts` |
 | 1.8 | 文件打开 loading | ✅ 加载遮罩 + 错误提示 | `src/pages/home/index.vue:322-334` |
 | 1.9 | 插件上下文注入 | ❌ 未实现 |
 
@@ -119,7 +119,7 @@ mxcad.openWebFile(url)
 | 2.6 | 另存为 UI | ✅ Vant Popup：保存到个人空间/项目/图库 | `src/pages/home/components/SaveAsSheet.vue` |
 | 2.7 | 另存为逻辑 | ✅ `saveAs()` + `executeSaveAs()` | `src/composables/useSaveAs.ts` |
 | 2.8 | 库文件保存 | ✅ `saveLibraryDrawing / saveLibraryBlock` | `src/services/saveService.ts:67-82` |
-| 2.9 | 新建图纸 | ❌ 未实现 |
+| 2.9 | 新建图纸 | ✅ `Mx_NewFile` 命令 → `mxcad.newFile()` + 清空状态 | `src/pages/home/index.vue:224-255`, `src/pages/home/hooks/useMenu.ts:17-19` |
 | 2.10 | 未保存确认 | ✅ `isModified` 标记 + 返回确认弹窗 | `src/pages/home/index.vue:84-97` |
 
 **交付：** ✅ 用户可保存修改到服务器，支持保存到原位置和另存为。
@@ -313,13 +313,13 @@ src/
 |-------|------|----------|--------|----------|
 | 0 | 工程基础 | 1-2天 | 80% | 无需路由，基本完成 |
 | 1 | 从服务器打开文件 | 2-3天 | 80% | 公开文件 + 上下文注入 |
-| 2 | 保存到服务器 | 3-4天 | 80% | 新建图纸 |
+| 2 | 保存到服务器 | 3-4天 | 85% | ✅ 已补齐 |
 | 3 | 下载/导出 | 1-2天 | 80% | 公共上传入口 |
 | 4 | 外部参照 | 2-3天 | 70% | 图片URL解析、公开文件、保存图片 |
 | 5 | 缩略图+版本历史 | 1-2天 | 90% | ✅ 已完成 |
 | 6 | 权限+登录提示 | 1天 | 85% | UI禁用+登录后恢复 |
 | 7 | 实时协作 | 2-3天 | 20% | 骨架，需从桌面完整移植 |
-| **合计** | | **13-20天** | **~73%** | **剩余约4-6天** |
+| **合计** | | **13-20天** | **~74%** | **剩余约3-5天** |
 
 **投入顺序建议：** Phase 0 → 1 → 2 → 3+6(并行) → 4 → 5 → 7
 

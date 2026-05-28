@@ -14,6 +14,9 @@ export const useMenu = () => {
         return [...uiConfig.headerMenuData?.map((item)=> Object.assign({}, item))||[]]
     }
     const actions = ref<PopoverAction[]>(getDefaultMenuData())
+    addCommand("Mx_NewFile", () => {
+        window.dispatchEvent(new CustomEvent('mxcad-new-file'))
+    })
     addCommand("Mx_versionHistory", () => {
         window.dispatchEvent(new CustomEvent('open-version-history'))
     })

@@ -1,3 +1,4 @@
+import { useTabsContext } from './Tabs';
 import { Button } from './Button';
 import type { ButtonProps } from './Button';
 
@@ -12,8 +13,15 @@ export const TabButton: React.FC<TabButtonProps> = ({
   tabVariant = 'secondary',
   className = '',
   children,
+  tooltip,
+  title,
   ...props
 }) => {
+  const { compact } = useTabsContext();
+
+  const labelText = typeof children === 'string' ? children : undefined;
+  const tooltipText = compact ? (tooltip || title || labelText) : tooltip;
+
   return (
     <Button
       variant={active ? tabVariant : 'ghost'}
@@ -29,9 +37,11 @@ export const TabButton: React.FC<TabButtonProps> = ({
             }
           : undefined
       }
+      tooltip={tooltipText}
+      title={compact ? undefined : title}
       {...props}
     >
-      {children}
+      {compact ? null : children}
     </Button>
   );
 };

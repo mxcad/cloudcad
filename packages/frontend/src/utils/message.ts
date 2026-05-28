@@ -1,4 +1,5 @@
 import { globalShowToast } from '../contexts/NotificationContext';
+import { useCADEditorStore } from '../stores/useCADEditorStore';
 
 let lastMessage = '';
 let lastShowTime = 0;
@@ -14,10 +15,9 @@ function shouldSkip(msg: string): boolean {
   return false;
 }
 
-function useMxMessage():
-  | { info: (msg: string) => void; success: (msg: string) => void; warning: (msg: string) => void; error: (msg: string) => void }
-  | null {
-  if (window.MxPluginContext?.useMessage) {
+function useMxMessage() {
+  const { isActive } = useCADEditorStore.getState();
+  if (isActive && window.MxPluginContext?.useMessage) {
     return window.MxPluginContext.useMessage();
   }
   return null;

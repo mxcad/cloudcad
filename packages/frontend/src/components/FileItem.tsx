@@ -4,16 +4,6 @@ import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { ImagePreviewModal } from './modals/ImagePreviewModal';
 import { FileNameText } from './ui/TruncateText';
 
-declare global {
-  interface Window {
-    MxPluginContext?: {
-      useMessage: () => {
-        info: (msg: string) => void;
-      };
-    };
-  }
-}
-
 import { handleError } from '../utils/errorHandler';
 import { infoOnce } from '../utils/message';
 import {

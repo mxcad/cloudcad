@@ -73,6 +73,7 @@ import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast, globalShowThreeButtonConfirm } from '../../contexts/NotificationContext';
+import { successOnce } from '../../utils/message';
 import { isAuthenticated } from '../../utils/authCheck';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { cancelLoginRedirect } from '../../config/clientSetup';
@@ -1223,7 +1224,7 @@ const handleNewFileCommand = async () => {
     // 6. 清空文件名显示
     globalThis.MxPluginContext.useFileName().fileName.value =
       formatEditorFileName('');
-    MxPluginContext.useMessage().success("已新建空白图纸")
+    successOnce("已新建空白图纸")
 
   } catch (error) {
     console.error('新建文件失败:', error);

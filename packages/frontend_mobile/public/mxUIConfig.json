@@ -2,6 +2,11 @@
   "headerMenuData?": "顶部菜单数据",
   "headerMenuData": [
     {
+      "text": "新建图纸",
+      "icon": "xinjian",
+      "cmd": "Mx_NewFile"
+    },
+    {
       "text": "语言",
       "icon": "buju",
       "cmd": "Mx_languages"

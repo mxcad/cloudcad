@@ -17,7 +17,8 @@ import { useSimulatedMouse } from './hooks/useSimulatedMouse';
 import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
 import { useFooterToolbar } from './hooks/useFooterToolbar';
 import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
-import { useFileLoader, checkFileExternalRefs } from '../../composables/useFileLoader';
+import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs } from '../../composables/useFileLoader';
+import { isHashLike } from '../../services/publicFileService';
 import { checkLibraryPermissions } from '../../services/permissionService';
 import { useEditorState } from '../../composables/useEditorState';
 import { useSave } from '../../composables/useSave';
@@ -142,12 +143,15 @@ const {
     error: fileError,
     progress: fileProgress,
     loadByNodeId,
+    loadByHash,
     getFileIdFromUrl,
+    getHashFromUrl,
     getVersionFromUrl,
 } = useFileLoader()
 const editorState = useEditorState()
 const drawName = ref("")
 const currentVersion = ref<number | undefined>(getVersionFromUrl())
+const isPublicFile = ref(!!getHashFromUrl())
 
 const { saving, save: saveAction } = useSave()
 const { isAuthenticated } = useUser()
@@ -163,6 +167,10 @@ checkLibraryPermissions().then(result => {
 })
 
 async function onSaveClick() {
+  if (isPublicFile.value) {
+    showToast('公开文件不支持保存')
+    return
+  }
   if (!isAuthenticated.value) {
     showLoginPrompt.value = true
     return
@@ -192,6 +200,10 @@ function onSaveAsSuccess() {
 }
 
 function onShowVersionHistory() {
+  if (isPublicFile.value) {
+    showToast('公开文件不支持版本历史')
+    return
+  }
   if (!isAuthenticated.value) {
     showLoginPrompt.value = true
     return
@@ -209,17 +221,53 @@ function onLoginPromptClose() {
   showLoginPrompt.value = false
 }
 
+async function handleNewFile() {
+  if (editorState.state.isModified) {
+    try {
+      await showConfirmDialog({
+        title: '未保存的更改',
+        message: '当前图纸有未保存的更改，新建图纸将丢失这些更改。',
+        confirmButtonText: '继续新建',
+        cancelButtonText: '取消',
+      })
+    } catch {
+      return
+    }
+  }
+
+  const mxcad = MxCpp.App.getCurrentMxCAD()
+  mxcad.newFile()
+
+  editorState.reset()
+
+  const url = new URL(window.location.href)
+  url.searchParams.delete('fileId')
+  url.searchParams.delete('nodeId')
+  url.searchParams.delete('hash')
+  url.searchParams.delete('v')
+  window.history.replaceState(null, '', url.pathname + url.search)
+
+  drawName.value = ''
+  currentVersion.value = undefined
+  isPublicFile.value = false
+
+  showToast('已新建空白图纸')
+}
+
 onMounted(async () => {
     window.addEventListener('open-version-history', onShowVersionHistory)
+    window.addEventListener('mxcad-new-file', handleNewFile)
 
     const mxcad = await createMxCAD()
 
 onBeforeUnmount(() => {
     window.removeEventListener('open-version-history', onShowVersionHistory)
+    window.removeEventListener('mxcad-new-file', handleNewFile)
 })
     initEditObjectToolbar(mxcad)
 
     const fileId = getFileIdFromUrl()
+    const fileHash = getHashFromUrl()
 
     if (fileId) {
         mxcad.on("openFileComplete", async () => {
@@ -227,6 +275,17 @@ onBeforeUnmount(() => {
             if (!fileError.value) {
                 drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
                 checkFileExternalRefs(fileId)
+            }
+        })
+    } else if (fileHash && isHashLike(fileHash)) {
+        isPublicFile.value = true
+        mxcad.on("openFileComplete", async () => {
+            await loadByHash(fileHash)
+            if (!fileError.value) {
+                drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+                checkPublicFileExternalRefs(fileHash)
+            } else {
+                drawName.value = mxcad.getCurrentFileName()
             }
         })
     } else {
@@ -259,7 +318,7 @@ setViewportHeight();
             <van-text-ellipsis class="draw_name" :content="drawName" />
             <span v-if="currentVersion" class="version-badge">r{{ currentVersion }}</span>
             <div class="top_toolbar">
-                <button class="item" :disabled="saving" @click="onSaveClick">
+                <button class="item" :disabled="saving || isPublicFile" @click="onSaveClick">
                     <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
                 </button>
                 <button class="item" @click="callCommand('Mx_ZoomE')">
