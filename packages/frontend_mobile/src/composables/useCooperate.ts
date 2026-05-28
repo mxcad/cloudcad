@@ -1,109 +1,137 @@
-import { ref, readonly } from 'vue';
+import { ref, readonly, onMounted, onBeforeUnmount } from 'vue';
 import { MxCpp } from 'mxcad';
 import { showToast } from 'vant';
 
-interface CooperateUser {
-  id: string;
-  name: string;
-  color: string;
-}
+const APP_COOPERATE_URL = '/api/cooperate';
 
-const isConnected = ref(false);
-const users = ref<CooperateUser[]>([]);
-const roomId = ref('');
+const isCadReady = ref(false);
+const works = ref<number[]>([]);
+const currentWorkId = ref<number | null>(null);
+const loading = ref(false);
 const connecting = ref(false);
 
+let cadCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+function getCooperate() {
+  try {
+    const mxCAD = MxCpp.getCurrentMxCAD();
+    if (!mxCAD) return null;
+    const cooperate = mxCAD.getCooperate();
+    if (!cooperate) return null;
+    cooperate.init({ server_addres: APP_COOPERATE_URL });
+    return cooperate;
+  } catch {
+    return null;
+  }
+}
+
 export function useCooperate() {
-  function getCooperate() {
+  onMounted(() => {
+    checkCadReady();
+    if (!isCadReady.value) {
+      cadCheckTimer = setInterval(checkCadReady, 500);
+    }
+  });
+
+  onBeforeUnmount(() => {
+    if (cadCheckTimer) {
+      clearInterval(cadCheckTimer);
+      cadCheckTimer = null;
+    }
+  });
+
+  function checkCadReady() {
     try {
       const mxCAD = MxCpp.getCurrentMxCAD();
-      if (!mxCAD) return null;
-      const cooperate = mxCAD.getCooperate();
-      return cooperate || null;
-    } catch {
-      return null;
-    }
-  }
-
-  async function createRoom(): Promise<string | null> {
-    const cooperate = getCooperate();
-    if (!cooperate) {
-      showToast('CAD 引擎未初始化');
-      return null;
-    }
-
-    connecting.value = true;
-    try {
-      cooperate.setOptions({
-        server_addres: '/api/cooperate',
-        coopType: 'single',
-      });
-
-      const result = await cooperate.createRoom();
-      if (result) {
-        roomId.value = result;
-        isConnected.value = true;
-        showToast('协作房间已创建');
-        return result;
+      if (mxCAD) {
+        isCadReady.value = true;
+        if (cadCheckTimer) {
+          clearInterval(cadCheckTimer);
+          cadCheckTimer = null;
+        }
       }
-      showToast('创建协作房间失败');
-      return null;
     } catch {
-      showToast('创建协作房间失败');
-      return null;
-    } finally {
-      connecting.value = false;
+      isCadReady.value = false;
     }
   }
 
-  async function joinRoom(id: string): Promise<boolean> {
+  function fetchWorks() {
+    loading.value = true;
     const cooperate = getCooperate();
     if (!cooperate) {
-      showToast('CAD 引擎未初始化');
-      return false;
+      loading.value = false;
+      showToast('协同服务未就绪');
+      return;
     }
-
-    connecting.value = true;
-    try {
-      cooperate.setOptions({
-        server_addres: '/api/cooperate',
-        coopType: 'single',
-      });
-
-      await cooperate.joinRoom(id);
-      roomId.value = id;
-      isConnected.value = true;
-      showToast('已加入协作房间');
-      return true;
-    } catch {
-      showToast('加入协作房间失败');
-      return false;
-    } finally {
-      connecting.value = false;
-    }
+    cooperate.getWorks((workList: number[]) => {
+      works.value = workList;
+      loading.value = false;
+    });
   }
 
-  function leaveRoom() {
+  function createWork() {
+    connecting.value = true;
+    const cooperate = getCooperate();
+    if (!cooperate) {
+      connecting.value = false;
+      showToast('协同服务未就绪');
+      return;
+    }
+    cooperate.createWrok((workid: number) => {
+      connecting.value = false;
+      if (workid > 0) {
+        currentWorkId.value = workid;
+        showToast('协同已创建');
+        fetchWorks();
+      } else {
+        const errorCode = -workid;
+        if (errorCode === 4) {
+          showToast('已在协同中');
+        } else {
+          showToast(`创建协同失败，错误码: ${errorCode}`);
+        }
+      }
+    });
+  }
+
+  function joinWork(workId: number) {
+    connecting.value = true;
+    const cooperate = getCooperate();
+    if (!cooperate) {
+      connecting.value = false;
+      showToast('协同服务未就绪');
+      return;
+    }
+    cooperate.joinWork(workId, (iRet: number) => {
+      connecting.value = false;
+      if (iRet === 0 || iRet === 17) {
+        currentWorkId.value = workId;
+        showToast('已加入协同');
+      } else {
+        showToast(`加入协同失败，错误码: ${iRet}`);
+      }
+    });
+  }
+
+  function exitWork() {
     const cooperate = getCooperate();
     if (cooperate) {
-      try {
-        cooperate.leaveRoom();
-      } catch {
-        // ignore
-      }
+      cooperate.exitWrok();
     }
-    isConnected.value = false;
-    roomId.value = '';
-    users.value = [];
+    currentWorkId.value = null;
+    showToast('已退出协同');
+    fetchWorks();
   }
 
   return {
-    isConnected: readonly(isConnected),
-    users: readonly(users),
-    roomId: readonly(roomId),
+    isCadReady: readonly(isCadReady),
+    works: readonly(works),
+    currentWorkId: readonly(currentWorkId),
+    loading: readonly(loading),
     connecting: readonly(connecting),
-    createRoom,
-    joinRoom,
-    leaveRoom,
+    fetchWorks,
+    createWork,
+    joinWork,
+    exitWork,
   };
 }

@@ -6,15 +6,23 @@ import { MxFun } from "mxdraw";
 import { openMxWeb } from "./openMxWeb";
 /** 创建MxCad APP控件 **/
 /**Create MxCad APP Control
-
+ 
  */
 export const createMxCAD = async () => {
   const mxcad = new McObject();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasSpecificFile = urlParams.has('fileId') || urlParams.has('nodeId') || urlParams.has('hash') || urlParams.has('fileHash');
+
   let {
-    file = new URL("../../../public/test2.mxweb", import.meta.url).href,
+    file,
     mode,
   } = getParamsFromUrl();
+
+  if (!file && !hasSpecificFile) {
+    file = new URL("../../../public/test2.mxweb", import.meta.url).href;
+  }
+
   if (
     (mode !== "2d" && mode !== "2d-st" && mode !== "st") ||
     typeof mode === "undefined"
@@ -33,12 +41,16 @@ export const createMxCAD = async () => {
     }
   });
 
-  mxcad.on("init_mxcad", () => {
-    // ‍  不显示坐标图标.
-    // ‍ Do not display coordinate icons
+  const initReady = new Promise<void>((resolve) => {
+    mxcad.on("init_mxcad", () => {
+      // ‍  不显示坐标图标.
+      // ‍ Do not display coordinate icons
 
-    mxcad.setAttribute({ ShowCoordinate: false });
+      mxcad.setAttribute({ ShowCoordinate: false });
+      resolve();
+    });
   });
+
   mxcad.create({
     // ‍  canvascanvas元素的id
     // ‍ The ID of the canvas element
@@ -55,7 +67,7 @@ export const createMxCAD = async () => {
     // ‍  需要初始化打开的文件url路径
     // ‍ Need to initialize the URL path of the opened file
 
-    fileUrl: file,
+    ...(file ? { fileUrl: file } : {}),
     // ‍  提供加载字体的目录路径
     // ‍ Provide the directory path for loading fonts
 
@@ -63,13 +75,14 @@ export const createMxCAD = async () => {
     middlePan: true,
     enableUndo: true,
   });
-  mxcad.on("openFileComplete", () => {
-    // ‍  清空置为当前图层的历史记录状态
-    // ‍ Clear empty space as the historical record status of the current layer
 
+  await initReady;
+
+  mxcad.on("openFileComplete", () => {
     currentLayerNameHistoryState.value = [];
     useDwgUpload();
   });
+
   return mxcad;
 };
 

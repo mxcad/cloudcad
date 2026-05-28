@@ -540,8 +540,11 @@ export const CADEditorDirect: React.FC = () => {
   }, [isAuthenticated, fileId]);
 
   // 当 fileId 变化时加载文件
+  // 注意：不依赖 loading state 做 guard，避免 loading=true → 侧边栏骨架屏 →
+  // ProjectDrawingsPanel 卸载→挂载→卸载→挂载循环导致图纸库/图块库渲染连锁空白。
+  // 浏览器返回时侧边栏应持续可见，文件在后台加载，不中断已有缓存数据展示。
   useEffect(() => {
-    if (!fileId || !isActive) return;
+    if (!fileId) return;
 
     // 如果已登录但尚未获取到 personalSpaceId，等待 personalSpaceId 就绪后重新触发加载
     if (isAuthenticated && !personalSpaceId) return;
@@ -549,8 +552,7 @@ export const CADEditorDirect: React.FC = () => {
     let cancelled = false;
 
     const loadFile = async () => {
-      setLoading(true);
-      setStoreLoading(true);
+      // 不 setLoading(true) — 侧边栏持续可见，不因骨架屏卸载 ProjectDrawingsPanel
       setError(null);
       setStoreError(null);
 

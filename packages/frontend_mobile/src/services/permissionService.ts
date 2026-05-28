@@ -5,6 +5,18 @@ import {
 import { useEditorState } from '../composables/useEditorState';
 import { useUser } from '../composables/useUser';
 
+interface CachedPermissions {
+  canSave: boolean;
+  canExport: boolean;
+  canManageExternalRef: boolean;
+}
+
+const permissionCache = new Map<string, CachedPermissions>();
+
+export function clearPermissionCache() {
+  permissionCache.clear();
+}
+
 export const PERMISSIONS = {
   CAD_SAVE: 'CAD_SAVE',
   FILE_DOWNLOAD: 'FILE_DOWNLOAD',
@@ -50,13 +62,21 @@ export async function loadCADPermissions(projectId: string | null): Promise<void
     return;
   }
 
+  const cached = permissionCache.get(projectId);
+  if (cached) {
+    editorState.setPermissions(cached);
+    return;
+  }
+
   const [canSave, canExport, canManageExternalRef] = await Promise.all([
     checkProjectPermission(projectId, PERMISSIONS.CAD_SAVE),
     checkProjectPermission(projectId, PERMISSIONS.FILE_DOWNLOAD),
     checkProjectPermission(projectId, PERMISSIONS.CAD_EXTERNAL_REFERENCE),
   ]);
 
-  editorState.setPermissions({ canSave, canExport, canManageExternalRef });
+  const perms = { canSave, canExport, canManageExternalRef };
+  permissionCache.set(projectId, perms);
+  editorState.setPermissions(perms);
 }
 
 export async function checkLibraryPermissions(): Promise<{ canManageDrawing: boolean; canManageBlock: boolean }> {

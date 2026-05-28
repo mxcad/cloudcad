@@ -2,8 +2,10 @@ import { uiConfig } from "@/config/uiConfig"
 import { i18nScope, t } from "@/languages"
 import { addCommand, callCommand } from "@/plugins/mxcad/command"
 import { showExportDialog } from "@/services/exportService"
+import { useEditorState } from "@/composables/useEditorState"
 import { injectVoerkaI18n } from "@voerkai18n/vue"
 import { MxCpp } from "mxcad"
+import { showToast } from "vant"
 import { PopoverAction } from "vant"
 import { ref } from "vue"
 
@@ -77,10 +79,23 @@ export const useMenu = () => {
             actions.value = _layouts
         }, 200)
     })
+    addCommand("Mx_ShowCollaborate", () => {
+        window.dispatchEvent(new CustomEvent('mxcad-show-collaborate'))
+    })
     addCommand("Mx_saveDwg", () => {
+        const { state } = useEditorState()
+        if (!state.permissions.canExport) {
+            showToast('没有导出权限')
+            return
+        }
         showExportDialog()
     })
     addCommand("Mx_exportPDF", () => {
+        const { state } = useEditorState()
+        if (!state.permissions.canExport) {
+            showToast('没有导出权限')
+            return
+        }
         showExportDialog()
     })
     const onSelectMenu = (action: PopoverAction) => {

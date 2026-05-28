@@ -19,6 +19,8 @@ export interface UseLoadNodesReturn {
   isFetching: boolean;
   /** API 错误信息 */
   error: string | null;
+  /** 资源库根节点 ID（来自 React Query 缓存，用于 libraryRootId 兜底） */
+  libraryRootId: string | null;
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   total: number;
@@ -248,6 +250,7 @@ export function useLoadNodes(
     loading,
     isFetching,
     error,
+    libraryRootId: libraryQuery.libraryId,
     currentPage,
     setCurrentPage,
     total,

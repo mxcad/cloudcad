@@ -106,6 +106,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     loadNodesRef, buildBreadcrumbPathRef,
     reset: resetNodes,
     error: loadNodesError,
+    libraryRootId: loadRootId,
   } = useLoadNodes(isLibraryMode, libraryType, projectId, pageSize);
 
   // Library categories
@@ -317,29 +318,37 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   }, [isPersonalSpace, projectId, selectedProjectId]);
 
   // Library mode: load on categories loaded
+  // libraryRootId 可能因 API 降级或时序竞争为 null，此时用 useLoadNodes 的
+  // libraryRootId（来自 React Query 缓存）作为兜底，确保 loadNodes 总能被调用
   useEffect(() => {
-    if (!visible || !isLibraryMode || !libraryRootId || listInitializedRef.current) return;
+    if (!visible || !isLibraryMode || listInitializedRef.current) return;
+    const rootId = libraryRootId || loadRootId;
+    if (!rootId) return;
     listInitializedRef.current = true;
-    const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    const nodeId = getCategoryNodeId(selectedCategoryPath, rootId);
     if (nodeId) loadNodes(nodeId, 1, '', false);
-  }, [visible, isLibraryMode, categoriesLoaded, libraryRootId, libraryType]);
+  }, [visible, isLibraryMode, categoriesLoaded, libraryRootId, libraryType, loadRootId]);
 
   // 分类选择：当用户点击分类时重新加载节点列表
   // 注意：不依赖 visible，只依赖 selectedCategoryPath，以免切标签页时重置搜索/页码
   useEffect(() => {
-    if (!isLibraryMode || !libraryRootId || !listInitializedRef.current) return;
+    if (!isLibraryMode || !listInitializedRef.current) return;
+    const rootId = libraryRootId || loadRootId;
+    if (!rootId) return;
     setSearchQuery('');
     setCurrentPage(1);
-    const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    const nodeId = getCategoryNodeId(selectedCategoryPath, rootId);
     if (nodeId) loadNodes(nodeId, 1, '', false);
-  }, [selectedCategoryPath, isLibraryMode, libraryRootId]);
+  }, [selectedCategoryPath, isLibraryMode, libraryRootId, loadRootId]);
 
   // 可见性恢复时重新加载当前页（不重置搜索/页码）
   useEffect(() => {
-    if (!visible || !isLibraryMode || !libraryRootId || !listInitializedRef.current || !nodes.length) return;
-    const nodeId = getCategoryNodeId(selectedCategoryPath, libraryRootId);
+    if (!visible || !isLibraryMode || !listInitializedRef.current || !nodes.length) return;
+    const rootId = libraryRootId || loadRootId;
+    if (!rootId) return;
+    const nodeId = getCategoryNodeId(selectedCategoryPath, rootId);
     if (nodeId) loadNodes(nodeId, currentPage, searchQuery, false);
-  }, [visible]);
+  }, [visible, libraryRootId, loadRootId, nodes, selectedCategoryPath]);
 
   // Reset on libraryType change
   useEffect(() => {

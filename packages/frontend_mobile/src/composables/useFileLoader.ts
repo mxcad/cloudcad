@@ -154,14 +154,14 @@ export function useFileLoader() {
   /**
    * Try to load file from URL params. Returns true if a fileId or hash was found and loading started.
    */
-  function loadFromUrl(): boolean {
+  async function loadFromUrl(): Promise<boolean> {
     const fileId = getFileIdFromUrl();
     if (fileId) {
-      return true;
+      return await loadByNodeId(fileId);
     }
     const fileHash = getHashFromUrl();
     if (fileHash) {
-      return true;
+      return await loadByHash(fileHash);
     }
     return false;
   }
@@ -202,14 +202,20 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
     if (needUpload.length === 0) return;
 
     const fileList = needUpload.map((f) => f.name).join('\n');
+    const { state } = useEditorState();
+    const canManageExtRef = state.permissions.canManageExternalRef;
+
     showDialog({
       title: '缺失外部参照文件',
-      message: `以下文件需要上传:\n${fileList}`,
+      message: canManageExtRef
+        ? `以下文件需要上传:\n${fileList}`
+        : `以下外部参照文件缺失:\n${fileList}\n\n请联系管理员上传`,
       showCancelButton: true,
-      confirmButtonText: '上传文件',
+      confirmButtonText: canManageExtRef ? '上传文件' : '知道了',
       cancelButtonText: '跳过',
     })
       .then(async () => {
+        if (!canManageExtRef) return;
         for (const ref of needUpload) {
           const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
           if (file) {

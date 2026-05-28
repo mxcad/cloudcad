@@ -31,6 +31,11 @@
       "icon": "dakaidwg",
       "cmd": "openFile",
       "prompt": "打开文件"
+    },
+    {
+      "prompt": "新建",
+      "icon": "xinjian",
+      "cmd": "Mx_NewFile"
     }
   ],
   "isShowTopButtonBar": true,
