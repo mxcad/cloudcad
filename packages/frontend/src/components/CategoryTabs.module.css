@@ -123,14 +123,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-default);
   max-height: 166px;
   overflow-y: auto;
-}
-
-[data-theme="dark"] .categorySelectGroup {
-  background: var(--bg-tertiary);
 }
 
 .categorySelectRow {
