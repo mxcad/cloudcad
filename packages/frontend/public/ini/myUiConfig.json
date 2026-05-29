@@ -86,16 +86,6 @@
       "cmd": "Mx_Properties"
     },
     {
-      "icon": "a-4-9tukuaiku",
-      "prompt": "图库",
-      "cmd": "Mx_ShowSidebar"
-    },
-    {
-      "icon": "class: cloudcad-icon cloudcad-xietongzu",
-      "prompt": "实时协同",
-      "cmd": "Mx_ShowCollaborate"
-    },
-    {
       "icon": "class: iconfont  icon_shujuzhongtai",
       "prompt": "数据库展示",
       "cmd": "Mx_DatabaseDisplay"
@@ -700,16 +690,6 @@
           "tab": "对象特性",
           "icon": "a-4-8duixiangtexing",
           "cmd": "Mx_Properties"
-        },
-        {
-          "tab": "图块库",
-          "icon": "a-4-9tukuaiku",
-          "cmd": "Mx_BlockLibrary"
-        },
-        {
-          "tab": "图纸库",
-          "icon": "tuzhiku",
-          "cmd": "Mx_DrawingsLibrary"
         },
         {
           "tab": "图纸比对",

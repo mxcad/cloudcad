@@ -1262,10 +1262,27 @@ MxFun.addCommand('exportFile', async () => {
 });
 
 /**
- * Mx_SaveAs 命令：另存为当前 CAD 文件（与 exportFile 相同逻辑）
+ * Mx_SaveAs 命令：导出为 MXWEB 并下载到本地
  */
 MxFun.addCommand('Mx_SaveAs', async () => {
-  await triggerSaveAs();
+  const fileName = currentFileInfo?.name || 'untitled';
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+    await saveAsFileDialog({
+      blob: saved.blob,
+      filename: `${nameWithoutExt}.mxweb`,
+      types: [{
+        description: 'MXWEB 文件',
+        accept: { 'application/octet-stream': ['.mxweb'] },
+      }],
+    });
+    hideGlobalLoading();
+    globalShowToast('文件已保存到本地', 'success');
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'Mx_SaveAs');
+  }
 });
 
 /**
@@ -1285,35 +1302,17 @@ MxFun.addCommand('Mx_ExportPDF', async () => {
 });
 
 /**
- * Mx_ExportDWG 命令：导出为 DWG（弹出下载格式选择框）
+ * Mx_ExportDWG 命令：导出为 DWG 并下载到本地
  */
 MxFun.addCommand('Mx_ExportDWG', async () => {
-  const fileName = currentFileInfo?.name || 'untitled';
-  try {
-    const saved = await saveCurrentDrawingToBlob(fileName);
-    window.dispatchEvent(new CustomEvent('mxcad-export-file', {
-      detail: { fileName, blob: saved.blob },
-    }));
-  } catch (error) {
-    hideGlobalLoading();
-    handleError(error, 'Mx_ExportDWG');
-  }
+  await exportDrawingWithFormat('dwg');
 });
 
 /**
- * Mx_ExportDXF 命令：导出为 DXF（弹出下载格式选择框）
+ * Mx_ExportDXF 命令：导出为 DXF 并下载到本地
  */
 MxFun.addCommand('Mx_ExportDXF', async () => {
-  const fileName = currentFileInfo?.name || 'untitled';
-  try {
-    const saved = await saveCurrentDrawingToBlob(fileName);
-    window.dispatchEvent(new CustomEvent('mxcad-export-file', {
-      detail: { fileName, blob: saved.blob },
-    }));
-  } catch (error) {
-    hideGlobalLoading();
-    handleError(error, 'Mx_ExportDXF');
-  }
+  await exportDrawingWithFormat('dxf');
 });
 
 /**

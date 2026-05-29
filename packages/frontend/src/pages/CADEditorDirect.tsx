@@ -1056,30 +1056,18 @@ export const CADEditorDirect: React.FC = () => {
     setShowLoginPrompt(false);
   };
 
-  // 监听导出事件（CAD 引擎命令 Mx_ExportDXF/PDF/DWG 和 UI 按钮共用）
+  // 监听导出事件（UI 按钮触发）
   useEffect(() => {
     const handleExportEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        fileId?: string;
-        fileName: string;
-        blob?: Blob;
-      }>;
-
-      // CAD 引擎命令携带 blob，图纸已在本地，直接走本地导出路径，无需权限检查
-      if (customEvent.detail.blob) {
-        setSaveAsBlob(customEvent.detail.blob);
-        isSaveAsLocalModeRef.current = true;
-        setDownloadingFileName(customEvent.detail.fileName);
-        setShowDownloadFormatModal(true);
-        return;
-      }
-
-      // 云文件导出需要权限检查
       if (!canExport) {
         showToast('您没有导出图纸的权限', 'warning');
         return;
       }
-      setDownloadingNodeId(customEvent.detail.fileId || '');
+      const customEvent = event as CustomEvent<{
+        fileId: string;
+        fileName: string;
+      }>;
+      setDownloadingNodeId(customEvent.detail.fileId);
       setDownloadingFileName(customEvent.detail.fileName);
       setShowDownloadFormatModal(true);
     };
