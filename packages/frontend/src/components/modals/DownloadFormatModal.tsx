@@ -18,11 +18,11 @@ export interface DwgOptions {
 }
 
 const DWG_VERSION_OPTIONS = [
-  { value: '23', label: 'CAD 2000' },
-  { value: '25', label: 'CAD 2004' },
-  { value: '27', label: 'CAD 2007' },
-  { value: '29', label: 'CAD 2010' },
-  { value: '33', label: 'CAD 2018（默认）' },
+  { value: 23, label: 'CAD 2000（默认）' },
+  { value: 25, label: 'CAD 2004' },
+  { value: 27, label: 'CAD 2007' },
+  { value: 29, label: 'CAD 2010' },
+  { value: 33, label: 'CAD 2018' },
 ];
 
 interface DownloadFormatModalProps {
@@ -46,7 +46,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     height: '2000',
     colorPolicy: 'mono',
   });
-  const [dwgVersion, setDwgVersion] = useState<number>(33);
+  const [dwgVersion, setDwgVersion] = useState<number>(23);
 
   const handleClose = () => {
     setFormat('mxweb');
@@ -55,7 +55,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
       height: '2000',
       colorPolicy: 'mono',
     });
-    setDwgVersion(33);
+    setDwgVersion(23);
     onClose();
   };
 
@@ -228,7 +228,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                 图纸版本
               </label>
               <Select
-                value={String(dwgVersion)}
+                value={dwgVersion}
                 onChange={(val) => setDwgVersion(Number(val))}
                 options={DWG_VERSION_OPTIONS}
                 size="sm"

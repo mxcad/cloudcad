@@ -12,6 +12,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsIn } from 'class-validator';
+import { Type } from 'class-transformer';
 
 /**
  * CAD 文件下载格式枚举
@@ -63,6 +64,7 @@ export class PdfConversionParams {
     required: false,
   })
   @IsOptional()
+  @Type(() => Number)
   dwgVersion?: number;
 }
 
@@ -113,5 +115,6 @@ export class DownloadNodeQueryDto {
     required: false,
   })
   @IsOptional()
+  @Type(() => Number)
   dwgVersion?: number;
 }

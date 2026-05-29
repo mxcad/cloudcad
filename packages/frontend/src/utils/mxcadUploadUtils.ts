@@ -107,7 +107,6 @@ export const uploadMxCadFile = uploadFile;
 /**
  * 分片上传文件（统一的上传逻辑）— 主要导出
  *
- * @deprecated 直接使用 uploadFile；uploadMxCadFile 保留作为向后兼容别名
  */
 export async function uploadFile(
   options: MxCadUploadOptions
@@ -137,14 +136,7 @@ export async function uploadFile(
     throw new MxCadUploadError(`文件过大: ${file.name} (最大100MB)`, file.name);
   }
 
-  // forceUpload 模式：跳过节点检查和秒传检查（匿名/公开上传等场景）
-  if (forceUpload) {
-    // forceUpload 模式下 nodeId 可为空，后端从文件哈希推断上下文
-  } else {
-    if (!nodeId) {
-      throw new MxCadUploadError('缺少节点 ID，请确保已选择目标文件夹');
-    }
-  }
+  // nodeId 可为空（公开上传场景）
 
   // 触发文件排队回调
   onFileQueued?.(file);
@@ -152,7 +144,7 @@ export async function uploadFile(
   const chunkSize = 5 * 1024 * 1024; // 5MB
   const totalChunks = Math.ceil(file.size / chunkSize);
 
-  // 1. 检查文件是否已存在（秒传）— forceUpload 时跳过
+  // 1. 检查文件是否已存在（秒传）— forceUpload 时跳过，直接上传
   if (!forceUpload) {
     const existRequest = {
       fileSize: file.size,
@@ -165,27 +157,25 @@ export async function uploadFile(
       body: existRequest
     });
     const data = existData.data!;
-  
-    // 秒传条件：文件存在且数据库中已有对应节点（nodeId 不为 null）
-    // 如果 nodeId 为 null，说明文件仅存在于 uploads 临时目录，需要重新上传
-    if (data?.exists && data.nodeId) {
-      // 秒传成功，设置进度为100%
+
+    // 秒传条件：文件存在于 uploads 目录（匿名/公开上传场景 nodeId 可能为 null，仍可秒传）
+    if (data?.exists) {
       onProgress?.(100);
       return {
         file,
         hash,
-        nodeId: data.nodeId,
+        nodeId: data.nodeId || nodeId,
         name: file.name,
         size: file.size,
         type: file.type,
-        isUseServerExistingFile: true,
+        isUseServerExistingFile: !!data.nodeId,
         isInstantUpload: true,
       };
     }
   }
 
-  // 小文件（≤5MB）且非 skipDb/forceUpload 模式：直接上传，不走分片
-  if (file.size <= chunkSize && !skipDb && !forceUpload) {
+  // 小文件（≤5MB）且非 skipDb 模式：直接上传，不走分片
+  if (file.size <= chunkSize && !skipDb) {
     onBeginUpload?.();
 
     const uploadData = await mxCadControllerUploadFile({

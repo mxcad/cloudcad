@@ -4,14 +4,14 @@ import { ChevronDown, X, Check, Loader2, Search } from 'lucide-react';
 import { Z_LAYERS } from '@/constants/layers';
 
 export interface SelectOption {
-  value: string;
+  value: string | number;
   label: string;
   icon?: React.ElementType;
   disabled?: boolean;
 }
 
 interface SelectProps {
-  value?: string;
+  value?: string | number;
   onChange?: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
@@ -68,7 +68,10 @@ const SimpleSelect: React.FC<SelectProps> = ({
   }, [onChange]);
 
   return (
-    <SelectPrimitive.Root value={value} onValueChange={onChange} disabled={disabled}>
+    <SelectPrimitive.Root
+      value={value !== undefined ? String(value) : undefined}
+      onValueChange={(strVal) => onChange?.(strVal)}
+      disabled={disabled}>
       <div className={`relative ${wrapperClassName || ''}`}>
         <SelectPrimitive.Trigger asChild>
           <button
@@ -137,11 +140,11 @@ const SimpleSelect: React.FC<SelectProps> = ({
             ) : (
               <SelectPrimitive.Viewport className="max-h-60">
                 {options
-                  .filter((option) => option.value !== '')
+                  .filter((option) => option.value !== '' && option.value !== 0)
                   .map((option) => (
                     <SelectPrimitive.Item
                       key={option.value}
-                      value={option.value}
+                      value={String(option.value)}
                       disabled={option.disabled}
                       className={`${itemBaseCls} ${cfg.itemCls} ${cfg.itemGap}`}
                       style={{ color: 'var(--text-secondary)' }}
@@ -161,7 +164,7 @@ const SimpleSelect: React.FC<SelectProps> = ({
         </SelectPrimitive.Portal>
 
         {name && (
-          <input type="hidden" name={name} value={value || ''} />
+          <input type="hidden" name={name} value={value !== undefined ? String(value) : ''} />
         )}
       </div>
     </SelectPrimitive.Root>
@@ -223,7 +226,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
   }, [onSearch]);
 
   const handleSelect = useCallback((option: SelectOption) => {
-    onChange?.(option.value);
+    onChange?.(String(option.value));
     setIsOpen(false);
     setSearchQuery('');
   }, [onChange]);

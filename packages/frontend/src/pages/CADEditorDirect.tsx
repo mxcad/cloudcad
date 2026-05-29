@@ -28,7 +28,7 @@ import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
-import { hideGlobalLoading } from '../utils/loadingUtils';
+import { showGlobalLoading, hideGlobalLoading, setLoadingMessage, setLoadingProgress } from '../utils/loadingUtils';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { useFileDropToOpen } from '../hooks/useFileDropToOpen';
 import { DropIndicator } from '../components/drop-indicator/DropIndicator';
@@ -428,30 +428,73 @@ export const CADEditorDirect: React.FC = () => {
     // 注册打印/剪切回调
     mxcadApp.initPrintConfig({
       callback: async (data: Blob, param) => {
+        showGlobalLoading('正在上传打印文件...');
         const file = new File([data], 'print.mxweb', { type: 'application/octet-stream' });
         const hash = await calculateFileHash(file);
-        await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
+        await uploadFile({
+          file, hash, nodeId: '', forceUpload: true, skipDb: true,
+          onProgress: (percentage: number) => {
+            setLoadingMessage(percentage === 100 ? '打印转换中...' : `正在上传打印文件... ${percentage.toFixed(1)}%`);
+            setLoadingProgress(percentage);
+          },
+        });
 
         const result = await publicFileControllerConvertAndDownload({
           body: { fileHash: hash, format: 'pdf', params: param },
         });
 
+        hideGlobalLoading();
         const blob = result?.data as Blob | undefined;
         return blob ? URL.createObjectURL(blob) : '';
       }
     });
     mxcadApp.initCutConfig({
       callback: async (data: Blob, box) => {
+        showGlobalLoading('正在上传裁剪文件...');
         const file = new File([data], 'cut.mxweb', { type: 'application/octet-stream' });
         const hash = await calculateFileHash(file);
-        await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
+        await uploadFile({
+          file, hash, nodeId: '', forceUpload: true, skipDb: true,
+          onProgress: (percentage: number) => {
+            setLoadingMessage(percentage === 100 ? '裁剪转换中...' : `正在上传裁剪文件... ${percentage.toFixed(1)}%`);
+            setLoadingProgress(percentage);
+          },
+        });
 
         const result = await publicFileControllerConvertAndDownload({
           body: { fileHash: hash, format: 'dwg', params: box.param },
         });
 
+        hideGlobalLoading();
         const blob = result?.data as Blob | undefined;
         return blob ? URL.createObjectURL(blob) : '';
+      }
+    });
+
+    mxcadApp.initCustomUploadConfig({
+      callback: async (file: File) => {
+        showGlobalLoading('正在上传文件...');
+        const hash = await calculateFileHash(file);
+        await uploadFile({
+          file,
+          hash,
+          nodeId: '',
+          onProgress: (percentage: number) => {
+            if (percentage === 100) {
+              setLoadingMessage('图纸转换中...');
+            } else {
+              setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
+            }
+            setLoadingProgress(percentage);
+          },
+        });
+
+        const ext = file.name.includes('.')
+          ? file.name.substring(file.name.lastIndexOf('.'))
+          : '';
+        const fileUrl = `/api/v1/public-file/access/${hash}${ext}.mxweb`;
+        hideGlobalLoading();
+        return { fileUrl };
       }
     });
   };
