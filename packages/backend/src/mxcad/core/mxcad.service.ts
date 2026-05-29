@@ -97,6 +97,7 @@ export class MxCadService {
         height: param.height ? String(param.height) : undefined,
         colorPolicy: param.colorPolicy,
         outjpg: param.outjpg,
+        dwgVersion: param.dwgVersion,
       };
 
       if (param.async === 'true' && param.resultposturl) {

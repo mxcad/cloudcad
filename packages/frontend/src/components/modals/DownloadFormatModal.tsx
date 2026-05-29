@@ -13,11 +13,23 @@ export interface PdfOptions {
   colorPolicy?: 'mono' | 'color';
 }
 
+export interface DwgOptions {
+  dwgVersion: number;
+}
+
+const DWG_VERSION_OPTIONS = [
+  { value: '23', label: 'CAD 2000' },
+  { value: '25', label: 'CAD 2004' },
+  { value: '27', label: 'CAD 2007' },
+  { value: '29', label: 'CAD 2010' },
+  { value: '33', label: 'CAD 2018（默认）' },
+];
+
 interface DownloadFormatModalProps {
   isOpen: boolean;
   fileName: string;
   onClose: () => void;
-  onDownload: (format: DownloadFormat, pdfOptions?: PdfOptions) => void;
+  onDownload: (format: DownloadFormat, pdfOptions?: PdfOptions, dwgOptions?: DwgOptions) => void;
   loading?: boolean;
 }
 
@@ -34,6 +46,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     height: '2000',
     colorPolicy: 'mono',
   });
+  const [dwgVersion, setDwgVersion] = useState<number>(33);
 
   const handleClose = () => {
     setFormat('mxweb');
@@ -42,25 +55,25 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
       height: '2000',
       colorPolicy: 'mono',
     });
+    setDwgVersion(33);
     onClose();
   };
 
   const handleDownload = () => {
     if (format === 'pdf') {
       onDownload(format, pdfOptions);
+    } else if (format === 'dwg' || format === 'dxf') {
+      onDownload(format, undefined, { dwgVersion });
     } else {
       onDownload(format);
     }
   };
 
-  // 根据选择的格式动态调整文件名
   const getDisplayFileName = (
     originalFileName: string,
     selectedFormat: DownloadFormat
   ): string => {
-    // 提取文件名（去除扩展名）
     const nameWithoutExt = (originalFileName || '').replace(/\.[^.]+$/, '');
-    // 添加对应格式的扩展名
     return `${nameWithoutExt}.${selectedFormat}`;
   };
 
@@ -117,7 +130,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
           />
         </div>
 
-        {/* PDF 参数（仅在选择 PDF 格式时显示） */}
+        {/* PDF 参数 */}
         {format === 'pdf' && (
           <div
             className="rounded-lg p-4 space-y-4"
@@ -133,7 +146,6 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
               PDF 导出参数
             </p>
 
-            {/* 宽度和高度 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label
@@ -167,7 +179,6 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
               </div>
             </div>
 
-            {/* 颜色策略 */}
             <div>
               <label
                 className="block font-medium mb-1"
@@ -187,6 +198,39 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                   { value: 'mono', label: '黑白（单色）' },
                   { value: 'color', label: '彩色' },
                 ]}
+                size="sm"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* DWG/DXF 参数 */}
+        {(format === 'dwg' || format === 'dxf') && (
+          <div
+            className="rounded-lg p-4 space-y-4"
+            style={{
+              backgroundColor: 'var(--bg-secondary, #f8fafc)',
+              border: '1px solid var(--border-default, #e2e8f0)',
+            }}
+          >
+            <p
+              className="font-medium"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {format === 'dwg' ? 'DWG' : 'DXF'} 导出参数
+            </p>
+
+            <div>
+              <label
+                className="block font-medium mb-1"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                图纸版本
+              </label>
+              <Select
+                value={String(dwgVersion)}
+                onChange={(val) => setDwgVersion(Number(val))}
+                options={DWG_VERSION_OPTIONS}
                 size="sm"
               />
             </div>

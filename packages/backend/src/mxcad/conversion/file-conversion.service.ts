@@ -221,6 +221,10 @@ export class FileConversionService implements IFileConversionService {
 				param.create_clip_block = options.create_clip_block;
 			}
 
+			if (options.dwgVersion !== undefined) {
+				param.dwg_version = options.dwgVersion;
+			}
+
 			// Linux 平台特殊处理
 			if (this.isLinux()) {
 				if (this.mxCadBinPath) {

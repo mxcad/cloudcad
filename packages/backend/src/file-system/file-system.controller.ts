@@ -918,31 +918,12 @@ export class FileSystemController {
     description:
       "支持下载 CAD 文件的多种格式：DWG、MXWEB、PDF。对于 PDF 格式，可以自定义宽度、高度和颜色策略。",
   })
-  @ApiQuery({
-    name: "format",
-    enum: Object.values(CadDownloadFormat),
-    enumName: "CadDownloadFormat",
-    required: false,
-    description:
-      "下载格式：dwg（DWG格式）、mxweb（MXWEB格式，默认）、pdf（PDF格式）",
-  })
-  @ApiQuery({
-    name: "width",
-    required: false,
-    description: "PDF 输出宽度（像素），仅当 format=pdf 时有效，默认：2000",
-  })
-  @ApiQuery({
-    name: "height",
-    required: false,
-    description: "PDF 输出高度（像素），仅当 format=pdf 时有效，默认：2000",
-  })
-  @ApiQuery({
-    name: "colorPolicy",
-    required: false,
-    description:
-      "PDF 颜色策略（mono/color），仅当 format=pdf 时有效，默认：mono",
-  })
   @ApiProduces("application/octet-stream")
+  @ApiQuery({ name: "format", required: false })
+  @ApiQuery({ name: "width", required: false })
+  @ApiQuery({ name: "height", required: false })
+  @ApiQuery({ name: "colorPolicy", required: false })
+  @ApiQuery({ name: "dwgVersion", required: false })
   @ApiResponse({ status: 200, description: "下载成功" })
   @ApiResponse({ status: 400, description: "参数错误或转换失败" })
   @ApiResponse({ status: 401, description: "未登录" })
@@ -975,7 +956,11 @@ export class FileSystemController {
               height: query.height || "2000",
               colorPolicy: query.colorPolicy || "mono",
             }
-          : undefined;
+          : (format === CadDownloadFormat.DWG ||
+              format === CadDownloadFormat.DXF) &&
+              query.dwgVersion
+            ? { dwgVersion: query.dwgVersion }
+            : undefined;
 
       const { stream, filename, mimeType } =
         await this.fileDownloadExportService.downloadNodeWithFormat(

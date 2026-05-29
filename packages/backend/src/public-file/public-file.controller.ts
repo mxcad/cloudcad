@@ -26,7 +26,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiTags, ApiOperation, ApiConsumes, ApiResponse, ApiQuery, ApiBody,
+  ApiTags, ApiOperation, ApiConsumes, ApiResponse, ApiQuery,
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { PublicFileService, PreloadingData } from './public-file.service';
@@ -333,36 +333,7 @@ export class PublicFileController {
   @Post('convert')
   @Public()
   @ApiOperation({ summary: '将 mxweb 文件转换为指定格式并下载（公开接口）' })
-  @ApiBody({
-    description: '转换请求参数',
-    schema: {
-      type: 'object',
-      required: ['fileHash', 'format'],
-      properties: {
-        fileHash: { type: 'string', description: 'mxweb 文件的 MD5（已通过分片上传到 uploads 目录）' },
-        format: { type: 'string', enum: ['dwg', 'dxf', 'pdf', 'mxweb'], description: '目标格式' },
-        params: {
-          type: 'object',
-          description: '转换参数（可选，与 mxcad-app 参数一致）',
-          properties: {
-            cmd: { type: 'string', enum: ['print_to_pdf', 'cut_dwg'], description: '命令类型' },
-            width: { type: 'string', description: '宽度（像素）' },
-            height: { type: 'string', description: '高度（像素）' },
-            colorPolicy: { type: 'string', enum: ['mono', 'default'], description: '颜色策略' },
-            roate_angle: { type: 'number', description: '旋转角度' },
-            view_angle: { type: 'number', description: '视角角度' },
-            bd_pt1_x: { type: 'string' },
-            bd_pt1_y: { type: 'string' },
-            bd_pt2_x: { type: 'string' },
-            bd_pt2_y: { type: 'string' },
-            open_file_md5: { type: 'string', description: '当前打开文件的 MD5' },
-            layout_name: { type: 'string', description: '布局名称' },
-            create_clip_block: { type: 'boolean', description: '是否创建裁剪块' },
-          },
-        },
-      },
-    },
-  })
+
   @ApiResponse({ status: 200, description: '返回转换后的文件' })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   async convertAndDownload(

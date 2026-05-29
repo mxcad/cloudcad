@@ -118,6 +118,8 @@ export interface ConversionOptions {
   layout_name?: string;
   /** 是否创建裁剪块 */
   create_clip_block?: boolean;
+  /** DWG/DXF 版本号 */
+  dwgVersion?: number;
 }
 
 export interface IFileConversionService {

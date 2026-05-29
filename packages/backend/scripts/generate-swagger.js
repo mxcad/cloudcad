@@ -9,8 +9,15 @@ const { NestFactory } = require('@nestjs/core');
 const { syncSwaggerAndSdk } = require('./swagger-sync');
 
 async function generateSwagger() {
+  const { VersioningType } = require('@nestjs/common');
   const app = await NestFactory.create(require('../dist/app.module').AppModule, {
     logger: false,
+  });
+
+  app.setGlobalPrefix('api');
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
   });
 
   syncSwaggerAndSdk(app);

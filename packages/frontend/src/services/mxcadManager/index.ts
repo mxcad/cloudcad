@@ -1302,17 +1302,35 @@ MxFun.addCommand('Mx_ExportPDF', async () => {
 });
 
 /**
- * Mx_ExportDWG 命令：导出为 DWG 并下载到本地
+ * Mx_ExportDWG 命令：导出为 DWG（弹出版本选择框）
  */
 MxFun.addCommand('Mx_ExportDWG', async () => {
-  await exportDrawingWithFormat('dwg');
+  const fileName = currentFileInfo?.name || 'untitled';
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    window.dispatchEvent(new CustomEvent('mxcad-export-dwg', {
+      detail: { fileName, blob: saved.blob, format: 'dwg' },
+    }));
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'Mx_ExportDWG');
+  }
 });
 
 /**
- * Mx_ExportDXF 命令：导出为 DXF 并下载到本地
+ * Mx_ExportDXF 命令：导出为 DXF（弹出版本选择框）
  */
 MxFun.addCommand('Mx_ExportDXF', async () => {
-  await exportDrawingWithFormat('dxf');
+  const fileName = currentFileInfo?.name || 'untitled';
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    window.dispatchEvent(new CustomEvent('mxcad-export-dxf', {
+      detail: { fileName, blob: saved.blob, format: 'dxf' },
+    }));
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'Mx_ExportDXF');
+  }
 });
 
 /**

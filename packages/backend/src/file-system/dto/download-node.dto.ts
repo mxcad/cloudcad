@@ -57,6 +57,13 @@ export class PdfConversionParams {
   @IsOptional()
   @IsString()
   colorPolicy?: string;
+
+  @ApiProperty({
+    description: 'DWG/DXF 版本号',
+    required: false,
+  })
+  @IsOptional()
+  dwgVersion?: number;
 }
 
 /**
@@ -100,4 +107,11 @@ export class DownloadNodeQueryDto {
   @IsOptional()
   @IsString()
   colorPolicy?: string;
+
+  @ApiProperty({
+    description: 'DWG/DXF 版本号（23/25/27/29/33），仅当 format=dwg/dxf 时有效',
+    required: false,
+  })
+  @IsOptional()
+  dwgVersion?: number;
 }

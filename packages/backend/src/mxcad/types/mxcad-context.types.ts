@@ -79,4 +79,6 @@ export interface ConvertServerFileParam {
   async?: string;
   /** 结果回调 URL */
   resultposturl?: string;
+  /** DWG/DXF 版本号 */
+  dwgVersion?: number;
 }

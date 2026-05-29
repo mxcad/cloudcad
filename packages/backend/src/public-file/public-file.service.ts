@@ -351,6 +351,7 @@ export class PublicFileService {
         open_file_md5: params?.open_file_md5,
         layout_name: params?.layout_name,
         create_clip_block: params?.create_clip_block,
+        dwgVersion: params?.dwgVersion,
       });
 
       if (!result.isOk) {

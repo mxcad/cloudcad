@@ -65,6 +65,10 @@ export class ConvertFileParamsDto {
   @IsOptional()
   @IsBoolean()
   create_clip_block?: boolean;
+
+  @ApiProperty({ description: 'DWG/DXF 版本号（23/25/27/29/33）', required: false })
+  @IsOptional()
+  dwgVersion?: number;
 }
 
 export class ConvertFileDto {

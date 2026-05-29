@@ -20,6 +20,7 @@ import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSyste
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { PdfExportModal } from '../components/modals/PdfExportModal';
+import { DwgExportModal } from '../components/modals/DwgExportModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
@@ -37,6 +38,7 @@ import { saveAsFileDialog } from 'mxcad';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/PdfExportModal';
+import type { DwgOptions } from '../components/modals/DwgExportModal';
 
 declare global {
   interface Window {
@@ -194,6 +196,13 @@ export const CADEditorDirect: React.FC = () => {
   const [pdfExportBlob, setPdfExportBlob] = useState<Blob | null>(null);
   const [pdfExportFileName, setPdfExportFileName] = useState<string>('');
   const [pdfExporting, setPdfExporting] = useState(false);
+
+  // DWG/DXF 导出弹窗状态
+  const [showDwgExportModal, setShowDwgExportModal] = useState(false);
+  const [dwgExportBlob, setDwgExportBlob] = useState<Blob | null>(null);
+  const [dwgExportFileName, setDwgExportFileName] = useState<string>('');
+  const [dwgExportFormat, setDwgExportFormat] = useState<'dwg' | 'dxf'>('dwg');
+  const [dwgExporting, setDwgExporting] = useState(false);
 
   // CAD 权限状态
   const [canSave, setCanSave] = useState(false);
@@ -1098,6 +1107,29 @@ export const CADEditorDirect: React.FC = () => {
     };
   }, []);
 
+  // 监听 DWG/DXF 导出事件（Mx_ExportDWG / Mx_ExportDXF 命令）
+  useEffect(() => {
+    const handleDwgExportEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        fileName: string;
+        blob: Blob;
+        format: 'dwg' | 'dxf';
+      }>;
+      setDwgExportFileName(customEvent.detail.fileName);
+      setDwgExportBlob(customEvent.detail.blob);
+      setDwgExportFormat(customEvent.detail.format);
+      setShowDwgExportModal(true);
+    };
+
+    window.addEventListener('mxcad-export-dwg', handleDwgExportEvent);
+    window.addEventListener('mxcad-export-dxf', handleDwgExportEvent);
+
+    return () => {
+      window.removeEventListener('mxcad-export-dwg', handleDwgExportEvent);
+      window.removeEventListener('mxcad-export-dxf', handleDwgExportEvent);
+    };
+  }, []);
+
   // 监听另存为事件
   useEffect(() => {
     const handleSaveAsEvent = (
@@ -1376,7 +1408,8 @@ export const CADEditorDirect: React.FC = () => {
   // 处理下载请求
   const handleDownloadWithFormat = async (
     format: DownloadFormat,
-    pdfOptions?: PdfOptions
+    pdfOptions?: PdfOptions,
+    dwgOptions?: DwgOptions
   ) => {
     try {
       setDownloading(true);
@@ -1391,11 +1424,14 @@ export const CADEditorDirect: React.FC = () => {
           body: {
             fileHash: hash,
             format,
-            params: pdfOptions ? {
-              width: pdfOptions.width,
-              height: pdfOptions.height,
-              colorPolicy: pdfOptions.colorPolicy as 'mono' | undefined,
-            } : undefined,
+            params: {
+              ...(pdfOptions ? {
+                width: pdfOptions.width,
+                height: pdfOptions.height,
+                colorPolicy: pdfOptions.colorPolicy as 'mono' | undefined,
+              } : {}),
+              ...(dwgOptions ? { dwgVersion: dwgOptions.dwgVersion } : {}),
+            } as Record<string, unknown> | undefined,
           },
         });
 
@@ -1428,7 +1464,7 @@ export const CADEditorDirect: React.FC = () => {
 
       const result = await fileSystemControllerDownloadNodeWithFormat({
         path: { nodeId: downloadingNodeId },
-        query: { format, ...pdfOptions },
+        query: { format, ...pdfOptions, ...dwgOptions },
       });
       if (result?.error) throw new Error('下载失败');
       const blobData = result?.data;
@@ -1501,6 +1537,49 @@ export const CADEditorDirect: React.FC = () => {
       showToast('PDF 导出失败，请重试', 'error');
     } finally {
       setPdfExporting(false);
+    }
+  };
+
+  // 处理 DWG/DXF 导出（Mx_ExportDWG / Mx_ExportDXF 命令专用）
+  const handleDwgExport = async (dwgVersion: number) => {
+    if (!dwgExportBlob) return;
+    try {
+      setDwgExporting(true);
+      setShowDwgExportModal(false);
+
+      const file = new File([dwgExportBlob], 'export.mxweb', { type: 'application/octet-stream' });
+      const hash = await calculateFileHash(file);
+      await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
+
+      const result = await publicFileControllerConvertAndDownload({
+        body: {
+          fileHash: hash,
+          format: dwgExportFormat,
+          params: { dwgVersion },
+        },
+      });
+
+      if (result?.error) throw new Error('转换失败');
+      const blob = result?.data as Blob | undefined;
+      if (!blob) throw new Error('转换失败：无返回数据');
+
+      const nameWithoutExt = dwgExportFileName.replace(/\.[^.]+$/, '');
+      await saveAsFileDialog({
+        blob,
+        filename: `${nameWithoutExt}.${dwgExportFormat}`,
+        types: [{
+          description: `${dwgExportFormat.toUpperCase()} 文件`,
+          accept: { 'application/octet-stream': [`.${dwgExportFormat}`] },
+        }],
+      });
+
+      setDwgExportBlob(null);
+      showToast(`${dwgExportFormat.toUpperCase()} 文件已保存到本地`, 'success');
+    } catch (error) {
+      console.error(`${dwgExportFormat.toUpperCase()} 导出失败:`, error);
+      showToast(`${dwgExportFormat.toUpperCase()} 导出失败，请重试`, 'error');
+    } finally {
+      setDwgExporting(false);
     }
   };
 
@@ -1607,6 +1686,18 @@ export const CADEditorDirect: React.FC = () => {
               }}
               onExport={handlePdfExport}
               loading={pdfExporting}
+            />
+            {/* DWG/DXF 导出参数弹窗 */}
+            <DwgExportModal
+              isOpen={showDwgExportModal}
+              fileName={dwgExportFileName}
+              format={dwgExportFormat}
+              onClose={() => {
+                setShowDwgExportModal(false);
+                setDwgExportBlob(null);
+              }}
+              onExport={handleDwgExport}
+              loading={dwgExporting}
             />
           </div>
         </div>

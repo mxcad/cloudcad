@@ -65,8 +65,8 @@ function writeSwaggerJson(document) {
 }
 
 function triggerSdkGeneration(targetName) {
-  const targetDir = path.join(ROOT_DIR, targetName);
-  const sdkBin = path.join(ROOT_DIR, 'frontend', 'node_modules', '@hey-api', 'openapi-ts', 'bin', 'run.js');
+  const targetDir = path.join(ROOT_DIR, 'packages', targetName);
+  const sdkBin = path.join(ROOT_DIR, 'packages', 'frontend', 'node_modules', '@hey-api', 'openapi-ts', 'bin', 'run.js');
 
   if (!fs.existsSync(sdkBin)) {
     console.warn(`[swagger] SDK binary not found (${targetName}), 跳过 SDK 生成`);

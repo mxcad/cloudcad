@@ -172,6 +172,7 @@ export class FileDownloadExportService {
       width?: string;
       height?: string;
       colorPolicy?: string;
+      dwgVersion?: number;
     }
   ): Promise<{
     stream: NodeJS.ReadableStream;
@@ -254,6 +255,13 @@ export class FileDownloadExportService {
             conversionOptions.width = pdfParams?.width || '2000';
             conversionOptions.height = pdfParams?.height || '2000';
             conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
+          }
+
+          if (
+            (format === CadDownloadFormat.DWG || format === CadDownloadFormat.DXF) &&
+            pdfParams?.dwgVersion
+          ) {
+            conversionOptions.dwgVersion = pdfParams.dwgVersion;
           }
 
           this.logger.log(
