@@ -1187,7 +1187,7 @@ const handleNewFileCommand = async () => {
     // 2. 调用 mxcad.newFile() 清空画布
     const mxcad = MxCpp.getCurrentMxCAD();
     if (mxcad) {
-      mxcad.newFile();
+      mxcad.openWebFile(new URL('/node_modules/mxcad-app/dist/mxcadAppAssets/empty_template.mxweb', import.meta.url).href, void 0, void 0, void 0, 1)
       const { initLayerList } = store.useLayer()
       const { initColorIndexList } = store.useColor()
       const { initLineTypeList } = store.useLineType()
@@ -1220,10 +1220,6 @@ const handleNewFileCommand = async () => {
         },
       })
     );
-
-    // 6. 清空文件名显示
-    globalThis.MxPluginContext.useFileName().fileName.value =
-      formatEditorFileName('');
     successOnce("已新建空白图纸")
 
   } catch (error) {
@@ -1273,24 +1269,51 @@ MxFun.addCommand('Mx_SaveAs', async () => {
 });
 
 /**
- * Mx_ExportPDF 命令：导出为 PDF 并下载到本地
+ * Mx_ExportPDF 命令：导出为 PDF（弹出 PDF 导出参数设置框）
  */
 MxFun.addCommand('Mx_ExportPDF', async () => {
-  await exportDrawingWithFormat('pdf');
+  const fileName = currentFileInfo?.name || 'untitled';
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    window.dispatchEvent(new CustomEvent('mxcad-export-pdf', {
+      detail: { fileName, blob: saved.blob },
+    }));
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'Mx_ExportPDF');
+  }
 });
 
 /**
- * Mx_ExportDWG 命令：导出为 DWG 并下载到本地
+ * Mx_ExportDWG 命令：导出为 DWG（弹出下载格式选择框）
  */
 MxFun.addCommand('Mx_ExportDWG', async () => {
-  await exportDrawingWithFormat('dwg');
+  const fileName = currentFileInfo?.name || 'untitled';
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    window.dispatchEvent(new CustomEvent('mxcad-export-file', {
+      detail: { fileName, blob: saved.blob },
+    }));
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'Mx_ExportDWG');
+  }
 });
 
 /**
- * Mx_ExportDXF 命令：导出为 DXF 并下载到本地
+ * Mx_ExportDXF 命令：导出为 DXF（弹出下载格式选择框）
  */
 MxFun.addCommand('Mx_ExportDXF', async () => {
-  await exportDrawingWithFormat('dxf');
+  const fileName = currentFileInfo?.name || 'untitled';
+  try {
+    const saved = await saveCurrentDrawingToBlob(fileName);
+    window.dispatchEvent(new CustomEvent('mxcad-export-file', {
+      detail: { fileName, blob: saved.blob },
+    }));
+  } catch (error) {
+    hideGlobalLoading();
+    handleError(error, 'Mx_ExportDXF');
+  }
 });
 
 /**

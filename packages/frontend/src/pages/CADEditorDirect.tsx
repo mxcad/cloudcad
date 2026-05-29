@@ -19,6 +19,7 @@ import { usePermission } from '../hooks/usePermission';
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload } from '@/api-sdk';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
+import { PdfExportModal } from '../components/modals/PdfExportModal';
 import { SaveAsModal } from '../components/modals/SaveAsModal';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferenceModal } from '../components/modals/ExternalReferenceModal';
@@ -32,9 +33,10 @@ import { useFileDropToOpen } from '../hooks/useFileDropToOpen';
 import { DropIndicator } from '../components/drop-indicator/DropIndicator';
 import { uploadFile } from '../utils/mxcadUploadUtils';
 import { calculateFileHash } from '../utils/hashUtils';
+import { saveAsFileDialog } from 'mxcad';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
-import type { PdfOptions } from '../components/modals/DownloadFormatModal';
+import type { PdfOptions } from '../components/modals/PdfExportModal';
 
 declare global {
   interface Window {
@@ -186,6 +188,12 @@ export const CADEditorDirect: React.FC = () => {
   const [downloadingNodeId, setDownloadingNodeId] = useState<string>('');
   const [downloadingFileName, setDownloadingFileName] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
+
+  // PDF 导出弹窗状态
+  const [showPdfExportModal, setShowPdfExportModal] = useState(false);
+  const [pdfExportBlob, setPdfExportBlob] = useState<Blob | null>(null);
+  const [pdfExportFileName, setPdfExportFileName] = useState<string>('');
+  const [pdfExporting, setPdfExporting] = useState(false);
 
   // CAD 权限状态
   const [canSave, setCanSave] = useState(false);
@@ -1048,18 +1056,30 @@ export const CADEditorDirect: React.FC = () => {
     setShowLoginPrompt(false);
   };
 
-  // 监听导出事件
+  // 监听导出事件（CAD 引擎命令 Mx_ExportDXF/PDF/DWG 和 UI 按钮共用）
   useEffect(() => {
     const handleExportEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        fileId?: string;
+        fileName: string;
+        blob?: Blob;
+      }>;
+
+      // CAD 引擎命令携带 blob，图纸已在本地，直接走本地导出路径，无需权限检查
+      if (customEvent.detail.blob) {
+        setSaveAsBlob(customEvent.detail.blob);
+        isSaveAsLocalModeRef.current = true;
+        setDownloadingFileName(customEvent.detail.fileName);
+        setShowDownloadFormatModal(true);
+        return;
+      }
+
+      // 云文件导出需要权限检查
       if (!canExport) {
         showToast('您没有导出图纸的权限', 'warning');
         return;
       }
-      const customEvent = event as CustomEvent<{
-        fileId: string;
-        fileName: string;
-      }>;
-      setDownloadingNodeId(customEvent.detail.fileId);
+      setDownloadingNodeId(customEvent.detail.fileId || '');
       setDownloadingFileName(customEvent.detail.fileName);
       setShowDownloadFormatModal(true);
     };
@@ -1070,6 +1090,25 @@ export const CADEditorDirect: React.FC = () => {
       window.removeEventListener('mxcad-export-file', handleExportEvent);
     };
   }, [canExport, showToast]);
+
+  // 监听 PDF 导出事件（Mx_ExportPDF 命令）
+  useEffect(() => {
+    const handlePdfExportEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        fileName: string;
+        blob: Blob;
+      }>;
+      setPdfExportFileName(customEvent.detail.fileName);
+      setPdfExportBlob(customEvent.detail.blob);
+      setShowPdfExportModal(true);
+    };
+
+    window.addEventListener('mxcad-export-pdf', handlePdfExportEvent);
+
+    return () => {
+      window.removeEventListener('mxcad-export-pdf', handlePdfExportEvent);
+    };
+  }, []);
 
   // 监听另存为事件
   useEffect(() => {
@@ -1430,6 +1469,53 @@ export const CADEditorDirect: React.FC = () => {
     }
   };
 
+  // 处理 PDF 导出（Mx_ExportPDF 命令专用）
+  const handlePdfExport = async (pdfOptions: PdfOptions) => {
+    if (!pdfExportBlob) return;
+    try {
+      setPdfExporting(true);
+      setShowPdfExportModal(false);
+
+      const file = new File([pdfExportBlob], 'export.mxweb', { type: 'application/octet-stream' });
+      const hash = await calculateFileHash(file);
+      await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
+
+      const result = await publicFileControllerConvertAndDownload({
+        body: {
+          fileHash: hash,
+          format: 'pdf',
+          params: {
+            width: pdfOptions.width,
+            height: pdfOptions.height,
+            colorPolicy: pdfOptions.colorPolicy as 'mono' | undefined,
+          },
+        },
+      });
+
+      if (result?.error) throw new Error('转换失败');
+      const blob = result?.data as Blob | undefined;
+      if (!blob) throw new Error('转换失败：无返回数据');
+
+      const nameWithoutExt = pdfExportFileName.replace(/\.[^.]+$/, '');
+      await saveAsFileDialog({
+        blob,
+        filename: `${nameWithoutExt}.pdf`,
+        types: [{
+          description: 'PDF 文件',
+          accept: { 'application/octet-stream': ['.pdf'] },
+        }],
+      });
+
+      setPdfExportBlob(null);
+      showToast('PDF 文件已保存到本地', 'success');
+    } catch (error) {
+      console.error('PDF 导出失败:', error);
+      showToast('PDF 导出失败，请重试', 'error');
+    } finally {
+      setPdfExporting(false);
+    }
+  };
+
   // 错误处理：返回项目列表或刷新页面
   const handleGoBack = () => {
     if (isHomeMode) {
@@ -1518,9 +1604,21 @@ export const CADEditorDirect: React.FC = () => {
               onClose={() => {
                 setShowDownloadFormatModal(false);
                 isSaveAsLocalModeRef.current = false;
+                setSaveAsBlob(null);
               }}
               onDownload={handleDownloadWithFormat}
               loading={downloading}
+            />
+            {/* PDF 导出参数弹窗 */}
+            <PdfExportModal
+              isOpen={showPdfExportModal}
+              fileName={pdfExportFileName}
+              onClose={() => {
+                setShowPdfExportModal(false);
+                setPdfExportBlob(null);
+              }}
+              onExport={handlePdfExport}
+              loading={pdfExporting}
             />
           </div>
         </div>
