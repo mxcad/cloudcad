@@ -1264,7 +1264,7 @@ MxFun.addCommand('exportFile', async () => {
 /**
  * Mx_SaveAs 命令：导出为 MXWEB 并下载到本地
  */
-MxFun.addCommand('Mx_SaveAs', async () => {
+MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
   const fileName = currentFileInfo?.name || 'untitled';
   try {
     const saved = await saveCurrentDrawingToBlob(fileName);
@@ -1281,7 +1281,7 @@ MxFun.addCommand('Mx_SaveAs', async () => {
     globalShowToast('文件已保存到本地', 'success');
   } catch (error) {
     hideGlobalLoading();
-    handleError(error, 'Mx_SaveAs');
+    handleError(error, 'Mx_SaveAsMxWeb');
   }
 });
 

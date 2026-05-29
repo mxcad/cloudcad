@@ -360,7 +360,7 @@
         {
           "tab": "另存为",
           "icon": "baocun",
-          "cmd": "Mx_SaveAs"
+          "cmd": "Mx_SaveAsMxWeb"
         },
         {
           "tab": "导出",
@@ -1317,7 +1317,7 @@
     {
       "label": "另存为",
       "tips": "CAD",
-      "cmd": "Mx_SaveAs"
+      "cmd": "Mx_SaveAsMxWeb"
     },
     {
       "label": "打印",
