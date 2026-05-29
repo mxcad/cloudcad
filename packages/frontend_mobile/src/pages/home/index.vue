@@ -1,6 +1,7 @@
     <script setup lang="ts">
 
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, unref } from 'vue';
+import { t } from '@/languages';
 import { createMxCAD } from '../../plugins/mxcad';
 import { callCommand } from '@/plugins/mxcad/command';
 import { uiConfig } from '@/config/uiConfig';
@@ -327,6 +328,13 @@ onMounted(async () => {
     window.addEventListener('mxcad-show-collaborate', () => { showCooperate.value = true })
 
     const mxcad = await createMxCAD()
+    mxcad.on('databaseModify', () => {
+      editorState.setIsModified(true)
+    })
+
+    mxcad.on('openFileComplete', () => {
+      editorState.setIsModified(false)
+    })
 
 onBeforeUnmount(() => {
     window.removeEventListener('open-version-history', onShowVersionHistory)
@@ -434,7 +442,7 @@ setViewportHeight();
             </button>
         </div>
         <div class="colorPicker" v-show="isShowColorPicker"></div>
-            <!-- <div class="floating_right_box_list" v-show="actionBtn">
+            <div class="floating_right_box_list" v-show="actionBtn">
                 <div class="floating_right_box_list_scroll">
                     <button v-for="({ icon, actionIcon }, index) in actionBtn?.icons" class="floating_right_box_list_item"
                         @click.stop="actionBtn && (actionBtn.index = index, actionBtn = null)">
@@ -442,12 +450,12 @@ setViewportHeight();
                             :name="actionBtn?.index === index ? actionIcon : icon" />
                     </button>
                 </div>
-            </div> -->
-            <!-- <div class="floating_right_box_btns">
+            </div>
+            <div class="floating_right_box_btns">
                 <button class="floating_right_box_btn" v-for="btn in floatingRightBtnArr" @click.stop="onClickBtn(btn)">
                     <van-icon class="img zoomed" :name="unref(btn.icon)" />
                 </button>
-            </div> -->
+            </div>
 
         <!-- 模拟鼠标指针 -->
         <!-- 针头 -->

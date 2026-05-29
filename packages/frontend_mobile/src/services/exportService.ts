@@ -10,7 +10,7 @@ export type ExportFormat = 'dwg' | 'dxf' | 'pdf' | 'mxweb';
 export interface PdfOptions {
   width?: string;
   height?: string;
-  colorPolicy?: 'mono' | 'default';
+  colorPolicy?: 'mono' | 'color';
 }
 
 export async function exportDrawing(
@@ -71,6 +71,31 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
+function showPdfOptionsDialog(): Promise<PdfOptions | null> {
+  return new Promise((resolve) => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    let app: ReturnType<typeof createApp> | null = null;
+
+    import('../../pages/home/components/PdfOptionsPopup.vue').then((mod) => {
+      const comp = mod.default || mod;
+      app = createApp(comp, {
+        onConfirm: (options: PdfOptions) => {
+          resolve(options);
+          app?.unmount();
+          container.remove();
+        },
+        onCancel: () => {
+          resolve(null);
+          app?.unmount();
+          container.remove();
+        },
+      });
+      app.mount(container);
+    });
+  });
+}
+
 export function showExportDialog() {
   const formatMap: Record<string, ExportFormat> = {
     DWG: 'dwg',
@@ -91,9 +116,15 @@ export function showExportDialog() {
         closeOnClickAction: true,
         title: '选择导出格式',
         cancelText: '取消',
-        onSelect: (action: { name: string }) => {
+        onSelect: async (action: { name: string }) => {
           const format = formatMap[action.name];
-          if (format) {
+          if (!format) return;
+          if (format === 'pdf') {
+            const pdfOptions = await showPdfOptionsDialog();
+            if (pdfOptions) {
+              exportDrawing(format, undefined, pdfOptions);
+            }
+          } else {
             exportDrawing(format);
           }
         },

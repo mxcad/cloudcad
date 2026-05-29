@@ -11,10 +11,22 @@ interface CachedPermissions {
   canManageExternalRef: boolean;
 }
 
-const permissionCache = new Map<string, CachedPermissions>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+interface CacheEntry {
+  permissions: CachedPermissions;
+  timestamp: number;
+}
+
+const permissionCache = new Map<string, CacheEntry>();
 
 export function clearPermissionCache() {
   permissionCache.clear();
+}
+
+function isCacheValid(entry: CacheEntry | undefined): entry is CacheEntry {
+  if (!entry) return false;
+  return Date.now() - entry.timestamp < CACHE_TTL;
 }
 
 export const PERMISSIONS = {
@@ -63,8 +75,8 @@ export async function loadCADPermissions(projectId: string | null): Promise<void
   }
 
   const cached = permissionCache.get(projectId);
-  if (cached) {
-    editorState.setPermissions(cached);
+  if (isCacheValid(cached)) {
+    editorState.setPermissions(cached.permissions);
     return;
   }
 
@@ -75,7 +87,7 @@ export async function loadCADPermissions(projectId: string | null): Promise<void
   ]);
 
   const perms = { canSave, canExport, canManageExternalRef };
-  permissionCache.set(projectId, perms);
+  permissionCache.set(projectId, { permissions: perms, timestamp: Date.now() });
   editorState.setPermissions(perms);
 }
 

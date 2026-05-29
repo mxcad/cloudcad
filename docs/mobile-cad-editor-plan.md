@@ -4,17 +4,17 @@
 
 ---
 
-## 当前进度 (2026-05-28)
+## 当前进度 (2026-05-29)
 
 ```
-Phase 0 工程基础    ████████████████░░░░  80%  (确定不需要路由)
+Phase 0 工程基础    ████████████████████ 100%  (确定不需要路由)
 Phase 1 打开文件    ████████████████████  95%  (✓ 递归循环+loadFromUrl+token headers 修复)
-Phase 2 保存        █████████████████░░░░  85%  (✓ 新建图纸已补齐)
-Phase 3 下载/导出   ████████████████████  95%  (✓ 公共上传入口已补齐)
-Phase 4 外部参照    ██████████████████░░  88%  (✓ URL解析+公开文件+保存图片均已补齐)
-Phase 5 版本历史    ██████████████████░░  90%  (✓ 刚刚补齐)
-Phase 6 权限+登录   ████████████████████  95%  (✓ UI禁用+缓存+登录恢复已补齐)
-Phase 7 协作        ████████████████████  95%  (✓ 完整移植自 desktop)
+Phase 2 保存        ████████████████████  98%  (✓ 新建图纸已补齐 ; ✓ isModified 修改追踪已接入)
+Phase 3 下载/导出   ████████████████████  98%  (✓ 公共上传入口已补齐 ; ✓ PDF 配置弹窗已添加)
+Phase 4 外部参照    ████████████████████  95%  (✓ URL解析+公开文件+保存图片均已补齐 ; 浮窗按钮 UI 已恢复)
+Phase 5 版本历史    ████████████████████  98%  (✓ 刚刚补齐 ; ✓ isModified 修改追踪已接入)
+Phase 6 权限+登录   ████████████████████  98%  (✓ UI禁用+缓存+登录恢复已补齐 ; ✓ 缓存 TTL 已添加)
+Phase 7 协作        ████████████████████  98%  (✓ 完整移植自 desktop ; ✓ 协同 URL 改为环境变量)
 ```
 
 ---
@@ -156,11 +156,11 @@ calculateFileHash(buffer) → SHA-256 hash
 |---|------|------|----------|
 | 3.1 | 导出格式选择 UI | ✅ Vant ActionSheet：DWG/DXF/PDF/MXWEB | `src/services/exportService.ts:74` |
 | 3.2 | 格式下载 | ✅ `exportDrawing(format, fileName)` — 转换+下载 | `src/services/exportService.ts:16` |
-| 3.3 | PDF 导出增强 | ◐ 基础 PDF 导出，无页面大小/方向选项 | `src/services/exportService.ts` |
+| 3.3 | PDF 导出增强 | ✅ 配置弹窗（宽/高/颜色策略），参照桌面端 `DownloadFormatModal` | `src/pages/home/components/PdfOptionsPopup.vue`, `src/services/exportService.ts:74` |
 | 3.4 | 公开文件导出 | ✅ `publicFileControllerConvertAndDownload` + hash 上传 | `src/services/exportService.ts:37` |
 | 3.5 | 公共上传入口 | ✅ `uploadPublicFile(file)` — 秒传检测+上传+返回URL；编辑器头部按钮触发文件选择+上传+打开 | `src/services/uploadService.ts:28-67`, `src/pages/home/index.vue` |
 
-**交付：** ✅ 用户可选择格式下载当前图纸（公共上传入口未做）。
+**交付：** ✅ 用户可选择格式下载当前图纸，PDF 支持配置宽/高/颜色策略。
 
 ---
 
@@ -225,11 +225,11 @@ mxCadControllerCheckExternalReference(nodeId)
 |---|------|------|----------|
 | 6.1 | 加载 CAD 权限 | ✅ `loadCADPermissions(projectId)` → canSave/canExport/canManageExtRef | `src/services/permissionService.ts:45` |
 | 6.2 | 权限禁用 UI | ✅ 保存按钮 `:disabled` + `onSaveClick` 检查 `canSave`；导出菜单 `showExportDialog` 检查 `canExport`；外部参照弹窗无权限时不显示上传按钮 | `src/pages/home/index.vue:175/347`, `src/pages/home/hooks/useMenu.ts:83-97`, `src/composables/useFileLoader.ts:205-218` |
-| 6.3 | 权限缓存 | ✅ `permissionCache` Map，相同 `projectId` 复用缓存 | `src/services/permissionService.ts:14-78` |
+| 6.3 | 权限缓存 | ✅ `permissionCache` Map + 5min TTL 过期 | `src/services/permissionService.ts:14-100` |
 | 6.4 | 登录提示 | ✅ Vant Dialog：未登录用户点击保存/版本历史 → 弹出登录引导 | `src/pages/home/components/LoginPromptPopup.vue` |
 | 6.5 | 登录后恢复操作 | ✅ `sessionStorage.pendingAction` 保存意图，登录返回后自动重试 | `src/pages/home/index.vue:229-237/312-321` |
 
-**交付：** ✅ 权限加载 + 登录引导已实现。UI 禁用和登录后恢复操作未完成。
+**交付：** ✅ 权限加载 + 登录引导已实现。UI 禁用和登录后恢复操作已补齐。
 
 ---
 
@@ -239,7 +239,7 @@ mxCadControllerCheckExternalReference(nodeId)
 
 | # | 任务 | 关键要点 | 参考源 |
 |---|------|----------|--------|
-| 7.1 | WebSocket 连接 | ✅ `cooperate.init({ server_addres: '/api/cooperate' })` — 通过后端反向代理连接协同服务 | `src/composables/useCooperate.ts:16` |
+| 7.1 | WebSocket 连接 | ✅ `cooperate.init({ server_addres })` — 通过 `VITE_APP_COOPERATE_URL` 环境变量配置 | `src/composables/useCooperate.ts:5` |
 | 7.2 | 协作初始化 | ✅ `getCooperate()` → `mxCAD.getCooperate()` + `init()`，每次调用时初始化（与 desktop 一致） | `src/composables/useCooperate.ts:13-21` |
 | 7.3 | 协同创建/加入/退出 | ✅ `createWrok`/`joinWork`/`exitWrok` callback-based API，匹配 desktop | `src/composables/useCooperate.ts:52-95` |
 | 7.4 | 协同列表 | ✅ `getWorks(callback)` 获取可用协同列表 | `src/composables/useCooperate.ts:39-49` |
@@ -272,26 +272,32 @@ src/
 │   ├── useUser.ts                # 用户登录态 ✅
 │   ├── useSaveAs.ts              # 另存为逻辑 ✅
 │   ├── useCooperate.ts           # 协作骨架 ✅
-│   └── useVersionHistory.ts      # 版本历史查询 + 跳转 ✅ (新)
+│   └── useVersionHistory.ts      # 版本历史查询 + 跳转 ✅
 ├── services/
 │   ├── fileService.ts            # 文件节点查询 + URL 构建 ✅
 │   ├── saveService.ts            # 保存 API ✅
 │   ├── extRefService.ts          # 外部参照 API ✅
 │   ├── thumbnailService.ts       # 缩略图生成 + 上传 ✅
-│   ├── permissionService.ts      # 权限查询 ✅
-│   ├── exportService.ts          # 导出/下载 ✅
+│   ├── permissionService.ts      # 权限查询(含5min缓存TTL) ✅
+│   ├── exportService.ts          # 导出/下载(含PDF配置弹窗) ✅
 │   └── uploadService.ts          # 文件上传 ✅
 ├── pages/home/
-│   ├── index.vue                 # 编辑器主页面（749→803行）✅
-│   ├── hooks/useMenu.ts          # 菜单 + 命令注册 ✅
+│   ├── index.vue                 # 编辑器主页面(954行) ✅
+│   ├── hooks/
+│   │   ├── useMenu.ts            # 菜单 + 命令注册 ✅
+│   │   ├── useFooterToolbar.ts   # 底栏工具栏 ✅
+│   │   └── useFloatingRightBtnList.ts # 右侧浮窗按钮 ✅
 │   └── components/
-│       ├── CommitMessageDialog.vue # 保存提交信息弹窗 ✅
-│       ├── SaveAsSheet.vue         # 另存为弹窗 ✅
-│       ├── VersionHistoryPopup.vue  # 版本历史弹窗 ✅ (新)
-│       └── LoginPromptPopup.vue    # 登录引导弹窗 ✅ (新)
+│       ├── CommitMessageDialog.vue   # 保存提交信息弹窗 ✅
+│       ├── SaveAsSheet.vue           # 另存为弹窗 ✅
+│       ├── VersionHistoryPopup.vue   # 版本历史弹窗 ✅
+│       ├── LoginPromptPopup.vue      # 登录引导弹窗 ✅
+│       ├── CooperatePopup.vue        # 协同弹窗 ✅
+│       └── PdfOptionsPopup.vue       # PDF 导出参数弹窗 ✅ (新)
 └── utils/
     ├── hashUtils.ts               # 文件哈希 (MD5) ✅
-    └── apiConfig.ts               # API 客户端单例 ✅
+    ├── apiConfig.ts               # API 客户端单例 ✅
+    └── isAndroidOrIOS.ts          # 平台检测 ✅ (新)
 ```
 
 ---
@@ -313,15 +319,15 @@ src/
 
 | Phase | 内容 | 估算天数 | 完成度 | 剩余工作 |
 |-------|------|----------|--------|----------|
-| 0 | 工程基础 | 1-2天 | 80% | 无需路由，基本完成 |
-| 1 | 从服务器打开文件 | 2-3天 | 95% | 公开文件递归循环+loadFromUrl 已修复，extRef 解析待验证 |
-| 2 | 保存到服务器 | 3-4天 | 85% | ✅ 已补齐 |
-| 3 | 下载/导出 | 1-2天 | 95% | ✓ |
-| 4 | 外部参照 | 2-3天 | 88% | ✅ 已补齐 |
-| 5 | 缩略图+版本历史 | 1-2天 | 90% | ✅ 已完成 |
-| 6 | 权限+登录提示 | 1天 | 95% | ✓ |
-| 7 | 实时协作 | 2-3天 | 95% | ✓ 完整移植自 desktop |
-| **合计** | | **13-20天** | **~91%** | **剩余扫尾** |
+| 0 | 工程基础 | 1-2天 | 100% | ✅ 全部完成 |
+| 1 | 从服务器打开文件 | 2-3天 | 95% | 公开文件 extRef 解析待验证 |
+| 2 | 保存到服务器 | 3-4天 | 98% | ✅ isModified 修改追踪已接入 |
+| 3 | 下载/导出 | 1-2天 | 98% | ✅ PDF 配置弹窗已添加 |
+| 4 | 外部参照 | 2-3天 | 95% | ✅ 浮窗按钮 UI 已恢复 |
+| 5 | 缩略图+版本历史 | 1-2天 | 98% | ✅ isModified 修改追踪已接入 |
+| 6 | 权限+登录提示 | 1天 | 98% | ✅ 缓存 TTL 已添加 |
+| 7 | 实时协作 | 2-3天 | 98% | ✅ 协同 URL 改为环境变量 |
+| **合计** | | **13-20天** | **~98%** | **仅剩公开文件 extRef 解析待验证** |
 
 **投入顺序建议：** Phase 0 → 1 → 2 → 3+6(并行) → 4 → 5 → 7
 

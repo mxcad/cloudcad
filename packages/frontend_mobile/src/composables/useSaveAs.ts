@@ -1,4 +1,4 @@
-import { ref, readonly, computed } from 'vue';
+import { ref, readonly } from 'vue';
 import { useUser } from './useUser';
 import { getMxwebBlob, saveAs } from '../services/saveService';
 import {
@@ -32,10 +32,7 @@ export function useSaveAs() {
   const selectedProjectId = ref<string>('');
   const selectedParentId = ref<string>('');
   const format = ref<SaveFormat>('dwg');
-
-  const canSaveToLibrary = computed(() => {
-    return false;
-  });
+  const canSaveToLibrary = ref(false);
 
   async function loadProjects() {
     try {
@@ -66,6 +63,10 @@ export function useSaveAs() {
     }
   }
 
+  function setCanSaveToLibrary(val: boolean) {
+    canSaveToLibrary.value = val;
+  }
+
   async function init(fileName_?: string) {
     saving.value = false;
     targetType.value = 'personal';
@@ -91,8 +92,7 @@ export function useSaveAs() {
         blob: params.blob,
         targetType: params.targetType,
         targetParentId: params.selectedParentId,
-        fileName: params.fileName,
-        format: params.format,
+        fileName: `${params.fileName}.${params.format}`,
         projectId:
           params.targetType === 'project'
             ? params.selectedProjectId
@@ -124,6 +124,8 @@ export function useSaveAs() {
     selectedProjectId,
     selectedParentId,
     format,
+    canSaveToLibrary,
+    setCanSaveToLibrary,
     init,
     loadProjects,
     loadPersonalSpace,

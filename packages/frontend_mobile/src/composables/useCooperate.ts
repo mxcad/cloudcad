@@ -2,7 +2,7 @@ import { ref, readonly, onMounted, onBeforeUnmount } from 'vue';
 import { MxCpp } from 'mxcad';
 import { showToast } from 'vant';
 
-const APP_COOPERATE_URL = '/api/cooperate';
+const APP_COOPERATE_URL = import.meta.env.VITE_APP_COOPERATE_URL || '/api/cooperate';
 
 const isCadReady = ref(false);
 const works = ref<number[]>([]);
