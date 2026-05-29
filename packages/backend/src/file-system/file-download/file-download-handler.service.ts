@@ -58,7 +58,7 @@ export class FileDownloadHandlerService {
 
       // 3. 设置 Content-Disposition（支持中文文件名）
       const encodedFilename = encodeURIComponent(filename);
-      const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, '_');
+      const fallbackFilename = filename.replace(/[^\x20-\x7E]/g, '_');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`

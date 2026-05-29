@@ -987,7 +987,7 @@ export class FileSystemController {
       res.setHeader("Content-Type", mimeType);
 
       const encodedFilename = encodeURIComponent(filename);
-      const fallbackFilename = filename.replace(/[^\x00-\x7F]/g, "_");
+      const fallbackFilename = filename.replace(/[^\x20-\x7E]/g, "_");
       res.setHeader(
         "Content-Disposition",
         `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`,
