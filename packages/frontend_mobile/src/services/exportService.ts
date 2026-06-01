@@ -97,7 +97,7 @@ function showDwgOptionsDialog(format: 'dwg' | 'dxf'): Promise<number | null> {
     document.body.appendChild(container);
     let app: ReturnType<typeof createApp> | null = null;
 
-    import('../../pages/home/components/DwgOptionsPopup.vue').then((mod) => {
+    import('../../src/pages/home/components/DwgOptionsPopup.vue').then((mod) => {
       const comp = mod.default || mod;
       app = createApp(comp, {
         format,
@@ -123,7 +123,7 @@ function showPdfOptionsDialog(): Promise<PdfOptions | null> {
     document.body.appendChild(container);
     let app: ReturnType<typeof createApp> | null = null;
 
-    import('../../pages/home/components/PdfOptionsPopup.vue').then((mod) => {
+    import('../../src/pages/home/components/PdfOptionsPopup.vue').then((mod) => {
       const comp = mod.default || mod;
       app = createApp(comp, {
         onConfirm: (options: PdfOptions) => {

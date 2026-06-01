@@ -1,7 +1,6 @@
 import {
   publicFileControllerGetPreloadingData,
   publicFileControllerCheckExtReference,
-  publicFileControllerUploadExtReference,
 } from '../api-sdk';
 import { getApiBaseUrl } from '../utils/apiConfig';
 
@@ -40,25 +39,6 @@ export async function checkPublicExtReference(
     });
     const data = result.data as unknown as { exists: boolean };
     return data?.exists ?? false;
-  } catch {
-    return false;
-  }
-}
-
-export async function uploadPublicExtReferenceFile(params: {
-  srcHash: string;
-  file: File;
-  extRefFile: string;
-}): Promise<boolean> {
-  try {
-    const result = await publicFileControllerUploadExtReference({
-      body: {
-        file: params.file,
-        srcFileHash: params.srcHash,
-        extRefFile: params.extRefFile,
-      } as never,
-    });
-    return !result.error;
   } catch {
     return false;
   }

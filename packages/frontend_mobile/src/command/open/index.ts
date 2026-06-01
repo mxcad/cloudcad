@@ -1,109 +1,69 @@
-import { getBaseUrl, getUploadFileConfig } from "@/config/serverConfig";
 import { openMxWeb } from "@/plugins/mxcad/openMxWeb";
-import { LoadFileParam, uploadFile } from "@/plugins/WebUploader/useDwgUpload";
+import { showFilePicker, FilePickerResult } from "@/composables/useNativeFilePicker";
 import { showLoadingToast } from "vant";
 import { showToastOnce } from "@/utils/toast";
-import { processorExternalFile } from "./openPreloading";
+import { checkPublicFileExternalRefs } from "@/composables/useFileLoader";
 import { FetchAttributes, MxCpp } from "mxcad";
-import $api from "@/plugins/axios"
 import { addCommand } from "@/plugins/mxcad/command";
 import { t } from "@/languages";
-async function OpenDwgImp(param: LoadFileParam, isUseBuffer: boolean) {
-    return new Promise<boolean>(async (res) => {
-        let fileHash = param.hash;
-        let type = param.type;
-        const file = param.file
 
-        if (type === "mxweb") {
-            const filePath = URL.createObjectURL(file.source.source)
-            setTimeout(() => {
-                openMxWeb(filePath)
-            })
-        } else {
-       
-            const { close } = showLoadingToast(t("打开图纸中") + "...")
-            let {
-                mxfilepath = ""
-            } = getUploadFileConfig() || {};
+async function OpenDwgImp(param: FilePickerResult, noCache: boolean): Promise<boolean> {
+    const fileHash = param.hash;
+    const type = param.type;
+    const file = param.file;
 
-            let baseUrl = getBaseUrl();
+    if (type === "mxweb") {
+        const filePath = URL.createObjectURL(file.source);
+        setTimeout(() => openMxWeb(filePath));
+        return true;
+    }
 
-            let filePath = baseUrl + mxfilepath + fileHash + "." + type + ".mxweb";
+    // 外部参照检查 (仅新上传的文件需要)
+    if (!param.isUseServerExistingFile) {
+        const toast = showLoadingToast(t("检查外部参照") + "...");
+        await checkPublicFileExternalRefs(fileHash);
+        toast.close();
+    }
 
-            let fileTzPath = baseUrl + mxfilepath + fileHash + "/___mx___tz___.dwg.mxweb";
+    // 打开文件
+    const toast = showLoadingToast(t("打开图纸中") + "...");
+    const filePath = "/api/v1/public-file/access/" + fileHash + "." + type + ".mxweb";
 
-            // ‍  处理加载该文件时需要的其它文件。
-// ‍ Process other files required for loading this file.
+    const token = localStorage.getItem("accessToken");
+    const headers = token ? { requestHeaders: { Authorization: "Bearer " + token } } : undefined;
 
-            let isWaiteTzFile = false;
+    const fetchAttrib = noCache
+        ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE | FetchAttributes.EMSCRIPTEN_FETCH_REPLACE
+        : 0;
 
-            if (!param.isUseServerExistingFile) {
-                let processorResult: any = await processorExternalFile(filePath, fileHash as string);
-                if (!processorResult.ok) {
-                    close()
-                    return res(false);
+    const mxcad = MxCpp.App.getCurrentMxCAD();
+    const openTime = Date.now();
+
+    return new Promise<boolean>((resolve) => {
+        mxcad.openWebFile(filePath, (iRet) => {
+            toast.close();
+            if (iRet === 0) {
+                if (Date.now() - openTime > 5000) {
+                    showToastOnce(t("更新显示") + "...");
                 }
-                if (processorResult.tz) {
-                    isWaiteTzFile = true;
-                }
+                resolve(true);
+            } else {
+                showToastOnce(t("打开图纸失败"));
+                resolve(false);
             }
-
-            showToastOnce(t("正在打开文件中") + "...");
-            var dTime1 = (new Date()).getTime();
-
-            let iFetchAttrib = 0;
-
-            if (!isUseBuffer) {
-                iFetchAttrib = FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE | FetchAttributes.EMSCRIPTEN_FETCH_REPLACE;
-            }
-
-            let mxcad = MxCpp.App.getCurrentMxCAD();
-
-            const isOpen = mxcad.openWebFile(filePath, (iRet) => {
-                close();
-                if (iRet === 0) {
-                    res(true)
-                    var dTime2 = (new Date()).getTime();
-                    if (dTime2 - dTime1 > 5000) {
-                        showToastOnce(t("更新显示") + "...")
-                    }
-                    // ‍  图纸加载完成.
-// ‍ The drawing loading is completed
-
-                    if (isWaiteTzFile) {
-                        let posttz = baseUrl + "/mxcad/files/tz";
-                        $api.post(posttz, { fileHash: fileHash }).then((res: any) => {
-                            if (res && res.data && res.data.code == 0) {
-                                mxcad.getImp().loadTz(fileTzPath);
-                            }
-                        });
-                    }
-                } else {
-                    res(false)
-                    showToastOnce(t("打开图纸失败"))
-                }
-            }, undefined, undefined, iFetchAttrib, !isWaiteTzFile);
-
-            if (isOpen) res(true)
-            else res(false)
-
-            res(false)
-        }
-    })
-
+        }, undefined, headers, fetchAttrib);
+    });
 }
 
 
 addCommand("OpenDwg", async () => {
-    await uploadFile(false, "OpenDwgImp")
-})
-addCommand("OpenDwgImp", async (param: LoadFileParam) => {
-  await OpenDwgImp(param, true);
+    showFilePicker(async (param) => {
+        await OpenDwgImp(param, false);
+    }, false);
 })
 
 addCommand("OpenDwg_DoNotUseCache", async () => {
-    await uploadFile(true, "OpenDwgImp_DoNotUseCache")
-})
-addCommand("OpenDwgImp_DoNotUseCache", async (param: LoadFileParam) => {
-    await OpenDwgImp(param, false);
+    showFilePicker(async (param) => {
+        await OpenDwgImp(param, true);
+    }, true);
 })

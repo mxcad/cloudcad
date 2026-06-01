@@ -1,7 +1,6 @@
 import { currentLayerNameHistoryState } from "@/command/layer/currentLayerNameHistoryState";
 import { McObject, MxCpp } from "mxcad";
 import { getParamsFromUrl } from "@/utils/paramsFromUrl";
-import { useDwgUpload } from "../WebUploader/useDwgUpload";
 import { MxFun } from "mxdraw";
 import { openMxWeb } from "./openMxWeb";
 /** 创建MxCad APP控件 **/
@@ -80,7 +79,6 @@ export const createMxCAD = async () => {
 
   mxcad.on("openFileComplete", () => {
     currentLayerNameHistoryState.value = [];
-    useDwgUpload();
   });
 
   return mxcad;

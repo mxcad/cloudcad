@@ -510,9 +510,6 @@ importers:
       vue:
         specifier: ^3.2.47
         version: 3.5.34(typescript@5.9.3)
-      webuploader:
-        specifier: ^0.1.8
-        version: 0.1.8
     devDependencies:
       '@hey-api/client-fetch':
         specifier: ^0.13.1
@@ -523,6 +520,9 @@ importers:
       '@types/node':
         specifier: ^22.14.0
         version: 22.19.19
+      '@types/spark-md5':
+        specifier: ^3.0.5
+        version: 3.0.5
       '@vitejs/plugin-legacy':
         specifier: 1.8.2
         version: 1.8.2(vite@4.5.14(@types/node@22.19.19)(lightningcss@1.32.0)(sass@1.100.0)(terser@5.14.2))

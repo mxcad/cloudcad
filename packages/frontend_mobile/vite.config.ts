@@ -86,6 +86,13 @@ export default ({ command, mode }) => {
       open: false,
       host: '0.0.0.0',
       port: 7001,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Embedder-Policy': 'require-corp'

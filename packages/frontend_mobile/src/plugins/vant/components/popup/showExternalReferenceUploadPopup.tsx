@@ -1,64 +1,49 @@
-import { t } from "@/languages";
-import {
-  showConfirmDialog,
+import { h, render } from 'vue'
+import { UploadFileInfo, UploadState } from './types'
+import ExternalRefUploadPopup from './ExternalRefUploadPopup.vue'
 
-} from "vant";
-import { createVNode, h, ref, render } from "vue";
-import { UploadFileInfo, UploadState } from "./types";
-const teleport = document.createElement("div");
-document.body.appendChild(teleport);
-import ExternalReferenceUploadPopup from "./ExternalReferenceUploadPopup.vue"
-import { getHostUrl, getUploadFileConfig } from "@/config/serverConfig";
-let dialog: any = null;
-export interface selectUploadXRefFileDialogParam {
+export interface SelectUploadXRefFileDialogParam {
   images: string[]
-  externalReference: string[],
+  externalReference: string[]
   hash: string
 }
 
-const files = ref<UploadFileInfo[]>([])
+export const showExternalReferenceUploadPopup = async (param: SelectUploadXRefFileDialogParam) => {
+  const infos: UploadFileInfo[] = [
+    ...param.externalReference.map((name) => ({
+      name,
+      uploadState: UploadState.notSelected,
+      progress: 0,
+      type: 'ref' as const,
+      hash: param.hash,
+    })),
+    ...param.images.map((name) => ({
+      name,
+      uploadState: UploadState.notSelected,
+      progress: 0,
+      type: 'img' as const,
+      hash: param.hash,
+    })),
+  ]
 
-export const showExternalReferenceUploadPopup = async (parma: selectUploadXRefFileDialogParam) => {
-  return new Promise((res) => {
-    const infos: UploadFileInfo[] = []
-    parma.externalReference.forEach((name) => {
-      infos.push({
-        name,
-        uploadState: UploadState.notSelected,
-        progress: 0,
-        type: "ref",
-        hash: parma.hash,
+  return new Promise<{ data: boolean }>((resolve) => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
 
-      })
+    let mounted: ReturnType<typeof h> | null = null
+
+    const vnode = h(ExternalRefUploadPopup, {
+      files: infos,
+      onClose(result: { data: boolean }) {
+        if (mounted) {
+          render(null, container)
+          mounted = null
+        }
+        container.remove()
+        resolve(result)
+      },
     })
-    parma.images.forEach((name) => {
-      infos.push({
-        name,
-        uploadState: UploadState.notSelected,
-        progress: 0,
-        hash: parma.hash,
-        type: "img"
-      })
-    })
-
-    files.value = infos
-
-    const action = showConfirmDialog({
-      title: t("上传外部参照"),
-    
-      message: () => (
-        <ExternalReferenceUploadPopup files={files.value}></ExternalReferenceUploadPopup>
-      )
-    }).then(() => {
-
-      res({
-        data: true
-      })
-    }).catch(() => {
-      res({
-        data: false
-      })
-    })
+    mounted = vnode
+    render(vnode, container)
   })
-
-};
+}

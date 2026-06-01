@@ -14,9 +14,10 @@ import {
   getPublicPreloadingData,
   buildPublicMxwebUrl,
   checkPublicExtReference,
-  uploadPublicExtReferenceFile,
+  type PublicPreloadingData,
 } from '../services/publicFileService';
 import { parseExtRefFileNames } from '../services/extRefService';
+import { showExternalReferenceUploadPopup } from '@/plugins/vant/components/popup/showExternalReferenceUploadPopup';
 import { showDialog, showToast } from 'vant';
 
 const loading = ref(false);
@@ -238,18 +239,33 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
   }
 }
 
-export async function checkPublicFileExternalRefs(hash: string): Promise<void> {
+async function getPublicPreloadingDataWithRetry(
+  hash: string,
+  maxRetries = 10,
+  delayMs = 2000
+): Promise<PublicPreloadingData | null> {
+  for (let i = 0; i < maxRetries; i++) {
+    const data = await getPublicPreloadingData(hash);
+    if (data) return data;
+    if (i < maxRetries - 1) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return null;
+}
+
+export async function checkPublicFileExternalRefs(hash: string): Promise<boolean> {
   try {
-    const preloadData = await getPublicPreloadingData(hash);
-    if (!preloadData) return;
+    const preloadData = await getPublicPreloadingDataWithRetry(hash);
+    if (!preloadData) return true;
 
     const refs = parseExtRefFileNames([
       ...(preloadData.images || []).filter(
-        (img) => !img.startsWith('http://') && !img.startsWith('https://')
+        (img: string) => !img.startsWith('http://') && !img.startsWith('https://')
       ),
       ...(preloadData.externalReference || []),
     ]);
-    if (refs.length === 0) return;
+    if (refs.length === 0) return true;
 
     const missingRefs: { name: string; type: 'img' | 'ref' }[] = [];
     for (const ref of refs) {
@@ -258,32 +274,18 @@ export async function checkPublicFileExternalRefs(hash: string): Promise<void> {
         missingRefs.push(ref);
       }
     }
-    if (missingRefs.length === 0) return;
+    if (missingRefs.length === 0) return true;
 
-    const fileList = missingRefs.map((f) => f.name).join('\n');
-    showDialog({
-      title: '缺失外部参照文件',
-      message: `以下公开文件外部参照需要上传:\n${fileList}`,
-      showCancelButton: true,
-      confirmButtonText: '上传文件',
-      cancelButtonText: '跳过',
-    })
-      .then(async () => {
-        for (const ref of missingRefs) {
-          const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
-          if (file) {
-            await uploadPublicExtReferenceFile({
-              srcHash: hash,
-              file,
-              extRefFile: ref.name,
-            });
-          }
-        }
-        showToast('外部参照上传完成');
-      })
-      .catch(() => {});
+    // 只传真正缺失的文件给弹窗
+    await showExternalReferenceUploadPopup({
+      images: missingRefs.filter((r) => r.type === 'img').map((r) => r.name),
+      externalReference: missingRefs.filter((r) => r.type === 'ref').map((r) => r.name),
+      hash,
+    });
+
+    return true;
   } catch {
-    // Silently fail
+    return true;
   }
 }
 
