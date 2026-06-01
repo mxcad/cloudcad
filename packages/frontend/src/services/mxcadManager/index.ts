@@ -1184,10 +1184,22 @@ const handleNewFileCommand = async () => {
       return;
     }
 
-    // 2. 调用 mxcad.newFile() 清空画布
+    // 2. 预先设置文件信息为新建文件，onOpen 回调会据此更新标题栏
+    currentFileInfo = {
+      fileId: '',
+      parentId: null,
+      projectId: null,
+      name: 'new.dwg',
+      personalSpaceId: null,
+    };
+    currentMxwebUrl = null;
+    currentCacheTimestamp = undefined;
+    resetDocumentModified();
+
+    // 3. 调用 mxcad.openWebFile() 清空画布
     const mxcad = MxCpp.getCurrentMxCAD();
     if (mxcad) {
-      mxcad.openWebFile(new URL('/node_modules/mxcad-app/dist/mxcadAppAssets/empty_template.mxweb', import.meta.url).href, void 0, void 0, void 0, 1)
+      mxcad.openWebFile(new URL('../../../public/empty.mxweb', import.meta.url).href, void 0, void 0, void 0, 1)
       const { initLayerList } = store.useLayer()
       const { initColorIndexList } = store.useColor()
       const { initLineTypeList } = store.useLineType()
@@ -1195,12 +1207,6 @@ const handleNewFileCommand = async () => {
       initColorIndexList()
       initLineTypeList()
     }
-
-    // 3. 重置文件信息状态
-    currentFileInfo = null;
-    currentMxwebUrl = null;
-    currentCacheTimestamp = undefined;
-    resetDocumentModified();
 
     // 4. 更新 URL 为 /cad-editor（不带 nodeId 和其他参数）
     if (navigateFunction) {
