@@ -3,6 +3,8 @@ import { getNodeInfo, buildMxwebUrl } from '../services/fileService';
 import { useEditorState } from './useEditorState';
 import { loadCADPermissions } from '../services/permissionService';
 import { openMxWeb } from '../plugins/mxcad/openMxWeb';
+import { getCachedMxwebData, setMxwebCache, buildCacheKey, clearMxwebCache } from '../services/mxwebCacheService';
+import { classifyApiError } from '../utils/errorHandler';
 import {
   getPreloadingData,
   checkExternalReferences,
@@ -72,6 +74,7 @@ export function useFileLoader() {
       editorState.setFileInfo(nodeInfo as unknown as Record<string, unknown>);
       editorState.setFileName(nodeInfo.name);
       editorState.setProjectId(nodeInfo.parentId || null);
+      editorState.setUpdatedAt((nodeInfo as unknown as Record<string, unknown>).updatedAt as string || null);
       await loadCADPermissions(nodeInfo.parentId || null);
 
       if (!nodeInfo.path) {
@@ -79,6 +82,23 @@ export function useFileLoader() {
       }
 
       const version = getVersionFromUrl();
+      const cacheKey = buildCacheKey(nodeInfo.path, version);
+
+      const cachedData = await getCachedMxwebData(cacheKey);
+      if (cachedData) {
+        progress.value = '正在从缓存加载图纸...';
+        const blob = new Blob([cachedData], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const opened = await openMxWeb(url);
+        URL.revokeObjectURL(url);
+        if (opened) {
+          editorState.setIsActive(true);
+          editorState.setLoading(false);
+          loading.value = false;
+          return true;
+        }
+      }
+
       const mxwebUrl = buildMxwebUrl(nodeInfo.path, version);
       progress.value = '正在打开图纸...';
 
@@ -88,12 +108,24 @@ export function useFileLoader() {
         editorState.setIsActive(true);
         editorState.setLoading(false);
         loading.value = false;
+        try {
+          const mxcad = (await import('mxcad')).MxCpp.App.getCurrentMxCAD();
+          if (mxcad) {
+            const fileName = mxcad.getCurrentFileName() || 'drawing.mxweb';
+            mxcad.saveFile(fileName, async (data: { buffer: ArrayBuffer }) => {
+              if (data?.buffer) {
+                await setMxwebCache(cacheKey, data.buffer).catch(() => {});
+              }
+            }, false, false);
+          }
+        } catch {}
         return true;
       } else {
         throw new Error('打开文件失败');
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '未知错误';
+      const classified = classifyApiError(e);
+      const message = classified.message;
       error.value = message;
       editorState.setError(message);
       editorState.setLoading(false);
@@ -143,7 +175,8 @@ export function useFileLoader() {
         throw new Error('打开文件失败');
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '未知错误';
+      const classified = classifyApiError(e);
+      const message = classified.message;
       error.value = message;
       editorState.setError(message);
       editorState.setLoading(false);

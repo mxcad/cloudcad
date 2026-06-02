@@ -1,10 +1,36 @@
 import { client } from '../api-sdk/client.gen';
+import { classifyApiError, isAuthError, isPermissionError, isAbortError } from './errorHandler';
+import { showToast } from 'vant';
 
 export function getApiBaseUrl(): string {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
   return '/api';
+}
+
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  try {
+    const resp = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+function getAccessToken(): string | undefined {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (token && token !== 'undefined' && token !== 'null') return token;
+  } catch {
+    // localStorage 不可用时忽略
+  }
+  return undefined;
 }
 
 export function setupApiClient(): void {
@@ -19,6 +45,7 @@ export function setupApiClient(): void {
   client.setConfig({
     baseUrl,
     credentials: 'include',
+    auth: () => getAccessToken(),
     responseTransformer: async (data: unknown) => {
       if (data && typeof data === 'object' && 'code' in data) {
         const typedData = data as Record<string, unknown>;
@@ -39,14 +66,44 @@ export function setupApiClient(): void {
     },
   });
 
-  client.interceptors.error.use(async (error, _response, _request, _options) => {
+  client.interceptors.error.use(async (error, response, _request, _options) => {
     if (error && typeof error === 'object') {
       const e = error as Record<string, unknown>;
-      if (e.status === 403) {
-        (error as Record<string, unknown>).isPermissionError = true;
-        (error as Record<string, unknown>).statusCode = 403;
+
+      if (isPermissionError(error)) {
+        e.isPermissionError = true;
+        e.statusCode = 403;
+      }
+
+      if (isAuthError(error)) {
+        const isAuthEndpoint = typeof _request?.url === 'string' &&
+          (_request.url.includes('/auth/') || _request.url.includes('/login') || _request.url.includes('/refresh'));
+        if (!isAuthEndpoint) {
+          if (!refreshPromise) {
+            refreshPromise = tryRefreshToken();
+          }
+          const refreshed = await refreshPromise;
+          refreshPromise = null;
+          if (refreshed) {
+            return { retry: true };
+          }
+        }
+      }
+
+      if (isAbortError(error)) {
+        return error;
       }
     }
     return error;
   });
+}
+
+export function handleApiError(error: unknown, context?: string): string {
+  if (isAbortError(error)) return '';
+  const classified = classifyApiError(error);
+  if (classified.type === 'abort') return '';
+  const prefix = context ? `${context}: ` : '';
+  const message = `${prefix}${classified.message}`;
+  showToast(message);
+  return message;
 }

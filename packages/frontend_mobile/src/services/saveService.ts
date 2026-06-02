@@ -29,16 +29,24 @@ export function getMxwebBlob(): Promise<Blob> {
   });
 }
 
-export async function saveToNode(nodeId: string, blob: Blob, commitMessage?: string): Promise<void> {
+export async function saveToNode(
+  nodeId: string,
+  blob: Blob,
+  commitMessage?: string,
+  expectedTimestamp?: string | null,
+): Promise<{ updatedAt?: string }> {
   const file = new File([blob], 'drawing.mxweb', { type: blob.type });
   const result = await saveControllerSaveMxwebToNode({
     path: { nodeId },
     body: {
       file,
       commitMessage: commitMessage || undefined,
+      expectedTimestamp: expectedTimestamp || undefined,
     },
   });
   if (result.error) throw result.error;
+  const data = result.data as unknown as { updatedAt?: string } | undefined;
+  return data || {};
 }
 
 export async function saveAs(params: {
@@ -49,13 +57,14 @@ export async function saveAs(params: {
   commitMessage?: string;
   projectId?: string;
   libraryType?: 'drawing' | 'block';
+  format?: 'dwg' | 'dxf' | 'mxweb';
 }): Promise<{ nodeId: string }> {
-  const { blob, ...rest } = params;
+  const { blob, format, ...rest } = params;
   const file = new File([blob], 'drawing.mxweb', { type: blob.type });
   const result = await saveControllerSaveMxwebAs({
     body: {
       file,
-      format: 'mxweb',
+      format: format || 'mxweb',
       ...rest,
     },
   });
@@ -64,20 +73,30 @@ export async function saveAs(params: {
   return responseData;
 }
 
-export async function saveLibraryDrawing(nodeId: string, blob: Blob): Promise<void> {
+export async function saveLibraryDrawing(
+  nodeId: string,
+  blob: Blob,
+): Promise<{ updatedAt?: string }> {
   const file = new File([blob], 'drawing.mxweb', { type: blob.type });
   const result = await libraryControllerSaveDrawingNode({
     path: { nodeId },
     body: { file },
   });
   if (result.error) throw result.error;
+  const data = result.data as unknown as { updatedAt?: string } | undefined;
+  return data || {};
 }
 
-export async function saveLibraryBlock(nodeId: string, blob: Blob): Promise<void> {
+export async function saveLibraryBlock(
+  nodeId: string,
+  blob: Blob,
+): Promise<{ updatedAt?: string }> {
   const file = new File([blob], 'block.mxweb', { type: blob.type });
   const result = await libraryControllerSaveBlockNode({
     path: { nodeId },
     body: { file },
   });
   if (result.error) throw result.error;
+  const data = result.data as unknown as { updatedAt?: string } | undefined;
+  return data || {};
 }

@@ -60,7 +60,7 @@ const showLayerList = ()=> {
         >
           { layerListData.value.map((item)=> (
               <Row class="layer_list_item" key={item.id} onClick={()=> setData(item, "off", item.off === 1 ? 0 : 1)}>
-                <Col span={3}><Icon onClick={(event)=> {event.stopPropagation();setCurrentLayerName(item.name)}} name={currentLayerName.value !== item.name ? "./mxcustomui/layer/tc_ic_tc_off.png" : "./mxcustomui/layer/tc_ic_tc_on.png" }></Icon></Col>
+                <Col span={3}><Icon onClick={(event: MouseEvent)=> {event.stopPropagation();setCurrentLayerName(item.name)}} name={currentLayerName.value !== item.name ? "./mxcustomui/layer/tc_ic_tc_off.png" : "./mxcustomui/layer/tc_ic_tc_on.png" }></Icon></Col>
                 <Col span={3}><Icon name={item.off === 1 ? "./mxcustomui/layer/tc_ic_xs_off.png" :"./mxcustomui/layer/tc_ic_xs_on.png" }></Icon></Col>
                 <Col span={3}><Icon onClick={()=> {event?.stopPropagation(); setData(item, "locked", item.locked === 1 ? 0 : 1)}} name={item.locked === 0 ? "./mxcustomui/layer/tc_ic_suo_off.png" : "./mxcustomui/layer/tc_ic_suo_on.png"}></Icon></Col>
                 <Col class="layer_list_item_name">{ item.name }</Col>

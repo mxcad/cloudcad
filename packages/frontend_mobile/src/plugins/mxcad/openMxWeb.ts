@@ -23,6 +23,8 @@ export function openMxWeb(url: string, options?: { requestHeaders?: Record<strin
       }, undefined, objParam)
       if (isOpen) res(true)
     } catch (e) {
+      console.error('openMxWeb failed:', e)
+      showToastOnce(t("打开图纸失败"))
       res(false)
     }
   })

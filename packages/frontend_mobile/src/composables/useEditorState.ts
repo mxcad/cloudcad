@@ -17,6 +17,8 @@ interface EditorState {
   isPersonalSpace: boolean;
   isModified: boolean;
   fileName: string;
+  updatedAt: string | null;
+  expectedTimestamp: string | null;
 }
 
 const state = reactive<EditorState>({
@@ -34,6 +36,8 @@ const state = reactive<EditorState>({
   isPersonalSpace: false,
   isModified: false,
   fileName: '',
+  updatedAt: null,
+  expectedTimestamp: null,
 });
 
 export function useEditorState() {
@@ -77,6 +81,15 @@ export function useEditorState() {
     state.isActive = val;
   }
 
+  function setUpdatedAt(val: string | null) {
+    state.updatedAt = val;
+    state.expectedTimestamp = val;
+  }
+
+  function setExpectedTimestamp(val: string | null) {
+    state.expectedTimestamp = val;
+  }
+
   function reset() {
     state.isActive = false;
     state.loading = false;
@@ -92,6 +105,8 @@ export function useEditorState() {
     state.isPersonalSpace = false;
     state.isModified = false;
     state.fileName = '';
+    state.updatedAt = null;
+    state.expectedTimestamp = null;
   }
 
   return {
@@ -106,6 +121,8 @@ export function useEditorState() {
     setIsModified,
     setFileName,
     setIsActive,
+    setUpdatedAt,
+    setExpectedTimestamp,
     reset,
   };
 }

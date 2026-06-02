@@ -6,7 +6,7 @@ type FilteredPerson<T> = {
 
 type PopupProps = Partial<FilteredPerson<InstanceType<typeof Popup>>>
 
-type SlotType = JSX.Element | VNode | string;
+type SlotType = VNode | string;
 export interface PopupConfig {
   /**  ‍ 是否使用单实例 */
 /** ‍ Do you want to use a single instance*/
@@ -61,7 +61,7 @@ class PopupClass {
   }
   private createVNode = () => {
     return h(() => (
-      <Popup {...this.config.props} onUpdate:show={(is)=> { if(this.config.props) this.config.props.show = is }} v-slots={this.config.slots}></Popup>
+      <Popup {...this.config.props} onUpdate:show={(is: boolean)=> { if(this.config.props) this.config.props.show = is }} v-slots={this.config.slots}></Popup>
     ));
   };
   show() {

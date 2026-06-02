@@ -9,6 +9,7 @@ import {
 } from '../services/saveService';
 import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { processPendingImages } from '../services/pendingImageService';
+import { handleApiError } from '../utils/apiConfig';
 import { showToast } from 'vant';
 
 const saving = ref(false);
@@ -37,7 +38,10 @@ export function useSave() {
       const blob = await getMxwebBlob();
 
       if (state.fileId && state.permissions.canSave) {
-        await saveToNode(state.fileId, blob, commitMessage);
+        const result = await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
+        if (result.updatedAt) {
+          editorState.setExpectedTimestamp(result.updatedAt);
+        }
         await processPendingImages(state.fileId).catch(() => {});
         showToast('保存成功');
         uploadThumbnailForNode(state.fileId).catch(() => {});
@@ -72,8 +76,7 @@ export function useSave() {
       saving.value = false;
       return false;
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '保存失败';
-      showToast(message);
+      handleApiError(e, '保存失败');
       saving.value = false;
       return false;
     }

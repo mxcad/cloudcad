@@ -39,11 +39,11 @@ export const PERMISSIONS = {
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
-export async function checkProjectPermission(projectId: string, permission: PermissionKey): Promise<boolean> {
+export async function checkProjectPermission(projectId: string, permission: string): Promise<boolean> {
   try {
     const result = await fileSystemControllerCheckProjectPermission({
       path: { projectId },
-      query: { permission },
+      query: { permission: permission as any },
     });
     if (result.error) return false;
     return result.data?.hasPermission ?? false;

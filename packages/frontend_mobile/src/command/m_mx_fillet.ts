@@ -1,6 +1,6 @@
 import { t } from "@/languages"
 import { addCommand } from "@/plugins/mxcad/command"
-import { MxCADUiPrDist, MxCADUiPrEntity, MxCADResbuf, McDbPolyline, McGePoint3d, McDbLine, MxCpp, MxCADUiPrKeyWord, McDbEntity, McDb, MxCADUtility } from "mxcad"
+import { MxCADUiPrDist, MxCADUiPrEntity, MxCADResbuf, McDbPolyline, McGePoint3d, McDbLine, MxCpp, MxCADUiPrKeyWord, McDbEntity, McDb, MxCADUtility, McDbArc } from "mxcad"
 import { DynamicInputType, MrxDbgUiPrBaseReturn, MxFun } from "mxdraw"
 /**
 /**

@@ -109,7 +109,7 @@ const showFindTextList = () => {
 };
 
 const updateDisplay = () => MxFun.updateDisplay();
-let selectRectBox: THREE.Line;
+let selectRectBox!: THREE.Line;
 let cancel!: () => void;
 export async function m_mx_find_text() {
   const mxcad = MxCpp.App.getCurrentMxCAD();

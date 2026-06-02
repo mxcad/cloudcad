@@ -29,7 +29,7 @@ async function Mx_SetObjectColor() {
         await openColorPicker((color)=> {
             entity.color = color.hexString
             mxcad.updateDisplay()
-        }, new iro.Color(entity.color))
+        }, new iro.Color(entity.color as unknown as string))
         isShowColorPicker.value = false
     }
 }

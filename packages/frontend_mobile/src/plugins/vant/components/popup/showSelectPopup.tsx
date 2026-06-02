@@ -78,7 +78,7 @@ export const showSelectPopup = (
             columns={columns.value}
             v-model={values.value}
             onCancel={cancel}
-            onConfirm={(e) => {
+            onConfirm={(e: PickerCancelEventParams) => {
               onConfirm && onConfirm(e);
               cancel()
             }}

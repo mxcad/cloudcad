@@ -1,394 +1,427 @@
     <script setup lang="ts">
 
-import { onMounted, onBeforeUnmount, ref, unref } from 'vue';
-import { t } from '@/languages';
-import { createMxCAD } from '../../plugins/mxcad';
-import { callCommand } from '@/plugins/mxcad/command';
-import { uiConfig } from '@/config/uiConfig';
-import BScroll from '@better-scroll/core';
-import ObserveDOM from '@better-scroll/observe-dom'
-import ObserveImage from '@better-scroll/observe-image';
-import { McCmColor, MxCpp } from 'mxcad';
-import { useColorPicker } from './useColorPicker';
-import iro from '@jaames/iro';
-import { drawArc } from "mxcad"
-import { useMenu } from "./hooks/useMenu"
-import { useEditObjectToolbar } from "./hooks/useEditObjectToolbar"
-import { useSimulatedMouse } from './hooks/useSimulatedMouse';
-import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
-import { useFooterToolbar } from './hooks/useFooterToolbar';
-import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
-import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs } from '../../composables/useFileLoader';
-import { isHashLike, resolvePublicExtRefUrl } from '../../services/publicFileService';
-import { checkLibraryPermissions } from '../../services/permissionService';
-import { useEditorState } from '../../composables/useEditorState';
-import { useSave } from '../../composables/useSave';
-import { useUser } from '../../composables/useUser';
-import { uploadPublicFile } from '../../services/uploadService';
-import { openMxWeb } from '../../plugins/mxcad/openMxWeb';
-import { showToast, showConfirmDialog } from 'vant';
-import CommitMessageDialog from './components/CommitMessageDialog.vue';
-import SaveAsSheet from './components/SaveAsSheet.vue';
-import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
-import LoginPromptPopup from './components/LoginPromptPopup.vue';
-import CooperatePopup from './components/CooperatePopup.vue';
-import MxToolbar from '@/components/MxToolbar.vue';
+    import { onMounted, onBeforeUnmount, ref, unref } from 'vue';
+    import { t } from '@/languages';
+    import { createMxCAD } from '../../plugins/mxcad';
+    import { callCommand } from '@/plugins/mxcad/command';
+    import { uiConfig } from '@/config/uiConfig';
+    import BScroll from '@better-scroll/core';
+    import ObserveDOM from '@better-scroll/observe-dom'
+    import ObserveImage from '@better-scroll/observe-image';
+    import { McCmColor, MxCpp } from 'mxcad';
+    import { useColorPicker } from './useColorPicker';
+    import iro from '@jaames/iro';
+    import { drawArc } from "mxcad"
+    import { useMenu } from "./hooks/useMenu"
+    import { useEditObjectToolbar } from "./hooks/useEditObjectToolbar"
+    import { useSimulatedMouse } from './hooks/useSimulatedMouse';
+    import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
+    import { useFooterToolbar } from './hooks/useFooterToolbar';
+    import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
+    import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs } from '../../composables/useFileLoader';
+    import { isHashLike, resolvePublicExtRefUrl } from '../../services/publicFileService';
+    import { checkLibraryPermissions } from '../../services/permissionService';
+    import { useEditorState } from '../../composables/useEditorState';
+    import { useSave } from '../../composables/useSave';
+    import { useUser } from '../../composables/useUser';
+    import { uploadPublicFile } from '../../services/uploadService';
+    import { openMxWeb } from '../../plugins/mxcad/openMxWeb';
+    import { checkDuplicateFile, showDuplicateFileDialog } from '../../services/checkService';
+    import { showToast, showConfirmDialog } from 'vant';
+import { handleApiError } from '@/utils/apiConfig';
+    import CommitMessageDialog from './components/CommitMessageDialog.vue';
+    import SaveAsSheet from './components/SaveAsSheet.vue';
+    import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
+    import LoginPromptPopup from './components/LoginPromptPopup.vue';
+    import CooperatePopup from './components/CooperatePopup.vue';
+    import MxToolbar from '@/components/MxToolbar.vue';
 
-BScroll.use(ObserveDOM)
-BScroll.use(ObserveImage)
-// ‍  气泡菜单
-// ‍ Bubble menu
+    BScroll.use(ObserveDOM)
+    BScroll.use(ObserveImage)
+    // ‍  气泡菜单
+    // ‍ Bubble menu
 
-const {
-    isShowMenu,
-    actions,
-    onSelectMenu,
-    onCloseMenu
-} = useMenu()
+    const {
+        isShowMenu,
+        actions,
+        onSelectMenu,
+        onCloseMenu
+    } = useMenu()
 
-// ‍  图元编辑工具栏
-// ‍ Element Editing Toolbar
+    // ‍  图元编辑工具栏
+    // ‍ Element Editing Toolbar
 
-const {
-    isShowObjectEditingToolbar,
-    objectEditingToolbarItems,
-    onObjectEditingBtnTap,
-    initEditObjectToolbar
-} = useEditObjectToolbar()
+    const {
+        isShowObjectEditingToolbar,
+        objectEditingToolbarItems,
+        onObjectEditingBtnTap,
+        initEditObjectToolbar
+    } = useEditObjectToolbar()
 
-const {
-    needle,
-    handle,
-    arrowTip,
-    onTouchstart
-} = useSimulatedMouse()
-const {
-    isRunCmd,
-    stopRunCmd,
-    determine,
-    cmdTipObj,
-    sendInputCmd
-} = useRunCmdOperationBtnList()
-// ‍  颜色选择器
-// ‍ Color picker
+    const {
+        needle,
+        handle,
+        arrowTip,
+        onTouchstart
+    } = useSimulatedMouse()
+    const {
+        isRunCmd,
+        stopRunCmd,
+        determine,
+        cmdTipObj,
+        sendInputCmd
+    } = useRunCmdOperationBtnList()
+    // ‍  颜色选择器
+    // ‍ Color picker
 
-const { isShowColorPicker, openColorPicker } = useColorPicker('.colorPicker')
-const color = ref("#fff")
+    const { isShowColorPicker, openColorPicker } = useColorPicker('.colorPicker')
+    const color = ref("#fff")
 
-function doGoBack() {
-  if (window.history.length > 1) {
-    window.history.back()
-  } else {
-    const backUrl = new URLSearchParams(window.location.search).get('back')
-    if (backUrl) {
-      window.location.href = backUrl
-    }
-  }
-}
-
-function goBack() {
-  if (editorState.state.isModified) {
-    showConfirmDialog({
-      title: '未保存的更改',
-      message: '当前图纸有未保存的更改，确定要返回吗？',
-      confirmButtonText: '确定返回',
-      cancelButtonText: '取消',
-    }).then(() => {
-      doGoBack()
-    }).catch(() => {})
-  } else {
-    doGoBack()
-  }
-}
-const selectColor = () => {
-    let _color =  MxCpp.getCurrentMxCAD().getDatabase().getCurrentlyTrueColor()
-    if(_color.getColorValue() === "0xFFFFFF") {
-        _color.setRGB(255, 255, 255)
-    }
-    openColorPicker((c) => {
-        color.value = c.hexString
-        const mcColor = new McCmColor()
-        mcColor.setRGB(c.red, c.green, c.blue)
-        MxCpp.getCurrentMxCAD().getDatabase().setCurrentlyTrueColor(mcColor)
-        MxCpp.getCurrentMxCAD().drawColor = mcColor
-    }, new iro.Color({
-        r: _color.red,
-        g: _color.green,
-        b: _color.blue
-    }))
-}
-
-const {
-    left,
-    currentItem,
-    onTap,
-    onClick,
-    // ‍  历史点击
-// ‍ Historical clicks
-
-    state,
-    historyBtnList,
-    toggle,
-    onHistoryBtnClick
-} = useFooterToolbar()
-
-
-
-
-const {
-    floatingRightBtnArr,
-    actionBtn,
-    onClickBtn
-} = useFloatingRightBtnList()
-
-
-const {
-    loading: fileLoading,
-    error: fileError,
-    progress: fileProgress,
-    loadByNodeId,
-    loadByHash,
-    getFileIdFromUrl,
-    getHashFromUrl,
-    getVersionFromUrl,
-} = useFileLoader()
-const editorState = useEditorState()
-const drawName = ref("")
-const currentVersion = ref<number | undefined>(getVersionFromUrl())
-const isPublicFile = ref(!!getHashFromUrl())
-
-const { saving, save: saveAction } = useSave()
-const { isAuthenticated } = useUser()
-const showCommitDialog = ref(false)
-const showSaveAsSheet = ref(false)
-const pendingCommitMessage = ref('')
-const canManageLibrary = ref(false)
-const showVersionHistory = ref(false)
-const showLoginPrompt = ref(false)
-const pendingActionAfterLogin = ref<'save' | 'version-history' | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
-const showCooperate = ref(false)
-const uploading = ref(false)
-
-checkLibraryPermissions().then(result => {
-  canManageLibrary.value = result.canManageDrawing || result.canManageBlock
-})
-
-async function onSaveClick() {
-  if (isPublicFile.value) {
-    showToast('公开文件不支持保存')
-    return
-  }
-  if (!editorState.state.permissions.canSave) {
-    showToast('没有保存权限')
-    return
-  }
-  if (!isAuthenticated.value) {
-    pendingActionAfterLogin.value = 'save'
-    showLoginPrompt.value = true
-    return
-  }
-  showCommitDialog.value = true
-}
-
-function onCommitConfirm(message: string) {
-  pendingCommitMessage.value = message
-  showCommitDialog.value = false
-  executeSave()
-}
-
-async function executeSave() {
-  const success = await saveAction(pendingCommitMessage.value)
-  if (!success) {
-    if (!isAuthenticated.value) {
-      showLoginPrompt.value = true
-      return
-    }
-    showSaveAsSheet.value = true
-  }
-}
-
-function onSaveAsClose() {
-  showSaveAsSheet.value = false
-}
-
-function onSaveAsSuccess() {
-  showSaveAsSheet.value = false
-}
-
-function onShowVersionHistory() {
-  if (isPublicFile.value) {
-    showToast('公开文件不支持版本历史')
-    return
-  }
-  if (!editorState.state.permissions.canSave) {
-    showToast('没有查看版本历史的权限')
-    return
-  }
-  if (!isAuthenticated.value) {
-    pendingActionAfterLogin.value = 'version-history'
-    showLoginPrompt.value = true
-    return
-  }
-  showVersionHistory.value = true
-}
-
-function onLoginPromptLogin() {
-  showLoginPrompt.value = false
-  if (pendingActionAfterLogin.value) {
-    sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value)
-    pendingActionAfterLogin.value = null
-  }
-  const currentUrl = encodeURIComponent(window.location.href)
-  window.location.href = `/login?redirect=${currentUrl}`
-}
-
-function onLoginPromptClose() {
-  showLoginPrompt.value = false
-}
-
-async function handleNewFile() {
-  if (editorState.state.isModified) {
-    try {
-      await showConfirmDialog({
-        title: '未保存的更改',
-        message: '当前图纸有未保存的更改，新建图纸将丢失这些更改。',
-        confirmButtonText: '继续新建',
-        cancelButtonText: '取消',
-      })
-    } catch {
-      return
-    }
-  }
-
-  const mxcad = MxCpp.App.getCurrentMxCAD()
-  mxcad.newFile()
-
-  editorState.reset()
-
-  const url = new URL(window.location.href)
-  url.searchParams.delete('fileId')
-  url.searchParams.delete('nodeId')
-  url.searchParams.delete('hash')
-  url.searchParams.delete('v')
-  window.history.replaceState(null, '', url.pathname + url.search)
-
-  drawName.value = ''
-  currentVersion.value = undefined
-  isPublicFile.value = false
-
-  showToast('已新建空白图纸')
-}
-
-async function handleOpenFile() {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.dwg,.dxf,.mxweb'
-  input.style.display = 'none'
-  document.body.appendChild(input)
-  input.onchange = async () => {
-    const file = input.files?.[0]
-    document.body.removeChild(input)
-    if (!file) return
-    uploading.value = true
-    showToast('正在上传文件...')
-    try {
-      const result = await uploadPublicFile(file)
-      if (!result) {
-        showToast('上传失败')
-        uploading.value = false
-        return
-      }
-      showToast(result.isCached ? '文件已存在，正在打开...' : '上传完成，正在打开...')
-      editorState.reset()
-      const opened = await openMxWeb(result.url)
-      if (opened) {
-        drawName.value = result.fileName
-        editorState.setIsActive(true)
-        editorState.setFileName(result.fileName)
-        isPublicFile.value = true
-        currentVersion.value = undefined
-        const url = new URL(window.location.href)
-        url.searchParams.set('hash', result.hash)
-        window.history.replaceState(null, '', url.pathname + url.search)
-      } else {
-        showToast('打开文件失败')
-      }
-    } catch {
-      showToast('上传或打开文件失败')
-    }
-    uploading.value = false
-  }
-  input.click()
-}
-
-onMounted(async () => {
-    window.addEventListener('open-version-history', onShowVersionHistory)
-    window.addEventListener('mxcad-new-file', handleNewFile)
-    window.addEventListener('mxcad-show-collaborate', () => { showCooperate.value = true })
-
-    const mxcad = await createMxCAD()
-    mxcad.on('databaseModify', () => {
-      editorState.setIsModified(true)
-    })
-
-    mxcad.on('openFileComplete', () => {
-      editorState.setIsModified(false)
-    })
-
-onBeforeUnmount(() => {
-    window.removeEventListener('open-version-history', onShowVersionHistory)
-    window.removeEventListener('mxcad-new-file', handleNewFile)
-    window.removeEventListener('mxcad-show-collaborate', () => {})
-})
-    initEditObjectToolbar(mxcad)
-
-    const fileId = getFileIdFromUrl()
-    const fileHash = getHashFromUrl()
-
-    if (fileId) {
-        const ok = await loadByNodeId(fileId)
-        if (ok) {
-            drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
-            checkFileExternalRefs(fileId)
-        }
-    } else if (fileHash && isHashLike(fileHash)) {
-        isPublicFile.value = true
-        const ok = await loadByHash(fileHash)
-        if (ok) {
-            drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
-            checkPublicFileExternalRefs(fileHash)
+    function doGoBack() {
+        if (window.history.length > 1) {
+            window.history.back()
         } else {
-            drawName.value = mxcad.getCurrentFileName()
+            const backUrl = new URLSearchParams(window.location.search).get('back')
+            if (backUrl) {
+                window.location.href = backUrl
+            }
         }
-    } else {
-        mxcad.on("openFileComplete", () => {
-            drawName.value = mxcad.getCurrentFileName()
-        })
     }
 
-    const pendingAction = sessionStorage.getItem('pendingAction')
-    if (pendingAction && isAuthenticated.value) {
-      sessionStorage.removeItem('pendingAction')
-      await new Promise(resolve => setTimeout(resolve, 500))
-      if (pendingAction === 'save') {
+    function goBack() {
+        if (editorState.state.isModified) {
+            showConfirmDialog({
+                title: '未保存的更改',
+                message: '当前图纸有未保存的更改，确定要返回吗？',
+                confirmButtonText: '确定返回',
+                cancelButtonText: '取消',
+            }).then(() => {
+                doGoBack()
+            }).catch(() => { })
+        } else {
+            doGoBack()
+        }
+    }
+    const selectColor = () => {
+        let _color = MxCpp.getCurrentMxCAD().getDatabase().getCurrentlyTrueColor()
+        if (_color.getColorValue() === "0xFFFFFF") {
+            _color.setRGB(255, 255, 255)
+        }
+        openColorPicker((c) => {
+            color.value = c.hexString
+            const mcColor = new McCmColor()
+            mcColor.setRGB(c.red, c.green, c.blue)
+            MxCpp.getCurrentMxCAD().getDatabase().setCurrentlyTrueColor(mcColor)
+            MxCpp.getCurrentMxCAD().drawColor = mcColor
+        }, new iro.Color({
+            r: _color.red,
+            g: _color.green,
+            b: _color.blue
+        }))
+    }
+
+    const {
+        left,
+        currentItem,
+        onTap,
+        onClick,
+        // ‍  历史点击
+        // ‍ Historical clicks
+
+        state,
+        historyBtnList,
+        toggle,
+        onHistoryBtnClick
+    } = useFooterToolbar()
+
+
+
+
+    const {
+        floatingRightBtnArr,
+        actionBtn,
+        onClickBtn
+    } = useFloatingRightBtnList()
+
+
+    const {
+        loading: fileLoading,
+        error: fileError,
+        progress: fileProgress,
+        loadByNodeId,
+        loadByHash,
+        getFileIdFromUrl,
+        getHashFromUrl,
+        getVersionFromUrl,
+    } = useFileLoader()
+    const editorState = useEditorState()
+    const drawName = ref("")
+    const currentVersion = ref<number | undefined>(getVersionFromUrl())
+    const isPublicFile = ref(!!getHashFromUrl())
+
+    const { saving, save: saveAction } = useSave()
+    const { isAuthenticated } = useUser()
+    const showCommitDialog = ref(false)
+    const showSaveAsSheet = ref(false)
+    const pendingCommitMessage = ref('')
+    const canManageLibrary = ref(false)
+    const showVersionHistory = ref(false)
+    const showLoginPrompt = ref(false)
+    const pendingActionAfterLogin = ref<'save' | 'version-history' | null>(null)
+    const fileInput = ref<HTMLInputElement | null>(null)
+    const showCooperate = ref(false)
+    const uploading = ref(false)
+
+    checkLibraryPermissions().then(result => {
+        canManageLibrary.value = result.canManageDrawing || result.canManageBlock
+    })
+
+    async function onSaveClick() {
+        if (isPublicFile.value) {
+            showToast('公开文件不支持保存')
+            return
+        }
+        if (!editorState.state.permissions.canSave) {
+            showToast('没有保存权限')
+            return
+        }
+        if (!isAuthenticated.value) {
+            pendingActionAfterLogin.value = 'save'
+            showLoginPrompt.value = true
+            return
+        }
         showCommitDialog.value = true
-      } else if (pendingAction === 'version-history') {
-        showVersionHistory.value = true
-      }
     }
-})
-// ‍  适配内容高度
-// ‍ Adaptation content height
 
-function setViewportHeight() {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-}
+    function onCommitConfirm(message: string) {
+        pendingCommitMessage.value = message
+        showCommitDialog.value = false
+        executeSave()
+    }
 
-window.addEventListener('resize', setViewportHeight);
-window.addEventListener('orientationchange', setViewportHeight);
-setViewportHeight();
+    async function executeSave() {
+        const success = await saveAction(pendingCommitMessage.value)
+        if (!success) {
+            if (!isAuthenticated.value) {
+                showLoginPrompt.value = true
+                return
+            }
+            showSaveAsSheet.value = true
+        }
+    }
+
+    function onSaveAsClose() {
+        showSaveAsSheet.value = false
+    }
+
+    function onSaveAsSuccess() {
+        showSaveAsSheet.value = false
+    }
+
+    function onShowVersionHistory() {
+        if (isPublicFile.value) {
+            showToast('公开文件不支持版本历史')
+            return
+        }
+        if (!editorState.state.permissions.canSave) {
+            showToast('没有查看版本历史的权限')
+            return
+        }
+        if (!isAuthenticated.value) {
+            pendingActionAfterLogin.value = 'version-history'
+            showLoginPrompt.value = true
+            return
+        }
+        showVersionHistory.value = true
+    }
+
+    function onLoginPromptLogin() {
+        showLoginPrompt.value = false
+        if (pendingActionAfterLogin.value) {
+            sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value)
+            pendingActionAfterLogin.value = null
+        }
+        const currentUrl = encodeURIComponent(window.location.href)
+        window.location.href = `/login?redirect=${currentUrl}`
+    }
+
+    function onLoginPromptClose() {
+        showLoginPrompt.value = false
+    }
+
+    async function handleNewFile() {
+        if (editorState.state.isModified) {
+            try {
+                await showConfirmDialog({
+                    title: '未保存的更改',
+                    message: '当前图纸有未保存的更改，新建图纸将丢失这些更改。',
+                    confirmButtonText: '继续新建',
+                    cancelButtonText: '取消',
+                })
+            } catch {
+                return
+            }
+        }
+
+        const mxcad = MxCpp.App.getCurrentMxCAD()
+        mxcad.newFile()
+
+        editorState.reset()
+
+        const url = new URL(window.location.href)
+        url.searchParams.delete('fileId')
+        url.searchParams.delete('nodeId')
+        url.searchParams.delete('hash')
+        url.searchParams.delete('v')
+        window.history.replaceState(null, '', url.pathname + url.search)
+
+        drawName.value = ''
+        currentVersion.value = undefined
+        isPublicFile.value = false
+
+        showToast('已新建空白图纸')
+    }
+
+    async function handleOpenFile() {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.dwg,.dxf,.mxweb'
+        input.style.display = 'none'
+        document.body.appendChild(input)
+        input.onchange = async () => {
+            const file = input.files?.[0]
+            document.body.removeChild(input)
+            if (!file) return
+
+            const hash = await (await import('../../utils/hashUtils')).calculateFileHash(file)
+            const { isDuplicate } = await checkDuplicateFile(hash, file.name, file.size)
+            if (isDuplicate) {
+                const { action } = await showDuplicateFileDialog(file.name)
+                if (action === 'cancel') return
+                if (action === 'open-existing') {
+                    uploading.value = true
+                    showToast('文件已存在，正在打开...')
+                    const apiBaseUrl = (await import('../../utils/apiConfig')).getApiBaseUrl()
+                    const baseUrl = (() => { try { return new URL(apiBaseUrl).origin } catch { return '' } })()
+                    const url = `${baseUrl}/api/v1/public-file/access/${hash}.mxweb?t=${Date.now()}`
+                    editorState.reset()
+                    const opened = await openMxWeb(url)
+                    if (opened) {
+                        drawName.value = file.name
+                        editorState.setIsActive(true)
+                        editorState.setFileName(file.name)
+                        isPublicFile.value = true
+                        const urlObj = new URL(window.location.href)
+                        urlObj.searchParams.set('hash', hash)
+                        window.history.replaceState(null, '', urlObj.pathname + urlObj.search)
+                    } else {
+                        showToast('打开文件失败')
+                    }
+                    uploading.value = false
+                    return
+                }
+            }
+
+            uploading.value = true
+            showToast('正在上传文件...')
+            try {
+                const result = await uploadPublicFile(file)
+                if (!result) {
+                    showToast('上传失败')
+                    uploading.value = false
+                    return
+                }
+                showToast(result.isCached ? '文件已存在，正在打开...' : '上传完成，正在打开...')
+                editorState.reset()
+                const opened = await openMxWeb(result.url)
+                if (opened) {
+                    drawName.value = result.fileName
+                    editorState.setIsActive(true)
+                    editorState.setFileName(result.fileName)
+                    isPublicFile.value = true
+                    currentVersion.value = undefined
+                    const url = new URL(window.location.href)
+                    url.searchParams.set('hash', result.hash)
+                    window.history.replaceState(null, '', url.pathname + url.search)
+                } else {
+                    showToast('打开文件失败')
+                }
+            } catch (e) {
+                handleApiError(e, '上传或打开文件失败')
+            }
+            uploading.value = false
+        }
+        input.click()
+    }
+
+    onMounted(async () => {
+        window.addEventListener('open-version-history', onShowVersionHistory)
+        window.addEventListener('mxcad-new-file', handleNewFile)
+        window.addEventListener('mxcad-show-collaborate', () => { showCooperate.value = true })
+
+        onBeforeUnmount(() => {
+            window.removeEventListener('open-version-history', onShowVersionHistory)
+            window.removeEventListener('mxcad-new-file', handleNewFile)
+            window.removeEventListener('mxcad-show-collaborate', () => { })
+        })
+
+        const mxcad = await createMxCAD()
+        mxcad.on('databaseModify', () => {
+            editorState.setIsModified(true)
+        })
+
+        mxcad.on('openFileComplete', () => {
+            editorState.setIsModified(false)
+        })
+
+        initEditObjectToolbar(mxcad)
+
+        const fileId = getFileIdFromUrl()
+        const fileHash = getHashFromUrl()
+
+        if (fileId) {
+            const ok = await loadByNodeId(fileId)
+            if (ok) {
+                drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+                checkFileExternalRefs(fileId)
+            }
+        } else if (fileHash && isHashLike(fileHash)) {
+            isPublicFile.value = true
+            const ok = await loadByHash(fileHash)
+            if (ok) {
+                drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+                checkPublicFileExternalRefs(fileHash)
+            } else {
+                drawName.value = mxcad.getCurrentFileName()
+            }
+        } else {
+            mxcad.on("openFileComplete", () => {
+                drawName.value = mxcad.getCurrentFileName()
+            })
+        }
+
+        const pendingAction = sessionStorage.getItem('pendingAction')
+        if (pendingAction && isAuthenticated.value) {
+            sessionStorage.removeItem('pendingAction')
+            await new Promise(resolve => setTimeout(resolve, 500))
+            if (pendingAction === 'save') {
+                showCommitDialog.value = true
+            } else if (pendingAction === 'version-history') {
+                showVersionHistory.value = true
+            }
+        }
+    })
+    // ‍  适配内容高度
+    // ‍ Adaptation content height
+
+    function setViewportHeight() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+
+    window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('orientationchange', setViewportHeight);
+    setViewportHeight();
 
 </script>
 
@@ -402,10 +435,8 @@ setViewportHeight();
             <van-text-ellipsis class="draw_name" :content="drawName" />
             <span v-if="currentVersion" class="version-badge">r{{ currentVersion }}</span>
             <div class="top_toolbar">
-                <button class="item" :disabled="uploading || fileLoading" @click="handleOpenFile" title="打开文件">
-                    <MxIcon icon="wenjian" isDefault class="zoomed"></MxIcon>
-                </button>
-                <button class="item" :disabled="saving || isPublicFile || !editorState.state.permissions.canSave" @click="onSaveClick">
+                <button class="item" :disabled="saving || isPublicFile || !editorState.state.permissions.canSave"
+                    @click="onSaveClick">
                     <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
                 </button>
                 <button class="item" @click="callCommand('Mx_ZoomE')">
@@ -418,7 +449,8 @@ setViewportHeight();
                     <div class="color_box zoomed" :style="{ backgroundColor: color }"></div>
                 </button>
                 <van-popover v-model:show="isShowMenu" icon-prefix="mxicon" theme="dark" placement="bottom-end"
-                    :actions="actions.map((item)=> { item.text = t(item.text); return item })" @select="onSelectMenu" @closed="onCloseMenu">
+                    :actions="actions.map((item) => { item.text = t(item.text); return item })" @select="onSelectMenu"
+                    @closed="onCloseMenu">
                     <template #reference>
                         <button class="item">
                             <MxIcon icon="caidan" isDefault class="zoomed"></MxIcon>
@@ -431,9 +463,11 @@ setViewportHeight();
         <div class="cmd_operation_btn_list" v-if="isRunCmd">
             cmdTipObj
             <template v-if="cmdTipObj?.keys">
-                <van-button color="#363636c4" size="small" style="margin-right: 5px; margin-bottom: 5px;" v-for="item in cmdTipObj.keys" @click.stop="item?.key && sendInputCmd(item.key)">{{ item.label }}</van-button>
+                <van-button color="#363636c4" size="small" style="margin-right: 5px; margin-bottom: 5px;"
+                    v-for="item in cmdTipObj.keys" @click.stop="item?.key && sendInputCmd(item.key)">{{ item.label
+                    }}</van-button>
             </template>
-   
+
             <button class="item zoomed" @click.stop="stopRunCmd">
                 <van-icon name="./mxcustomui/draw/cuo.png"></van-icon>
             </button>
@@ -442,20 +476,19 @@ setViewportHeight();
             </button>
         </div>
         <div class="colorPicker" v-show="isShowColorPicker"></div>
-            <div class="floating_right_box_list" v-show="actionBtn">
-                <div class="floating_right_box_list_scroll">
-                    <button v-for="({ icon, actionIcon }, index) in actionBtn?.icons" class="floating_right_box_list_item"
-                        @click.stop="actionBtn && (actionBtn.index = index, actionBtn = null)">
-                        <van-icon class="img zoomed"
-                            :name="actionBtn?.index === index ? actionIcon : icon" />
-                    </button>
-                </div>
-            </div>
-            <div class="floating_right_box_btns">
-                <button class="floating_right_box_btn" v-for="btn in floatingRightBtnArr" @click.stop="onClickBtn(btn)">
-                    <van-icon class="img zoomed" :name="unref(btn.icon)" />
+        <div class="floating_right_box_list" v-show="actionBtn">
+            <div class="floating_right_box_list_scroll">
+                <button v-for="({ icon, actionIcon }, index) in actionBtn?.icons" class="floating_right_box_list_item"
+                    @click.stop="actionBtn && (actionBtn.index = index, actionBtn = null)">
+                    <van-icon class="img zoomed" :name="actionBtn?.index === index ? actionIcon : icon" />
                 </button>
             </div>
+        </div>
+        <div class="floating_right_box_btns">
+            <button class="floating_right_box_btn" v-for="btn in floatingRightBtnArr" @click.stop="onClickBtn(btn)">
+                <van-icon class="img zoomed" :name="unref(btn.icon)" />
+            </button>
+        </div>
 
         <!-- 模拟鼠标指针 -->
         <!-- 针头 -->
@@ -479,45 +512,28 @@ setViewportHeight();
                 <p class="loading-text">{{ fileError }}</p>
             </div>
         </div>
-        <CommitMessageDialog
-          v-if="showCommitDialog"
-          @confirm="onCommitConfirm"
-          @cancel="showCommitDialog = false"
-        />
-        <SaveAsSheet
-          :show="showSaveAsSheet"
-          :current-file-name="editorState.state.fileName"
-          :can-manage-library="canManageLibrary"
-          @close="onSaveAsClose"
-          @success="onSaveAsSuccess"
-          @login-required="showLoginPrompt = true"
-        />
-        <VersionHistoryPopup
-          v-if="showVersionHistory"
-          @close="showVersionHistory = false"
-        />
-        <LoginPromptPopup
-          v-if="showLoginPrompt"
-          @login="onLoginPromptLogin"
-          @close="onLoginPromptClose"
-        />
-        <CooperatePopup
-          v-if="showCooperate"
-          @close="showCooperate = false"
-        />
+        <CommitMessageDialog v-if="showCommitDialog" @confirm="onCommitConfirm" @cancel="showCommitDialog = false" />
+        <SaveAsSheet :show="showSaveAsSheet" :current-file-name="editorState.state.fileName"
+            :can-manage-library="canManageLibrary" @close="onSaveAsClose" @success="onSaveAsSuccess"
+            @login-required="showLoginPrompt = true" />
+        <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
+        <LoginPromptPopup v-if="showLoginPrompt" @login="onLoginPromptLogin" @close="onLoginPromptClose" />
+        <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
         <canvas id="mxCanvas"></canvas>
         <div class="history_box">
             <transition name="slide">
                 <div class="history_btn_list" v-if="state">
-                    <button v-for="item in historyBtnList" class="history_btn zoomed" @click.stop="onHistoryBtnClick(item)">
+                    <button v-for="item in historyBtnList" class="history_btn zoomed"
+                        @click.stop="onHistoryBtnClick(item)">
                         <div class="history_btn_content">
                             <MxIcon :icon="item.icon" :isDefault="item.isIconDefault"></MxIcon>
                         </div>
-                    </button>-
+                    </button>
                 </div>
             </transition>
             <button class="history_btn" @click.stop="() => toggle()">
-                <van-icon class="img" :name="state ? './mxcustomui/history_close.png' : './mxcustomui/history_open.png'"></van-icon>
+                <van-icon class="img"
+                    :name="state ? './mxcustomui/history_close.png' : './mxcustomui/history_open.png'"></van-icon>
             </button>
         </div>
         <div class="footer">
@@ -669,6 +685,7 @@ setViewportHeight();
     max-height: 600px;
     background-color: #363636c4;
     margin-right: 20px;
+
     .floating_right_box_list_item {
         width: 100%;
         padding: 0;
@@ -702,6 +719,7 @@ setViewportHeight();
         border-radius: 20px;
         margin: 5px 0;
         overflow: hidden;
+
         &:active .zoomed {
             transform: scale(var(--zoomed-scale, 1.2));
         }
@@ -727,7 +745,7 @@ setViewportHeight();
         opacity: 0;
         transform: translateY(100%);
         /*  ‍ 元素初始位置向下偏移其自身高度 */
-/* ‍ The initial position of the element is offset downwards by its own height*/
+        /* ‍ The initial position of the element is offset downwards by its own height*/
 
     }
 
@@ -735,7 +753,7 @@ setViewportHeight();
         opacity: 1;
         transform: translateY(0);
         /*  ‍ 元素最终位置回到正常 */
-/* ‍ The final position of the element returns to normal*/
+        /* ‍ The final position of the element returns to normal*/
 
     }
 
@@ -752,7 +770,7 @@ setViewportHeight();
         opacity: 0;
         transform: translateY(100%);
         /*  ‍ 离开时向下偏移，可选，根据实际需求调整 */
-/* ‍ Shift downwards when leaving, optional, adjust according to actual needs*/
+        /* ‍ Shift downwards when leaving, optional, adjust according to actual needs*/
 
     }
 
@@ -807,6 +825,7 @@ setViewportHeight();
     width: 100%;
     height: calc(var(--vh, 1vh) * 100);
     background: #000;
+
     .header {
         position: absolute;
         display: flex;
@@ -880,17 +899,17 @@ setViewportHeight();
 }
 
 .version-badge {
-  position: absolute;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ff6b35;
-  color: #fff;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  z-index: 10;
-  white-space: nowrap;
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff6b35;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    z-index: 10;
+    white-space: nowrap;
 }
 
 .cmd_operation_btn_list {
@@ -900,6 +919,7 @@ setViewportHeight();
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
+
     .item {
         width: 60px;
         height: 60px;

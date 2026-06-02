@@ -3,6 +3,7 @@ import {
   mxCadControllerCheckChunkExist,
   mxCadControllerUploadFile,
 } from '@/api-sdk/sdk.gen';
+import { handleApiError } from '@/utils/apiConfig';
 import { calculateFileHash } from '@/utils/hashUtils';
 
 export interface MobileUploadOptions {
@@ -57,6 +58,8 @@ export async function uploadFile(
 
   const chunkSize = 5 * 1024 * 1024;
   const totalChunks = Math.ceil(file.size / chunkSize);
+
+  try {
 
   if (!forceUpload) {
     const existData = await mxCadControllerCheckFileExist({
@@ -160,6 +163,10 @@ export async function uploadFile(
     ext: getFileExt(file.name),
     isUseServerExistingFile: false,
   };
+  } catch (e) {
+    handleApiError(e, `上传失败: ${file.name}`);
+    throw e;
+  }
 }
 
 export async function uploadSingleFile(

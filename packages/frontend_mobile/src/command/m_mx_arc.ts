@@ -11,7 +11,7 @@ async function m_mx_arc() {
     const startPoint = await getPoint.go()
     if(!startPoint) return
     getPoint.setUserDraw((pt, pw)=> {
-        pw.drawLine(pt, startPoint)
+        pw.drawLine(pt.toVector3(), startPoint.toVector3())
     })
     getPoint.setMessage(t("指定圆弧端点"))
     const endPoint = await getPoint.go()

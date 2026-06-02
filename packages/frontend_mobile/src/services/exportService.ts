@@ -1,6 +1,7 @@
 import { getMxwebBlob } from './saveService';
 import { uploadFileForConversion } from './uploadService';
 import { publicFileControllerConvertAndDownload } from '../api-sdk';
+import { handleApiError } from '../utils/apiConfig';
 import { showToast } from 'vant';
 import { h, createApp } from 'vue';
 import { ActionSheet } from 'vant';
@@ -63,7 +64,7 @@ export async function exportDrawing(
     });
 
     if (result.error) {
-      showToast('转换失败');
+      handleApiError(result.error, '转换失败');
       return;
     }
 
@@ -75,8 +76,8 @@ export async function exportDrawing(
 
     downloadBlob(convertedBlob, `${fileName}.${format}`);
     showToast('下载完成');
-  } catch {
-    showToast('转换失败');
+  } catch (e) {
+    handleApiError(e, '转换失败');
   }
 }
 
