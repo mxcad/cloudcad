@@ -100,6 +100,17 @@ config-service-login.jpg
 # Test files
 test-sidebar.html
 
+# Test artifacts
+test_result*.txt
+test_results*.txt
+test-output*.txt
+tsc_output*.txt
+tsc_full*.txt
+test-results*/
+test-results.json/
+debug.txt
+vite.config.ts.timestamp-*
+
 # AI tool generated -> symlinked from .agents/
 .claude/skills/
 .claude/hooks/
