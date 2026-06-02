@@ -1,8 +1,16 @@
-import type React from 'react';
+import React from 'react';
 
 export type CardVariant = 'elevated' | 'outlined' | 'filled' | 'ghost';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
-export type CardRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
+export type CardRadius =
+  | 'none'
+  | 'sm'
+  | 'md'
+  | 'lg'
+  | 'xl'
+  | '2xl'
+  | '3xl'
+  | 'full';
 
 const radiusStyles: Record<CardRadius, string> = {
   none: 'rounded-none',
@@ -16,17 +24,19 @@ const radiusStyles: Record<CardRadius, string> = {
 };
 
 const variantStyles: Record<CardVariant, string> = {
-  elevated: 'bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[var(--shadow-xl)]',
+  elevated:
+    'bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[var(--shadow-xl)]',
   outlined: 'bg-[var(--bg-secondary)] border border-[var(--border-default)]',
   filled: 'bg-[var(--bg-tertiary)]',
   ghost: 'bg-transparent',
 };
 
-const hoverStyles = 'transition-all duration-200 hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5';
+const hoverStyles =
+  'transition-all duration-200 hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5';
 
 const paddingStyles: Record<CardPadding, string> = {
   none: 'p-0',
-  sm: 'p-3',
+  sm: 'p-1',
   md: 'p-5',
   lg: 'p-8',
 };
@@ -38,30 +48,38 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
 }
 
-const CardRoot: React.FC<CardProps> = ({
-  variant = 'outlined',
-  padding,
-  radius = 'xl',
-  hover: enableHover = false,
-  className = '',
-  children,
-  ...props
-}) => {
-  return (
-    <div
-      className={`
+const CardRoot = React.forwardRef<HTMLDivElement, CardProps>(
+  (
+    {
+      variant = 'outlined',
+      padding,
+      radius = 'md',
+      hover: enableHover = false,
+      className = '',
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    return (
+      <div
+        ref={ref}
+        className={`
         ${radiusStyles[radius]}
         ${variantStyles[variant]}
         ${enableHover ? hoverStyles : ''}
         ${padding ? paddingStyles[padding] : ''}
         ${className}
       `}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-};
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+
+CardRoot.displayName = 'Card';
 
 CardRoot.displayName = 'Card';
 
@@ -83,7 +101,7 @@ const CardHeader: React.FC<CardHeaderProps> = ({
         ${paddingStyles[padding]}
         ${className}
       `}
-      style={{ padding: '10px 16px' }}
+      style={{ padding: '6px 16px' }}
       {...props}
     >
       {children}

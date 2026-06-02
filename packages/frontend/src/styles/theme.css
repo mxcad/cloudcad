@@ -15,34 +15,37 @@
   /* ----------------------------------------
      1.1 背景层次 - 从浅到深
      ---------------------------------------- */
-  --bg-canvas: #ffffff;           /* 纯白 - 画布 */
-  --bg-primary: #f8fafc;          /* 主背景 - 页面 */
-  --bg-secondary: #ffffff;        /* 次级背景 - 卡片 */
-  --bg-drawing-card: #0000001f;      /* 绘图卡片背景 */
-  --bg-tertiary: #f1f5f9;         /* 三级背景 - 悬停 */
-  --bg-card: #E5E5E5;             /* 卡片背景 - 图纸库/图块库卡片 */
-  --bg-elevated: #ffffff;         /* 提升层 - 弹窗 */
+  --bg-canvas: #ffffff; /* 纯白 - 画布 */
+  --bg-primary: #f8fafc; /* 主背景 - 页面 */
+  --bg-secondary: #ffffff; /* 次级背景 - 卡片 */
+  --bg-drawing-card: #0000001f; /* 绘图卡片背景 */
+  --bg-tertiary: #f1f5f9; /* 三级背景 - 悬停 */
+  --bg-card: #e5e5e5; /* 卡片背景 - 图纸库/图块库卡片 */
+  --bg-elevated: #ffffff; /* 提升层 - 弹窗 */
   --bg-overlay: rgba(15, 23, 42, 0.4); /* 遮罩层 */
 
-  --menu-bg: #ffffff;             /* 菜单列表背景 */
-  --menu-highlight: #D3D3D3;      /* 菜单列表高亮 */
+  --modal-bg: #e0e0e0;
+  --modal-header-bg: #ffffff;
+
+  --menu-bg: #ffffff; /* 菜单列表背景 */
+  --menu-highlight: #d3d3d3; /* 菜单列表高亮 */
 
   /* ----------------------------------------
      1.2 文字层次 - 从高对比到低对比
      ---------------------------------------- */
-  --text-primary: #0f172a;        /* 主要文字 - 标题 */
-  --text-secondary: #334155;      /* 次要文字 - 正文 */
-  --text-tertiary: #64748b;       /* 辅助文字 - 描述 */
-  --text-muted: #94a3b8;          /* 弱化文字 - 禁用 */
-  --text-inverse: #ffffff;        /* 反色文字 */
+  --text-primary: #0f172a; /* 主要文字 - 标题 */
+  --text-secondary: #334155; /* 次要文字 - 正文 */
+  --text-tertiary: #64748b; /* 辅助文字 - 描述 */
+  --text-muted: #94a3b8; /* 弱化文字 - 禁用 */
+  --text-inverse: #ffffff; /* 反色文字 */
 
   /* ----------------------------------------
      1.3 边框层次
      ---------------------------------------- */
-  --border-subtle: #f1f5f9;       /* 微妙边框 */
-  --border-default: #e2e8f0;      /* 默认边框 */
-  --border-strong: #cbd5e1;       /* 强调边框 */
-  --border-focus: #6366f1;        /* 聚焦边框 */
+  --border-subtle: #f1f5f9; /* 微妙边框 */
+  --border-default: #e2e8f0; /* 默认边框 */
+  --border-strong: #cbd5e1; /* 强调边框 */
+  --border-focus: #6366f1; /* 聚焦边框 */
 
   /* ----------------------------------------
       1.4 主品牌色 - 工程蓝
@@ -53,18 +56,18 @@
   --primary-300: #67e8f9;
   --primary-400: #22d3ee;
   --primary-500: #009cff;
-  --primary-600: #0080cc;   /* 主按钮 */
-  --primary-700: #006699;   /* 悬停 */
+  --primary-600: #0080cc; /* 主按钮 */
+  --primary-700: #006699; /* 悬停 */
   --primary-800: #004d73;
   --primary-900: #00334d;
 
   /* ----------------------------------------
       1.5 按钮背景色
       ---------------------------------------- */
-  --btn-primary-bg: #039be5;        /* 默认主按钮背景 */
-  --btn-primary-hover: #0288d1;     /* 悬停 */
-  --btn-primary-active: #039be5;    /* 激活/按下 */
-  --btn-default-bg: rgb(240, 240, 240);  /* 普通按钮默认背景（亮色） */
+  --btn-primary-bg: #039be5; /* 默认主按钮背景 */
+  --btn-primary-hover: #0288d1; /* 悬停 */
+  --btn-primary-active: #039be5; /* 激活/按下 */
+  --btn-default-bg: rgb(240, 240, 240); /* 普通按钮默认背景（亮色） */
   --btn-default-hover: rgb(230, 230, 230);
   --btn-default-active: rgb(220, 220, 220);
 
@@ -142,29 +145,29 @@
   /* ----------------------------------------
      1.8 间距系统
      ---------------------------------------- */
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
-  --space-20: 5rem;     /* 80px */
-  --space-24: 6rem;     /* 96px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
+  --space-20: 5rem; /* 80px */
+  --space-24: 6rem; /* 96px */
 
   /* ----------------------------------------
      1.9 圆角系统
      ---------------------------------------- */
   --radius-none: 0;
-  --radius-sm: 0.25rem;    /* 4px */
-  --radius-md: 0.375rem;   /* 6px */
-  --radius-lg: 0.5rem;     /* 8px */
-  --radius-xl: 0.75rem;    /* 12px */
-  --radius-2xl: 1rem;      /* 16px */
-  --radius-3xl: 1.5rem;    /* 24px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.375rem; /* 6px */
+  --radius-lg: 0.5rem; /* 8px */
+  --radius-xl: 0.75rem; /* 12px */
+  --radius-2xl: 1rem; /* 16px */
+  --radius-3xl: 1.5rem; /* 24px */
   --radius-full: 9999px;
 
   /* ----------------------------------------
@@ -191,72 +194,68 @@
    */
   --font-family-base:
     /* Windows */
-    'Segoe UI', 'Microsoft YaHei', '微软雅黑',
-    /* macOS */
-    -apple-system, BlinkMacSystemFont, 'SF Pro', 'PingFang SC', 'Hiragino Sans GB',
-    /* Linux */
-    'Noto Sans CJK SC', 'WenQuanYi Micro Hei', '文泉驿微米黑',
-    /* 通用回退 */
-    'Helvetica Neue', Arial, sans-serif;
-  
+    'Segoe UI', 'Microsoft YaHei', '微软雅黑', /* macOS */ -apple-system,
+    BlinkMacSystemFont, 'SF Pro', 'PingFang SC', 'Hiragino Sans GB',
+    /* Linux */ 'Noto Sans CJK SC', 'WenQuanYi Micro Hei', '文泉驿微米黑',
+    /* 通用回退 */ 'Helvetica Neue', Arial, sans-serif;
+
   /* 
    * 等宽字体 - 用于代码显示
    * 全部为系统预装免费字体
    */
   --font-family-mono: 
     /* Windows */
-    'Consolas', 'Courier New',
-    /* macOS */
-    'SF Mono', 'Menlo', 'Monaco',
-    /* Linux */
-    'DejaVu Sans Mono', 'Noto Sans Mono CJK SC',
-    /* 通用回退 */
-    monospace;
+    'Consolas', 'Courier New', /* macOS */ 'SF Mono', 'Menlo', 'Monaco',
+    /* Linux */ 'DejaVu Sans Mono', 'Noto Sans Mono CJK SC',
+    /* 通用回退 */ monospace;
 
   /* ----------------------------------------
      1.12 字体大小系统
      ---------------------------------------- */
-  --text-xs: 0.6875rem;    /* 11px - 辅助标签、角标 */
-  --text-sm: 0.75rem;      /* 12px - 次要文字 */
-  --text-base: 0.75rem;    /* 12px - 正文默认（全局基准字体） */
-  --text-md: 0.8125rem;    /* 13px - 强调文字 */
-  --text-lg: 0.875rem;     /* 14px - 小标题 */
-  --text-xl: 1rem;         /* 16px - 标题 */
-  --text-2xl: 1.125rem;    /* 18px - 大标题 */
-  --text-3xl: 1.25rem;     /* 20px - 页面标题 */
+  --text-xs: 0.6875rem; /* 11px - 辅助标签、角标 */
+  --text-sm: 0.75rem; /* 12px - 次要文字 */
+  --text-base: 0.75rem; /* 12px - 正文默认（全局基准字体） */
+  --text-md: 0.8125rem; /* 13px - 强调文字 */
+  --text-lg: 0.875rem; /* 14px - 小标题 */
+  --text-xl: 1rem; /* 16px - 标题 */
+  --text-2xl: 1.125rem; /* 18px - 大标题 */
+  --text-3xl: 1.25rem; /* 20px - 页面标题 */
 }
 
 /* ============================================
    2. 深色主题覆盖 - Midnight Engineering
    ============================================ */
-[data-theme="dark"] {
+[data-theme='dark'] {
   /* ----------------------------------------
      2.1 背景层次 - 从深到浅
      ---------------------------------------- */
-  --bg-canvas: #0d0f12;           /* 最深 - CAD 画布背景 */
-  --bg-primary: #141619;          /* 主背景 - 页面、面板 */
-  --bg-secondary: #212832;        /* 次级背景 - 卡片、输入框 */
-  --bg-drawing-card: #1a1d2151;      /* 绘图卡片背景 */
-  --bg-tertiary: #22262b;         /* 三级背景 - 悬停、选中 */
-  --bg-card: #3A4352;             /* 卡片背景 - 图纸库/图块库卡片 */
-  --bg-elevated: #2a2f35;         /* 提升层 - 弹窗、下拉菜单 */
+  --bg-canvas: #0d0f12; /* 最深 - CAD 画布背景 */
+  --bg-primary: #141619; /* 主背景 - 页面、面板 */
+  --bg-secondary: #212832; /* 次级背景 - 卡片、输入框 */
+  --bg-drawing-card: #1a1d2151; /* 绘图卡片背景 */
+  --bg-tertiary: #22262b; /* 三级背景 - 悬停、选中 */
+  --bg-card: #3a4352; /* 卡片背景 - 图纸库/图块库卡片 */
+  --bg-elevated: #2a2f35; /* 提升层 - 弹窗、下拉菜单 */
   --bg-overlay: rgba(0, 0, 0, 0.6); /* 遮罩层 */
 
-  --menu-bg: #212832;             /* 菜单列表背景 */
-  --menu-highlight: #474D55;      /* 菜单列表高亮 */
+  --modal-bg: #3a4352;
+  --modal-header-bg: #212832;
+
+  --menu-bg: #212832; /* 菜单列表背景 */
+  --menu-highlight: #474d55; /* 菜单列表高亮 */
 
   /* CAD编辑器侧边栏专用颜色 - 与CAD画布完美融合 */
-  --sidebar-bg: #3A4352;          /* 侧边栏背景 - 与CAD画布一致 */
-  --sidebar-border: #212832;      /* 侧边栏边框 - 微妙的分割线 */
+  --sidebar-bg: #3a4352; /* 侧边栏背景 - 与CAD画布一致 */
+  --sidebar-border: #212832; /* 侧边栏边框 - 微妙的分割线 */
 
   /* ----------------------------------------
      2.2 文字层次
      ---------------------------------------- */
-  --text-primary: #f0f4f8;        /* 主要文字 */
-  --text-secondary: #b8c5d1;      /* 次要文字 */
-  --text-tertiary: #7a8a99;       /* 辅助文字 */
-  --text-muted: #5a6a7a;          /* 弱化文字 */
-  --text-inverse: #141619;        /* 反色文字 */
+  --text-primary: #f0f4f8; /* 主要文字 */
+  --text-secondary: #b8c5d1; /* 次要文字 */
+  --text-tertiary: #7a8a99; /* 辅助文字 */
+  --text-muted: #5a6a7a; /* 弱化文字 */
+  --text-inverse: #141619; /* 反色文字 */
 
   /* ----------------------------------------
      2.3 边框层次
@@ -283,10 +282,10 @@
   /* ----------------------------------------
       2.5 按钮背景色（深色主题）
       ---------------------------------------- */
-  --btn-primary-bg: #039be5;        /* 默认主按钮背景 */
-  --btn-primary-hover: #0288d1;     /* 悬停 */
-  --btn-primary-active: #039be5;    /* 激活/按下 */
-  --btn-default-bg: rgb(33, 40, 50);  /* 普通按钮默认背景（暗色） */
+  --btn-primary-bg: #039be5; /* 默认主按钮背景 */
+  --btn-primary-hover: #0288d1; /* 悬停 */
+  --btn-primary-active: #039be5; /* 激活/按下 */
+  --btn-default-bg: rgb(33, 40, 50); /* 普通按钮默认背景（暗色） */
   --btn-default-hover: rgb(40, 48, 60);
   --btn-default-active: rgb(28, 34, 44);
 
@@ -306,8 +305,8 @@
   --accent-300: #0e7490;
   --accent-400: #0891b2;
   --accent-500: #06b6d4;
-  --accent-600: #22d3ee;   /* 高亮 */
-  --accent-700: #67e8f9;   /* 最亮 */
+  --accent-600: #22d3ee; /* 高亮 */
+  --accent-700: #67e8f9; /* 最亮 */
   --accent-800: #a5f3fc;
   --accent-900: #cffafe;
 
@@ -612,7 +611,7 @@
   color: var(--primary-600);
 }
 
-[data-theme="dark"] .dropdown-item-theme.active {
+[data-theme='dark'] .dropdown-item-theme.active {
   background: var(--primary-100);
   color: var(--primary-500);
 }
@@ -652,7 +651,7 @@
 }
 
 /* 深色主题发光效果 */
-[data-theme="dark"] .toggle-theme:checked {
+[data-theme='dark'] .toggle-theme:checked {
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
 }
 
@@ -662,8 +661,12 @@
 
 /* 5.1 淡入 */
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* 5.2 缩放进入 */
@@ -703,38 +706,70 @@
 
 /* 5.4 脉冲 */
 @keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(1.3); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
 }
 
 /* 5.5 骨架屏闪光 */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* 5.6 旋转 */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 5.7 弹跳 */
 @keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
 
 /* 5.8 浮动光晕 */
 @keyframes float-orb {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -30px) scale(1.05); }
-  50% { transform: translate(-20px, 20px) scale(0.95); }
-  75% { transform: translate(20px, 30px) scale(1.02); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -30px) scale(1.05);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(20px, 30px) scale(1.02);
+  }
 }
 
 /* ============================================
@@ -805,7 +840,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-[data-theme="dark"] .glass-theme {
+[data-theme='dark'] .glass-theme {
   background: rgba(26, 29, 33, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -878,4 +913,3 @@
   height: 1px;
   background: var(--border-default);
 }
-

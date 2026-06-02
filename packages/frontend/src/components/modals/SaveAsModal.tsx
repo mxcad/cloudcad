@@ -10,8 +10,6 @@ import { globalShowToast } from '../../contexts/NotificationContext';
 import { usePermission } from '../../hooks/usePermission';
 import { SystemPermission } from '../../constants/permissions';
 
-// TODO: Replace with SDK when backend adds this endpoint — keep old import for getUserPersonalSpace
-
 interface SaveAsModalProps {
   isOpen: boolean;
   currentFileName: string;
