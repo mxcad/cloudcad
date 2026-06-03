@@ -27,6 +27,7 @@ const {
 // 判断是否是部署模式
 const args = process.argv.slice(2);
 const isDeployMode = args[0] === 'deploy';
+let isFirstDeploy = false; // 标记是否为首次部署（.env 刚创建）
 
 // ==================== 配置 ====================
 
@@ -1835,6 +1836,36 @@ async function waitForServicesForeground(backendProcess, backendStderr) {
  * 统一的应用服务启动函数
  * @param {'pm2' | 'foreground'} mode - 启动模式
  */
+function showCurrentPasswords() {
+  if (!isFirstDeploy) return;
+  if (!fs.existsSync(BACKEND_ENV_PATH)) return;
+  const envConfig = parseEnvFile(BACKEND_ENV_PATH);
+  const dbPassword = envConfig.DB_PASSWORD;
+  const redisPassword = envConfig.REDIS_PASSWORD;
+  const adminPassword = envConfig.INITIAL_ADMIN_PASSWORD;
+  const adminUsername = envConfig.INITIAL_ADMIN_USERNAME || 'admin';
+
+  if (dbPassword || adminPassword) {
+    console.log('');
+    console.log(`${colors.yellow}╔════════════════════════════════════════╗${colors.reset}`);
+    console.log(`${colors.yellow}║     当前部署配置（请妥善保管）        ║${colors.reset}`);
+    console.log(`${colors.yellow}╚════════════════════════════════════════╝${colors.reset}`);
+    console.log('');
+    console.log(`  ${colors.bright}数据库:${colors.reset}     ${envConfig.DB_HOST || 'localhost'}:${envConfig.DB_PORT || '5432'}/${envConfig.DB_DATABASE || 'cloudcad'}`);
+    console.log(`  ${colors.bright}数据库密码:${colors.reset} ${dbPassword || '(未设置)'}`);
+    console.log(`  ${colors.bright}Redis:${colors.reset}      ${envConfig.REDIS_HOST || 'localhost'}:${envConfig.REDIS_PORT || '6379'}`);
+    console.log(`  ${colors.bright}Redis 密码:${colors.reset} ${redisPassword || '(无密码)'}`);
+    console.log(`  ${colors.bright}管理员账号:${colors.reset} ${adminUsername}`);
+    console.log(`  ${colors.bright}管理员密码:${colors.reset} ${adminPassword || '(未设置)'}`);
+    console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
+    console.log('');
+    console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+    console.log(`${colors.red}  ⚠ 安全提醒：登录后请立即修改管理员密码！${colors.reset}`);
+    console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+    console.log('');
+  }
+}
+
 async function startAppServices(mode) {
   const backendDist = path.join(
     PROJECT_ROOT,
@@ -1977,6 +2008,8 @@ async function startAppServices(mode) {
     log('green', '╠══════════════════════════════════════════════════════════╣');
     log('green', '║  停止:  选择菜单 [停止服务]                               ║');
     log('green', '╚══════════════════════════════════════════════════════════╝');
+
+    showCurrentPasswords();
 
     await waitAndOpenBrowsers();
   }
@@ -2819,20 +2852,26 @@ async function autoSetupAndShowPasswords() {
   // 写入 .env
   updateEnvFile(BACKEND_ENV_PATH, updates);
 
-  // 显示密码
+  // 显示默认配置和自动生成的密码
   console.log('');
   console.log(`${colors.cyan}╔════════════════════════════════════════╗${colors.reset}`);
-  console.log(`${colors.cyan}║      CloudCAD 首次部署配置完成         ║${colors.reset}`);
+  console.log(`${colors.cyan}║      CloudCAD 首次部署配置             ║${colors.reset}`);
   console.log(`${colors.cyan}╚════════════════════════════════════════╝${colors.reset}`);
   console.log('');
-  console.log(`${colors.yellow}  ⚠ 请务必记录以下自动生成的密码：${colors.reset}`);
+  console.log(`${colors.bright}默认配置：${colors.reset}`);
+  console.log(`  ${colors.bright}数据库:${colors.reset}     ${envConfig.DB_HOST || 'localhost'}:${envConfig.DB_PORT || '5432'}/${envConfig.DB_DATABASE || 'cloudcad'} (用户: ${envConfig.DB_USERNAME || 'postgres'})`);
+  console.log(`  ${colors.bright}Redis:${colors.reset}      ${envConfig.REDIS_HOST || 'localhost'}:${envConfig.REDIS_PORT || '6379'}`);
+  console.log(`  ${colors.bright}管理员:${colors.reset}     ${envConfig.INITIAL_ADMIN_USERNAME || 'admin'} / ${envConfig.INITIAL_ADMIN_PASSWORD || 'Admin123!'}`);
+  console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
+  console.log('');
+  console.log(`${colors.yellow}  ⚠ 以下是自动生成的安全密码（已覆盖默认密码）：${colors.reset}`);
   console.log('');
   console.log(`  ${colors.bright}数据库密码:${colors.reset}     ${dbPassword}`);
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${redisPassword}`);
   console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${adminPassword}`);
   console.log('');
-  console.log(`  管理员账号: ${colors.bright}admin${colors.reset}`);
-  console.log(`  配置中心:   http://localhost:3002`);
+  console.log(`  管理员账号: ${colors.bright}${envConfig.INITIAL_ADMIN_USERNAME || 'admin'}${colors.reset}`);
+  console.log(`  配置中心:   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
   console.log('');
   console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
   console.log(`${colors.red}  ⚠ 安全提醒：登录后请立即修改管理员密码！${colors.reset}`);
@@ -2990,6 +3029,7 @@ async function bootstrap() {
 
   // 如果 .env 之前不存在，说明是首次部署，自动生成配置
   if (!envExistedBefore) {
+    isFirstDeploy = true;
     await autoSetupAndShowPasswords();
   }
 

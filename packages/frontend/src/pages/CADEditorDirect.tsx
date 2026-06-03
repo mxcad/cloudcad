@@ -16,7 +16,7 @@ import { useNotification, useConfirmDialog } from '../contexts/NotificationConte
 import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload } from '@/api-sdk';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload, cooperateControllerResolveShareNode } from '@/api-sdk';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { PdfExportModal } from '../components/modals/PdfExportModal';
@@ -102,6 +102,7 @@ export const CADEditorDirect: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const libraryKeyParam =
     (searchParams.get('library') as 'drawing' | 'block' | null) || null;
+  const shareTokenParam = searchParams.get('shareToken');
 
   // 是否激活（路由匹配 /cad-editor/:fileId 或主页模式）
   // 不再依赖 isAuthenticated，因为公开资源库可以免登录访问
@@ -640,6 +641,18 @@ export const CADEditorDirect: React.FC = () => {
         } else if (libraryKeyParam === 'block') {
           const { data: nodeData } = await libraryControllerGetBlockNode({ path: { nodeId: fileId } });
           file = nodeData!;
+        } else if (shareTokenParam) {
+          try {
+            const { data: fileData } = await cooperateControllerResolveShareNode({ path: { token: shareTokenParam } });
+            file = fileData!;
+          } catch (error) {
+            console.error('通过分享 token 获取文件信息失败:', error);
+            setError('分享文件不存在或已失效');
+            setStoreError('分享文件不存在或已失效');
+            setLoading(false);
+            setStoreLoading(false);
+            return;
+          }
         } else {
           // 项目文件：需要登录
           try {
@@ -698,10 +711,10 @@ export const CADEditorDirect: React.FC = () => {
         let projectId: string | null | undefined = file.parentId || null;
 
         // 判断是否需要获取根节点：
-        // 1. 项目文件（无 libraryKeyParam）→ 需要
+        // 1. 项目文件（无 libraryKeyParam）→ 需要（分享文件跳过，因为分享用户无项目权限）
         // 2. 资源库文件 + 有对应管理权限 → 需要（管理员可以管理资源库）
         // 3. 资源库文件 + 无权限 → 不需要（普通用户只读）
-        const shouldGetRoot = !libraryKeyParam ||
+        const shouldGetRoot = !libraryKeyParam && !shareTokenParam ||
           (libraryKeyParam === 'drawing' && hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE)) ||
           (libraryKeyParam === 'block' && hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE));
 

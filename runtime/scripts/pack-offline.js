@@ -112,9 +112,9 @@ function readCachedHash(storeName) {
 /**
  * 清理 node_modules
  */
-function cleanNodeModules() {
+function cleanNodeModules(skipRoot = false) {
   const paths = [
-    path.join(PROJECT_ROOT, 'node_modules'),
+    ...(skipRoot ? [] : [path.join(PROJECT_ROOT, 'node_modules')]),
     path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules'),
     path.join(PROJECT_ROOT, 'packages', 'frontend', 'node_modules'),
   ];
@@ -633,7 +633,7 @@ function getDeployIncludeList(platform) {
  * 部署包：安装完整依赖
  */
 async function installFullDeps() {
-  cleanNodeModules();
+  cleanNodeModules(true);
 
   try {
     execSync('pnpm install --frozen-lockfile', {
@@ -771,7 +771,7 @@ async function prepareDeployStore() {
     fs.rmSync(storePath, { recursive: true, force: true });
   }
 
-  cleanNodeModules();
+  cleanNodeModules(true);
 
   // Prisma 7.x schema engine 仍然是 Rust 二进制，需要为每个目标平台下载
   // binaryTargets 配置只在当前平台生效，需要通过环境变量强制下载所有平台
@@ -814,7 +814,7 @@ async function prepareDeployStore() {
   const storeCheck = verifyDeployStore(storePath);
   if (!storeCheck.valid) {
     log(`警告: ${storeName} ${storeCheck.reason}，执行重试...`);
-    cleanNodeModules();
+    cleanNodeModules(true);
     execSync('pnpm --filter backend install --frozen-lockfile --prod', {
       cwd: PROJECT_ROOT,
       stdio: 'inherit',

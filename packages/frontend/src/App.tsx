@@ -35,11 +35,17 @@ import NoPermissionPage from './components/ui/NoPermissionPage';
 // ============================================================================
 
 const PageLoader: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+  <div
+    className="flex items-center justify-center min-h-screen"
+    style={{ background: 'var(--bg-primary)' }}
+  >
     <div className="flex flex-col items-center gap-4">
       <div
         className="w-10 h-10 rounded-full animate-spin"
-        style={{ border: '3px solid var(--border-default)', borderTopColor: 'var(--primary-500)' }}
+        style={{
+          border: '3px solid var(--border-default)',
+          borderTopColor: 'var(--primary-500)',
+        }}
       />
       <p style={{ color: 'var(--text-secondary)' }}>加载中...</p>
     </div>
@@ -56,6 +62,9 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // CAD 编辑器（高频使用，单独分包）
 const CADEditorDirect = lazy(() => import('./pages/CADEditorDirect'));
+
+// 分享落地页
+const ShareLanding = lazy(() => import('./pages/ShareLanding'));
 
 // 主要功能页面
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -84,10 +93,16 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
     // Wait for token validation before deciding — prevents flash-redirect on reload
     if (loading) {
       return (
-        <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+        <div
+          className="flex items-center justify-center min-h-screen"
+          style={{ background: 'var(--bg-primary)' }}
+        >
           <div
             className="w-10 h-10 rounded-full animate-spin"
-            style={{ border: '3px solid var(--border-default)', borderTopColor: 'var(--primary-500)' }}
+            style={{
+              border: '3px solid var(--border-default)',
+              borderTopColor: 'var(--primary-500)',
+            }}
           />
         </div>
       );
@@ -125,7 +140,6 @@ const PermissionRoute: React.FC<{
   return <>{children}</>;
 });
 
-
 // ============================================================================
 // 应用内容组件
 // ============================================================================
@@ -148,12 +162,25 @@ function CADEditorRouteGuard() {
   if (!isCADRoute && !everLoadedRef.current) return null;
 
   return (
-    <Suspense fallback={
-      <div className="fixed inset-0 flex flex-col items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
-        <div className="animate-spin rounded-full h-8 w-8" style={{ border: '2px solid var(--border-strong)', borderTopColor: 'var(--accent-600)' }} />
-        <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>正在加载 CAD 编辑器...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div
+          className="fixed inset-0 flex flex-col items-center justify-center"
+          style={{ background: 'var(--bg-primary)' }}
+        >
+          <div
+            className="animate-spin rounded-full h-8 w-8"
+            style={{
+              border: '2px solid var(--border-strong)',
+              borderTopColor: 'var(--accent-600)',
+            }}
+          />
+          <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
+            正在加载 CAD 编辑器...
+          </p>
+        </div>
+      }
+    >
       <CADEditorDirect />
     </Suspense>
   );
@@ -217,6 +244,16 @@ function AppContent() {
           element={
             <Suspense fallback={<PageLoader />}>
               <ResetPassword />
+            </Suspense>
+          }
+        />
+
+        {/* 分享落地页 - 公开访问 */}
+        <Route
+          path="/share/:token"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <ShareLanding />
             </Suspense>
           }
         />
@@ -362,7 +399,10 @@ function AppContent() {
                     path="/library"
                     element={
                       <PermissionRoute
-                        permission={[SystemPermission.LIBRARY_DRAWING_MANAGE, SystemPermission.LIBRARY_BLOCK_MANAGE]}
+                        permission={[
+                          SystemPermission.LIBRARY_DRAWING_MANAGE,
+                          SystemPermission.LIBRARY_BLOCK_MANAGE,
+                        ]}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -374,7 +414,10 @@ function AppContent() {
                     path="/library/:libraryType"
                     element={
                       <PermissionRoute
-                        permission={[SystemPermission.LIBRARY_DRAWING_MANAGE, SystemPermission.LIBRARY_BLOCK_MANAGE]}
+                        permission={[
+                          SystemPermission.LIBRARY_DRAWING_MANAGE,
+                          SystemPermission.LIBRARY_BLOCK_MANAGE,
+                        ]}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -386,7 +429,10 @@ function AppContent() {
                     path="/library/:libraryType/:nodeId"
                     element={
                       <PermissionRoute
-                        permission={[SystemPermission.LIBRARY_DRAWING_MANAGE, SystemPermission.LIBRARY_BLOCK_MANAGE]}
+                        permission={[
+                          SystemPermission.LIBRARY_DRAWING_MANAGE,
+                          SystemPermission.LIBRARY_BLOCK_MANAGE,
+                        ]}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />

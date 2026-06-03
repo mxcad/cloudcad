@@ -434,6 +434,45 @@
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
 }
 
+.sessionActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.shareButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--accent-500, #06b6d4);
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shareButton:hover {
+  background: rgba(34, 211, 238, 0.2);
+  border-color: rgba(34, 211, 238, 0.3);
+  box-shadow: 0 2px 6px rgba(34, 211, 238, 0.15);
+}
+
+[data-theme="dark"] .shareButton {
+  background: rgba(34, 211, 238, 0.08);
+  border-color: rgba(34, 211, 238, 0.15);
+  color: #22d3ee;
+}
+
+[data-theme="dark"] .shareButton:hover {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: rgba(34, 211, 238, 0.25);
+}
+
 /* ============================================
    5. 协同列表区域
    ============================================ */

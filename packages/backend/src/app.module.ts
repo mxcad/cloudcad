@@ -50,6 +50,7 @@ import { RuntimeConfigModule } from './runtime-config/runtime-config.module';
 import { PublicFileModule } from './public-file/public-file.module';
 import { LibraryModule } from './library/library.module';
 import { ConversionModule } from './conversion/conversion.module';
+import { CooperateModule } from './cooperate';
 
 // env 文件查找路径：支持多种运行模式
 // 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
@@ -95,6 +96,7 @@ const envFilePaths = [
     PublicFileModule,
     LibraryModule,
     ConversionModule,
+    CooperateModule,
   ],
   controllers: [AppController],
   providers: [

@@ -34,6 +34,7 @@ model User {
   projectMembers       ProjectMember[]
   role                 Role             @relation(fields: [roleId], references: [id])
   refreshTokens        RefreshToken[]
+  cooperateShares      CooperateShare[]
 
   @@index([deletedAt])
   @@map("users")
@@ -435,6 +436,26 @@ enum RoleCategory {
   SYSTEM
   PROJECT
   CUSTOM
+}
+
+model CooperateShare {
+  id        String    @id @default(cuid())
+  fileId    String
+  token     String    @unique @default(nanoid(16))
+  createdBy String
+  expiresAt DateTime?
+  usedCount Int       @default(0)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@index([fileId])
+  @@index([token])
+  @@index([createdBy])
+  @@map("cooperate_shares")
 }
 
 enum PolicyType {

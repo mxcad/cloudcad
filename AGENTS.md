@@ -105,6 +105,38 @@ pnpm build                  # i18n compile → vite build
 3. 生产部署自动执行 `prisma migrate deploy`
 4. 破坏性变更：先加新字段，同步数据，再删旧字段（分版本发布）
 
+### 迁移历史修复（仅首次部署时执行）
+
+**场景**：已有 migration 文件在 git 中被修改过，导致 `prisma migrate deploy` 因 checksum 不匹配而失败。
+
+在 **生产数据库** 上执行一次：
+
+```bash
+# 修复被修改过的 migration checksum
+npx prisma migrate resolve --rolled-back 20260330025027_init
+npx prisma migrate resolve --applied 20260330025027_init
+
+npx prisma migrate resolve --rolled-back 20260330025133_baseline
+npx prisma migrate resolve --applied 20260330025133_baseline
+
+npx prisma migrate resolve --rolled-back 20260330030233_add_gallery_add_permission
+npx prisma migrate resolve --applied 20260330030233_add_gallery_add_permission
+
+npx prisma migrate resolve --rolled-back 20260407_add_user_phone_wechat_fields
+npx prisma migrate resolve --applied 20260407_add_user_phone_wechat_fields
+
+npx prisma migrate resolve --rolled-back 20260414100000_sync_enum_changes
+npx prisma migrate resolve --applied 20260414100000_sync_enum_changes
+
+# 执行所有待处理迁移
+npx prisma migrate deploy
+```
+
+**原理说明**：
+- `resolve --rolled-back` 和 `resolve --applied` 只更新 `_prisma_migrations` 元数据表，**不涉及任何 DDL 变更**
+- 重启后即可用 `prisma migrate deploy` 正常运行
+- 后续所有部署不再需要此步骤，直接 `prisma migrate deploy` 即可
+
 ---
 
 ## 测试

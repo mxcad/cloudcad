@@ -2657,6 +2657,72 @@ export type SaveLibraryAsDto = {
     fileName?: string;
 };
 
+export type CreateShareDto = {
+    /**
+     * 文件ID
+     */
+    fileId: string;
+    /**
+     * 过期时间（秒），null 表示永不过期
+     */
+    expiresIn?: number;
+};
+
+export type CreateShareResponseDto = {
+    /**
+     * 分享 token
+     */
+    token: string;
+    /**
+     * 分享链接路径
+     */
+    url: string;
+    /**
+     * 过期时间
+     */
+    expiresAt?: {
+        [key: string]: unknown;
+    };
+};
+
+export type ResolveShareResponseDto = {
+    /**
+     * 文件 ID
+     */
+    fileId: string;
+};
+
+export type ResolveShareNodeResponseDto = {
+    /**
+     * 文件名
+     */
+    name: string;
+    /**
+     * 文件 hash
+     */
+    fileHash: string;
+    /**
+     * 文件路径
+     */
+    path: string;
+    /**
+     * 父节点 ID
+     */
+    parentId: string | null;
+    /**
+     * 文件 ID
+     */
+    id: string;
+    /**
+     * 删除时间
+     */
+    deletedAt?: string | null;
+    /**
+     * 更新时间
+     */
+    updatedAt?: string;
+};
+
 /**
  * 项目权限枚举
  */
@@ -7973,3 +8039,103 @@ export type LibraryControllerCopyBlockNodeResponses = {
 };
 
 export type LibraryControllerCopyBlockNodeResponse = LibraryControllerCopyBlockNodeResponses[keyof LibraryControllerCopyBlockNodeResponses];
+
+export type CooperateControllerCreateShareData = {
+    body: CreateShareDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/collaboration/share';
+};
+
+export type CooperateControllerCreateShareErrors = {
+    /**
+     * 参数错误
+     */
+    400: unknown;
+};
+
+export type CooperateControllerCreateShareResponses = {
+    /**
+     * 分享链接创建成功
+     */
+    201: CreateShareResponseDto;
+};
+
+export type CooperateControllerCreateShareResponse = CooperateControllerCreateShareResponses[keyof CooperateControllerCreateShareResponses];
+
+export type CooperateControllerRevokeShareData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}';
+};
+
+export type CooperateControllerRevokeShareErrors = {
+    /**
+     * 无权操作
+     */
+    403: unknown;
+    /**
+     * 链接不存在
+     */
+    404: unknown;
+};
+
+export type CooperateControllerRevokeShareResponses = {
+    /**
+     * 撤销成功
+     */
+    200: unknown;
+};
+
+export type CooperateControllerResolveShareData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}';
+};
+
+export type CooperateControllerResolveShareErrors = {
+    /**
+     * 链接不存在或已失效
+     */
+    404: unknown;
+};
+
+export type CooperateControllerResolveShareResponses = {
+    /**
+     * 解析成功
+     */
+    200: ResolveShareResponseDto;
+};
+
+export type CooperateControllerResolveShareResponse = CooperateControllerResolveShareResponses[keyof CooperateControllerResolveShareResponses];
+
+export type CooperateControllerResolveShareNodeData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}/node';
+};
+
+export type CooperateControllerResolveShareNodeErrors = {
+    /**
+     * 链接不存在或文件不存在
+     */
+    404: unknown;
+};
+
+export type CooperateControllerResolveShareNodeResponses = {
+    /**
+     * 文件信息
+     */
+    200: ResolveShareNodeResponseDto;
+};
+
+export type CooperateControllerResolveShareNodeResponse = CooperateControllerResolveShareNodeResponses[keyof CooperateControllerResolveShareNodeResponses];

@@ -24,7 +24,6 @@ import { StorageCleanupService } from './services/storage-cleanup.service';
 import { StorageCleanupScheduler } from './schedulers/storage-cleanup.scheduler';
 
 import { RoleInheritanceService } from './services/role-inheritance.service';
-import { InitializationService } from './services/initialization.service';
 import { FileExtensionsService } from './services/file-extensions.service';
 import { UserCleanupService } from './services/user-cleanup.service';
 import { UserCleanupScheduler } from './schedulers/user-cleanup.scheduler';
@@ -45,7 +44,6 @@ import { ConcurrencyManager } from './concurrency/concurrency-manager';
     StorageCleanupService,
     StorageCleanupScheduler,
     RoleInheritanceService,
-    InitializationService,
     FileExtensionsService,
     UserCleanupService,
     UserCleanupScheduler,
@@ -63,7 +61,6 @@ import { ConcurrencyManager } from './concurrency/concurrency-manager';
     DiskMonitorService,
     StorageCleanupService,
     RoleInheritanceService,
-    InitializationService,
     FileExtensionsService,
     UserCleanupService,
     ConcurrencyManager,
