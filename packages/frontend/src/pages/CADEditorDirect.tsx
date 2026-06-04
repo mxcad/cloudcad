@@ -90,7 +90,7 @@ export const CADEditorDirect: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotification();
   const { hasPermission } = usePermission();
-  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode } = useCADEditorStore();
+  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setShareCollaborationEnabled } = useCADEditorStore();
 
   // 主页模式（/ 路由，无 fileId）- 在组件顶部计算，用于初始化 isActive
   const isHomeMode = isHomeRoute(location.pathname);
@@ -616,6 +616,7 @@ export const CADEditorDirect: React.FC = () => {
       // 不 setLoading(true) — 侧边栏持续可见，不因骨架屏卸载 ProjectDrawingsPanel
       setError(null);
       setStoreError(null);
+      setShareCollaborationEnabled(null);
 
       try {
         const { mxcadManager } = await import('../services/mxcadManager');
@@ -645,6 +646,9 @@ export const CADEditorDirect: React.FC = () => {
           try {
             const { data: fileData } = await cooperateControllerResolveShareNode({ path: { token: shareTokenParam } });
             file = fileData!;
+            if (file && 'collaborationEnabled' in file) {
+              setShareCollaborationEnabled(!!(file as unknown as Record<string, unknown>).collaborationEnabled);
+            }
           } catch (error) {
             console.error('通过分享 token 获取文件信息失败:', error);
             setError('分享文件不存在或已失效');
@@ -871,6 +875,45 @@ export const CADEditorDirect: React.FC = () => {
             setStoreLoading(false);
           }
         };
+
+        // 分享协同模式：跳过文件打开，让协同 SDK 内部自动加载协同文件
+        const collaborationEnabled = file && 'collaborationEnabled' in file
+          ? !!(file as unknown as Record<string, unknown>).collaborationEnabled
+          : false;
+
+        if (!!shareTokenParam && collaborationEnabled) {
+          // 先派发事件让 SidebarContainer 获取文件信息
+          window.dispatchEvent(
+            new CustomEvent('mxcad-file-opened', {
+              detail: { fileId: file.id, parentId: file.parentId || null, projectId },
+            })
+          );
+
+          if (!isInitializedRef.current || !mxcadManager.isCreated()) {
+            await loadMxCADDependencies();
+            if (cancelled) return;
+            await initMxCADConfig(file);
+            if (cancelled) return;
+            await mxcadManager.initializeMxCADView();
+            if (cancelled) return;
+            mxcadManager.showMxCAD(true);
+            await initThemeSync();
+            if (cancelled) return;
+            isInitializedRef.current = true;
+          } else {
+            mxcadManager.showMxCAD(true);
+          }
+          currentFileIdRef.current = fileId;
+          loadedFileUrlRef.current = '';
+          await new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          });
+          if (!cancelled) {
+            setLoading(false);
+            setStoreLoading(false);
+          }
+          return;
+        }
 
         // 从页面跳转打开文件（我的图纸/项目管理/公开资源库），直接打开，不检查外部参照
         await doOpenMxFile();
@@ -1672,7 +1715,7 @@ export const CADEditorDirect: React.FC = () => {
         </div>
       )}
 
-      {!error && isActive && (
+      {!error && (
         <div className="flex w-full h-screen relative">
           <SidebarContainer
             projectId={

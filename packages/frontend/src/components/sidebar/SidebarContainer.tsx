@@ -325,118 +325,118 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // ==================== 渲染内容 ====================
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'drawings':
-        return (
-          <div className={styles.drawingsPanel}>
-            {/* 子 Tab 切换 */}
-            <div className={`${styles.subTabBar} ${settings.width < 380 ? styles.compact : ''}`}>
-              {SUB_TABS.map((tab) => (
-                <Tab
-                  key={tab.id}
-                  active={activeDrawingsSubTab === tab.id}
-                  tabVariant="primary"
-                  icon={tab.icon}
-                  onClick={() => handleDrawingsSubTabChange(tab.id)}
-                  aria-label={tab.label}
-                  tooltip={settings.width < 380 ? tab.label : undefined}
-                  tooltipPosition="bottom"
-                  tooltipDelay={200}
-                >
-                  {settings.width < 380 ? undefined : tab.label}
-                </Tab>
-              ))}
+    return (
+      <>
+        {/* 图纸 tab — 始终挂载，不活跃时 CSS 隐藏，避免组件卸载/重挂载导致数据丢失 */}
+        <div
+          className={styles.drawingsPanel}
+          style={{ display: activeTab === 'drawings' ? '' : 'none' }}
+        >
+          {/* 子 Tab 切换 */}
+          <div className={`${styles.subTabBar} ${settings.width < 380 ? styles.compact : ''}`}>
+            {SUB_TABS.map((tab) => (
+              <Tab
+                key={tab.id}
+                active={activeDrawingsSubTab === tab.id}
+                tabVariant="primary"
+                icon={tab.icon}
+                onClick={() => handleDrawingsSubTabChange(tab.id)}
+                aria-label={tab.label}
+                tooltip={settings.width < 380 ? tab.label : undefined}
+                tooltipPosition="bottom"
+                tooltipDelay={200}
+              >
+                {settings.width < 380 ? undefined : tab.label}
+              </Tab>
+            ))}
+          </div>
+          {/* 子 Tab 内容 */}
+          <div className={styles.subTabContent}>
+            <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}>
+              <ProjectDrawingsPanel
+                key="drawings-gallery"
+                libraryType="drawing"
+                onDrawingOpen={handleDrawingOpen}
+                currentOpenFileId={currentOpenFileId}
+                isModified={isModified}
+                doubleClickToOpen={true}
+                visible={activeDrawingsSubTab === 'drawings-gallery'}
+              />
             </div>
-            {/* 子 Tab 内容 */}
-            <div className={styles.subTabContent}>
-              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}>
+            <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}>
+              <ProjectDrawingsPanel
+                key="blocks-gallery"
+                libraryType="block"
+                onDrawingOpen={handleDrawingOpen}
+                currentOpenFileId={currentOpenFileId}
+                isModified={isModified}
+                visible={activeDrawingsSubTab === 'blocks-gallery'}
+              />
+            </div>
+            <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}>
+              {isAuthenticated ? (
                 <ProjectDrawingsPanel
-                  key="drawings-gallery"
-                  libraryType="drawing"
+                  key="my-project"
+                  projectId={isLibraryFile ? '' : projectId}
                   onDrawingOpen={handleDrawingOpen}
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
-                  doubleClickToOpen={true}
-                  visible={activeDrawingsSubTab === 'drawings-gallery'}
+                  parentId={isLibraryFile ? null : currentOpenFileParentId}
+                  personalSpaceId={personalSpaceId}
+                  visible={activeDrawingsSubTab === 'my-project'}
                 />
-              </div>
-              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}>
+              ) : (
+                <div className={styles.loginPromptContainer}>
+                  <div className={styles.loginPromptContent}>
+                    <div className={styles.loginPromptIcon}>
+                      <FolderOpen size={40} />
+                    </div>
+                    <h3 className={styles.loginPromptTitle}>登录以访问我的项目</h3>
+                    <p className={styles.loginPromptDescription}>
+                      登录后可以查看和管理您的项目
+                    </p>
+                    <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
+                      立即登录
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}>
+              {isAuthenticated ? (
                 <ProjectDrawingsPanel
-                  key="blocks-gallery"
-                  libraryType="block"
+                  key="my-drawings"
+                  projectId={personalSpaceId || ''}
                   onDrawingOpen={handleDrawingOpen}
+                  isPersonalSpace={true}
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
-                  visible={activeDrawingsSubTab === 'blocks-gallery'}
+                  parentId={currentOpenFileParentId}
+                  visible={activeDrawingsSubTab === 'my-drawings'}
                 />
-              </div>
-              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}>
-                {isAuthenticated ? (
-                  <ProjectDrawingsPanel
-                    key="my-project"
-                    projectId={isLibraryFile ? '' : projectId}
-                    onDrawingOpen={handleDrawingOpen}
-                    currentOpenFileId={currentOpenFileId}
-                    isModified={isModified}
-                    parentId={isLibraryFile ? null : currentOpenFileParentId}
-                    personalSpaceId={personalSpaceId}
-                    visible={activeDrawingsSubTab === 'my-project'}
-                  />
-                ) : (
-                  <div className={styles.loginPromptContainer}>
-                    <div className={styles.loginPromptContent}>
-                      <div className={styles.loginPromptIcon}>
-                        <FolderOpen size={40} />
-                      </div>
-                      <h3 className={styles.loginPromptTitle}>登录以访问我的项目</h3>
-                      <p className={styles.loginPromptDescription}>
-                        登录后可以查看和管理您的项目
-                      </p>
-                      <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
-                        立即登录
-                      </Button>
+              ) : (
+                <div className={styles.loginPromptContainer}>
+                  <div className={styles.loginPromptContent}>
+                    <div className={styles.loginPromptIcon}>
+                      <FileText size={40} />
                     </div>
+                    <h3 className={styles.loginPromptTitle}>登录以访问我的图纸</h3>
+                    <p className={styles.loginPromptDescription}>
+                      登录后可以查看和管理您的私人图纸
+                    </p>
+                    <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
+                      立即登录
+                    </Button>
                   </div>
-                )}
-              </div>
-              <div className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}>
-                {isAuthenticated ? (
-                  <ProjectDrawingsPanel
-                    key="my-drawings"
-                    projectId={personalSpaceId || ''}
-                    onDrawingOpen={handleDrawingOpen}
-                    isPersonalSpace={true}
-                    currentOpenFileId={currentOpenFileId}
-                    isModified={isModified}
-                    parentId={currentOpenFileParentId}
-                    visible={activeDrawingsSubTab === 'my-drawings'}
-                  />
-                ) : (
-                  <div className={styles.loginPromptContainer}>
-                    <div className={styles.loginPromptContent}>
-                      <div className={styles.loginPromptIcon}>
-                        <FileText size={40} />
-                      </div>
-                      <h3 className={styles.loginPromptTitle}>登录以访问我的图纸</h3>
-                      <p className={styles.loginPromptDescription}>
-                        登录后可以查看和管理您的私人图纸
-                      </p>
-                      <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
-                        立即登录
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
-        );
-      case 'project-management':
-        return null;
-      case 'collaborate':
-        // 协同 tab 未登录时显示登录提示
-        if (!isAuthenticated) {
-          return (
+        </div>
+
+        {/* 协同 tab — 始终挂载，不活跃时 CSS 隐藏 */}
+        <div style={{ display: activeTab === 'collaborate' ? '' : 'none' }}>
+          {!isAuthenticated ? (
             <div className={styles.loginPromptContainer}>
               <div className={styles.loginPromptContent}>
                 <div className={styles.loginPromptIcon}>
@@ -451,16 +451,14 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                 </Button>
               </div>
             </div>
-          );
-        }
-        return (
-          <div className={styles.content}>
-            <CollaborateSidebar />
-          </div>
-        );
-      default:
-        return null;
-    }
+          ) : (
+            <div className={styles.content}>
+              <CollaborateSidebar />
+            </div>
+          )}
+        </div>
+      </>
+    );
   };
 
   // ==================== 渲染 ====================
