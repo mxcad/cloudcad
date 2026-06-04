@@ -16,6 +16,7 @@ import 'vant/es/notify/style';
 import 'vant/es/image-preview/style';
 
 import 'vant/es/field/style';
+import 'vant/es/switch/style';
 
 import 'vant/es/popup/style';
 

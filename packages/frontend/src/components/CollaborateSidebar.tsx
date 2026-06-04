@@ -2,7 +2,6 @@ import {
   Users,
   UserPlus,
   RefreshCw,
-  Loader2,
   Check,
   Share2,
 } from 'lucide-react';
@@ -15,10 +14,14 @@ import React, {
 } from 'react';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
-import { Tooltip } from './ui/Tooltip';
-import { Card } from '@/components/ui/Card';
+import { Button } from './ui/Button';
+import { Tabs, Tab } from './ui';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
-import { mxcadManager } from '../services/mxcadManager';
+import {
+  mxcadManager,
+  checkAndConfirmUnsavedChanges,
+  refreshFileName,
+} from '../services/mxcadManager';
 import { useAuth } from '../contexts/AuthContext';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import {
@@ -29,12 +32,16 @@ import {
   parseWorkData,
   encodeWorkData,
   encodeUserData,
+  deduplicateWorkUsers,
 } from '../types/collaboration';
 import type {
   CollaborateWorkData,
   CollaborateUserData,
 } from '../types/collaboration';
+import { exitCurrentCollaboration } from '../services/collaborationService';
 import { ShareDialog } from './modals/ShareDialog';
+import { CurrentFilePanel } from './CurrentFilePanel';
+import { WorkListPanel } from './WorkListPanel';
 import styles from './CollaborateSidebar.module.css';
 
 interface Work {
@@ -43,6 +50,11 @@ interface Work {
   real_user_id: string;
   work_data: string;
   work_id: number;
+}
+
+interface ProjectCacheEntry {
+  id: string;
+  name: string;
 }
 
 async function fetchMyProjectIds(): Promise<string[]> {
@@ -58,8 +70,10 @@ async function fetchMyProjectIds(): Promise<string[]> {
 
 export const CollaborateSidebar: React.FC = () => {
   const { user } = useAuth();
-  const { currentFileId, currentProjectId } = useCADEditorStore();
+  const { currentFileId, currentProjectId, shareCollaborationEnabled, setCollaborationState } = useCADEditorStore();
   const { showToast } = useNotification();
+
+  const cooperateInitRef = useRef(false);
 
   const getCooperate = useCallback(() => {
     const mxCAD = MxCpp.getCurrentMxCAD();
@@ -68,7 +82,10 @@ export const CollaborateSidebar: React.FC = () => {
     const cooperate = mxCAD.getCooperate();
     if (!cooperate) return null;
 
-    cooperate.init({ server_addres: APP_COOPERATE_URL });
+    if (!cooperateInitRef.current) {
+      cooperate.init({ server_addres: APP_COOPERATE_URL });
+      cooperateInitRef.current = true;
+    }
     return cooperate;
   }, []);
 
@@ -77,10 +94,15 @@ export const CollaborateSidebar: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [joiningWorkId, setJoiningWorkId] = useState<number | null>(null);
-  const [fileNameCache, setFileNameCache] = useState<Record<string, string>>(
-    {}
-  );
+  const [fileNameCache, setFileNameCache] = useState<Record<string, string>>({});
+  const [projectNameCache, setProjectNameCache] = useState<Record<string, string>>({});
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [waitingForSession, setWaitingForSession] = useState(false);
+  const [myProjectIds, setMyProjectIds] = useState<string[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'current' | 'list'>('current');
+  const [isCadReady, setIsCadReady] = useState(false);
+
+  const initCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchWorks = useCallback(async () => {
     try {
@@ -88,61 +110,103 @@ export const CollaborateSidebar: React.FC = () => {
       const cooperate = getCooperate();
       if (!cooperate) {
         setLoading(false);
+        showToast('协同服务未就绪', 'error');
         return;
       }
 
-      const myProjectIds = await fetchMyProjectIds();
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+        showToast('获取协同列表超时', 'warning');
+      }, 15000);
+
+      const ids = await fetchMyProjectIds();
+      setMyProjectIds(ids);
 
       cooperate.getWorks((workList: Work[]) => {
+        clearTimeout(timeoutId);
         const filtered = workList.filter((w) => {
           const data = parseWorkData(w.work_data);
           if (!data) return false;
-          if (data.projectId && myProjectIds.includes(data.projectId))
-            return true;
+          if (data.projectId && ids.includes(data.projectId)) return true;
           if (!data.projectId) return true;
           return false;
+        }).map((w) => {
+          const { linkUserIds, linkUserData } = deduplicateWorkUsers(
+            w.link_user_ids,
+            w.link_user_data
+          );
+          return { ...w, link_user_ids: linkUserIds, link_user_data: linkUserData };
         });
-        setWorks(filtered);
+          const prevIds = worksRef.current.map((w) => w.work_id).sort().join(',');
+          const newIds = filtered.map((w) => w.work_id).sort().join(',');
+          if (prevIds !== newIds) {
+            setWorks((prev) => {
+              const newWorkIds = filtered.map((w) => w.work_id);
+              const localOnly = prev.filter((w) => !newWorkIds.includes(w.work_id));
+              if (localOnly.length === 0) return filtered;
+              return [...filtered, ...localOnly];
+            });
+          }
         setLoading(false);
       });
     } catch (error) {
       console.error('获取协同列表失败:', error);
       setLoading(false);
+      showToast('获取协同列表失败', 'error');
     }
-  }, [getCooperate, currentFileId, user]);
+  }, [getCooperate, showToast]);
 
-  const resolveFileNames = useCallback(async (workList: Work[]) => {
+  const resolveNames = useCallback(async (workList: Work[]) => {
     const drawingIds = new Set<string>();
+    const projectIds = new Set<string>();
+
     for (const w of workList) {
       const data = parseWorkData(w.work_data);
       if (data?.drawingId) drawingIds.add(data.drawingId);
+      if (data?.projectId) projectIds.add(data.projectId);
     }
 
-    const resolvedList: { id: string; name: string }[] = [];
-    await Promise.all(
-      [...drawingIds].map(async (id) => {
+    const resolvedDrawings: { id: string; name: string }[] = [];
+    const resolvedProjects: ProjectCacheEntry[] = [];
+
+    await Promise.all([
+      ...[...drawingIds].map(async (id) => {
         try {
           const result = await fileSystemControllerGetNode({
             path: { nodeId: id },
           });
           if (result.data && 'name' in result.data) {
-            resolvedList.push({
+            resolvedDrawings.push({
               id,
               name: (result.data as { name: string }).name,
             });
           }
         } catch {
-          resolvedList.push({ id, name: `图纸 ${id.slice(0, 6)}...` });
+          resolvedDrawings.push({ id, name: `图纸 ${id.slice(0, 6)}...` });
         }
-      })
-    );
-    if (resolvedList.length > 0) {
+      }),
+      ...[...projectIds].map(async (id) => {
+        try {
+          const result = await fileSystemControllerGetNode({
+            path: { nodeId: id },
+          });
+          if (result.data && 'name' in result.data) {
+            resolvedProjects.push({
+              id,
+              name: (result.data as { name: string }).name,
+            });
+          }
+        } catch {
+          resolvedProjects.push({ id, name: `项目 ${id.slice(0, 6)}...` });
+        }
+      }),
+    ]);
+
+    if (resolvedDrawings.length > 0) {
       setFileNameCache((prev) => {
-        const entries = resolvedList.filter((r) => !prev[r.id]);
+        const entries = resolvedDrawings.filter((r) => !prev[r.id]);
         if (entries.length === 0) {
-          const staleIds = Object.keys(prev).filter(
-            (id) => !drawingIds.has(id)
-          );
+          const staleIds = Object.keys(prev).filter((id) => !drawingIds.has(id));
           if (staleIds.length === 0) return prev;
           const cleaned = { ...prev };
           for (const id of staleIds) delete cleaned[id];
@@ -150,19 +214,30 @@ export const CollaborateSidebar: React.FC = () => {
         }
         const updated = { ...prev };
         for (const e of entries) updated[e.id] = e.name;
-        const staleIds = Object.keys(updated).filter(
-          (id) => !drawingIds.has(id)
-        );
+        const staleIds = Object.keys(updated).filter((id) => !drawingIds.has(id));
         for (const id of staleIds) delete updated[id];
         return updated;
       });
-    } else {
-      setFileNameCache({});
+    }
+
+    if (resolvedProjects.length > 0) {
+      setProjectNameCache((prev) => {
+        const entries = resolvedProjects.filter((r) => !prev[r.id]);
+        if (entries.length === 0) {
+          const staleIds = Object.keys(prev).filter((id) => !projectIds.has(id));
+          if (staleIds.length === 0) return prev;
+          const cleaned = { ...prev };
+          for (const id of staleIds) delete cleaned[id];
+          return cleaned;
+        }
+        const updated = { ...prev };
+        for (const e of entries) updated[e.id] = e.name;
+        const staleIds = Object.keys(updated).filter((id) => !projectIds.has(id));
+        for (const id of staleIds) delete updated[id];
+        return updated;
+      });
     }
   }, []);
-
-  const [isCadReady, setIsCadReady] = useState(false);
-  const initCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const checkCadReady = () => {
@@ -193,27 +268,30 @@ export const CollaborateSidebar: React.FC = () => {
     if (isCadReady) {
       fetchWorks();
     }
-  }, [isCadReady, fetchWorks, currentFileId]);
+  }, [isCadReady, fetchWorks]);
 
   useEffect(() => {
     if (works.length > 0) {
-      resolveFileNames(works);
+      resolveNames(works);
     }
   }, [works]);
 
   const autoJoinRef = useRef(false);
 
   useEffect(() => {
-    const fromShare = new URLSearchParams(window.location.search).get(
-      'fromShare'
-    );
+    const fromShare = new URLSearchParams(window.location.search).get('fromShare');
     if (fromShare === '1') {
       autoJoinRef.current = true;
     }
   }, []);
 
   useEffect(() => {
-    if (!autoJoinRef.current || !currentFileId || works.length === 0) return;
+    if (!autoJoinRef.current || !currentFileId) return;
+
+    if (works.length === 0) {
+      setWaitingForSession(true);
+      return;
+    }
 
     const matchingWork = works.find((w) => {
       const data = parseWorkData(w.work_data);
@@ -222,12 +300,53 @@ export const CollaborateSidebar: React.FC = () => {
 
     if (matchingWork && currentWorkId === null) {
       autoJoinRef.current = false;
-      handleJoinWork(matchingWork.work_id);
+      setWaitingForSession(false);
+      handleJoinWork(matchingWork.work_id, true);
+    } else if (!matchingWork) {
+      setWaitingForSession(true);
     }
   }, [works, currentFileId, currentWorkId]);
 
+  const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const worksRef = useRef(works);
+  worksRef.current = works;
+
+  useEffect(() => {
+    if (!autoJoinRef.current) return;
+
+    autoJoinTimerRef.current = setInterval(() => {
+      if (!autoJoinRef.current) {
+        if (autoJoinTimerRef.current) {
+          clearInterval(autoJoinTimerRef.current);
+          autoJoinTimerRef.current = null;
+        }
+        return;
+      }
+      fetchWorks();
+    }, 8000);
+
+    return () => {
+      if (autoJoinTimerRef.current) {
+        clearInterval(autoJoinTimerRef.current);
+        autoJoinTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleCreateWork = useCallback(async () => {
     try {
+      // 如果在其他协同中，先退出
+      if (useCADEditorStore.getState().collaborationWorkId !== null) {
+        exitCurrentCollaboration();
+        setCurrentWorkId(null);
+        fetchWorks();
+      }
+
+      // 创建前检查未保存修改
+      const canProceed = await checkAndConfirmUnsavedChanges();
+      if (!canProceed) return;
+
       setCreating(true);
       const cooperate = getCooperate();
       if (!cooperate) {
@@ -259,6 +378,20 @@ export const CollaborateSidebar: React.FC = () => {
           setCreating(false);
           if (workid > 0) {
             setCurrentWorkId(workid);
+            setCollaborationState({ isInCollaboration: true, workId: workid });
+            refreshFileName();
+            // 立即插入本地 work，避免等待 getWorks 异步回调导致 UI 滞后
+            const newWork: Work = {
+              work_id: workid,
+              work_data: encodeWorkData(workData),
+              real_user_id: user.id,
+              link_user_ids: [user.id],
+              link_user_data: [encodeUserData(userData)],
+            };
+            setWorks((prev) => {
+              if (prev.some((w) => w.work_id === workid)) return prev;
+              return [newWork, ...prev];
+            });
             fetchWorks();
             showToast(`协同创建成功！ID: ${workid}`, 'success');
           } else {
@@ -289,8 +422,24 @@ export const CollaborateSidebar: React.FC = () => {
   ]);
 
   const handleJoinWork = useCallback(
-    async (workId: number) => {
+    async (workId: number, skipModifiedCheck = false) => {
       try {
+        // 如果在其他协同中，先退出
+        if (
+          useCADEditorStore.getState().collaborationWorkId !== null &&
+          useCADEditorStore.getState().collaborationWorkId !== workId
+        ) {
+          exitCurrentCollaboration();
+          setCurrentWorkId(null);
+          fetchWorks();
+        }
+
+        // 非自动加入时检查未保存修改
+        if (!skipModifiedCheck) {
+          const canProceed = await checkAndConfirmUnsavedChanges();
+          if (!canProceed) return;
+        }
+
         setJoiningWorkId(workId);
         const cooperate = getCooperate();
         if (!cooperate) {
@@ -318,9 +467,13 @@ export const CollaborateSidebar: React.FC = () => {
             setJoiningWorkId(null);
             if (iRet === 0) {
               setCurrentWorkId(workId);
+              setCollaborationState({ isInCollaboration: true, workId });
+              refreshFileName();
             } else {
               if (iRet === 17) {
                 setCurrentWorkId(workId);
+                setCollaborationState({ isInCollaboration: true, workId });
+                refreshFileName();
               } else {
                 showToast(`加入协同失败，错误码: ${iRet}`, 'error');
               }
@@ -335,7 +488,7 @@ export const CollaborateSidebar: React.FC = () => {
         showToast('加入协同失败', 'error');
       }
     },
-    [getCooperate, user, showToast]
+    [getCooperate, user, showToast, fetchWorks]
   );
 
   const handleExitWork = useCallback(async () => {
@@ -349,6 +502,8 @@ export const CollaborateSidebar: React.FC = () => {
       const ret = cooperate.exitWrok();
       if (ret === 0) {
         setCurrentWorkId(null);
+        setCollaborationState({ isInCollaboration: false, workId: null });
+        refreshFileName();
         fetchWorks();
         showToast('已退出协同', 'success');
       } else {
@@ -360,149 +515,111 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, [getCooperate, fetchWorks, showToast]);
 
-  const getSessionName = useCallback(
-    (work: Work) => {
-      const data = parseWorkData(work.work_data);
-      if (data?.drawingId && fileNameCache[data.drawingId]) {
-        return fileNameCache[data.drawingId];
-      }
-      return `协同 ${work.work_id}`;
-    },
-    [fileNameCache]
+  const currentFileWork = useMemo(
+    () =>
+      works.find((w) => {
+        const data = parseWorkData(w.work_data);
+        return data?.drawingId === currentFileId;
+      }),
+    [works, currentFileId]
   );
+
+  const availableWorks = useMemo(() => {
+    return works
+      .filter((w) => {
+        const data = parseWorkData(w.work_data);
+        if (!data) return false;
+        if (data.projectId && myProjectIds.includes(data.projectId)) return true;
+        if (!data.projectId) return false;
+        return false;
+      })
+      .map((w) => {
+        const data = parseWorkData(w.work_data);
+        return {
+          work: w,
+          projectName: data?.projectId
+            ? projectNameCache[data.projectId] ?? '未知项目'
+            : '个人空间',
+          drawingName: data?.drawingId
+            ? fileNameCache[data.drawingId] ?? '未知图纸'
+            : '未知图纸',
+          isCurrentFile: data?.drawingId === currentFileId,
+          isJoined: currentWorkId === w.work_id,
+          onlineCount: w.link_user_ids.length,
+        };
+      });
+  }, [works, myProjectIds, projectNameCache, fileNameCache, currentFileId, currentWorkId]);
+
+  const currentFileName: string = useMemo(() => {
+    if (!currentFileId) return '';
+    const data = currentFileWork
+      ? parseWorkData(currentFileWork.work_data)
+      : null;
+    if (data?.drawingId && fileNameCache[data.drawingId]) {
+      return fileNameCache[data.drawingId] ?? '';
+    }
+    return '当前图纸';
+  }, [currentFileId, currentFileWork, fileNameCache]);
 
   return (
     <div className={styles.container} data-tour="collaborators-panel">
-      <div className={styles.actionsBar}>
-        <button
-          onClick={handleCreateWork}
-          disabled={creating || currentWorkId !== null}
-          className={`${styles.primaryButton} ${styles.ripple}`}
-          data-tour="create-collaborate-btn"
-        >
-          {creating ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <UserPlus size={14} />
-          )}
-          <span>{creating ? '创建中...' : '创建协同'}</span>
-        </button>
-
-        <Tooltip
-          content="刷新列表"
-          position="bottom"
-          delay={100}
-          disabled={loading}
-        >
-          <button
-            onClick={fetchWorks}
-            disabled={loading}
-            className={`${styles.iconButton} ${styles.ripple}`}
-            aria-label="刷新列表"
+      <div className={styles.subTabBar}>
+        <Tabs>
+          <Tab
+            active={activeSubTab === 'current'}
+            tabVariant="primary"
+            size="sm"
+            onClick={() => setActiveSubTab('current')}
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </Tooltip>
+            当前图纸
+          </Tab>
+          <Tab
+            active={activeSubTab === 'list'}
+            tabVariant="primary"
+            size="sm"
+            onClick={() => setActiveSubTab('list')}
+          >
+            协同列表
+          </Tab>
+        </Tabs>
+
+        <Button
+          variant="icon"
+          icon={RefreshCw}
+          tooltip="刷新列表"
+          tooltipPosition="bottom"
+          tooltipDelay={100}
+          loading={loading}
+          onClick={fetchWorks}
+          aria-label="刷新列表"
+        />
       </div>
 
-      {currentWorkId !== null && (
-        <div className={styles.currentSession}>
-          <div className={styles.sessionInfo}>
-            <div className={styles.sessionLeft}>
-              <div className={styles.statusIndicator}>
-                <div className={styles.statusDot} />
-              </div>
-              <span className={styles.sessionLabel}>
-                当前协同:{' '}
-                <span className={styles.sessionId}>{currentWorkId}</span>
-              </span>
-            </div>
-            <div className={styles.sessionActions}>
-              <Tooltip content="分享" position="bottom" delay={100}>
-                <button
-                  onClick={() => setShareDialogOpen(true)}
-                  className={`${styles.shareButton} ${styles.ripple}`}
-                >
-                  <Share2 size={12} />
-                </button>
-              </Tooltip>
-              <button
-                onClick={handleExitWork}
-                className={`${styles.exitButton} ${styles.ripple}`}
-              >
-                退出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className={styles.sessionList} data-tour="collaborate-list">
-        {loading ? (
-          <div className={styles.loadingState}>
-            <div className={styles.loadingSpinner} />
-            <span className={styles.loadingText}>加载中...</span>
-          </div>
-        ) : works.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <Users size={20} />
-            </div>
-            <div className={styles.emptyTitle}>暂无协同会话</div>
-            <div className={styles.emptyDescription}>
-              点击「创建协同」开始协作
-            </div>
-          </div>
+      <div className={styles.panelContent}>
+        {activeSubTab === 'current' ? (
+          <CurrentFilePanel
+            work={currentFileWork}
+            currentWorkId={currentWorkId}
+            collaborationEnabled={shareCollaborationEnabled === null ? true : shareCollaborationEnabled}
+            fileName={currentFileName}
+            isCadReady={isCadReady}
+            creating={creating}
+            joiningWorkId={joiningWorkId}
+            waitingForSession={waitingForSession}
+            onCreateWork={handleCreateWork}
+            onJoinWork={handleJoinWork}
+            onExitWork={handleExitWork}
+            onShare={() => setShareDialogOpen(true)}
+          />
         ) : (
-          works.map((work, index) => (
-            <Card
-              key={work.work_id}
-              variant="filled"
-              className={`${styles.sessionCard} ${currentWorkId === work.work_id ? styles.active : ''}`}
-              style={{ animationDelay: `${Math.min(index * 0.05, 0.35)}s` }}
-              onClick={() =>
-                currentWorkId !== work.work_id &&
-                currentWorkId === null &&
-                handleJoinWork(work.work_id)
-              }
-            >
-              <div className={styles.sessionCardLeft}>
-                <div className={styles.sessionIcon}>
-                  <Users size={14} />
-                </div>
-                <div className={styles.sessionDetails}>
-                  <div className={styles.sessionName}>
-                    {getSessionName(work)}
-                  </div>
-                  <div className={styles.sessionMeta}>
-                    <span>等待加入</span>
-                  </div>
-                </div>
-              </div>
-
-              {currentWorkId === work.work_id ? (
-                <span className={styles.joinedBadge}>
-                  <Check size={10} />
-                  已加入
-                </span>
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleJoinWork(work.work_id);
-                  }}
-                  disabled={joiningWorkId !== null || currentWorkId !== null}
-                  className={`${styles.joinButton} ${styles.ripple}`}
-                >
-                  {joiningWorkId === work.work_id ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    '加入'
-                  )}
-                </button>
-              )}
-            </Card>
-          ))
+          <WorkListPanel
+            items={availableWorks}
+            loading={loading}
+            currentWorkId={currentWorkId}
+            joiningWorkId={joiningWorkId}
+            onJoinWork={handleJoinWork}
+            onRefresh={fetchWorks}
+          />
         )}
       </div>
 

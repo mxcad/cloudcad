@@ -173,6 +173,16 @@ function parseEnvFile(filePath) {
   return result;
 }
 
+function extractDbNameFromUrl(url) {
+  if (!url) return null;
+  try {
+    const match = url.match(/\/([^/?]+)(\?|$)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 function updateEnvFile(filePath, updates) {
   let content = fs.existsSync(filePath)
     ? fs.readFileSync(filePath, 'utf8')
@@ -960,7 +970,7 @@ async function handleApi(req, res, pathname, searchParams) {
       const env = parseEnvFile(ENV_PATH);
       const dbHost = updates.DB_HOST || env.DB_HOST || 'localhost';
       const dbPort = updates.DB_PORT || env.DB_PORT || '5432';
-      const dbName = updates.DB_DATABASE || env.DB_DATABASE || 'cloudcad';
+      const dbName = updates.DB_DATABASE || env.DB_DATABASE || extractDbNameFromUrl(env.DATABASE_URL) || 'cloudcad';
       const dbUser = updates.DB_USERNAME || env.DB_USERNAME || 'postgres';
       const dbPassword = updates.DB_PASSWORD || env.DB_PASSWORD || 'password';
       const encodedPassword = encodeURIComponent(dbPassword);
@@ -1058,7 +1068,7 @@ async function handleApi(req, res, pathname, searchParams) {
     try {
       const dbHost = env.DB_HOST || 'localhost';
       const dbPort = env.DB_PORT || '5432';
-      const dbName = env.DB_DATABASE || 'cloudcad';
+      const dbName = env.DB_DATABASE || extractDbNameFromUrl(env.DATABASE_URL) || 'cloudcad';
       const dbUser = env.DB_USERNAME || 'postgres';
       const escapedUser = dbUser.replace(/"/g, '""');
       const escapedPassword = newPassword.replace(/'/g, "''");
@@ -1172,7 +1182,7 @@ async function handleApi(req, res, pathname, searchParams) {
           configSucceeded = true;
           log('info', 'Redis requirepass 已通过 CONFIG SET 更新');
           // 持久化到 redis.conf（如果有）
-          spawnSync(redisCliPath, [...configArgs.slice(0, -2), 'CONFIG', 'REWRITE'], {
+          spawnSync(redisCliPath, [...configArgs.slice(0, -4), 'CONFIG', 'REWRITE'], {
             shell: false,
             stdio: 'pipe',
             timeout: 5000,

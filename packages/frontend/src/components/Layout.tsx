@@ -32,7 +32,7 @@ import { ScrollText } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
-import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library } from 'lucide-react';
+import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library, Share2 } from 'lucide-react';
 import { Menu } from './ui/Menu';
 
 interface NavItemProps {
@@ -267,6 +267,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         dataTour: 'sidebar-personal-space',
       },
       {
+        to: '/shares',
+        icon: Share2,
+        label: '分享管理',
+        visible: true,
+      },
+      {
         to: '/library',
         icon: Library,
         label: '公共资源库',
@@ -439,7 +445,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </p>
               {menuItems
                 .filter((item) => item.visible)
-                .slice(0, 3)
+                .slice(0, 4)
                 .map((item) => (
                   <NavItem
                     key={item.to}
@@ -450,7 +456,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
 
             {/* 管理菜单 */}
-            {menuItems.some((item, idx) => idx >= 3 && item.visible) && (
+            {menuItems.some((item, idx) => idx >= 4 && item.visible) && (
               <div
                 className="pt-2 border-t"
                 style={{ borderColor: 'var(--border-default)' }}
@@ -462,7 +468,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   系统管理
                 </p>
                 {menuItems
-                  .filter((item, idx) => idx >= 3 && item.visible)
+                  .filter((item, idx) => idx >= 4 && item.visible)
                   .map((item) => (
                     <NavItem
                       key={item.to}

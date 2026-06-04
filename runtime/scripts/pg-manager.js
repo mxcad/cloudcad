@@ -364,7 +364,7 @@ function isRunning() {
         shell: IS_WINDOWS,
         timeout: 5000,
         windowsHide: true,
-        env: getEnv(),
+        env: getEnv({ PGUSER: 'postgres' }),
       }
     );
     return result.status === 0;
@@ -495,7 +495,7 @@ function startPostgres() {
       stdio: 'inherit',
       shell: IS_WINDOWS,
       windowsHide: true,
-      env: getEnv({ PGDATA: PG_DATA_DIR }),
+      env: getEnv({ PGDATA: PG_DATA_DIR, PGUSER: 'postgres' }),
     }
   );
 

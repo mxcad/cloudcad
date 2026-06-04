@@ -2,8 +2,10 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Delete,
   Param,
+  Query,
   Body,
   Req,
   UseGuards,
@@ -19,6 +21,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,6 +31,8 @@ import {
   CreateShareResponseDto,
   ResolveShareResponseDto,
   ResolveShareNodeResponseDto,
+  UpdateShareDto,
+  ShareListResponseDto,
 } from './dto';
 
 @ApiTags('协同分享')
@@ -92,5 +97,55 @@ export class CooperateController {
     const userId = (req.user as { id: string }).id;
     await this.cooperateService.revokeShare(token, userId);
     return { message: '分享已撤销' };
+  }
+
+  @Get('shares')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取分享列表（分页）' })
+  @ApiResponse({ status: 200, description: '分享列表', type: ShareListResponseDto })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '页码，默认 1' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: '每页条数，默认 20' })
+  @ApiQuery({ name: 'fileId', required: false, type: String, description: '按文件筛选' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: '按文件名搜索' })
+  @ApiQuery({ name: 'sortBy', required: false, enum: ['createdAt', 'expiresAt', 'usedCount'], description: '排序字段，默认 createdAt' })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: '排序方向，默认 desc' })
+  async listShares(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('fileId') fileId?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: 'createdAt' | 'expiresAt' | 'usedCount',
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Req() req?: Request,
+  ) {
+    const userId = (req!.user as { id: string }).id;
+    const result = await this.cooperateService.listShares(userId, {
+      page: page ? parseInt(page, 10) : undefined,
+      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      fileId,
+      search,
+      sortBy,
+      sortOrder,
+    });
+    return result;
+  }
+
+  @Patch('share/:token')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '修改分享设置' })
+  @ApiResponse({ status: 200, description: '修改成功' })
+  @ApiResponse({ status: 403, description: '无权操作' })
+  @ApiResponse({ status: 404, description: '链接不存在' })
+  async updateShare(
+    @Param('token') token: string,
+    @Body() dto: UpdateShareDto,
+    @Req() req: Request,
+  ) {
+    const userId = (req.user as { id: string }).id;
+    const result = await this.cooperateService.updateShare(token, userId, dto);
+    return result;
   }
 }

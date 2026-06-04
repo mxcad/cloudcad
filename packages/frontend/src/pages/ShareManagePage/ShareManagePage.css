@@ -1,0 +1,159 @@
+.share-mgmt-page {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.share-mgmt-page-header {
+  margin-bottom: var(--space-6);
+}
+
+.share-mgmt-page-title {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.share-mgmt-page-subtitle {
+  color: var(--text-tertiary);
+}
+
+.share-mgmt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.share-mgmt-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  max-width: 400px;
+}
+
+.share-mgmt-table-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.share-mgmt-table-scroll {
+  overflow-x: auto;
+}
+
+.share-mgmt-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.share-mgmt-table thead {
+  background: var(--bg-tertiary);
+}
+
+.share-mgmt-table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.share-mgmt-table td {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.share-mgmt-table tbody tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.share-mgmt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.share-mgmt-table-empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.share-mgmt-link-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 180px;
+}
+
+.share-mgmt-link-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.share-mgmt-copy-btn {
+  flex-shrink: 0;
+}
+
+.share-mgmt-action-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.share-mgmt-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-16);
+}
+
+.share-mgmt-empty {
+  text-align: center;
+  padding: var(--space-16);
+}
+
+.share-mgmt-empty-title {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.share-mgmt-empty-desc {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.share-mgmt-pagination {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-default);
+}
+
+@media (max-width: 640px) {
+  .share-mgmt-page {
+    padding: var(--space-4);
+  }
+  .share-mgmt-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .share-mgmt-search {
+    max-width: none;
+  }
+}

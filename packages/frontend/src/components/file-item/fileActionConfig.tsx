@@ -15,7 +15,9 @@ export type ActionType =
   | 'permanently_delete'
   | 'edit'
   | 'show_members'
-  | 'show_roles';
+  | 'show_roles'
+  | 'share'
+  | 'view_shares';
 
 /**
  * 操作项配置
@@ -61,6 +63,8 @@ export interface FileActionCheckProps {
   onDownload?: boolean;
   onShowVersionHistory?: boolean;
   onEdit?: boolean;
+  onShare?: boolean;
+  onViewShares?: boolean;
   onShowMembers?: boolean;
   onShowRoles?: boolean;
   onMove?: boolean;
@@ -208,6 +212,22 @@ const Icons = {
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   ),
+  Share: () => (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  ),
   Settings: () => (
     <svg
       width="16"
@@ -339,6 +359,28 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isRoot, isTrash, onEdit }) =>
       isRoot && !isTrash && !!onEdit,
     permissionCheck: ({ canEdit }) => canEdit !== false,
+  },
+  share: {
+    type: 'share',
+    label: '分享',
+    tooltip: '分享图纸',
+    icon: <Icons.Share />,
+    colorClass: 'text-cyan-600',
+    hoverClass: 'hover:bg-cyan-50',
+    visibilityCheck: ({ isFolder, onShare }) =>
+      !isFolder && !!onShare,
+    permissionCheck: () => true,
+  },
+  view_shares: {
+    type: 'view_shares',
+    label: '查看分享',
+    tooltip: '查看分享链接',
+    icon: <Icons.Settings />,
+    colorClass: 'text-slate-700',
+    hoverClass: 'hover:bg-slate-50',
+    visibilityCheck: ({ isFolder, onViewShares }) =>
+      !isFolder && !!onViewShares,
+    permissionCheck: () => true,
   },
   show_members: {
     type: 'show_members',

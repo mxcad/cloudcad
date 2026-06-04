@@ -82,6 +82,9 @@ export const useMenu = () => {
     addCommand("Mx_ShowCollaborate", () => {
         window.dispatchEvent(new CustomEvent('mxcad-show-collaborate'))
     })
+    addCommand("Mx_ShowShare", () => {
+        window.dispatchEvent(new CustomEvent('mxcad-show-share'))
+    })
     addCommand("Mx_saveDwg", () => {
         const { state } = useEditorState()
         if (!state.permissions.canExport) {

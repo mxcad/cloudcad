@@ -75,10 +75,12 @@ import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast, globalShowThreeButtonConfirm } from '../../contexts/NotificationContext';
 import { successOnce } from '../../utils/message';
 import { isAuthenticated } from '../../utils/authCheck';
+import { useCADEditorStore } from '../../stores/useCADEditorStore';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { cancelLoginRedirect } from '../../config/clientSetup';
 import { handleError } from '@/utils/errorHandler';
 import { showGlobalLoading, hideGlobalLoading, setLoadingMessage, setLoadingProgress } from '../../utils/loadingUtils';
+import { APP_COOPERATE_URL } from '@/constants/appConfig';
 
 
 // ==================== 辅助函数 ====================
@@ -92,13 +94,15 @@ import { showGlobalLoading, hideGlobalLoading, setLoadingMessage, setLoadingProg
 function formatEditorFileName(fileName: string): string {
   const isLoggedIn = isAuthenticated();
   const loginPrefix = isLoggedIn ? '' : '[未登录]';
+  const { isInCollaboration } = useCADEditorStore.getState();
+  const collaborationPrefix = isInCollaboration ? '[协同中] ' : '';
 
-  // empty_template.mxweb 文件不显示文件名
-  if (fileName === 'empty_template.mxweb') {
-    return loginPrefix;
+  // empty_template.mxweb 和 empty.mxweb 文件不显示文件名
+  if (fileName === 'empty_template.mxweb' || fileName === 'empty.mxweb') {
+    return `${collaborationPrefix}${loginPrefix}`;
   }
 
-  return `${loginPrefix} - ${fileName}`;
+  return `${collaborationPrefix}${loginPrefix}${loginPrefix ? ' - ' : ''}${fileName}`;
 }
 
 // ==================== 全局状态 ====================
@@ -158,6 +162,9 @@ export function resetDocumentModified(): void {
  */
 function setupBeforeUnloadHandler(): void {
   window.addEventListener('beforeunload', (e: BeforeUnloadEvent) => {
+    // 退出当前协同会话
+    exitCollaborationIfNeeded();
+
     // 如果正在主动离开页面（已弹过确认），跳过二次弹窗
     if (isLeavingPageRef.current) {
       e.returnValue = '';
@@ -176,6 +183,34 @@ function setupBeforeUnloadHandler(): void {
 
 // 在模块加载时自动启用浏览器关闭保护
 setupBeforeUnloadHandler();
+
+/**
+ * 退出当前协同会话（如果存在）
+ * 在打开新文件或页面关闭前调用
+ */
+function exitCollaborationIfNeeded(): void {
+  try {
+    const { isInCollaboration } = useCADEditorStore.getState();
+    if (!isInCollaboration) return;
+
+    const mxCAD = MxCpp.getCurrentMxCAD();
+    if (!mxCAD) return;
+    const cooperate = mxCAD.getCooperate();
+    if (!cooperate) return;
+
+    cooperate.init({ server_addres: APP_COOPERATE_URL });
+    const ret = cooperate.exitWrok();
+    if (ret === 0) {
+      useCADEditorStore.getState().setCollaborationState({
+        isInCollaboration: false,
+        workId: null,
+      });
+      refreshFileName();
+    }
+  } catch {
+    // best-effort
+  }
+}
 
 /**
  * 显示未保存更改确认对话框
@@ -591,6 +626,7 @@ export async function openUploadedFile(
   newNodeId: string,
   uploadTargetNodeId: string
 ): Promise<void> {
+  exitCollaborationIfNeeded();
   setLoadingMessage(DEFAULT_MESSAGES.OPENING_FILE);
 
   // 等待文件转换完成
@@ -642,6 +678,8 @@ export async function openLibraryDrawing(
   updatedAt?: string
 ): Promise<void> {
   try {
+    exitCollaborationIfNeeded();
+
     // 1. 检查当前文档是否有未保存的修改
     const canProceed = await checkAndConfirmUnsavedChanges();
     if (!canProceed) {
@@ -731,6 +769,8 @@ export async function openLibraryBlock(
   updatedAt?: string
 ): Promise<void> {
   try {
+    exitCollaborationIfNeeded();
+
     // 1. 检查当前文档是否有未保存的修改
     const canProceed = await checkAndConfirmUnsavedChanges();
     if (!canProceed) {
@@ -1178,6 +1218,8 @@ MxFun.addCommand('openFile_noCache', () => openFile(true));
  */
 const handleNewFileCommand = async () => {
   try {
+    exitCollaborationIfNeeded();
+
     // 1. 检查是否有未保存的修改
     const canProceed = await checkAndConfirmUnsavedChanges();
     if (!canProceed) {
@@ -2620,6 +2662,7 @@ export class MxCADManager {
   }
 
   async openFile(fileUrl: string, noCache?: boolean): Promise<void> {
+    exitCollaborationIfNeeded();
     return this.instanceManager.openFile(fileUrl, noCache);
   }
 

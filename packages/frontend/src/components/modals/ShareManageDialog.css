@@ -1,0 +1,122 @@
+.share-dialog-body {
+  padding: var(--space-2) 0;
+}
+
+.share-dialog-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+.share-dialog-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-10);
+}
+
+.share-dialog-error {
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--text-secondary);
+}
+
+.share-dialog-error p {
+  margin-bottom: var(--space-2);
+}
+
+.share-dialog-empty {
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--text-secondary);
+}
+
+.share-dialog-empty-title {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.share-dialog-table-container {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.share-dialog-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.share-dialog-table thead {
+  background: var(--bg-tertiary);
+}
+
+.share-dialog-table th {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.share-dialog-table td {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.share-dialog-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.share-dialog-table tbody tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.share-dialog-link-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.share-dialog-link-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  max-width: 110px;
+}
+
+.share-dialog-copy-btn {
+  flex-shrink: 0;
+}
+
+.share-dialog-collab-btn {
+  padding: var(--space-0) var(--space-2);
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  line-height: 20px;
+}
+
+.share-dialog-collab-btn--on {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
+.share-dialog-collab-btn--off {
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.share-dialog-action-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}

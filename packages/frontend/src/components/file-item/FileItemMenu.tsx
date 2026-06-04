@@ -18,6 +18,8 @@ const variantMap: Record<ActionType, 'default' | 'danger' | 'success' | 'info' |
   edit: 'default',
   show_members: 'default',
   show_roles: 'default',
+  share: 'default',
+  view_shares: 'default',
 };
 
 interface FileItemMenuProps {
@@ -39,6 +41,8 @@ interface FileItemMenuProps {
   onCopy?: (node: FileSystemNode) => void;
   onUploadExternalReference?: (e: React.MouseEvent) => void;
   onShowVersionHistory?: (node: FileSystemNode) => void;
+  onShare?: (node: FileSystemNode) => void;
+  onViewShares?: (node: FileSystemNode) => void;
   isCadFile: () => boolean;
   canDownload?: boolean;
   canEdit?: boolean;
@@ -67,6 +71,8 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onCopy,
   onUploadExternalReference,
   onShowVersionHistory,
+  onShare,
+  onViewShares,
   isCadFile,
   canDownload,
   canEdit,
@@ -101,6 +107,8 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
       onShowMembers?.({ stopPropagation: () => {} } as React.MouseEvent),
     show_roles: () =>
       onShowRoles?.({ stopPropagation: () => {} } as React.MouseEvent),
+    share: () => onShare?.(node),
+    view_shares: () => onViewShares?.(node),
   };
 
   const availableActions = getAvailableActions({
@@ -121,6 +129,8 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     onEdit: !!onEdit,
     onShowMembers: !!onShowMembers,
     onShowRoles: !!onShowRoles,
+    onShare: !!onShare,
+    onViewShares: !!onViewShares,
     onMove: !!onMove,
     onCopy: !!onCopy,
     onRestore: !!onRestore,

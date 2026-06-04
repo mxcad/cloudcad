@@ -364,17 +364,21 @@
         },
         {
           "tab": "导出",
+          "icon": "cloudcad-daochu",
           "list": [
             {
               "tab": "PDF",
+              "icon": "cloudcad-PDF",
               "cmd": "Mx_ExportPDF"
             },
             {
               "tab": "DWG",
+              "icon": "cloudcad-DWG",
               "cmd": "Mx_ExportDWG"
             },
             {
               "tab": "DXF",
+              "icon": "cloudcad-DXF", 
               "cmd": "Mx_ExportDXF"
             }
           ]

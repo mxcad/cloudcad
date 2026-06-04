@@ -1,11 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useCooperate } from '../../../composables/useCooperate';
-import { showToast } from 'vant';
+import { useUser } from '../../../composables/useUser';
+
+interface Work {
+  link_user_data: string[];
+  link_user_ids: string[];
+  real_user_id: string;
+  work_data: string;
+  work_id: number;
+}
+
+interface CollaborateWorkData {
+  v: 1;
+  drawingId: string;
+  projectId: string | null;
+}
+
+function parseWorkData(raw: string): CollaborateWorkData | null {
+  try {
+    const parsed = JSON.parse(atob(raw));
+    if (parsed && parsed.v === 1 && typeof parsed.drawingId === 'string') {
+      return parsed as CollaborateWorkData;
+    }
+  } catch {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.v === 1 && typeof parsed.drawingId === 'string') {
+        return parsed as CollaborateWorkData;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
+
+const { user } = useUser();
 
 const {
   isCadReady,
@@ -26,11 +61,11 @@ onMounted(() => {
 });
 
 function handleCreateWork() {
-  createWork();
+  createWork(user.value ?? undefined);
 }
 
 function handleJoinWork(workId: number) {
-  joinWork(workId);
+  joinWork(workId, user.value ?? undefined);
 }
 
 function handleExitWork() {
@@ -40,6 +75,14 @@ function handleExitWork() {
 function handleClose() {
   show.value = false;
   emit('close');
+}
+
+function getWorkName(work: Work): string {
+  const data = parseWorkData(work.work_data);
+  if (data?.drawingId) {
+    return `图纸 ${data.drawingId.slice(0, 8)}...`;
+  }
+  return `协同 #${work.work_id}`;
 }
 </script>
 
@@ -113,13 +156,13 @@ function handleClose() {
       <div v-else class="cooperate-list">
         <div class="cooperate-list-title">可用协同 ({{ works.length }})</div>
         <div
-          v-for="workId in works"
-          :key="workId"
+          v-for="work in works"
+          :key="work.work_id"
           class="cooperate-list-item"
         >
           <div class="cooperate-list-item-info">
             <van-icon name="friends-o" size="20" color="#1989fa" />
-            <span>协同 #{{ workId }}</span>
+            <span>{{ getWorkName(work) }}</span>
           </div>
           <van-button
             size="small"
@@ -127,7 +170,7 @@ function handleClose() {
             plain
             :disabled="connecting"
             :loading="connecting"
-            @click="handleJoinWork(workId)"
+            @click="handleJoinWork(work.work_id)"
           >
             加入
           </van-button>

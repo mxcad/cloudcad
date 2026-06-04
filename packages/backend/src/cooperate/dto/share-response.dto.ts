@@ -9,11 +9,17 @@ export class CreateShareResponseDto {
 
   @ApiPropertyOptional({ description: '过期时间' })
   expiresAt: Date | null;
+
+  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
+  collaborationEnabled: boolean;
 }
 
 export class ResolveShareResponseDto {
   @ApiProperty({ description: '文件 ID' })
   fileId: string;
+
+  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
+  collaborationEnabled: boolean;
 }
 
 export class ResolveShareNodeResponseDto {
@@ -37,4 +43,58 @@ export class ResolveShareNodeResponseDto {
 
   @ApiPropertyOptional({ description: '更新时间' })
   updatedAt: string;
+
+  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
+  collaborationEnabled: boolean;
+}
+
+export class UpdateShareDto {
+  @ApiPropertyOptional({ description: '是否允许接收者加入实时协同' })
+  collaborationEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: '过期时间（ISO 日期），传 null 改为永不过期', nullable: true })
+  expiresAt?: string | null;
+}
+
+export class ShareListItemDto {
+  @ApiProperty({ description: '分享 ID' })
+  id: string;
+
+  @ApiProperty({ description: '分享 token' })
+  token: string;
+
+  @ApiProperty({ description: '分享链接路径' })
+  url: string;
+
+  @ApiProperty({ description: '文件 ID' })
+  fileId: string;
+
+  @ApiProperty({ description: '文件名' })
+  fileName: string;
+
+  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
+  collaborationEnabled: boolean;
+
+  @ApiPropertyOptional({ description: '过期时间', nullable: true })
+  expiresAt: string | null;
+
+  @ApiProperty({ description: '使用次数' })
+  usedCount: number;
+
+  @ApiProperty({ description: '创建时间' })
+  createdAt: string;
+}
+
+export class ShareListResponseDto {
+  @ApiProperty({ description: '分享列表', type: [ShareListItemDto] })
+  items: ShareListItemDto[];
+
+  @ApiProperty({ description: '总数' })
+  total: number;
+
+  @ApiProperty({ description: '当前页码' })
+  page: number;
+
+  @ApiProperty({ description: '每页条数' })
+  pageSize: number;
 }

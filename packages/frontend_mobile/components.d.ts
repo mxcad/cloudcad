@@ -9,6 +9,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     MxIcon: typeof import('./src/components/MxIcon.vue')['default']
     MxToolbar: typeof import('./src/components/MxToolbar.vue')['default']
+    SharePopup: typeof import('./src/components/SharePopup.vue')['default']
     VanButton: typeof import('vant/es')['Button']
     VanCell: typeof import('vant/es')['Cell']
     VanCellGroup: typeof import('vant/es')['CellGroup']
@@ -26,6 +27,7 @@ declare module 'vue' {
     VanProgress: typeof import('vant/es')['Progress']
     VanRadio: typeof import('vant/es')['Radio']
     VanRadioGroup: typeof import('vant/es')['RadioGroup']
+    VanSwitch: typeof import('vant/es')['Switch']
     VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
   }
 }

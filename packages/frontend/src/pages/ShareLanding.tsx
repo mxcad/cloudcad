@@ -1,116 +1,167 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { cooperateControllerResolveShare } from '@/api-sdk';
+import { Loader2, FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Tag } from '@/components/ui/Tag';
+import {
+  cooperateControllerResolveShareNode,
+} from '@/api-sdk';
+
+interface ShareFileInfo {
+  id: string;
+  name: string;
+  collaborationEnabled: boolean;
+}
 
 export const ShareLanding: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [fileInfo, setFileInfo] = useState<ShareFileInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const resolvedRef = useRef(false);
 
   useEffect(() => {
     if (!token) {
       setError('无效的分享链接');
+      setLoading(false);
       return;
     }
 
-    cooperateControllerResolveShare({ path: { token } })
+    if (resolvedRef.current) return;
+    resolvedRef.current = true;
+
+    cooperateControllerResolveShareNode({ path: { token } })
       .then((result) => {
+        setLoading(false);
         if (result.error) {
           setError('分享链接不存在或已失效');
           return;
         }
-        const data = result.data as { fileId: string };
-        if (data?.fileId) {
-          navigate(`/cad-editor/${data.fileId}?fromShare=1&shareToken=${token}`, { replace: true });
-        } else {
+        const data = result.data as Record<string, unknown> | undefined;
+        if (!data || !data.id) {
           setError('分享链接解析失败');
+          return;
         }
+        const info: ShareFileInfo = {
+          id: data.id as string,
+          name: (data.name as string) ?? '未知图纸',
+          collaborationEnabled: !!data.collaborationEnabled,
+        };
+        setFileInfo(info);
       })
       .catch(() => {
+        setLoading(false);
         setError('分享链接不存在或已失效');
       });
-  }, [token, navigate]);
+  }, [token]);
 
-  if (error) {
+  useEffect(() => {
+    if (fileInfo && isAuthenticated) {
+      navigate(
+        `/cad-editor/${fileInfo.id}?fromShare=1&shareToken=${token}`,
+        { replace: true }
+      );
+    }
+  }, [fileInfo, isAuthenticated, navigate, token]);
+
+  const handleLogin = () => {
+    navigate(`/login?redirect=/share/${token}`);
+  };
+
+  const pageContainer: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    background: 'var(--bg-primary)',
+    padding: '24px',
+  };
+
+  if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          background: 'var(--bg-primary)',
-          gap: '16px',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-          }}
-        >
-          分享链接无效
-        </div>
-        <div
-          style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          {error}
-        </div>
-        <button
-          onClick={() => navigate('/cad-editor', { replace: true })}
-          style={{
-            marginTop: '8px',
-            padding: '8px 16px',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            color: 'white',
-            background: 'var(--primary-500)',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            cursor: 'pointer',
-          }}
-        >
-          返回首页
-        </button>
+      <div style={{ ...pageContainer, gap: '12px' }}>
+        <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
+        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+          正在解析分享链接...
+        </span>
       </div>
     );
   }
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: 'var(--bg-primary)',
-        gap: '12px',
-      }}
-    >
-      <div
-        style={{
-          width: '32px',
-          height: '32px',
-          border: '3px solid var(--border-default)',
-          borderTopColor: 'var(--primary-500)',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }}
-      />
-      <span
-        style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}
-      >
-        正在解析分享链接...
-      </span>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
+  if (error) {
+    return (
+      <div style={{ ...pageContainer, gap: '16px' }}>
+        <div style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)' }}>
+          分享链接无效
+        </div>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          {error}
+        </div>
+        <Button variant="primary" onClick={() => navigate('/cad-editor', { replace: true })}>
+          返回首页
+        </Button>
+      </div>
+    );
+  }
+
+  if (authLoading && fileInfo) {
+    return (
+      <div style={{ ...pageContainer, gap: '12px' }}>
+        <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
+        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+          正在验证登录状态...
+        </span>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && fileInfo) {
+    return (
+      <div style={pageContainer}>
+        <Card variant="outlined" padding="none" style={{ maxWidth: '360px', width: '100%' }}>
+          <Card.Body>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center' }}>
+                你收到了一份图纸分享
+              </div>
+
+              <div style={{
+                width: '80px', height: '80px', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', borderRadius: '16px', background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-default)',
+              }}>
+                <FileText size={36} style={{ color: 'var(--primary-500)' }} />
+              </div>
+
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', textAlign: 'center' }}>
+                {fileInfo.name}
+              </div>
+
+              {fileInfo.collaborationEnabled && (
+                <Tag variant="success" size="sm">已开启实时协同</Tag>
+              )}
+
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                登录后即可查看图纸
+                {fileInfo.collaborationEnabled && '并参与实时协同'}
+              </div>
+
+              <Button variant="primary" onClick={handleLogin} style={{ width: '100%' }}>
+                登录 / 注册
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default ShareLanding;

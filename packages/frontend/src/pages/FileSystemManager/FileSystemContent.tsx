@@ -36,6 +36,8 @@ interface FileSystemContentProps {
   onMove: ((node: FileSystemNode) => void) | undefined;
   onCopy: ((node: FileSystemNode) => void) | undefined;
   onShowVersionHistory: ((node: FileSystemNode) => void) | undefined;
+  onShare: ((node: FileSystemNode) => void) | undefined;
+  onViewShares: ((node: FileSystemNode) => void) | undefined;
   onDragStart: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragLeave: () => void;
@@ -84,6 +86,8 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onMove,
   onCopy,
   onShowVersionHistory,
+  onShare,
+  onViewShares,
   onDragStart,
   onDragOver,
   onDragLeave,
@@ -241,6 +245,16 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   !isTrashView &&
                   (node.extension === '.dwg' || node.extension === '.dxf')
                     ? onShowVersionHistory
+                    : undefined
+                }
+                onShare={
+                  !node.isFolder && onShare
+                    ? onShare
+                    : undefined
+                }
+                onViewShares={
+                  !node.isFolder && onViewShares
+                    ? onViewShares
                     : undefined
                 }
                 onDragStart={onDragStart}

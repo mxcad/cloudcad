@@ -79,6 +79,22 @@ pnpm build                  # i18n compile → vite build
 ### CAD 引擎是黑盒
 `mxcad-app` npm 包内部自建 Vue 3 + Vuetify 应用，React 通过 `mxcadManager.ts`（单例）通信。`CADEditorDirect.tsx` 作为全局叠加层在 `<Routes>` 之外渲染，通过 `visibility` + `z-index` 跨路由保持 WebGL 上下文。
 
+### 协同 SDK (mxcad-app) 黑盒行为
+`MxCpp.getCurrentMxCAD().getCooperate()` 提供的协同 API 内部行为：
+
+| API | 内部行为 | 注意 |
+|-----|---------|------|
+| `cooperate.createWrok()` | 上传当前 mxweb 内容到协同服务器 → 创建 work session → **内部自动打开协同文件** | 返回 workid > 0 成功；错误码 4 = 已存在 |
+| `cooperate.joinWork()` | 连接到已有 work session → **内部自动加载协同文件** → 与其他参与者同步 | workId 来自 `getWorks()` 列表 |
+| `cooperate.exitWrok()` | 断开协同连接 → 回退到本地编辑模式 | 文件本身不会关闭 |
+| `cooperate.getWorks()` | 查询当前用户可见的所有活跃 work session | 回调返回 `Work[]` 列表 |
+
+**关键约束**：
+- `cooperate.init()` 只需调用一次，通过 `cooperateInitRef` 守卫
+- `createWrok` / `joinWork` 成功后，SDK **内部自动打开协同文件**，不需要前端额外调用 `openFile()`
+- `setupFileOpenListener` (`mxcadManager/index.ts`) 的 `on('openFile')` 回调会在 SDK 内部打开文件时触发，确保 `useFileName` 和 `currentFileInfo` 更新
+- 分享链接进入且 `collaborationEnabled=true` 时，`CADEditorDirect.tsx` 跳过文件打开（`doOpenMxFile`），初始化空白 CAD 引擎后由 `CollaborateSidebar` 的 auto-join 接管
+
 ### API SDK 自动生成
 修改后端 API 后运行 `pnpm generate:api-types`（= `pnpm --filter frontend generate:sdk`），会从 Swagger spec 重新生成 `packages/frontend/src/api-sdk/`。手动编辑生成的 `.gen.ts` 文件会被覆盖。
 
@@ -89,6 +105,9 @@ pnpm build                  # i18n compile → vite build
 - z-index: 必须使用 `Z_LAYERS` 常量（`@/constants/layers`），禁止裸数字
 - 颜色: 使用 `--color-*` / `--bg-*` / `--text-*` CSS 变量，禁止硬编码色值
 - 字体: 使用 `--font-family-base` / `--font-family-mono` CSS 变量
+
+### 全局组件优先
+新增 UI 组件前，先检查 `src/components/ui/` 是否已有可复用组件（Button, Modal, Table, Form, Input, Tooltip, Pagination 等）。能用全局组件就用全局组件，避免重复造轮子。
 
 ### 移动端 (frontend_mobile)
 - Vue 3 + Vite 4 + TypeScript 4.9

@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, Trash2, Loader2, Link2 } from 'lucide-react';
+import { Copy, Check, Trash2, Loader2, Link2, Users } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -13,36 +13,76 @@ import {
 interface ShareDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  fileId?: string;
 }
 
 interface ShareInfo {
   token: string;
   url: string;
   expiresAt: string | null;
+  collaborationEnabled: boolean;
 }
+
+type ExpirationOption = 'never' | '1d' | '3d' | '7d' | 'custom';
+
+const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
+  never: '永不过期',
+  '1d': '1 天后过期',
+  '3d': '3 天后过期',
+  '7d': '7 天后过期',
+  custom: '自定义',
+};
+
+const EXPIRATION_VALUES: Record<ExpirationOption, number | null> = {
+  never: null,
+  '1d': 86400,
+  '3d': 259200,
+  '7d': 604800,
+  custom: null,
+};
 
 export const ShareDialog: React.FC<ShareDialogProps> = ({
   isOpen,
   onClose,
+  fileId: propFileId,
 }) => {
   const { currentFileId } = useCADEditorStore();
   const { showToast } = useNotification();
+
+  const resolvedFileId = propFileId || currentFileId;
+
+  const [collaborationEnabled, setCollaborationEnabled] = useState(false);
+  const [expiration, setExpiration] = useState<ExpirationOption>('7d');
+  const [customDays, setCustomDays] = useState(1);
 
   const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const prevFileIdRef = useRef<string | null>(null);
 
   const createShare = useCallback(async () => {
-    if (!currentFileId) {
+    if (!resolvedFileId) {
       showToast('请先打开图纸', 'error');
       return;
+    }
+
+    let expiresIn: number | undefined;
+    if (expiration === 'custom') {
+      expiresIn = customDays * 86400;
+    } else {
+      const val = EXPIRATION_VALUES[expiration];
+      if (val !== null) expiresIn = val;
     }
 
     setLoading(true);
     try {
       const result = await cooperateControllerCreateShare({
-        body: { fileId: currentFileId, expiresIn: 7 * 24 * 3600 },
+        body: {
+          fileId: resolvedFileId,
+          ...(expiresIn !== undefined ? { expiresIn } : {}),
+          collaborationEnabled,
+        },
       });
       if (result.error) {
         showToast('创建分享链接失败', 'error');
@@ -61,6 +101,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             ? raw.expiresAt
             : new Date(raw.expiresAt as number | string).toISOString()
           : null,
+        collaborationEnabled: !!raw.collaborationEnabled,
       };
       setShareInfo(data);
     } catch {
@@ -68,7 +109,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [currentFileId, showToast]);
+  }, [resolvedFileId, collaborationEnabled, expiration, customDays, showToast]);
 
   const revokeShare = useCallback(async () => {
     if (!shareInfo) return;
@@ -111,29 +152,160 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   }, [shareInfo]);
 
   useEffect(() => {
-    if (isOpen && currentFileId && !shareInfo) {
-      createShare();
-    }
     if (!isOpen) {
       setShareInfo(null);
       setCopied(false);
+      prevFileIdRef.current = null;
+      setCollaborationEnabled(false);
+      setExpiration('7d');
+      setCustomDays(1);
+      return;
     }
-  }, [isOpen, createShare, currentFileId, shareInfo]);
+
+    if (!resolvedFileId) return;
+
+    if (prevFileIdRef.current !== resolvedFileId) {
+      prevFileIdRef.current = resolvedFileId;
+      setShareInfo(null);
+    }
+  }, [isOpen, resolvedFileId]);
 
   const fullUrl = shareInfo ? `${window.location.origin}${shareInfo.url}` : '';
 
+  const rowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '8px 0',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 'var(--text-sm)',
+    color: 'var(--text-primary)',
+    fontWeight: 500,
+  };
+
+  const toggleStyle = (on: boolean): React.CSSProperties => ({
+    width: '36px',
+    height: '20px',
+    borderRadius: '10px',
+    background: on ? 'var(--primary-500)' : 'var(--border-default)',
+    cursor: 'pointer',
+    position: 'relative',
+    transition: 'background 0.2s',
+    border: 'none',
+    padding: 0,
+    flexShrink: 0,
+  });
+
+  const toggleKnobStyle = (on: boolean): React.CSSProperties => ({
+    width: '16px',
+    height: '16px',
+    borderRadius: '50%',
+    background: 'white',
+    position: 'absolute',
+    top: '2px',
+    left: on ? '18px' : '2px',
+    transition: 'left 0.2s',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+  });
+
+  const radioGroupStyle: React.CSSProperties = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    width: '100%',
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="分享协同" size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title="分享图纸" size="sm">
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
+          gap: '12px',
           padding: '8px 0',
         }}
       >
-        {loading ? (
+        {!shareInfo && !loading && (
+          <>
+            <div style={rowStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Users size={14} style={{ color: 'var(--text-tertiary)' }} />
+                <span style={labelStyle}>允许加入实时协同</span>
+              </div>
+              <button
+                onClick={() => setCollaborationEnabled(!collaborationEnabled)}
+                style={toggleStyle(collaborationEnabled)}
+                type="button"
+              >
+                <div style={toggleKnobStyle(collaborationEnabled)} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                width: '100%',
+                height: '1px',
+                background: 'var(--border-default)',
+              }}
+            />
+
+            <div style={{ width: '100%' }}>
+              <span style={{ ...labelStyle, display: 'block', marginBottom: '8px' }}>
+                有效期
+              </span>
+              <div style={radioGroupStyle}>
+                {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map(
+                  (key) => (
+                    <Button
+                      key={key}
+                      variant={expiration === key ? 'primary' : 'outline'}
+                      size="xs"
+                      onClick={() => setExpiration(key)}
+                    >
+                      {EXPIRATION_LABELS[key]}
+                    </Button>
+                  ),
+                )}
+              </div>
+              {expiration === 'custom' && (
+                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={customDays}
+                    onChange={(e) => setCustomDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
+                    style={{
+                      width: '60px',
+                      padding: '4px 8px',
+                      fontSize: 'var(--text-sm)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-default)',
+                      background: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                    }}
+                  />
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                    天后过期
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <Button
+              variant="primary"
+              onClick={createShare}
+              style={{ width: '100%', marginTop: '4px' }}
+            >
+              生成分享链接
+            </Button>
+          </>
+        )}
+
+        {loading && (
           <div
             style={{
               display: 'flex',
@@ -157,23 +329,49 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               正在生成分享链接...
             </span>
           </div>
-        ) : shareInfo ? (
+        )}
+
+        {shareInfo && !loading && (
           <>
             <div
               style={{
-                background: 'var(--bg-primary)',
-                padding: '16px',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--border-default)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              <QRCodeSVG
-                value={fullUrl}
-                size={160}
-                level="M"
-                bgColor="transparent"
-                fgColor="var(--text-primary)"
-              />
+              <div
+                style={{
+                  background: 'var(--bg-primary)',
+                  padding: '16px',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-default)',
+                }}
+              >
+                <QRCodeSVG
+                  value={fullUrl}
+                  size={160}
+                  level="M"
+                  bgColor="transparent"
+                  fgColor="var(--text-primary)"
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--text-tertiary)',
+                }}
+              >
+                <Users size={12} />
+                <span>
+                  协同：{shareInfo.collaborationEnabled ? '开启' : '关闭'}
+                </span>
+              </div>
             </div>
 
             <div
@@ -268,28 +466,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               </Button>
             </div>
           </>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px',
-            }}
-          >
-            <span
-              style={{
-                color: 'var(--text-secondary)',
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              未能生成分享链接
-            </span>
-            <Button onClick={createShare} disabled={loading}>
-              重试
-            </Button>
-          </div>
         )}
       </div>
     </Modal>

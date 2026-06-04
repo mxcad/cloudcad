@@ -33,8 +33,9 @@ import { handleApiError } from '@/utils/apiConfig';
     import SaveAsSheet from './components/SaveAsSheet.vue';
     import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
     import LoginPromptPopup from './components/LoginPromptPopup.vue';
-    import CooperatePopup from './components/CooperatePopup.vue';
-    import MxToolbar from '@/components/MxToolbar.vue';
+import CooperatePopup from './components/CooperatePopup.vue';
+import SharePopup from '@/components/SharePopup.vue';
+import MxToolbar from '@/components/MxToolbar.vue';
 
     BScroll.use(ObserveDOM)
     BScroll.use(ObserveImage)
@@ -170,6 +171,7 @@ import { handleApiError } from '@/utils/apiConfig';
     const pendingActionAfterLogin = ref<'save' | 'version-history' | null>(null)
     const fileInput = ref<HTMLInputElement | null>(null)
     const showCooperate = ref(false)
+    const showShare = ref(false)
     const uploading = ref(false)
 
     checkLibraryPermissions().then(result => {
@@ -354,15 +356,20 @@ import { handleApiError } from '@/utils/apiConfig';
         input.click()
     }
 
+    const handleShowCollaborate = () => { showCooperate.value = true }
+    const handleShowShare = () => { showShare.value = true }
+
     onMounted(async () => {
         window.addEventListener('open-version-history', onShowVersionHistory)
         window.addEventListener('mxcad-new-file', handleNewFile)
-        window.addEventListener('mxcad-show-collaborate', () => { showCooperate.value = true })
+        window.addEventListener('mxcad-show-collaborate', handleShowCollaborate)
+        window.addEventListener('mxcad-show-share', handleShowShare)
 
         onBeforeUnmount(() => {
             window.removeEventListener('open-version-history', onShowVersionHistory)
             window.removeEventListener('mxcad-new-file', handleNewFile)
-            window.removeEventListener('mxcad-show-collaborate', () => { })
+            window.removeEventListener('mxcad-show-collaborate', handleShowCollaborate)
+            window.removeEventListener('mxcad-show-share', handleShowShare)
         })
 
         const mxcad = await createMxCAD()
@@ -519,6 +526,7 @@ import { handleApiError } from '@/utils/apiConfig';
         <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
         <LoginPromptPopup v-if="showLoginPrompt" @login="onLoginPromptLogin" @close="onLoginPromptClose" />
         <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
+        <SharePopup v-if="showShare" @close="showShare = false" />
         <canvas id="mxCanvas"></canvas>
         <div class="history_box">
             <transition name="slide">

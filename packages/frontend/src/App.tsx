@@ -65,6 +65,7 @@ const CADEditorDirect = lazy(() => import('./pages/CADEditorDirect'));
 
 // 分享落地页
 const ShareLanding = lazy(() => import('./pages/ShareLanding'));
+const ShareManagePage = lazy(() => import('./pages/ShareManagePage'));
 
 // 主要功能页面
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -438,6 +439,16 @@ function AppContent() {
                           <LibraryManager />
                         </Suspense>
                       </PermissionRoute>
+                    }
+                  />
+
+                  {/* 分享管理 */}
+                  <Route
+                    path="/shares"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <ShareManagePage />
+                      </Suspense>
                     }
                   />
 

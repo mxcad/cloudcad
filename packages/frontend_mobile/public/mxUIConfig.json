@@ -54,6 +54,11 @@
       "text": "版本历史",
       "icon": "buju",
       "cmd": "Mx_versionHistory"
+    },
+    {
+      "text": "分享",
+      "icon": "fenxiang",
+      "cmd": "Mx_ShowShare"
     }
   ],
   "?toolbarData": "底部工具栏",

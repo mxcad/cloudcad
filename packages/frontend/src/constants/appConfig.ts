@@ -69,7 +69,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
  * 协同服务 URL
  * 通过后端 /api/cooperate 代理到协同服务，无需直接访问 3091 端口
  */
-export const APP_COOPERATE_URL = '/api/cooperate';
+export const APP_COOPERATE_URL = import.meta.env.VITE_APP_COOPERATE_URL || '/api/cooperate';
 
 /**
  * 分页配置
