@@ -12,6 +12,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
 import { Button } from './ui/Button';
@@ -72,6 +73,7 @@ export const CollaborateSidebar: React.FC = () => {
   const { user } = useAuth();
   const { currentFileId, currentProjectId, shareCollaborationEnabled, setCollaborationState } = useCADEditorStore();
   const { showToast } = useNotification();
+  const location = useLocation();
 
   const cooperateInitRef = useRef(false);
 
@@ -279,11 +281,9 @@ export const CollaborateSidebar: React.FC = () => {
   const autoJoinRef = useRef(false);
 
   useEffect(() => {
-    const fromShare = new URLSearchParams(window.location.search).get('fromShare');
-    if (fromShare === '1') {
-      autoJoinRef.current = true;
-    }
-  }, []);
+    const fromShare = new URLSearchParams(location.search).get('fromShare');
+    autoJoinRef.current = fromShare === '1';
+  }, [location]);
 
   useEffect(() => {
     if (!autoJoinRef.current || !currentFileId) return;
