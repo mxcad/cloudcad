@@ -96,14 +96,14 @@ function formatEditorFileName(fileName: string): string {
   const loginPrefix = isLoggedIn ? '' : '[未登录]';
   const { isInCollaboration } = useCADEditorStore.getState();
   const collaborationPrefix = isInCollaboration ? '[协同中] ' : '';
-  const sharePrefix = currentFileInfo?.fromShare ? '- ' : '';
+  const sharePrefix =  ' — '
 
   // empty_template.mxweb 和 empty.mxweb 文件不显示文件名
   if (fileName === 'empty_template.mxweb' || fileName === 'empty.mxweb') {
-    return `${collaborationPrefix}${loginPrefix}${sharePrefix}`;
+    return `${collaborationPrefix}${loginPrefix}`;
   }
 
-  return `${collaborationPrefix}${loginPrefix}${loginPrefix ? ' - ' : sharePrefix}${fileName}`;
+  return `${collaborationPrefix}${loginPrefix}${sharePrefix}${fileName}`;
 }
 
 // ==================== 全局状态 ====================
@@ -2108,7 +2108,6 @@ class MxCADInstanceManager {
     initialFileUrl?: string,
     fileName?: string
   ): Promise<MxCADView> {
-    // 缓存文件名，用于文件打开完成后设置标题
     if (fileName) {
       currentFileInfo = {
         fileId: '',
@@ -2251,9 +2250,6 @@ class MxCADInstanceManager {
    */
   private setupFileOpenListener(): void {
     const onOpen = async () => {
-      // 文件打开完成后，派发全局事件通知 UI 隐藏加载状态
-      console.log('[setupFileOpenListener] onOpen 触发', { currentFileInfo });
-
       window.dispatchEvent(
         new CustomEvent('mxcad-file-open-complete', {
           detail: {
@@ -2429,7 +2425,6 @@ class MxCADInstanceManager {
       const viewOptions = this.buildViewOptions(openFile);
       this.mxcadView = new MxCADView(viewOptions);
 
-      // 在 create() 之前设置监听器，确保不会错过 openFileComplete 事件
       this.setupFileOpenListener();
       this.setupInitializationListener();
 
@@ -2440,6 +2435,16 @@ class MxCADInstanceManager {
       this.isInitialized = false;
       throw error;
     }
+  }
+
+  /**
+   * 重新初始化 CAD 视图并打开文件
+   * 用于空白初始化的 CAD 需要打开文件时（如协同分享的 auto-create）
+   * 先重置再初始化，避免 "running open" 状态冲突
+   */
+  async reopenWithUrl(fileUrl: string): Promise<void> {
+    this.reset();
+    await this.initialize(fileUrl);
   }
 
   async openFile(fileUrl: string, noCache?: boolean): Promise<void> {
@@ -2696,6 +2701,14 @@ export class MxCADManager {
 
   reset(): void {
     this.instanceManager.reset();
+  }
+
+  /**
+   * 重新初始化 CAD 视图并打开文件
+   * 用于空白初始化的 CAD 需要打开文件时（如协同分享的 auto-create）
+   */
+  async reopenWithUrl(fileUrl: string): Promise<void> {
+    return this.instanceManager.reopenWithUrl(fileUrl);
   }
 
   /**

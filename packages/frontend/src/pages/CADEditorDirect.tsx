@@ -828,21 +828,15 @@ export const CADEditorDirect: React.FC = () => {
         // skipFileOpen: 协同分享模式时跳过文件打开，仅初始化空白 CAD 引擎
         const doOpenMxFile = async (skipFileOpen = false) => {
           if (isInitializedRef.current && mxcadManager.isCreated()) {
-            // URL 变化了，需要重新加载文件
-            console.log(
-              `文件 URL 变化，重新加载: ${loadedFileUrlRef.current} -> ${mxcadFileUrl}`
-            );
-            await mxcadManager.openFile(mxcadFileUrl);
             mxcadManager.showMxCAD(true);
+            await mxcadManager.openFile(mxcadFileUrl);
             loadedFileUrlRef.current = mxcadFileUrl;
             currentFileIdRef.current = fileId;
             setLoading(false);
             return;
           }
 
-          // 检查 MxCAD 是否已创建（可能是其他组件初始化的）
           if (mxcadManager.isCreated()) {
-            console.log('[CADEditorDirect] MxCAD 已创建，跳过初始化');
             isInitializedRef.current = true;
             loadedFileUrlRef.current = mxcadFileUrl;
             currentFileIdRef.current = fileId;
@@ -851,30 +845,23 @@ export const CADEditorDirect: React.FC = () => {
             return;
           }
 
-          // 按需加载 MxCAD 依赖
           await loadMxCADDependencies();
           if (cancelled) return;
 
-          // 初始化 MxCAD 配置，传入当前文件信息以获取正确的父节点
           await initMxCADConfig(file);
           if (cancelled) return;
 
-          // 初始化 MxCAD 视图
+          mxcadManager.showMxCAD(true);
           await mxcadManager.initializeMxCADView(skipFileOpen ? undefined : mxcadFileUrl);
           if (cancelled) return;
 
-          mxcadManager.showMxCAD(true);
-
-          // 初始化主题同步 - 监听 mxcad-app 主题变化
           await initThemeSync();
           if (cancelled) return;
 
-          // 标记为已初始化
           isInitializedRef.current = true;
           loadedFileUrlRef.current = mxcadFileUrl;
           currentFileIdRef.current = fileId;
 
-          // 等待一帧渲染，确保 CAD canvas 已绘制到屏幕后再隐藏 loading
           await new Promise<void>((resolve) => {
             requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
           });
@@ -885,30 +872,37 @@ export const CADEditorDirect: React.FC = () => {
           }
         };
 
-        // 分享协同模式：跳过文件打开，让协同 SDK 内部自动加载协同文件
         const collaborationEnabled = file && 'collaborationEnabled' in file
           ? !!(file as unknown as Record<string, unknown>).collaborationEnabled
           : false;
 
+        // 分享协同模式：先正常打开图纸，等待打开完成后再触发协同创建/加入
         if (!!shareTokenParam && collaborationEnabled) {
-          // 保存文件 URL，用于 auto-create 时先打开文件再创建协同
-          sessionStorage.setItem('collaborationShareFileUrl', mxcadFileUrl);
-          // 先派发事件让 SidebarContainer 获取文件信息
+          await doOpenMxFile(false);
+
+          if (!cancelled) {
+            await new Promise<void>((resolve) => {
+              const onComplete = () => {
+                window.removeEventListener('mxcad-file-open-complete', onComplete);
+                resolve();
+              };
+              window.addEventListener('mxcad-file-open-complete', onComplete);
+            });
+          }
+
           window.dispatchEvent(
             new CustomEvent('mxcad-file-opened', {
               detail: { fileId: file.id, parentId: file.parentId || null, projectId },
             })
           );
-          // 分享协同模式：自动切换到协同 tab
           window.dispatchEvent(
             new CustomEvent('mxcad-open-sidebar', {
               detail: { type: 'collaborate' },
             })
           );
+        } else {
+          await doOpenMxFile(false);
         }
-
-        // 从页面跳转打开文件（我的图纸/项目管理/公开资源库），直接打开，不检查外部参照
-        await doOpenMxFile(!!shareTokenParam && collaborationEnabled);
       } catch (err) {
         console.error('加载文件失败:', err);
         if (!cancelled) {
