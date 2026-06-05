@@ -2490,6 +2490,35 @@ export type ShareListResponseDto = {
     pageSize: number;
 };
 
+export type FileSharesResponseDto = {
+    /**
+     * 分享 token
+     */
+    token: string;
+    /**
+     * 分享链接路径
+     */
+    url: string;
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled: boolean;
+    /**
+     * 过期时间
+     */
+    expiresAt?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 创建者 ID
+     */
+    createdBy: string;
+};
+
 export type UpdateShareDto = {
     /**
      * 是否允许接收者加入实时协同
@@ -7016,6 +7045,24 @@ export type CooperateControllerListSharesResponses = {
 };
 
 export type CooperateControllerListSharesResponse = CooperateControllerListSharesResponses[keyof CooperateControllerListSharesResponses];
+
+export type CooperateControllerGetFileSharesData = {
+    body?: never;
+    path: {
+        fileId: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/file/{fileId}';
+};
+
+export type CooperateControllerGetFileSharesResponses = {
+    /**
+     * 分享链接列表
+     */
+    200: Array<FileSharesResponseDto>;
+};
+
+export type CooperateControllerGetFileSharesResponse = CooperateControllerGetFileSharesResponses[keyof CooperateControllerGetFileSharesResponses];
 
 export type AdminControllerGetAdminStatsData = {
     body?: never;

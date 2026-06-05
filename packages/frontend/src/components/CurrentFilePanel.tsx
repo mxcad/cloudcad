@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Users, UserPlus, Share2, Loader2, LogOut } from 'lucide-react';
+import { Users, UserPlus, Share2, Copy, Loader2, LogOut } from 'lucide-react';
 import { Button } from './ui/Button';
 import { deduplicateWorkUsers } from '../types/collaboration';
 import styles from './CollaborateSidebar.module.css';
@@ -21,10 +21,12 @@ interface CurrentFilePanelProps {
   creating: boolean;
   joiningWorkId: number | null;
   waitingForSession: boolean;
+  fromShare: boolean;
   onCreateWork: () => void;
   onJoinWork: (workId: number) => void;
   onExitWork: () => void;
   onShare: () => void;
+  onCopyShareLink: () => void;
 }
 
 function parseWorkData(raw: string): { drawingId?: string; projectId?: string | null } | null {
@@ -49,10 +51,12 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
   creating,
   joiningWorkId,
   waitingForSession,
+  fromShare,
   onCreateWork,
   onJoinWork,
   onExitWork,
   onShare,
+  onCopyShareLink,
 }) => {
   const isJoined = currentWorkId !== null && work?.work_id === currentWorkId;
 
@@ -198,9 +202,15 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
           {deduplicated!.linkUserIds.length} 人在线
         </div>
         <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-          <Button variant="secondary" icon={Share2} onClick={onShare} style={{ flex: 1 }}>
-            分享
-          </Button>
+          {fromShare ? (
+            <Button variant="secondary" icon={Copy} onClick={onCopyShareLink} style={{ flex: 1 }}>
+              复制分享链接
+            </Button>
+          ) : (
+            <Button variant="secondary" icon={Share2} onClick={onShare} style={{ flex: 1 }}>
+              分享
+            </Button>
+          )}
           <Button variant="danger" icon={LogOut} onClick={onExitWork} style={{ flex: 1 }}>
             退出
           </Button>

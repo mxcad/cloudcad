@@ -96,13 +96,14 @@ function formatEditorFileName(fileName: string): string {
   const loginPrefix = isLoggedIn ? '' : '[未登录]';
   const { isInCollaboration } = useCADEditorStore.getState();
   const collaborationPrefix = isInCollaboration ? '[协同中] ' : '';
+  const sharePrefix = currentFileInfo?.fromShare ? '- ' : '';
 
   // empty_template.mxweb 和 empty.mxweb 文件不显示文件名
   if (fileName === 'empty_template.mxweb' || fileName === 'empty.mxweb') {
-    return `${collaborationPrefix}${loginPrefix}`;
+    return `${collaborationPrefix}${loginPrefix}${sharePrefix}`;
   }
 
-  return `${collaborationPrefix}${loginPrefix}${loginPrefix ? ' - ' : ''}${fileName}`;
+  return `${collaborationPrefix}${loginPrefix}${loginPrefix ? ' - ' : sharePrefix}${fileName}`;
 }
 
 // ==================== 全局状态 ====================
@@ -117,6 +118,7 @@ let currentFileInfo: {
   personalSpaceId?: string | null; // 私人空间 ID，用于判断是否为私人空间模式
   libraryKey?: 'drawing' | 'block'; // 公共资源库标识
   fromPlatform?: boolean; // 是否从平台跳转进入
+  fromShare?: boolean; // 是否来自分享链接
   updatedAt?: string; // 乐观锁时间戳
   expectedTimestamp?: string;
 } | null = null;
@@ -300,6 +302,7 @@ export function setCurrentFileInfo(fileInfo: {
   libraryKey?: 'drawing' | 'block';
   path?: string; // 节点完整路径(如: 202604/cmnsaru53000d4sufzcg9wjlg.dwg.mxweb)
   fromPlatform?: boolean; // 是否从平台跳转进入
+  fromShare?: boolean; // 是否来自分享链接
   updatedAt?: string; // 乐观锁时间戳
 }) {
   currentFileInfo = { ...fileInfo, expectedTimestamp: fileInfo.updatedAt };

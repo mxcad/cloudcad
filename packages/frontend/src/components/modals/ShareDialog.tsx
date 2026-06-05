@@ -11,13 +11,24 @@ import {
   cooperateControllerListShares,
   cooperateControllerUpdateShare,
 } from '@/api-sdk';
+import { client } from '@/api-sdk/client.gen';
 import type { ShareListItemDto } from '@/api-sdk';
 import './ShareManageDialog.css';
+
+interface ShareListItem {
+  token: string;
+  url: string;
+  collaborationEnabled: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+  createdBy: string;
+}
 
 interface ShareDialogProps {
   isOpen: boolean;
   onClose: () => void;
   fileId?: string;
+  readOnly?: boolean;
 }
 
 interface ShareInfo {
@@ -49,6 +60,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   isOpen,
   onClose,
   fileId: propFileId,
+  readOnly = false,
 }) => {
   const { currentFileId } = useCADEditorStore();
   const { showToast } = useNotification();
@@ -65,7 +77,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   const [copied, setCopied] = useState(false);
   const prevFileIdRef = useRef<string | null>(null);
 
-  const [items, setItems] = useState<ShareListItemDto[]>([]);
+  const [items, setItems] = useState<ShareListItem[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -78,25 +90,45 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     setListLoading(true);
     setListError(null);
     try {
-      const result = await cooperateControllerListShares({
-        query: { fileId: resolvedFileId, page: 1, pageSize: 50 },
-      });
-      if (result.error) {
-        setListError('获取分享列表失败');
-        return;
-      }
-      const data = result.data as { items: ShareListItemDto[] } | undefined;
-      const fetched = data?.items ?? [];
-      setItems(fetched);
-      if (fetched.length === 0 && view === 'list') {
-        setView('create');
+      if (readOnly) {
+        const response = await (
+          client as { get: (opts: { url: string }) => Promise<{ data: unknown; error?: unknown }> }
+        ).get({ url: `/api/v1/collaboration/share/file/${resolvedFileId}` });
+        if (response.error) {
+          setListError('获取分享链接失败');
+          return;
+        }
+        const fetched = (response.data as ShareListItem[]) ?? [];
+        setItems(fetched);
+      } else {
+        const result = await cooperateControllerListShares({
+          query: { fileId: resolvedFileId, page: 1, pageSize: 50 },
+        });
+        if (result.error) {
+          setListError('获取分享列表失败');
+          return;
+        }
+        const data = result.data as { items: ShareListItemDto[] } | undefined;
+        const raw = data?.items ?? [];
+        const mapped: ShareListItem[] = raw.map((item) => ({
+          token: item.token,
+          url: `/share/${item.token}`,
+          collaborationEnabled: item.collaborationEnabled,
+          expiresAt: (item as Record<string, unknown>).expiresAt as string | null,
+          createdAt: (item as Record<string, unknown>).createdAt as string,
+          createdBy: '',
+        }));
+        setItems(mapped);
+        if (mapped.length === 0 && view === 'list') {
+          setView('create');
+        }
       }
     } catch {
       setListError('获取分享列表失败');
     } finally {
       setListLoading(false);
     }
-  }, [resolvedFileId, view]);
+  }, [resolvedFileId, view, readOnly]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -218,6 +250,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   }, [shareInfo]);
 
   const handleRevoke = async (token: string) => {
+    if (readOnly) return;
     try {
       const result = await cooperateControllerRevokeShare({ path: { token } });
       if (result.error) {
@@ -243,7 +276,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     }
   };
 
-  const handleToggleCollaboration = async (item: ShareListItemDto) => {
+  const handleToggleCollaboration = async (item: ShareListItem) => {
     try {
       await cooperateControllerUpdateShare({
         path: { token: item.token },
@@ -319,21 +352,23 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const renderListView = () => (
     <div className="share-dialog-body">
-      <div className="share-dialog-toolbar">
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => {
-            setCollaborationEnabled(false);
-            setExpiration('7d');
-            setCustomDays(1);
-            setView('create');
-          }}
-        >
-          <Plus size={14} />
-          新建分享
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="share-dialog-toolbar">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setCollaborationEnabled(false);
+              setExpiration('7d');
+              setCustomDays(1);
+              setView('create');
+            }}
+          >
+            <Plus size={14} />
+            新建分享
+          </Button>
+        </div>
+      )}
 
       {listLoading ? (
         <div className="share-dialog-loading">
@@ -346,7 +381,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         </div>
       ) : items.length === 0 ? (
         <div className="share-dialog-empty">
-          <p className="share-dialog-empty-title">还没有分享过这个文件</p>
+          <p className="share-dialog-empty-title">
+            {readOnly ? '当前没有可复制的分享链接' : '还没有分享过这个文件'}
+          </p>
         </div>
       ) : (
         <div className="share-dialog-table-container">
@@ -356,13 +393,12 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                 <th>链接</th>
                 <th>协同</th>
                 <th>有效期</th>
-                <th>次数</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.token}>
                   <td>
                     <div className="share-dialog-link-cell">
                       <span className="share-dialog-link-text">
@@ -380,35 +416,27 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                   </td>
                   <td>
                     <button
-                      onClick={() => handleToggleCollaboration(item)}
+                      onClick={() => { if (!readOnly) handleToggleCollaboration(item); }}
                       className={`share-dialog-collab-btn ${item.collaborationEnabled ? 'share-dialog-collab-btn--on' : 'share-dialog-collab-btn--off'}`}
                     >
                       {item.collaborationEnabled ? '开' : '关'}
                     </button>
                   </td>
                   <td style={{ color: 'var(--text-secondary)' }}>
-                    {formatDate((item as Record<string, unknown>).expiresAt as string | null)}
-                  </td>
-                  <td style={{ color: 'var(--text-secondary)' }}>
-                    {item.usedCount}
+                    {formatDate(item.expiresAt)}
                   </td>
                   <td>
                     <div className="share-dialog-action-cell">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        icon={ExternalLink}
-                        onClick={() => window.open(`/cad-editor/${item.fileId}?shareToken=${item.token}`, '_blank')}
-                        tooltip="打开文件"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        icon={Trash2}
-                        onClick={() => handleRevoke(item.token)}
-                        tooltip="撤销分享"
-                        style={{ color: 'var(--error)' }}
-                      />
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          icon={Trash2}
+                          onClick={() => handleRevoke(item.token)}
+                          tooltip="撤销分享"
+                          style={{ color: 'var(--error)' }}
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -686,11 +714,17 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="分享图纸" size={view === 'list' ? 'md' : 'sm'}>
-      {view === 'list' && renderListView()}
-      {view === 'create' && !loading && renderCreateView()}
-      {view === 'create' && loading && renderLoadingView()}
-      {view === 'created' && renderCreatedView()}
+    <Modal isOpen={isOpen} onClose={onClose} title={readOnly ? '复制分享链接' : '分享图纸'} size={readOnly ? 'md' : (view === 'list' ? 'md' : 'sm')}>
+      {readOnly ? (
+        renderListView()
+      ) : (
+        <>
+          {view === 'list' && renderListView()}
+          {view === 'create' && !loading && renderCreateView()}
+          {view === 'create' && loading && renderLoadingView()}
+          {view === 'created' && renderCreatedView()}
+        </>
+      )}
     </Modal>
   );
 };

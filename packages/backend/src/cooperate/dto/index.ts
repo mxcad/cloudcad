@@ -6,4 +6,5 @@ export {
   UpdateShareDto,
   ShareListItemDto,
   ShareListResponseDto,
+  FileSharesResponseDto,
 } from './share-response.dto';

@@ -71,7 +71,7 @@ async function fetchMyProjectIds(): Promise<string[]> {
 
 export const CollaborateSidebar: React.FC = () => {
   const { user } = useAuth();
-  const { currentFileId, currentProjectId, shareCollaborationEnabled, setCollaborationState } = useCADEditorStore();
+  const { currentFileId, currentProjectId, fromShare, shareCollaborationEnabled, setCollaborationState } = useCADEditorStore();
   const { showToast } = useNotification();
   const location = useLocation();
 
@@ -103,8 +103,10 @@ export const CollaborateSidebar: React.FC = () => {
   const [myProjectIds, setMyProjectIds] = useState<string[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'current' | 'list'>('current');
   const [isCadReady, setIsCadReady] = useState(false);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
 
   const initCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const autoCreateRef = useRef(false);
 
   const fetchWorks = useCallback(async () => {
     try {
@@ -126,11 +128,15 @@ export const CollaborateSidebar: React.FC = () => {
 
       cooperate.getWorks((workList: Work[]) => {
         clearTimeout(timeoutId);
+        setInitialFetchDone(true);
+        const currentId = useCADEditorStore.getState().currentFileId;
         const filtered = workList.filter((w) => {
           const data = parseWorkData(w.work_data);
           if (!data) return false;
           if (data.projectId && ids.includes(data.projectId)) return true;
           if (!data.projectId) return true;
+          // 当前打开图纸的协同会话始终可见（用于分享协同自动加入）
+          if (currentId && data.drawingId === currentId) return true;
           return false;
         }).map((w) => {
           const { linkUserIds, linkUserData } = deduplicateWorkUsers(
@@ -279,19 +285,26 @@ export const CollaborateSidebar: React.FC = () => {
   }, [works]);
 
   const autoJoinRef = useRef(false);
+  const handleCreateWorkRef = useRef<(skipChecks?: boolean) => Promise<void>>(async () => {});
+  const handleJoinWorkRef = useRef<(workId: number, skipModifiedCheck?: boolean) => Promise<void>>(async () => {});
 
   useEffect(() => {
-    const fromShare = new URLSearchParams(location.search).get('fromShare');
-    autoJoinRef.current = fromShare === '1';
+    const shareParam = new URLSearchParams(location.search).get('fromShare');
+    autoJoinRef.current = shareParam === '1';
   }, [location]);
 
   useEffect(() => {
     if (!autoJoinRef.current || !currentFileId) return;
 
-    if (works.length === 0) {
-      setWaitingForSession(true);
+    // 非协同分享，不做任何自动操作
+    if (shareCollaborationEnabled === false) {
+      autoJoinRef.current = false;
+      setWaitingForSession(false);
       return;
     }
+
+    // 等待首次 fetchWorks 完成
+    if (!initialFetchDone) return;
 
     const matchingWork = works.find((w) => {
       const data = parseWorkData(w.work_data);
@@ -299,13 +312,17 @@ export const CollaborateSidebar: React.FC = () => {
     });
 
     if (matchingWork && currentWorkId === null) {
+      // 有协同 → 直接加入
       autoJoinRef.current = false;
       setWaitingForSession(false);
-      handleJoinWork(matchingWork.work_id, true);
-    } else if (!matchingWork) {
-      setWaitingForSession(true);
+      handleJoinWorkRef.current(matchingWork.work_id, true);
+    } else if (!matchingWork && !autoCreateRef.current && !creating) {
+      // 没有协同 → 自动创建协同（仅执行一次）
+      autoCreateRef.current = true;
+      setWaitingForSession(false);
+      handleCreateWorkRef.current(true);
     }
-  }, [works, currentFileId, currentWorkId]);
+  }, [works, currentFileId, currentWorkId, shareCollaborationEnabled, initialFetchDone, creating]);
 
   const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -334,7 +351,7 @@ export const CollaborateSidebar: React.FC = () => {
     };
   }, []);
 
-  const handleCreateWork = useCallback(async () => {
+  const handleCreateWork = useCallback(async (skipChecks = false) => {
     try {
       // 如果在其他协同中，先退出
       if (useCADEditorStore.getState().collaborationWorkId !== null) {
@@ -343,9 +360,11 @@ export const CollaborateSidebar: React.FC = () => {
         fetchWorks();
       }
 
-      // 创建前检查未保存修改
-      const canProceed = await checkAndConfirmUnsavedChanges();
-      if (!canProceed) return;
+      // 自动创建时跳过未保存修改检查
+      if (!skipChecks) {
+        const canProceed = await checkAndConfirmUnsavedChanges();
+        if (!canProceed) return;
+      }
 
       setCreating(true);
       const cooperate = getCooperate();
@@ -353,6 +372,29 @@ export const CollaborateSidebar: React.FC = () => {
         showToast('协同对象未初始化', 'error');
         setCreating(false);
         return;
+      }
+
+      // 从分享链接自动创建协同：CAD 引擎为空白，需先打开图纸再创建
+      if (skipChecks) {
+        const pendingUrl = sessionStorage.getItem('collaborationShareFileUrl');
+        if (pendingUrl) {
+          try {
+            await mxcadManager.openFile(pendingUrl);
+            await new Promise<void>((resolve) => {
+              const onComplete = () => {
+                window.removeEventListener('mxcad-file-open-complete', onComplete);
+                resolve();
+              };
+              window.addEventListener('mxcad-file-open-complete', onComplete);
+            });
+            sessionStorage.removeItem('collaborationShareFileUrl');
+          } catch (error) {
+            console.error('打开文件失败:', error);
+            showToast('打开文件失败', 'error');
+            setCreating(false);
+            return;
+          }
+        }
       }
 
       if (!currentFileId || !user) {
@@ -377,10 +419,9 @@ export const CollaborateSidebar: React.FC = () => {
         (workid: number) => {
           setCreating(false);
           if (workid > 0) {
-            setCurrentWorkId(workid);
-            setCollaborationState({ isInCollaboration: true, workId: workid });
-            refreshFileName();
-            // 立即插入本地 work，避免等待 getWorks 异步回调导致 UI 滞后
+            // 创建成功后立即加入协同（创建共享会话后需要 join 才能同步）
+            handleJoinWorkRef.current(workid, true);
+            // 插入本地 work，避免等待 getWorks 异步回调导致 UI 滞后
             const newWork: Work = {
               work_id: workid,
               work_data: encodeWorkData(workData),
@@ -393,7 +434,6 @@ export const CollaborateSidebar: React.FC = () => {
               return [newWork, ...prev];
             });
             fetchWorks();
-            showToast(`协同创建成功！ID: ${workid}`, 'success');
           } else {
             const errorCode = -workid;
             if (errorCode === 4) {
@@ -420,6 +460,7 @@ export const CollaborateSidebar: React.FC = () => {
     fetchWorks,
     showToast,
   ]);
+  handleCreateWorkRef.current = handleCreateWork;
 
   const handleJoinWork = useCallback(
     async (workId: number, skipModifiedCheck = false) => {
@@ -490,6 +531,7 @@ export const CollaborateSidebar: React.FC = () => {
     },
     [getCooperate, user, showToast, fetchWorks]
   );
+  handleJoinWorkRef.current = handleJoinWork;
 
   const handleExitWork = useCallback(async () => {
     try {
@@ -606,10 +648,12 @@ export const CollaborateSidebar: React.FC = () => {
             creating={creating}
             joiningWorkId={joiningWorkId}
             waitingForSession={waitingForSession}
+            fromShare={fromShare}
             onCreateWork={handleCreateWork}
             onJoinWork={handleJoinWork}
             onExitWork={handleExitWork}
             onShare={() => setShareDialogOpen(true)}
+            onCopyShareLink={() => setShareDialogOpen(true)}
           />
         ) : (
           <WorkListPanel
@@ -626,6 +670,7 @@ export const CollaborateSidebar: React.FC = () => {
       <ShareDialog
         isOpen={shareDialogOpen}
         onClose={() => setShareDialogOpen(false)}
+        readOnly={fromShare}
       />
     </div>
   );

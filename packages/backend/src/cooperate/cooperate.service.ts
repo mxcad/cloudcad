@@ -6,16 +6,33 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { ProjectPermissionService } from '../roles/project-permission.service';
+import { PermissionService } from '../common/services/permission.service';
+import { SystemPermission, ProjectPermission } from '../common/enums/permissions.enum';
 import { CreateShareDto, UpdateShareDto } from './dto';
 
 @Injectable()
 export class CooperateService {
   private readonly logger = new Logger(CooperateService.name);
 
-  constructor(private readonly prisma: DatabaseService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly projectPermissionService: ProjectPermissionService,
+    private readonly systemPermissionService: PermissionService,
+  ) {}
 
   async createShare(dto: CreateShareDto, userId: string) {
     const { fileId, expiresIn, collaborationEnabled } = dto;
+
+    const fileNode = await this.prisma.fileSystemNode.findFirst({
+      where: { id: fileId, deletedAt: null },
+      select: { id: true, projectId: true, ownerId: true, libraryKey: true },
+    });
+    if (!fileNode) {
+      throw new BadRequestException('文件不存在');
+    }
+
+    await this.checkSharePermission(userId, fileNode);
 
     let expiresAt: Date | null = null;
     if (expiresIn) {
@@ -23,14 +40,6 @@ export class CooperateService {
     }
 
     const share = await this.prisma.$transaction(async (tx) => {
-      const fileNode = await tx.fileSystemNode.findFirst({
-        where: { id: fileId, deletedAt: null },
-        select: { id: true },
-      });
-      if (!fileNode) {
-        throw new BadRequestException('文件不存在');
-      }
-
       return tx.cooperateShare.create({
         data: {
           fileId,
@@ -51,6 +60,57 @@ export class CooperateService {
       expiresAt: share.expiresAt,
       collaborationEnabled: share.collaborationEnabled,
     };
+  }
+
+  private async checkSharePermission(
+    userId: string,
+    fileNode: { id: string; projectId: string | null; ownerId: string; libraryKey: string | null },
+  ): Promise<void> {
+    if (fileNode.libraryKey === 'drawing') {
+      const hasPerm = await this.systemPermissionService.checkSystemPermission(
+        userId,
+        SystemPermission.LIBRARY_DRAWING_MANAGE,
+      );
+      if (!hasPerm) {
+        throw new ForbiddenException('没有资源库图纸的分享权限');
+      }
+      return;
+    }
+
+    if (fileNode.libraryKey === 'block') {
+      const hasPerm = await this.systemPermissionService.checkSystemPermission(
+        userId,
+        SystemPermission.LIBRARY_BLOCK_MANAGE,
+      );
+      if (!hasPerm) {
+        throw new ForbiddenException('没有资源库图块的分享权限');
+      }
+      return;
+    }
+
+    if (fileNode.projectId) {
+      const isOwner = await this.projectPermissionService.isProjectOwner(
+        userId,
+        fileNode.projectId,
+      );
+      if (isOwner) {
+        return;
+      }
+
+      const hasPerm = await this.projectPermissionService.checkPermission(
+        userId,
+        fileNode.projectId,
+        ProjectPermission.FILE_SHARE,
+      );
+      if (!hasPerm) {
+        throw new ForbiddenException('没有文件分享权限');
+      }
+      return;
+    }
+
+    if (fileNode.ownerId !== userId) {
+      throw new ForbiddenException('只有文件所有者可以分享');
+    }
   }
 
   async resolveShare(token: string) {
@@ -214,6 +274,43 @@ export class CooperateService {
     }
 
     return { items, total, page, pageSize };
+  }
+
+  async getFileShares(fileId: string, userId: string) {
+    const fileNode = await this.prisma.fileSystemNode.findFirst({
+      where: { id: fileId, deletedAt: null },
+      select: { id: true, projectId: true, ownerId: true, libraryKey: true },
+    });
+    if (!fileNode) {
+      throw new NotFoundException('文件不存在');
+    }
+
+    await this.checkSharePermission(userId, fileNode);
+
+    const shares = await this.prisma.cooperateShare.findMany({
+      where: {
+        fileId,
+        deletedAt: null,
+        AND: [
+          {
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
+          },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return shares.map((share) => ({
+      token: share.token,
+      url: `/share/${share.token}`,
+      collaborationEnabled: share.collaborationEnabled,
+      expiresAt: share.expiresAt?.toISOString() ?? null,
+      createdAt: share.createdAt.toISOString(),
+      createdBy: share.createdBy,
+    }));
   }
 
   /**

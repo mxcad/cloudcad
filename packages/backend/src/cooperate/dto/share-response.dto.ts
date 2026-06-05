@@ -85,6 +85,26 @@ export class ShareListItemDto {
   createdAt: string;
 }
 
+export class FileSharesResponseDto {
+  @ApiProperty({ description: '分享 token' })
+  token: string;
+
+  @ApiProperty({ description: '分享链接路径' })
+  url: string;
+
+  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
+  collaborationEnabled: boolean;
+
+  @ApiPropertyOptional({ description: '过期时间', nullable: true })
+  expiresAt: string | null;
+
+  @ApiProperty({ description: '创建时间' })
+  createdAt: string;
+
+  @ApiProperty({ description: '创建者 ID' })
+  createdBy: string;
+}
+
 export class ShareListResponseDto {
   @ApiProperty({ description: '分享列表', type: [ShareListItemDto] })
   items: ShareListItemDto[];

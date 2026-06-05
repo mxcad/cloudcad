@@ -33,6 +33,7 @@ import {
   ResolveShareNodeResponseDto,
   UpdateShareDto,
   ShareListResponseDto,
+  FileSharesResponseDto,
 } from './dto';
 
 @ApiTags('协同分享')
@@ -129,6 +130,20 @@ export class CooperateController {
       sortOrder,
     });
     return result;
+  }
+
+  @Get('share/file/:fileId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取文件已有的分享链接列表' })
+  @ApiResponse({
+    status: 200,
+    description: '分享链接列表',
+    type: [FileSharesResponseDto],
+  })
+  async getFileShares(@Param('fileId') fileId: string, @Req() req: Request) {
+    const userId = (req.user as { id: string }).id;
+    return this.cooperateService.getFileShares(fileId, userId);
   }
 
   @Patch('share/:token')
