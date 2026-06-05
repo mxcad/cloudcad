@@ -47,6 +47,10 @@ function svnLog(targetPath, limit, verbose, username, password, callback) {
       callback(null, stdout);
     })
     .catch(error => {
+      if (error.message && error.message.includes('E160013')) {
+        callback(null, '<?xml version="1.0"?>\n<log></log>');
+        return;
+      }
       callback(error);
     });
 }
