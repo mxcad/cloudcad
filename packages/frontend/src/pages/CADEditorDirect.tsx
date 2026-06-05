@@ -785,7 +785,7 @@ export const CADEditorDirect: React.FC = () => {
           if (libraryKeyParam === 'drawing' || libraryKeyParam === 'block') {
             mxcadFileUrl = `/api/v1/library/${libraryKeyParam}/filesData/${file.path}?v=${versionParam}`;
           } else {
-            mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?v=${versionParam}`;
+            mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?v=${versionParam}${shareTokenParam ? `&shareToken=${shareTokenParam}` : ''}`;
           }
           setCacheTimestamp(undefined); // 历史版本不需要清理缓存
         } else {
@@ -795,7 +795,7 @@ export const CADEditorDirect: React.FC = () => {
             if (libraryKeyParam === 'drawing' || libraryKeyParam === 'block') {
               mxcadFileUrl = `/api/v1/library/${libraryKeyParam}/filesData/${file.path}?t=${cacheTimestamp}`;
             } else {
-              mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?t=${cacheTimestamp}`;
+              mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?t=${cacheTimestamp}${shareTokenParam ? `&shareToken=${shareTokenParam}` : ''}`;
             }
             setCacheTimestamp(cacheTimestamp); // 设置缓存时间戳，用于清理旧缓存
           } else {

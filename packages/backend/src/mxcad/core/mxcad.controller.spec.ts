@@ -23,6 +23,7 @@ import { RuntimeConfigService } from "../../runtime-config/runtime-config.servic
 import { MxCadController } from "./mxcad.controller";
 import { MxCadService } from "./mxcad.service";
 import { MxcadFileHandlerService } from "./mxcad-file-handler.service";
+import { CooperateService } from "../../cooperate/cooperate.service";
 import { MxCadRequest } from "../types/request.types";
 describe("MxCadController", () => {
 	let controller: MxCadController;
@@ -87,6 +88,7 @@ describe("MxCadController", () => {
 	const mockMxcadFileHandler = { serveFile: jest.fn() };
 	const mockQuotaEnforcementService = { checkQuota: jest.fn() };
 	const mockRuntimeConfigService = { get: jest.fn() };
+	const mockCooperateService = { validateShareFileAccess: jest.fn() };
 
 	beforeEach(async () => {
 		jest.clearAllMocks();
@@ -130,6 +132,7 @@ describe("MxCadController", () => {
 				{ provide: MxcadFileHandlerService, useValue: mockMxcadFileHandler },
 				{ provide: QuotaEnforcementService, useValue: mockQuotaEnforcementService },
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
+				{ provide: CooperateService, useValue: mockCooperateService },
 			],
 		}).compile();
 

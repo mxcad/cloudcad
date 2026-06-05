@@ -216,6 +216,56 @@ export class CooperateService {
     return { items, total, page, pageSize };
   }
 
+  /**
+   * 验证分享令牌是否有权访问指定的存储路径
+   * @param token 分享令牌
+   * @param storagePath 请求的文件存储路径（如 202506/nodeId/filename.dwg）
+   */
+  async validateShareFileAccess(token: string, storagePath: string): Promise<void> {
+    const share = await this.prisma.cooperateShare.findUnique({
+      where: { token },
+    });
+
+    if (!share) {
+      throw new NotFoundException('分享链接不存在');
+    }
+
+    if (share.deletedAt) {
+      throw new NotFoundException('分享链接已撤销');
+    }
+
+    if (share.expiresAt && share.expiresAt < new Date()) {
+      throw new NotFoundException('分享链接已过期');
+    }
+
+    const fileNode = await this.prisma.fileSystemNode.findUnique({
+      where: { id: share.fileId },
+      select: { id: true, path: true, deletedAt: true },
+    });
+
+    if (!fileNode) {
+      throw new NotFoundException('文件不存在');
+    }
+
+    if (fileNode.deletedAt) {
+      throw new NotFoundException('文件已被删除');
+    }
+
+    // 验证请求的存储路径与分享文件的路径一致
+    // 防止 shareToken 被用于访问其他文件
+    if (fileNode.path !== storagePath) {
+      this.logger.warn(
+        `分享令牌路径不匹配: token=${token}, expected=${fileNode.path}, requested=${storagePath}`
+      );
+      throw new ForbiddenException('分享令牌与请求的文件不匹配');
+    }
+
+    await this.prisma.cooperateShare.update({
+      where: { id: share.id },
+      data: { usedCount: { increment: 1 } },
+    });
+  }
+
   async updateShare(token: string, userId: string, dto: UpdateShareDto) {
     const share = await this.prisma.cooperateShare.findUnique({
       where: { token },

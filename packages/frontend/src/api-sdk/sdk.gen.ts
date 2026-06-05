@@ -1674,6 +1674,60 @@ export const saveControllerSaveMxwebAs = <ThrowOnError extends boolean = false>(
 });
 
 /**
+ * 创建协同分享链接
+ */
+export const cooperateControllerCreateShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerCreateShareData, ThrowOnError>) => (options.client ?? client).post<CooperateControllerCreateShareResponses, CooperateControllerCreateShareErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/collaboration/share',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 撤销分享链接
+ */
+export const cooperateControllerRevokeShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerRevokeShareData, ThrowOnError>) => (options.client ?? client).delete<CooperateControllerRevokeShareResponses, CooperateControllerRevokeShareErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/collaboration/share/{token}',
+    ...options
+});
+
+/**
+ * 解析分享链接
+ */
+export const cooperateControllerResolveShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerResolveShareData, ThrowOnError>) => (options.client ?? client).get<CooperateControllerResolveShareResponses, CooperateControllerResolveShareErrors, ThrowOnError>({ url: '/api/v1/collaboration/share/{token}', ...options });
+
+/**
+ * 修改分享设置
+ */
+export const cooperateControllerUpdateShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerUpdateShareData, ThrowOnError>) => (options.client ?? client).patch<CooperateControllerUpdateShareResponses, CooperateControllerUpdateShareErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/collaboration/share/{token}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 通过分享 token 获取文件信息
+ */
+export const cooperateControllerResolveShareNode = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerResolveShareNodeData, ThrowOnError>) => (options.client ?? client).get<CooperateControllerResolveShareNodeResponses, CooperateControllerResolveShareNodeErrors, ThrowOnError>({ url: '/api/v1/collaboration/share/{token}/node', ...options });
+
+/**
+ * 获取分享列表（分页）
+ */
+export const cooperateControllerListShares = <ThrowOnError extends boolean = false>(options?: Options<CooperateControllerListSharesData, ThrowOnError>) => (options?.client ?? client).get<CooperateControllerListSharesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/collaboration/shares',
+    ...options
+});
+
+/**
  * 获取管理员统计信息
  */
 export const adminControllerGetAdminStats = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetAdminStatsData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetAdminStatsResponses, unknown, ThrowOnError>({
@@ -2138,58 +2192,4 @@ export const libraryControllerCopyBlockNode = <ThrowOnError extends boolean = fa
         'Content-Type': 'application/json',
         ...options.headers
     }
-});
-
-/**
- * 创建协同分享链接
- */
-export const cooperateControllerCreateShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerCreateShareData, ThrowOnError>) => (options.client ?? client).post<CooperateControllerCreateShareResponses, CooperateControllerCreateShareErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/collaboration/share',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 撤销分享链接
- */
-export const cooperateControllerRevokeShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerRevokeShareData, ThrowOnError>) => (options.client ?? client).delete<CooperateControllerRevokeShareResponses, CooperateControllerRevokeShareErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/collaboration/share/{token}',
-    ...options
-});
-
-/**
- * 解析分享链接
- */
-export const cooperateControllerResolveShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerResolveShareData, ThrowOnError>) => (options.client ?? client).get<CooperateControllerResolveShareResponses, CooperateControllerResolveShareErrors, ThrowOnError>({ url: '/api/v1/collaboration/share/{token}', ...options });
-
-/**
- * 修改分享设置
- */
-export const cooperateControllerUpdateShare = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerUpdateShareData, ThrowOnError>) => (options.client ?? client).patch<CooperateControllerUpdateShareResponses, CooperateControllerUpdateShareErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/collaboration/share/{token}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 通过分享 token 获取文件信息
- */
-export const cooperateControllerResolveShareNode = <ThrowOnError extends boolean = false>(options: Options<CooperateControllerResolveShareNodeData, ThrowOnError>) => (options.client ?? client).get<CooperateControllerResolveShareNodeResponses, CooperateControllerResolveShareNodeErrors, ThrowOnError>({ url: '/api/v1/collaboration/share/{token}/node', ...options });
-
-/**
- * 获取分享列表（分页）
- */
-export const cooperateControllerListShares = <ThrowOnError extends boolean = false>(options?: Options<CooperateControllerListSharesData, ThrowOnError>) => (options?.client ?? client).get<CooperateControllerListSharesResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/collaboration/shares',
-    ...options
 });

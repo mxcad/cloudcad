@@ -27,6 +27,7 @@ import { StorageModule } from '../../storage/storage.module';
 import { VersionControlModule } from '../../version-control/version-control.module';
 import { RolesModule } from '../../roles/roles.module';
 import { RuntimeConfigModule } from '../../runtime-config/runtime-config.module';
+import { CooperateModule } from '../../cooperate/cooperate.module';
 import { MxcadInfraModule } from '../infra/mxcad-infra.module';
 import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from '../node/mxcad-node.module';
@@ -106,6 +107,7 @@ import { SaveController } from '../save/save.controller';
       },
       inject: [ConfigService],
     }),
+    CooperateModule,
     MxcadInfraModule,
     MxcadConversionModule,
     MxcadNodeModule,

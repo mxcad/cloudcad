@@ -2348,6 +2348,161 @@ export type SaveMxwebAsResponseDto = {
     parentId: string;
 };
 
+export type CreateShareDto = {
+    /**
+     * 文件ID
+     */
+    fileId: string;
+    /**
+     * 过期时间（秒），null 表示永不过期
+     */
+    expiresIn?: number;
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled?: boolean;
+};
+
+export type CreateShareResponseDto = {
+    /**
+     * 分享 token
+     */
+    token: string;
+    /**
+     * 分享链接路径
+     */
+    url: string;
+    /**
+     * 过期时间
+     */
+    expiresAt?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled: boolean;
+};
+
+export type ResolveShareResponseDto = {
+    /**
+     * 文件 ID
+     */
+    fileId: string;
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled: boolean;
+};
+
+export type ResolveShareNodeResponseDto = {
+    /**
+     * 文件名
+     */
+    name: string;
+    /**
+     * 文件 hash
+     */
+    fileHash: string;
+    /**
+     * 文件路径
+     */
+    path: string;
+    /**
+     * 父节点 ID
+     */
+    parentId: string | null;
+    /**
+     * 文件 ID
+     */
+    id: string;
+    /**
+     * 删除时间
+     */
+    deletedAt?: string | null;
+    /**
+     * 更新时间
+     */
+    updatedAt?: string;
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled: boolean;
+};
+
+export type ShareListItemDto = {
+    /**
+     * 分享 ID
+     */
+    id: string;
+    /**
+     * 分享 token
+     */
+    token: string;
+    /**
+     * 分享链接路径
+     */
+    url: string;
+    /**
+     * 文件 ID
+     */
+    fileId: string;
+    /**
+     * 文件名
+     */
+    fileName: string;
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled: boolean;
+    /**
+     * 过期时间
+     */
+    expiresAt?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 使用次数
+     */
+    usedCount: number;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+};
+
+export type ShareListResponseDto = {
+    /**
+     * 分享列表
+     */
+    items: Array<ShareListItemDto>;
+    /**
+     * 总数
+     */
+    total: number;
+    /**
+     * 当前页码
+     */
+    page: number;
+    /**
+     * 每页条数
+     */
+    pageSize: number;
+};
+
+export type UpdateShareDto = {
+    /**
+     * 是否允许接收者加入实时协同
+     */
+    collaborationEnabled?: boolean;
+    /**
+     * 过期时间（ISO 日期），传 null 改为永不过期
+     */
+    expiresAt?: {
+        [key: string]: unknown;
+    } | null;
+};
+
 export type AdminStatsResponseDto = {
     /**
      * 提示消息
@@ -2655,161 +2810,6 @@ export type SaveLibraryAsDto = {
      * 文件名（不含扩展名）
      */
     fileName?: string;
-};
-
-export type CreateShareDto = {
-    /**
-     * 文件ID
-     */
-    fileId: string;
-    /**
-     * 过期时间（秒），null 表示永不过期
-     */
-    expiresIn?: number;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled?: boolean;
-};
-
-export type CreateShareResponseDto = {
-    /**
-     * 分享 token
-     */
-    token: string;
-    /**
-     * 分享链接路径
-     */
-    url: string;
-    /**
-     * 过期时间
-     */
-    expiresAt?: {
-        [key: string]: unknown;
-    };
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
-};
-
-export type ResolveShareResponseDto = {
-    /**
-     * 文件 ID
-     */
-    fileId: string;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
-};
-
-export type ResolveShareNodeResponseDto = {
-    /**
-     * 文件名
-     */
-    name: string;
-    /**
-     * 文件 hash
-     */
-    fileHash: string;
-    /**
-     * 文件路径
-     */
-    path: string;
-    /**
-     * 父节点 ID
-     */
-    parentId: string | null;
-    /**
-     * 文件 ID
-     */
-    id: string;
-    /**
-     * 删除时间
-     */
-    deletedAt?: string | null;
-    /**
-     * 更新时间
-     */
-    updatedAt?: string;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
-};
-
-export type ShareListItemDto = {
-    /**
-     * 分享 ID
-     */
-    id: string;
-    /**
-     * 分享 token
-     */
-    token: string;
-    /**
-     * 分享链接路径
-     */
-    url: string;
-    /**
-     * 文件 ID
-     */
-    fileId: string;
-    /**
-     * 文件名
-     */
-    fileName: string;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
-    /**
-     * 过期时间
-     */
-    expiresAt?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * 使用次数
-     */
-    usedCount: number;
-    /**
-     * 创建时间
-     */
-    createdAt: string;
-};
-
-export type ShareListResponseDto = {
-    /**
-     * 分享列表
-     */
-    items: Array<ShareListItemDto>;
-    /**
-     * 总数
-     */
-    total: number;
-    /**
-     * 当前页码
-     */
-    page: number;
-    /**
-     * 每页条数
-     */
-    pageSize: number;
-};
-
-export type UpdateShareDto = {
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled?: boolean;
-    /**
-     * 过期时间（ISO 日期），传 null 改为永不过期
-     */
-    expiresAt?: {
-        [key: string]: unknown;
-    } | null;
 };
 
 /**
@@ -6849,6 +6849,174 @@ export type SaveControllerSaveMxwebAsResponses = {
 
 export type SaveControllerSaveMxwebAsResponse = SaveControllerSaveMxwebAsResponses[keyof SaveControllerSaveMxwebAsResponses];
 
+export type CooperateControllerCreateShareData = {
+    body: CreateShareDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/collaboration/share';
+};
+
+export type CooperateControllerCreateShareErrors = {
+    /**
+     * 参数错误
+     */
+    400: unknown;
+};
+
+export type CooperateControllerCreateShareResponses = {
+    /**
+     * 分享链接创建成功
+     */
+    201: CreateShareResponseDto;
+};
+
+export type CooperateControllerCreateShareResponse = CooperateControllerCreateShareResponses[keyof CooperateControllerCreateShareResponses];
+
+export type CooperateControllerRevokeShareData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}';
+};
+
+export type CooperateControllerRevokeShareErrors = {
+    /**
+     * 无权操作
+     */
+    403: unknown;
+    /**
+     * 链接不存在
+     */
+    404: unknown;
+};
+
+export type CooperateControllerRevokeShareResponses = {
+    /**
+     * 撤销成功
+     */
+    200: unknown;
+};
+
+export type CooperateControllerResolveShareData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}';
+};
+
+export type CooperateControllerResolveShareErrors = {
+    /**
+     * 链接不存在或已失效
+     */
+    404: unknown;
+};
+
+export type CooperateControllerResolveShareResponses = {
+    /**
+     * 解析成功
+     */
+    200: ResolveShareResponseDto;
+};
+
+export type CooperateControllerResolveShareResponse = CooperateControllerResolveShareResponses[keyof CooperateControllerResolveShareResponses];
+
+export type CooperateControllerUpdateShareData = {
+    body: UpdateShareDto;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}';
+};
+
+export type CooperateControllerUpdateShareErrors = {
+    /**
+     * 无权操作
+     */
+    403: unknown;
+    /**
+     * 链接不存在
+     */
+    404: unknown;
+};
+
+export type CooperateControllerUpdateShareResponses = {
+    /**
+     * 修改成功
+     */
+    200: unknown;
+};
+
+export type CooperateControllerResolveShareNodeData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/collaboration/share/{token}/node';
+};
+
+export type CooperateControllerResolveShareNodeErrors = {
+    /**
+     * 链接不存在或文件不存在
+     */
+    404: unknown;
+};
+
+export type CooperateControllerResolveShareNodeResponses = {
+    /**
+     * 文件信息
+     */
+    200: ResolveShareNodeResponseDto;
+};
+
+export type CooperateControllerResolveShareNodeResponse = CooperateControllerResolveShareNodeResponses[keyof CooperateControllerResolveShareNodeResponses];
+
+export type CooperateControllerListSharesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 页码，默认 1
+         */
+        page?: number;
+        /**
+         * 每页条数，默认 20
+         */
+        pageSize?: number;
+        /**
+         * 按文件筛选
+         */
+        fileId?: string;
+        /**
+         * 按文件名搜索
+         */
+        search?: string;
+        /**
+         * 排序字段，默认 createdAt
+         */
+        sortBy?: 'createdAt' | 'expiresAt' | 'usedCount';
+        /**
+         * 排序方向，默认 desc
+         */
+        sortOrder?: 'asc' | 'desc';
+    };
+    url: '/api/v1/collaboration/shares';
+};
+
+export type CooperateControllerListSharesResponses = {
+    /**
+     * 分享列表
+     */
+    200: ShareListResponseDto;
+};
+
+export type CooperateControllerListSharesResponse = CooperateControllerListSharesResponses[keyof CooperateControllerListSharesResponses];
+
 export type AdminControllerGetAdminStatsData = {
     body?: never;
     path?: never;
@@ -8128,171 +8296,3 @@ export type LibraryControllerCopyBlockNodeResponses = {
 };
 
 export type LibraryControllerCopyBlockNodeResponse = LibraryControllerCopyBlockNodeResponses[keyof LibraryControllerCopyBlockNodeResponses];
-
-export type CooperateControllerCreateShareData = {
-    body: CreateShareDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/collaboration/share';
-};
-
-export type CooperateControllerCreateShareErrors = {
-    /**
-     * 参数错误
-     */
-    400: unknown;
-};
-
-export type CooperateControllerCreateShareResponses = {
-    /**
-     * 分享链接创建成功
-     */
-    201: CreateShareResponseDto;
-};
-
-export type CooperateControllerCreateShareResponse = CooperateControllerCreateShareResponses[keyof CooperateControllerCreateShareResponses];
-
-export type CooperateControllerRevokeShareData = {
-    body?: never;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}';
-};
-
-export type CooperateControllerRevokeShareErrors = {
-    /**
-     * 无权操作
-     */
-    403: unknown;
-    /**
-     * 链接不存在
-     */
-    404: unknown;
-};
-
-export type CooperateControllerRevokeShareResponses = {
-    /**
-     * 撤销成功
-     */
-    200: unknown;
-};
-
-export type CooperateControllerResolveShareData = {
-    body?: never;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}';
-};
-
-export type CooperateControllerResolveShareErrors = {
-    /**
-     * 链接不存在或已失效
-     */
-    404: unknown;
-};
-
-export type CooperateControllerResolveShareResponses = {
-    /**
-     * 解析成功
-     */
-    200: ResolveShareResponseDto;
-};
-
-export type CooperateControllerResolveShareResponse = CooperateControllerResolveShareResponses[keyof CooperateControllerResolveShareResponses];
-
-export type CooperateControllerUpdateShareData = {
-    body: UpdateShareDto;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}';
-};
-
-export type CooperateControllerUpdateShareErrors = {
-    /**
-     * 无权操作
-     */
-    403: unknown;
-    /**
-     * 链接不存在
-     */
-    404: unknown;
-};
-
-export type CooperateControllerUpdateShareResponses = {
-    /**
-     * 修改成功
-     */
-    200: unknown;
-};
-
-export type CooperateControllerResolveShareNodeData = {
-    body?: never;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}/node';
-};
-
-export type CooperateControllerResolveShareNodeErrors = {
-    /**
-     * 链接不存在或文件不存在
-     */
-    404: unknown;
-};
-
-export type CooperateControllerResolveShareNodeResponses = {
-    /**
-     * 文件信息
-     */
-    200: ResolveShareNodeResponseDto;
-};
-
-export type CooperateControllerResolveShareNodeResponse = CooperateControllerResolveShareNodeResponses[keyof CooperateControllerResolveShareNodeResponses];
-
-export type CooperateControllerListSharesData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * 页码，默认 1
-         */
-        page?: number;
-        /**
-         * 每页条数，默认 20
-         */
-        pageSize?: number;
-        /**
-         * 按文件筛选
-         */
-        fileId?: string;
-        /**
-         * 按文件名搜索
-         */
-        search?: string;
-        /**
-         * 排序字段，默认 createdAt
-         */
-        sortBy?: 'createdAt' | 'expiresAt' | 'usedCount';
-        /**
-         * 排序方向，默认 desc
-         */
-        sortOrder?: 'asc' | 'desc';
-    };
-    url: '/api/v1/collaboration/shares';
-};
-
-export type CooperateControllerListSharesResponses = {
-    /**
-     * 分享列表
-     */
-    200: ShareListResponseDto;
-};
-
-export type CooperateControllerListSharesResponse = CooperateControllerListSharesResponses[keyof CooperateControllerListSharesResponses];

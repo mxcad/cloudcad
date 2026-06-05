@@ -27,6 +27,7 @@ import {
   Logger,
   NotFoundException,
   UnauthorizedException,
+  ForbiddenException,
   BadRequestException,
   InternalServerErrorException,
   UseGuards,
@@ -77,6 +78,7 @@ import { UploadUtilityService } from '../upload/upload-utility.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
+import { CooperateService } from '../../cooperate/cooperate.service';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { StorageQuotaInterceptor } from '../../common/interceptors/storage-quota.interceptor';
@@ -113,7 +115,8 @@ export class MxCadController {
     private readonly fileConversionService: FileConversionService,
     private readonly mxcadFileHandler: MxcadFileHandlerService,
     private readonly fileTreeService: FileTreeService,
-    private readonly uploadUtilityService: UploadUtilityService
+    private readonly uploadUtilityService: UploadUtilityService,
+    private readonly cooperateService: CooperateService
   ) {
     this.mxCadFileExt =
       this.configService.get('conversion.fileExt', { infer: true }) || '.mxweb';
@@ -850,7 +853,6 @@ export class MxCadController {
     },
   })
   async getFilesDataFile(@Res() res: Response, @Req() req: Request) {
-    // 从 req.params.path 获取完整的路径（支持多层路径）
     const pathArray = req.params.path;
     const filename = Array.isArray(pathArray)
       ? pathArray.join('/')
@@ -862,21 +864,30 @@ export class MxCadController {
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
 
-    // 检查是否请求历史版本（通过 v 参数）
+    try {
+      await this.authorizeFilesDataAccess(filename, req);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return res.status(404).json({ code: -1, message: error.message });
+      }
+      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) {
+        return res.status(401).json({ code: -1, message: error.message });
+      }
+      throw error;
+    }
+
     const versionParam = req.query.v as string | undefined;
     if (versionParam) {
       return this.handleFilesDataFileRequest(filename, res, req, false);
     }
 
-    // 正常请求：使用共享的文件处理服务
     return this.mxcadFileHandler.serveFile(filename, res);
   }
 
   /**
    * 访问 filesData 目录中的文件 - HEAD 方法
    * 用于获取文件信息而不下载文件内容
-   * 注意：HEAD 请求公开访问，因为 MxCAD 库内部发送的 HEAD 请求无法自定义请求头
-   * 实际的安全性由 GET 请求和文件路径的随机性保证
+   * 携带 shareToken 时校验访问权限，否则透传（MxCAD SDK 内部 HEAD 请求无法自定义请求头）
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
@@ -896,7 +907,6 @@ export class MxCadController {
     description: '服务器内部错误',
   })
   async getFilesDataFileHead(@Res() res: Response, @Req() req: Request) {
-    // 从 req.params.path 获取完整的路径（支持多层路径）
     const pathArray = req.params.path;
     const filename = Array.isArray(pathArray)
       ? pathArray.join('/')
@@ -907,6 +917,16 @@ export class MxCadController {
       );
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
+
+    const shareToken = req.query.shareToken as string | undefined;
+    if (shareToken) {
+      try {
+        await this.authorizeFilesDataAccess(filename, req);
+      } catch {
+        return res.status(401).json({ code: -1, message: '没有文件访问权限' });
+      }
+    }
+
     return this.handleFilesDataFileRequest(filename, res, req, true);
   }
 
@@ -1004,6 +1024,45 @@ export class MxCadController {
       if (!res.headersSent) {
         res.status(500).json({ code: -1, message: '获取文件失败' });
       }
+    }
+  }
+
+  /**
+   * 授权检查：验证请求是否有权访问指定的文件存储路径
+   *
+   * 双路授权策略：
+   * 1. shareToken 存在 → 通过 CooperateService 验证 share token 绑定此文件
+   * 2. shareToken 不存在 → 通过项目权限系统检查 FILE_OPEN 权限
+   */
+  private async authorizeFilesDataAccess(
+    filename: string,
+    req: Request
+  ): Promise<void> {
+    const normalizedFilename = filename.replace(/,/g, '/');
+    const shareToken = req.query.shareToken as string | undefined;
+
+    if (shareToken) {
+      await this.cooperateService.validateShareFileAccess(
+        shareToken,
+        normalizedFilename
+      );
+      return;
+    }
+
+    // 常规访问：验证 JWT 用户的项目权限
+    const node = await this.mxCadService.getFileSystemNodeByPath(
+      normalizedFilename
+    );
+    if (!node) {
+      throw new NotFoundException('文件不存在');
+    }
+
+    const hasAccess = await this.permissionService.getNodeAccessRole(
+      (req as any).user?.id,
+      node.id
+    );
+    if (!hasAccess) {
+      throw new UnauthorizedException('没有文件访问权限');
     }
   }
 
@@ -1440,9 +1499,11 @@ export class MxCadController {
   }
 
   /**
-   * 访问转换后的文件 (.mxweb) - GET 方法
-   * 支持 MxCAD-App 访问路径: /mxcad/file/{filename}
    * 从本地存储读取文件
+   *
+   * 双路授权策略：
+   * 1. shareToken 参数 → 验证分享令牌与文件路径匹配
+   * 2. 无 shareToken → 通过 JWT + 项目权限 (FILE_OPEN) 检查
    *
    * @param res Express Response 对象
    * @param req Express Request 对象
