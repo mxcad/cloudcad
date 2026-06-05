@@ -80,7 +80,6 @@ interface FileItemProps {
   onCopy?: (node: FileSystemNode) => void;
   onShowVersionHistory?: (node: FileSystemNode) => void;
   onShare?: (node: FileSystemNode) => void;
-  onViewShares?: (node: FileSystemNode) => void;
   onDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
   onDragLeave?: () => void;
@@ -123,7 +122,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   onCopy,
   onShowVersionHistory,
   onShare,
-  onViewShares,
   onDragStart,
   onDragOver,
   onDragLeave,
@@ -351,10 +349,6 @@ export const FileItem: React.FC<FileItemProps> = ({
       e.stopPropagation();
       onShare?.(node);
     },
-    view_shares: (e) => {
-      e.stopPropagation();
-      onViewShares?.(node);
-    },
   };
 
   // 获取可用操作列表
@@ -377,7 +371,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     onShowMembers: !!onShowMembers,
     onShowRoles: !!onShowRoles,
     onShare: !!onShare,
-    onViewShares: !!onViewShares,
     onMove: !!onMove,
     onCopy: !!onCopy,
     onRestore: !!onRestore,
@@ -548,7 +541,6 @@ export const FileItem: React.FC<FileItemProps> = ({
             onShowVersionHistory={onShowVersionHistory}
             onUploadExternalReference={handleUploadExternalReference}
             onShare={onShare}
-            onViewShares={onViewShares}
             isCadFile={isCadFile}
             canDownload={canDownload}
             canEdit={canEdit}
@@ -735,7 +727,6 @@ export const FileItem: React.FC<FileItemProps> = ({
             onCopy={onCopy}
             onShowVersionHistory={onShowVersionHistory}
             onShare={onShare}
-            onViewShares={onViewShares}
             onUploadExternalReference={handleUploadExternalReference}
             isCadFile={isCadFile}
             canDownload={canDownload}

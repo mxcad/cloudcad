@@ -16,8 +16,7 @@ export type ActionType =
   | 'edit'
   | 'show_members'
   | 'show_roles'
-  | 'share'
-  | 'view_shares';
+  | 'share';
 
 /**
  * 操作项配置
@@ -64,7 +63,6 @@ export interface FileActionCheckProps {
   onShowVersionHistory?: boolean;
   onEdit?: boolean;
   onShare?: boolean;
-  onViewShares?: boolean;
   onShowMembers?: boolean;
   onShowRoles?: boolean;
   onMove?: boolean;
@@ -369,17 +367,6 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-cyan-50',
     visibilityCheck: ({ isFolder, onShare }) =>
       !isFolder && !!onShare,
-    permissionCheck: () => true,
-  },
-  view_shares: {
-    type: 'view_shares',
-    label: '查看分享',
-    tooltip: '查看分享链接',
-    icon: <Icons.Settings />,
-    colorClass: 'text-slate-700',
-    hoverClass: 'hover:bg-slate-50',
-    visibilityCheck: ({ isFolder, onViewShares }) =>
-      !isFolder && !!onViewShares,
     permissionCheck: () => true,
   },
   show_members: {

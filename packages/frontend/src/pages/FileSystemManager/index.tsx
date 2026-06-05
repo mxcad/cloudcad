@@ -37,7 +37,6 @@ import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { DownloadFormatModal } from '@/components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { ShareDialog } from '@/components/modals/ShareDialog';
-import { ShareManageDialog } from '@/components/modals/ShareManageDialog';
 import { isAbortError, handleError } from '@/utils/errorHandler';
 import type { ProjectFilterType } from '@/types/project';
 
@@ -224,17 +223,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareFileId, setShareFileId] = useState<string | null>(null);
-  const [viewSharesFileId, setViewSharesFileId] = useState<string | null>(null);
-  const [viewSharesFileName, setViewSharesFileName] = useState('');
 
   const handleShare = useCallback((node: FileSystemNode) => {
     setShareFileId(node.id);
     setShareDialogOpen(true);
-  }, []);
-
-  const handleViewShares = useCallback((node: FileSystemNode) => {
-    setViewSharesFileId(node.id);
-    setViewSharesFileName(node.name);
   }, []);
 
   const {
@@ -572,7 +564,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onCopy={handleCopy}
                   onShowVersionHistory={handleShowVersionHistory}
                   onShare={handleShare}
-                  onViewShares={handleViewShares}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -749,15 +740,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         fileId={shareFileId ?? undefined}
       />
 
-      <ShareManageDialog
-        isOpen={viewSharesFileId !== null}
-        onClose={() => {
-          setViewSharesFileId(null);
-          setViewSharesFileName('');
-        }}
-        fileId={viewSharesFileId ?? ''}
-        fileName={viewSharesFileName}
-      />
     </>
   );
 };
