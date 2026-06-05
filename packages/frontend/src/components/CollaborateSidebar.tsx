@@ -75,8 +75,6 @@ export const CollaborateSidebar: React.FC = () => {
   const { showToast } = useNotification();
   const location = useLocation();
 
-  const cooperateInitRef = useRef(false);
-
   const getCooperate = useCallback(() => {
     const mxCAD = MxCpp.getCurrentMxCAD();
     if (!mxCAD) return null;
@@ -84,10 +82,7 @@ export const CollaborateSidebar: React.FC = () => {
     const cooperate = mxCAD.getCooperate();
     if (!cooperate) return null;
 
-    if (!cooperateInitRef.current) {
-      cooperate.init({ server_addres: APP_COOPERATE_URL });
-      cooperateInitRef.current = true;
-    }
+    cooperate.init({ server_addres: APP_COOPERATE_URL });
     return cooperate;
   }, []);
 
@@ -123,28 +118,20 @@ export const CollaborateSidebar: React.FC = () => {
         showToast('获取协同列表超时', 'warning');
       }, 15000);
 
-      const ids = await fetchMyProjectIds();
-      setMyProjectIds(ids);
+      setMyProjectIds(await fetchMyProjectIds());
 
       cooperate.getWorks((workList: Work[]) => {
         clearTimeout(timeoutId);
         setInitialFetchDone(true);
-        const currentId = useCADEditorStore.getState().currentFileId;
-        const filtered = workList.filter((w) => {
-          const data = parseWorkData(w.work_data);
-          if (!data) return false;
-          if (data.projectId && ids.includes(data.projectId)) return true;
-          if (!data.projectId) return true;
-          // 当前打开图纸的协同会话始终可见（用于分享协同自动加入）
-          if (currentId && data.drawingId === currentId) return true;
-          return false;
-        }).map((w) => {
-          const { linkUserIds, linkUserData } = deduplicateWorkUsers(
-            w.link_user_ids,
-            w.link_user_data
-          );
-          return { ...w, link_user_ids: linkUserIds, link_user_data: linkUserData };
-        });
+        const filtered = workList
+          .filter((w) => parseWorkData(w.work_data) !== null)
+          .map((w) => {
+            const { linkUserIds, linkUserData } = deduplicateWorkUsers(
+              w.link_user_ids,
+              w.link_user_data
+            );
+            return { ...w, link_user_ids: linkUserIds, link_user_data: linkUserData };
+          });
           const prevIds = worksRef.current.map((w) => w.work_id).sort().join(',');
           const newIds = filtered.map((w) => w.work_id).sort().join(',');
           if (prevIds !== newIds) {
@@ -372,29 +359,6 @@ export const CollaborateSidebar: React.FC = () => {
         showToast('协同对象未初始化', 'error');
         setCreating(false);
         return;
-      }
-
-      // 从分享链接自动创建协同：CAD 引擎为空白，需先打开图纸再创建
-      if (skipChecks) {
-        const pendingUrl = sessionStorage.getItem('collaborationShareFileUrl');
-        if (pendingUrl) {
-          try {
-            await mxcadManager.openFile(pendingUrl);
-            await new Promise<void>((resolve) => {
-              const onComplete = () => {
-                window.removeEventListener('mxcad-file-open-complete', onComplete);
-                resolve();
-              };
-              window.addEventListener('mxcad-file-open-complete', onComplete);
-            });
-            sessionStorage.removeItem('collaborationShareFileUrl');
-          } catch (error) {
-            console.error('打开文件失败:', error);
-            showToast('打开文件失败', 'error');
-            setCreating(false);
-            return;
-          }
-        }
       }
 
       if (!currentFileId || !user) {
@@ -653,7 +617,18 @@ export const CollaborateSidebar: React.FC = () => {
             onJoinWork={handleJoinWork}
             onExitWork={handleExitWork}
             onShare={() => setShareDialogOpen(true)}
-            onCopyShareLink={() => setShareDialogOpen(true)}
+            onCopyShareLink={() => {
+              const params = new URLSearchParams(location.search);
+              const shareToken = params.get('shareToken');
+              if (!shareToken) {
+                showToast('未找到分享令牌', 'error');
+                return;
+              }
+              const shareUrl = `${window.location.origin}/share/${shareToken}`;
+              navigator.clipboard.writeText(shareUrl)
+                .then(() => showToast('链接已复制', 'success'))
+                .catch(() => showToast('复制失败', 'error'));
+            }}
           />
         ) : (
           <WorkListPanel
