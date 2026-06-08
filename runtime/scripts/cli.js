@@ -1453,50 +1453,111 @@ async function runDatabaseMigration() {
 
   // === 始终使用 migrate deploy（推荐方式）===
   // migrate deploy 会自动处理空数据库和已有数据库的情况
+  // 当迁移因"对象已存在"失败时，自动标记为 applied 并重试，兼容 db push 导致的 schema drift
   log('cyan', '正在应用数据库迁移 (migrate deploy)...');
   log('cyan', `数据库: ${dbName}`);
   console.log('');
-  
-  // 显示迁移开始时间
-  const startTime = Date.now();
-  log('blue', '┌─ 迁移进度 ──────────────────────────────────┐');
-  log('blue', '│  开始执行数据库迁移...                      │');
-  log('blue', '└─────────────────────────────────────────────┘');
-  console.log('');
 
-  // 使用 -F (filter) + exec 来正确执行 prisma 命令
-  const migrationResult = await runCommandWithProgress(
-    PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
-    PNPM_JS && fs.existsSync(PNPM_JS)
-      ? [PNPM_JS, '-F', 'backend', 'exec', 'prisma', 'migrate', 'deploy']
-      : ['-F', 'backend', 'exec', 'prisma', 'migrate', 'deploy'],
-    { silent: false }
-  );
+  const MAX_MIGRATE_RETRIES = 10;
+  let migrateAttempt = 0;
+  let migrationSuccess = false;
+  let elapsed;
 
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  while (migrateAttempt < MAX_MIGRATE_RETRIES && !migrationSuccess) {
+    migrateAttempt++;
 
-  if (!migrationResult.success) {
+    if (migrateAttempt > 1) {
+      console.log('');
+      log('cyan', `┌─ 重试部署 (第 ${migrateAttempt} 次) ─────────────────┐`);
+    }
+
+    const startTime = Date.now();
+    log('blue', '┌─ 迁移进度 ──────────────────────────────────┐');
+    log('blue', '│  开始执行数据库迁移...                      │');
+    log('blue', '└─────────────────────────────────────────────┘');
+    console.log('');
+
+    // 使用 -F (filter) + exec 来正确执行 prisma 命令
+    const migrationResult = await runCommandWithProgress(
+      PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+      PNPM_JS && fs.existsSync(PNPM_JS)
+        ? [PNPM_JS, '-F', 'backend', 'exec', 'prisma', 'migrate', 'deploy']
+        : ['-F', 'backend', 'exec', 'prisma', 'migrate', 'deploy'],
+      { silent: false }
+    );
+
+    elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    if (migrationResult.success) {
+      migrationSuccess = true;
+      break;
+    }
+
+    // 迁移失败处理
     log('blue', '┌─ 迁移结果 ──────────────────────────────────┐');
     log('red', `│  ❌ 迁移失败 (耗时: ${elapsed}s)                   │`);
     log('blue', '└─────────────────────────────────────────────┘');
     console.log('');
-    log('red', '[错误] 数据库迁移失败，请检查上方日志');
+    log('red', '[错误] 数据库迁移失败，检查错误类型...');
     console.log('');
 
-    // 解析失败迁移名称并自动标记为 rolled-back
     const errorOutput = migrationResult.stderr || migrationResult.stdout || '';
-    
+
     // 匹配 "Migration name: 20260414100000_sync_enum_changes" 格式
     const migrationMatch = errorOutput.match(/Migration name:\s*([^\s\n]+)/);
     // 或者匹配 "The `20260414100000_sync_enum_changes` migration started at" 格式
     const altMigrationMatch = errorOutput.match(/The `([^`]+)` migration started at/);
-    
+
     const failedMigrationName = migrationMatch?.[1] || altMigrationMatch?.[1];
 
-    if (failedMigrationName) {
-      log('yellow', `检测到失败迁移: ${failedMigrationName}`);
+    if (!failedMigrationName) {
+      log('yellow', '⚠️  无法解析失败迁移名称，请手动执行:');
+      log('cyan', '  npx prisma migrate resolve --rolled-back <migration_name>');
+      log('cyan', '  或 npx prisma migrate resolve --applied <migration_name>');
+      break;
+    }
+
+    // 判断是否为"已存在"类错误（表、索引、约束等在数据库中已存在）
+    // 42P07 = relation already exists, 42710 = duplicate object, 42P16 = invalid table definition
+    const isAlreadyExistsError = /already exists|42P07|42710/.test(errorOutput);
+
+    if (isAlreadyExistsError) {
+      log('yellow', `检测到迁移 "${failedMigrationName}" 失败：变更已存在于数据库`);
+      log('cyan', '自动标记为已应用（applied）并继续部署...');
+
+      const resolveResult = spawnSync(
+        PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+        PNPM_JS && fs.existsSync(PNPM_JS)
+          ? [PNPM_JS, '-F', 'backend', 'exec', 'prisma', 'migrate', 'resolve', '--applied', failedMigrationName]
+          : ['-F', 'backend', 'exec', 'prisma', 'migrate', 'resolve', '--applied', failedMigrationName],
+        {
+          cwd: PROJECT_ROOT,
+          stdio: 'pipe',
+          shell: IS_WINDOWS,
+          encoding: 'utf-8',
+        }
+      );
+
+      if (resolveResult.status === 0) {
+        log('green', `[✓] 迁移 "${failedMigrationName}" 已标记为 applied`);
+      } else {
+        const resolveErr = (resolveResult.stderr || '').trim();
+        log('red', `[错误] 标记 applied 失败: ${resolveErr || '未知错误'}`);
+        // P3008 = already recorded as applied（已被其他进程标记过，可安全继续）
+        if (!resolveErr.includes('P3008')) {
+          break;
+        }
+        log('yellow', '（P3008 表示已标记过，继续部署）');
+      }
+
+      if (migrateAttempt >= MAX_MIGRATE_RETRIES) {
+        log('red', `[错误] 已达到最大重试次数 (${MAX_MIGRATE_RETRIES})，终止部署`);
+      }
+    } else {
+      // 非"已存在"类错误 → 回退到 rolled-back 并停止部署
+      log('red', `检测到迁移 "${failedMigrationName}" 失败：非兼容性错误`);
       log('cyan', '正在自动标记为 rolled-back...');
-      
+
       const resolveResult = spawnSync(
         PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
         PNPM_JS && fs.existsSync(PNPM_JS)
@@ -1516,11 +1577,15 @@ async function runDatabaseMigration() {
       } else {
         log('red', `[错误] 标记失败: ${resolveResult.stderr || '未知错误'}`);
       }
-    } else {
-      log('yellow', '提示：无法解析失败迁移名称，请手动执行:');
-      log('cyan', '  npx prisma migrate resolve --rolled-back <migration_name>');
+      break;
     }
-    
+  }
+
+  if (!migrationSuccess) {
+    log('blue', '┌─ 最终结果 ──────────────────────────────────┐');
+    log('red', '│  ❌ 数据库迁移失败                           │');
+    log('blue', '└─────────────────────────────────────────────┘');
+    log('red', '[错误] 数据库迁移失败，请检查上方日志');
     return false;
   }
 

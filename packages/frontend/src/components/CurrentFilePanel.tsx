@@ -110,7 +110,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
         </div>
         <div className={styles.statusTitle}>暂无协同</div>
         <div className={styles.statusDesc}>创建协同以开始实时协作</div>
-        <Button variant="primary" loading={creating} icon={UserPlus} onClick={onCreateWork}>
+        <Button variant="primary" loading={creating} icon={UserPlus} onClick={onCreateWork} data-tour="create-collaborate-btn">
           {creating ? '创建中...' : '创建协同'}
         </Button>
       </div>
@@ -158,6 +158,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
           icon={UserPlus}
           loading={joiningWorkId === work!.work_id}
           onClick={() => onJoinWork(work!.work_id)}
+          data-tour="join-collaborate-btn"
         >
           加入协同
         </Button>
@@ -254,7 +255,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
         <div className={styles.statusDesc}>
           等待协同会话就绪，或手动创建协同
         </div>
-        <Button variant="primary" loading={creating} icon={UserPlus} onClick={onCreateWork}>
+        <Button variant="primary" loading={creating} icon={UserPlus} onClick={onCreateWork} data-tour="create-collaborate-btn">
           {creating ? '创建中...' : '创建协同'}
         </Button>
       </div>

@@ -109,6 +109,10 @@ import { StorageInfoService } from "./storage-quota/storage-info.service";
 export class FileSystemController {
   private readonly logger = new Logger(FileSystemController.name);
 
+  private readonly DEFAULT_THUMBNAILS_DIR = path.join(
+    __dirname, '..', 'assets', 'default-thumbnails',
+  );
+
   constructor(
     private readonly projectCrudService: ProjectCrudService,
     private readonly fileOperationsService: FileOperationsService,
@@ -842,6 +846,20 @@ export class FileSystemController {
     const thumbnail = findThumbnailSync(nodeDir);
 
     if (!thumbnail) {
+      const ext = path.extname(node.name || '').toLowerCase();
+      const defaultMap: Record<string, string> = {
+        '.dwg': 'dwg.jpg',
+        '.dxf': 'dxf.jpg',
+        '.mxweb': 'mxweb.jpg',
+      };
+      const defaultFile = defaultMap[ext] || 'default.svg';
+      const defaultPath = path.join(this.DEFAULT_THUMBNAILS_DIR, defaultFile);
+
+      if (fs.existsSync(defaultPath)) {
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+        return res.sendFile(defaultPath);
+      }
       return res.status(204).end();
     }
 
