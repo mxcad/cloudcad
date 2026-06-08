@@ -44,7 +44,7 @@ import { ProjectRolesModal } from '@/components/modals/ProjectRolesModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
 import { SelectFolderModal } from '@/components/modals/SelectFolderModal';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
-import { handleError } from '@/utils/errorHandler';
+import { handleError, getErrorMessage } from '@/utils/errorHandler';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { ProjectPermission } from '@/constants/permissions';
 import styles from '@/components/sidebar/sidebar.module.css';
@@ -593,7 +593,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       refreshNodes();
     } catch (error: unknown) {
       handleError(error, '拖拽操作失败');
-      showToast('操作失败，请重试', 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally { setDraggedNodes([]); }
   }, [draggedNodes, refreshNodes, showToast]);
 
@@ -633,7 +633,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       if (isLibraryMode) {
         await libraryOperations.handleRename(editingNode.id, folderName.trim(), () => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); });
       } else await handleRename();
-    } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 重命名失败'); showToast('重命名失败', 'error'); } finally { setIsRenameLoading(false); }
+    } catch (error: unknown) { handleError(error, 'ProjectDrawingsPanel: 重命名失败'); showToast(getErrorMessage(error), 'error'); } finally { setIsRenameLoading(false); }
   }, [editingNode, folderName, isLibraryMode, libraryOperations, handleRename, showToast]);
 
   // 判断是否显示项目列表视图（我的项目 tab，未选中项目时）

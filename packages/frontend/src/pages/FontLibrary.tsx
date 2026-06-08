@@ -10,6 +10,7 @@ import type { FontInfo } from '../types/filesystem';
 import type { TagVariant } from '@/components/ui/Tag';
 import { usePermission } from '../hooks/usePermission';
 import { useNotification } from '../contexts/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -249,7 +250,7 @@ export default function FontLibrary(props: FontLibraryProps) {
     try {
       const { error } = await fontsControllerDeleteFont({ path: { fileName: fontName }, query: { target: activeTab } });
       if (error) {
-        showToast('删除字体失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         return;
       }
       await fetchFonts();
@@ -261,7 +262,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       showToast('删除成功', 'success');
     } catch (error) {
       console.error('删除字体失败:', error);
-      showToast('删除字体失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -295,7 +296,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       showToast('批量删除成功', 'success');
     } catch (error) {
       console.error('批量删除失败:', error);
-      showToast('批量删除失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -326,7 +327,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       showToast('下载成功', 'success');
     } catch (error) {
       console.error('下载字体失败:', error);
-      showToast('下载字体失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -827,7 +828,7 @@ function UploadFontModal({
       onSuccess();
     } catch (error) {
       console.error('上传失败:', error);
-      showToast('上传失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setUploading(false);
     }

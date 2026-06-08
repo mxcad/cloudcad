@@ -5,7 +5,7 @@
 
 import { useCallback } from 'react';
 import { fileSystemControllerMoveNode, fileSystemControllerCopyNode } from '@/api-sdk';
-import { handleError } from '@/utils/errorHandler';
+import { handleError, getErrorMessage } from '@/utils/errorHandler';
 import type { FileSystemNode } from '@/types/filesystem';
 
 interface UseDragAndDropOptions {
@@ -77,7 +77,7 @@ export function useDragAndDrop({
         handleRefresh();
       } catch (error: unknown) {
         handleError(error, '拖拽操作失败');
-        showToast('操作失败，请重试', 'error');
+        showToast(getErrorMessage(error), 'error');
       } finally {
         setDraggedNodes([]);
       }

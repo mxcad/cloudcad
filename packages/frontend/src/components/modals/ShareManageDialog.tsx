@@ -3,6 +3,7 @@ import { Copy, Check, Trash2, Loader2, ExternalLink, Plus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useNotification } from '../../contexts/NotificationContext';
+import { getErrorMessage } from '../../utils/errorHandler';
 import {
   cooperateControllerListShares,
   cooperateControllerRevokeShare,
@@ -41,13 +42,13 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
         query: { fileId, page: 1, pageSize: 50 },
       });
       if (result.error) {
-        setError('获取分享列表失败');
+        setError(getErrorMessage(result.error));
         return;
       }
       const data = result.data as { items: ShareListItemDto[] } | undefined;
       setItems(data?.items ?? []);
-    } catch {
-      setError('获取分享列表失败');
+    } catch (error) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -63,13 +64,13 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
     try {
       const result = await cooperateControllerRevokeShare({ path: { token } });
       if (result.error) {
-        showToast('撤销失败', 'error');
+        showToast(getErrorMessage(result.error), 'error');
         return;
       }
       setItems((prev) => prev.filter((i) => i.token !== token));
       showToast('分享已撤销', 'success');
-    } catch {
-      showToast('撤销失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -80,8 +81,8 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
-    } catch {
-      showToast('复制失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -97,8 +98,8 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
         ),
       );
       showToast('已更新', 'success');
-    } catch {
-      showToast('更新失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     }
   };
 

@@ -19,6 +19,7 @@ import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { RenameModal } from '../components/modals/RenameModal';
 import { LibrarySelectFolderModal } from '../components/modals/LibrarySelectFolderModal';
 import { useNotification, useConfirmDialog } from '../contexts/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { Pagination } from '../components/ui/Pagination';
 import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
 import { FileItem } from '../components/FileItem';
@@ -227,7 +228,7 @@ export const LibraryManager: React.FC = () => {
         showToast(`正在打开：${node.name}`, 'success');
       } catch (err) {
         console.error('打开文件失败:', err);
-        showToast('打开文件失败', 'error');
+        showToast(getErrorMessage(err), 'error');
       }
     },
     [libraryType, showToast]
@@ -710,7 +711,7 @@ export const LibraryManager: React.FC = () => {
                             await refresh();
                           } catch (error) {
                             console.error('批量删除失败:', error);
-                            showToast('批量删除失败', 'error');
+                            showToast(getErrorMessage(error), 'error');
                           }
                         });
                       }}

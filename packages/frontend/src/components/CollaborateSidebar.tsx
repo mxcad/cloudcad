@@ -15,6 +15,7 @@ import React, {
 import { useLocation } from 'react-router-dom';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { Button } from './ui/Button';
 import { Tabs, Tab } from './ui';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
@@ -144,7 +145,7 @@ export const CollaborateSidebar: React.FC = () => {
     } catch (error) {
       console.error('获取协同列表失败:', error);
       setLoading(false);
-      showToast('获取协同列表失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   }, [getCooperate, showToast]);
 
@@ -405,7 +406,7 @@ export const CollaborateSidebar: React.FC = () => {
     } catch (error) {
       console.error('创建协同失败:', error);
       setCreating(false);
-      showToast('创建协同失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   }, [
     getCooperate,
@@ -483,7 +484,7 @@ export const CollaborateSidebar: React.FC = () => {
       } catch (error) {
         console.error('加入协同失败:', error);
         setJoiningWorkId(null);
-        showToast('加入协同失败', 'error');
+        showToast(getErrorMessage(error), 'error');
       }
     },
     [getCooperate, user, showToast, fetchWorks]
@@ -512,7 +513,7 @@ export const CollaborateSidebar: React.FC = () => {
       }
     } catch (error) {
       console.error('退出协同失败:', error);
-      showToast('退出协同失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     }
   }, [getCooperate, fetchWorks, showToast]);
 
@@ -622,7 +623,7 @@ export const CollaborateSidebar: React.FC = () => {
               const shareUrl = `${window.location.origin}/share/${shareToken}`;
               navigator.clipboard.writeText(shareUrl)
                 .then(() => showToast('链接已复制', 'success'))
-                .catch(() => showToast('复制失败', 'error'));
+                .catch((error) => showToast(getErrorMessage(error), 'error'));
             }}
           />
         ) : (

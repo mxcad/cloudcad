@@ -13,6 +13,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification, useConfirmDialog } from '../contexts/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
@@ -1435,7 +1436,7 @@ export const CADEditorDirect: React.FC = () => {
           );
         } catch (error) {
           console.error('打开文件失败:', error);
-          showToast('打开文件失败', 'error');
+          showToast(getErrorMessage(error), 'error');
         }
       } else {
         if (loginPromptDismissedRef.current) return;
@@ -1573,7 +1574,7 @@ export const CADEditorDirect: React.FC = () => {
       setShowDownloadFormatModal(false);
     } catch (error) {
       console.error('下载失败:', error);
-      showToast('下载失败，请重试', 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setDownloading(false);
     }
@@ -1620,7 +1621,7 @@ export const CADEditorDirect: React.FC = () => {
       showToast('PDF 文件已保存到本地', 'success');
     } catch (error) {
       console.error('PDF 导出失败:', error);
-      showToast('PDF 导出失败，请重试', 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setPdfExporting(false);
     }
@@ -1663,7 +1664,7 @@ export const CADEditorDirect: React.FC = () => {
       showToast(`${dwgExportFormat.toUpperCase()} 文件已保存到本地`, 'success');
     } catch (error) {
       console.error(`${dwgExportFormat.toUpperCase()} 导出失败:`, error);
-      showToast(`${dwgExportFormat.toUpperCase()} 导出失败，请重试`, 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setDwgExporting(false);
     }

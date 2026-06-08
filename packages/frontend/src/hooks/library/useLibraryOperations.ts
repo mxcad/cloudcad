@@ -30,6 +30,7 @@ import {
   libraryControllerCopyBlockNode,
 } from '@/api-sdk';
 import { sanitizeFileName } from '../../utils/fileUtils';
+import { getErrorMessage } from '../../utils/errorHandler';
 
 export type LibraryType = 'drawing' | 'block';
 
@@ -119,7 +120,7 @@ export function useLibraryOperations({
         showToast('下载已开始', 'success');
       } catch (error) {
         console.error('下载失败:', error);
-        showToast('下载失败', 'error');
+        showToast(getErrorMessage(error), 'error');
       }
     },
     [libraryType, showToast]
@@ -158,7 +159,7 @@ export function useLibraryOperations({
         showToast(`已下载：${fileName}`, 'success');
       } catch (error) {
         console.error('下载失败:', error);
-        showToast('下载失败', 'error');
+        showToast(getErrorMessage(error), 'error');
       }
     },
     [libraryType, showToast]
@@ -181,7 +182,7 @@ export function useLibraryOperations({
             refreshNodes();
           } catch (error) {
             console.error('删除失败:', error);
-            showToast('删除失败', 'error');
+            showToast(getErrorMessage(error), 'error');
           }
         },
         'danger',
@@ -205,7 +206,7 @@ export function useLibraryOperations({
         onComplete?.();
       } catch (error) {
         console.error('重命名失败:', error);
-        showToast('重命名失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         throw error;
       }
     },
@@ -225,7 +226,7 @@ export function useLibraryOperations({
         refreshNodes();
       } catch (error) {
         console.error('移动失败:', error);
-        showToast('移动失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         throw error;
       }
     },
@@ -245,7 +246,7 @@ export function useLibraryOperations({
         refreshNodes();
       } catch (error) {
         console.error('复制失败:', error);
-        showToast('复制失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         throw error;
       }
     },
@@ -267,7 +268,7 @@ export function useLibraryOperations({
         refreshNodes();
       } catch (error) {
         console.error('批量删除失败:', error);
-        showToast('批量删除失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         throw error;
       }
     },
@@ -289,7 +290,7 @@ export function useLibraryOperations({
         refreshNodes();
       } catch (error) {
         console.error('批量移动失败:', error);
-        showToast('批量移动失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         throw error;
       }
     },
@@ -311,7 +312,7 @@ export function useLibraryOperations({
         refreshNodes();
       } catch (error) {
         console.error('批量复制失败:', error);
-        showToast('批量复制失败', 'error');
+        showToast(getErrorMessage(error), 'error');
         throw error;
       }
     },

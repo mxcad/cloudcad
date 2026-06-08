@@ -11,6 +11,7 @@ import {
   runtimeConfigControllerGetPublicConfigs,
   StorageInfoDto
 } from '@/api-sdk';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface UseLibraryQuotaOptions {
   /** 资源库 ID */
@@ -90,7 +91,7 @@ export function useLibraryQuota({
       }
     } catch (error) {
       console.error('获取库配额失败:', error);
-      showToast('获取库配额失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setQuotaLoading(false);
     }
@@ -125,10 +126,7 @@ export function useLibraryQuota({
       }
     } catch (error: unknown) {
       console.error('保存库配额失败:', error);
-      const message = error && typeof error === 'object' && 'response' in error
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-        : undefined;
-      showToast(message || '保存配额失败', 'error');
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setQuotaLoading(false);
     }

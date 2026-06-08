@@ -14,6 +14,7 @@ import React, { useCallback, useState } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
 import { fileSystemControllerCopyNode, fileSystemControllerMoveNode } from '@/api-sdk';
 import { useNotification } from '../../contexts/NotificationContext';
+import { getErrorMessage } from '../../utils/errorHandler';
 
 export const useFileSystemDragDrop = () => {
   const { showToast } = useNotification();
@@ -75,7 +76,8 @@ export const useFileSystemDragDrop = () => {
         }
         onRefresh();
       } catch (error) {
-        showToast('移动失败，请重试', 'error');
+        console.error('拖拽移动失败:', error);
+        showToast(getErrorMessage(error), 'error');
       } finally {
         setDraggedNodes([]);
       }

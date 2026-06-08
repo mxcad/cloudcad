@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
+import { getErrorMessage } from '../../utils/errorHandler';
 import {
   cooperateControllerCreateShare,
   cooperateControllerRevokeShare,
@@ -185,7 +186,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         },
       });
       if (result.error) {
-        showToast('创建分享链接失败', 'error');
+        showToast(getErrorMessage(result.error), 'error');
         return;
       }
       const raw = result.data as Record<string, unknown> | undefined;
@@ -206,8 +207,8 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setShareInfo(data);
       setView('created');
       fetchShares();
-    } catch {
-      showToast('创建分享链接失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
@@ -222,15 +223,15 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         path: { token: shareInfo.token },
       });
       if (result.error) {
-        showToast('撤销分享失败', 'error');
+        showToast(getErrorMessage(result.error), 'error');
         return;
       }
       setShareInfo(null);
       setView('list');
       fetchShares();
       showToast('分享已撤销', 'success');
-    } catch {
-      showToast('撤销分享失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     } finally {
       setRevoking(false);
     }
@@ -260,13 +261,13 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     try {
       const result = await cooperateControllerRevokeShare({ path: { token } });
       if (result.error) {
-        showToast('撤销失败', 'error');
+        showToast(getErrorMessage(result.error), 'error');
         return;
       }
       setItems((prev) => prev.filter((i) => i.token !== token));
       showToast('分享已撤销', 'success');
-    } catch {
-      showToast('撤销失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -277,8 +278,8 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
-    } catch {
-      showToast('复制失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
@@ -294,8 +295,8 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         ),
       );
       showToast('已更新', 'success');
-    } catch {
-      showToast('更新失败', 'error');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
     }
   };
 
