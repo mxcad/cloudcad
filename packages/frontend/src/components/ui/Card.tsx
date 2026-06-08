@@ -159,7 +159,7 @@ export interface CardBodyProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const CardBody: React.FC<CardBodyProps> = ({
-  padding = 'md',
+  padding = 'sm',
   className = '',
   children,
   ...props
@@ -167,7 +167,7 @@ const CardBody: React.FC<CardBodyProps> = ({
   return (
     <div
       className={`${paddingStyles[padding]} ${className}`}
-      style={{ color: 'var(--text-secondary)', padding: '12px 16px' }}
+      style={{ color: 'var(--text-secondary)'}}
       {...props}
     >
       {children}

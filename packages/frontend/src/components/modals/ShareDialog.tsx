@@ -38,10 +38,13 @@ interface ShareInfo {
   collaborationEnabled: boolean;
 }
 
-type ExpirationOption = 'never' | '1d' | '3d' | '7d' | 'custom';
+type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
 
 const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
   never: '永不过期',
+  '2h': '2 小时后过期',
+  '6h': '6 小时后过期',
+  '12h': '12 小时后过期',
   '1d': '1 天后过期',
   '3d': '3 天后过期',
   '7d': '7 天后过期',
@@ -50,6 +53,9 @@ const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
 
 const EXPIRATION_VALUES: Record<ExpirationOption, number | null> = {
   never: null,
+  '2h': 7200,
+  '6h': 21600,
+  '12h': 43200,
   '1d': 86400,
   '3d': 259200,
   '7d': 604800,

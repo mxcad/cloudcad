@@ -566,9 +566,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             <div className="flex items-center justify-between">
               <span
                 className="text-sm"
-                style={{ color: 'var(--text-tertiary)' }}
+                style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}
               >
-                共 {filteredMembers.length} 人
+                共 {filteredMembers.length} 人 
               </span>
               <select
                 value={filterRoleId}

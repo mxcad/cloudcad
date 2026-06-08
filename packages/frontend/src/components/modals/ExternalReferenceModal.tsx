@@ -187,12 +187,12 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         </div>
       }
     >
-      <div className="p-4">
+      <div>
         {/* 文件列表 */}
         {files.length > 0 ? (
           <div
-            className="rounded-lg overflow-hidden"
-            style={{ border: '1px solid var(--border-default)', maxHeight: '300px', overflowY: 'auto' }}
+            className="overflow-hidden"
+            style={{  maxHeight: '300px', overflowY: 'auto' }}
             data-tour="xref-list"
           >
             <table className="w-full">
