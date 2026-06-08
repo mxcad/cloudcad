@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateShareResponseDto {
   @ApiProperty({ description: '分享 token' })
@@ -50,9 +51,13 @@ export class ResolveShareNodeResponseDto {
 
 export class UpdateShareDto {
   @ApiPropertyOptional({ description: '是否允许接收者加入实时协同' })
+  @IsOptional()
+  @IsBoolean()
   collaborationEnabled?: boolean;
 
   @ApiPropertyOptional({ description: '过期时间（ISO 日期），传 null 改为永不过期', nullable: true })
+  @IsOptional()
+  @IsString()
   expiresAt?: string | null;
 }
 
