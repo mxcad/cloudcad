@@ -409,7 +409,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   if (viewMode === 'grid') {
     const showSelection = isMultiSelectMode && isSelected;
-    const thumbnailSize = galleryMode ? 100 : 64;
+    const thumbnailSize = 100;
 
     return (
       <Card
