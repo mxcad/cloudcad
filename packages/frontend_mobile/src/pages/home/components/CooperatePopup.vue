@@ -60,12 +60,17 @@ onMounted(() => {
   fetchWorks();
 });
 
+function mapUser(u: { id: string; username: string; avatar?: string } | null) {
+  if (!u) return undefined;
+  return { id: u.id, name: u.username, avatar: u.avatar };
+}
+
 function handleCreateWork() {
-  createWork(user.value ?? undefined);
+  createWork(mapUser(user.value));
 }
 
 function handleJoinWork(workId: number) {
-  joinWork(workId, user.value ?? undefined);
+  joinWork(workId, mapUser(user.value));
 }
 
 function handleExitWork() {
@@ -77,7 +82,7 @@ function handleClose() {
   emit('close');
 }
 
-function getWorkName(work: Work): string {
+function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
   const data = parseWorkData(work.work_data);
   if (data?.drawingId) {
     return `图纸 ${data.drawingId.slice(0, 8)}...`;
