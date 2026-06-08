@@ -950,12 +950,32 @@
   flex-shrink: 0;
 }
 
+.statusAvailableBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--info, #3b82f6);
+  background: var(--info-dim, rgba(59, 130, 246, 0.12));
+  border-radius: var(--radius-full, 9999px);
+  flex-shrink: 0;
+}
+
 .statusDot {
   width: 6px;
   height: 6px;
   background: var(--success, #22c55e);
   border-radius: 50%;
   animation: statusPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.statusDotStatic {
+  width: 6px;
+  height: 6px;
+  background: var(--info, #3b82f6);
+  border-radius: 50%;
 }
 
 .statusBody {

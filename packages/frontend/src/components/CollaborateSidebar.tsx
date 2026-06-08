@@ -102,6 +102,7 @@ export const CollaborateSidebar: React.FC = () => {
 
   const initCheckRef = useRef<NodeJS.Timeout | null>(null);
   const autoCreateRef = useRef(false);
+  const exitGuardRef = useRef(false);
 
   const fetchWorks = useCallback(async () => {
     try {
@@ -277,6 +278,7 @@ export const CollaborateSidebar: React.FC = () => {
   }, [location]);
 
   useEffect(() => {
+    if (exitGuardRef.current) return;
     if (!autoJoinRef.current || !currentFileId) return;
 
     // 非协同分享，不做任何自动操作
@@ -500,6 +502,8 @@ export const CollaborateSidebar: React.FC = () => {
       if (ret === 0) {
         setCurrentWorkId(null);
         setCollaborationState({ isInCollaboration: false, workId: null });
+        exitGuardRef.current = true;
+        setTimeout(() => { exitGuardRef.current = false; }, 3000);
         refreshFileName();
         fetchWorks();
         showToast('已退出协同', 'success');

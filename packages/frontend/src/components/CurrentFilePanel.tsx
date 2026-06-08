@@ -121,9 +121,9 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
     <div className={styles.statusCard}>
       <div className={styles.statusHeader}>
         <span className={styles.statusFileName}>{fileName}</span>
-        <span className={styles.statusLiveBadge}>
-          <span className={styles.statusDot} />
-          协同进行中
+        <span className={styles.statusAvailableBadge}>
+          <span className={styles.statusDotStatic} />
+          协同可用
         </span>
       </div>
       <div className={styles.statusBody}>
