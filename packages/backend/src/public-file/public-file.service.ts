@@ -332,6 +332,8 @@ export class PublicFileService {
     const uploadPath = this.uploadService.getUploadPath();
     let outputFile: string | undefined;
 
+    this.logger.log(`[convertMxwebByHash] params?.colorPolicy: ${params?.colorPolicy}, all keys: ${Object.keys(params || {})}`);
+
     try {
       const result = await this.fileConversionService.convertFile({
         srcPath: mxwebPath,

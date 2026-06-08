@@ -428,7 +428,7 @@ export const CADEditorDirect: React.FC = () => {
 
     // 注册打印/剪切回调
     mxcadApp.initPrintConfig({
-      callback: async (data: Blob, param) => {
+      callback: async (data: Blob, params) => {
         showGlobalLoading('正在上传打印文件...');
         const file = new File([data], 'print.mxweb', { type: 'application/octet-stream' });
         const hash = await calculateFileHash(file);
@@ -441,7 +441,7 @@ export const CADEditorDirect: React.FC = () => {
         });
 
         const result = await publicFileControllerConvertAndDownload({
-          body: { fileHash: hash, format: 'pdf', params: param },
+          body: { fileHash: hash, format: 'pdf', params: { cmd: 'print_to_pdf', ...params } },
         });
 
         hideGlobalLoading();
@@ -463,7 +463,7 @@ export const CADEditorDirect: React.FC = () => {
         });
 
         const result = await publicFileControllerConvertAndDownload({
-          body: { fileHash: hash, format: 'dwg', params: box.param },
+          body: { fileHash: hash, format: 'dwg', params: { cmd: 'cut_dwg', ...box.param } },
         });
 
         hideGlobalLoading();

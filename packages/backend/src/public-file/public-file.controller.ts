@@ -350,6 +350,8 @@ export class PublicFileController {
       );
     }
 
+    this.logger.log(`[convertAndDownload] params: ${JSON.stringify(body.params)}`);
+
     try {
       const result = await this.publicFileService.convertMxwebByHash(
         body.fileHash,
