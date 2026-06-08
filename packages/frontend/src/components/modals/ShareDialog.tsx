@@ -391,7 +391,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             <thead>
               <tr>
                 <th>链接</th>
-                <th>协同</th>
+                <th>自动加入协同</th>
                 <th>有效期</th>
                 <th>操作</th>
               </tr>
@@ -460,7 +460,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       <div style={rowStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={14} style={{ color: 'var(--text-tertiary)' }} />
-          <span style={labelStyle}>允许加入实时协同</span>
+          <span style={labelStyle}>自动加入协同</span>
         </div>
         <button
           onClick={() => setCollaborationEnabled(!collaborationEnabled)}
@@ -588,7 +588,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         >
           <Users size={12} />
           <span>
-            协同：{shareInfo!.collaborationEnabled ? '开启' : '关闭'}
+            自动加入协同：{shareInfo!.collaborationEnabled ? '开启' : '关闭'}
           </span>
         </div>
       </div>

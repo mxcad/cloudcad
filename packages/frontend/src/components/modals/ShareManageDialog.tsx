@@ -150,7 +150,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                 <thead>
                   <tr>
                     <th>链接</th>
-                    <th>协同</th>
+                    <th>自动加入协同</th>
                     <th>有效期</th>
                     <th>次数</th>
                     <th>操作</th>

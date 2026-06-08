@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Check, Trash2, Search, ExternalLink, Loader2 } from 'lucide-react';
+import { Copy, Check, Trash2, Search, ExternalLink, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
@@ -11,6 +11,8 @@ import {
   cooperateControllerUpdateShare,
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
+import { SelectFileModal } from '@/components/modals/SelectFileModal';
+import { ShareDialog } from '@/components/modals/ShareDialog';
 import './ShareManagePage/ShareManagePage.css';
 
 export const ShareManagePage: React.FC = () => {
@@ -25,6 +27,9 @@ export const ShareManagePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [showFileSelector, setShowFileSelector] = useState(false);
+  const [shareFileId, setShareFileId] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const fetchShares = useCallback(async (p: number, q: string) => {
     setLoading(true);
@@ -155,7 +160,8 @@ export const ShareManagePage: React.FC = () => {
           <Button variant="secondary" size="sm" onClick={handleSearch}>搜索</Button>
         </div>
         {items.length > 0 && (
-          <Button variant="primary" size="sm" onClick={() => navigate('/')}>
+          <Button variant="primary" size="sm" onClick={() => setShowFileSelector(true)}>
+            <Plus size={14} />
             新建分享
           </Button>
         )}
@@ -189,8 +195,8 @@ export const ShareManagePage: React.FC = () => {
               </Button>
             )}
             {!search && (
-              <Button variant="primary" size="sm" style={{ marginTop: '16px' }} onClick={() => navigate('/')}>
-                去分享
+              <Button variant="primary" size="sm" style={{ marginTop: '16px' }} onClick={() => setShowFileSelector(true)}>
+                新建分享
               </Button>
             )}
           </div>
@@ -203,7 +209,7 @@ export const ShareManagePage: React.FC = () => {
                 <tr>
                   <th>文件</th>
                   <th>链接</th>
-                  <th>协同</th>
+                  <th>自动加入协同</th>
                   <th>有效期</th>
                   <th>次数</th>
                   <th>创建时间</th>
@@ -280,6 +286,27 @@ export const ShareManagePage: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+      <SelectFileModal
+        isOpen={showFileSelector}
+        onClose={() => setShowFileSelector(false)}
+        onConfirm={(fileId, _fileName) => {
+          setShowFileSelector(false);
+          setShareFileId(fileId);
+          setShowShareDialog(true);
+        }}
+      />
+
+      {shareFileId && (
+        <ShareDialog
+          isOpen={showShareDialog}
+          onClose={() => {
+            setShowShareDialog(false);
+            setShareFileId(null);
+            fetchShares(page, search);
+          }}
+          fileId={shareFileId}
+        />
       )}
     </div>
   );
