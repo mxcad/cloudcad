@@ -371,21 +371,25 @@
   flex-shrink: 0;
 }
 
-.statusDot {
+.indicatorDot {
   position: absolute;
   inset: 0;
   background: var(--success, #22c55e);
   border-radius: 50%;
 }
 
-.statusDot::before {
+.indicatorDot::before {
   content: '';
   position: absolute;
   inset: -2px;
   background: var(--success, #22c55e);
   border-radius: 50%;
   opacity: 0.3;
-  animation: statusPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: indicatorPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes indicatorPing {
+  75%, 100% { transform: scale(2); opacity: 0; }
 }
 
 @keyframes statusPing {

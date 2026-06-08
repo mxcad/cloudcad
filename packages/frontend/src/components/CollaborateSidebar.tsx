@@ -132,16 +132,12 @@ export const CollaborateSidebar: React.FC = () => {
             );
             return { ...w, link_user_ids: linkUserIds, link_user_data: linkUserData };
           });
-          const prevIds = worksRef.current.map((w) => w.work_id).sort().join(',');
-          const newIds = filtered.map((w) => w.work_id).sort().join(',');
-          if (prevIds !== newIds) {
-            setWorks((prev) => {
-              const newWorkIds = filtered.map((w) => w.work_id);
-              const localOnly = prev.filter((w) => !newWorkIds.includes(w.work_id));
-              if (localOnly.length === 0) return filtered;
-              return [...filtered, ...localOnly];
-            });
-          }
+          setWorks((prev) => {
+            const newWorkIds = filtered.map((w) => w.work_id);
+            const localOnly = prev.filter((w) => !newWorkIds.includes(w.work_id));
+            if (localOnly.length === 0) return filtered;
+            return [...filtered, ...localOnly];
+          });
         setLoading(false);
       });
     } catch (error) {
@@ -317,16 +313,9 @@ export const CollaborateSidebar: React.FC = () => {
   worksRef.current = works;
 
   useEffect(() => {
-    if (!autoJoinRef.current) return;
+    if (!isCadReady) return;
 
     autoJoinTimerRef.current = setInterval(() => {
-      if (!autoJoinRef.current) {
-        if (autoJoinTimerRef.current) {
-          clearInterval(autoJoinTimerRef.current);
-          autoJoinTimerRef.current = null;
-        }
-        return;
-      }
       fetchWorks();
     }, 8000);
 
@@ -336,7 +325,7 @@ export const CollaborateSidebar: React.FC = () => {
         autoJoinTimerRef.current = null;
       }
     };
-  }, []);
+  }, [isCadReady, fetchWorks]);
 
   const handleCreateWork = useCallback(async (skipChecks = false) => {
     try {
@@ -474,11 +463,13 @@ export const CollaborateSidebar: React.FC = () => {
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
               refreshFileName();
+              fetchWorks();
             } else {
               if (iRet === 17) {
                 setCurrentWorkId(workId);
                 setCollaborationState({ isInCollaboration: true, workId });
                 refreshFileName();
+                fetchWorks();
               } else {
                 showToast(`加入协同失败，错误码: ${iRet}`, 'error');
               }
