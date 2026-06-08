@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { FileNameText } from '../ui/TruncateText';
-import { Folder } from 'lucide-react';
-import { ChevronRight } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
-import { Check } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import { Folder, Check, Loader2 } from 'lucide-react';
 import { useFolderChildren } from './hooks/useFolderChildren';
 import { FileSystemNode } from '../../types/filesystem';
 import { handleError } from '@/utils/errorHandler';
+import { FileTree } from '../ui/FileTree';
 
 interface SelectFolderModalProps {
   isOpen: boolean;
@@ -154,86 +150,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   );
 
   // 递归渲染文件夹树
-  const renderFolderTree = (
-    nodes: FolderNode[],
-    level: number = 0
-  ): React.ReactNode => {
-    if (!nodes || nodes.length === 0) {
-      return null;
-    }
 
-    return nodes.map((node) => (
-      <div key={node.id}>
-        <div
-          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 hover:bg-slate-50 border border-transparent`}
-          style={{
-            paddingLeft: `${level * 20 + 8}px`,
-            ...(selectedFolderId === node.id && {
-              background: 'var(--primary-50)',
-              color: 'var(--primary-700)',
-              borderColor: 'var(--primary-200)',
-            }),
-          }}
-          onClick={() => selectFolder(node.id)}
-        >
-          {/* 展开/折叠图标 */}
-          {node.hasChildren ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpand(node.id);
-              }}
-              className="p-0.5 flex-shrink-0"
-              disabled={node.loading}
-            >
-              {node.loading ? (
-                <Loader2 size={14} className="text-slate-400 animate-spin" />
-              ) : node.expanded ? (
-                <ChevronDown size={14} className="text-slate-500" />
-              ) : (
-                <ChevronRight size={14} className="text-slate-500" />
-              )}
-            </Button>
-          ) : (
-            <div className="w-5 h-5 flex-shrink-0" />
-          )}
-
-          {/* 文件夹图标 */}
-          <Folder
-            size={18}
-            className={`flex-shrink-0 transition-colors ${
-              selectedFolderId === node.id ? '' : 'text-amber-500'
-            }`}
-            style={{ color: selectedFolderId === node.id ? 'var(--primary-600)' : undefined }}
-          />
-
-          {/* 文件夹名称 */}
-          <FileNameText
-            className={`flex-1 transition-colors ${
-              selectedFolderId === node.id ? 'font-medium' : ''
-            }`}
-            style={{ color: selectedFolderId === node.id ? 'var(--primary-700)' : 'var(--text-secondary)' }}
-          >
-            {node.name}
-          </FileNameText>
-
-          {/* 选中标记 */}
-          {selectedFolderId === node.id && (
-            <Check size={18} className="flex-shrink-0" style={{ color: 'var(--primary-600)' }} />
-          )}
-        </div>
-
-        {/* 子文件夹 */}
-        {node.expanded && node.children && node.children.length > 0 && (
-          <div className="border-l border-slate-200 ml-6">
-            {renderFolderTree(node.children, level + 1)}
-          </div>
-        )}
-      </div>
-    ));
-  };
 
   const handleConfirm = () => {
     if (selectedFolderId) {
@@ -324,7 +241,12 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
               点击文件夹名称选择，点击箭头展开/折叠
             </p>
             <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-lg bg-white">
-              {renderFolderTree(folderTree)}
+              <FileTree
+                nodes={folderTree}
+                selectedId={selectedFolderId}
+                onToggleExpand={toggleExpand}
+                onSelect={(node) => selectFolder(node.id)}
+              />
             </div>
           </div>
         )}

@@ -60,3 +60,6 @@ export type { SectionProps } from './Section';
 export { Box } from './Box';
 export type { BoxProps, BoxSpacing, BoxBackground, BoxRadius, BoxDisplay, BoxFlex, BoxFlexDirection, BoxAlignItems, BoxJustifyContent, BoxElement } from './Box';
 
+export { FileTree } from './FileTree';
+export type { FileTreeNode, FileTreeProps } from './FileTree';
+

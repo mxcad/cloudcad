@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
-import { Folder, FileText, Search, Loader2, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { FileText, Search, Loader2 } from 'lucide-react';
 import {
   fileSystemControllerSearch,
   fileSystemControllerGetPersonalSpace,
@@ -10,6 +10,8 @@ import {
   fileSystemControllerGetChildren,
 } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
+import { FileTree } from '../ui/FileTree';
+import type { FileTreeNode } from '../ui/FileTree';
 
 interface SelectFileModalProps {
   isOpen: boolean;
@@ -223,92 +225,16 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     setSelectedName((prev) => (prev === name ? null : name));
   }, []);
 
-  const renderTree = (nodes: FileEntry[], level: number = 0): React.ReactNode => {
-    if (!nodes || nodes.length === 0) return null;
-
-    return nodes.map((node) => {
-      const isSelected = node.id === selectedId && !node.isFolder;
-
-      return (
-        <div key={node.id}>
-          <div
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent ${
-              isSelected ? 'bg-primary-50' : 'hover:bg-slate-50'
-            }`}
-            style={{
-              paddingLeft: `${level * 20 + 8}px`,
-              ...(isSelected && {
-                background: 'var(--primary-50)',
-                color: 'var(--primary-700)',
-                borderColor: 'var(--primary-200)',
-              }),
-            }}
-            onClick={() => {
-              if (node.isFolder) {
-                toggleExpand(node.id);
-              } else {
-                handleSelect(node.id, node.name);
-              }
-            }}
-          >
-            {node.isFolder ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleExpand(node.id);
-                }}
-                style={{
-                  width: '20px', height: '20px', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  padding: 0, flexShrink: 0,
-                }}
-                disabled={node.loading}
-              >
-                {node.loading ? (
-                  <Loader2 size={14} className="animate-spin" style={{ color: 'var(--text-tertiary)' }} />
-                ) : node.expanded ? (
-                  <ChevronDown size={14} style={{ color: 'var(--text-tertiary)' }} />
-                ) : (
-                  <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />
-                )}
-              </button>
-            ) : (
-              <div style={{ width: '20px', flexShrink: 0 }} />
-            )}
-
-            {node.isFolder ? (
-              <Folder size={18} className="flex-shrink-0" style={{ color: isSelected ? 'var(--primary-600)' : undefined }} />
-            ) : (
-              <FileText size={18} className="flex-shrink-0" style={{ color: isSelected ? 'var(--primary-600)' : 'var(--text-tertiary)' }} />
-            )}
-
-            <span
-              style={{
-                flex: 1, fontSize: 'var(--text-sm)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                fontWeight: isSelected ? 500 : 400,
-                color: isSelected ? 'var(--primary-700)' : node.isFolder ? 'var(--text-secondary)' : 'var(--text-primary)',
-              }}
-            >
-              {node.name}
-            </span>
-
-            {isSelected && (
-              <Check size={18} className="flex-shrink-0" style={{ color: 'var(--primary-600)' }} />
-            )}
-          </div>
-
-          {node.expanded && node.children.length > 0 && (
-            <div className="border-l border-slate-200 ml-6">
-              {renderTree(node.children, level + 1)}
-            </div>
-          )}
-        </div>
-      );
-    });
-  };
+  const handleTreeSelect = useCallback(
+    (node: FileTreeNode) => {
+      if (node.isFolder) {
+        toggleExpand(node.id);
+      } else {
+        handleSelect(node.id, node.name);
+      }
+    },
+    [handleSelect, toggleExpand],
+  );
 
   const handleConfirm = () => {
     if (selectedId && selectedName) {
@@ -427,7 +353,12 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                   background: 'var(--bg-primary)',
                 }}
               >
-                {renderTree(treeNodes)}
+                <FileTree
+                  nodes={treeNodes}
+                  selectedId={selectedId}
+                  onToggleExpand={toggleExpand}
+                  onSelect={handleTreeSelect}
+                />
               </div>
             )}
           </>

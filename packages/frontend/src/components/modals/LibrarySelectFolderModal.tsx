@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Folder } from 'lucide-react';
-import { ChevronRight } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
-import { Check } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { useLibraryFolders } from './hooks/useLibraryFolders';
 import { FileSystemNode } from '../../types/filesystem';
+import { FileTree } from '../ui/FileTree';
 
 interface LibrarySelectFolderModalProps {
   isOpen: boolean;
@@ -143,61 +140,6 @@ export const LibrarySelectFolderModal: React.FC<
     }
   }, [selectedFolderId, onConfirm]);
 
-  const renderFolderTree = (nodes: FolderNode[], depth: number = 0) => {
-    return nodes.map((node) => (
-      <div key={node.id}>
-        <div
-          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors hover:bg-gray-100`}
-          style={{
-            paddingLeft: `${depth * 20 + 8}px`,
-            ...(selectedFolderId === node.id && {
-              background: 'var(--primary-50)',
-              color: 'var(--primary-700)',
-            }),
-          }}
-          onClick={() => handleSelectFolder(node.id)}
-        >
-          {node.isRoot || node.hasChildren ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!node.loading) {
-                  handleToggleFolder(node.id);
-                }
-              }}
-              className="p-0.5"
-              disabled={node.loading}
-            >
-              {node.loading ? (
-                <Loader2 size={14} className="animate-spin text-gray-400" />
-              ) : node.expanded ? (
-                <ChevronDown size={14} className="text-gray-400" />
-              ) : (
-                <ChevronRight size={14} className="text-gray-400" />
-              )}
-            </Button>
-          ) : (
-            <span className="w-[14px]" />
-          )}
-
-          <Folder size={16} className="text-yellow-500" />
-
-          <span className="flex-1 truncate">{node.name}</span>
-
-          {selectedFolderId === node.id && (
-            <Check size={16} style={{ color: 'var(--primary-600)' }} />
-          )}
-        </div>
-
-        {node.expanded && node.children && (
-          <div>{renderFolderTree(node.children, depth + 1)}</div>
-        )}
-      </div>
-    ));
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`选择目标文件夹`}>
       <div className="space-y-4">
@@ -217,7 +159,12 @@ export const LibrarySelectFolderModal: React.FC<
               暂无文件夹
             </div>
           ) : (
-            renderFolderTree(folderTree)
+            <FileTree
+              nodes={folderTree}
+              selectedId={selectedFolderId}
+              onToggleExpand={handleToggleFolder}
+              onSelect={(node) => handleSelectFolder(node.id)}
+            />
           )}
         </div>
 
