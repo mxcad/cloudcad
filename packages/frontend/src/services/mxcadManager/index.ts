@@ -2384,7 +2384,9 @@ class MxCADInstanceManager {
   private setupInitializationListener(): void {
     MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
       this.isInitialized = true;
-      // 应用创建完成后，设置文档修改事件监听
+      // 应用创建完成后重新设置文件打开完成监听（此时 this.mxcadView.mxcad 可用）
+      this.setupFileOpenListener();
+      // 设置文档修改事件监听
       this.setupDocumentModifyListener();
       // 延迟注册自定义命令，确保在 mxcad-app 完成所有初始化后覆盖默认命令
       setTimeout(() => {
@@ -2574,44 +2576,87 @@ class MxCADInstanceManager {
       return false;
     }
 
-    try {
-      const token = localStorage.getItem('accessToken');
+    showGlobalLoading('正在加载图纸...');
 
-      for (
-        let attempt = 0;
-        attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
-        attempt++
-      ) {
-        try {
-          this.mxcadView.mxcad.openWebFile(
-            currentMxwebUrl,
-            undefined,
-            true,
-            token
-              ? { requestHeaders: { Authorization: `Bearer ${token}` } }
-              : undefined,
-            0
-          );
-          return true;
-        } catch (error) {
-          const err = error as Error;
-          if (
-            err.message?.includes('mxdrawObject') &&
-            attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
-          ) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
-            );
-            continue;
-          }
-          throw error;
-        }
+    // 等待文件打开完成（与 openFile 同样的模式）
+    return new Promise<boolean>((resolve) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        hideGlobalLoading();
+        resolve(false);
+      }, 60000);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        this.mxcadView?.mxcad?.off('openFileComplete', onOpen);
+      };
+
+      const onOpen = () => {
+        cleanup();
+        hideGlobalLoading();
+        resolve(true);
+      };
+
+      try {
+        this.mxcadView?.mxcad?.on('openFileComplete', onOpen);
+      } catch (error) {
+        cleanup();
+        hideGlobalLoading();
+        resolve(false);
+        return;
       }
-      return false;
-    } catch (error) {
-      console.error('重新加载文件失败:', error);
-      return false;
-    }
+
+      const doOpen = async () => {
+        try {
+          const token = localStorage.getItem('accessToken');
+          const url = currentMxwebUrl!;
+
+          for (
+            let attempt = 0;
+            attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
+            attempt++
+          ) {
+            try {
+              this.mxcadView!.mxcad!.openWebFile(
+                url,
+                undefined,
+                true,
+                token
+                  ? { requestHeaders: { Authorization: `Bearer ${token}` } }
+                  : undefined,
+                0
+              );
+              return; // 等待 openFileComplete
+            } catch (error) {
+              const err = error as Error;
+              if (
+                err.message?.includes('mxdrawObject') &&
+                attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
+              ) {
+                await new Promise((resolve) =>
+                  setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
+                );
+                continue;
+              }
+              cleanup();
+              hideGlobalLoading();
+              resolve(false);
+              return;
+            }
+          }
+          cleanup();
+          hideGlobalLoading();
+          resolve(false);
+        } catch (error) {
+          cleanup();
+          hideGlobalLoading();
+          console.error('重新加载文件失败:', error);
+          resolve(false);
+        }
+      };
+
+      doOpen();
+    });
   }
 
   isCreated(): boolean {

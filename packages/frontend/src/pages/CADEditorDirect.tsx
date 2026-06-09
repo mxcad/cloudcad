@@ -830,6 +830,7 @@ export const CADEditorDirect: React.FC = () => {
         const doOpenMxFile = async (skipFileOpen = false) => {
           if (isInitializedRef.current && mxcadManager.isCreated()) {
             mxcadManager.showMxCAD(true);
+            showGlobalLoading('正在加载图纸...');
             await mxcadManager.openFile(mxcadFileUrl);
             loadedFileUrlRef.current = mxcadFileUrl;
             currentFileIdRef.current = fileId;
@@ -853,6 +854,9 @@ export const CADEditorDirect: React.FC = () => {
           if (cancelled) return;
 
           mxcadManager.showMxCAD(true);
+          if (!skipFileOpen) {
+            showGlobalLoading('正在加载图纸...');
+          }
           await mxcadManager.initializeMxCADView(skipFileOpen ? undefined : mxcadFileUrl);
           if (cancelled) return;
 
@@ -907,6 +911,7 @@ export const CADEditorDirect: React.FC = () => {
       } catch (err) {
         console.error('加载文件失败:', err);
         if (!cancelled) {
+          hideGlobalLoading();
           setError('CAD编辑器初始化失败');
           setStoreError('CAD编辑器初始化失败');
           setLoading(false);
