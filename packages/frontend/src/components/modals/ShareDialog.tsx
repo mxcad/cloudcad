@@ -1,25 +1,23 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, Trash2, Loader2, Link2, Users, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Copy, Check, Trash2, Loader2, Link2, Plus, ArrowLeft } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
 import { getErrorMessage } from '../../utils/errorHandler';
 import {
-  cooperateControllerCreateShare,
-  cooperateControllerRevokeShare,
-  cooperateControllerListShares,
-  cooperateControllerUpdateShare,
+  shareControllerCreateShare,
+  shareControllerRevokeShare,
+  shareControllerListShares,
+  shareControllerGetFileShares,
 } from '@/api-sdk';
-import { client } from '@/api-sdk/client.gen';
 import type { ShareListItemDto } from '@/api-sdk';
 import './ShareManageDialog.css';
 
 interface ShareListItem {
   token: string;
   url: string;
-  collaborationEnabled: boolean;
   expiresAt: string | null;
   createdAt: string;
   createdBy: string;
@@ -36,7 +34,6 @@ interface ShareInfo {
   token: string;
   url: string;
   expiresAt: string | null;
-  collaborationEnabled: boolean;
 }
 
 type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
@@ -74,7 +71,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const resolvedFileId = propFileId || currentFileId;
 
-  const [collaborationEnabled, setCollaborationEnabled] = useState(false);
   const [expiration, setExpiration] = useState<ExpirationOption>('7d');
   const [customDays, setCustomDays] = useState(1);
 
@@ -98,9 +94,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     setListError(null);
     try {
       if (readOnly) {
-        const response = await (
-          client as { get: (opts: { url: string }) => Promise<{ data: unknown; error?: unknown }> }
-        ).get({ url: `/api/v1/collaboration/share/file/${resolvedFileId}` });
+        const response = await shareControllerGetFileShares({
+          path: { fileId: resolvedFileId },
+        });
         if (response.error) {
           setListError('获取分享链接失败');
           return;
@@ -108,7 +104,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         const fetched = (response.data as ShareListItem[]) ?? [];
         setItems(fetched);
       } else {
-        const result = await cooperateControllerListShares({
+        const result = await shareControllerListShares({
           query: { fileId: resolvedFileId, page: 1, pageSize: 50 },
         });
         if (result.error) {
@@ -120,7 +116,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         const mapped: ShareListItem[] = raw.map((item) => ({
           token: item.token,
           url: `/share/${item.token}`,
-          collaborationEnabled: item.collaborationEnabled,
           expiresAt: (item as Record<string, unknown>).expiresAt as string | null,
           createdAt: (item as Record<string, unknown>).createdAt as string,
           createdBy: '',
@@ -142,7 +137,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setShareInfo(null);
       setCopied(false);
       prevFileIdRef.current = null;
-      setCollaborationEnabled(false);
       setExpiration('7d');
       setCustomDays(1);
       setItems([]);
@@ -178,11 +172,10 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
     setLoading(true);
     try {
-      const result = await cooperateControllerCreateShare({
+      const result = await shareControllerCreateShare({
         body: {
           fileId: resolvedFileId,
           ...(expiresIn !== undefined ? { expiresIn } : {}),
-          collaborationEnabled,
         },
       });
       if (result.error) {
@@ -202,7 +195,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             ? raw.expiresAt
             : new Date(raw.expiresAt as number | string).toISOString()
           : null,
-        collaborationEnabled: !!raw.collaborationEnabled,
       };
       setShareInfo(data);
       setView('created');
@@ -212,14 +204,14 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [resolvedFileId, collaborationEnabled, expiration, customDays, showToast, fetchShares]);
+  }, [resolvedFileId, expiration, customDays, showToast, fetchShares]);
 
   const revokeShare = useCallback(async () => {
     if (!shareInfo) return;
 
     setRevoking(true);
     try {
-      const result = await cooperateControllerRevokeShare({
+      const result = await shareControllerRevokeShare({
         path: { token: shareInfo.token },
       });
       if (result.error) {
@@ -259,7 +251,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   const handleRevoke = async (token: string) => {
     if (readOnly) return;
     try {
-      const result = await cooperateControllerRevokeShare({ path: { token } });
+      const result = await shareControllerRevokeShare({ path: { token } });
       if (result.error) {
         showToast(getErrorMessage(result.error), 'error');
         return;
@@ -278,23 +270,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
-    } catch (error) {
-      showToast(getErrorMessage(error), 'error');
-    }
-  };
-
-  const handleToggleCollaboration = async (item: ShareListItem) => {
-    try {
-      await cooperateControllerUpdateShare({
-        path: { token: item.token },
-        body: { collaborationEnabled: !item.collaborationEnabled },
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.token === item.token ? { ...i, collaborationEnabled: !i.collaborationEnabled } : i,
-        ),
-      );
-      showToast('已更新', 'success');
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
     }
@@ -325,31 +300,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     fontWeight: 500,
   };
 
-  const toggleStyle = (on: boolean): React.CSSProperties => ({
-    width: '36px',
-    height: '20px',
-    borderRadius: '10px',
-    background: on ? 'var(--primary-500)' : 'var(--border-default)',
-    cursor: 'pointer',
-    position: 'relative',
-    transition: 'background 0.2s',
-    border: 'none',
-    padding: 0,
-    flexShrink: 0,
-  });
-
-  const toggleKnobStyle = (on: boolean): React.CSSProperties => ({
-    width: '16px',
-    height: '16px',
-    borderRadius: '50%',
-    background: 'white',
-    position: 'absolute',
-    top: '2px',
-    left: on ? '18px' : '2px',
-    transition: 'left 0.2s',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-  });
-
   const radioGroupStyle: React.CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
@@ -365,7 +315,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             variant="primary"
             size="sm"
             onClick={() => {
-              setCollaborationEnabled(false);
               setExpiration('7d');
               setCustomDays(1);
               setView('create');
@@ -398,7 +347,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             <thead>
               <tr>
                 <th>链接</th>
-                <th>自动加入协同</th>
                 <th>有效期</th>
                 <th>操作</th>
               </tr>
@@ -420,14 +368,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                         {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                       </button>
                     </div>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => { if (!readOnly) handleToggleCollaboration(item); }}
-                      className={`share-dialog-collab-btn ${item.collaborationEnabled ? 'share-dialog-collab-btn--on' : 'share-dialog-collab-btn--off'}`}
-                    >
-                      {item.collaborationEnabled ? '开' : '关'}
-                    </button>
                   </td>
                   <td style={{ color: 'var(--text-secondary)' }}>
                     {formatDate(item.expiresAt)}
@@ -464,28 +404,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         padding: '8px 0',
       }}
     >
-      <div style={rowStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Users size={14} style={{ color: 'var(--text-tertiary)' }} />
-          <span style={labelStyle}>自动加入协同</span>
-        </div>
-        <button
-          onClick={() => setCollaborationEnabled(!collaborationEnabled)}
-          style={toggleStyle(collaborationEnabled)}
-          type="button"
-        >
-          <div style={toggleKnobStyle(collaborationEnabled)} />
-        </button>
-      </div>
-
-      <div
-        style={{
-          width: '100%',
-          height: '1px',
-          background: 'var(--border-default)',
-        }}
-      />
-
       <div style={{ width: '100%' }}>
         <span style={{ ...labelStyle, display: 'block', marginBottom: '8px' }}>
           有效期
@@ -584,20 +502,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           />
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-tertiary)',
-          }}
-        >
-          <Users size={12} />
-          <span>
-            自动加入协同：{shareInfo!.collaborationEnabled ? '开启' : '关闭'}
-          </span>
-        </div>
       </div>
 
       <div

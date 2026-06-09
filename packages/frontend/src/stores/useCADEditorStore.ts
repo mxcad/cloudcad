@@ -11,7 +11,6 @@ interface CADEditorState {
   currentProjectId: string | null;
   isPersonalSpaceMode: boolean;
   fromShare: boolean;
-  shareCollaborationEnabled: boolean | null;
   isInCollaboration: boolean;
   collaborationWorkId: number | null;
   setIsActive: (active: boolean) => void;
@@ -22,7 +21,6 @@ interface CADEditorState {
   setCurrentProjectId: (projectId: string | null) => void;
   setIsPersonalSpaceMode: (mode: boolean) => void;
   setFromShare: (fromShare: boolean) => void;
-  setShareCollaborationEnabled: (enabled: boolean | null) => void;
   setCollaborationState: (state: { isInCollaboration: boolean; workId: number | null }) => void;
 }
 
@@ -37,7 +35,6 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   currentProjectId: null,
   isPersonalSpaceMode: false,
   fromShare: false,
-  shareCollaborationEnabled: null,
   isInCollaboration: false,
   collaborationWorkId: null,
   setIsActive: (active) => set({ isActive: active }),
@@ -53,7 +50,6 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   setCurrentProjectId: (projectId) => set({ currentProjectId: projectId }),
   setIsPersonalSpaceMode: (mode) => set({ isPersonalSpaceMode: mode }),
   setFromShare: (fromShare) => set({ fromShare }),
-  setShareCollaborationEnabled: (enabled) => set({ shareCollaborationEnabled: enabled }),
   setCollaborationState: ({ isInCollaboration, workId }) =>
     set({ isInCollaboration, collaborationWorkId: workId }),
 }));

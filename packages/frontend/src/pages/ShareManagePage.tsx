@@ -7,9 +7,8 @@ import { Pagination } from '@/components/ui/Pagination';
 import { useNotification } from '@/contexts/NotificationContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import {
-  cooperateControllerListShares,
-  cooperateControllerRevokeShare,
-  cooperateControllerUpdateShare,
+  shareControllerListShares,
+  shareControllerRevokeShare,
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
 import { SelectFileModal } from '@/components/modals/SelectFileModal';
@@ -36,7 +35,7 @@ export const ShareManagePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await cooperateControllerListShares({
+      const result = await shareControllerListShares({
         query: {
           page: p,
           pageSize: 20,
@@ -68,7 +67,7 @@ export const ShareManagePage: React.FC = () => {
 
   const handleRevoke = async (token: string) => {
     try {
-      const result = await cooperateControllerRevokeShare({ path: { token } });
+      const result = await shareControllerRevokeShare({ path: { token } });
       if (result.error) {
         showToast(getErrorMessage(result.error), 'error');
         return;
@@ -93,23 +92,6 @@ export const ShareManagePage: React.FC = () => {
     }
   };
 
-  const handleEditToggleCollaboration = async (item: ShareListItemDto) => {
-    try {
-      await cooperateControllerUpdateShare({
-        path: { token: item.token },
-        body: { collaborationEnabled: !item.collaborationEnabled },
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.token === item.token ? { ...i, collaborationEnabled: !i.collaborationEnabled } : i,
-        ),
-      );
-      showToast('已更新', 'success');
-    } catch (error) {
-      showToast(getErrorMessage(error), 'error');
-    }
-  };
-
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '永不过期';
     try {
@@ -129,17 +111,6 @@ export const ShareManagePage: React.FC = () => {
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
-
-  const collaborationBtnStyle = (enabled: boolean): React.CSSProperties => ({
-    padding: '2px 8px',
-    fontSize: '11px',
-    fontWeight: 600,
-    border: '1px solid var(--border-default)',
-    borderRadius: 'var(--radius-sm)',
-    background: enabled ? 'var(--success-dim)' : 'transparent',
-    color: enabled ? 'var(--success)' : 'var(--text-tertiary)',
-    cursor: 'pointer',
-  });
 
   return (
     <div className="share-mgmt-page">
@@ -210,7 +181,6 @@ export const ShareManagePage: React.FC = () => {
                 <tr>
                   <th>文件</th>
                   <th>链接</th>
-                  <th>自动加入协同</th>
                   <th>有效期</th>
                   <th>次数</th>
                   <th>创建时间</th>
@@ -235,14 +205,6 @@ export const ShareManagePage: React.FC = () => {
                           {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                         </button>
                       </div>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleEditToggleCollaboration(item)}
-                        style={collaborationBtnStyle(item.collaborationEnabled)}
-                      >
-                        {item.collaborationEnabled ? '开' : '关'}
-                      </button>
                     </td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
                       {formatDate(item.expiresAt as string | null)}

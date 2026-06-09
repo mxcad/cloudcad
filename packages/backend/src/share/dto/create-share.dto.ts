@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateShareDto {
@@ -11,9 +11,4 @@ export class CreateShareDto {
   @IsNumber()
   @Min(60)
   expiresIn?: number;
-
-  @ApiPropertyOptional({ description: '是否允许接收者加入实时协同', default: false })
-  @IsOptional()
-  @IsBoolean()
-  collaborationEnabled?: boolean;
 }

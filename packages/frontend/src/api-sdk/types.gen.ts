@@ -2368,10 +2368,6 @@ export type CreateShareDto = {
      * 过期时间（秒），null 表示永不过期
      */
     expiresIn?: number;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled?: boolean;
 };
 
 export type CreateShareResponseDto = {
@@ -2389,10 +2385,6 @@ export type CreateShareResponseDto = {
     expiresAt?: {
         [key: string]: unknown;
     };
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
 };
 
 export type ResolveShareResponseDto = {
@@ -2400,10 +2392,6 @@ export type ResolveShareResponseDto = {
      * 文件 ID
      */
     fileId: string;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
 };
 
 export type ResolveShareNodeResponseDto = {
@@ -2435,10 +2423,6 @@ export type ResolveShareNodeResponseDto = {
      * 更新时间
      */
     updatedAt?: string;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
 };
 
 export type ShareListItemDto = {
@@ -2462,10 +2446,6 @@ export type ShareListItemDto = {
      * 文件名
      */
     fileName: string;
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
     /**
      * 过期时间
      */
@@ -2511,10 +2491,6 @@ export type FileSharesResponseDto = {
      */
     url: string;
     /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled: boolean;
-    /**
      * 过期时间
      */
     expiresAt?: {
@@ -2531,10 +2507,6 @@ export type FileSharesResponseDto = {
 };
 
 export type UpdateShareDto = {
-    /**
-     * 是否允许接收者加入实时协同
-     */
-    collaborationEnabled?: boolean;
     /**
      * 过期时间（ISO 日期），传 null 改为永不过期
      */
@@ -6912,134 +6884,7 @@ export type SaveControllerSaveMxwebAsResponses = {
 
 export type SaveControllerSaveMxwebAsResponse = SaveControllerSaveMxwebAsResponses[keyof SaveControllerSaveMxwebAsResponses];
 
-export type CooperateControllerCreateShareData = {
-    body: CreateShareDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/collaboration/share';
-};
-
-export type CooperateControllerCreateShareErrors = {
-    /**
-     * 参数错误
-     */
-    400: unknown;
-};
-
-export type CooperateControllerCreateShareResponses = {
-    /**
-     * 分享链接创建成功
-     */
-    201: CreateShareResponseDto;
-};
-
-export type CooperateControllerCreateShareResponse = CooperateControllerCreateShareResponses[keyof CooperateControllerCreateShareResponses];
-
-export type CooperateControllerRevokeShareData = {
-    body?: never;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}';
-};
-
-export type CooperateControllerRevokeShareErrors = {
-    /**
-     * 无权操作
-     */
-    403: unknown;
-    /**
-     * 链接不存在
-     */
-    404: unknown;
-};
-
-export type CooperateControllerRevokeShareResponses = {
-    /**
-     * 撤销成功
-     */
-    200: unknown;
-};
-
-export type CooperateControllerResolveShareData = {
-    body?: never;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}';
-};
-
-export type CooperateControllerResolveShareErrors = {
-    /**
-     * 链接不存在或已失效
-     */
-    404: unknown;
-};
-
-export type CooperateControllerResolveShareResponses = {
-    /**
-     * 解析成功
-     */
-    200: ResolveShareResponseDto;
-};
-
-export type CooperateControllerResolveShareResponse = CooperateControllerResolveShareResponses[keyof CooperateControllerResolveShareResponses];
-
-export type CooperateControllerUpdateShareData = {
-    body: UpdateShareDto;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}';
-};
-
-export type CooperateControllerUpdateShareErrors = {
-    /**
-     * 无权操作
-     */
-    403: unknown;
-    /**
-     * 链接不存在
-     */
-    404: unknown;
-};
-
-export type CooperateControllerUpdateShareResponses = {
-    /**
-     * 修改成功
-     */
-    200: unknown;
-};
-
-export type CooperateControllerResolveShareNodeData = {
-    body?: never;
-    path: {
-        token: string;
-    };
-    query?: never;
-    url: '/api/v1/collaboration/share/{token}/node';
-};
-
-export type CooperateControllerResolveShareNodeErrors = {
-    /**
-     * 链接不存在或文件不存在
-     */
-    404: unknown;
-};
-
-export type CooperateControllerResolveShareNodeResponses = {
-    /**
-     * 文件信息
-     */
-    200: ResolveShareNodeResponseDto;
-};
-
-export type CooperateControllerResolveShareNodeResponse = CooperateControllerResolveShareNodeResponses[keyof CooperateControllerResolveShareNodeResponses];
-
-export type CooperateControllerListSharesData = {
+export type ShareControllerListSharesData = {
     body?: never;
     path?: never;
     query?: {
@@ -7068,35 +6913,162 @@ export type CooperateControllerListSharesData = {
          */
         sortOrder?: 'asc' | 'desc';
     };
-    url: '/api/v1/collaboration/shares';
+    url: '/api/v1/shares';
 };
 
-export type CooperateControllerListSharesResponses = {
+export type ShareControllerListSharesResponses = {
     /**
      * 分享列表
      */
     200: ShareListResponseDto;
 };
 
-export type CooperateControllerListSharesResponse = CooperateControllerListSharesResponses[keyof CooperateControllerListSharesResponses];
+export type ShareControllerListSharesResponse = ShareControllerListSharesResponses[keyof ShareControllerListSharesResponses];
 
-export type CooperateControllerGetFileSharesData = {
+export type ShareControllerCreateShareData = {
+    body: CreateShareDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/shares';
+};
+
+export type ShareControllerCreateShareErrors = {
+    /**
+     * 参数错误
+     */
+    400: unknown;
+};
+
+export type ShareControllerCreateShareResponses = {
+    /**
+     * 分享链接创建成功
+     */
+    201: CreateShareResponseDto;
+};
+
+export type ShareControllerCreateShareResponse = ShareControllerCreateShareResponses[keyof ShareControllerCreateShareResponses];
+
+export type ShareControllerRevokeShareData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/shares/{token}';
+};
+
+export type ShareControllerRevokeShareErrors = {
+    /**
+     * 无权操作
+     */
+    403: unknown;
+    /**
+     * 链接不存在
+     */
+    404: unknown;
+};
+
+export type ShareControllerRevokeShareResponses = {
+    /**
+     * 撤销成功
+     */
+    200: unknown;
+};
+
+export type ShareControllerResolveShareData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/shares/{token}';
+};
+
+export type ShareControllerResolveShareErrors = {
+    /**
+     * 链接不存在或已失效
+     */
+    404: unknown;
+};
+
+export type ShareControllerResolveShareResponses = {
+    /**
+     * 解析成功
+     */
+    200: ResolveShareResponseDto;
+};
+
+export type ShareControllerResolveShareResponse = ShareControllerResolveShareResponses[keyof ShareControllerResolveShareResponses];
+
+export type ShareControllerUpdateShareData = {
+    body: UpdateShareDto;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/shares/{token}';
+};
+
+export type ShareControllerUpdateShareErrors = {
+    /**
+     * 无权操作
+     */
+    403: unknown;
+    /**
+     * 链接不存在
+     */
+    404: unknown;
+};
+
+export type ShareControllerUpdateShareResponses = {
+    /**
+     * 修改成功
+     */
+    200: unknown;
+};
+
+export type ShareControllerResolveShareNodeData = {
+    body?: never;
+    path: {
+        token: string;
+    };
+    query?: never;
+    url: '/api/v1/shares/{token}/node';
+};
+
+export type ShareControllerResolveShareNodeErrors = {
+    /**
+     * 链接不存在或文件不存在
+     */
+    404: unknown;
+};
+
+export type ShareControllerResolveShareNodeResponses = {
+    /**
+     * 文件信息
+     */
+    200: ResolveShareNodeResponseDto;
+};
+
+export type ShareControllerResolveShareNodeResponse = ShareControllerResolveShareNodeResponses[keyof ShareControllerResolveShareNodeResponses];
+
+export type ShareControllerGetFileSharesData = {
     body?: never;
     path: {
         fileId: string;
     };
     query?: never;
-    url: '/api/v1/collaboration/share/file/{fileId}';
+    url: '/api/v1/shares/file/{fileId}';
 };
 
-export type CooperateControllerGetFileSharesResponses = {
+export type ShareControllerGetFileSharesResponses = {
     /**
      * 分享链接列表
      */
     200: Array<FileSharesResponseDto>;
 };
 
-export type CooperateControllerGetFileSharesResponse = CooperateControllerGetFileSharesResponses[keyof CooperateControllerGetFileSharesResponses];
+export type ShareControllerGetFileSharesResponse = ShareControllerGetFileSharesResponses[keyof ShareControllerGetFileSharesResponses];
 
 export type AdminControllerGetAdminStatsData = {
     body?: never;

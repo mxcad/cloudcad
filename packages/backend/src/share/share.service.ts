@@ -12,8 +12,8 @@ import { SystemPermission, ProjectPermission } from '../common/enums/permissions
 import { CreateShareDto, UpdateShareDto } from './dto';
 
 @Injectable()
-export class CooperateService {
-  private readonly logger = new Logger(CooperateService.name);
+export class ShareService {
+  private readonly logger = new Logger(ShareService.name);
 
   constructor(
     private readonly prisma: DatabaseService,
@@ -22,7 +22,7 @@ export class CooperateService {
   ) {}
 
   async createShare(dto: CreateShareDto, userId: string) {
-    const { fileId, expiresIn, collaborationEnabled } = dto;
+    const { fileId, expiresIn } = dto;
 
     const fileNode = await this.prisma.fileSystemNode.findFirst({
       where: { id: fileId, deletedAt: null },
@@ -40,25 +40,23 @@ export class CooperateService {
     }
 
     const share = await this.prisma.$transaction(async (tx) => {
-      return tx.cooperateShare.create({
+      return tx.fileShare.create({
         data: {
           fileId,
           createdBy: userId,
           expiresAt,
-          collaborationEnabled: collaborationEnabled ?? false,
         },
       });
     });
 
     this.logger.log(
-      `创建分享: fileId=${fileId}, token=${share.token}, userId=${userId}, collaborationEnabled=${share.collaborationEnabled}`
+      `创建分享: fileId=${fileId}, token=${share.token}, userId=${userId}`
     );
 
     return {
       token: share.token,
       url: `/share/${share.token}`,
       expiresAt: share.expiresAt,
-      collaborationEnabled: share.collaborationEnabled,
     };
   }
 
@@ -114,7 +112,7 @@ export class CooperateService {
   }
 
   async resolveShare(token: string) {
-    const share = await this.prisma.cooperateShare.findUnique({
+    const share = await this.prisma.fileShare.findUnique({
       where: { token },
     });
 
@@ -130,19 +128,18 @@ export class CooperateService {
       throw new NotFoundException('分享链接已过期');
     }
 
-    await this.prisma.cooperateShare.update({
+    await this.prisma.fileShare.update({
       where: { id: share.id },
       data: { usedCount: { increment: 1 } },
     });
 
     return {
       fileId: share.fileId,
-      collaborationEnabled: share.collaborationEnabled,
     };
   }
 
   async revokeShare(token: string, userId: string) {
-    const share = await this.prisma.cooperateShare.findUnique({
+    const share = await this.prisma.fileShare.findUnique({
       where: { token },
     });
 
@@ -158,7 +155,7 @@ export class CooperateService {
       throw new NotFoundException('分享链接已撤销');
     }
 
-    await this.prisma.cooperateShare.update({
+    await this.prisma.fileShare.update({
       where: { id: share.id },
       data: { deletedAt: new Date() },
     });
@@ -167,7 +164,7 @@ export class CooperateService {
   }
 
   async resolveShareNode(token: string) {
-    const share = await this.prisma.cooperateShare.findUnique({
+    const share = await this.prisma.fileShare.findUnique({
       where: { token },
     });
 
@@ -200,7 +197,7 @@ export class CooperateService {
       throw new NotFoundException('文件不存在');
     }
 
-    await this.prisma.cooperateShare.update({
+    await this.prisma.fileShare.update({
       where: { id: share.id },
       data: { usedCount: { increment: 1 } },
     });
@@ -213,7 +210,6 @@ export class CooperateService {
       id: fileNode.id,
       deletedAt: fileNode.deletedAt?.toISOString() ?? null,
       updatedAt: fileNode.updatedAt.toISOString(),
-      collaborationEnabled: share.collaborationEnabled,
     };
   }
 
@@ -240,8 +236,8 @@ export class CooperateService {
     }
 
     const [total, shares] = await Promise.all([
-      this.prisma.cooperateShare.count({ where }),
-      this.prisma.cooperateShare.findMany({
+      this.prisma.fileShare.count({ where }),
+      this.prisma.fileShare.findMany({
         where,
         orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * pageSize,
@@ -262,7 +258,6 @@ export class CooperateService {
       url: `/share/${share.token}`,
       fileId: share.fileId,
       fileName: fileNameMap.get(share.fileId) ?? '未知文件',
-      collaborationEnabled: share.collaborationEnabled,
       expiresAt: share.expiresAt?.toISOString() ?? null,
       usedCount: share.usedCount,
       createdAt: share.createdAt.toISOString(),
@@ -287,7 +282,7 @@ export class CooperateService {
 
     await this.checkSharePermission(userId, fileNode);
 
-    const shares = await this.prisma.cooperateShare.findMany({
+    const shares = await this.prisma.fileShare.findMany({
       where: {
         fileId,
         deletedAt: null,
@@ -306,7 +301,6 @@ export class CooperateService {
     return shares.map((share) => ({
       token: share.token,
       url: `/share/${share.token}`,
-      collaborationEnabled: share.collaborationEnabled,
       expiresAt: share.expiresAt?.toISOString() ?? null,
       createdAt: share.createdAt.toISOString(),
       createdBy: share.createdBy,
@@ -319,7 +313,7 @@ export class CooperateService {
    * @param storagePath 请求的文件存储路径（如 202506/nodeId/filename.dwg）
    */
   async validateShareFileAccess(token: string, storagePath: string): Promise<void> {
-    const share = await this.prisma.cooperateShare.findUnique({
+    const share = await this.prisma.fileShare.findUnique({
       where: { token },
     });
 
@@ -348,8 +342,6 @@ export class CooperateService {
       throw new NotFoundException('文件已被删除');
     }
 
-    // 验证请求的存储路径与分享文件的路径一致
-    // 防止 shareToken 被用于访问其他文件
     if (fileNode.path !== storagePath) {
       this.logger.warn(
         `分享令牌路径不匹配: token=${token}, expected=${fileNode.path}, requested=${storagePath}`
@@ -357,14 +349,14 @@ export class CooperateService {
       throw new ForbiddenException('分享令牌与请求的文件不匹配');
     }
 
-    await this.prisma.cooperateShare.update({
+    await this.prisma.fileShare.update({
       where: { id: share.id },
       data: { usedCount: { increment: 1 } },
     });
   }
 
   async updateShare(token: string, userId: string, dto: UpdateShareDto) {
-    const share = await this.prisma.cooperateShare.findUnique({
+    const share = await this.prisma.fileShare.findUnique({
       where: { token },
     });
 
@@ -381,26 +373,22 @@ export class CooperateService {
     }
 
     const data: any = {};
-    if (dto.collaborationEnabled !== undefined) {
-      data.collaborationEnabled = dto.collaborationEnabled;
-    }
     if (dto.expiresAt !== undefined) {
       data.expiresAt = dto.expiresAt === null ? null : new Date(dto.expiresAt);
     }
 
-    const updated = await this.prisma.cooperateShare.update({
+    const updated = await this.prisma.fileShare.update({
       where: { id: share.id },
       data,
     });
 
     this.logger.log(
-      `更新分享: token=${token}, userId=${userId}, collaborationEnabled=${updated.collaborationEnabled}`
+      `更新分享: token=${token}, userId=${userId}`
     );
 
     return {
       token: updated.token,
       url: `/share/${updated.token}`,
-      collaborationEnabled: updated.collaborationEnabled,
       expiresAt: updated.expiresAt?.toISOString() ?? null,
     };
   }

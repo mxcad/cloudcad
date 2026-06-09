@@ -4,15 +4,13 @@ import { Loader2, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Tag } from '@/components/ui/Tag';
 import {
-  cooperateControllerResolveShareNode,
+  shareControllerResolveShareNode,
 } from '@/api-sdk';
 
 interface ShareFileInfo {
   id: string;
   name: string;
-  collaborationEnabled: boolean;
 }
 
 export const ShareLanding: React.FC = () => {
@@ -34,7 +32,7 @@ export const ShareLanding: React.FC = () => {
     if (resolvedRef.current) return;
     resolvedRef.current = true;
 
-    cooperateControllerResolveShareNode({ path: { token } })
+    shareControllerResolveShareNode({ path: { token } })
       .then((result) => {
         setLoading(false);
         if (result.error) {
@@ -49,7 +47,6 @@ export const ShareLanding: React.FC = () => {
         const info: ShareFileInfo = {
           id: data.id as string,
           name: (data.name as string) ?? '未知图纸',
-          collaborationEnabled: !!data.collaborationEnabled,
         };
         setFileInfo(info);
       })
@@ -142,13 +139,8 @@ export const ShareLanding: React.FC = () => {
                 {fileInfo.name}
               </div>
 
-              {fileInfo.collaborationEnabled && (
-                <Tag variant="success" size="sm">已开启实时协同</Tag>
-              )}
-
               <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', textAlign: 'center' }}>
                 登录后即可查看图纸
-                {fileInfo.collaborationEnabled && '并参与实时协同'}
               </div>
 
               <Button variant="primary" onClick={handleLogin} style={{ width: '100%' }}>

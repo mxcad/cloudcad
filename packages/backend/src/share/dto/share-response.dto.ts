@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateShareResponseDto {
   @ApiProperty({ description: '分享 token' })
@@ -10,17 +9,11 @@ export class CreateShareResponseDto {
 
   @ApiPropertyOptional({ description: '过期时间' })
   expiresAt: Date | null;
-
-  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
-  collaborationEnabled: boolean;
 }
 
 export class ResolveShareResponseDto {
   @ApiProperty({ description: '文件 ID' })
   fileId: string;
-
-  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
-  collaborationEnabled: boolean;
 }
 
 export class ResolveShareNodeResponseDto {
@@ -44,20 +37,10 @@ export class ResolveShareNodeResponseDto {
 
   @ApiPropertyOptional({ description: '更新时间' })
   updatedAt: string;
-
-  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
-  collaborationEnabled: boolean;
 }
 
 export class UpdateShareDto {
-  @ApiPropertyOptional({ description: '是否允许接收者加入实时协同' })
-  @IsOptional()
-  @IsBoolean()
-  collaborationEnabled?: boolean;
-
   @ApiPropertyOptional({ description: '过期时间（ISO 日期），传 null 改为永不过期', nullable: true })
-  @IsOptional()
-  @IsString()
   expiresAt?: string | null;
 }
 
@@ -77,9 +60,6 @@ export class ShareListItemDto {
   @ApiProperty({ description: '文件名' })
   fileName: string;
 
-  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
-  collaborationEnabled: boolean;
-
   @ApiPropertyOptional({ description: '过期时间', nullable: true })
   expiresAt: string | null;
 
@@ -96,9 +76,6 @@ export class FileSharesResponseDto {
 
   @ApiProperty({ description: '分享链接路径' })
   url: string;
-
-  @ApiProperty({ description: '是否允许接收者加入实时协同', default: false })
-  collaborationEnabled: boolean;
 
   @ApiPropertyOptional({ description: '过期时间', nullable: true })
   expiresAt: string | null;

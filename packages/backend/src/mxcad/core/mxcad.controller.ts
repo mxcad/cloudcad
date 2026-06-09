@@ -78,7 +78,7 @@ import { UploadUtilityService } from '../upload/upload-utility.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
-import { CooperateService } from '../../cooperate/cooperate.service';
+import { ShareService } from '../../share/share.service';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { StorageQuotaInterceptor } from '../../common/interceptors/storage-quota.interceptor';
@@ -116,7 +116,7 @@ export class MxCadController {
     private readonly mxcadFileHandler: MxcadFileHandlerService,
     private readonly fileTreeService: FileTreeService,
     private readonly uploadUtilityService: UploadUtilityService,
-    private readonly cooperateService: CooperateService
+    private readonly shareService: ShareService
   ) {
     this.mxCadFileExt =
       this.configService.get('conversion.fileExt', { infer: true }) || '.mxweb';
@@ -1031,7 +1031,7 @@ export class MxCadController {
    * 授权检查：验证请求是否有权访问指定的文件存储路径
    *
    * 双路授权策略：
-   * 1. shareToken 存在 → 通过 CooperateService 验证 share token 绑定此文件
+    * 1. shareToken 存在 → 通过 ShareService 验证 share token 绑定此文件
    * 2. shareToken 不存在 → 通过项目权限系统检查 FILE_OPEN 权限
    */
   private async authorizeFilesDataAccess(
@@ -1042,7 +1042,7 @@ export class MxCadController {
     const shareToken = req.query.shareToken as string | undefined;
 
     if (shareToken) {
-      await this.cooperateService.validateShareFileAccess(
+      await this.shareService.validateShareFileAccess(
         shareToken,
         normalizedFilename
       );

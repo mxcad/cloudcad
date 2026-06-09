@@ -5,9 +5,8 @@ import { Button } from '../ui/Button';
 import { useNotification } from '../../contexts/NotificationContext';
 import { getErrorMessage } from '../../utils/errorHandler';
 import {
-  cooperateControllerListShares,
-  cooperateControllerRevokeShare,
-  cooperateControllerUpdateShare,
+  shareControllerListShares,
+  shareControllerRevokeShare,
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
 import { ShareDialog } from './ShareDialog';
@@ -38,7 +37,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const result = await cooperateControllerListShares({
+      const result = await shareControllerListShares({
         query: { fileId, page: 1, pageSize: 50 },
       });
       if (result.error) {
@@ -62,7 +61,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
 
   const handleRevoke = async (token: string) => {
     try {
-      const result = await cooperateControllerRevokeShare({ path: { token } });
+      const result = await shareControllerRevokeShare({ path: { token } });
       if (result.error) {
         showToast(getErrorMessage(result.error), 'error');
         return;
@@ -81,23 +80,6 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
-    } catch (error) {
-      showToast(getErrorMessage(error), 'error');
-    }
-  };
-
-  const handleToggleCollaboration = async (item: ShareListItemDto) => {
-    try {
-      await cooperateControllerUpdateShare({
-        path: { token: item.token },
-        body: { collaborationEnabled: !item.collaborationEnabled },
-      });
-      setItems((prev) =>
-        prev.map((i) =>
-          i.token === item.token ? { ...i, collaborationEnabled: !i.collaborationEnabled } : i,
-        ),
-      );
-      showToast('已更新', 'success');
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
     }
@@ -151,7 +133,6 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                 <thead>
                   <tr>
                     <th>链接</th>
-                    <th>自动加入协同</th>
                     <th>有效期</th>
                     <th>次数</th>
                     <th>操作</th>
@@ -174,14 +155,6 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                             {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                           </button>
                         </div>
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => handleToggleCollaboration(item)}
-                          className={`share-dialog-collab-btn ${item.collaborationEnabled ? 'share-dialog-collab-btn--on' : 'share-dialog-collab-btn--off'}`}
-                        >
-                          {item.collaborationEnabled ? '开' : '关'}
-                        </button>
                       </td>
                       <td style={{ color: 'var(--text-secondary)' }}>
                         {formatDate(item.expiresAt as string | null)}

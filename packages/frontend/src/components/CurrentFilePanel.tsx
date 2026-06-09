@@ -15,7 +15,6 @@ interface Work {
 interface CurrentFilePanelProps {
   work: Work | undefined;
   currentWorkId: number | null;
-  collaborationEnabled: boolean;
   fileName: string;
   isCadReady: boolean;
   creating: boolean;
@@ -45,7 +44,6 @@ function parseWorkData(raw: string): { drawingId?: string; projectId?: string | 
 export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
   work,
   currentWorkId,
-  collaborationEnabled,
   fileName,
   isCadReady,
   creating,
@@ -220,28 +218,6 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
     </div>
   );
 
-  const renderScenarioD = () => {
-    if (!collaborationEnabled) {
-      return (
-        <div className={styles.statusCard}>
-          <div className={styles.statusHeader}>
-            <span className={styles.statusFileName}>{fileName}</span>
-          </div>
-          <div className={styles.statusBody}>
-            <div className={styles.statusIcon}>
-              <Users size={20} />
-            </div>
-            <div className={styles.statusTitle}>此图纸未开启协同</div>
-            <div className={styles.statusDesc}>
-              分享者未启用实时协同功能，你可以正常查看图纸
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const renderScenarioWaiting = () => (
     <div className={styles.statusCard}>
       <div className={styles.statusHeader}>
@@ -264,9 +240,6 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
 
   const panel = (() => {
     if (!work) {
-      if (collaborationEnabled === false) {
-        return renderScenarioD();
-      }
       if (waitingForSession) {
         return renderScenarioWaiting();
       }

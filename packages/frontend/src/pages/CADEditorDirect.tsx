@@ -17,7 +17,7 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload, cooperateControllerResolveShareNode } from '@/api-sdk';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload, shareControllerResolveShareNode } from '@/api-sdk';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { PdfExportModal } from '../components/modals/PdfExportModal';
@@ -91,7 +91,7 @@ export const CADEditorDirect: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotification();
   const { hasPermission } = usePermission();
-  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setFromShare, setShareCollaborationEnabled } = useCADEditorStore();
+  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setFromShare } = useCADEditorStore();
 
   // 主页模式（/ 路由，无 fileId）- 在组件顶部计算，用于初始化 isActive
   const isHomeMode = isHomeRoute(location.pathname);
@@ -617,7 +617,6 @@ export const CADEditorDirect: React.FC = () => {
       // 不 setLoading(true) — 侧边栏持续可见，不因骨架屏卸载 ProjectDrawingsPanel
       setError(null);
       setStoreError(null);
-      setShareCollaborationEnabled(null);
 
       try {
         const { mxcadManager } = await import('../services/mxcadManager');
@@ -645,11 +644,8 @@ export const CADEditorDirect: React.FC = () => {
           file = nodeData!;
         } else if (shareTokenParam) {
           try {
-            const { data: fileData } = await cooperateControllerResolveShareNode({ path: { token: shareTokenParam } });
+            const { data: fileData } = await shareControllerResolveShareNode({ path: { token: shareTokenParam } });
             file = fileData!;
-            if (file && 'collaborationEnabled' in file) {
-              setShareCollaborationEnabled(!!(file as unknown as Record<string, unknown>).collaborationEnabled);
-            }
           } catch (error) {
             console.error('通过分享 token 获取文件信息失败:', error);
             setError('分享文件不存在或已失效');
@@ -877,37 +873,7 @@ export const CADEditorDirect: React.FC = () => {
           }
         };
 
-        const collaborationEnabled = file && 'collaborationEnabled' in file
-          ? !!(file as unknown as Record<string, unknown>).collaborationEnabled
-          : false;
-
-        // 分享协同模式：先正常打开图纸，等待打开完成后再触发协同创建/加入
-        if (!!shareTokenParam && collaborationEnabled) {
-          await doOpenMxFile(false);
-
-          if (!cancelled) {
-            await new Promise<void>((resolve) => {
-              const onComplete = () => {
-                window.removeEventListener('mxcad-file-open-complete', onComplete);
-                resolve();
-              };
-              window.addEventListener('mxcad-file-open-complete', onComplete);
-            });
-          }
-
-          window.dispatchEvent(
-            new CustomEvent('mxcad-file-opened', {
-              detail: { fileId: file.id, parentId: file.parentId || null, projectId },
-            })
-          );
-          window.dispatchEvent(
-            new CustomEvent('mxcad-open-sidebar', {
-              detail: { type: 'collaborate' },
-            })
-          );
-        } else {
-          await doOpenMxFile(false);
-        }
+        await doOpenMxFile(false);
       } catch (err) {
         console.error('加载文件失败:', err);
         if (!cancelled) {

@@ -72,7 +72,7 @@ async function fetchMyProjectIds(): Promise<string[]> {
 
 export const CollaborateSidebar: React.FC = () => {
   const { user } = useAuth();
-  const { currentFileId, currentProjectId, fromShare, shareCollaborationEnabled, setCollaborationState } = useCADEditorStore();
+  const { currentFileId, currentProjectId, fromShare, setCollaborationState } = useCADEditorStore();
   const { showToast } = useNotification();
   const location = useLocation();
 
@@ -102,7 +102,6 @@ export const CollaborateSidebar: React.FC = () => {
   const [initialFetchDone, setInitialFetchDone] = useState(false);
 
   const initCheckRef = useRef<NodeJS.Timeout | null>(null);
-  const autoCreateRef = useRef(false);
   const exitGuardRef = useRef(false);
 
   const fetchWorks = useCallback(async () => {
@@ -269,49 +268,8 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, [works]);
 
-  const autoJoinRef = useRef(false);
-  const handleCreateWorkRef = useRef<(skipChecks?: boolean) => Promise<void>>(async () => {});
   const handleJoinWorkRef = useRef<(workId: number, skipModifiedCheck?: boolean) => Promise<void>>(async () => {});
-
-  useEffect(() => {
-    const shareParam = new URLSearchParams(location.search).get('fromShare');
-    autoJoinRef.current = shareParam === '1';
-  }, [location]);
-
-  useEffect(() => {
-    if (exitGuardRef.current) return;
-    if (!autoJoinRef.current || !currentFileId) return;
-
-    // 非协同分享，不做任何自动操作
-    if (shareCollaborationEnabled === false) {
-      autoJoinRef.current = false;
-      setWaitingForSession(false);
-      return;
-    }
-
-    // 等待首次 fetchWorks 完成
-    if (!initialFetchDone) return;
-
-    const matchingWork = works.find((w) => {
-      const data = parseWorkData(w.work_data);
-      return data?.drawingId === currentFileId;
-    });
-
-    if (matchingWork && currentWorkId === null) {
-      // 有协同 → 直接加入
-      autoJoinRef.current = false;
-      setWaitingForSession(false);
-      handleJoinWorkRef.current(matchingWork.work_id, true);
-    } else if (!matchingWork && !autoCreateRef.current && !creating) {
-      // 没有协同 → 自动创建协同（仅执行一次）
-      autoCreateRef.current = true;
-      setWaitingForSession(false);
-      handleCreateWorkRef.current(true);
-    }
-  }, [works, currentFileId, currentWorkId, shareCollaborationEnabled, initialFetchDone, creating]);
-
   const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   const worksRef = useRef(works);
   worksRef.current = works;
 
@@ -416,7 +374,6 @@ export const CollaborateSidebar: React.FC = () => {
     fetchWorks,
     showToast,
   ]);
-  handleCreateWorkRef.current = handleCreateWork;
 
   const handleJoinWork = useCallback(
     async (workId: number, skipModifiedCheck = false) => {
@@ -602,7 +559,6 @@ export const CollaborateSidebar: React.FC = () => {
           <CurrentFilePanel
             work={currentFileWork}
             currentWorkId={currentWorkId}
-            collaborationEnabled={shareCollaborationEnabled === null ? true : shareCollaborationEnabled}
             fileName={currentFileName}
             isCadReady={isCadReady}
             creating={creating}

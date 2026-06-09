@@ -12,9 +12,6 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,7 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CooperateService } from './cooperate.service';
+import { ShareService } from './share.service';
 import {
   CreateShareDto,
   CreateShareResponseDto,
@@ -36,18 +33,18 @@ import {
   FileSharesResponseDto,
 } from './dto';
 
-@ApiTags('协同分享')
-@Controller('collaboration')
-export class CooperateController {
-  private readonly logger = new Logger(CooperateController.name);
+@ApiTags('文件分享')
+@Controller('shares')
+export class ShareController {
+  private readonly logger = new Logger(ShareController.name);
 
-  constructor(private readonly cooperateService: CooperateService) {}
+  constructor(private readonly shareService: ShareService) {}
 
-  @Post('share')
+  @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: '创建协同分享链接' })
+  @ApiOperation({ summary: '创建分享链接' })
   @ApiResponse({
     status: 201,
     description: '分享链接创建成功',
@@ -56,11 +53,11 @@ export class CooperateController {
   @ApiResponse({ status: 400, description: '参数错误' })
   async createShare(@Body() dto: CreateShareDto, @Req() req: Request) {
     const userId = (req.user as { id: string }).id;
-    const result = await this.cooperateService.createShare(dto, userId);
+    const result = await this.shareService.createShare(dto, userId);
     return result;
   }
 
-  @Get('share/:token')
+  @Get(':token')
   @ApiOperation({ summary: '解析分享链接' })
   @ApiResponse({
     status: 200,
@@ -69,11 +66,11 @@ export class CooperateController {
   })
   @ApiResponse({ status: 404, description: '链接不存在或已失效' })
   async resolveShare(@Param('token') token: string) {
-    const result = await this.cooperateService.resolveShare(token);
+    const result = await this.shareService.resolveShare(token);
     return result;
   }
 
-  @Get('share/:token/node')
+  @Get(':token/node')
   @ApiOperation({ summary: '通过分享 token 获取文件信息' })
   @ApiResponse({
     status: 200,
@@ -82,11 +79,11 @@ export class CooperateController {
   })
   @ApiResponse({ status: 404, description: '链接不存在或文件不存在' })
   async resolveShareNode(@Param('token') token: string) {
-    const result = await this.cooperateService.resolveShareNode(token);
+    const result = await this.shareService.resolveShareNode(token);
     return result;
   }
 
-  @Delete('share/:token')
+  @Delete(':token')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
@@ -96,11 +93,11 @@ export class CooperateController {
   @ApiResponse({ status: 404, description: '链接不存在' })
   async revokeShare(@Param('token') token: string, @Req() req: Request) {
     const userId = (req.user as { id: string }).id;
-    await this.cooperateService.revokeShare(token, userId);
+    await this.shareService.revokeShare(token, userId);
     return { message: '分享已撤销' };
   }
 
-  @Get('shares')
+  @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取分享列表（分页）' })
@@ -121,7 +118,7 @@ export class CooperateController {
     @Req() req?: Request,
   ) {
     const userId = (req!.user as { id: string }).id;
-    const result = await this.cooperateService.listShares(userId, {
+    const result = await this.shareService.listShares(userId, {
       page: page ? parseInt(page, 10) : undefined,
       pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
       fileId,
@@ -132,7 +129,7 @@ export class CooperateController {
     return result;
   }
 
-  @Get('share/file/:fileId')
+  @Get('file/:fileId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取文件已有的分享链接列表' })
@@ -143,10 +140,10 @@ export class CooperateController {
   })
   async getFileShares(@Param('fileId') fileId: string, @Req() req: Request) {
     const userId = (req.user as { id: string }).id;
-    return this.cooperateService.getFileShares(fileId, userId);
+    return this.shareService.getFileShares(fileId, userId);
   }
 
-  @Patch('share/:token')
+  @Patch(':token')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
@@ -160,7 +157,7 @@ export class CooperateController {
     @Req() req: Request,
   ) {
     const userId = (req.user as { id: string }).id;
-    const result = await this.cooperateService.updateShare(token, userId, dto);
+    const result = await this.shareService.updateShare(token, userId, dto);
     return result;
   }
 }
