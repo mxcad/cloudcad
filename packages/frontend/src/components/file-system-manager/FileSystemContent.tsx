@@ -153,7 +153,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
             node={node}
             isSelected={selectedNodes.has(node.id)}
             viewMode={viewMode}
-            isMultiSelectMode={isMultiSelectMode}
+                
             onSelect={onNodeSelect}
             onEnter={onFileOpen}
             onDownload={onDownload}

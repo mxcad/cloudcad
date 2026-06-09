@@ -22,8 +22,9 @@ import {
 import { FileSystemNode } from '../types/filesystem';
 import { Card } from './ui/Card';
 import { Tooltip } from './ui/Tooltip';
+import { Menu } from './ui/Menu';
+import { Z_LAYERS } from '@/constants/layers';
 
-// Lucide 图标（用于 compact 模式）
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
 
@@ -39,7 +40,6 @@ interface FileItemProps {
   compact?: boolean;
   /** 图库模式：网格模式图片完全占据容器，文件名在底部，不显示大小；列表模式图片放大，去除后缀标签 */
   galleryMode?: boolean;
-  isMultiSelectMode?: boolean;
   isTrash?: boolean;
   canUpload?: boolean;
   canEdit?: boolean;
@@ -48,14 +48,28 @@ interface FileItemProps {
   canViewVersionHistory?: boolean;
   canManageTrash?: boolean;
   canManageExternalReference?: boolean;
-  /** 是否需要双击打开（默认 false，单击打开） */
-  doubleClickToOpen?: boolean;
   /** 文件名字体大小，默认不设置（继承父元素字体大小） */
   fontSize?: number | string;
   /** 隐藏文件类型标签（文件夹/DWG/DXF 等徽章） */
   hideTypeTag?: boolean;
   /** 强制紧凑操作模式：始终使用"更多"菜单替代独立操作按钮 */
   forceCompactActions?: boolean;
+  /** 隐藏选中圆圈（用于项目列表等纯导航场景） */
+  hideSelectionCircle?: boolean;
+  /** 双击打开（用于侧边栏图库等场景），true=单击打开，false=双击打开，配合 hideSelectionCircle 提示 */
+  doubleClickToOpen?: boolean;
+  /** 是否正在框选（禁用拖拽避免冲突） */
+  isRubberBanding?: boolean;
+  /** 当前已选中的条目总数（用于多选场景右键菜单） */
+  selectedCount?: number;
+  /** 批量删除选中项 */
+  onBatchDelete?: () => void;
+  /** 批量移动选中项 */
+  onBatchMove?: () => void;
+  /** 批量复制选中项 */
+  onBatchCopy?: () => void;
+  /** 批量恢复选中项 */
+  onBatchRestore?: () => void;
   onSelect?: (
     nodeId: string,
     isMultiSelect?: boolean,
@@ -89,7 +103,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   viewMode = 'list',
   compact = false,
   galleryMode = false,
-  isMultiSelectMode = false,
   isTrash = false,
   canUpload = false,
   canEdit = false,
@@ -98,10 +111,17 @@ export const FileItem: React.FC<FileItemProps> = ({
   canViewVersionHistory = false,
   canManageExternalReference = false,
   canManageTrash = false,
-  doubleClickToOpen = false,
   fontSize,
   hideTypeTag = false,
   forceCompactActions = false,
+  hideSelectionCircle = true,
+  doubleClickToOpen = false,
+  isRubberBanding = false,
+  selectedCount = 0,
+  onBatchDelete,
+  onBatchMove,
+  onBatchCopy,
+  onBatchRestore,
   onSelect,
   onEnter,
   onDownload,
@@ -124,7 +144,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDrop,
   isDropTarget = false,
 }) => {
-  // 空值保护：node 为空时返回 null
   if (!node) {
     console.warn('[FileItem] node is undefined or null');
     return null;
@@ -132,9 +151,9 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const [useCompactActions, setUseCompactActions] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isRoot = node.isRoot;
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
@@ -147,8 +166,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     nodeId: node.id,
     onSuccess: () => {
       console.info('外部参照上传成功，开始刷新文件列表', 'FileItem');
-      // 后端在上传成功后已经调用了 updateExternalReferenceAfterUpload 更新数据库
-      // 前端只需要刷新文件列表即可
       onRefresh?.();
     },
     onError: (error) => {
@@ -169,11 +186,8 @@ export const FileItem: React.FC<FileItemProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       try {
-        // 调用 checkMissingReferences 打开外部参照管理弹框
-        // forceOpen = true，手动点击时即使没有外部参照也弹框显示提示
         const hasExternalReference = await externalReferenceUpload.checkMissingReferences(undefined, false, true);
-        
-        // 如果没有外部参照，提示用户
+
         if (!hasExternalReference) {
           console.info(`[FileItem] 文件 "${node.name}" 没有外部参照`);
         }
@@ -201,26 +215,26 @@ export const FileItem: React.FC<FileItemProps> = ({
         return;
       }
 
+      if (isRubberBanding) return;
+
       if ((e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')) {
         return;
       }
 
-      if (isMultiSelectMode) {
-        const isCtrl = e.ctrlKey || e.metaKey;
-        const isShift = e.shiftKey;
-        // 在多选模式下：
-        // - 直接点击：切换选中状态（isMulti=true, isShift=false）
-        // - Ctrl+点击：切换选中状态（isMulti=true, isShift=false）
-        // - Shift+点击：范围选择（isMulti=true, isShift=true）
-        onSelect?.(node.id, true, isShift);
+      const isCtrl = e.ctrlKey || e.metaKey;
+      const isShift = e.shiftKey;
+
+      if (!hideSelectionCircle) {
+        if (isCtrl || isShift) {
+          onSelect?.(node.id, isCtrl || isShift, isShift);
+        } else {
+          onEnter(node);
+        }
       } else if (doubleClickToOpen) {
-        // 双击模式：等待用户完成双击，只有确定是单击才显示提示
         clickCountRef.current++;
         if (clickCountRef.current === 1) {
-          // 第一次点击，启动定时器
           clickTimerRef.current = setTimeout(() => {
-            // 超过时间没有第二次点击，确定是单击
-            infoOnce('请双击打开图纸');
+            infoOnce('请双击打开');
             clickCountRef.current = 0;
             clickTimerRef.current = null;
           }, 300);
@@ -230,13 +244,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         onEnter(node);
       }
     },
-    [
-      node,
-      isMultiSelectMode,
-      onSelect,
-      onEnter,
-      doubleClickToOpen,
-    ]
+    [node, onSelect, onEnter, hideSelectionCircle, doubleClickToOpen, isRubberBanding]
   );
 
   const handleDoubleClick = useCallback(
@@ -259,7 +267,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     setShowMenu(false);
   }, []);
 
-  // 操作处理函数映射
   const actionHandlers: Record<ActionType, (e: React.MouseEvent) => void> = {
     upload_external_reference: handleUploadExternalReference,
     download: (e) => {
@@ -312,7 +319,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     },
   };
 
-  // 获取可用操作列表
   const actionProps = {
     node,
     isTrash,
@@ -336,13 +342,152 @@ export const FileItem: React.FC<FileItemProps> = ({
     onCopy: !!onCopy,
     onRestore: !!onRestore,
     onPermanentlyDelete: !!onPermanentlyDelete,
-    // 对于项目根节点，使用 onDeleteNode（已由权限检查控制）；对于普通节点，使用 onDelete
     onDeleteNode: isRoot ? !!onDeleteNode : (!!onDeleteNode || !!onDelete),
   };
 
   const availableActions = getAvailableActions(actionProps);
 
-  // 响应式操作按钮：监听列表项宽度，空间不足时切换为菜单按钮模式
+  const moveCopyActions = availableActions.filter(
+    (a) => a.type === 'move' || a.type === 'copy'
+  );
+  const contextMainActions = availableActions.filter(
+    (a) => !a.isDestructive && a.type !== 'move' && a.type !== 'copy'
+  );
+  const contextDestructiveActions = availableActions.filter((a) => a.isDestructive);
+
+  const isMultiSelected = selectedCount > 1 && isSelected;
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isMultiSelected) {
+        if (!(onBatchDelete || onBatchMove || onBatchCopy || onBatchRestore)) return;
+      } else {
+        const ma = availableActions.filter((a) => !a.isDestructive && a.type !== 'move' && a.type !== 'copy');
+        const da = availableActions.filter((a) => a.isDestructive);
+        const mca = availableActions.filter((a) => a.type === 'move' || a.type === 'copy');
+        if (ma.length === 0 && da.length === 0 && mca.length === 0) return;
+      }
+      if (!hideSelectionCircle && !isMultiSelected && !isSelected && onSelect) {
+        onSelect(node.id, false, false);
+      }
+      setContextMenuPos({ x: e.clientX, y: e.clientY });
+    },
+    [node, onSelect, isSelected, isMultiSelected, hideSelectionCircle,
+     onBatchDelete, onBatchMove, onBatchCopy, onBatchRestore, availableActions]
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuPos(null);
+  }, []);
+
+  const variantMap: Record<string, 'default' | 'danger' | 'success' | 'info' | 'warning'> = {
+    upload_external_reference: 'warning',
+    download: 'default',
+    view_version_history: 'info',
+    rename: 'default',
+    move: 'default',
+    copy: 'default',
+    restore: 'success',
+    delete: 'danger',
+    permanently_delete: 'danger',
+    edit: 'default',
+    show_members: 'default',
+    show_roles: 'default',
+    share: 'default',
+  };
+
+  const contextMenuElement = contextMenuPos && (isMultiSelected
+    ? !!(onBatchDelete || onBatchMove || onBatchCopy || onBatchRestore)
+    : availableActions.length > 0
+  ) && (
+    <div style={{ position: 'fixed', left: contextMenuPos.x, top: contextMenuPos.y, width: 0, height: 0, overflow: 'visible', zIndex: Z_LAYERS.POPUP }}>
+      <Menu open onOpenChange={(open) => { if (!open) closeContextMenu(); }} modal={false}>
+        <Menu.Trigger asChild>
+          <div style={{ width: 0, height: 0 }} />
+        </Menu.Trigger>
+        <Menu.Content align="start" side="bottom" sideOffset={0}>
+          {isMultiSelected ? (
+            <>
+              {onBatchDelete && (
+                <Menu.Item variant="danger" onClick={() => { onBatchDelete(); closeContextMenu(); }}>
+                  删除 {selectedCount} 个选中项
+                </Menu.Item>
+              )}
+              {onBatchMove && (
+                <Menu.Item onClick={() => { onBatchMove(); closeContextMenu(); }}>
+                  移动 {selectedCount} 个选中项
+                </Menu.Item>
+              )}
+              {onBatchCopy && (
+                <Menu.Item onClick={() => { onBatchCopy(); closeContextMenu(); }}>
+                  复制 {selectedCount} 个选中项
+                </Menu.Item>
+              )}
+              {onBatchRestore && (
+                <Menu.Item variant="success" onClick={() => { onBatchRestore(); closeContextMenu(); }}>
+                  恢复 {selectedCount} 个选中项
+                </Menu.Item>
+              )}
+            </>
+          ) : (
+            <>
+              {contextMainActions.map((action) => (
+                <Menu.Item
+                  key={action.type}
+                  variant={variantMap[action.type] || 'default'}
+                  icon={action.icon}
+                  onClick={() => {
+                    actionHandlers[action.type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
+                    closeContextMenu();
+                  }}
+                >
+                  {action.label}
+                </Menu.Item>
+              ))}
+
+              {moveCopyActions.length > 0 && (
+                <Menu.Submenu label="其他操作" icon={moveCopyActions[0]?.icon}>
+                  {moveCopyActions.map((action) => (
+                    <Menu.Item
+                      key={action.type}
+                      variant={variantMap[action.type] || 'default'}
+                      icon={action.icon}
+                      onClick={() => {
+                        actionHandlers[action.type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
+                        closeContextMenu();
+                      }}
+                    >
+                      {action.label}
+                    </Menu.Item>
+                  ))}
+                </Menu.Submenu>
+              )}
+
+              {(contextDestructiveActions.length > 0) && (contextMainActions.length > 0 || moveCopyActions.length > 0) && <Menu.Separator />}
+
+              {contextDestructiveActions.map((action) => (
+                <Menu.Item
+                  key={action.type}
+                  variant="danger"
+                  icon={action.icon}
+                  onClick={() => {
+                    actionHandlers[action.type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
+                    closeContextMenu();
+                  }}
+                >
+                  {action.label}
+                </Menu.Item>
+              ))}
+            </>
+          )}
+        </Menu.Content>
+      </Menu>
+      <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={closeContextMenu} />
+    </div>
+  );
+
   useEffect(() => {
     if (viewMode !== 'list') return;
 
@@ -352,8 +497,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        // 宽度小于 550px 时使用紧凑模式（菜单按钮）
-        // 操作按钮区域大约需要：每个按钮 40px × N个按钮
         setUseCompactActions(width < 550);
       }
     });
@@ -362,40 +505,42 @@ export const FileItem: React.FC<FileItemProps> = ({
     return () => resizeObserver.disconnect();
   }, [viewMode]);
 
-  // 当视图模式切换时，重置悬停和菜单状态，避免闪烁
   useEffect(() => {
     setIsHovered(false);
     setShowMenu(false);
   }, [viewMode]);
 
   if (viewMode === 'grid') {
-    const showSelection = isMultiSelectMode && isSelected;
+    const showSelectedStyle = isSelected;
     const thumbnailSize = 100;
 
     return (
+      <>
       <Card
         variant="outlined"
         padding="none"
         radius={galleryMode ? 'sm' : undefined}
         data-tour="file-item"
-        className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto
+        data-node-id={node.id}
+        title={doubleClickToOpen ? '双击打开' : undefined}
+        className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto select-none
           ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
-          ${showSelection ? 'shadow-md' : ''}
+          ${showSelectedStyle ? 'shadow-md' : ''}
           ${isDropTarget ? 'shadow-md' : ''}
-          ${!showSelection && !isDropTarget && !galleryMode ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
-          ${!showSelection && !isDropTarget && galleryMode ? 'hover:shadow-lg' : ''}
+          ${!showSelectedStyle && !isDropTarget && !galleryMode ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
+          ${!showSelectedStyle && !isDropTarget && galleryMode ? 'hover:shadow-lg' : ''}
         `}
         style={{
-          background: showSelection || isDropTarget
+          background: showSelectedStyle || isDropTarget
             ? 'var(--primary-50)'
             : 'var(--bg-drawing-card)',
-          border: showSelection || isDropTarget
+          border: showSelectedStyle || isDropTarget
             ? '2px solid var(--primary-500)'
             : undefined,
         }}
         onMouseEnter={(e) => {
           setIsHovered(true);
-          if (!showSelection && !isDropTarget) {
+          if (!showSelectedStyle && !isDropTarget) {
             if (galleryMode) {
               e.currentTarget.style.background = 'var(--bg-tertiary)';
             } else {
@@ -407,7 +552,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           setIsHovered(false);
           setShowMenu(false);
           onDragLeave?.();
-          if (!showSelection && !isDropTarget) {
+          if (!showSelectedStyle && !isDropTarget) {
             if (galleryMode) {
               e.currentTarget.style.background = 'var(--bg-drawing-card)';
             } else {
@@ -415,19 +560,23 @@ export const FileItem: React.FC<FileItemProps> = ({
             }
           }
         }}
+        onMouseDown={(e) => { if (hideSelectionCircle && !isRubberBanding) e.stopPropagation(); }}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
-        draggable={!!onDragStart && !node.isRoot}
-        onDragStart={(e) => onDragStart?.(e, node)}
+        onContextMenu={handleContextMenu}
+        draggable={hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding}
+        onDragStart={(e) => { onDragStart?.(e, node); }}
         onDragOver={(e) => onDragOver?.(e, node)}
         onDrop={(e) => onDrop?.(e, node)}
       >
-        <FileItemSelection
-          isSelected={isSelected}
-          isMultiSelectMode={isMultiSelectMode}
-          onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
-          isGrid
-        />
+        {!hideSelectionCircle && (
+          <FileItemSelection
+            isSelected={isSelected}
+            onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
+            isGrid
+            isDraggable={!!onDragStart && !node.isRoot && !isRubberBanding}
+          />
+        )}
 
         {galleryMode ? (
           <div className="flex flex-col h-full p-2">
@@ -448,9 +597,9 @@ export const FileItem: React.FC<FileItemProps> = ({
         ) : (
           <div className="p-6 pb-4">
             <div
-              className="mx-auto mb-4 flex items-center justify-center transition-transform duration-200 
-                ${isHovered && !showSelection ? 'scale-110' : ''}
-                ${showSelection ? 'scale-105' : ''}
+              className="mx-auto mb-4 flex items-center justify-center transition-transform duration-200
+                ${isHovered && !showSelectedStyle ? 'scale-110' : ''}
+                ${showSelectedStyle ? 'scale-105' : ''}
               "
               style={{ width: thumbnailSize, height: thumbnailSize }}
             >
@@ -513,19 +662,17 @@ export const FileItem: React.FC<FileItemProps> = ({
           onClose={externalReferenceUpload.close}
         />
       </Card>
+      {contextMenuElement}
+    </>
     );
   }
 
-  const showListSelection = isMultiSelectMode && isSelected;
-
-  // compact 模式：简化渲染
   if (compact) {
     return (
       <div
         onClick={() => onEnter(node)}
         className="group flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer hover:bg-[var(--bg-tertiary)]"
       >
-        {/* 图标 */}
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{
@@ -541,7 +688,6 @@ export const FileItem: React.FC<FileItemProps> = ({
           )}
         </div>
 
-        {/* 内容 */}
         <div className="flex-1 min-w-0">
           <h4
             className="font-medium text-sm"
@@ -581,22 +727,25 @@ export const FileItem: React.FC<FileItemProps> = ({
   }
 
   return (
+    <>
     <div
       ref={listItemRef}
       data-tour="file-item"
-      className={`group relative flex items-center rounded-lg transition-all duration-200 cursor-pointer
+      data-node-id={node.id}
+      title={doubleClickToOpen ? '双击打开' : undefined}
+      className={`group relative flex items-center rounded-lg transition-all duration-200 cursor-pointer select-none
         ${galleryMode ? 'gap-2' : 'gap-4'}
-        ${showListSelection ? '' : 'hover:border-[var(--border-default)]'}
+        ${isSelected ? '' : 'hover:border-[var(--border-default)]'}
       `}
       style={{
-        background: showListSelection ? 'var(--primary-50)' : 'transparent',
-        border: showListSelection
+        background: isSelected ? 'var(--primary-50)' : 'transparent',
+        border: isSelected
           ? '1px solid var(--primary-200)'
           : '1px solid transparent',
       }}
       onMouseEnter={(e) => {
         setIsHovered(true);
-        if (!showListSelection) {
+        if (!isSelected) {
           e.currentTarget.style.background = 'var(--bg-tertiary)';
         }
       }}
@@ -604,24 +753,28 @@ export const FileItem: React.FC<FileItemProps> = ({
         setIsHovered(false);
         setShowMenu(false);
         onDragLeave?.();
-        if (!showListSelection) {
+        if (!isSelected) {
           e.currentTarget.style.background = 'transparent';
         }
       }}
+      onMouseDown={(e) => { if (hideSelectionCircle && !isRubberBanding) e.stopPropagation(); }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      draggable={!!onDragStart && !node.isRoot}
-      onDragStart={(e) => onDragStart?.(e, node)}
+      onContextMenu={handleContextMenu}
+      draggable={hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding}
+      onDragStart={(e) => { onDragStart?.(e, node); }}
       onDragOver={(e) => onDragOver?.(e, node)}
       onDrop={(e) => onDrop?.(e, node)}
     >
-      <div className="p-2">
-        <FileItemSelection
-          isSelected={isSelected}
-          isMultiSelectMode={isMultiSelectMode}
-          onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
-        />
-      </div>
+      {!hideSelectionCircle && (
+        <div className="p-2">
+          <FileItemSelection
+            isSelected={isSelected}
+            onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
+            isDraggable={!!onDragStart && !node.isRoot && !isRubberBanding}
+          />
+        </div>
+      )}
 
       <div className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? 'w-14 h-14' : 'w-10 h-10'}`}>
               <Thumbnail
@@ -635,7 +788,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         <FileItemInfo node={node} galleryMode={galleryMode} fontSize={fontSize} />
       </div>
 
-      {/* 图库模式或显式隐藏时不显示文件后缀标签 */}
       {!galleryMode && !hideTypeTag && (
         <div className="p-3">
           <FileItemTypeTag node={node} />
@@ -647,7 +799,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? 'p-2' : 'p-3'}`}
       >
         {(forceCompactActions || useCompactActions) ? (
-          // 紧凑模式 / 强制紧凑：悬停时显示菜单按钮（与网格模式一致）
           <div className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}>
           <FileItemMenu
             node={node}
@@ -679,35 +830,77 @@ export const FileItem: React.FC<FileItemProps> = ({
           />
           </div>
         ) : (
-          // 正常模式：显示独立操作按钮
-          availableActions.map((action) => (
-            <Tooltip key={action.type} content={action.tooltip} position="top">
-              <button
-                {...action.props}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  actionHandlers[action.type]?.(e);
-                }}
-                className={`p-2 rounded-lg transition-colors ${
-                  action.colorClass || 'text-slate-500'
-                } ${action.hoverClass || 'hover:bg-slate-100'}`}
-              >
-                {/* 将图标的尺寸放大到 18px 以匹配列表视图 */}
-                <span className="inline-block scale-110 origin-center">
-                  {React.cloneElement(
-                    action.icon as React.ReactElement<{
-                      width?: number;
-                      height?: number;
-                    }>,
-                    {
-                      width: 18,
-                      height: 18,
-                    }
+          <>
+            {(() => {
+              const mainActions = availableActions.filter(
+                (a) => a.type !== 'move' && a.type !== 'copy'
+              );
+              const moveCopyActions = availableActions.filter(
+                (a) => a.type === 'move' || a.type === 'copy'
+              );
+              return (
+                <>
+                  {mainActions.map((action) => (
+                    <Tooltip key={action.type} content={action.tooltip} position="top">
+                      <button
+                        {...action.props}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          actionHandlers[action.type]?.(e);
+                        }}
+                        className={`p-2 rounded-lg transition-colors ${
+                          action.colorClass || 'text-slate-500'
+                        } ${action.hoverClass || 'hover:bg-slate-100'}`}
+                      >
+                        <span className="inline-block scale-110 origin-center">
+                          {React.cloneElement(
+                            action.icon as React.ReactElement<{
+                              width?: number;
+                              height?: number;
+                            }>,
+                            { width: 18, height: 18 }
+                          )}
+                        </span>
+                      </button>
+                    </Tooltip>
+                  ))}
+                  {moveCopyActions.length > 0 && (
+                    <Menu modal={false}>
+                      <Tooltip content="其他操作" position="top">
+                        <Menu.Trigger>
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 rounded-lg transition-colors text-slate-500 hover:bg-slate-100"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="5" r="1" />
+                              <circle cx="12" cy="12" r="1" />
+                              <circle cx="12" cy="19" r="1" />
+                            </svg>
+                          </button>
+                        </Menu.Trigger>
+                      </Tooltip>
+                      <Menu.Content align="end" side="bottom" sideOffset={4}>
+                        {moveCopyActions.map((action) => (
+                          <Menu.Item
+                            key={action.type}
+                            variant="default"
+                            icon={action.icon}
+                            onClick={() => {
+                              if (action.type === 'move') onMove?.(node);
+                              if (action.type === 'copy') onCopy?.(node);
+                            }}
+                          >
+                            {action.label}
+                          </Menu.Item>
+                        ))}
+                      </Menu.Content>
+                    </Menu>
                   )}
-                </span>
-              </button>
-            </Tooltip>
-          ))
+                </>
+              );
+            })()}
+          </>
         )}
       </div>
 
@@ -721,13 +914,14 @@ export const FileItem: React.FC<FileItemProps> = ({
         onClose={externalReferenceUpload.close}
       />
     </div>
+      {contextMenuElement}
+    </>
   );
 };
 
-// 包装组件，保持向后兼容
 export const FileIconComponent: React.FC<{
   node: FileSystemNode;
   size?: number;
 }> = ({ node, size = 48 }) => {
-  return null; // 实际实现在 FileIcons.tsx 中
+  return null;
 };

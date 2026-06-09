@@ -91,7 +91,7 @@ export const CADEditorDirect: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotification();
   const { hasPermission } = usePermission();
-  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setFromShare } = useCADEditorStore();
+  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setFromShare, setCollabShareState } = useCADEditorStore();
 
   // 主页模式（/ 路由，无 fileId）- 在组件顶部计算，用于初始化 isActive
   const isHomeMode = isHomeRoute(location.pathname);
@@ -104,6 +104,9 @@ export const CADEditorDirect: React.FC = () => {
   const libraryKeyParam =
     (searchParams.get('library') as 'drawing' | 'block' | null) || null;
   const shareTokenParam = searchParams.get('shareToken');
+  const collabWorkIdParam = searchParams.get('collabWorkId');
+  const collabDrawingIdParam = searchParams.get('drawingId');
+  const collabProjectIdParam = searchParams.get('projectId');
 
   // 是否激活（路由匹配 /cad-editor/:fileId 或主页模式）
   // 不再依赖 isAuthenticated，因为公开资源库可以免登录访问
@@ -307,6 +310,31 @@ export const CADEditorDirect: React.FC = () => {
   useEffect(() => {
     setIsPersonalSpaceMode(isPersonalSpaceMode);
   }, [isPersonalSpaceMode]);
+
+  // 协同分享链接：设置 collabShareState，CAD 初始化后自动加入
+  useEffect(() => {
+    if (collabWorkIdParam) {
+      const workId = parseInt(collabWorkIdParam, 10);
+      if (!isNaN(workId) && workId > 0) {
+        setCollabShareState({ fromCollabShare: true, targetWorkId: workId });
+        setFromShare(true);
+        if (collabDrawingIdParam) {
+          setStoreFileId(collabDrawingIdParam);
+        }
+        if (collabProjectIdParam) {
+          setStoreProjectId(collabProjectIdParam);
+        }
+      }
+    }
+    return () => {
+      if (collabWorkIdParam) {
+        setCollabShareState({ fromCollabShare: false, targetWorkId: null });
+        setFromShare(false);
+        setStoreFileId(null);
+        setStoreProjectId(null);
+      }
+    };
+  }, [collabWorkIdParam]);
 
   // 加载 CAD 权限
   useEffect(() => {

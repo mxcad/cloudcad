@@ -1,9 +1,5 @@
 import {
-  Users,
-  UserPlus,
   RefreshCw,
-  Check,
-  Share2,
 } from 'lucide-react';
 import React, {
   useCallback,
@@ -12,17 +8,16 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import { useLocation } from 'react-router-dom';
 import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
 import { getErrorMessage } from '../utils/errorHandler';
-import { Button } from './ui/Button';
 import { Tabs, Tab } from './ui';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
 import {
   mxcadManager,
   checkAndConfirmUnsavedChanges,
   refreshFileName,
+  patchCurrentFileInfo,
 } from '../services/mxcadManager';
 import { useAuth } from '../contexts/AuthContext';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
@@ -32,16 +27,21 @@ import {
 } from '@/api-sdk';
 import {
   parseWorkData,
-  encodeWorkData,
+  encodeV2WorkData,
   encodeUserData,
   deduplicateWorkUsers,
 } from '../types/collaboration';
 import type {
-  CollaborateWorkData,
   CollaborateUserData,
 } from '../types/collaboration';
-import { exitCurrentCollaboration } from '../services/collaborationService';
-import { ShareDialog } from './modals/ShareDialog';
+import {
+  getCooperate,
+  exitCurrentCollaboration,
+} from '../services/collaborationService';
+import {
+  showGlobalLoading,
+  hideGlobalLoading,
+} from '../utils/loadingUtils';
 import { CurrentFilePanel } from './CurrentFilePanel';
 import { WorkListPanel } from './WorkListPanel';
 import styles from './CollaborateSidebar.module.css';
@@ -72,56 +72,65 @@ async function fetchMyProjectIds(): Promise<string[]> {
 
 export const CollaborateSidebar: React.FC = () => {
   const { user } = useAuth();
-  const { currentFileId, currentProjectId, fromShare, setCollaborationState } = useCADEditorStore();
+  const {
+    currentFileId,
+    currentProjectId,
+    fromShare,
+    fromCollabShare,
+    targetCollabWorkId,
+    setCollaborationState,
+    setCollabShareState,
+    isInCollaboration,
+    collaborationWorkId,
+  } = useCADEditorStore();
   const { showToast } = useNotification();
-  const location = useLocation();
-
-  const getCooperate = useCallback(() => {
-    const mxCAD = MxCpp.getCurrentMxCAD();
-    if (!mxCAD) return null;
-
-    const cooperate = mxCAD.getCooperate();
-    if (!cooperate) return null;
-
-    cooperate.init({ server_addres: APP_COOPERATE_URL });
-    return cooperate;
-  }, []);
 
   const [works, setWorks] = useState<Work[]>([]);
-  const [currentWorkId, setCurrentWorkId] = useState<number | null>(null);
+  const [currentWorkId, setCurrentWorkIdState] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [joiningWorkId, setJoiningWorkId] = useState<number | null>(null);
   const [fileNameCache, setFileNameCache] = useState<Record<string, string>>({});
   const [projectNameCache, setProjectNameCache] = useState<Record<string, string>>({});
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [waitingForSession, setWaitingForSession] = useState(false);
   const [myProjectIds, setMyProjectIds] = useState<string[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'current' | 'list'>('current');
   const [isCadReady, setIsCadReady] = useState(false);
+  const [blankFileReady, setBlankFileReady] = useState(false);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
 
   const initCheckRef = useRef<NodeJS.Timeout | null>(null);
   const exitGuardRef = useRef(false);
+  const joiningLockRef = useRef(false);
+  const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchWorks = useCallback(async () => {
+  // Sync workId state with store
+  const setCurrentWorkId = useCallback((id: number | null) => {
+    setCurrentWorkIdState(id);
+  }, []);
+
+  const fetchWorks = useCallback(async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const cooperate = getCooperate();
       if (!cooperate) {
         setLoading(false);
-        showToast('协同服务未就绪', 'error');
         return;
       }
 
+      let done = false;
       const timeoutId = setTimeout(() => {
-        setLoading(false);
-        showToast('获取协同列表超时', 'warning');
-      }, 15000);
+        if (!done) {
+          done = true;
+          setLoading(false);
+        }
+      }, 30000);
 
       setMyProjectIds(await fetchMyProjectIds());
 
       cooperate.getWorks((workList: Work[]) => {
+        if (done) return;
+        done = true;
         clearTimeout(timeoutId);
         setInitialFetchDone(true);
         const filtered = workList
@@ -144,9 +153,8 @@ export const CollaborateSidebar: React.FC = () => {
     } catch (error) {
       console.error('获取协同列表失败:', error);
       setLoading(false);
-      showToast(getErrorMessage(error), 'error');
     }
-  }, [getCooperate, showToast]);
+  }, []);
 
   const resolveNames = useCallback(async (workList: Work[]) => {
     const drawingIds = new Set<string>();
@@ -231,6 +239,7 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, []);
 
+  // CAD ready check
   useEffect(() => {
     const checkCadReady = () => {
       const ready = mxcadManager.isReady();
@@ -242,13 +251,10 @@ export const CollaborateSidebar: React.FC = () => {
         }
       }
     };
-
     checkCadReady();
-
     if (!mxcadManager.isReady()) {
       initCheckRef.current = setInterval(checkCadReady, 500);
     }
-
     return () => {
       if (initCheckRef.current) {
         clearInterval(initCheckRef.current);
@@ -256,30 +262,47 @@ export const CollaborateSidebar: React.FC = () => {
     };
   }, []);
 
+  // Wait for blank file to fully open before triggering auto-join
+  useEffect(() => {
+    if (!isCadReady || !fromCollabShare) return;
+    const onOpen = () => setBlankFileReady(true);
+    window.addEventListener('mxcad-file-open-complete', onOpen, { once: true });
+    // Safety: proceed anyway after 10s even if event never fires
+    const timer = setTimeout(() => setBlankFileReady(true), 10000);
+    return () => {
+      window.removeEventListener('mxcad-file-open-complete', onOpen);
+      clearTimeout(timer);
+    };
+  }, [isCadReady, fromCollabShare]);
+
+  // Initial fetch
   useEffect(() => {
     if (isCadReady) {
-      fetchWorks();
+      fetchWorks(true);
     }
   }, [isCadReady, fetchWorks]);
 
+  // Resolve names
   useEffect(() => {
     if (works.length > 0) {
       resolveNames(works);
     }
   }, [works]);
 
-  const handleJoinWorkRef = useRef<(workId: number, skipModifiedCheck?: boolean) => Promise<void>>(async () => {});
-  const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const worksRef = useRef(works);
-  worksRef.current = works;
+  // Sync resolved name to editor title
+  useEffect(() => {
+    if (currentFileId && fileNameCache[currentFileId]) {
+      patchCurrentFileInfo({ name: fileNameCache[currentFileId] });
+      refreshFileName();
+    }
+  }, [fileNameCache, currentFileId]);
 
+  // Polling
   useEffect(() => {
     if (!isCadReady) return;
-
     autoJoinTimerRef.current = setInterval(() => {
       fetchWorks();
     }, 8000);
-
     return () => {
       if (autoJoinTimerRef.current) {
         clearInterval(autoJoinTimerRef.current);
@@ -288,19 +311,143 @@ export const CollaborateSidebar: React.FC = () => {
     };
   }, [isCadReady, fetchWorks]);
 
-  const handleCreateWork = useCallback(async (skipChecks = false) => {
-    try {
-      // 如果在其他协同中，先退出
-      if (useCADEditorStore.getState().collaborationWorkId !== null) {
-        exitCurrentCollaboration();
-        setCurrentWorkId(null);
-        fetchWorks();
+  // Auto-join from collaboration share link
+  // Retry joinWork every 1s until the SDK is ready to accept it
+  useEffect(() => {
+    if (!blankFileReady || !fromCollabShare || !targetCollabWorkId) return;
+    if (isInCollaboration) return;
+    if (exitGuardRef.current) return;
+    if (!user) {
+      setCollabShareState({ fromCollabShare: false, targetWorkId: null });
+      setWaitingForSession(false);
+      return;
+    }
+
+    setWaitingForSession(true);
+
+    let cancelled = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 30;
+
+    const userData: CollaborateUserData = {
+      v: 1,
+      id: user.id,
+      name: user.username,
+      avatar: user.avatar ?? undefined,
+    };
+
+    const tryJoin = () => {
+      if (cancelled) return;
+
+      const cooperate = getCooperate();
+      if (!cooperate) {
+        if (retryCount < MAX_RETRIES) { retryCount++; setTimeout(tryJoin, 1000); }
+        return;
       }
 
-      // 自动创建时跳过未保存修改检查
+      showGlobalLoading('正在打开协同文件...', 'autoJoin');
+
+      cooperate.joinWork(
+        targetCollabWorkId,
+        (iRet: number) => {
+          if (iRet === 0 || iRet === 17) {
+            // Success
+            cancelled = true;
+            setWaitingForSession(false);
+            setCurrentWorkId(targetCollabWorkId);
+            setCollaborationState({ isInCollaboration: true, workId: targetCollabWorkId });
+            const storeState = useCADEditorStore.getState();
+            patchCurrentFileInfo({
+              fileId: storeState.currentFileId || undefined,
+              projectId: storeState.currentProjectId ?? null,
+              fromShare: true,
+            });
+            refreshFileName();
+            try {
+              const mxCAD = MxCpp.getCurrentMxCAD();
+              const fn = mxCAD?.getCurrentFileName?.();
+              if (fn && fn !== 'empty_template.mxweb' && fn !== 'empty.mxweb') {
+                patchCurrentFileInfo({ name: fn });
+                refreshFileName();
+              }
+            } catch {}
+            setTimeout(() => {
+              try {
+                const mxCAD = MxCpp.getCurrentMxCAD();
+                const fn = mxCAD?.getCurrentFileName?.();
+                if (fn && fn !== 'empty_template.mxweb' && fn !== 'empty.mxweb') {
+                  patchCurrentFileInfo({ name: fn });
+                  refreshFileName();
+                }
+              } catch {}
+            }, 500);
+            setWorks((prev) => {
+              if (prev.some((w) => w.work_id === targetCollabWorkId)) return prev;
+              const store = useCADEditorStore.getState();
+              const tempWork: Work = {
+                work_id: targetCollabWorkId,
+                work_data: encodeV2WorkData({
+                  drawingId: store.currentFileId || '',
+                  projectId: store.currentProjectId ?? null,
+                  creatorId: user.id,
+                  creatorName: user.username,
+                  creatorAvatar: user.avatar ?? undefined,
+                }),
+                real_user_id: user.id,
+                link_user_ids: [user.id],
+                link_user_data: [encodeUserData(userData)],
+              };
+              return [tempWork, ...prev];
+            });
+            fetchWorks();
+            setCollabShareState({ fromCollabShare: false, targetWorkId: null });
+          } else if (iRet < 0) {
+            // SDK busy — retry
+            hideGlobalLoading('autoJoin-retry');
+            if (!cancelled && retryCount < MAX_RETRIES) {
+              retryCount++;
+              setTimeout(tryJoin, 1000);
+            } else {
+              setWaitingForSession(false);
+              showToast('加入协同超时', 'warning');
+              setCollabShareState({ fromCollabShare: false, targetWorkId: null });
+            }
+          } else {
+            // Real error
+            cancelled = true;
+            setWaitingForSession(false);
+            showToast(`加入协同失败，错误码: ${iRet}`, 'error');
+            setCollabShareState({ fromCollabShare: false, targetWorkId: null });
+          }
+        },
+        user.id,
+        encodeUserData(userData)
+      );
+    };
+
+    // Start joining after a brief delay to let the blank file settle
+    const timer = setTimeout(tryJoin, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [blankFileReady, fromCollabShare, targetCollabWorkId, isInCollaboration, user]);
+
+  // We need a ref-based handle join for create callback
+  const handleJoinWorkRef = useRef<(workId: number, skipModifiedCheck?: boolean) => Promise<void>>(async () => {});
+
+  const handleCreateWork = useCallback(async (skipChecks = false) => {
+    try {
       if (!skipChecks) {
         const canProceed = await checkAndConfirmUnsavedChanges();
         if (!canProceed) return;
+      }
+
+      // Exit current collaboration first
+      if (collaborationWorkId !== null) {
+        exitCurrentCollaboration();
+        setCurrentWorkId(null);
       }
 
       setCreating(true);
@@ -317,11 +464,6 @@ export const CollaborateSidebar: React.FC = () => {
         return;
       }
 
-      const workData: CollaborateWorkData = {
-        v: 1,
-        drawingId: currentFileId,
-        projectId: currentProjectId ?? null,
-      };
       const userData: CollaborateUserData = {
         v: 1,
         id: user.id,
@@ -329,16 +471,24 @@ export const CollaborateSidebar: React.FC = () => {
         avatar: user.avatar ?? undefined,
       };
 
+      const workDataPayload = encodeV2WorkData({
+        drawingId: currentFileId,
+        projectId: currentProjectId ?? null,
+        creatorId: user.id,
+        creatorName: user.username,
+        creatorAvatar: user.avatar ?? undefined,
+      });
+
+      showGlobalLoading('正在创建协同...', 'handleCreate');
       cooperate.createWrok(
         (workid: number) => {
+          hideGlobalLoading('handleCreate-success');
           setCreating(false);
           if (workid > 0) {
-            // 创建成功后立即加入协同（创建共享会话后需要 join 才能同步）
             handleJoinWorkRef.current(workid, true);
-            // 插入本地 work，避免等待 getWorks 异步回调导致 UI 滞后
             const newWork: Work = {
               work_id: workid,
-              work_data: encodeWorkData(workData),
+              work_data: workDataPayload,
               real_user_id: user.id,
               link_user_ids: [user.id],
               link_user_data: [encodeUserData(userData)],
@@ -350,18 +500,15 @@ export const CollaborateSidebar: React.FC = () => {
             fetchWorks();
           } else {
             const errorCode = -workid;
-            if (errorCode === 4) {
-              showToast('协同已存在，您已在协同中', 'warning');
-            } else {
-              showToast(`创建协同失败，错误码: ${errorCode}`, 'error');
-            }
+            showToast(`创建协同失败，错误码: ${errorCode}`, 'error');
           }
         },
-        encodeWorkData(workData),
+        workDataPayload,
         user.id,
         encodeUserData(userData)
       );
     } catch (error) {
+      hideGlobalLoading('handleCreate-catch');
       console.error('创建协同失败:', error);
       setCreating(false);
       showToast(getErrorMessage(error), 'error');
@@ -373,25 +520,32 @@ export const CollaborateSidebar: React.FC = () => {
     user,
     fetchWorks,
     showToast,
+    collaborationWorkId,
   ]);
 
   const handleJoinWork = useCallback(
     async (workId: number, skipModifiedCheck = false) => {
+      // Concurrency guard: prevent double-join
+      if (joiningLockRef.current) return;
+      joiningLockRef.current = true;
+
       try {
-        // 如果在其他协同中，先退出
+        // If already in a different work, exit first
         if (
-          useCADEditorStore.getState().collaborationWorkId !== null &&
-          useCADEditorStore.getState().collaborationWorkId !== workId
+          collaborationWorkId !== null &&
+          collaborationWorkId !== workId
         ) {
           exitCurrentCollaboration();
           setCurrentWorkId(null);
           fetchWorks();
         }
 
-        // 非自动加入时检查未保存修改
         if (!skipModifiedCheck) {
           const canProceed = await checkAndConfirmUnsavedChanges();
-          if (!canProceed) return;
+          if (!canProceed) {
+            joiningLockRef.current = false;
+            return;
+          }
         }
 
         setJoiningWorkId(workId);
@@ -399,12 +553,14 @@ export const CollaborateSidebar: React.FC = () => {
         if (!cooperate) {
           showToast('协同对象未初始化', 'error');
           setJoiningWorkId(null);
+          joiningLockRef.current = false;
           return;
         }
 
         if (!user) {
           showToast('请先登录', 'error');
           setJoiningWorkId(null);
+          joiningLockRef.current = false;
           return;
         }
 
@@ -415,36 +571,46 @@ export const CollaborateSidebar: React.FC = () => {
           avatar: user.avatar ?? undefined,
         };
 
+        // Safety fallback: if the file-open event never fires, still hide loading
+        const safetyTimer = setTimeout(() => {
+          hideGlobalLoading('handleJoin-safetyTimeout');
+        }, 15000);
+
+        const onFileOpen = () => {
+          clearTimeout(safetyTimer);
+          hideGlobalLoading('handleJoin-onFileOpen');
+        };
+        window.addEventListener('mxcad-file-open-complete', onFileOpen, { once: true });
+
+        showGlobalLoading('正在打开协同文件...', 'handleJoin');
         cooperate.joinWork(
           workId,
           async (iRet: number) => {
             setJoiningWorkId(null);
-            if (iRet === 0) {
+            joiningLockRef.current = false;
+            if (iRet === 0 || iRet === 17) {
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
               refreshFileName();
               fetchWorks();
             } else {
-              if (iRet === 17) {
-                setCurrentWorkId(workId);
-                setCollaborationState({ isInCollaboration: true, workId });
-                refreshFileName();
-                fetchWorks();
-              } else {
-                showToast(`加入协同失败，错误码: ${iRet}`, 'error');
-              }
+              clearTimeout(safetyTimer);
+              hideGlobalLoading('handleJoin-error');
+              showToast(`加入协同失败，错误码: ${iRet}`, 'error');
             }
           },
           user.id,
           encodeUserData(userData)
         );
       } catch (error) {
+        hideGlobalLoading('handleJoin-catch');
         console.error('加入协同失败:', error);
         setJoiningWorkId(null);
+        joiningLockRef.current = false;
         showToast(getErrorMessage(error), 'error');
       }
     },
-    [getCooperate, user, showToast, fetchWorks]
+    [getCooperate, user, showToast, fetchWorks, collaborationWorkId]
   );
   handleJoinWorkRef.current = handleJoinWork;
 
@@ -474,51 +640,82 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, [getCooperate, fetchWorks, showToast]);
 
-  const currentFileWork = useMemo(
+  // --- Filtered work lists ---
+
+  // Current file works: same drawing, and same project as current drawing (or personal)
+  const currentFileWorks = useMemo(
     () =>
-      works.find((w) => {
+      works.filter((w) => {
         const data = parseWorkData(w.work_data);
-        return data?.drawingId === currentFileId;
+        if (!data || data.drawingId !== currentFileId) return false;
+
+        if (data.projectId) {
+          return data.projectId === currentProjectId;
+        }
+
+        return user ? w.real_user_id === user.id : false;
       }),
-    [works, currentFileId]
+    [works, currentFileId, currentProjectId, user]
   );
 
-  const availableWorks = useMemo(() => {
-    return works
-      .filter((w) => {
-        const data = parseWorkData(w.work_data);
-        if (!data) return false;
-        if (data.projectId && myProjectIds.includes(data.projectId)) return true;
-        if (!data.projectId) return false;
-        return false;
-      })
-      .map((w) => {
-        const data = parseWorkData(w.work_data);
-        return {
-          work: w,
-          projectName: data?.projectId
-            ? projectNameCache[data.projectId] ?? '未知项目'
-            : '个人空间',
-          drawingName: data?.drawingId
-            ? fileNameCache[data.drawingId] ?? '未知图纸'
-            : '未知图纸',
-          isCurrentFile: data?.drawingId === currentFileId,
-          isJoined: currentWorkId === w.work_id,
-          onlineCount: w.link_user_ids.length,
-        };
-      });
-  }, [works, myProjectIds, projectNameCache, fileNameCache, currentFileId, currentWorkId]);
+  // My created works (for list panel)
+  const myWorks = useMemo(
+    () =>
+      works
+        .filter((w) => user && w.real_user_id === user.id)
+        .map((w) => {
+          const data = parseWorkData(w.work_data);
+          return {
+            work: w,
+            projectName: data?.projectId
+              ? projectNameCache[data.projectId] ?? '未知项目'
+              : '个人空间',
+            drawingName: data?.drawingId
+              ? fileNameCache[data.drawingId] ?? '未知图纸'
+              : '未知图纸',
+            isCurrentFile: data?.drawingId === currentFileId,
+            isJoined: currentWorkId === w.work_id,
+            onlineCount: w.link_user_ids.length,
+          };
+        }),
+    [works, user, projectNameCache, fileNameCache, currentFileId, currentWorkId]
+  );
+
+  // Project works (for list panel) - exclude those already in myWorks
+  const myWorkIds = useMemo(() => new Set(myWorks.map((m) => m.work.work_id)), [myWorks]);
+
+  const projectWorks = useMemo(
+    () =>
+      works
+        .filter((w) => {
+          if (myWorkIds.has(w.work_id)) return false;
+          const data = parseWorkData(w.work_data);
+          if (!data) return false;
+          if (!data.projectId) return false;
+          return myProjectIds.includes(data.projectId);
+        })
+        .map((w) => {
+          const data = parseWorkData(w.work_data);
+          return {
+            work: w,
+            projectName: data?.projectId
+              ? projectNameCache[data.projectId] ?? '未知项目'
+              : '',
+            drawingName: data?.drawingId
+              ? fileNameCache[data.drawingId] ?? '未知图纸'
+              : '未知图纸',
+            isCurrentFile: data?.drawingId === currentFileId,
+            isJoined: currentWorkId === w.work_id,
+            onlineCount: w.link_user_ids.length,
+          };
+        }),
+    [works, myWorkIds, myProjectIds, projectNameCache, fileNameCache, currentFileId, currentWorkId]
+  );
 
   const currentFileName: string = useMemo(() => {
     if (!currentFileId) return '';
-    const data = currentFileWork
-      ? parseWorkData(currentFileWork.work_data)
-      : null;
-    if (data?.drawingId && fileNameCache[data.drawingId]) {
-      return fileNameCache[data.drawingId] ?? '';
-    }
-    return '当前图纸';
-  }, [currentFileId, currentFileWork, fileNameCache]);
+    return fileNameCache[currentFileId] ?? '当前图纸';
+  }, [currentFileId, fileNameCache]);
 
   return (
     <div className={styles.container} data-tour="collaborators-panel">
@@ -542,22 +739,21 @@ export const CollaborateSidebar: React.FC = () => {
           </Tab>
         </Tabs>
 
-        <Button
-          variant="icon"
-          icon={RefreshCw}
-          tooltip="刷新列表"
-          tooltipPosition="bottom"
-          tooltipDelay={100}
-          loading={loading}
-          onClick={fetchWorks}
+        <button
+          className={styles.toolbarRefreshBtn}
+          onClick={() => fetchWorks(true)}
+          disabled={loading}
+          title="刷新列表"
           aria-label="刷新列表"
-        />
+        >
+          <RefreshCw className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       <div className={styles.panelContent}>
         {activeSubTab === 'current' ? (
           <CurrentFilePanel
-            work={currentFileWork}
+            works={currentFileWorks}
             currentWorkId={currentWorkId}
             fileName={currentFileName}
             isCadReady={isCadReady}
@@ -568,37 +764,20 @@ export const CollaborateSidebar: React.FC = () => {
             onCreateWork={handleCreateWork}
             onJoinWork={handleJoinWork}
             onExitWork={handleExitWork}
-            onShare={() => setShareDialogOpen(true)}
-            onCopyShareLink={() => {
-              const params = new URLSearchParams(location.search);
-              const shareToken = params.get('shareToken');
-              if (!shareToken) {
-                showToast('未找到分享令牌', 'error');
-                return;
-              }
-              const shareUrl = `${window.location.origin}/share/${shareToken}`;
-              navigator.clipboard.writeText(shareUrl)
-                .then(() => showToast('链接已复制', 'success'))
-                .catch((error) => showToast(getErrorMessage(error), 'error'));
-            }}
           />
         ) : (
           <WorkListPanel
-            items={availableWorks}
+            myWorks={myWorks}
+            projectWorks={projectWorks}
             loading={loading}
             currentWorkId={currentWorkId}
             joiningWorkId={joiningWorkId}
             onJoinWork={handleJoinWork}
+            onExitWork={handleExitWork}
             onRefresh={fetchWorks}
           />
         )}
       </div>
-
-      <ShareDialog
-        isOpen={shareDialogOpen}
-        onClose={() => setShareDialogOpen(false)}
-        readOnly={fromShare}
-      />
     </div>
   );
 };

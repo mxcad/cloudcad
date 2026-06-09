@@ -22,6 +22,8 @@ import {
   fileSystemControllerGetProjects,
   fileSystemControllerGetNode,
   fileSystemControllerUpdateNode,
+  fileSystemControllerMoveNode,
+  fileSystemControllerCopyNode,
 } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
@@ -60,6 +62,9 @@ import { ProjectListView } from './components/ProjectListView';
 import { BreadcrumbNav } from './components/BreadcrumbNav';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { createPortal } from 'react-dom';
+import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
+import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import { useFileSystemShortcuts } from '@/hooks/file-system/useFileSystemShortcuts';
 
 export type { LibraryType } from './types';
 
@@ -165,6 +170,15 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   const isProjectTrashViewRef = React.useRef(false);
 
+  const clipboardItems = useFileSystemClipboardStore((s) => s.items);
+  const clipboardMode = useFileSystemClipboardStore((s) => s.mode);
+  const setClipboard = useFileSystemClipboardStore((s) => s.setClipboard);
+  const clearClipboard = useFileSystemClipboardStore((s) => s.clearClipboard);
+  const undoStoreUndo = useFileSystemUndoRedoStore((s) => s.undo);
+  const undoStoreRedo = useFileSystemUndoRedoStore((s) => s.redo);
+  const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
+  const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
+
   // Load projects
   useEffect(() => {
     if (!visible || isPersonalSpace || isLibraryMode) return;
@@ -217,6 +231,76 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       if (lastBreadcrumb) loadNodes(lastBreadcrumb.id);
     }
   }, [isLibraryMode, selectedCategoryPath, libraryRootId, searchQuery, currentPage, breadcrumb, loadNodes, refreshCategories]);
+
+  const currentProjectId = selectedProjectId || personalSpaceId || '';
+
+  const sidebarHandleCopy = useCallback(() => {
+    if (nodes.length === 0) return;
+    setClipboard(nodes.map((n) => n.id), 'copy', currentProjectId);
+    showToast(`已复制 ${nodes.length} 个项目`, 'info');
+  }, [nodes, currentProjectId, setClipboard, showToast]);
+
+  const sidebarHandleCut = useCallback(() => {
+    if (nodes.length === 0) return;
+    setClipboard(nodes.map((n) => n.id), 'cut', currentProjectId);
+    showToast(`已剪切 ${nodes.length} 个项目`, 'info');
+  }, [nodes, currentProjectId, setClipboard, showToast]);
+
+  const sidebarHandlePaste = useCallback(async () => {
+    if (clipboardItems.length === 0 || !clipboardMode) return;
+    const targetId = breadcrumb[breadcrumb.length - 1]?.id || selectedProjectId;
+    if (!targetId) return;
+    const srcProjectId = useFileSystemClipboardStore.getState().sourceProjectId;
+    if (srcProjectId && srcProjectId !== currentProjectId) {
+      showToast('不能跨项目粘贴', 'error');
+      return;
+    }
+    try {
+      if (clipboardMode === 'cut') {
+        for (const nodeId of clipboardItems) {
+          await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId } });
+        }
+        clearClipboard();
+      } else {
+        for (const nodeId of clipboardItems) {
+          await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId } });
+        }
+      }
+      showToast('粘贴成功', 'success');
+      refreshNodes();
+    } catch (error) {
+      const appError = error instanceof Error ? error.message : '粘贴失败';
+      showToast(appError, 'error');
+    }
+  }, [clipboardItems, clipboardMode, breadcrumb, selectedProjectId, currentProjectId, clearClipboard, refreshNodes, showToast]);
+
+  const sidebarHandleUndo = useCallback(async () => {
+    if (undoStack.length === 0) return;
+    try {
+      const action = undoStack[undoStack.length - 1];
+      if (!action) return;
+      await undoStoreUndo(currentProjectId);
+      showToast(`已撤销: ${action.description}`, 'info');
+      refreshNodes();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '撤销失败';
+      showToast(msg, 'error');
+    }
+  }, [undoStack, undoStoreUndo, currentProjectId, refreshNodes, showToast]);
+
+  const sidebarHandleRedo = useCallback(async () => {
+    if (redoStack.length === 0) return;
+    try {
+      const action = redoStack[redoStack.length - 1];
+      if (!action) return;
+      await undoStoreRedo(currentProjectId);
+      showToast(`已重做: ${action.description}`, 'info');
+      refreshNodes();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '重做失败';
+      showToast(msg, 'error');
+    }
+  }, [redoStack, undoStoreRedo, currentProjectId, refreshNodes, showToast]);
 
   // Library operations
   const libraryOperations = useLibraryOperations({ libraryType: libraryType || 'drawing', showToast, refreshNodes, showConfirm });
@@ -558,6 +642,19 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     }
   }, [moveSourceNode, copySourceNode, refreshNodes, showToast]);
 
+  useFileSystemShortcuts({
+    onUndo: sidebarHandleUndo,
+    onRedo: sidebarHandleRedo,
+    onCopy: sidebarHandleCopy,
+    onCut: sidebarHandleCut,
+    onPaste: sidebarHandlePaste,
+    onDeleteSelected: () => {},
+    onRenameSelected: () => {},
+    onClearSelection: () => {},
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
+  });
+
   // Drag-and-drop handlers
   const handleDragStart = useCallback((e: React.DragEvent, node: FileSystemNode) => {
     if (node.isRoot) { e.preventDefault(); return; }
@@ -701,7 +798,20 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           ) : undefined
           }
           renderItem={renderFileItem}
-          toolbarExtra={isLibraryMode ? undefined : <Button variant="ghost" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" />}
+          toolbarExtra={isLibraryMode ? undefined : (
+            <div className="flex items-center gap-1">
+              {clipboardItems.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={sidebarHandlePaste} tooltip="粘贴" className="text-primary border border-primary-dim mr-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                    <path d="M12 11v6M9 14h6" />
+                  </svg>
+                </Button>
+              )}
+              <Button variant="ghost" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" />
+            </div>
+          )}
           loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
         />
         <RenameModal isOpen={showRenameModal} editingNode={editingNode} newName={folderName} loading={isRenameLoading} onClose={() => { setShowRenameModal(false); setEditingNode(null); setFolderName(''); }} onNameChange={setFolderName} onRename={handleRenameSubmit} />

@@ -99,7 +99,6 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 node={project}
                 isSelected={false}
                 viewMode="list"
-                isMultiSelectMode={false}
                 isTrash={false}
                 hideTypeTag={true}
                 forceCompactActions={true}

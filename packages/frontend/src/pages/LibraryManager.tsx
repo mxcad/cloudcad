@@ -7,8 +7,6 @@ import React, { useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
-import { CheckSquare } from 'lucide-react';
-import { Square } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '../components/ui/Modal';
@@ -106,11 +104,9 @@ export const LibraryManager: React.FC = () => {
     downloadNode,
     clearError,
     selectedNodes,
-    isMultiSelectMode,
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
-    toggleMultiSelectMode,
     batchDeleteNodes,
   } = useLibrary({
     page: currentPage,
@@ -523,29 +519,8 @@ export const LibraryManager: React.FC = () => {
                 <RefreshIcon size={18} />
               </Button>
 
-              {/* 多选模式切换按钮 */}
-              <Button
-                onClick={toggleMultiSelectMode}
-                variant="ghost"
-                style={{
-                  background: isMultiSelectMode
-                    ? 'var(--primary-100)'
-                    : 'transparent',
-                  color: isMultiSelectMode
-                    ? 'var(--primary-600)'
-                    : 'var(--text-tertiary)',
-                }}
-                title="多选模式"
-              >
-                {isMultiSelectMode ? (
-                  <Square size={18} />
-                ) : (
-                  <CheckSquare size={18} />
-                )}
-              </Button>
-
-              {/* 全选按钮 - 仅在多选模式下显示 */}
-              {isMultiSelectMode && nodes.length > 0 && (
+              {/* 全选按钮 */}
+              {nodes.length > 0 && (
                 <Button
                   onClick={handleSelectAll}
                   variant="ghost"
@@ -652,15 +627,12 @@ export const LibraryManager: React.FC = () => {
                     canDelete={canManage}
                     canEdit={canManage}
                     canManageExternalReference={canManage}
-                    isMultiSelectMode={isMultiSelectMode}
                     isSelected={selectedNodes.has(node.id)}
                     onSelect={(nodeId, isMultiSelect, isShift) => {
                       handleNodeSelect(nodeId, isMultiSelect, isShift);
                     }}
                     onEnter={(node) => {
-                      if (isMultiSelectMode) {
-                        handleNodeSelect(node.id, true, false);
-                      } else if (node.isFolder) {
+                      if (node.isFolder) {
                         enterNode(node);
                       } else {
                         handleOpenInEditor(node);
@@ -685,7 +657,7 @@ export const LibraryManager: React.FC = () => {
           </div>
 
           {/* 多选操作条 */}
-          {isMultiSelectMode && selectedNodes.size > 0 && (
+          {selectedNodes.size > 0 && (
             <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
               <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
                 <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>

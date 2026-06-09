@@ -58,7 +58,6 @@ describe('useFileSystemData', () => {
     paginationRef: { current: { page: 1, limit: 20 } },
     showToast: vi.fn(),
     clearSelection: vi.fn(),
-    setIsMultiSelectMode: vi.fn(),
     projectFilter: undefined,
   });
 

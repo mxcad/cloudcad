@@ -13,6 +13,8 @@ interface UseDragAndDropOptions {
   setDraggedNodes: (nodes: FileSystemNode[]) => void;
   dropTargetId: string | null;
   setDropTargetId: (id: string | null) => void;
+  selectedNodes: Set<string>;
+  nodes: FileSystemNode[];
   handleRefresh: () => void;
   showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
@@ -22,6 +24,8 @@ export function useDragAndDrop({
   setDraggedNodes,
   dropTargetId: _dropTargetId,
   setDropTargetId,
+  selectedNodes,
+  nodes,
   handleRefresh,
   showToast,
 }: UseDragAndDropOptions) {
@@ -33,15 +37,19 @@ export function useDragAndDrop({
       }
       e.dataTransfer.setData('text/plain', node.id);
       e.dataTransfer.effectAllowed = 'copyMove';
-      setDraggedNodes([node]);
+
+      const nodesToDrag = selectedNodes.has(node.id)
+        ? nodes.filter((n) => selectedNodes.has(n.id))
+        : [node];
+      setDraggedNodes(nodesToDrag);
     },
-    [setDraggedNodes]
+    [setDraggedNodes, selectedNodes, nodes]
   );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent, node: FileSystemNode) => {
       e.preventDefault();
-      if (node.isFolder && node.id !== draggedNodes[0]?.id) {
+      if (node.isFolder && !draggedNodes.some((dn) => dn.id === node.id)) {
         e.dataTransfer.dropEffect = e.ctrlKey || e.metaKey ? 'copy' : 'move';
         setDropTargetId(node.id);
       }
@@ -61,23 +69,23 @@ export function useDragAndDrop({
       if (!targetNode.isFolder) return;
       if (draggedNodes.length === 0) return;
 
-      const draggedNode = draggedNodes[0];
-      if (!draggedNode) return;
-      const draggedNodeId = draggedNode.id;
-      if (draggedNodeId === targetNode.id) return;
-
       const isCopy = e.ctrlKey || e.metaKey;
+      let hasError = false;
 
       try {
-        if (isCopy) {
-          await fileSystemControllerCopyNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } } as Parameters<typeof fileSystemControllerCopyNode>[0]);
-        } else {
-          await fileSystemControllerMoveNode({ path: { nodeId: draggedNodeId }, body: { targetParentId: targetNode.id } } as Parameters<typeof fileSystemControllerMoveNode>[0]);
+        for (const draggedNode of draggedNodes) {
+          if (draggedNode.id === targetNode.id) continue;
+          if (isCopy) {
+            await fileSystemControllerCopyNode({ path: { nodeId: draggedNode.id }, body: { targetParentId: targetNode.id } } as Parameters<typeof fileSystemControllerCopyNode>[0]);
+          } else {
+            await fileSystemControllerMoveNode({ path: { nodeId: draggedNode.id }, body: { targetParentId: targetNode.id } } as Parameters<typeof fileSystemControllerMoveNode>[0]);
+          }
         }
         handleRefresh();
       } catch (error: unknown) {
         handleError(error, '拖拽操作失败');
         showToast(getErrorMessage(error), 'error');
+        hasError = true;
       } finally {
         setDraggedNodes([]);
       }

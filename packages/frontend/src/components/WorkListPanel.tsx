@@ -1,18 +1,13 @@
 import React from 'react';
-import { Users, Check } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Button } from './ui/Button';
+import { parseWorkData } from '../types/collaboration';
+import { CollabWorkCard } from './CollabWorkCard';
+import type { WorkData } from './CollabWorkCard';
 import styles from './CollaborateSidebar.module.css';
 
-interface Work {
-  link_user_data: string[];
-  link_user_ids: string[];
-  real_user_id: string;
-  work_data: string;
-  work_id: number;
-}
-
 interface WorkListItem {
-  work: Work;
+  work: WorkData;
   projectName: string;
   drawingName: string;
   isCurrentFile: boolean;
@@ -21,20 +16,24 @@ interface WorkListItem {
 }
 
 interface WorkListPanelProps {
-  items: WorkListItem[];
+  myWorks: WorkListItem[];
+  projectWorks: WorkListItem[];
   loading: boolean;
   currentWorkId: number | null;
   joiningWorkId: number | null;
   onJoinWork: (workId: number) => void;
+  onExitWork: () => void;
   onRefresh: () => void;
 }
 
 export const WorkListPanel: React.FC<WorkListPanelProps> = ({
-  items,
+  myWorks,
+  projectWorks,
   loading,
   currentWorkId,
   joiningWorkId,
   onJoinWork,
+  onExitWork,
   onRefresh,
 }) => {
   if (loading) {
@@ -48,7 +47,10 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
     );
   }
 
-  if (items.length === 0) {
+  const hasMyWorks = myWorks.length > 0;
+  const hasProjectWorks = projectWorks.length > 0;
+
+  if (!hasMyWorks && !hasProjectWorks) {
     return (
       <div className={styles.workListPanel}>
         <div className={styles.emptyState}>
@@ -57,7 +59,7 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
           </div>
           <div className={styles.emptyTitle}>暂无活跃协同</div>
           <div className={styles.emptyDescription}>
-            当前项目中没有活跃的协同会话
+            当前没有可加入的协同会话
           </div>
           <Button variant="primary" size="sm" onClick={onRefresh} style={{ marginTop: '12px' }}>
             刷新
@@ -69,52 +71,47 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
 
   return (
     <div className={styles.workListPanel}>
-      <div className={styles.workListHeader}>
-        <span className={styles.workListHeaderLabel}>项目</span>
-        <span className={styles.workListHeaderLabel}>图纸</span>
-        <span className={styles.workListHeaderLabel}>在线</span>
-        <span className={styles.workListHeaderLabel}>操作</span>
-      </div>
-      <div className={styles.workListBody}>
-        {items.map((item) => {
-          const isJoined = item.isJoined || item.work.work_id === currentWorkId;
-          return (
-            <div
-              key={item.work.work_id}
-              className={`${styles.workListRow} ${item.isCurrentFile ? styles.workListRowCurrent : ''}`}
-            >
-              <span className={styles.workListCell} title={item.projectName}>
-                {item.isCurrentFile && <span className={styles.currentMarker}>📌</span>}
-                {item.projectName}
-              </span>
-              <span className={styles.workListCell} title={item.drawingName}>
-                {item.drawingName}
-              </span>
-              <span className={styles.workListCell}>
-                {item.onlineCount}人
-              </span>
-              <span className={styles.workListCell}>
-                {isJoined ? (
-                  <span className={styles.joinedBadge}>
-                    <Check size={10} />
-                    已加入
-                  </span>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    loading={joiningWorkId === item.work.work_id}
-                    disabled={currentWorkId !== null}
-                    onClick={() => onJoinWork(item.work.work_id)}
-                  >
-                    加入
-                  </Button>
-                )}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {hasMyWorks && (
+        <div className={styles.workListGroup}>
+          <div className={styles.workListGroupLabel}>我创建的</div>
+          <div className={styles.workListGroupBody}>
+            {myWorks.map((item) => (
+              <CollabWorkCard
+                key={item.work.work_id}
+                work={item.work}
+                isActive={item.work.work_id === currentWorkId}
+                isJoined={item.isJoined || item.work.work_id === currentWorkId}
+                isJoining={joiningWorkId === item.work.work_id}
+                drawingName={item.drawingName}
+                projectName={item.projectName}
+                onJoin={onJoinWork}
+                onExit={onExitWork}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasProjectWorks && (
+        <div className={styles.workListGroup}>
+          <div className={styles.workListGroupLabel}>项目协同</div>
+          <div className={styles.workListGroupBody}>
+            {projectWorks.map((item) => (
+              <CollabWorkCard
+                key={item.work.work_id}
+                work={item.work}
+                isActive={item.work.work_id === currentWorkId}
+                isJoined={item.isJoined || item.work.work_id === currentWorkId}
+                isJoining={joiningWorkId === item.work.work_id}
+                drawingName={item.drawingName}
+                projectName={item.projectName}
+                onJoin={onJoinWork}
+                onExit={onExitWork}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -119,7 +119,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
               key={node.id}
               node={node}
               isSelected={selectedNodes.has(node.id)}
-              isMultiSelectMode={isMultiSelectMode}
+                
               isTrash={isTrashView}
               isDropTarget={dropTargetId === node.id}
               isDragging={draggedNodes.some((n) => n.id === node.id)}

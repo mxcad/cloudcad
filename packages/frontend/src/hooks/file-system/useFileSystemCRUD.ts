@@ -132,15 +132,21 @@ export const useFileSystemCRUD = ({
       setShowCreateFolderModal(false);
       const createdId = (newFolder as unknown as { id?: string })?.id || '';
       if (createdId) {
+        const folderNameTrimmed = folderName.trim();
+        const createdIdHolder = { current: createdId };
         pushAction({
           type: 'createFolder',
-          description: `创建文件夹 "${folderName.trim()}"`,
-          projectId: urlProjectId,
+          description: `创建文件夹 "${folderNameTrimmed}"`,
+          projectId: urlProjectId || '',
           execute: async () => {
-            await fileSystemControllerCreateFolder({ path: { parentId: parentNodeId }, body: { name: folderName.trim() }, throwOnError: true });
+            const result = await fileSystemControllerCreateFolder({ path: { parentId: parentNodeId }, body: { name: folderNameTrimmed }, throwOnError: true });
+            const newId = (result as unknown as { id?: string })?.id || '';
+            if (newId) createdIdHolder.current = newId;
           },
           rollback: async () => {
-            await fileSystemControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true }, throwOnError: true });
+            if (createdIdHolder.current) {
+              await fileSystemControllerDeleteNode({ path: { nodeId: createdIdHolder.current }, query: { permanently: true }, throwOnError: true });
+            }
           },
         });
       }
@@ -205,8 +211,9 @@ export const useFileSystemCRUD = ({
       }
 
       // TODO: Replace with SDK when backend adds renameNode endpoint
+      const nodeId = editingNode.id;
       const oldName = editingNode.name;
-      await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName }, throwOnError: true });
+      await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: finalName }, throwOnError: true });
       showToast('重命名成功', 'success');
       setFolderName('');
       setShowRenameModal(false);
@@ -214,12 +221,12 @@ export const useFileSystemCRUD = ({
       pushAction({
         type: 'rename',
         description: `重命名 "${oldName}" → "${finalName}"`,
-        projectId: urlProjectId,
+        projectId: urlProjectId || '',
         execute: async () => {
-          await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName }, throwOnError: true });
+          await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: finalName }, throwOnError: true });
         },
         rollback: async () => {
-          await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: oldName }, throwOnError: true });
+          await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: oldName }, throwOnError: true });
         },
       });
       loadData();
@@ -286,7 +293,7 @@ export const useFileSystemCRUD = ({
             pushAction({
               type: 'delete',
               description: `删除 "${deletedNodeName}"`,
-              projectId: urlProjectId,
+              projectId: urlProjectId || '',
               execute: async () => {
                 await fileSystemControllerDeleteNode({ path: { nodeId: deletedNodeId }, query: { permanently: false }, throwOnError: true });
               },
@@ -361,7 +368,7 @@ export const useFileSystemCRUD = ({
               pushAction({
                 type: 'delete',
                 description: `批量删除 ${batchNodeIds.length} 个项目`,
-                projectId: urlProjectId,
+                projectId: urlProjectId || '',
                 execute: async () => {
                   await Promise.all(
                     batchNodeIds.map((id) =>

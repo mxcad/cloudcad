@@ -1,11 +1,7 @@
-/**
- * 协同侧边栏样�?- CloudCAD完美主题系统 2.0
- * 
- * 设计理念：专业协同工作空�? * - 深色主题：Midnight Engineering - 沉浸、专注、高�? * - 亮色主题：Daylight Clarity - 清晰、通透、活�? * - 特色：实时状态指示、流畅动画、专业感
- */
+/* 协同侧边栏样式 - CloudCAD 主题系统 2.0 */
 
 /* ============================================
-   1. 容器 - 与CAD画布完美融合
+   1. 容器 - 与 CAD 编辑器融合
    ============================================ */
 
 .container {
@@ -13,19 +9,12 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--sidebar-bg, var(--bg-secondary, #3A4352));
-  color: var(--text-primary, #f0f4f8);
-  transition: all 0.3s ease;
+  background: var(--sidebar-bg, var(--bg-secondary));
+  color: var(--text-primary);
   overflow: hidden;
   position: relative;
 }
 
-/* 深色主题 */
-[data-theme="dark"] .container {
-  background: var(--sidebar-bg, #212832);
-}
-
-/* 顶部装饰渐变�?*/
 .container::before {
   content: '';
   position: absolute;
@@ -33,15 +22,14 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(    
+  background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--accent-500, #06b6d4) 30%,
-    var(--primary-500, #818cf8) 70%,
+    var(--accent-500) 30%,
+    var(--primary-500) 70%,
     transparent 100%
   );
-  opacity: 0.6;
-  z-index: 10;
+  opacity: 0.4;
 }
 
 [data-theme="dark"] .container::before {
@@ -52,830 +40,11 @@
     var(--info) 70%,
     transparent 100%
   );
-  box-shadow: 0 0 8px rgba(0, 156, 255, 0.3);
+  box-shadow: 0 0 6px rgba(0, 156, 255, 0.3);
 }
 
 /* ============================================
-   2. 标题�?   ============================================ */
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; 
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    transparent 100%
-  );
-  border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
-  position: relative;
-  z-index: 5;
-}
-
-[data-theme="dark"] .header {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    transparent 100%
-  );
-  border-bottom-color: var(--sidebar-border, #3A4352);
-}
-
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.headerIcon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.15) 0%,
-    rgba(34, 211, 238, 0.05) 100%
-  );
-  border-radius: var(--radius-lg, 10px);
-  border: 1px solid rgba(34, 211, 238, 0.2);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.headerIcon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.2) 0%,
-    transparent 100%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.header:hover .headerIcon::before {
-  opacity: 1;
-}
-
-[data-theme="dark"] .headerIcon {
-  background: linear-gradient(
-    135deg,
-    rgba(34, 211, 238, 0.12) 0%,
-    rgba(34, 211, 238, 0.04) 100%
-  );
-  border-color: rgba(34, 211, 238, 0.15);
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.headerIcon svg {
-  color: var(--accent-500, #06b6d4);
-  transition: transform 0.3s ease;
-}
-
-[data-theme="dark"] .headerIcon svg {
-  color: #22d3ee;
-}
-
-.header:hover .headerIcon svg {
-  transform: scale(1.1);
-}
-
-.headerTitle {
-  font-size: var(--text-md);
-  font-weight: 600;
-  color: var(--text-primary, #f0f4f8);
-  letter-spacing: 0.01em;
-}
-
-[data-theme="dark"] .headerTitle {
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.headerBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--success, #22c55e);
-  background: var(--success-dim, rgba(34, 197, 94, 0.15));
-  border-radius: var(--radius-full, 9999px);
-  animation: badgePulse 2s ease-in-out infinite;
-}
-
-@keyframes badgePulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* ============================================
-   3. 操作�?   ============================================ */
-
-.actionsBar {
-  display: flex;
-  gap: 6px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
-  flex-shrink: 0;
-}
-
-.primaryButton {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: white;
-  background: var(--info);
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.primaryButton::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.08);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.primaryButton:hover:not(:disabled)::before { opacity: 1; }
-
-.primaryButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.primaryButton:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.primaryButton:disabled {
-  background: var(--bg-tertiary, #22262b);
-  color: var(--text-muted, #5a6a7a);
-  cursor: not-allowed;
-  box-shadow: none;
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
-}
-
-[data-theme="dark"] .primaryButton:disabled {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
-[data-theme="dark"] .primaryButton {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.9) 0%, rgba(59, 130, 246, 0.9) 100%);
-  box-shadow: 0 1px 6px rgba(96, 165, 250, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .primaryButton:hover:not(:disabled) {
-  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-[data-theme="dark"] .primaryButton:disabled {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.35);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.iconButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  color: var(--text-tertiary, #7a8a99);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.iconButton::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.iconButton:hover:not(:disabled)::before { opacity: 1; }
-
-.iconButton:hover:not(:disabled) {
-  color: var(--text-primary, #f0f4f8);
-  background: var(--bg-tertiary, #22262b);
-  border-color: var(--border-strong, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.iconButton:disabled { opacity: 0.5; cursor: not-allowed; }
-
-[data-theme="dark"] .iconButton {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.45);
-}
-
-[data-theme="dark"] .iconButton:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* ============================================
-   4. 当前协同状�?   ============================================ */
-
-.currentSession {
-  padding: 8px 10px;
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.06) 0%, rgba(99, 102, 241, 0.04) 50%, transparent 100%);
-  border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
-  position: relative;
-  overflow: hidden;
-}
-
-.currentSession::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: linear-gradient(180deg, var(--accent-500, #06b6d4) 0%, var(--primary-500, #818cf8) 100%);
-}
-
-[data-theme="dark"] .currentSession::before {
-  background: linear-gradient(180deg, var(--accent-500) 0%, var(--info) 100%);
-}
-
-[data-theme="dark"] .currentSession {
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.08) 0%, rgba(96, 165, 250, 0.04) 50%, transparent 100%);
-  border-bottom-color: var(--sidebar-border, #3A4352);
-}
-
-[data-theme="dark"] .currentSession::before {
-  background: linear-gradient(
-    180deg,
-    var(--accent-500) 0%,
-    var(--info) 100%
-  );
-  box-shadow: 0 0 12px rgba(0, 156, 255, 0.5);
-}
-
-.sessionInfo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.sessionLeft {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.statusIndicator {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-}
-
-.indicatorDot {
-  position: absolute;
-  inset: 0;
-  background: var(--success, #22c55e);
-  border-radius: 50%;
-}
-
-.indicatorDot::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  background: var(--success, #22c55e);
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: indicatorPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-@keyframes indicatorPing {
-  75%, 100% { transform: scale(2); opacity: 0; }
-}
-
-@keyframes statusPing {
-  75%, 100% { transform: scale(2); opacity: 0; }
-}
-
-.sessionLabel {
-  font-size: var(--text-xs);
-  color: var(--text-secondary, #b8c5d1);
-  white-space: nowrap;
-}
-
-[data-theme="dark"] .sessionLabel { color: rgba(255, 255, 255, 0.65); }
-
-.sessionId {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--accent-500, #06b6d4);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-[data-theme="dark"] .sessionId {
-  color: #22d3ee;
-  text-shadow: 0 0 6px rgba(34, 211, 238, 0.25);
-}
-
-.exitButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, var(--error, #ef4444) 0%, #dc2626 100%);
-  border: none;
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.25);
-  flex-shrink: 0;
-}
-
-.exitButton:hover {
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
-}
-
-.sessionActions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.shareButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  color: var(--accent-500, #06b6d4);
-  background: rgba(34, 211, 238, 0.1);
-  border: 1px solid rgba(34, 211, 238, 0.2);
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.shareButton:hover {
-  background: rgba(34, 211, 238, 0.2);
-  border-color: rgba(34, 211, 238, 0.3);
-  box-shadow: 0 2px 6px rgba(34, 211, 238, 0.15);
-}
-
-[data-theme="dark"] .shareButton {
-  background: rgba(34, 211, 238, 0.08);
-  border-color: rgba(34, 211, 238, 0.15);
-  color: #22d3ee;
-}
-
-[data-theme="dark"] .shareButton:hover {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: rgba(34, 211, 238, 0.25);
-}
-
-/* ============================================
-   5. 协同列表区域
-   ============================================ */
-
-.sessionList {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-/* 自定义滚动条 */
-.sessionList::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sessionList::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sessionList::-webkit-scrollbar-thumb {
-  background: var(--border-default, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-full, 9999px);
-}
-
-.sessionList::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong, rgba(255, 255, 255, 0.15));
-}
-
-[data-theme="dark"] .sessionList::-webkit-scrollbar-thumb {
-  background: var(--sidebar-border, #3A4352);
-}
-
-[data-theme="dark"] .sessionList::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* ============================================
-   6. 协同会话卡片
-   ============================================ */
-
-.sessionCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.sessionCard::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.05) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.sessionCard:hover::before { opacity: 1; }
-
-.sessionCard:hover {
-  background: var(--bg-tertiary, #22262b);
-  border-color: var(--border-default, rgba(255, 255, 255, 0.08));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="dark"] .sessionCard { background: rgba(255, 255, 255, 0.02); }
-
-[data-theme="dark"] .sessionCard:hover {
-  background: rgba(96, 165, 250, 0.06);
-  border-color: rgba(96, 165, 250, 0.15);
-}
-
-/* 激活状�?*/
-.sessionCard.active {
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.08) 0%, rgba(99, 102, 241, 0.04) 100%);
-  border-color: rgba(34, 211, 238, 0.2);
-  box-shadow: inset 2px 0 0 var(--accent-500, #06b6d4);
-}
-
-.sessionCard.active::before {
-  opacity: 1;
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.06) 0%, transparent 100%);
-}
-
-[data-theme="dark"] .sessionCard.active {
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.1) 0%, rgba(96, 165, 250, 0.04) 100%);
-  border-color: rgba(34, 211, 238, 0.25);
-}
-
-.sessionCardLeft {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.sessionIcon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: var(--radius-sm, 6px);
-  border: 1px solid rgba(99, 102, 241, 0.12);
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.sessionCard:hover .sessionIcon {
-  border-color: rgba(99, 102, 241, 0.2);
-}
-
-.sessionCard.active .sessionIcon {
-  background: rgba(34, 211, 238, 0.1);
-  border-color: rgba(34, 211, 238, 0.25);
-}
-
-[data-theme="dark"] .sessionIcon {
-  background: rgba(96, 165, 250, 0.08);
-  border-color: rgba(96, 165, 250, 0.12);
-}
-
-[data-theme="dark"] .sessionCard:hover .sessionIcon { border-color: rgba(96, 165, 250, 0.2); }
-
-.sessionIcon svg {
-  color: var(--text-tertiary, #7a8a99);
-  transition: color 0.2s ease;
-}
-
-.sessionCard:hover .sessionIcon svg {
-  color: var(--primary-500, #818cf8);
-}
-
-.sessionCard.active .sessionIcon svg {
-  color: var(--accent-500, #06b6d4);
-}
-
-[data-theme="dark"] .sessionIcon svg {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-[data-theme="dark"] .sessionCard:hover .sessionIcon svg {
-  color: var(--info);
-}
-
-[data-theme="dark"] .sessionCard.active .sessionIcon svg {
-  color: #22d3ee;
-}
-
-.sessionDetails {
-  flex: 1;
-  min-width: 0;
-}
-
-.sessionName {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary, #f0f4f8);
-  margin-bottom: 1px;
-  transition: color 0.2s ease;
-}
-
-.sessionCard:hover .sessionName { color: var(--primary-500, #818cf8); }
-.sessionCard.active .sessionName { color: var(--accent-500, #06b6d4); }
-[data-theme="dark"] .sessionName { color: rgba(255, 255, 255, 0.85); }
-[data-theme="dark"] .sessionCard:hover .sessionName { color: var(--info); }
-[data-theme="dark"] .sessionCard.active .sessionName { color: #22d3ee; }
-
-.sessionMeta {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary, #7a8a99);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-[data-theme="dark"] .sessionMeta {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-/* 已加入标�?*/
-.joinedBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--success, #22c55e);
-  background: var(--success-dim, rgba(34, 197, 94, 0.12));
-  border-radius: var(--radius-full, 9999px);
-  border: 1px solid rgba(34, 197, 94, 0.15);
-  flex-shrink: 0;
-}
-
-[data-theme="dark"] .joinedBadge {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.2);
-}
-
-/* 加入按钮 */
-.joinButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 12px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, var(--primary-500, #818cf8) 0%, var(--primary-600, #4f46e5) 100%);
-  border: none;
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.2);
-  flex-shrink: 0;
-  min-width: 48px;
-}
-
-.joinButton:hover:not(:disabled) {
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.joinButton:disabled {
-  background: var(--bg-tertiary, #22262b);
-  color: var(--text-muted, #5a6a7a);
-  cursor: not-allowed;
-  box-shadow: none;
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
-}
-
-[data-theme="dark"] .joinButton:disabled {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
-[data-theme="dark"] .joinButton {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.85) 0%, rgba(59, 130, 246, 0.85) 100%);
-  box-shadow: 0 1px 6px rgba(96, 165, 250, 0.25);
-}
-
-[data-theme="dark"] .joinButton:hover:not(:disabled) {
-  box-shadow: 0 2px 10px rgba(96, 165, 250, 0.35);
-}
-
-[data-theme="dark"] .joinButton:disabled {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.35);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-/* ============================================
-   7. 空状�?   ============================================ */
-
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  text-align: center;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.emptyIcon {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: 50%;
-  margin-bottom: 14px;
-}
-
-.emptyIcon svg {
-  width: 24px;
-  height: 24px;
-  color: var(--text-muted, #5a6a7a);
-  opacity: 0.5;
-}
-
-[data-theme="dark"] .emptyIcon { background: rgba(96, 165, 250, 0.08); }
-[data-theme="dark"] .emptyIcon svg { color: rgba(255, 255, 255, 0.3); }
-
-.emptyTitle {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-secondary, #b8c5d1);
-  margin-bottom: 4px;
-}
-
-[data-theme="dark"] .emptyTitle { color: rgba(255, 255, 255, 0.6); }
-
-.emptyDescription {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary, #7a8a99);
-  max-width: 180px;
-  line-height: 1.5;
-}
-
-[data-theme="dark"] .emptyDescription { color: rgba(255, 255, 255, 0.4); }
-
-/* ============================================
-   8. 加载状�?   ============================================ */
-
-.loadingState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-}
-
-.loadingSpinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--border-default, rgba(255, 255, 255, 0.08));
-  border-top-color: var(--primary-500, #818cf8);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 10px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-[data-theme="dark"] .loadingSpinner {
-  border-color: var(--sidebar-border, #3A4352);
-  border-top-color: var(--info);
-}
-
-.loadingText {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary, #7a8a99);
-}
-
-[data-theme="dark"] .loadingText { color: rgba(255, 255, 255, 0.4); }
-
-/* ============================================
-   9. 微交互动�?   ============================================ */
-
-.ripple { position: relative; overflow: hidden; }
-
-.ripple::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-}
-
-.ripple:active::after { animation: rippleEffect 0.3s ease-out; }
-
-@keyframes rippleEffect {
-  from { width: 0; height: 0; opacity: 0.4; }
-  to { width: 150px; height: 150px; opacity: 0; }
-}
-
-/* 列表项入场动�?*/
-.sessionCard {
-  animation: slideIn 0.3s ease forwards;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.sessionCard:nth-child(1) { animation-delay: 0s; }
-.sessionCard:nth-child(2) { animation-delay: 0.04s; }
-.sessionCard:nth-child(3) { animation-delay: 0.08s; }
-.sessionCard:nth-child(4) { animation-delay: 0.12s; }
-.sessionCard:nth-child(5) { animation-delay: 0.16s; }
-.sessionCard:nth-child(6) { animation-delay: 0.2s; }
-.sessionCard:nth-child(7) { animation-delay: 0.24s; }
-.sessionCard:nth-child(8) { animation-delay: 0.28s; }
-
-/* ============================================
-   10. 子 Tab 栏
+   2. 子 Tab 栏
    ============================================ */
 
 .subTabBar {
@@ -884,8 +53,12 @@
   justify-content: space-between;
   padding: 6px 10px;
   gap: 6px;
-  border-bottom: 1px solid var(--sidebar-border, var(--border-default, #212832));
+  border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .subTabBar {
+  border-bottom-color: var(--sidebar-border, #3A4352);
 }
 
 .panelContent {
@@ -895,41 +68,120 @@
 }
 
 /* ============================================
-   11. 当前图纸状态卡
+   3. 刷新按钮
    ============================================ */
 
-.currentFilePanel {
-  padding: 10px;
-}
-
-.statusCard {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md, 8px);
-  overflow: hidden;
-}
-
-[data-theme="dark"] .statusCard {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
-.statusHeader {
+.toolbarRefreshBtn {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toolbarRefreshBtn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+[data-theme="dark"] .toolbarRefreshBtn {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme="dark"] .toolbarRefreshBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.toolbarRefreshBtn:active {
+  transform: scale(0.95);
+}
+
+.toolbarRefreshBtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================
+   4. 协同卡片 (CollabWorkCard)
+   ============================================ */
+
+.workCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  transition: border-color var(--transition-fast),
+              background var(--transition-fast);
+  position: relative;
+}
+
+.workCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-strong);
+}
+
+[data-theme="dark"] .workCard {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .workCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.workCardActive {
+  border-color: var(--accent-500);
+  border-left: 2px solid var(--accent-500);
+  padding-left: 11px;
+  background: linear-gradient(
+    90deg,
+    var(--accent-50) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+}
+
+[data-theme="dark"] .workCardActive {
+  background: linear-gradient(
+    90deg,
+    rgba(6, 182, 212, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border-color: var(--accent-500);
+}
+
+.workCardMain {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
-  background: rgba(255, 255, 255, 0.02);
 }
 
-[data-theme="dark"] .statusHeader {
-  border-bottom-color: rgba(255, 255, 255, 0.04);
+.workCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
-.statusFileName {
-  font-size: var(--text-xs);
+.workCardTitle {
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -937,176 +189,108 @@
   white-space: nowrap;
 }
 
-.statusLiveBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--success, #22c55e);
-  background: var(--success-dim, rgba(34, 197, 94, 0.12));
-  border-radius: var(--radius-full, 9999px);
-  flex-shrink: 0;
+[data-theme="dark"] .workCardTitle {
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.statusAvailableBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--info, #3b82f6);
-  background: var(--info-dim, rgba(59, 130, 246, 0.12));
-  border-radius: var(--radius-full, 9999px);
-  flex-shrink: 0;
-}
-
-.statusDot {
-  width: 6px;
-  height: 6px;
-  background: var(--success, #22c55e);
-  border-radius: 50%;
-  animation: statusPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.statusDotStatic {
-  width: 6px;
-  height: 6px;
-  background: var(--info, #3b82f6);
-  border-radius: 50%;
-}
-
-.statusBody {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 12px;
-}
-
-.statusIcon {
-  width: 40px;
-  height: 40px;
+.workCardMetaRow {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: 50%;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.statusIcon svg {
-  color: var(--text-muted);
+[data-theme="dark"] .workCardMetaRow {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.workCardMeta + .workCardMeta::before {
+  content: '·';
+  margin-right: 4px;
   opacity: 0.5;
 }
 
-.statusTitle {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.statusDesc {
-  font-size: var(--text-xs);
+.workCardBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 500;
   color: var(--text-tertiary);
-  text-align: center;
-  max-width: 180px;
-  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-.statusPrimaryBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 16px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: white;
-  background: var(--info);
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25);
-  margin-top: 4px;
+[data-theme="dark"] .workCardBadge {
+  color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.statusPrimaryBtn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
-  transform: translateY(-1px);
+.workCardActive .workCardBadge {
+  color: var(--accent-500);
+  border-color: var(--accent-400);
+  background: rgba(6, 182, 212, 0.08);
 }
 
-.statusPrimaryBtn:disabled {
-  background: var(--bg-tertiary);
-  color: var(--text-muted);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.statusSecondaryBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--accent-500, #06b6d4);
-  background: rgba(34, 211, 238, 0.1);
-  border: 1px solid rgba(34, 211, 238, 0.2);
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.statusSecondaryBtn:hover {
-  background: rgba(34, 211, 238, 0.2);
+[data-theme="dark"] .workCardActive .workCardBadge {
+  color: #22d3ee;
   border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.1);
 }
 
-.statusDangerBtn {
+.workCardFooter {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, var(--error, #ef4444) 0%, #dc2626 100%);
-  border: none;
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.25);
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.statusDangerBtn:hover {
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
-}
+/* ============================================
+   5. 头像
+   ============================================ */
 
-/* 参与者头像列表 */
-.participantAvatars {
+.workCardAvatars {
   display: flex;
   align-items: center;
-  gap: -4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.workCardNoUsers {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .workCardNoUsers {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid var(--bg-secondary, #3A4352);
+  border: 2px solid var(--sidebar-bg, var(--bg-secondary));
   margin-right: -6px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.15s ease, z-index 0s;
 }
 
-[data-theme="dark"] .avatar {
-  border-color: var(--sidebar-bg, #212832);
+.avatar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
 }
 
 .avatarImg {
@@ -1121,10 +305,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary-500, #818cf8);
+  background: var(--primary-500);
   color: white;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
+  line-height: 1;
+}
+
+[data-theme="dark"] .avatarFallback {
+  background: var(--info);
 }
 
 .avatarMore {
@@ -1133,147 +322,367 @@
   justify-content: center;
   background: var(--bg-tertiary);
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
+  line-height: 1;
+  border: 2px solid var(--sidebar-bg, var(--bg-secondary));
 }
 
-.onlineCount {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
+[data-theme="dark"] .avatarMore {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.workCardActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 /* ============================================
-   12. 协同列表面板
+   6. 当前图纸面板 (CurrentFilePanel)
+   ============================================ */
+
+.currentFilePanel {
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+.currentFilePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 0 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: 10px;
+}
+
+.currentFilePanelHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+[data-theme="dark"] .currentFilePanelHeader {
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom-color: var(--sidebar-border, #3A4352);
+}
+
+.statusCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .statusCard {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .statusHeader {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.statusFileName {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .statusFileName {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.statusBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 12px;
+}
+
+.statusIcon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+}
+
+.statusIcon svg {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+[data-theme="dark"] .statusIcon {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .statusIcon svg {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.statusTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+[data-theme="dark"] .statusTitle {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.statusDesc {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+  max-width: 180px;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .statusDesc {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* "协同中" 闪烁徽章 */
+.statusLiveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-dim);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .statusLiveBadge {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: statusPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+[data-theme="dark"] .statusDot {
+  background: #22c55e;
+}
+
+@keyframes statusPing {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+.otherWorksSection {
+  margin-top: 6px;
+}
+
+.createNewRow {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-default);
+}
+
+[data-theme="dark"] .createNewRow {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================
+   7. 协同列表面板 (WorkListPanel)
    ============================================ */
 
 .workListPanel {
   padding: 8px;
-  min-height: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
-.workListHeader {
-  display: grid;
-  grid-template-columns: 1fr 1fr 36px 66px;
-  gap: 4px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border-default);
-  margin-bottom: 4px;
-  box-sizing: border-box;
+.workListGroup {
+  margin-bottom: 12px;
 }
 
-.workListHeaderLabel {
+.workListGroupLabel {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  padding: 4px 8px 6px;
 }
 
-.workListBody {
+[data-theme="dark"] .workListGroupLabel {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.workListGroupBody {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.workListRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 36px 66px;
-  gap: 4px;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm, 6px);
-  align-items: center;
-  transition: background 0.15s;
-  box-sizing: border-box;
-}
-
-.workListRow:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-[data-theme="dark"] .workListRow:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.workListRowCurrent {
-  background: rgba(34, 211, 238, 0.04);
-  border-left: 2px solid var(--accent-500, #06b6d4);
-}
-
-.workListCell {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.workListCell .joinedBadge {
-  padding: 2px 6px;
-  font-size: 10px;
-}
-
-.currentMarker {
-  margin-right: 2px;
-}
-
-.joinBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  color: white;
-  background: var(--info);
-  border: none;
-  border-radius: var(--radius-sm, 4px);
-  cursor: pointer;
-  transition: all 0.15s;
-  min-width: 32px;
-}
-
-.joinBtn:hover:not(:disabled) {
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.3);
-}
-
-.joinBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.retryBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 12px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--primary-500);
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.retryBtn:hover {
-  background: rgba(99, 102, 241, 0.12);
 }
 
 /* ============================================
-   10. 响应式调�?   ============================================ */
+   8. 空状态
+   ============================================ */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 50%;
+  margin-bottom: 14px;
+}
+
+.emptyIcon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+[data-theme="dark"] .emptyIcon {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .emptyIcon svg {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.emptyTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+[data-theme="dark"] .emptyTitle {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.emptyDescription {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  max-width: 180px;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .emptyDescription {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   9. 加载状态
+   ============================================ */
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.loadingSpinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 10px;
+}
+
+[data-theme="dark"] .loadingSpinner {
+  border-color: rgba(255, 255, 255, 0.08);
+  border-top-color: var(--info);
+}
+
+.loadingText {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .loadingText {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   10. 动画
+   ============================================ */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.workCard {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+.workCard:nth-child(1) { animation-delay: 0s; }
+.workCard:nth-child(2) { animation-delay: 0.03s; }
+.workCard:nth-child(3) { animation-delay: 0.06s; }
+.workCard:nth-child(4) { animation-delay: 0.09s; }
+.workCard:nth-child(5) { animation-delay: 0.12s; }
+
+/* ============================================
+   11. 响应式
+   ============================================ */
 
 @media (max-width: 480px) {
-  .actionsBar { padding: 6px 8px; flex-wrap: wrap; }
-  .primaryButton { padding: 5px 8px; font-size: var(--text-xs); }
-  .iconButton { width: 28px; height: 28px; }
-  .sessionCard { padding: 6px 8px; }
-  .sessionIcon { width: 28px; height: 28px; }
-  .workListHeader { display: none; }
-  .workListRow { grid-template-columns: 1fr auto; gap: 6px; }
-  .workListCell:nth-child(2) { display: none; }
-  .workListCell:nth-child(3) { display: none; }
+  .currentFilePanel {
+    padding: 8px;
+  }
+  .workCard {
+    padding: 8px 10px;
+  }
+  .workListPanel {
+    padding: 6px;
+  }
 }

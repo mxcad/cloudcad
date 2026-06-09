@@ -143,7 +143,6 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           isSelected={false}
           viewMode={viewMode}
           galleryMode={isLibraryMode}
-          isMultiSelectMode={false}
           isTrash={false}
           hideTypeTag={hideTypeTag}
           forceCompactActions={forceCompactActions}

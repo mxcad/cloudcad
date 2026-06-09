@@ -55,8 +55,6 @@ interface UseLibraryState {
   isFolderMode: boolean;
   /** 选中节点 */
   selectedNodes: Set<string>;
-  /** 是否多选模式 */
-  isMultiSelectMode: boolean;
 }
 
 interface UseLibraryActions {
@@ -96,8 +94,6 @@ interface UseLibraryActions {
   handleSelectAll: () => void;
   /** 清除选择 */
   clearSelection: () => void;
-  /** 切换多选模式 */
-  toggleMultiSelectMode: () => void;
   /** 批量删除 */
   batchDeleteNodes: (nodeIds: string[]) => Promise<void>;
 }
@@ -223,8 +219,6 @@ export const useLibrary = (
   // ── 选择管理 ──
   const {
     selectedNodes,
-    isMultiSelectMode,
-    setIsMultiSelectMode,
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
@@ -234,23 +228,6 @@ export const useLibrary = (
   const clearError = useCallback(() => {
     // React Query 错误通过 query 自动管理，此方法保留用于向后兼容
   }, []);
-
-  // ── 退出多选模式时清空选中 ──
-  useEffect(() => {
-    if (!isMultiSelectMode && selectedNodes.size > 0) {
-      clearSelection();
-    }
-  }, [isMultiSelectMode, selectedNodes.size, clearSelection]);
-
-  // ── 切换多选模式 ──
-  const toggleMultiSelectMode = useCallback(() => {
-    setIsMultiSelectMode((prev) => {
-      if (!prev) {
-        clearSelection();
-      }
-      return !prev;
-    });
-  }, [setIsMultiSelectMode, clearSelection]);
 
   // ── 批量删除（使用 mutation + 清除选择） ──
   const batchDeleteNodes = useCallback(
@@ -276,7 +253,6 @@ export const useLibrary = (
     isFolderMode: query.isFolderMode,
     // Selection State
     selectedNodes,
-    isMultiSelectMode,
     // Actions
     setLibraryType,
     enterNode,
@@ -305,7 +281,6 @@ export const useLibrary = (
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
-    toggleMultiSelectMode,
     batchDeleteNodes,
   };
 };

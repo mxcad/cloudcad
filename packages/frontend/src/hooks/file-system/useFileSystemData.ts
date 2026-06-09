@@ -53,7 +53,6 @@ interface UseFileSystemDataProps {
     type: 'success' | 'error' | 'info' | 'warning'
   ) => void;
   clearSelection: () => void;
-  setIsMultiSelectMode: (value: boolean) => void;
   /** 项目过滤类型：all-全部，owned-我创建的，joined-我加入的 */
   projectFilter?: ProjectFilterType;
 }
@@ -70,7 +69,6 @@ export const useFileSystemData = ({
   paginationRef,
   showToast,
   clearSelection,
-  setIsMultiSelectMode,
   projectFilter,
 }: UseFileSystemDataProps) => {
   const navigate = useNavigate();

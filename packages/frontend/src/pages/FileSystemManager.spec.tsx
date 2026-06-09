@@ -139,8 +139,6 @@ describe('FileSystemManager', () => {
       viewMode: 'grid',
       setViewMode: vi.fn(),
       selectedNodes: new Set(),
-      isMultiSelectMode: false,
-      setIsMultiSelectMode: vi.fn(),
       toasts: [],
       showToast: vi.fn(),
       isProjectRootMode: true,

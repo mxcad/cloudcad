@@ -1,8 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
 
@@ -12,7 +7,6 @@ interface UseLibrarySelectionProps {
 
 export const useLibrarySelection = ({ nodes }: UseLibrarySelectionProps) => {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
   const lastSelectedNodeIdRef = useRef<string | null | undefined>(null);
   const lastSelectedIndexRef = useRef<number>(-1);
@@ -35,10 +29,6 @@ export const useLibrarySelection = ({ nodes }: UseLibrarySelectionProps) => {
           const lastIndex = lastSelectedIndexRef.current;
           const startIndex = Math.min(lastIndex, currentIndex);
           const endIndex = Math.max(lastIndex, currentIndex);
-
-          if (!isMultiSelectMode) {
-            newSet.clear();
-          }
 
           for (let i = startIndex; i <= endIndex; i++) {
             const node = nodes[i];
@@ -69,13 +59,13 @@ export const useLibrarySelection = ({ nodes }: UseLibrarySelectionProps) => {
         return newSet;
       });
     },
-    [nodes, isMultiSelectMode]
+    [nodes]
   );
 
   const handleSelectAll = useCallback(() => {
     const allNodeIds = nodes.map((node) => node.id);
 
-    if (selectedNodes.size === allNodeIds.length) {
+    if (selectedNodes.size === allNodeIds.length && selectedNodes.size > 0) {
       setSelectedNodes(new Set());
       lastSelectedNodeIdRef.current = null;
       lastSelectedIndexRef.current = -1;
@@ -97,10 +87,6 @@ export const useLibrarySelection = ({ nodes }: UseLibrarySelectionProps) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        if (!isMultiSelectMode) {
-          return;
-        }
-
         e.preventDefault();
         e.stopPropagation();
         handleSelectAll();
@@ -112,12 +98,10 @@ export const useLibrarySelection = ({ nodes }: UseLibrarySelectionProps) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isMultiSelectMode, handleSelectAll]);
+  }, [handleSelectAll]);
 
   return {
     selectedNodes,
-    isMultiSelectMode,
-    setIsMultiSelectMode,
     handleNodeSelect,
     handleSelectAll,
     clearSelection,

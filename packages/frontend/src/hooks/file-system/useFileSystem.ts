@@ -154,13 +154,10 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   const { draggedNodes, setDraggedNodes, dropTargetId, setDropTargetId } =
     useFileSystemDragDrop();
 
-  // Data Hook - 需要传递 clearSelection 和 setIsMultiSelectMode
+  // Data Hook
   const [selectionClearFn, setSelectionClearFn] = React.useState<() => void>(
     () => () => {}
   );
-  const [setMultiSelectModeFn, setSetMultiSelectModeFn] = React.useState<
-    (v: boolean) => void
-  >(() => () => {});
 
   const {
     nodes,
@@ -189,18 +186,16 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     paginationRef,
     showToast,
     clearSelection: selectionClearFn,
-    setIsMultiSelectMode: setMultiSelectModeFn,
     projectFilter: externalProjectFilter,
   });
 
   // Selection Hook
   const {
     selectedNodes,
-    isMultiSelectMode,
-    setIsMultiSelectMode,
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
+    selectNodes,
   } = useFileSystemSelection({
     nodes,
     showToast,
@@ -209,8 +204,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   // 设置 selection 回调函数
   React.useEffect(() => {
     setSelectionClearFn(() => clearSelection);
-    setSetMultiSelectModeFn(() => setIsMultiSelectMode);
-  }, [clearSelection, setIsMultiSelectMode]);
+  }, [clearSelection]);
 
   // Navigation Hook
   const {
@@ -430,8 +424,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     viewMode,
     setViewMode,
     selectedNodes,
-    isMultiSelectMode,
-    setIsMultiSelectMode,
     toasts,
     showCreateFolderModal,
     showCreateDrawingModal,
@@ -466,6 +458,8 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     handleGoBack,
     handleNodeSelect,
     handleSelectAll,
+    clearSelection,
+    selectNodes,
     handleCreateFolder,
     handleCreateDrawing,
     handleRename,

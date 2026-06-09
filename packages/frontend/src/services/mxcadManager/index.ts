@@ -93,17 +93,19 @@ import { APP_COOPERATE_URL } from '@/constants/appConfig';
  */
 function formatEditorFileName(fileName: string): string {
   const isLoggedIn = isAuthenticated();
-  const loginPrefix = isLoggedIn ? '' : '[未登录]';
   const { isInCollaboration } = useCADEditorStore.getState();
-  const collaborationPrefix = isInCollaboration ? '[协同中] ' : '';
-  const sharePrefix =  ' — '
+  const prefixes: string[] = [];
 
-  // empty_template.mxweb 和 empty.mxweb 文件不显示文件名
+  if (isInCollaboration) prefixes.push('[协同中]');
+  if (!isLoggedIn) prefixes.push('[未登录]');
+
   if (fileName === 'empty_template.mxweb' || fileName === 'empty.mxweb') {
-    return `${collaborationPrefix}${loginPrefix}`;
+    return prefixes.join(' - ');
   }
 
-  return `${collaborationPrefix}${loginPrefix}${sharePrefix}${fileName}`;
+  if (prefixes.length === 0) return ` - ${fileName}`;
+
+  return `${prefixes.join(' - ')} - ${fileName}`;
 }
 
 // ==================== 全局状态 ====================
@@ -300,12 +302,28 @@ export function setCurrentFileInfo(fileInfo: {
   name: string;
   personalSpaceId?: string | null;
   libraryKey?: 'drawing' | 'block';
-  path?: string; // 节点完整路径(如: 202604/cmnsaru53000d4sufzcg9wjlg.dwg.mxweb)
-  fromPlatform?: boolean; // 是否从平台跳转进入
-  fromShare?: boolean; // 是否来自分享链接
-  updatedAt?: string; // 乐观锁时间戳
+  path?: string;
+  fromPlatform?: boolean;
+  fromShare?: boolean;
+  updatedAt?: string;
 }) {
   currentFileInfo = { ...fileInfo, expectedTimestamp: fileInfo.updatedAt };
+}
+
+export function patchCurrentFileInfo(partial: {
+  fileId?: string;
+  projectId?: string | null;
+  parentId?: string | null;
+  name?: string;
+  fromShare?: boolean;
+}) {
+  if (currentFileInfo) {
+    if (partial.fileId !== undefined) currentFileInfo.fileId = partial.fileId;
+    if (partial.projectId !== undefined) currentFileInfo.projectId = partial.projectId;
+    if (partial.parentId !== undefined) currentFileInfo.parentId = partial.parentId;
+    if (partial.name !== undefined) currentFileInfo.name = partial.name;
+    if (partial.fromShare !== undefined) currentFileInfo.fromShare = partial.fromShare;
+  }
 }
 
 export function setCacheTimestamp(timestamp: number | undefined) {

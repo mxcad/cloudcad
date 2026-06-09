@@ -137,7 +137,12 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
     return null;
   }
 
-  const mainActions = availableActions.filter((a) => !a.isDestructive);
+  const moveCopyActions = availableActions.filter(
+    (a) => a.type === 'move' || a.type === 'copy'
+  );
+  const mainActions = availableActions.filter(
+    (a) => !a.isDestructive && a.type !== 'move' && a.type !== 'copy'
+  );
   const destructiveActions = availableActions.filter((a) => a.isDestructive);
 
   return (
@@ -172,7 +177,23 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
             </Menu.Item>
           ))}
 
-          {destructiveActions.length > 0 && mainActions.length > 0 && <Menu.Separator />}
+          {moveCopyActions.length > 0 && (
+            <Menu.Submenu label="其他操作" icon={moveCopyActions[0]?.icon}>
+              {moveCopyActions.map((action) => (
+                <Menu.Item
+                  key={action.type}
+                  variant={variantMap[action.type]}
+                  icon={action.icon}
+                  onClick={() => handleMenuAction(() => actionHandlers[action.type]?.())}
+                  {...(action.props as Record<string, unknown>)}
+                >
+                  {action.label}
+                </Menu.Item>
+              ))}
+            </Menu.Submenu>
+          )}
+
+          {(destructiveActions.length > 0) && (mainActions.length > 0 || moveCopyActions.length > 0) && <Menu.Separator />}
 
           {destructiveActions.map((action) => (
             <Menu.Item

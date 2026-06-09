@@ -1,8 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FilePlus, FolderPlus, RefreshCw } from 'lucide-react';
@@ -33,7 +28,6 @@ interface FileSystemHeaderProps {
   isFetching: boolean;
   searchTerm: string;
   viewMode: 'grid' | 'list';
-  isMultiSelectMode: boolean;
   selectedNodes: Set<string>;
   nodesCount: number;
   projectFilter: ProjectFilterType;
@@ -43,7 +37,6 @@ interface FileSystemHeaderProps {
   getCurrentParentId: () => string;
   onSetSearchTerm: (term: string) => void;
   onSetViewMode: (mode: 'grid' | 'list') => void;
-  onSetIsMultiSelectMode: (mode: boolean) => void;
   onSearchSubmit: () => void;
   onSelectAll: () => void;
   onToggleTrashView: () => void;
@@ -53,11 +46,16 @@ interface FileSystemHeaderProps {
   onProjectFilterChange: (filter: ProjectFilterType) => void;
   onRefresh: () => void;
   onCreateFolder: () => void;
-  onCreateDrawing: () => void;
   onCreateProject: () => void;
+  onCreateDrawing?: () => void;
   onGoBack: () => void;
   onBreadcrumbNavigate: (crumb: BreadcrumbItem & { isRoot?: boolean }) => void;
   showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  clipboardCount?: number;
+  clipboardMode?: string | null;
+  onCopy?: () => void;
+  onCut?: () => void;
+  onPaste?: () => void;
 }
 
 export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
@@ -71,7 +69,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   isFetching,
   searchTerm,
   viewMode,
-  isMultiSelectMode,
   selectedNodes,
   nodesCount,
   projectFilter,
@@ -81,7 +78,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   getCurrentParentId,
   onSetSearchTerm,
   onSetViewMode,
-  onSetIsMultiSelectMode,
   onSearchSubmit,
   onSelectAll,
   onToggleTrashView,
@@ -91,16 +87,20 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   onProjectFilterChange,
   onRefresh,
   onCreateFolder,
-  onCreateDrawing,
   onCreateProject,
+  onCreateDrawing,
   onGoBack,
   onBreadcrumbNavigate,
   showToast,
+  clipboardCount = 0,
+  clipboardMode,
+  onCopy,
+  onCut,
+  onPaste,
 }) => {
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; nodeId?: string }>();
 
-  // 面包屑滚轮横向滚动处理
   const breadcrumbRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,7 +127,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
     return () => document.removeEventListener('wheel', handleWheel);
   }, []);
 
-  // 面包屑更新时滚动到最后
   useEffect(() => {
     if (breadcrumbRef.current && breadcrumbs.length > 0) {
       breadcrumbRef.current.scrollTo({
@@ -138,7 +137,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   }, [breadcrumbs]);
 
   const handleBackButton = () => {
-    // 如果在回收站视图，先退出回收站视图
     if (isTrashView) {
       onToggleTrashView();
       return;
@@ -171,7 +169,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   const handleBreadcrumbNav = (crumb: BreadcrumbItem) => {
     onSetSearchTerm('');
     if (isTrashView) {
-      // parent handles isTrashView reset
     }
     if (isPersonalSpaceMode) {
       if (crumb.isRoot) {
@@ -255,7 +252,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </Button>
           </Tooltip>
 
-          {/* 回收站按钮 */}
           {!isAtRoot && (
             <Button
               variant={isTrashView ? 'primary' : 'ghost'}
@@ -345,7 +341,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </>
           )}
 
-          {/* 上传组件 - 仅在项目/文件夹模式下显示 */}
           {!isAtRoot && (
             <MxCadUploader
               ref={uploaderRef}
@@ -362,7 +357,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         </div>
       </div>
 
-      {/* 项目标签页 - 仅在项目根目录模式下显示 */}
       {isAtRoot && (
         <ProjectFilterTabs
           isProjectTrashView={isProjectTrashView}
@@ -384,11 +378,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         onSearchSubmit={onSearchSubmit}
         viewMode={viewMode}
         onViewModeChange={onSetViewMode}
-        isMultiSelectMode={isMultiSelectMode}
-        onMultiSelectModeChange={onSetIsMultiSelectMode}
-        selectedNodes={selectedNodes}
-        nodesCount={nodesCount}
-        onSelectAll={onSelectAll}
         loading={loading}
         isTrashView={isTrashView}
         onClearTrash={onClearProjectTrash}

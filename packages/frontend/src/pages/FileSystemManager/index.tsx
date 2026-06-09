@@ -1,8 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -16,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
 import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { useFileSystem } from '@/hooks/file-system';
+import { useFileSystemSelection } from '@/hooks/file-system/useFileSystemSelection';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { usePermission } from '@/hooks/usePermission';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
@@ -24,6 +20,8 @@ import { useFileSystemStore } from '@/stores/fileSystemStore';
 import {
   fileSystemControllerUpdateNode,
   fileSystemControllerCreateProject,
+  fileSystemControllerMoveNode,
+  fileSystemControllerCopyNode,
 } from '@/api-sdk';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FileSystemNode } from '@/types/filesystem';
@@ -40,6 +38,9 @@ import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { ShareDialog } from '@/components/modals/ShareDialog';
 import { isAbortError, handleError } from '@/utils/errorHandler';
 import type { ProjectFilterType } from '@/types/project';
+import { useFileSystemClipboardStore, type ClipboardMode } from '@/stores/fileSystemClipboardStore';
+import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import { useFileSystemShortcuts } from '@/hooks/file-system/useFileSystemShortcuts';
 
 import { FileSystemHeader } from './FileSystemHeader';
 import { FileSystemContent } from './FileSystemContent';
@@ -85,9 +86,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleSearchSubmit,
     viewMode,
     setViewMode,
-    selectedNodes,
-    isMultiSelectMode,
-    setIsMultiSelectMode,
     toasts,
     showToast,
     isProjectRootMode,
@@ -109,8 +107,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     removeToast,
     handleRefresh,
     handleGoBack,
-    handleNodeSelect,
-    handleSelectAll,
     handleCreateFolder,
     handleCreateDrawing,
     showCreateDrawingModal,
@@ -121,7 +117,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleDelete,
     handlePermanentlyDelete,
     handleBatchDelete,
-    handleFileOpen,
+    handleFileOpen: handleFileOpenRaw,
     handleDownload,
     handleDownloadWithFormat,
     handleOpenRename,
@@ -148,6 +144,184 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     projectFilter,
   });
 
+  const clipboardItems = useFileSystemClipboardStore((s) => s.items);
+  const clipboardMode = useFileSystemClipboardStore((s) => s.mode);
+  const setClipboard = useFileSystemClipboardStore((s) => s.setClipboard);
+  const clearClipboard = useFileSystemClipboardStore((s) => s.clearClipboard);
+  const undoStoreUndo = useFileSystemUndoRedoStore((s) => s.undo);
+  const undoStoreRedo = useFileSystemUndoRedoStore((s) => s.redo);
+  const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
+  const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
+
+  const projectId = urlProjectId || '';
+
+  const isAtRoot = mode === 'personal-space' ? false : !urlProjectId;
+  const displayNodes = Array.isArray(nodes) ? nodes : [];
+  const [accumulatedNodes, setAccumulatedNodes] = useState<FileSystemNode[]>(displayNodes);
+  const loadDirectionRef = useRef<'next' | 'prev' | null>(null);
+
+  const handleScrollPageChange = useCallback((page: number, direction: 'prev' | 'next') => {
+    loadDirectionRef.current = direction;
+    handlePageChange(page);
+  }, [handlePageChange]);
+
+  useEffect(() => {
+    const dir = loadDirectionRef.current;
+    loadDirectionRef.current = null;
+
+    if (dir === 'next') {
+      setAccumulatedNodes((prev) => {
+        const map = new Map<string, FileSystemNode>();
+        prev.forEach((n) => map.set(n.id, n));
+        displayNodes.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        return Array.from(map.values());
+      });
+    } else if (dir === 'prev') {
+      setAccumulatedNodes((prev) => {
+        const map = new Map<string, FileSystemNode>();
+        displayNodes.forEach((n) => map.set(n.id, n));
+        prev.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        return Array.from(map.values());
+      });
+    } else {
+      setAccumulatedNodes(displayNodes);
+    }
+  }, [displayNodes]);
+
+  const viewNodes = isAtRoot ? displayNodes : accumulatedNodes;
+
+  const {
+    selectedNodes,
+    handleNodeSelect,
+    handleSelectAll,
+    clearSelection,
+    selectNodes,
+  } = useFileSystemSelection({
+    nodes: viewNodes,
+    showToast,
+  });
+
+  const handleFileOpen = useCallback((node: FileSystemNode) => {
+    clearSelection();
+    handleFileOpenRaw(node);
+  }, [clearSelection, handleFileOpenRaw]);
+
+  const clipboardHandleCopy = useCallback(() => {
+    if (selectedNodes.size === 0) {
+      showToast('请先选择要复制的文件', 'info');
+      return;
+    }
+    setClipboard(Array.from(selectedNodes), 'copy', projectId);
+    showToast(`已复制 ${selectedNodes.size} 个项目`, 'info');
+  }, [selectedNodes, setClipboard, projectId, showToast]);
+
+  const clipboardHandleCut = useCallback(() => {
+    if (selectedNodes.size === 0) {
+      showToast('请先选择要剪切的文件', 'info');
+      return;
+    }
+    setClipboard(Array.from(selectedNodes), 'cut', projectId);
+    showToast(`已剪切 ${selectedNodes.size} 个项目`, 'info');
+  }, [selectedNodes, setClipboard, projectId, showToast]);
+
+  const clipboardHandlePaste = useCallback(async () => {
+    if (clipboardItems.length === 0 || !clipboardMode) return;
+
+    if (projectId) {
+      const sourceProjectId = useFileSystemClipboardStore.getState().sourceProjectId;
+      if (sourceProjectId && sourceProjectId !== projectId) {
+        showToast('不能跨项目粘贴', 'error');
+        return;
+      }
+    }
+
+    const targetParentId = currentNode?.id || projectId;
+    if (!targetParentId) {
+      showToast('无法确定粘贴位置', 'error');
+      return;
+    }
+
+    try {
+      if (clipboardMode === 'cut') {
+        for (const nodeId of clipboardItems) {
+          await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } });
+        }
+        clearClipboard();
+        showToast('粘贴成功', 'success');
+      } else {
+        for (const nodeId of clipboardItems) {
+          await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
+        }
+        showToast('粘贴成功', 'success');
+      }
+      handleRefresh();
+    } catch (error) {
+      const appError = handleError(error, '粘贴', 'medium');
+      showToast(appError.message, 'error');
+    }
+  }, [clipboardItems, clipboardMode, projectId, currentNode, clearClipboard, handleRefresh, showToast]);
+
+  const handleRubberBandSelect = useCallback((nodeIds: string[]) => {
+    selectNodes(nodeIds);
+  }, [selectNodes]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedNodes.size === 0) return;
+    handleBatchDelete(false);
+  }, [selectedNodes, handleBatchDelete]);
+
+  const handleRenameSelected = useCallback(() => {
+    if (selectedNodes.size !== 1) return;
+    const nodeId = selectedNodes.values().next().value;
+    if (!nodeId) return;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node) {
+      handleOpenRename(node);
+    }
+  }, [selectedNodes, nodes, handleOpenRename]);
+
+  const clipboardHandleUndo = useCallback(async () => {
+    if (undoStack.length === 0) return;
+    try {
+      const action = undoStack[undoStack.length - 1];
+      if (!action) return;
+      await undoStoreUndo(projectId);
+      showToast(`已撤销: ${action.description}`, 'info');
+      handleRefresh();
+    } catch (error) {
+      const appError = handleError(error, '撤销', 'medium');
+      showToast(appError.message, 'error');
+    }
+  }, [undoStack, undoStoreUndo, projectId, handleRefresh, showToast]);
+
+  const clipboardHandleRedo = useCallback(async () => {
+    if (redoStack.length === 0) return;
+    try {
+      const action = redoStack[redoStack.length - 1];
+      if (!action) return;
+      await undoStoreRedo(projectId);
+      showToast(`已重做: ${action.description}`, 'info');
+      handleRefresh();
+    } catch (error) {
+      const appError = handleError(error, '重做', 'medium');
+      showToast(appError.message, 'error');
+    }
+  }, [redoStack, undoStoreRedo, projectId, handleRefresh, showToast]);
+
+  useFileSystemShortcuts({
+    enabled: !isAtRoot,
+    onUndo: clipboardHandleUndo,
+    onRedo: clipboardHandleRedo,
+    onCopy: clipboardHandleCopy,
+    onCut: clipboardHandleCut,
+    onPaste: clipboardHandlePaste,
+    onDeleteSelected: handleDeleteSelected,
+    onRenameSelected: handleRenameSelected,
+    onClearSelection: clearSelection,
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
+  });
+
   const {
     isModalOpen: isProjectModalOpen,
     editingProject,
@@ -171,12 +345,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     showToast,
   });
 
-  // 使用共享 hook 获取私人空间（替代手动 fetch + 重试逻辑）
   const personalSpaceQuery = usePersonalSpaceQuery({
     enabled: mode === 'personal-space',
   });
 
-  // 同步到 Zustand store（供子组件使用）
   useEffect(() => {
     if (personalSpaceQuery.data?.id) {
       setPersonalSpaceId(personalSpaceQuery.data.id);
@@ -246,15 +418,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setCopySourceNode,
     setShowSelectFolderModal,
   } = useMoveCopy({
-    isMultiSelectMode,
+    urlProjectId: urlProjectId || '',
     selectedNodes,
+    nodes: displayNodes,
     handleRefresh,
     showToast,
   });
-
-  const isAtRoot = mode === 'personal-space' ? false : !urlProjectId;
-
-  const displayNodes = Array.isArray(nodes) ? nodes : [];
 
   const currentNodeIdRef = useRef<string | null>(null);
   const getCurrentParentId = useCallback(() => {
@@ -274,7 +443,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     }
   }, [currentNode]);
 
-  // 外部文件拖拽上传
   const { isDragOver: isFileDragOver, dropHandlers: fileDropHandlers } = useFileDropUpload({
     nodeId: getCurrentParentId,
     openAfterUpload: false,
@@ -409,7 +577,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   );
 
   const handleUploadExternalReference = useCallback((_node: FileSystemNode) => {
-    // External reference upload handled in FileItem component
   }, []);
 
   const { handleDragStart, handleDragOver, handleDragLeave, handleDrop } =
@@ -418,34 +585,77 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       setDraggedNodes,
       dropTargetId,
       setDropTargetId,
+      selectedNodes,
+      nodes: displayNodes,
       handleRefresh,
       showToast,
     });
 
-  const multiSelectBar = isMultiSelectMode && selectedNodes.size > 0 ? (
+  const showSelectionBar = !isAtRoot && selectedNodes.size > 0;
+  const showClipboardBar = !isAtRoot && selectedNodes.size === 0 && clipboardItems.length > 0;
+
+  const handleCancelBar = useCallback(() => {
+    clearSelection();
+    clearClipboard();
+  }, [clearSelection, clearClipboard]);
+
+  const bottomBar = (showSelectionBar || showClipboardBar) ? (
     <div className="flex items-center gap-4">
-      <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
-      <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-
-      {(isTrashView || isProjectTrashView) && (
-        <Button variant="ghost" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
-      )}
-
-      {!isTrashView && !isProjectTrashView && (
+      {showSelectionBar && (
         <>
-          <Button variant="ghost" onClick={() => { setMoveSourceNode({ id: 'batch' }); setCopySourceNode(null); setShowSelectFolderModal(true); }} style={{ color: 'var(--text-secondary)' }}>移动</Button>
-          <Button variant="ghost" onClick={() => { setMoveSourceNode(null); setCopySourceNode({ id: 'batch' }); setShowSelectFolderModal(true); }} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+          <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
+          <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
+
+          {(isTrashView || isProjectTrashView) && (
+            <Button variant="ghost" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
+          )}
+
+          {!isTrashView && !isProjectTrashView && (
+            <>
+              <Button variant="ghost" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+              <Button variant="ghost" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+            </>
+          )}
+
+          {(isTrashView || isProjectTrashView) && (
+            <Button variant="ghost" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
+          )}
+
+          {!isTrashView && !isProjectTrashView && (
+            <Button variant="ghost" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
+          )}
         </>
       )}
 
-      {(isTrashView || isProjectTrashView) && (
-        <Button variant="ghost" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
-      )}
+      <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
+        <Button
+          variant="ghost"
+          onClick={clipboardHandlePaste}
+          disabled={clipboardItems.length === 0}
+          style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }}
+          className="relative px-3"
+        >
+          粘贴
+          {clipboardItems.length > 0 && (
+            <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
+              {clipboardItems.length}
+            </span>
+          )}
+        </Button>
+        {clipboardItems.length > 0 && (
+          <Button
+            variant="ghost"
+            onClick={clearClipboard}
+            style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </Button>
+        )}
+      </div>
 
-      {!isTrashView && !isProjectTrashView && (
-        <Button variant="ghost" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
-      )}
-      <Button variant="ghost" onClick={() => { selectedNodes.clear(); setIsMultiSelectMode(false); }} style={{ color: 'var(--text-muted)' }}>
+      <Button variant="ghost" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
         取消
       </Button>
     </div>
@@ -473,7 +683,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             isFetching={isFetching}
             searchTerm={searchTerm}
             viewMode={viewMode}
-            isMultiSelectMode={isMultiSelectMode}
             selectedNodes={selectedNodes}
             nodesCount={nodes.length}
             projectFilter={projectFilter}
@@ -483,7 +692,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             getCurrentParentId={getCurrentParentId}
             onSetSearchTerm={setSearchTerm}
             onSetViewMode={setViewMode}
-            onSetIsMultiSelectMode={setIsMultiSelectMode}
             onSearchSubmit={handleSearchSubmit}
             onSelectAll={handleSelectAll}
             onToggleTrashView={handleToggleTrashView}
@@ -498,6 +706,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             onGoBack={handleGoBack}
             onBreadcrumbNavigate={() => {}}
             showToast={showToast}
+            clipboardCount={clipboardItems.length}
+            clipboardMode={clipboardMode}
+            onCopy={clipboardHandleCopy}
+            onCut={clipboardHandleCut}
+            onPaste={clipboardHandlePaste}
           />
         </div>
 
@@ -512,7 +725,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             className="h-full rounded-2xl flex flex-col overflow-hidden"
             {...(!isAtRoot ? fileDropHandlers : {})}
           >
-            {/* 拖拽上传提示覆盖层 */}
             {isFileDragOver && (
               <div
                 className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl pointer-events-none m-0"
@@ -553,9 +765,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             ) : (
               <div className="flex-1 min-h-0 flex flex-col">
                 <FileSystemContent
-                  nodes={displayNodes}
+                  nodes={viewNodes}
                   viewMode={viewMode}
-                  isMultiSelectMode={isMultiSelectMode}
                   isTrashView={isTrashView}
                   isProjectTrashView={isProjectTrashView}
                   isAtRoot={isAtRoot}
@@ -596,15 +807,29 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onPageSizeChange={handlePageSizeChange}
                   onDeleteProject={handleDeleteProject}
                   onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
-                  bottomBar={multiSelectBar}
+                   onRubberBandSelect={handleRubberBandSelect}
+                  onBatchDelete={() => handleBatchDelete(isTrashView || isProjectTrashView)}
+                  onBatchMove={() => { setMoveSourceNode({ id: 'batch' }); setCopySourceNode(null); setShowSelectFolderModal(true); }}
+                  onBatchCopy={() => { setMoveSourceNode(null); setCopySourceNode({ id: 'batch' }); setShowSelectFolderModal(true); }}
+                  onBatchRestore={handleBatchRestore}
+                  loading={loading || isFetching}
+                  currentPage={paginationMeta?.page}
+                  totalPages={paginationMeta?.totalPages}
+                  onScrollPageChange={handleScrollPageChange}
                 />
+              </div>
+            )}
+            {bottomBar && (
+              <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                  {bottomBar}
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modals */}
       <CreateFolderModal
         isOpen={showCreateFolderModal}
         folderName={folderName}
@@ -650,7 +875,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         onSubmit={handleSubmitProject}
       />
 
-      {/* Delete project confirm modal */}
       <Modal
         isOpen={deleteConfirmOpen}
         onClose={cancelDelete}

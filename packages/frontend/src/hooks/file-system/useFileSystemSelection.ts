@@ -1,15 +1,3 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-// The code, documentation, and related materials of this software belong to
-// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
-// Technology Co., Ltd. to use this software, its documentation, or related
-// materials.
-// https://www.mxdraw.com/
-///////////////////////////////////////////////////////////////////////////////
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
 
@@ -26,7 +14,6 @@ export const useFileSystemSelection = ({
   showToast,
 }: UseFileSystemSelectionProps) => {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
   const lastSelectedNodeIdRef = useRef<string | null | undefined>(null);
   const lastSelectedIndexRef = useRef<number>(-1);
@@ -49,10 +36,6 @@ export const useFileSystemSelection = ({
           const lastIndex = lastSelectedIndexRef.current;
           const startIndex = Math.min(lastIndex, currentIndex);
           const endIndex = Math.max(lastIndex, currentIndex);
-
-          if (!isMultiSelectMode) {
-            newSet.clear();
-          }
 
           for (let i = startIndex; i <= endIndex; i++) {
             const node = nodes[i];
@@ -83,13 +66,13 @@ export const useFileSystemSelection = ({
         return newSet;
       });
     },
-    [nodes, isMultiSelectMode]
+    [nodes]
   );
 
   const handleSelectAll = useCallback(() => {
     const allNodeIds = nodes.map((node) => node.id);
 
-    if (selectedNodes.size === allNodeIds.length) {
+    if (selectedNodes.size === allNodeIds.length && selectedNodes.size > 0) {
       setSelectedNodes(new Set());
       lastSelectedNodeIdRef.current = null;
       lastSelectedIndexRef.current = -1;
@@ -108,13 +91,21 @@ export const useFileSystemSelection = ({
     lastSelectedIndexRef.current = -1;
   }, []);
 
+  const selectNodes = useCallback((nodeIds: string[]) => {
+    setSelectedNodes(new Set(nodeIds));
+    if (nodeIds.length > 0) {
+      const firstIndex = nodes.findIndex((n) => n.id === nodeIds[0]);
+      lastSelectedNodeIdRef.current = nodeIds[nodeIds.length - 1];
+      lastSelectedIndexRef.current = firstIndex >= 0 ? firstIndex : -1;
+    } else {
+      lastSelectedNodeIdRef.current = null;
+      lastSelectedIndexRef.current = -1;
+    }
+  }, [nodes]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        if (!isMultiSelectMode) {
-          return;
-        }
-
         e.preventDefault();
         e.stopPropagation();
         handleSelectAll();
@@ -126,14 +117,13 @@ export const useFileSystemSelection = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isMultiSelectMode, handleSelectAll]);
+  }, [handleSelectAll]);
 
   return {
     selectedNodes,
-    isMultiSelectMode,
-    setIsMultiSelectMode,
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
+    selectNodes,
   };
 };

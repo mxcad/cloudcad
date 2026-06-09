@@ -2,13 +2,13 @@ import React, { memo, useCallback } from 'react';
 
 interface FileItemSelectionProps {
   isSelected: boolean;
-  isMultiSelectMode: boolean;
   onSelect: (isShift: boolean) => void;
   isGrid?: boolean;
+  isDraggable?: boolean;
 }
 
 export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
-  ({ isSelected, isMultiSelectMode, onSelect, isGrid = false }) => {
+  ({ isSelected, onSelect, isGrid = false, isDraggable = false }) => {
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -18,25 +18,26 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
       [onSelect]
     );
 
-    if (!isMultiSelectMode) return null;
-
     return (
       <div
+        data-drag-handle
         className={`${
           isGrid ? 'absolute top-3 left-3' : ''
         } w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all duration-200 cursor-pointer z-10 ${
           isSelected
             ? 'border-transparent'
             : isGrid
-              ? 'group-hover:border-[var(--primary-500)]'
-              : 'group-hover:border-[var(--primary-500)]'
-        }`}
+              ? 'opacity-0 group-hover:opacity-100'
+              : 'opacity-0 group-hover:opacity-100'
+        } ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{
           background: isSelected ? 'var(--primary-500)' : isGrid ? 'var(--bg-secondary)' : 'transparent',
           borderColor: isSelected ? 'var(--primary-500)' : 'var(--border-default)',
         }}
+        draggable={isDraggable}
         onClick={handleClick}
-        title={isSelected ? '单击取消选择' : '单击选择'}
+        onMouseDown={(e) => { e.stopPropagation(); }}
+        title={isSelected ? '单击取消选择' : isDraggable ? '点击选择，拖拽移动' : '单击选择'}
       >
         {isSelected && (
           <svg

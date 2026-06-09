@@ -3,17 +3,12 @@ import { APP_COOPERATE_URL } from '@/constants/appConfig';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { refreshFileName } from './mxcadManager';
 
-let cooperateInitialized = false;
-
-function getCooperate() {
+export function getCooperate() {
   const mxCAD = MxCpp.getCurrentMxCAD();
   if (!mxCAD) return null;
   const cooperate = mxCAD.getCooperate();
   if (!cooperate) return null;
-  if (!cooperateInitialized) {
-    cooperate.init({ server_addres: APP_COOPERATE_URL });
-    cooperateInitialized = true;
-  }
+  cooperate.init({ server_addres: APP_COOPERATE_URL });
   return cooperate;
 }
 
