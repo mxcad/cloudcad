@@ -16,8 +16,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFileSystemData } from './useFileSystemData';
 import {
+  fileSystemControllerGetDeletedProjects,
   fileSystemControllerGetProjects,
-  fileSystemControllerGetTrash,
   fileSystemControllerSearch,
   fileSystemControllerGetRootNode,
   fileSystemControllerGetNode,
@@ -25,8 +25,8 @@ import {
 } from '@/api-sdk';
 
 vi.mock('@/api-sdk', () => ({
+  fileSystemControllerGetDeletedProjects: vi.fn(),
   fileSystemControllerGetProjects: vi.fn(),
-  fileSystemControllerGetTrash: vi.fn(),
   fileSystemControllerSearch: vi.fn(),
   fileSystemControllerGetRootNode: vi.fn(),
   fileSystemControllerGetNode: vi.fn(),
