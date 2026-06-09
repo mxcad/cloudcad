@@ -37,6 +37,8 @@ export const Z_LAYERS = {
   POPUP: 15000,
   /** Tooltips */
   TOOLTIP: 50000,
+  /** Global loading overlay (during upload, etc.) */
+  LOADING_OVERLAY: 99999,
   /** Toast notifications — highest priority, always on top */
   TOAST: 100000,
 } as const;

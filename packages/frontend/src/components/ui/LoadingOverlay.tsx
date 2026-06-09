@@ -12,14 +12,26 @@
 
 import { useUIStore } from '../../stores/uiStore';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
+import { Z_LAYERS } from '../../constants/layers';
 
 export const LoadingOverlay = () => {
   const { globalLoading, loadingMessage, loadingProgress } = useUIStore();
+  const location = useLocation();
+
+  const isCADRoute =
+    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
 
   if (!globalLoading) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999]">
+    <div
+      className="fixed inset-0"
+      style={{
+        zIndex: Z_LAYERS.LOADING_OVERLAY,
+        pointerEvents: isCADRoute ? 'auto' : 'none',
+      }}
+    >
       {/* 底部横条容器 - 高度 20px */}
       <div className="fixed bottom-0 left-0 right-0 h-[20px] bg-gray-900/80 flex items-center justify-center px-4">
         {/* 顶部细线进度条 - 高度 3px */}
