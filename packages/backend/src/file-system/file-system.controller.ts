@@ -63,6 +63,7 @@ import {
 } from "../mxcad/infra/thumbnail-utils";
 import { ProjectPermissionService } from "../roles/project-permission.service";
 import { CopyNodeDto } from "./dto/copy-node.dto";
+import { CreateDrawingDto } from "./dto/create-drawing.dto";
 import { CreateFolderDto } from "./dto/create-folder.dto";
 import { CreateNodeDto } from "./dto/create-node.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
@@ -412,6 +413,27 @@ export class FileSystemController {
     @Body() dto: CreateFolderDto,
   ) {
     return this.projectCrudService.createFolder(req.user.id, parentId, dto);
+  }
+
+  @Post("nodes/create-drawing")
+  @RequireProjectPermission(ProjectPermission.FILE_CREATE)
+  @CsrfProtected()
+  @ApiOperation({ summary: "创建新图纸（从空白模板）" })
+  @ApiResponse({
+    status: 201,
+    description: "图纸创建成功",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 400, description: "请求参数错误" })
+  async createDrawing(
+    @Request() req: ExpressRequest & { user: { id: string } },
+    @Body() dto: CreateDrawingDto,
+  ) {
+    return this.fileTreeService.createDrawingFromTemplate({
+      parentId: dto.parentId,
+      name: dto.name,
+      ownerId: req.user.id,
+    });
   }
 
   @Get('nodes/:nodeId/root')

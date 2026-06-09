@@ -28,6 +28,7 @@ import {
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FileSystemNode } from '@/types/filesystem';
 import { CreateFolderModal } from '@/components/modals/CreateFolderModal';
+import { NewDrawingModal } from '@/components/modals/NewDrawingModal';
 import { RenameModal } from '@/components/modals/RenameModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
 import { MembersModal } from '@/components/modals/MembersModal';
@@ -111,6 +112,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleNodeSelect,
     handleSelectAll,
     handleCreateFolder,
+    handleCreateDrawing,
+    showCreateDrawingModal,
+    setShowCreateDrawingModal,
+    drawingName,
+    setDrawingName,
     handleRename,
     handleDelete,
     handlePermanentlyDelete,
@@ -343,19 +349,34 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   useEffect(() => {
     const action = searchParams.get('action');
-    if (action !== 'upload' || isAtRoot || loading) return;
+    if (isAtRoot || loading) return;
 
-    const timer = setTimeout(() => {
-      if (uploaderRef.current) {
-        uploaderRef.current.triggerUpload();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (action === 'upload') {
+      timer = setTimeout(() => {
+        if (uploaderRef.current) {
+          uploaderRef.current.triggerUpload();
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.delete('action');
+          navigate({ search: newSearchParams.toString() }, { replace: true });
+        }
+      }, 300);
+    }
+
+    if (action === 'new-drawing') {
+      timer = setTimeout(() => {
+        setShowCreateDrawingModal(true);
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete('action');
         navigate({ search: newSearchParams.toString() }, { replace: true });
-      }
-    }, 300);
+      }, 300);
+    }
 
-    return () => clearTimeout(timer);
-  }, [searchParams, isAtRoot, loading, navigate]);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [searchParams, isAtRoot, loading, navigate, setShowCreateDrawingModal]);
 
   const handleShowMembers = useCallback((project: FileSystemNode) => {
     setEditingProject(project);
@@ -472,6 +493,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             onProjectFilterChange={setProjectFilter}
             onRefresh={handleRefresh}
             onCreateFolder={() => setShowCreateFolderModal(true)}
+            onCreateDrawing={() => setShowCreateDrawingModal(true)}
             onCreateProject={openCreateProject}
             onGoBack={handleGoBack}
             onBreadcrumbNavigate={() => {}}
@@ -590,6 +612,18 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         onClose={() => setShowCreateFolderModal(false)}
         onFolderNameChange={setFolderName}
         onCreate={handleCreateFolder}
+      />
+
+      <NewDrawingModal
+        isOpen={showCreateDrawingModal}
+        drawingName={drawingName}
+        loading={loading}
+        onClose={() => {
+          setShowCreateDrawingModal(false);
+          setDrawingName('');
+        }}
+        onDrawingNameChange={setDrawingName}
+        onCreate={handleCreateDrawing}
       />
 
       <RenameModal

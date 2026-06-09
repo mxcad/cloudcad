@@ -5,7 +5,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderPlus, RefreshCw } from 'lucide-react';
+import { FilePlus, FolderPlus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -53,6 +53,7 @@ interface FileSystemHeaderProps {
   onProjectFilterChange: (filter: ProjectFilterType) => void;
   onRefresh: () => void;
   onCreateFolder: () => void;
+  onCreateDrawing: () => void;
   onCreateProject: () => void;
   onGoBack: () => void;
   onBreadcrumbNavigate: (crumb: BreadcrumbItem & { isRoot?: boolean }) => void;
@@ -90,6 +91,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   onProjectFilterChange,
   onRefresh,
   onCreateFolder,
+  onCreateDrawing,
   onCreateProject,
   onGoBack,
   onBreadcrumbNavigate,
@@ -303,6 +305,18 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             <>
               {!isTrashView && (
                 <>
+                  <Tooltip content="新建图纸">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onCreateDrawing}
+                      disabled={loading}
+                      className="hover:bg-[var(--bg-tertiary)]"
+                      style={{ color: 'var(--text-tertiary)' }}
+                    >
+                      <FilePlus size={16} />
+                    </Button>
+                  </Tooltip>
                   <Tooltip content="新建文件夹">
                     <Button
                       variant="ghost"

@@ -24,6 +24,7 @@ import { QueryChildrenDto } from '../dto/query-children.dto';
 import { StorageInfoService } from '../storage-quota/storage-info.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class FileTreeService {
@@ -216,6 +217,39 @@ export class FileTreeService {
     );
 
     return createdNode;
+  }
+
+  async createDrawingFromTemplate(dto: {
+    parentId: string;
+    name?: string;
+    ownerId: string;
+  }): Promise<PrismaFileSystemNode> {
+    const { parentId, name, ownerId } = dto;
+
+    const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'assets', 'templates');
+    const templatePath = path.join(TEMPLATES_DIR, 'blank.mxweb');
+
+    this.logger.log(
+      `[createDrawingFromTemplate] 从模板创建图纸: templatePath=${templatePath}, parentId=${parentId}`
+    );
+
+    const templateBuffer = await fsPromises.readFile(templatePath);
+    const templateHash = createHash('md5').update(templateBuffer).digest('hex');
+    const templateSize = templateBuffer.length;
+
+    const drawingName = name ? `${name}.mxweb` : '新建图纸.mxweb';
+
+    return this.createFileNode({
+      name: drawingName,
+      fileHash: templateHash,
+      size: templateSize,
+      mimeType: 'application/octet-stream',
+      extension: '.mxweb',
+      parentId,
+      ownerId,
+      sourceFilePath: templatePath,
+      fileStatus: FileStatus.COMPLETED,
+    });
   }
 
   /**

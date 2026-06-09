@@ -15,12 +15,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   fileSystemControllerCreateProject,
   fileSystemControllerCreateFolder,
+  fileSystemControllerCreateDrawing,
   fileSystemControllerUpdateNode,
   fileSystemControllerDeleteNode,
   fileSystemControllerRestoreNode,
   fileSystemControllerRestoreTrashItems,
   fileSystemControllerClearTrash,
 } from '@/api-sdk';
+import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 
 import { FileSystemNode } from '@/types/filesystem';
 import { handleError } from '@/utils/errorHandler';
@@ -95,11 +97,14 @@ export const useFileSystemCRUD = ({
   mode = 'project',
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
+  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
 
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [showCreateDrawingModal, setShowCreateDrawingModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
   const [folderName, setFolderName] = useState('');
+  const [drawingName, setDrawingName] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCreateFolder = useCallback(async () => {
@@ -117,7 +122,7 @@ export const useFileSystemCRUD = ({
     const parentNodeId = currentNode?.id || urlProjectId;
 
     try {
-      await fileSystemControllerCreateFolder({
+      const newFolder = await fileSystemControllerCreateFolder({
         path: { parentId: parentNodeId },
         body: { name: folderName.trim() },
         throwOnError: true,
@@ -125,6 +130,20 @@ export const useFileSystemCRUD = ({
       showToast('文件夹创建成功', 'success');
       setFolderName('');
       setShowCreateFolderModal(false);
+      const createdId = (newFolder as unknown as { id?: string })?.id || '';
+      if (createdId) {
+        pushAction({
+          type: 'createFolder',
+          description: `创建文件夹 "${folderName.trim()}"`,
+          projectId: urlProjectId,
+          execute: async () => {
+            await fileSystemControllerCreateFolder({ path: { parentId: parentNodeId }, body: { name: folderName.trim() }, throwOnError: true });
+          },
+          rollback: async () => {
+            await fileSystemControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true }, throwOnError: true });
+          },
+        });
+      }
       loadData();
       return null;
     } catch (error) {
@@ -133,6 +152,34 @@ export const useFileSystemCRUD = ({
       return null;
     }
   }, [folderName, urlProjectId, currentNode, loadData, showToast]);
+
+  const handleCreateDrawing = useCallback(async () => {
+    if (!urlProjectId) {
+      showToast('无法确定创建位置', 'error');
+      return null;
+    }
+
+    const parentNodeId = currentNode?.id || urlProjectId;
+
+    try {
+      await fileSystemControllerCreateDrawing({
+        body: {
+          parentId: parentNodeId,
+          name: drawingName.trim() || undefined,
+        },
+        throwOnError: true,
+      });
+      showToast('图纸创建成功', 'success');
+      setDrawingName('');
+      setShowCreateDrawingModal(false);
+      loadData();
+      return null;
+    } catch (error) {
+      const appError = handleError(error, '创建图纸', 'medium');
+      showToast(appError.message, 'error');
+      return null;
+    }
+  }, [drawingName, urlProjectId, currentNode, loadData, showToast]);
 
   const handleRename = useCallback(async () => {
     if (!editingNode || !urlProjectId) {
@@ -158,17 +205,29 @@ export const useFileSystemCRUD = ({
       }
 
       // TODO: Replace with SDK when backend adds renameNode endpoint
+      const oldName = editingNode.name;
       await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName }, throwOnError: true });
       showToast('重命名成功', 'success');
       setFolderName('');
       setShowRenameModal(false);
       setEditingNode(null);
+      pushAction({
+        type: 'rename',
+        description: `重命名 "${oldName}" → "${finalName}"`,
+        projectId: urlProjectId,
+        execute: async () => {
+          await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: finalName }, throwOnError: true });
+        },
+        rollback: async () => {
+          await fileSystemControllerUpdateNode({ path: { nodeId: editingNode.id }, body: { name: oldName }, throwOnError: true });
+        },
+      });
       loadData();
     } catch (error) {
       const appError = handleError(error, '重命名', 'medium');
       showToast(appError.message, 'error');
     }
-  }, [folderName, editingNode, urlProjectId, loadData, showToast]);
+  }, [folderName, editingNode, urlProjectId, loadData, showToast, pushAction]);
 
   const handleDelete = useCallback(
     (node: FileSystemNode, permanently: boolean = false) => {
@@ -219,6 +278,27 @@ export const useFileSystemCRUD = ({
           }
 
           showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
+
+          if (!permanently) {
+            const deletedNodeId = node.id;
+            const deletedNodeName = node.name;
+            const deletedIsRoot = node.isRoot;
+            pushAction({
+              type: 'delete',
+              description: `删除 "${deletedNodeName}"`,
+              projectId: urlProjectId,
+              execute: async () => {
+                await fileSystemControllerDeleteNode({ path: { nodeId: deletedNodeId }, query: { permanently: false }, throwOnError: true });
+              },
+              rollback: async () => {
+                if (deletedIsRoot) {
+                  await fileSystemControllerRestoreTrashItems({ body: { itemIds: [deletedNodeId] }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+                } else {
+                  await fileSystemControllerRestoreNode({ path: { nodeId: deletedNodeId }, throwOnError: true });
+                }
+              },
+            });
+          }
 
           if (isProjectTrashViewRef.current && permanently) {
             loadData();
@@ -275,6 +355,35 @@ export const useFileSystemCRUD = ({
               })
             );
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
+
+            if (!permanently) {
+              const batchNodeIds = Array.from(selectedNodes);
+              pushAction({
+                type: 'delete',
+                description: `批量删除 ${batchNodeIds.length} 个项目`,
+                projectId: urlProjectId,
+                execute: async () => {
+                  await Promise.all(
+                    batchNodeIds.map((id) =>
+                      fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: false }, throwOnError: true })
+                    )
+                  );
+                },
+                rollback: async () => {
+                  await Promise.all(
+                    batchNodeIds.map(async (id) => {
+                      const node = nodes.find((n) => n.id === id);
+                      if (node?.isRoot) {
+                        await fileSystemControllerRestoreTrashItems({ body: { itemIds: [id] }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+                      } else {
+                        await fileSystemControllerRestoreNode({ path: { nodeId: id }, throwOnError: true });
+                      }
+                    })
+                  );
+                },
+              });
+            }
+
             clearSelection();
 
             if (isProjectTrashViewRef.current && permanently) {
@@ -504,13 +613,18 @@ export const useFileSystemCRUD = ({
   return {
     showCreateFolderModal,
     setShowCreateFolderModal,
+    showCreateDrawingModal,
+    setShowCreateDrawingModal,
     showRenameModal,
     setShowRenameModal,
     editingNode,
     setEditingNode,
     folderName,
     setFolderName,
+    drawingName,
+    setDrawingName,
     handleCreateFolder,
+    handleCreateDrawing,
     handleRename,
     handleDelete,
     handlePermanentlyDelete,

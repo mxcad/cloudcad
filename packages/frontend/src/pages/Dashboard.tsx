@@ -26,7 +26,7 @@ import { Clock } from 'lucide-react';
 import { Plus } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
 import { Layers } from 'lucide-react';
-import { Upload } from 'lucide-react';
+import { Upload, FilePlus } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { CheckCircle } from 'lucide-react';
 
@@ -566,6 +566,12 @@ export const Dashboard: React.FC = () => {
                 label="上传图纸"
                 color="var(--accent-500)"
                 onClick={() => navigate('/personal-space?action=upload')}
+              />
+              <QuickAction
+                icon={FilePlus}
+                label="新建图纸"
+                color="var(--primary-500)"
+                onClick={() => navigate('/personal-space?action=new-drawing')}
               />
             </div>
           </Section>

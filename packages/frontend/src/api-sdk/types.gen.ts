@@ -1675,6 +1675,17 @@ export type CreateFolderDto = {
     skipIfExists?: boolean;
 };
 
+export type CreateDrawingDto = {
+    /**
+     * 父文件夹节点ID
+     */
+    parentId: string;
+    /**
+     * 图纸名称（默认：新建图纸）
+     */
+    name?: string;
+};
+
 export type NodeTreeResponseDto = {
     /**
      * 节点 ID
@@ -5387,6 +5398,29 @@ export type FileSystemControllerCreateFolderResponses = {
 };
 
 export type FileSystemControllerCreateFolderResponse = FileSystemControllerCreateFolderResponses[keyof FileSystemControllerCreateFolderResponses];
+
+export type FileSystemControllerCreateDrawingData = {
+    body: CreateDrawingDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/file-system/nodes/create-drawing';
+};
+
+export type FileSystemControllerCreateDrawingErrors = {
+    /**
+     * 请求参数错误
+     */
+    400: unknown;
+};
+
+export type FileSystemControllerCreateDrawingResponses = {
+    /**
+     * 图纸创建成功
+     */
+    201: FileSystemNodeDto;
+};
+
+export type FileSystemControllerCreateDrawingResponse = FileSystemControllerCreateDrawingResponses[keyof FileSystemControllerCreateDrawingResponses];
 
 export type FileSystemControllerGetRootNodeData = {
     body?: never;
