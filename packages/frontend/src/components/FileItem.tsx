@@ -1,16 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
-import { ImagePreviewModal } from './modals/ImagePreviewModal';
+
 import { FileNameText } from './ui/TruncateText';
 
 import { handleError } from '../utils/errorHandler';
 import { infoOnce } from '../utils/message';
-import {
-  getOriginalFileUrl,
-  formatRelativeTime,
-  formatFileSize,
-} from '../utils/fileUtils';
+import { formatRelativeTime, formatFileSize } from '../utils/fileUtils';
 import {
   Thumbnail,
   FileItemSelection,
@@ -136,8 +132,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewImageSrc, setPreviewImageSrc] = useState('');
+
   const [useCompactActions, setUseCompactActions] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const isRoot = node.isRoot;
@@ -199,27 +194,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     return ext === '.dwg' || ext === '.dxf' || ext === '.mxweb';
   }, [node.extension, node.isFolder, node.isRoot]);
 
-  const isImageFile = useCallback(() => {
-    if (node.isFolder || node.isRoot) return false;
-    const ext = node.extension?.toLowerCase();
-    const imageExtensions = [
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.gif',
-      '.webp',
-      '.bmp',
-      '.svg',
-    ];
-    return imageExtensions.includes(ext || '');
-  }, [node.extension, node.isFolder, node.isRoot]);
-
-  const handleImagePreview = useCallback(() => {
-    const imageUrl = getOriginalFileUrl(node);
-    setPreviewImageSrc(imageUrl);
-    setIsPreviewOpen(true);
-  }, [node]);
-
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (blockItemClickRef.current) {
@@ -253,11 +227,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         }
         return;
       } else {
-        if (isImageFile()) {
-          handleImagePreview();
-        } else {
-          onEnter(node);
-        }
+        onEnter(node);
       }
     },
     [
@@ -265,29 +235,20 @@ export const FileItem: React.FC<FileItemProps> = ({
       isMultiSelectMode,
       onSelect,
       onEnter,
-      isImageFile,
-      handleImagePreview,
       doubleClickToOpen,
     ]
   );
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
-      // 清除单击定时器（如果存在）
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current);
         clickTimerRef.current = null;
       }
       clickCountRef.current = 0;
-
-      if (isPreviewOpen) return;
-      if (isImageFile()) {
-        handleImagePreview();
-      } else {
-        onEnter(node);
-      }
+      onEnter(node);
     },
-    [node, onEnter, isPreviewOpen, isImageFile, handleImagePreview]
+    [node, onEnter]
   );
 
   const handleToggleMenu = useCallback(() => {
@@ -419,7 +380,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         data-tour="file-item"
         className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto
           ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
-          ${isPreviewOpen ? 'pointer-events-none' : ''}
           ${showSelection ? 'shadow-md' : ''}
           ${isDropTarget ? 'shadow-md' : ''}
           ${!showSelection && !isDropTarget && !galleryMode ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
@@ -478,10 +438,6 @@ export const FileItem: React.FC<FileItemProps> = ({
                 node={node}
                 size={thumbnailSize}
                 galleryMode={galleryMode}
-                onPreview={(src) => {
-                  setPreviewImageSrc(src);
-                  setIsPreviewOpen(true);
-                }}
               />
             </div>
             <div className="flex flex-col items-center pb-2">
@@ -502,10 +458,6 @@ export const FileItem: React.FC<FileItemProps> = ({
                 node={node}
                 size={thumbnailSize}
                 galleryMode={galleryMode}
-                onPreview={(src) => {
-                  setPreviewImageSrc(src);
-                  setIsPreviewOpen(true);
-                }}
               />
             </div>
 
@@ -517,7 +469,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         )}
 
         <div
-          className={`absolute top-3 right-3 transition-opacity duration-200 z-20 pointer-events-auto ${
+          className={`absolute top-1 right-1 transition-opacity duration-200 z-20 pointer-events-auto ${
             isHovered || showMenu ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -559,13 +511,6 @@ export const FileItem: React.FC<FileItemProps> = ({
           onComplete={externalReferenceUpload.complete}
           onSkip={externalReferenceUpload.skip}
           onClose={externalReferenceUpload.close}
-        />
-
-        <ImagePreviewModal
-          isOpen={isPreviewOpen}
-          onClose={() => setIsPreviewOpen(false)}
-          src={previewImageSrc}
-          alt={node.name}
         />
       </Card>
     );
@@ -679,15 +624,11 @@ export const FileItem: React.FC<FileItemProps> = ({
       </div>
 
       <div className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? 'w-14 h-14' : 'w-10 h-10'}`}>
-        <Thumbnail
-          node={node}
-          size={galleryMode ? 56 : 40}
-          galleryMode={galleryMode}
-          onPreview={(src) => {
-            setPreviewImageSrc(src);
-            setIsPreviewOpen(true);
-          }}
-        />
+              <Thumbnail
+                node={node}
+                size={galleryMode ? 56 : 40}
+                galleryMode={galleryMode}
+              />
       </div>
 
       <div className={`flex-1 min-w-0 ${galleryMode ? 'p-2' : 'p-3'}`}>
@@ -769,13 +710,6 @@ export const FileItem: React.FC<FileItemProps> = ({
           ))
         )}
       </div>
-
-      <ImagePreviewModal
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        src={previewImageSrc}
-        alt={node.name}
-      />
 
       <ExternalReferenceModal
         isOpen={externalReferenceUpload.isOpen}

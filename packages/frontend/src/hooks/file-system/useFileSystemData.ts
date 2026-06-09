@@ -14,8 +14,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
+  fileSystemControllerGetDeletedProjects,
   fileSystemControllerGetProjects,
-  fileSystemControllerGetTrash,
   fileSystemControllerGetProjectTrash,
   fileSystemControllerSearch,
   fileSystemControllerGetNode,
@@ -294,8 +294,8 @@ export const useFileSystemData = ({
         };
       }
 
-      // 全局回收站：调用全局接口（仅返回已删除的项目）
-      const response = await fileSystemControllerGetTrash();
+      // 全局回收站：调用项目回收站接口（仅返回已删除的项目）
+      const response = await fileSystemControllerGetDeletedProjects();
 
       const data = response.data;
       if (data && typeof data === 'object' && Array.isArray(data.nodes)) {

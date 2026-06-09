@@ -1,22 +1,19 @@
 import React, { useState, memo, useMemo } from 'react';
 import { getFileIconComponent } from '../FileIcons';
 import { FileSystemNode } from '../../types/filesystem';
-import { Eye } from 'lucide-react';
 import {
   getCadThumbnailUrl,
   getThumbnailUrl,
-  getOriginalFileUrl,
 } from '../../utils/fileUtils';
 
 interface ThumbnailProps {
   node: FileSystemNode;
   size: number;
-  onPreview?: (src: string) => void;
   galleryMode?: boolean;
 }
 
 export const Thumbnail: React.FC<ThumbnailProps> = memo(
-  ({ node, size, onPreview, galleryMode }) => {
+  ({ node, size }) => {
     const [imageLoadError, setImageLoadError] = useState(false);
 
     const isImage = useMemo(
@@ -40,12 +37,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
       () => (isImage ? getThumbnailUrl(node) : getCadThumbnailUrl(node)),
       [isImage, node]
     );
-    const previewSrc = useMemo(
-      () => (isImage ? getOriginalFileUrl(node) : thumbnailSrc),
-      [isImage, node, thumbnailSrc]
-    );
 
-    // 如果不应该显示图片，返回图标组件（居中显示）
     if (!shouldShowImage) {
       return (
         <div
@@ -59,7 +51,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
 
     return (
       <div
-        className="relative group/thumb overflow-hidden rounded-lg"
+        className="relative overflow-hidden rounded-lg"
         style={{ width: size, height: size }}
       >
         <img
@@ -75,28 +67,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
             imageRendering: '-webkit-optimize-contrast',
           }}
           onError={() => setImageLoadError(true)}
-          onClick={(e) => {
-            // 图库模式下不打开图片预览，让点击事件冒泡到父组件处理（打开CAD编辑器）
-            if (!galleryMode && onPreview) {
-              e.stopPropagation();
-              onPreview(previewSrc);
-            }
-          }}
         />
-        {!galleryMode && onPreview && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPreview(previewSrc);
-            }}
-            className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/20 transition-all duration-200 opacity-0 group-hover/thumb:opacity-100"
-            title="查看原图"
-          >
-            <div className="p-2 bg-white/90 rounded-full shadow-lg">
-              <Eye size={Math.max(16, size / 4)} className="text-slate-700" />
-            </div>
-          </button>
-        )}
       </div>
     );
   }
