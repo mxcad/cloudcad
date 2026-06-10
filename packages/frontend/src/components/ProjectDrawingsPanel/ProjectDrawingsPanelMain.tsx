@@ -86,6 +86,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   const [pageSize, setPageSize] = useState(30);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+
   const isLibraryMode = libraryType === 'drawing' || libraryType === 'block';
   const canManageLibrary = isLibraryMode && user !== null && (
     libraryType === 'drawing'
@@ -253,6 +255,22 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   const sidebarHandlePaste = useCallback(async () => {
     if (clipboardItems.length === 0 || !clipboardMode) return;
+
+    // 去重：如果剪贴板中同时包含父目录和子节点，只保留父目录
+    const parentMap = new Map<string, string | null>();
+    for (const n of nodes) {
+      parentMap.set(n.id, n.parentId ?? null);
+    }
+    const items = clipboardItems.filter((id) => {
+      const parentId = parentMap.get(id);
+      return !(parentId && clipboardItems.includes(parentId));
+    });
+
+    if (items.length === 0) {
+      showToast('没有可粘贴的项目', 'info');
+      return;
+    }
+
     const targetId = breadcrumb[breadcrumb.length - 1]?.id || selectedProjectId;
     if (!targetId) return;
     const srcProjectId = useFileSystemClipboardStore.getState().sourceProjectId;
@@ -263,16 +281,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     try {
       if (clipboardMode === 'cut') {
         const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
-        for (const nodeId of clipboardItems) {
+        for (const nodeId of items) {
           await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
         }
         clearClipboard();
         pushAction({
           type: 'move',
-          description: `移动 ${Object.keys(origParentIds).length} 个项目`,
+          description: `移动 ${items.length} 个项目`,
           projectId: currentProjectId,
           execute: async () => {
-            for (const nodeId of clipboardItems) {
+            for (const nodeId of items) {
               await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
             }
           },
@@ -285,23 +303,22 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         });
       } else {
         const newIds: string[] = [];
-        for (const nodeId of clipboardItems) {
+        for (const nodeId of items) {
           try {
             const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
             const data = (result as unknown as { data?: { id?: string } })?.data || result;
             const newId = (data as unknown as { id?: string })?.id || '';
             if (newId) newIds.push(newId);
           } catch (e) {
-            console.log('[sidebarHandlePaste] copyNode failed', nodeId, e);
           }
         }
         if (newIds.length > 0) {
           pushAction({
             type: 'delete',
-            description: `复制 ${clipboardItems.length} 个项目`,
+            description: `复制 ${items.length} 个项目`,
             projectId: currentProjectId,
             execute: async () => {
-              for (const nodeId of clipboardItems) {
+              for (const nodeId of items) {
                 await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
               }
             },
@@ -319,7 +336,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       const appError = error instanceof Error ? error.message : '粘贴失败';
       showToast(appError, 'error');
     }
-  }, [clipboardItems, clipboardMode, breadcrumb, selectedProjectId, currentProjectId, clearClipboard, refreshNodes, showToast, pushAction]);
+  }, [clipboardItems, clipboardMode, nodes, breadcrumb, selectedProjectId, currentProjectId, clearClipboard, refreshNodes, showToast, pushAction]);
 
   const sidebarHandleUndo = useCallback(async () => {
     if (undoStack.length === 0) return;
@@ -690,6 +707,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   }, [moveSourceNode, copySourceNode, refreshNodes, showToast]);
 
   useFileSystemShortcuts({
+    containerRef: panelRef,
     onUndo: sidebarHandleUndo,
     onRedo: sidebarHandleRedo,
     onCopy: sidebarHandleCopy,
@@ -784,7 +802,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const showProjectList = !isPersonalSpace && !isLibraryMode && !selectedProjectId;
 
   return (
-    <div className={styles.projectDrawingsPanel}>
+    <div ref={panelRef} className={styles.projectDrawingsPanel}>
       {createPortal(
         <ToastContainer toasts={toasts} onRemove={removeToast} />,
         document.body

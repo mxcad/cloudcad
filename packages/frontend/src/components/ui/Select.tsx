@@ -298,7 +298,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
               ref={searchInputRef}
               value={searchQuery}
               onChange={handleSearchChange}
-              placeholder={selectedOption?.label || placeholder}
+              placeholder={placeholder}
               className="flex-1 bg-transparent outline-none min-w-0 py-1.5 pl-1.5 text-xs"
               style={{ color: 'var(--text-primary)' }}
               onClick={(e) => e.stopPropagation()}

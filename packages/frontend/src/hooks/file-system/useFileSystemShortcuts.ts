@@ -24,6 +24,10 @@ function isInputFocused(): boolean {
   return false;
 }
 
+function isAnyModalOpen(): boolean {
+  return document.querySelector('.modal-enter') !== null;
+}
+
 export function useFileSystemShortcuts({
   containerRef,
   enabled = true,
@@ -129,6 +133,7 @@ export function useFileSystemShortcuts({
           return;
         }
         case 'Escape': {
+          if (isAnyModalOpen()) return;
           e.preventDefault();
           onClearSelectionRef.current();
           return;

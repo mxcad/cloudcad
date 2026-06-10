@@ -1739,12 +1739,42 @@ export class FileOperationsService {
     };
   }
 
+  private async filterDescendantNodes(nodeIds: string[]): Promise<string[]> {
+    if (nodeIds.length <= 1) return nodeIds;
+
+    const nodes = await this.prisma.fileSystemNode.findMany({
+      where: { id: { in: nodeIds } },
+      select: { id: true, parentId: true },
+    });
+    const parentMap = new Map<string, string | null>();
+    for (const n of nodes) {
+      parentMap.set(n.id, n.parentId);
+    }
+
+    let result = [...nodeIds];
+    while (true) {
+      const resultSet = new Set(result);
+      const filtered = result.filter((id) => {
+        const parentId = parentMap.get(id);
+        return !(parentId && resultSet.has(parentId));
+      });
+      if (filtered.length === result.length) break;
+      result = filtered;
+    }
+    return result;
+  }
+
   async batchMoveNodes(nodeIds: string[], targetParentId: string) {
+    const dedupedIds = await this.filterDescendantNodes(nodeIds);
+    if (dedupedIds.length === 0) {
+      return { successCount: 0, failedCount: 0, successIds: [], failedIds: [], errors: ['所有节点均为子节点，已自动跳过'] };
+    }
+
     const successIds: string[] = [];
     const failedIds: string[] = [];
     const errors: string[] = [];
 
-    for (const nodeId of nodeIds) {
+    for (const nodeId of dedupedIds) {
       try {
         await this.moveNode(nodeId, targetParentId);
         successIds.push(nodeId);
@@ -1765,11 +1795,16 @@ export class FileOperationsService {
   }
 
   async batchCopyNodes(nodeIds: string[], targetParentId: string) {
+    const dedupedIds = await this.filterDescendantNodes(nodeIds);
+    if (dedupedIds.length === 0) {
+      return { successCount: 0, failedCount: 0, successIds: [], failedIds: [], errors: ['所有节点均为子节点，已自动跳过'] };
+    }
+
     const successIds: string[] = [];
     const failedIds: string[] = [];
     const errors: string[] = [];
 
-    for (const nodeId of nodeIds) {
+    for (const nodeId of dedupedIds) {
       try {
         await this.copyNode(nodeId, targetParentId);
         successIds.push(nodeId);

@@ -17,6 +17,8 @@ import {
 } from './file-item';
 import {
   getAvailableActions,
+  getActionGroups,
+  ACTION_VARIANT_MAP,
   type ActionType,
 } from './file-item/fileActionConfig';
 import { FileSystemNode } from '../types/filesystem';
@@ -62,6 +64,16 @@ interface FileItemProps {
   isRubberBanding?: boolean;
   /** 当前已选中的条目总数（用于多选场景右键菜单） */
   selectedCount?: number;
+  /** 搜索结果模式 */
+  isSearchResult?: boolean;
+  onOpen?: (node: FileSystemNode) => void;
+  onOpenInNewTab?: (node: FileSystemNode) => void;
+  onOpenFileLocation?: (node: FileSystemNode) => void;
+  onNewFolder?: (node: FileSystemNode) => void;
+  onCopyClipboard?: (node: FileSystemNode) => void;
+  onCut?: (node: FileSystemNode) => void;
+  onDownloadFolder?: (node: FileSystemNode) => void;
+  onShowProperties?: (node: FileSystemNode) => void;
   /** 批量删除选中项 */
   onBatchDelete?: () => void;
   /** 批量移动选中项 */
@@ -143,6 +155,15 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDragLeave,
   onDrop,
   isDropTarget = false,
+  isSearchResult = false,
+  onOpen,
+  onOpenInNewTab,
+  onOpenFileLocation,
+  onCopyClipboard,
+  onNewFolder,
+  onCut,
+  onDownloadFolder,
+  onShowProperties,
 }) => {
   if (!node) {
     console.warn('[FileItem] node is undefined or null');
@@ -289,6 +310,10 @@ export const FileItem: React.FC<FileItemProps> = ({
       e.stopPropagation();
       onCopy?.(node);
     },
+    copy_clipboard: (e) => {
+      e.stopPropagation();
+      onCopyClipboard?.(node);
+    },
     restore: (e) => {
       e.stopPropagation();
       onRestore?.(node);
@@ -317,6 +342,34 @@ export const FileItem: React.FC<FileItemProps> = ({
       e.stopPropagation();
       onShare?.(node);
     },
+    open: (e) => {
+      e.stopPropagation();
+      onOpen?.(node);
+    },
+    open_in_new_tab: (e) => {
+      e.stopPropagation();
+      onOpenInNewTab?.(node);
+    },
+    open_file_location: (e) => {
+      e.stopPropagation();
+      onOpenFileLocation?.(node);
+    },
+    new_folder: (e) => {
+      e.stopPropagation();
+      onNewFolder?.(node);
+    },
+    cut: (e) => {
+      e.stopPropagation();
+      onCut?.(node);
+    },
+    download_folder: (e) => {
+      e.stopPropagation();
+      onDownloadFolder?.(node);
+    },
+    properties: (e) => {
+      e.stopPropagation();
+      onShowProperties?.(node);
+    },
   };
 
   const actionProps = {
@@ -343,17 +396,19 @@ export const FileItem: React.FC<FileItemProps> = ({
     onRestore: !!onRestore,
     onPermanentlyDelete: !!onPermanentlyDelete,
     onDeleteNode: isRoot ? !!onDeleteNode : (!!onDeleteNode || !!onDelete),
+    isSearchResult,
+    onOpen: !!onOpen,
+    onOpenInNewTab: !!onOpenInNewTab,
+    onOpenFileLocation: !!onOpenFileLocation,
+    onNewFolder: !!onNewFolder,
+    onCopyClipboard: !!onCopyClipboard,
+    onCut: !!onCut,
+    onDownloadFolder: !!onDownloadFolder,
+    onShowProperties: !!onShowProperties,
   };
 
   const availableActions = getAvailableActions(actionProps);
-
-  const moveCopyActions = availableActions.filter(
-    (a) => a.type === 'move' || a.type === 'copy'
-  );
-  const contextMainActions = availableActions.filter(
-    (a) => !a.isDestructive && a.type !== 'move' && a.type !== 'copy'
-  );
-  const contextDestructiveActions = availableActions.filter((a) => a.isDestructive);
+  const { main: contextMainActions, secondary: contextSecondaryActions, destructive: contextDestructiveActions } = getActionGroups(availableActions);
 
   const isMultiSelected = selectedCount > 1 && isSelected;
 
@@ -364,10 +419,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       if (isMultiSelected) {
         if (!(onBatchDelete || onBatchMove || onBatchCopy || onBatchRestore)) return;
       } else {
-        const ma = availableActions.filter((a) => !a.isDestructive && a.type !== 'move' && a.type !== 'copy');
-        const da = availableActions.filter((a) => a.isDestructive);
-        const mca = availableActions.filter((a) => a.type === 'move' || a.type === 'copy');
-        if (ma.length === 0 && da.length === 0 && mca.length === 0) return;
+        if (contextMainActions.length === 0 && contextDestructiveActions.length === 0 && contextSecondaryActions.length === 0) return;
       }
       if (!hideSelectionCircle && !isMultiSelected && !isSelected && onSelect) {
         onSelect(node.id, false, false);
@@ -382,21 +434,10 @@ export const FileItem: React.FC<FileItemProps> = ({
     setContextMenuPos(null);
   }, []);
 
-  const variantMap: Record<string, 'default' | 'danger' | 'success' | 'info' | 'warning'> = {
-    upload_external_reference: 'warning',
-    download: 'default',
-    view_version_history: 'info',
-    rename: 'default',
-    move: 'default',
-    copy: 'default',
-    restore: 'success',
-    delete: 'danger',
-    permanently_delete: 'danger',
-    edit: 'default',
-    show_members: 'default',
-    show_roles: 'default',
-    share: 'default',
-  };
+  const handleAction = useCallback((type: ActionType) => {
+    actionHandlers[type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
+    closeContextMenu();
+  }, [actionHandlers, closeContextMenu]);
 
   const contextMenuElement = contextMenuPos && (isMultiSelected
     ? !!(onBatchDelete || onBatchMove || onBatchCopy || onBatchRestore)
@@ -436,28 +477,22 @@ export const FileItem: React.FC<FileItemProps> = ({
               {contextMainActions.map((action) => (
                 <Menu.Item
                   key={action.type}
-                  variant={variantMap[action.type] || 'default'}
+                  variant={ACTION_VARIANT_MAP[action.type] || 'default'}
                   icon={action.icon}
-                  onClick={() => {
-                    actionHandlers[action.type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
-                    closeContextMenu();
-                  }}
+                  onClick={() => handleAction(action.type)}
                 >
                   {action.label}
                 </Menu.Item>
               ))}
 
-              {moveCopyActions.length > 0 && (
-                <Menu.Submenu label="其他操作" icon={moveCopyActions[0]?.icon}>
-                  {moveCopyActions.map((action) => (
+              {contextSecondaryActions.length > 0 && (
+                <Menu.Submenu label="其他操作" icon={contextSecondaryActions[0]?.icon}>
+                  {contextSecondaryActions.map((action) => (
                     <Menu.Item
                       key={action.type}
-                      variant={variantMap[action.type] || 'default'}
+                      variant={ACTION_VARIANT_MAP[action.type] || 'default'}
                       icon={action.icon}
-                      onClick={() => {
-                        actionHandlers[action.type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
-                        closeContextMenu();
-                      }}
+                      onClick={() => handleAction(action.type)}
                     >
                       {action.label}
                     </Menu.Item>
@@ -465,17 +500,14 @@ export const FileItem: React.FC<FileItemProps> = ({
                 </Menu.Submenu>
               )}
 
-              {(contextDestructiveActions.length > 0) && (contextMainActions.length > 0 || moveCopyActions.length > 0) && <Menu.Separator />}
+              {(contextDestructiveActions.length > 0) && (contextMainActions.length > 0 || contextSecondaryActions.length > 0) && <Menu.Separator />}
 
               {contextDestructiveActions.map((action) => (
                 <Menu.Item
                   key={action.type}
                   variant="danger"
                   icon={action.icon}
-                  onClick={() => {
-                    actionHandlers[action.type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
-                    closeContextMenu();
-                  }}
+                  onClick={() => handleAction(action.type)}
                 >
                   {action.label}
                 </Menu.Item>
@@ -623,32 +655,12 @@ export const FileItem: React.FC<FileItemProps> = ({
           }`}
         >
           <FileItemMenu
-            node={node}
-            isTrash={isTrash}
+            actions={availableActions}
+            onAction={handleAction}
             showMenu={showMenu}
             menuButtonRef={menuButtonRef}
             onOpenMenu={handleToggleMenu}
             onCloseMenu={handleCloseMenu}
-            onDownload={onDownload}
-            onDelete={onDelete}
-            onPermanentlyDelete={onPermanentlyDelete}
-            onRename={onRename}
-            onEdit={onEdit}
-            onShowMembers={onShowMembers}
-            onShowRoles={onShowRoles}
-            onRestore={onRestore}
-            onMove={onMove}
-            onCopy={onCopy}
-            onShowVersionHistory={onShowVersionHistory}
-            onUploadExternalReference={handleUploadExternalReference}
-            onShare={onShare}
-            isCadFile={isCadFile}
-            canDownload={canDownload}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            canViewVersionHistory={canViewVersionHistory}
-            canManageExternalReference={canManageExternalReference}
-            canManageTrash={canManageTrash}
           />
         </div>
 
@@ -767,7 +779,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       onDrop={(e) => onDrop?.(e, node)}
     >
       {!hideSelectionCircle && (
-        <div className="p-2">
+        <div className="p-1">
           <FileItemSelection
             isSelected={isSelected}
             onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
@@ -801,46 +813,21 @@ export const FileItem: React.FC<FileItemProps> = ({
         {(forceCompactActions || useCompactActions) ? (
           <div className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}>
           <FileItemMenu
-            node={node}
-            isTrash={isTrash}
+            actions={availableActions}
+            onAction={handleAction}
             showMenu={showMenu}
             menuButtonRef={menuButtonRef}
             onOpenMenu={handleToggleMenu}
             onCloseMenu={handleCloseMenu}
-            onDownload={onDownload}
-            onDelete={onDelete}
-            onPermanentlyDelete={onPermanentlyDelete}
-            onRename={onRename}
-            onEdit={onEdit}
-            onShowMembers={onShowMembers}
-            onShowRoles={onShowRoles}
-            onRestore={onRestore}
-            onMove={onMove}
-            onCopy={onCopy}
-            onShowVersionHistory={onShowVersionHistory}
-            onShare={onShare}
-            onUploadExternalReference={handleUploadExternalReference}
-            isCadFile={isCadFile}
-            canDownload={canDownload}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            canViewVersionHistory={canViewVersionHistory}
-            canManageExternalReference={canManageExternalReference}
-            canManageTrash={canManageTrash}
           />
           </div>
         ) : (
           <>
             {(() => {
-              const mainActions = availableActions.filter(
-                (a) => a.type !== 'move' && a.type !== 'copy'
-              );
-              const moveCopyActions = availableActions.filter(
-                (a) => a.type === 'move' || a.type === 'copy'
-              );
+              const { main: btnMainActions, secondary: btnSecondaryActions } = getActionGroups(availableActions);
               return (
                 <>
-                  {mainActions.map((action) => (
+                  {btnMainActions.map((action) => (
                     <Tooltip key={action.type} content={action.tooltip} position="top">
                       <button
                         {...action.props}
@@ -864,7 +851,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                       </button>
                     </Tooltip>
                   ))}
-                  {moveCopyActions.length > 0 && (
+                  {btnSecondaryActions.length > 0 && (
                     <Menu modal={false}>
                       <Tooltip content="其他操作" position="top">
                         <Menu.Trigger>
@@ -881,14 +868,13 @@ export const FileItem: React.FC<FileItemProps> = ({
                         </Menu.Trigger>
                       </Tooltip>
                       <Menu.Content align="end" side="bottom" sideOffset={4}>
-                        {moveCopyActions.map((action) => (
+                        {btnSecondaryActions.map((action) => (
                           <Menu.Item
                             key={action.type}
                             variant="default"
                             icon={action.icon}
                             onClick={() => {
-                              if (action.type === 'move') onMove?.(node);
-                              if (action.type === 'copy') onCopy?.(node);
+                              handleAction(action.type);
                             }}
                           >
                             {action.label}

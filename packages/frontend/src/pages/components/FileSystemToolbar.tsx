@@ -17,6 +17,7 @@ interface FileSystemToolbarProps {
   onClearTrash?: () => void;
   trashItemsCount?: number;
   isAtRoot?: boolean;
+  isProjectRootMode?: boolean;
   searchFilters?: SearchFilterValues;
   onSearchFiltersChange?: (filters: SearchFilterValues) => void;
 }
@@ -32,6 +33,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
   onClearTrash,
   trashItemsCount = 0,
   isAtRoot = false,
+  isProjectRootMode = false,
   searchFilters,
   onSearchFiltersChange,
 }) => {
@@ -52,6 +54,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
           <SearchFilters
             filters={searchFilters}
             onChange={onSearchFiltersChange}
+            scope={isProjectRootMode ? 'project' : 'project_files'}
           />
         )}
       </div>

@@ -157,7 +157,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
   // UI 状态（必须在条件返回之前调用所有 Hooks）
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userMenuWidth, setUserMenuWidth] = useState(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -364,7 +363,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         // 只有点击主内容区域时才关闭菜单，侧边栏内部点击不关闭
         const target = e.target as HTMLElement;
         if (target.closest('aside')) return;
-        if (showSettings) setShowSettings(false);
         if (showUserMenu) setShowUserMenu(false);
       }}
     >
@@ -731,59 +729,24 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               <ThemeToggle />
             </div>
 
-            {/* 设置按钮 */}
-            <div className="p-0.5">
-              <Menu open={showSettings} onOpenChange={setShowSettings}>
-                <Tooltip content="设置">
-                  <Menu.Trigger>
-                    <Button
-                      variant="ghost"
-                      className="relative rounded-xl transition-all duration-300 ease-out
-                                 hover:scale-110 active:scale-95
-                                 hover:bg-[var(--bg-tertiary)]
-                                 group"
-                      aria-label="设置"
-                    >
-                      <Settings2 size={20} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-500)]" />
-                    </Button>
-                  </Menu.Trigger>
+            {/* 系统设置 */}
+            {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
+              <div className="p-0.5">
+                <Tooltip content="系统设置">
+                  <Button
+                    variant="ghost"
+                    className="relative rounded-xl transition-all duration-300 ease-out
+                               hover:scale-110 active:scale-95
+                               hover:bg-[var(--bg-tertiary)]
+                               group"
+                    aria-label="系统设置"
+                    onClick={() => navigate('/runtime-config')}
+                  >
+                    <Settings2 size={20} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-500)]" />
+                  </Button>
                 </Tooltip>
-
-                <Menu.Content align="end" sideOffset={8} className="w-52">
-                  <Menu.Item
-                    icon={<Settings size={16} />}
-                    onClick={() => {
-                      setShowSettings(false);
-                      window.location.href = '/profile';
-                    }}
-                  >
-                    个人资料
-                  </Menu.Item>
-                  {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
-                    <Menu.Item
-                      icon={<Settings2 size={16} />}
-                      onClick={() => {
-                        setShowSettings(false);
-                        window.location.href = '/runtime-config';
-                      }}
-                    >
-                      系统设置
-                    </Menu.Item>
-                  )}
-                  <Menu.Separator />
-                  <Menu.Item
-                    variant="danger"
-                    icon={<LogOut size={16} />}
-                    onClick={() => {
-                      setShowSettings(false);
-                      setShowLogoutConfirm(true);
-                    }}
-                  >
-                    退出登录
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu>
-            </div>
+              </div>
+            )}
           </div>
         </header>
 

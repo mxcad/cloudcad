@@ -1,149 +1,29 @@
 import React from 'react';
 import { MoreIcon } from '../FileIcons';
-import { FileSystemNode } from '../../types/filesystem';
-import { getAvailableActions, type ActionType } from './fileActionConfig';
+import { type ActionType, type FileAction, ACTION_VARIANT_MAP, getActionGroups } from './fileActionConfig';
 import { Tooltip } from '../ui/Tooltip';
 import { Menu } from '../ui/Menu';
 
-const variantMap: Record<ActionType, 'default' | 'danger' | 'success' | 'info' | 'warning'> = {
-  upload_external_reference: 'warning',
-  download: 'default',
-  view_version_history: 'info',
-  rename: 'default',
-  move: 'default',
-  copy: 'default',
-  restore: 'success',
-  delete: 'danger',
-  permanently_delete: 'danger',
-  edit: 'default',
-  show_members: 'default',
-  show_roles: 'default',
-  share: 'default',
-};
-
 interface FileItemMenuProps {
-  node: FileSystemNode;
-  isTrash: boolean;
+  actions: FileAction[];
+  onAction: (type: ActionType) => void;
   showMenu: boolean;
   menuButtonRef: React.RefObject<HTMLButtonElement | null>;
   onOpenMenu: () => void;
   onCloseMenu: () => void;
-  onDownload?: (node: FileSystemNode) => void;
-  onDelete?: (node: FileSystemNode) => void;
-  onPermanentlyDelete?: (node: FileSystemNode) => void;
-  onRename?: (node: FileSystemNode) => void;
-  onEdit?: (e: React.MouseEvent) => void;
-  onShowMembers?: (e: React.MouseEvent) => void;
-  onShowRoles?: (e: React.MouseEvent) => void;
-  onRestore?: (node: FileSystemNode) => void;
-  onMove?: (node: FileSystemNode) => void;
-  onCopy?: (node: FileSystemNode) => void;
-  onUploadExternalReference?: (e: React.MouseEvent) => void;
-  onShowVersionHistory?: (node: FileSystemNode) => void;
-  onShare?: (node: FileSystemNode) => void;
-  isCadFile: () => boolean;
-  canDownload?: boolean;
-  canEdit?: boolean;
-  canDelete?: boolean;
-  canViewVersionHistory?: boolean;
-  canManageExternalReference?: boolean;
-  canManageTrash?: boolean;
 }
 
 export const FileItemMenu: React.FC<FileItemMenuProps> = ({
-  node,
-  isTrash,
+  actions,
+  onAction,
   showMenu,
   menuButtonRef,
   onOpenMenu,
   onCloseMenu,
-  onDownload,
-  onDelete,
-  onPermanentlyDelete,
-  onRename,
-  onEdit,
-  onShowMembers,
-  onShowRoles,
-  onRestore,
-  onMove,
-  onCopy,
-  onUploadExternalReference,
-  onShowVersionHistory,
-  onShare,
-  isCadFile,
-  canDownload,
-  canEdit,
-  canDelete,
-  canViewVersionHistory,
-  canManageExternalReference,
 }) => {
-  const isRoot = node.isRoot;
-  const isFolder = node.isFolder;
+  const { main, secondary, destructive } = getActionGroups(actions);
 
-  const handleMenuAction = (action: () => void) => {
-    action();
-    onCloseMenu();
-  };
-
-  const actionHandlers: Record<ActionType, () => void> = {
-    upload_external_reference: () =>
-      onUploadExternalReference?.({
-        stopPropagation: () => {},
-        preventDefault: () => {},
-      } as React.MouseEvent),
-    download: () => onDownload?.(node),
-    view_version_history: () => onShowVersionHistory?.(node),
-    rename: () => onRename?.(node),
-    move: () => onMove?.(node),
-    copy: () => onCopy?.(node),
-    restore: () => onRestore?.(node),
-    delete: () => onDelete?.(node),
-    permanently_delete: () => onPermanentlyDelete?.(node),
-    edit: () => onEdit?.({ stopPropagation: () => {} } as React.MouseEvent),
-    show_members: () =>
-      onShowMembers?.({ stopPropagation: () => {} } as React.MouseEvent),
-    show_roles: () =>
-      onShowRoles?.({ stopPropagation: () => {} } as React.MouseEvent),
-    share: () => onShare?.(node),
-  };
-
-  const availableActions = getAvailableActions({
-    node,
-    isTrash,
-    isRoot,
-    isCadFile: isCadFile(),
-    isFolder,
-    hasMissingExternalReferences: node.hasMissingExternalReferences || false,
-    canDownload,
-    canEdit,
-    canDelete,
-    canViewVersionHistory,
-    canManageExternalReference,
-    canManageTrash: !!onRestore || !!onPermanentlyDelete,
-    onDownload: !!onDownload,
-    onShowVersionHistory: !!onShowVersionHistory,
-    onEdit: !!onEdit,
-    onShowMembers: !!onShowMembers,
-    onShowRoles: !!onShowRoles,
-    onShare: !!onShare,
-    onMove: !!onMove,
-    onCopy: !!onCopy,
-    onRestore: !!onRestore,
-    onPermanentlyDelete: !!onPermanentlyDelete,
-    onDeleteNode: isRoot ? canDelete !== false : !!onDelete,
-  });
-
-  if (availableActions.length === 0) {
-    return null;
-  }
-
-  const moveCopyActions = availableActions.filter(
-    (a) => a.type === 'move' || a.type === 'copy'
-  );
-  const mainActions = availableActions.filter(
-    (a) => !a.isDestructive && a.type !== 'move' && a.type !== 'copy'
-  );
-  const destructiveActions = availableActions.filter((a) => a.isDestructive);
+  if (actions.length === 0) return null;
 
   return (
     <>
@@ -165,26 +45,26 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
         </Tooltip>
 
         <Menu.Content align="end" side="bottom" sideOffset={4}>
-          {mainActions.map((action) => (
+          {main.map((action) => (
             <Menu.Item
               key={action.type}
-              variant={variantMap[action.type]}
+              variant={ACTION_VARIANT_MAP[action.type]}
               icon={action.icon}
-              onClick={() => handleMenuAction(() => actionHandlers[action.type]?.())}
+              onClick={() => { onAction(action.type); onCloseMenu(); }}
               {...(action.props as Record<string, unknown>)}
             >
               {action.label}
             </Menu.Item>
           ))}
 
-          {moveCopyActions.length > 0 && (
-            <Menu.Submenu label="其他操作" icon={moveCopyActions[0]?.icon}>
-              {moveCopyActions.map((action) => (
+          {secondary.length > 0 && (
+            <Menu.Submenu label="其他操作" icon={secondary[0]?.icon}>
+              {secondary.map((action) => (
                 <Menu.Item
                   key={action.type}
-                  variant={variantMap[action.type]}
+                  variant={ACTION_VARIANT_MAP[action.type]}
                   icon={action.icon}
-                  onClick={() => handleMenuAction(() => actionHandlers[action.type]?.())}
+                  onClick={() => { onAction(action.type); onCloseMenu(); }}
                   {...(action.props as Record<string, unknown>)}
                 >
                   {action.label}
@@ -193,14 +73,14 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
             </Menu.Submenu>
           )}
 
-          {(destructiveActions.length > 0) && (mainActions.length > 0 || moveCopyActions.length > 0) && <Menu.Separator />}
+          {(destructive.length > 0) && (main.length > 0 || secondary.length > 0) && <Menu.Separator />}
 
-          {destructiveActions.map((action) => (
+          {destructive.map((action) => (
             <Menu.Item
               key={action.type}
               variant="danger"
               icon={action.icon}
-              onClick={() => handleMenuAction(() => actionHandlers[action.type]?.())}
+              onClick={() => { onAction(action.type); onCloseMenu(); }}
             >
               {action.label}
             </Menu.Item>

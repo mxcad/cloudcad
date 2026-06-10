@@ -93,6 +93,8 @@ export const useFileSystemData = ({
   // ── Derived mode flags for query enabled checks ─────────────────────
   const isTrash = isTrashView;
   const hasSearch = !!searchQuery;
+  const hasFilter = !!(searchFilters.extension || searchFilters.timeRange || searchFilters.sortBy);
+  const shouldSearch = hasSearch || hasFilter;
 
   // Effective node ID for personal-space and folder modes
   const effectiveNodeId = isPersonalSpaceMode
@@ -109,7 +111,7 @@ export const useFileSystemData = ({
       return toFileSystemNode(response.data as FileSystemNodeDto);
     },
     enabled:
-      !!effectiveNodeId && !isProjectRootMode && !isTrash && !hasSearch,
+      !!effectiveNodeId && !isProjectRootMode && !isTrash && !shouldSearch,
   });
 
   // ── Query 2: Children / Projects list ──────────────────────────────
@@ -182,11 +184,15 @@ export const useFileSystemData = ({
       };
     },
     enabled:
-      (!!effectiveNodeId && !isTrash && !hasSearch) || isProjectRootMode,
+      (!!effectiveNodeId && !isTrash && !shouldSearch) || isProjectRootMode,
     placeholderData: keepPreviousData,
   });
 
   // ── Query 3: Search results ────────────────────────────────────────
+  const effectiveSearchKeyword = searchFilters.timeRange
+    ? `modified:>${searchFilters.timeRange} ${searchQuery}`.trim()
+    : searchQuery;
+
   const searchQueryResult = useQuery({
     queryKey: queryKeys.fileSystem.search({
       keyword: searchQuery,
@@ -219,15 +225,16 @@ export const useFileSystemData = ({
 
       const response = await fileSystemControllerSearch({
         query: {
-          keyword: searchQuery,
+          keyword: effectiveSearchKeyword,
           scope: searchScope,
           filter: searchFilter,
           projectId: searchProjectId,
           page: pagination.page,
           limit: pagination.limit,
           extension: searchFilters.extension || undefined,
-          type: searchFilters.type !== 'all' ? searchFilters.type : undefined,
-          fileStatus: searchFilters.fileStatus || undefined,
+          fileStatus: undefined,
+          sortBy: searchFilters.sortBy || undefined,
+          sortOrder: searchFilters.sortOrder || undefined,
         },
         signal: abortSignal,
       });
@@ -250,7 +257,7 @@ export const useFileSystemData = ({
         totalPages: 0,
       };
     },
-    enabled: hasSearch && !isTrash,
+    enabled: shouldSearch && !isTrash,
     placeholderData: keepPreviousData,
   });
 

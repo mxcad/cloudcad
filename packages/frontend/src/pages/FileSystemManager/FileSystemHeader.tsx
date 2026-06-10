@@ -375,6 +375,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         onClearTrash={() => onClearTrash()}
         trashItemsCount={isTrashView ? nodesCount : 0}
         isAtRoot={isAtRoot}
+        isProjectRootMode={isProjectRootMode}
         searchFilters={searchFilters}
         onSearchFiltersChange={onSearchFiltersChange}
       />

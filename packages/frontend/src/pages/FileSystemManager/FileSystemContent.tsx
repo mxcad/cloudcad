@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { FileItem } from '@/components/FileItem';
+import { Menu } from '@/components/ui/Menu';
 import { Pagination } from '@/components/ui/Pagination';
+import { Z_LAYERS } from '@/constants/layers';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
 import type { FileSystemNode } from '@/types/filesystem';
 
@@ -54,6 +56,16 @@ interface FileSystemContentProps {
   onBatchMove?: () => void;
   onBatchCopy?: () => void;
   onBatchRestore?: () => void;
+  /** 搜索结果模式 */
+  isSearchResult?: boolean;
+  onOpen?: (node: FileSystemNode) => void;
+  onOpenInNewTab?: (node: FileSystemNode) => void;
+  onOpenFileLocation?: (node: FileSystemNode) => void;
+  onNewFolder?: (node: FileSystemNode) => void;
+  onCopyClipboard?: (node: FileSystemNode) => void;
+  onCut?: (node: FileSystemNode) => void;
+  onDownloadFolder?: (node: FileSystemNode) => void;
+  onShowProperties?: (node: FileSystemNode) => void;
   /** 是否正在加载（用于阻止滚动加载） */
   loading?: boolean;
   /** 当前页码（用于滚动方向检测） */
@@ -62,6 +74,18 @@ interface FileSystemContentProps {
   totalPages?: number;
   /** 滚动加载上一页/下一页 */
   onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
+  /** 高亮节点 ID（搜索结果打开所在位置用） */
+  highlightNodeId?: string;
+  /** 在当前目录创建新文件夹 */
+  onCreateFolderInCurrentDir?: () => void;
+  /** 在当前目录创建新图纸 */
+  onCreateDrawingInCurrentDir?: () => void;
+  /** 上传文件 */
+  onUpload?: () => void;
+  /** 在当前目录粘贴 */
+  onPasteInCurrentDir?: () => void;
+  /** 剪贴板是否有内容 */
+  clipboardHasItems?: boolean;
 }
 
 export const FileSystemContent: React.FC<FileSystemContentProps> = ({
@@ -109,6 +133,21 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   currentPage: _currentPage,
   totalPages: _totalPages,
   onScrollPageChange,
+  highlightNodeId,
+  isSearchResult = false,
+  onOpen,
+  onOpenInNewTab,
+  onOpenFileLocation,
+  onNewFolder,
+  onCopyClipboard,
+  onCut,
+  onDownloadFolder,
+  onShowProperties,
+  onCreateFolderInCurrentDir,
+  onCreateDrawingInCurrentDir,
+  onUpload,
+  onPasteInCurrentDir,
+  clipboardHasItems = false,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [rubberBand, setRubberBand] = useState<{
@@ -119,6 +158,8 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     startScrollLeft: number;
     startScrollTop: number;
   } | null>(null);
+
+  const [emptyContextMenuPos, setEmptyContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -257,6 +298,24 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     };
   }, [rubberBand, cancelAutoScroll, applyRubberBandSelection]);
 
+  useEffect(() => {
+    if (!highlightNodeId || !scrollContainerRef.current) return;
+
+    const container = scrollContainerRef.current;
+    const timer = setTimeout(() => {
+      const el = container.querySelector(`[data-node-id="${highlightNodeId}"]`);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('file-item-highlight');
+        setTimeout(() => {
+          el.classList.remove('file-item-highlight');
+        }, 3500);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [highlightNodeId, nodes]);
+
   const getNodePermissionProps = (node: FileSystemNode) => {
     const cachedPermissions = nodePermissions.get(node.id);
     const defaultPermissions = {
@@ -359,6 +418,18 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     }
   }, []);
 
+  const handleEmptyContextMenu = useCallback((e: React.MouseEvent) => {
+    if (isTrashView) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-node-id]') || target.closest('[role="menu"]') || target.closest('[data-menu-content]')) return;
+    e.preventDefault();
+    setEmptyContextMenuPos({ x: e.clientX, y: e.clientY });
+  }, [isTrashView]);
+
+  const closeEmptyContextMenu = useCallback(() => {
+    setEmptyContextMenuPos(null);
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       <div
@@ -369,6 +440,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
+          onContextMenu={handleEmptyContextMenu}
         >
         <div className="relative">
           <div
@@ -390,17 +462,17 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               <FileItem
                 key={node.id}
                 node={node}
-                isSelected={isRootLevel ? false : selectedNodes.has(node.id)}
+                isSelected={selectedNodes.has(node.id)}
                 viewMode={viewMode}
-                hideSelectionCircle={isRootLevel}
+                hideSelectionCircle={false}
                 isRubberBanding={!!rubberBand}
                 selectedCount={selectedNodes.size}
-                onBatchDelete={isRootLevel ? undefined : onBatchDelete}
+                onBatchDelete={onBatchDelete}
                 onBatchMove={isRootLevel ? undefined : onBatchMove}
                 onBatchCopy={isRootLevel ? undefined : onBatchCopy}
-                onBatchRestore={isRootLevel ? undefined : onBatchRestore}
+                onBatchRestore={onBatchRestore}
                 isTrash={isTrashView}
-                onSelect={isRootLevel ? undefined : onNodeSelect}
+                onSelect={onNodeSelect}
                 onEnter={onFileOpen}
                 onDownload={onDownload}
                 onDelete={onDelete}
@@ -451,6 +523,15 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 canDownload={extraProps.canDownload}
                 canViewVersionHistory={extraProps.canViewVersionHistory}
                 canManageExternalReference={extraProps.canManageExternalReference}
+                isSearchResult={isSearchResult}
+                onOpen={onOpen}
+                onOpenInNewTab={onOpenInNewTab}
+                onOpenFileLocation={onOpenFileLocation}
+                onNewFolder={onNewFolder}
+                onCopyClipboard={onCopyClipboard}
+                onCut={onCut}
+                onDownloadFolder={onDownloadFolder}
+                onShowProperties={onShowProperties}
               />
             );
           })}
@@ -485,6 +566,89 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
             );
           })()}
         </div>
+
+        {emptyContextMenuPos && (
+          <div
+            style={{ position: 'fixed', left: emptyContextMenuPos.x, top: emptyContextMenuPos.y, width: 0, height: 0, overflow: 'visible', zIndex: Z_LAYERS.POPUP }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Menu open onOpenChange={(open) => { if (!open) closeEmptyContextMenu(); }} modal={false}>
+              <Menu.Trigger asChild>
+                <div style={{ width: 0, height: 0 }} />
+              </Menu.Trigger>
+              <Menu.Content align="start" side="bottom" sideOffset={0}>
+                {!isAtRoot && onCreateDrawingInCurrentDir && (
+                  <Menu.Item
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="12" y1="18" x2="12" y2="12" />
+                        <line x1="9" y1="15" x2="15" y2="15" />
+                      </svg>
+                    }
+                    onClick={() => { onCreateDrawingInCurrentDir?.(); closeEmptyContextMenu(); }}
+                  >
+                    新建图纸
+                  </Menu.Item>
+                )}
+                <Menu.Item
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" />
+                      <line x1="12" y1="11" x2="12" y2="17" />
+                      <line x1="9" y1="14" x2="15" y2="14" />
+                    </svg>
+                  }
+                  onClick={() => { onCreateFolderInCurrentDir?.(); closeEmptyContextMenu(); }}
+                >
+                  新建文件夹
+                </Menu.Item>
+                {!isAtRoot && onUpload && (
+                  <Menu.Item
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    }
+                    onClick={() => { onUpload?.(); closeEmptyContextMenu(); }}
+                  >
+                    上传
+                  </Menu.Item>
+                )}
+                {clipboardHasItems && (
+                  <Menu.Item
+                    icon={
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    }
+                    onClick={() => { onPasteInCurrentDir?.(); closeEmptyContextMenu(); }}
+                  >
+                    粘贴
+                  </Menu.Item>
+                )}
+                <Menu.Separator />
+                <Menu.Item
+                  icon={
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="23 4 23 10 17 10" />
+                      <polyline points="1 20 1 14 7 14" />
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                  }
+                  onClick={() => { onRefresh(); closeEmptyContextMenu(); }}
+                >
+                  刷新
+                </Menu.Item>
+              </Menu.Content>
+            </Menu>
+            <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={closeEmptyContextMenu} />
+          </div>
+        )}
       </div>
 
       <div

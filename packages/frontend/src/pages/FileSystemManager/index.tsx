@@ -235,9 +235,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [selectedNodes, nodes, setClipboard, projectId, showToast]);
 
   const clipboardHandlePaste = useCallback(async () => {
-    console.log('[clipboardHandlePaste] called', { clipboardItems, clipboardMode, projectId, currentNodeId: currentNode?.id, hasPushAction: !!pushAction });
     if (clipboardItems.length === 0 || !clipboardMode) {
-      console.log('[clipboardHandlePaste] early return: no items or mode');
+      return;
+    }
+
+    // 去重：如果剪贴板中同时包含父目录和子节点，只保留父目录（子节点会被递归复制）
+    const parentMap = new Map<string, string | null>();
+    for (const n of nodes) {
+      parentMap.set(n.id, n.parentId ?? null);
+    }
+    const items = clipboardItems.filter((id) => {
+      const parentId = parentMap.get(id);
+      return !(parentId && clipboardItems.includes(parentId));
+    });
+
+    if (items.length === 0) {
+      showToast('没有可粘贴的项目', 'info');
       return;
     }
 
@@ -258,19 +271,17 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     try {
       if (clipboardMode === 'cut') {
         const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
-        console.log('[clipboardHandlePaste] cut mode', { origParentIds, clipboardItems, targetParentId });
-        for (const nodeId of clipboardItems) {
+        for (const nodeId of items) {
           const result = await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
-          console.log('[clipboardHandlePaste] moveNode result', nodeId, result);
         }
         clearClipboard();
         showToast('粘贴成功', 'success');
         const action = {
           type: 'move' as const,
-          description: `移动 ${Object.keys(origParentIds).length} 个项目`,
+          description: `移动 ${items.length} 个项目`,
           projectId: urlProjectId || undefined,
           execute: async () => {
-            for (const nodeId of clipboardItems) {
+            for (const nodeId of items) {
               await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
             }
           },
@@ -284,25 +295,24 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         pushAction(action);
       } else {
         const createdIdsRef: { current: string[] } = { current: [] };
-        for (const nodeId of clipboardItems) {
+        for (const nodeId of items) {
           try {
             const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
             const data = (result as unknown as { data?: { id?: string } })?.data || result;
             const newId = (data as unknown as { id?: string })?.id || '';
             if (newId) createdIdsRef.current.push(newId);
           } catch (e) {
-            console.log('[clipboardHandlePaste] copyNode failed', nodeId, e);
           }
         }
         showToast('粘贴成功', 'success');
         if (createdIdsRef.current.length > 0) {
           pushAction({
             type: 'paste-copy',
-            description: `复制 ${clipboardItems.length} 个项目`,
+            description: `复制 ${items.length} 个项目`,
             projectId: urlProjectId || undefined,
             execute: async () => {
               const newIds: string[] = [];
-              for (const nodeId of clipboardItems) {
+              for (const nodeId of items) {
                 const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
                 const data = (result as unknown as { data?: { id?: string } })?.data || result;
                 const newId = (data as unknown as { id?: string })?.id || '';
@@ -328,7 +338,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       const appError = handleError(error, '粘贴', 'medium');
       showToast(appError.message, 'error');
     }
-  }, [clipboardItems, clipboardMode, projectId, currentNode, clearClipboard, handleRefresh, showToast, pushAction]);
+  }, [clipboardItems, clipboardMode, projectId, currentNode, nodes, clearClipboard, handleRefresh, showToast, pushAction]);
 
   const handleRubberBandSelect = useCallback((nodeIds: string[]) => {
     selectNodes(nodeIds);
@@ -381,7 +391,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   useFileSystemShortcuts({
     containerRef,
-    enabled: !isAtRoot,
+    enabled: true,
     onUndo: () => { console.log('[shortcuts] onUndo triggered'); return clipboardHandleUndo(); },
     onRedo: () => { console.log('[shortcuts] onRedo triggered'); return clipboardHandleRedo(); },
     onCopy: () => { console.log('[shortcuts] onCopy triggered'); clipboardHandleCopy(); },
@@ -672,22 +682,21 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     }
   }, [buildNodeUrl, pagination]);
 
-  const handleCopyPath = useCallback(async (node: FileSystemNode) => {
-    if (node.path) {
-      try {
-        await navigator.clipboard.writeText(node.path);
-        showToast('路径已复制', 'success');
-      } catch {
-        showToast('复制失败', 'error');
-      }
-    }
-  }, [showToast]);
-
   const handleNewFolder = useCallback((node: FileSystemNode) => {
     const store = useFileSystemStore.getState();
     store.setCurrentParentId(node.id);
     setShowCreateFolderModal(true);
   }, [setShowCreateFolderModal]);
+
+  const handleCopyClipboard = useCallback((node: FileSystemNode) => {
+    useFileSystemClipboardStore.getState().setClipboard(
+      [node.id],
+      'copy',
+      urlProjectId || '',
+      { [node.id]: node.parentId || '' },
+    );
+    showToast('已复制', 'info');
+  }, [urlProjectId, showToast]);
 
   const handleCut = useCallback((node: FileSystemNode) => {
     useFileSystemClipboardStore.getState().setClipboard(
@@ -744,7 +753,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       showToast,
     });
 
-  const showSelectionBar = !isAtRoot && selectedNodes.size > 0;
+  const showSelectionBar = selectedNodes.size > 0;
   const showClipboardBar = !isAtRoot && selectedNodes.size === 0 && clipboardItems.length > 0;
 
   const handleCancelBar = useCallback(() => {
@@ -763,7 +772,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             <Button variant="ghost" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
           )}
 
-          {!isTrashView && (
+          {!isTrashView && !isAtRoot && (
             <>
               <Button variant="ghost" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>移动</Button>
               <Button variant="ghost" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
@@ -961,7 +970,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onBatchDelete={() => handleBatchDelete(isTrashView)}
                   onBatchMove={() => { setMoveSourceNode({ id: 'batch' }); setCopySourceNode(null); setShowSelectFolderModal(true); }}
                   onBatchCopy={() => { setMoveSourceNode(null); setCopySourceNode({ id: 'batch' }); setShowSelectFolderModal(true); }}
-                  onBatchRestore={handleBatchRestore}
+                  onBatchRestore={isTrashView ? handleBatchRestore : undefined}
                   loading={loading || isFetching}
                   currentPage={paginationMeta?.page}
                   totalPages={paginationMeta?.totalPages}
@@ -971,11 +980,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onOpen={handleOpen}
                   onOpenInNewTab={handleOpenInNewTab}
                   onOpenFileLocation={handleOpenFileLocation}
-                  onCopyPath={handleCopyPath}
-                  onNewFolder={handleNewFolder}
-                  onCut={handleCut}
-                  onDownloadFolder={handleDownloadFolder}
-                  onShowProperties={handleShowProperties}
+                   onNewFolder={handleNewFolder}
+                   onCopyClipboard={handleCopyClipboard}
+                   onCut={handleCut}
+                   onDownloadFolder={handleDownloadFolder}
+                   onShowProperties={handleShowProperties}
+                   onCreateFolderInCurrentDir={() => setShowCreateFolderModal(true)}
+                   onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
+                   onUpload={() => uploaderRef.current?.triggerUpload()}
+                   onPasteInCurrentDir={clipboardHandlePaste}
+                   clipboardHasItems={clipboardItems.length > 0}
                 />
               </div>
             )}

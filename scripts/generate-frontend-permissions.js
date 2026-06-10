@@ -337,6 +337,9 @@ function generatePermissionDependencies(
   if (projectPermissions.includes('GALLERY_ADD')) {
     dependencies['GALLERY_ADD'] = ['FILE_OPEN'];
   }
+  if (projectPermissions.includes('FILE_SHARE')) {
+    dependencies['FILE_SHARE'] = ['FILE_OPEN'];
+  }
   if (projectPermissions.includes('VERSION_READ')) {
     dependencies['VERSION_READ'] = ['FILE_OPEN'];
   }
@@ -530,6 +533,7 @@ function getPermissionLabel(permission) {
     FILE_DELETE: '删除文件',
     FILE_TRASH_MANAGE: '回收站管理',
     FILE_DOWNLOAD: '下载文件',
+    FILE_SHARE: '分享文件',
     FILE_MOVE: '移动文件',
     FILE_COPY: '复制文件',
     CAD_SAVE: '保存图纸',

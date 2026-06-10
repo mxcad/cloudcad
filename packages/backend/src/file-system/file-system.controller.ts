@@ -90,6 +90,8 @@ import { MoveNodeDto } from "./dto/move-node.dto";
 import { QueryChildrenDto } from "./dto/query-children.dto";
 import { QueryProjectsDto } from "./dto/query-projects.dto";
 import { SearchDto } from "./dto/search.dto";
+import { ParentContextDto } from "./dto/parent-context.dto";
+import { NodePropertiesDto } from "./dto/node-properties.dto";
 import { UpdateNodeDto } from "./dto/update-node.dto";
 import { UpdateProjectMemberDto } from "./dto/update-project-member.dto";
 import { UpdateStorageQuotaDto } from "./dto/update-storage-quota.dto";
@@ -903,7 +905,7 @@ export class FileSystemController {
 
     let node: any;
     try {
-      node = await this.fileTreeService.getNode(nodeId);
+      node = await this.fileTreeService.getNodeIgnoreDeleted(nodeId);
     } catch {
       return this.sendDefaultFallback(res);
     }
@@ -1282,6 +1284,46 @@ export class FileSystemController {
     );
 
     return this.searchService.search(req.user.id, dto, req.signal);
+  }
+
+  // ==================== 节点上下文 & 属性 ====================
+
+  @Get("nodes/:nodeId/parent-context")
+  @ApiOperation({
+    summary: "获取节点在父目录中的分页上下文",
+    description: "用于搜索结果「打开所在位置」时，计算目标文件在父目录中的页码和位置",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "父目录上下文信息",
+    type: ParentContextDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async getParentContext(
+    @Param("nodeId") nodeId: string,
+    @Query("pageSize") pageSize?: number,
+    @Query("sortBy") sortBy?: string,
+    @Query("sortOrder") sortOrder?: 'asc' | 'desc',
+  ) {
+    return this.fileTreeService.getParentContext(nodeId, pageSize, sortBy, sortOrder);
+  }
+
+  @Get("nodes/:nodeId/properties")
+  @ApiOperation({
+    summary: "获取节点属性信息",
+    description: "返回文件/文件夹的完整属性，包括统计信息、权限等",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "节点属性信息",
+    type: NodePropertiesDto,
+  })
+  @ApiResponse({ status: 404, description: "节点不存在" })
+  async getNodeProperties(
+    @Param("nodeId") nodeId: string,
+    @Request() req,
+  ) {
+    return this.fileTreeService.getNodeProperties(nodeId, req.user.id);
   }
 
   // ==================== Helper ====================

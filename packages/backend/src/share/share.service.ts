@@ -128,6 +128,14 @@ export class ShareService {
       throw new NotFoundException('分享链接已过期');
     }
 
+    const fileNode = await this.prisma.fileSystemNode.findFirst({
+      where: { id: share.fileId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!fileNode) {
+      throw new NotFoundException('分享的文件不存在');
+    }
+
     await this.prisma.fileShare.update({
       where: { id: share.id },
       data: { usedCount: { increment: 1 } },

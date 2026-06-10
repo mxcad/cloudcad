@@ -289,6 +289,23 @@ export class FileTreeService {
     }
   }
 
+  async getNodeIgnoreDeleted(nodeId: string) {
+    try {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: nodeId },
+      });
+
+      if (!node) {
+        throw new NotFoundException('节点不存在');
+      }
+
+      return node;
+    } catch (error) {
+      this.logger.error(`获取节点失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   /**
    * 获取节点详情（不包含子节点，用于判断库类型）
    */
@@ -942,5 +959,190 @@ export class FileTreeService {
       this.logger.error(`递归获取文件失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 获取目标节点在父目录中的分页上下文（用于搜索结果高亮定位）
+   */
+  async getParentContext(
+    nodeId: string,
+    pageSize: number = 50,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
+  ) {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId, deletedAt: null },
+      select: { id: true, parentId: true, name: true, isFolder: true, updatedAt: true, size: true },
+    });
+
+    if (!node || !node.parentId) {
+      throw new NotFoundException(`节点不存在或没有父节点: ${nodeId}`);
+    }
+
+    const safeSortBy = (sortBy && ['name', 'createdAt', 'updatedAt', 'size'].includes(sortBy))
+      ? sortBy
+      : 'updatedAt';
+    const safeSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    const orderColumn = safeSortBy === 'name' ? 'name'
+      : safeSortBy === 'createdAt' ? 'createdAt'
+      : safeSortBy === 'size' ? 'size'
+      : 'updatedAt';
+
+    const where = {
+      parentId: node.parentId,
+      deletedAt: null,
+    };
+
+    const total = await this.prisma.fileSystemNode.count({ where });
+
+    const comparator = safeSortOrder === 'asc' ? '>' : '<';
+    const orderExpr = orderColumn === 'name'
+      ? Prisma.sql`${node.name}`
+      : orderColumn === 'size'
+        ? Prisma.sql`${node.size ?? 0}`
+        : Prisma.sql`${node.updatedAt}`;
+
+    const countBefore = await this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint as count
+      FROM "file_system_nodes"
+      WHERE "parentId" = ${node.parentId}
+        AND "deletedAt" IS NULL
+        AND (
+          ${Prisma.raw(`"${orderColumn}"`)} ${Prisma.raw(comparator)} ${orderExpr}
+          OR (
+            ${Prisma.raw(`"${orderColumn}"`)} = ${orderExpr}
+            AND id < ${nodeId}
+          )
+        )
+    `;
+
+    const count = Number(countBefore[0]?.count ?? 0);
+    const pageNumber = Math.floor(count / pageSize) + 1;
+    const positionInPage = (count % pageSize) + 1;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return {
+      parentId: node.parentId,
+      pageNumber,
+      positionInPage,
+      totalPages,
+      total,
+    };
+  }
+
+  /**
+   * 递归计算文件夹的总大小
+   */
+  private async calculateTotalSize(folderId: string): Promise<number> {
+    const result = await this.prisma.$queryRaw<[{ total: bigint | null }]>`
+      WITH RECURSIVE descendants AS (
+        SELECT id, size, "isFolder"
+        FROM "file_system_nodes"
+        WHERE "parentId" = ${folderId} AND "deletedAt" IS NULL
+        UNION ALL
+        SELECT fn.id, fn.size, fn."isFolder"
+        FROM "file_system_nodes" fn
+        INNER JOIN descendants d ON fn."parentId" = d.id AND d."isFolder" = true
+        WHERE fn."deletedAt" IS NULL
+      )
+      SELECT COALESCE(SUM(size), 0)::bigint as total
+      FROM descendants
+      WHERE "isFolder" = false
+    `;
+    return Number(result[0]?.total ?? 0);
+  }
+
+  /**
+   * 递归统计文件夹的总子节点数
+   */
+  private async countTotalChildren(folderId: string): Promise<{ fileCount: number; folderCount: number }> {
+    const result = await this.prisma.$queryRaw<[{ fileCount: bigint; folderCount: bigint }]>`
+      WITH RECURSIVE descendants AS (
+        SELECT id, "isFolder"
+        FROM "file_system_nodes"
+        WHERE "parentId" = ${folderId} AND "deletedAt" IS NULL
+        UNION ALL
+        SELECT fn.id, fn."isFolder"
+        FROM "file_system_nodes" fn
+        INNER JOIN descendants d ON fn."parentId" = d.id AND d."isFolder" = true
+        WHERE fn."deletedAt" IS NULL
+      )
+      SELECT
+        COALESCE(SUM(CASE WHEN "isFolder" = false THEN 1 ELSE 0 END), 0)::bigint as "fileCount",
+        COALESCE(SUM(CASE WHEN "isFolder" = true THEN 1 ELSE 0 END), 0)::bigint as "folderCount"
+      FROM descendants
+    `;
+    return {
+      fileCount: Number(result[0]?.fileCount ?? 0),
+      folderCount: Number(result[0]?.folderCount ?? 0),
+    };
+  }
+
+  /**
+   * 获取节点属性信息
+   */
+  async getNodeProperties(nodeId: string, userId: string) {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId, deletedAt: null },
+      include: {
+        owner: {
+          select: { id: true, username: true, nickname: true },
+        },
+        _count: {
+          select: {
+            children: {
+              where: { deletedAt: null },
+            },
+          },
+        },
+      },
+    });
+
+    if (!node) {
+      throw new NotFoundException(`节点不存在: ${nodeId}`);
+    }
+
+    let totalSize: number | undefined;
+    let totalChildrenCount: number | undefined;
+    let childrenFolderCount = 0;
+    let childrenFileCount = 0;
+
+    if (node.isFolder) {
+      totalSize = await this.calculateTotalSize(nodeId);
+      const totalChildren = await this.countTotalChildren(nodeId);
+      totalChildrenCount = totalChildren.fileCount + totalChildren.folderCount;
+    }
+
+    if (node._count?.children) {
+      const directChildren = await this.prisma.fileSystemNode.findMany({
+        where: { parentId: nodeId, deletedAt: null },
+        select: { id: true, isFolder: true },
+      });
+      childrenFolderCount = directChildren.filter(c => c.isFolder).length;
+      childrenFileCount = directChildren.filter(c => !c.isFolder).length;
+    }
+
+    return {
+      id: node.id,
+      name: node.name,
+      isFolder: node.isFolder,
+      path: node.path,
+      size: node.size,
+      totalSize,
+      childrenFolderCount,
+      childrenFileCount,
+      totalChildrenCount,
+      ownerName: node.owner?.nickname || node.owner?.username,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+      projectId: node.projectId,
+      mimeType: node.mimeType,
+      permissions: {
+        canEdit: true,
+        canDelete: false,
+        canDownload: !node.isFolder,
+      },
+    };
   }
 }

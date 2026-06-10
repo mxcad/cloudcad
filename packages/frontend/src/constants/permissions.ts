@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-04-14T02:55:19.424Z
+ * 生成时间: 2026-06-10T08:21:01.099Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -57,6 +57,7 @@ export const ProjectPermission = {
   FILE_DELETE: 'FILE_DELETE',
   FILE_TRASH_MANAGE: 'FILE_TRASH_MANAGE',
   FILE_DOWNLOAD: 'FILE_DOWNLOAD',
+  FILE_SHARE: 'FILE_SHARE',
   FILE_MOVE: 'FILE_MOVE',
   FILE_COPY: 'FILE_COPY',
   CAD_SAVE: 'CAD_SAVE',
@@ -117,6 +118,7 @@ export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
   'FILE_DOWNLOAD': ["FILE_OPEN"],
   'CAD_SAVE': ["FILE_OPEN"],
   'CAD_EXTERNAL_REFERENCE': ["FILE_OPEN"],
+  'FILE_SHARE': ["FILE_OPEN"],
   'VERSION_READ': ["FILE_OPEN"],
 };
 
@@ -205,6 +207,7 @@ export const PERMISSION_GROUPS = {
         { key: 'FILE_DELETE', label: '删除文件' },
         { key: 'FILE_TRASH_MANAGE', label: '回收站管理' },
         { key: 'FILE_DOWNLOAD', label: '下载文件' },
+        { key: 'FILE_SHARE', label: '分享文件' },
         { key: 'FILE_MOVE', label: '移动文件' },
         { key: 'FILE_COPY', label: '复制文件' },
       ],

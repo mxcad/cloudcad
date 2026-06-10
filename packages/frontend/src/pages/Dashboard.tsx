@@ -11,8 +11,8 @@ import { formatFileSize } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
-import { usersControllerGetDashboardStats } from '@/api-sdk';
-import type { UserDashboardStatsDto } from '@/api-sdk';
+import { usersControllerGetDashboardStats, fileSystemControllerGetStorageQuota } from '@/api-sdk';
+import type { UserDashboardStatsDto, StorageInfoDto } from '@/api-sdk';
 
 // Lucide 图标
 import { RefreshCw } from 'lucide-react';
@@ -169,6 +169,23 @@ export const Dashboard: React.FC = () => {
   const [refreshedStats, setRefreshedStats] = useState<UserDashboardStatsDto | null>(null);
   const finalStats = refreshedStats ?? dashboardStats;
 
+  // 存储配额数据（与侧边栏同一数据源）
+  const [quotaStorage, setQuotaStorage] = useState<StorageInfoDto | null>(null);
+  const [quotaLoading, setQuotaLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      setQuotaLoading(true);
+      fileSystemControllerGetStorageQuota({ query: { nodeId: '', userId: user.id || '' } })
+        .then((result: { data?: StorageInfoDto }) => {
+          const data = result?.data as StorageInfoDto | undefined;
+          if (data) setQuotaStorage(data);
+        })
+        .catch(() => {})
+        .finally(() => setQuotaLoading(false));
+    }
+  }, [user]);
+
   const {
     projects: rawProjects,
     personalFiles,
@@ -270,14 +287,11 @@ export const Dashboard: React.FC = () => {
 
   // 统计数据
   const stats = useMemo(() => {
-    if (!finalStats || !finalStats.storage || !finalStats.fileTypeStats) {
+    if (!finalStats || !finalStats.fileTypeStats) {
       return {
         projects: 0,
         files: 0,
         todayUploads: 0,
-        storage: '-',
-        storageTotal: '-',
-        usagePercent: 0,
         dwgFiles: 0,
         dxfFiles: 0,
         otherFiles: 0,
@@ -288,9 +302,6 @@ export const Dashboard: React.FC = () => {
       projects: finalStats.projectCount,
       files: finalStats.totalFiles,
       todayUploads: finalStats.todayUploads,
-      storage: formatFileSize(finalStats.storage.used),
-      storageTotal: formatFileSize(finalStats.storage.total),
-      usagePercent: finalStats.storage.usagePercent,
       dwgFiles: finalStats.fileTypeStats.dwg,
       dxfFiles: finalStats.fileTypeStats.dxf,
       otherFiles: finalStats.fileTypeStats.other,
@@ -411,11 +422,11 @@ export const Dashboard: React.FC = () => {
         />
         <StatCard
           title="存储使用"
-          value={stats.storage}
-          subtitle={`共 ${stats.storageTotal}`}
+          value={quotaStorage ? formatFileSize(quotaStorage.used) : '-'}
+          subtitle={quotaStorage ? `共 ${formatFileSize(quotaStorage.total)}` : ''}
           icon={HardDrive}
-          color={stats.usagePercent > 90 ? '#ef4444' : '#22c55e'}
-          loading={loading}
+          color={(quotaStorage?.usagePercent ?? 0) > 90 ? '#ef4444' : '#22c55e'}
+          loading={quotaLoading}
         />
       </div>
 

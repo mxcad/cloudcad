@@ -920,3 +920,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   min-width: 0 !important;
   width: auto !important;
 }
+
+/* ============================================
+   搜索高亮闪烁动画 - 用于「打开所在位置」
+   ============================================ */
+@keyframes highlight-fade {
+  0% {
+    background-color: var(--color-primary-100, #dbeafe);
+    box-shadow: 0 0 0 2px var(--color-primary-400, #60a5fa);
+  }
+  70% {
+    background-color: var(--color-primary-100, #dbeafe);
+    box-shadow: 0 0 0 2px var(--color-primary-400, #60a5fa);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.file-item-highlight {
+  animation: highlight-fade 3s ease-out forwards;
+  border-radius: var(--radius-md, 6px);
+}

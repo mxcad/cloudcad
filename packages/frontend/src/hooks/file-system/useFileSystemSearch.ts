@@ -68,7 +68,12 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   }, []);
 
   const handleFiltersChange = useCallback((filters: SearchFilterValues) => {
-    setSearchFilters(filters);
+    const cleaned: SearchFilterValues = {};
+    if (filters.extension) cleaned.extension = filters.extension;
+    if (filters.timeRange) cleaned.timeRange = filters.timeRange;
+    if (filters.sortBy) cleaned.sortBy = filters.sortBy;
+    if (filters.sortOrder) cleaned.sortOrder = filters.sortOrder;
+    setSearchFilters(cleaned);
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
