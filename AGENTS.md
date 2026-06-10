@@ -6,9 +6,10 @@
 
 | 文件 | 内容 |
 |------|------|
-| `CLAUDE.md` | 关键陷阱、常用命令、架构决策、后端/前端约定 |
-| `CONTEXT.md` | 领域术语、图纸归属、上传协议、保存流程、编码约束、反模式清单 |
-| `.agents/skills/` | 主技能（project / frontend / backend coding-standards） |
+| `CLAUDE.md` | 架构决策、关键陷阱、后端/前端约定 |
+| `CONTEXT.md` | 领域术语、图纸归属、编码约束、反模式清单 |
+| `packages/backend/CLAUDE.md` | NestJS DI 细节、Prisma v7、Express v5、Façade 模式 |
+| `packages/frontend/AGENTS.md` | i18n (VoerkaI18n) 子库模式、library 约束 |
 | `LEAN-CTX.md` | lean-ctx MCP tools 使用规则 |
 
 ---
@@ -19,11 +20,11 @@
 
 | 包 | 技术栈 | 端口 | 入口 |
 |---|--------|------|------|
-| `packages/frontend` | React 19 + Vite + Tailwind v4 + Zustand + Radix UI | 5173 | `src/main.tsx` |
+| `packages/frontend` | React 19 + Vite + Tailwind v4 + Zustand + Radix UI | 3000 | `src/main.tsx` |
 | `packages/backend` | NestJS 11 + Express 5 + Prisma 7 + PostgreSQL + Redis | 3001 | `src/main.ts` |
-| `packages/frontend_mobile` | Vue 3 + Vite + vant | — | `src/main.ts` |
-| `packages/config-service` | NestJS (配置中心) | 3002 | `src/main.ts` |
-| `packages/svnVersionTool` | SVN CLI wrapper | — | `src/main.ts` |
+| `packages/frontend_mobile` | Vue 3 + Vite 4 + vant + VoerkaI18n | — | `src/main.ts` |
+| `packages/config-service` | **纯 Node.js HTTP** (0 依赖, 非 NestJS) | 3002 | `server.js` |
+| `packages/svnVersionTool` | **CommonJS** SVN CLI 包装器 (无 build 步骤) | — | `svncmd.js` |
 
 ---
 
@@ -35,6 +36,7 @@ pnpm dev                    # 并行启动所有 dev server
 pnpm build                  # 构建所有包
 pnpm check                  # lint → format:check → type-check
 pnpm type-check             # pnpm -r type-check
+pnpm generate:api-types     # 为 frontend + frontend_mobile 生成 API SDK
 
 # 前端 (packages/frontend)
 pnpm test                   # vitest run
@@ -43,10 +45,12 @@ pnpm generate:sdk           # 从 Swagger JSON 生成 API SDK (@hey-api/openapi-
                             # → src/api-sdk/{sdk.gen.ts,types.gen.ts} (勿手动编辑)
 
 # 后端 (packages/backend)
-pnpm test                   # jest (30s timeout)
+pnpm test                   # jest (30s timeout, clearMocks+restoreMocks+resetMocks)
 pnpm test:unit              # 跳过 integration
-pnpm test:integration       # 仅 integration
+pnpm test:integration       # 仅 integration (独立 jest config)
 pnpm test:ci                # coverage + CI mode
+pnpm test:permission        # 权限专门测试
+pnpm test:permission:scenarios
 pnpm type-check             # tsc --noEmit --project tsconfig.build.json
 pnpm build                  # nest build (SWC) + generate:swagger
 pnpm verify                 # check:fix → test → build
@@ -54,11 +58,11 @@ pnpm prisma generate        # 生成 Prisma Client
 pnpm prisma migrate dev     # 创建新 migration (禁止仅用 db push)
 pnpm prisma db push         # 仅开发环境快速同步
 pnpm db:seed                # 种子数据
-pnpm generate:swagger       # 生成 swagger-spec.json (build 内自动执行)
 
 # 移动端 (packages/frontend_mobile)
 pnpm dev                    # vite
 pnpm build                  # i18n compile → vite build
+pnpm generate:sdk           # 手动运行: node scripts/generate-sdk.cjs
 ```
 
 ---
@@ -66,54 +70,49 @@ pnpm build                  # i18n compile → vite build
 ## 关键陷阱
 
 ### NestJS DI (后端)
-**永远不要对 DI 注入的类使用 `import type`** — 装饰器元数据会被 strip。Biome 的 `organizeImports` 可能自动做此事，运行后需要手工复查。详见 `packages/backend/CLAUDE.md`。
+**永远不要对 DI 注入的类使用 `import type`** — 装饰器元数据会被 strip。ESLint 的 `consistent-type-imports` 已禁用，但 `unused-imports` 插件仍可能触发自动删除。详见 `packages/backend/CLAUDE.md`。
 
-### 双格式化系统
+### 格式化/Lint
 - **根 / frontend / frontend_mobile**: Prettier（`singleQuote`, `trailingComma: es5`, `printWidth: 80`）
-- **backend 代码**: Biome（单引号、2-space、LF、`src/**/*.ts` 和 `test/**/*.ts` 范围）
-- 后端运行 `pnpm check` 时同时启用 ESLint 和 Biome，配置文件在 `packages/backend/biome.json`
+- **后端 scripts**: ESLint + Prettier（`biome.json` 存在但不由脚本调用）
+- 后端 `check` = `eslint .` → `prettier --check .` → `tsc --noEmit`
 
-### 后端 TypeScript 配置（故意宽松）
-`strictNullChecks: false`, `noImplicitAny: false`, `noImplicitReturns: false`。类型安全通过 lint 规则而非编译器保证。
+### 后端 TypeScript（故意宽松）
+`strictNullChecks: false`, `noImplicitAny: false`, `noImplicitReturns: false`, `isolatedModules: false`。类型安全通过 lint 规则而非编译器保证。**注意 `package.json` 声明 `typescript: "~5.0.0"` 但 lockfile 解析到 5.9.3**，更严格的类型推断可能暴露 5.0 未发现的问题。
 
 ### CAD 引擎是黑盒
 `mxcad-app` npm 包内部自建 Vue 3 + Vuetify 应用，React 通过 `mxcadManager.ts`（单例）通信。`CADEditorDirect.tsx` 作为全局叠加层在 `<Routes>` 之外渲染，通过 `visibility` + `z-index` 跨路由保持 WebGL 上下文。
 
 ### 协同 SDK (mxcad-app) 黑盒行为
-`MxCpp.getCurrentMxCAD().getCooperate()` 提供的协同 API 内部行为：
-
-| API | 内部行为 | 注意 |
-|-----|---------|------|
-| `cooperate.createWrok()` | 上传当前 mxweb 内容到协同服务器 → 创建 work session → **内部自动打开协同文件** | 返回 workid > 0 成功；错误码 4 = 已存在 |
-| `cooperate.joinWork()` | 连接到已有 work session → **内部自动加载协同文件** → 与其他参与者同步 | workId 来自 `getWorks()` 列表 |
-| `cooperate.exitWrok()` | 断开协同连接 → 回退到本地编辑模式 | 文件本身不会关闭 |
-| `cooperate.getWorks()` | 查询当前用户可见的所有活跃 work session | 回调返回 `Work[]` 列表 |
-
-**关键约束**：
-- `cooperate.init()` 只需调用一次，通过 `cooperateInitRef` 守卫
-- `createWrok` / `joinWork` 成功后，SDK **内部自动打开协同文件**，不需要前端额外调用 `openFile()`
-- `setupFileOpenListener` (`mxcadManager/index.ts`) 的 `on('openFile')` 回调会在 SDK 内部打开文件时触发，确保 `useFileName` 和 `currentFileInfo` 更新
-- 分享链接进入且 `collaborationEnabled=true` 时，`CADEditorDirect.tsx` 跳过文件打开（`doOpenMxFile`），初始化空白 CAD 引擎后由 `CollaborateSidebar` 的 auto-join 接管
+`MxCpp.getCurrentMxCAD().getCooperate()` 提供的协同 API：
+- `createWrok()` → 上传 mxweb → 创建 work session → **内部自动打开协同文件**。workid>0 成功；错误码 4 = 已存在
+- `joinWork()` → 连接已有 session → **内部自动加载协同文件**
+- `exitWrok()` → 断开连接 → 回退本地编辑（文件不关闭）
+- `init()` 只需调用一次（通过 `cooperateInitRef` 守卫）
+- 分享链接 + `collaborationEnabled=true` 时，`CADEditorDirect.tsx` 跳过 `doOpenMxFile`，由 `CollaborateSidebar` 的 auto-join 接管
 
 ### API SDK 自动生成
-修改后端 API 后运行 `pnpm generate:api-types`（= `pnpm --filter frontend generate:sdk`），会从 Swagger spec 重新生成 `packages/frontend/src/api-sdk/`。手动编辑生成的 `.gen.ts` 文件会被覆盖。
+`pnpm generate:api-types` 同时为 frontend + frontend_mobile 生成 SDK。手动编辑生成的 `.gen.ts` 文件会被覆盖。
 
 ### Prisma v7 类型
-更新 Prisma schema 后，生成的新类型可能是 `ModelNameOmit` 而非 `ModelName`。始终运行 `pnpm type-check` 确认。
+更新 schema 后生成的新类型可能是 `ModelNameOmit` 而非 `ModelName`。始终运行 `pnpm type-check` 确认。
 
 ### 前端 CSS 约束
 - z-index: 必须使用 `Z_LAYERS` 常量（`@/constants/layers`），禁止裸数字
 - 颜色: 使用 `--color-*` / `--bg-*` / `--text-*` CSS 变量，禁止硬编码色值
 - 字体: 使用 `--font-family-base` / `--font-family-mono` CSS 变量
+- 新增 UI 前先检查 `src/components/ui/`（26 个全局组件可用）
 
-### 全局组件优先
-新增 UI 组件前，先检查 `src/components/ui/` 是否已有可复用组件（Button, Modal, Table, Form, Input, Tooltip, Pagination 等）。能用全局组件就用全局组件，避免重复造轮子。
+### 前端 i18n: VoerkaI18n (子库模式)
+- CloudCAD 是 mxcad-app 的 VoerkaI18n 子库（`library: true`），语言切换由 mxcad-app 驱动
+- `@voerkai18n/vite` 插件必须在 `react()` 之前注册（vite.config.ts）
+- **每次运行 `pnpm i18n:compile` 后，必须手动检查 `src/languages/index.ts` 中 `library: true` 是否被覆盖**（compile 会重置为 `false`）
 
 ### 移动端 (frontend_mobile)
-- Vue 3 + Vite 4 + TypeScript 4.9
-- 使用 `voerkai18n` 做国际化，构建时会自动编译 i18n
-- 构建命令: `pnpm build`（含 i18n 编译步骤）
-- 使用 vant 组件库
+- Vue 3 + Vite 4 + TypeScript 4.9 + vant 组件库
+- `voerkai18n` 国际化，同样有 `library` 配置文件需检查
+- 使用 `postcss-pxtorem` + `lib-flexible` 做移动端适配
+- 构建时自动编译 i18n → vite build
 
 ---
 
@@ -123,38 +122,27 @@ pnpm build                  # i18n compile → vite build
 2. 将生成的 `migrations/` 目录提交到 Git
 3. 生产部署自动执行 `prisma migrate deploy`
 4. 破坏性变更：先加新字段，同步数据，再删旧字段（分版本发布）
+5. 迁移历史修复步骤见底部
 
 ### 迁移历史修复（仅首次部署时执行）
 
 **场景**：已有 migration 文件在 git 中被修改过，导致 `prisma migrate deploy` 因 checksum 不匹配而失败。
 
-在 **生产数据库** 上执行一次：
+在生产数据库上执行一次 fix（只更新 `_prisma_migrations` 元数据表，不涉及 DDL）：
 
 ```bash
-# 修复被修改过的 migration checksum
 npx prisma migrate resolve --rolled-back 20260330025027_init
 npx prisma migrate resolve --applied 20260330025027_init
-
 npx prisma migrate resolve --rolled-back 20260330025133_baseline
 npx prisma migrate resolve --applied 20260330025133_baseline
-
 npx prisma migrate resolve --rolled-back 20260330030233_add_gallery_add_permission
 npx prisma migrate resolve --applied 20260330030233_add_gallery_add_permission
-
 npx prisma migrate resolve --rolled-back 20260407_add_user_phone_wechat_fields
 npx prisma migrate resolve --applied 20260407_add_user_phone_wechat_fields
-
 npx prisma migrate resolve --rolled-back 20260414100000_sync_enum_changes
 npx prisma migrate resolve --applied 20260414100000_sync_enum_changes
-
-# 执行所有待处理迁移
 npx prisma migrate deploy
 ```
-
-**原理说明**：
-- `resolve --rolled-back` 和 `resolve --applied` 只更新 `_prisma_migrations` 元数据表，**不涉及任何 DDL 变更**
-- 重启后即可用 `prisma migrate deploy` 正常运行
-- 后续所有部署不再需要此步骤，直接 `prisma migrate deploy` 即可
 
 ---
 
@@ -162,34 +150,45 @@ npx prisma migrate deploy
 
 ```bash
 # 后端
-pnpm test                           # 所有 jest 测试
+pnpm test                           # 所有 jest 测试 (30s timeout, forceExit)
 pnpm test -- --testPathPattern="auth"
-pnpm test:permission                # 权限专门测试
+pnpm test:unit                      # 跳过 integration
+pnpm test:integration               # 独立 jest config (test/jest-integration.json)
+pnpm test:permission                # --testPathPatterns=permission --testNamePattern="PermissionTestRunner"
 pnpm test:permission:scenarios
+pnpm test:cov                       # 带覆盖率
+pnpm test:ci                        # CI 模式
 
 # 前端
 pnpm test                           # vitest run
 pnpm test:e2e                       # Playwright
 pnpm test:e2e:headed                # Playwright 有头模式
+pnpm test:coverage                  # 覆盖率报告
 ```
 
-后端覆盖阈值（per-file）：P0 80%（auth/permission service），P1 70%（file-system/role-inheritance 等）。Jest config: `clearMocks`, `restoreMocks`, `resetMocks` 全 true。
+后端覆盖阈值（per-file）：P0 80%（auth.service.ts, permission.service.ts），P1 70%（file-system, role-inheritance 等）。Jest: `clearMocks`, `restoreMocks`, `resetMocks` 全 true。
+
+**注意**：CI workflow 中 frontend 不跑 vitest，只跑 `type-check`。后端 CI 需要 PostgreSQL + Redis 服务。
 
 ---
 
-## 可用 Skills
+## 关键 Skills
+
+Skills 在 `.agents/skills/`（27 个）和 `.opencode/skills/`（8 个）。重要技能及触发条件：
 
 | 技能 | 触发条件 |
 |------|----------|
-| **project-coding-standards** | 任何代码生成/新建/重构/提交前检查 |
-| **frontend-coding-standards** | React 组件、样式、API 调用、`packages/frontend` 代码 |
-| **backend-coding-standards** | NestJS service/controller、Prisma、权限、`packages/backend` 代码 |
-| **config-management** | 环境变量、运行时配置、`process.env` |
-| **permission-system** | 权限检查、角色管理、Guard/装饰器 |
-| **api-contracts** | DTO 变更、类型不匹配、Swagger |
-| **nestjs-circular-dependency** | 循环依赖、`forwardRef` |
-| **prisma-database** | schema.prisma 变更、迁移 |
-| **diagnose** | 调试 bug、性能回归 |
+| `project-coding-standards` | 任何代码生成/新建/重构/提交前检查 |
+| `frontend-coding-standards` | React 组件、样式、API 调用 |
+| `backend-coding-standards` | NestJS service/controller、Prisma、权限 |
+| `config-management` | 环境变量、运行时配置、`process.env` |
+| `permission-system` | 权限检查、角色管理、Guard/装饰器 |
+| `api-contracts` | DTO 变更、类型不匹配、Swagger |
+| `nestjs-circular-dependency` | 循环依赖、`forwardRef` |
+| `prisma-database` | schema.prisma 变更、迁移 |
+| `perfect-theme-system` | 主题、颜色、CSS 变量、深色/亮色模式 |
+| `vercel-react-best-practices` | React 性能优化 |
+| `diagnose` | 调试 bug、性能回归 |
 
 ---
 
