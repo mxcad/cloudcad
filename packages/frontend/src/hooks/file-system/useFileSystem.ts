@@ -146,6 +146,8 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     handlePageSizeChange,
     paginationRef,
     checkShouldLoadData,
+    searchFilters,
+    handleFiltersChange,
   } = useFileSystemSearch({
     loadData: () => {}, // 将在下面覆盖
   });
@@ -169,9 +171,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     paginationMeta,
     isTrashView,
     setIsTrashView,
-    isProjectTrashView,
-    setIsProjectTrashView,
-    isProjectTrashViewRef,
     loadData,
     buildBreadcrumbsFromNode,
   } = useFileSystemData({
@@ -187,6 +186,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     showToast,
     clearSelection: selectionClearFn,
     projectFilter: externalProjectFilter,
+    searchFilters,
   });
 
   // Selection Hook
@@ -252,7 +252,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     handleDeleteProject,
     handlePermanentlyDeleteProject,
     handleRestoreNode,
-    handleClearProjectTrash,
     handleClearTrash,
   } = useFileSystemCRUD({
     urlProjectId,
@@ -263,7 +262,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     selectedNodes,
     nodes,
     clearSelection,
-    isProjectTrashViewRef,
     mode,
   });
 
@@ -281,16 +279,9 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   const prevParamsRef = useRef<UseFileSystemProps | null>(null);
 
   // 切换回收站视图
-  // 在项目内部时切换项目回收站，在项目列表时切换全局回收站
   const handleToggleTrashView = useCallback(() => {
-    if (isFolderMode || isPersonalSpaceMode) {
-      // 在项目/私人空间内部，切换项目回收站
-      setIsProjectTrashView(!isProjectTrashView);
-    } else {
-      // 在项目列表级别，切换全局回收站
-      setIsTrashView(!isTrashView);
-    }
-  }, [isTrashView, setIsTrashView, isProjectTrashView, setIsProjectTrashView, isFolderMode, isPersonalSpaceMode]);
+    setIsTrashView(!isTrashView);
+  }, [isTrashView, setIsTrashView]);
 
   // 监听 isTrashView 变化
   const prevIsTrashViewRef = useRef(isTrashView);
@@ -302,21 +293,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
       prevIsTrashViewRef.current = isTrashView;
     }
   }, [isTrashView, setStoreSearchTerm, setPagination]);
-
-  const handleToggleProjectTrashView = useCallback(() => {
-    setIsProjectTrashView(!isProjectTrashView);
-  }, [isProjectTrashView, setIsProjectTrashView]);
-
-  // 监听 isProjectTrashView 变化
-  const prevIsProjectTrashViewRef = useRef(isProjectTrashView);
-  useEffect(() => {
-    if (prevIsProjectTrashViewRef.current !== isProjectTrashView) {
-      setStoreSearchTerm('');
-      setPagination((prev) => ({ ...prev, page: 1 }));
-      setRefreshCount((prev) => prev + 1);
-      prevIsProjectTrashViewRef.current = isProjectTrashView;
-    }
-  }, [isProjectTrashView, setStoreSearchTerm, setPagination]);
 
   // 监听 projectFilter 变化（项目过滤：全部/我创建的/我加入的）
   const prevProjectFilterRef = useRef(externalProjectFilter);
@@ -368,6 +344,8 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   useEffect(() => {
     if (searchQuery === '' && prevSearchTermRef.current !== '') {
       setPagination((prev) => ({ ...prev, page: 1 }));
+      // 200ms 延迟：等待 store 中的搜索状态完全清除后再重新加载数据
+      // 避免与 useFileSystemData 中 hasSearch 状态过渡期间的条件竞争
       setTimeout(() => {
         loadData();
       }, 200);
@@ -416,6 +394,8 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     searchTerm: searchQuery,
     setSearchTerm: handleSearchChange,
     handleSearchSubmit: handleSearchSubmitWrapper,
+    searchFilters,
+    handleFiltersChange,
     pagination,
     setPagination,
     paginationMeta,
@@ -486,10 +466,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     setIsTrashView,
     handleToggleTrashView,
     handleRestoreNode,
-    handleClearProjectTrash,
     handleClearTrash,
-    isProjectTrashView,
-    setIsProjectTrashView,
-    handleToggleProjectTrashView,
   };
 };

@@ -50,13 +50,13 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RequirePermissions } from "../common/decorators/require-permissions.decorator";
 import { RequireProjectPermission } from "../common/decorators/require-project-permission.decorator";
 import { StorageInfoDto } from "../common/dto/storage-info.dto";
+import { BatchDeleteDto, BatchMoveDto, BatchCopyDto } from "./dto/batch-operations.dto";
 import {
   ProjectPermission,
   SystemPermission,
 } from "../common/enums/permissions.enum";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { RequireProjectPermissionGuard } from "../common/guards/require-project-permission.guard";
-import { StorageQuotaInterceptor } from "../common/interceptors/storage-quota.interceptor";
 import { PermissionService } from "../common/services/permission.service";
 import {
   findThumbnailSync,
@@ -104,7 +104,6 @@ import { StorageInfoService } from "./storage-quota/storage-info.service";
 
 @Controller('file-system')
 @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard, PermissionsGuard)
-@UseInterceptors(StorageQuotaInterceptor)
 @ApiTags("文件系统")
 @ApiBearerAuth()
 export class FileSystemController {
@@ -257,18 +256,32 @@ export class FileSystemController {
   // ==================== 回收站管理 ====================
 
   @Get('trash')
-  @ApiOperation({ summary: '获取回收站列表' })
+  @ApiOperation({ summary: '获取回收站列表（统一回收站）' })
+  @ApiQuery({ name: 'projectId', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'sortBy', required: false })
+  @ApiQuery({ name: 'sortOrder', required: false })
+  @ApiQuery({ name: 'search', required: false })
   @ApiResponse({
     status: 200,
     description: '获取回收站列表成功',
     type: TrashListResponseDto,
   })
-  async getTrash(@Request() req) {
-    return this.fileTreeService.getTrashItems(req.user.id);
+  async getTrash(
+    @Request() req,
+    @Query('projectId') projectId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('search') search?: string,
+  ) {
+    return this.fileTreeService.getTrashItems(req.user.id, { projectId, page, limit, sortBy, sortOrder, search });
   }
 
   @Post("trash/restore")
-  @RequirePermissions([SystemPermission.PROJECT_CREATE])
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "恢复回收站项目" })
@@ -294,7 +307,7 @@ export class FileSystemController {
   }
 
   @Delete('trash/items')
-  @RequirePermissions([SystemPermission.PROJECT_CREATE])
+  @RequireProjectPermission(ProjectPermission.FILE_TRASH_MANAGE)
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '永久删除回收站项目' })
@@ -312,8 +325,11 @@ export class FileSystemController {
     description: '永久删除项目成功',
     type: BatchOperationResponseDto,
   })
-  async permanentlyDeleteTrashItems(@Body() body: { itemIds: string[] }) {
-    return this.fileOperationsService.permanentlyDeleteTrashItems(body.itemIds);
+  async permanentlyDeleteTrashItems(
+    @Body() body: { itemIds: string[] },
+    @Request() req: ExpressRequest & { user: { id: string } },
+  ) {
+    return this.fileOperationsService.permanentlyDeleteTrashItems(body.itemIds, req.user.id);
   }
 
   @Delete('trash')
@@ -332,7 +348,7 @@ export class FileSystemController {
 
   @Get('projects/:projectId/trash')
   @RequireProjectPermission(ProjectPermission.FILE_OPEN)
-  @ApiOperation({ summary: '获取项目回收站列表' })
+  @ApiOperation({ summary: '获取项目回收站列表（已废弃，请使用 GET /trash?projectId=）' })
   @ApiResponse({
     status: 200,
     description: '获取项目回收站列表成功',
@@ -344,7 +360,14 @@ export class FileSystemController {
     @Request() req,
     @Query() query?: QueryChildrenDto,
   ) {
-    return this.fileOperationsService.getProjectTrash(projectId, req.user.id, query);
+    return this.fileTreeService.getTrashItems(req.user.id, {
+      projectId,
+      page: query?.page,
+      limit: query?.limit,
+      sortBy: query?.sortBy,
+      sortOrder: query?.sortOrder,
+      search: query?.search,
+    });
   }
 
   @Delete('projects/:projectId/trash')
@@ -556,6 +579,50 @@ export class FileSystemController {
   @ApiResponse({ status: 404, description: "节点不存在" })
   async copyNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     return this.fileOperationsService.copyNode(nodeId, dto.targetParentId);
+  }
+
+  // ==================== 批量操作 ====================
+
+  @Post("nodes/batch-delete")
+  @RequireProjectPermission(ProjectPermission.FILE_DELETE)
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "批量删除节点" })
+  @ApiResponse({
+    status: 200,
+    description: "批量删除成功",
+    type: BatchOperationResponseDto,
+  })
+  async batchDeleteNodes(@Body() dto: BatchDeleteDto) {
+    return this.fileOperationsService.batchDeleteNodes(dto.nodeIds, dto.permanently);
+  }
+
+  @Post("nodes/batch-move")
+  @RequireProjectPermission(ProjectPermission.FILE_MOVE)
+  @CsrfProtected()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "批量移动节点" })
+  @ApiResponse({
+    status: 200,
+    description: "批量移动成功",
+    type: BatchOperationResponseDto,
+  })
+  async batchMoveNodes(@Body() dto: BatchMoveDto) {
+    return this.fileOperationsService.batchMoveNodes(dto.nodeIds, dto.targetParentId);
+  }
+
+  @Post("nodes/batch-copy")
+  @RequireProjectPermission(ProjectPermission.FILE_COPY)
+  @CsrfProtected()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "批量复制节点" })
+  @ApiResponse({
+    status: 201,
+    description: "批量复制成功",
+    type: BatchOperationResponseDto,
+  })
+  async batchCopyNodes(@Body() dto: BatchCopyDto) {
+    return this.fileOperationsService.batchCopyNodes(dto.nodeIds, dto.targetParentId);
   }
 
   // ==================== 配额管理 ====================

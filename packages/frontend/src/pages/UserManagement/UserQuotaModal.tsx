@@ -14,6 +14,7 @@ interface UserQuotaModalProps {
   user: { nickname?: string; username?: string; avatar?: string } | null;
   quota: number;
   defaultQuota: number;
+  quotaIsDefault?: boolean;
   onQuotaChange: (quota: number) => void;
 }
 
@@ -25,6 +26,7 @@ export function UserQuotaModal({
   user,
   quota,
   defaultQuota,
+  quotaIsDefault,
   onQuotaChange,
 }: UserQuotaModalProps) {
   return (
@@ -84,12 +86,20 @@ export function UserQuotaModal({
             step="1"
             suffix="GB"
           />
-          <p className="quota-hint">默认配额：{defaultQuota} GB</p>
+          <p className="quota-hint">
+            默认配额：{defaultQuota} GB
+            {quota === 0 && <span style={{ color: 'var(--text-muted)' }}>（跟随系统）</span>}
+          </p>
           <div className="quota-preview">
             <div className="quota-bar">
               <div className="quota-bar-fill" style={{ width: '0%' }} />
             </div>
-            <p className="quota-text">已配置：{quota} GB</p>
+            <p className="quota-text">
+              已配置：{quota > 0 ? quota : defaultQuota} GB
+              {(quota === 0 || quotaIsDefault) && (
+                <span style={{ color: 'var(--text-tertiary)' }}>（默认）</span>
+              )}
+            </p>
           </div>
         </div>
       </div>

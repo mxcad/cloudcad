@@ -623,6 +623,7 @@ export const LibraryManager: React.FC = () => {
                     key={node.id}
                     node={node}
                     viewMode={viewMode}
+                    hideSelectionCircle={false}
                     canDownload={true}
                     canDelete={canManage}
                     canEdit={canManage}
@@ -669,16 +670,26 @@ export const LibraryManager: React.FC = () => {
                     <Button onClick={() => openBatchMoveModal(selectedNodes.size)} variant="ghost" style={{ color: 'var(--text-secondary)' }}>移动</Button>
                     <Button onClick={() => openBatchCopyModal(selectedNodes.size)} variant="ghost" style={{ color: 'var(--text-secondary)' }}>复制</Button>
                     <Button
-                      onClick={() => {
+                      onClick={async () => {
                         const nodeIds = Array.from(selectedNodes);
                         const count = nodeIds.length;
                         showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
                           try {
-                            for (const nodeId of nodeIds) {
-                              const apiMethod = libraryType === 'drawing' ? deleteDrawingNode : deleteBlockNode;
-                              await apiMethod(nodeId, true);
+                            const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
+                            const fn = libraryType === 'drawing'
+                              ? libraryControllerBatchDeleteDrawingNodes
+                              : libraryControllerBatchDeleteBlockNodes;
+                            const { data, error } = await fn({
+                              body: { nodeIds, permanently: true },
+                              throwOnError: false,
+                            });
+                            if (error) throw error;
+                            const result = data as unknown as { successCount: number; failedCount: number };
+                            if (result.failedCount > 0) {
+                              showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+                            } else {
+                              showToast(`成功删除 ${count} 个项目`, 'success');
                             }
-                            showToast(`成功删除 ${count} 个项目`, 'success');
                             clearSelection();
                             await refresh();
                           } catch (error) {
@@ -864,7 +875,10 @@ export const LibraryManager: React.FC = () => {
               step="1"
               suffix="GB"
             />
-            <p className="quota-hint">默认配额：{defaultLibraryQuota} GB</p>
+            <p className="quota-hint">
+              默认配额：{defaultLibraryQuota} GB
+              {libraryQuota === 0 && <span style={{ color: 'var(--text-muted)' }}>（跟随系统）</span>}
+            </p>
             {libraryStorageInfo && (
               <div className="quota-preview">
                 <div className="quota-bar">

@@ -135,6 +135,20 @@ export class FileSystemService {
     return this.fileOperationsService.copyNode(nodeId, targetParentId);
   }
 
+  // ==================== 批量操作 ====================
+
+  async batchDeleteNodes(nodeIds: string[], permanently: boolean = false) {
+    return this.fileOperationsService.batchDeleteNodes(nodeIds, permanently);
+  }
+
+  async batchMoveNodes(nodeIds: string[], targetParentId: string) {
+    return this.fileOperationsService.batchMoveNodes(nodeIds, targetParentId);
+  }
+
+  async batchCopyNodes(nodeIds: string[], targetParentId: string) {
+    return this.fileOperationsService.batchCopyNodes(nodeIds, targetParentId);
+  }
+
   // ==================== 文件下载（file-download） ====================
 
   async downloadNode(

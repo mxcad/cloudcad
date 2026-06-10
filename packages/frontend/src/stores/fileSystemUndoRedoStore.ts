@@ -45,8 +45,12 @@ export const useFileSystemUndoRedoStore = create<FileSystemUndoRedoState>(
       }
 
       console.log('[undoStore] executing rollback for', action.type, action.description);
-      await action.rollback();
-      console.log('[undoStore] rollback done');
+      try {
+        await action.rollback();
+        console.log('[undoStore] rollback done');
+      } catch (error) {
+        console.error('[undoStore] rollback failed, removing action anyway', error);
+      }
 
       set((state) => ({
         undoStack: state.undoStack.slice(0, -1),
@@ -68,7 +72,12 @@ export const useFileSystemUndoRedoStore = create<FileSystemUndoRedoState>(
       }
 
       console.log('[undoStore] executing execute for', action.type, action.description);
-      await action.execute();
+      try {
+        await action.execute();
+        console.log('[undoStore] execute done');
+      } catch (error) {
+        console.error('[undoStore] execute failed, removing action anyway', error);
+      }
 
       set((state) => ({
         redoStack: state.redoStack.slice(0, -1),

@@ -194,45 +194,60 @@ export class ProjectCrudService {
       filter,
     } = query || {};
     // HTTP 查询参数是字符串，确保转为数字
+    const ALLOWED_SORT = ['name', 'createdAt', 'updatedAt', 'size'];
+    if (sortBy && !ALLOWED_SORT.includes(sortBy)) {
+      throw new BadRequestException(`不支持的排序字段: ${sortBy}`);
+    }
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit) || 20;
     const skip = (pageNum - 1) * limitNum;
 
-    let ownerCondition: Prisma.FileSystemNodeWhereInput;
-
-    switch (filter) {
-      case 'owned':
-        ownerCondition = { ownerId: userId };
-        break;
-      case 'joined':
-        ownerCondition = {
-          projectMembers: {
-            some: { userId },
-          },
-          ownerId: { not: userId },
-        };
-        break;
-      case 'all':
-      default:
-        ownerCondition = {
-          OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
-        };
-        break;
-    }
+    const permissionAnd: Prisma.FileSystemNodeWhereInput[] = (() => {
+      switch (filter) {
+        case 'owned':
+          return [{ ownerId: userId }];
+        case 'joined':
+          return [
+            { projectMembers: { some: { userId } } },
+            { ownerId: { not: userId } },
+          ];
+        case 'all':
+        default:
+          return [{
+            OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
+          }];
+      }
+    })();
 
     const where: Prisma.FileSystemNodeWhereInput = {
       isRoot: true,
       deletedAt: null,
       personalSpaceKey: null,
       libraryKey: null,
-      ...ownerCondition,
+      AND: permissionAnd,
     };
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+      try {
+        const ftsIds = await this.prisma.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "file_system_nodes"
+          WHERE "searchVector" @@ plainto_tsquery('simple', ${search})
+          LIMIT 200
+        `;
+        if (ftsIds.length > 0) {
+          where.id = { in: ftsIds.map((r) => r.id) };
+        } else {
+          where.OR = [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ];
+        }
+      } catch {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
     }
 
     if (projectStatus) {
@@ -300,6 +315,10 @@ export class ProjectCrudService {
     query?: QueryProjectsDto
   ): Promise<NodeListResponseDto> {
     const { search, page = 1, limit = 20, sortBy, sortOrder } = query || {};
+    const ALLOWED_SORT = ['name', 'createdAt', 'updatedAt', 'size'];
+    if (sortBy && !ALLOWED_SORT.includes(sortBy)) {
+      throw new BadRequestException(`不支持的排序字段: ${sortBy}`);
+    }
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit) || 20;
     const skip = (pageNum - 1) * limitNum;
@@ -324,14 +343,35 @@ export class ProjectCrudService {
     );
 
     if (search) {
-      where.AND = [
-        {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-          ],
-        },
-      ];
+      try {
+        const ftsIds = await this.prisma.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "file_system_nodes"
+          WHERE "searchVector" @@ plainto_tsquery('simple', ${search})
+            AND "deletedAt" IS NOT NULL
+          LIMIT 200
+        `;
+        if (ftsIds.length > 0) {
+          where.id = { in: ftsIds.map((r) => r.id) };
+        } else {
+          where.AND = [
+            {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+          ];
+        }
+      } catch {
+        where.AND = [
+          {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        ];
+      }
     }
 
     try {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '../../components/ui/Button';
 import { RefreshIcon } from '../../components/FileIcons';
 import { SearchInput } from '@/components/search/SearchInput';
+import { SearchFilters, type SearchFilterValues } from '@/components/search/SearchFilters';
 import { ViewToggle } from '@/components/common/ViewToggle';
 import { Tooltip } from '@/components/ui/Tooltip';
 
@@ -14,7 +15,10 @@ interface FileSystemToolbarProps {
   loading: boolean;
   isTrashView: boolean;
   onClearTrash?: () => void;
+  trashItemsCount?: number;
   isAtRoot?: boolean;
+  searchFilters?: SearchFilterValues;
+  onSearchFiltersChange?: (filters: SearchFilterValues) => void;
 }
 
 export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
@@ -26,19 +30,31 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
   loading,
   isTrashView,
   onClearTrash,
+  trashItemsCount = 0,
   isAtRoot = false,
+  searchFilters,
+  onSearchFiltersChange,
 }) => {
   return (
     <div
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2"
       style={{ borderTop: '1px solid var(--border-subtle)' }}
     >
-      <SearchInput
-        placeholder={isTrashView ? '搜索已删除的项目...' : '搜索文件或项目...'}
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-        onSearch={() => onSearchSubmit()}
-      />
+      <div className="flex items-center gap-2 flex-1">
+        <SearchInput
+          placeholder={isTrashView ? '搜索已删除的项目...' : '搜索文件或项目...'}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onSearch={() => onSearchSubmit()}
+        />
+
+        {!isTrashView && searchFilters !== undefined && onSearchFiltersChange && (
+          <SearchFilters
+            filters={searchFilters}
+            onChange={onSearchFiltersChange}
+          />
+        )}
+      </div>
 
       <div className="flex items-center gap-3">
         <ViewToggle
@@ -47,7 +63,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
           className="data-tour-view-toggle"
         />
 
-        {isTrashView && onClearTrash && (
+        {isTrashView && onClearTrash && trashItemsCount > 0 && (
           <Tooltip content="清空回收站">
             <Button
               variant="outline"

@@ -9,6 +9,7 @@ import { DatabaseModule } from '../../database/database.module';
 import { FilePermissionModule } from '../file-permission/file-permission.module';
 import { CommonModule } from '../../common/common.module';
 import { SearchService } from './search.service';
+import { FtsQueryBuilder } from './fts-query-builder';
 
 /**
  * 文件搜索子模块
@@ -18,7 +19,7 @@ import { SearchService } from './search.service';
  */
 @Module({
   imports: [DatabaseModule, FilePermissionModule, CommonModule],
-  providers: [SearchService],
+  providers: [SearchService, FtsQueryBuilder],
   exports: [SearchService],
 })
 export class SearchModule {}

@@ -1,9 +1,9 @@
 export { CreateShareDto } from './create-share.dto';
+export { UpdateShareDto } from './update-share.dto';
 export {
   CreateShareResponseDto,
   ResolveShareResponseDto,
   ResolveShareNodeResponseDto,
-  UpdateShareDto,
   ShareListItemDto,
   ShareListResponseDto,
   FileSharesResponseDto,

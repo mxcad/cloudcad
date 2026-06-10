@@ -14,14 +14,13 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
-  fileSystemControllerGetDeletedProjects,
+  fileSystemControllerGetTrash,
   fileSystemControllerGetProjects,
-  fileSystemControllerGetProjectTrash,
   fileSystemControllerSearch,
   fileSystemControllerGetNode,
   fileSystemControllerGetChildren,
   fileSystemControllerGetRootNode,
-  FileSystemNodeDto, ProjectDto
+  FileSystemNodeDto, ProjectDto, type SearchScope
 } from '@/api-sdk';
 import {
   FileSystemNode,
@@ -34,6 +33,7 @@ import { PaginationMeta } from '@/components/ui/Pagination';
 import { handleError } from '@/utils/errorHandler';
 import { queryKeys } from '@/lib/queryKeys';
 import type { ProjectFilterType } from '@/types/project';
+import type { SearchFilterValues } from '@/components/search/SearchFilters';
 
 /** 从 API 响应包装中提取 data 属性类型 */
 type UnwrapApiResponse<T> = T extends { data: infer D } ? D : T;
@@ -55,6 +55,8 @@ interface UseFileSystemDataProps {
   clearSelection: () => void;
   /** 项目过滤类型：all-全部，owned-我创建的，joined-我加入的 */
   projectFilter?: ProjectFilterType;
+  /** 搜索过滤条件 */
+  searchFilters?: SearchFilterValues;
 }
 
 export const useFileSystemData = ({
@@ -70,6 +72,7 @@ export const useFileSystemData = ({
   showToast,
   clearSelection,
   projectFilter,
+  searchFilters = {},
 }: UseFileSystemDataProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -81,24 +84,14 @@ export const useFileSystemData = ({
 
   // ── Trash view state (managed here, exposed to parent) ──────────────
   const [isTrashView, setIsTrashView] = useState(false);
-  const [isProjectTrashView, setIsProjectTrashView] = useState(false);
-  const isProjectTrashViewRef = useRef(isProjectTrashView);
 
+  // Reset trash view on mode change
   useEffect(() => {
-    isProjectTrashViewRef.current = isProjectTrashView;
-  }, [isProjectTrashView]);
-
-  // Reset trash view state on mode change
-  useEffect(() => {
-    if (isProjectRootMode) {
-      setIsTrashView(false);
-    } else {
-      setIsProjectTrashView(false);
-    }
+    setIsTrashView(false);
   }, [isProjectRootMode]);
 
   // ── Derived mode flags for query enabled checks ─────────────────────
-  const isTrash = isTrashView || isProjectTrashView;
+  const isTrash = isTrashView;
   const hasSearch = !!searchQuery;
 
   // Effective node ID for personal-space and folder modes
@@ -207,9 +200,10 @@ export const useFileSystemData = ({
       filter: isProjectRootMode ? projectFilter : undefined,
       page: pagination.page,
       limit: pagination.limit,
+      ...searchFilters,
     }),
-    queryFn: async () => {
-      let searchScope = 'project_files';
+    queryFn: async ({ signal: abortSignal }) => {
+      let searchScope: SearchScope = 'project_files';
       let searchProjectId: string | undefined;
       let searchFilter: 'all' | 'owned' | 'joined' = 'all';
 
@@ -226,12 +220,16 @@ export const useFileSystemData = ({
       const response = await fileSystemControllerSearch({
         query: {
           keyword: searchQuery,
-          scope: searchScope as 'project' | 'project_files',
+          scope: searchScope,
           filter: searchFilter,
           projectId: searchProjectId,
           page: pagination.page,
           limit: pagination.limit,
+          extension: searchFilters.extension || undefined,
+          type: searchFilters.type !== 'all' ? searchFilters.type : undefined,
+          fileStatus: searchFilters.fileStatus || undefined,
         },
+        signal: abortSignal,
       });
 
       const data = response.data;
@@ -252,48 +250,26 @@ export const useFileSystemData = ({
         totalPages: 0,
       };
     },
-    enabled: hasSearch,
+    enabled: hasSearch && !isTrash,
     placeholderData: keepPreviousData,
   });
 
-  // ── Query 4: Trash ────────────────────────────────────────────────
-  const trashQuery = useQuery({
-    queryKey: isProjectTrashView
-      ? [...queryKeys.fileSystem.trash, effectiveNodeId, { page: pagination.page, limit: pagination.limit }] as const
-      : [...queryKeys.fileSystem.trash, { page: pagination.page, limit: pagination.limit }] as const,
-    queryFn: async () => {
-      // 项目内/私人空间回收站：调用项目级接口
-      if (isProjectTrashView && effectiveNodeId) {
-        const response = await fileSystemControllerGetProjectTrash({
-          path: { projectId: effectiveNodeId },
-          query: {
-            page: pagination.page,
-            limit: pagination.limit,
-          },
-        });
+  // ── Query 4: Trash (unified) ───────────────────────────────────────
+  const projectIdForTrash = isTrash && !isProjectRootMode
+    ? (urlNodeId || urlProjectId || '')
+    : undefined;
 
-        const data = response.data;
-        if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
-          const trashNodes = data.nodes.map(toFileSystemNode);
-          return {
-            nodes: trashNodes,
-            total: data.total,
-            page: data.page,
-            limit: data.limit,
-            totalPages: data.totalPages,
-          };
-        }
-        return {
-          nodes: [],
-          total: 0,
+  const trashQuery = useQuery({
+    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery }] as const,
+    queryFn: async () => {
+      const response = await fileSystemControllerGetTrash({
+        query: {
+          projectId: projectIdForTrash,
           page: pagination.page,
           limit: pagination.limit,
-          totalPages: 0,
-        };
-      }
-
-      // 全局回收站：调用项目回收站接口（仅返回已删除的项目）
-      const response = await fileSystemControllerGetDeletedProjects();
+          search: searchQuery || undefined,
+        },
+      });
 
       const data = response.data;
       if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
@@ -424,11 +400,11 @@ export const useFileSystemData = ({
 
   // ── Derive current data from active query ──────────────────────────
   const activeData = (() => {
-    if (hasSearch && searchQueryResult.data) {
-      return searchQueryResult.data;
-    }
     if (isTrash && trashQuery.data) {
       return trashQuery.data;
+    }
+    if (hasSearch && searchQueryResult.data) {
+      return searchQueryResult.data;
     }
     if (childrenQuery.data) {
       return childrenQuery.data;
@@ -493,22 +469,22 @@ export const useFileSystemData = ({
     return [];
   })();
 
-  const loading =
-    (hasSearch && searchQueryResult.isLoading) ||
-    (!hasSearch && isTrash && trashQuery.isLoading) ||
-    (!hasSearch && !isTrash && !isProjectRootMode && nodeQuery.isLoading) ||
-    (!hasSearch && !isTrash && childrenQuery.isLoading);
+  const loading = isTrash
+    ? trashQuery.isLoading
+    : (hasSearch && searchQueryResult.isLoading) ||
+      (!hasSearch && !isProjectRootMode && nodeQuery.isLoading) ||
+      (!hasSearch && childrenQuery.isLoading);
 
-  const isFetching =
-    (hasSearch && searchQueryResult.isFetching) ||
-    (!hasSearch && isTrash && trashQuery.isFetching) ||
-    (!hasSearch && !isTrash && !isProjectRootMode && nodeQuery.isFetching) ||
-    (!hasSearch && !isTrash && childrenQuery.isFetching);
+  const isFetching = isTrash
+    ? trashQuery.isFetching
+    : (hasSearch && searchQueryResult.isFetching) ||
+      (!hasSearch && !isProjectRootMode && nodeQuery.isFetching) ||
+      (!hasSearch && childrenQuery.isFetching);
 
-  const error = hasSearch
-    ? searchQueryResult.error
-    : isTrash
-      ? trashQuery.error
+  const error = isTrash
+    ? trashQuery.error
+    : hasSearch
+      ? searchQueryResult.error
       : nodeQuery.error || childrenQuery.error;
 
   // ── Refetch helpers ────────────────────────────────────────────────
@@ -552,9 +528,6 @@ export const useFileSystemData = ({
     paginationMeta,
     isTrashView,
     setIsTrashView,
-    isProjectTrashView,
-    setIsProjectTrashView,
-    isProjectTrashViewRef,
     loadData,
     buildBreadcrumbsFromNode,
   };

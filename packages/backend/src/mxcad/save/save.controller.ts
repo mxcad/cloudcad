@@ -51,7 +51,6 @@ import { SaveMxwebAsResponseDto } from '../dto/save-mxweb-as-response.dto';
 
 @ApiTags('MxCAD 图纸保存')
 @Controller('mxcad')
-@UseInterceptors(StorageQuotaInterceptor)
 export class SaveController {
   private readonly logger = new Logger(SaveController.name);
 
@@ -68,6 +67,7 @@ export class SaveController {
   @RequireProjectPermission(ProjectPermission.CAD_SAVE)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: SaveMxwebDto })
   @ApiResponse({
@@ -132,6 +132,7 @@ export class SaveController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: SaveMxwebAsDto })
   @ApiResponse({

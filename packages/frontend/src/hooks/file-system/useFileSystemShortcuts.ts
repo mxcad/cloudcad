@@ -64,12 +64,16 @@ export function useFileSystemShortcuts({
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('[shortcuts:handleKeyDown]', e.key, e.ctrlKey, e.metaKey, e.shiftKey, 'enabled:', enabled, 'target:', e.target);
       if (isInputFocused()) return;
 
-      if (containerRef?.current && !containerRef.current.contains(e.target as Node)) {
-        return;
+      if (containerRef?.current) {
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl !== document.body && !containerRef.current.contains(activeEl)) {
+          return;
+        }
       }
+
+      console.log('[shortcuts:handleKeyDown]', e.key, e.ctrlKey, e.metaKey, e.shiftKey, 'target:', e.target);
 
       const isMod = e.ctrlKey || e.metaKey;
 

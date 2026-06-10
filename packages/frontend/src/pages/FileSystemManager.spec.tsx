@@ -60,7 +60,6 @@ vi.mock('@/components/FileItem', () => ({
 }));
 vi.mock('@/pages/components', () => ({
   FileSystemToolbar: () => <div>Toolbar</div>,
-  BatchActionsBar: () => <div>BatchActions</div>,
   ProjectFilterTabs: () => <div>FilterTabs</div>,
 }));
 vi.mock('@/components/modals/CreateFolderModal', () => ({
@@ -194,11 +193,12 @@ describe('FileSystemManager', () => {
       setIsTrashView: vi.fn(),
       handleToggleTrashView: vi.fn(),
       handleRestoreNode: vi.fn(),
-      handleClearProjectTrash: vi.fn(),
       handleClearTrash: vi.fn(),
-      isProjectTrashView: false,
-      setIsProjectTrashView: vi.fn(),
-      handleToggleProjectTrashView: vi.fn(),
+      showCreateDrawingModal: false,
+      setShowCreateDrawingModal: vi.fn(),
+      drawingName: '',
+      setDrawingName: vi.fn(),
+      handleCreateDrawing: vi.fn(),
     });
 
     // Mock useProjectManagement

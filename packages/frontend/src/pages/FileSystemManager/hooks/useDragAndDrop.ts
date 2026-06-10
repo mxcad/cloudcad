@@ -13,8 +13,6 @@ interface UseDragAndDropOptions {
   setDraggedNodes: (nodes: FileSystemNode[]) => void;
   dropTargetId: string | null;
   setDropTargetId: (id: string | null) => void;
-  selectedNodes: Set<string>;
-  nodes: FileSystemNode[];
   handleRefresh: () => void;
   showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
@@ -24,8 +22,6 @@ export function useDragAndDrop({
   setDraggedNodes,
   dropTargetId: _dropTargetId,
   setDropTargetId,
-  selectedNodes,
-  nodes,
   handleRefresh,
   showToast,
 }: UseDragAndDropOptions) {
@@ -37,13 +33,9 @@ export function useDragAndDrop({
       }
       e.dataTransfer.setData('text/plain', node.id);
       e.dataTransfer.effectAllowed = 'copyMove';
-
-      const nodesToDrag = selectedNodes.has(node.id)
-        ? nodes.filter((n) => selectedNodes.has(n.id))
-        : [node];
-      setDraggedNodes(nodesToDrag);
+      setDraggedNodes([node]);
     },
-    [setDraggedNodes, selectedNodes, nodes]
+    [setDraggedNodes]
   );
 
   const handleDragOver = useCallback(

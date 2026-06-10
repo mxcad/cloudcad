@@ -64,6 +64,7 @@ import { RefreshExternalReferencesResponseDto } from '../dto/refresh-external-re
 import { MxCadRequest } from '../types/request.types';
 import { MxCadContext } from '../types/mxcad-context.types';
 import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { StorageService } from '../../storage/storage.service';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
@@ -89,7 +90,6 @@ import { UploadFileResponseDto } from '../dto/upload-file-response.dto';
 
 @ApiTags('MxCAD 文件上传与转换')
 @Controller('mxcad')
-@UseInterceptors(StorageQuotaInterceptor)
 export class MxCadController {
   private readonly logger = new Logger(MxCadController.name);
   private readonly mxCadFileExt: string;
@@ -116,7 +116,8 @@ export class MxCadController {
     private readonly mxcadFileHandler: MxcadFileHandlerService,
     private readonly fileTreeService: FileTreeService,
     private readonly uploadUtilityService: UploadUtilityService,
-    private readonly shareService: ShareService
+    private readonly shareService: ShareService,
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {
     this.mxCadFileExt =
       this.configService.get('conversion.fileExt', { infer: true }) || '.mxweb';
@@ -240,6 +241,7 @@ export class MxCadController {
   @Post('files/uploadFiles')
   @OptionalAuth()
   @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: 200,
@@ -481,6 +483,7 @@ export class MxCadController {
   @Post('up_ext_reference_dwg/:nodeId')
   @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadExtReferenceFileDto })
@@ -633,6 +636,7 @@ export class MxCadController {
   @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
   @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadExtReferenceFileDto })
   @ApiResponse({
@@ -2138,13 +2142,13 @@ export class MxCadController {
   /**
    * 验证文件大小是否在允许范围内
    * @param fileSize 文件大小（字节）
-   * @param maxSize 最大文件大小（字节），默认 100MB
    * @returns 是否在允许范围内
    */
-  private validateFileSize(
-    fileSize: number,
-    maxSize: number = 104857600
-  ): boolean {
+  private async validateFileSize(
+    fileSize: number
+  ): Promise<boolean> {
+    const maxFileSizeMB = await this.runtimeConfigService.getValue<number>('maxFileSize', 100);
+    const maxSize = maxFileSizeMB * 1024 * 1024;
     return fileSize > 0 && fileSize <= maxSize;
   }
 
@@ -2239,7 +2243,7 @@ export class MxCadController {
     }
 
     // 6. 验证文件大小
-    if (!this.validateFileSize(file.size)) {
+    if (!await this.validateFileSize(file.size)) {
       this.logger.warn(
         `[${methodPrefix}] 文件大小超出限制: ${file.size} bytes`
       );

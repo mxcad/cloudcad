@@ -21,6 +21,7 @@ export type PublicRuntimeConfig = {
   systemNotice: string;
   wechatEnabled: boolean;
   wechatAutoRegister: boolean;
+  maxFileSize: number;
 };
 
 interface RuntimeConfigContextType {
@@ -40,6 +41,7 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   systemNotice: '',
   wechatEnabled: false,
   wechatAutoRegister: false,
+  maxFileSize: 100,
 };
 
 const RuntimeConfigContext = createContext<
@@ -118,6 +120,7 @@ export const RuntimeConfigProvider: React.FC<RuntimeConfigProviderProps> = ({
         systemNotice: String(data.systemNotice ?? ''),
         wechatEnabled: Boolean(data.wechatEnabled ?? false),
         wechatAutoRegister: Boolean(data.wechatAutoRegister ?? false),
+        maxFileSize: Number(data.maxFileSize ?? 100),
       });
     } catch (error) {
       if (!isMountedRef.current) return;

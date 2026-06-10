@@ -23,6 +23,7 @@ export interface StorageQuotaInfo {
   total: number;
   remaining: number;
   usagePercent: number;
+  isDefault: boolean;
 }
 
 /**
@@ -73,6 +74,19 @@ export class StorageInfoService {
           storageQuota: true,
         },
       });
+
+      if (resolvedNode && !resolvedNode.libraryKey && resolvedNode.projectId) {
+        const root = await this.prisma.fileSystemNode.findUnique({
+          where: { id: resolvedNode.projectId },
+          select: { libraryKey: true, storageQuota: true },
+        });
+        if (root?.libraryKey) {
+          resolvedNode.libraryKey = root.libraryKey;
+          if (root.storageQuota != null && root.storageQuota > 0) {
+            resolvedNode.storageQuota = root.storageQuota;
+          }
+        }
+      }
     } else if (!nodeId) {
       // 如果没有 nodeId，获取用户个人空间节点
       const personalSpace = await this.prisma.fileSystemNode.findUnique({
@@ -172,6 +186,8 @@ export class StorageInfoService {
     const usagePercentage =
       totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
 
+    const isDefault = !node?.storageQuota || node.storageQuota <= 0;
+
     return {
       nodeId,
       type,
@@ -179,6 +195,7 @@ export class StorageInfoService {
       total: totalLimit,
       remaining: available,
       usagePercent: usagePercentage,
+      isDefault,
     };
   }
 

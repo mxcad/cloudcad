@@ -21,7 +21,9 @@ import {
   fileSystemControllerRestoreNode,
   fileSystemControllerRestoreTrashItems,
   fileSystemControllerClearTrash,
+  fileSystemControllerClearProjectTrash,
 } from '@/api-sdk';
+import { fileSystemControllerBatchDeleteNodes } from '@/api-sdk';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 
 import { FileSystemNode } from '@/types/filesystem';
@@ -45,8 +47,7 @@ interface UseFileSystemCRUDProps {
   selectedNodes: Set<string>;
   nodes: FileSystemNode[];
   clearSelection: () => void;
-  isProjectTrashViewRef: React.MutableRefObject<boolean>;
-  mode?: 'project' | 'personal-space';
+  mode: 'project' | 'personal-space';
 }
 
 const validateFolderName = (
@@ -93,7 +94,6 @@ export const useFileSystemCRUD = ({
   selectedNodes,
   nodes,
   clearSelection,
-  isProjectTrashViewRef,
   mode = 'project',
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
@@ -312,9 +312,7 @@ export const useFileSystemCRUD = ({
             });
           }
 
-          if (isProjectTrashViewRef.current && permanently) {
-            loadData();
-          } else if (permanently && node.isRoot) {
+          if (permanently && node.isRoot) {
             navigate(mode === 'personal-space' ? '/personal-space' : '/projects');
           } else {
             loadData();
@@ -336,14 +334,12 @@ export const useFileSystemCRUD = ({
       showToast,
       isDeleting,
       navigate,
-      isProjectTrashViewRef,
     ]
   );
 
   const handleBatchDelete = useCallback(
     (permanently: boolean = false) => {
       const currentSelected = selectedNodesRef.current;
-      const currentNodes = nodesRef.current;
       if (currentSelected.size === 0) {
         return;
       }
@@ -357,61 +353,32 @@ export const useFileSystemCRUD = ({
         message,
         async () => {
           try {
-            await Promise.all(
-              Array.from(currentSelected).map((nodeId: string) => {
-                const node = currentNodes.find((n) => n.id === nodeId);
-                // TODO: Replace with SDK when backend adds deleteProject
-                if (node?.isRoot) {
-                  return fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently }, throwOnError: true });
-                }
-                return fileSystemControllerDeleteNode({ path: { nodeId: nodeId }, query: { permanently }, throwOnError: true });
-              })
-            );
-            showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
+            const nodeIds = Array.from(currentSelected);
+            const { data, error } = await fileSystemControllerBatchDeleteNodes({
+              body: { nodeIds, permanently },
+              throwOnError: false,
+            });
 
-            if (!permanently) {
-              const batchNodeIds = Array.from(currentSelected);
-              pushAction({
-                type: 'delete',
-                description: `批量删除 ${batchNodeIds.length} 个项目`,
-                projectId: urlProjectId || '',
-                execute: async () => {
-                  await Promise.all(
-                    batchNodeIds.map((id) =>
-                      fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: false }, throwOnError: true })
-                    )
-                  );
-                },
-                rollback: async () => {
-                  await Promise.all(
-                    batchNodeIds.map(async (id) => {
-                      const node = currentNodes.find((n) => n.id === id);
-                      if (node?.isRoot) {
-                        await fileSystemControllerRestoreTrashItems({ body: { itemIds: [id] }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
-                      } else {
-                        await fileSystemControllerRestoreNode({ path: { nodeId: id }, throwOnError: true });
-                      }
-                    })
-                  );
-                },
-              });
+            if (error) {
+              throw error;
+            }
+
+            const result = data as unknown as {
+              successCount: number;
+              failedCount: number;
+            };
+
+            if (result.failedCount > 0) {
+              showToast(
+                `成功删除 ${result.successCount} 项，${result.failedCount} 项失败`,
+                'warning'
+              );
+            } else {
+              showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             }
 
             clearSelection();
-
-            if (isProjectTrashViewRef.current && permanently) {
-              loadData();
-            } else if (
-              permanently &&
-              Array.from(currentSelected).some((nodeId) => {
-                const node = currentNodes.find((n) => n.id === nodeId);
-                return node?.isRoot;
-              })
-            ) {
-              navigate(mode === 'personal-space' ? '/personal-space' : '/projects');
-            } else {
-              loadData();
-            }
+            loadData();
           } catch (error) {
             const appError = handleError(error, '批量删除', 'medium');
             showToast(appError.message, 'error');
@@ -421,17 +388,7 @@ export const useFileSystemCRUD = ({
         permanently ? '彻底删除' : '删除'
       );
     },
-    [
-      showConfirm,
-      loadData,
-      showToast,
-      clearSelection,
-      navigate,
-      isProjectTrashViewRef,
-      urlProjectId,
-      pushAction,
-      mode,
-    ]
+    [showConfirm, loadData, showToast, clearSelection]
   );
 
   const handleBatchRestore = useCallback(() => {
@@ -580,48 +537,41 @@ export const useFileSystemCRUD = ({
     [showConfirm, showToast, loadData]
   );
 
-  // 清空项目回收站
-  const handleClearProjectTrash = useCallback(() => {
-    if (!urlProjectId) {
-      showToast('未选择项目', 'error');
-      return;
+  // 清空回收站（项目内清空调用 clearProjectTrash，全局清空调用 clearTrash）
+  const handleClearTrash = useCallback((projectId?: string) => {
+    if (projectId) {
+      showConfirm(
+        '确认清空回收站',
+        '确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。',
+        async () => {
+          try {
+            await fileSystemControllerClearProjectTrash({ path: { projectId }, throwOnError: true });
+            showToast('项目回收站已清空', 'success');
+            loadData();
+          } catch (error) {
+            const appError = handleError(error, '清空回收站', 'medium');
+            showToast(appError.message, 'error');
+          }
+        },
+        'danger'
+      );
+    } else {
+      showConfirm(
+        '确认清空回收站',
+        '确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。',
+        async () => {
+          try {
+            await fileSystemControllerClearTrash({ throwOnError: true });
+            showToast('回收站已清空', 'success');
+            loadData();
+          } catch (error) {
+            const appError = handleError(error, '清空回收站', 'medium');
+            showToast(appError.message, 'error');
+          }
+        },
+        'danger'
+      );
     }
-
-    showConfirm(
-      '确认清空回收站',
-      '确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。',
-      async () => {
-        try {
-          // TODO: clearTrash in SDK has no projectId parameter — revisit filtering
-          await fileSystemControllerClearTrash({ throwOnError: true });
-          showToast('项目回收站已清空', 'success');
-          loadData();
-        } catch (error) {
-          const appError = handleError(error, '清空回收站', 'medium');
-          showToast(appError.message, 'error');
-        }
-      },
-      'danger'
-    );
-  }, [urlProjectId, showConfirm, showToast, loadData]);
-
-  // 清空项目回收站（项目列表页的回收站）
-  const handleClearTrash = useCallback(() => {
-    showConfirm(
-      '确认清空回收站',
-      '确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。',
-      async () => {
-        try {
-          await fileSystemControllerClearTrash({ throwOnError: true });
-          showToast('回收站已清空', 'success');
-          loadData();
-        } catch (error) {
-          const appError = handleError(error, '清空回收站', 'medium');
-          showToast(appError.message, 'error');
-        }
-      },
-      'danger'
-    );
   }, [showConfirm, showToast, loadData]);
 
   return {
@@ -650,7 +600,6 @@ export const useFileSystemCRUD = ({
     handleDeleteProject,
     handlePermanentlyDeleteProject,
     handleRestoreNode,
-    handleClearProjectTrash,
     handleClearTrash,
   };
 };

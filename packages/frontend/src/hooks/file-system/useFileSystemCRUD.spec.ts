@@ -35,7 +35,6 @@ describe('useFileSystemCRUD', () => {
     selectedNodes: new Set(),
     nodes: [],
     clearSelection: vi.fn(),
-    isProjectTrashViewRef: { current: false },
     mode: 'project' as const,
   });
 

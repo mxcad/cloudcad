@@ -6,6 +6,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../../database/database.service';
 import { SearchService } from '../../file-system/search/search.service';
+import { FtsQueryBuilder } from '../../file-system/search/fts-query-builder';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { PermissionService } from '../../common/services/permission.service';
 import { SearchScope, SearchType } from '../../file-system/dto/search.dto';
@@ -35,8 +36,14 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
     checkSystemPermissionsBatch: jest.fn(),
   };
 
+  const mockFtsQueryBuilder = {
+    matchIds: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    mockFtsQueryBuilder.matchIds.mockResolvedValue({ ids: new Set(), matched: false });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,6 +51,7 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
         { provide: DatabaseService, useValue: mockPrisma },
         { provide: FileSystemPermissionService, useValue: mockFileSystemPermissionService },
         { provide: PermissionService, useValue: mockPermissionService },
+        { provide: FtsQueryBuilder, useValue: mockFtsQueryBuilder },
       ],
     }).compile();
 
@@ -260,8 +268,8 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
       expect(result.nodes.length).toBe(2);
       expect(result.total).toBe(2);
       
-      // 验证首先查询用户有权访问的项目
-      expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledTimes(2);
+      // 验证使用合并 JOIN 查询
+      expect(mockPrisma.fileSystemNode.findMany).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -31,6 +31,8 @@ interface UseLibraryQuotaReturn {
   libraryQuota: number;
   /** 默认配额度（GB） */
   defaultLibraryQuota: number;
+  /** 配额是否为系统默认 */
+  quotaIsDefault: boolean;
   /** 库存储信息 */
   libraryStorageInfo: StorageInfoDto | null;
   /** 打开配额弹窗并加载数据 */
@@ -57,6 +59,7 @@ export function useLibraryQuota({
   const [quotaLoading, setQuotaLoading] = useState(false);
   const [libraryQuota, setLibraryQuota] = useState<number>(100);
   const [defaultLibraryQuota, setDefaultLibraryQuota] = useState<number>(100);
+  const [quotaIsDefault, setQuotaIsDefault] = useState(true);
   const [libraryStorageInfo, setLibraryStorageInfo] = useState<StorageInfoDto | null>(null);
 
   const openQuotaModal = useCallback(async () => {
@@ -78,6 +81,7 @@ export function useLibraryQuota({
 
         if (storageInfo) {
           setLibraryStorageInfo(storageInfo);
+          setQuotaIsDefault(storageInfo.isDefault ?? true);
           // total 是字节，转换为 GB
           const totalGB = Math.round(
             (storageInfo.total || defaultVal * 1024 * 1024 * 1024) /
@@ -123,6 +127,7 @@ export function useLibraryQuota({
       });
       if (storageInfo) {
         setLibraryStorageInfo(storageInfo);
+        setQuotaIsDefault(storageInfo.isDefault ?? true);
       }
     } catch (error: unknown) {
       console.error('保存库配额失败:', error);
@@ -137,6 +142,7 @@ export function useLibraryQuota({
     quotaLoading,
     libraryQuota,
     defaultLibraryQuota,
+    quotaIsDefault,
     libraryStorageInfo,
     openQuotaModal,
     closeQuotaModal,

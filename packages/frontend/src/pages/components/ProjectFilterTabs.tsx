@@ -4,8 +4,7 @@ import { RefreshIcon } from '../../components/FileIcons';
 import type { ProjectFilterType } from '@/types/project';
 
 interface ProjectFilterTabsProps {
-  isProjectTrashView: boolean;
-  onToggleProjectTrashView: () => void;
+  isTrashView: boolean;
   projectFilter: ProjectFilterType;
   onProjectFilterChange: (filter: ProjectFilterType) => void;
   isProjectRootMode: boolean;
@@ -23,8 +22,7 @@ const projectFilterTabs: { key: ProjectFilterType; label: string }[] = [
 ];
 
 export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
-  isProjectTrashView,
-  onToggleProjectTrashView,
+  isTrashView,
   projectFilter,
   onProjectFilterChange,
   isProjectRootMode,
@@ -41,19 +39,13 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
     >
       <Tabs>
         <Tab
-          active={!isProjectTrashView}
-          onClick={() => isProjectTrashView && onToggleProjectTrashView()}
+          active={!isTrashView}
+          onClick={() => {}}
         >
           我的项目
         </Tab>
-        <Tab
-          active={isProjectTrashView}
-          onClick={() => !isProjectTrashView && onToggleProjectTrashView()}
-        >
-          项目回收站
-        </Tab>
 
-        {!isProjectTrashView && isProjectRootMode && (
+        {!isTrashView && isProjectRootMode && (
           <>
             <div
               className="mx-1 h-5 w-px"
@@ -72,7 +64,7 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
         )}
       </Tabs>
 
-      {isProjectTrashView && nodesCount > 0 && (
+      {isTrashView && nodesCount > 0 && (
         <div className="ml-auto flex items-center gap-2">
           <Button
             variant="outline"

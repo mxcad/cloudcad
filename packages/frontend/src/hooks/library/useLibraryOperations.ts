@@ -177,7 +177,7 @@ export function useLibraryOperations({
               libraryType === 'drawing'
                 ? libraryControllerDeleteDrawingNode
                 : libraryControllerDeleteBlockNode;
-            await apiMethod({ path: { nodeId: node.id }, query: { permanently: true } });
+            await apiMethod({ path: { nodeId: node.id }, query: { permanently: true }, throwOnError: true });
             showToast('删除成功', 'success');
             refreshNodes();
           } catch (error) {
@@ -200,7 +200,7 @@ export function useLibraryOperations({
           libraryType === 'drawing'
             ? libraryControllerRenameDrawingNode
             : libraryControllerRenameBlockNode;
-        await apiMethod({ path: { nodeId }, body: { name: newName } });
+        await apiMethod({ path: { nodeId }, body: { name: newName }, throwOnError: true });
         showToast('重命名成功', 'success');
         refreshNodes();
         onComplete?.();
@@ -221,7 +221,7 @@ export function useLibraryOperations({
           libraryType === 'drawing'
             ? libraryControllerMoveDrawingNode
             : libraryControllerMoveBlockNode;
-        await apiMethod({ path: { nodeId }, body: { targetParentId } });
+        await apiMethod({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
         showToast('移动成功', 'success');
         refreshNodes();
       } catch (error) {
@@ -241,7 +241,7 @@ export function useLibraryOperations({
           libraryType === 'drawing'
             ? libraryControllerCopyDrawingNode
             : libraryControllerCopyBlockNode;
-        await apiMethod({ path: { nodeId }, body: { targetParentId } });
+        await apiMethod({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
         showToast('复制成功', 'success');
         refreshNodes();
       } catch (error) {
@@ -257,14 +257,25 @@ export function useLibraryOperations({
   const handleBatchDelete = useCallback(
     async (nodeIds: string[]) => {
       try {
-        for (const nodeId of nodeIds) {
-          const apiMethod =
-            libraryType === 'drawing'
-              ? libraryControllerDeleteDrawingNode
-              : libraryControllerDeleteBlockNode;
-          await apiMethod({ path: { nodeId }, query: { permanently: true } });
+        const {
+          libraryControllerBatchDeleteDrawingNodes,
+          libraryControllerBatchDeleteBlockNodes,
+        } = await import('@/api-sdk');
+        const fn =
+          libraryType === 'drawing'
+            ? libraryControllerBatchDeleteDrawingNodes
+            : libraryControllerBatchDeleteBlockNodes;
+        const { data, error } = await fn({
+          body: { nodeIds, permanently: true },
+          throwOnError: false,
+        });
+        if (error) throw error;
+        const result = data as unknown as { successCount: number; failedCount: number };
+        if (result.failedCount > 0) {
+          showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+        } else {
+          showToast(`成功删除 ${nodeIds.length} 个项目`, 'success');
         }
-        showToast(`成功删除 ${nodeIds.length} 个项目`, 'success');
         refreshNodes();
       } catch (error) {
         console.error('批量删除失败:', error);
@@ -279,14 +290,25 @@ export function useLibraryOperations({
   const handleBatchMove = useCallback(
     async (nodeIds: string[], targetParentId: string) => {
       try {
-        for (const nodeId of nodeIds) {
-          const apiMethod =
-            libraryType === 'drawing'
-              ? libraryControllerMoveDrawingNode
-              : libraryControllerMoveBlockNode;
-          await apiMethod({ path: { nodeId }, body: { targetParentId } });
+        const {
+          libraryControllerBatchMoveDrawingNodes,
+          libraryControllerBatchMoveBlockNodes,
+        } = await import('@/api-sdk');
+        const fn =
+          libraryType === 'drawing'
+            ? libraryControllerBatchMoveDrawingNodes
+            : libraryControllerBatchMoveBlockNodes;
+        const { data, error } = await fn({
+          body: { nodeIds, targetParentId },
+          throwOnError: false,
+        });
+        if (error) throw error;
+        const result = data as unknown as { successCount: number; failedCount: number };
+        if (result.failedCount > 0) {
+          showToast(`成功移动 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+        } else {
+          showToast(`成功移动 ${nodeIds.length} 个项目`, 'success');
         }
-        showToast(`成功移动 ${nodeIds.length} 个项目`, 'success');
         refreshNodes();
       } catch (error) {
         console.error('批量移动失败:', error);
@@ -301,14 +323,25 @@ export function useLibraryOperations({
   const handleBatchCopy = useCallback(
     async (nodeIds: string[], targetParentId: string) => {
       try {
-        for (const nodeId of nodeIds) {
-          const apiMethod =
-            libraryType === 'drawing'
-              ? libraryControllerCopyDrawingNode
-              : libraryControllerCopyBlockNode;
-          await apiMethod({ path: { nodeId }, body: { targetParentId } });
+        const {
+          libraryControllerBatchCopyDrawingNodes,
+          libraryControllerBatchCopyBlockNodes,
+        } = await import('@/api-sdk');
+        const fn =
+          libraryType === 'drawing'
+            ? libraryControllerBatchCopyDrawingNodes
+            : libraryControllerBatchCopyBlockNodes;
+        const { data, error } = await fn({
+          body: { nodeIds, targetParentId },
+          throwOnError: false,
+        });
+        if (error) throw error;
+        const result = data as unknown as { successCount: number; failedCount: number };
+        if (result.failedCount > 0) {
+          showToast(`成功复制 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+        } else {
+          showToast(`成功复制 ${nodeIds.length} 个项目`, 'success');
         }
-        showToast(`成功复制 ${nodeIds.length} 个项目`, 'success');
         refreshNodes();
       } catch (error) {
         console.error('批量复制失败:', error);

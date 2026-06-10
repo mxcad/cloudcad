@@ -95,6 +95,7 @@ export const UserManagement = () => {
   const [quotaNodeId, setQuotaNodeId] = useState<string>('');
   const [userQuota, setUserQuota] = useState<number>(10);
   const [defaultQuota, setDefaultQuota] = useState<number>(10);
+  const [quotaIsDefault, setQuotaIsDefault] = useState(true);
 
   const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
   const [cleanupLoading, setCleanupLoading] = useState(false);
@@ -265,6 +266,7 @@ export const UserManagement = () => {
       if (info?.nodeId) {
         setQuotaNodeId(info.nodeId);
       }
+      setQuotaIsDefault(info?.isDefault ?? true);
     } catch {
       // ignore, use default
     }
@@ -483,7 +485,11 @@ export const UserManagement = () => {
         user={quotaUser}
         quota={userQuota}
         defaultQuota={defaultQuota}
-        onQuotaChange={setUserQuota}
+        quotaIsDefault={quotaIsDefault}
+        onQuotaChange={(gb) => {
+          setUserQuota(gb);
+          if (gb !== 0) setQuotaIsDefault(false);
+        }}
       />
 
       <Modal

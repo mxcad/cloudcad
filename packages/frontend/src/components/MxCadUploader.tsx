@@ -13,7 +13,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 import { useUIStore } from '../stores/uiStore';
-import { openUploadedFile, waitForFileReady } from '../services/mxcadManager';
 import { globalShowToast } from '../contexts/NotificationContext';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
@@ -116,10 +115,12 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               // 打开模式：上传完成后延迟1秒再显示"正在打开图纸中"
               await new Promise(resolve => setTimeout(resolve, 1000));
               setLoadingMessage('正在打开图纸中...');
+              const { openUploadedFile } = await import('../services/mxcadManager');
               await openUploadedFile(param.nodeId!, currentNodeId || '');
             } else {
               // 列表页模式：上传完成直接显示"图纸转换中"
               setLoadingMessage('图纸转换中...');
+              const { waitForFileReady } = await import('../services/mxcadManager');
               await waitForFileReady(param.nodeId!);
               // 列表页模式：转换完成后直接隐藏进度条
               setGlobalLoading(false);

@@ -43,4 +43,7 @@ export class StorageInfoDto {
 
   @ApiProperty({ description: '使用百分比' })
   usagePercent: number;
+
+  @ApiProperty({ description: '是否为系统默认配额（未经管理员自定义）' })
+  isDefault: boolean;
 }

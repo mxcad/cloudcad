@@ -13,6 +13,20 @@ import { JsonValue } from './../api-sdk/core/queryKeySerializer.gen';
 ///////////////////////////////////////////////////////////////////////////////
 import { mxCadControllerCheckFileExist, mxCadControllerCheckChunkExist, mxCadControllerUploadFile } from "@/api-sdk"
 import { calculateFileHash } from './hashUtils';
+
+/**
+ * 当前上传最大文件大小（字节），可由外部动态更新
+ * 默认 100MB，后端运行时配置可动态修改
+ */
+export let uploadMaxFileSize = 100 * 1024 * 1024;
+
+/**
+ * 更新上传最大文件大小
+ * 供 RuntimeConfigContext 在加载完成后调用
+ */
+export function setUploadMaxFileSize(sizeMB: number): void {
+  uploadMaxFileSize = sizeMB * 1024 * 1024;
+}
 /**
  * MxCAD 上传配置接口
  */
@@ -35,6 +49,8 @@ export interface MxCadUploadOptions {
   onProgress?: (percentage: number) => void;
   /** 文件排队回调 */
   onFileQueued?: (file: File) => void;
+  /** 最大文件大小（字节），默认使用 uploadMaxFileSize */
+  maxSize?: number;
 }
 
 /**
@@ -86,7 +102,7 @@ export const validateFileType = (file: File): boolean => {
  */
 export const validateFileSize = (
   file: File,
-  maxSize: number = 100 * 1024 * 1024
+  maxSize: number = uploadMaxFileSize
 ): boolean => {
   return file.size <= maxSize;
 };
@@ -121,6 +137,7 @@ export async function uploadFile(
     onBeginUpload,
     onProgress,
     onFileQueued,
+    maxSize,
   } = options;
 
   // 验证文件类型
@@ -132,8 +149,9 @@ export async function uploadFile(
   }
 
   // 验证文件大小
-  if (!validateFileSize(file)) {
-    throw new MxCadUploadError(`文件过大: ${file.name} (最大100MB)`, file.name);
+  const fileMaxSize = maxSize ?? uploadMaxFileSize;
+  if (!validateFileSize(file, fileMaxSize)) {
+    throw new MxCadUploadError(`文件过大: ${file.name} (最大${fileMaxSize / 1024 / 1024}MB)`, file.name);
   }
 
   // nodeId 可为空（公开上传场景）

@@ -5,6 +5,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { RateLimiter } from '../../common/concurrency/rate-limiter';
@@ -19,6 +20,7 @@ export class ChunkUploadManagerService {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly runtimeConfigService: RuntimeConfigService,
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileMergeService: FileMergeService
   ) {
@@ -37,10 +39,11 @@ export class ChunkUploadManagerService {
 
     try {
       if (chunk === 0) {
-        const maxSize = 104857600;
-        if (size > maxSize) {
+        const maxFileSizeMB = await this.runtimeConfigService.getValue<number>('maxFileSize', 100);
+        const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
+        if (size > maxFileSizeBytes) {
           this.logger.warn(
-            `[checkChunkExist] 文件大小超过限制: ${size} bytes > ${maxSize} bytes`
+            `[checkChunkExist] 文件大小超过限制: ${size} bytes > ${maxFileSizeBytes} bytes`
           );
           return { ret: MxUploadReturn.kErrorParam };
         }

@@ -16,6 +16,8 @@ import {
   Delete,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
   Logger,
   Param,
   Post,
@@ -33,6 +35,7 @@ import {
   ApiOperation,
   ApiConsumes,
   ApiQuery,
+  ApiResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,7 +49,8 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { FontsService } from './fonts.service';
-import { UploadFontDto, DeleteFontDto, FontUploadTarget } from './dto/font.dto';
+import { UploadFontDto, DeleteFontDto, FontUploadTarget, BatchDeleteFontDto } from './dto/font.dto';
+import { BatchOperationResponseDto } from '../file-system/dto/file-system-response.dto';
 
 /**
  * 字体管理控制器
@@ -150,6 +154,31 @@ export class FontsController {
       return { message: result.message };
     } catch (error) {
       this.logger.error(`删除字体失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量删除字体文件
+   */
+  @Post('batch-delete')
+  @ApiOperation({
+    summary: '批量删除字体文件',
+    description: '批量删除多个字体文件',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '批量删除成功',
+    type: BatchOperationResponseDto,
+  })
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_DELETE])
+  async batchDeleteFonts(@Body() dto: BatchDeleteFontDto) {
+    try {
+      const target = dto.target || FontUploadTarget.BOTH;
+      return await this.fontsService.batchDeleteFonts(dto.fileNames, target);
+    } catch (error) {
+      this.logger.error(`批量删除字体失败: ${error.message}`, error.stack);
       throw error;
     }
   }

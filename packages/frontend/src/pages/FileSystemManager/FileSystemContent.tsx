@@ -8,7 +8,6 @@ interface FileSystemContentProps {
   nodes: FileSystemNode[];
   viewMode: 'grid' | 'list';
   isTrashView: boolean;
-  isProjectTrashView: boolean;
   isAtRoot: boolean;
   selectedNodes: Set<string>;
   dropTargetId: string | null;
@@ -69,7 +68,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   nodes,
   viewMode,
   isTrashView,
-  isProjectTrashView,
   isAtRoot,
   selectedNodes,
   dropTargetId,
@@ -292,7 +290,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     }
     if (node.isRoot && permissions.canDelete) {
       onDeleteHandler = () => {
-        if (isProjectTrashView && onPermanentlyDeleteProject) {
+        if (isTrashView && onPermanentlyDeleteProject) {
           onPermanentlyDeleteProject(node.id, node.name);
         } else if (onDeleteProject) {
           onDeleteProject(node.id, node.name);
@@ -401,7 +399,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 onBatchMove={isRootLevel ? undefined : onBatchMove}
                 onBatchCopy={isRootLevel ? undefined : onBatchCopy}
                 onBatchRestore={isRootLevel ? undefined : onBatchRestore}
-                isTrash={isTrashView || isProjectTrashView}
+                isTrash={isTrashView}
                 onSelect={isRootLevel ? undefined : onNodeSelect}
                 onEnter={onFileOpen}
                 onDownload={onDownload}
@@ -410,7 +408,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 onRename={onRename}
                 onRefresh={onRefresh}
                 onRestore={
-                  isTrashView || isProjectTrashView
+                  isTrashView
                     ? onRestore
                     : undefined
                 }

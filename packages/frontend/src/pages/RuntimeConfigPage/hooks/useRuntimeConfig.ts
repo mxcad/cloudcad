@@ -54,6 +54,8 @@ export function getConfigUnit(key: string): string | null {
     projectStorageQuota: 'GB',
     libraryStorageQuota: 'GB',
     maxFileSize: 'MB',
+    fontMaxFileSize: 'MB',
+    extRefMaxFileSize: 'MB',
   };
   return unitMap[key] || null;
 }

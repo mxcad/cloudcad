@@ -6,6 +6,8 @@ import { PermissionService } from '../../common/services/permission.service';
 import { ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
 import { Prisma } from '@prisma/client';
 import { FileStatus } from '../../common/enums/file-status.enum';
+import { FtsQueryBuilder } from './fts-query-builder';
+import { parseSearchQuery, type ParsedSearchQuery } from './search-query.parser';
 import {
   NodeListResponseDto,
   FileSystemNodeDto,
@@ -18,11 +20,12 @@ export class SearchService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly permissionService: FileSystemPermissionService,
-    private readonly systemPermissionService: PermissionService
+    private readonly systemPermissionService: PermissionService,
+    private readonly ftsQueryBuilder: FtsQueryBuilder,
   ) {}
 
   async search(userId: string, dto: SearchDto, signal?: AbortSignal): Promise<NodeListResponseDto> {
-    const {
+    let {
       keyword,
       scope = SearchScope.PROJECT_FILES,
       type = SearchType.ALL,
@@ -37,12 +40,30 @@ export class SearchService {
       sortOrder = 'desc',
     } = dto;
 
+    // Parse search syntax (ext:.dwg, type:file, modified:>2024-01-01, etc.)
+    const parsed = parseSearchQuery(keyword);
+    if (parsed.hasSyntax) {
+      keyword = parsed.keyword;
+      if (parsed.extension) extension = parsed.extension;
+      if (parsed.type !== SearchType.ALL) type = parsed.type;
+      if (parsed.fileStatus) fileStatus = parsed.fileStatus as any;
+      if (parsed.sortBy) sortBy = parsed.sortBy;
+      if (parsed.sortOrder) sortOrder = parsed.sortOrder;
+    }
+
     const ALLOWED_SORT_FIELDS = ['name', 'createdAt', 'updatedAt', 'size'] as const;
     if (!(ALLOWED_SORT_FIELDS as readonly string[]).includes(sortBy)) {
       throw new BadRequestException(`不支持的排序字段: ${sortBy}`);
     }
 
     const skip = (page - 1) * limit;
+
+    const extra = {
+      exactPhrase: parsed.exactPhrase,
+      excludeTerms: parsed.excludeTerms,
+      dateRange: parsed.dateRange,
+      sizeRange: parsed.sizeRange,
+    };
 
     switch (scope) {
       case SearchScope.PROJECT:
@@ -54,6 +75,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
+          ...extra,
         }, signal);
       case SearchScope.PROJECT_FILES:
         if (!projectId) {
@@ -69,6 +91,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
+          ...extra,
         }, signal);
       case SearchScope.ALL_PROJECTS:
         return this.searchAllProjects(userId, {
@@ -78,6 +101,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
+          ...extra,
         }, signal);
       case SearchScope.LIBRARY:
         return this.searchLibrary(userId, {
@@ -90,6 +114,7 @@ export class SearchService {
           skip,
           sortBy,
           sortOrder,
+          ...extra,
         }, signal);
       default:
         throw new BadRequestException(`不支持的搜索范围: ${scope}`);
@@ -106,44 +131,53 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
+      exactPhrase?: string | null;
+      excludeTerms?: string[];
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
-    const { keyword, filter, skip, limit, sortBy, sortOrder } = params;
+    const { keyword, filter, skip, limit, sortBy, sortOrder, exactPhrase, excludeTerms, dateRange, sizeRange } = params;
     const safeLimit = Number(limit) || 50;
 
-    let ownerCondition: Prisma.FileSystemNodeWhereInput;
-    switch (filter) {
-      case 'owned':
-        ownerCondition = { ownerId: userId };
-        break;
-      case 'joined':
-        ownerCondition = {
-          projectMembers: {
-            some: { userId },
-          },
-          ownerId: { not: userId },
-        };
-        break;
-      case 'all':
-      default:
-        ownerCondition = {
-          OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
-        };
-        break;
-    }
+    const permissionAnd: Prisma.FileSystemNodeWhereInput[] = (() => {
+      switch (filter) {
+        case 'owned':
+          return [{ ownerId: userId }];
+        case 'joined':
+          return [
+            { projectMembers: { some: { userId } } },
+            { ownerId: { not: userId } },
+          ];
+        case 'all':
+        default:
+          return [{
+            OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
+          }];
+      }
+    })();
 
     const where: Prisma.FileSystemNodeWhereInput = {
       isRoot: true,
       deletedAt: null,
       personalSpaceKey: null,
       libraryKey: null,
-      ...ownerCondition,
-      OR: [
+      AND: permissionAnd,
+    };
+
+    const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
+    if (ftsMatch.matched) {
+      where.id = { in: [...ftsMatch.ids] };
+    } else if (keyword) {
+      where.OR = [
         { name: { contains: keyword, mode: 'insensitive' } },
         { description: { contains: keyword, mode: 'insensitive' } },
-      ],
-    };
+      ];
+    }
+
+    this.applyExtraFilters(where, { exactPhrase, excludeTerms });
+    this.applyRangeFilters(where, { dateRange, sizeRange });
 
     this.checkAborted(signal);
 
@@ -189,6 +223,10 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
+      exactPhrase?: string | null;
+      excludeTerms?: string[];
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -201,6 +239,10 @@ export class SearchService {
       limit,
       sortBy,
       sortOrder,
+      exactPhrase,
+      excludeTerms,
+      dateRange,
+      sizeRange,
     } = params;
     const safeLimit = Number(limit) || 50;
 
@@ -215,15 +257,29 @@ export class SearchService {
 
     const projectNodeIds = await this.getAllProjectNodeIds(projectId);
 
+    const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
+    let effectiveIds: string[];
+    if (ftsMatch.matched) {
+      effectiveIds = projectNodeIds.filter((id) => ftsMatch.ids.has(id));
+      if (effectiveIds.length === 0) {
+        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
+      }
+    } else {
+      effectiveIds = projectNodeIds;
+    }
+
     const where: Prisma.FileSystemNodeWhereInput = {
-      id: { in: projectNodeIds },
+      id: { in: effectiveIds },
       deletedAt: null,
       isRoot: false,
-      OR: [
+    };
+
+    if (!ftsMatch.matched && keyword) {
+      where.OR = [
         { name: { contains: keyword, mode: 'insensitive' } },
         { description: { contains: keyword, mode: 'insensitive' } },
-      ],
-    };
+      ];
+    }
 
     if (type === SearchType.FILE) where.isFolder = false;
     else if (type === SearchType.FOLDER) where.isFolder = true;
@@ -235,6 +291,9 @@ export class SearchService {
       }
       where.fileStatus = fileStatus as FileStatus;
     }
+
+    this.applyExtraFilters(where, { exactPhrase, excludeTerms });
+    this.applyRangeFilters(where, { dateRange, sizeRange });
 
     this.checkAborted(signal);
 
@@ -286,10 +345,14 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
+      exactPhrase?: string | null;
+      excludeTerms?: string[];
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
-    const { keyword, skip, limit, sortBy, sortOrder } = params;
+    const { keyword, skip, limit, sortBy, sortOrder, exactPhrase, excludeTerms, dateRange, sizeRange } = params;
     const safeLimit = Number(limit) || 50;
 
     // 使用 Prisma relation filter 合并两次查询为一次 JOIN
@@ -304,11 +367,20 @@ export class SearchService {
           { projectMembers: { some: { userId } } },
         ],
       },
-      OR: [
+    };
+
+    const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
+    if (ftsMatch.matched) {
+      where.id = { in: [...ftsMatch.ids] };
+    } else if (keyword) {
+      where.OR = [
         { name: { contains: keyword, mode: 'insensitive' } },
         { description: { contains: keyword, mode: 'insensitive' } },
-      ],
-    };
+      ];
+    }
+
+    this.applyExtraFilters(where, { exactPhrase, excludeTerms });
+    this.applyRangeFilters(where, { dateRange, sizeRange });
 
     this.checkAborted(signal);
 
@@ -362,6 +434,10 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
+      exactPhrase?: string | null;
+      excludeTerms?: string[];
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -374,6 +450,10 @@ export class SearchService {
       limit,
       sortBy,
       sortOrder,
+      exactPhrase,
+      excludeTerms,
+      dateRange,
+      sizeRange,
     } = params;
     const safeLimit = Number(limit) || 50;
 
@@ -418,11 +498,20 @@ export class SearchService {
       deletedAt: null,
       libraryKey: libraryKey ? { equals: libraryKey } : { not: null },
       isRoot: false,
-      OR: [
+    };
+
+    const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
+    if (ftsMatch.matched) {
+      where.id = { in: [...ftsMatch.ids] };
+    } else if (keyword) {
+      where.OR = [
         { name: { contains: keyword, mode: 'insensitive' } },
         { description: { contains: keyword, mode: 'insensitive' } },
-      ],
-    };
+      ];
+    }
+
+    this.applyExtraFilters(where, { exactPhrase, excludeTerms });
+    this.applyRangeFilters(where, { dateRange, sizeRange });
 
     this.logger.log(`[资源库搜索] 查询条件: ${JSON.stringify(where)}`);
 
@@ -468,6 +557,56 @@ export class SearchService {
       params.page,
       limit,
     );
+  }
+
+  /**
+   * 向查询条件中注入 exactPhrase（精确短语匹配）和 excludeTerms（排除词）
+   */
+  private applyExtraFilters(
+    where: Prisma.FileSystemNodeWhereInput,
+    extra: { exactPhrase?: string | null; excludeTerms?: string[] },
+  ): void {
+    if (extra.exactPhrase) {
+      const exactCond: Prisma.FileSystemNodeWhereInput = {
+        name: { equals: extra.exactPhrase, mode: 'insensitive' },
+      };
+      if (where.OR) {
+        (where.OR as Prisma.FileSystemNodeWhereInput[]).push(exactCond);
+      } else {
+        where.OR = [exactCond];
+      }
+    }
+
+    if (extra.excludeTerms?.length) {
+      where.NOT = {
+        OR: extra.excludeTerms.map((term) => ({
+          OR: [
+            { name: { contains: term, mode: 'insensitive' as const } },
+            { description: { contains: term, mode: 'insensitive' as const } },
+          ],
+        })),
+      };
+    }
+  }
+
+  /**
+   * 注入 dateRange（modified:>/created:>）和 sizeRange（size:>）过滤条件
+   */
+  private applyRangeFilters(
+    where: Prisma.FileSystemNodeWhereInput,
+    extra: {
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
+    },
+  ): void {
+    if (extra.dateRange) {
+      const opMap: Record<string, 'gt' | 'lt' | 'gte'> = { '>': 'gt', '<': 'lt', '>=': 'gte' };
+      (where as any)[extra.dateRange.field] = { [opMap[extra.dateRange.operator]]: extra.dateRange.value };
+    }
+    if (extra.sizeRange) {
+      const opMap: Record<string, 'gt' | 'lt'> = { '>': 'gt', '<': 'lt' };
+      (where as any).size = { [opMap[extra.sizeRange.operator]]: extra.sizeRange.value };
+    }
   }
 
   /**

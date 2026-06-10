@@ -12,24 +12,31 @@
 
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { memoryStorage } from 'multer';
 import { PublicFileController } from './public-file.controller';
 import { PublicFileService } from './public-file.service';
 import { PublicFileUploadService } from './services/public-file-upload.service';
 import { CommonModule } from '../common/common.module';
 import { MxCadModule } from '../mxcad/mxcad.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 
 @Module({
   imports: [
     CommonModule,
     MxCadModule,
-    MulterModule.register({
-      storage: memoryStorage(),
-      limits: {
-        fileSize: 500 * 1024 * 1024, // 500MB
-        fields: 20,
-        fieldSize: 1024 * 1024,
-      },
+    RuntimeConfigModule,
+    MulterModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        storage: memoryStorage(),
+        limits: {
+          fileSize: (configService.get('upload.maxSize') as number) || 500 * 1024 * 1024,
+          fields: 20,
+          fieldSize: 1024 * 1024,
+        },
+      }),
     }),
   ],
   controllers: [PublicFileController],

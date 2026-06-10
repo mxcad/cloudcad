@@ -13,6 +13,7 @@ import { PermissionService } from "../../common/services/permission.service";
 import { DatabaseService } from "../../database/database.service";
 import { SearchScope, SearchType, SearchDto } from "../dto/search.dto";
 import { FileSystemPermissionService } from "../file-permission/file-system-permission.service";
+import { FtsQueryBuilder } from "./fts-query-builder";
 import { SearchService } from "./search.service";
 
 describe("SearchService", () => {
@@ -36,6 +37,10 @@ describe("SearchService", () => {
 		checkSystemPermissionsBatch: jest.fn(),
 	};
 
+	const mockFtsQueryBuilder = {
+		matchIds: jest.fn(),
+	};
+
 	beforeEach(async () => {
 		jest.clearAllMocks();
 
@@ -44,6 +49,7 @@ describe("SearchService", () => {
 		mockPermissionService.checkNodePermission.mockResolvedValue(true);
 		mockSystemPermissionService.checkSystemPermission.mockResolvedValue(true);
 		mockSystemPermissionService.checkSystemPermissionsBatch.mockResolvedValue([true]);
+		mockFtsQueryBuilder.matchIds.mockResolvedValue({ ids: new Set(), matched: false });
 
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
@@ -54,6 +60,7 @@ describe("SearchService", () => {
 					useValue: mockPermissionService,
 				},
 				{ provide: PermissionService, useValue: mockSystemPermissionService },
+				{ provide: FtsQueryBuilder, useValue: mockFtsQueryBuilder },
 			],
 		}).compile();
 
@@ -132,7 +139,8 @@ describe("SearchService", () => {
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
 			expect(where.isRoot).toBe(true);
-			expect(where.ownerId).toBe("u1");
+			expect(where.AND).toBeDefined();
+			expect(where.AND[0].ownerId).toBe("u1");
 		});
 
 		it("filters by joined projects (filter=joined)", async () => {
@@ -146,8 +154,9 @@ describe("SearchService", () => {
 			} as SearchDto);
 
 			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
-			expect(where.ownerId).toEqual({ not: "u1" });
-			expect(where.projectMembers).toBeDefined();
+			expect(where.AND).toBeDefined();
+			expect(where.AND[0].projectMembers).toBeDefined();
+			expect(where.AND[1].ownerId).toEqual({ not: "u1" });
 		});
 
 		it("returns empty when no matches", async () => {
@@ -353,6 +362,74 @@ describe("SearchService", () => {
 			await expect(
 				service.search("u1", { keyword: "test" } as SearchDto),
 			).rejects.toThrow(BadRequestException);
+		});
+	});
+
+	// ==================== FTS integration ====================
+	describe("FTS integration", () => {
+		it("uses id:in filter when FTS matches (PROJECT scope)", async () => {
+			mockFtsQueryBuilder.matchIds.mockResolvedValue({
+				ids: new Set(["proj-1", "proj-2"]),
+				matched: true,
+			});
+			mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+			mockPrisma.fileSystemNode.count.mockResolvedValue(0);
+
+			await service.search("u1", {
+				keyword: "test",
+				scope: SearchScope.PROJECT,
+			} as SearchDto);
+
+			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
+			expect(where.id).toEqual({ in: ["proj-1", "proj-2"] });
+			// Permissions still in AND
+			expect(where.AND).toBeDefined();
+			// No ILIKE OR fallback
+			expect(where.OR).toBeUndefined();
+		});
+
+		it("intersects FTS ids with project scope (PROJECT_FILES)", async () => {
+			mockFtsQueryBuilder.matchIds.mockResolvedValue({
+				ids: new Set(["f1", "f2", "f3"]),
+				matched: true,
+			});
+			// getAllProjectNodeIds returns all project nodes
+			mockPrisma.$queryRaw.mockResolvedValue([
+				{ id: "proj-1" }, { id: "f1" }, { id: "f2" }, { id: "f4" },
+			]);
+			mockPermissionService.checkNodePermission.mockResolvedValue(true);
+			mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+			mockPrisma.fileSystemNode.count.mockResolvedValue(0);
+
+			await service.search("u1", {
+				keyword: "test",
+				scope: SearchScope.PROJECT_FILES,
+				projectId: "proj-1",
+			} as SearchDto);
+
+			const where = mockPrisma.fileSystemNode.findMany.mock.calls[0][0].where;
+			// f3 is in FTS but NOT in project — excluded by intersection
+			expect(where.id.in).toEqual(["f1", "f2"]);
+		});
+
+		it("returns empty when FTS intersection is empty (PROJECT_FILES)", async () => {
+			mockFtsQueryBuilder.matchIds.mockResolvedValue({
+				ids: new Set(["outside-node"]),
+				matched: true,
+			});
+			mockPrisma.$queryRaw.mockResolvedValue([{ id: "proj-1" }]);
+			mockPermissionService.checkNodePermission.mockResolvedValue(true);
+
+			const result = await service.search("u1", {
+				keyword: "test",
+				scope: SearchScope.PROJECT_FILES,
+				projectId: "proj-1",
+			} as SearchDto);
+
+			// Empty intersection → early return with no Prisma query
+			expect(mockPrisma.fileSystemNode.findMany).not.toHaveBeenCalled();
+			expect(result.nodes).toEqual([]);
+			expect(result.total).toBe(0);
 		});
 	});
 });

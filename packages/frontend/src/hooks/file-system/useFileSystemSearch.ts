@@ -1,18 +1,7 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-// The code, documentation, and related materials of this software belong to
-// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
-// Technology Co., Ltd. to use this software, its documentation, or related
-// materials.
-// https://www.mxdraw.com/
-///////////////////////////////////////////////////////////////////////////////
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFileSystemStore } from '../../stores/fileSystemStore';
 import { useSearch } from '../useSearch';
+import type { SearchFilterValues } from '../../components/search/SearchFilters';
 
 interface UseFileSystemSearchProps {
   loadData: () => void;
@@ -33,6 +22,9 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   const [pagination, setPagination] = useState({ page: 1, limit: storePageSize });
   const paginationRef = useRef(pagination);
   const shouldLoadDataRef = useRef(false);
+
+  // Search filter state
+  const [searchFilters, setSearchFilters] = useState<SearchFilterValues>({});
 
   // 同步 store 中的 pageSize 到 pagination
   useEffect(() => {
@@ -65,9 +57,7 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
   const handlePageSizeChange = useCallback((newPageSize: number) => {
     paginationRef.current = { page: 1, limit: newPageSize };
     shouldLoadDataRef.current = true;
-    // 更新 store 以持久化 pageSize
     setStorePageSize(newPageSize);
-    // 立即更新 pagination 状态，确保 useEffect 能捕获到变化
     setPagination({ page: 1, limit: newPageSize });
   }, [setStorePageSize]);
 
@@ -75,6 +65,11 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
     const shouldLoad = shouldLoadDataRef.current;
     shouldLoadDataRef.current = false;
     return shouldLoad;
+  }, []);
+
+  const handleFiltersChange = useCallback((filters: SearchFilterValues) => {
+    setSearchFilters(filters);
+    setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
   return {
@@ -90,5 +85,7 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
     paginationRef,
     syncPaginationRef,
     checkShouldLoadData,
+    searchFilters,
+    handleFiltersChange,
   };
 };

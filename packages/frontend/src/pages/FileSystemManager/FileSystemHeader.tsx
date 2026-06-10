@@ -10,6 +10,7 @@ import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
 import { RefreshIcon } from '@/components/FileIcons';
 import type { FileSystemNode } from '@/types/filesystem';
 import type { ProjectFilterType } from '@/types/project';
+import type { SearchFilterValues } from '@/components/search/SearchFilters';
 
 interface BreadcrumbItem {
   id: string;
@@ -21,7 +22,6 @@ interface FileSystemHeaderProps {
   mode: 'project' | 'personal-space';
   isAtRoot: boolean;
   isTrashView: boolean;
-  isProjectTrashView: boolean;
   isPersonalSpaceMode: boolean;
   isProjectRootMode: boolean;
   loading: boolean;
@@ -40,9 +40,7 @@ interface FileSystemHeaderProps {
   onSearchSubmit: () => void;
   onSelectAll: () => void;
   onToggleTrashView: () => void;
-  onToggleProjectTrashView: () => void;
-  onClearProjectTrash: () => void;
-  onClearTrash: () => void;
+  onClearTrash: (projectId?: string) => void;
   onProjectFilterChange: (filter: ProjectFilterType) => void;
   onRefresh: () => void;
   onCreateFolder: () => void;
@@ -56,13 +54,14 @@ interface FileSystemHeaderProps {
   onCopy?: () => void;
   onCut?: () => void;
   onPaste?: () => void;
+  searchFilters?: SearchFilterValues;
+  onSearchFiltersChange?: (filters: SearchFilterValues) => void;
 }
 
 export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   mode: _mode,
   isAtRoot,
   isTrashView,
-  isProjectTrashView,
   isPersonalSpaceMode,
   isProjectRootMode,
   loading,
@@ -81,8 +80,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   onSearchSubmit,
   onSelectAll,
   onToggleTrashView,
-  onToggleProjectTrashView,
-  onClearProjectTrash,
   onClearTrash,
   onProjectFilterChange,
   onRefresh,
@@ -97,6 +94,8 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   onCopy,
   onCut,
   onPaste,
+  searchFilters,
+  onSearchFiltersChange,
 }) => {
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; nodeId?: string }>();
@@ -139,10 +138,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   const handleBackButton = () => {
     if (isTrashView) {
       onToggleTrashView();
-      return;
-    }
-    if (isProjectTrashView) {
-      onToggleProjectTrashView();
       return;
     }
 
@@ -252,36 +247,34 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </Button>
           </Tooltip>
 
-          {!isAtRoot && (
-            <Button
-              variant={isTrashView ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={onToggleTrashView}
-              disabled={loading}
-              className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
-              style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
-              title={isTrashView ? '返回文件列表' : '文件回收站'}
+          <Button
+            variant={isTrashView ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={onToggleTrashView}
+            disabled={loading}
+            className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
+            style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
+            title={isTrashView ? '返回文件列表' : '回收站'}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="mr-1"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="mr-1"
-              >
-                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-              文件回收站
-            </Button>
-          )}
+              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+            回收站
+          </Button>
 
           {isAtRoot ? (
             <>
               {canCreateProject &&
                 !isPersonalSpaceMode &&
-                !isProjectTrashView &&
+                !isTrashView &&
                 projectFilter !== 'joined' && (
                   <Tooltip content="新建项目">
                     <Button
@@ -341,7 +334,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </>
           )}
 
-          {!isAtRoot && (
+          {!isAtRoot && !isTrashView && (
             <MxCadUploader
               ref={uploaderRef}
               nodeId={() => getCurrentParentId()}
@@ -359,13 +352,12 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
 
       {isAtRoot && (
         <ProjectFilterTabs
-          isProjectTrashView={isProjectTrashView}
-          onToggleProjectTrashView={onToggleProjectTrashView}
+          isTrashView={isTrashView}
           projectFilter={projectFilter}
           onProjectFilterChange={onProjectFilterChange}
           isProjectRootMode={isProjectRootMode}
           nodesCount={nodesCount}
-          onClearTrash={onClearTrash}
+          onClearTrash={() => onClearTrash()}
           onRefresh={onRefresh}
           loading={loading}
           isFetching={isFetching}
@@ -380,8 +372,11 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         onViewModeChange={onSetViewMode}
         loading={loading}
         isTrashView={isTrashView}
-        onClearTrash={onClearProjectTrash}
+        onClearTrash={() => onClearTrash()}
+        trashItemsCount={isTrashView ? nodesCount : 0}
         isAtRoot={isAtRoot}
+        searchFilters={searchFilters}
+        onSearchFiltersChange={onSearchFiltersChange}
       />
     </Card>
   );

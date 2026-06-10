@@ -169,8 +169,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     [showConfirmPromise]
   );
 
-  const isProjectTrashViewRef = React.useRef(false);
-
   const clipboardItems = useFileSystemClipboardStore((s) => s.items);
   const clipboardMode = useFileSystemClipboardStore((s) => s.mode);
   const setClipboard = useFileSystemClipboardStore((s) => s.setClipboard);
@@ -367,7 +365,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   } = useFileSystemCRUD({
     urlProjectId: selectedProjectId || undefined, currentNode, loadData: refreshNodes,
     showToast, showConfirm, selectedNodes: new Set(), nodes,
-    clearSelection: () => { }, isProjectTrashViewRef,
+    clearSelection: () => { },
     mode: isPersonalSpace ? 'personal-space' : 'project',
   });
 

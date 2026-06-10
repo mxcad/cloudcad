@@ -75,6 +75,22 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     category: 'file',
     description: '文件上传大小限制 (MB)',
     defaultValue: 100,
+    isPublic: true,
+  },
+  {
+    key: 'fontMaxFileSize',
+    type: 'number',
+    category: 'file',
+    description: '字体上传大小限制 (MB)',
+    defaultValue: 50,
+    isPublic: false,
+  },
+  {
+    key: 'extRefMaxFileSize',
+    type: 'number',
+    category: 'file',
+    description: '外部参照上传大小限制 (MB)',
+    defaultValue: 100,
     isPublic: false,
   },
 

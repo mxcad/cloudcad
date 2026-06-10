@@ -16,7 +16,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFileSystemData } from './useFileSystemData';
 import {
-  fileSystemControllerGetDeletedProjects,
+  fileSystemControllerGetTrash,
   fileSystemControllerGetProjects,
   fileSystemControllerSearch,
   fileSystemControllerGetRootNode,
@@ -25,7 +25,7 @@ import {
 } from '@/api-sdk';
 
 vi.mock('@/api-sdk', () => ({
-  fileSystemControllerGetDeletedProjects: vi.fn(),
+  fileSystemControllerGetTrash: vi.fn(),
   fileSystemControllerGetProjects: vi.fn(),
   fileSystemControllerSearch: vi.fn(),
   fileSystemControllerGetRootNode: vi.fn(),
@@ -55,6 +55,8 @@ describe('useFileSystemData', () => {
     isPersonalSpaceMode: false,
     personalSpaceId: null,
     searchQuery: '',
+    pagination: { page: 1, limit: 20 },
+    setPagination: vi.fn(),
     paginationRef: { current: { page: 1, limit: 20 } },
     showToast: vi.fn(),
     clearSelection: vi.fn(),
@@ -94,9 +96,6 @@ describe('useFileSystemData', () => {
 
     expect(typeof result.current.isTrashView).toBe('boolean');
     expect(typeof result.current.setIsTrashView).toBe('function');
-    expect(typeof result.current.isProjectTrashView).toBe('boolean');
-    expect(typeof result.current.setIsProjectTrashView).toBe('function');
-    expect(result.current.isProjectTrashViewRef).toBeDefined();
   });
 
   it('should call loadData without crashing', async () => {

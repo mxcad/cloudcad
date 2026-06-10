@@ -27,6 +27,8 @@ import { GlobalTourRenderer } from './components/tour';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { BrandProvider } from './contexts/BrandContext';
+import { useRuntimeConfig } from './contexts/RuntimeConfigContext';
+import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
 import NoPermissionPage from './components/ui/NoPermissionPage';
 
 // ============================================================================
@@ -510,6 +512,7 @@ function App() {
     <BrandProvider>
       <Router>
         <RuntimeConfigProvider>
+          <RuntimeConfigSync />
           <TourProvider>
             <AppContent />
             {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
@@ -522,3 +525,14 @@ function App() {
 }
 
 export default App;
+
+/**
+ * 将 RuntimeConfig 中的 maxFileSize 同步到 mxcadUploadUtils
+ */
+function RuntimeConfigSync(): null {
+  const { config } = useRuntimeConfig();
+  React.useEffect(() => {
+    setUploadMaxFileSize(config.maxFileSize);
+  }, [config.maxFileSize]);
+  return null;
+}

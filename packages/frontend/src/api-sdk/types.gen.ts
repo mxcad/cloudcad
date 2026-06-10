@@ -1052,6 +1052,10 @@ export type StorageInfoDto = {
      * 使用百分比
      */
     usagePercent: number;
+    /**
+     * 是否为系统默认配额（未经管理员自定义）
+     */
+    isDefault: boolean;
 };
 
 export type UserDashboardStatsDto = {
@@ -1806,6 +1810,39 @@ export type CopyNodeDto = {
     targetParentId: string;
 };
 
+export type BatchDeleteDto = {
+    /**
+     * 节点ID列表
+     */
+    nodeIds: Array<string>;
+    /**
+     * 是否永久删除
+     */
+    permanently?: boolean;
+};
+
+export type BatchMoveDto = {
+    /**
+     * 节点ID列表
+     */
+    nodeIds: Array<string>;
+    /**
+     * 目标父节点ID
+     */
+    targetParentId: string;
+};
+
+export type BatchCopyDto = {
+    /**
+     * 节点ID列表
+     */
+    nodeIds: Array<string>;
+    /**
+     * 目标父节点ID
+     */
+    targetParentId: string;
+};
+
 export type UpdateStorageQuotaDto = {
     /**
      * 节点 ID（用户个人空间根节点、项目根节点或公共资源库节点）
@@ -1989,6 +2026,17 @@ export type UploadFontDto = {
      * 上传目标
      */
     target: FontUploadTarget;
+};
+
+export type BatchDeleteFontDto = {
+    /**
+     * 要删除的字体文件名列表
+     */
+    fileNames: Array<string>;
+    /**
+     * 删除目标
+     */
+    target?: FontUploadTarget;
 };
 
 export type CheckChunkExistDto = {
@@ -5175,7 +5223,14 @@ export type FileSystemControllerClearTrashResponse = FileSystemControllerClearTr
 export type FileSystemControllerGetTrashData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        projectId?: string;
+        page?: number;
+        limit?: number;
+        sortBy?: string;
+        sortOrder?: string;
+        search?: string;
+    };
     url: '/api/v1/file-system/trash';
 };
 
@@ -5632,6 +5687,54 @@ export type FileSystemControllerCopyNodeResponses = {
 };
 
 export type FileSystemControllerCopyNodeResponse = FileSystemControllerCopyNodeResponses[keyof FileSystemControllerCopyNodeResponses];
+
+export type FileSystemControllerBatchDeleteNodesData = {
+    body: BatchDeleteDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/file-system/nodes/batch-delete';
+};
+
+export type FileSystemControllerBatchDeleteNodesResponses = {
+    /**
+     * 批量删除成功
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type FileSystemControllerBatchDeleteNodesResponse = FileSystemControllerBatchDeleteNodesResponses[keyof FileSystemControllerBatchDeleteNodesResponses];
+
+export type FileSystemControllerBatchMoveNodesData = {
+    body: BatchMoveDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/file-system/nodes/batch-move';
+};
+
+export type FileSystemControllerBatchMoveNodesResponses = {
+    /**
+     * 批量移动成功
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type FileSystemControllerBatchMoveNodesResponse = FileSystemControllerBatchMoveNodesResponses[keyof FileSystemControllerBatchMoveNodesResponses];
+
+export type FileSystemControllerBatchCopyNodesData = {
+    body: BatchCopyDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/file-system/nodes/batch-copy';
+};
+
+export type FileSystemControllerBatchCopyNodesResponses = {
+    /**
+     * 批量复制成功
+     */
+    201: BatchOperationResponseDto;
+};
+
+export type FileSystemControllerBatchCopyNodesResponse = FileSystemControllerBatchCopyNodesResponses[keyof FileSystemControllerBatchCopyNodesResponses];
 
 export type FileSystemControllerGetStorageQuotaData = {
     body?: never;
@@ -6415,6 +6518,22 @@ export type FontsControllerDeleteFontData = {
 export type FontsControllerDeleteFontResponses = {
     200: unknown;
 };
+
+export type FontsControllerBatchDeleteFontsData = {
+    body: BatchDeleteFontDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/font-management/batch-delete';
+};
+
+export type FontsControllerBatchDeleteFontsResponses = {
+    /**
+     * 批量删除成功
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type FontsControllerBatchDeleteFontsResponse = FontsControllerBatchDeleteFontsResponses[keyof FontsControllerBatchDeleteFontsResponses];
 
 export type FontsControllerDownloadFontData = {
     body?: never;
@@ -8022,6 +8141,54 @@ export type LibraryControllerCopyDrawingNodeResponses = {
 
 export type LibraryControllerCopyDrawingNodeResponse = LibraryControllerCopyDrawingNodeResponses[keyof LibraryControllerCopyDrawingNodeResponses];
 
+export type LibraryControllerBatchDeleteDrawingNodesData = {
+    body: BatchDeleteDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/drawing/nodes/batch-delete';
+};
+
+export type LibraryControllerBatchDeleteDrawingNodesResponses = {
+    /**
+     * Success
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type LibraryControllerBatchDeleteDrawingNodesResponse = LibraryControllerBatchDeleteDrawingNodesResponses[keyof LibraryControllerBatchDeleteDrawingNodesResponses];
+
+export type LibraryControllerBatchMoveDrawingNodesData = {
+    body: BatchMoveDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/drawing/nodes/batch-move';
+};
+
+export type LibraryControllerBatchMoveDrawingNodesResponses = {
+    /**
+     * Success
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type LibraryControllerBatchMoveDrawingNodesResponse = LibraryControllerBatchMoveDrawingNodesResponses[keyof LibraryControllerBatchMoveDrawingNodesResponses];
+
+export type LibraryControllerBatchCopyDrawingNodesData = {
+    body: BatchCopyDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/drawing/nodes/batch-copy';
+};
+
+export type LibraryControllerBatchCopyDrawingNodesResponses = {
+    /**
+     * Success
+     */
+    201: BatchOperationResponseDto;
+};
+
+export type LibraryControllerBatchCopyDrawingNodesResponse = LibraryControllerBatchCopyDrawingNodesResponses[keyof LibraryControllerBatchCopyDrawingNodesResponses];
+
 export type LibraryControllerGetBlockLibraryData = {
     body?: never;
     path?: never;
@@ -8349,3 +8516,51 @@ export type LibraryControllerCopyBlockNodeResponses = {
 };
 
 export type LibraryControllerCopyBlockNodeResponse = LibraryControllerCopyBlockNodeResponses[keyof LibraryControllerCopyBlockNodeResponses];
+
+export type LibraryControllerBatchDeleteBlockNodesData = {
+    body: BatchDeleteDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/block/nodes/batch-delete';
+};
+
+export type LibraryControllerBatchDeleteBlockNodesResponses = {
+    /**
+     * Success
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type LibraryControllerBatchDeleteBlockNodesResponse = LibraryControllerBatchDeleteBlockNodesResponses[keyof LibraryControllerBatchDeleteBlockNodesResponses];
+
+export type LibraryControllerBatchMoveBlockNodesData = {
+    body: BatchMoveDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/block/nodes/batch-move';
+};
+
+export type LibraryControllerBatchMoveBlockNodesResponses = {
+    /**
+     * Success
+     */
+    200: BatchOperationResponseDto;
+};
+
+export type LibraryControllerBatchMoveBlockNodesResponse = LibraryControllerBatchMoveBlockNodesResponses[keyof LibraryControllerBatchMoveBlockNodesResponses];
+
+export type LibraryControllerBatchCopyBlockNodesData = {
+    body: BatchCopyDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/library/block/nodes/batch-copy';
+};
+
+export type LibraryControllerBatchCopyBlockNodesResponses = {
+    /**
+     * Success
+     */
+    201: BatchOperationResponseDto;
+};
+
+export type LibraryControllerBatchCopyBlockNodesResponse = LibraryControllerBatchCopyBlockNodesResponses[keyof LibraryControllerBatchCopyBlockNodesResponses];

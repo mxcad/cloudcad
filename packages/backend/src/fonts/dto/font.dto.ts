@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString } from 'class-validator';
 
 /**
  * 字体上传目标枚举
@@ -49,6 +49,27 @@ export class DeleteFontDto {
     enum: Object.values(FontUploadTarget),
     enumName: 'FontUploadTarget',
     default: FontUploadTarget.BOTH,
+  })
+  @IsEnum(FontUploadTarget)
+  @IsOptional()
+  target?: FontUploadTarget;
+}
+
+/**
+ * 批量删除字体 DTO
+ */
+export class BatchDeleteFontDto {
+  @ApiProperty({ description: '要删除的字体文件名列表' })
+  @IsArray()
+  @IsString({ each: true })
+  fileNames: string[];
+
+  @ApiProperty({
+    description: '删除目标',
+    enum: Object.values(FontUploadTarget),
+    enumName: 'FontUploadTarget',
+    default: FontUploadTarget.BOTH,
+    required: false,
   })
   @IsEnum(FontUploadTarget)
   @IsOptional()

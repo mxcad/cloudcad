@@ -15,8 +15,10 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { promises as fs } from 'fs';
 import * as fsSync from 'fs';
 import * as path from 'path';
@@ -49,7 +51,7 @@ export interface FontUploadResult {
  * 负责管理后端转换程序和前端的字体文件
  */
 @Injectable()
-export class FontsService {
+export class FontsService implements OnModuleInit {
   private readonly logger = new Logger(FontsService.name);
 
   /** 后端转换程序字体目录 */
@@ -69,10 +71,13 @@ export class FontsService {
     '.shx',
   ];
 
-  /** 最大文件大小（不限制） */
-  private readonly maxFileSize = Infinity;
+  /** 最大文件大小（动态从运行时配置获取） */
+  private fontMaxFileSizeBytes: number = 50 * 1024 * 1024; // 默认 50MB，初始化时更新
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private runtimeConfigService: RuntimeConfigService
+  ) {
     // 从配置服务获取字体目录路径（配置已在 configuration.ts 中正确解析为绝对路径）
     const backendPath = this.configService.get<string>('fonts.backendPath');
     const frontendPath = this.configService.get<string>('fonts.frontendPath');
@@ -83,6 +88,15 @@ export class FontsService {
 
     this.logger.log(`后端字体目录: ${this.backendFontsDir}`);
     this.logger.log(`前端字体目录: ${this.frontendFontsDir}`);
+  }
+
+  async onModuleInit(): Promise<void> {
+    const fontMaxFileSizeMB = await this.runtimeConfigService.getValue<number>(
+      'fontMaxFileSize',
+      50
+    );
+    this.fontMaxFileSizeBytes = fontMaxFileSizeMB * 1024 * 1024;
+    this.logger.log(`字体上传大小限制: ${fontMaxFileSizeMB}MB`);
   }
 
   /**
@@ -182,9 +196,10 @@ export class FontsService {
   ): Promise<FontUploadResult> {
     try {
       // 验证文件
-      this.validateFontFile(file);
+      await this.validateFontFile(file);
 
-      const fileName = file.originalname;
+      const rawName = file.originalname;
+      const fileName = path.basename(rawName);
       const fileExt = path.extname(fileName).toLowerCase();
 
       // 确保目录存在
@@ -413,7 +428,7 @@ export class FontsService {
   /**
    * 验证字体文件
    */
-  private validateFontFile(file: Express.Multer.File): void {
+  private async validateFontFile(file: Express.Multer.File): Promise<void> {
     if (!file) {
       throw new BadRequestException('未提供文件');
     }
@@ -429,15 +444,21 @@ export class FontsService {
     }
 
     // 验证文件大小
-    if (file.size > this.maxFileSize) {
+    if (file.size > this.fontMaxFileSizeBytes) {
       throw new BadRequestException(
-        `文件大小超过限制。最大允许: ${this.maxFileSize / 1024 / 1024}MB`
+        `文件大小超过限制。最大允许: ${this.fontMaxFileSizeBytes / 1024 / 1024}MB`
       );
     }
 
-    // 验证文件名
-    if (!fileName || fileName.length > 255) {
-      throw new BadRequestException('文件名无效');
+    // 验证文件名（防止路径遍历攻击）
+    if (
+      !fileName ||
+      fileName.length > 255 ||
+      fileName.includes('..') ||
+      fileName.includes('/') ||
+      fileName.includes('\\')
+    ) {
+      throw new BadRequestException('无效的文件名');
     }
   }
 
@@ -490,5 +511,33 @@ export class FontsService {
         throw error;
       }
     }
+  }
+
+  async batchDeleteFonts(
+    fileNames: string[],
+    target: FontUploadTarget = FontUploadTarget.BOTH
+  ) {
+    const successIds: string[] = [];
+    const failedIds: string[] = [];
+    const errors: string[] = [];
+
+    for (const fileName of fileNames) {
+      try {
+        await this.deleteFont(fileName, target);
+        successIds.push(fileName);
+      } catch (error) {
+        failedIds.push(fileName);
+        errors.push(`字体 ${fileName}: ${error.message}`);
+        this.logger.error(`批量删除字体失败: ${fileName}`, error.message);
+      }
+    }
+
+    return {
+      successCount: successIds.length,
+      failedCount: failedIds.length,
+      successIds,
+      failedIds,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
 }

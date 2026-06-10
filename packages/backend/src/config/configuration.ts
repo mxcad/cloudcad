@@ -135,7 +135,8 @@ export default (): AppConfig => {
 
 	upload: {
 		// 文件大小限制 - Multer 中间件层防护（第一层）
-		// 使用固定上限值 500MB，业务层使用运行时配置 maxFileSize 进行精确限制
+		// Multer 层已改为读取此值，而非硬编码
+		// 业务层使用运行时配置 maxFileSize 进行精确限制
 		// 运行时配置可在管理界面动态调整
 		maxSize: 500 * 1024 * 1024, // 500MB 固定上限
 		allowedTypes: parseStringArray(process.env.UPLOAD_ALLOWED_TYPES, [

@@ -72,6 +72,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setPersonalSpaceIdLoading,
   } = useFileSystemStore();
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const uploaderRef = useRef<MxCadUploaderRef>(null);
 
   const {
@@ -133,16 +134,15 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     isTrashView,
     handleToggleTrashView,
     handleRestoreNode,
-    handleClearProjectTrash,
     handleBatchRestore,
-    isProjectTrashView,
-    handleToggleProjectTrashView,
     handleClearTrash,
     selectedNodes,
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
     selectNodes,
+    searchFilters,
+    handleFiltersChange,
   } = useFileSystem({
     mode,
     personalSpaceId,
@@ -301,7 +301,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             },
             rollback: async () => {
               for (const id of newIds) {
-                await fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
+                try {
+                  await fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
+                } catch (e) {
+                  if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'NOT_FOUND') continue;
+                  throw e;
+                }
               }
             },
           });
@@ -364,6 +369,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [redoStack, undoStoreRedo, projectId, handleRefresh, showToast]);
 
   useFileSystemShortcuts({
+    containerRef,
     enabled: !isAtRoot,
     onUndo: () => { console.log('[shortcuts] onUndo triggered'); return clipboardHandleUndo(); },
     onRedo: () => { console.log('[shortcuts] onRedo triggered'); return clipboardHandleRedo(); },
@@ -484,10 +490,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const getCurrentParentId = useCallback(() => {
     if (currentNodeIdRef.current) return currentNodeIdRef.current;
     if (urlNodeId) return urlNodeId;
-    if (urlNodeId && nodes.length > 0) {
-      const currentNodeData = nodes.find((n) => n.id === urlNodeId);
-      if (currentNodeData) return currentNodeData.id;
-    }
     if (urlProjectId) return urlProjectId;
     return '';
   }, [urlNodeId, urlProjectId, nodes]);
@@ -640,8 +642,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       setDraggedNodes,
       dropTargetId,
       setDropTargetId,
-      selectedNodes,
-      nodes: displayNodes,
       handleRefresh,
       showToast,
     });
@@ -661,22 +661,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
 
-          {(isTrashView || isProjectTrashView) && (
+          {isTrashView && (
             <Button variant="ghost" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
           )}
 
-          {!isTrashView && !isProjectTrashView && (
+          {!isTrashView && (
             <>
               <Button variant="ghost" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>移动</Button>
               <Button variant="ghost" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
             </>
           )}
 
-          {(isTrashView || isProjectTrashView) && (
+          {isTrashView && (
             <Button variant="ghost" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
           )}
 
-          {!isTrashView && !isProjectTrashView && (
+          {!isTrashView && (
             <Button variant="ghost" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
           )}
         </>
@@ -725,13 +725,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         document.body
       )}
 
-      <div className="h-full flex flex-col overflow-hidden">
+      <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
         <div className="flex-shrink-0 max-w-7xl mx-auto w-full space-y-6 relative">
           <FileSystemHeader
             mode={mode}
             isAtRoot={isAtRoot}
             isTrashView={isTrashView}
-            isProjectTrashView={isProjectTrashView}
             isPersonalSpaceMode={isPersonalSpaceMode}
             isProjectRootMode={isProjectRootMode}
             loading={loading}
@@ -739,20 +738,18 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             searchTerm={searchTerm}
             viewMode={viewMode}
             selectedNodes={selectedNodes}
-            nodesCount={nodes.length}
+            nodesCount={displayNodes.length}
             projectFilter={projectFilter}
             breadcrumbs={breadcrumbs}
             canCreateProject={canCreateProject}
             uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
-            getCurrentParentId={getCurrentParentId}
+            getCurrentParentId={() => currentNode?.id || urlNodeId || urlProjectId || ''}
             onSetSearchTerm={setSearchTerm}
             onSetViewMode={setViewMode}
             onSearchSubmit={handleSearchSubmit}
             onSelectAll={handleSelectAll}
             onToggleTrashView={handleToggleTrashView}
-            onToggleProjectTrashView={handleToggleProjectTrashView}
-            onClearProjectTrash={handleClearProjectTrash}
-            onClearTrash={handleClearTrash}
+            onClearTrash={() => handleClearTrash(isTrashView && !isAtRoot ? urlProjectId : undefined)}
             onProjectFilterChange={setProjectFilter}
             onRefresh={handleRefresh}
             onCreateFolder={() => setShowCreateFolderModal(true)}
@@ -766,6 +763,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             onCopy={clipboardHandleCopy}
             onCut={clipboardHandleCut}
             onPaste={clipboardHandlePaste}
+            searchFilters={searchFilters}
+            onSearchFiltersChange={handleFiltersChange}
           />
         </div>
 
@@ -809,7 +808,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   isEmpty={showEmpty}
                   isAtRoot={isAtRoot}
                   isTrashView={isTrashView}
-                  isProjectTrashView={isProjectTrashView}
                   searchTerm={searchTerm}
                   canCreateProject={canCreateProject}
                   projectFilter={projectFilter}
@@ -823,7 +821,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   nodes={viewNodes}
                   viewMode={viewMode}
                   isTrashView={isTrashView}
-                  isProjectTrashView={isProjectTrashView}
                   isAtRoot={isAtRoot}
                   selectedNodes={selectedNodes}
                   dropTargetId={dropTargetId}
@@ -837,10 +834,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onPermanentlyDelete={handlePermanentlyDelete}
                   onRename={handleOpenRename}
                   onRefresh={handleRefresh}
-                  onRestore={isTrashView || isProjectTrashView ? handleRestoreNode : undefined}
+                  onRestore={isTrashView ? handleRestoreNode : undefined}
                   onEdit={isAtRoot ? (node: FileSystemNode) => openEditProject(node) : undefined}
                   onDeleteNode={isAtRoot ? (node: FileSystemNode) => {
-                    if (isProjectTrashView) {
+                    if (isTrashView) {
                       handlePermanentlyDeleteProject(node.id, node.name);
                     } else {
                       handleDeleteProject(node.id, node.name);
@@ -863,7 +860,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onDeleteProject={handleDeleteProject}
                   onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
                    onRubberBandSelect={handleRubberBandSelect}
-                  onBatchDelete={() => handleBatchDelete(isTrashView || isProjectTrashView)}
+                  onBatchDelete={() => handleBatchDelete(isTrashView)}
                   onBatchMove={() => { setMoveSourceNode({ id: 'batch' }); setCopySourceNode(null); setShowSelectFolderModal(true); }}
                   onBatchCopy={() => { setMoveSourceNode(null); setCopySourceNode({ id: 'batch' }); setShowSelectFolderModal(true); }}
                   onBatchRestore={handleBatchRestore}

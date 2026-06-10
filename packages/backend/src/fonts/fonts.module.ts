@@ -16,6 +16,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { FontsController } from './fonts.controller';
 import { FontsService } from './fonts.service';
 import { CommonModule } from '../common/common.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 
 /**
  * 字体管理模块
@@ -24,6 +25,7 @@ import { CommonModule } from '../common/common.module';
   imports: [
     CommonModule,
     ConfigModule,
+    RuntimeConfigModule,
     MulterModule.register({
       limits: {
         // 字体文件上传不限制大小

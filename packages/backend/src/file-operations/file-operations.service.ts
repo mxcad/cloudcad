@@ -596,89 +596,6 @@ export class FileOperationsService {
     return { message: '项目已从回收站恢复' };
   }
 
-  async getProjectTrash(
-    projectId: string,
-    userId: string,
-    query?: QueryChildrenDto
-  ) {
-    const {
-      search,
-      nodeType,
-      extension,
-      page = 1,
-      limit = 50,
-      sortBy,
-      sortOrder,
-    } = query || {};
-    const safePage = Number(page) || 1;
-    const safeLimit = Number(limit) || 50;
-    const skip = (safePage - 1) * safeLimit;
-
-    const where: Prisma.FileSystemNodeWhereInput = {
-      deletedAt: { not: null },
-    };
-
-    const projectRoot = await this.prisma.fileSystemNode.findUnique({
-      where: { id: projectId, isRoot: true },
-      select: { id: true, ownerId: true },
-    });
-
-    if (!projectRoot) {
-      throw new NotFoundException('项目不存在');
-    }
-
-    const allProjectNodeIds = await this.getAllProjectNodeIds(projectId);
-
-    where.id = { in: allProjectNodeIds };
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (nodeType) {
-      where.isFolder = nodeType === 'folder';
-    }
-
-    if (extension) {
-      where.extension = extension;
-    }
-
-    try {
-      const [nodes, total] = await Promise.all([
-        this.prisma.fileSystemNode.findMany({
-          where,
-          skip,
-          take: safeLimit,
-          orderBy: sortBy ? { [sortBy]: sortOrder } : { deletedAt: 'desc' },
-          include: {
-            owner: {
-              select: {
-                id: true,
-                username: true,
-                nickname: true,
-              },
-            },
-          },
-        }),
-        this.prisma.fileSystemNode.count({ where }),
-      ]);
-
-      return {
-        nodes,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / safeLimit),
-      };
-    } catch (error) {
-      this.logger.error(`查询项目回收站失败: ${error.message}`, error.stack);
-      throw error;
-    }
-  }
-
   async clearProjectTrash(projectId: string, userId: string) {
     try {
       // 获取项目信息用于缓存清除
@@ -1548,17 +1465,45 @@ export class FileOperationsService {
     }
   }
 
+  /**
+   * 验证用户对回收站项的操作权限 (FILE_TRASH_MANAGE 逐项检查)
+   */
+  private async validateTrashPermission(itemIds: string[], userId: string): Promise<void> {
+    const items = await this.prisma.fileSystemNode.findMany({
+      where: { id: { in: itemIds }, deletedAt: { not: null } },
+      select: { id: true, isRoot: true, projectId: true, ownerId: true },
+    });
+
+    if (items.length === 0) {
+      throw new NotFoundException('未找到要操作的回收站项目');
+    }
+
+    const checkedProjects = new Set<string>();
+    for (const item of items) {
+      const projectId = item.isRoot ? item.id : item.projectId;
+      if (!projectId || checkedProjects.has(projectId)) continue;
+      checkedProjects.add(projectId);
+
+      const hasPermission = await this.projectPermissionService.checkPermission(
+        userId, projectId, ProjectPermission.FILE_TRASH_MANAGE
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException(`没有权限操作项目 ${projectId} 的回收站`);
+      }
+    }
+  }
+
   async restoreTrashItems(itemIds: string[], userId: string) {
     try {
       if (!itemIds || itemIds.length === 0) {
         return { message: '请选择要恢复的项目' };
       }
 
+      await this.validateTrashPermission(itemIds, userId);
+
       const items = await this.prisma.fileSystemNode.findMany({
-        where: {
-          id: { in: itemIds },
-          deletedAt: { not: null },
-        },
+        where: { id: { in: itemIds }, deletedAt: { not: null } },
         select: { id: true, isRoot: true, isFolder: true, parentId: true },
       });
 
@@ -1582,17 +1527,16 @@ export class FileOperationsService {
     }
   }
 
-  async permanentlyDeleteTrashItems(itemIds: string[]) {
+  async permanentlyDeleteTrashItems(itemIds: string[], userId: string) {
     try {
       if (!itemIds || itemIds.length === 0) {
         return { message: '请选择要删除的项目' };
       }
 
+      await this.validateTrashPermission(itemIds, userId);
+
       const items = await this.prisma.fileSystemNode.findMany({
-        where: {
-          id: { in: itemIds },
-          deletedAt: { not: null },
-        },
+        where: { id: { in: itemIds }, deletedAt: { not: null } },
         select: { id: true, isRoot: true },
       });
 
@@ -1610,23 +1554,16 @@ export class FileOperationsService {
 
       if (this.versionControlService.isReady()) {
         try {
-          const commitResult =
-            await this.versionControlService.commitWorkingCopy(
-              `批量删除 ${items.length} 个项目/节点`
-            );
+          const commitResult = await this.versionControlService.commitWorkingCopy(
+            `批量删除 ${items.length} 个项目/节点`
+          );
           if (commitResult.success) {
-            this.logger.log(
-              `批量删除的 SVN 更改已提交: ${items.length} 个项目/节点`
-            );
+            this.logger.log(`批量删除的 SVN 更改已提交: ${items.length} 个项目/节点`);
           } else {
-            this.logger.warn(
-              `批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`
-            );
+            this.logger.warn(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`);
           }
         } catch (svnError) {
-          this.logger.error(
-            `批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 错误: ${svnError.message}`
-          );
+          this.logger.error(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 错误: ${svnError.message}`);
         }
       }
 
@@ -1644,15 +1581,28 @@ export class FileOperationsService {
         where: {
           isRoot: true,
           deletedAt: { not: null },
-          projectMembers: { some: { userId } },
+          OR: [
+            { ownerId: userId },
+            { projectMembers: { some: { userId } } },
+          ],
         },
-        select: { id: true },
+        select: { id: true, ownerId: true },
       });
+
+      for (const project of projects) {
+        const hasPermission = await this.projectPermissionService.checkPermission(
+          userId, project.id, ProjectPermission.FILE_TRASH_MANAGE
+        );
+        if (!hasPermission) {
+          throw new ForbiddenException(`没有权限清空项目 ${project.id} 的回收站`);
+        }
+      }
 
       const nodes = await this.prisma.fileSystemNode.findMany({
         where: {
           deletedAt: { not: null },
-          ownerId: userId,
+          projectId: { in: projects.map((p) => p.id) },
+          isRoot: false,
         },
         select: { id: true, isFolder: true, path: true, fileHash: true },
       });
@@ -1663,41 +1613,27 @@ export class FileOperationsService {
 
       for (const node of nodes) {
         if (!node.isFolder && node.path) {
-          await this.deleteFileIfNotReferenced(
-            this.prisma,
-            node.id,
-            node.path,
-            node.fileHash
-          );
+          await this.deleteFileIfNotReferenced(this.prisma, node.id, node.path, node.fileHash);
         }
       }
 
-      await this.prisma.fileSystemNode.deleteMany({
-        where: {
-          id: { in: nodes.map((n) => n.id) },
-        },
-      });
+      const deleteNodeIds = nodes.map((n) => n.id);
+      if (deleteNodeIds.length > 0) {
+        await this.prisma.fileSystemNode.deleteMany({ where: { id: { in: deleteNodeIds } } });
+      }
 
-      // 清除用户配额缓存
       await this.storageInfoService.invalidateQuotaCache(userId);
 
       if (this.versionControlService.isReady()) {
         try {
-          const commitResult =
-            await this.versionControlService.commitWorkingCopy(
-              `清空用户回收站: ${userId}`
-            );
+          const commitResult = await this.versionControlService.commitWorkingCopy(`清空用户回收站: ${userId}`);
           if (commitResult.success) {
             this.logger.log(`清空回收站的 SVN 更改已提交: ${userId}`);
           } else {
-            this.logger.warn(
-              `清空回收站的 SVN 更改提交失败: ${userId}, 原因: ${commitResult.message}`
-            );
+            this.logger.warn(`清空回收站的 SVN 更改提交失败: ${userId}, 原因: ${commitResult.message}`);
           }
         } catch (svnError) {
-          this.logger.error(
-            `清空回收站的 SVN 更改提交失败: ${userId}, 错误: ${svnError.message}`
-          );
+          this.logger.error(`清空回收站的 SVN 更改提交失败: ${userId}, 错误: ${svnError.message}`);
         }
       }
 
@@ -1774,5 +1710,82 @@ export class FileOperationsService {
       this.logger.error(`节点更新失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  // ==================== 批量操作 ====================
+
+  async batchDeleteNodes(nodeIds: string[], permanently: boolean = false) {
+    const successIds: string[] = [];
+    const failedIds: string[] = [];
+    const errors: string[] = [];
+
+    for (const nodeId of nodeIds) {
+      try {
+        await this.deleteNode(nodeId, permanently);
+        successIds.push(nodeId);
+      } catch (error) {
+        failedIds.push(nodeId);
+        errors.push(`节点 ${nodeId}: ${error.message}`);
+        this.logger.error(`批量删除节点失败: ${nodeId}`, error.message);
+      }
+    }
+
+    return {
+      successCount: successIds.length,
+      failedCount: failedIds.length,
+      successIds,
+      failedIds,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
+  async batchMoveNodes(nodeIds: string[], targetParentId: string) {
+    const successIds: string[] = [];
+    const failedIds: string[] = [];
+    const errors: string[] = [];
+
+    for (const nodeId of nodeIds) {
+      try {
+        await this.moveNode(nodeId, targetParentId);
+        successIds.push(nodeId);
+      } catch (error) {
+        failedIds.push(nodeId);
+        errors.push(`节点 ${nodeId}: ${error.message}`);
+        this.logger.error(`批量移动节点失败: ${nodeId}`, error.message);
+      }
+    }
+
+    return {
+      successCount: successIds.length,
+      failedCount: failedIds.length,
+      successIds,
+      failedIds,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
+  async batchCopyNodes(nodeIds: string[], targetParentId: string) {
+    const successIds: string[] = [];
+    const failedIds: string[] = [];
+    const errors: string[] = [];
+
+    for (const nodeId of nodeIds) {
+      try {
+        await this.copyNode(nodeId, targetParentId);
+        successIds.push(nodeId);
+      } catch (error) {
+        failedIds.push(nodeId);
+        errors.push(`节点 ${nodeId}: ${error.message}`);
+        this.logger.error(`批量复制节点失败: ${nodeId}`, error.message);
+      }
+    }
+
+    return {
+      successCount: successIds.length,
+      failedCount: failedIds.length,
+      successIds,
+      failedIds,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
 }

@@ -21,6 +21,7 @@ import { DatabaseService } from '../../database/database.service';
 import { StorageManager, NodeStorageInfo } from '../../common/services/storage-manager.service';
 import { StorageService } from '../../storage/storage.service';
 import { QueryChildrenDto } from '../dto/query-children.dto';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { StorageInfoService } from '../storage-quota/storage-info.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
@@ -34,7 +35,7 @@ export class FileTreeService {
     private readonly prisma: DatabaseService,
     private readonly storageManager: StorageManager,
     private readonly storageService: StorageService,
-    private readonly storageInfoService: StorageInfoService
+    private readonly storageInfoService: StorageInfoService,
   ) {}
 
   async createFileNode(options: {
@@ -385,6 +386,10 @@ export class FileTreeService {
       sortOrder,
       includeDeleted = false,
     } = query || {};
+    const ALLOWED_SORT = ['name', 'createdAt', 'updatedAt', 'size'];
+    if (sortBy && !ALLOWED_SORT.includes(sortBy)) {
+      throw new BadRequestException(`不支持的排序字段: ${sortBy}`);
+    }
     const safePage = Number(page) || 1;
     const safeLimit = Number(limit) || 50;
     const skip = (safePage - 1) * safeLimit;
@@ -395,10 +400,27 @@ export class FileTreeService {
     };
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
+      try {
+        const ftsIds = await this.prisma.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "file_system_nodes"
+          WHERE "searchVector" @@ plainto_tsquery('simple', ${search})
+            AND "parentId" = ${nodeId}
+          LIMIT 200
+        `;
+        if (ftsIds.length > 0) {
+          where.id = { in: ftsIds.map((r) => r.id) };
+        } else {
+          where.OR = [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ];
+        }
+      } catch {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
     }
 
     if (nodeType) {
@@ -622,90 +644,147 @@ export class FileTreeService {
     return rootNode?.libraryKey as 'drawing' | 'block' | null;
   }
 
-  async getTrashItems(userId: string) {
+  async getTrashItems(
+    userId: string,
+    options?: {
+      projectId?: string;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      search?: string;
+    }
+  ) {
     try {
-      const projects = await this.prisma.fileSystemNode.findMany({
-        where: {
-          isRoot: true,
+      const { projectId, page, limit, sortBy, sortOrder, search } = options || {};
+
+      // ── Project-scoped trash ─────────────────────────────────────
+      if (projectId) {
+        const safePage = Number(page) || 1;
+        const safeLimit = Number(limit) || 50;
+        const skip = (safePage - 1) * safeLimit;
+
+        const where: Prisma.FileSystemNodeWhereInput = {
           deletedAt: { not: null },
-          libraryKey: null,
-          OR: [
-            { ownerId: userId },
-            {
-              projectMembers: {
-                some: { userId },
-              },
-            },
-          ],
-        },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              email: true,
-              username: true,
-              nickname: true,
-            },
-          },
-          projectMembers: {
+        };
+
+        const projectRoot = await this.prisma.fileSystemNode.findUnique({
+          where: { id: projectId, isRoot: true },
+          select: { id: true },
+        });
+
+        if (!projectRoot) {
+          throw new NotFoundException('项目不存在');
+        }
+
+        const allProjectNodeIds = await this.getAllProjectNodeIds(projectId);
+        where.id = { in: allProjectNodeIds };
+
+        if (search) {
+          try {
+            const ftsIds = await this.prisma.$queryRaw<{ id: string }[]>`
+              SELECT "id" FROM "file_system_nodes"
+              WHERE "searchVector" @@ plainto_tsquery('simple', ${search})
+                AND "id" = ANY(${allProjectNodeIds})
+              LIMIT 200
+            `;
+            if (ftsIds.length > 0) {
+              where.id = { in: ftsIds.map((r) => r.id) };
+            } else {
+              where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ];
+            }
+          } catch {
+            where.OR = [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ];
+          }
+        }
+
+        const [nodes, total] = await Promise.all([
+          this.prisma.fileSystemNode.findMany({
+            where,
+            skip,
+            take: safeLimit,
+            orderBy: sortBy ? { [sortBy]: sortOrder } : { deletedAt: 'desc' },
             include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  username: true,
-                  nickname: true,
-                },
+              owner: {
+                select: { id: true, username: true, nickname: true },
               },
             },
-          },
-        },
-        orderBy: {
-          deletedAt: 'desc',
-        },
-      });
+          }),
+          this.prisma.fileSystemNode.count({ where }),
+        ]);
 
-      const nodes = await this.prisma.fileSystemNode.findMany({
-        where: {
-          deletedAt: { not: null },
-          ownerId: userId,
-          isRoot: false,
-          deletedByCascade: false,
-        },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              username: true,
-              nickname: true,
-            },
-          },
-          _count: {
-            select: {
-              children: {
-                where: { deletedAt: null },
-              },
-            },
-          },
-        },
-        orderBy: {
-          deletedAt: 'desc',
-        },
-      });
+        return { nodes, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+      }
 
-      const allItems = [
-        ...projects.map((p) => ({ ...p, itemType: 'project' })),
-        ...nodes.map((n) => ({ ...n, itemType: 'node' })),
-      ];
+      // ── Global trash: deleted projects only ──────────────────────
+      const safePage = Number(page) || 1;
+      const safeLimit = Number(limit) || 50;
+      const skip = (safePage - 1) * safeLimit;
 
-      return {
-        items: allItems,
-        total: allItems.length,
+      const where: Prisma.FileSystemNodeWhereInput = {
+        isRoot: true,
+        deletedAt: { not: null },
+        libraryKey: null,
+        OR: [
+          { ownerId: userId },
+          { projectMembers: { some: { userId } } },
+        ],
       };
+
+      if (search) {
+        where.AND = [{ name: { contains: search, mode: 'insensitive' } }];
+      }
+
+      const [projects, total] = await Promise.all([
+        this.prisma.fileSystemNode.findMany({
+          where,
+          skip,
+          take: safeLimit,
+          include: {
+            owner: { select: { id: true, email: true, username: true, nickname: true } },
+            projectMembers: {
+              include: { user: { select: { id: true, email: true, username: true, nickname: true } } },
+            },
+          },
+          orderBy: { deletedAt: 'desc' },
+        }),
+        this.prisma.fileSystemNode.count({ where }),
+      ]);
+
+      const paginatedItems = projects.map((p) => ({ ...p, itemType: 'project' }));
+
+      return { nodes: paginatedItems, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
     } catch (error) {
       this.logger.error(`获取回收站列表失败: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  /**
+   * 递归获取项目内所有节点 ID
+   */
+  private async getAllProjectNodeIds(projectId: string): Promise<string[]> {
+    const nodeIds: string[] = [];
+
+    const traverse = async (parentId: string) => {
+      const children = await this.prisma.fileSystemNode.findMany({
+        where: { parentId },
+        select: { id: true },
+      });
+      for (const child of children) {
+        nodeIds.push(child.id);
+        await traverse(child.id);
+      }
+    };
+
+    await traverse(projectId);
+    return nodeIds;
   }
 
   /**
@@ -730,6 +809,10 @@ export class FileTreeService {
       sortOrder,
       includeDeleted = false,
     } = query || {};
+    const ALLOWED_SORT = ['name', 'createdAt', 'updatedAt', 'size'];
+    if (sortBy && !ALLOWED_SORT.includes(sortBy)) {
+      throw new BadRequestException(`不支持的排序字段: ${sortBy}`);
+    }
     const safePage = Number(page) || 1;
     const safeLimit = Number(limit) || 50;
 
@@ -797,10 +880,27 @@ export class FileTreeService {
       };
 
       if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ];
+        try {
+          const ftsIds = await this.prisma.$queryRaw<{ id: string }[]>`
+            SELECT "id" FROM "file_system_nodes"
+            WHERE "searchVector" @@ plainto_tsquery('simple', ${search})
+              AND "id" = ANY(${allFileIds})
+            LIMIT 200
+          `;
+          if (ftsIds.length > 0) {
+            where.id = { in: ftsIds.map((r) => r.id) };
+          } else {
+            where.OR = [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ];
+          }
+        } catch {
+          where.OR = [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ];
+        }
       }
 
       if (extension) {

@@ -39,11 +39,6 @@ export class ResolveShareNodeResponseDto {
   updatedAt: string;
 }
 
-export class UpdateShareDto {
-  @ApiPropertyOptional({ description: '过期时间（ISO 日期），传 null 改为永不过期', nullable: true })
-  expiresAt?: string | null;
-}
-
 export class ShareListItemDto {
   @ApiProperty({ description: '分享 ID' })
   id: string;

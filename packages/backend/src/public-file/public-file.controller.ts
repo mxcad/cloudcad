@@ -33,6 +33,7 @@ import { PublicFileService, PreloadingData } from './public-file.service';
 import { UploadExtReferenceDto, ConvertFileDto } from './dto';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -42,7 +43,7 @@ const ALLOWED_EXT_REFERENCE_EXTENSIONS = [
   '.dwg', '.dxf',
 ];
 
-const MAX_EXT_REFERENCE_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_EXT_REFERENCE_FILE_SIZE = 100 * 1024 * 1024; // 100MB（默认值，运行时配置可覆盖）
 
 function validateFileName(fileName: string): boolean {
   if (fileName.length > 255) return false;
@@ -66,7 +67,10 @@ function validateFileType(fileName: string): boolean {
 export class PublicFileController {
   private readonly logger = new Logger(PublicFileController.name);
 
-  constructor(private readonly publicFileService: PublicFileService) {}
+  constructor(
+    private readonly publicFileService: PublicFileService,
+    private readonly runtimeConfigService: RuntimeConfigService
+  ) {}
 
   /**
    * 通过文件哈希访问目录下的文件
@@ -235,7 +239,10 @@ export class PublicFileController {
     }
 
     if (file.size > MAX_EXT_REFERENCE_FILE_SIZE) {
-      throw new BadRequestException('文件大小超出限制（最大 100MB）');
+      const extRefMaxFileSizeMB = await this.runtimeConfigService.getValue<number>('extRefMaxFileSize', 100);
+      if (file.size > extRefMaxFileSizeMB * 1024 * 1024) {
+        throw new BadRequestException(`文件大小超出限制（最大 ${extRefMaxFileSizeMB}MB）`);
+      }
     }
 
     this.logger.log(

@@ -15,7 +15,6 @@ interface FileSystemStatesProps {
   isEmpty: boolean;
   isAtRoot: boolean;
   isTrashView: boolean;
-  isProjectTrashView: boolean;
   searchTerm: string;
   canCreateProject: boolean;
   projectFilter: ProjectFilterType;
@@ -29,7 +28,6 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
   isEmpty,
   isAtRoot,
   isTrashView,
-  isProjectTrashView,
   searchTerm,
   canCreateProject,
   projectFilter,
@@ -80,7 +78,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
   }
 
   if (isEmpty) {
-    const isProjectsEmpty = isAtRoot && !isTrashView && !isProjectTrashView;
+    const isProjectsEmpty = isAtRoot && !isTrashView;
 
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -93,28 +91,23 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
           className="text-xl font-bold mb-2"
           style={{ color: 'var(--text-primary)' }}
         >
-          {isProjectTrashView
+          {isTrashView
             ? '回收站是空的'
-            : isTrashView
-              ? '回收站是空的'
-              : isProjectsEmpty
-                ? '暂无项目'
-                : '这个文件夹是空的'}
+            : isProjectsEmpty
+              ? '暂无项目'
+              : '这个文件夹是空的'}
         </h3>
         <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
-          {isProjectTrashView
-            ? '删除的项目会出现在这里'
-            : isTrashView
-              ? '删除的文件和文件夹会出现在这里'
-              : searchTerm
-                ? '没有找到匹配的内容'
-                : isProjectsEmpty
-                  ? '开始创建您的第一个项目'
-                  : '上传文件或创建文件夹来开始使用'}
+          {isTrashView
+            ? (isAtRoot ? '已删除的项目会出现在这里' : '已删除的文件会出现在这里')
+            : searchTerm
+              ? '没有找到匹配的内容'
+              : isProjectsEmpty
+                ? '开始创建您的第一个项目'
+                : '上传文件或创建文件夹来开始使用'}
         </p>
         {isProjectsEmpty &&
           canCreateProject &&
-          !isProjectTrashView &&
           !isTrashView &&
           projectFilter !== 'joined' && (
             <Button

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Copy, Check, Trash2, Loader2, ExternalLink, Plus } from 'lucide-react';
+import { Copy, Check, Trash2, Loader2, ExternalLink, Plus, Edit3 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useNotification } from '../../contexts/NotificationContext';
@@ -7,10 +7,33 @@ import { getErrorMessage } from '../../utils/errorHandler';
 import {
   shareControllerListShares,
   shareControllerRevokeShare,
+  shareControllerUpdateShare,
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
 import { ShareDialog } from './ShareDialog';
 import './ShareManageDialog.css';
+
+type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
+
+const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
+  never: '永不过期',
+  '2h': '2 小时',
+  '6h': '6 小时',
+  '12h': '12 小时',
+  '1d': '1 天',
+  '3d': '3 天',
+  '7d': '7 天',
+  custom: '自定义',
+};
+
+const EXPIRATION_VALUES: Record<Exclude<ExpirationOption, 'never' | 'custom'>, number> = {
+  '2h': 7200,
+  '6h': 21600,
+  '12h': 43200,
+  '1d': 86400,
+  '3d': 259200,
+  '7d': 604800,
+};
 
 interface ShareManageDialogProps {
   isOpen: boolean;
@@ -32,6 +55,11 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const [editToken, setEditToken] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editExpiration, setEditExpiration] = useState<ExpirationOption>('never');
+  const [editCustomDays, setEditCustomDays] = useState(1);
 
   const fetchShares = useCallback(async () => {
     setLoading(true);
@@ -80,6 +108,53 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
+    }
+  };
+
+  const openEditModal = (token: string, expiresAt: string | null) => {
+    setEditToken(token);
+    setEditCustomDays(1);
+    if (!expiresAt) {
+      setEditExpiration('never');
+    } else {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 7200 * 1000) setEditExpiration('2h');
+      else if (diff <= 21600 * 1000) setEditExpiration('6h');
+      else if (diff <= 43200 * 1000) setEditExpiration('12h');
+      else if (diff <= 86400 * 1000) setEditExpiration('1d');
+      else if (diff <= 259200 * 1000) setEditExpiration('3d');
+      else if (diff <= 604800 * 1000) setEditExpiration('7d');
+      else {
+        setEditExpiration('custom');
+        setEditCustomDays(Math.ceil(diff / (86400 * 1000)));
+      }
+    }
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editToken) return;
+    let expiresAt: string | null = null;
+    if (editExpiration === 'custom') {
+      expiresAt = new Date(Date.now() + editCustomDays * 86400 * 1000).toISOString();
+    } else if (editExpiration !== 'never') {
+      const secs = EXPIRATION_VALUES[editExpiration];
+      expiresAt = new Date(Date.now() + secs * 1000).toISOString();
+    }
+    try {
+      const result = await shareControllerUpdateShare({
+        path: { token: editToken },
+        body: { expiresAt } as any,
+      });
+      if (result.error) {
+        showToast(getErrorMessage(result.error), 'error');
+        return;
+      }
+      showToast('有效期已更新', 'success');
+      setShowEditModal(false);
+      fetchShares();
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
     }
@@ -174,6 +249,13 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                           <Button
                             variant="ghost"
                             size="xs"
+                            icon={Edit3}
+                            onClick={() => openEditModal(item.token, item.expiresAt as string | null)}
+                            tooltip="修改有效期"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="xs"
                             icon={Trash2}
                             onClick={() => handleRevoke(item.token)}
                             tooltip="撤销分享"
@@ -198,6 +280,50 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
         }}
         fileId={fileId}
       />
+
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="修改有效期"
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
+          <div>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+              有效期
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map((key) => (
+                <Button
+                  key={key}
+                  variant={editExpiration === key ? 'primary' : 'outline'}
+                  size="xs"
+                  onClick={() => setEditExpiration(key)}
+                >
+                  {EXPIRATION_LABELS[key]}
+                </Button>
+              ))}
+            </div>
+            {editExpiration === 'custom' && (
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={editCustomDays}
+                  onChange={(e) => setEditCustomDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
+                  style={{ width: '60px', padding: '4px 8px', fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                />
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>天后过期</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <Button variant="ghost" onClick={() => setShowEditModal(false)}>取消</Button>
+            <Button variant="primary" onClick={handleSaveEdit}>保存</Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

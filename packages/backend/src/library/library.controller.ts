@@ -50,6 +50,7 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { Public } from '../auth/decorators/public.decorator';
+import { StorageQuotaInterceptor } from '../common/interceptors/storage-quota.interceptor';
 import { FileSystemService } from '../file-system/file-system.service';
 import { FileDownloadHandlerService } from '../file-system/file-download/file-download-handler.service';
 import { MxcadFileHandlerService } from '../mxcad/core/mxcad-file-handler.service';
@@ -62,9 +63,11 @@ import { MoveNodeDto } from '../file-system/dto/move-node.dto';
 import { CopyNodeDto } from '../file-system/dto/copy-node.dto';
 import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
 import { QueryChildrenDto } from '../file-system/dto/query-children.dto';
+import { BatchDeleteDto, BatchMoveDto, BatchCopyDto } from '../file-system/dto/batch-operations.dto';
 import {
   FileSystemNodeDto,
   NodeListResponseDto,
+  BatchOperationResponseDto,
 } from '../file-system/dto/file-system-response.dto';
 import { FileContentResponseDto } from '../version-control/dto/file-content-response.dto';
 import { SaveLibraryNodeDto } from './dto/save-library-node.dto';
@@ -194,6 +197,7 @@ export class LibraryController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Overwrite save drawing library file' })
   @ApiResponse({ status: 200, description: 'Success' })
@@ -213,6 +217,7 @@ export class LibraryController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Save-as drawing to drawing library' })
   @ApiResponse({ status: 200, description: 'Success' })
@@ -285,6 +290,41 @@ export class LibraryController {
   async copyDrawingNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     await this.validateLibraryNode(dto.targetParentId, 'drawing');
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
+  }
+
+  @Post('drawing/nodes/batch-delete')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Batch delete drawing library nodes' })
+  @ApiResponse({ status: 200, description: 'Success', type: BatchOperationResponseDto })
+  async batchDeleteDrawingNodes(@Body() dto: BatchDeleteDto) {
+    return this.fileSystemService.batchDeleteNodes(dto.nodeIds, dto.permanently);
+  }
+
+  @Post('drawing/nodes/batch-move')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Batch move drawing library nodes' })
+  @ApiResponse({ status: 200, description: 'Success', type: BatchOperationResponseDto })
+  async batchMoveDrawingNodes(@Body() dto: BatchMoveDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'drawing');
+    return this.fileSystemService.batchMoveNodes(dto.nodeIds, dto.targetParentId);
+  }
+
+  @Post('drawing/nodes/batch-copy')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_DRAWING_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Batch copy drawing library nodes' })
+  @ApiResponse({ status: 201, description: 'Success', type: BatchOperationResponseDto })
+  async batchCopyDrawingNodes(@Body() dto: BatchCopyDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'drawing');
+    return this.fileSystemService.batchCopyNodes(dto.nodeIds, dto.targetParentId);
   }
 
   // ========== Block library - read ==========
@@ -383,6 +423,7 @@ export class LibraryController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Overwrite save block library file' })
   @ApiResponse({ status: 200, description: 'Success' })
@@ -402,6 +443,7 @@ export class LibraryController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(StorageQuotaInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Save-as block to block library' })
   @ApiResponse({ status: 200, description: 'Success' })
@@ -474,6 +516,41 @@ export class LibraryController {
   async copyBlockNode(@Param('nodeId') nodeId: string, @Body() dto: CopyNodeDto) {
     await this.validateLibraryNode(dto.targetParentId, 'block');
     return this.fileSystemService.copyNode(nodeId, dto.targetParentId);
+  }
+
+  @Post('block/nodes/batch-delete')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Batch delete block library nodes' })
+  @ApiResponse({ status: 200, description: 'Success', type: BatchOperationResponseDto })
+  async batchDeleteBlockNodes(@Body() dto: BatchDeleteDto) {
+    return this.fileSystemService.batchDeleteNodes(dto.nodeIds, dto.permanently);
+  }
+
+  @Post('block/nodes/batch-move')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Batch move block library nodes' })
+  @ApiResponse({ status: 200, description: 'Success', type: BatchOperationResponseDto })
+  async batchMoveBlockNodes(@Body() dto: BatchMoveDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'block');
+    return this.fileSystemService.batchMoveNodes(dto.nodeIds, dto.targetParentId);
+  }
+
+  @Post('block/nodes/batch-copy')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions([SystemPermission.LIBRARY_BLOCK_MANAGE])
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Batch copy block library nodes' })
+  @ApiResponse({ status: 201, description: 'Success', type: BatchOperationResponseDto })
+  async batchCopyBlockNodes(@Body() dto: BatchCopyDto) {
+    await this.validateLibraryNode(dto.targetParentId, 'block');
+    return this.fileSystemService.batchCopyNodes(dto.nodeIds, dto.targetParentId);
   }
 
   // ========== Private helpers ==========

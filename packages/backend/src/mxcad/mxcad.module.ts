@@ -59,7 +59,7 @@ import { ConversionModule } from '../conversion';
       useFactory: async (configService: ConfigService<AppConfig>) => {
         const config = configService.get('mxcadUploadPath', { infer: true });
         const tempPath = configService.get('mxcadTempPath', { infer: true });
-        const maxFileSize = 500 * 1024 * 1024;
+        const maxFileSize = configService.get('upload.maxSize', { infer: true }) as number || 500 * 1024 * 1024;
 
         return {
           storage: diskStorage({

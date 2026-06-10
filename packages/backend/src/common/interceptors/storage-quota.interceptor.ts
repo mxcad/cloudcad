@@ -76,17 +76,25 @@ export class StorageQuotaInterceptor implements NestInterceptor {
     const parentNodeId = this.extractParentNodeId(request);
 
     // 如果无法获取必要信息，记录原因并跳过检查
+    const isWriteMethod = ['POST', 'PUT', 'PATCH'].includes(request.method);
+
     if (!fileSize) {
-      this.logger.debug(
-        `跳过配额检查: 无法获取文件大小, url=${url}, method=${request.method}`
-      );
+      const msg = `跳过配额检查: 无法获取文件大小, url=${url}, method=${request.method}`;
+      if (isWriteMethod) {
+        this.logger.warn(msg);
+      } else {
+        this.logger.debug(msg);
+      }
       return next.handle();
     }
 
     if (!parentNodeId) {
-      this.logger.debug(
-        `跳过配额检查: 无法获取父节点ID, url=${url}, method=${request.method}`
-      );
+      const msg = `跳过配额检查: 无法获取父节点ID, url=${url}, method=${request.method}`;
+      if (isWriteMethod) {
+        this.logger.warn(msg);
+      } else {
+        this.logger.debug(msg);
+      }
       return next.handle();
     }
 
@@ -172,7 +180,31 @@ export class StorageQuotaInterceptor implements NestInterceptor {
       }
     }
 
-    // 7. Content-Length 头（对于纯文件上传的请求）
+    // 7. Axios/umi-request 等库的 data 字段
+    if (request.body?.data?.size) {
+      const size = Number(request.body.data.size);
+      if (!isNaN(size) && size > 0) {
+        return size;
+      }
+    }
+
+    // 8. 前端上传库的嵌套字段（如 file.size）
+    if (request.body?.['file']?.size) {
+      const size = Number(request.body['file'].size);
+      if (!isNaN(size) && size > 0) {
+        return size;
+      }
+    }
+
+    // 9. 分片上传的 chunkSize + chunks 乘积
+    if (request.body?.chunkSize && request.body?.chunks) {
+      const size = Number(request.body.chunkSize) * Number(request.body.chunks);
+      if (!isNaN(size) && size > 0) {
+        return size;
+      }
+    }
+
+    // 10. Content-Length 头（对于纯文件上传的请求）
     const contentLength = request.headers?.['content-length'];
     if (contentLength && !request.body?.fileSize && !request.body?.size) {
       // 仅在没有其他大小信息时使用 Content-Length 作为估算
@@ -199,10 +231,14 @@ export class StorageQuotaInterceptor implements NestInterceptor {
       'node_id',
       'targetNodeId',
       'target_node_id',
+      'targetParentId',
+      'target_parent_id',
       'folderId',
       'folder_id',
       'projectId',
       'project_id',
+      'libraryKey',
+      'library_key',
     ];
 
     for (const key of bodyKeys) {
@@ -219,10 +255,14 @@ export class StorageQuotaInterceptor implements NestInterceptor {
       'node_id',
       'targetNodeId',
       'target_node_id',
+      'targetParentId',
+      'target_parent_id',
       'folderId',
       'folder_id',
       'projectId',
       'project_id',
+      'libraryKey',
+      'library_key',
     ];
 
     for (const key of queryKeys) {

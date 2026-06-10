@@ -5,6 +5,7 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { RuntimeConfigModule } from '../../runtime-config/runtime-config.module';
 import { DatabaseModule } from '../../database/database.module';
 import { CommonModule } from '../../common/common.module';
 import { FileSystemModule } from '../../file-system/file-system.module';
@@ -22,7 +23,7 @@ import { UploadUtilityService } from './upload-utility.service';
 import { ChunkUploadManagerService } from '../services/chunk-upload-manager.service';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, CommonModule, FileSystemModule, StorageModule, VersionControlModule, MxcadInfraModule, MxcadNodeModule, MxcadConversionModule, MxcadExternalRefModule, MxcadSaveModule],
+  imports: [ConfigModule, RuntimeConfigModule, DatabaseModule, CommonModule, FileSystemModule, StorageModule, VersionControlModule, MxcadInfraModule, MxcadNodeModule, MxcadConversionModule, MxcadExternalRefModule, MxcadSaveModule],
   providers: [
     FileMergeService,
     FileConversionUploadService,
