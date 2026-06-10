@@ -834,13 +834,14 @@ export class FileSystemController {
   ) {
     const userId = (req.user as { id?: string })?.id;
 
-    const node = await this.fileTreeService.getNode(nodeId);
-    if (!node) {
-      throw new NotFoundException("文件节点不存在");
+    let node: any;
+    try {
+      node = await this.fileTreeService.getNode(nodeId);
+    } catch {
+      return this.sendDefaultFallback(res);
     }
 
     if (userId) {
-      // 使用统一的文件访问权限检查（适用于资源库和项目文件）
       const hasAccess = await this.fileDownloadExportService.checkFileAccess(
         nodeId,
         userId,
@@ -865,7 +866,7 @@ export class FileSystemController {
         '.dxf': 'dxf.jpg',
         '.mxweb': 'mxweb.jpg',
       };
-      const defaultFile = defaultMap[ext] || 'default.svg';
+      const defaultFile = defaultMap[ext] || 'default.jpg';
       const defaultPath = path.join(this.DEFAULT_THUMBNAILS_DIR, defaultFile);
 
       if (fs.existsSync(defaultPath)) {
@@ -897,6 +898,16 @@ export class FileSystemController {
         res.status(500).json({ message: "读取缩略图失败" });
       }
     });
+  }
+
+  private sendDefaultFallback(res: Response) {
+    const defaultPath = path.join(this.DEFAULT_THUMBNAILS_DIR, 'default.jpg');
+    if (fs.existsSync(defaultPath)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+      return res.sendFile(defaultPath);
+    }
+    return res.status(204).end();
   }
 
   // ==================== 文件下载 ====================

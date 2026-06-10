@@ -266,7 +266,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       if (clipboardMode === 'cut') {
         const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
         for (const nodeId of clipboardItems) {
-          await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId } });
+          await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
         }
         clearClipboard();
         pushAction({
@@ -275,22 +275,27 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           projectId: currentProjectId,
           execute: async () => {
             for (const nodeId of clipboardItems) {
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId } });
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
             }
           },
           rollback: async () => {
             for (const [nodeId, srcParentId] of Object.entries(origParentIds)) {
               if (!srcParentId) continue;
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId } });
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId }, throwOnError: true });
             }
           },
         });
       } else {
         const newIds: string[] = [];
         for (const nodeId of clipboardItems) {
-          const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId } });
-          const newId = (result as unknown as { id?: string })?.id || '';
-          if (newId) newIds.push(newId);
+          try {
+            const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
+            const data = (result as unknown as { data?: { id?: string } })?.data || result;
+            const newId = (data as unknown as { id?: string })?.id || '';
+            if (newId) newIds.push(newId);
+          } catch (e) {
+            console.log('[sidebarHandlePaste] copyNode failed', nodeId, e);
+          }
         }
         if (newIds.length > 0) {
           pushAction({
@@ -299,7 +304,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             projectId: currentProjectId,
             execute: async () => {
               for (const nodeId of clipboardItems) {
-                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId } });
+                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId }, throwOnError: true });
               }
             },
             rollback: async () => {

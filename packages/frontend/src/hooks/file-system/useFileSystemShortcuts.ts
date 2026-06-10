@@ -64,6 +64,7 @@ export function useFileSystemShortcuts({
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('[shortcuts:handleKeyDown]', e.key, e.ctrlKey, e.metaKey, e.shiftKey, 'enabled:', enabled, 'target:', e.target);
       if (isInputFocused()) return;
 
       if (containerRef?.current && !containerRef.current.contains(e.target as Node)) {

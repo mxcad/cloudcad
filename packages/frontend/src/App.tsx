@@ -27,7 +27,6 @@ import { GlobalTourRenderer } from './components/tour';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { BrandProvider } from './contexts/BrandContext';
-import { useMxCADPreload } from './hooks/useMxCADPreload';
 import NoPermissionPage from './components/ui/NoPermissionPage';
 
 // ============================================================================
@@ -188,9 +187,6 @@ function CADEditorRouteGuard() {
 }
 
 function AppContent() {
-  // 所有页面（CAD 编辑器自身除外）预加载 CAD 引擎
-  useMxCADPreload();
-
   return (
     <div className="layout-container">
       {/* 全局加载遮罩 - 覆盖所有内容 */}

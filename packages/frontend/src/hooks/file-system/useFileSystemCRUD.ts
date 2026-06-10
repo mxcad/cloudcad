@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   fileSystemControllerCreateProject,
@@ -98,6 +98,11 @@ export const useFileSystemCRUD = ({
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
   const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
+
+  const selectedNodesRef = useRef(selectedNodes);
+  selectedNodesRef.current = selectedNodes;
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
 
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showCreateDrawingModal, setShowCreateDrawingModal] = useState(false);
@@ -337,14 +342,15 @@ export const useFileSystemCRUD = ({
 
   const handleBatchDelete = useCallback(
     (permanently: boolean = false) => {
-      if (selectedNodes.size === 0) {
-        showToast('请先选择要删除的项目', 'error');
+      const currentSelected = selectedNodesRef.current;
+      const currentNodes = nodesRef.current;
+      if (currentSelected.size === 0) {
         return;
       }
 
       const message = permanently
-        ? `确定要彻底删除选中的 ${selectedNodes.size} 个项目吗？此操作不可恢复。`
-        : `确定要将选中的 ${selectedNodes.size} 个项目移到回收站吗？`;
+        ? `确定要彻底删除选中的 ${currentSelected.size} 个项目吗？此操作不可恢复。`
+        : `确定要将选中的 ${currentSelected.size} 个项目移到回收站吗？`;
 
       showConfirm(
         permanently ? '确认彻底删除' : '批量删除',
@@ -352,8 +358,8 @@ export const useFileSystemCRUD = ({
         async () => {
           try {
             await Promise.all(
-              Array.from(selectedNodes).map((nodeId: string) => {
-                const node = nodes.find((n) => n.id === nodeId);
+              Array.from(currentSelected).map((nodeId: string) => {
+                const node = currentNodes.find((n) => n.id === nodeId);
                 // TODO: Replace with SDK when backend adds deleteProject
                 if (node?.isRoot) {
                   return fileSystemControllerDeleteNode({ path: { nodeId: node.id }, query: { permanently }, throwOnError: true });
@@ -364,7 +370,7 @@ export const useFileSystemCRUD = ({
             showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
 
             if (!permanently) {
-              const batchNodeIds = Array.from(selectedNodes);
+              const batchNodeIds = Array.from(currentSelected);
               pushAction({
                 type: 'delete',
                 description: `批量删除 ${batchNodeIds.length} 个项目`,
@@ -379,7 +385,7 @@ export const useFileSystemCRUD = ({
                 rollback: async () => {
                   await Promise.all(
                     batchNodeIds.map(async (id) => {
-                      const node = nodes.find((n) => n.id === id);
+                      const node = currentNodes.find((n) => n.id === id);
                       if (node?.isRoot) {
                         await fileSystemControllerRestoreTrashItems({ body: { itemIds: [id] }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
                       } else {
@@ -397,8 +403,8 @@ export const useFileSystemCRUD = ({
               loadData();
             } else if (
               permanently &&
-              Array.from(selectedNodes).some((nodeId) => {
-                const node = nodes.find((n) => n.id === nodeId);
+              Array.from(currentSelected).some((nodeId) => {
+                const node = currentNodes.find((n) => n.id === nodeId);
                 return node?.isRoot;
               })
             ) {
@@ -416,30 +422,31 @@ export const useFileSystemCRUD = ({
       );
     },
     [
-      selectedNodes,
-      nodes,
       showConfirm,
       loadData,
       showToast,
       clearSelection,
       navigate,
       isProjectTrashViewRef,
+      urlProjectId,
+      pushAction,
+      mode,
     ]
   );
 
   const handleBatchRestore = useCallback(() => {
-    if (selectedNodes.size === 0) {
-      showToast('请先选择要恢复的项目', 'error');
+    const currentSelected = selectedNodesRef.current;
+    if (currentSelected.size === 0) {
       return;
     }
 
     showConfirm(
       '批量恢复',
-      `确定要恢复选中的 ${selectedNodes.size} 个项目吗？`,
+      `确定要恢复选中的 ${currentSelected.size} 个项目吗？`,
       async () => {
         try {
-          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(selectedNodes) }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
-          showToast(`已恢复 ${selectedNodes.size} 个项目`, 'success');
+          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(currentSelected) }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+          showToast(`已恢复 ${currentSelected.size} 个项目`, 'success');
           clearSelection();
           loadData();
         } catch (error) {
@@ -453,7 +460,7 @@ export const useFileSystemCRUD = ({
       'warning',
       '恢复'
     );
-  }, [selectedNodes, showConfirm, loadData, showToast, clearSelection]);
+  }, [showConfirm, loadData, showToast, clearSelection]);
 
   const handleOpenRename = useCallback((node: FileSystemNode) => {
     setEditingNode(node);

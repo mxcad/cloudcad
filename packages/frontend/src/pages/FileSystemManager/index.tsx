@@ -11,7 +11,6 @@ import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
 import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { useFileSystem } from '@/hooks/file-system';
-import { useFileSystemSelection } from '@/hooks/file-system/useFileSystemSelection';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { usePermission } from '@/hooks/usePermission';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
@@ -139,6 +138,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     isProjectTrashView,
     handleToggleProjectTrashView,
     handleClearTrash,
+    selectedNodes,
+    handleNodeSelect,
+    handleSelectAll,
+    clearSelection,
+    selectNodes,
   } = useFileSystem({
     mode,
     personalSpaceId,
@@ -192,17 +196,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   const viewNodes = isAtRoot ? displayNodes : accumulatedNodes;
 
-  const {
-    selectedNodes,
-    handleNodeSelect,
-    handleSelectAll,
-    clearSelection,
-    selectNodes,
-  } = useFileSystemSelection({
-    nodes: viewNodes,
-    showToast,
-  });
-
   const handleFileOpen = useCallback((node: FileSystemNode) => {
     clearSelection();
     handleFileOpenRaw(node);
@@ -233,7 +226,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [selectedNodes, nodes, setClipboard, projectId, showToast]);
 
   const clipboardHandlePaste = useCallback(async () => {
-    if (clipboardItems.length === 0 || !clipboardMode) return;
+    console.log('[clipboardHandlePaste] called', { clipboardItems, clipboardMode, projectId, currentNodeId: currentNode?.id, hasPushAction: !!pushAction });
+    if (clipboardItems.length === 0 || !clipboardMode) {
+      console.log('[clipboardHandlePaste] early return: no items or mode');
+      return;
+    }
 
     if (projectId) {
       const sourceProjectId = useFileSystemClipboardStore.getState().sourceProjectId;
@@ -252,43 +249,54 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     try {
       if (clipboardMode === 'cut') {
         const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
+        console.log('[clipboardHandlePaste] cut mode', { origParentIds, clipboardItems, targetParentId });
         for (const nodeId of clipboardItems) {
-          await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } });
+          const result = await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+          console.log('[clipboardHandlePaste] moveNode result', nodeId, result);
         }
         clearClipboard();
         showToast('粘贴成功', 'success');
-        pushAction({
-          type: 'move',
+        const action = {
+          type: 'move' as const,
           description: `移动 ${Object.keys(origParentIds).length} 个项目`,
           projectId,
           execute: async () => {
             for (const nodeId of clipboardItems) {
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } });
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
             }
           },
           rollback: async () => {
             for (const [nodeId, srcParentId] of Object.entries(origParentIds)) {
               if (!srcParentId) continue;
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId } });
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId }, throwOnError: true });
             }
           },
-        });
+        };
+        console.log('[clipboardHandlePaste] pushing undo action', action);
+        pushAction(action);
       } else {
         const newIds: string[] = [];
         for (const nodeId of clipboardItems) {
-          const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
-          const newId = (result as unknown as { id?: string })?.id || '';
-          if (newId) newIds.push(newId);
+          try {
+            const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+            const data = (result as unknown as { data?: { id?: string } })?.data || result;
+            const newId = (data as unknown as { id?: string })?.id || '';
+            console.log('[clipboardHandlePaste] copyNode result', nodeId, { newId });
+            if (newId) newIds.push(newId);
+          } catch (e) {
+            console.log('[clipboardHandlePaste] copyNode failed', nodeId, e);
+          }
         }
         showToast('粘贴成功', 'success');
         if (newIds.length > 0) {
+          console.log('[clipboardHandlePaste] pushing undo action for copy, newIds:', newIds);
           pushAction({
             type: 'delete',
             description: `复制 ${clipboardItems.length} 个项目`,
             projectId,
             execute: async () => {
               for (const nodeId of clipboardItems) {
-                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
+                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
               }
             },
             rollback: async () => {
@@ -326,9 +334,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [selectedNodes, nodes, handleOpenRename]);
 
   const clipboardHandleUndo = useCallback(async () => {
+    console.log('[clipboardHandleUndo] called', { undoStackLength: undoStack.length, projectId });
     if (undoStack.length === 0) return;
     try {
       const action = undoStack[undoStack.length - 1];
+      console.log('[clipboardHandleUndo] action found', action?.type, action?.description);
       if (!action) return;
       await undoStoreUndo(projectId);
       showToast(`已撤销: ${action.description}`, 'info');
@@ -355,11 +365,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   useFileSystemShortcuts({
     enabled: !isAtRoot,
-    onUndo: clipboardHandleUndo,
-    onRedo: clipboardHandleRedo,
-    onCopy: clipboardHandleCopy,
-    onCut: clipboardHandleCut,
-    onPaste: clipboardHandlePaste,
+    onUndo: () => { console.log('[shortcuts] onUndo triggered'); return clipboardHandleUndo(); },
+    onRedo: () => { console.log('[shortcuts] onRedo triggered'); return clipboardHandleRedo(); },
+    onCopy: () => { console.log('[shortcuts] onCopy triggered'); clipboardHandleCopy(); },
+    onCut: () => { console.log('[shortcuts] onCut triggered'); clipboardHandleCut(); },
+    onPaste: () => { console.log('[shortcuts] onPaste triggered'); return clipboardHandlePaste(); },
     onDeleteSelected: handleDeleteSelected,
     onRenameSelected: handleRenameSelected,
     onClearSelection: clearSelection,
