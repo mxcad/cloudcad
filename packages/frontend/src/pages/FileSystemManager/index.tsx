@@ -22,6 +22,7 @@ import {
   fileSystemControllerCreateProject,
   fileSystemControllerMoveNode,
   fileSystemControllerCopyNode,
+  fileSystemControllerDeleteNode,
 } from '@/api-sdk';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { FileSystemNode } from '@/types/filesystem';
@@ -148,6 +149,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const clipboardMode = useFileSystemClipboardStore((s) => s.mode);
   const setClipboard = useFileSystemClipboardStore((s) => s.setClipboard);
   const clearClipboard = useFileSystemClipboardStore((s) => s.clearClipboard);
+  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
   const undoStoreUndo = useFileSystemUndoRedoStore((s) => s.undo);
   const undoStoreRedo = useFileSystemUndoRedoStore((s) => s.redo);
   const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
@@ -220,9 +222,15 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       showToast('请先选择要剪切的文件', 'info');
       return;
     }
-    setClipboard(Array.from(selectedNodes), 'cut', projectId);
+    const nodeIds = Array.from(selectedNodes);
+    const sourceParentIds: Record<string, string> = {};
+    for (const id of nodeIds) {
+      const node = nodes.find((n) => n.id === id);
+      if (node?.parentId) sourceParentIds[id] = node.parentId;
+    }
+    setClipboard(nodeIds, 'cut', projectId, sourceParentIds);
     showToast(`已剪切 ${selectedNodes.size} 个项目`, 'info');
-  }, [selectedNodes, setClipboard, projectId, showToast]);
+  }, [selectedNodes, nodes, setClipboard, projectId, showToast]);
 
   const clipboardHandlePaste = useCallback(async () => {
     if (clipboardItems.length === 0 || !clipboardMode) return;
@@ -243,23 +251,60 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
     try {
       if (clipboardMode === 'cut') {
+        const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
         for (const nodeId of clipboardItems) {
           await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } });
         }
         clearClipboard();
         showToast('粘贴成功', 'success');
+        pushAction({
+          type: 'move',
+          description: `移动 ${Object.keys(origParentIds).length} 个项目`,
+          projectId,
+          execute: async () => {
+            for (const nodeId of clipboardItems) {
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId } });
+            }
+          },
+          rollback: async () => {
+            for (const [nodeId, srcParentId] of Object.entries(origParentIds)) {
+              if (!srcParentId) continue;
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId } });
+            }
+          },
+        });
       } else {
+        const newIds: string[] = [];
         for (const nodeId of clipboardItems) {
-          await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
+          const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
+          const newId = (result as unknown as { id?: string })?.id || '';
+          if (newId) newIds.push(newId);
         }
         showToast('粘贴成功', 'success');
+        if (newIds.length > 0) {
+          pushAction({
+            type: 'delete',
+            description: `复制 ${clipboardItems.length} 个项目`,
+            projectId,
+            execute: async () => {
+              for (const nodeId of clipboardItems) {
+                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId } });
+              }
+            },
+            rollback: async () => {
+              for (const id of newIds) {
+                await fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
+              }
+            },
+          });
+        }
       }
       handleRefresh();
     } catch (error) {
       const appError = handleError(error, '粘贴', 'medium');
       showToast(appError.message, 'error');
     }
-  }, [clipboardItems, clipboardMode, projectId, currentNode, clearClipboard, handleRefresh, showToast]);
+  }, [clipboardItems, clipboardMode, projectId, currentNode, clearClipboard, handleRefresh, showToast, pushAction]);
 
   const handleRubberBandSelect = useCallback((nodeIds: string[]) => {
     selectNodes(nodeIds);

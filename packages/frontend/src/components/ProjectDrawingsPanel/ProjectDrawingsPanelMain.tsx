@@ -24,6 +24,7 @@ import {
   fileSystemControllerUpdateNode,
   fileSystemControllerMoveNode,
   fileSystemControllerCopyNode,
+  fileSystemControllerDeleteNode,
 } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
@@ -174,6 +175,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const clipboardMode = useFileSystemClipboardStore((s) => s.mode);
   const setClipboard = useFileSystemClipboardStore((s) => s.setClipboard);
   const clearClipboard = useFileSystemClipboardStore((s) => s.clearClipboard);
+  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
   const undoStoreUndo = useFileSystemUndoRedoStore((s) => s.undo);
   const undoStoreRedo = useFileSystemUndoRedoStore((s) => s.redo);
   const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
@@ -242,7 +244,12 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   const sidebarHandleCut = useCallback(() => {
     if (nodes.length === 0) return;
-    setClipboard(nodes.map((n) => n.id), 'cut', currentProjectId);
+    const nodeIds = nodes.map((n) => n.id);
+    const sourceParentIds: Record<string, string> = {};
+    for (const n of nodes) {
+      if (n.parentId) sourceParentIds[n.id] = n.parentId;
+    }
+    setClipboard(nodeIds, 'cut', currentProjectId, sourceParentIds);
     showToast(`已剪切 ${nodes.length} 个项目`, 'info');
   }, [nodes, currentProjectId, setClipboard, showToast]);
 
@@ -257,13 +264,50 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     }
     try {
       if (clipboardMode === 'cut') {
+        const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
         for (const nodeId of clipboardItems) {
           await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId } });
         }
         clearClipboard();
+        pushAction({
+          type: 'move',
+          description: `移动 ${Object.keys(origParentIds).length} 个项目`,
+          projectId: currentProjectId,
+          execute: async () => {
+            for (const nodeId of clipboardItems) {
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: targetId } });
+            }
+          },
+          rollback: async () => {
+            for (const [nodeId, srcParentId] of Object.entries(origParentIds)) {
+              if (!srcParentId) continue;
+              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId } });
+            }
+          },
+        });
       } else {
+        const newIds: string[] = [];
         for (const nodeId of clipboardItems) {
-          await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId } });
+          const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId } });
+          const newId = (result as unknown as { id?: string })?.id || '';
+          if (newId) newIds.push(newId);
+        }
+        if (newIds.length > 0) {
+          pushAction({
+            type: 'delete',
+            description: `复制 ${clipboardItems.length} 个项目`,
+            projectId: currentProjectId,
+            execute: async () => {
+              for (const nodeId of clipboardItems) {
+                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId: targetId } });
+              }
+            },
+            rollback: async () => {
+              for (const id of newIds) {
+                await fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
+              }
+            },
+          });
         }
       }
       showToast('粘贴成功', 'success');
@@ -272,7 +316,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       const appError = error instanceof Error ? error.message : '粘贴失败';
       showToast(appError, 'error');
     }
-  }, [clipboardItems, clipboardMode, breadcrumb, selectedProjectId, currentProjectId, clearClipboard, refreshNodes, showToast]);
+  }, [clipboardItems, clipboardMode, breadcrumb, selectedProjectId, currentProjectId, clearClipboard, refreshNodes, showToast, pushAction]);
 
   const sidebarHandleUndo = useCallback(async () => {
     if (undoStack.length === 0) return;

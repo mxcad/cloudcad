@@ -5991,7 +5991,7 @@ export type FileSystemControllerGetThumbnailData = {
 
 export type FileSystemControllerGetThumbnailErrors = {
     /**
-     * 未登录（项目文件需要登录）
+     * 未登录
      */
     401: unknown;
     /**

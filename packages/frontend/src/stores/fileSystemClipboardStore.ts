@@ -6,7 +6,8 @@ export interface FileSystemClipboardState {
   items: string[];
   mode: ClipboardMode | null;
   sourceProjectId: string;
-  setClipboard: (items: string[], mode: ClipboardMode, sourceProjectId: string) => void;
+  sourceParentIds: Record<string, string>;
+  setClipboard: (items: string[], mode: ClipboardMode, sourceProjectId: string, sourceParentIds?: Record<string, string>) => void;
   clearClipboard: () => void;
 }
 
@@ -15,13 +16,14 @@ export const useFileSystemClipboardStore = create<FileSystemClipboardState>(
     items: [],
     mode: null,
     sourceProjectId: '',
+    sourceParentIds: {},
 
-    setClipboard: (items, mode, sourceProjectId) => {
-      set({ items, mode, sourceProjectId });
+    setClipboard: (items, mode, sourceProjectId, sourceParentIds = {}) => {
+      set({ items, mode, sourceProjectId, sourceParentIds });
     },
 
     clearClipboard: () => {
-      set({ items: [], mode: null, sourceProjectId: '' });
+      set({ items: [], mode: null, sourceProjectId: '', sourceParentIds: {} });
     },
   })
 );

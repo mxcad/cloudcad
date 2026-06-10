@@ -57,6 +57,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = memo(
         <img
           src={thumbnailSrc}
           alt={node.name}
+          draggable={false}
           className="object-contain"
           style={{
             position: 'absolute',

@@ -824,7 +824,7 @@ export class FileSystemController {
   @ApiProduces("image/*")
   @ApiResponse({ status: 200, description: "获取缩略图成功" })
   @ApiResponse({ status: 204, description: "缩略图不存在" })
-  @ApiResponse({ status: 401, description: "未登录（项目文件需要登录）" })
+  @ApiResponse({ status: 401, description: "未登录" })
   @ApiResponse({ status: 403, description: "无权限访问该文件" })
   @ApiResponse({ status: 404, description: "文件节点不存在" })
   async getThumbnail(
@@ -839,16 +839,7 @@ export class FileSystemController {
       throw new NotFoundException("文件节点不存在");
     }
 
-    const libraryKey = await this.fileTreeService.getLibraryKey(nodeId);
-    const isLibraryNode = libraryKey !== null;
-
-    if (!userId) {
-      if (isLibraryNode) {
-        // 资源库允许未登录用户查看缩略图
-      } else {
-        throw new UnauthorizedException("未登录");
-      }
-    } else {
+    if (userId) {
       // 使用统一的文件访问权限检查（适用于资源库和项目文件）
       const hasAccess = await this.fileDownloadExportService.checkFileAccess(
         nodeId,
