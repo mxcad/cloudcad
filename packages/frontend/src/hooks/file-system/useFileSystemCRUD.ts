@@ -142,7 +142,7 @@ export const useFileSystemCRUD = ({
         pushAction({
           type: 'createFolder',
           description: `创建文件夹 "${folderNameTrimmed}"`,
-          projectId: urlProjectId || '',
+          projectId: urlProjectId || undefined,
           execute: async () => {
             const result = await fileSystemControllerCreateFolder({ path: { parentId: parentNodeId }, body: { name: folderNameTrimmed }, throwOnError: true });
             const newId = (result as unknown as { id?: string })?.id || '';
@@ -171,18 +171,41 @@ export const useFileSystemCRUD = ({
     }
 
     const parentNodeId = currentNode?.id || urlProjectId;
+    const drawingNameTrimmed = drawingName.trim();
 
     try {
-      await fileSystemControllerCreateDrawing({
+      const result = await fileSystemControllerCreateDrawing({
         body: {
           parentId: parentNodeId,
-          name: drawingName.trim() || undefined,
+          name: drawingNameTrimmed || undefined,
         },
         throwOnError: true,
       });
       showToast('图纸创建成功', 'success');
       setDrawingName('');
       setShowCreateDrawingModal(false);
+      const createdId = (result as unknown as { id?: string })?.id || '';
+      if (createdId) {
+        const createdIdHolder = { current: createdId };
+        pushAction({
+          type: 'createDrawing',
+          description: `创建图纸 "${drawingNameTrimmed || '未命名'}"`,
+          projectId: urlProjectId || undefined,
+          execute: async () => {
+            const r = await fileSystemControllerCreateDrawing({
+              body: { parentId: parentNodeId, name: drawingNameTrimmed || undefined },
+              throwOnError: true,
+            });
+            const newId = (r as unknown as { id?: string })?.id || '';
+            if (newId) createdIdHolder.current = newId;
+          },
+          rollback: async () => {
+            if (createdIdHolder.current) {
+              await fileSystemControllerDeleteNode({ path: { nodeId: createdIdHolder.current }, query: { permanently: true }, throwOnError: true });
+            }
+          },
+        });
+      }
       loadData();
       return null;
     } catch (error) {
@@ -190,7 +213,7 @@ export const useFileSystemCRUD = ({
       showToast(appError.message, 'error');
       return null;
     }
-  }, [drawingName, urlProjectId, currentNode, loadData, showToast]);
+  }, [drawingName, urlProjectId, currentNode, loadData, showToast, pushAction]);
 
   const handleRename = useCallback(async () => {
     if (!editingNode || !urlProjectId) {
@@ -226,7 +249,7 @@ export const useFileSystemCRUD = ({
       pushAction({
         type: 'rename',
         description: `重命名 "${oldName}" → "${finalName}"`,
-        projectId: urlProjectId || '',
+        projectId: urlProjectId || undefined,
         execute: async () => {
           await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: finalName }, throwOnError: true });
         },
@@ -298,7 +321,7 @@ export const useFileSystemCRUD = ({
             pushAction({
               type: 'delete',
               description: `删除 "${deletedNodeName}"`,
-              projectId: urlProjectId || '',
+              projectId: urlProjectId || undefined,
               execute: async () => {
                 await fileSystemControllerDeleteNode({ path: { nodeId: deletedNodeId }, query: { permanently: false }, throwOnError: true });
               },
@@ -377,6 +400,26 @@ export const useFileSystemCRUD = ({
               showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
             }
 
+            if (!permanently) {
+              pushAction({
+                type: 'delete',
+                description: `批量删除 ${nodeIds.length} 个项目`,
+                projectId: urlProjectId || undefined,
+                execute: async () => {
+                  await fileSystemControllerBatchDeleteNodes({
+                    body: { nodeIds, permanently: false },
+                    throwOnError: true,
+                  });
+                },
+                rollback: async () => {
+                  await fileSystemControllerRestoreTrashItems({
+                    body: { itemIds: nodeIds },
+                    throwOnError: true,
+                  } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+                },
+              });
+            }
+
             clearSelection();
             loadData();
           } catch (error) {
@@ -388,7 +431,7 @@ export const useFileSystemCRUD = ({
         permanently ? '彻底删除' : '删除'
       );
     },
-    [showConfirm, loadData, showToast, clearSelection]
+    [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId]
   );
 
   const handleBatchRestore = useCallback(() => {
@@ -397,13 +440,29 @@ export const useFileSystemCRUD = ({
       return;
     }
 
+    const nodeIds = Array.from(currentSelected);
+
     showConfirm(
       '批量恢复',
-      `确定要恢复选中的 ${currentSelected.size} 个项目吗？`,
+      `确定要恢复选中的 ${nodeIds.length} 个项目吗？`,
       async () => {
         try {
-          await fileSystemControllerRestoreTrashItems({ body: { itemIds: Array.from(currentSelected) }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
-          showToast(`已恢复 ${currentSelected.size} 个项目`, 'success');
+          await fileSystemControllerRestoreTrashItems({ body: { itemIds: nodeIds }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+          showToast(`已恢复 ${nodeIds.length} 个项目`, 'success');
+          pushAction({
+            type: 'delete',
+            description: `批量恢复 ${nodeIds.length} 个项目`,
+            projectId: urlProjectId || undefined,
+            execute: async () => {
+              await fileSystemControllerRestoreTrashItems({ body: { itemIds: nodeIds }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
+            },
+            rollback: async () => {
+              await fileSystemControllerBatchDeleteNodes({
+                body: { nodeIds, permanently: false },
+                throwOnError: true,
+              });
+            },
+          });
           clearSelection();
           loadData();
         } catch (error) {
@@ -417,7 +476,7 @@ export const useFileSystemCRUD = ({
       'warning',
       '恢复'
     );
-  }, [showConfirm, loadData, showToast, clearSelection]);
+  }, [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId]);
 
   const handleOpenRename = useCallback((node: FileSystemNode) => {
     setEditingNode(node);

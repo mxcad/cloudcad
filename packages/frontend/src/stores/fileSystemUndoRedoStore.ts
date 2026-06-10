@@ -1,20 +1,35 @@
 import { create } from 'zustand';
 
 export interface UndoableAction {
-  type: 'delete' | 'move' | 'copy' | 'rename' | 'createFolder';
+  type: 'delete' | 'move' | 'copy' | 'paste-copy' | 'rename' | 'createFolder' | 'createDrawing';
   description: string;
-  projectId: string;
+  projectId: string | undefined;
   execute: () => Promise<void>;
   rollback: () => Promise<void>;
+}
+
+function isProcessingGuard(get: () => FileSystemUndoRedoState): boolean {
+  if (get().isProcessing) {
+    console.warn('[undoStore] already processing, skipping');
+    return true;
+  }
+  return false;
+}
+
+function projectGuard(action: UndoableAction, currentProjectId: string | undefined): void {
+  if (action.projectId != null && currentProjectId != null && action.projectId !== currentProjectId) {
+    throw new Error('无法撤销：当前项目与操作时的项目不一致');
+  }
 }
 
 export interface FileSystemUndoRedoState {
   undoStack: UndoableAction[];
   redoStack: UndoableAction[];
+  isProcessing: boolean;
 
   pushAction: (action: UndoableAction) => void;
-  undo: (currentProjectId: string) => Promise<void>;
-  redo: (currentProjectId: string) => Promise<void>;
+  undo: (currentProjectId: string | undefined) => Promise<void>;
+  redo: (currentProjectId: string | undefined) => Promise<void>;
   clearStack: () => void;
 }
 
@@ -22,67 +37,65 @@ export const useFileSystemUndoRedoStore = create<FileSystemUndoRedoState>(
   (set, get) => ({
     undoStack: [],
     redoStack: [],
+    isProcessing: false,
 
     pushAction: (action) => {
-      console.log('[undoStore] pushAction', action.type, action.description, 'undoStack before:', get().undoStack.length);
       set((state) => ({
         undoStack: [...state.undoStack, action],
         redoStack: [],
       }));
-      console.log('[undoStore] pushAction done, undoStack after:', get().undoStack.length);
     },
 
     undo: async (currentProjectId) => {
-      const { undoStack } = get();
-      console.log('[undoStore] undo called', { undoStackLength: undoStack.length, currentProjectId });
-      if (undoStack.length === 0) return;
-
-      const action = undoStack[undoStack.length - 1];
-      if (!action) return;
-
-      if (action.projectId && currentProjectId && action.projectId !== currentProjectId) {
-        throw new Error('无法撤销：当前项目与操作时的项目不一致');
-      }
-
-      console.log('[undoStore] executing rollback for', action.type, action.description);
+      if (isProcessingGuard(get)) return;
+      set({ isProcessing: true });
       try {
-        await action.rollback();
-        console.log('[undoStore] rollback done');
-      } catch (error) {
-        console.error('[undoStore] rollback failed, removing action anyway', error);
-      }
+        const { undoStack } = get();
+        if (undoStack.length === 0) return;
+        const action = undoStack[undoStack.length - 1];
+        if (!action) return;
 
-      set((state) => ({
-        undoStack: state.undoStack.slice(0, -1),
-        redoStack: [...state.redoStack, action],
-      }));
-      console.log('[undoStore] undo state updated');
+        projectGuard(action, currentProjectId);
+
+        await action.rollback();
+
+        set((state) => {
+          const idx = state.undoStack.indexOf(action);
+          if (idx === -1) return state;
+          return {
+            undoStack: [...state.undoStack.slice(0, idx), ...state.undoStack.slice(idx + 1)],
+            redoStack: [...state.redoStack, action],
+          };
+        });
+      } finally {
+        set({ isProcessing: false });
+      }
     },
 
     redo: async (currentProjectId) => {
-      const { redoStack } = get();
-      console.log('[undoStore] redo called', { redoStackLength: redoStack.length, currentProjectId });
-      if (redoStack.length === 0) return;
-
-      const action = redoStack[redoStack.length - 1];
-      if (!action) return;
-
-      if (action.projectId && currentProjectId && action.projectId !== currentProjectId) {
-        throw new Error('无法重做：当前项目与操作时的项目不一致');
-      }
-
-      console.log('[undoStore] executing execute for', action.type, action.description);
+      if (isProcessingGuard(get)) return;
+      set({ isProcessing: true });
       try {
-        await action.execute();
-        console.log('[undoStore] execute done');
-      } catch (error) {
-        console.error('[undoStore] execute failed, removing action anyway', error);
-      }
+        const { redoStack } = get();
+        if (redoStack.length === 0) return;
+        const action = redoStack[redoStack.length - 1];
+        if (!action) return;
 
-      set((state) => ({
-        redoStack: state.redoStack.slice(0, -1),
-        undoStack: [...state.undoStack, action],
-      }));
+        projectGuard(action, currentProjectId);
+
+        await action.execute();
+
+        set((state) => {
+          const idx = state.redoStack.indexOf(action);
+          if (idx === -1) return state;
+          return {
+            redoStack: [...state.redoStack.slice(0, idx), ...state.redoStack.slice(idx + 1)],
+            undoStack: [...state.undoStack, action],
+          };
+        });
+      } finally {
+        set({ isProcessing: false });
+      }
     },
 
     clearStack: () => {

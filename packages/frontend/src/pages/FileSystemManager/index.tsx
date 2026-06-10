@@ -36,7 +36,9 @@ import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { DownloadFormatModal } from '@/components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { ShareDialog } from '@/components/modals/ShareDialog';
+import { FolderPropertiesModal } from '@/components/modals/FolderPropertiesModal';
 import { isAbortError, handleError } from '@/utils/errorHandler';
+import { client } from '@/api-sdk/client.gen';
 import type { ProjectFilterType } from '@/types/project';
 import { useFileSystemClipboardStore, type ClipboardMode } from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
@@ -60,7 +62,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 }) => {
   useDocumentTitle(mode === 'personal-space' ? '我的图纸' : '项目管理');
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
 
   const [projectFilter, setProjectFilter] = useState<ProjectFilterType>('all');
@@ -108,6 +110,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     removeToast,
     handleRefresh,
     handleGoBack,
+    handleEnterFolder,
     handleCreateFolder,
     handleCreateDrawing,
     showCreateDrawingModal,
@@ -129,6 +132,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     paginationMeta,
     handlePageChange,
     handlePageSizeChange,
+    pagination,
     handleDeleteProject,
     handlePermanentlyDeleteProject,
     isTrashView,
@@ -158,8 +162,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const undoStoreRedo = useFileSystemUndoRedoStore((s) => s.redo);
   const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
   const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
+  const clearUndoStack = useFileSystemUndoRedoStore((s) => s.clearStack);
 
   const projectId = urlProjectId || '';
+
+  useEffect(() => {
+    clearUndoStack();
+  }, [urlProjectId, clearUndoStack]);
 
   const isAtRoot = mode === 'personal-space' ? false : !urlProjectId;
   const displayNodes = Array.isArray(nodes) ? nodes : [];
@@ -259,7 +268,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         const action = {
           type: 'move' as const,
           description: `移动 ${Object.keys(origParentIds).length} 个项目`,
-          projectId,
+          projectId: urlProjectId || undefined,
           execute: async () => {
             for (const nodeId of clipboardItems) {
               await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
@@ -272,35 +281,37 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             }
           },
         };
-        console.log('[clipboardHandlePaste] pushing undo action', action);
         pushAction(action);
       } else {
-        const newIds: string[] = [];
+        const createdIdsRef: { current: string[] } = { current: [] };
         for (const nodeId of clipboardItems) {
           try {
             const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
             const data = (result as unknown as { data?: { id?: string } })?.data || result;
             const newId = (data as unknown as { id?: string })?.id || '';
-            console.log('[clipboardHandlePaste] copyNode result', nodeId, { newId });
-            if (newId) newIds.push(newId);
+            if (newId) createdIdsRef.current.push(newId);
           } catch (e) {
             console.log('[clipboardHandlePaste] copyNode failed', nodeId, e);
           }
         }
         showToast('粘贴成功', 'success');
-        if (newIds.length > 0) {
-          console.log('[clipboardHandlePaste] pushing undo action for copy, newIds:', newIds);
+        if (createdIdsRef.current.length > 0) {
           pushAction({
-            type: 'delete',
+            type: 'paste-copy',
             description: `复制 ${clipboardItems.length} 个项目`,
-            projectId,
+            projectId: urlProjectId || undefined,
             execute: async () => {
+              const newIds: string[] = [];
               for (const nodeId of clipboardItems) {
-                await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+                const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+                const data = (result as unknown as { data?: { id?: string } })?.data || result;
+                const newId = (data as unknown as { id?: string })?.id || '';
+                if (newId) newIds.push(newId);
               }
+              createdIdsRef.current = newIds;
             },
             rollback: async () => {
-              for (const id of newIds) {
+              for (const id of createdIdsRef.current) {
                 try {
                   await fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
                 } catch (e) {
@@ -613,6 +624,93 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setIsProjectRolesModalOpen(true);
   }, []);
 
+  const highlightNodeId = searchParams.get('highlight');
+  const searchQueryFromUrl = searchParams.get('search');
+
+  useEffect(() => {
+    if (searchQueryFromUrl && searchQueryFromUrl !== searchTerm) {
+      setSearchTerm(searchQueryFromUrl);
+    }
+  }, [searchQueryFromUrl, searchTerm, setSearchTerm]);
+
+  const buildNodeUrl = useCallback((node: FileSystemNode): string => {
+    if (mode === 'personal-space') {
+      return `${window.location.origin}/personal-space/${node.id}`;
+    }
+    if (urlProjectId) {
+      return `${window.location.origin}/projects/${urlProjectId}/files/${node.id}`;
+    }
+    return '#';
+  }, [mode, urlProjectId]);
+
+  const handleOpen = useCallback((node: FileSystemNode) => {
+    handleEnterFolder(node);
+  }, [handleEnterFolder]);
+
+  const handleOpenInNewTab = useCallback((node: FileSystemNode) => {
+    const url = buildNodeUrl(node);
+    if (url !== '#') window.open(url, '_blank');
+  }, [buildNodeUrl]);
+
+  const handleOpenFileLocation = useCallback(async (node: FileSystemNode) => {
+    if (!node.parentId) return;
+    try {
+      const pageSize = pagination?.limit || 30;
+      type ContextResponse = { 200: { parentId: string; pageNumber: number } };
+      const { data } = await client.get<ContextResponse, unknown, true>({
+        url: `/api/v1/file-system/nodes/${node.id}/parent-context`,
+        query: { pageSize },
+        throwOnError: true,
+      });
+      const ctx = data as unknown as { parentId: string; pageNumber: number };
+      const baseUrl = buildNodeUrl({ ...node, id: node.parentId } as FileSystemNode);
+      const url = `${baseUrl}?highlight=${node.id}&page=${ctx.pageNumber}`;
+      window.open(url, '_blank');
+    } catch {
+      const baseUrl = buildNodeUrl({ ...node, id: node.parentId } as FileSystemNode);
+      window.open(baseUrl, '_blank');
+    }
+  }, [buildNodeUrl, pagination]);
+
+  const handleCopyPath = useCallback(async (node: FileSystemNode) => {
+    if (node.path) {
+      try {
+        await navigator.clipboard.writeText(node.path);
+        showToast('路径已复制', 'success');
+      } catch {
+        showToast('复制失败', 'error');
+      }
+    }
+  }, [showToast]);
+
+  const handleNewFolder = useCallback((node: FileSystemNode) => {
+    const store = useFileSystemStore.getState();
+    store.setCurrentParentId(node.id);
+    setShowCreateFolderModal(true);
+  }, [setShowCreateFolderModal]);
+
+  const handleCut = useCallback((node: FileSystemNode) => {
+    useFileSystemClipboardStore.getState().setClipboard(
+      [node.id],
+      'cut',
+      urlProjectId || '',
+      { [node.id]: node.parentId || '' },
+    );
+    showToast('已剪切', 'info');
+  }, [urlProjectId, showToast]);
+
+  const handleDownloadFolder = useCallback((node: FileSystemNode) => {
+    handleDownload(node);
+  }, [handleDownload]);
+
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
+  const [propertiesNode, setPropertiesNode] = useState<FileSystemNode | null>(null);
+
+  const handleShowProperties = useCallback((node: FileSystemNode) => {
+    setPropertiesNode(node);
+    setShowPropertiesModal(true);
+  }, []);
+
   const handleSubmitProject = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -868,6 +966,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   currentPage={paginationMeta?.page}
                   totalPages={paginationMeta?.totalPages}
                   onScrollPageChange={handleScrollPageChange}
+                  highlightNodeId={highlightNodeId || undefined}
+                  isSearchResult={!!searchTerm}
+                  onOpen={handleOpen}
+                  onOpenInNewTab={handleOpenInNewTab}
+                  onOpenFileLocation={handleOpenFileLocation}
+                  onCopyPath={handleCopyPath}
+                  onNewFolder={handleNewFolder}
+                  onCut={handleCut}
+                  onDownloadFolder={handleDownloadFolder}
+                  onShowProperties={handleShowProperties}
                 />
               </div>
             )}
@@ -1048,6 +1156,15 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           setShareFileId(null);
         }}
         fileId={shareFileId ?? undefined}
+      />
+
+      <FolderPropertiesModal
+        isOpen={showPropertiesModal}
+        node={propertiesNode}
+        onClose={() => {
+          setShowPropertiesModal(false);
+          setPropertiesNode(null);
+        }}
       />
 
     </>
