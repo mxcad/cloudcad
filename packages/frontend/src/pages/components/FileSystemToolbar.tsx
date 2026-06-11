@@ -50,7 +50,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
           onSearch={() => onSearchSubmit()}
         />
 
-        {!isTrashView && searchFilters !== undefined && onSearchFiltersChange && (
+        {searchFilters !== undefined && onSearchFiltersChange && (
           <SearchFilters
             filters={searchFilters}
             onChange={onSearchFiltersChange}

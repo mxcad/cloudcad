@@ -1004,13 +1004,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   canCreateProject={canCreateProject}
                   projectFilter={projectFilter}
                   onRefresh={handleRefresh}
-                  onCreateProject={openCreateProject}
-                />
-              </div>
-            ) : (
-              <div className="flex-1 min-h-0 flex flex-col">
-                <FileSystemContent
-                  nodes={viewNodes}
+                     onCreateProject={openCreateProject}
+                   />
+               </div>
+             ) : (
+               <div className="flex-1 min-h-0 flex flex-col">
+                 <FileSystemContent
+                   onClearTrash={() => handleClearTrash(isTrashView && !isAtRoot ? urlProjectId : undefined)}
+                   nodes={viewNodes}
                   viewMode={viewMode}
                   isTrashView={isTrashView}
                   isAtRoot={isAtRoot}

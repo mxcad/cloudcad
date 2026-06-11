@@ -106,7 +106,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
         </h3>
         <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
           {isTrashView
-            ? (isAtRoot ? '已删除的项目会出现在这里' : '已删除的文件会出现在这里')
+            ? (isAtRoot ? '已删除的文件和项目会出现在这里' : '已删除的文件会出现在这里')
             : searchTerm
               ? '没有找到匹配的内容'
               : isProjectsEmpty

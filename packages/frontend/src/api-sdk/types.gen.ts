@@ -5355,6 +5355,7 @@ export type FileSystemControllerGetTrashData = {
         sortBy?: string;
         sortOrder?: string;
         search?: string;
+        extension?: string;
     };
     url: '/api/v1/file-system/trash';
 };

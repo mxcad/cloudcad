@@ -263,7 +263,7 @@ export const useFileSystemData = ({
     : undefined;
 
   const trashQuery = useQuery({
-    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery }] as const,
+    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery, extension: searchFilters.extension, sortBy: searchFilters.sortBy, sortOrder: searchFilters.sortOrder }] as const,
     queryFn: async () => {
       const response = await fileSystemControllerGetTrash({
         query: {
@@ -271,6 +271,9 @@ export const useFileSystemData = ({
           page: pagination.page,
           limit: pagination.limit,
           search: searchQuery || undefined,
+          extension: searchFilters.extension || undefined,
+          sortBy: searchFilters.sortBy || undefined,
+          sortOrder: searchFilters.sortOrder || undefined,
         },
       });
 

@@ -75,6 +75,7 @@ interface FileSystemContentProps {
   onPasteInCurrentDir?: () => void;
   clipboardHasItems?: boolean;
   onCreateProject?: () => void;
+  onClearTrash?: (projectId?: string) => void;
 }
 
 export const FileSystemContent: React.FC<FileSystemContentProps> = ({
@@ -140,6 +141,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onPasteInCurrentDir,
   clipboardHasItems = false,
   onCreateProject,
+  onClearTrash,
 }) => {
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [contextMenuNode, setContextMenuNode] = useState<FileSystemNode | null>(null);
@@ -180,7 +182,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   }, [highlightNodeId]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    if (isTrashView) return;
     const target = e.target as HTMLElement;
     if (target.closest('[role="menu"]') || target.closest('[data-menu-content]')) return;
     e.preventDefault();
@@ -510,6 +511,25 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               </>
             );
           })()
+        ) : isTrashView ? (
+          <>
+            {nodes.length > 0 && onClearTrash && (
+              <Menu.Item
+                variant="danger"
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>}
+                onClick={() => { onClearTrash(); closeContextMenu(); }}
+              >
+                清空回收站
+              </Menu.Item>
+            )}
+            <Menu.Separator />
+            <Menu.Item
+              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>}
+              onClick={() => { onRefresh(); closeContextMenu(); }}
+            >
+              刷新
+            </Menu.Item>
+          </>
         ) : isAtRoot ? (
           <>
             {selectedNodes.size > 0 && onBatchDelete && (

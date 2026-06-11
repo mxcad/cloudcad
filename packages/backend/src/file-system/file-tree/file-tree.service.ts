@@ -671,10 +671,11 @@ export class FileTreeService {
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
       search?: string;
+      extension?: string;
     }
   ) {
     try {
-      const { projectId, page, limit, sortBy, sortOrder, search } = options || {};
+      const { projectId, page, limit, sortBy, sortOrder, search, extension } = options || {};
 
       // ── Project-scoped trash ─────────────────────────────────────
       if (projectId) {
@@ -722,6 +723,10 @@ export class FileTreeService {
           }
         }
 
+        if (extension) {
+          where.extension = extension;
+        }
+
         const [nodes, total] = await Promise.all([
           this.prisma.fileSystemNode.findMany({
             where,
@@ -750,14 +755,14 @@ export class FileTreeService {
         return { nodes, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
       }
 
-      // ── Global trash: deleted projects only ──────────────────────
+      // ── Global trash: all deleted items across accessible projects ──
       const safePage = Number(page) || 1;
       const safeLimit = Number(limit) || 50;
       const skip = (safePage - 1) * safeLimit;
 
-      const where: Prisma.FileSystemNodeWhereInput = {
+      const accessibleProjectFilter: Prisma.FileSystemNodeWhereInput = {
         isRoot: true,
-        deletedAt: { not: null },
+        deletedAt: null,
         libraryKey: null,
         OR: [
           { ownerId: userId },
@@ -765,29 +770,59 @@ export class FileTreeService {
         ],
       };
 
+      const userAccessFilter = [
+        { ownerId: userId },
+        { projectMembers: { some: { userId } } },
+      ];
+
+      const where: Prisma.FileSystemNodeWhereInput = {
+        deletedAt: { not: null },
+        libraryKey: null,
+        OR: [
+          { project: accessibleProjectFilter },
+          { isRoot: true, OR: userAccessFilter },
+        ],
+      };
+
       if (search) {
-        where.AND = [{ name: { contains: search, mode: 'insensitive' } }];
+        where.AND = [
+          {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        ];
       }
 
-      const [projects, total] = await Promise.all([
+      if (extension) {
+        where.extension = extension;
+      }
+
+      const [nodes, total] = await Promise.all([
         this.prisma.fileSystemNode.findMany({
           where,
           skip,
           take: safeLimit,
+          orderBy: sortBy ? { [sortBy]: sortOrder } : [{ isRoot: 'desc' }, { deletedAt: 'desc' }],
           include: {
-            owner: { select: { id: true, email: true, username: true, nickname: true } },
-            projectMembers: {
-              include: { user: { select: { id: true, email: true, username: true, nickname: true } } },
-            },
+            owner: { select: { id: true, username: true, nickname: true } },
           },
-          orderBy: { deletedAt: 'desc' },
         }),
         this.prisma.fileSystemNode.count({ where }),
       ]);
 
-      const paginatedItems = projects.map((p) => ({ ...p, itemType: 'project' }));
+      const parentIds = nodes
+        .map((n) => n.parentId)
+        .filter((id): id is string => !!id);
+      if (parentIds.length > 0) {
+        const pathMap = await this.buildAncestorPaths(parentIds);
+        (nodes as FileSystemNodeDto[]).forEach((n) => {
+          if (n.parentId) n.ancestorPath = pathMap.get(n.parentId);
+        });
+      }
 
-      return { nodes: paginatedItems, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+      return { nodes, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
     } catch (error) {
       this.logger.error(`获取回收站列表失败: ${error.message}`, error.stack);
       throw error;
@@ -828,7 +863,6 @@ export class FileTreeService {
         SELECT id, name, "parentId", id as start_id, 0 as depth
         FROM file_system_nodes
         WHERE id = ANY(${uniqueIds}::text[])
-        AND "deletedAt" IS NULL
         UNION ALL
         SELECT p.id, p.name, p."parentId", a.start_id, a.depth + 1
         FROM file_system_nodes p
