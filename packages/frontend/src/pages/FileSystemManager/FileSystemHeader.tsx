@@ -248,31 +248,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </Button>
           </Tooltip>
 
-          {!hideTrashButton && (
-            <Button
-              variant={isTrashView ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={onToggleTrashView}
-              disabled={loading}
-              className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
-              style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
-              title={isTrashView ? '返回文件列表' : '回收站'}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="mr-1"
-              >
-                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-              回收站
-            </Button>
-          )}
-
           {isAtRoot ? (
             <>
               {canCreateProject &&
@@ -356,6 +331,31 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           )}
 
           {renderExtraActions}
+
+          {!hideTrashButton && (
+            <Button
+              variant={isTrashView ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={onToggleTrashView}
+              disabled={loading}
+              className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
+              style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
+              title={isTrashView ? '返回文件列表' : '回收站'}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="mr-1"
+              >
+                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+              回收站
+            </Button>
+          )}
         </div>
       </div>
 
@@ -366,7 +366,6 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           onProjectFilterChange={onProjectFilterChange}
           isProjectRootMode={isProjectRootMode}
           nodesCount={nodesCount}
-          onClearTrash={() => onClearTrash()}
           onRefresh={onRefresh}
           loading={loading}
           isFetching={isFetching}

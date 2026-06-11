@@ -191,7 +191,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           <Button
             onClick={handleSelectFiles}
             disabled={globalLoading || !isAuthenticated}
-            variant="outline"
+            variant="ghost"
             size="sm"
             loading={globalLoading}
             icon={globalLoading ? undefined : (isAuthenticated ? Upload : undefined)}

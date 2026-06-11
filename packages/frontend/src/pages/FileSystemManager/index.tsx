@@ -859,33 +859,35 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         </>
       )}
 
-      <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-        <Button
-          variant="ghost"
-          onClick={clipboardHandlePaste}
-          disabled={clipboardItems.length === 0}
-          style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }}
-          className="relative px-3"
-        >
-          粘贴
-          {clipboardItems.length > 0 && (
-            <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
-              {clipboardItems.length}
-            </span>
-          )}
-        </Button>
-        {clipboardItems.length > 0 && (
+      {(!showSelectionBar || (!isAtRoot && !isTrashView)) && (
+        <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
           <Button
             variant="ghost"
-            onClick={clearClipboard}
-            style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}
+            onClick={clipboardHandlePaste}
+            disabled={clipboardItems.length === 0}
+            style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }}
+            className="relative px-3"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            粘贴
+            {clipboardItems.length > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
+                {clipboardItems.length}
+              </span>
+            )}
           </Button>
-        )}
-      </div>
+          {clipboardItems.length > 0 && (
+            <Button
+              variant="ghost"
+              onClick={clearClipboard}
+              style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </Button>
+          )}
+        </div>
+      )}
 
       <Button variant="ghost" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
         取消

@@ -352,12 +352,12 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   删除 {selectedNodes.size} 个选中项
                 </Menu.Item>
               )}
-              {!isAtRoot && onBatchMove && (
+              {!isAtRoot && !isTrashView && onBatchMove && (
                 <Menu.Item onClick={() => { onBatchMove(); closeContextMenu(); }}>
                   移动
                 </Menu.Item>
               )}
-              {!isAtRoot && onBatchCopy && (
+              {!isAtRoot && !isTrashView && onBatchCopy && (
                 <Menu.Item onClick={() => { onBatchCopy(); closeContextMenu(); }}>
                   复制
                 </Menu.Item>
