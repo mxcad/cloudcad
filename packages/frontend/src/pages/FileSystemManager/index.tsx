@@ -989,8 +989,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                    onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
                    onUpload={() => uploaderRef.current?.triggerUpload()}
                    onPasteInCurrentDir={clipboardHandlePaste}
-                   clipboardHasItems={clipboardItems.length > 0}
-                />
+                    clipboardHasItems={clipboardItems.length > 0}
+                    onCreateProject={openCreateProject}
+                 />
               </div>
             )}
             {bottomBar && (

@@ -30,7 +30,7 @@ import {
 } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
-import type { UserResponseDto as UserDto } from '@/api-sdk';
+import type { UserResponseDto as UserDto, CreateRoleDto, CreateProjectRoleDto } from '@/api-sdk';
 import { roleManagementStyles } from './RoleManagementStyles';
 type SystemRole = {
   id: string;
@@ -213,7 +213,7 @@ export const RoleManagement = () => {
           body: {
             name: systemRoleName,
             description: systemRoleDesc,
-            permissions: selectedSystemPerms,
+            permissions: selectedSystemPerms as CreateRoleDto['permissions'],
           },
         });
         showSuccess('角色更新成功');
@@ -222,7 +222,7 @@ export const RoleManagement = () => {
           body: {
             name: systemRoleName,
             description: systemRoleDesc,
-            permissions: selectedSystemPerms,
+            permissions: selectedSystemPerms as CreateRoleDto['permissions'],
             category: 'CUSTOM',
             level: 0,
           },
@@ -289,7 +289,7 @@ export const RoleManagement = () => {
           body: {
             name: projectRoleName,
             description: projectRoleDesc,
-            permissions: selectedProjectPerms,
+            permissions: selectedProjectPerms as CreateProjectRoleDto['permissions'],
           },
         });
         showSuccess('角色更新成功');
@@ -298,7 +298,7 @@ export const RoleManagement = () => {
           body: {
             name: projectRoleName,
             description: projectRoleDesc,
-            permissions: selectedProjectPerms,
+            permissions: selectedProjectPerms as CreateProjectRoleDto['permissions'],
           },
         });
         showSuccess('角色创建成功');

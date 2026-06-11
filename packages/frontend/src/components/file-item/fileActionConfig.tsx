@@ -64,6 +64,7 @@ export interface FileActionCheckProps {
   canDownload?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  canShare?: boolean;
   canViewVersionHistory?: boolean;
   canManageExternalReference?: boolean;
   canManageTrash?: boolean;
@@ -424,9 +425,9 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     icon: <Icons.Share />,
     colorClass: 'text-cyan-600',
     hoverClass: 'hover:bg-cyan-50',
-    visibilityCheck: ({ isFolder, onShare }) =>
+    visibilityCheck: ({ isFolder, onShare, canShare }) =>
       !isFolder && !!onShare,
-    permissionCheck: () => true,
+    permissionCheck: ({ canShare }) => canShare !== false,
   },
   show_members: {
     type: 'show_members',

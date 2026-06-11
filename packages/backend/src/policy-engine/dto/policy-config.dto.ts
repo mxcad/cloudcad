@@ -19,7 +19,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { PolicyType } from '../enums/policy-type.enum';
-import { SystemPermission } from '../../common/enums/system-permission.enum';
+import { SystemPermission } from '../../common/enums/permissions.enum';
 
 /**
  * 策略配置 DTO

@@ -11,7 +11,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString } from 'class-validator';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 
 export class UpdateProjectRoleDto {
   @ApiProperty({
@@ -35,11 +36,12 @@ export class UpdateProjectRoleDto {
   @ApiProperty({
     description: '权限列表',
     example: ['PROJECT_UPDATE', 'PROJECT_DELETE', 'FILE_CREATE'],
-    type: [String],
+    enum: ProjectPermission,
+    isArray: true,
     required: false,
   })
   @IsArray()
-  @IsString({ each: true })
+  @IsEnum(ProjectPermission, { each: true })
   @IsOptional()
-  permissions?: string[];
+  permissions?: ProjectPermission[];
 }

@@ -35,7 +35,7 @@ function buildSwaggerDocument(app) {
   if (!document.components) document.components = { schemas: {} };
   if (!document.components.schemas) document.components.schemas = {};
 
-  const { SystemPermission, ProjectPermission } = require('../dist/common/dto/permission.dto');
+  const { SystemPermission, ProjectPermission } = require('../dist/common/enums/permissions.enum');
 
   document.components.schemas.SystemPermission = {
     type: 'string',

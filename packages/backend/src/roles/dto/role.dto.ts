@@ -15,7 +15,7 @@ import { RoleCategory } from '../../common/enums/permissions.enum';
 import {
   SystemPermission,
   ProjectPermission,
-} from '../../common/dto/permission.dto';
+} from '../../common/enums/permissions.enum';
 
 // 合并所有权限值
 const ALL_PERMISSIONS = [

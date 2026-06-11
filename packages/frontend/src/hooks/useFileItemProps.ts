@@ -19,6 +19,7 @@ import type { PermissionState } from './useProjectPermissions';
 export interface NodePermission {
   canEdit?: boolean;
   canDelete?: boolean;
+  canShare?: boolean;
   canManageMembers?: boolean;
   canManageRoles?: boolean;
 }
@@ -51,6 +52,7 @@ export const getFileItemPermissionProps = (
   canUpload: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canShare: boolean;
   canDownload: boolean;
   canViewVersionHistory: boolean;
   canManageExternalReference: boolean;
@@ -73,6 +75,7 @@ export const getFileItemPermissionProps = (
     canDelete: isRoot
       ? (rootPerms.canDelete ?? false)
       : (projectPermissions[ProjectPermission.FILE_DELETE] ?? false),
+    canShare: projectPermissions[ProjectPermission.FILE_SHARE] ?? false,
     canDownload: projectPermissions[ProjectPermission.FILE_DOWNLOAD] ?? false,
     canViewVersionHistory:
       projectPermissions[ProjectPermission.VERSION_READ] ?? false,

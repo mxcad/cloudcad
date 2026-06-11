@@ -5,7 +5,7 @@ import {
   rolesControllerUpdateProjectRole,
   rolesControllerDeleteProjectRole,
 } from '@/api-sdk';
-import type { ProjectRoleDto } from '@/api-sdk';
+import type { ProjectRoleDto, CreateProjectRoleDto, UpdateProjectRoleDto } from '@/api-sdk';
 
 const PROJECT_ROLES_BY_PROJECT_KEY = ['projectRolesByProject'] as const;
 
@@ -50,7 +50,7 @@ export const useProjectRoleCRUD = (projectId: string) => {
           projectId,
           name: data.name,
           description: data.description,
-          permissions: data.permissions,
+          permissions: data.permissions as CreateProjectRoleDto['permissions'],
         },
       });
       if (result.error) throw result.error;
@@ -77,7 +77,7 @@ export const useProjectRoleCRUD = (projectId: string) => {
         body: {
           name: data.name,
           description: data.description,
-          permissions: data.permissions,
+          permissions: data.permissions as CreateProjectRoleDto['permissions'],
         },
       });
       if (result.error) throw result.error;

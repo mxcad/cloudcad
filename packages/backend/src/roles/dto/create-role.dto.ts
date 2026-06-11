@@ -20,7 +20,10 @@ import {
   IsEnum,
   MaxLength,
 } from 'class-validator';
-import { RoleCategory } from '../../common/enums/permissions.enum';
+import {
+  RoleCategory,
+  SystemPermission,
+} from '../../common/enums/permissions.enum';
 
 export class CreateRoleDto {
   @ApiProperty({ description: '角色名称', example: '设计主管' })
@@ -62,10 +65,11 @@ export class CreateRoleDto {
   @ApiProperty({
     description: '权限列表（数据库存储格式：大写）',
     example: ['SYSTEM_USER_READ', 'SYSTEM_ROLE_READ', 'SYSTEM_FONT_READ'],
-    type: [String],
+    enum: SystemPermission,
+    isArray: true,
   })
   @IsArray()
-  @IsString({ each: true })
+  @IsEnum(SystemPermission, { each: true })
   @IsNotEmpty({ each: true })
-  permissions: string[];
+  permissions: SystemPermission[];
 }

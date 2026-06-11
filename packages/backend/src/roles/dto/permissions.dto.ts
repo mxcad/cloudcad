@@ -11,7 +11,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty } from 'class-validator';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 
 export class PermissionsDto {
   @ApiProperty({
@@ -21,6 +22,6 @@ export class PermissionsDto {
   })
   @IsArray()
   @IsNotEmpty()
-  @IsString({ each: true })
-  permissions!: string[];
+  @IsEnum(ProjectPermission, { each: true })
+  permissions!: ProjectPermission[];
 }

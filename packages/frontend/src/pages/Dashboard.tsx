@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -10,6 +10,8 @@ import { useDashboardProjects } from '../hooks/useDashboardProjects';
 import { formatFileSize } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
+import { ViewAllFilesModal } from '../components/modals/ViewAllFilesModal';
+import { ViewAllProjectsModal } from '../components/modals/ViewAllProjectsModal';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
 import { usersControllerGetDashboardStats, fileSystemControllerGetStorageQuota } from '@/api-sdk';
 import type { UserDashboardStatsDto, StorageInfoDto } from '@/api-sdk';
@@ -205,6 +207,8 @@ export const Dashboard: React.FC = () => {
 
   // 项目创建弹框状态
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isViewAllFilesOpen, setIsViewAllFilesOpen] = useState(false);
+  const [isViewAllProjectsOpen, setIsViewAllProjectsOpen] = useState(false);
   const [projectFormData, setProjectFormData] = useState({
     name: '',
     description: '',
@@ -341,16 +345,8 @@ export const Dashboard: React.FC = () => {
             </p>
           </div>
 
-          {/* 快捷操作按钮 */}
+          {/* 刷新按钮 */}
           <div className="flex gap-3">
-            <Button variant="primary" onClick={() => setIsProjectModalOpen(true)}>
-              <Plus size={16} />
-              新建项目
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/personal-space?action=upload')}>
-              <Upload size={16} />
-              上传图纸
-            </Button>
             <Button variant="ghost" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
               刷新
             </Button>
@@ -438,14 +434,14 @@ export const Dashboard: React.FC = () => {
           <Section
             title="最近文件"
             actions={
-              <Link
-                to="/personal-space"
+              <button
+                onClick={() => setIsViewAllFilesOpen(true)}
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
                 style={{ color: 'var(--primary-500)' }}
               >
                 查看全部
                 <ArrowRight size={14} />
-              </Link>
+              </button>
             }
             variant="outlined"
             className="rounded-2xl"
@@ -466,10 +462,8 @@ export const Dashboard: React.FC = () => {
                     compact
                     onEnter={(node) => {
                       if (node.isFolder) {
-                        // 文件夹：跳转到目录
                         navigate(`/personal-space/${node.id}`);
                       } else {
-                        // 文件：在新标签页打开编辑器
                         window.open(`/cad-editor/${node.id}?back=${encodeURIComponent(window.location.pathname + window.location.search)}`, '_blank');
                       }
                     }}
@@ -497,14 +491,14 @@ export const Dashboard: React.FC = () => {
           <Section
             title="最近项目"
             actions={
-              <Link
-                to="/projects"
+              <button
+                onClick={() => setIsViewAllProjectsOpen(true)}
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
                 style={{ color: 'var(--accent-500)' }}
               >
                 查看全部
                 <ArrowRight size={14} />
-              </Link>
+              </button>
             }
             variant="outlined"
             className="rounded-2xl"
@@ -601,6 +595,18 @@ export const Dashboard: React.FC = () => {
         }}
         onFormDataChange={setProjectFormData}
         onSubmit={handleCreateProject}
+      />
+
+      {/* 最近文件查看全部弹框 */}
+      <ViewAllFilesModal
+        isOpen={isViewAllFilesOpen}
+        onClose={() => setIsViewAllFilesOpen(false)}
+      />
+
+      {/* 最近项目查看全部弹框 */}
+      <ViewAllProjectsModal
+        isOpen={isViewAllProjectsOpen}
+        onClose={() => setIsViewAllProjectsOpen(false)}
       />
     </div>
   );

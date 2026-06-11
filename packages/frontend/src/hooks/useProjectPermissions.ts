@@ -28,6 +28,7 @@ export const PROJECT_FILE_PERMISSIONS = [
   ProjectPermission.FILE_COPY,
   ProjectPermission.CAD_SAVE,
   ProjectPermission.CAD_EXTERNAL_REFERENCE,
+  ProjectPermission.FILE_SHARE,
   ProjectPermission.VERSION_READ,
   ProjectPermission.PROJECT_UPDATE,
   ProjectPermission.PROJECT_DELETE,

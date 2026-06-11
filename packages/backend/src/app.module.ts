@@ -43,7 +43,7 @@ import { VersionControlModule } from './version-control/version-control.module';
 import {
   SystemPermission,
   ProjectPermission,
-} from './common/dto/permission.dto';
+} from './common/enums/permissions.enum';
 import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 import { RuntimeConfigModule } from './runtime-config/runtime-config.module';
