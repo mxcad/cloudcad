@@ -126,6 +126,15 @@
   font-size: var(--text-xs);
 }
 
+.share-dialog-td-clickable {
+  cursor: pointer;
+}
+
+.share-dialog-td-clickable:hover {
+  color: var(--primary-500);
+  text-decoration: underline;
+}
+
 .share-dialog-create-body {
   display: flex;
   flex-direction: column;

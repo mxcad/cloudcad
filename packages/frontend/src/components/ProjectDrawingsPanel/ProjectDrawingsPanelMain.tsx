@@ -60,7 +60,7 @@ import { useLibraryCategories } from './hooks/useLibraryCategories';
 import { useVersionHistory } from './hooks/useVersionHistory';
 import { useFileItemRenderer } from './hooks/useFileItemRenderer';
 import { ProjectListView } from './components/ProjectListView';
-import { BreadcrumbNav } from './components/BreadcrumbNav';
+import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { createPortal } from 'react-dom';
 import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
@@ -857,7 +857,16 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             !isLibraryMode ? (
             <div className={styles.breadcrumbPlaceholder}>
               {(breadcrumb.length > 0 || !isPersonalSpace) && (
-                <BreadcrumbNav breadcrumb={breadcrumb} isLibraryMode={isLibraryMode} isPersonalSpace={isPersonalSpace} handleGoBack={handleGoBack} handleBreadcrumbClick={handleBreadcrumbClick} handleBackToProjects={handleBackToProjects} />
+                <BreadcrumbNavigation
+                  variant="panel"
+                  breadcrumbs={breadcrumb.map((b) => ({ ...b, isRoot: false, isFolder: true }))}
+                  onNavigate={(crumb) => {
+                    const idx = breadcrumb.findIndex((b) => b.id === crumb.id);
+                    if (idx >= 0) handleBreadcrumbClick(idx);
+                  }}
+                  onBack={handleGoBack}
+                  onBackToProjects={handleBackToProjects}
+                />
               )}
             </div>
           ) : undefined

@@ -193,7 +193,10 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                           </button>
                         </div>
                       </td>
-                      <td className="share-dialog-td-meta">
+                      <td
+                        className="share-dialog-td-meta share-dialog-td-clickable"
+                        onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
+                      >
                         {formatExpiryDate(item.expiresAt as string | null)}
                       </td>
                       <td className="share-dialog-td-meta">

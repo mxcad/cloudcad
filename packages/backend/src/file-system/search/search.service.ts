@@ -2,8 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SearchDto, SearchScope, SearchType } from '../dto/search.dto';
 import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
-import { PermissionService } from '../../common/services/permission.service';
-import { ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { Prisma } from '@prisma/client';
 import { FileStatus } from '../../common/enums/file-status.enum';
 import { FtsQueryBuilder } from './fts-query-builder';
@@ -20,7 +19,6 @@ export class SearchService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly permissionService: FileSystemPermissionService,
-    private readonly systemPermissionService: PermissionService,
     private readonly ftsQueryBuilder: FtsQueryBuilder,
   ) {}
 
@@ -109,6 +107,33 @@ export class SearchService {
           libraryKey,
           type,
           extension,
+          page,
+          limit,
+          skip,
+          sortBy,
+          sortOrder,
+          ...extra,
+        }, signal);
+      case SearchScope.GLOBAL:
+        return this.searchGlobal(userId, {
+          keyword,
+          filter,
+          type,
+          extension,
+          fileStatus,
+          page,
+          limit,
+          skip,
+          sortBy,
+          sortOrder,
+          ...extra,
+        }, signal);
+      case SearchScope.PERSONAL_SPACE:
+        return this.searchPersonalSpace(userId, {
+          keyword,
+          type,
+          extension,
+          fileStatus,
           page,
           limit,
           skip,
@@ -206,7 +231,7 @@ export class SearchService {
       total,
       params.page,
       limit,
-      (node) => ({ childrenCount: (node._count as any)?.children }),
+      (node) => ({ childrenCount: (node._count as any)?.children, memberCount: (node._count as any)?.projectMembers }),
     );
   }
 
@@ -327,13 +352,16 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
-    return this.toNodeListResponse(
+    const result = this.toNodeListResponse(
       nodes as Record<string, unknown>[],
       total,
       params.page,
       limit,
       (node) => ({ projectId: (node.projectId as string) || projectId }),
     );
+
+    await this.injectAncestorPaths(result);
+    return result;
   }
 
   private async searchAllProjects(
@@ -414,12 +442,15 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
-    return this.toNodeListResponse(
+    const result = this.toNodeListResponse(
       nodes as Record<string, unknown>[],
       total,
       params.page,
       limit,
     );
+
+    await this.injectAncestorPaths(result);
+    return result;
   }
 
   private async searchLibrary(
@@ -456,39 +487,6 @@ export class SearchService {
       sizeRange,
     } = params;
     const safeLimit = Number(limit) || 50;
-
-    // ── 权限检查 ──
-    // 如果指定了 libraryKey，检查对应资源库的系统权限
-    // 如果未指定（搜索所有资源库），需要拥有两个权限中的一个
-    if (libraryKey === 'drawing') {
-      const hasPermission = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_DRAWING_MANAGE,
-      );
-      if (!hasPermission) {
-        this.logger.warn(`用户 ${userId} 无图纸库搜索权限`);
-        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
-      }
-    } else if (libraryKey === 'block') {
-      const hasPermission = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_BLOCK_MANAGE,
-      );
-      if (!hasPermission) {
-        this.logger.warn(`用户 ${userId} 无图块库搜索权限`);
-        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
-      }
-    } else {
-      // 未指定 libraryKey — 搜索所有资源库，需至少拥有一个权限
-      const hasDrawingAccess = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_DRAWING_MANAGE,
-      );
-      const hasBlockAccess = await this.systemPermissionService.checkSystemPermission(
-        userId, SystemPermission.LIBRARY_BLOCK_MANAGE,
-      );
-      if (!hasDrawingAccess && !hasBlockAccess) {
-        this.logger.warn(`用户 ${userId} 无任何资源库搜索权限`);
-        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
-      }
-    }
 
     this.logger.log(
       `[资源库搜索] 用户ID: ${userId}, 关键词: ${keyword}, libraryKey: ${libraryKey}, type: ${type}`
@@ -551,12 +549,209 @@ export class SearchService {
       this.prisma.fileSystemNode.count({ where }),
     ]);
 
-    return this.toNodeListResponse(
+    const result = this.toNodeListResponse(
       nodes as Record<string, unknown>[],
       total,
       params.page,
       limit,
     );
+
+    await this.injectAncestorPaths(result);
+    return result;
+  }
+
+  /**
+   * 搜索全部 — 合并项目和跨项目文件结果（用于项目列表页面）
+   * 项目结果排在文件结果前面，统一分页
+   */
+  private async searchGlobal(
+    userId: string,
+    params: {
+      keyword: string;
+      filter: 'all' | 'owned' | 'joined';
+      type: SearchType;
+      extension?: string;
+      fileStatus?: string;
+      page: number;
+      limit: number;
+      skip: number;
+      sortBy: string;
+      sortOrder: 'asc' | 'desc';
+      exactPhrase?: string | null;
+      excludeTerms?: string[];
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
+    },
+    signal?: AbortSignal,
+  ): Promise<NodeListResponseDto> {
+    const { skip, limit, page } = params;
+    const safeLimit = Number(limit) || 50;
+
+    const [projectResult, fileResult] = await Promise.all([
+      this.searchProjects(userId, { ...params, skip: 0, limit: 1000 }, signal),
+      this.searchAllProjects(userId, params, signal),
+    ]);
+
+    const projectNodes = projectResult.nodes.map((n) => ({
+      ...n,
+      sourceType: 'project' as const,
+    }));
+    const fileNodes = fileResult.nodes.map((n) => ({
+      ...n,
+      sourceType: 'file' as const,
+    }));
+
+    const projectCount = projectResult.total;
+    const fileTotal = fileResult.total;
+    const total = projectCount + fileTotal;
+
+    const merged: FileSystemNodeDto[] = [];
+    if (skip < projectCount) {
+      const projSlice = projectNodes.slice(skip, skip + safeLimit);
+      const remaining = safeLimit - projSlice.length;
+      merged.push(...projSlice, ...fileNodes.slice(0, Math.max(0, remaining)));
+    } else {
+      const fileStart = skip - projectCount;
+      merged.push(...fileNodes.slice(fileStart, fileStart + safeLimit));
+    }
+
+    return {
+      nodes: merged,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
+  }
+
+  /**
+   * 搜索个人空间 — 搜索用户个人空间内的文件
+   */
+  private async searchPersonalSpace(
+    userId: string,
+    params: {
+      keyword: string;
+      type: SearchType;
+      extension?: string;
+      fileStatus?: string;
+      page: number;
+      limit: number;
+      skip: number;
+      sortBy: string;
+      sortOrder: 'asc' | 'desc';
+      exactPhrase?: string | null;
+      excludeTerms?: string[];
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | null;
+    },
+    signal?: AbortSignal,
+  ): Promise<NodeListResponseDto> {
+    const {
+      keyword,
+      type,
+      extension,
+      fileStatus,
+      skip,
+      limit,
+      sortBy,
+      sortOrder,
+      exactPhrase,
+      excludeTerms,
+      dateRange,
+      sizeRange,
+    } = params;
+    const safeLimit = Number(limit) || 50;
+
+    const personalRoot = await this.prisma.fileSystemNode.findFirst({
+      where: { personalSpaceKey: userId, isRoot: true, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!personalRoot) {
+      return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
+    }
+
+    const allNodeIds = await this.getAllProjectNodeIds(personalRoot.id);
+
+    const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
+    let effectiveIds: string[];
+    if (ftsMatch.matched) {
+      effectiveIds = allNodeIds.filter((id) => ftsMatch.ids.has(id));
+      if (effectiveIds.length === 0) {
+        return { nodes: [], total: 0, page: params.page, limit, totalPages: 0 };
+      }
+    } else {
+      effectiveIds = allNodeIds;
+    }
+
+    const where: Prisma.FileSystemNodeWhereInput = {
+      id: { in: effectiveIds.filter((id) => id !== personalRoot.id) },
+      deletedAt: null,
+      isRoot: false,
+    };
+
+    if (!ftsMatch.matched && keyword) {
+      where.OR = [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { description: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+
+    if (type === SearchType.FILE) where.isFolder = false;
+    else if (type === SearchType.FOLDER) where.isFolder = true;
+    if (extension) where.extension = extension;
+    if (fileStatus) {
+      const validStatuses = Object.values(FileStatus) as string[];
+      if (!validStatuses.includes(fileStatus)) {
+        throw new BadRequestException(`无效的文件状态: ${fileStatus}`);
+      }
+      where.fileStatus = fileStatus as FileStatus;
+    }
+
+    this.applyExtraFilters(where, { exactPhrase, excludeTerms });
+    this.applyRangeFilters(where, { dateRange, sizeRange });
+
+    this.checkAborted(signal);
+
+    const [nodes, total] = await Promise.all([
+      this.prisma.fileSystemNode.findMany({
+        where,
+        skip,
+        take: safeLimit,
+        orderBy: { [sortBy]: sortOrder },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          isFolder: true,
+          isRoot: true,
+          parentId: true,
+          path: true,
+          size: true,
+          mimeType: true,
+          fileHash: true,
+          fileStatus: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+          ownerId: true,
+          personalSpaceKey: true,
+          libraryKey: true,
+          projectId: true,
+        },
+      }),
+      this.prisma.fileSystemNode.count({ where }),
+    ]);
+
+    const result = this.toNodeListResponse(
+      nodes as Record<string, unknown>[],
+      total,
+      params.page,
+      limit,
+    );
+
+    await this.injectAncestorPaths(result);
+    return result;
   }
 
   /**
@@ -666,6 +861,59 @@ export class SearchService {
     `;
 
     return result.map((row) => row.id);
+  }
+
+  /**
+   * 为搜索结果注入 ancestorPath（从根到父节点的面包屑路径）
+   */
+  private async injectAncestorPaths(result: NodeListResponseDto): Promise<void> {
+    const parentIds = [
+      ...new Set(
+        result.nodes.map((n) => n.parentId).filter((id): id is string => !!id),
+      ),
+    ];
+    if (parentIds.length === 0) return;
+
+    const pathMap = await this.buildAncestorPaths(parentIds);
+    result.nodes.forEach((n) => {
+      if (n.parentId) {
+        n.ancestorPath = pathMap.get(n.parentId);
+      }
+    });
+  }
+
+  /**
+   * 使用批量递归 CTE 构建多个 parentId 的祖先路径
+   * 返回 Map<nodeId, "根 > 父1 > 父2">
+   */
+  private async buildAncestorPaths(parentIds: string[]): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(parentIds.filter(Boolean))];
+    if (uniqueIds.length === 0) return new Map();
+
+    const rows = await this.prisma.$queryRaw<{ id: string; path: string | null }[]>`
+      WITH RECURSIVE ancestors AS (
+        SELECT id, name, "parentId", id as start_id, 0 as depth
+        FROM file_system_nodes
+        WHERE id = ANY(${uniqueIds}::text[])
+        AND "deletedAt" IS NULL
+
+        UNION ALL
+
+        SELECT p.id, p.name, p."parentId", a.start_id, a.depth + 1
+        FROM file_system_nodes p
+        INNER JOIN ancestors a ON p.id = a."parentId"
+        WHERE a."parentId" IS NOT NULL AND a.depth < 50
+      )
+      SELECT start_id as id, string_agg(name, ' > ' ORDER BY depth DESC) as path
+      FROM ancestors
+      GROUP BY start_id
+    `;
+
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      if (row.path) map.set(row.id, row.path);
+    }
+    return map;
   }
 
   private checkAborted(signal?: AbortSignal): void {

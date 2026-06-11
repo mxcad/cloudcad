@@ -20,6 +20,8 @@ export enum SearchScope {
   PROJECT_FILES = 'project_files',
   ALL_PROJECTS = 'all_projects',
   LIBRARY = 'library',
+  GLOBAL = 'global',
+  PERSONAL_SPACE = 'personal_space',
 }
 
 export enum SearchType {

@@ -90,6 +90,7 @@ import { MoveNodeDto } from "./dto/move-node.dto";
 import { QueryChildrenDto } from "./dto/query-children.dto";
 import { QueryProjectsDto } from "./dto/query-projects.dto";
 import { SearchDto } from "./dto/search.dto";
+import { ResolvePathDto } from "./dto/resolve-path.dto";
 import { ParentContextDto } from "./dto/parent-context.dto";
 import { NodePropertiesDto } from "./dto/node-properties.dto";
 import { UpdateNodeDto } from "./dto/update-node.dto";
@@ -1270,7 +1271,10 @@ export class FileSystemController {
     description: `支持多种搜索范围：
 - project: 搜索项目列表
 - project_files: 搜索指定项目内的文件（需提供 projectId）
-- all_projects: 搜索所有有权限访问的项目中的文件`,
+- all_projects: 搜索所有有权限访问的项目中的文件
+- library: 搜索公共资源库（提供 libraryKey: drawing|block）
+- global: 合并项目和跨项目文件搜索（用于项目列表页面）
+- personal_space: 搜索个人空间内的文件`,
   })
   @ApiResponse({
     status: 200,
@@ -1284,6 +1288,23 @@ export class FileSystemController {
     );
 
     return this.searchService.search(req.user.id, dto, req.signal);
+  }
+
+  // ==================== 路径解析 ====================
+
+  @Get("resolve-path")
+  @ApiOperation({
+    summary: "解析面包屑路径到目标节点",
+    description: "将形如「项目A > 文件夹1 > 子文件夹」的面包屑路径解析为目标节点的 ID，用于可编辑面包屑导航",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "路径对应的节点",
+    type: FileSystemNodeDto,
+  })
+  @ApiResponse({ status: 404, description: "路径或项目不存在" })
+  async resolvePath(@Request() req, @Query() dto: ResolvePathDto) {
+    return this.fileTreeService.resolvePath(dto.projectId, dto.path, req.user.id);
   }
 
   // ==================== 节点上下文 & 属性 ====================

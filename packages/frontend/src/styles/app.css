@@ -926,12 +926,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    ============================================ */
 @keyframes highlight-fade {
   0% {
-    background-color: var(--color-primary-100, #dbeafe);
-    box-shadow: 0 0 0 2px var(--color-primary-400, #60a5fa);
+    background-color: var(--primary-100);
+    box-shadow: 0 0 0 2px var(--primary-500);
   }
   70% {
-    background-color: var(--color-primary-100, #dbeafe);
-    box-shadow: 0 0 0 2px var(--color-primary-400, #60a5fa);
+    background-color: var(--primary-100);
+    box-shadow: 0 0 0 2px var(--primary-500);
   }
   100% {
     background-color: transparent;

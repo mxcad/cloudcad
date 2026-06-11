@@ -6,8 +6,8 @@ interface UseLibrarySelectionProps {
 }
 
 export const useLibrarySelection = ({ nodes }: UseLibrarySelectionProps) => {
-  const { selectedNodes, handleNodeSelect, handleSelectAll, clearSelection } =
+  const { selectedNodes, handleNodeSelect, handleSelectAll, clearSelection, selectNodes } =
     useMultiSelectSelection({ nodes });
 
-  return { selectedNodes, handleNodeSelect, handleSelectAll, clearSelection };
+  return { selectedNodes, handleNodeSelect, handleSelectAll, clearSelection, selectNodes };
 };

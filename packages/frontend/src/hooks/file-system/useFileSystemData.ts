@@ -198,11 +198,7 @@ export const useFileSystemData = ({
       keyword: searchQuery,
       isProjectRootMode,
       isPersonalSpaceMode,
-      projectId: isProjectRootMode
-        ? undefined
-        : isPersonalSpaceMode
-          ? (urlNodeId || urlProjectId || '')
-          : urlProjectId,
+      projectId: isPersonalSpaceMode ? undefined : (urlProjectId ?? undefined),
       filter: isProjectRootMode ? projectFilter : undefined,
       page: pagination.page,
       limit: pagination.limit,
@@ -214,13 +210,13 @@ export const useFileSystemData = ({
       let searchFilter: 'all' | 'owned' | 'joined' = 'all';
 
       if (isProjectRootMode) {
-        searchScope = 'project';
+        searchScope = 'global';
         searchFilter = projectFilter || 'all';
-      } else if (isPersonalSpaceMode || urlProjectId) {
+      } else if (isPersonalSpaceMode) {
+        searchScope = 'personal_space';
+      } else if (urlProjectId) {
         searchScope = 'project_files';
-        searchProjectId = isPersonalSpaceMode
-          ? (urlProjectId || '')
-          : urlProjectId;
+        searchProjectId = urlProjectId;
       }
 
       const response = await fileSystemControllerSearch({

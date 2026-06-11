@@ -68,15 +68,15 @@ export const getFileItemPermissionProps = (
   return {
     canUpload: disableUpload
       ? false
-      : (projectPermissions[ProjectPermission.FILE_UPLOAD] ?? false),
+      : (projectPermissions[ProjectPermission.FILE_UPLOAD] ?? rootPerms.canEdit ?? false),
     canEdit: isRoot
       ? (rootPerms.canEdit ?? false)
-      : (projectPermissions[ProjectPermission.FILE_EDIT] ?? false),
+      : (projectPermissions[ProjectPermission.FILE_EDIT] ?? rootPerms.canEdit ?? false),
     canDelete: isRoot
       ? (rootPerms.canDelete ?? false)
-      : (projectPermissions[ProjectPermission.FILE_DELETE] ?? false),
+      : (projectPermissions[ProjectPermission.FILE_DELETE] ?? rootPerms.canDelete ?? false),
     canShare: projectPermissions[ProjectPermission.FILE_SHARE] ?? false,
-    canDownload: projectPermissions[ProjectPermission.FILE_DOWNLOAD] ?? false,
+    canDownload: projectPermissions[ProjectPermission.FILE_DOWNLOAD] ?? true,
     canViewVersionHistory:
       projectPermissions[ProjectPermission.VERSION_READ] ?? false,
     canManageExternalReference:

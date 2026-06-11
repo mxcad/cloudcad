@@ -5,11 +5,7 @@
 
 import { BadRequestException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
-import {
-	ProjectPermission,
-	SystemPermission,
-} from "../../common/enums/permissions.enum";
-import { PermissionService } from "../../common/services/permission.service";
+import { ProjectPermission } from "../../common/enums/permissions.enum";
 import { DatabaseService } from "../../database/database.service";
 import { SearchScope, SearchType, SearchDto } from "../dto/search.dto";
 import { FileSystemPermissionService } from "../file-permission/file-system-permission.service";
@@ -31,12 +27,6 @@ describe("SearchService", () => {
 		checkNodePermission: jest.fn(),
 	};
 
-	const mockSystemPermissionService = {
-		checkSystemPermission: jest.fn(),
-		checkSystemPermissionWithContext: jest.fn(),
-		checkSystemPermissionsBatch: jest.fn(),
-	};
-
 	const mockFtsQueryBuilder = {
 		matchIds: jest.fn(),
 	};
@@ -47,8 +37,6 @@ describe("SearchService", () => {
 		// Set default mock implementations (resetMocks: true in jest.config clears them between tests)
 		mockPrisma.$queryRaw.mockResolvedValue([{ id: "proj-1" }, { id: "f1" }, { id: "f2" }]);
 		mockPermissionService.checkNodePermission.mockResolvedValue(true);
-		mockSystemPermissionService.checkSystemPermission.mockResolvedValue(true);
-		mockSystemPermissionService.checkSystemPermissionsBatch.mockResolvedValue([true]);
 		mockFtsQueryBuilder.matchIds.mockResolvedValue({ ids: new Set(), matched: false });
 
 		const module: TestingModule = await Test.createTestingModule({
@@ -59,7 +47,6 @@ describe("SearchService", () => {
 					provide: FileSystemPermissionService,
 					useValue: mockPermissionService,
 				},
-				{ provide: PermissionService, useValue: mockSystemPermissionService },
 				{ provide: FtsQueryBuilder, useValue: mockFtsQueryBuilder },
 			],
 		}).compile();

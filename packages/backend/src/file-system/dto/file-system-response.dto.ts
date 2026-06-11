@@ -83,8 +83,23 @@ export class FileSystemNodeDto {
 	@ApiProperty({ description: "子节点数量", required: false })
 	childrenCount?: number;
 
+	@ApiProperty({ description: "成员数量（项目根节点）", required: false })
+	memberCount?: number;
+
 	@ApiProperty({ description: "项目 ID", required: false })
 	projectId?: string;
+
+	@ApiProperty({
+		description: "祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）",
+		required: false,
+	})
+	ancestorPath?: string;
+
+	@ApiProperty({
+		description: "结果来源类型（仅 Global 搜索使用）",
+		required: false,
+	})
+	sourceType?: 'project' | 'file';
 }
 
 /**

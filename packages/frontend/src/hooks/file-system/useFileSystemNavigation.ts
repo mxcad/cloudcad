@@ -77,7 +77,8 @@ export const useFileSystemNavigation = ({
         if (mode === 'personal-space') {
           navigate(`/personal-space/${node.id}`);
         } else {
-          navigate(`/projects/${urlProjectId}/files/${node.id}`);
+          const effectiveProjectId = urlProjectId || node.projectId || '';
+          navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
         }
       }
     },
@@ -102,7 +103,7 @@ export const useFileSystemNavigation = ({
         if (mode === 'personal-space') {
           navigate(`/personal-space/${node.id}`);
         } else {
-          const effectiveProjectId = node.isRoot ? node.id : urlProjectId;
+          const effectiveProjectId = node.isRoot ? node.id : (urlProjectId || node.projectId || '');
           navigate(`/projects/${effectiveProjectId}/files/${node.id}`);
         }
       } else {

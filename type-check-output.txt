@@ -1,8 +1,0 @@
-
-> frontend@0.0.0 type-check D:\project\cloudcad\packages\frontend
-> tsc --noEmit
-
-ÏµÍ³ÕÒ²»µ½Ö¸¶¨µÄÂ·¾¶¡£
-D:\project\cloudcad\packages\frontend:
-â€‰ERR_PNPM_RECURSIVE_RUN_FIRST_FAILâ€‰ frontend@0.0.0 type-check: `tsc --noEmit`
-Exit status 1

@@ -386,7 +386,10 @@ export const ShareManagePage: React.FC = () => {
                       <td className="share-mgmt-td-meta">
                         {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}
                       </td>
-                      <td className="share-mgmt-td-meta">
+                      <td
+                        className="share-mgmt-td-meta share-mgmt-td-clickable"
+                        onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
+                      >
                         {formatExpiryDate(item.expiresAt as string | null)}
                       </td>
                       <td className="share-mgmt-td-meta">{item.usedCount}</td>

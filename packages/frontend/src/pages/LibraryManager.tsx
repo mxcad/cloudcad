@@ -3,44 +3,39 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderPlus } from 'lucide-react';
-import { AlertCircle } from 'lucide-react';
+import { FolderPlus, HardDrive, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { FileNameInput } from '../components/ui/FileNameInput';
-import { SearchInput } from '../components/search/SearchInput';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { RenameModal } from '../components/modals/RenameModal';
 import { LibrarySelectFolderModal } from '../components/modals/LibrarySelectFolderModal';
-import { useNotification, useConfirmDialog } from '../contexts/NotificationContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { getErrorMessage } from '../utils/errorHandler';
-import { Pagination } from '../components/ui/Pagination';
-import { BreadcrumbNavigation } from '../components/BreadcrumbNavigation';
-import { FileItem } from '../components/FileItem';
 import { useLibrary } from '../hooks/useLibrary';
 import { useLibraryOperations } from '../hooks/library/useLibraryOperations';
 import { useLibraryModals } from '../hooks/library/useLibraryModals';
 import { useLibraryPagination } from '../hooks/library/useLibraryPagination';
 import { useLibraryQuota } from '../hooks/library/useLibraryQuota';
 import { usePermission } from '../hooks/usePermission';
+import { useFileSystemShortcuts } from '../hooks/file-system/useFileSystemShortcuts';
+import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
+import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { SystemPermission } from '../constants/permissions';
-// TODO: Replace with SDK when backend adds delete endpoints
-import { deleteDrawingNode, deleteBlockNode } from '../utils/libraryApi';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
-import {
-  EmptyFolderIcon,
-  RefreshIcon,
-} from '../components/FileIcons';
-import { ViewToggle } from '@/components/common/ViewToggle';
+import { EmptyFolderIcon } from '../components/FileIcons';
 import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
 import { formatFileSize } from '../utils/fileUtils';
-import { HardDrive, Save } from 'lucide-react';
+import { FileSystemHeader } from './FileSystemManager/FileSystemHeader';
+import { FileSystemContent } from './FileSystemManager/FileSystemContent';
+import { FileSystemStates } from './FileSystemManager/FileSystemStates';
 
 /**
  * 公共资源库管理页面
@@ -107,6 +102,7 @@ export const LibraryManager: React.FC = () => {
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
+    selectNodes,
     batchDeleteNodes,
   } = useLibrary({
     page: currentPage,
@@ -116,7 +112,7 @@ export const LibraryManager: React.FC = () => {
     onTotalChange: handleTotalChange,
   });
 
-  const { hasPermission, getUserPermissions } = usePermission();
+  const { hasPermission } = usePermission();
 
   // 权限检查：只有管理员才能上传、创建文件夹、删除
   const canManage =
@@ -203,6 +199,158 @@ export const LibraryManager: React.FC = () => {
 
   // 上传组件 ref - 完全复用项目管理的 MxCadUploader
   const uploaderRef = useRef<MxCadUploaderRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 剪贴板
+  const clipboardItems = useFileSystemClipboardStore((s) => s.items);
+  const clipboardMode = useFileSystemClipboardStore((s) => s.mode);
+  const setClipboard = useFileSystemClipboardStore((s) => s.setClipboard);
+  const clearClipboard = useFileSystemClipboardStore((s) => s.clearClipboard);
+
+  // 撤销/重做
+  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
+  const undoStoreUndo = useFileSystemUndoRedoStore((s) => s.undo);
+  const undoStoreRedo = useFileSystemUndoRedoStore((s) => s.redo);
+  const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
+  const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
+
+  // 剪贴板操作
+  const clipboardHandleCopy = useCallback(() => {
+    if (selectedNodes.size === 0) {
+      showToast('请先选择要复制的文件', 'info');
+      return;
+    }
+    setClipboard(Array.from(selectedNodes), 'copy', libraryId || '');
+    showToast(`已复制 ${selectedNodes.size} 个项目`, 'info');
+  }, [selectedNodes, setClipboard, libraryId, showToast]);
+
+  const clipboardHandleCut = useCallback(() => {
+    if (selectedNodes.size === 0) {
+      showToast('请先选择要剪切的文件', 'info');
+      return;
+    }
+    const nodeIds = Array.from(selectedNodes);
+    const sourceParentIds: Record<string, string> = {};
+    for (const id of nodeIds) {
+      const node = nodes.find((n) => n.id === id);
+      if (node?.parentId) sourceParentIds[id] = node.parentId;
+    }
+    setClipboard(nodeIds, 'cut', libraryId || '', sourceParentIds);
+    showToast(`已剪切 ${selectedNodes.size} 个项目`, 'info');
+  }, [selectedNodes, nodes, setClipboard, libraryId, showToast]);
+
+  const clipboardHandlePaste = useCallback(async () => {
+    if (clipboardItems.length === 0 || !clipboardMode) return;
+    const targetParentId = currentNode?.id || libraryId;
+    if (!targetParentId) {
+      showToast('无法确定粘贴位置', 'error');
+      return;
+    }
+    try {
+      if (clipboardMode === 'cut') {
+        for (const nodeId of clipboardItems) {
+          await moveNode(nodeId, targetParentId);
+        }
+        clearClipboard();
+        showToast('粘贴成功', 'success');
+        pushAction({
+          type: 'move',
+          description: `移动 ${clipboardItems.length} 个项目`,
+          projectId: libraryId || undefined,
+          execute: async () => {
+            for (const nodeId of clipboardItems) {
+              await moveNode(nodeId, targetParentId);
+            }
+          },
+          rollback: async () => {
+            const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
+            for (const [nodeId, srcParentId] of Object.entries(origParentIds)) {
+              if (srcParentId) {
+                await moveNode(nodeId, srcParentId);
+              }
+            }
+          },
+        });
+      } else {
+        for (const nodeId of clipboardItems) {
+          await copyNode(nodeId, targetParentId);
+        }
+        showToast('粘贴成功', 'success');
+        pushAction({
+          type: 'copy',
+          description: `复制 ${clipboardItems.length} 个项目`,
+          projectId: libraryId || undefined,
+          execute: async () => {
+            for (const nodeId of clipboardItems) {
+              await copyNode(nodeId, targetParentId);
+            }
+          },
+          rollback: async () => {
+            // 复制操作的回滚：删除已创建的文件（简化处理）
+            showToast('复制操作无法自动撤销', 'info');
+          },
+        });
+      }
+      refresh();
+    } catch (error) {
+      showToast('粘贴失败', 'error');
+    }
+  }, [clipboardItems, clipboardMode, currentNode, libraryId, moveNode, copyNode, clearClipboard, showToast, pushAction, refresh]);
+
+  // 快捷键相关 callback（延迟到 handlers 定义完成后）
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedNodes.size === 0) return;
+    const nodeIds = Array.from(selectedNodes);
+    const count = nodeIds.length;
+    showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
+      try {
+        const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
+        const fn = libraryType === 'drawing' ? libraryControllerBatchDeleteDrawingNodes : libraryControllerBatchDeleteBlockNodes;
+        const { data, error } = await fn({
+          body: { nodeIds, permanently: true },
+          throwOnError: false,
+        });
+        if (error) throw error;
+        const result = data as unknown as { successCount: number; failedCount: number };
+        if (result.failedCount > 0) {
+          showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+        } else {
+          showToast(`成功删除 ${count} 个项目`, 'success');
+        }
+        clearSelection();
+        await refresh();
+      } catch (error) {
+        console.error('批量删除失败:', error);
+        showToast(getErrorMessage(error), 'error');
+      }
+    });
+  }, [selectedNodes, showConfirm, libraryType, showToast, clearSelection, refresh]);
+
+  const clipboardHandleUndo = useCallback(async () => {
+    if (undoStack.length === 0) return;
+    try {
+      const action = undoStack[undoStack.length - 1];
+      if (!action) return;
+      await undoStoreUndo(libraryId || undefined);
+      showToast(`已撤销: ${action.description}`, 'info');
+      refresh();
+    } catch (error) {
+      showToast('撤销失败', 'error');
+    }
+  }, [undoStack, undoStoreUndo, libraryId, showToast, refresh]);
+
+  const clipboardHandleRedo = useCallback(async () => {
+    if (redoStack.length === 0) return;
+    try {
+      const action = redoStack[redoStack.length - 1];
+      if (!action) return;
+      await undoStoreRedo(libraryId || undefined);
+      showToast(`已重做: ${action.description}`, 'info');
+      refresh();
+    } catch (error) {
+      showToast('重做失败', 'error');
+    }
+  }, [redoStack, undoStoreRedo, libraryId, showToast, refresh]);
 
   // 打开文件到 CAD 编辑器
   const handleOpenInEditor = useCallback(
@@ -319,6 +467,31 @@ export const LibraryManager: React.FC = () => {
     [openRenameModal]
   );
 
+  const handleRenameSelected = useCallback(() => {
+    if (selectedNodes.size !== 1) return;
+    const nodeId = selectedNodes.values().next().value;
+    if (!nodeId) return;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node) {
+      handleRename({ id: node.id, name: node.name });
+    }
+  }, [selectedNodes, nodes, handleRename]);
+
+  useFileSystemShortcuts({
+    containerRef,
+    enabled: true,
+    onUndo: clipboardHandleUndo,
+    onRedo: clipboardHandleRedo,
+    onCopy: clipboardHandleCopy,
+    onCut: clipboardHandleCut,
+    onPaste: clipboardHandlePaste,
+    onDeleteSelected: handleDeleteSelected,
+    onRenameSelected: handleRenameSelected,
+    onClearSelection: clearSelection,
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
+  });
+
   // 执行重命名
   const handleRenameSubmit = useCallback(
     async (newName: string) => {
@@ -403,329 +576,348 @@ export const LibraryManager: React.FC = () => {
     [setLibraryType, setSearchTerm]
   );
 
-  return (
-    <div className="h-full flex flex-col overflow-hidden p-6">
-      {/* 顶部导航栏 */}
-      <div className="flex-shrink-0 max-w-7xl mx-auto w-full mb-6">
-        <div className="card-theme p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                公共资源库
-              </h1>
-              {/* 库类型切换 */}
-              <Select
-                value={libraryType}
-                onChange={(val) => handleSwitchLibrary(val as 'drawing' | 'block')}
-                options={[
-                  { value: 'drawing', label: '图纸库' },
-                  { value: 'block', label: '图块库' },
-                ]}
-                size="sm"
-              />
-              {/* 存储配额按钮 */}
-              {canManage && (
-                <Button
-                  onClick={openQuotaModal}
-                  variant="secondary"
-                  icon={HardDrive}
-                  title="配置存储配额"
-                >
-                  存储配额
-                </Button>
-              )}
-            </div>
+  // 面包屑导航
+  const handleBreadcrumbNav = useCallback(
+    (crumb: { id: string; name: string; isRoot?: boolean }) => {
+      setSearchTerm('');
+      if (crumb.id === libraryId) {
+        navigate(`/library/${libraryType}`);
+      } else {
+        navigate(`/library/${libraryType}/${crumb.id}`);
+      }
+    },
+    [libraryType, libraryId, navigate, setSearchTerm]
+  );
 
-            {/* 管理员操作按钮：只有管理员才显示 */}
-            {canManage && (
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={openCreateFolderModal}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <FolderPlus size={18} />
-                  新建文件夹
-                </Button>
-                <Button
-                  onClick={() => setShowDirectoryImport(true)}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <FolderPlus size={18} />
-                  批量导入
-                </Button>
-                {/* 使用 MxCadUploader 组件，完全复用项目管理的上传逻辑 */}
-                <MxCadUploader
-                  ref={uploaderRef}
-                  nodeId={currentNode?.id || libraryId || undefined}
-                  onSuccess={handleUploadSuccess}
-                  onError={handleUploadError}
-                  buttonText="上传文件"
-                  showProgress={true}
-                  openAfterUpload={false}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+  // 返回上一级
+  const handleGoBack = useCallback(() => {
+    setSearchTerm('');
+    if (breadcrumbs.length > 1) {
+      const parent = breadcrumbs[breadcrumbs.length - 2];
+      if (parent) {
+        if (parent.id === libraryId) {
+          navigate(`/library/${libraryType}`);
+        } else {
+          navigate(`/library/${libraryType}/${parent.id}`);
+        }
+      }
+    }
+  }, [breadcrumbs, libraryType, libraryId, navigate, setSearchTerm]);
 
-      {/* 主内容区 */}
-      <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full">
-        <div className="card-theme p-4 flex flex-col h-full">
-          {/* 面包屑和工具栏 */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            {/* 面包屑导航 */}
-            <div className="flex-1 min-w-0">
-              <BreadcrumbNavigation
-                breadcrumbs={breadcrumbs.map((b) => ({
-                  id: b.id,
-                  name: b.name,
-                  isRoot: false,
-                }))}
-                onNavigate={(breadcrumb) => {
-                  // 面包屑导航时清空搜索状态
-                  setSearchTerm('');
-                  if (breadcrumb.id === libraryId) {
-                    navigate(`/library/${libraryType}`);
-                  } else {
-                    navigate(`/library/${libraryType}/${breadcrumb.id}`);
-                  }
-                }}
-              />
-            </div>
+  // 是否在库根目录
+  const isAtRoot = !currentNode?.id || currentNode.id === libraryId;
 
-            {/* 工具栏 */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* 搜索框 */}
-              <SearchInput
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onSearch={() => handleSearchSubmit()}
-                placeholder="搜索文件..."
-              />
+  // 节点权限映射
+  const nodePermissions = useMemo(() => {
+    const map = new Map<string, { canEdit: boolean; canDelete: boolean; canManageMembers: boolean; canManageRoles: boolean }>();
+    for (const node of nodes) {
+      map.set(node.id, {
+        canEdit: canManage,
+        canDelete: canManage,
+        canManageMembers: false,
+        canManageRoles: false,
+      });
+    }
+    return map;
+  }, [nodes, canManage]);
 
-              {/* 视图切换 */}
-              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+  // 选中 / 剪贴板底部操作栏
+  const showSelectionBar = selectedNodes.size > 0;
+  const showClipboardBar = !showSelectionBar && clipboardItems.length > 0;
+  const handleCancelBar = useCallback(() => {
+    clearSelection();
+    clearClipboard();
+  }, [clearSelection, clearClipboard]);
 
-              {/* 刷新按钮 */}
-              <Button
-                onClick={refresh}
-                loading={isFetching}
-                variant="ghost"
-                title="刷新"
-              >
-                <RefreshIcon size={18} />
-              </Button>
-
-              {/* 全选按钮 */}
-              {nodes.length > 0 && (
-                <Button
-                  onClick={handleSelectAll}
-                  variant="ghost"
-                  style={{ color: 'var(--text-tertiary)' }}
-                  title={
-                    selectedNodes.size === nodes.length ? '取消全选' : '全选'
-                  }
-                >
-                  {selectedNodes.size === nodes.length ? (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <path d="M9 9l6 6M15 9l-6 6" />
-                    </svg>
-                  ) : (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <path d="M9 12l2 2 4-4" />
-                    </svg>
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* 错误提示 */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-              <AlertCircle
-                size={20}
-                className="text-red-500 flex-shrink-0 mt-0.5"
-              />
-              <div className="flex-1">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-              <Button
-                onClick={clearError}
-                variant="ghost"
-                className="text-red-500 hover:text-red-700"
-              >
-                关闭
-              </Button>
-            </div>
+  const bottomBar = (showSelectionBar || showClipboardBar) ? (
+    <div className="flex items-center gap-4">
+      {showSelectionBar && (
+        <>
+          <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
+          <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
+          {canManage && (
+            <>
+              <Button variant="ghost" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+              <Button variant="ghost" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+              <Button variant="ghost" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>删除</Button>
+            </>
           )}
+        </>
+      )}
+      <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
+        <Button variant="ghost" onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
+          粘贴
+          {clipboardItems.length > 0 && (
+            <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
+              {clipboardItems.length}
+            </span>
+          )}
+        </Button>
+        {clipboardItems.length > 0 && (
+          <Button variant="ghost" onClick={clearClipboard} style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </Button>
+        )}
+      </div>
+      <Button variant="ghost" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
+        取消
+      </Button>
+    </div>
+  ) : undefined;
 
-          {/* 文件列表 */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-              </div>
-            ) : nodes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full">
-                <EmptyFolderIcon
-                  size={80}
-                  className="text-slate-300 mb-6 animate-float"
+  const isEmpty = nodes.length === 0 && !loading && !error;
+
+  // 自定义空状态视图
+  const emptyView = (
+    <div className="flex flex-col items-center justify-center h-full">
+      <EmptyFolderIcon size={80} className="text-slate-300 mb-6 animate-float" />
+      <h3 className="text-xl font-bold text-slate-900 mb-2" style={{ color: 'var(--text-primary)' }}>
+        {isFolderMode ? '文件夹是空的' : '资源库暂无内容'}
+      </h3>
+      <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
+        {canManage
+          ? '上传文件或创建文件夹开始使用'
+          : '资源库暂无内容，请稍后再来'}
+      </p>
+      {canManage && (
+        <div className="flex gap-2">
+          <Button onClick={openCreateFolderModal} variant="outline">
+            创建文件夹
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  // 库类型 Select + 管理员快捷操作（自定义右侧按钮）
+  const renderExtraActions = useMemo(() => (
+    <>
+      <Select
+        value={libraryType}
+        onChange={(val) => handleSwitchLibrary(val as 'drawing' | 'block')}
+        options={[
+          { value: 'drawing', label: '图纸库' },
+          { value: 'block', label: '图块库' },
+        ]}
+        size="sm"
+      />
+      {canManage && (
+        <Tooltip content="存储配额">
+          <Button
+            onClick={openQuotaModal}
+            variant="ghost"
+            size="sm"
+            className="hover:bg-[var(--bg-tertiary)]"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            <HardDrive size={16} />
+          </Button>
+        </Tooltip>
+      )}
+      {canManage && (
+        <Tooltip content="批量导入">
+          <Button
+            onClick={() => setShowDirectoryImport(true)}
+            variant="ghost"
+            size="sm"
+            className="hover:bg-[var(--bg-tertiary)]"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </Button>
+        </Tooltip>
+      )}
+    </>
+  ), [libraryType, canManage, handleSwitchLibrary, openQuotaModal, setShowDirectoryImport]);
+
+  return (
+    <>
+    <div ref={containerRef} className="h-full flex flex-col overflow-hidden p-6">
+        {/* 顶部导航栏：复用 FileSystemHeader */}
+        <div className="flex-shrink-0 max-w-7xl mx-auto w-full space-y-6 relative">
+          <FileSystemHeader
+            mode="project"
+            isAtRoot={false}
+            isTrashView={false}
+            isPersonalSpaceMode={false}
+            isProjectRootMode={false}
+            loading={loading}
+            isFetching={isFetching}
+            searchTerm={searchTerm}
+            viewMode={viewMode}
+            selectedNodes={selectedNodes}
+            nodesCount={nodes.length}
+            projectFilter="all"
+            breadcrumbs={breadcrumbs}
+            canCreateProject={false}
+            uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
+            getCurrentParentId={() => currentNode?.id || libraryId || ''}
+            onSetSearchTerm={setSearchTerm}
+            onSetViewMode={setViewMode}
+            onSearchSubmit={handleSearchSubmit}
+            onSelectAll={handleSelectAll}
+            onToggleTrashView={() => {}}
+            onClearTrash={() => {}}
+            onProjectFilterChange={() => {}}
+            onRefresh={refresh}
+            onCreateFolder={canManage ? openCreateFolderModal : undefined}
+            onCreateProject={() => {}}
+            onGoBack={handleGoBack}
+            onBreadcrumbNavigate={handleBreadcrumbNav}
+            showToast={showToast}
+            clipboardCount={clipboardItems.length}
+            clipboardMode={clipboardMode}
+            onCopy={clipboardHandleCopy}
+            onCut={clipboardHandleCut}
+            onPaste={clipboardHandlePaste}
+            hideTrashButton={true}
+            hideBackButton={isAtRoot}
+            renderExtraActions={renderExtraActions}
+          />
+        </div>
+
+        {/* 主内容区 */}
+        <div
+          className="flex-1 min-h-0 max-w-7xl mx-auto w-full mt-6 rounded-2xl shadow-sm overflow-hidden"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border-default)',
+          }}
+        >
+          <div className="h-full rounded-2xl flex flex-col overflow-hidden">
+            {loading || error || isEmpty ? (
+              <div className="flex-1 flex items-center justify-center">
+                <FileSystemStates
+                  loading={loading}
+                  error={error}
+                  isEmpty={isEmpty}
+                  isAtRoot={false}
+                  isTrashView={false}
+                  searchTerm={searchTerm}
+                  canCreateProject={false}
+                  projectFilter="all"
+                  onRefresh={refresh}
+                  onCreateProject={() => {}}
+                  renderEmptyView={emptyView}
                 />
-                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  {isFolderMode ? '文件夹是空的' : '资源库暂无内容'}
-                </h3>
-                <p className="text-slate-500 text-sm mb-6">
-                  {canManage
-                    ? '上传文件或创建文件夹开始使用'
-                    : '资源库暂无内容，请稍后再来'}
-                </p>
-                {canManage && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={openCreateFolderModal}
-                      variant="outline"
-                    >
-                      创建文件夹
-                    </Button>
-                  </div>
-                )}
               </div>
             ) : (
-              <div
-                className={
-                  viewMode === 'grid'
-                    ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
-                    : 'space-y-2 p-6'
-                }
-              >
-                {nodes.map((node) => (
-                  <FileItem
-                    key={node.id}
-                    node={node}
-                    viewMode={viewMode}
-                    hideSelectionCircle={false}
-                    canDownload={true}
-                    canDelete={canManage}
-                    canEdit={canManage}
-                    canManageExternalReference={canManage}
-                    isSelected={selectedNodes.has(node.id)}
-                    onSelect={(nodeId, isMultiSelect, isShift) => {
-                      handleNodeSelect(nodeId, isMultiSelect, isShift);
-                    }}
-                    onEnter={(node) => {
-                      if (node.isFolder) {
-                        enterNode(node);
-                      } else {
-                        handleOpenInEditor(node);
-                      }
-                    }}
-                    onDownload={(node) => {
-                      if (!node.isFolder) {
-                        openDownloadFormatModal(node.id, node.name);
-                      }
-                    }}
-                    onDelete={() => handleDeleteConfirm(node.id, node.name)}
-                    onRename={() =>
-                      handleRename({ id: node.id, name: node.name })
+              <div className="flex-1 min-h-0 flex flex-col">
+                <FileSystemContent
+                  nodes={nodes}
+                  viewMode={viewMode}
+                  isTrashView={false}
+                  isAtRoot={false}
+                  selectedNodes={selectedNodes}
+                  dropTargetId={null}
+                  nodePermissions={nodePermissions}
+                  projectPermissions={{}}
+                  paginationMeta={{
+                    total,
+                    page: currentPage,
+                    limit: pageSize,
+                    totalPages: Math.max(totalPages, 1),
+                  }}
+                  onNodeSelect={(nodeId, ctrlKey) => handleNodeSelect(nodeId, ctrlKey)}
+                  onFileOpen={(node) => {
+                    if (node.isFolder) {
+                      enterNode(node);
+                    } else {
+                      handleOpenInEditor(node);
                     }
-                    onMove={() => handleMove({ id: node.id, name: node.name })}
-                    onCopy={() => handleCopy({ id: node.id, name: node.name })}
-                    compact={false}
-                  />
-                ))}
+                  }}
+                  onDownload={(node) => {
+                    if (!node.isFolder) {
+                      openDownloadFormatModal(node.id, node.name);
+                    }
+                  }}
+                  onDelete={(node) => handleDeleteConfirm(node.id, node.name)}
+                  onPermanentlyDelete={() => {}}
+                  onRename={(node) => handleRename({ id: node.id, name: node.name })}
+                  onRefresh={refresh}
+                  onRestore={undefined}
+                  onEdit={undefined}
+                  onDeleteNode={undefined}
+                  onShowMembers={undefined}
+                  onShowRoles={undefined}
+                  onMove={canManage ? (node) => handleMove({ id: node.id, name: node.name }) : undefined}
+                  onCopy={canManage ? (node) => handleCopy({ id: node.id, name: node.name }) : undefined}
+                  onShowVersionHistory={undefined}
+                  onShare={undefined}
+                  onDragStart={() => {}}
+                  onDragOver={() => {}}
+                  onDragLeave={() => {}}
+                  onDrop={() => {}}
+                  onPageChange={(newPage) => { setCurrentPage(newPage); }}
+                  onPageSizeChange={(newPageSize) => { setPageSize(newPageSize); setCurrentPage(1); }}
+                  onRubberBandSelect={selectNodes}
+                  onBatchDelete={canManage ? (() => {
+                    const nodeIds = Array.from(selectedNodes);
+                    const count = nodeIds.length;
+                    showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
+                      try {
+                        const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
+                        const fn = libraryType === 'drawing'
+                          ? libraryControllerBatchDeleteDrawingNodes
+                          : libraryControllerBatchDeleteBlockNodes;
+                        const { data, error } = await fn({
+                          body: { nodeIds, permanently: true },
+                          throwOnError: false,
+                        });
+                        if (error) throw error;
+                        const result = data as unknown as { successCount: number; failedCount: number };
+                        if (result.failedCount > 0) {
+                          showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+                        } else {
+                          showToast(`成功删除 ${count} 个项目`, 'success');
+                        }
+                        clearSelection();
+                        await refresh();
+                      } catch (error) {
+                        console.error('批量删除失败:', error);
+                        showToast(getErrorMessage(error), 'error');
+                      }
+                    });
+                  }) : undefined}
+                  onBatchMove={canManage ? clipboardHandleCut : undefined}
+                  onBatchCopy={canManage ? clipboardHandleCopy : undefined}
+                  loading={loading || isFetching}
+                  onScrollPageChange={() => {}}
+                  isSearchResult={false}
+                  onOpen={(node) => {
+                    if (node.isFolder) {
+                      enterNode(node);
+                    } else {
+                      handleOpenInEditor(node);
+                    }
+                  }}
+                  onOpenInNewTab={(node) => {
+                    if (!node.isFolder) {
+                      handleOpenInEditor(node);
+                    }
+                  }}
+                  onCopyClipboard={canManage ? (node) => clipboardHandleCopy() : undefined}
+                  onCut={canManage ? (node) => clipboardHandleCut() : undefined}
+                  onCreateFolderInCurrentDir={canManage ? openCreateFolderModal : undefined}
+                  onUpload={canManage ? () => uploaderRef.current?.triggerUpload() : undefined}
+                  onPasteInCurrentDir={clipboardHandlePaste}
+                  clipboardHasItems={clipboardItems.length > 0}
+                />
               </div>
             )}
-          </div>
-
-          {/* 多选操作条 */}
-          {selectedNodes.size > 0 && (
-            <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
-                <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
-                  已选中 {selectedNodes.size} 项
-                </span>
-                <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-                {canManage && (
-                  <>
-                    <Button onClick={() => openBatchMoveModal(selectedNodes.size)} variant="ghost" style={{ color: 'var(--text-secondary)' }}>移动</Button>
-                    <Button onClick={() => openBatchCopyModal(selectedNodes.size)} variant="ghost" style={{ color: 'var(--text-secondary)' }}>复制</Button>
-                    <Button
-                      onClick={async () => {
-                        const nodeIds = Array.from(selectedNodes);
-                        const count = nodeIds.length;
-                        showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
-                          try {
-                            const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
-                            const fn = libraryType === 'drawing'
-                              ? libraryControllerBatchDeleteDrawingNodes
-                              : libraryControllerBatchDeleteBlockNodes;
-                            const { data, error } = await fn({
-                              body: { nodeIds, permanently: true },
-                              throwOnError: false,
-                            });
-                            if (error) throw error;
-                            const result = data as unknown as { successCount: number; failedCount: number };
-                            if (result.failedCount > 0) {
-                              showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
-                            } else {
-                              showToast(`成功删除 ${count} 个项目`, 'success');
-                            }
-                            clearSelection();
-                            await refresh();
-                          } catch (error) {
-                            console.error('批量删除失败:', error);
-                            showToast(getErrorMessage(error), 'error');
-                          }
-                        });
-                      }}
-                      variant="ghost"
-                      style={{ color: 'var(--error)' }}
-                    >批量删除</Button>
-                  </>
-                )}
-                <Button onClick={clearSelection} variant="ghost" style={{ color: 'var(--text-secondary)' }}>取消选择</Button>
+            {bottomBar && (
+              <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                  {bottomBar}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* 分页 */}
-          <div className="flex-shrink-0 mt-4 flex justify-center">
-            <Pagination
-              meta={{
-                total,
-                page: currentPage,
-                limit: pageSize,
-                totalPages: Math.max(totalPages, 1),
-              }}
-              onPageChange={(newPage: number) => {
-                setCurrentPage(newPage);
-              }}
-              onPageSizeChange={(newPageSize: number) => {
-                setPageSize(newPageSize);
-                setCurrentPage(1);
-              }}
-              showSizeChanger={true}
-            />
+            )}
           </div>
         </div>
       </div>
@@ -750,7 +942,8 @@ export const LibraryManager: React.FC = () => {
             <div>
               <label
                 htmlFor="folderName"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium mb-1"
+                style={{ color: 'var(--text-primary)' }}
               >
                 文件夹名称
               </label>
@@ -899,7 +1092,7 @@ export const LibraryManager: React.FC = () => {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 };
 

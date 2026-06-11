@@ -171,6 +171,15 @@
   font-size: var(--text-sm);
 }
 
+.share-mgmt-td-clickable {
+  cursor: pointer;
+}
+
+.share-mgmt-td-clickable:hover {
+  color: var(--primary-500);
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   .share-mgmt-page {
     padding: var(--space-4);

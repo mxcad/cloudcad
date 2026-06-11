@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { FileSystemNode } from '../types/filesystem';
+import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { useLibrarySelection } from './library/useLibrarySelection';
 import { useLibraryQuery } from './library/useLibraryQuery';
 import { useLibraryMutations } from './library/useLibraryMutations';
@@ -94,6 +95,8 @@ interface UseLibraryActions {
   handleSelectAll: () => void;
   /** 清除选择 */
   clearSelection: () => void;
+  /** 直接设置选中节点 */
+  selectNodes: (nodeIds: string[]) => void;
   /** 批量删除 */
   batchDeleteNodes: (nodeIds: string[]) => Promise<void>;
 }
@@ -134,27 +137,9 @@ export const useLibrary = (
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // ── 视图模式（localStorage 持久化） ──
-  const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => {
-    try {
-      const saved = localStorage.getItem('library:viewMode');
-      if (saved === 'grid' || saved === 'list') {
-        return saved;
-      }
-    } catch {
-      // localStorage 不可用时忽略
-    }
-    return 'grid';
-  });
-
-  const setViewMode = useCallback((mode: 'grid' | 'list') => {
-    setViewModeState(mode);
-    try {
-      localStorage.setItem('library:viewMode', mode);
-    } catch {
-      // localStorage 不可用时忽略
-    }
-  }, []);
+  // ── 视图模式（使用全局 fileSystemStore，与 FileSystemManager 共享状态） ──
+  const viewMode = useFileSystemStore((s) => s.viewMode);
+  const setViewMode = useFileSystemStore((s) => s.setViewMode);
 
   // ── 数据查询 ──
   // flatMode: false → 管理页面走层级目录（getChildren），而非递归扁平（getAllFiles）
@@ -222,6 +207,7 @@ export const useLibrary = (
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
+    selectNodes,
   } = useLibrarySelection({ nodes: query.nodes });
 
   // ── 清除错误（React Query 没有可清除的 error 状态，保留接口兼容） ──
@@ -281,6 +267,7 @@ export const useLibrary = (
     handleNodeSelect,
     handleSelectAll,
     clearSelection,
+    selectNodes,
     batchDeleteNodes,
   };
 };

@@ -8,9 +8,8 @@ import { DatabaseService } from '../../database/database.service';
 import { SearchService } from '../../file-system/search/search.service';
 import { FtsQueryBuilder } from '../../file-system/search/fts-query-builder';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
-import { PermissionService } from '../../common/services/permission.service';
 import { SearchScope, SearchType } from '../../file-system/dto/search.dto';
-import { ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 
 describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
   let searchService: SearchService;
@@ -29,13 +28,6 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
     checkNodePermission: jest.fn(),
   };
 
-  // Mock PermissionService
-  const mockPermissionService = {
-    checkSystemPermission: jest.fn(),
-    checkSystemPermissionWithContext: jest.fn(),
-    checkSystemPermissionsBatch: jest.fn(),
-  };
-
   const mockFtsQueryBuilder = {
     matchIds: jest.fn(),
   };
@@ -50,7 +42,6 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
         SearchService,
         { provide: DatabaseService, useValue: mockPrisma },
         { provide: FileSystemPermissionService, useValue: mockFileSystemPermissionService },
-        { provide: PermissionService, useValue: mockPermissionService },
         { provide: FtsQueryBuilder, useValue: mockFtsQueryBuilder },
       ],
     }).compile();
@@ -273,19 +264,16 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
     });
   });
 
-  describe('测试 4: 资源库搜索权限过滤', () => {
-    it('应返回图纸库搜索结果，当用户有图纸库权限时', async () => {
-      // 准备
+  describe('测试 4: 资源库搜索', () => {
+    it('应返回图纸库搜索结果', async () => {
       const userId = 'user-1';
       const mockLibraryItems = [
         { id: 'lib-1', name: 'library-dwg-1.dwg', libraryKey: 'drawing' },
       ];
 
-      mockPermissionService.checkSystemPermission.mockResolvedValue(true);
       mockPrisma.fileSystemNode.findMany.mockResolvedValue(mockLibraryItems);
       mockPrisma.fileSystemNode.count.mockResolvedValue(1);
 
-      // 执行
       const result = await searchService.search(userId, {
         keyword: 'library',
         scope: SearchScope.LIBRARY,
@@ -294,30 +282,8 @@ describe('文件搜索 → 权限过滤 → 分页 链路集成测试', () => {
         limit: 10,
       });
 
-      // 验证
       expect(result.nodes.length).toBe(1);
       expect(result.total).toBe(1);
-      expect(mockPermissionService.checkSystemPermission).toHaveBeenCalled();
-    });
-
-    it('应返回空结果，当用户无图纸库权限时', async () => {
-      // 准备
-      const userId = 'user-1';
-
-      mockPermissionService.checkSystemPermission.mockResolvedValue(false);
-
-      // 执行
-      const result = await searchService.search(userId, {
-        keyword: 'library',
-        scope: SearchScope.LIBRARY,
-        libraryKey: 'drawing',
-        page: 1,
-        limit: 10,
-      });
-
-      // 验证
-      expect(result.nodes).toEqual([]);
-      expect(result.total).toBe(0);
     });
   });
 

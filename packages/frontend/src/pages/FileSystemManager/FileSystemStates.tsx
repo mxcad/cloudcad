@@ -20,6 +20,8 @@ interface FileSystemStatesProps {
   projectFilter: ProjectFilterType;
   onRefresh: () => void;
   onCreateProject: () => void;
+  /** 自定义空状态视图（覆盖默认的 empty view） */
+  renderEmptyView?: React.ReactNode;
 }
 
 export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
@@ -33,6 +35,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
   projectFilter,
   onRefresh,
   onCreateProject,
+  renderEmptyView,
 }) => {
   if (loading) {
     return (
@@ -79,6 +82,10 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
 
   if (isEmpty) {
     const isProjectsEmpty = isAtRoot && !isTrashView;
+
+    if (renderEmptyView) {
+      return <>{renderEmptyView}</>;
+    }
 
     return (
       <div className="flex flex-col items-center justify-center py-16">
