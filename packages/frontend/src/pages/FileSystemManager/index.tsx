@@ -968,8 +968,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
                    onRubberBandSelect={handleRubberBandSelect}
                   onBatchDelete={() => handleBatchDelete(isTrashView)}
-                  onBatchMove={() => { setMoveSourceNode({ id: 'batch' }); setCopySourceNode(null); setShowSelectFolderModal(true); }}
-                  onBatchCopy={() => { setMoveSourceNode(null); setCopySourceNode({ id: 'batch' }); setShowSelectFolderModal(true); }}
+                  onBatchMove={clipboardHandleCut}
+                  onBatchCopy={clipboardHandleCopy}
                   onBatchRestore={isTrashView ? handleBatchRestore : undefined}
                   loading={loading || isFetching}
                   currentPage={paginationMeta?.page}

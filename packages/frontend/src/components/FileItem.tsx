@@ -46,6 +46,7 @@ interface FileItemProps {
   canUpload?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  canShare?: boolean;
   canDownload?: boolean;
   canViewVersionHistory?: boolean;
   canManageTrash?: boolean;
@@ -119,6 +120,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   canUpload = false,
   canEdit = false,
   canDelete = false,
+  canShare = false,
   canDownload = false,
   canViewVersionHistory = false,
   canManageExternalReference = false,
@@ -248,6 +250,8 @@ export const FileItem: React.FC<FileItemProps> = ({
       if (!hideSelectionCircle) {
         if (isCtrl || isShift) {
           onSelect?.(node.id, isCtrl || isShift, isShift);
+        } else if (isSelected) {
+          onSelect?.(node.id, true, false);
         } else {
           onEnter(node);
         }
@@ -265,7 +269,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         onEnter(node);
       }
     },
-    [node, onSelect, onEnter, hideSelectionCircle, doubleClickToOpen, isRubberBanding]
+    [node, onSelect, onEnter, hideSelectionCircle, doubleClickToOpen, isRubberBanding, isSelected]
   );
 
   const handleDoubleClick = useCallback(
@@ -382,6 +386,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     canDownload,
     canEdit,
     canDelete,
+    canShare,
     canViewVersionHistory,
     canManageExternalReference,
     canManageTrash: !!onRestore || !!onPermanentlyDelete,
@@ -458,12 +463,12 @@ export const FileItem: React.FC<FileItemProps> = ({
               )}
               {onBatchMove && (
                 <Menu.Item onClick={() => { onBatchMove(); closeContextMenu(); }}>
-                  移动 {selectedCount} 个选中项
+                  移动
                 </Menu.Item>
               )}
               {onBatchCopy && (
                 <Menu.Item onClick={() => { onBatchCopy(); closeContextMenu(); }}>
-                  复制 {selectedCount} 个选中项
+                  复制
                 </Menu.Item>
               )}
               {onBatchRestore && (
