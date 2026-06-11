@@ -26,6 +26,12 @@ import { usePermission } from '../hooks/usePermission';
 import { useFileSystemShortcuts } from '../hooks/file-system/useFileSystemShortcuts';
 import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import {
+  libraryControllerCopyDrawingNode,
+  libraryControllerCopyBlockNode,
+  libraryControllerDeleteDrawingNode,
+  libraryControllerDeleteBlockNode,
+} from '@/api-sdk';
 import { SystemPermission } from '../constants/permissions';
 import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
 import { EmptyFolderIcon } from '../components/FileIcons';
@@ -92,10 +98,8 @@ export const LibraryManager: React.FC = () => {
     setSearchTerm,
     setViewMode,
     createFolder,
-    deleteNode,
     renameNode,
     moveNode,
-    copyNode,
     downloadNode,
     clearError,
     selectedNodes,
@@ -272,30 +276,62 @@ export const LibraryManager: React.FC = () => {
           },
         });
       } else {
+        const apiMethod = libraryType === 'drawing'
+          ? libraryControllerCopyDrawingNode
+          : libraryControllerCopyBlockNode;
+        const deleteApi = libraryType === 'drawing'
+          ? libraryControllerDeleteDrawingNode
+          : libraryControllerDeleteBlockNode;
+
+        const createdIdsRef: { current: string[] } = { current: [] };
         for (const nodeId of clipboardItems) {
-          await copyNode(nodeId, targetParentId);
+          try {
+            const result = await apiMethod({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+            const data = (result as unknown as { data?: { id?: string } })?.data || result;
+            const newId = (data as unknown as { id?: string })?.id || '';
+            if (newId) createdIdsRef.current.push(newId);
+          } catch {
+            // 单个复制失败不影响其他
+          }
         }
         showToast('粘贴成功', 'success');
-        pushAction({
-          type: 'copy',
-          description: `复制 ${clipboardItems.length} 个项目`,
-          projectId: libraryId || undefined,
-          execute: async () => {
-            for (const nodeId of clipboardItems) {
-              await copyNode(nodeId, targetParentId);
-            }
-          },
-          rollback: async () => {
-            // 复制操作的回滚：删除已创建的文件（简化处理）
-            showToast('复制操作无法自动撤销', 'info');
-          },
-        });
+        if (createdIdsRef.current.length > 0) {
+          pushAction({
+            type: 'paste-copy',
+            description: `复制 ${clipboardItems.length} 个项目`,
+            projectId: libraryId || undefined,
+            execute: async () => {
+              const newIds: string[] = [];
+              for (const nodeId of clipboardItems) {
+                try {
+                  const result = await apiMethod({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+                  const data = (result as unknown as { data?: { id?: string } })?.data || result;
+                  const newId = (data as unknown as { id?: string })?.id || '';
+                  if (newId) newIds.push(newId);
+                } catch {
+                  // skip
+                }
+              }
+              createdIdsRef.current = newIds;
+            },
+            rollback: async () => {
+              for (const id of createdIdsRef.current) {
+                try {
+                  await deleteApi({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
+                } catch (e) {
+                  if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'NOT_FOUND') continue;
+                  throw e;
+                }
+              }
+            },
+          });
+        }
       }
       refresh();
     } catch (error) {
       showToast('粘贴失败', 'error');
     }
-  }, [clipboardItems, clipboardMode, currentNode, libraryId, moveNode, copyNode, clearClipboard, showToast, pushAction, refresh]);
+  }, [clipboardItems, clipboardMode, currentNode, libraryId, moveNode, clearClipboard, showToast, pushAction, refresh, libraryType]);
 
   // 快捷键相关 callback（延迟到 handlers 定义完成后）
   const handleDeleteSelected = useCallback(() => {
@@ -717,21 +753,20 @@ export const LibraryManager: React.FC = () => {
         </Tooltip>
       )}
       {canManage && (
-        <Tooltip content="批量导入">
-          <Button
-            onClick={() => setShowDirectoryImport(true)}
-            variant="ghost"
-            size="sm"
-            className="hover:bg-[var(--bg-tertiary)]"
-            style={{ color: 'var(--text-tertiary)' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={() => setShowDirectoryImport(true)}
+          variant="ghost"
+          size="sm"
+          className="hover:bg-[var(--bg-tertiary)]"
+          style={{ color: 'var(--text-tertiary)' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          批量导入
+        </Button>
       )}
     </>
   ), [libraryType, canManage, handleSwitchLibrary, openQuotaModal, setShowDirectoryImport]);
