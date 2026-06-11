@@ -783,142 +783,144 @@ export const LibraryManager: React.FC = () => {
         </div>
 
         {/* 主内容区 */}
-        <div
-          className="flex-1 min-h-0 max-w-7xl mx-auto w-full mt-6 rounded-2xl shadow-sm overflow-hidden"
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--border-default)',
-          }}
-        >
-          <div className="h-full rounded-2xl flex flex-col overflow-hidden">
-            {loading || error || isEmpty ? (
-              <div className="flex-1 flex items-center justify-center">
-                <FileSystemStates
-                  loading={loading}
-                  error={error}
-                  isEmpty={isEmpty}
-                  isAtRoot={false}
-                  isTrashView={false}
-                  searchTerm={searchTerm}
-                  canCreateProject={false}
-                  projectFilter="all"
-                  onRefresh={refresh}
-                  onCreateProject={() => {}}
-                  renderEmptyView={emptyView}
-                />
-              </div>
-            ) : (
-              <div className="flex-1 min-h-0 flex flex-col">
-                <FileSystemContent
-                  nodes={nodes}
-                  viewMode={viewMode}
-                  isTrashView={false}
-                  isAtRoot={false}
-                  selectedNodes={selectedNodes}
-                  dropTargetId={null}
-                  nodePermissions={nodePermissions}
-                  projectPermissions={{}}
-                  paginationMeta={{
-                    total,
-                    page: currentPage,
-                    limit: pageSize,
-                    totalPages: Math.max(totalPages, 1),
-                  }}
-                  onNodeSelect={(nodeId, ctrlKey) => handleNodeSelect(nodeId, ctrlKey)}
-                  onFileOpen={(node) => {
-                    if (node.isFolder) {
-                      enterNode(node);
-                    } else {
-                      handleOpenInEditor(node);
-                    }
-                  }}
-                  onDownload={(node) => {
-                    if (!node.isFolder) {
-                      openDownloadFormatModal(node.id, node.name);
-                    }
-                  }}
-                  onDelete={(node) => handleDeleteConfirm(node.id, node.name)}
-                  onPermanentlyDelete={() => {}}
-                  onRename={(node) => handleRename({ id: node.id, name: node.name })}
-                  onRefresh={refresh}
-                  onRestore={undefined}
-                  onEdit={undefined}
-                  onDeleteNode={undefined}
-                  onShowMembers={undefined}
-                  onShowRoles={undefined}
-                  onMove={canManage ? (node) => handleMove({ id: node.id, name: node.name }) : undefined}
-                  onCopy={canManage ? (node) => handleCopy({ id: node.id, name: node.name }) : undefined}
-                  onShowVersionHistory={undefined}
-                  onShare={undefined}
-                  onDragStart={() => {}}
-                  onDragOver={() => {}}
-                  onDragLeave={() => {}}
-                  onDrop={() => {}}
-                  onPageChange={(newPage) => { setCurrentPage(newPage); }}
-                  onPageSizeChange={(newPageSize) => { setPageSize(newPageSize); setCurrentPage(1); }}
-                  onRubberBandSelect={selectNodes}
-                  onBatchDelete={canManage ? (() => {
-                    const nodeIds = Array.from(selectedNodes);
-                    const count = nodeIds.length;
-                    showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
-                      try {
-                        const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
-                        const fn = libraryType === 'drawing'
-                          ? libraryControllerBatchDeleteDrawingNodes
-                          : libraryControllerBatchDeleteBlockNodes;
-                        const { data, error } = await fn({
-                          body: { nodeIds, permanently: true },
-                          throwOnError: false,
-                        });
-                        if (error) throw error;
-                        const result = data as unknown as { successCount: number; failedCount: number };
-                        if (result.failedCount > 0) {
-                          showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
-                        } else {
-                          showToast(`成功删除 ${count} 个项目`, 'success');
-                        }
-                        clearSelection();
-                        await refresh();
-                      } catch (error) {
-                        console.error('批量删除失败:', error);
-                        showToast(getErrorMessage(error), 'error');
-                      }
-                    });
-                  }) : undefined}
-                  onBatchMove={canManage ? clipboardHandleCut : undefined}
-                  onBatchCopy={canManage ? clipboardHandleCopy : undefined}
-                  loading={loading || isFetching}
-                  onScrollPageChange={() => {}}
-                  isSearchResult={false}
-                  onOpen={(node) => {
-                    if (node.isFolder) {
-                      enterNode(node);
-                    } else {
-                      handleOpenInEditor(node);
-                    }
-                  }}
-                  onOpenInNewTab={(node) => {
-                    if (!node.isFolder) {
-                      handleOpenInEditor(node);
-                    }
-                  }}
-                  onCopyClipboard={canManage ? (node) => clipboardHandleCopy() : undefined}
-                  onCut={canManage ? (node) => clipboardHandleCut() : undefined}
-                  onCreateFolderInCurrentDir={canManage ? openCreateFolderModal : undefined}
-                  onUpload={canManage ? () => uploaderRef.current?.triggerUpload() : undefined}
-                  onPasteInCurrentDir={clipboardHandlePaste}
-                  clipboardHasItems={clipboardItems.length > 0}
-                />
-              </div>
-            )}
-            {bottomBar && (
-              <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
-                  {bottomBar}
+        <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full mt-6 flex flex-col gap-3">
+          <div
+            className="flex-1 min-h-0 rounded-2xl shadow-sm overflow-hidden"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border-default)',
+            }}
+          >
+            <div className="h-full rounded-2xl flex flex-col overflow-hidden">
+              {loading || error || isEmpty ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <FileSystemStates
+                    loading={loading}
+                    error={error}
+                    isEmpty={isEmpty}
+                    isAtRoot={false}
+                    isTrashView={false}
+                    searchTerm={searchTerm}
+                    canCreateProject={false}
+                    projectFilter="all"
+                    onRefresh={refresh}
+                    onCreateProject={() => {}}
+                    renderEmptyView={emptyView}
+                  />
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <FileSystemContent
+                    nodes={nodes}
+                    viewMode={viewMode}
+                    isTrashView={false}
+                    isAtRoot={false}
+                    selectedNodes={selectedNodes}
+                    dropTargetId={null}
+                    nodePermissions={nodePermissions}
+                    projectPermissions={{}}
+                    paginationMeta={{
+                      total,
+                      page: currentPage,
+                      limit: pageSize,
+                      totalPages: Math.max(totalPages, 1),
+                    }}
+                    onNodeSelect={(nodeId, ctrlKey) => handleNodeSelect(nodeId, ctrlKey)}
+                    onFileOpen={(node) => {
+                      if (node.isFolder) {
+                        enterNode(node);
+                      } else {
+                        handleOpenInEditor(node);
+                      }
+                    }}
+                    onDownload={(node) => {
+                      if (!node.isFolder) {
+                        openDownloadFormatModal(node.id, node.name);
+                      }
+                    }}
+                    onDelete={(node) => handleDeleteConfirm(node.id, node.name)}
+                    onPermanentlyDelete={() => {}}
+                    onRename={(node) => handleRename({ id: node.id, name: node.name })}
+                    onRefresh={refresh}
+                    onRestore={undefined}
+                    onEdit={undefined}
+                    onDeleteNode={undefined}
+                    onShowMembers={undefined}
+                    onShowRoles={undefined}
+                    onMove={canManage ? (node) => handleMove({ id: node.id, name: node.name }) : undefined}
+                    onCopy={canManage ? (node) => handleCopy({ id: node.id, name: node.name }) : undefined}
+                    onShowVersionHistory={undefined}
+                    onShare={undefined}
+                    onDragStart={() => {}}
+                    onDragOver={() => {}}
+                    onDragLeave={() => {}}
+                    onDrop={() => {}}
+                    onPageChange={(newPage) => { setCurrentPage(newPage); }}
+                    onPageSizeChange={(newPageSize) => { setPageSize(newPageSize); setCurrentPage(1); }}
+                    onRubberBandSelect={selectNodes}
+                    onBatchDelete={canManage ? (() => {
+                      const nodeIds = Array.from(selectedNodes);
+                      const count = nodeIds.length;
+                      showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
+                        try {
+                          const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
+                          const fn = libraryType === 'drawing'
+                            ? libraryControllerBatchDeleteDrawingNodes
+                            : libraryControllerBatchDeleteBlockNodes;
+                          const { data, error } = await fn({
+                            body: { nodeIds, permanently: true },
+                            throwOnError: false,
+                          });
+                          if (error) throw error;
+                          const result = data as unknown as { successCount: number; failedCount: number };
+                          if (result.failedCount > 0) {
+                            showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+                          } else {
+                            showToast(`成功删除 ${count} 个项目`, 'success');
+                          }
+                          clearSelection();
+                          await refresh();
+                        } catch (error) {
+                          console.error('批量删除失败:', error);
+                          showToast(getErrorMessage(error), 'error');
+                        }
+                      });
+                    }) : undefined}
+                    onBatchMove={canManage ? clipboardHandleCut : undefined}
+                    onBatchCopy={canManage ? clipboardHandleCopy : undefined}
+                    loading={loading || isFetching}
+                    onScrollPageChange={() => {}}
+                    isSearchResult={false}
+                    onOpen={(node) => {
+                      if (node.isFolder) {
+                        enterNode(node);
+                      } else {
+                        handleOpenInEditor(node);
+                      }
+                    }}
+                    onOpenInNewTab={(node) => {
+                      if (!node.isFolder) {
+                        handleOpenInEditor(node);
+                      }
+                    }}
+                    onCopyClipboard={canManage ? (node) => clipboardHandleCopy() : undefined}
+                    onCut={canManage ? (node) => clipboardHandleCut() : undefined}
+                    onCreateFolderInCurrentDir={canManage ? openCreateFolderModal : undefined}
+                    onUpload={canManage ? () => uploaderRef.current?.triggerUpload() : undefined}
+                    onPasteInCurrentDir={clipboardHandlePaste}
+                    clipboardHasItems={clipboardItems.length > 0}
+                  />
+                </div>
+              )}
+            </div>
           </div>
+          {bottomBar && (
+            <div className="flex-shrink-0 flex justify-center">
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                {bottomBar}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

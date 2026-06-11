@@ -960,136 +960,138 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           />
         </div>
 
-        <div
-          className="flex-1 min-h-0 max-w-7xl mx-auto w-full mt-6 rounded-2xl shadow-sm overflow-hidden"
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--border-default)',
-          }}
-        >
+        <div className="flex-1 min-h-0 max-w-7xl mx-auto w-full mt-6 flex flex-col gap-3">
           <div
-            className="h-full rounded-2xl flex flex-col overflow-hidden"
-            {...(!isAtRoot ? fileDropHandlers : {})}
+            className="flex-1 min-h-0 rounded-2xl shadow-sm overflow-hidden"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border-default)',
+            }}
           >
-            {isFileDragOver && (
-              <div
-                className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl pointer-events-none m-0"
-                style={{
-                  background: 'color-mix(in srgb, var(--primary-500) 8%, transparent)',
-                  border: '2px dashed var(--primary-400)',
-                }}
-              >
+            <div
+              className="h-full rounded-2xl flex flex-col overflow-hidden"
+              {...(!isAtRoot ? fileDropHandlers : {})}
+            >
+              {isFileDragOver && (
                 <div
-                  className="flex items-center gap-3 px-6 py-3 rounded-xl"
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl pointer-events-none m-0"
                   style={{
-                    background: 'var(--bg-elevated)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    background: 'color-mix(in srgb, var(--primary-500) 8%, transparent)',
+                    border: '2px dashed var(--primary-400)',
                   }}
                 >
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--primary-500)' }} />
-                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>释放文件以上传到当前目录</span>
+                  <div
+                    className="flex items-center gap-3 px-6 py-3 rounded-xl"
+                    style={{
+                      background: 'var(--bg-elevated)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--primary-500)' }} />
+                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>释放文件以上传到当前目录</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {loading || error || showEmpty ? (
-              <div className="flex-1 flex items-center justify-center">
-                <FileSystemStates
-                  loading={loading}
-                  error={error}
-                  isEmpty={showEmpty}
-                  isAtRoot={isAtRoot}
-                  isTrashView={isTrashView}
-                  searchTerm={searchTerm}
-                  canCreateProject={canCreateProject}
-                  projectFilter={projectFilter}
-                  onRefresh={handleRefresh}
-                     onCreateProject={openCreateProject}
-                   />
-               </div>
-             ) : (
-               <div className="flex-1 min-h-0 flex flex-col">
-                 <FileSystemContent
-                   onClearTrash={() => handleClearTrash(isTrashView && !isAtRoot ? urlProjectId : undefined)}
-                   nodes={viewNodes}
-                  viewMode={viewMode}
-                  isTrashView={isTrashView}
-                  isAtRoot={isAtRoot}
-                  selectedNodes={selectedNodes}
-                  dropTargetId={dropTargetId}
-                  nodePermissions={nodePermissions}
-                  projectPermissions={projectPermissionsRecord}
-                  paginationMeta={paginationMeta}
-                  onNodeSelect={handleNodeSelect}
-                  onFileOpen={handleFileOpen}
-                  onDownload={handleDownload}
-                  onDelete={handleDelete}
-                  onPermanentlyDelete={handlePermanentlyDelete}
-                  onRename={handleOpenRename}
-                  onRefresh={handleRefresh}
-                  onRestore={isTrashView ? handleRestoreNode : undefined}
-                  onEdit={isAtRoot ? (node: FileSystemNode) => openEditProject(node) : undefined}
-                  onDeleteNode={isAtRoot ? (node: FileSystemNode) => {
-                    if (isTrashView) {
-                      handlePermanentlyDeleteProject(node.id, node.name);
-                    } else {
-                      handleDeleteProject(node.id, node.name);
-                    }
-                  } : undefined}
-                  onShowMembers={isAtRoot ? (node: FileSystemNode) => handleShowMembers(node) : undefined}
-                  onShowRoles={isAtRoot ? (node: FileSystemNode) => handleShowRoles(node) : undefined}
-                  onMove={handleMove}
-                  onCopy={handleCopy}
-                  onShowVersionHistory={handleShowVersionHistory}
-                  onShare={handleShare}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  fileDropHandlers={fileDropHandlers}
-                  isFileDragOver={isFileDragOver}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={handlePageSizeChange}
-                  onDeleteProject={handleDeleteProject}
-                  onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
-                   onRubberBandSelect={handleRubberBandSelect}
-                  onBatchDelete={() => handleBatchDelete(isTrashView)}
-                  onBatchMove={clipboardHandleCut}
-                  onBatchCopy={clipboardHandleCopy}
-                  onBatchRestore={isTrashView ? handleBatchRestore : undefined}
-                  loading={loading || isFetching}
-                  currentPage={paginationMeta?.page}
-                  totalPages={paginationMeta?.totalPages}
-                  onScrollPageChange={handleScrollPageChange}
-                  highlightNodeId={highlightNodeId || undefined}
-                   isSearchResult={!!searchTerm}
-                   currentAncestorPath={currentAncestorPath}
-                   onOpen={handleOpen}
-                  onOpenInNewTab={handleOpenInNewTab}
-                  onOpenFileLocation={handleOpenFileLocation}
-                   onNewFolder={handleNewFolder}
-                   onCopyClipboard={handleCopyClipboard}
-                   onCut={handleCut}
-                   onDownloadFolder={handleDownloadFolder}
-                   onShowProperties={handleShowProperties}
-                   onCopyPath={handleCopyPath}
-                   onCreateFolderInCurrentDir={() => setShowCreateFolderModal(true)}
-                   onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
-                   onUpload={() => uploaderRef.current?.triggerUpload()}
-                   onPasteInCurrentDir={clipboardHandlePaste}
+              {loading || error || showEmpty ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <FileSystemStates
+                    loading={loading}
+                    error={error}
+                    isEmpty={showEmpty}
+                    isAtRoot={isAtRoot}
+                    isTrashView={isTrashView}
+                    searchTerm={searchTerm}
+                    canCreateProject={canCreateProject}
+                    projectFilter={projectFilter}
+                    onRefresh={handleRefresh}
+                    onCreateProject={openCreateProject}
+                  />
+                </div>
+              ) : (
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <FileSystemContent
+                    onClearTrash={() => handleClearTrash(isTrashView && !isAtRoot ? urlProjectId : undefined)}
+                    nodes={viewNodes}
+                    viewMode={viewMode}
+                    isTrashView={isTrashView}
+                    isAtRoot={isAtRoot}
+                    selectedNodes={selectedNodes}
+                    dropTargetId={dropTargetId}
+                    nodePermissions={nodePermissions}
+                    projectPermissions={projectPermissionsRecord}
+                    paginationMeta={paginationMeta}
+                    onNodeSelect={handleNodeSelect}
+                    onFileOpen={handleFileOpen}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    onPermanentlyDelete={handlePermanentlyDelete}
+                    onRename={handleOpenRename}
+                    onRefresh={handleRefresh}
+                    onRestore={isTrashView ? handleRestoreNode : undefined}
+                    onEdit={isAtRoot ? (node: FileSystemNode) => openEditProject(node) : undefined}
+                    onDeleteNode={isAtRoot ? (node: FileSystemNode) => {
+                      if (isTrashView) {
+                        handlePermanentlyDeleteProject(node.id, node.name);
+                      } else {
+                        handleDeleteProject(node.id, node.name);
+                      }
+                    } : undefined}
+                    onShowMembers={isAtRoot ? (node: FileSystemNode) => handleShowMembers(node) : undefined}
+                    onShowRoles={isAtRoot ? (node: FileSystemNode) => handleShowRoles(node) : undefined}
+                    onMove={handleMove}
+                    onCopy={handleCopy}
+                    onShowVersionHistory={handleShowVersionHistory}
+                    onShare={handleShare}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    fileDropHandlers={fileDropHandlers}
+                    isFileDragOver={isFileDragOver}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
+                    onDeleteProject={handleDeleteProject}
+                    onPermanentlyDeleteProject={handlePermanentlyDeleteProject}
+                    onRubberBandSelect={handleRubberBandSelect}
+                    onBatchDelete={() => handleBatchDelete(isTrashView)}
+                    onBatchMove={clipboardHandleCut}
+                    onBatchCopy={clipboardHandleCopy}
+                    onBatchRestore={isTrashView ? handleBatchRestore : undefined}
+                    loading={loading || isFetching}
+                    currentPage={paginationMeta?.page}
+                    totalPages={paginationMeta?.totalPages}
+                    onScrollPageChange={handleScrollPageChange}
+                    highlightNodeId={highlightNodeId || undefined}
+                    isSearchResult={!!searchTerm}
+                    currentAncestorPath={currentAncestorPath}
+                    onOpen={handleOpen}
+                    onOpenInNewTab={handleOpenInNewTab}
+                    onOpenFileLocation={handleOpenFileLocation}
+                    onNewFolder={handleNewFolder}
+                    onCopyClipboard={handleCopyClipboard}
+                    onCut={handleCut}
+                    onDownloadFolder={handleDownloadFolder}
+                    onShowProperties={handleShowProperties}
+                    onCopyPath={handleCopyPath}
+                    onCreateFolderInCurrentDir={() => setShowCreateFolderModal(true)}
+                    onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
+                    onUpload={() => uploaderRef.current?.triggerUpload()}
+                    onPasteInCurrentDir={clipboardHandlePaste}
                     clipboardHasItems={clipboardItems.length > 0}
                     onCreateProject={openCreateProject}
-                 />
-              </div>
-            )}
-            {bottomBar && (
-              <div className="flex-shrink-0 flex justify-center py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
-                  {bottomBar}
+                  />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+          {bottomBar && (
+            <div className="flex-shrink-0 flex justify-center">
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                {bottomBar}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
