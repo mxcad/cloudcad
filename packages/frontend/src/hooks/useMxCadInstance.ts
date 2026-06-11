@@ -29,8 +29,6 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
 
   const initializeMxCAD = async () => {
     try {
-      console.log('初始化 MxCADView（永不销毁容器）');
-
       const isFirstInit = !mxcadManager.isReady();
       let resolvedFileUrl: string | undefined;
 
@@ -43,7 +41,6 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
           const fileInfo = await getFileInfo(initialFileUrl);
           if (fileInfo?.data?.path) {
             resolvedFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.data.path);
-            console.log('首次初始化，准备打开文件', { url: resolvedFileUrl });
           }
         } catch (error) {
           console.error('获取文件信息', error);
@@ -54,10 +51,7 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
 
       setIsMxCADReady(true);
 
-      console.log('MxCADView 初始化完成');
-
       if (isFirstInit && resolvedFileUrl) {
-        console.log('首次初始化文件已处理，跳过后续文件切换逻辑');
       }
     } catch (error) {
       console.error('MxCADView 初始化', error);
@@ -67,7 +61,6 @@ export const useMxCadInstance = (initialFileUrl?: string) => {
 
   const showMxCAD = (show: boolean) => {
     mxcadManager.showMxCAD(show);
-    console.log(`${show ? '显示' : '隐藏'} MxCAD 容器`);
   };
 
   return {
@@ -131,18 +124,11 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
       // 检查是否已有打开的文件
       const currentFileName = mxcadManager.getCurrentFileName();
       if (currentFileName && currentFileName.includes(targetFileName)) {
-        console.log('目标文件已打开，跳过重复操作', {
-          currentFileName,
-          targetFileName,
-        });
         return;
       }
 
-      console.log('MxCADView 状态检查通过，开始打开文件');
-
       // 第二次打开文件需要调用 openFile 方法
       await mxcadManager.openFile(mxcadFileUrl);
-      console.log('第二次打开文件命令已执行');
     } catch (error) {
       console.error('打开文件', error);
     }

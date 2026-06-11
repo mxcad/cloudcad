@@ -110,7 +110,6 @@ export function useFileDropToOpen() {
       return;
     }
     if (allowedFiles.length > 1) {
-      console.log(`[useFileDropToOpen] 拖入了 ${allowedFiles.length} 个文件，只打开第一个: ${file.name}`);
     }
 
     isUploadingRef.current = true;

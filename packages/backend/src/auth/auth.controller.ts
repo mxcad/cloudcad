@@ -16,6 +16,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   Post,
   Query,
   Req,
@@ -94,6 +95,8 @@ import { ConfigService } from '@nestjs/config';
 @ApiTags('认证')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthFacadeService,
     private readonly wechatService: WechatService,
@@ -761,14 +764,11 @@ export class AuthController {
       origin = stateData.origin || origin;
       isPopup = stateData.isPopup || false;
       purpose = stateData.purpose || 'login';
-      console.log(
-        '[wechat callback] 解析 state 成功: origin=%s, isPopup=%s, purpose=%s',
-        origin,
-        isPopup,
-        purpose
+      this.logger.log(
+        `[wechat callback] 解析 state 成功: origin=${origin}, isPopup=${isPopup}, purpose=${purpose}`
       );
     } catch (e) {
-      console.log('[wechat callback] 解析 state 失败: %s', e);
+      this.logger.log(`[wechat callback] 解析 state 失败: ${e}`);
     }
 
     // 统一的重定向函数
@@ -783,13 +783,13 @@ export class AuthController {
         );
         url += `#wechat_result=${hash}`;
       }
-      console.log('[wechat callback] 重定向到:', url);
+      this.logger.log(`[wechat callback] 重定向到: ${url}`);
       res.redirect(url);
     };
 
     // 绑定流程 - 重定向到 Profile 页面
     if (purpose === 'bind') {
-      console.log('[wechat callback] bind 流程, code:', !!code);
+      this.logger.log(`[wechat callback] bind 流程, code: ${!!code}`);
       if (!code) {
         redirectToFrontend('/profile', { error: '授权失败', purpose: 'bind' });
         return;
@@ -800,7 +800,7 @@ export class AuthController {
 
     // 注销确认流程 - 重定向到 Profile 页面
     if (purpose === 'deactivate') {
-      console.log('[wechat callback] deactivate 流程, code:', !!code);
+      this.logger.log(`[wechat callback] deactivate 流程, code: ${!!code}`);
       if (!code) {
         redirectToFrontend('/profile', {
           error: '授权失败',

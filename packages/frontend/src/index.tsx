@@ -16,7 +16,6 @@ if (import.meta.env.VITE_MSW === 'true') {
   const startMsw = async () => {
     const { worker } = await import('./test/msw/browser');
     await worker.start({ onUnhandledRequest: 'bypass' });
-    console.log('[MSW] Mock Service Worker 已启动');
   };
   startMsw();
 }
@@ -41,8 +40,6 @@ if (!rootElement) {
   throw new Error('Could not find root element to mount to');
 }
 
-console.log('[CloudCAD] 开始初始化应用，rootElement:', !!rootElement);
-
 // 应用启动器：先等待 API Client 和 Brand Config 初始化完成，再渲染应用
 const AppInitializer: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
@@ -55,8 +52,6 @@ const AppInitializer: React.FC = () => {
   // }, [activeLanguage]);
 
   useEffect(() => {
-    console.log('[CloudCAD] 开始初始化 Brand Config');
-
     const timeoutId = setTimeout(() => {
       console.warn('[CloudCAD] Brand Config 超时，继续渲染');
       setIsReady(true);
@@ -64,7 +59,6 @@ const AppInitializer: React.FC = () => {
 
     fetchBrandConfig()
       .then((brandConfig) => {
-        console.log('[CloudCAD] 初始化成功:', { brandConfig });
         clearTimeout(timeoutId);
         setIsReady(true);
       })
@@ -78,7 +72,6 @@ const AppInitializer: React.FC = () => {
   }, []);
 
   if (!isReady) {
-    console.log('[CloudCAD] 初始化中...显示 loading');
     // 显示一个可见的 loading 状态
     return (
       <div
@@ -115,7 +108,6 @@ const AppInitializer: React.FC = () => {
     );
   }
 
-  console.log('[CloudCAD] 初始化完成，渲染应用');
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

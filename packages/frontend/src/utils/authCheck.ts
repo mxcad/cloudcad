@@ -95,7 +95,6 @@ export function checkAuth(
     return true;
   }
 
-  console.log(`[authCheck] 用户未登录，尝试执行：${action}`);
   onNotLoggedIn();
   return false;
 }
@@ -109,7 +108,6 @@ export function clearAuthData(): void {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    console.log('[authCheck] 认证信息已清除');
   } catch (error) {
     console.error('[authCheck] 清除认证信息失败:', error);
   }

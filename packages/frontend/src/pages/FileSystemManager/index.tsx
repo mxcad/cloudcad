@@ -365,11 +365,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [selectedNodes, nodes, handleOpenRename]);
 
   const clipboardHandleUndo = useCallback(async () => {
-    console.log('[clipboardHandleUndo] called', { undoStackLength: undoStack.length, projectId });
     if (undoStack.length === 0) return;
     try {
       const action = undoStack[undoStack.length - 1];
-      console.log('[clipboardHandleUndo] action found', action?.type, action?.description);
       if (!action) return;
       await undoStoreUndo(projectId);
       showToast(`已撤销: ${action.description}`, 'info');
@@ -397,11 +395,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   useFileSystemShortcuts({
     containerRef,
     enabled: true,
-    onUndo: () => { console.log('[shortcuts] onUndo triggered'); return clipboardHandleUndo(); },
-    onRedo: () => { console.log('[shortcuts] onRedo triggered'); return clipboardHandleRedo(); },
-    onCopy: () => { console.log('[shortcuts] onCopy triggered'); clipboardHandleCopy(); },
-    onCut: () => { console.log('[shortcuts] onCut triggered'); clipboardHandleCut(); },
-    onPaste: () => { console.log('[shortcuts] onPaste triggered'); return clipboardHandlePaste(); },
+    onUndo: () => clipboardHandleUndo(),
+    onRedo: () => clipboardHandleRedo(),
+    onCopy: () => clipboardHandleCopy(),
+    onCut: () => clipboardHandleCut(),
+    onPaste: () => clipboardHandlePaste(),
     onDeleteSelected: handleDeleteSelected,
     onRenameSelected: handleRenameSelected,
     onClearSelection: clearSelection,
@@ -568,8 +566,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               canManageNodeMembers(user, nodeId),
               canManageNodeRoles(user, nodeId),
             ]);
-
-          console.log('[权限加载]', nodeId, { canEdit, canDelete, canManageMembers, canManageRoles });
 
           return { nodeId, canEdit, canDelete, canManageMembers, canManageRoles };
         });

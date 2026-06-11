@@ -152,7 +152,6 @@ export default function FontLibrary(props: FontLibraryProps) {
         fontList = raw as FontInfo[];
       }
 
-      console.log('解析后的字体数据:', fontList, '数量:', fontList.length);
       setAllFonts(fontList);
     } catch (error) {
       console.error('获取字体列表失败:', error);

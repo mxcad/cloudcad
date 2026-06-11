@@ -48,15 +48,8 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
       if (!hashValue) return;
 
       const result = JSON.parse(decodeURIComponent(hashValue));
-      console.log(
-        '[useWechatAuth] 解析 hash 结果:',
-        result,
-        'purpose:',
-        purpose
-      );
 
       if (result.purpose !== purpose) {
-        console.log('[useWechatAuth] purpose 不匹配, 忽略');
         return;
       }
 
@@ -66,7 +59,6 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
       if (result.error) {
         onError?.(result.error);
       } else if (result.code || result.accessToken) {
-        console.log('[useWechatAuth] 调用 onSuccess');
         onSuccess?.(result);
       }
     } catch (e) {
@@ -95,7 +87,6 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
         },
       });
 
-      console.log('[useWechatAuth] 跳转授权页面, purpose:', purpose);
       const { authUrl } = response.data as { authUrl: string };
       window.location.href = authUrl;
     } catch (err) {

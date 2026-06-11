@@ -77,8 +77,6 @@ export function useFileSystemShortcuts({
         }
       }
 
-      console.log('[shortcuts:handleKeyDown]', e.key, e.ctrlKey, e.metaKey, e.shiftKey, 'target:', e.target);
-
       const isMod = e.ctrlKey || e.metaKey;
 
       if (isMod) {

@@ -55,7 +55,6 @@ export async function uploadThumbnail(
     await thumbnailControllerUploadThumbnail({ path: { nodeId }, body: {
       file: blob,
     } });
-    console.log(`[uploadThumbnail] 缩略图上传成功: ${nodeId}`);
     return true;
   } catch (error) {
     console.error(`[uploadThumbnail] 缩略图上传失败: ${nodeId}`, error);

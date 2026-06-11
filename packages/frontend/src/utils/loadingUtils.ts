@@ -6,7 +6,6 @@ let loadingSource: string | null = null;
 export const showGlobalLoading = (message?: string, source?: string): void => {
   loadingRefCount++;
   loadingSource = source || 'unknown';
-  console.log(`[Loading] show (ref:${loadingRefCount}) source:${loadingSource} msg:${message}`);
   useUIStore.setState({
     globalLoading: true,
     loadingMessage: message || '',
@@ -20,8 +19,6 @@ export const hideGlobalLoading = (source?: string): void => {
     return;
   }
   loadingRefCount--;
-  const tag = source || 'unknown';
-  console.log(`[Loading] hide (ref:${loadingRefCount}) source:${tag} currentSource:${loadingSource}`);
   if (loadingRefCount === 0) {
     loadingSource = null;
     useUIStore.setState({
@@ -41,7 +38,6 @@ export const setLoadingProgress = (progress: number): void => {
 };
 
 export const resetLoading = (source?: string): void => {
-  console.log(`[Loading] reset source:${source || 'unknown'} (refCount was ${loadingRefCount})`);
   loadingRefCount = 0;
   loadingSource = null;
   useUIStore.setState({

@@ -45,9 +45,7 @@ export const LanguageSwitcher: React.FC = () => {
             key={lang.name}
             onClick={async () => {
               try {
-                console.log('[i18n] switching to:', lang.name);
                 await changeLanguage(lang.name);
-                console.log('[i18n] switched to:', lang.name);
               } catch (err) {
                 console.error('[i18n] switch failed:', err);
               }
