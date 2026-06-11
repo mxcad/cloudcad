@@ -23,6 +23,7 @@ import { StorageService } from '../../storage/storage.service';
 import { QueryChildrenDto } from '../dto/query-children.dto';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { StorageInfoService } from '../storage-quota/storage-info.service';
+import type { FileSystemNodeDto } from '../dto/file-system-response.dto';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { createHash } from 'crypto';
@@ -736,6 +737,16 @@ export class FileTreeService {
           this.prisma.fileSystemNode.count({ where }),
         ]);
 
+        const parentIds = nodes
+          .map((n) => n.parentId)
+          .filter((id): id is string => !!id);
+        if (parentIds.length > 0) {
+          const pathMap = await this.buildAncestorPaths(parentIds);
+          (nodes as FileSystemNodeDto[]).forEach((n) => {
+            if (n.parentId) n.ancestorPath = pathMap.get(n.parentId);
+          });
+        }
+
         return { nodes, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
       }
 
@@ -802,6 +813,110 @@ export class FileTreeService {
 
     await traverse(projectId);
     return nodeIds;
+  }
+
+  /**
+   * 使用批量递归 CTE 构建多个 parentId 的祖先路径
+   * 用于回收站节点注入 originalLocation 路径
+   */
+  private async buildAncestorPaths(parentIds: string[]): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(parentIds.filter(Boolean))];
+    if (uniqueIds.length === 0) return new Map();
+
+    const rows = await this.prisma.$queryRaw<{ id: string; path: string | null }[]>`
+      WITH RECURSIVE ancestors AS (
+        SELECT id, name, "parentId", id as start_id, 0 as depth
+        FROM file_system_nodes
+        WHERE id = ANY(${uniqueIds}::text[])
+        AND "deletedAt" IS NULL
+        UNION ALL
+        SELECT p.id, p.name, p."parentId", a.start_id, a.depth + 1
+        FROM file_system_nodes p
+        INNER JOIN ancestors a ON p.id = a."parentId"
+        WHERE a."parentId" IS NOT NULL AND a.depth < 50
+      )
+      SELECT start_id as id, string_agg(name, ' > ' ORDER BY depth DESC) as path
+      FROM ancestors
+      GROUP BY start_id
+    `;
+
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      if (row.path) map.set(row.id, row.path);
+    }
+    return map;
+  }
+
+  /**
+   * 通过面包屑路径字符串解析目标节点
+   * 例如 "项目A > 文件夹1 > 子文件夹" → 返回子文件夹节点
+   * @param projectId 项目 ID（个人空间可不传）
+   * @param pathStr   面包屑路径
+   * @param userId    用户 ID（个人空间模式需要）
+   */
+  async resolvePath(
+    projectId: string | undefined,
+    pathStr: string,
+    userId?: string,
+  ): Promise<PrismaFileSystemNode> {
+    const parts = pathStr.split(/\s*(?:>|\/)\s*/).filter(Boolean);
+    if (parts.length === 0) {
+      throw new BadRequestException('路径不能为空');
+    }
+
+    // 找到根节点：项目模式用 projectId，个人空间模式用 userId
+    let rootNode: PrismaFileSystemNode | null = null;
+
+    if (projectId) {
+      rootNode = await this.prisma.fileSystemNode.findUnique({
+        where: { id: projectId, isRoot: true },
+      });
+      if (!rootNode) {
+        throw new NotFoundException('项目不存在');
+      }
+    } else if (userId) {
+      rootNode = await this.prisma.fileSystemNode.findUnique({
+        where: { personalSpaceKey: userId },
+      });
+      if (!rootNode) {
+        throw new NotFoundException('个人空间不存在');
+      }
+    } else {
+      throw new BadRequestException('请指定项目 ID 或用户 ID');
+    }
+
+    let currentId = rootNode.id;
+    let offset = 0;
+
+    // 如果第一段匹配根节点名称，跳过它
+    if (parts[0] === rootNode.name) {
+      offset = 1;
+    }
+
+    for (let i = offset; i < parts.length; i++) {
+      const segment = parts[i];
+      const children = await this.prisma.fileSystemNode.findMany({
+        where: { parentId: currentId, deletedAt: null },
+        select: { id: true, name: true },
+        take: 100,
+      });
+
+      const child = children.find((c) => c.name === segment);
+      if (!child) {
+        throw new NotFoundException(
+          `路径 "${pathStr}" 在 "${parts.slice(0, i).join(' > ')}" 处未找到 "${segment}"`,
+        );
+      }
+      currentId = child.id;
+    }
+
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: currentId },
+    });
+    if (!node) {
+      throw new NotFoundException('路径解析结果不存在');
+    }
+    return node;
   }
 
   /**

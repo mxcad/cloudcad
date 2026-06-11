@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
-import { FileItem } from '@/components/FileItem';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Menu } from '@/components/ui/Menu';
-import { Pagination } from '@/components/ui/Pagination';
-import { Z_LAYERS } from '@/constants/layers';
+import { FileItem } from '@/components/FileItem';
+import { FileListGrid } from '@/components/common/FileListGrid';
+import { EmptyContextMenu } from '@/components/common/EmptyContextMenu';
 import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
+import { getAvailableActions, getActionGroups, ACTION_VARIANT_MAP, type ActionType } from '@/components/file-item/fileActionConfig';
 import type { FileSystemNode } from '@/types/filesystem';
 
 interface FileSystemContentProps {
@@ -40,24 +41,20 @@ interface FileSystemContentProps {
   onPageSizeChange: (size: number) => void;
   onDeleteProject?: (nodeId: string, nodeName: string) => void;
   onPermanentlyDeleteProject?: (nodeId: string, nodeName: string) => void;
-  /** 外部文件拖拽上传的事件处理器 */
   fileDropHandlers?: {
     onDragEnter: (e: React.DragEvent) => void;
     onDragOver: (e: React.DragEvent) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent) => void;
   };
-  /** 是否显示拖拽上传提示 */
   isFileDragOver?: boolean;
-  /** 框选完成回调 */
   onRubberBandSelect?: (nodeIds: string[]) => void;
-  /** 批量操作回调 */
   onBatchDelete?: () => void;
   onBatchMove?: () => void;
   onBatchCopy?: () => void;
   onBatchRestore?: () => void;
-  /** 搜索结果模式 */
   isSearchResult?: boolean;
+  currentAncestorPath?: string;
   onOpen?: (node: FileSystemNode) => void;
   onOpenInNewTab?: (node: FileSystemNode) => void;
   onOpenFileLocation?: (node: FileSystemNode) => void;
@@ -66,27 +63,17 @@ interface FileSystemContentProps {
   onCut?: (node: FileSystemNode) => void;
   onDownloadFolder?: (node: FileSystemNode) => void;
   onShowProperties?: (node: FileSystemNode) => void;
-  /** 是否正在加载（用于阻止滚动加载） */
+  onCopyPath?: (node: FileSystemNode) => void;
   loading?: boolean;
-  /** 当前页码（用于滚动方向检测） */
   currentPage?: number;
-  /** 总页数（用于检测是否还有更多） */
   totalPages?: number;
-  /** 滚动加载上一页/下一页 */
   onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
-  /** 高亮节点 ID（搜索结果打开所在位置用） */
   highlightNodeId?: string;
-  /** 在当前目录创建新文件夹 */
   onCreateFolderInCurrentDir?: () => void;
-  /** 在当前目录创建新图纸 */
   onCreateDrawingInCurrentDir?: () => void;
-  /** 上传文件 */
   onUpload?: () => void;
-  /** 在当前目录粘贴 */
   onPasteInCurrentDir?: () => void;
-  /** 剪贴板是否有内容 */
   clipboardHasItems?: boolean;
-  /** 新建项目（仅在项目列表根层级使用） */
   onCreateProject?: () => void;
 }
 
@@ -124,8 +111,8 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onPageSizeChange,
   onDeleteProject,
   onPermanentlyDeleteProject,
-  fileDropHandlers,
-  isFileDragOver,
+  fileDropHandlers: _fileDropHandlers,
+  isFileDragOver: _isFileDragOver,
   onRubberBandSelect,
   onBatchDelete,
   onBatchMove,
@@ -137,6 +124,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onScrollPageChange,
   highlightNodeId,
   isSearchResult = false,
+  currentAncestorPath,
   onOpen,
   onOpenInNewTab,
   onOpenFileLocation,
@@ -145,6 +133,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onCut,
   onDownloadFolder,
   onShowProperties,
+  onCopyPath,
   onCreateFolderInCurrentDir,
   onCreateDrawingInCurrentDir,
   onUpload,
@@ -152,189 +141,70 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   clipboardHasItems = false,
   onCreateProject,
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [rubberBand, setRubberBand] = useState<{
-    startVX: number;
-    startVY: number;
-    currentVX: number;
-    currentVY: number;
-    startScrollLeft: number;
-    startScrollTop: number;
-  } | null>(null);
-  const rubberBandJustEndedRef = useRef(false);
-
-  const [emptyContextMenuPos, setEmptyContextMenuPos] = useState<{ x: number; y: number } | null>(null);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    rubberBandJustEndedRef.current = false;
-    if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest('[data-drag-handle]')) return;
-    if ((e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')) return;
-    if (e.shiftKey || e.ctrlKey || e.metaKey) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    setRubberBand({
-      startVX: e.clientX,
-      startVY: e.clientY,
-      currentVX: e.clientX,
-      currentVY: e.clientY,
-      startScrollLeft: container.scrollLeft,
-      startScrollTop: container.scrollTop,
-    });
-  }, []);
-
-  const onRubberBandSelectRef = useRef(onRubberBandSelect);
-  onRubberBandSelectRef.current = onRubberBandSelect;
-  const lastSelectTimeRef = useRef(0);
-
-  const applyRubberBandSelection = useCallback((startVX: number, startVY: number, currVX: number, currVY: number, startSL: number, startST: number) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const cr = container.getBoundingClientRect();
-    const curSL = container.scrollLeft;
-    const curST = container.scrollTop;
-
-    const scx = startVX - cr.left + startSL;
-    const scy = startVY - cr.top + startST;
-    const ccx = currVX - cr.left + curSL;
-    const ccy = currVY - cr.top + curST;
-
-    const x1 = Math.min(scx, ccx);
-    const y1 = Math.min(scy, ccy);
-    const x2 = Math.max(scx, ccx);
-    const y2 = Math.max(scy, ccy);
-
-    if (Math.abs(x2 - x1) < 5 && Math.abs(y2 - y1) < 5) return;
-
-    const items = container.querySelectorAll('[data-node-id]');
-    const ids: string[] = [];
-    items.forEach((item) => {
-      const rect = item.getBoundingClientRect();
-      const iL = rect.left - cr.left + curSL;
-      const iR = rect.right - cr.left + curSL;
-      const iT = rect.top - cr.top + curST;
-      const iB = rect.bottom - cr.top + curST;
-      if (iL < x2 && iR > x1 && iT < y2 && iB > y1) {
-        const id = item.getAttribute('data-node-id');
-        if (id) ids.push(id);
-      }
-    });
-    onRubberBandSelectRef.current?.(ids);
-  }, []);
-
-  const cancelAutoScroll = useCallback(() => {
-    if (autoScrollRef.current !== null) {
-      cancelAnimationFrame(autoScrollRef.current);
-      autoScrollRef.current = null;
-    }
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!rubberBand) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const mouseY = e.clientY;
-    const EDGE = 40;
-    const MAX_SPEED = 12;
-
-    let direction = 0;
-    let speed = 0;
-
-    if (mouseY >= rect.top && mouseY < rect.top + EDGE) {
-      direction = -1;
-      speed = 1 + (EDGE - (mouseY - rect.top)) / EDGE * (MAX_SPEED - 1);
-    } else if (mouseY > rect.bottom - EDGE && mouseY <= rect.bottom) {
-      direction = 1;
-      speed = 1 + (EDGE - (rect.bottom - mouseY)) / EDGE * (MAX_SPEED - 1);
-    }
-
-    cancelAutoScroll();
-
-    if (direction !== 0) {
-      const scroll = () => {
-        if (!container) return;
-        container.scrollTop += direction * Math.round(speed);
-        autoScrollRef.current = requestAnimationFrame(scroll);
-      };
-      autoScrollRef.current = requestAnimationFrame(scroll);
-    }
-
-    setRubberBand((prev) => prev ? {
-      ...prev,
-      currentVX: e.clientX,
-      currentVY: e.clientY,
-    } : null);
-
-    const now = Date.now();
-    if (now - lastSelectTimeRef.current > 40) {
-      lastSelectTimeRef.current = now;
-      applyRubberBandSelection(rubberBand.startVX, rubberBand.startVY, e.clientX, e.clientY, rubberBand.startScrollLeft, rubberBand.startScrollTop);
-    }
-  }, [rubberBand, cancelAutoScroll, applyRubberBandSelection]);
-
-  const handleMouseLeave = useCallback(() => {
-    cancelAutoScroll();
-  }, [cancelAutoScroll]);
-
-  const setRubberBandJustEnded = useCallback(() => {
-    rubberBandJustEndedRef.current = true;
-    setTimeout(() => { rubberBandJustEndedRef.current = false; }, 0);
-  }, []);
-
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    cancelAutoScroll();
-    if (rubberBand) {
-      applyRubberBandSelection(rubberBand.startVX, rubberBand.startVY, rubberBand.currentVX, rubberBand.currentVY, rubberBand.startScrollLeft, rubberBand.startScrollTop);
-      const dx = Math.abs(rubberBand.currentVX - rubberBand.startVX);
-      const dy = Math.abs(rubberBand.currentVY - rubberBand.startVY);
-      if (dx >= 5 || dy >= 5) {
-        setRubberBandJustEnded();
-      }
-    }
-    setRubberBand(null);
-  }, [rubberBand, cancelAutoScroll, applyRubberBandSelection, setRubberBandJustEnded]);
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenuNode, setContextMenuNode] = useState<FileSystemNode | null>(null);
+  const highlightHandledRef = useRef(false);
 
   useEffect(() => {
-    if (!rubberBand) return;
-    const onWindowMouseUp = () => {
-      cancelAutoScroll();
-      applyRubberBandSelection(rubberBand.startVX, rubberBand.startVY, rubberBand.currentVX, rubberBand.currentVY, rubberBand.startScrollLeft, rubberBand.startScrollTop);
-      const dx = Math.abs(rubberBand.currentVX - rubberBand.startVX);
-      const dy = Math.abs(rubberBand.currentVY - rubberBand.startVY);
-      if (dx >= 5 || dy >= 5) {
-        setRubberBandJustEnded();
-      }
-      setRubberBand(null);
-    };
-    window.addEventListener('mouseup', onWindowMouseUp);
-    return () => {
-      window.removeEventListener('mouseup', onWindowMouseUp);
-      cancelAutoScroll();
-    };
-  }, [rubberBand, cancelAutoScroll, applyRubberBandSelection]);
+    if (!highlightNodeId) {
+      highlightHandledRef.current = false;
+      return;
+    }
+    if (highlightHandledRef.current) return;
+    highlightHandledRef.current = true;
 
-  useEffect(() => {
-    if (!highlightNodeId || !scrollContainerRef.current) return;
+    let cancelled = false;
+    let retryCount = 0;
+    const maxRetries = 30;
 
-    const container = scrollContainerRef.current;
-    const timer = setTimeout(() => {
-      const el = container.querySelector(`[data-node-id="${highlightNodeId}"]`);
+    const tryScroll = () => {
+      if (cancelled) return;
+      const el = document.querySelector(`[data-node-id="${highlightNodeId}"]`);
       if (el) {
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         el.classList.add('file-item-highlight');
         setTimeout(() => {
           el.classList.remove('file-item-highlight');
         }, 3500);
+      } else if (retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(tryScroll, 100);
       }
-    }, 100);
+    };
 
-    return () => clearTimeout(timer);
-  }, [highlightNodeId, nodes]);
+    const timer = setTimeout(tryScroll, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [highlightNodeId]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (isTrashView) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[role="menu"]') || target.closest('[data-menu-content]')) return;
+    e.preventDefault();
+
+    const fileItem = target.closest('[data-node-id]');
+    if (fileItem) {
+      const nodeId = fileItem.getAttribute('data-node-id');
+      if (!nodeId) return;
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      if (!selectedNodes.has(nodeId) && onNodeSelect) {
+        onNodeSelect(nodeId, false);
+      }
+      setContextMenuNode(node);
+    } else {
+      setContextMenuNode(null);
+    }
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+  }, [isTrashView, nodes, selectedNodes, onNodeSelect]);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuPos(null);
+    setContextMenuNode(null);
+  }, []);
 
   const getNodePermissionProps = (node: FileSystemNode) => {
     const cachedPermissions = nodePermissions.get(node.id);
@@ -347,7 +217,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
 
     const permissions = node.isRoot
       ? cachedPermissions || defaultPermissions
-      : {
+      : cachedPermissions || {
           canEdit: true,
           canDelete: true,
           canManageMembers: false,
@@ -359,7 +229,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
       nodePermissions: permissions,
     });
 
-    // 个人空间文件：所有者可分享（后端逻辑），不受 projectPermissions 限制
     if (Object.keys(projectPermissions).length === 0) {
       fileItemProps.canShare = true;
     }
@@ -397,392 +266,349 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     };
   };
 
-  const paginationMetaRef = useRef(paginationMeta);
-  paginationMetaRef.current = paginationMeta;
-  const onPageChangeRef = useRef(onPageChange);
-  onPageChangeRef.current = onPageChange;
-  const onScrollPageChangeRef = useRef(onScrollPageChange);
-  onScrollPageChangeRef.current = onScrollPageChange;
-  const loadingRef = useRef(loading);
-  loadingRef.current = loading;
-  const lastScrollTopRef = useRef(0);
-  const scrollBlockedRef = useRef(false);
-
-  useLayoutEffect(() => {
-    scrollBlockedRef.current = true;
-    const t = setTimeout(() => { scrollBlockedRef.current = false; }, 100);
-    return () => clearTimeout(t);
-  }, [nodes]);
-
-  const rubberBandRef = useRef(rubberBand);
-  rubberBandRef.current = rubberBand;
-  const autoScrollRef = useRef<number | null>(null);
-
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    if (rubberBandRef.current) return;
-    if (loadingRef.current) return;
-    if (scrollBlockedRef.current) return;
-
-    const meta = paginationMetaRef.current;
-    if (!meta) return;
-
-    const target = e.currentTarget;
-    const { scrollTop, scrollHeight, clientHeight } = target;
-
-    const scrollDirection = scrollTop > lastScrollTopRef.current ? 'down' : 'up';
-    lastScrollTopRef.current = scrollTop;
-
-    if (scrollDirection === 'down' && scrollTop + clientHeight >= scrollHeight - 200) {
-      if (meta.page < meta.totalPages) {
-        onScrollPageChangeRef.current?.(meta.page + 1, 'next');
-      }
-    } else if (scrollDirection === 'up' && scrollTop <= 200) {
-      if (meta.page > 1) {
-        onScrollPageChangeRef.current?.(meta.page - 1, 'prev');
-      }
-    }
-  }, []);
-
-  const handleEmptyContextMenu = useCallback((e: React.MouseEvent) => {
-    if (isTrashView) return;
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-node-id]') || target.closest('[role="menu"]') || target.closest('[data-menu-content]')) return;
-    e.preventDefault();
-    setEmptyContextMenuPos({ x: e.clientX, y: e.clientY });
-  }, [isTrashView]);
-
-  const closeEmptyContextMenu = useCallback(() => {
-    setEmptyContextMenuPos(null);
-  }, []);
-
   return (
-    <div className="flex flex-col h-full">
-      <div
-          ref={scrollContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto"
-          onScroll={handleScroll}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onContextMenu={handleEmptyContextMenu}
-        >
-        <div className="relative">
-          <div
-            data-view-mode={viewMode}
-            className={
-              viewMode === 'grid'
-                ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-2'
-                : 'divide-y'
-            }
-            style={
-              viewMode !== 'grid' ? { borderColor: 'var(--border-subtle)' } : {}
-            }
-          >
-            {nodes.map((node) => {
-            const extraProps = getNodePermissionProps(node);
-            const isRootLevel = isAtRoot;
+    <>
+      <FileListGrid
+        nodes={nodes}
+        viewMode={viewMode}
+        selectedNodes={selectedNodes}
+        loading={loading}
+        paginationMeta={paginationMeta}
+        onNodeSelect={onNodeSelect}
+        onRubberBandSelect={onRubberBandSelect}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        onScrollPageChange={onScrollPageChange}
+        onContextMenu={handleContextMenu}
+        renderItem={(node, _index, { isRubberBanding, rubberBandJustEndedRef }) => {
+          const extraProps = getNodePermissionProps(node);
+          const isRootLevel = isAtRoot;
 
+          return (
+            <FileItem
+              node={node}
+              isSelected={selectedNodes.has(node.id)}
+              viewMode={viewMode}
+              hideSelectionCircle={false}
+              isRubberBanding={isRubberBanding}
+              rubberBandJustEndedRef={rubberBandJustEndedRef}
+              selectedCount={selectedNodes.size}
+              onBatchDelete={isRootLevel ? undefined : onBatchDelete}
+              onBatchMove={isRootLevel ? undefined : onBatchMove}
+              onBatchCopy={isRootLevel ? undefined : onBatchCopy}
+              onBatchRestore={onBatchRestore}
+              isTrash={isTrashView}
+              onSelect={onNodeSelect}
+              onEnter={onFileOpen}
+              onDownload={onDownload}
+              onDelete={onDelete}
+              onPermanentlyDelete={onPermanentlyDelete}
+              onRename={onRename}
+              onRefresh={onRefresh}
+              onRestore={isTrashView ? onRestore : undefined}
+              onEdit={extraProps.onEdit}
+              onDeleteNode={extraProps.onDeleteNode}
+              onShowMembers={extraProps.onShowMembers}
+              onShowRoles={extraProps.onShowRoles}
+              onMove={!node.isRoot && projectPermissions['FILE_MOVE' as keyof typeof projectPermissions] ? onMove : undefined}
+              onCopy={!node.isRoot && projectPermissions['FILE_COPY' as keyof typeof projectPermissions] ? onCopy : undefined}
+              onShowVersionHistory={!node.isFolder && !isTrashView && (node.extension === '.dwg' || node.extension === '.dxf') ? onShowVersionHistory : undefined}
+              onShare={!node.isFolder && onShare ? onShare : undefined}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              isDropTarget={isRootLevel ? false : dropTargetId === node.id}
+              canUpload={extraProps.canUpload}
+              canEdit={extraProps.canEdit}
+              canDelete={extraProps.canDelete}
+              canShare={extraProps.canShare}
+              canDownload={extraProps.canDownload}
+              canViewVersionHistory={extraProps.canViewVersionHistory}
+              canManageExternalReference={extraProps.canManageExternalReference}
+               isSearchResult={isSearchResult}
+               isProjectRootLevel={isAtRoot}
+               currentAncestorPath={currentAncestorPath}
+               onOpen={onOpen}
+              onOpenInNewTab={onOpenInNewTab}
+              onOpenFileLocation={onOpenFileLocation}
+              onNewFolder={onNewFolder}
+              onCopyClipboard={onCopyClipboard}
+              onCut={onCut}
+              onDownloadFolder={onDownloadFolder}
+               onShowProperties={onShowProperties}
+               onCopyPath={onCopyPath}
+            />
+          );
+        }}
+      />
+      <EmptyContextMenu pos={contextMenuPos} onClose={closeContextMenu}>
+        {contextMenuNode ? (
+          selectedNodes.size > 1 && selectedNodes.has(contextMenuNode.id) ? (
+            <>
+              {onBatchDelete && (
+                <Menu.Item variant="danger" onClick={() => { onBatchDelete(); closeContextMenu(); }}>
+                  删除 {selectedNodes.size} 个选中项
+                </Menu.Item>
+              )}
+              {!isAtRoot && onBatchMove && (
+                <Menu.Item onClick={() => { onBatchMove(); closeContextMenu(); }}>
+                  移动
+                </Menu.Item>
+              )}
+              {!isAtRoot && onBatchCopy && (
+                <Menu.Item onClick={() => { onBatchCopy(); closeContextMenu(); }}>
+                  复制
+                </Menu.Item>
+              )}
+              {onBatchRestore && (
+                <Menu.Item variant="success" onClick={() => { onBatchRestore(); closeContextMenu(); }}>
+                  恢复 {selectedNodes.size} 个选中项
+                </Menu.Item>
+              )}
+            </>
+          ) : (() => {
+            const node = contextMenuNode;
+            const nodePerms = getNodePermissionProps(node);
+            const actionProps = {
+              node,
+              isTrash: isTrashView,
+              isRoot: node.isRoot,
+              isCadFile: !node.isFolder && !node.isRoot && ['.dwg', '.dxf', '.mxweb'].includes(node.extension?.toLowerCase() || ''),
+              isFolder: node.isFolder,
+              hasMissingExternalReferences: node.hasMissingExternalReferences || false,
+              canDownload: nodePerms.canDownload,
+              canEdit: nodePerms.canEdit,
+              canDelete: nodePerms.canDelete,
+              canShare: nodePerms.canShare,
+              canViewVersionHistory: nodePerms.canViewVersionHistory,
+              canManageExternalReference: nodePerms.canManageExternalReference,
+              canManageTrash: !!onRestore || !!onPermanentlyDelete,
+              onDownload: !!onDownload,
+              onShowVersionHistory: !!onShowVersionHistory,
+              onEdit: !!nodePerms.onEdit,
+              onShowMembers: !!nodePerms.onShowMembers,
+              onShowRoles: !!nodePerms.onShowRoles,
+              onShare: !!onShare,
+              onMove: !!onMove,
+              onCopy: !!onCopy,
+              onRestore: !!onRestore,
+              onPermanentlyDelete: !!onPermanentlyDelete,
+              onDeleteNode: node.isRoot ? !!nodePerms.onDeleteNode : (!!nodePerms.onDeleteNode || !!onDelete),
+              isSearchResult: !!isSearchResult,
+              onOpen: !!onFileOpen,
+              onOpenInNewTab: !!onOpenInNewTab,
+              onOpenFileLocation: !!onOpenFileLocation,
+              onNewFolder: !!onNewFolder,
+              onCopyClipboard: !!onCopyClipboard,
+              onCut: !!onCut,
+              onDownloadFolder: !!onDownloadFolder,
+               onShowProperties: !!onShowProperties,
+               onCopyPath: !!onCopyPath,
+             };
+             const availableActions = getAvailableActions(actionProps);
+            const { main, secondary, destructive } = getActionGroups(availableActions);
             return (
-              <FileItem
-                key={node.id}
-                node={node}
-                isSelected={selectedNodes.has(node.id)}
-                viewMode={viewMode}
-                hideSelectionCircle={false}
-                isRubberBanding={!!rubberBand}
-                rubberBandJustEndedRef={rubberBandJustEndedRef}
-                selectedCount={selectedNodes.size}
-                onBatchDelete={isRootLevel ? undefined : onBatchDelete}
-                onBatchMove={isRootLevel ? undefined : onBatchMove}
-                onBatchCopy={isRootLevel ? undefined : onBatchCopy}
-                onBatchRestore={onBatchRestore}
-                isTrash={isTrashView}
-                onSelect={onNodeSelect}
-                onEnter={onFileOpen}
-                onDownload={onDownload}
-                onDelete={onDelete}
-                onPermanentlyDelete={onPermanentlyDelete}
-                onRename={onRename}
-                onRefresh={onRefresh}
-                onRestore={
-                  isTrashView
-                    ? onRestore
-                    : undefined
-                }
-                onEdit={extraProps.onEdit}
-                onDeleteNode={extraProps.onDeleteNode}
-                onShowMembers={extraProps.onShowMembers}
-                onShowRoles={extraProps.onShowRoles}
-                onMove={
-                  !node.isRoot &&
-                  projectPermissions['FILE_MOVE' as keyof typeof projectPermissions]
-                    ? onMove
-                    : undefined
-                }
-                onCopy={
-                  !node.isRoot &&
-                  projectPermissions['FILE_COPY' as keyof typeof projectPermissions]
-                    ? onCopy
-                    : undefined
-                }
-                onShowVersionHistory={
-                  !node.isFolder &&
-                  !isTrashView &&
-                  (node.extension === '.dwg' || node.extension === '.dxf')
-                    ? onShowVersionHistory
-                    : undefined
-                }
-                onShare={
-                  !node.isFolder && onShare
-                    ? onShare
-                    : undefined
-                }
-                onDragStart={onDragStart}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onDrop={onDrop}
-                isDropTarget={isRootLevel ? false : dropTargetId === node.id}
-                canUpload={extraProps.canUpload}
-                canEdit={extraProps.canEdit}
-                canDelete={extraProps.canDelete}
-                canShare={extraProps.canShare}
-                canDownload={extraProps.canDownload}
-                canViewVersionHistory={extraProps.canViewVersionHistory}
-                canManageExternalReference={extraProps.canManageExternalReference}
-                isSearchResult={isSearchResult}
-                onOpen={onOpen}
-                onOpenInNewTab={onOpenInNewTab}
-                onOpenFileLocation={onOpenFileLocation}
-                onNewFolder={onNewFolder}
-                onCopyClipboard={onCopyClipboard}
-                onCut={onCut}
-                onDownloadFolder={onDownloadFolder}
-                onShowProperties={onShowProperties}
-              />
-            );
-          })}
-          </div>
-          {rubberBand && (() => {
-            const c = scrollContainerRef.current;
-            if (!c) return null;
-            const cr = c.getBoundingClientRect();
-            const scx = rubberBand.startVX - cr.left + rubberBand.startScrollLeft;
-            const scy = rubberBand.startVY - cr.top + rubberBand.startScrollTop;
-            const ccx = rubberBand.currentVX - cr.left + c.scrollLeft;
-            const ccy = rubberBand.currentVY - cr.top + c.scrollTop;
-            const left = Math.min(scx, ccx);
-            const top = Math.min(scy, ccy);
-            const width = Math.abs(ccx - scx);
-            const height = Math.abs(ccy - scy);
-            return (
-              <div
-                style={{
-                  position: 'absolute',
-                  left,
-                  top,
-                  width,
-                  height,
-                  background: 'rgba(59, 130, 246, 0.08)',
-                  border: '1px solid rgba(59, 130, 246, 0.5)',
-                  pointerEvents: 'none',
-                  zIndex: 100,
-                  borderRadius: '4px',
-                }}
-              />
-            );
-          })()}
-        </div>
-
-        {emptyContextMenuPos && (
-          <div
-            style={{ position: 'fixed', left: emptyContextMenuPos.x, top: emptyContextMenuPos.y, width: 0, height: 0, overflow: 'visible', zIndex: Z_LAYERS.POPUP }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Menu open onOpenChange={(open) => { if (!open) closeEmptyContextMenu(); }} modal={false}>
-              <Menu.Trigger asChild>
-                <div style={{ width: 0, height: 0 }} />
-              </Menu.Trigger>
-              <Menu.Content align="start" side="bottom" sideOffset={0}>
-                {isAtRoot ? (
-                  <>
-                    {selectedNodes.size > 0 && onBatchDelete && (
-                      <Menu.Item
-                        variant="danger"
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        }
-                        onClick={() => { onBatchDelete(); closeEmptyContextMenu(); }}
-                      >
-                        删除
-                      </Menu.Item>
-                    )}
-                    {onCreateProject && (
-                      <Menu.Item
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 5v14M5 12h14" />
-                          </svg>
-                        }
-                        onClick={() => { onCreateProject(); closeEmptyContextMenu(); }}
-                      >
-                        新建项目
-                      </Menu.Item>
-                    )}
-                    <Menu.Separator />
-                    <Menu.Item
-                      icon={
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="23 4 23 10 17 10" />
-                          <polyline points="1 20 1 14 7 14" />
-                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                        </svg>
+              <>
+                {main.map((action) => (
+                  <Menu.Item
+                    key={action.type}
+                    variant={ACTION_VARIANT_MAP[action.type] || 'default'}
+                    icon={action.icon}
+                    onClick={() => {
+                      const type = action.type;
+                      closeContextMenu();
+                      switch (type) {
+                        case 'open': onFileOpen(node); break;
+                        case 'download': onDownload?.(node); break;
+                        case 'rename': onRename?.(node); break;
+                        case 'delete': onDelete?.(node); break;
+                        case 'permanently_delete': onPermanentlyDelete?.(node); break;
+                        case 'restore': onRestore?.(node); break;
+                        case 'move': onMove?.(node); break;
+                        case 'copy': onCopy?.(node); break;
+                        case 'share': onShare?.(node); break;
+                        case 'view_version_history': onShowVersionHistory?.(node); break;
+                        case 'edit': nodePerms.onEdit?.(new MouseEvent('click') as unknown as React.MouseEvent); break;
+                        case 'show_members': nodePerms.onShowMembers?.(new MouseEvent('click') as unknown as React.MouseEvent); break;
+                        case 'show_roles': nodePerms.onShowRoles?.(new MouseEvent('click') as unknown as React.MouseEvent); break;
+                        case 'open_in_new_tab': onOpenInNewTab?.(node); break;
+                        case 'open_file_location': onOpenFileLocation?.(node); break;
+                        case 'new_folder': onNewFolder?.(node); break;
+                        case 'copy_clipboard': onCopyClipboard?.(node); break;
+                        case 'cut': onCut?.(node); break;
+                        case 'download_folder': onDownloadFolder?.(node); break;
+                        case 'properties': onShowProperties?.(node); break;
+                        case 'copy_path': onCopyPath?.(node); break;
+                        default: break;
                       }
-                      onClick={() => { onRefresh(); closeEmptyContextMenu(); }}
-                    >
-                      刷新
-                    </Menu.Item>
-                  </>
-                ) : (
-                  <>
-                    {selectedNodes.size > 0 && (
-                      <>
-                        {onBatchCopy && (
-                          <Menu.Item
-                            icon={
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                              </svg>
-                            }
-                            onClick={() => { onBatchCopy(); closeEmptyContextMenu(); }}
-                          >
-                            复制
-                          </Menu.Item>
-                        )}
-                        {onBatchMove && (
-                          <Menu.Item
-                            icon={
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="17 15 21 15 21 19 17 19" />
-                                <line x1="3" y1="11" x2="21" y2="11" />
-                                <polyline points="7 7 3 11 7 15" />
-                              </svg>
-                            }
-                            onClick={() => { onBatchMove(); closeEmptyContextMenu(); }}
-                          >
-                            移动
-                          </Menu.Item>
-                        )}
-                        {onBatchDelete && (
-                          <Menu.Item
-                            variant="danger"
-                            icon={
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              </svg>
-                            }
-                            onClick={() => { onBatchDelete(); closeEmptyContextMenu(); }}
-                          >
-                            删除
-                          </Menu.Item>
-                        )}
-                        <Menu.Separator />
-                      </>
-                    )}
-                    {!isAtRoot && onCreateDrawingInCurrentDir && (
+                    }}
+                  >
+                    {action.label}
+                  </Menu.Item>
+                ))}
+                {secondary.length > 0 && (
+                  <Menu.Submenu label="其他操作" icon={secondary[0]?.icon}>
+                    {secondary.map((action) => (
                       <Menu.Item
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                            <line x1="12" y1="18" x2="12" y2="12" />
-                            <line x1="9" y1="15" x2="15" y2="15" />
-                          </svg>
-                        }
-                        onClick={() => { onCreateDrawingInCurrentDir?.(); closeEmptyContextMenu(); }}
+                        key={action.type}
+                        variant={ACTION_VARIANT_MAP[action.type] || 'default'}
+                        icon={action.icon}
+                        onClick={() => {
+                          const type = action.type;
+                          closeContextMenu();
+                          switch (type) {
+                            case 'open': onFileOpen(node); break;
+                            case 'download': onDownload?.(node); break;
+                            case 'rename': onRename?.(node); break;
+                            case 'delete': onDelete?.(node); break;
+                            case 'permanently_delete': onPermanentlyDelete?.(node); break;
+                            case 'restore': onRestore?.(node); break;
+                            case 'move': onMove?.(node); break;
+                            case 'copy': onCopy?.(node); break;
+                            case 'share': onShare?.(node); break;
+                            case 'view_version_history': onShowVersionHistory?.(node); break;
+                            case 'edit': nodePerms.onEdit?.(new MouseEvent('click') as unknown as React.MouseEvent); break;
+                            case 'show_members': nodePerms.onShowMembers?.(new MouseEvent('click') as unknown as React.MouseEvent); break;
+                            case 'show_roles': nodePerms.onShowRoles?.(new MouseEvent('click') as unknown as React.MouseEvent); break;
+                            case 'open_in_new_tab': onOpenInNewTab?.(node); break;
+                            case 'open_file_location': onOpenFileLocation?.(node); break;
+                            case 'new_folder': onNewFolder?.(node); break;
+                            case 'copy_clipboard': onCopyClipboard?.(node); break;
+                            case 'cut': onCut?.(node); break;
+                            case 'download_folder': onDownloadFolder?.(node); break;
+                            case 'properties': onShowProperties?.(node); break;
+                            case 'copy_path': onCopyPath?.(node); break;
+                            default: break;
+                          }
+                        }}
                       >
-                        新建图纸
+                        {action.label}
                       </Menu.Item>
-                    )}
-                    <Menu.Item
-                      icon={
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" />
-                          <line x1="12" y1="11" x2="12" y2="17" />
-                          <line x1="9" y1="14" x2="15" y2="14" />
-                        </svg>
-                      }
-                      onClick={() => { onCreateFolderInCurrentDir?.(); closeEmptyContextMenu(); }}
-                    >
-                      新建文件夹
-                    </Menu.Item>
-                    {!isAtRoot && onUpload && (
-                      <Menu.Item
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                          </svg>
-                        }
-                        onClick={() => { onUpload?.(); closeEmptyContextMenu(); }}
-                      >
-                        上传
-                      </Menu.Item>
-                    )}
-                    {clipboardHasItems && (
-                      <Menu.Item
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                          </svg>
-                        }
-                        onClick={() => { onPasteInCurrentDir?.(); closeEmptyContextMenu(); }}
-                      >
-                        粘贴
-                      </Menu.Item>
-                    )}
-                    <Menu.Separator />
-                    <Menu.Item
-                      icon={
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="23 4 23 10 17 10" />
-                          <polyline points="1 20 1 14 7 14" />
-                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                        </svg>
-                      }
-                      onClick={() => { onRefresh(); closeEmptyContextMenu(); }}
-                    >
-                      刷新
-                    </Menu.Item>
-                  </>
+                    ))}
+                  </Menu.Submenu>
                 )}
-              </Menu.Content>
-            </Menu>
-            <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={closeEmptyContextMenu} />
-          </div>
+                {(destructive.length > 0) && (main.length > 0 || secondary.length > 0) && <Menu.Separator />}
+                {destructive.map((action) => (
+                  <Menu.Item
+                    key={action.type}
+                    variant="danger"
+                    icon={action.icon}
+                    onClick={() => {
+                      const type = action.type;
+                      closeContextMenu();
+                      if (type === 'permanently_delete') {
+                        onPermanentlyDelete?.(node);
+                      } else {
+                        onDelete?.(node);
+                      }
+                    }}
+                  >
+                    {action.label}
+                  </Menu.Item>
+                ))}
+              </>
+            );
+          })()
+        ) : isAtRoot ? (
+          <>
+            {selectedNodes.size > 0 && onBatchDelete && (
+              <Menu.Item
+                variant="danger"
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>}
+                onClick={() => { onBatchDelete(); closeContextMenu(); }}
+              >
+                删除
+              </Menu.Item>
+            )}
+            {onCreateProject && (
+              <Menu.Item
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}
+                onClick={() => { onCreateProject(); closeContextMenu(); }}
+              >
+                新建项目
+              </Menu.Item>
+            )}
+            <Menu.Separator />
+            <Menu.Item
+              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>}
+              onClick={() => { onRefresh(); closeContextMenu(); }}
+            >
+              刷新
+            </Menu.Item>
+          </>
+        ) : (
+          <>
+            {selectedNodes.size > 0 && (
+              <>
+                {onBatchCopy && (
+                  <Menu.Item
+                    icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
+                    onClick={() => { onBatchCopy(); closeContextMenu(); }}
+                  >
+                    复制
+                  </Menu.Item>
+                )}
+                {onBatchMove && (
+                  <Menu.Item
+                    icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 15 21 15 21 19 17 19" /><line x1="3" y1="11" x2="21" y2="11" /><polyline points="7 7 3 11 7 15" /></svg>}
+                    onClick={() => { onBatchMove(); closeContextMenu(); }}
+                  >
+                    移动
+                  </Menu.Item>
+                )}
+                {onBatchDelete && (
+                  <Menu.Item
+                    variant="danger"
+                    icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>}
+                    onClick={() => { onBatchDelete(); closeContextMenu(); }}
+                  >
+                    删除
+                  </Menu.Item>
+                )}
+                <Menu.Separator />
+              </>
+            )}
+            {!isAtRoot && onCreateDrawingInCurrentDir && (
+              <Menu.Item
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></svg>}
+                onClick={() => { onCreateDrawingInCurrentDir?.(); closeContextMenu(); }}
+              >
+                新建图纸
+              </Menu.Item>
+            )}
+            <Menu.Item
+              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>}
+              onClick={() => { onCreateFolderInCurrentDir?.(); closeContextMenu(); }}
+            >
+              新建文件夹
+            </Menu.Item>
+            {!isAtRoot && onUpload && (
+              <Menu.Item
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>}
+                onClick={() => { onUpload?.(); closeContextMenu(); }}
+              >
+                上传
+              </Menu.Item>
+            )}
+            {clipboardHasItems && (
+              <Menu.Item
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
+                onClick={() => { onPasteInCurrentDir?.(); closeContextMenu(); }}
+              >
+                粘贴
+              </Menu.Item>
+            )}
+            <Menu.Separator />
+            <Menu.Item
+              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>}
+              onClick={() => { onRefresh(); closeContextMenu(); }}
+            >
+              刷新
+            </Menu.Item>
+          </>
         )}
-      </div>
-
-      <div
-        className="flex-shrink-0 px-6 py-4"
-        style={{ borderTop: '1px solid var(--border-subtle)' }}
-      >
-        <Pagination
-          meta={
-            paginationMeta || { total: 0, page: 1, limit: 30, totalPages: 1 }
-          }
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-          showSizeChanger={true}
-        />
-      </div>
-    </div>
+      </EmptyContextMenu>
+    </>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   useNavigate,
@@ -204,6 +204,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, [displayNodes]);
 
   const viewNodes = isAtRoot ? displayNodes : accumulatedNodes;
+
+  const currentAncestorPath = useMemo(() => {
+    if (isAtRoot || isTrashView || breadcrumbs.length <= 1) return '';
+    return breadcrumbs.slice(1).map((c) => c.name).join(' > ');
+  }, [isAtRoot, isTrashView, breadcrumbs]);
 
   const handleFileOpen = useCallback((node: FileSystemNode) => {
     clearSelection();
@@ -635,6 +640,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   }, []);
 
   const highlightNodeId = searchParams.get('highlight');
+  const pageFromUrl = searchParams.get('page');
   const searchQueryFromUrl = searchParams.get('search');
 
   useEffect(() => {
@@ -643,12 +649,44 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     }
   }, [searchQueryFromUrl, searchTerm, setSearchTerm]);
 
+  const prevPageFromUrlRef = useRef(pageFromUrl);
+  useEffect(() => {
+    if (!pageFromUrl || isAtRoot) return;
+    const pageNum = parseInt(pageFromUrl, 10);
+    if (isNaN(pageNum) || pageNum < 1) return;
+
+    if (prevPageFromUrlRef.current !== pageFromUrl || pagination.page !== pageNum) {
+      prevPageFromUrlRef.current = pageFromUrl;
+      handlePageChange(pageNum);
+    }
+
+    const timer = setTimeout(() => {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('page');
+      navigate({ search: newSearchParams.toString() }, { replace: true });
+    }, 200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageFromUrl, isAtRoot, searchParams, navigate]);
+
+  useEffect(() => {
+    if (!highlightNodeId) return;
+    const timer = setTimeout(() => {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('highlight');
+      navigate({ search: newSearchParams.toString() }, { replace: true });
+    }, 4500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const buildNodeUrl = useCallback((node: FileSystemNode): string => {
     if (mode === 'personal-space') {
-      return `${window.location.origin}/personal-space/${node.id}`;
+      return `/personal-space/${node.id}`;
     }
-    if (urlProjectId) {
-      return `${window.location.origin}/projects/${urlProjectId}/files/${node.id}`;
+    const pid = urlProjectId || node.projectId;
+    if (pid) {
+      return `/projects/${pid}/files/${node.id}`;
     }
     return '#';
   }, [mode, urlProjectId]);
@@ -659,8 +697,32 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   const handleOpenInNewTab = useCallback((node: FileSystemNode) => {
     const url = buildNodeUrl(node);
-    if (url !== '#') window.open(url, '_blank');
+    if (url !== '#') window.open(window.location.origin + url, '_blank');
   }, [buildNodeUrl]);
+
+  const handleBreadcrumbPathSubmit = useCallback(async (path: string) => {
+    // 编辑框使用 " / " 分隔，后端要求 " > " 分隔
+    const normalizedPath = path.replace(/\s*\/\s*/g, ' > ');
+    const query: Record<string, string> = { path: normalizedPath };
+    if (mode === 'project' && urlProjectId) {
+      query.projectId = urlProjectId;
+    }
+    if (!query.projectId && mode !== 'personal-space') return;
+    try {
+      const { data } = await client.get({
+        url: `/api/v1/file-system/resolve-path`,
+        query,
+        throwOnError: true,
+      });
+      const node = data as unknown as FileSystemNode;
+      if (node?.id) {
+        const url = buildNodeUrl(node);
+        navigate(url);
+      }
+    } catch {
+      showToast('路径不存在或无法访问', 'error');
+    }
+  }, [mode, urlProjectId, navigate, buildNodeUrl, showToast]);
 
   const handleOpenFileLocation = useCallback(async (node: FileSystemNode) => {
     if (!node.parentId) return;
@@ -674,11 +736,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       });
       const ctx = data as unknown as { parentId: string; pageNumber: number };
       const baseUrl = buildNodeUrl({ ...node, id: node.parentId } as FileSystemNode);
-      const url = `${baseUrl}?highlight=${node.id}&page=${ctx.pageNumber}`;
+      const url = `${window.location.origin}${baseUrl}?highlight=${node.id}&page=${ctx.pageNumber}`;
       window.open(url, '_blank');
     } catch {
       const baseUrl = buildNodeUrl({ ...node, id: node.parentId } as FileSystemNode);
-      window.open(baseUrl, '_blank');
+      window.open(window.location.origin + baseUrl, '_blank');
     }
   }, [buildNodeUrl, pagination]);
 
@@ -719,6 +781,18 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     setPropertiesNode(node);
     setShowPropertiesModal(true);
   }, []);
+
+  const handleCopyPath = useCallback(async (node: FileSystemNode) => {
+    const path = node.ancestorPath
+      ? `${node.ancestorPath} > ${node.name}`
+      : node.name;
+    try {
+      await navigator.clipboard.writeText(path);
+      showToast('路径已复制到剪贴板', 'success');
+    } catch {
+      showToast('复制失败', 'error');
+    }
+  }, [showToast]);
 
   const handleSubmitProject = useCallback(
     (e: React.FormEvent) => {
@@ -863,7 +937,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             onCreateDrawing={() => setShowCreateDrawingModal(true)}
             onCreateProject={openCreateProject}
             onGoBack={handleGoBack}
-            onBreadcrumbNavigate={() => {}}
+            onBreadcrumbNavigate={(crumb) => {
+              if (isPersonalSpaceMode) {
+                if (crumb.isRoot) {
+                  navigate('/personal-space');
+                } else {
+                  navigate(`/personal-space/${crumb.id}`);
+                }
+              } else {
+                if (crumb.isRoot) {
+                  navigate(`/projects/${crumb.id}/files`);
+                } else {
+                  navigate(`/projects/${urlProjectId}/files/${crumb.id}`);
+                }
+              }
+            }}
+            onBreadcrumbPathSubmit={handleBreadcrumbPathSubmit}
             showToast={showToast}
             clipboardCount={clipboardItems.length}
             clipboardMode={clipboardMode}
@@ -976,8 +1065,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   totalPages={paginationMeta?.totalPages}
                   onScrollPageChange={handleScrollPageChange}
                   highlightNodeId={highlightNodeId || undefined}
-                  isSearchResult={!!searchTerm}
-                  onOpen={handleOpen}
+                   isSearchResult={!!searchTerm}
+                   currentAncestorPath={currentAncestorPath}
+                   onOpen={handleOpen}
                   onOpenInNewTab={handleOpenInNewTab}
                   onOpenFileLocation={handleOpenFileLocation}
                    onNewFolder={handleNewFolder}
@@ -985,6 +1075,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                    onCut={handleCut}
                    onDownloadFolder={handleDownloadFolder}
                    onShowProperties={handleShowProperties}
+                   onCopyPath={handleCopyPath}
                    onCreateFolderInCurrentDir={() => setShowCreateFolderModal(true)}
                    onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
                    onUpload={() => uploaderRef.current?.triggerUpload()}

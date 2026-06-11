@@ -8,10 +8,12 @@ interface FileItemInfoProps {
   isGrid?: boolean;
   galleryMode?: boolean;
   fontSize?: number | string;
+  /** 搜索结果/回收站路径徽章（替换次级信息） */
+  searchPathBadge?: React.ReactNode;
 }
 
 export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
-  ({ node, isGrid = false, galleryMode = false, fontSize }) => {
+  ({ node, isGrid = false, galleryMode = false, fontSize, searchPathBadge }) => {
     const isRoot = node.isRoot;
 
     // 图库模式：文件名去后缀（文件夹保留原名）
@@ -31,7 +33,11 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
     const descriptionText = useMemo(
       () => {
         if (isRoot) {
-          return node.description || '暂无描述';
+          const parts: string[] = [];
+          if (node.description) parts.push(node.description);
+          if (node.childrenCount !== undefined) parts.push(`${node.childrenCount} 个文件`);
+          if (node.memberCount !== undefined) parts.push(`${node.memberCount} 个成员`);
+          return parts.join(' · ') || '暂无描述';
         }
         if (node.isFolder) {
           return `${node._count?.children || 0} 个项目`;
@@ -73,11 +79,15 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
               </FileNameText>
             )}
           </h3>
-          {!galleryMode && (
+          {searchPathBadge ? (
+            <div className="mt-1 w-full flex justify-center">
+              {searchPathBadge}
+            </div>
+          ) : !galleryMode ? (
             <p className="text-xs text-slate-500 text-center mt-1 overflow-hidden w-full" style={{ minWidth: 0 }}>
               <DescriptionText showTooltip={true}>{descriptionText}</DescriptionText>
             </p>
-          )}
+          ) : null}
         </>
       );
     }
@@ -98,12 +108,18 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             </FileNameText>
           )}
         </h3>
-        <div className="flex items-center gap-2">
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {formatDate(node.updatedAt)}
-            {!node.isFolder && !galleryMode && ` • ${formatFileSize(node.size)}`}
-          </p>
-        </div>
+        {searchPathBadge ? (
+          <div className="flex items-center gap-1 mt-0.5">
+            {searchPathBadge}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {formatDate(node.updatedAt)}
+              {!node.isFolder && !galleryMode && ` • ${formatFileSize(node.size)}`}
+            </p>
+          </div>
+        )}
       </div>
     );
   }

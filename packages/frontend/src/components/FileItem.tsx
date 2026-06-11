@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 
@@ -18,17 +18,21 @@ import {
 import {
   getAvailableActions,
   getActionGroups,
-  ACTION_VARIANT_MAP,
   type ActionType,
 } from './file-item/fileActionConfig';
 import { FileSystemNode } from '../types/filesystem';
 import { Card } from './ui/Card';
 import { Tooltip } from './ui/Tooltip';
 import { Menu } from './ui/Menu';
-import { Z_LAYERS } from '@/constants/layers';
 
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
+
+function abbreviateSearchPath(path: string): string {
+  const parts = path.split(' > ');
+  if (parts.length <= 2) return path;
+  return `${parts[0]} > ... > ${parts[parts.length - 1]}`;
+}
 
 interface FileItemProps {
   node: FileSystemNode;
@@ -69,6 +73,8 @@ interface FileItemProps {
   selectedCount?: number;
   /** 搜索结果模式 */
   isSearchResult?: boolean;
+  /** 项目列表级别（搜索结果需显示项目名称） */
+  isProjectRootLevel?: boolean;
   onOpen?: (node: FileSystemNode) => void;
   onOpenInNewTab?: (node: FileSystemNode) => void;
   onOpenFileLocation?: (node: FileSystemNode) => void;
@@ -77,6 +83,9 @@ interface FileItemProps {
   onCut?: (node: FileSystemNode) => void;
   onDownloadFolder?: (node: FileSystemNode) => void;
   onShowProperties?: (node: FileSystemNode) => void;
+  onCopyPath?: (node: FileSystemNode) => void;
+  /** 当前目录的祖先路径（用于搜索结果中隐藏同目录文件的路径） */
+  currentAncestorPath?: string;
   /** 批量删除选中项 */
   onBatchDelete?: () => void;
   /** 批量移动选中项 */
@@ -161,6 +170,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDrop,
   isDropTarget = false,
   isSearchResult = false,
+  isProjectRootLevel = false,
   onOpen,
   onOpenInNewTab,
   onOpenFileLocation,
@@ -169,6 +179,8 @@ export const FileItem: React.FC<FileItemProps> = ({
   onCut,
   onDownloadFolder,
   onShowProperties,
+  onCopyPath,
+  currentAncestorPath,
 }) => {
   if (!node) {
     console.warn('[FileItem] node is undefined or null');
@@ -177,7 +189,6 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const [useCompactActions, setUseCompactActions] = useState(false);
   const isRoot = node.isRoot;
@@ -378,6 +389,10 @@ export const FileItem: React.FC<FileItemProps> = ({
       e.stopPropagation();
       onShowProperties?.(node);
     },
+    copy_path: (e) => {
+      e.stopPropagation();
+      onCopyPath?.(node);
+    },
   };
 
   const actionProps = {
@@ -414,120 +429,14 @@ export const FileItem: React.FC<FileItemProps> = ({
     onCut: !!onCut,
     onDownloadFolder: !!onDownloadFolder,
     onShowProperties: !!onShowProperties,
+    onCopyPath: !!onCopyPath,
   };
 
   const availableActions = getAvailableActions(actionProps);
-  const { main: contextMainActions, secondary: contextSecondaryActions, destructive: contextDestructiveActions } = getActionGroups(availableActions);
-
-  const isMultiSelected = selectedCount > 1 && isSelected;
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (isMultiSelected) {
-        if (!(onBatchDelete || onBatchMove || onBatchCopy || onBatchRestore)) return;
-      } else {
-        if (contextMainActions.length === 0 && contextDestructiveActions.length === 0 && contextSecondaryActions.length === 0) return;
-      }
-      if (!hideSelectionCircle && !isMultiSelected && !isSelected && onSelect) {
-        onSelect(node.id, false, false);
-      }
-      setContextMenuPos({ x: e.clientX, y: e.clientY });
-    },
-    [node, onSelect, isSelected, isMultiSelected, hideSelectionCircle,
-     onBatchDelete, onBatchMove, onBatchCopy, onBatchRestore, availableActions]
-  );
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenuPos(null);
-  }, []);
 
   const handleAction = useCallback((type: ActionType) => {
     actionHandlers[type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
-    closeContextMenu();
-  }, [actionHandlers, closeContextMenu]);
-
-  const contextMenuElement = contextMenuPos && (isMultiSelected
-    ? !!(onBatchDelete || onBatchMove || onBatchCopy || onBatchRestore)
-    : availableActions.length > 0
-  ) && (
-    <div style={{ position: 'fixed', left: contextMenuPos.x, top: contextMenuPos.y, width: 0, height: 0, overflow: 'visible', zIndex: Z_LAYERS.POPUP }}>
-      <Menu open onOpenChange={(open) => { if (!open) closeContextMenu(); }} modal={false}>
-        <Menu.Trigger asChild>
-          <div style={{ width: 0, height: 0 }} />
-        </Menu.Trigger>
-        <Menu.Content align="start" side="bottom" sideOffset={0}>
-          {isMultiSelected ? (
-            <>
-              {onBatchDelete && (
-                <Menu.Item variant="danger" onClick={() => { onBatchDelete(); closeContextMenu(); }}>
-                  删除 {selectedCount} 个选中项
-                </Menu.Item>
-              )}
-              {onBatchMove && (
-                <Menu.Item onClick={() => { onBatchMove(); closeContextMenu(); }}>
-                  移动
-                </Menu.Item>
-              )}
-              {onBatchCopy && (
-                <Menu.Item onClick={() => { onBatchCopy(); closeContextMenu(); }}>
-                  复制
-                </Menu.Item>
-              )}
-              {onBatchRestore && (
-                <Menu.Item variant="success" onClick={() => { onBatchRestore(); closeContextMenu(); }}>
-                  恢复 {selectedCount} 个选中项
-                </Menu.Item>
-              )}
-            </>
-          ) : (
-            <>
-              {contextMainActions.map((action) => (
-                <Menu.Item
-                  key={action.type}
-                  variant={ACTION_VARIANT_MAP[action.type] || 'default'}
-                  icon={action.icon}
-                  onClick={() => handleAction(action.type)}
-                >
-                  {action.label}
-                </Menu.Item>
-              ))}
-
-              {contextSecondaryActions.length > 0 && (
-                <Menu.Submenu label="其他操作" icon={contextSecondaryActions[0]?.icon}>
-                  {contextSecondaryActions.map((action) => (
-                    <Menu.Item
-                      key={action.type}
-                      variant={ACTION_VARIANT_MAP[action.type] || 'default'}
-                      icon={action.icon}
-                      onClick={() => handleAction(action.type)}
-                    >
-                      {action.label}
-                    </Menu.Item>
-                  ))}
-                </Menu.Submenu>
-              )}
-
-              {(contextDestructiveActions.length > 0) && (contextMainActions.length > 0 || contextSecondaryActions.length > 0) && <Menu.Separator />}
-
-              {contextDestructiveActions.map((action) => (
-                <Menu.Item
-                  key={action.type}
-                  variant="danger"
-                  icon={action.icon}
-                  onClick={() => handleAction(action.type)}
-                >
-                  {action.label}
-                </Menu.Item>
-              ))}
-            </>
-          )}
-        </Menu.Content>
-      </Menu>
-      <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={closeContextMenu} />
-    </div>
-  );
+  }, [actionHandlers]);
 
   useEffect(() => {
     if (viewMode !== 'list') return;
@@ -550,6 +459,50 @@ export const FileItem: React.FC<FileItemProps> = ({
     setIsHovered(false);
     setShowMenu(false);
   }, [viewMode]);
+
+  const displayAncestorPath = useMemo(() => {
+    if (!node.ancestorPath) return null;
+    if (isProjectRootLevel) {
+      return node.ancestorPath;
+    }
+    const parts = node.ancestorPath.split(' > ');
+    const relativePath = parts.slice(1).join(' > ');
+    if (!relativePath) return null;
+
+    if (currentAncestorPath) {
+      if (relativePath === currentAncestorPath) return null;
+      if (relativePath.startsWith(currentAncestorPath + ' > ')) {
+        return relativePath.slice(currentAncestorPath.length + 3);
+      }
+    }
+    return relativePath;
+  }, [node.ancestorPath, currentAncestorPath, isProjectRootLevel]);
+
+  const searchPathBadge = useMemo(() => {
+    if (!(isSearchResult || isTrash) || !displayAncestorPath) return null;
+    if (viewMode === 'grid') {
+      return (
+        <Tooltip content={node.ancestorPath || ''} position="bottom">
+          <span
+            className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium leading-none max-w-full truncate"
+            style={{ background: 'var(--primary-100)', color: 'var(--primary-600)' }}
+          >
+            {abbreviateSearchPath(displayAncestorPath)}
+          </span>
+        </Tooltip>
+      );
+    }
+    return (
+      <Tooltip content={node.ancestorPath || ''} position="bottom">
+        <span
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium leading-none max-w-full truncate"
+          style={{ background: 'var(--primary-100)', color: 'var(--primary-600)' }}
+        >
+          {displayAncestorPath}
+        </span>
+      </Tooltip>
+    );
+  }, [isSearchResult, isTrash, displayAncestorPath, viewMode, node.ancestorPath]);
 
   if (viewMode === 'grid') {
     const showSelectedStyle = isSelected;
@@ -604,7 +557,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         onMouseDown={(e) => { if (hideSelectionCircle && !isRubberBanding) e.stopPropagation(); }}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
-        onContextMenu={handleContextMenu}
         draggable={hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding}
         onDragStart={(e) => { onDragStart?.(e, node); }}
         onDragOver={(e) => onDragOver?.(e, node)}
@@ -631,7 +583,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               />
             </div>
             <div className="flex flex-col items-center pb-2">
-              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} />
+              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} searchPathBadge={searchPathBadge} />
               <FileItemExternalReferenceWarning node={node} isGrid />
             </div>
           </div>
@@ -652,7 +604,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             </div>
 
             <div className="flex flex-col items-center">
-              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} />
+              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} searchPathBadge={searchPathBadge} />
               <FileItemExternalReferenceWarning node={node} isGrid />
             </div>
           </div>
@@ -683,7 +635,6 @@ export const FileItem: React.FC<FileItemProps> = ({
           onClose={externalReferenceUpload.close}
         />
       </Card>
-      {contextMenuElement}
     </>
     );
   }
@@ -781,7 +732,6 @@ export const FileItem: React.FC<FileItemProps> = ({
       onMouseDown={(e) => { if (hideSelectionCircle && !isRubberBanding) e.stopPropagation(); }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      onContextMenu={handleContextMenu}
       draggable={hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding}
       onDragStart={(e) => { onDragStart?.(e, node); }}
       onDragOver={(e) => onDragOver?.(e, node)}
@@ -806,10 +756,10 @@ export const FileItem: React.FC<FileItemProps> = ({
       </div>
 
       <div className={`flex-1 min-w-0 ${galleryMode ? 'p-2' : 'p-3'}`}>
-        <FileItemInfo node={node} galleryMode={galleryMode} fontSize={fontSize} />
+        <FileItemInfo node={node} galleryMode={galleryMode} fontSize={fontSize} searchPathBadge={searchPathBadge} />
       </div>
 
-      {!galleryMode && !hideTypeTag && (
+      {!galleryMode && !hideTypeTag && !isSearchResult && (
         <div className="p-3">
           <FileItemTypeTag node={node} />
         </div>
@@ -909,7 +859,6 @@ export const FileItem: React.FC<FileItemProps> = ({
         onClose={externalReferenceUpload.close}
       />
     </div>
-      {contextMenuElement}
     </>
   );
 };

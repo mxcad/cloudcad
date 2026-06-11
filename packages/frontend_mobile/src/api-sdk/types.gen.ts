@@ -1535,9 +1535,21 @@ export type FileSystemNodeDto = {
      */
     childrenCount?: number;
     /**
+     * 成员数量（项目根节点）
+     */
+    memberCount?: number;
+    /**
      * 项目 ID
      */
     projectId?: string;
+    /**
+     * 祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）
+     */
+    ancestorPath?: string;
+    /**
+     * 结果来源类型（仅 Global 搜索使用）
+     */
+    sourceType?: string;
 };
 
 export type ProjectListResponseDto = {
@@ -1764,9 +1776,21 @@ export type NodeTreeResponseDto = {
      */
     childrenCount?: number;
     /**
+     * 成员数量（项目根节点）
+     */
+    memberCount?: number;
+    /**
      * 项目 ID
      */
     projectId?: string;
+    /**
+     * 祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）
+     */
+    ancestorPath?: string;
+    /**
+     * 结果来源类型（仅 Global 搜索使用）
+     */
+    sourceType?: string;
     /**
      * 子节点
      */
@@ -1936,7 +1960,7 @@ export type PermissionCheckResponseDto = {
 
 export type SearchEntity = 'file';
 
-export type SearchScope = 'project' | 'project_files' | 'all_projects' | 'library';
+export type SearchScope = 'project' | 'project_files' | 'all_projects' | 'library' | 'global' | 'personal_space';
 
 export type SearchType = 'all' | 'file' | 'folder';
 
@@ -6436,6 +6460,38 @@ export type FileSystemControllerSearchResponses = {
 };
 
 export type FileSystemControllerSearchResponse = FileSystemControllerSearchResponses[keyof FileSystemControllerSearchResponses];
+
+export type FileSystemControllerResolvePathData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * 面包屑路径（如 "项目A > 文件夹1 > 子文件夹"）
+         */
+        path: string;
+        /**
+         * 项目 ID。个人空间模式不需要传此参数，使用 userId 自动定位
+         */
+        projectId?: string;
+    };
+    url: '/api/v1/file-system/resolve-path';
+};
+
+export type FileSystemControllerResolvePathErrors = {
+    /**
+     * 路径或项目不存在
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerResolvePathResponses = {
+    /**
+     * 路径对应的节点
+     */
+    200: FileSystemNodeDto;
+};
+
+export type FileSystemControllerResolvePathResponse = FileSystemControllerResolvePathResponses[keyof FileSystemControllerResolvePathResponses];
 
 export type FileSystemControllerGetParentContextData = {
     body?: never;

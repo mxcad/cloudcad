@@ -24,7 +24,8 @@ export type ActionType =
   | 'copy_clipboard'
   | 'cut'
   | 'download_folder'
-  | 'properties';
+  | 'properties'
+  | 'copy_path';
 
 /**
  * 操作项配置
@@ -91,6 +92,7 @@ export interface FileActionCheckProps {
   onCut?: boolean;
   onDownloadFolder?: boolean;
   onShowProperties?: boolean;
+  onCopyPath?: boolean;
 }
 
 /**
@@ -537,6 +539,16 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isRoot, isTrash, onShowProperties }) =>
       !isRoot && !isTrash && !!onShowProperties,
   },
+  copy_path: {
+    type: 'copy_path',
+    label: '复制路径',
+    tooltip: '复制文件完整路径',
+    icon: <Icons.Copy />,
+    colorClass: 'text-slate-700',
+    hoverClass: 'hover:bg-slate-50',
+    visibilityCheck: ({ isRoot, isTrash, isSearchResult, onCopyPath }) =>
+      !!isSearchResult && !isRoot && !isTrash && !!onCopyPath,
+  },
 };
 
 /**
@@ -610,11 +622,12 @@ export const ACTION_VARIANT_MAP: Record<string, 'default' | 'danger' | 'success'
   cut: 'default',
   download_folder: 'default',
   properties: 'default',
+  copy_path: 'default',
 };
 
 const SECONDARY_ACTION_TYPES = new Set<ActionType>([
   'move', 'copy', 'copy_clipboard', 'cut',
-  'open_in_new_tab', 'open_file_location',
+  'open_in_new_tab', 'open_file_location', 'copy_path',
   'new_folder',
 ]);
 
