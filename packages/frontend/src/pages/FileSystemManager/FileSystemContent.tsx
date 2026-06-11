@@ -86,6 +86,8 @@ interface FileSystemContentProps {
   onPasteInCurrentDir?: () => void;
   /** 剪贴板是否有内容 */
   clipboardHasItems?: boolean;
+  /** 新建项目（仅在项目列表根层级使用） */
+  onCreateProject?: () => void;
 }
 
 export const FileSystemContent: React.FC<FileSystemContentProps> = ({
@@ -148,6 +150,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onUpload,
   onPasteInCurrentDir,
   clipboardHasItems = false,
+  onCreateProject,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [rubberBand, setRubberBand] = useState<{
@@ -158,10 +161,12 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     startScrollLeft: number;
     startScrollTop: number;
   } | null>(null);
+  const rubberBandJustEndedRef = useRef(false);
 
   const [emptyContextMenuPos, setEmptyContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    rubberBandJustEndedRef.current = false;
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('[data-drag-handle]')) return;
     if ((e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')) return;
@@ -276,19 +281,34 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     cancelAutoScroll();
   }, [cancelAutoScroll]);
 
+  const setRubberBandJustEnded = useCallback(() => {
+    rubberBandJustEndedRef.current = true;
+    setTimeout(() => { rubberBandJustEndedRef.current = false; }, 0);
+  }, []);
+
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     cancelAutoScroll();
     if (rubberBand) {
       applyRubberBandSelection(rubberBand.startVX, rubberBand.startVY, rubberBand.currentVX, rubberBand.currentVY, rubberBand.startScrollLeft, rubberBand.startScrollTop);
+      const dx = Math.abs(rubberBand.currentVX - rubberBand.startVX);
+      const dy = Math.abs(rubberBand.currentVY - rubberBand.startVY);
+      if (dx >= 5 || dy >= 5) {
+        setRubberBandJustEnded();
+      }
     }
     setRubberBand(null);
-  }, [rubberBand, cancelAutoScroll, applyRubberBandSelection]);
+  }, [rubberBand, cancelAutoScroll, applyRubberBandSelection, setRubberBandJustEnded]);
 
   useEffect(() => {
     if (!rubberBand) return;
     const onWindowMouseUp = () => {
       cancelAutoScroll();
       applyRubberBandSelection(rubberBand.startVX, rubberBand.startVY, rubberBand.currentVX, rubberBand.currentVY, rubberBand.startScrollLeft, rubberBand.startScrollTop);
+      const dx = Math.abs(rubberBand.currentVX - rubberBand.startVX);
+      const dy = Math.abs(rubberBand.currentVY - rubberBand.startVY);
+      if (dx >= 5 || dy >= 5) {
+        setRubberBandJustEnded();
+      }
       setRubberBand(null);
     };
     window.addEventListener('mouseup', onWindowMouseUp);
@@ -471,8 +491,9 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 viewMode={viewMode}
                 hideSelectionCircle={false}
                 isRubberBanding={!!rubberBand}
+                rubberBandJustEndedRef={rubberBandJustEndedRef}
                 selectedCount={selectedNodes.size}
-                onBatchDelete={onBatchDelete}
+                onBatchDelete={isRootLevel ? undefined : onBatchDelete}
                 onBatchMove={isRootLevel ? undefined : onBatchMove}
                 onBatchCopy={isRootLevel ? undefined : onBatchCopy}
                 onBatchRestore={onBatchRestore}
@@ -583,36 +604,9 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 <div style={{ width: 0, height: 0 }} />
               </Menu.Trigger>
               <Menu.Content align="start" side="bottom" sideOffset={0}>
-                {selectedNodes.size > 0 && (
+                {isAtRoot ? (
                   <>
-                    {onBatchCopy && (
-                      <Menu.Item
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                          </svg>
-                        }
-                        onClick={() => { onBatchCopy(); closeEmptyContextMenu(); }}
-                      >
-                        复制
-                      </Menu.Item>
-                    )}
-                    {onBatchMove && (
-                      <Menu.Item
-                        icon={
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="17 15 21 15 21 19 17 19" />
-                            <line x1="3" y1="11" x2="21" y2="11" />
-                            <polyline points="7 7 3 11 7 15" />
-                          </svg>
-                        }
-                        onClick={() => { onBatchMove(); closeEmptyContextMenu(); }}
-                      >
-                        移动
-                      </Menu.Item>
-                    )}
-                    {onBatchDelete && (
+                    {selectedNodes.size > 0 && onBatchDelete && (
                       <Menu.Item
                         variant="danger"
                         icon={
@@ -626,76 +620,149 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                         删除
                       </Menu.Item>
                     )}
+                    {onCreateProject && (
+                      <Menu.Item
+                        icon={
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 5v14M5 12h14" />
+                          </svg>
+                        }
+                        onClick={() => { onCreateProject(); closeEmptyContextMenu(); }}
+                      >
+                        新建项目
+                      </Menu.Item>
+                    )}
                     <Menu.Separator />
+                    <Menu.Item
+                      icon={
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="23 4 23 10 17 10" />
+                          <polyline points="1 20 1 14 7 14" />
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                      }
+                      onClick={() => { onRefresh(); closeEmptyContextMenu(); }}
+                    >
+                      刷新
+                    </Menu.Item>
+                  </>
+                ) : (
+                  <>
+                    {selectedNodes.size > 0 && (
+                      <>
+                        {onBatchCopy && (
+                          <Menu.Item
+                            icon={
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
+                            }
+                            onClick={() => { onBatchCopy(); closeEmptyContextMenu(); }}
+                          >
+                            复制
+                          </Menu.Item>
+                        )}
+                        {onBatchMove && (
+                          <Menu.Item
+                            icon={
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="17 15 21 15 21 19 17 19" />
+                                <line x1="3" y1="11" x2="21" y2="11" />
+                                <polyline points="7 7 3 11 7 15" />
+                              </svg>
+                            }
+                            onClick={() => { onBatchMove(); closeEmptyContextMenu(); }}
+                          >
+                            移动
+                          </Menu.Item>
+                        )}
+                        {onBatchDelete && (
+                          <Menu.Item
+                            variant="danger"
+                            icon={
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            }
+                            onClick={() => { onBatchDelete(); closeEmptyContextMenu(); }}
+                          >
+                            删除
+                          </Menu.Item>
+                        )}
+                        <Menu.Separator />
+                      </>
+                    )}
+                    {!isAtRoot && onCreateDrawingInCurrentDir && (
+                      <Menu.Item
+                        icon={
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="12" y1="18" x2="12" y2="12" />
+                            <line x1="9" y1="15" x2="15" y2="15" />
+                          </svg>
+                        }
+                        onClick={() => { onCreateDrawingInCurrentDir?.(); closeEmptyContextMenu(); }}
+                      >
+                        新建图纸
+                      </Menu.Item>
+                    )}
+                    <Menu.Item
+                      icon={
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" />
+                          <line x1="12" y1="11" x2="12" y2="17" />
+                          <line x1="9" y1="14" x2="15" y2="14" />
+                        </svg>
+                      }
+                      onClick={() => { onCreateFolderInCurrentDir?.(); closeEmptyContextMenu(); }}
+                    >
+                      新建文件夹
+                    </Menu.Item>
+                    {!isAtRoot && onUpload && (
+                      <Menu.Item
+                        icon={
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                        }
+                        onClick={() => { onUpload?.(); closeEmptyContextMenu(); }}
+                      >
+                        上传
+                      </Menu.Item>
+                    )}
+                    {clipboardHasItems && (
+                      <Menu.Item
+                        icon={
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                        }
+                        onClick={() => { onPasteInCurrentDir?.(); closeEmptyContextMenu(); }}
+                      >
+                        粘贴
+                      </Menu.Item>
+                    )}
+                    <Menu.Separator />
+                    <Menu.Item
+                      icon={
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="23 4 23 10 17 10" />
+                          <polyline points="1 20 1 14 7 14" />
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                      }
+                      onClick={() => { onRefresh(); closeEmptyContextMenu(); }}
+                    >
+                      刷新
+                    </Menu.Item>
                   </>
                 )}
-                {!isAtRoot && onCreateDrawingInCurrentDir && (
-                  <Menu.Item
-                    icon={
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="12" y1="18" x2="12" y2="12" />
-                        <line x1="9" y1="15" x2="15" y2="15" />
-                      </svg>
-                    }
-                    onClick={() => { onCreateDrawingInCurrentDir?.(); closeEmptyContextMenu(); }}
-                  >
-                    新建图纸
-                  </Menu.Item>
-                )}
-                <Menu.Item
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" />
-                      <line x1="12" y1="11" x2="12" y2="17" />
-                      <line x1="9" y1="14" x2="15" y2="14" />
-                    </svg>
-                  }
-                  onClick={() => { onCreateFolderInCurrentDir?.(); closeEmptyContextMenu(); }}
-                >
-                  新建文件夹
-                </Menu.Item>
-                {!isAtRoot && onUpload && (
-                  <Menu.Item
-                    icon={
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                    }
-                    onClick={() => { onUpload?.(); closeEmptyContextMenu(); }}
-                  >
-                    上传
-                  </Menu.Item>
-                )}
-                {clipboardHasItems && (
-                  <Menu.Item
-                    icon={
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                      </svg>
-                    }
-                    onClick={() => { onPasteInCurrentDir?.(); closeEmptyContextMenu(); }}
-                  >
-                    粘贴
-                  </Menu.Item>
-                )}
-                <Menu.Separator />
-                <Menu.Item
-                  icon={
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="23 4 23 10 17 10" />
-                      <polyline points="1 20 1 14 7 14" />
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                    </svg>
-                  }
-                  onClick={() => { onRefresh(); closeEmptyContextMenu(); }}
-                >
-                  刷新
-                </Menu.Item>
               </Menu.Content>
             </Menu>
             <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={closeEmptyContextMenu} />

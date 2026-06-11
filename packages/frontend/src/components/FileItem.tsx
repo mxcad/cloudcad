@@ -63,6 +63,8 @@ interface FileItemProps {
   doubleClickToOpen?: boolean;
   /** 是否正在框选（禁用拖拽避免冲突） */
   isRubberBanding?: boolean;
+  /** 框选刚结束 ref（阻止残留 click 导致文件打开） */
+  rubberBandJustEndedRef?: React.MutableRefObject<boolean>;
   /** 当前已选中的条目总数（用于多选场景右键菜单） */
   selectedCount?: number;
   /** 搜索结果模式 */
@@ -131,6 +133,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   hideSelectionCircle = true,
   doubleClickToOpen = false,
   isRubberBanding = false,
+  rubberBandJustEndedRef,
   selectedCount = 0,
   onBatchDelete,
   onBatchMove,
@@ -238,7 +241,10 @@ export const FileItem: React.FC<FileItemProps> = ({
         return;
       }
 
-      if (isRubberBanding) return;
+      if (isRubberBanding || rubberBandJustEndedRef?.current) {
+        if (rubberBandJustEndedRef) rubberBandJustEndedRef.current = false;
+        return;
+      }
 
       if ((e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')) {
         return;
@@ -250,8 +256,6 @@ export const FileItem: React.FC<FileItemProps> = ({
       if (!hideSelectionCircle) {
         if (isCtrl || isShift) {
           onSelect?.(node.id, isCtrl || isShift, isShift);
-        } else if (isSelected) {
-          onSelect?.(node.id, true, false);
         } else {
           onEnter(node);
         }
