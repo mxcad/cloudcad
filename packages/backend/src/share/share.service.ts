@@ -243,6 +243,17 @@ export class ShareService {
       where.fileId = query.fileId;
     }
 
+    if (query.search) {
+      const matchingFiles = await this.prisma.fileSystemNode.findMany({
+        where: {
+          name: { contains: query.search, mode: 'insensitive' },
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      where.fileId = { in: matchingFiles.map((f) => f.id) };
+    }
+
     const [total, shares] = await Promise.all([
       this.prisma.fileShare.count({ where }),
       this.prisma.fileShare.findMany({
@@ -260,7 +271,7 @@ export class ShareService {
     });
     const fileNameMap = new Map(fileNodes.map((n) => [n.id, n.name]));
 
-    let items = shares.map((share) => ({
+    const items = shares.map((share) => ({
       id: share.id,
       token: share.token,
       url: `/share/${share.token}`,
@@ -270,11 +281,6 @@ export class ShareService {
       usedCount: share.usedCount,
       createdAt: share.createdAt.toISOString(),
     }));
-
-    if (query.search) {
-      const keyword = query.search.toLowerCase();
-      items = items.filter((item) => item.fileName.toLowerCase().includes(keyword));
-    }
 
     return { items, total, page, pageSize };
   }

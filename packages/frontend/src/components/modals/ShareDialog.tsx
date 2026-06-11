@@ -13,6 +13,13 @@ import {
   shareControllerGetFileShares,
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
+import { ConfirmRevokeModal } from './ConfirmRevokeModal';
+import {
+  ExpirationOption,
+  EXPIRATION_LABELS,
+  EXPIRATION_VALUES,
+  formatExpiryDate,
+} from '@/constants/share';
 import './ShareManageDialog.css';
 
 interface ShareListItem {
@@ -36,30 +43,6 @@ interface ShareInfo {
   expiresAt: string | null;
 }
 
-type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
-
-const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
-  never: '永不过期',
-  '2h': '2 小时后过期',
-  '6h': '6 小时后过期',
-  '12h': '12 小时后过期',
-  '1d': '1 天后过期',
-  '3d': '3 天后过期',
-  '7d': '7 天后过期',
-  custom: '自定义',
-};
-
-const EXPIRATION_VALUES: Record<ExpirationOption, number | null> = {
-  never: null,
-  '2h': 7200,
-  '6h': 21600,
-  '12h': 43200,
-  '1d': 86400,
-  '3d': 259200,
-  '7d': 604800,
-  custom: null,
-};
-
 export const ShareDialog: React.FC<ShareDialogProps> = ({
   isOpen,
   onClose,
@@ -76,7 +59,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [revoking, setRevoking] = useState(false);
   const [copied, setCopied] = useState(false);
   const prevFileIdRef = useRef<string | null>(null);
 
@@ -84,6 +66,10 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   type ViewMode = 'list' | 'create' | 'created';
   const [view, setView] = useState<ViewMode>('list');
@@ -130,7 +116,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     } finally {
       setListLoading(false);
     }
-  }, [resolvedFileId, view, readOnly]);
+  }, [resolvedFileId, readOnly]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -163,11 +149,12 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     }
 
     let expiresIn: number | undefined;
-    if (expiration === 'custom') {
+    if (expiration === 'never') {
+      expiresIn = undefined;
+    } else if (expiration === 'custom') {
       expiresIn = customDays * 86400;
     } else {
-      const val = EXPIRATION_VALUES[expiration];
-      if (val !== null) expiresIn = val;
+      expiresIn = EXPIRATION_VALUES[expiration];
     }
 
     setLoading(true);
@@ -206,9 +193,14 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     }
   }, [resolvedFileId, expiration, customDays, showToast, fetchShares]);
 
-  const revokeShare = useCallback(async () => {
+  const confirmRevokeCurrent = () => {
     if (!shareInfo) return;
+    setRevokeTarget(shareInfo.token);
+    setShowRevokeConfirm(true);
+  };
 
+  const handleRevokeCurrent = async () => {
+    if (!shareInfo) return;
     setRevoking(true);
     try {
       const result = await shareControllerRevokeShare({
@@ -222,12 +214,14 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setView('list');
       fetchShares();
       showToast('分享已撤销', 'success');
+      setShowRevokeConfirm(false);
+      setRevokeTarget(null);
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
     } finally {
       setRevoking(false);
     }
-  }, [shareInfo, showToast, fetchShares]);
+  };
 
   const copyLink = useCallback(async () => {
     if (!shareInfo) return;
@@ -248,64 +242,44 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     }
   }, [shareInfo]);
 
-  const handleRevoke = async (token: string) => {
-    if (readOnly) return;
+  const confirmRevokeItem = (token: string) => {
+    setRevokeTarget(token);
+    setShowRevokeConfirm(true);
+  };
+
+  const handleRevokeItem = async () => {
+    if (!revokeTarget) return;
+    setRevoking(true);
     try {
-      const result = await shareControllerRevokeShare({ path: { token } });
+      const result = await shareControllerRevokeShare({ path: { token: revokeTarget } });
       if (result.error) {
         showToast(getErrorMessage(result.error), 'error');
         return;
       }
-      setItems((prev) => prev.filter((i) => i.token !== token));
+      setItems((prev) => prev.filter((i) => i.token !== revokeTarget));
       showToast('分享已撤销', 'success');
+      setShowRevokeConfirm(false);
+      setRevokeTarget(null);
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
+    } finally {
+      setRevoking(false);
     }
   };
 
-  const handleCopy = async (token: string) => {
+  const handleCopyItem = async (token: string) => {
     const url = `${window.location.origin}/share/${token}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
-    } catch (error) {
-      showToast(getErrorMessage(error), 'error');
-    }
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '永不过期';
-    try {
-      return new Date(dateStr).toLocaleDateString();
     } catch {
-      return dateStr;
+      showToast('复制失败', 'error');
     }
   };
 
   const fullUrl = shareInfo ? `${window.location.origin}${shareInfo.url}` : '';
-
-  const rowStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    padding: '8px 0',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 'var(--text-sm)',
-    color: 'var(--text-primary)',
-    fontWeight: 500,
-  };
-
-  const radioGroupStyle: React.CSSProperties = {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '6px',
-    width: '100%',
-  };
 
   const renderListView = () => (
     <div className="share-dialog-body">
@@ -340,6 +314,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           <p className="share-dialog-empty-title">
             {readOnly ? '当前没有可复制的分享链接' : '还没有分享过这个文件'}
           </p>
+          {!readOnly && (
+            <Button variant="primary" size="sm" style={{ marginTop: '12px' }} onClick={() => { setExpiration('7d'); setCustomDays(1); setView('create'); }}>
+              新建分享
+            </Button>
+          )}
         </div>
       ) : (
         <div className="share-dialog-table-container">
@@ -360,17 +339,16 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                         /share/{item.token.slice(0, 10)}...
                       </span>
                       <button
-                        onClick={() => handleCopy(item.token)}
+                        onClick={() => handleCopyItem(item.token)}
                         className="share-dialog-copy-btn"
-                        style={{ display: 'flex', padding: '2px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-500)' }}
                         title="复制链接"
                       >
                         {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                       </button>
                     </div>
                   </td>
-                  <td style={{ color: 'var(--text-secondary)' }}>
-                    {formatDate(item.expiresAt)}
+                  <td className="share-dialog-td-meta">
+                    {formatExpiryDate(item.expiresAt)}
                   </td>
                   <td>
                     <div className="share-dialog-action-cell">
@@ -379,7 +357,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                           variant="ghost"
                           size="xs"
                           icon={Trash2}
-                          onClick={() => handleRevoke(item.token)}
+                          onClick={() => confirmRevokeItem(item.token)}
                           tooltip="撤销分享"
                           style={{ color: 'var(--error)' }}
                         />
@@ -396,19 +374,10 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   );
 
   const renderCreateView = () => (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        padding: '8px 0',
-      }}
-    >
-      <div style={{ width: '100%' }}>
-        <span style={{ ...labelStyle, display: 'block', marginBottom: '8px' }}>
-          有效期
-        </span>
-        <div style={radioGroupStyle}>
+    <div className="share-dialog-create-body">
+      <div className="share-dialog-create-section">
+        <span className="share-dialog-create-label">有效期</span>
+        <div className="share-dialog-expiration-group">
           {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map(
             (key) => (
               <Button
@@ -423,44 +392,26 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           )}
         </div>
         {expiration === 'custom' && (
-          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="share-dialog-custom-days">
             <input
               type="number"
               min={1}
               max={365}
               value={customDays}
               onChange={(e) => setCustomDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
-              style={{
-                width: '60px',
-                padding: '4px 8px',
-                fontSize: 'var(--text-sm)',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-default)',
-                background: 'var(--bg-primary)',
-                color: 'var(--text-primary)',
-              }}
+              className="share-dialog-custom-input"
             />
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-              天后过期
-            </span>
+            <span className="share-dialog-custom-label">天后过期</span>
           </div>
         )}
       </div>
 
-      <Button
-        variant="primary"
-        onClick={createShare}
-        style={{ width: '100%', marginTop: '4px' }}
-      >
+      <Button variant="primary" onClick={createShare} className="share-dialog-action-btn">
         生成分享链接
       </Button>
 
       {items.length > 0 && (
-        <Button
-          variant="ghost"
-          onClick={() => setView('list')}
-          style={{ width: '100%' }}
-        >
+        <Button variant="ghost" onClick={() => setView('list')} className="share-dialog-action-btn">
           <ArrowLeft size={14} />
           返回分享列表
         </Button>
@@ -469,30 +420,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   );
 
   const renderCreatedView = () => (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        padding: '8px 0',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-      >
-        <div
-          style={{
-            background: 'var(--bg-primary)',
-            padding: '16px',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--border-default)',
-          }}
-        >
+    <div className="share-dialog-created-body">
+      <div className="share-dialog-qr-container">
+        <div className="share-dialog-qr-box">
           <QRCodeSVG
             value={fullUrl}
             size={160}
@@ -501,94 +431,26 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             fgColor="var(--text-primary)"
           />
         </div>
-
       </div>
 
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '8px 12px',
-          background: 'var(--bg-tertiary)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-default)',
-        }}
-      >
-        <Link2
-          size={14}
-          style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}
-        />
-        <span
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          {fullUrl}
-        </span>
-        <button
-          onClick={copyLink}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '4px 8px',
-            gap: '4px',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 600,
-            color: copied ? 'var(--success)' : 'var(--primary-500)',
-            background: copied ? 'var(--success-dim)' : 'transparent',
-            border:
-              '1px solid ' +
-              (copied
-                ? 'rgba(34, 197, 94, 0.2)'
-                : 'var(--border-default)'),
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            flexShrink: 0,
-          }}
-        >
+      <div className="share-dialog-url-bar">
+        <Link2 size={14} className="share-dialog-url-icon" />
+        <span className="share-dialog-url-text">{fullUrl}</span>
+        <button onClick={copyLink} className={`share-dialog-copy-link-btn ${copied ? 'share-dialog-copy-link-btn--copied' : ''}`}>
           {copied ? <Check size={12} /> : <Copy size={12} />}
           {copied ? '已复制' : '复制'}
         </button>
       </div>
 
       {shareInfo!.expiresAt && (
-        <span
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-tertiary)',
-          }}
-        >
+        <span className="share-dialog-expiry-hint">
           有效期至: {new Date(shareInfo!.expiresAt).toLocaleString()}
         </span>
       )}
 
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          width: '100%',
-        }}
-      >
-        <Button
-          variant="ghost"
-          onClick={revokeShare}
-          disabled={revoking}
-          style={{ flex: 1 }}
-        >
-          {revoking ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Trash2 size={14} />
-          )}
+      <div className="share-dialog-created-actions">
+        <Button variant="ghost" onClick={confirmRevokeCurrent} disabled={revoking} style={{ flex: 1 }}>
+          {revoking ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
           撤销分享
         </Button>
         <Button variant="primary" onClick={() => { setView('list'); fetchShares(); }} style={{ flex: 1 }}>
@@ -599,44 +461,34 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   );
 
   const renderLoadingView = () => (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '24px',
-      }}
-    >
-      <Loader2
-        size={24}
-        className="animate-spin"
-        style={{ color: 'var(--primary-500)' }}
-      />
-      <span
-        style={{
-          color: 'var(--text-secondary)',
-          fontSize: 'var(--text-sm)',
-        }}
-      >
-        正在生成分享链接...
-      </span>
+    <div className="share-dialog-loading-view">
+      <Loader2 size={24} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
+      <span className="share-dialog-loading-text">正在生成分享链接...</span>
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={readOnly ? '复制分享链接' : '分享图纸'} size={readOnly ? 'md' : (view === 'list' ? 'md' : 'sm')}>
-      {readOnly ? (
-        renderListView()
-      ) : (
-        <>
-          {view === 'list' && renderListView()}
-          {view === 'create' && !loading && renderCreateView()}
-          {view === 'create' && loading && renderLoadingView()}
-          {view === 'created' && renderCreatedView()}
-        </>
-      )}
-    </Modal>
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} title={readOnly ? '复制分享链接' : '分享图纸'} size={readOnly ? 'md' : (view === 'list' ? 'md' : 'sm')}>
+        {readOnly ? (
+          renderListView()
+        ) : (
+          <>
+            {view === 'list' && renderListView()}
+            {view === 'create' && !loading && renderCreateView()}
+            {view === 'create' && loading && renderLoadingView()}
+            {view === 'created' && renderCreatedView()}
+          </>
+        )}
+      </Modal>
+
+      <ConfirmRevokeModal
+        isOpen={showRevokeConfirm}
+        onClose={() => { setShowRevokeConfirm(false); setRevokeTarget(null); }}
+        onConfirm={handleRevokeItem}
+        loading={revoking}
+      />
+    </>
   );
 };
 

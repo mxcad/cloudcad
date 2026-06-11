@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Check, Trash2, Search, ExternalLink, Loader2, Plus, Edit3 } from 'lucide-react';
+import { Copy, Check, Trash2, Search, ExternalLink, Loader2, Plus, Edit3, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
+import { Tag } from '@/components/ui/Tag';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { useNotification } from '@/contexts/NotificationContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import {
@@ -12,32 +14,26 @@ import {
   shareControllerUpdateShare,
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
-import { Modal } from '@/components/ui/Modal';
 import { SelectFileModal } from '@/components/modals/SelectFileModal';
 import { ShareDialog } from '@/components/modals/ShareDialog';
+import { EditExpiryModal } from '@/components/modals/EditExpiryModal';
+import { ConfirmRevokeModal } from '@/components/modals/ConfirmRevokeModal';
+import { formatExpiryDate, isExpired } from '@/constants/share';
 import './ShareManagePage/ShareManagePage.css';
 
-type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
+type SortField = 'createdAt' | 'expiresAt' | 'usedCount';
+type SortOrder = 'asc' | 'desc';
 
-const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
-  never: '永不过期',
-  '2h': '2 小时',
-  '6h': '6 小时',
-  '12h': '12 小时',
-  '1d': '1 天',
-  '3d': '3 天',
-  '7d': '7 天',
-  custom: '自定义',
-};
+interface SortConfig {
+  field: SortField;
+  order: SortOrder;
+}
 
-const EXPIRATION_VALUES: Record<Exclude<ExpirationOption, 'never' | 'custom'>, number> = {
-  '2h': 7200,
-  '6h': 21600,
-  '12h': 43200,
-  '1d': 86400,
-  '3d': 259200,
-  '7d': 604800,
-};
+const SORTABLE_COLUMNS: { field: SortField; label: string }[] = [
+  { field: 'createdAt', label: '创建时间' },
+  { field: 'expiresAt', label: '有效期' },
+  { field: 'usedCount', label: '次数' },
+];
 
 export const ShareManagePage: React.FC = () => {
   const navigate = useNavigate();
@@ -55,12 +51,20 @@ export const ShareManagePage: React.FC = () => {
   const [shareFileId, setShareFileId] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
-  const [editToken, setEditToken] = useState<string | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editExpiration, setEditExpiration] = useState<ExpirationOption>('never');
-  const [editCustomDays, setEditCustomDays] = useState(1);
+  const [sort, setSort] = useState<SortConfig>({ field: 'createdAt', order: 'desc' });
+  const [selectedTokens, setSelectedTokens] = useState<Set<string>>(new Set());
 
-  const fetchShares = useCallback(async (p: number, q: string) => {
+  const [editTarget, setEditTarget] = useState<{ token: string; expiresAt: string | null } | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+
+  const [showBatchRevokeConfirm, setShowBatchRevokeConfirm] = useState(false);
+  const [batchRevoking, setBatchRevoking] = useState(false);
+
+  const fetchShares = useCallback(async (p: number, q: string, s: SortConfig) => {
     setLoading(true);
     setError(null);
     try {
@@ -69,6 +73,8 @@ export const ShareManagePage: React.FC = () => {
           page: p,
           pageSize: 20,
           search: q || undefined,
+          sortBy: s.field,
+          sortOrder: s.order,
         },
       });
       if (result.error) {
@@ -78,6 +84,7 @@ export const ShareManagePage: React.FC = () => {
       const data = result.data as { items: ShareListItemDto[]; total: number; page: number; pageSize: number } | undefined;
       setItems(data?.items ?? []);
       setTotal(data?.total ?? 0);
+      setSelectedTokens(new Set());
     } catch (error) {
       setError(getErrorMessage(error));
     } finally {
@@ -86,27 +93,103 @@ export const ShareManagePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchShares(page, search);
-  }, [page]);
+    fetchShares(page, search, sort);
+  }, [page, sort]);
 
   const handleSearch = () => {
     setPage(1);
-    fetchShares(1, search);
+    fetchShares(1, search, sort);
   };
 
-  const handleRevoke = async (token: string) => {
+  const handleClearSearch = () => {
+    setSearch('');
+    setPage(1);
+    fetchShares(1, '', sort);
+  };
+
+  const handleSort = (field: SortField) => {
+    setSort((prev) => ({
+      field,
+      order: prev.field === field && prev.order === 'desc' ? 'asc' : 'desc',
+    }));
+    setPage(1);
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sort.field !== field) return null;
+    return sort.order === 'desc' ? <ArrowDown size={10} /> : <ArrowUp size={10} />;
+  };
+
+  const toggleSelect = (token: string) => {
+    setSelectedTokens((prev) => {
+      const next = new Set(prev);
+      if (next.has(token)) next.delete(token);
+      else next.add(token);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTokens.size === items.length) {
+      setSelectedTokens(new Set());
+    } else {
+      setSelectedTokens(new Set(items.map((i) => i.token)));
+    }
+  };
+
+  const allSelected = items.length > 0 && selectedTokens.size === items.length;
+
+  const confirmRevoke = (token: string) => {
+    setRevokeTarget(token);
+    setShowRevokeConfirm(true);
+  };
+
+  const handleRevoke = async () => {
+    if (!revokeTarget) return;
+    setRevoking(true);
     try {
-      const result = await shareControllerRevokeShare({ path: { token } });
+      const result = await shareControllerRevokeShare({ path: { token: revokeTarget } });
       if (result.error) {
         showToast(getErrorMessage(result.error), 'error');
         return;
       }
-      setItems((prev) => prev.filter((i) => i.token !== token));
+      setItems((prev) => prev.filter((i) => i.token !== revokeTarget));
       setTotal((prev) => prev - 1);
       showToast('分享已撤销', 'success');
+      setShowRevokeConfirm(false);
+      setRevokeTarget(null);
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
+    } finally {
+      setRevoking(false);
     }
+  };
+
+  const handleBatchRevoke = async () => {
+    setBatchRevoking(true);
+    const tokens = Array.from(selectedTokens);
+    let successCount = 0;
+    let failCount = 0;
+    for (const token of tokens) {
+      try {
+        const result = await shareControllerRevokeShare({ path: { token } });
+        if (!result.error) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+    if (successCount > 0) {
+      showToast(`已撤销 ${successCount} 个分享${failCount > 0 ? `，${failCount} 个失败` : ''}`, 'success');
+    } else if (failCount > 0) {
+      showToast(`撤销失败 ${failCount} 个`, 'error');
+    }
+    setShowBatchRevokeConfirm(false);
+    setBatchRevoking(false);
+    fetchShares(page, search, sort);
   };
 
   const handleCopy = async (token: string) => {
@@ -121,39 +204,16 @@ export const ShareManagePage: React.FC = () => {
     }
   };
 
-  const openEditModal = (token: string, expiresAt: string | null) => {
-    setEditToken(token);
-    setEditCustomDays(1);
-    if (!expiresAt) {
-      setEditExpiration('never');
-    } else {
-      const diff = new Date(expiresAt).getTime() - Date.now();
-      if (diff <= 7200 * 1000) setEditExpiration('2h');
-      else if (diff <= 21600 * 1000) setEditExpiration('6h');
-      else if (diff <= 43200 * 1000) setEditExpiration('12h');
-      else if (diff <= 86400 * 1000) setEditExpiration('1d');
-      else if (diff <= 259200 * 1000) setEditExpiration('3d');
-      else if (diff <= 604800 * 1000) setEditExpiration('7d');
-      else {
-        setEditExpiration('custom');
-        setEditCustomDays(Math.ceil(diff / (86400 * 1000)));
-      }
-    }
+  const handleEditExpiry = (token: string, expiresAt: string | null) => {
+    setEditTarget({ token, expiresAt });
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editToken) return;
-    let expiresAt: string | null = null;
-    if (editExpiration === 'custom') {
-      expiresAt = new Date(Date.now() + editCustomDays * 86400 * 1000).toISOString();
-    } else if (editExpiration !== 'never') {
-      const secs = EXPIRATION_VALUES[editExpiration];
-      expiresAt = new Date(Date.now() + secs * 1000).toISOString();
-    }
+  const handleSaveEdit = async (expiresAt: string | null) => {
+    if (!editTarget) return;
     try {
       const result = await shareControllerUpdateShare({
-        path: { token: editToken },
+        path: { token: editTarget.token },
         body: { expiresAt } as any,
       });
       if (result.error) {
@@ -162,18 +222,10 @@ export const ShareManagePage: React.FC = () => {
       }
       showToast('有效期已更新', 'success');
       setShowEditModal(false);
-      fetchShares(page, search);
+      setEditTarget(null);
+      fetchShares(page, search, sort);
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
-    }
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '永不过期';
-    try {
-      return new Date(dateStr).toLocaleDateString();
-    } catch {
-      return dateStr;
     }
   };
 
@@ -207,12 +259,25 @@ export const ShareManagePage: React.FC = () => {
           />
           <Button variant="secondary" size="sm" onClick={handleSearch}>搜索</Button>
         </div>
-        {items.length > 0 && (
-          <Button variant="primary" size="sm" onClick={() => setShowFileSelector(true)}>
-            <Plus size={14} />
-            新建分享
-          </Button>
-        )}
+        <div className="share-mgmt-toolbar-actions">
+          {selectedTokens.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Trash2}
+              onClick={() => setShowBatchRevokeConfirm(true)}
+              style={{ color: 'var(--error)' }}
+            >
+              批量撤销 ({selectedTokens.size})
+            </Button>
+          )}
+          {items.length > 0 && (
+            <Button variant="primary" size="sm" onClick={() => setShowFileSelector(true)}>
+              <Plus size={14} />
+              新建分享
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -223,7 +288,7 @@ export const ShareManagePage: React.FC = () => {
         <div className="share-mgmt-table-container">
           <div className="share-mgmt-table-empty">
             <p style={{ marginBottom: '8px' }}>{error}</p>
-            <Button variant="secondary" size="sm" onClick={() => fetchShares(page, search)}>
+            <Button variant="secondary" size="sm" onClick={() => fetchShares(page, search, sort)}>
               重试
             </Button>
           </div>
@@ -234,11 +299,11 @@ export const ShareManagePage: React.FC = () => {
             <p className="share-mgmt-empty-title">
               {search ? '没有找到匹配的分享' : '还没有分享过图纸'}
             </p>
-            <p className="share-mgmt-empty-desc" style={{ marginTop: '4px' }}>
+            <p className="share-mgmt-empty-desc">
               {search ? '尝试其他搜索词' : '去文件管理器选择图纸，右键即可分享'}
             </p>
             {search && (
-              <Button variant="ghost" size="sm" style={{ marginTop: '12px' }} onClick={() => { setSearch(''); fetchShares(1, ''); }}>
+              <Button variant="ghost" size="sm" style={{ marginTop: '12px' }} onClick={handleClearSearch}>
                 清除搜索
               </Button>
             )}
@@ -255,70 +320,105 @@ export const ShareManagePage: React.FC = () => {
             <table className="share-mgmt-table">
               <thead>
                 <tr>
+                  <th className="share-mgmt-th-checkbox">
+                    <Checkbox
+                      size="xs"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th>文件</th>
                   <th>链接</th>
-                  <th>有效期</th>
-                  <th>次数</th>
-                  <th>创建时间</th>
+                  <th>状态</th>
+                  {SORTABLE_COLUMNS.map((col) => (
+                    <th
+                      key={col.field}
+                      className="share-mgmt-th-sortable"
+                      onClick={() => handleSort(col.field)}
+                    >
+                      <span className="share-mgmt-th-content">
+                        {col.label}
+                        <span className="share-mgmt-sort-icon">
+                          {renderSortIcon(col.field)}
+                        </span>
+                      </span>
+                    </th>
+                  ))}
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: 500 }}>{item.fileName}</td>
-                    <td>
-                      <div className="share-mgmt-link-cell">
-                        <span className="share-mgmt-link-text">
-                          /share/{item.token.slice(0, 8)}...
-                        </span>
-                        <button
-                          onClick={() => handleCopy(item.token)}
-                          className="share-mgmt-copy-btn"
-                          style={{ display: 'flex', padding: '2px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary-500)' }}
-                          title="复制链接"
+                {items.map((item) => {
+                  const expired = isExpired(item.expiresAt as string | null);
+                  return (
+                    <tr key={item.id} className={selectedTokens.has(item.token) ? 'share-mgmt-row-selected' : ''}>
+                      <td className="share-mgmt-td-checkbox">
+                        <Checkbox
+                          size="xs"
+                          checked={selectedTokens.has(item.token)}
+                          onChange={() => toggleSelect(item.token)}
+                        />
+                      </td>
+                      <td className="share-mgmt-td-filename">{item.fileName}</td>
+                      <td>
+                        <div className="share-mgmt-link-cell">
+                          <span className="share-mgmt-link-text">
+                            /share/{item.token.slice(0, 8)}...
+                          </span>
+                          <button
+                            onClick={() => handleCopy(item.token)}
+                            className="share-mgmt-copy-btn"
+                            title="复制链接"
+                          >
+                            {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        <Tag
+                          variant={expired ? 'neutral' : 'success'}
+                          size="xs"
+                          onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
                         >
-                          {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
-                        </button>
-                      </div>
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-                      {formatDate(item.expiresAt as string | null)}
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-                      {item.usedCount}
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}
-                    </td>
-                    <td>
-                      <div className="share-mgmt-action-cell">
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          icon={ExternalLink}
-                          onClick={() => navigate(`/cad-editor/${item.fileId}?shareToken=${item.token}`)}
-                          tooltip="打开文件"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          icon={Edit3}
-                          onClick={() => openEditModal(item.token, item.expiresAt as string | null)}
-                          tooltip="修改有效期"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          icon={Trash2}
-                          onClick={() => handleRevoke(item.token)}
-                          tooltip="撤销分享"
-                          style={{ color: 'var(--error)' }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {expired ? '已过期' : '有效'}
+                        </Tag>
+                      </td>
+                      <td className="share-mgmt-td-meta">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="share-mgmt-td-meta">
+                        {formatExpiryDate(item.expiresAt as string | null)}
+                      </td>
+                      <td className="share-mgmt-td-meta">{item.usedCount}</td>
+                      <td>
+                        <div className="share-mgmt-action-cell">
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            icon={ExternalLink}
+                            onClick={() => navigate(`/cad-editor/${item.fileId}?shareToken=${item.token}`)}
+                            tooltip="打开文件"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            icon={Edit3}
+                            onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
+                            tooltip="修改有效期"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            icon={Trash2}
+                            onClick={() => confirmRevoke(item.token)}
+                            tooltip="撤销分享"
+                            style={{ color: 'var(--error)' }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -333,6 +433,7 @@ export const ShareManagePage: React.FC = () => {
           )}
         </div>
       )}
+
       <SelectFileModal
         isOpen={showFileSelector}
         onClose={() => setShowFileSelector(false)}
@@ -349,55 +450,36 @@ export const ShareManagePage: React.FC = () => {
           onClose={() => {
             setShowShareDialog(false);
             setShareFileId(null);
-            fetchShares(page, search);
+            fetchShares(page, search, sort);
           }}
           fileId={shareFileId}
         />
       )}
 
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="修改有效期"
-        size="sm"
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
-          <div>
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
-              有效期
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map((key) => (
-                <Button
-                  key={key}
-                  variant={editExpiration === key ? 'primary' : 'outline'}
-                  size="xs"
-                  onClick={() => setEditExpiration(key)}
-                >
-                  {EXPIRATION_LABELS[key]}
-                </Button>
-              ))}
-            </div>
-            {editExpiration === 'custom' && (
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={editCustomDays}
-                  onChange={(e) => setEditCustomDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
-                  style={{ width: '60px', padding: '4px 8px', fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                />
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>天后过期</span>
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-            <Button variant="ghost" onClick={() => setShowEditModal(false)}>取消</Button>
-            <Button variant="primary" onClick={handleSaveEdit}>保存</Button>
-          </div>
-        </div>
-      </Modal>
+      {editTarget && (
+        <EditExpiryModal
+          isOpen={showEditModal}
+          onClose={() => { setShowEditModal(false); setEditTarget(null); }}
+          currentExpiresAt={editTarget.expiresAt}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      <ConfirmRevokeModal
+        isOpen={showRevokeConfirm}
+        onClose={() => { setShowRevokeConfirm(false); setRevokeTarget(null); }}
+        onConfirm={handleRevoke}
+        loading={revoking}
+      />
+
+      <ConfirmRevokeModal
+        isOpen={showBatchRevokeConfirm}
+        onClose={() => setShowBatchRevokeConfirm(false)}
+        onConfirm={handleBatchRevoke}
+        title="批量撤销分享"
+        message={`确定要撤销选中的 ${selectedTokens.size} 个分享链接？`}
+        loading={batchRevoking}
+      />
     </div>
   );
 };
