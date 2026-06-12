@@ -776,10 +776,34 @@ export const FileItem: React.FC<FileItemProps> = ({
         ) : (
           <>
             {(() => {
-              const { main: btnMainActions, secondary: btnSecondaryActions } = getActionGroups(availableActions);
+              const { main: btnMainActions, secondary: btnSecondaryActions, destructive: btnDestructiveActions } = getActionGroups(availableActions);
               return (
                 <>
                   {btnMainActions.map((action) => (
+                    <Tooltip key={action.type} content={action.tooltip} position="top">
+                      <button
+                        {...action.props}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          actionHandlers[action.type]?.(e);
+                        }}
+                        className={`p-2 rounded-lg transition-colors ${
+                          action.colorClass || 'text-slate-500'
+                        } ${action.hoverClass || 'hover:bg-slate-100'}`}
+                      >
+                        <span className="inline-block scale-110 origin-center">
+                          {React.cloneElement(
+                            action.icon as React.ReactElement<{
+                              width?: number;
+                              height?: number;
+                            }>,
+                            { width: 18, height: 18 }
+                          )}
+                        </span>
+                      </button>
+                    </Tooltip>
+                  ))}
+                  {btnDestructiveActions.map((action) => (
                     <Tooltip key={action.type} content={action.tooltip} position="top">
                       <button
                         {...action.props}
