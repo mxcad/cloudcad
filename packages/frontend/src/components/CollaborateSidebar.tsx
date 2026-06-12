@@ -12,7 +12,6 @@ import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import { Tabs, Tab } from './ui';
-import { APP_COOPERATE_URL } from '@/constants/appConfig';
 import {
   mxcadManager,
   checkAndConfirmUnsavedChanges,
@@ -108,6 +107,7 @@ export const CollaborateSidebar: React.FC = () => {
   const joiningLockRef = useRef(false);
   const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingJoinWorkIdRef = useRef<number | null>(null);
+  const fetchVersionRef = useRef(0);
 
   // Sync workId state with store
   const setCurrentWorkId = useCallback((id: number | null) => {
@@ -115,29 +115,26 @@ export const CollaborateSidebar: React.FC = () => {
   }, []);
 
   const fetchWorks = useCallback(async (showLoading = false) => {
+    const version = ++fetchVersionRef.current;
+    if (showLoading) setLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 30000);
+
     try {
-      if (showLoading) setLoading(true);
+      setMyProjectIds(await fetchMyProjectIds());
+
       const cooperate = getCooperate();
       if (!cooperate) {
         setLoading(false);
         return;
       }
 
-      let done = false;
-      const timeoutId = setTimeout(() => {
-        if (!done) {
-          done = true;
-          setLoading(false);
-        }
-      }, 30000);
-
-      setMyProjectIds(await fetchMyProjectIds());
-
       cooperate.getWorks((workList: Work[]) => {
-        console.log('Fetched works:', workList);
-        if (done) return;
-        done = true;
         clearTimeout(timeoutId);
+        setLoading(false);
+        if (version !== fetchVersionRef.current) return;
         setInitialFetchDone(true);
         const filtered = workList
           .filter((w) => parseWorkData(w.work_data) !== null)
@@ -148,20 +145,18 @@ export const CollaborateSidebar: React.FC = () => {
             );
             return { ...w, link_user_ids: linkUserIds, link_user_data: linkUserData };
           });
-          setWorks((prev) => {
-            const serverIds = new Set(filtered.map((w) => w.work_id));
-            const merged = filtered.map((serverWork) => {
-              const local = prev.find((w) => w.work_id === serverWork.work_id);
-              return local || serverWork;
-            });
-            const localOnly = prev.filter((w) => !serverIds.has(w.work_id));
-            if (localOnly.length === 0) return merged;
-            return [...merged, ...localOnly];
+        setWorks((prev) => {
+          const serverIds = new Set(filtered.map((w) => w.work_id));
+          const merged = filtered.map((serverWork) => {
+            const local = prev.find((w) => w.work_id === serverWork.work_id);
+            return local || serverWork;
           });
-        setLoading(false);
+          const localOnly = prev.filter((w) => !serverIds.has(w.work_id));
+          if (localOnly.length === 0) return merged;
+          return [...merged, ...localOnly];
+        });
       });
     } catch (error) {
-      console.error('获取协同列表失败:', error);
       setLoading(false);
     }
   }, []);
@@ -320,6 +315,17 @@ export const CollaborateSidebar: React.FC = () => {
       }
     };
   }, [isCadReady, fetchWorks]);
+
+  // Re-fetch works after file open completes
+  useEffect(() => {
+    const onFileOpenComplete = () => {
+      fetchWorks(true);
+    };
+    window.addEventListener('mxcad-file-open-complete', onFileOpenComplete);
+    return () => {
+      window.removeEventListener('mxcad-file-open-complete', onFileOpenComplete);
+    };
+  }, [fetchWorks]);
 
   // Sync local state with store (handles external collaboration exit, e.g. openFile/openFile_noCache)
   useEffect(() => {
@@ -550,7 +556,7 @@ export const CollaborateSidebar: React.FC = () => {
 
       const workDataPayload = encodeV3WorkData({
         drawingId: currentFileId || '',
-        projectId: currentProjectId ?? null,
+        projectId: (sourceType === 'my' || sourceType === 'local') ? null : (currentProjectId ?? null),
         drawingName,
         sourceType,
         libraryKey,
@@ -751,7 +757,6 @@ export const CollaborateSidebar: React.FC = () => {
         const data = parseWorkData(w.work_data);
         if (!data) return false;
 
-        // V3: use sourceType for matching
         if (data.v === 3) {
           if (data.sourceType === 'local') {
             if (currentFileId === '' && data.drawingId === '') {
@@ -759,17 +764,10 @@ export const CollaborateSidebar: React.FC = () => {
             }
             return data.drawingId === currentFileId;
           }
-          if (data.sourceType === 'library') {
-            return data.drawingId === currentFileId;
-          }
-          if (data.drawingId !== currentFileId) return false;
-          return !data.projectId || data.projectId === currentProjectId;
+          return data.drawingId === currentFileId;
         }
 
-        // V1/V2 fallback
-        if (data.drawingId !== currentFileId) return false;
-        if (data.projectId) return data.projectId === currentProjectId;
-        return user ? w.real_user_id === user.id || w.link_user_ids.includes(user.id) : false;
+        return data.drawingId === currentFileId;
       });
 
       // Always include the active work, even if filter doesn't match (e.g. during refresh)
@@ -780,7 +778,7 @@ export const CollaborateSidebar: React.FC = () => {
 
       return filtered;
     },
-    [works, currentFileId, currentProjectId, user, currentWorkId]
+    [works, currentFileId, user, currentWorkId]
   );
 
   // My created works (for list panel)
