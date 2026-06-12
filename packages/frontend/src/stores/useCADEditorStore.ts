@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { CurrentFileInfo } from '../services/mxcadManager/mxcadTypes';
 
 interface CADEditorState {
   isActive: boolean;
@@ -17,6 +18,7 @@ interface CADEditorState {
   collabShareLibraryKey: 'drawing' | 'block' | null;
   isInCollaboration: boolean;
   collaborationWorkId: number | null;
+  currentFileInfo: CurrentFileInfo | null;
   setIsActive: (active: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -28,6 +30,8 @@ interface CADEditorState {
   setFromShare: (fromShare: boolean) => void;
   setCollabShareState: (state: { fromCollabShare: boolean; targetWorkId: number | null; libraryKey?: 'drawing' | 'block' | null }) => void;
   setCollaborationState: (state: { isInCollaboration: boolean; workId: number | null }) => void;
+  setCurrentFileInfo: (info: CurrentFileInfo | null) => void;
+  patchCurrentFileInfo: (partial: Partial<CurrentFileInfo>) => void;
 }
 
 export const useCADEditorStore = create<CADEditorState>((set) => ({
@@ -47,6 +51,7 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   collabShareLibraryKey: null,
   isInCollaboration: false,
   collaborationWorkId: null,
+  currentFileInfo: null,
   setIsActive: (active) => set({ isActive: active }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
@@ -65,4 +70,11 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
     set({ fromCollabShare, targetCollabWorkId: targetWorkId, collabShareLibraryKey: libraryKey ?? null }),
   setCollaborationState: ({ isInCollaboration, workId }) =>
     set({ isInCollaboration, collaborationWorkId: workId }),
+  setCurrentFileInfo: (info) => set({ currentFileInfo: info }),
+  patchCurrentFileInfo: (partial) =>
+    set((state) => ({
+      currentFileInfo: state.currentFileInfo
+        ? { ...state.currentFileInfo, ...partial }
+        : null,
+    })),
 }));

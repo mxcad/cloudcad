@@ -110,22 +110,12 @@ function formatEditorFileName(fileName: string): string {
 
 // ==================== 全局状态 ====================
 
-// 当前打开的文件信息（用于返回逻辑）
-let currentFileInfo: {
-  fileId: string;
-  parentId: string | null | undefined;
-  projectId: string | null | undefined;
-  name: string;
-  path?: string; // 文件路径
-  personalSpaceId?: string | null; // 私人空间 ID，用于判断是否为私人空间模式
-  libraryKey?: 'drawing' | 'block'; // 公共资源库标识
-  fromPlatform?: boolean; // 是否从平台跳转进入
-  fromShare?: boolean; // 是否来自分享链接
-  updatedAt?: string; // 乐观锁时间戳
-  expectedTimestamp?: string;
-} | null = null;
-
 // 私人空间 ID 缓存（用于判断文件是否属于私人空间）
+/** 从 Zustand store 读取当前文件信息（单一数据源） */
+function getFileInfo() {
+  return useCADEditorStore.getState().currentFileInfo;
+}
+
 let cachedPersonalSpaceId: string | null = null;
 
 // 文档修改状态跟踪
@@ -307,28 +297,16 @@ export function setCurrentFileInfo(fileInfo: {
   fromShare?: boolean;
   updatedAt?: string;
 }) {
-  currentFileInfo = { ...fileInfo, expectedTimestamp: fileInfo.updatedAt };
+  const info = { ...fileInfo, expectedTimestamp: fileInfo.updatedAt };
   const store = useCADEditorStore.getState();
-  store.setCurrentFileId(fileInfo.fileId);
-  store.setCurrentFileName(fileInfo.name || null);
+  store.setCurrentFileInfo(info);
+  store.setCurrentFileId(info.fileId);
+  store.setCurrentFileName(info.name || null);
 }
 
-export function patchCurrentFileInfo(partial: {
-  fileId?: string;
-  projectId?: string | null;
-  parentId?: string | null;
-  name?: string;
-  fromShare?: boolean;
-  libraryKey?: 'drawing' | 'block';
-}) {
-  if (currentFileInfo) {
-    if (partial.fileId !== undefined) currentFileInfo.fileId = partial.fileId;
-    if (partial.projectId !== undefined) currentFileInfo.projectId = partial.projectId;
-    if (partial.parentId !== undefined) currentFileInfo.parentId = partial.parentId;
-    if (partial.name !== undefined) currentFileInfo.name = partial.name;
-    if (partial.fromShare !== undefined) currentFileInfo.fromShare = partial.fromShare;
-    if (partial.libraryKey !== undefined) currentFileInfo.libraryKey = partial.libraryKey;
-  }
+export function patchCurrentFileInfo(partial: Partial<CurrentFileInfo> & { fromShare?: boolean }) {
+  const store = useCADEditorStore.getState();
+  store.patchCurrentFileInfo(partial as Partial<CurrentFileInfo>);
 }
 
 export function setCacheTimestamp(timestamp: number | undefined) {
@@ -343,9 +321,9 @@ export function setNavigateFunction(navigate: (path: string) => void) {
  * 清除当前文件信息和 navigate 函数
  */
 export function clearCurrentFileInfo() {
-  currentFileInfo = null;
   navigateFunction = null;
   const store = useCADEditorStore.getState();
+  store.setCurrentFileInfo(null);
   store.setCurrentFileId(null);
   store.setCurrentFileName(null);
   store.setCurrentProjectId(null);
@@ -356,7 +334,7 @@ export function clearCurrentFileInfo() {
  * 用于登录状态变化后更新文件名前缀（[未登录] -> 正常显示）
  */
 export function refreshFileName() {
-  const fileName = currentFileInfo?.name || '';
+  const fileName = getFileInfo()?.name || '';
   try {
     globalThis.MxPluginContext.useFileName().fileName.value =
       formatEditorFileName(fileName);
@@ -469,14 +447,15 @@ const checkToReturnToPreviousPage = async () => {
 
   // 根据当前文件信息计算返回路径并导航
   try {
-    if (!currentFileInfo) {
+    const fileInfo = getFileInfo();
+    if (!fileInfo) {
       navigateToProjectsList();
     } else {
       const targetPath = calculateReturnPath(
-        currentFileInfo.parentId,
-        currentFileInfo.projectId,
-        currentFileInfo.personalSpaceId,
-        currentFileInfo.libraryKey
+        fileInfo.parentId,
+        fileInfo.projectId,
+        fileInfo.personalSpaceId,
+        fileInfo.libraryKey
       );
       navigateTo(targetPath);
     }
@@ -532,7 +511,7 @@ async function getUploadTargetNodeId(): Promise<string> {
   }
 
   // 2. 判断当前是否打开了文件
-  const currentProjectId = currentFileInfo?.projectId;
+  const currentProjectId = getFileInfo()?.projectId;
 
   if (!currentProjectId) {
     // 未打开任何文件 → 上传到私人空间根目录
@@ -542,7 +521,7 @@ async function getUploadTargetNodeId(): Promise<string> {
   // 3. 判断当前文件是否属于私人空间
   if (currentProjectId === personalSpace.id) {
     // 当前文件属于私人空间 → 上传到父目录（或根目录）
-    return currentFileInfo?.parentId || personalSpace.id;
+    return getFileInfo()?.parentId || personalSpace.id;
   } else {
     // 当前文件属于项目 → 上传到私人空间根目录
     return personalSpace.id;
@@ -562,8 +541,9 @@ async function getProjectId(
 ): Promise<string> {
   let projectId = uploadTargetNodeId;
 
-  if (currentFileInfo?.projectId) {
-    projectId = currentFileInfo.projectId;
+  const fileInfoCurrent = getFileInfo();
+  if (fileInfoCurrent?.projectId) {
+    projectId = fileInfoCurrent.projectId;
   } else if (fileInfo.parentId) {
     try {
       const rootResponse = await fileSystemControllerGetRootNode({ path: { nodeId: newNodeId } });
@@ -985,7 +965,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
                 const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
 
                 // 先设置文件信息，再打开文件
-                // 确保文件打开完成时 currentFileInfo 已存在
+                // 确保文件打开完成时 store currentFileInfo 已存在
                 setCurrentFileInfo({
                   fileId: '',
                   parentId: null,
@@ -1044,7 +1024,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
             const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
 
             // 先设置文件信息，再打开文件
-            // 确保文件打开完成时 currentFileInfo 已存在
+            // 确保文件打开完成时 store currentFileInfo 已存在
             setCurrentFileInfo({
               fileId: '',
               parentId: null,
@@ -1150,18 +1130,13 @@ const handleNewFileCommand = async () => {
     }
 
     // 2. 预先设置文件信息为新建文件，onOpen 回调会据此更新标题栏
-    currentFileInfo = {
+    useCADEditorStore.getState().setCurrentFileInfo({
       fileId: '',
       parentId: null,
       projectId: null,
       name: 'new.dwg',
       personalSpaceId: null,
-    };
-    // 同步更新 Zustand store（单一数据源）
-    const cadStore = useCADEditorStore.getState();
-    cadStore.setCurrentFileId('');
-    cadStore.setCurrentFileName('new.dwg');
-    cadStore.setCurrentProjectId(null);
+    });
     currentMxwebUrl = null;
     currentCacheTimestamp = undefined;
     resetDocumentModified();
@@ -1209,7 +1184,7 @@ const handleNewFileCommand = async () => {
 
 
 async function triggerSaveAs() {
-  const fileName = currentFileInfo?.name || 'untitled';
+  const fileName = getFileInfo()?.name || 'untitled';
 
   if (!isAuthenticated() || isAccessTokenExpired()) {
     // 未登录或 token 已过期：取消后台 401 触发的登录跳转定时器，
@@ -1241,7 +1216,7 @@ MxFun.addCommand('exportFile', async () => {
  * Mx_SaveAs 命令：导出为 MXWEB 并下载到本地
  */
 MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
-  const fileName = currentFileInfo?.name || 'untitled';
+  const fileName = getFileInfo()?.name || 'untitled';
   try {
     const saved = await saveCurrentDrawingToBlob(fileName);
     const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
@@ -1265,7 +1240,7 @@ MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
  * Mx_ExportPDF 命令：导出为 PDF（弹出 PDF 导出参数设置框）
  */
 MxFun.addCommand('Mx_ExportPDF', async () => {
-  const fileName = currentFileInfo?.name || 'untitled';
+  const fileName = getFileInfo()?.name || 'untitled';
   try {
     const saved = await saveCurrentDrawingToBlob(fileName);
     window.dispatchEvent(new CustomEvent('mxcad-export-pdf', {
@@ -1281,7 +1256,7 @@ MxFun.addCommand('Mx_ExportPDF', async () => {
  * Mx_ExportDWG 命令：导出为 DWG（弹出版本选择框）
  */
 MxFun.addCommand('Mx_ExportDWG', async () => {
-  const fileName = currentFileInfo?.name || 'untitled';
+  const fileName = getFileInfo()?.name || 'untitled';
   try {
     const saved = await saveCurrentDrawingToBlob(fileName);
     window.dispatchEvent(new CustomEvent('mxcad-export-dwg', {
@@ -1297,7 +1272,7 @@ MxFun.addCommand('Mx_ExportDWG', async () => {
  * Mx_ExportDXF 命令：导出为 DXF（弹出版本选择框）
  */
 MxFun.addCommand('Mx_ExportDXF', async () => {
-  const fileName = currentFileInfo?.name || 'untitled';
+  const fileName = getFileInfo()?.name || 'untitled';
   try {
     const saved = await saveCurrentDrawingToBlob(fileName);
     window.dispatchEvent(new CustomEvent('mxcad-export-dxf', {
@@ -1387,7 +1362,7 @@ MxFun.addCommand('Mx_Save', async () => {
       return;
     }
 
-    if (!currentFileInfo) {
+    if (!getFileInfo()) {
       // 没有打开的文件（可能是空白画布新建的文件），弹出保存弹窗
       const { isAuthenticated: authCheck } = await import('../../utils/authCheck');
       const { isAccessTokenExpired: tokenExpiredCheck } = await import('../../utils/tokenUtils');
@@ -1404,27 +1379,24 @@ MxFun.addCommand('Mx_Save', async () => {
         personalSpaceId = await getPersonalSpaceId();
       } catch {
         // 获取私人空间 ID 失败（如 token 过期），降级为 null
-        globalShowToast('登录状态可能已过期，请保存到本地或重新登录', 'warning');
       }
       await showSaveAsDialog(personalSpaceId, 'untitled');
       return;
     }
 
-    // 获取个人空间ID
     let personalSpaceId: string | null = null;
     try {
       personalSpaceId = await getPersonalSpaceId();
     } catch {
       // 获取私人空间 ID 失败（如 token 过期），降级为 null
-      // 后续逻辑会跳过"我的图纸"判断，走另存为流程
     }
 
     // 判断是否是我的图纸（个人空间中的图纸）
     const isMyDrawing =
-      personalSpaceId && currentFileInfo.parentId === personalSpaceId;
+      personalSpaceId && getFileInfo()!.parentId === personalSpaceId;
 
-    // 判断是否是公共资源库文件（通过 currentFileInfo.libraryKey 判断）
-    const isLibraryFile = !!currentFileInfo?.libraryKey;
+    // 判断是否是公共资源库文件（通过 libraryKey 判断）
+    const isLibraryFile = !!getFileInfo()?.libraryKey;
 
     // 如果是我的图纸，直接保存
     if (isMyDrawing) {
@@ -1452,27 +1424,28 @@ MxFun.addCommand('Mx_Save', async () => {
           if (hasLibraryPermission) {
             await saveLibraryFile();
           } else {
-            const fileName = currentFileInfo?.name || 'untitled';
+            const fileName = getFileInfo()?.name || 'untitled';
             await showSaveAsDialog(personalSpaceId, fileName);
           }
         } catch (error) {
           handleError(error, 'mxcadManager: Mx_Save library permission check');
-          const fileName = currentFileInfo?.name || 'untitled';
+          const fileName = getFileInfo()?.name || 'untitled';
           await showSaveAsDialog(personalSpaceId, fileName);
         }
       } else {
         // 无用户数据，弹出另存为
-        const fileName = currentFileInfo?.name || 'untitled';
+        const fileName = getFileInfo()?.name || 'untitled';
         await showSaveAsDialog(personalSpaceId, fileName);
       }
       return;
     }
 
     // 如果是项目图纸，需要检查用户是否有保存权限
-    if (currentFileInfo.projectId) {
+    const fileInfoForSave = getFileInfo()!;
+    if (fileInfoForSave.projectId) {
       try {
         const response = await fileSystemControllerCheckProjectPermission({
-          path: { projectId: currentFileInfo.projectId },
+          path: { projectId: fileInfoForSave.projectId },
           query: { permission: 'CAD_SAVE' },
         });
         if (response.data?.hasPermission) {
@@ -1488,7 +1461,7 @@ MxFun.addCommand('Mx_Save', async () => {
     }
 
     // 非我的图纸 或 没有项目保存权限，弹出另存为窗口
-    const fileName = currentFileInfo?.name || 'untitled';
+    const fileName = getFileInfo()?.name || 'untitled';
     await showSaveAsDialog(personalSpaceId, fileName);
   } catch (error) {
     handleError(error, 'mxcadManager: Mx_Save');
@@ -1503,7 +1476,7 @@ MxFun.addCommand('Mx_Save', async () => {
  * 保存到当前文件（原有逻辑）
  */
 async function saveToCurrentFile(personalSpaceId: string | null) {
-  const projectId = currentFileInfo?.projectId;
+  const projectId = getFileInfo()?.projectId;
   if (projectId) {
     try {
       const response = await fileSystemControllerCheckProjectPermission({
@@ -1521,11 +1494,12 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     }
   }
 
-  if (!currentFileInfo) {
+  const fileInfo = getFileInfo();
+  if (!fileInfo) {
     globalShowToast('保存失败：文件信息丢失', 'error');
     return;
   }
-  const { fileId, name, expectedTimestamp } = currentFileInfo;
+  const { fileId, name, expectedTimestamp } = fileInfo;
   const commitMessage = await _showSaveConfirmDialog();
   if (commitMessage === null) {
     return;
@@ -1612,8 +1586,8 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     if (!fileInfo) return;
 
     // 保存成功后更新乐观锁时间戳
-    if (fileInfo.updatedAt && currentFileInfo) {
-      currentFileInfo = { ...currentFileInfo, updatedAt: fileInfo.updatedAt, expectedTimestamp: fileInfo.updatedAt };
+    if (fileInfo.updatedAt && getFileInfo()) {
+      useCADEditorStore.getState().patchCurrentFileInfo({ updatedAt: fileInfo.updatedAt, expectedTimestamp: fileInfo.updatedAt });
     }
 
     if (fileInfo.path) {
@@ -1663,11 +1637,12 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
  * 保存公共资源库文件（图纸库/图块库）
  */
 async function saveLibraryFile() {
-  if (!currentFileInfo) {
+  const fileInfo = getFileInfo();
+  if (!fileInfo) {
     globalShowToast('保存失败：文件信息丢失', 'error');
     return;
   }
-  let { fileId, name, libraryKey, path: nodePath, expectedTimestamp } = currentFileInfo;
+  let { fileId, name, libraryKey, path: nodePath, expectedTimestamp } = fileInfo;
   const commitMessage = ''; // Library files don't have user-facing commit messages
 
   if (!libraryKey) {
@@ -1686,8 +1661,8 @@ async function saveLibraryFile() {
       if (node) {
         nodePath = node.path;
 
-        if (nodePath && currentFileInfo) {
-          currentFileInfo = { ...currentFileInfo, path: nodePath };
+        if (nodePath) {
+          useCADEditorStore.getState().patchCurrentFileInfo({ path: nodePath });
         }
       }
     } catch (error) {
@@ -1996,13 +1971,13 @@ class MxCADInstanceManager {
     fileName?: string
   ): Promise<MxCADView> {
     if (fileName) {
-      currentFileInfo = {
+      useCADEditorStore.getState().setCurrentFileInfo({
         fileId: '',
         parentId: null,
         projectId: null,
         name: fileName,
         personalSpaceId: null,
-      };
+      });
     }
 
     if (this.mxcadView && this.isInitialized) {
@@ -2140,8 +2115,8 @@ class MxCADInstanceManager {
       window.dispatchEvent(
         new CustomEvent('mxcad-file-open-complete', {
           detail: {
-            fileId: currentFileInfo?.fileId,
-            fileName: currentFileInfo?.name,
+            fileId: getFileInfo()?.fileId,
+            fileName: getFileInfo()?.name,
           },
         })
       );
@@ -2149,8 +2124,8 @@ class MxCADInstanceManager {
       // 文件打开完成后，重置修改状态
       resetDocumentModified();
 
-      // 如果 currentFileInfo 为空，尝试从 MxCAD 获取文件名
-      if (!currentFileInfo) {
+      // 如果 currentFileInfo（store）为空，尝试从 MxCAD 获取文件名
+      if (!getFileInfo()) {
         try {
           const mxcad = MxCpp.getCurrentMxCAD();
           const mxFileName = mxcad?.getCurrentFileName?.();
@@ -2170,22 +2145,22 @@ class MxCADInstanceManager {
         }
       }
 
-      if (currentFileInfo) {
-        // 文件可能从空白模板切换到真实文件，更新 currentFileInfo.name
-        // 仅当 currentFileInfo.name 未设置或为模板名称时才覆盖，避免覆盖分享/API 已设置的正确文件名
+      if (getFileInfo()) {
+        // 文件可能从空白模板切换到真实文件，更新 getFileInfo().name
+        // 仅当 getFileInfo().name 未设置或为模板名称时才覆盖，避免覆盖分享/API 已设置的正确文件名
         try {
           const mxcad = MxCpp.getCurrentMxCAD();
           const mxFileName = mxcad?.getCurrentFileName?.();
           if (mxFileName && mxFileName !== 'empty_template.mxweb' && mxFileName !== 'empty.mxweb') {
-            const currentName = currentFileInfo.name || '';
+            const currentName = getFileInfo()!.name || '';
             if (!currentName || currentName === 'empty_template.mxweb' || currentName === 'empty.mxweb') {
-              currentFileInfo.name = mxFileName;
+              useCADEditorStore.getState().patchCurrentFileInfo({ name: mxFileName });
             }
           }
         } catch {}
-        useCADEditorStore.getState().setCurrentFileName(currentFileInfo.name);
+        useCADEditorStore.getState().setCurrentFileName(getFileInfo()!.name);
         globalThis.MxPluginContext.useFileName().fileName.value =
-          formatEditorFileName(currentFileInfo.name);
+          formatEditorFileName(getFileInfo()!.name);
 
         try {
           // 检查用户是否已登录，未登录则不生成和上传缩略图
@@ -2193,8 +2168,8 @@ class MxCADInstanceManager {
             return;
           }
 
-          // 优先使用 currentFileInfo.fileId；为空时从 mxweb URL 提取 nodeId
-          let fileId = currentFileInfo.fileId;
+          // 优先使用 getFileInfo()!.fileId；为空时从 mxweb URL 提取 nodeId
+          let fileId = getFileInfo()!.fileId;
           if (!fileId && currentMxwebUrl) {
             // URL 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}.{ext}.mxweb
             // 从路径中提取 nodeId
@@ -2221,7 +2196,7 @@ class MxCADInstanceManager {
         }
 
         // 清理旧版本缓存（如果有缓存时间戳）
-        if (currentCacheTimestamp && currentFileInfo && currentMxwebUrl) {
+        if (currentCacheTimestamp && getFileInfo() && currentMxwebUrl) {
           try {
             const urlWithoutTimestamp = currentMxwebUrl.replace(/\?t=\d+$/, '');
             // 支持项目文件和图纸库文件的缓存清理
@@ -2662,15 +2637,8 @@ export class MxCADManager {
    * 获取当前打开的文件信息
    * @returns 当前文件信息，如果没有打开的文件则返回 null
    */
-  getCurrentFileInfo(): {
-    fileId: string;
-    parentId: string | null | undefined;
-    projectId: string | null | undefined;
-    name: string;
-    personalSpaceId?: string | null;
-    libraryKey?: 'drawing' | 'block';
-  } | null {
-    return currentFileInfo;
+  getCurrentFileInfo(): CurrentFileInfo | null {
+    return getFileInfo();
   }
 
   /**
