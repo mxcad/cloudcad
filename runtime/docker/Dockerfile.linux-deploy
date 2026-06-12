@@ -23,6 +23,10 @@
 ARG BASE_IMAGE=centos:7
 FROM ${BASE_IMAGE}
 
+# 是否使用 SystemLib 版本的 mxcad 二进制（新系统 glibc >= 2.35 需要）
+# 通过 --use-system-lib 参数控制，不影响源码目录，仅容器内操作
+ARG USE_SYSTEM_LIB=false
+
 # 避免 Ubuntu/Debian 交互式提示
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -107,6 +111,16 @@ COPY tsconfig.json ./
 
 # 复制启动/停止脚本
 COPY start.sh stop.sh ./
+
+# 按需用 SystemLib 覆盖 mxcad 二进制（仅容器内操作，不影响源码）
+# 同时清理冗余的 SystemLib 目录，避免打包进 tarball
+RUN if [ "${USE_SYSTEM_LIB}" = "true" ]; then \
+      echo ">> 使用 SystemLib 覆盖 mxcad 二进制..."; \
+      cp -r -f runtime/linux/mxcad/SystemLib/. runtime/linux/mxcad/; \
+    else \
+      echo ">> 保留默认 mxcad 二进制"; \
+    fi && \
+    rm -rf runtime/linux/mxcad/SystemLib
 
 # 默认命令：提取运行时 + 打包
 # 步骤：

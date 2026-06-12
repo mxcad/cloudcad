@@ -107,8 +107,9 @@ function runCommand(command, options = {}) {
 /**
  * 构建打包镜像
  * @param {string} os 目标操作系统
+ * @param {boolean} useSystemLib 是否使用 SystemLib
  */
-async function buildPackImage(os = 'centos7') {
+async function buildPackImage(os = 'centos7', useSystemLib = false) {
   log('构建打包镜像...');
   
   const dockerfilePath = path.join(DOCKER_DIR, DOCKERFILE);
@@ -118,8 +119,12 @@ async function buildPackImage(os = 'centos7') {
     throw new Error(`找不到 Dockerfile: ${dockerfilePath}`);
   }
   
+  const buildArgs = [`BASE_IMAGE=${baseImage}`, `USE_SYSTEM_LIB=${useSystemLib}`];
+  const argStr = buildArgs.map(a => `--build-arg ${a}`).join(' ');
+  
   log(`基础镜像: ${baseImage}`);
-  await runCommand(`docker build -t ${IMAGE_NAME} -f "${dockerfilePath}" --build-arg BASE_IMAGE=${baseImage} "${PROJECT_ROOT}"`);
+  log(`SystemLib: ${useSystemLib ? '是' : '否'}`);
+  await runCommand(`docker build ${argStr} -t ${IMAGE_NAME} -f "${dockerfilePath}" "${PROJECT_ROOT}"`);
   
   log('✓ 打包镜像构建完成');
 }
@@ -169,10 +174,11 @@ function showHelp() {
 CloudCAD Linux 部署包打包入口
 
 使用方式：
-  node scripts/pack-linux-deploy.js                    打包 (默认 CentOS 7)
-  node scripts/pack-linux-deploy.js --os ubuntu22      打包 Ubuntu 22.04
-  node scripts/pack-linux-deploy.js --os rocky9        打包 Rocky Linux 9
-  node scripts/pack-linux-deploy.js --help             显示帮助
+  node scripts/pack-linux-deploy.js                          打包 (默认 CentOS 7)
+  node scripts/pack-linux-deploy.js --os ubuntu22            打包 Ubuntu 22.04
+  node scripts/pack-linux-deploy.js --os ubuntu22 --use-system-lib  使用 SystemLib 覆盖 mxcad
+  node scripts/pack-linux-deploy.js --os centos7 --no-system-lib    明确不使用 SystemLib
+  node scripts/pack-linux-deploy.js --help                   显示帮助
 
 支持的 OS：
   centos7   - CentOS 7 (默认，glibc 2.17，兼容性最广)
@@ -181,6 +187,10 @@ CloudCAD Linux 部署包打包入口
   rocky8    - Rocky Linux 8 (glibc 2.28)
   rocky9    - Rocky Linux 9 (glibc 2.34)
   debian    - Debian 11 (glibc 2.31)
+
+参数：
+  --use-system-lib    使用 SystemLib 版本的 mxcad 二进制覆盖默认 mxcad
+  --no-system-lib     明确不使用 SystemLib（默认不指定时也不使用）
 
 流程说明：
   1. 构建 Docker 打包镜像 (Dockerfile.linux-deploy)
@@ -352,7 +362,7 @@ function ensureBinaryCache() {
 async function main() {
   const args = process.argv.slice(2);
   
-  // 显示帮助
+    // 显示帮助
   if (args.includes('--help') || args.includes('-h')) {
     showHelp();
     process.exit(0);
@@ -372,12 +382,19 @@ async function main() {
     }
   }
   
+  // 解析 --use-system-lib / --no-system-lib 参数
+  const useSystemLib = args.includes('--use-system-lib');
+  if (useSystemLib && args.includes('--no-system-lib')) {
+    error('不能同时指定 --use-system-lib 和 --no-system-lib');
+    process.exit(1);
+  }
+  
   log('============================================');
   log(' CloudCAD Linux 部署包打包工具');
   log('============================================');
   log(`版本: ${VERSION}`);
   log(`目标 OS: ${os} (${OS_BASE_IMAGES[os]})`);
-  log('');
+  log(`SystemLib: ${useSystemLib ? '是' : '否'}`);
   
   // 检查 Docker
   if (!checkDocker()) {
@@ -394,7 +411,7 @@ async function main() {
   try {
     // 1. 构建打包镜像
     log('[1/2] 构建打包镜像...');
-    await buildPackImage(os);
+    await buildPackImage(os, useSystemLib);
     
     // 2. 执行打包
     log('');
