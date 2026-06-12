@@ -55,7 +55,7 @@ export class ShareService {
 
     return {
       token: share.token,
-      url: `/share/${share.token}`,
+      url: `/cad-editor/${dto.fileId}?shareToken=${share.token}`,
       expiresAt: share.expiresAt,
     };
   }
@@ -274,7 +274,7 @@ export class ShareService {
     const items = shares.map((share) => ({
       id: share.id,
       token: share.token,
-      url: `/share/${share.token}`,
+      url: `/cad-editor/${share.fileId}?shareToken=${share.token}`,
       fileId: share.fileId,
       fileName: fileNameMap.get(share.fileId) ?? '未知文件',
       expiresAt: share.expiresAt?.toISOString() ?? null,
@@ -314,7 +314,7 @@ export class ShareService {
 
     return shares.map((share) => ({
       token: share.token,
-      url: `/share/${share.token}`,
+      url: `/cad-editor/${share.fileId}?shareToken=${share.token}`,
       expiresAt: share.expiresAt?.toISOString() ?? null,
       createdAt: share.createdAt.toISOString(),
       createdBy: share.createdBy,
@@ -402,7 +402,7 @@ export class ShareService {
 
     return {
       token: updated.token,
-      url: `/share/${updated.token}`,
+      url: `/cad-editor/${share.fileId}?shareToken=${updated.token}`,
       expiresAt: updated.expiresAt?.toISOString() ?? null,
     };
   }

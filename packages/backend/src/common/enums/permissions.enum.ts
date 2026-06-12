@@ -214,6 +214,7 @@ export const DEFAULT_PROJECT_ROLE_PERMISSIONS: Record<
 		PrismaProjectPermission.FILE_EDIT,
 		PrismaProjectPermission.FILE_DELETE,
 		PrismaProjectPermission.FILE_DOWNLOAD,
+		PrismaProjectPermission.FILE_SHARE,
 		PrismaProjectPermission.FILE_MOVE,
 		PrismaProjectPermission.FILE_COPY,
 		PrismaProjectPermission.CAD_SAVE,

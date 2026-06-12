@@ -64,8 +64,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 // CAD 编辑器（高频使用，单独分包）
 const CADEditorDirect = lazy(() => import('./pages/CADEditorDirect'));
 
-// 分享落地页
-const ShareLanding = lazy(() => import('./pages/ShareLanding'));
+// 分享管理页
 const ShareManagePage = lazy(() => import('./pages/ShareManagePage'));
 
 // 主要功能页面
@@ -243,16 +242,6 @@ function AppContent() {
           element={
             <Suspense fallback={<PageLoader />}>
               <ResetPassword />
-            </Suspense>
-          }
-        />
-
-        {/* 分享落地页 - 公开访问 */}
-        <Route
-          path="/share/:token"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <ShareLanding />
             </Suspense>
           }
         />

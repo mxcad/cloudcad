@@ -192,11 +192,11 @@ export const ShareManagePage: React.FC = () => {
     fetchShares(page, search, sort);
   };
 
-  const handleCopy = async (token: string) => {
-    const url = `${window.location.origin}/share/${token}`;
+  const handleCopy = async (linkUrl: string, token?: string) => {
+    const fullUrl = `${window.location.origin}${linkUrl}`;
     try {
-      await navigator.clipboard.writeText(url);
-      setCopiedToken(token);
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedToken(token ?? linkUrl);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
     } catch (error) {
@@ -363,10 +363,10 @@ export const ShareManagePage: React.FC = () => {
                       <td>
                         <div className="share-mgmt-link-cell">
                           <span className="share-mgmt-link-text">
-                            /share/{item.token.slice(0, 8)}...
+                            {item.url?.length > 25 ? item.url.slice(0, 25) + '...' : item.url}
                           </span>
                           <button
-                            onClick={() => handleCopy(item.token)}
+                            onClick={() => handleCopy(item.url, item.token)}
                             className="share-mgmt-copy-btn"
                             title="复制链接"
                           >

@@ -95,11 +95,11 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
     }
   };
 
-  const handleCopy = async (token: string) => {
-    const url = `${window.location.origin}/share/${token}`;
+  const handleCopy = async (linkUrl: string, token?: string) => {
+    const fullUrl = `${window.location.origin}${linkUrl}`;
     try {
-      await navigator.clipboard.writeText(url);
-      setCopiedToken(token);
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedToken(token ?? linkUrl);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
     } catch {
@@ -182,10 +182,10 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                       <td>
                         <div className="share-dialog-link-cell">
                           <span className="share-dialog-link-text">
-                            /share/{item.token.slice(0, 10)}...
+                            {item.url?.length > 25 ? item.url.slice(0, 25) + '...' : item.url}
                           </span>
                           <button
-                            onClick={() => handleCopy(item.token)}
+                            onClick={() => handleCopy(item.url, item.token)}
                             className="share-dialog-copy-btn"
                             title="复制链接"
                           >

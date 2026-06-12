@@ -101,7 +101,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         const raw = data?.items ?? [];
         const mapped: ShareListItem[] = raw.map((item) => ({
           token: item.token,
-          url: `/share/${item.token}`,
+          url: item.url,
           expiresAt: (item as Record<string, unknown>).expiresAt as string | null,
           createdAt: (item as Record<string, unknown>).createdAt as string,
           createdBy: '',
@@ -267,11 +267,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     }
   };
 
-  const handleCopyItem = async (token: string) => {
-    const url = `${window.location.origin}/share/${token}`;
+  const handleCopyItem = async (linkUrl: string, token?: string) => {
+    const fullUrl = `${window.location.origin}${linkUrl}`;
     try {
-      await navigator.clipboard.writeText(url);
-      setCopiedToken(token);
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedToken(token ?? linkUrl);
       setTimeout(() => setCopiedToken(null), 2000);
       showToast('链接已复制', 'success');
     } catch {
@@ -336,10 +336,10 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                   <td>
                     <div className="share-dialog-link-cell">
                       <span className="share-dialog-link-text">
-                        /share/{item.token.slice(0, 10)}...
+                        {item.url?.length > 25 ? item.url.slice(0, 25) + '...' : item.url}
                       </span>
                       <button
-                        onClick={() => handleCopyItem(item.token)}
+                        onClick={() => handleCopyItem(item.url, item.token)}
                         className="share-dialog-copy-btn"
                         title="复制链接"
                       >

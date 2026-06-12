@@ -108,6 +108,9 @@ pnpm generate:sdk           # 手动运行: node scripts/generate-sdk.cjs
 - `@voerkai18n/vite` 插件必须在 `react()` 之前注册（vite.config.ts）
 - **每次运行 `pnpm i18n:compile` 后，必须手动检查 `src/languages/index.ts` 中 `library: true` 是否被覆盖**（compile 会重置为 `false`）
 
+### 禁止使用 `git restore`
+**永远不要使用 `git restore` 撤销代码改动**——它会清除所有工程上下文，导致已完成的修改丢失。如需撤销，应手动用 `edit` 工具还原或通过版本历史对照重新实现。
+
 ### 移动端 (frontend_mobile)
 - Vue 3 + Vite 4 + TypeScript 4.9 + vant 组件库
 - `voerkai18n` 国际化，同样有 `library` 配置文件需检查
