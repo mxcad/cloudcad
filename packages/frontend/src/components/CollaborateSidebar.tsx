@@ -306,18 +306,6 @@ export const CollaborateSidebar: React.FC = () => {
     fetchWorks(true);
   }, [currentFileId, isCadReady, fetchWorks]);
 
-  // Sync file name from mxcadManager when file changes
-  useEffect(() => {
-    if (!currentFileId || !isCadReady) return;
-    const info = mxcadManager.getCurrentFileInfo();
-    if (info?.fileId && info?.name) {
-      setFileNameCache((prev) => {
-        if (prev[info.fileId] === info.name) return prev;
-        return { ...prev, [info.fileId]: info.name };
-      });
-    }
-  }, [currentFileId, isCadReady]);
-
   // Polling
   useEffect(() => {
     if (!isCadReady) return;
@@ -798,7 +786,11 @@ export const CollaborateSidebar: React.FC = () => {
 
   const currentFileName: string = useMemo(() => {
     if (!currentFileId) return '';
-    return fileNameCache[currentFileId] ?? '当前图纸';
+    const cached = fileNameCache[currentFileId];
+    if (cached) return cached;
+    const info = mxcadManager.getCurrentFileInfo();
+    if (info?.fileId === currentFileId && info?.name) return info.name;
+    return '当前图纸';
   }, [currentFileId, fileNameCache]);
 
   return (
