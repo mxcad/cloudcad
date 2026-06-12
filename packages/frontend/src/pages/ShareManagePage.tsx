@@ -399,7 +399,7 @@ export const ShareManagePage: React.FC = () => {
                             variant="ghost"
                             size="xs"
                             icon={ExternalLink}
-                            onClick={() => navigate(`/cad-editor/${item.fileId}?shareToken=${item.token}`)}
+                            onClick={() => navigate(item.url)}
                             tooltip="打开文件"
                           />
                           <Button

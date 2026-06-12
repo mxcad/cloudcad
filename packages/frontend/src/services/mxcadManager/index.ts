@@ -2146,13 +2146,15 @@ class MxCADInstanceManager {
           const mxcad = MxCpp.getCurrentMxCAD();
           const mxFileName = mxcad?.getCurrentFileName?.();
           if (mxFileName) {
-            currentFileInfo = {
-              fileId: '',
+            // 保留 store 中已有的 fileId（例如分享链接 URL 指定的 drawingId）
+            const store = useCADEditorStore.getState();
+            setCurrentFileInfo({
+              fileId: store.currentFileId || '',
               parentId: null,
               projectId: null,
               name: mxFileName,
               personalSpaceId: null,
-            };
+            });
           }
         } catch (error) {
           console.error('[setupFileOpenListener] 获取 MxCAD 文件名失败', error);
@@ -2160,6 +2162,18 @@ class MxCADInstanceManager {
       }
 
       if (currentFileInfo) {
+        // 文件可能从空白模板切换到真实文件，更新 currentFileInfo.name
+        // 仅当 currentFileInfo.name 未设置或为模板名称时才覆盖，避免覆盖分享/API 已设置的正确文件名
+        try {
+          const mxcad = MxCpp.getCurrentMxCAD();
+          const mxFileName = mxcad?.getCurrentFileName?.();
+          if (mxFileName && mxFileName !== 'empty_template.mxweb' && mxFileName !== 'empty.mxweb') {
+            const currentName = currentFileInfo.name || '';
+            if (!currentName || currentName === 'empty_template.mxweb' || currentName === 'empty.mxweb') {
+              currentFileInfo.name = mxFileName;
+            }
+          }
+        } catch {}
         useCADEditorStore.getState().setCurrentFileName(currentFileInfo.name);
         globalThis.MxPluginContext.useFileName().fileName.value =
           formatEditorFileName(currentFileInfo.name);

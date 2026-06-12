@@ -107,6 +107,7 @@ export const CADEditorDirect: React.FC = () => {
   const collabWorkIdParam = searchParams.get('collabWorkId');
   const collabDrawingIdParam = searchParams.get('drawingId');
   const collabProjectIdParam = searchParams.get('projectId');
+  const shareFileNameParam = searchParams.get('fileName');
 
   // 是否激活（路由匹配 /cad-editor/:fileId 或主页模式）
   // 不再依赖 isAuthenticated，因为公开资源库可以免登录访问
@@ -803,7 +804,7 @@ export const CADEditorDirect: React.FC = () => {
           fromShare: !!shareTokenParam,
         });
         setStoreFileId(file.id || null);
-        setStoreFileName(file.name || null);
+        setStoreFileName(file.name || shareFileNameParam || null);
         setFromShare(!!shareTokenParam);
         setNavigateFunction(navigate);
 

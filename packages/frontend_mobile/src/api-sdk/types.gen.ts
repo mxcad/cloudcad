@@ -2563,6 +2563,10 @@ export type FileSharesResponseDto = {
      */
     url: string;
     /**
+     * 文件名
+     */
+    fileName: string;
+    /**
      * 过期时间
      */
     expiresAt?: {

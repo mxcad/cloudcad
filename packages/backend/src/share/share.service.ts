@@ -26,7 +26,7 @@ export class ShareService {
 
     const fileNode = await this.prisma.fileSystemNode.findFirst({
       where: { id: fileId, deletedAt: null },
-      select: { id: true, projectId: true, ownerId: true, libraryKey: true },
+      select: { id: true, projectId: true, ownerId: true, libraryKey: true, name: true },
     });
     if (!fileNode) {
       throw new BadRequestException('文件不存在');
@@ -55,7 +55,7 @@ export class ShareService {
 
     return {
       token: share.token,
-      url: `/cad-editor/${dto.fileId}?shareToken=${share.token}`,
+      url: `/cad-editor/${dto.fileId}?shareToken=${share.token}&fileName=${encodeURIComponent(fileNode.name)}`,
       expiresAt: share.expiresAt,
     };
   }
@@ -271,16 +271,19 @@ export class ShareService {
     });
     const fileNameMap = new Map(fileNodes.map((n) => [n.id, n.name]));
 
-    const items = shares.map((share) => ({
-      id: share.id,
-      token: share.token,
-      url: `/cad-editor/${share.fileId}?shareToken=${share.token}`,
-      fileId: share.fileId,
-      fileName: fileNameMap.get(share.fileId) ?? '未知文件',
-      expiresAt: share.expiresAt?.toISOString() ?? null,
-      usedCount: share.usedCount,
-      createdAt: share.createdAt.toISOString(),
-    }));
+    const items = shares.map((share) => {
+      const shareFileName = fileNameMap.get(share.fileId) ?? '';
+      return {
+        id: share.id,
+        token: share.token,
+        url: `/cad-editor/${share.fileId}?shareToken=${share.token}${shareFileName ? `&fileName=${encodeURIComponent(shareFileName)}` : ''}`,
+        fileId: share.fileId,
+        fileName: shareFileName || '未知文件',
+        expiresAt: share.expiresAt?.toISOString() ?? null,
+        usedCount: share.usedCount,
+        createdAt: share.createdAt.toISOString(),
+      };
+    });
 
     return { items, total, page, pageSize };
   }
@@ -288,7 +291,7 @@ export class ShareService {
   async getFileShares(fileId: string, userId: string) {
     const fileNode = await this.prisma.fileSystemNode.findFirst({
       where: { id: fileId, deletedAt: null },
-      select: { id: true, projectId: true, ownerId: true, libraryKey: true },
+      select: { id: true, projectId: true, ownerId: true, libraryKey: true, name: true },
     });
     if (!fileNode) {
       throw new NotFoundException('文件不存在');
@@ -314,10 +317,11 @@ export class ShareService {
 
     return shares.map((share) => ({
       token: share.token,
-      url: `/cad-editor/${share.fileId}?shareToken=${share.token}`,
+      url: `/cad-editor/${share.fileId}?shareToken=${share.token}&fileName=${encodeURIComponent(fileNode.name)}`,
       expiresAt: share.expiresAt?.toISOString() ?? null,
       createdAt: share.createdAt.toISOString(),
       createdBy: share.createdBy,
+      fileName: fileNode.name,
     }));
   }
 
@@ -396,13 +400,18 @@ export class ShareService {
       data,
     });
 
+    const fileNode = await this.prisma.fileSystemNode.findUnique({
+      where: { id: share.fileId },
+      select: { name: true },
+    });
+
     this.logger.log(
       `更新分享: token=${token}, userId=${userId}`
     );
 
     return {
       token: updated.token,
-      url: `/cad-editor/${share.fileId}?shareToken=${updated.token}`,
+      url: `/cad-editor/${share.fileId}?shareToken=${updated.token}&fileName=${encodeURIComponent(fileNode?.name ?? '')}`,
       expiresAt: updated.expiresAt?.toISOString() ?? null,
     };
   }

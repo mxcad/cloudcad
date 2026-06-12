@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Z_LAYERS } from '../constants/layers';
+import { useCADEditorStore } from '../stores/useCADEditorStore';
 import type { ToastType } from '../components/ui/Toast';
 
 interface ToastItem {
@@ -71,7 +72,22 @@ const THREE_BUTTON_CONFIRM_RESPONSE_EVENT = 'cloudcad:three-button-confirm-respo
 const ALERT_RESPONSE_EVENT = 'cloudcad:alert-response';
 const PROMPT_RESPONSE_EVENT = 'cloudcad:prompt-response';
 
+function routeToCadMessage(message: string, type: ToastType) {
+  const mx = window.MxPluginContext?.useMessage;
+  if (!mx) return false;
+  const m = mx();
+  switch (type) {
+    case 'success': m.success(message); break;
+    case 'error': m.error(message); break;
+    case 'warning': m.warning(message); break;
+    default: m.info(message); break;
+  }
+  return true;
+}
+
 export const globalShowToast = (message: string, type: ToastType = 'info') => {
+  const { isActive } = useCADEditorStore.getState();
+  if (isActive && routeToCadMessage(message, type)) return;
   window.dispatchEvent(
     new CustomEvent(TOAST_EVENT, { detail: { message, type } })
   );
@@ -161,6 +177,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const isCadActive = useCADEditorStore(s => s.isActive);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timerRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const confirmResolveRef = useRef<((value: boolean) => void) | null>(null);
@@ -308,6 +325,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
+    if (isCadActive && routeToCadMessage(message, type)) return;
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
 
@@ -316,7 +334,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       timerRefs.current.delete(timerId);
     }, 5000);
     timerRefs.current.add(timerId);
-  }, []);
+  }, [isCadActive]);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));

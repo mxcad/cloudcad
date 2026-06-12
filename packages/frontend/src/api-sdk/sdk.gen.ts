@@ -1699,11 +1699,7 @@ export const mxCadControllerUploadExtReferenceImage = <ThrowOnError extends bool
     }
 });
 
-export const mxCadControllerGetFilesDataFile = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFilesDataFileData, ThrowOnError>) => (options?.client ?? client).get<MxCadControllerGetFilesDataFileResponses, MxCadControllerGetFilesDataFileErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/mxcad/filesData/{path}',
-    ...options
-});
+export const mxCadControllerGetFilesDataFile = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFilesDataFileData, ThrowOnError>) => (options?.client ?? client).get<MxCadControllerGetFilesDataFileResponses, MxCadControllerGetFilesDataFileErrors, ThrowOnError>({ url: '/api/v1/mxcad/filesData/{path}', ...options });
 
 export const mxCadControllerGetFilesDataFileHead = <ThrowOnError extends boolean = false>(options?: Options<MxCadControllerGetFilesDataFileHeadData, ThrowOnError>) => (options?.client ?? client).head<MxCadControllerGetFilesDataFileHeadResponses, MxCadControllerGetFilesDataFileHeadErrors, ThrowOnError>({ url: '/api/v1/mxcad/filesData/{path}', ...options });
 

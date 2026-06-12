@@ -1,5 +1,4 @@
 import { globalShowToast } from '../contexts/NotificationContext';
-import { useCADEditorStore } from '../stores/useCADEditorStore';
 
 let lastMessage = '';
 let lastShowTime = 0;
@@ -15,50 +14,22 @@ function shouldSkip(msg: string): boolean {
   return false;
 }
 
-function useMxMessage() {
-  const { isActive } = useCADEditorStore.getState();
-  if (isActive && window.MxPluginContext?.useMessage) {
-    return window.MxPluginContext.useMessage();
-  }
-  return null;
-}
-
 export function infoOnce(msg: string) {
   if (shouldSkip(msg)) return;
-  const mx = useMxMessage();
-  if (mx) {
-    mx.info(msg);
-  } else {
-    globalShowToast(msg, 'info');
-  }
+  globalShowToast(msg, 'info');
 }
 
 export function successOnce(msg: string) {
   if (shouldSkip(msg)) return;
-  const mx = useMxMessage();
-  if (mx) {
-    mx.success(msg);
-  } else {
-    globalShowToast(msg, 'success');
-  }
+  globalShowToast(msg, 'success');
 }
 
 export function warningOnce(msg: string) {
   if (shouldSkip(msg)) return;
-  const mx = useMxMessage();
-  if (mx) {
-    mx.warning(msg);
-  } else {
-    globalShowToast(msg, 'warning');
-  }
+  globalShowToast(msg, 'warning');
 }
 
 export function errorOnce(msg: string) {
   if (shouldSkip(msg)) return;
-  const mx = useMxMessage();
-  if (mx) {
-    mx.error(msg);
-  } else {
-    globalShowToast(msg, 'error');
-  }
+  globalShowToast(msg, 'error');
 }

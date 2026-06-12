@@ -329,11 +329,17 @@ export const CollaborateSidebar: React.FC = () => {
     const joinedWork = works.find((w) => w.work_id === targetWorkId);
     if (!joinedWork) return;
     const data = parseWorkData(joinedWork.work_data);
-    if (!data?.drawingId) return;
+    if (!data) return;
     const store = useCADEditorStore.getState();
-    store.setCurrentFileId(data.drawingId);
+    const hasRealData = !!(data.drawingId || (data.v === 3 && data.drawingName));
+    if (!hasRealData) return;
+    if (data.drawingId) store.setCurrentFileId(data.drawingId);
     if (data.projectId) store.setCurrentProjectId(data.projectId);
-    if (data.v === 3 && data.drawingName) store.setCurrentFileName(data.drawingName);
+    if (data.v === 3 && data.drawingName) {
+      store.setCurrentFileName(data.drawingName);
+      patchCurrentFileInfo({ name: data.drawingName });
+      refreshFileName();
+    }
     pendingJoinWorkIdRef.current = null;
   }, [works]);
 
@@ -735,7 +741,9 @@ export const CollaborateSidebar: React.FC = () => {
         // V3: use sourceType for matching
         if (data.v === 3) {
           if (data.sourceType === 'local') {
-            return currentFileId === '' && data.drawingId === '' && user && data.creatorId === user.id;
+            return currentFileId === '' && data.drawingId === '' && user && (
+              data.creatorId === user.id || w.link_user_ids.includes(user.id)
+            );
           }
           if (data.sourceType === 'library') {
             return data.drawingId === currentFileId;
@@ -747,7 +755,7 @@ export const CollaborateSidebar: React.FC = () => {
         // V1/V2 fallback
         if (data.drawingId !== currentFileId) return false;
         if (data.projectId) return data.projectId === currentProjectId;
-        return user ? w.real_user_id === user.id : false;
+        return user ? w.real_user_id === user.id || w.link_user_ids.includes(user.id) : false;
       }),
     [works, currentFileId, currentProjectId, user]
   );

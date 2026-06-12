@@ -72,6 +72,9 @@ export class FileSharesResponseDto {
   @ApiProperty({ description: '分享链接路径' })
   url: string;
 
+  @ApiProperty({ description: '文件名' })
+  fileName: string;
+
   @ApiPropertyOptional({ description: '过期时间', nullable: true })
   expiresAt: string | null;
 

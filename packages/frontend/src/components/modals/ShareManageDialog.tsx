@@ -208,7 +208,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                             variant="ghost"
                             size="xs"
                             icon={ExternalLink}
-                            onClick={() => window.open(`/cad-editor/${item.fileId}?shareToken=${item.token}`, '_blank')}
+                            onClick={() => window.open(item.url, '_blank')}
                             tooltip="打开文件"
                           />
                           <Button
