@@ -104,7 +104,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
           <Users size={14} />
           <span className={styles.statusFileName}>{fileName}</span>
         </div>
-        {activeWork && (
+        {(activeWork || currentWorkId !== null) && (
           <span className={styles.statusLiveBadge}>
             <span className={styles.statusDot} />
             协同中
@@ -112,7 +112,7 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
         )}
       </div>
 
-      {works.length === 0 && (
+      {works.length === 0 && !currentWorkId && (
         <div className={styles.statusCard}>
           <div className={styles.statusBody}>
             <div className={styles.statusIcon}>
@@ -129,6 +129,18 @@ export const CurrentFilePanel: React.FC<CurrentFilePanelProps> = ({
             >
               {creating ? '创建中...' : '创建协同'}
             </Button>
+          </div>
+        </div>
+      )}
+
+      {works.length === 0 && currentWorkId !== null && !activeWork && (
+        <div className={styles.statusCard}>
+          <div className={styles.statusBody}>
+            <div className={styles.statusIcon}>
+              <Users size={20} />
+            </div>
+            <div className={styles.statusTitle}>协同中</div>
+            <div className={styles.statusDesc}>正在获取协同信息...</div>
           </div>
         </div>
       )}

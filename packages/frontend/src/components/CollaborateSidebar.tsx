@@ -85,6 +85,7 @@ export const CollaborateSidebar: React.FC = () => {
     setCollabShareState,
     isInCollaboration,
     collaborationWorkId,
+    isPersonalSpaceMode,
   } = useCADEditorStore();
   const { showToast } = useNotification();
 
@@ -148,11 +149,14 @@ export const CollaborateSidebar: React.FC = () => {
             return { ...w, link_user_ids: linkUserIds, link_user_data: linkUserData };
           });
           setWorks((prev) => {
-            const newWorkIds = filtered.map((w) => w.work_id);
-            const localOnly = prev.filter((w) => !newWorkIds.includes(w.work_id));
-            if (localOnly.length === 0) return filtered;
-            if (initialFetchDone && filtered.length === 0) return filtered;
-            return [...filtered, ...localOnly];
+            const serverIds = new Set(filtered.map((w) => w.work_id));
+            const merged = filtered.map((serverWork) => {
+              const local = prev.find((w) => w.work_id === serverWork.work_id);
+              return local || serverWork;
+            });
+            const localOnly = prev.filter((w) => !serverIds.has(w.work_id));
+            if (localOnly.length === 0) return merged;
+            return [...merged, ...localOnly];
           });
         setLoading(false);
       });
@@ -536,8 +540,12 @@ export const CollaborateSidebar: React.FC = () => {
         sourceType = 'local';
       } else if (fromShare) {
         sourceType = 'share';
-      } else {
+      } else if (isPersonalSpaceMode) {
+        sourceType = 'my';
+      } else if (currentProjectId) {
         sourceType = 'project';
+      } else {
+        sourceType = 'local';
       }
 
       const workDataPayload = encodeV3WorkData({
@@ -738,17 +746,18 @@ export const CollaborateSidebar: React.FC = () => {
 
   // Current file works: match by drawingId, sourceType-specific rules
   const currentFileWorks = useMemo(
-    () =>
-      works.filter((w) => {
+    () => {
+      const filtered = works.filter((w) => {
         const data = parseWorkData(w.work_data);
         if (!data) return false;
 
         // V3: use sourceType for matching
         if (data.v === 3) {
           if (data.sourceType === 'local') {
-            return currentFileId === '' && data.drawingId === '' && user && (
-              data.creatorId === user.id || w.link_user_ids.includes(user.id)
-            );
+            if (currentFileId === '' && data.drawingId === '') {
+              return user && (data.creatorId === user.id || w.link_user_ids.includes(user.id));
+            }
+            return data.drawingId === currentFileId;
           }
           if (data.sourceType === 'library') {
             return data.drawingId === currentFileId;
@@ -761,8 +770,17 @@ export const CollaborateSidebar: React.FC = () => {
         if (data.drawingId !== currentFileId) return false;
         if (data.projectId) return data.projectId === currentProjectId;
         return user ? w.real_user_id === user.id || w.link_user_ids.includes(user.id) : false;
-      }),
-    [works, currentFileId, currentProjectId, user]
+      });
+
+      // Always include the active work, even if filter doesn't match (e.g. during refresh)
+      if (currentWorkId !== null && !filtered.some((w) => w.work_id === currentWorkId)) {
+        const activeWork = works.find((w) => w.work_id === currentWorkId);
+        if (activeWork) return [...filtered, activeWork];
+      }
+
+      return filtered;
+    },
+    [works, currentFileId, currentProjectId, user, currentWorkId]
   );
 
   // My created works (for list panel)
@@ -784,7 +802,8 @@ export const CollaborateSidebar: React.FC = () => {
             isJoined: currentWorkId === w.work_id,
             onlineCount: w.link_user_ids.length,
           };
-        }),
+        })
+        .sort((a, b) => b.work.work_id - a.work.work_id),
     [works, user, projectNameCache, fileNameCache, currentFileId, currentWorkId]
   );
 
@@ -798,6 +817,7 @@ export const CollaborateSidebar: React.FC = () => {
           if (myWorkIds.has(w.work_id)) return false;
           const data = parseWorkData(w.work_data);
           if (!data) return false;
+          if (data.v === 3 && (data.sourceType === 'local' || data.sourceType === 'my' || data.sourceType === 'share')) return false;
           if (!data.projectId) return false;
           return myProjectIds.includes(data.projectId);
         })
@@ -815,7 +835,8 @@ export const CollaborateSidebar: React.FC = () => {
             isJoined: currentWorkId === w.work_id,
             onlineCount: w.link_user_ids.length,
           };
-        }),
+        })
+        .sort((a, b) => b.work.work_id - a.work.work_id),
     [works, myWorkIds, myProjectIds, projectNameCache, fileNameCache, currentFileId, currentWorkId]
   );
 
