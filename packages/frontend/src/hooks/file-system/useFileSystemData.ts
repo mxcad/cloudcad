@@ -32,7 +32,7 @@ import {
 import { PaginationMeta } from '@/components/ui/Pagination';
 import { handleError } from '@/utils/errorHandler';
 import { queryKeys } from '@/lib/queryKeys';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 import type { SearchFilterValues } from '@/components/search/SearchFilters';
 
 /** 从 API 响应包装中提取 data 属性类型 */

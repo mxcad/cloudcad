@@ -7,7 +7,7 @@ import React from 'react';
 import { FolderPlus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyFolderIcon, RefreshIcon } from '@/components/FileIcons';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 
 interface FileSystemStatesProps {
   loading: boolean;

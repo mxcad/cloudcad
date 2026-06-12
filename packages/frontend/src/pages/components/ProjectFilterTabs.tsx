@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tab, Tabs, Button } from '@/components/ui';
 import { RefreshIcon } from '../../components/FileIcons';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 
 interface ProjectFilterTabsProps {
   isTrashView: boolean;

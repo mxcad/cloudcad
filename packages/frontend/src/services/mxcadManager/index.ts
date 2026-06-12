@@ -570,34 +570,6 @@ async function getProjectId(
 }
 
 /**
- * 上传并处理文件
- * @param file 要上传的文件
- * @param uploadTargetNodeId 上传目标节点 ID
- * @returns 上传后的节点 ID
- */
-async function uploadAndProcessFile(
-  file: File,
-  uploadTargetNodeId: string
-): Promise<string> {
-  setLoadingMessage(DEFAULT_MESSAGES.CALCULATING_HASH);
-  const hash = await calculateFileHash(file);
-
-  setLoadingMessage(DEFAULT_MESSAGES.UPLOADING);
-  const uploadResult = await uploadMxCadFile({
-    file,
-    hash,
-    nodeId: uploadTargetNodeId,
-    onProgress: (percentage: number) => {
-      setLoadingMessage(
-        `${DEFAULT_MESSAGES.UPLOADING} ${percentage.toFixed(1)}%`
-      );
-    },
-  });
-
-  return uploadResult.nodeId;
-}
-
-/**
  * 等待文件转换完成（轮询检查）
  * @param nodeId 节点 ID
  * @param maxAttempts 最大尝试次数
@@ -1083,86 +1055,6 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
       }
     });
     window.dispatchEvent(event);
-  } catch (error) {
-    hideGlobalLoading();
-    const errorMessage =
-      error instanceof Error ? error.message : '文件上传失败';
-    globalShowToast(errorMessage, 'error');
-  }
-}
-
-/**
- * 处理文件选择后的上传和打开流程（已登录用户）
- * @param file 选择的文件
- * @param uploadTargetNodeId 上传目标节点 ID
- */
-async function handleFileSelection(
-  file: File,
-  uploadTargetNodeId: string
-): Promise<void> {
-  try {
-    // 已登录用户上传逻辑
-    showGlobalLoading(DEFAULT_MESSAGES.CALCULATING_HASH);
-    const hash = await calculateFileHash(file);
-
-    // 检查目录中是否存在重复文件
-    const duplicateCheck = await mxCadControllerCheckFileExist({
-      body: { fileHash: hash, filename: file.name, nodeId: uploadTargetNodeId, fileSize: file.size },
-    });
-
-    if (duplicateCheck.data?.exists && duplicateCheck.data?.nodeId) {
-      // 隐藏加载动画
-      hideGlobalLoading();
-
-      // 显示确认对话框
-      const userChoice = await _showDuplicateFileDialog(file.name);
-
-      if (userChoice === 'open') {
-        // 用户选择打开已有文件 — 先派发事件检查外部参照，弹框关闭后再打开文件
-        window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
-          detail: {
-            nodeId: duplicateCheck.data?.nodeId,
-            callback: async () => {
-              showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
-              await openUploadedFile(
-                duplicateCheck.data?.nodeId!,
-                uploadTargetNodeId
-              );
-              hideGlobalLoading();
-            },
-          },
-        }));
-        return;
-      } else if (userChoice === null) {
-        // 用户取消
-        return;
-      }
-      // userChoice === 'upload' 继续上传流程
-    }
-
-    // 继续上传流程 — 先上传文件，再派发事件检查外部参照，弹框关闭后打开文件
-    showGlobalLoading(DEFAULT_MESSAGES.UPLOADING);
-    const uploadResult = await uploadMxCadFile({
-      file,
-      hash,
-      nodeId: uploadTargetNodeId,
-      onProgress: (percentage: number) => {
-        setLoadingMessage(
-          `${DEFAULT_MESSAGES.UPLOADING} ${percentage.toFixed(1)}%`
-        );
-      },
-    });
-
-    // 不立即打开文件，先派发事件检查外部参照，弹框关闭后通过回调打开
-    window.dispatchEvent(new CustomEvent('mxcad-upload-completed', {
-      detail: {
-        nodeId: uploadResult.nodeId,
-        callback: async () => {
-          await openUploadedFile(uploadResult.nodeId, uploadTargetNodeId);
-          hideGlobalLoading();
-        },
-      },
-    }));
   } catch (error) {
     hideGlobalLoading();
     const errorMessage =
@@ -1972,45 +1864,7 @@ async function saveCurrentDrawingToBlob(fileName: string): Promise<{
   return savedFile;
 }
 
-/**
- * 导出当前图纸为指定格式并下载到本地
- */
-async function exportDrawingWithFormat(format: 'dwg' | 'dxf' | 'pdf') {
-  const fileName = currentFileInfo?.name || 'untitled';
-  showGlobalLoading('正在导出文件...');
-  try {
-    const saved = await saveCurrentDrawingToBlob(fileName);
-    const file = new File([saved.blob], `${fileName}.mxweb`, { type: 'application/octet-stream' });
-    const hash = await calculateFileHash(file);
-    await uploadMxCadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
 
-    const params = format === 'pdf' ? { width: '2000', height: '2000', colorPolicy: 'mono' as const } : undefined;
-    const result = await publicFileControllerConvertAndDownload({
-      body: { fileHash: hash, format, params },
-    });
-
-    const blob = result?.data as Blob | undefined;
-    if (!blob) throw new Error('转换失败');
-
-    const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
-    await saveAsFileDialog({
-      blob,
-      filename: `${nameWithoutExt}.${format}`,
-      types: [{
-        description: `${format.toUpperCase()} 文件`,
-        accept: {
-          'application/octet-stream': [`.${format}`],
-        },
-      }],
-    });
-
-    hideGlobalLoading();
-    globalShowToast('文件已保存到本地', 'success');
-  } catch (error) {
-    hideGlobalLoading();
-    handleError(error, 'exportDrawingWithFormat');
-  }
-}
 
 /**
  * 显示保存弹窗（Save As）

@@ -51,7 +51,7 @@ import { handleError, getErrorMessage } from '@/utils/errorHandler';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { ProjectPermission } from '@/constants/permissions';
 import styles from '@/components/sidebar/sidebar.module.css';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 
 import type { LibraryType, BreadcrumbItem, ProjectDrawingsPanelProps } from './types';
 import { isDrawingFile, API_BASE } from './constants';

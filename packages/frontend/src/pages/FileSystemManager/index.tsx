@@ -39,7 +39,7 @@ import { ShareDialog } from '@/components/modals/ShareDialog';
 import { FolderPropertiesModal } from '@/components/modals/FolderPropertiesModal';
 import { isAbortError, handleError } from '@/utils/errorHandler';
 import { client } from '@/api-sdk/client.gen';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 import { useFileSystemClipboardStore, type ClipboardMode } from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { useFileSystemShortcuts } from '@/hooks/file-system/useFileSystemShortcuts';

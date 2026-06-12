@@ -36,7 +36,7 @@ import { useFileSystemSearch } from './useFileSystemSearch';
 import { useFileSystemUI } from './useFileSystemUI';
 import { useFileSystemDragDrop } from './useFileSystemDragDrop';
 import { useConfirmDialog } from '@/contexts/NotificationContext';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 
 interface UseFileSystemOptions {
   mode?: 'project' | 'personal-space';

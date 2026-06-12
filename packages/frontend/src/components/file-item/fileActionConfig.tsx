@@ -464,8 +464,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     icon: <Icons.FolderOpen />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
-    visibilityCheck: ({ isFolder, isRoot, isTrash, onOpen }) =>
-      isFolder && !isRoot && !isTrash && !!onOpen,
+    visibilityCheck: () => false,
   },
   open_in_new_tab: {
     type: 'open_in_new_tab',
@@ -474,8 +473,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     icon: <Icons.ExternalLink />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
-    visibilityCheck: ({ isFolder, isRoot, isTrash, onOpenInNewTab }) =>
-      isFolder && !isRoot && !isTrash && !!onOpenInNewTab,
+    visibilityCheck: () => false,
   },
   open_file_location: {
     type: 'open_file_location',
@@ -607,6 +605,8 @@ export const ACTION_VARIANT_MAP: Record<string, 'default' | 'danger' | 'success'
   rename: 'default',
   move: 'default',
   copy: 'default',
+  open: 'default',
+  open_in_new_tab: 'default',
   restore: 'success',
   delete: 'danger',
   permanently_delete: 'danger',
@@ -614,8 +614,7 @@ export const ACTION_VARIANT_MAP: Record<string, 'default' | 'danger' | 'success'
   show_members: 'default',
   show_roles: 'default',
   share: 'default',
-  open: 'default',
-  open_in_new_tab: 'default',
+
   open_file_location: 'default',
   new_folder: 'default',
   copy_clipboard: 'default',

@@ -9,7 +9,7 @@ import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
 import { RefreshIcon } from '@/components/FileIcons';
 import type { FileSystemNode } from '@/types/filesystem';
-import type { ProjectFilterType } from '@/types/project';
+import type { ProjectFilterType } from '@/api-sdk';
 import type { SearchFilterValues } from '@/components/search/SearchFilters';
 
 interface BreadcrumbItem {
