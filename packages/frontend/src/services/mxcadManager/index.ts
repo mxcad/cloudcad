@@ -345,6 +345,10 @@ export function setNavigateFunction(navigate: (path: string) => void) {
 export function clearCurrentFileInfo() {
   currentFileInfo = null;
   navigateFunction = null;
+  const store = useCADEditorStore.getState();
+  store.setCurrentFileId(null);
+  store.setCurrentFileName(null);
+  store.setCurrentProjectId(null);
 }
 
 /**
@@ -1153,6 +1157,11 @@ const handleNewFileCommand = async () => {
       name: 'new.dwg',
       personalSpaceId: null,
     };
+    // 同步更新 Zustand store（单一数据源）
+    const cadStore = useCADEditorStore.getState();
+    cadStore.setCurrentFileId('');
+    cadStore.setCurrentFileName('new.dwg');
+    cadStore.setCurrentProjectId(null);
     currentMxwebUrl = null;
     currentCacheTimestamp = undefined;
     resetDocumentModified();
