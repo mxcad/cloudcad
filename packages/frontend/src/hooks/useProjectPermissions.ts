@@ -92,7 +92,7 @@ export const useProjectPermissions = (
     autoLoad = true,
   } = options;
 
-  const { checkPermission } = useProjectPermission();
+  const { getPermissions } = useProjectPermission();
   const [permissions, setPermissions] = useState<PermissionState>({});
   const [loading, setLoading] = useState(false);
 
@@ -110,13 +110,11 @@ export const useProjectPermissions = (
     setLoading(true);
     try {
       const currentPermissions = permissionListRef.current;
-      const results = await Promise.all(
-        currentPermissions.map((perm) => checkPermission(projectId, perm))
-      );
+      const result = await getPermissions(projectId);
 
       const newPermissions: PermissionState = {};
-      currentPermissions.forEach((perm, index) => {
-        newPermissions[perm] = results[index];
+      currentPermissions.forEach((perm) => {
+        newPermissions[perm] = result.includes(perm);
       });
       setPermissions(newPermissions);
     } catch (error) {
@@ -124,7 +122,7 @@ export const useProjectPermissions = (
     } finally {
       setLoading(false);
     }
-  }, [projectId, checkPermission]);
+  }, [projectId, getPermissions]);
 
   // 自动加载
   useEffect(() => {

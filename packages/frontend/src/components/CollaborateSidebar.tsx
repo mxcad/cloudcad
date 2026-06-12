@@ -300,6 +300,24 @@ export const CollaborateSidebar: React.FC = () => {
     }
   }, [fileNameCache, currentFileId]);
 
+  // Re-fetch works when current file changes
+  useEffect(() => {
+    if (!isCadReady || !currentFileId) return;
+    fetchWorks(true);
+  }, [currentFileId, isCadReady, fetchWorks]);
+
+  // Sync file name from mxcadManager when file changes
+  useEffect(() => {
+    if (!currentFileId || !isCadReady) return;
+    const info = mxcadManager.getCurrentFileInfo();
+    if (info?.fileId && info?.name) {
+      setFileNameCache((prev) => {
+        if (prev[info.fileId] === info.name) return prev;
+        return { ...prev, [info.fileId]: info.name };
+      });
+    }
+  }, [currentFileId, isCadReady]);
+
   // Polling
   useEffect(() => {
     if (!isCadReady) return;
@@ -671,11 +689,15 @@ export const CollaborateSidebar: React.FC = () => {
 
       const ret = cooperate.exitWrok();
       if (ret === 0) {
+        const exitedWorkId = useCADEditorStore.getState().collaborationWorkId;
         setCurrentWorkId(null);
         setCollaborationState({ isInCollaboration: false, workId: null });
         exitGuardRef.current = true;
         setTimeout(() => { exitGuardRef.current = false; }, 3000);
         refreshFileName();
+        if (exitedWorkId !== null) {
+          setWorks((prev) => prev.filter((w) => w.work_id !== exitedWorkId));
+        }
         // 延迟获取，等待 SDK 状态更新
         setTimeout(() => fetchWorks(), 300);
         showToast('已退出协同', 'success');
