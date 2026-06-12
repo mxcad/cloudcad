@@ -24,7 +24,6 @@ export type ActionType =
   | 'copy_clipboard'
   | 'cut'
   | 'download_folder'
-  | 'properties'
   | 'copy_path';
 
 /**
@@ -91,7 +90,6 @@ export interface FileActionCheckProps {
   onCopyClipboard?: boolean;
   onCut?: boolean;
   onDownloadFolder?: boolean;
-  onShowProperties?: boolean;
   onCopyPath?: boolean;
 }
 
@@ -292,13 +290,6 @@ const Icons = {
       <circle cx="6" cy="18" r="3" />
       <line x1="8.12" y1="8.12" x2="15.88" y2="15.88" />
       <line x1="15.88" y1="8.12" x2="8.12" y2="15.88" />
-    </svg>
-  ),
-  Info: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="16" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12.01" y2="8" />
     </svg>
   ),
 };
@@ -527,16 +518,6 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isFolder, isRoot, isTrash, onDownloadFolder }) =>
       isFolder && !isRoot && !isTrash && !!onDownloadFolder,
   },
-  properties: {
-    type: 'properties',
-    label: '属性',
-    tooltip: '查看文件/文件夹属性',
-    icon: <Icons.Info />,
-    colorClass: 'text-slate-700',
-    hoverClass: 'hover:bg-slate-50',
-    visibilityCheck: ({ isRoot, isTrash, onShowProperties }) =>
-      !isRoot && !isTrash && !!onShowProperties,
-  },
   copy_path: {
     type: 'copy_path',
     label: '复制路径',
@@ -620,7 +601,6 @@ export const ACTION_VARIANT_MAP: Record<string, 'default' | 'danger' | 'success'
   copy_clipboard: 'default',
   cut: 'default',
   download_folder: 'default',
-  properties: 'default',
   copy_path: 'default',
 };
 

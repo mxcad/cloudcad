@@ -528,20 +528,6 @@ test.describe('图纸组织', { tag: ['@drawing-organization'] }, () => {
         }
       });
 
-      // CM-007: P1
-      test('右键菜单 → 属性 → 属性弹窗打开', async ({ page }) => {
-        const firstFile = fsPage.fileItems.first();
-        if (await firstFile.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await firstFile.click({ button: 'right' });
-          await expect(fsPage.contextMenu).toBeVisible({ timeout: 5000 });
-          const propsBtn = page.getByRole('menuitem', { name: /属性/ });
-          if (await propsBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-            await propsBtn.click();
-            await expect(fsPage.modal).toBeVisible({ timeout: 5000 });
-          }
-        }
-      });
-
       // CM-009: P2
       test('右键菜单 — 文件夹右键 → "打开"不可用', async ({ page }) => {
         const folderItem = fsPage.fileItems.filter({ hasText: /folder|文件夹/ }).first();
@@ -1198,7 +1184,7 @@ test.describe('图纸组织', { tag: ['@drawing-organization'] }, () => {
         await expect(fsPage.trashViewBtn.first()).toBeVisible({ timeout: 5000 });
       });
 
-      test('ADMIN → 右键菜单：重命名/移动/复制/删除/打开/版本/属性可见', async ({ page }) => {
+      test('ADMIN → 右键菜单：重命名/移动/复制/删除/打开/版本可见', async ({ page }) => {
         const fsPage = new FileSystemPage(page);
         await fsPage.gotoProjectFiles('test-project-id');
         const firstFile = fsPage.fileItems.first();
@@ -1225,7 +1211,7 @@ test.describe('图纸组织', { tag: ['@drawing-organization'] }, () => {
         await expect(fsPage.trashViewBtn).toBeHidden({ timeout: 5000 }).catch(() => {});
       });
 
-      test('MEMBER → 右键菜单：重命名/移动/复制/删除/打开/版本/属性可见', async ({ page }) => {
+      test('MEMBER → 右键菜单：重命名/移动/复制/删除/打开/版本可见', async ({ page }) => {
         const fsPage = new FileSystemPage(page);
         await fsPage.gotoProjectFiles('test-project-id');
         const firstFile = fsPage.fileItems.first();
@@ -1253,7 +1239,7 @@ test.describe('图纸组织', { tag: ['@drawing-organization'] }, () => {
         await expect(fsPage.trashViewBtn).toBeHidden({ timeout: 5000 }).catch(() => {});
       });
 
-      test('EDITOR → 右键菜单：打开/移动/复制/删除/版本/属性可见，重命名隐藏', async ({ page }) => {
+      test('EDITOR → 右键菜单：打开/移动/复制/删除/版本可见，重命名隐藏', async ({ page }) => {
         const fsPage = new FileSystemPage(page);
         await fsPage.gotoProjectFiles('test-project-id');
         const firstFile = fsPage.fileItems.first();
@@ -1281,8 +1267,8 @@ test.describe('图纸组织', { tag: ['@drawing-organization'] }, () => {
         await expect(fsPage.trashViewBtn).toBeHidden({ timeout: 5000 }).catch(() => {});
       });
 
-      // CM-008: VIEWER 右键仅打开/版本/属性
-      test('VIEWER → 右键菜单：仅打开/版本/属性可见', async ({ page }) => {
+      // CM-008: VIEWER 右键仅打开/版本
+      test('VIEWER → 右键菜单：仅打开/版本可见', async ({ page }) => {
         const fsPage = new FileSystemPage(page);
         await fsPage.gotoProjectFiles('test-project-id');
         const firstFile = fsPage.fileItems.first();

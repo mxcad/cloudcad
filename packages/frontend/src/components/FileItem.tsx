@@ -82,7 +82,6 @@ interface FileItemProps {
   onCopyClipboard?: (node: FileSystemNode) => void;
   onCut?: (node: FileSystemNode) => void;
   onDownloadFolder?: (node: FileSystemNode) => void;
-  onShowProperties?: (node: FileSystemNode) => void;
   onCopyPath?: (node: FileSystemNode) => void;
   /** 当前目录的祖先路径（用于搜索结果中隐藏同目录文件的路径） */
   currentAncestorPath?: string;
@@ -178,7 +177,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   onNewFolder,
   onCut,
   onDownloadFolder,
-  onShowProperties,
   onCopyPath,
   currentAncestorPath,
 }) => {
@@ -385,10 +383,6 @@ export const FileItem: React.FC<FileItemProps> = ({
       e.stopPropagation();
       onDownloadFolder?.(node);
     },
-    properties: (e) => {
-      e.stopPropagation();
-      onShowProperties?.(node);
-    },
     copy_path: (e) => {
       e.stopPropagation();
       onCopyPath?.(node);
@@ -428,7 +422,6 @@ export const FileItem: React.FC<FileItemProps> = ({
     onCopyClipboard: !!onCopyClipboard,
     onCut: !!onCut,
     onDownloadFolder: !!onDownloadFolder,
-    onShowProperties: !!onShowProperties,
     onCopyPath: !!onCopyPath,
   };
 

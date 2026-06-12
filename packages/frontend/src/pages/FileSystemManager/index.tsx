@@ -36,7 +36,6 @@ import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { DownloadFormatModal } from '@/components/modals/DownloadFormatModal';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { ShareDialog } from '@/components/modals/ShareDialog';
-import { FolderPropertiesModal } from '@/components/modals/FolderPropertiesModal';
 import { isAbortError, handleError } from '@/utils/errorHandler';
 import { client } from '@/api-sdk/client.gen';
 import type { ProjectFilterType } from '@/api-sdk';
@@ -770,14 +769,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     handleDownload(node);
   }, [handleDownload]);
 
-  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
-  const [propertiesNode, setPropertiesNode] = useState<FileSystemNode | null>(null);
-
-  const handleShowProperties = useCallback((node: FileSystemNode) => {
-    setPropertiesNode(node);
-    setShowPropertiesModal(true);
-  }, []);
-
   const handleCopyPath = useCallback(async (node: FileSystemNode) => {
     const path = node.ancestorPath
       ? `${node.ancestorPath} > ${node.name}`
@@ -1074,7 +1065,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     onCopyClipboard={handleCopyClipboard}
                     onCut={handleCut}
                     onDownloadFolder={handleDownloadFolder}
-                    onShowProperties={handleShowProperties}
                     onCopyPath={handleCopyPath}
                     onCreateFolderInCurrentDir={() => setShowCreateFolderModal(true)}
                     onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
@@ -1263,15 +1253,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           setShareFileId(null);
         }}
         fileId={shareFileId ?? undefined}
-      />
-
-      <FolderPropertiesModal
-        isOpen={showPropertiesModal}
-        node={propertiesNode}
-        onClose={() => {
-          setShowPropertiesModal(false);
-          setPropertiesNode(null);
-        }}
       />
 
     </>

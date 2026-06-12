@@ -62,7 +62,6 @@ interface FileSystemContentProps {
   onCopyClipboard?: (node: FileSystemNode) => void;
   onCut?: (node: FileSystemNode) => void;
   onDownloadFolder?: (node: FileSystemNode) => void;
-  onShowProperties?: (node: FileSystemNode) => void;
   onCopyPath?: (node: FileSystemNode) => void;
   loading?: boolean;
   currentPage?: number;
@@ -133,7 +132,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onCopyClipboard,
   onCut,
   onDownloadFolder,
-  onShowProperties,
   onCopyPath,
   onCreateFolderInCurrentDir,
   onCreateDrawingInCurrentDir,
@@ -231,7 +229,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     });
 
     if (Object.keys(projectPermissions).length === 0) {
-      fileItemProps.canShare = true;
+      fileItemProps.canShare = false;
     }
 
     let onEditHandler: ((e: React.MouseEvent) => void) | undefined;
@@ -337,7 +335,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               onCopyClipboard={onCopyClipboard}
               onCut={onCut}
               onDownloadFolder={onDownloadFolder}
-               onShowProperties={onShowProperties}
                onCopyPath={onCopyPath}
             />
           );
@@ -404,7 +401,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               onCopyClipboard: !!onCopyClipboard,
               onCut: !!onCut,
               onDownloadFolder: !!onDownloadFolder,
-               onShowProperties: !!onShowProperties,
                onCopyPath: !!onCopyPath,
              };
              const availableActions = getAvailableActions(actionProps);
@@ -439,7 +435,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                         case 'copy_clipboard': onCopyClipboard?.(node); break;
                         case 'cut': onCut?.(node); break;
                         case 'download_folder': onDownloadFolder?.(node); break;
-                        case 'properties': onShowProperties?.(node); break;
                         case 'copy_path': onCopyPath?.(node); break;
                         default: break;
                       }
@@ -478,7 +473,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                             case 'copy_clipboard': onCopyClipboard?.(node); break;
                             case 'cut': onCut?.(node); break;
                             case 'download_folder': onDownloadFolder?.(node); break;
-                            case 'properties': onShowProperties?.(node); break;
                             case 'copy_path': onCopyPath?.(node); break;
                             default: break;
                           }
