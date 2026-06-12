@@ -29,7 +29,7 @@ import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { generateThumbnail, uploadThumbnail } from '../services/mxcadManager/mxcadThumbnail';
-import { showGlobalLoading, hideGlobalLoading, setLoadingMessage, setLoadingProgress } from '../utils/loadingUtils';
+import { showGlobalLoading, hideGlobalLoading, setLoadingMessage, setLoadingProgress, getLoadingState } from '../utils/loadingUtils';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { useFileDropToOpen } from '../hooks/useFileDropToOpen';
 import { DropIndicator } from '../components/drop-indicator/DropIndicator';
@@ -1419,6 +1419,9 @@ export const CADEditorDirect: React.FC = () => {
   // 监听文件打开完成事件，隐藏底部加载状态
   useEffect(() => {
     const handleFileOpenComplete = () => {
+      const { source } = getLoadingState();
+      // Auto-join/handleJoin manage their own loading — don't interfere
+      if (source === 'autoJoin' || source === 'handleJoin') return;
       hideGlobalLoading();
     };
 

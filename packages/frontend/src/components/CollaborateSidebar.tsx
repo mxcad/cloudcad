@@ -151,6 +151,7 @@ export const CollaborateSidebar: React.FC = () => {
             const newWorkIds = filtered.map((w) => w.work_id);
             const localOnly = prev.filter((w) => !newWorkIds.includes(w.work_id));
             if (localOnly.length === 0) return filtered;
+            if (initialFetchDone && filtered.length === 0) return filtered;
             return [...filtered, ...localOnly];
           });
         setLoading(false);
@@ -267,17 +268,11 @@ export const CollaborateSidebar: React.FC = () => {
     };
   }, []);
 
-  // Wait for blank file to fully open before triggering auto-join
+  // Auto-join: CAD ready is sufficient — joinWork handles file loading internally.
+  // No need to wait for mxcad-file-open-complete (never fires in home mode).
   useEffect(() => {
     if (!isCadReady || !fromCollabShare) return;
-    const onOpen = () => setBlankFileReady(true);
-    window.addEventListener('mxcad-file-open-complete', onOpen, { once: true });
-    // Safety: proceed anyway after 10s even if event never fires
-    const timer = setTimeout(() => setBlankFileReady(true), 10000);
-    return () => {
-      window.removeEventListener('mxcad-file-open-complete', onOpen);
-      clearTimeout(timer);
-    };
+    setBlankFileReady(true);
   }, [isCadReady, fromCollabShare]);
 
   // Initial fetch
@@ -664,12 +659,14 @@ export const CollaborateSidebar: React.FC = () => {
             if (iRet === 0) {
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
+              pendingJoinWorkIdRef.current = workId;
               refreshFileName();
               fetchWorks();
             } else if (iRet === 17) {
               // 已经加入过，设置状态即可
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
+              pendingJoinWorkIdRef.current = workId;
               refreshFileName();
               fetchWorks();
             } else {
