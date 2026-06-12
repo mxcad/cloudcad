@@ -808,8 +808,7 @@ export class MxCadController {
    * @returns 返回文件流或错误信息
    */
   @Get('filesData/*path')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @OptionalAuth()
   @ApiResponse({
     status: 200,
     description: '成功获取文件',

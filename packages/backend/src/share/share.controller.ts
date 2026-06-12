@@ -21,6 +21,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ShareService } from './share.service';
 import {
@@ -58,6 +59,7 @@ export class ShareController {
   }
 
   @Get(':token')
+  @Public()
   @ApiOperation({ summary: '解析分享链接' })
   @ApiResponse({
     status: 200,
@@ -71,6 +73,7 @@ export class ShareController {
   }
 
   @Get(':token/node')
+  @Public()
   @ApiOperation({ summary: '通过分享 token 获取文件信息' })
   @ApiResponse({
     status: 200,
