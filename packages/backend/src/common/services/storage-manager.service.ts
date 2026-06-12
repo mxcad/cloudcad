@@ -13,7 +13,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DirectoryAllocator } from './directory-allocator.service';
 import { LocalStorageProvider } from '../../storage/local-storage.provider';
-import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 
 export interface NodeStorageInfo {
@@ -139,7 +138,7 @@ export class StorageManager {
    * @returns 是否存在
    */
   async nodeStorageExists(nodeId: string, directory: string): Promise<boolean> {
-    const nodeRelativePath = path.join(directory, nodeId);
+    const nodeRelativePath = `${directory}/${nodeId}`;
     return await this.localStorageProvider.directoryExists(nodeRelativePath);
   }
 

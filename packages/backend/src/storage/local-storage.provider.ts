@@ -67,10 +67,10 @@ export class LocalStorageProvider implements StorageProvider {
       throw new BadRequestException('不允许使用绝对路径');
     }
 
-    // 检查 Windows 路径分隔符
+    // 检查并纠正 Windows 路径分隔符
     if (key.includes('\\')) {
-      this.logger.error(`[validatePath] 路径包含反斜杠: ${key}`);
-      throw new BadRequestException('路径包含非法字符');
+      this.logger.warn(`[validatePath] 路径包含反斜杠，已自动转换为正斜杠: ${key}`);
+      key = key.replace(/\\/g, '/');
     }
 
     // 检查非法字符（Windows 不允许的字符）
@@ -235,7 +235,7 @@ export class LocalStorageProvider implements StorageProvider {
       });
 
       for (const entry of entries) {
-        const relativePath = path.join(prefix, entry.name);
+        const relativePath = path.join(prefix, entry.name).replace(/\\/g, '/');
         if (startsWith && !entry.name.startsWith(startsWith)) {
           continue;
         }
