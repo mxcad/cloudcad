@@ -308,6 +308,9 @@ export function setCurrentFileInfo(fileInfo: {
   updatedAt?: string;
 }) {
   currentFileInfo = { ...fileInfo, expectedTimestamp: fileInfo.updatedAt };
+  const store = useCADEditorStore.getState();
+  store.setCurrentFileId(fileInfo.fileId);
+  store.setCurrentFileName(fileInfo.name || null);
 }
 
 export function patchCurrentFileInfo(partial: {
@@ -652,6 +655,7 @@ export async function openUploadedFile(
         fileId: newNodeId,
         parentId: fileInfo.parentId || uploadTargetNodeId,
         projectId,
+        fileName: fileInfo.name,
       },
     })
   );
@@ -917,10 +921,7 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
     db.close();
 
     // 5. 通过虚拟 URL 打开文件，WASM 会从 IndexedDB 中查找该 key
-    setLoadingMessage('正在打开文件...');
-    await mxcadManager.openFile(virtualUrl, noCache);
-
-    // 设置当前文件名（用于侧边栏显示）
+    // 在打开前先设置文件名，确保 openFileComplete → onOpen 读到正确名称
     setCurrentFileInfo({
       fileId: '',
       parentId: null,
@@ -928,6 +929,9 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
       name: file.name,
       personalSpaceId: null,
     });
+
+    setLoadingMessage('正在打开文件...');
+    await mxcadManager.openFile(virtualUrl, noCache);
 
     hideGlobalLoading();
   } catch (error) {
@@ -2156,6 +2160,7 @@ class MxCADInstanceManager {
       }
 
       if (currentFileInfo) {
+        useCADEditorStore.getState().setCurrentFileName(currentFileInfo.name);
         globalThis.MxPluginContext.useFileName().fileName.value =
           formatEditorFileName(currentFileInfo.name);
 

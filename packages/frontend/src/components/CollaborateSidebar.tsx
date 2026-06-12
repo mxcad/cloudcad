@@ -75,6 +75,7 @@ export const CollaborateSidebar: React.FC = () => {
   const { user } = useAuth();
   const {
     currentFileId,
+    currentFileName: storeFileName,
     currentProjectId,
     fromShare,
     fromCollabShare,
@@ -105,6 +106,7 @@ export const CollaborateSidebar: React.FC = () => {
   const exitGuardRef = useRef(false);
   const joiningLockRef = useRef(false);
   const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingJoinWorkIdRef = useRef<number | null>(null);
 
   // Sync workId state with store
   const setCurrentWorkId = useCallback((id: number | null) => {
@@ -320,6 +322,21 @@ export const CollaborateSidebar: React.FC = () => {
     };
   }, [isCadReady, fetchWorks]);
 
+  // After auto-join fetches works, sync currentFileId from work data
+  useEffect(() => {
+    const targetWorkId = pendingJoinWorkIdRef.current;
+    if (targetWorkId === null) return;
+    const joinedWork = works.find((w) => w.work_id === targetWorkId);
+    if (!joinedWork) return;
+    const data = parseWorkData(joinedWork.work_data);
+    if (!data?.drawingId) return;
+    const store = useCADEditorStore.getState();
+    store.setCurrentFileId(data.drawingId);
+    if (data.projectId) store.setCurrentProjectId(data.projectId);
+    if (data.v === 3 && data.drawingName) store.setCurrentFileName(data.drawingName);
+    pendingJoinWorkIdRef.current = null;
+  }, [works]);
+
   // Auto-join from collaboration share link
   // Retry joinWork every 1s until the SDK is ready to accept it
   useEffect(() => {
@@ -363,6 +380,8 @@ export const CollaborateSidebar: React.FC = () => {
           if (iRet === 0) {
             // 加入成功
             cancelled = true;
+            hideGlobalLoading('autoJoin');
+            pendingJoinWorkIdRef.current = targetCollabWorkId;
             setWaitingForSession(false);
             setCurrentWorkId(targetCollabWorkId);
             setCollaborationState({ isInCollaboration: true, workId: targetCollabWorkId });
@@ -417,6 +436,8 @@ export const CollaborateSidebar: React.FC = () => {
           } else if (iRet === 17) {
             // 已经加入过，设置状态即可
             cancelled = true;
+            hideGlobalLoading('autoJoin');
+            pendingJoinWorkIdRef.current = targetCollabWorkId;
             setWaitingForSession(false);
             setCurrentWorkId(targetCollabWorkId);
             setCollaborationState({ isInCollaboration: true, workId: targetCollabWorkId });
@@ -425,7 +446,7 @@ export const CollaborateSidebar: React.FC = () => {
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           } else if (iRet < 0) {
             // SDK busy — retry
-            hideGlobalLoading('autoJoin-retry');
+            hideGlobalLoading('autoJoin');
             if (!cancelled && retryCount < MAX_RETRIES) {
               retryCount++;
               setTimeout(tryJoin, 1000);
@@ -437,6 +458,7 @@ export const CollaborateSidebar: React.FC = () => {
           } else {
             // Real error
             cancelled = true;
+            hideGlobalLoading('autoJoin');
             setWaitingForSession(false);
             showToast(`加入协同失败，错误码: ${iRet}`, 'error');
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
@@ -785,13 +807,11 @@ export const CollaborateSidebar: React.FC = () => {
   );
 
   const currentFileName: string = useMemo(() => {
-    if (!currentFileId) return '';
+    if (currentFileId === null || currentFileId === undefined) return '';
     const cached = fileNameCache[currentFileId];
     if (cached) return cached;
-    const info = mxcadManager.getCurrentFileInfo();
-    if (info?.fileId === currentFileId && info?.name) return info.name;
-    return '当前图纸';
-  }, [currentFileId, fileNameCache]);
+    return storeFileName || '当前图纸';
+  }, [currentFileId, fileNameCache, storeFileName]);
 
   return (
     <div className={styles.container} data-tour="collaborators-panel">

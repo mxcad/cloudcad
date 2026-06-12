@@ -91,7 +91,7 @@ export const CADEditorDirect: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useNotification();
   const { hasPermission } = usePermission();
-  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setFromShare, setCollabShareState } = useCADEditorStore();
+  const { setIsActive, setLoading: setStoreLoading, setError: setStoreError, setPermissions, setCurrentFileId: setStoreFileId, setCurrentFileName: setStoreFileName, setCurrentProjectId: setStoreProjectId, setIsPersonalSpaceMode, setFromShare, setCollabShareState } = useCADEditorStore();
 
   // 主页模式（/ 路由，无 fileId）- 在组件顶部计算，用于初始化 isActive
   const isHomeMode = isHomeRoute(location.pathname);
@@ -335,6 +335,7 @@ export const CADEditorDirect: React.FC = () => {
         setCollabShareState({ fromCollabShare: false, targetWorkId: null });
         setFromShare(false);
         setStoreFileId(null);
+        setStoreFileName(null);
         setStoreProjectId(null);
       }
     };
@@ -521,6 +522,15 @@ export const CADEditorDirect: React.FC = () => {
             }
             setLoadingProgress(percentage);
           },
+        });
+
+        const { setCurrentFileInfo } = await import('../services/mxcadManager');
+        setCurrentFileInfo({
+          fileId: '',
+          parentId: null,
+          projectId: null,
+          name: file.name,
+          personalSpaceId: null,
         });
 
         const ext = file.name.includes('.')
@@ -793,6 +803,7 @@ export const CADEditorDirect: React.FC = () => {
           fromShare: !!shareTokenParam,
         });
         setStoreFileId(file.id || null);
+        setStoreFileName(file.name || null);
         setFromShare(!!shareTokenParam);
         setNavigateFunction(navigate);
 
@@ -1326,7 +1337,7 @@ export const CADEditorDirect: React.FC = () => {
         libraryKey?: string;
       }>
     ) => {
-      const { fileId, parentId, projectId, libraryKey } = event.detail;
+      const { fileId, parentId, projectId, libraryKey, fileName } = event.detail;
       // 更新当前项目 ID（用于判断是否为私人空间模式）
       // 注意：公开资源库文件不设置 projectId，避免侧边栏"我的项目"Tab 显示资源库内容
       if (!libraryKey) {
@@ -1365,6 +1376,7 @@ export const CADEditorDirect: React.FC = () => {
       // 更新当前文件 ID
       currentFileIdRef.current = fileId;
       setStoreFileId(fileId);
+      setStoreFileName(fileName || null);
     };
 
     window.addEventListener(
@@ -1389,6 +1401,7 @@ export const CADEditorDirect: React.FC = () => {
       // 重置当前文件 ID
       currentFileIdRef.current = null;
       setStoreFileId(null);
+      setStoreFileName(null);
     };
 
     window.addEventListener('mxcad-new-file', handleNewFile as EventListener);

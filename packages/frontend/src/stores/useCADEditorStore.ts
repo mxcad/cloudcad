@@ -8,6 +8,7 @@ interface CADEditorState {
   canExport: boolean;
   canManageExternalRef: boolean;
   currentFileId: string | null;
+  currentFileName: string | null;
   currentProjectId: string | null;
   isPersonalSpaceMode: boolean;
   fromShare: boolean;
@@ -21,6 +22,7 @@ interface CADEditorState {
   setError: (error: string | null) => void;
   setPermissions: (permissions: { canSave?: boolean; canExport?: boolean; canManageExternalRef?: boolean }) => void;
   setCurrentFileId: (fileId: string | null) => void;
+  setCurrentFileName: (name: string | null) => void;
   setCurrentProjectId: (projectId: string | null) => void;
   setIsPersonalSpaceMode: (mode: boolean) => void;
   setFromShare: (fromShare: boolean) => void;
@@ -36,6 +38,7 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   canExport: false,
   canManageExternalRef: false,
   currentFileId: null,
+  currentFileName: null,
   currentProjectId: null,
   isPersonalSpaceMode: false,
   fromShare: false,
@@ -54,6 +57,7 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
       canManageExternalRef: canManageExternalRef ?? state.canManageExternalRef,
     })),
   setCurrentFileId: (fileId) => set({ currentFileId: fileId }),
+  setCurrentFileName: (name) => set({ currentFileName: name }),
   setCurrentProjectId: (projectId) => set({ currentProjectId: projectId }),
   setIsPersonalSpaceMode: (mode) => set({ isPersonalSpaceMode: mode }),
   setFromShare: (fromShare) => set({ fromShare }),
