@@ -13,7 +13,19 @@ export interface CollaborateWorkDataV2 {
   creatorAvatar?: string;
 }
 
-export type CollaborateWorkData = CollaborateWorkDataV1 | CollaborateWorkDataV2;
+export interface CollaborateWorkDataV3 {
+  v: 3;
+  drawingId: string;
+  projectId: string | null;
+  drawingName: string;
+  sourceType: 'my' | 'project' | 'library' | 'local' | 'share';
+  libraryKey?: 'drawing' | 'block';
+  creatorId: string;
+  creatorName: string;
+  creatorAvatar?: string;
+}
+
+export type CollaborateWorkData = CollaborateWorkDataV1 | CollaborateWorkDataV2 | CollaborateWorkDataV3;
 
 export interface CollaborateUserData {
   v: 1;
@@ -50,11 +62,15 @@ export function encodeV2WorkData(data: Omit<CollaborateWorkDataV2, 'v'>): string
   return btoa(JSON.stringify({ v: 2, ...data }));
 }
 
+export function encodeV3WorkData(data: Omit<CollaborateWorkDataV3, 'v'>): string {
+  return btoa(JSON.stringify({ v: 3, ...data }));
+}
+
 export function parseWorkData(raw: string): CollaborateWorkData | null {
   const decoded = tryBase64Decode(raw);
   const parsed = tryParseRawJson(raw) ?? (decoded ? tryParseRawJson(decoded) : null);
   if (!parsed || typeof parsed.drawingId !== 'string') return null;
-  if (parsed.v === 1 || parsed.v === 2) {
+  if (parsed.v === 1 || parsed.v === 2 || parsed.v === 3) {
     return parsed as unknown as CollaborateWorkData;
   }
   return null;
@@ -70,7 +86,7 @@ export function parseUserData(raw: string): CollaborateUserData | null {
 }
 
 export function getWorkCreator(data: CollaborateWorkData): { id?: string; name?: string; avatar?: string } {
-  if (data.v === 2) {
+  if (data.v === 2 || data.v === 3) {
     return { id: data.creatorId, name: data.creatorName, avatar: data.creatorAvatar };
   }
   return {};

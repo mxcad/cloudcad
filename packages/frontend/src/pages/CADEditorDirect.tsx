@@ -316,7 +316,11 @@ export const CADEditorDirect: React.FC = () => {
     if (collabWorkIdParam) {
       const workId = parseInt(collabWorkIdParam, 10);
       if (!isNaN(workId) && workId > 0) {
-        setCollabShareState({ fromCollabShare: true, targetWorkId: workId });
+        setCollabShareState({
+          fromCollabShare: true,
+          targetWorkId: workId,
+          libraryKey: libraryKeyParam,
+        });
         setFromShare(true);
         if (collabDrawingIdParam) {
           setStoreFileId(collabDrawingIdParam);
@@ -334,7 +338,7 @@ export const CADEditorDirect: React.FC = () => {
         setStoreProjectId(null);
       }
     };
-  }, [collabWorkIdParam]);
+  }, [collabWorkIdParam, libraryKeyParam]);
 
   // 加载 CAD 权限
   useEffect(() => {

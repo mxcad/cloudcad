@@ -13,6 +13,7 @@ interface CADEditorState {
   fromShare: boolean;
   fromCollabShare: boolean;
   targetCollabWorkId: number | null;
+  collabShareLibraryKey: 'drawing' | 'block' | null;
   isInCollaboration: boolean;
   collaborationWorkId: number | null;
   setIsActive: (active: boolean) => void;
@@ -23,7 +24,7 @@ interface CADEditorState {
   setCurrentProjectId: (projectId: string | null) => void;
   setIsPersonalSpaceMode: (mode: boolean) => void;
   setFromShare: (fromShare: boolean) => void;
-  setCollabShareState: (state: { fromCollabShare: boolean; targetWorkId: number | null }) => void;
+  setCollabShareState: (state: { fromCollabShare: boolean; targetWorkId: number | null; libraryKey?: 'drawing' | 'block' | null }) => void;
   setCollaborationState: (state: { isInCollaboration: boolean; workId: number | null }) => void;
 }
 
@@ -40,6 +41,7 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   fromShare: false,
   fromCollabShare: false,
   targetCollabWorkId: null,
+  collabShareLibraryKey: null,
   isInCollaboration: false,
   collaborationWorkId: null,
   setIsActive: (active) => set({ isActive: active }),
@@ -55,8 +57,8 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   setCurrentProjectId: (projectId) => set({ currentProjectId: projectId }),
   setIsPersonalSpaceMode: (mode) => set({ isPersonalSpaceMode: mode }),
   setFromShare: (fromShare) => set({ fromShare }),
-  setCollabShareState: ({ fromCollabShare, targetWorkId }) =>
-    set({ fromCollabShare, targetCollabWorkId: targetWorkId }),
+  setCollabShareState: ({ fromCollabShare, targetWorkId, libraryKey }) =>
+    set({ fromCollabShare, targetCollabWorkId: targetWorkId, collabShareLibraryKey: libraryKey ?? null }),
   setCollaborationState: ({ isInCollaboration, workId }) =>
     set({ isInCollaboration, collaborationWorkId: workId }),
 }));

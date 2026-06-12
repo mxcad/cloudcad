@@ -6,6 +6,7 @@ import {
   parseWorkData,
   getWorkCreator,
 } from '../types/collaboration';
+import type { CollaborateWorkDataV3 } from '../types/collaboration';
 import { CollabShareModal } from './CollabShareModal';
 import styles from './CollaborateSidebar.module.css';
 
@@ -41,6 +42,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
   const [showShare, setShowShare] = useState(false);
   const data = parseWorkData(work.work_data);
   const creator = data ? getWorkCreator(data) : {};
+  const libraryKey = data?.v === 3 ? data.libraryKey : undefined;
   const onlineCount = work.link_user_ids.length;
 
   const deduped = deduplicateWorkUsers(work.link_user_ids, work.link_user_data);
@@ -132,6 +134,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
           workId={work.work_id}
           drawingId={data?.drawingId}
           projectId={data?.projectId}
+          libraryKey={libraryKey}
         />
       )}
     </div>

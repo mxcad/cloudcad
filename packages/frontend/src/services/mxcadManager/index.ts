@@ -316,6 +316,7 @@ export function patchCurrentFileInfo(partial: {
   parentId?: string | null;
   name?: string;
   fromShare?: boolean;
+  libraryKey?: 'drawing' | 'block';
 }) {
   if (currentFileInfo) {
     if (partial.fileId !== undefined) currentFileInfo.fileId = partial.fileId;
@@ -323,6 +324,7 @@ export function patchCurrentFileInfo(partial: {
     if (partial.parentId !== undefined) currentFileInfo.parentId = partial.parentId;
     if (partial.name !== undefined) currentFileInfo.name = partial.name;
     if (partial.fromShare !== undefined) currentFileInfo.fromShare = partial.fromShare;
+    if (partial.libraryKey !== undefined) currentFileInfo.libraryKey = partial.libraryKey;
   }
 }
 
@@ -2637,6 +2639,7 @@ export class MxCADManager {
     parentId: string | null | undefined;
     projectId: string | null | undefined;
     name: string;
+    personalSpaceId?: string | null;
     libraryKey?: 'drawing' | 'block';
   } | null {
     return currentFileInfo;

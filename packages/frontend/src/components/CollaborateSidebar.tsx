@@ -27,12 +27,13 @@ import {
 } from '@/api-sdk';
 import {
   parseWorkData,
-  encodeV2WorkData,
+  encodeV3WorkData,
   encodeUserData,
   deduplicateWorkUsers,
 } from '../types/collaboration';
 import type {
   CollaborateUserData,
+  CollaborateWorkDataV3,
 } from '../types/collaboration';
 import {
   getCooperate,
@@ -78,6 +79,7 @@ export const CollaborateSidebar: React.FC = () => {
     fromShare,
     fromCollabShare,
     targetCollabWorkId,
+    collabShareLibraryKey,
     setCollaborationState,
     setCollabShareState,
     isInCollaboration,
@@ -129,6 +131,7 @@ export const CollaborateSidebar: React.FC = () => {
       setMyProjectIds(await fetchMyProjectIds());
 
       cooperate.getWorks((workList: Work[]) => {
+        console.log('Fetched works:', workList);
         if (done) return;
         done = true;
         clearTimeout(timeoutId);
@@ -350,8 +353,9 @@ export const CollaborateSidebar: React.FC = () => {
       cooperate.joinWork(
         targetCollabWorkId,
         (iRet: number) => {
-          if (iRet === 0 || iRet === 17) {
-            // Success
+          console.log(`Auto-join attempt ${retryCount + 1}, joinWork returned:`, iRet);
+          if (iRet === 0) {
+            // 加入成功
             cancelled = true;
             setWaitingForSession(false);
             setCurrentWorkId(targetCollabWorkId);
@@ -361,6 +365,7 @@ export const CollaborateSidebar: React.FC = () => {
               fileId: storeState.currentFileId || undefined,
               projectId: storeState.currentProjectId ?? null,
               fromShare: true,
+              libraryKey: collabShareLibraryKey ?? undefined,
             });
             refreshFileName();
             try {
@@ -386,9 +391,11 @@ export const CollaborateSidebar: React.FC = () => {
               const store = useCADEditorStore.getState();
               const tempWork: Work = {
                 work_id: targetCollabWorkId,
-                work_data: encodeV2WorkData({
+                work_data: encodeV3WorkData({
                   drawingId: store.currentFileId || '',
                   projectId: store.currentProjectId ?? null,
+                  drawingName: '',
+                  sourceType: 'share',
                   creatorId: user.id,
                   creatorName: user.username,
                   creatorAvatar: user.avatar ?? undefined,
@@ -399,6 +406,15 @@ export const CollaborateSidebar: React.FC = () => {
               };
               return [tempWork, ...prev];
             });
+            fetchWorks();
+            setCollabShareState({ fromCollabShare: false, targetWorkId: null });
+          } else if (iRet === 17) {
+            // 已经加入过，设置状态即可
+            cancelled = true;
+            setWaitingForSession(false);
+            setCurrentWorkId(targetCollabWorkId);
+            setCollaborationState({ isInCollaboration: true, workId: targetCollabWorkId });
+            refreshFileName();
             fetchWorks();
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           } else if (iRet < 0) {
@@ -458,7 +474,7 @@ export const CollaborateSidebar: React.FC = () => {
         return;
       }
 
-      if (!currentFileId || !user) {
+      if (currentFileId === undefined || !user) {
         showToast('请先打开图纸并登录', 'error');
         setCreating(false);
         return;
@@ -471,9 +487,28 @@ export const CollaborateSidebar: React.FC = () => {
         avatar: user.avatar ?? undefined,
       };
 
-      const workDataPayload = encodeV2WorkData({
-        drawingId: currentFileId,
+      const fileInfo = mxcadManager.getCurrentFileInfo();
+      const drawingName = fileInfo?.name || '未命名图纸';
+      let sourceType: CollaborateWorkDataV3['sourceType'];
+      let libraryKey: 'drawing' | 'block' | undefined;
+
+      if (fileInfo?.libraryKey) {
+        sourceType = 'library';
+        libraryKey = fileInfo.libraryKey as 'drawing' | 'block';
+      } else if (!currentFileId) {
+        sourceType = 'local';
+      } else if (fromShare) {
+        sourceType = 'share';
+      } else {
+        sourceType = 'project';
+      }
+
+      const workDataPayload = encodeV3WorkData({
+        drawingId: currentFileId || '',
         projectId: currentProjectId ?? null,
+        drawingName,
+        sourceType,
+        libraryKey,
         creatorId: user.id,
         creatorName: user.username,
         creatorAvatar: user.avatar ?? undefined,
@@ -485,7 +520,9 @@ export const CollaborateSidebar: React.FC = () => {
           hideGlobalLoading('handleCreate-success');
           setCreating(false);
           if (workid > 0) {
-            handleJoinWorkRef.current(workid, true);
+            setCurrentWorkId(workid);
+            setCollaborationState({ isInCollaboration: true, workId: workid });
+            refreshFileName();
             const newWork: Work = {
               work_id: workid,
               work_data: workDataPayload,
@@ -511,6 +548,7 @@ export const CollaborateSidebar: React.FC = () => {
       hideGlobalLoading('handleCreate-catch');
       console.error('创建协同失败:', error);
       setCreating(false);
+      fetchWorks();
       showToast(getErrorMessage(error), 'error');
     }
   }, [
@@ -521,6 +559,7 @@ export const CollaborateSidebar: React.FC = () => {
     fetchWorks,
     showToast,
     collaborationWorkId,
+    fromShare,
   ]);
 
   const handleJoinWork = useCallback(
@@ -588,7 +627,13 @@ export const CollaborateSidebar: React.FC = () => {
           async (iRet: number) => {
             setJoiningWorkId(null);
             joiningLockRef.current = false;
-            if (iRet === 0 || iRet === 17) {
+            if (iRet === 0) {
+              setCurrentWorkId(workId);
+              setCollaborationState({ isInCollaboration: true, workId });
+              refreshFileName();
+              fetchWorks();
+            } else if (iRet === 17) {
+              // 已经加入过，设置状态即可
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
               refreshFileName();
@@ -596,6 +641,7 @@ export const CollaborateSidebar: React.FC = () => {
             } else {
               clearTimeout(safetyTimer);
               hideGlobalLoading('handleJoin-error');
+              fetchWorks();
               showToast(`加入协同失败，错误码: ${iRet}`, 'error');
             }
           },
@@ -607,6 +653,7 @@ export const CollaborateSidebar: React.FC = () => {
         console.error('加入协同失败:', error);
         setJoiningWorkId(null);
         joiningLockRef.current = false;
+        fetchWorks();
         showToast(getErrorMessage(error), 'error');
       }
     },
@@ -629,30 +676,45 @@ export const CollaborateSidebar: React.FC = () => {
         exitGuardRef.current = true;
         setTimeout(() => { exitGuardRef.current = false; }, 3000);
         refreshFileName();
-        fetchWorks();
+        // 延迟获取，等待 SDK 状态更新
+        setTimeout(() => fetchWorks(), 300);
         showToast('已退出协同', 'success');
       } else {
+        // 退出失败也刷新，确保列表与服务器一致
+        fetchWorks();
         showToast(`退出协同失败，错误码: ${ret}`, 'error');
       }
     } catch (error) {
       console.error('退出协同失败:', error);
+      fetchWorks();
       showToast(getErrorMessage(error), 'error');
     }
   }, [getCooperate, fetchWorks, showToast]);
 
   // --- Filtered work lists ---
 
-  // Current file works: same drawing, and same project as current drawing (or personal)
+  // Current file works: match by drawingId, sourceType-specific rules
   const currentFileWorks = useMemo(
     () =>
       works.filter((w) => {
         const data = parseWorkData(w.work_data);
-        if (!data || data.drawingId !== currentFileId) return false;
+        if (!data) return false;
 
-        if (data.projectId) {
-          return data.projectId === currentProjectId;
+        // V3: use sourceType for matching
+        if (data.v === 3) {
+          if (data.sourceType === 'local') {
+            return currentFileId === '' && data.drawingId === '' && user && data.creatorId === user.id;
+          }
+          if (data.sourceType === 'library') {
+            return data.drawingId === currentFileId;
+          }
+          if (data.drawingId !== currentFileId) return false;
+          return !data.projectId || data.projectId === currentProjectId;
         }
 
+        // V1/V2 fallback
+        if (data.drawingId !== currentFileId) return false;
+        if (data.projectId) return data.projectId === currentProjectId;
         return user ? w.real_user_id === user.id : false;
       }),
     [works, currentFileId, currentProjectId, user]
@@ -670,9 +732,9 @@ export const CollaborateSidebar: React.FC = () => {
             projectName: data?.projectId
               ? projectNameCache[data.projectId] ?? '未知项目'
               : '个人空间',
-            drawingName: data?.drawingId
-              ? fileNameCache[data.drawingId] ?? '未知图纸'
-              : '未知图纸',
+            drawingName: (data?.drawingId && fileNameCache[data.drawingId]
+              ? fileNameCache[data.drawingId]
+              : (data && data.v === 3 ? data.drawingName : undefined)) || '未知图纸',
             isCurrentFile: data?.drawingId === currentFileId,
             isJoined: currentWorkId === w.work_id,
             onlineCount: w.link_user_ids.length,
@@ -701,9 +763,9 @@ export const CollaborateSidebar: React.FC = () => {
             projectName: data?.projectId
               ? projectNameCache[data.projectId] ?? '未知项目'
               : '',
-            drawingName: data?.drawingId
-              ? fileNameCache[data.drawingId] ?? '未知图纸'
-              : '未知图纸',
+            drawingName: (data?.drawingId && fileNameCache[data.drawingId]
+              ? fileNameCache[data.drawingId]
+              : (data && data.v === 3 ? data.drawingName : undefined)) || '未知图纸',
             isCurrentFile: data?.drawingId === currentFileId,
             isJoined: currentWorkId === w.work_id,
             onlineCount: w.link_user_ids.length,

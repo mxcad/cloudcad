@@ -10,6 +10,7 @@ interface CollabShareModalProps {
   workId: number;
   drawingId?: string;
   projectId?: string | null;
+  libraryKey?: 'drawing' | 'block';
 }
 
 export const CollabShareModal: React.FC<CollabShareModalProps> = ({
@@ -18,10 +19,11 @@ export const CollabShareModal: React.FC<CollabShareModalProps> = ({
   workId,
   drawingId,
   projectId,
+  libraryKey,
 }) => {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `${window.location.origin}/cad-editor?collabWorkId=${workId}${drawingId ? `&drawingId=${drawingId}` : ''}${projectId ? `&projectId=${projectId}` : ''}`;
+  const shareUrl = `${window.location.origin}/cad-editor?collabWorkId=${workId}${drawingId ? `&drawingId=${encodeURIComponent(drawingId)}` : ''}${projectId ? `&projectId=${encodeURIComponent(projectId)}` : ''}${libraryKey ? `&library=${libraryKey}` : ''}`;
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(shareUrl)
