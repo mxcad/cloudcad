@@ -317,6 +317,14 @@ export const CollaborateSidebar: React.FC = () => {
     };
   }, [isCadReady, fetchWorks]);
 
+  // Sync local state with store (handles external collaboration exit, e.g. openFile/openFile_noCache)
+  useEffect(() => {
+    if (!isInCollaboration && collaborationWorkId === null && currentWorkId !== null) {
+      setCurrentWorkId(null);
+      fetchWorks();
+    }
+  }, [isInCollaboration, collaborationWorkId, currentWorkId, fetchWorks]);
+
   // After auto-join fetches works, sync currentFileId from work data
   useEffect(() => {
     const targetWorkId = pendingJoinWorkIdRef.current;
