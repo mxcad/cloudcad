@@ -237,7 +237,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         <div className="flex items-center gap-1.5">
           <Tooltip content="刷新">
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={onRefresh}
               disabled={isFetching}
@@ -256,7 +256,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                 projectFilter !== 'joined' && (
                   <Tooltip content="新建项目">
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                       onClick={onCreateProject}
                       className="hover:bg-[var(--bg-tertiary)]"
@@ -275,7 +275,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                   {onCreateDrawing && (
                     <Tooltip content="新建图纸">
                       <Button
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
                         onClick={onCreateDrawing}
                         disabled={loading}
@@ -289,7 +289,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                   {onCreateFolder && (
                     <Tooltip content="新建文件夹">
                       <Button
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
                         onClick={onCreateFolder}
                         disabled={loading}

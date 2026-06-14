@@ -347,7 +347,7 @@ export const Dashboard: React.FC = () => {
 
           {/* 刷新按钮 */}
           <div className="flex gap-3">
-            <Button variant="ghost" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
+            <Button variant="secondary" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
               刷新
             </Button>
           </div>

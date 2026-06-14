@@ -73,7 +73,7 @@ export const EditExpiryModal: React.FC<EditExpiryModalProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <Button variant="ghost" onClick={onClose} disabled={saving}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>取消</Button>
           <Button variant="primary" onClick={handleSave} loading={saving}>保存</Button>
         </div>
       </div>

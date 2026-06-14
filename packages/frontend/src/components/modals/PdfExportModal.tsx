@@ -55,7 +55,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
       title="导出 PDF"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose} disabled={loading}>
+          <Button variant="secondary" onClick={handleClose} disabled={loading}>
             取消
           </Button>
           <Button onClick={handleExport} loading={loading}>

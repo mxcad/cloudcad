@@ -484,7 +484,7 @@ export const Register: React.FC = () => {
                     />
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                       className="absolute right-4 top-1/2 -translate-y-1/2"
                       icon={showPassword ? EyeOff : Eye}
@@ -540,7 +540,7 @@ export const Register: React.FC = () => {
                     />
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                       className="absolute right-4 top-1/2 -translate-y-1/2"
                       icon={showConfirmPassword ? EyeOff : Eye}
@@ -588,7 +588,7 @@ export const Register: React.FC = () => {
           <div className="form-footer">
             <p className="login-text">
               已有账户？
-              <Button variant="ghost" onClick={() => navigate('/login')}>
+              <Button variant="secondary" onClick={() => navigate('/login')}>
                 立即登录
               </Button>
             </p>

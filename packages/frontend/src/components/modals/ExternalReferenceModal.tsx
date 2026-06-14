@@ -139,7 +139,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       footer={
         <div data-tour="xref-actions" className="flex items-center justify-end gap-2">
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={() => {
               onClose();
             }}

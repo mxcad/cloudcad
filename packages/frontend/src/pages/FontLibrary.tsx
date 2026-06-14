@@ -526,7 +526,7 @@ export default function FontLibrary(props: FontLibraryProps) {
 
             {/* 展开筛选按钮 */}
             <Button
-              variant="ghost"
+              variant="secondary"
               icon={Filter}
               onClick={() => setShowFilters(!showFilters)}
             >
@@ -542,7 +542,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               filters.extension ||
               filters.startTime ||
               filters.endTime) && (
-              <Button variant="ghost" icon={X} onClick={handleReset}>
+              <Button variant="secondary" icon={X} onClick={handleReset}>
                 清除
               </Button>
             )}
@@ -610,7 +610,7 @@ export default function FontLibrary(props: FontLibraryProps) {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="xs"
                 onClick={() => setSelectedFonts(new Set())}
               >
@@ -638,7 +638,7 @@ export default function FontLibrary(props: FontLibraryProps) {
             { key: 'size', label: '大小' },
           ].map(({ key, label }) => (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="xs"
               key={key}
               onClick={() => handleSort(key as 'name' | 'size' | 'createdAt')}
@@ -719,7 +719,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                     <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {canDownloadFonts && (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           icon={Download}
                           onClick={() => handleDownload(font.name)}
                           tooltip="下载"
@@ -727,7 +727,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                       )}
                       {canDeleteFonts && (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           icon={Trash2}
                           onClick={() => handleDelete(font.name)}
                           tooltip="删除"
@@ -874,7 +874,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                           <div className="flex items-center justify-end gap-1">
                             {canDownloadFonts && (
                               <Button
-                                variant="ghost"
+                                variant="secondary"
                                 icon={Download}
                                 onClick={() => handleDownload(font.name)}
                                 tooltip="下载"
@@ -882,7 +882,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                             )}
                             {canDeleteFonts && (
                               <Button
-                                variant="ghost"
+                                variant="secondary"
                                 icon={Trash2}
                                 onClick={() => handleDelete(font.name)}
                                 tooltip="删除"
@@ -1028,7 +1028,7 @@ function UploadFontModal({
               </p>
             </div>
           </div>
-          <Button variant="ghost" icon={X} onClick={onClose} tooltip="关闭" />
+          <Button variant="secondary" icon={X} onClick={onClose} tooltip="关闭" />
         </div>
 
         {/* 内容 */}
@@ -1065,7 +1065,7 @@ function UploadFontModal({
                   {(file.size / 1024 / 1024).toFixed(2)} MB
                 </p>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="xs"
                   onClick={(e) => {
                     e.stopPropagation();

@@ -358,7 +358,7 @@ export const PromptModal: React.FC<PromptModalProps> = ({
       title={title}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={loading}>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
             取消
           </Button>
           <Button

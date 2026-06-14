@@ -354,7 +354,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
         </div>
         <Tooltip content="跳过引导">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             onClick={onSkip}
             style={{
@@ -431,7 +431,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
         }}
       >
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onClick={onSkip}
         >

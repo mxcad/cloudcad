@@ -191,7 +191,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
         title="项目角色管理"
         className="max-w-4xl"
         footer={
-          <Button variant="ghost" onClick={onClose} data-tour="modal-close-btn">
+          <Button variant="secondary" onClick={onClose} data-tour="modal-close-btn">
             关闭
           </Button>
         }
@@ -282,14 +282,14 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                             {canManageRoles && (
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <Button
-                                  variant="ghost"
+                                  variant="secondary"
                                   size="sm"
                                   onClick={() => handleEditRole(role)}
                                 >
                                   <Edit size={16} />
                                 </Button>
                                 <Button
-                                  variant="ghost"
+                                  variant="secondary"
                                   size="sm"
                                   onClick={() => handleDeleteRole(role)}
                                 >
@@ -349,7 +349,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                             </div>
                             {canManageRoles && (
                               <Button
-                                variant="ghost"
+                                variant="secondary"
                                 size="sm"
                                 onClick={() => handleEditRole(role)}
                                 className="flex-shrink-0"
@@ -399,7 +399,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
           footer={
             <>
               <Button
-                variant="ghost"
+                variant="secondary"
                 onClick={() => {
                   setDeleteConfirmOpen(false);
                   setRoleToDelete(null);

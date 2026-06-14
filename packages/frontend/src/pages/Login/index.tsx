@@ -220,7 +220,7 @@ export const Login: React.FC = () => {
           <div className="form-footer">
             <p className="register-text">
               {t('还没有账户？')}
-              <Button variant="ghost" size="xs" onClick={() => navigate('/register')}>
+              <Button variant="secondary" size="xs" onClick={() => navigate('/register')}>
                 {t('立即注册')}
               </Button>
             </p>

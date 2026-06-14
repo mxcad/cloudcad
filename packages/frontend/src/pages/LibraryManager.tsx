@@ -673,15 +673,15 @@ export const LibraryManager: React.FC = () => {
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
           {canManage && (
             <>
-              <Button variant="ghost" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>移动</Button>
-              <Button variant="ghost" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>复制</Button>
-              <Button variant="ghost" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>删除</Button>
+              <Button variant="secondary" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+              <Button variant="secondary" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+              <Button variant="secondary" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>删除</Button>
             </>
           )}
         </>
       )}
       <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-        <Button variant="ghost" onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
+        <Button variant="secondary" onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
           粘贴
           {clipboardItems.length > 0 && (
             <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
@@ -690,14 +690,14 @@ export const LibraryManager: React.FC = () => {
           )}
         </Button>
         {clipboardItems.length > 0 && (
-          <Button variant="ghost" onClick={clearClipboard} style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}>
+          <Button variant="secondary" onClick={clearClipboard} style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </Button>
         )}
       </div>
-      <Button variant="ghost" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
+      <Button variant="secondary" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
         取消
       </Button>
     </div>
@@ -743,7 +743,7 @@ export const LibraryManager: React.FC = () => {
         <Tooltip content="存储配额">
           <Button
             onClick={openQuotaModal}
-            variant="ghost"
+            variant="secondary"
             size="sm"
             className="hover:bg-[var(--bg-tertiary)]"
             style={{ color: 'var(--text-tertiary)' }}
@@ -755,7 +755,7 @@ export const LibraryManager: React.FC = () => {
       {canManage && (
         <Button
           onClick={() => setShowDirectoryImport(true)}
-          variant="ghost"
+          variant="secondary"
           size="sm"
           className="hover:bg-[var(--bg-tertiary)]"
           style={{ color: 'var(--text-tertiary)' }}
@@ -1057,7 +1057,7 @@ export const LibraryManager: React.FC = () => {
         footer={
           <div className="modal-footer">
             <Button
-              variant="ghost"
+              variant="secondary"
               onClick={closeQuotaModal}
               disabled={quotaLoading}
             >

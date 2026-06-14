@@ -240,7 +240,7 @@ export const RuntimeConfigPage: React.FC = () => {
     if (item.type === 'boolean') {
       return (
         <Button
-          variant="ghost"
+          variant="secondary"
           onClick={() => handleValueChange(item.key, !value)}
           className={`toggle-switch ${value ? 'active' : ''}`}
           disabled={!canManageConfig}
@@ -276,7 +276,7 @@ export const RuntimeConfigPage: React.FC = () => {
             placeholder="••••••••"
           />
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             icon={isHidden ? EyeOff : Eye}
             onClick={() => toggleValueVisibility(item.key)}

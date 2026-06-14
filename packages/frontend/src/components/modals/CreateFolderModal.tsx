@@ -32,7 +32,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
       title="新建文件夹"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             取消
           </Button>
           <Button onClick={onCreate}>创建</Button>

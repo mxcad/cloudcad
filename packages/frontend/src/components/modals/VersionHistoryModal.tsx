@@ -67,7 +67,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       title={`版本历史 - ${node?.name || '文件'}`}
       className="max-w-md"
       footer={
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="secondary" onClick={onClose}>
           关闭
         </Button>
       }
@@ -141,7 +141,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
 
                   {/* 查看按钮 */}
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={() => onOpenVersion(entry.revision)}
                     className="flex-shrink-0 ml-2"

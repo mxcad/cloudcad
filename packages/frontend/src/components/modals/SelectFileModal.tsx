@@ -257,7 +257,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       title="选择要分享的图纸"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             取消
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedId}>

@@ -67,7 +67,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
                 required={!user || user.hasPassword === true}
               />
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="xs"
                 icon={showPassword.old ? EyeOff : Eye}
                 onClick={() => onTogglePassword('old')}
@@ -77,7 +77,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             </div>
             <div className="field-hint">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="xs"
                 onClick={() => onNavigate('/forgot-password')}
               >
@@ -121,7 +121,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               required
             />
             <Button
-              variant="ghost"
+              variant="secondary"
               size="xs"
               icon={showPassword.new ? EyeOff : Eye}
               onClick={() => onTogglePassword('new')}
@@ -169,7 +169,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               required
             />
             <Button
-              variant="ghost"
+              variant="secondary"
               size="xs"
               icon={showPassword.confirm ? EyeOff : Eye}
               onClick={() => onTogglePassword('confirm')}

@@ -22,7 +22,7 @@ export const LanguageSwitcher: React.FC = () => {
       <Tooltip content={t('切换语言')}>
         <Menu.Trigger>
           <Button
-            variant="ghost"
+            variant="secondary"
             className="relative rounded-xl transition-all duration-300 ease-out
                        hover:scale-110 active:scale-95
                        hover:bg-[var(--bg-tertiary)]

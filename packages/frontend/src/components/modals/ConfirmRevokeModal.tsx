@@ -26,7 +26,7 @@ export const ConfirmRevokeModal: React.FC<ConfirmRevokeModalProps> = ({
           {message}
         </p>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <Button variant="ghost" onClick={onClose} disabled={loading}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>取消</Button>
           <Button
             variant="primary"
             onClick={onConfirm}

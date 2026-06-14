@@ -499,7 +499,7 @@ export const UserManagement = () => {
         className="max-w-md"
         footer={
           <div className="modal-footer">
-            <Button variant="ghost" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>取消</Button>
+            <Button variant="secondary" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>取消</Button>
             <Button
               onClick={async () => {
                 setCleanupLoading(true);

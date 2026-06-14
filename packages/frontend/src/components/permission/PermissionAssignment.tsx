@@ -209,7 +209,7 @@ export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
       contentClassName="config-modal-scroll"
       footer={
         <div className="config-modal-footer">
-          <Button variant="ghost" onClick={onClose} disabled={loading}>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
             取消
           </Button>
           <Button onClick={onSave} disabled={loading} data-tour="role-save-btn">

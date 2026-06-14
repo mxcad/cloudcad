@@ -154,7 +154,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   placeholder="请输入密码"
                 />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="xs"
                   icon={showPassword.confirm ? EyeOff : Eye}
                   onClick={() =>

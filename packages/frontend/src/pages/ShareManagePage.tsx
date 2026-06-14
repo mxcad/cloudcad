@@ -303,7 +303,7 @@ export const ShareManagePage: React.FC = () => {
               {search ? '尝试其他搜索词' : '去文件管理器选择图纸，右键即可分享'}
             </p>
             {search && (
-              <Button variant="ghost" size="sm" style={{ marginTop: '12px' }} onClick={handleClearSearch}>
+              <Button variant="secondary" size="sm" style={{ marginTop: '12px' }} onClick={handleClearSearch}>
                 清除搜索
               </Button>
             )}
@@ -396,21 +396,21 @@ export const ShareManagePage: React.FC = () => {
                       <td>
                         <div className="share-mgmt-action-cell">
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             icon={ExternalLink}
                             onClick={() => navigate(item.url)}
                             tooltip="打开文件"
                           />
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             icon={Edit3}
                             onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
                             tooltip="修改有效期"
                           />
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             icon={Trash2}
                             onClick={() => confirmRevoke(item.token)}

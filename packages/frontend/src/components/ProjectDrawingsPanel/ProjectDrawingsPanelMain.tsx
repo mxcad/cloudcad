@@ -875,7 +875,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           toolbarExtra={isLibraryMode ? undefined : (
             <div className="flex items-center gap-1">
               {clipboardItems.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={sidebarHandlePaste} tooltip="粘贴" className="text-primary border border-primary-dim mr-1">
+                <Button variant="secondary" size="sm" onClick={sidebarHandlePaste} tooltip="粘贴" className="text-primary border border-primary-dim mr-1">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
@@ -883,7 +883,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
                   </svg>
                 </Button>
               )}
-              <Button variant="ghost" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" />
+              <Button variant="secondary" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" />
             </div>
           )}
           loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}

@@ -84,7 +84,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
       title="选择下载格式"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose} disabled={loading}>
+          <Button variant="secondary" onClick={handleClose} disabled={loading}>
             取消
           </Button>
           <Button onClick={handleDownload} loading={loading}>

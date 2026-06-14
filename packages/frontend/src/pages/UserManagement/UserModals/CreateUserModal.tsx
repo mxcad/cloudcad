@@ -48,7 +48,7 @@ export function CreateUserModal({
       className="max-w-lg"
       footer={
         <div className="modal-footer">
-          <Button variant="ghost" onClick={onClose} disabled={loading}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>取消</Button>
           <Button onClick={handleSubmit} disabled={loading} className="submit-btn">
             {loading ? <><Loader2 size={18} className="animate-spin" />处理中...</> : '创建用户'}
           </Button>

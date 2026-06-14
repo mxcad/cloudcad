@@ -35,7 +35,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
   if (item.type === 'boolean') {
     return (
       <Button
-        variant="ghost"
+        variant="secondary"
         onClick={() => onValueChange(item.key, !value)}
         className={`toggle-switch ${value ? 'active' : ''}`}
         disabled={!canManageConfig}
@@ -71,7 +71,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           placeholder="••••••••"
         />
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           icon={isHidden ? EyeOff : Eye}
           onClick={() => onToggleVisibility(item.key)}

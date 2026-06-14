@@ -542,7 +542,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           zIndex={Z_LAYERS.TOAST - 1}
           footer={
             <>
-              <Button variant="ghost" onClick={handleCancel}>
+              <Button variant="secondary" onClick={handleCancel}>
                 {confirmState.cancelText}
               </Button>
               <Button onClick={handleConfirm}>
@@ -571,7 +571,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           zIndex={Z_LAYERS.TOAST - 1}
           footer={
             <>
-              <Button variant="ghost" onClick={handleThreeButtonCancel}>
+              <Button variant="secondary" onClick={handleThreeButtonCancel}>
                 {threeButtonState.cancelText}
               </Button>
               <Button variant="outline" onClick={handleThreeButtonDiscard}>
@@ -627,7 +627,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           zIndex={Z_LAYERS.TOAST - 1}
           footer={
             <>
-              <Button variant="ghost" onClick={handlePromptCancel}>
+              <Button variant="secondary" onClick={handlePromptCancel}>
                 {promptState.cancelText}
               </Button>
               <Button

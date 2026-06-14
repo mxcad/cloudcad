@@ -830,22 +830,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
 
           {isTrashView && (
-            <Button variant="ghost" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
+            <Button variant="secondary" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
           )}
 
           {!isTrashView && !isAtRoot && (
             <>
-              <Button variant="ghost" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>移动</Button>
-              <Button variant="ghost" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+              <Button variant="secondary" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+              <Button variant="secondary" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
             </>
           )}
 
           {isTrashView && (
-            <Button variant="ghost" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
+            <Button variant="secondary" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
           )}
 
           {!isTrashView && (
-            <Button variant="ghost" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
+            <Button variant="secondary" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
           )}
         </>
       )}
@@ -853,7 +853,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       {(!showSelectionBar || (!isAtRoot && !isTrashView)) && (
         <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={clipboardHandlePaste}
             disabled={clipboardItems.length === 0}
             style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }}
@@ -868,7 +868,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           </Button>
           {clipboardItems.length > 0 && (
             <Button
-              variant="ghost"
+              variant="secondary"
               onClick={clearClipboard}
               style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}
             >
@@ -880,7 +880,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         </div>
       )}
 
-      <Button variant="ghost" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
+      <Button variant="secondary" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
         取消
       </Button>
     </div>
@@ -1138,7 +1138,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         title="确认删除项目"
         footer={
           <>
-            <Button variant="ghost" onClick={cancelDelete} disabled={projectLoading}>
+            <Button variant="secondary" onClick={cancelDelete} disabled={projectLoading}>
               取消
             </Button>
             <Button

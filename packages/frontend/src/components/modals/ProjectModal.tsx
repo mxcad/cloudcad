@@ -36,7 +36,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       title={editingProject ? '编辑项目' : '创建新项目'}
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             取消
           </Button>
           <Button

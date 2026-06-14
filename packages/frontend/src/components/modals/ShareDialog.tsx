@@ -354,7 +354,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                     <div className="share-dialog-action-cell">
                       {!readOnly && (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="xs"
                           icon={Trash2}
                           onClick={() => confirmRevokeItem(item.token)}
@@ -411,7 +411,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       </Button>
 
       {items.length > 0 && (
-        <Button variant="ghost" onClick={() => setView('list')} className="share-dialog-action-btn">
+        <Button variant="secondary" onClick={() => setView('list')} className="share-dialog-action-btn">
           <ArrowLeft size={14} />
           返回分享列表
         </Button>
@@ -449,7 +449,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       )}
 
       <div className="share-dialog-created-actions">
-        <Button variant="ghost" onClick={confirmRevokeCurrent} disabled={revoking} style={{ flex: 1 }}>
+        <Button variant="secondary" onClick={confirmRevokeCurrent} disabled={revoking} style={{ flex: 1 }}>
           {revoking ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
           撤销分享
         </Button>

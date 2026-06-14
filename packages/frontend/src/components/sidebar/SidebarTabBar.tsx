@@ -46,7 +46,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
     <div className={styles.tabBar}>
       <Tooltip content={isExpanded ? "关闭侧边栏" : "展开侧边栏"} position="bottom" delay={100}>
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onClick={onCloseClick}
           aria-label={isExpanded ? "关闭侧边栏" : "展开侧边栏"}

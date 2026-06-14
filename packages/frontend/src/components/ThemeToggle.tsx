@@ -15,7 +15,7 @@ export const ThemeToggle: React.FC = () => {
   return (
     <Tooltip content={isDark ? '切换到亮色模式' : '切换到暗色模式'}>
       <Button
-        variant="ghost"
+        variant="secondary"
         onClick={toggleTheme}
         className="relative rounded-xl transition-all duration-300 ease-out
                    hover:scale-110 active:scale-95

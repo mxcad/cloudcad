@@ -102,7 +102,7 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
       </div>
 
       <div className="form-options">
-        <Button type="button" variant="ghost" size="sm" onClick={onForgotPassword}>
+        <Button type="button" variant="secondary" size="sm" onClick={onForgotPassword}>
           {t('忘记密码？')}
         </Button>
       </div>

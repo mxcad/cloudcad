@@ -118,7 +118,7 @@ export function UserTable({
                   onClick={() => onOpenQuota(user)}
                   className="quota-btn"
                   title="配置存储配额"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                 >
                   配额
@@ -139,7 +139,7 @@ export function UserTable({
                     onClick={() => onEdit(user)}
                     className="action-btn edit"
                     title="编辑用户"
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                   >
                     编辑
@@ -149,7 +149,7 @@ export function UserTable({
                       onClick={() => onRestore(user.id)}
                       className="action-btn restore"
                       title="恢复用户"
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                     >
                       恢复
@@ -159,7 +159,7 @@ export function UserTable({
                       onClick={() => onDelete(user.id)}
                       className="action-btn delete"
                       title="注销"
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                     >
                       注销

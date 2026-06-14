@@ -248,7 +248,7 @@ export const ResetPassword: React.FC = () => {
                 />
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   className="absolute right-4"
                   icon={showPassword ? EyeOff : Eye}
@@ -274,7 +274,7 @@ export const ResetPassword: React.FC = () => {
                 />
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   className="absolute right-4"
                   icon={showConfirmPassword ? EyeOff : Eye}
@@ -291,7 +291,7 @@ export const ResetPassword: React.FC = () => {
 
           {/* 返回登录 */}
           <div className="form-footer">
-            <Button variant="ghost" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
+            <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
               返回登录
             </Button>
           </div>

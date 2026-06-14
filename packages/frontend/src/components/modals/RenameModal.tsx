@@ -45,7 +45,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
       title={`重命名${editingNode?.isFolder ? '文件夹' : '文件'}`}
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             取消
           </Button>
           <Button onClick={onRename}>保存</Button>

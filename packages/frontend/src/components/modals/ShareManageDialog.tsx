@@ -205,21 +205,21 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                       <td>
                         <div className="share-dialog-action-cell">
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             icon={ExternalLink}
                             onClick={() => window.open(item.url, '_blank')}
                             tooltip="打开文件"
                           />
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             icon={Edit3}
                             onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
                             tooltip="修改有效期"
                           />
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="xs"
                             icon={Trash2}
                             onClick={() => confirmRevoke(item.token)}

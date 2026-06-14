@@ -439,7 +439,7 @@ export const RoleManagement = () => {
         />
 
         {/* 刷新按钮 */}
-        <Button variant="ghost" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" tooltip="刷新角色数据" />
+        <Button variant="secondary" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" tooltip="刷新角色数据" />
       </div>
 
       {/* Tab 切换 */}
@@ -497,7 +497,7 @@ export const RoleManagement = () => {
                   </div>
                   {!role.isSystem && canDeleteRoles && (
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                       onClick={() => handleDeleteProjectRole(role.id)}
                       className="delete-btn"
@@ -571,7 +571,7 @@ export const RoleManagement = () => {
                   </div>
                   {!role.isSystem && canDeleteRoles && (
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                       onClick={() => handleDeleteSystemRole(role.id)}
                       className="delete-btn"
@@ -655,7 +655,7 @@ export const RoleManagement = () => {
         footer={
           <div className="modal-footer">
             <Button
-              variant="ghost"
+              variant="secondary"
               onClick={() => {
                 setDeleteConfirmOpen(false);
                 setRoleToDelete(null);

@@ -424,7 +424,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
             {/* 移动端关闭按钮 */}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               icon={X}
               className="lg:hidden"
@@ -693,7 +693,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           <div className="flex items-center gap-4 flex-1">
             {/* 移动端菜单按钮 */}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               icon={MenuIcon}
               className="lg:hidden"
@@ -734,7 +734,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               <div className="p-0.5">
                 <Tooltip content="系统设置">
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     className="relative rounded-xl transition-all duration-300 ease-out
                                hover:scale-110 active:scale-95
                                hover:bg-[var(--bg-tertiary)]
@@ -797,7 +797,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         footer={
           <>
             <Button
-              variant="ghost"
+              variant="secondary"
               onClick={() => setShowLogoutConfirm(false)}
               disabled={isLoggingOut}
             >

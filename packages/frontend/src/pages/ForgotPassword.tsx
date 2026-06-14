@@ -565,7 +565,7 @@ export const ForgotPassword: React.FC = () => {
 
           {/* 返回登录 */}
           <div className="form-footer">
-            <Button variant="ghost" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
+            <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
               返回登录
             </Button>
           </div>

@@ -242,7 +242,7 @@ export const SystemMonitorPage: React.FC = () => {
         <div className="error-banner">
           <AlertTriangle size={20} />
           <span>{error}</span>
-          <Button variant="ghost" onClick={fetchSystemHealth}>重试</Button>
+          <Button variant="secondary" onClick={fetchSystemHealth}>重试</Button>
         </div>
       )}
 

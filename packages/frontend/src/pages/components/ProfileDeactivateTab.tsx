@@ -177,7 +177,7 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
                   placeholder="请输入密码"
                 />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="xs"
                   icon={showPassword.confirm ? EyeOff : Eye}
                   onClick={() => onTogglePassword('confirm')}

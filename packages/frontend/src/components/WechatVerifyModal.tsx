@@ -19,7 +19,7 @@ export const WechatVerifyModal: React.FC<WechatVerifyModalProps> = ({
       onClose={onClose}
       title="微信验证"
       footer={
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="secondary" onClick={onClose}>
           关闭
         </Button>
       }

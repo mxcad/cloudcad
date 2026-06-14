@@ -68,7 +68,7 @@ export const CollabShareModal: React.FC<CollabShareModalProps> = ({
             {shareUrl}
           </span>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             icon={copied ? Check : Copy}
             onClick={handleCopy}

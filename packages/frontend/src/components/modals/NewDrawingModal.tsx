@@ -32,7 +32,7 @@ export const NewDrawingModal: React.FC<NewDrawingModalProps> = ({
       title="新建图纸"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             取消
           </Button>
           <Button onClick={onCreate}>创建</Button>

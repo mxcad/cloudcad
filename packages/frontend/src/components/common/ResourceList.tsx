@@ -388,7 +388,7 @@ const CascadeCategorySelector: React.FC<{
         <>
           {/* 选择按钮 */}
           <Button
-            variant="ghost"
+            variant="secondary"
             className={`${styles.cascadeButton} ${isOpen ? styles.open : ''} ${selectedPath.length > 0 ? styles.active : ''}`}
             onClick={() => setIsOpen(!isOpen)}
           >

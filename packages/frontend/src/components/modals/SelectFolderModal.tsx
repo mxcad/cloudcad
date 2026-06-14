@@ -170,7 +170,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       title="选择目标文件夹"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose}>
             取消
           </Button>
           <Button

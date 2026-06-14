@@ -127,7 +127,7 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
         {/* 操作按钮 */}
         <div className="flex items-center justify-center gap-4">
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={onDismiss}
           >
             稍后再说

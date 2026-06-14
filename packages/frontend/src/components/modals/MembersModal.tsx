@@ -308,7 +308,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         onClose={onClose}
         title="项目成员"
         footer={
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             关闭
           </Button>
         }
@@ -754,7 +754,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           footer={
             <>
               <Button
-                variant="ghost"
+                variant="secondary"
                 onClick={() => {
                   setShowTransferModal(false);
                   setTransferTarget(null);

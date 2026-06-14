@@ -28,7 +28,7 @@ export function DeleteUserConfirm({
       title="确认删除用户"
       footer={
         <div className="modal-footer">
-          <Button variant="ghost" onClick={onClose} disabled={loading}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>取消</Button>
           <Button onClick={onConfirm} disabled={loading} className="danger-btn">
             {loading ? (
               <><Loader2 size={18} className="animate-spin" />删除中...</>

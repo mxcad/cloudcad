@@ -41,7 +41,7 @@ export const LoginPrompt: React.FC<LoginPromptProps> = ({
       title="需要登录"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             稍后再说
           </Button>
           <Button variant="primary" onClick={onLogin}>

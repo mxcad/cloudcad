@@ -151,7 +151,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
         className="max-w-md"
         footer={
           <>
-            <Button variant="ghost" onClick={handleClose} disabled={saving}>
+            <Button variant="secondary" onClick={handleClose} disabled={saving}>
               取消
             </Button>
             <Button onClick={handleConfirm} disabled={saving}>

@@ -31,7 +31,7 @@ export const RegistrationClosed: React.FC = () => {
             <br />
             如有疑问，请联系管理员。
           </p>
-          <Button variant="ghost" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
+          <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
             返回登录
           </Button>
         </div>

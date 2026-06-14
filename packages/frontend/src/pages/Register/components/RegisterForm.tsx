@@ -338,7 +338,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       <div className="form-footer">
         <p className="login-text">
           已有账户？
-          <Button onClick={() => navigate('/login')} variant="ghost" size="lg" className="login-link">
+          <Button onClick={() => navigate('/login')} variant="secondary" size="lg" className="login-link">
              立即登录
            </Button>
         </p>
