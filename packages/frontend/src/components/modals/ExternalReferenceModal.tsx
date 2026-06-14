@@ -139,14 +139,18 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       footer={
         <div data-tour="xref-actions" className="flex items-center justify-end gap-2">
           <Button
-            variant="secondary"
             onClick={() => {
-              onClose();
+              if (allSuccess) {
+                onComplete();
+              } else {
+                onSkip();
+              }
             }}
             disabled={loading}
+            data-tour="xref-complete-btn"
             className="min-w-[72px] h-8"
           >
-            取消
+            继续打开
           </Button>
           {files.length > 0 && (
             <Button
@@ -170,20 +174,6 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               )}
             </Button>
           )}
-          <Button
-            onClick={() => {
-              if (allSuccess) {
-                onComplete();
-              } else {
-                onSkip();
-              }
-            }}
-            disabled={loading}
-            data-tour="xref-complete-btn"
-            className="min-w-[72px] h-8"
-          >
-            {allSuccess ? '完成' : '关闭'}
-          </Button>
         </div>
       }
     >

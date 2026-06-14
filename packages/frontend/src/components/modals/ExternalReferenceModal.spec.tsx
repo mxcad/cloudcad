@@ -135,8 +135,7 @@ describe('ExternalReferenceModal', () => {
     render(<ExternalReferenceModal {...defaultProps} />);
 
     expect(screen.getByText('选择并上传')).not.toBeNull();
-    expect(screen.getByText('取消')).not.toBeNull();
-    expect(screen.getByText('关闭')).not.toBeNull();
+    expect(screen.getByText('继续打开')).not.toBeNull();
   });
 
   it('应该在所有文件上传成功时显示成功提示', () => {
@@ -257,10 +256,10 @@ describe('ExternalReferenceModal', () => {
     expect(progressText).not.toBeNull();
   });
 
-  it('应该在 loading 时禁用取消按钮', () => {
+  it('应该在 loading 时禁用继续打开按钮', () => {
     render(<ExternalReferenceModal {...defaultProps} loading={true} />);
 
-    const cancelButton = screen.getByRole('button', { name: /取消/ });
+    const cancelButton = screen.getByRole('button', { name: /继续打开/ });
     expect(cancelButton.getAttribute('disabled')).toBe('');
   });
 
