@@ -498,8 +498,11 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (nodeId) loadNodes(nodeId, currentPage, searchQuery, false);
   }, [visible, libraryRootId, loadRootId, nodes, selectedCategoryPath]);
 
-  // Reset on libraryType change
+  // Reset on libraryType change (skip on mount to avoid race with init effect)
+  const prevLibraryTypeRef = useRef(libraryType);
   useEffect(() => {
+    if (prevLibraryTypeRef.current === libraryType) return;
+    prevLibraryTypeRef.current = libraryType;
     listInitializedRef.current = false;
     resetNodes(); setBreadcrumb([]);
     setSearchQuery('');

@@ -872,6 +872,7 @@ export const CADEditorDirect: React.FC = () => {
             mxcadManager.showMxCAD(true);
             showGlobalLoading('正在加载图纸...');
             await mxcadManager.openFile(mxcadFileUrl);
+            hideGlobalLoading();
             loadedFileUrlRef.current = mxcadFileUrl;
             currentFileIdRef.current = fileId;
             setLoading(false);
