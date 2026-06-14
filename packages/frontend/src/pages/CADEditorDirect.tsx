@@ -1606,7 +1606,6 @@ export const CADEditorDirect: React.FC = () => {
     if (!pdfExportBlob) return;
     try {
       setPdfExporting(true);
-      setShowPdfExportModal(false);
 
       const file = new File([pdfExportBlob], 'export.mxweb', { type: 'application/octet-stream' });
       const hash = await calculateFileHash(file);
@@ -1638,6 +1637,7 @@ export const CADEditorDirect: React.FC = () => {
         }],
       });
 
+      setShowPdfExportModal(false);
       setPdfExportBlob(null);
       showToast('PDF 文件已保存到本地', 'success');
     } catch (error) {
@@ -1653,7 +1653,6 @@ export const CADEditorDirect: React.FC = () => {
     if (!dwgExportBlob) return;
     try {
       setDwgExporting(true);
-      setShowDwgExportModal(false);
 
       const file = new File([dwgExportBlob], 'export.mxweb', { type: 'application/octet-stream' });
       const hash = await calculateFileHash(file);
@@ -1681,6 +1680,7 @@ export const CADEditorDirect: React.FC = () => {
         }],
       });
 
+      setShowDwgExportModal(false);
       setDwgExportBlob(null);
       showToast(`${dwgExportFormat.toUpperCase()} 文件已保存到本地`, 'success');
     } catch (error) {

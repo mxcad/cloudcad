@@ -52,6 +52,7 @@ export const DwgExportModal: React.FC<DwgExportModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
+      closeOnOverlayClick={!loading}
       title={title}
       footer={
         <>

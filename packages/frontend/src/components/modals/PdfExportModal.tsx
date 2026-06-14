@@ -52,6 +52,7 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
+      closeOnOverlayClick={!loading}
       title="导出 PDF"
       footer={
         <>

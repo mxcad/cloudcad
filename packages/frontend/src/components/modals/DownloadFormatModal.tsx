@@ -81,6 +81,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
+      closeOnOverlayClick={!loading}
       title="选择下载格式"
       footer={
         <>
