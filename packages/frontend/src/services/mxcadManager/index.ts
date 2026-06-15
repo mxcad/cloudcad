@@ -2194,10 +2194,13 @@ class MxCADInstanceManager {
           const thumbnailResult = await thumbnailControllerCheckThumbnail({ path: { nodeId: fileId } });
 
           if (!thumbnailResult?.data?.exists) {
-            const imageData = await this.generateThumbnail();
+            setTimeout(async ()=> {
+              const imageData = await this.generateThumbnail();
             if (imageData) {
               await this.uploadThumbnail(fileId, imageData);
             }
+            }, 1000)
+            
           }
         } catch (error) {
           handleError(error, 'mxcadManager: setupFileOpenListener thumbnail');

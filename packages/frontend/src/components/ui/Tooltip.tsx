@@ -331,7 +331,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   return (
     <div
       ref={triggerRef}
-      className="relative inline-flex"
+      className="relative"
       style={{ flexShrink: 0 }}
       {...getEventHandlers()}
     >
