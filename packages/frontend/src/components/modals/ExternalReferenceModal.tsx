@@ -138,20 +138,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
       contentClassName="p-0"
       footer={
         <div data-tour="xref-actions" className="flex items-center justify-end gap-2">
-          <Button
-            onClick={() => {
-              if (allSuccess) {
-                onComplete();
-              } else {
-                onSkip();
-              }
-            }}
-            disabled={loading}
-            data-tour="xref-complete-btn"
-            className="min-w-[72px] h-8"
-          >
-            继续打开
-          </Button>
+
           {files.length > 0 && (
             <Button
               onClick={() => {
@@ -174,6 +161,20 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               )}
             </Button>
           )}
+          <Button
+            onClick={() => {
+              if (allSuccess) {
+                onComplete();
+              } else {
+                onSkip();
+              }
+            }}
+            disabled={loading}
+            data-tour="xref-complete-btn"
+            className="min-w-[72px] h-8"
+          >
+            继续打开
+          </Button>
         </div>
       }
     >
@@ -182,7 +183,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
         {files.length > 0 ? (
           <div
             className="overflow-hidden"
-            style={{  maxHeight: '300px', overflowY: 'auto' }}
+            style={{ maxHeight: '300px', overflowY: 'auto' }}
             data-tour="xref-list"
           >
             <table className="w-full">
@@ -217,8 +218,8 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                         <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{
                           backgroundColor: file.uploadState === 'success' || (file.exists && file.uploadState === 'notSelected') ? 'var(--success-dim)' :
                             file.uploadState === 'fail' ? 'var(--error-dim)' :
-                            file.uploadState === 'uploading' ? 'var(--info-dim)' :
-                            'var(--bg-tertiary)'
+                              file.uploadState === 'uploading' ? 'var(--info-dim)' :
+                                'var(--bg-tertiary)'
                         }}>
                           {getStatusIcon(file)}
                         </div>
@@ -249,12 +250,12 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                       {file.uploadState === 'uploading' ? (
                         <div className="flex items-center justify-end gap-1.5">
                           <div className="w-12 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
-                            <div 
-                              className="h-full rounded-full transition-all duration-300" 
-                              style={{ 
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
                                 width: `${file.progress}%`,
                                 backgroundColor: 'var(--primary-500)'
-                              }} 
+                              }}
                             />
                           </div>
                           <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
@@ -292,12 +293,12 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               </span>
             </div>
             <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-default)' }}>
-              <div 
-                className="h-full transition-all duration-300" 
-                style={{ 
+              <div
+                className="h-full transition-all duration-300"
+                style={{
                   width: `${(files.filter((f) => f.uploadState === 'success').length / files.length) * 100}%`,
                   backgroundColor: 'var(--primary-500)'
-                }} 
+                }}
               />
             </div>
           </div>
