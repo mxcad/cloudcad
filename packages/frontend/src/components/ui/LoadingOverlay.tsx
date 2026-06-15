@@ -22,7 +22,7 @@ export const LoadingOverlay = () => {
   const isCADRoute =
     location.pathname === '/' || location.pathname.startsWith('/cad-editor');
 
-  if (!globalLoading) return null;
+  if (!globalLoading || !isCADRoute) return null;
 
   return createPortal(
     <div
@@ -37,8 +37,8 @@ export const LoadingOverlay = () => {
         <div
           className="animate-spin rounded-full"
           style={{
-            width: 48,
-            height: 48,
+            width: 64,
+            height: 64,
             borderWidth: 4,
             borderStyle: 'solid',
             borderColor: 'rgba(24, 103, 192, 0.2)',

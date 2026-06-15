@@ -210,6 +210,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           onComplete={externalReferenceUpload.complete}
           onSkip={externalReferenceUpload.skip}
           onClose={externalReferenceUpload.close}
+          isCADEditor={false}
         />
       </div>
     );

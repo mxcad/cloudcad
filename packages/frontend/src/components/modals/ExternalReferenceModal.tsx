@@ -20,12 +20,14 @@ interface ExternalReferenceModalProps {
   loading: boolean;
   /** 选择文件并自动上传回调 */
   onSelectAndUpload: () => void;
-  /** 完成上传回调 */
+  /** 完成上传回调（CAD编辑器场景：继续打开文件） */
   onComplete: () => void;
-  /** 跳过上传回调 */
+  /** 跳过上传回调（CAD编辑器场景：跳过并打开文件） */
   onSkip: () => void;
   /** 关闭模态框回调 */
   onClose: () => void;
+  /** 是否在 CAD 编辑器页面，影响按钮文字 */
+  isCADEditor?: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   onComplete,
   onSkip,
   onClose,
+  isCADEditor = true,
 }) => {
   const allSuccess =
     files.length > 0 && files.every((f) => f.uploadState === 'success');
@@ -163,17 +166,21 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           )}
           <Button
             onClick={() => {
-              if (allSuccess) {
-                onComplete();
+              if (isCADEditor) {
+                if (allSuccess) {
+                  onComplete();
+                } else {
+                  onSkip();
+                }
               } else {
-                onSkip();
+                onClose();
               }
             }}
             disabled={loading}
             data-tour="xref-complete-btn"
             className="min-w-[72px] h-8"
           >
-            继续打开
+            {isCADEditor ? '继续打开' : '完成'}
           </Button>
         </div>
       }

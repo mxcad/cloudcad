@@ -629,6 +629,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           onComplete={externalReferenceUpload.complete}
           onSkip={externalReferenceUpload.skip}
           onClose={externalReferenceUpload.close}
+          isCADEditor={false}
         />
       </Card>
     </>
@@ -877,6 +878,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         onComplete={externalReferenceUpload.complete}
         onSkip={externalReferenceUpload.skip}
         onClose={externalReferenceUpload.close}
+        isCADEditor={false}
       />
     </div>
     </>

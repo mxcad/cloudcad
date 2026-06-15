@@ -1844,6 +1844,7 @@ export const CADEditorDirect: React.FC = () => {
         onComplete={externalReferenceUpload.complete}
         onSkip={externalReferenceUpload.skip}
         onClose={externalReferenceUpload.skip}
+        isCADEditor={true}
       />
 
       {/* 拖拽文件提示层 */}

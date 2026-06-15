@@ -69,6 +69,7 @@ vi.mock('lucide-react', () => ({
   Loader2: () => <span data-testid="icon-loader">Loader2</span>,
   Upload: () => <span data-testid="icon-upload">Upload</span>,
   AlertTriangle: () => <span data-testid="icon-alert-triangle">AlertTriangle</span>,
+  AlertCircle: () => <span data-testid="icon-alert-circle">AlertCircle</span>,
 }));
 
 describe('ExternalReferenceModal', () => {
