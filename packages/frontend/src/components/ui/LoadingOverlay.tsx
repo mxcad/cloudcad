@@ -32,6 +32,21 @@ export const LoadingOverlay = () => {
         pointerEvents: isCADRoute ? 'auto' : 'none',
       }}
     >
+      {/* 全局居中圆形加载动画 */}
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div
+          className="animate-spin rounded-full"
+          style={{
+            width: 48,
+            height: 48,
+            borderWidth: 4,
+            borderStyle: 'solid',
+            borderColor: 'rgba(24, 103, 192, 0.2)',
+            borderTopColor: '#1867C0',
+          }}
+        />
+      </div>
+
       {/* 底部横条容器 - 高度 20px */}
       <div className="fixed bottom-0 left-0 right-0 h-[20px] bg-gray-900/80 flex items-center justify-center px-4">
         {/* 顶部细线进度条 - 高度 3px */}
