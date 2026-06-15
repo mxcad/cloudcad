@@ -609,7 +609,7 @@ export async function openUploadedFile(
   uploadTargetNodeId: string
 ): Promise<void> {
   exitCollaborationIfNeeded();
-  setLoadingMessage(DEFAULT_MESSAGES.OPENING_FILE);
+  showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
 
   // 等待文件转换完成
   const fileInfo = await waitForFileReady(newNodeId);
@@ -631,6 +631,7 @@ export async function openUploadedFile(
 
   const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
   await mxcadManager.openFile(mxcadFileUrl);
+  hideGlobalLoading();
 
   // 派发文件打开事件，通知 URL 更新
   window.dispatchEvent(
@@ -669,6 +670,8 @@ export async function openLibraryDrawing(
       // 用户取消或保存失败，不继续打开新文件
       return;
     }
+
+    showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
 
     // 2. 如果没有传入 fileName 和 nodePath，从 API 获取
     let finalFileName = fileName;
@@ -759,6 +762,8 @@ export async function openLibraryBlock(
     if (!canProceed) {
       return;
     }
+
+    showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
 
     // 2. 如果没有传入 fileName 和 nodePath，从 API 获取
     let finalFileName = fileName;
