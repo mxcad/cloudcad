@@ -89,7 +89,7 @@ export class FileConversionUploadService {
 
   async uploadAndConvertFile(
     options: UploadFileOptions
-  ): Promise<{ ret: string; tz?: boolean }> {
+  ): Promise<{ ret: string; tz?: boolean; nodeId?: string }> {
     const { filePath, hash, name, size, context } = options;
 
     try {
@@ -154,7 +154,7 @@ export class FileConversionUploadService {
           this.logger.log(`[uploadAndConvertFile] 状态转换: PROCESSING → COMPLETED (${newNodeId})`);
         }
         await this.handleFileNodeCreation(name, hash, size, filePath, context, newNodeId);
-        return { ret: MxUploadReturn.kOk, tz: ret?.tz };
+        return { ret: MxUploadReturn.kOk, tz: ret?.tz, nodeId: newNodeId };
       } else {
         // 转换失败 → FAILED → 删除节点
         if (newNodeId) {
@@ -496,7 +496,7 @@ export class FileConversionUploadService {
           await this.handleFileNodeCreation(name, hash, size, filePath, context, cadNodeId);
         }
 
-        return { ret: MxUploadReturn.kOk, tz: ret?.tz };
+        return { ret: MxUploadReturn.kOk, tz: ret?.tz, nodeId: cadNodeId };
       } else {
         // 转换失败 → FAILED → 删除节点
         if (cadNodeId) {
@@ -687,7 +687,7 @@ export class FileConversionUploadService {
           skipFileCopy: true,
         });
 
-        nodeId = nodeId;
+        nodeId = newNode.id;
         this.logger.log(`[handleFileNodeCreation] 节点创建成功: ${nodeId}`);
       }
 
