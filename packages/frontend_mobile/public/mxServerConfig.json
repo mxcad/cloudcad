@@ -8,5 +8,7 @@
   "aiConfig": {
     "?aiUrl": "ai服务地址",
     "aiUrl": "http://localhost:7900"
-  }
+  },
+  "isAutomaticJumpToDesktopPage": true,
+  "desktopPageUrl": "/cad-editor"
 }

@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { Suspense, lazy, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import {
   Navigate,
   Route,
@@ -30,6 +30,8 @@ import { BrandProvider } from './contexts/BrandContext';
 import { useRuntimeConfig } from './contexts/RuntimeConfigContext';
 import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
 import NoPermissionPage from './components/ui/NoPermissionPage';
+import { isMobile } from './utils/isMobile';
+import { getMobileRedirectConfig, getMobileRedirectUrl } from './utils/mobileRedirect';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -156,8 +158,55 @@ function CADEditorRouteGuard() {
 
   // 跟踪 CAD 是否已首次加载。加载后必须永久驻留 DOM。
   const everLoadedRef = useRef(false);
+
+  // 移动端跳转检测：首次进入 CAD 路由时，检测设备是否为移动端，
+  // 若配置开启自动跳转，则重定向到移动端 H5 编辑器。
+  const [mobileChecking, setMobileChecking] = useState(true);
+  const mobileCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isCADRoute || mobileCheckedRef.current) return;
+    mobileCheckedRef.current = true;
+
+    if (!isMobile()) {
+      setMobileChecking(false);
+      return;
+    }
+
+    getMobileRedirectConfig()
+      .then((config) => {
+        const redirectUrl = getMobileRedirectUrl(config);
+        if (redirectUrl) {
+          window.location.replace(redirectUrl);
+        }
+      })
+      .finally(() => {
+        setMobileChecking(false);
+      });
+  }, [isCADRoute]);
+
   if (isCADRoute) {
     everLoadedRef.current = true;
+  }
+
+  if (mobileChecking && isCADRoute) {
+    return (
+      <div
+        className="fixed inset-0 flex flex-col items-center justify-center"
+        style={{ background: 'var(--bg-primary)' }}
+      >
+        <div
+          className="animate-spin rounded-full h-8 w-8"
+          style={{
+            border: '2px solid var(--border-strong)',
+            borderTopColor: 'var(--accent-600)',
+          }}
+        />
+        <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
+          正在加载 CAD 编辑器...
+        </p>
+      </div>
+    );
   }
 
   if (!isCADRoute && !everLoadedRef.current) return null;
