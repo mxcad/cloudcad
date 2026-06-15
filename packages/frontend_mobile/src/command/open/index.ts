@@ -3,19 +3,27 @@ import { showFilePicker, FilePickerResult } from "@/composables/useNativeFilePic
 import { showLoadingToast } from "vant";
 import { showToastOnce } from "@/utils/toast";
 import { checkPublicFileExternalRefs } from "@/composables/useFileLoader";
+import { useEditorState } from "@/composables/useEditorState";
 import { FetchAttributes, MxCpp } from "mxcad";
 import { addCommand } from "@/plugins/mxcad/command";
 import { t } from "@/languages";
 
 async function OpenDwgImp(param: FilePickerResult, noCache: boolean): Promise<boolean> {
+    const editorState = useEditorState();
     const fileHash = param.hash;
     const type = param.type;
     const file = param.file;
 
     if (type === "mxweb") {
         const filePath = URL.createObjectURL(file.source);
-        setTimeout(() => openMxWeb(filePath));
-        return true;
+        editorState.reset();
+        const opened = await openMxWeb(filePath);
+        if (opened) {
+            editorState.setIsActive(true);
+            editorState.setFileName(param.name);
+            editorState.setIsPublicFile(true);
+        }
+        return opened;
     }
 
     // 外部参照检查 (仅新上传的文件需要)
@@ -26,6 +34,7 @@ async function OpenDwgImp(param: FilePickerResult, noCache: boolean): Promise<bo
     }
 
     // 打开文件
+    editorState.reset();
     const toast = showLoadingToast(t("打开图纸中") + "...");
     const filePath = "/api/v1/public-file/access/" + fileHash + "." + type + ".mxweb";
 
@@ -43,6 +52,9 @@ async function OpenDwgImp(param: FilePickerResult, noCache: boolean): Promise<bo
         mxcad.openWebFile(filePath, (iRet) => {
             toast.close();
             if (iRet === 0) {
+                editorState.setIsActive(true);
+                editorState.setFileName(param.name);
+                editorState.setIsPublicFile(true);
                 if (Date.now() - openTime > 5000) {
                     showToastOnce(t("更新显示") + "...");
                 }

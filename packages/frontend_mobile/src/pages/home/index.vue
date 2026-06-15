@@ -1,6 +1,6 @@
     <script setup lang="ts">
 
-    import { onMounted, onBeforeUnmount, ref, unref } from 'vue';
+    import { onMounted, onBeforeUnmount, ref, unref, computed } from 'vue';
     import { t } from '@/languages';
     import { createMxCAD } from '../../plugins/mxcad';
     import { callCommand } from '@/plugins/mxcad/command';
@@ -24,12 +24,11 @@
     import { useEditorState } from '../../composables/useEditorState';
     import { useSave } from '../../composables/useSave';
     import { useUser } from '../../composables/useUser';
-    import { uploadPublicFile } from '../../services/uploadService';
-    import { openMxWeb } from '../../plugins/mxcad/openMxWeb';
-    import { checkDuplicateFile, showDuplicateFileDialog } from '../../services/checkService';
+
     import { showToast, showConfirmDialog } from 'vant';
-import { handleApiError } from '@/utils/apiConfig';
-    import CommitMessageDialog from './components/CommitMessageDialog.vue';
+import { showToastOnce } from '@/utils/toast';
+import { exitCollaborationIfNeeded } from '../../composables/useCooperate';
+import CommitMessageDialog from './components/CommitMessageDialog.vue';
     import SaveAsSheet from './components/SaveAsSheet.vue';
     import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
     import LoginPromptPopup from './components/LoginPromptPopup.vue';
@@ -156,9 +155,11 @@ import MxToolbar from '@/components/MxToolbar.vue';
         getVersionFromUrl,
     } = useFileLoader()
     const editorState = useEditorState()
-    const drawName = ref("")
-    const currentVersion = ref<number | undefined>(getVersionFromUrl())
-    const isPublicFile = ref(!!getHashFromUrl())
+    const drawName = computed(() => {
+      return editorState.state.fileName
+    })
+    const currentVersion = computed(() => editorState.state.currentVersion)
+    const isPublicFile = computed(() => editorState.state.isPublicFile)
 
     const { saving, save: saveAction } = useSave()
     const { isAuthenticated } = useUser()
@@ -169,10 +170,8 @@ import MxToolbar from '@/components/MxToolbar.vue';
     const showVersionHistory = ref(false)
     const showLoginPrompt = ref(false)
     const pendingActionAfterLogin = ref<'save' | 'version-history' | null>(null)
-    const fileInput = ref<HTMLInputElement | null>(null)
     const showCooperate = ref(false)
     const showShare = ref(false)
-    const uploading = ref(false)
 
     checkLibraryPermissions().then(result => {
         canManageLibrary.value = result.canManageDrawing || result.canManageBlock
@@ -252,108 +251,35 @@ import MxToolbar from '@/components/MxToolbar.vue';
     }
 
     async function handleNewFile() {
+        exitCollaborationIfNeeded()
+
         if (editorState.state.isModified) {
             try {
                 await showConfirmDialog({
                     title: '未保存的更改',
-                    message: '当前图纸有未保存的更改，新建图纸将丢失这些更改。',
-                    confirmButtonText: '继续新建',
-                    cancelButtonText: '取消',
+                    message: '当前图纸有未保存的更改，是否保存？',
+                    confirmButtonText: '保存',
+                    cancelButtonText: '不保存',
                 })
+                try {
+                    const success = await saveAction()
+                    if (!success) return
+                } catch {
+                    return
+                }
             } catch {
-                return
+                editorState.setIsModified(false)
             }
         }
+
+        editorState.resetNewFile()
+
+        editorState.setNewFileInfo()
 
         const mxcad = MxCpp.App.getCurrentMxCAD()
         mxcad.newFile()
 
-        editorState.reset()
-
-        const url = new URL(window.location.href)
-        url.searchParams.delete('fileId')
-        url.searchParams.delete('nodeId')
-        url.searchParams.delete('hash')
-        url.searchParams.delete('v')
-        window.history.replaceState(null, '', url.pathname + url.search)
-
-        drawName.value = ''
-        currentVersion.value = undefined
-        isPublicFile.value = false
-
-        showToast('已新建空白图纸')
-    }
-
-    async function handleOpenFile() {
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = '.dwg,.dxf,.mxweb'
-        input.style.display = 'none'
-        document.body.appendChild(input)
-        input.onchange = async () => {
-            const file = input.files?.[0]
-            document.body.removeChild(input)
-            if (!file) return
-
-            const hash = await (await import('../../utils/hashUtils')).calculateFileHash(file)
-            const { isDuplicate } = await checkDuplicateFile(hash, file.name, file.size)
-            if (isDuplicate) {
-                const { action } = await showDuplicateFileDialog(file.name)
-                if (action === 'cancel') return
-                if (action === 'open-existing') {
-                    uploading.value = true
-                    showToast('文件已存在，正在打开...')
-                    const apiBaseUrl = (await import('../../utils/apiConfig')).getApiBaseUrl()
-                    const baseUrl = (() => { try { return new URL(apiBaseUrl).origin } catch { return '' } })()
-                    const url = `${baseUrl}/api/v1/public-file/access/${hash}.mxweb?t=${Date.now()}`
-                    editorState.reset()
-                    const opened = await openMxWeb(url)
-                    if (opened) {
-                        drawName.value = file.name
-                        editorState.setIsActive(true)
-                        editorState.setFileName(file.name)
-                        isPublicFile.value = true
-                        const urlObj = new URL(window.location.href)
-                        urlObj.searchParams.set('hash', hash)
-                        window.history.replaceState(null, '', urlObj.pathname + urlObj.search)
-                    } else {
-                        showToast('打开文件失败')
-                    }
-                    uploading.value = false
-                    return
-                }
-            }
-
-            uploading.value = true
-            showToast('正在上传文件...')
-            try {
-                const result = await uploadPublicFile(file)
-                if (!result) {
-                    showToast('上传失败')
-                    uploading.value = false
-                    return
-                }
-                showToast(result.isCached ? '文件已存在，正在打开...' : '上传完成，正在打开...')
-                editorState.reset()
-                const opened = await openMxWeb(result.url)
-                if (opened) {
-                    drawName.value = result.fileName
-                    editorState.setIsActive(true)
-                    editorState.setFileName(result.fileName)
-                    isPublicFile.value = true
-                    currentVersion.value = undefined
-                    const url = new URL(window.location.href)
-                    url.searchParams.set('hash', result.hash)
-                    window.history.replaceState(null, '', url.pathname + url.search)
-                } else {
-                    showToast('打开文件失败')
-                }
-            } catch (e) {
-                handleApiError(e, '上传或打开文件失败')
-            }
-            uploading.value = false
-        }
-        input.click()
+        showToastOnce('已新建空白图纸')
     }
 
     const handleShowCollaborate = () => { showCooperate.value = true }
@@ -389,22 +315,20 @@ import MxToolbar from '@/components/MxToolbar.vue';
         if (fileId) {
             const ok = await loadByNodeId(fileId)
             if (ok) {
-                drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+                editorState.setCurrentVersion(getVersionFromUrl())
                 checkFileExternalRefs(fileId)
             }
         } else if (fileHash && isHashLike(fileHash)) {
-            isPublicFile.value = true
+            editorState.setIsPublicFile(true)
             const ok = await loadByHash(fileHash)
             if (ok) {
-                drawName.value = editorState.state.fileName || mxcad.getCurrentFileName()
+                editorState.setCurrentVersion(getVersionFromUrl())
                 checkPublicFileExternalRefs(fileHash)
             } else {
-                drawName.value = mxcad.getCurrentFileName()
+                editorState.setFileName(mxcad.getCurrentFileName())
             }
         } else {
-            mxcad.on("openFileComplete", () => {
-                drawName.value = mxcad.getCurrentFileName()
-            })
+            editorState.setFileName('new.dwg')
         }
 
         const pendingAction = sessionStorage.getItem('pendingAction')
@@ -439,7 +363,7 @@ import MxToolbar from '@/components/MxToolbar.vue';
             <button class="header_huitui zoomed" @click="goBack">
                 <MxIcon icon="huitui1" isDefault></MxIcon>
             </button>
-            <van-text-ellipsis class="draw_name" :content="drawName" />
+            <span class="draw_name">{{ drawName }}</span>
             <span v-if="currentVersion" class="version-badge">r{{ currentVersion }}</span>
             <div class="top_toolbar">
                 <button class="item" :disabled="saving || isPublicFile || !editorState.state.permissions.canSave"
@@ -858,6 +782,9 @@ import MxToolbar from '@/components/MxToolbar.vue';
             background: #62859161;
             width: 600px;
             margin-right: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .top_toolbar {
