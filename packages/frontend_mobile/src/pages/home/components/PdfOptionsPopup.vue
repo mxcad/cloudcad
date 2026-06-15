@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 export interface PdfOptions {
   width: string
@@ -12,6 +12,7 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const show = ref(true)
 const options = reactive<PdfOptions>({
   width: '2000',
   height: '2000',
@@ -19,152 +20,168 @@ const options = reactive<PdfOptions>({
 })
 
 function onConfirm() {
+  show.value = false
   emit('confirm', { ...options })
 }
 
 function onCancel() {
+  show.value = false
   emit('cancel')
 }
 </script>
 
 <template>
-  <div class="pdf-options-overlay" @click.self="onCancel">
-    <div class="pdf-options-popup">
-      <div class="popup-header">
-        <span class="popup-title">PDF 导出参数</span>
-        <button class="popup-close" @click="onCancel">
-          <van-icon name="cross" />
-        </button>
-      </div>
-      <div class="popup-body">
-        <div class="option-row">
-          <div class="option-group">
-            <label class="option-label">宽度（像素）</label>
-            <van-field
+  <van-popup
+    v-model:show="show"
+    position="bottom"
+    round
+    :style="{ maxHeight: '70vh' }"
+    closeable
+    @close="emit('cancel')"
+  >
+    <div class="export-popup">
+      <div class="export-title">导出 PDF</div>
+
+      <div class="export-body">
+        <div class="input-row">
+          <div class="input-group">
+            <label class="input-label">宽度（像素）</label>
+            <input
               v-model="options.width"
+              class="text-input"
+              type="number"
               placeholder="2000"
-              type="digit"
-              clearable
             />
           </div>
-          <div class="option-group">
-            <label class="option-label">高度（像素）</label>
-            <van-field
+          <div class="input-group">
+            <label class="input-label">高度（像素）</label>
+            <input
               v-model="options.height"
+              class="text-input"
+              type="number"
               placeholder="2000"
-              type="digit"
-              clearable
             />
           </div>
         </div>
-        <div class="option-group">
-          <label class="option-label">颜色策略</label>
-          <van-radio-group v-model="options.colorPolicy" direction="horizontal">
-            <van-radio name="mono">黑白（单色）</van-radio>
-            <van-radio name="color">彩色</van-radio>
-          </van-radio-group>
+
+        <div class="toggle-group">
+          <label class="input-label">颜色策略</label>
+          <div class="toggle-row">
+            <button
+              :class="['toggle-btn', { active: options.colorPolicy === 'mono' }]"
+              @click="options.colorPolicy = 'mono'"
+            >
+              黑白
+            </button>
+            <button
+              :class="['toggle-btn', { active: options.colorPolicy === 'color' }]"
+              @click="options.colorPolicy = 'color'"
+            >
+              彩色
+            </button>
+          </div>
         </div>
       </div>
-      <div class="popup-footer">
-        <van-button plain type="default" size="small" @click="onCancel">取消</van-button>
-        <van-button type="primary" size="small" @click="onConfirm">确认导出</van-button>
+
+      <div class="export-footer">
+        <van-button plain block round @click="onCancel">取消</van-button>
+        <van-button type="primary" block round @click="onConfirm">确认导出</van-button>
       </div>
     </div>
-  </div>
+  </van-popup>
 </template>
 
 <style scoped lang="scss">
-.pdf-options-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+.export-popup {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
+  flex-direction: column;
+  min-height: 40vh;
+  max-height: 70vh;
 }
 
-.pdf-options-popup {
-  width: 85%;
-  max-width: 400px;
-  background: #2a2a2a;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #3a3a3a;
-}
-
-.popup-title {
-  color: #fff;
+.export-title {
   font-size: 16px;
   font-weight: 600;
+  text-align: center;
+  padding: 20px 16px 0;
 }
 
-.popup-close {
-  background: none;
-  border: none;
-  color: #999;
-  font-size: 18px;
-  padding: 4px;
+.export-body {
+  flex: 1;
+  padding: 24px 20px 8px;
+  overflow-y: auto;
 }
 
-.popup-body {
-  padding: 16px;
-}
-
-.option-row {
+.input-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.option-group {
+.input-group {
   flex: 1;
 }
 
-.option-label {
+.input-label {
   display: block;
-  color: #ccc;
-  font-size: 13px;
-  margin-bottom: 6px;
+  font-size: 14px;
+  color: #969799;
+  margin-bottom: 8px;
 }
 
-:deep(.van-field) {
-  background: #3a3a3a;
-  border-radius: 6px;
-  padding: 8px 12px;
+.text-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #ebedf0;
+  background: #f7f8fa;
+  font-size: 15px;
+  color: #323233;
+  box-sizing: border-box;
+  outline: none;
 
-  .van-field__control {
-    color: #fff;
-    font-size: 14px;
+  &:focus {
+    border-color: #1989fa;
   }
 }
 
-:deep(.van-radio-group) {
-  .van-radio {
-    margin-right: 16px;
-  }
-
-  .van-radio__label {
-    color: #ccc;
-    font-size: 14px;
-  }
+.toggle-group {
+  margin-bottom: 16px;
 }
 
-.popup-footer {
+.toggle-row {
   display: flex;
-  justify-content: flex-end;
   gap: 12px;
-  padding: 12px 16px 16px;
-  border-top: 1px solid #3a3a3a;
+  margin-top: 8px;
+}
+
+.toggle-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid #ebedf0;
+  background: #f7f8fa;
+  font-size: 15px;
+  color: #646566;
+  transition: all 0.2s;
+
+  &.active {
+    background: #1989fa;
+    color: #fff;
+    border-color: #1989fa;
+  }
+}
+
+.export-footer {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid #ebedf0;
+
+  :deep(.van-button) {
+    font-size: 15px;
+    height: 44px;
+  }
 }
 </style>

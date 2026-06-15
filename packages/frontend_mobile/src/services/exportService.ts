@@ -92,7 +92,7 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-function showDwgOptionsDialog(format: 'dwg' | 'dxf'): Promise<number | null> {
+export function showDwgOptionsDialog(format: 'dwg' | 'dxf'): Promise<number | null> {
   return new Promise((resolve) => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -118,7 +118,7 @@ function showDwgOptionsDialog(format: 'dwg' | 'dxf'): Promise<number | null> {
   });
 }
 
-function showPdfOptionsDialog(): Promise<PdfOptions | null> {
+export function showPdfOptionsDialog(): Promise<PdfOptions | null> {
   return new Promise((resolve) => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -178,6 +178,58 @@ export function showExportDialog() {
             }
           } else {
             exportDrawing(format);
+          }
+        },
+        'onUpdate:show': (val: boolean) => {
+          if (!val) {
+            app.unmount();
+            container.remove();
+          }
+        },
+      });
+    },
+  });
+
+  app.mount(container);
+}
+
+export function showExportMenu() {
+  const actions = [
+    { name: '导出 PDF' },
+    { name: '导出 DWG' },
+    { name: '导出 DXF' },
+  ];
+
+  const formatMap: Record<string, ExportFormat> = {
+    '导出 PDF': 'pdf',
+    '导出 DWG': 'dwg',
+    '导出 DXF': 'dxf',
+  };
+
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+
+  const app = createApp({
+    render() {
+      return h(ActionSheet, {
+        show: true,
+        actions,
+        closeOnClickAction: true,
+        title: '导出',
+        cancelText: '取消',
+        onSelect: async (action: { name: string }) => {
+          const format = formatMap[action.name];
+          if (!format) return;
+          if (format === 'pdf') {
+            const pdfOptions = await showPdfOptionsDialog();
+            if (pdfOptions) {
+              exportDrawing(format, undefined, pdfOptions);
+            }
+          } else if (format === 'dwg' || format === 'dxf') {
+            const dwgVersion = await showDwgOptionsDialog(format);
+            if (dwgVersion) {
+              exportDrawing(format, undefined, undefined, { dwgVersion });
+            }
           }
         },
         'onUpdate:show': (val: boolean) => {

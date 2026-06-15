@@ -1,19 +1,67 @@
 import { uiConfig } from "@/config/uiConfig"
 import { i18nScope, t } from "@/languages"
 import { addCommand, callCommand } from "@/plugins/mxcad/command"
-import { showExportDialog } from "@/services/exportService"
-import { useEditorState } from "@/composables/useEditorState"
+import { exportDrawing, showDwgOptionsDialog, showPdfOptionsDialog } from "@/services/exportService"
 import { injectVoerkaI18n } from "@voerkai18n/vue"
 import { MxCpp } from "mxcad"
-import { showToast } from "vant"
 import { PopoverAction } from "vant"
 import { ref } from "vue"
 
 export const useMenu = () => {
     const i18n = injectVoerkaI18n()
     const isShowMenu = ref(false)
+
+    const exportActions: PopoverAction[] = [
+        {
+            text: '导出 PDF',
+            icon: 'pdf',
+            call: async () => {
+                isShowMenu.value = false
+                const pdfOptions = await showPdfOptionsDialog()
+                if (pdfOptions) {
+                    exportDrawing('pdf', undefined, pdfOptions)
+                }
+            }
+        },
+        {
+            text: '导出 DWG',
+            icon: 'geshi',
+            call: async () => {
+                isShowMenu.value = false
+                const dwgVersion = await showDwgOptionsDialog('dwg')
+                if (dwgVersion) {
+                    exportDrawing('dwg', undefined, undefined, { dwgVersion })
+                }
+            }
+        },
+        {
+            text: '导出 DXF',
+            icon: 'geshi',
+            call: async () => {
+                isShowMenu.value = false
+                const dwgVersion = await showDwgOptionsDialog('dxf')
+                if (dwgVersion) {
+                    exportDrawing('dxf', undefined, undefined, { dwgVersion })
+                }
+            }
+        },
+    ]
+
+    const showExportSubMenu = () => {
+        setTimeout(() => {
+            isShowMenu.value = true
+            actions.value = exportActions
+        }, 200)
+    }
+
     const getDefaultMenuData = () => {
-        return [...uiConfig.headerMenuData?.map((item)=> Object.assign({}, item))||[]]
+        return [...uiConfig.headerMenuData?.map((item)=> {
+            const copy = Object.assign({}, item)
+            if (copy.cmd === 'Mx_export' || copy.cmd === 'Mx_saveDwg' || copy.cmd === 'Mx_exportPDF') {
+                copy.call = showExportSubMenu
+            }
+            return copy
+        })||[]]
     }
     const actions = ref<PopoverAction[]>(getDefaultMenuData())
     addCommand("Mx_NewFile", () => {
@@ -25,25 +73,6 @@ export const useMenu = () => {
     addCommand("Mx_languages", () => {
         setTimeout(() => {
             isShowMenu.value = true
-            // const layouts = MxCpp.App.getCurrentMxCAD().getAllLayoutName()
-            // const _layouts: PopoverAction[] = []
-            // layouts.forEach((name) => {
-            //     const call = () => {
-            //         isShowMenu.value = false
-            //         MxCpp.App.getCurrentMxCAD().setCurrentLayout(name)
-            //     }
-            //     if (name === "Model") {
-            //         _layouts.unshift({
-            //             text: name,
-            //             call
-            //         })
-            //     } else {
-            //         _layouts.push({
-            //             text: name,
-            //             call
-            //         })
-            //     }
-            // })
             actions.value = i18nScope.languages.map(({ name, title }) => {
                 return {
                     text: t(title || ""),
@@ -85,22 +114,9 @@ export const useMenu = () => {
     addCommand("Mx_ShowShare", () => {
         window.dispatchEvent(new CustomEvent('mxcad-show-share'))
     })
-    addCommand("Mx_saveDwg", () => {
-        const { state } = useEditorState()
-        if (!state.permissions.canExport) {
-            showToast('没有导出权限')
-            return
-        }
-        showExportDialog()
-    })
-    addCommand("Mx_exportPDF", () => {
-        const { state } = useEditorState()
-        if (!state.permissions.canExport) {
-            showToast('没有导出权限')
-            return
-        }
-        showExportDialog()
-    })
+    addCommand("Mx_export", showExportSubMenu)
+    addCommand("Mx_saveDwg", showExportSubMenu)
+    addCommand("Mx_exportPDF", showExportSubMenu)
     const onSelectMenu = (action: PopoverAction) => {
         action.cmd && callCommand(action.cmd)
         action.call && action.call()

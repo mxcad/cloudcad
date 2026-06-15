@@ -10,136 +10,141 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const show = ref(true)
+
 const VERSIONS = [
-  { label: 'CAD2000', value: 23 },
-  { label: 'CAD2004', value: 25 },
-  { label: 'CAD2007', value: 27 },
-  { label: 'CAD2010', value: 29 },
-  { label: 'CAD2018', value: 33 },
+  { label: 'CAD 2000', value: 23 },
+  { label: 'CAD 2004', value: 25 },
+  { label: 'CAD 2007', value: 27 },
+  { label: 'CAD 2010', value: 29 },
+  { label: 'CAD 2018', value: 33 },
 ]
 
-const selectedVersion = ref(33)
+const selectedVersion = ref(23)
 
 const title = computed(() =>
   props.format === 'dwg' ? '导出 DWG' : '导出 DXF'
 )
 
 function onConfirm() {
+  show.value = false
   emit('confirm', selectedVersion.value)
 }
 
 function onCancel() {
+  show.value = false
   emit('cancel')
 }
 </script>
 
 <template>
-  <div class="dwg-options-overlay" @click.self="onCancel">
-    <div class="dwg-options-popup">
-      <div class="popup-header">
-        <span class="popup-title">{{ title }}</span>
-        <button class="popup-close" @click="onCancel">
-          <van-icon name="cross" />
-        </button>
-      </div>
-      <div class="popup-body">
-        <div class="option-group">
-          <label class="option-label">AutoCAD 版本</label>
-          <van-radio-group v-model="selectedVersion" direction="vertical">
-            <van-radio
-              v-for="v in VERSIONS"
-              :key="v.value"
-              :name="v.value"
-              class="version-radio"
-            >
-              {{ v.label }}（v{{ v.value }}）
-            </van-radio>
-          </van-radio-group>
+  <van-popup
+    v-model:show="show"
+    position="bottom"
+    round
+    :style="{ maxHeight: '70vh' }"
+    closeable
+    @close="emit('cancel')"
+  >
+    <div class="export-popup">
+      <div class="export-title">{{ title }}</div>
+
+      <div class="export-body">
+        <label class="input-label">AutoCAD 版本</label>
+        <div class="version-list">
+          <button
+            v-for="v in VERSIONS"
+            :key="v.value"
+            :class="['version-item', { active: selectedVersion === v.value }]"
+            @click="selectedVersion = v.value"
+          >
+            <span class="version-name">{{ v.label }}</span>
+            <van-icon
+              v-if="selectedVersion === v.value"
+              name="success"
+              color="#1989fa"
+            />
+          </button>
         </div>
       </div>
-      <div class="popup-footer">
-        <van-button plain type="default" size="small" @click="onCancel">取消</van-button>
-        <van-button type="primary" size="small" @click="onConfirm">确认导出</van-button>
+
+      <div class="export-footer">
+        <van-button plain block round @click="onCancel">取消</van-button>
+        <van-button type="primary" block round @click="onConfirm">确认导出</van-button>
       </div>
     </div>
-  </div>
+  </van-popup>
 </template>
 
 <style scoped lang="scss">
-.dwg-options-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+.export-popup {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
+  flex-direction: column;
+  min-height: 40vh;
+  max-height: 70vh;
 }
 
-.dwg-options-popup {
-  width: 85%;
-  max-width: 400px;
-  background: #2a2a2a;
-  border-radius: 12px;
-  overflow: hidden;
+.export-title {
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  padding: 20px 16px 0;
 }
 
-.popup-header {
+.export-body {
+  flex: 1;
+  padding: 24px 20px 8px;
+  overflow-y: auto;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  color: #969799;
+  margin-bottom: 12px;
+}
+
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.version-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #3a3a3a;
-}
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid #ebedf0;
+  background: #f7f8fa;
+  font-size: 15px;
+  color: #323233;
+  transition: all 0.2s;
 
-.popup-title {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.popup-close {
-  background: none;
-  border: none;
-  color: #999;
-  font-size: 18px;
-  padding: 4px;
-}
-
-.popup-body {
-  padding: 16px;
-}
-
-.option-group {
-  flex: 1;
-}
-
-.option-label {
-  display: block;
-  color: #ccc;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-:deep(.van-radio-group) {
-  .version-radio {
-    padding: 8px 0;
-  }
-
-  .van-radio__label {
-    color: #ccc;
-    font-size: 14px;
+  &.active {
+    border-color: #1989fa;
+    background: #ecf5ff;
+    color: #1989fa;
+    font-weight: 600;
   }
 }
 
-.popup-footer {
+.version-name {
+  font-size: 15px;
+}
+
+.export-footer {
   display: flex;
-  justify-content: flex-end;
   gap: 12px;
-  padding: 12px 16px 16px;
-  border-top: 1px solid #3a3a3a;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid #ebedf0;
+
+  :deep(.van-button) {
+    font-size: 15px;
+    height: 44px;
+  }
 }
 </style>

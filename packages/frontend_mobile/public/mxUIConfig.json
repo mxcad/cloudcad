@@ -22,8 +22,9 @@
       "icon": "dakai"
     },
     {
-      "text": "设置",
-      "icon": "shezhi"
+      "text": "导出",
+      "icon": "geshi",
+      "cmd": "Mx_export"
     },
     {
       "text": "重绘",
@@ -39,16 +40,6 @@
       "text": "布局",
       "icon": "buju",
       "cmd": "Mx_layouts"
-    },
-    {
-      "text": "保存DWG",
-      "icon": "baocun",
-      "cmd": "Mx_saveDwg"
-    },
-    {
-      "text": "导出PDF",
-      "icon": "pdf",
-      "cmd": "Mx_exportPDF"
     },
     {
       "text": "版本历史",
