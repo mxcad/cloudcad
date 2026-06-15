@@ -711,6 +711,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   useFileSystemShortcuts({
     containerRef: panelRef,
+    enabled: false,
     onUndo: sidebarHandleUndo,
     onRedo: sidebarHandleRedo,
     onCopy: sidebarHandleCopy,
