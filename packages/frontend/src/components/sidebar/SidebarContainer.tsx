@@ -359,7 +359,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                 onDrawingOpen={handleDrawingOpen}
                 currentOpenFileId={currentOpenFileId}
                 isModified={isModified}
-                doubleClickToOpen={true}
                 visible={activeDrawingsSubTab === 'drawings-gallery'}
               />
             </div>
@@ -370,6 +369,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                 onDrawingOpen={handleDrawingOpen}
                 currentOpenFileId={currentOpenFileId}
                 isModified={isModified}
+                doubleClickToOpen={true}
                 visible={activeDrawingsSubTab === 'blocks-gallery'}
               />
             </div>

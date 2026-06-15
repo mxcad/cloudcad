@@ -67,6 +67,8 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
       const node = nodes.find((n) => n.id === item.id);
       if (!node) return null;
 
+      const doubleClickHint = libraryType === 'block' ? '请双击插入图块' : '请双击打开';
+
       const handleLibraryDownload = () => {
         if (node.isFolder) return;
         setDownloadingNode(node);
@@ -147,6 +149,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           hideTypeTag={hideTypeTag}
           forceCompactActions={forceCompactActions}
           doubleClickToOpen={doubleClickToOpen}
+          doubleClickHint={doubleClickHint}
           {...(isLibraryMode
             ? { canDownload: canManageLibrary, canEdit: canManageLibrary, canDelete: canManageLibrary, canUpload: canManageLibrary, canViewVersionHistory: false }
             : getFileItemPermissionProps(node, { projectPermissions }))}

@@ -65,6 +65,8 @@ interface FileItemProps {
   hideSelectionCircle?: boolean;
   /** 双击打开（用于侧边栏图库等场景），true=单击打开，false=双击打开，配合 hideSelectionCircle 提示 */
   doubleClickToOpen?: boolean;
+  /** 双击提示文字（当 doubleClickToOpen=true 时单击显示的提示） */
+  doubleClickHint?: string;
   /** 是否正在框选（禁用拖拽避免冲突） */
   isRubberBanding?: boolean;
   /** 框选刚结束 ref（阻止残留 click 导致文件打开） */
@@ -140,6 +142,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   forceCompactActions = false,
   hideSelectionCircle = true,
   doubleClickToOpen = false,
+  doubleClickHint = '请双击打开',
   isRubberBanding = false,
   rubberBandJustEndedRef,
   selectedCount = 0,
@@ -272,7 +275,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         clickCountRef.current++;
         if (clickCountRef.current === 1) {
           clickTimerRef.current = setTimeout(() => {
-            infoOnce('请双击打开');
+            infoOnce(doubleClickHint);
             clickCountRef.current = 0;
             clickTimerRef.current = null;
           }, 300);
