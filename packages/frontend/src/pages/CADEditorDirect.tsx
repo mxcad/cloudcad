@@ -1628,7 +1628,7 @@ export const CADEditorDirect: React.FC = () => {
       if (!blob) throw new Error('转换失败：无返回数据');
 
       const nameWithoutExt = pdfExportFileName.replace(/\.[^.]+$/, '');
-      await saveAsFileDialog({
+      const pdfSaved = await saveAsFileDialog({
         blob,
         filename: `${nameWithoutExt}.pdf`,
         types: [{
@@ -1637,9 +1637,11 @@ export const CADEditorDirect: React.FC = () => {
         }],
       });
 
-      setShowPdfExportModal(false);
-      setPdfExportBlob(null);
-      showToast('PDF 文件已保存到本地', 'success');
+      if (pdfSaved !== false) {
+        setShowPdfExportModal(false);
+        setPdfExportBlob(null);
+        showToast('PDF 文件已保存到本地', 'success');
+      }
     } catch (error) {
       console.error('PDF 导出失败:', error);
       showToast(getErrorMessage(error), 'error');
@@ -1671,7 +1673,7 @@ export const CADEditorDirect: React.FC = () => {
       if (!blob) throw new Error('转换失败：无返回数据');
 
       const nameWithoutExt = dwgExportFileName.replace(/\.[^.]+$/, '');
-      await saveAsFileDialog({
+      const dwgSaved = await saveAsFileDialog({
         blob,
         filename: `${nameWithoutExt}.${dwgExportFormat}`,
         types: [{
@@ -1680,9 +1682,11 @@ export const CADEditorDirect: React.FC = () => {
         }],
       });
 
-      setShowDwgExportModal(false);
-      setDwgExportBlob(null);
-      showToast(`${dwgExportFormat.toUpperCase()} 文件已保存到本地`, 'success');
+      if (dwgSaved !== false) {
+        setShowDwgExportModal(false);
+        setDwgExportBlob(null);
+        showToast(`${dwgExportFormat.toUpperCase()} 文件已保存到本地`, 'success');
+      }
     } catch (error) {
       console.error(`${dwgExportFormat.toUpperCase()} 导出失败:`, error);
       showToast(getErrorMessage(error), 'error');

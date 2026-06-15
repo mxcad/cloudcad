@@ -1220,7 +1220,7 @@ MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
   try {
     const saved = await saveCurrentDrawingToBlob(fileName);
     const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
-    await saveAsFileDialog({
+    const saveResult = await saveAsFileDialog({
       blob: saved.blob,
       filename: `${nameWithoutExt}.mxweb`,
       types: [{
@@ -1228,8 +1228,11 @@ MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
         accept: { 'application/octet-stream': ['.mxweb'] },
       }],
     });
+
     hideGlobalLoading();
-    globalShowToast('文件已保存到本地', 'success');
+    if (saveResult !== false) {
+      globalShowToast('文件已保存到本地', 'success');
+    }
   } catch (error) {
     hideGlobalLoading();
     handleError(error, 'Mx_SaveAsMxWeb');
