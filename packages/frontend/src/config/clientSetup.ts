@@ -203,7 +203,7 @@ client.setConfig({
     // 401 → 尝试刷新 token 并重试（支持所有 HTTP 方法）
     if (response.status === 401) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/profile') || url.includes('/auth/forgot-password') || url.includes('/auth/reset-password');
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/forgot-password') || url.includes('/auth/reset-password');
       if (!isAuthEndpoint) {
         const refreshed = await tryRefreshToken();
         if (refreshed) {
@@ -220,8 +220,6 @@ client.setConfig({
         } else {
           handleTokenRefreshFailure();
         }
-      } else if (url.includes('/auth/profile')) {
-        handleTokenRefreshFailure();
       }
     }
 

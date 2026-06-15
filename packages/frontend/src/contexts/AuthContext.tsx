@@ -119,18 +119,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
           const fetchError = error as { status?: number; message?: string };
           console.error('[AuthContext] Token 验证失败:', fetchError.status, fetchError.message);
-          // Only clear auth state on explicit 401 — network errors, 5xx, etc.
-          // should not log the user out (consistent with main branch behavior).
-          // clientSetup.ts already handles 401 → token refresh → redirect.
-          if (fetchError.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            localStorage.removeItem('personalSpaceId');
-            localStorage.removeItem('mxcad-personal-space-id');
-            setToken(null);
-            setUser(null);
-          }
+          // clientSetup.ts 的 fetch wrapper 已经处理了 401 → 刷新 token → 重试/跳转登录
+          // 此处不再独立清除 token，避免与 clientSetup 刷新/跳转逻辑冲突
         } finally {
           clearTimeout(timeoutId);
           setLoading(false);
