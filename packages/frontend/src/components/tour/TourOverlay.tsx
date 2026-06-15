@@ -493,165 +493,222 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
     };
   }, [isActive, highlight.element, isInteractiveMode, step.actionType, onInteractionComplete]);
 
+  /** 点击拦截层：点击暗部区域的行为 */
+  const handleBlockerClick = useCallback(() => {
+    if (!isInteractiveMode) {
+      // 展示模式：点击暗部 → 下一步
+      onNext();
+    }
+    // 交互模式：点击暗部 → 不做任何事（阻止误操作）
+  }, [isInteractiveMode, onNext]);
+
   if (!isActive) return null;
 
   // 计算高亮区域
   const highlightRect = highlight.rect;
   const hasTarget = highlightRect !== null;
 
-  // 交互模式下，需要让点击穿透到目标元素
-  // TourTooltip 本身也是 fixed 定位，z-index 比容器高
-  // 但 TourTooltip 是定位在目标元素附近的，通常不会遮挡目标
-  // 解决方案：容器在交互模式下也设置 pointer-events: none，让点击穿透
-  // ESC 键监听是通过 document 全局事件处理的，不依赖容器
-  const highlightPointerEvents = 'none'; // 高亮边框始终不拦截事件
+  // 高亮区域边距后的坐标（用于 4 分块点击拦截）
+  const hlLeft = highlightRect ? Math.max(0, highlightRect.left - HIGHLIGHT_PADDING) : 0;
+  const hlTop = highlightRect ? Math.max(0, highlightRect.top - HIGHLIGHT_PADDING) : 0;
+  const hlRight = highlightRect ? highlightRect.right + HIGHLIGHT_PADDING : 0;
+  const hlBottom = highlightRect ? highlightRect.bottom + HIGHLIGHT_PADDING : 0;
 
   return (
-    <div
-      ref={overlayRef}
-      className="tour-overlay"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: OVERLAY_Z_INDEX,
-        pointerEvents: isInteractiveMode ? 'none' : 'auto', // 交互模式下让点击穿透到目标元素
-      }}
-    >
-      {/* 遮罩层 - 使用 SVG 绘制镂空效果 */}
-      <svg
+    <>
+      {/* ====== 点击拦截层（独立于视觉层，确保 pointer-events: auto 生效）====== */}
+      {highlightRect ? (
+        <>
+          {/* 上方遮罩 */}
+          <div
+            style={{ position: 'fixed', zIndex: OVERLAY_Z_INDEX, top: 0, left: 0, right: 0, height: hlTop, pointerEvents: 'auto' }}
+            onClick={handleBlockerClick}
+          />
+          {/* 下方遮罩 */}
+          <div
+            style={{ position: 'fixed', zIndex: OVERLAY_Z_INDEX, top: hlBottom, left: 0, right: 0, bottom: 0, pointerEvents: 'auto' }}
+            onClick={handleBlockerClick}
+          />
+          {/* 左侧遮罩 */}
+          <div
+            style={{ position: 'fixed', zIndex: OVERLAY_Z_INDEX, top: hlTop, left: 0, width: hlLeft, height: Math.max(0, hlBottom - hlTop), pointerEvents: 'auto' }}
+            onClick={handleBlockerClick}
+          />
+          {/* 右侧遮罩 */}
+          <div
+            style={{ position: 'fixed', zIndex: OVERLAY_Z_INDEX, top: hlTop, left: hlRight, right: 0, height: Math.max(0, hlBottom - hlTop), pointerEvents: 'auto' }}
+            onClick={handleBlockerClick}
+          />
+        </>
+      ) : (
+        /* 无高亮目标时，全屏拦截 */
+        <div
+          style={{ position: 'fixed', zIndex: OVERLAY_Z_INDEX, inset: 0, pointerEvents: 'auto' }}
+          onClick={handleBlockerClick}
+        />
+      )}
+
+      {/* ====== 视觉层（纯展示，不拦截事件）====== */}
+      <div
+        ref={overlayRef}
+        className="tour-overlay"
         style={{
-          position: 'absolute',
+          position: 'fixed',
           inset: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: isInteractiveMode ? 'none' : 'auto', // 交互模式下让点击穿透
-        }}
-        onClick={() => {
-          if (!isInteractiveMode) {
-            onNext();
-          }
+          zIndex: OVERLAY_Z_INDEX,
+          pointerEvents: 'none',
         }}
       >
-        <defs>
-          <mask id="tour-overlay-mask">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {highlightRect && (
-              <rect
-                x={highlightRect.left - HIGHLIGHT_PADDING}
-                y={highlightRect.top - HIGHLIGHT_PADDING}
-                width={highlightRect.width + HIGHLIGHT_PADDING * 2}
-                height={highlightRect.height + HIGHLIGHT_PADDING * 2}
-                rx={8}
-                fill="black"
-              />
-            )}
-          </mask>
-        </defs>
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="rgba(0, 0, 0, 0.5)"
-          mask="url(#tour-overlay-mask)"
-        />
-      </svg>
+        {/* 遮罩层 - 使用 SVG 绘制镂空视觉效果 */}
+        <svg
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+          }}
+        >
+          <defs>
+            <mask id="tour-overlay-mask">
+              <rect x="0" y="0" width="100%" height="100%" fill="white" />
+              {highlightRect && (
+                <rect
+                  x={hlLeft}
+                  y={hlTop}
+                  width={hlRight - hlLeft}
+                  height={hlBottom - hlTop}
+                  rx={8}
+                  fill="black"
+                />
+              )}
+            </mask>
+          </defs>
+          <rect
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            fill="rgba(0, 0, 0, 0.5)"
+            mask="url(#tour-overlay-mask)"
+          />
+        </svg>
 
-      {/* 高亮边框 */}
+        {/* 展示模式下，高亮区域点击 → 下一步 */}
+        {highlightRect && !isInteractiveMode && (
+          <div
+            className="tour-highlight-click-area"
+            style={{
+              position: 'fixed',
+              top: hlTop,
+              left: hlLeft,
+              width: hlRight - hlLeft,
+              height: hlBottom - hlTop,
+              pointerEvents: 'auto',
+              cursor: 'pointer',
+            }}
+            onClick={onNext}
+          />
+        )}
+
+        {/* 高亮边框 */}
       {highlightRect && (
         <div
           className="tour-highlight-border"
           style={{
             position: 'fixed',
-            top: highlightRect.top - HIGHLIGHT_PADDING,
-            left: highlightRect.left - HIGHLIGHT_PADDING,
-            width: highlightRect.width + HIGHLIGHT_PADDING * 2,
-            height: highlightRect.height + HIGHLIGHT_PADDING * 2,
-            border: '2px solid var(--primary-500)',
-            borderRadius: 8,
-            boxShadow: step.highlight 
-              ? '0 0 0 4px rgba(59, 130, 246, 0.3), 0 0 0 8px rgba(59, 130, 246, 0.2)'
-              : '0 0 0 4px rgba(59, 130, 246, 0.3)',
-            pointerEvents: highlightPointerEvents,
-            transition: 'all 0.2s ease-out',
-          }}
-        >
-          {/* 交互模式高亮脉冲动画 */}
-          {isInteractiveMode && step.highlight && (
-            <div
-              style={{
-                position: 'absolute',
-                inset: -4,
-                border: '2px solid var(--primary-400)',
-                borderRadius: 10,
-                animation: 'tour-pulse 1.5s ease-in-out infinite',
-              }}
-            />
-          )}
-        </div>
-      )}
+            top: hlTop,
+            left: hlLeft,
+            width: hlRight - hlLeft,
+            height: hlBottom - hlTop,
+              border: '2px solid var(--primary-500)',
+              borderRadius: 8,
+              boxShadow: step.highlight 
+                ? '0 0 0 4px rgba(59, 130, 246, 0.3), 0 0 0 8px rgba(59, 130, 246, 0.2)'
+                : '0 0 0 4px rgba(59, 130, 246, 0.3)',
+              pointerEvents: 'none',
+              transition: 'all 0.2s ease-out',
+            }}
+          >
+            {/* 交互模式高亮脉冲动画 */}
+            {isInteractiveMode && step.highlight && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: -4,
+                  border: '2px solid var(--primary-400)',
+                  borderRadius: 10,
+                  animation: 'tour-pulse 1.5s ease-in-out infinite',
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+          </div>
+        )}
 
-      {/* 加载状态 */}
-      {highlight.isLoading && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'var(--text-primary)',
-            background: 'var(--bg-elevated)',
-            padding: '16px 24px',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
+        {/* 加载状态 */}
+        {highlight.isLoading && (
           <div
             style={{
-              width: 16,
-              height: 16,
-              border: '2px solid var(--primary-500)',
-              borderTopColor: 'transparent',
-              borderRadius: '50%',
-              animation: 'tour-spin 1s linear infinite',
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              color: 'var(--text-primary)',
+              background: 'var(--bg-elevated)',
+              padding: '16px 24px',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-lg)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              pointerEvents: 'none',
             }}
-          />
-          正在定位目标元素...
-        </div>
-      )}
+          >
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                border: '2px solid var(--primary-500)',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'tour-spin 1s linear infinite',
+              }}
+            />
+            正在定位目标元素...
+          </div>
+        )}
 
-      {/* 子组件（TourTooltip） */}
-      {!highlight.isLoading && children({ 
-        targetRect: highlightRect, 
-        hasTarget 
-      })}
+        {/* 子组件（TourTooltip） */}
+        {!highlight.isLoading && children({ 
+          targetRect: highlightRect, 
+          hasTarget 
+        })}
 
-      {/* 样式定义 */}
-      <style>{`
-        @keyframes tour-pulse {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
+        {/* 样式定义 */}
+        <style>{`
+          @keyframes tour-pulse {
+            0%, 100% {
+              opacity: 1;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.5;
+              transform: scale(1.05);
+            }
           }
-          50% {
-            opacity: 0.5;
-            transform: scale(1.05);
+          
+          @keyframes tour-spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
           }
-        }
-        
-        @keyframes tour-spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
+        `}</style>
+      </div>
+    </>
   );
 };
 
