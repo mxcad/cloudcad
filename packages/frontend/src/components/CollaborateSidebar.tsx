@@ -374,10 +374,16 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     }
 
     setWaitingForSession(true);
+    showGlobalLoading('正在打开协同文件...', 'autoJoin');
 
     let cancelled = false;
     let retryCount = 0;
     const MAX_RETRIES = 30;
+
+    // Safety fallback: hide loading after 15s if the collaborative file never loads
+    const safetyTimer = setTimeout(() => {
+      hideGlobalLoading('autoJoin-safetyTimeout');
+    }, 15000);
 
     const userData: CollaborateUserData = {
       v: 1,
@@ -395,16 +401,14 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         return;
       }
 
-      showGlobalLoading('正在打开协同文件...', 'autoJoin');
-
       cooperate.joinWork(
         targetCollabWorkId,
         (iRet: number) => {
           console.log(`Auto-join attempt ${retryCount + 1}, joinWork returned:`, iRet);
           if (iRet === 0) {
-            // 加入成功
+            // 加入成功 — 保持 loading，等待协同文件加载完成
             cancelled = true;
-            hideGlobalLoading('autoJoin');
+            clearTimeout(safetyTimer);
             pendingJoinWorkIdRef.current = targetCollabWorkId;
             setWaitingForSession(false);
             setCurrentWorkId(targetCollabWorkId);
@@ -434,6 +438,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
                   refreshFileName();
                 }
               } catch {}
+              hideGlobalLoading('autoJoin-fileLoaded');
             }, 500);
             setWorks((prev) => {
               if (prev.some((w) => w.work_id === targetCollabWorkId)) return prev;
@@ -460,6 +465,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
           } else if (iRet === 17) {
             // 已经加入过，设置状态即可
             cancelled = true;
+            clearTimeout(safetyTimer);
             hideGlobalLoading('autoJoin');
             pendingJoinWorkIdRef.current = targetCollabWorkId;
             setWaitingForSession(false);
@@ -469,12 +475,13 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             fetchWorks();
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           } else if (iRet < 0) {
-            // SDK busy — retry
-            hideGlobalLoading('autoJoin');
+            // SDK busy — retry (loading stays visible)
             if (!cancelled && retryCount < MAX_RETRIES) {
               retryCount++;
               setTimeout(tryJoin, 1000);
             } else {
+              clearTimeout(safetyTimer);
+              hideGlobalLoading('autoJoin');
               setWaitingForSession(false);
               showToast('加入协同超时', 'warning');
               setCollabShareState({ fromCollabShare: false, targetWorkId: null });
@@ -482,6 +489,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
           } else {
             // Real error
             cancelled = true;
+            clearTimeout(safetyTimer);
             hideGlobalLoading('autoJoin');
             setWaitingForSession(false);
             showToast(`加入协同失败，错误码: ${iRet}`, 'error');
@@ -499,6 +507,8 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearTimeout(safetyTimer);
+      hideGlobalLoading('autoJoin-cleanup');
     };
   }, [blankFileReady, fromCollabShare, targetCollabWorkId, isInCollaboration, user]);
 
