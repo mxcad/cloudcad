@@ -224,6 +224,10 @@ import MxToolbar from '@/components/MxToolbar.vue';
             showToast('公开文件不支持版本历史')
             return
         }
+        if (!editorState.state.fileId) {
+            showToast('本地图纸无版本历史')
+            return
+        }
         if (!editorState.state.permissions.canSave) {
             showToast('没有查看版本历史的权限')
             return

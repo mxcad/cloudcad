@@ -56,9 +56,14 @@ export const useMenu = () => {
 
     const getDefaultMenuData = () => {
         return [...uiConfig.headerMenuData?.map((item)=> {
-            const copy = Object.assign({}, item)
+            const copy = Object.assign({} as Record<string, unknown>, item)
             if (copy.cmd === 'Mx_export' || copy.cmd === 'Mx_saveDwg' || copy.cmd === 'Mx_exportPDF') {
                 copy.call = showExportSubMenu
+            }
+            if (copy.cmd === 'Mx_versionHistory') {
+                copy.call = () => {
+                    window.dispatchEvent(new CustomEvent('open-version-history'))
+                }
             }
             return copy
         })||[]]
