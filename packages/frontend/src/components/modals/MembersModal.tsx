@@ -437,6 +437,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
               <div className="space-y-3">
                 {/* 用户搜索输入框 */}
                 <Autocomplete
+                  dataTour="member-search-input"
                   value={newEmail}
                   onChange={(value) => {
                     setNewEmail(value);

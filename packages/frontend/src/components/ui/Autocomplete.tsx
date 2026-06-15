@@ -24,6 +24,7 @@ interface AutocompleteProps {
   onOpenChange?: (open: boolean) => void;
   className?: string;
   wrapperClassName?: string;
+  dataTour?: string;
 }
 
 export const Autocomplete: React.FC<AutocompleteProps> = ({
@@ -40,6 +41,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   onOpenChange,
   className = '',
   wrapperClassName = '',
+  dataTour,
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -60,6 +62,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   return (
     <div className={`relative ${wrapperClassName}`}>
       <Input
+        data-tour={dataTour}
         leftIcon={Search}
         value={value}
         onChange={handleInputChange}

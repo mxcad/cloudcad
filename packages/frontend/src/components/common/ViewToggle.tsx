@@ -8,6 +8,7 @@ interface ViewToggleProps {
   viewMode: ViewMode;
   onChange: (mode: ViewMode) => void;
   className?: string;
+  dataTour?: string;
 }
 
 const iconSize = 14;
@@ -17,6 +18,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
   viewMode,
   onChange,
   className = '',
+  dataTour,
 }) => {
   return (
     <div
@@ -48,6 +50,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
       <Tooltip content="列表视图">
         <button
           type="button"
+          data-tour={dataTour}
           onClick={() => onChange('list')}
           className={`${buttonPadding} transition-colors duration-150`}
           style={{

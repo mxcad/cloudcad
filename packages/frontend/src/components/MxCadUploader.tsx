@@ -189,6 +189,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       <div className="mxcad-uploader">
         <Tooltip content={!isAuthenticated ? '请先登录后再上传文件' : '上传 CAD 文件'}>
           <Button
+            data-tour="upload-btn"
             onClick={handleSelectFiles}
             disabled={globalLoading || !isAuthenticated}
             variant="secondary"

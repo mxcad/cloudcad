@@ -115,6 +115,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
             </Button>
           ) : (
             <Button
+              data-tour="join-collaborate-btn"
               variant="primary"
               size="xs"
               icon={UserPlus}

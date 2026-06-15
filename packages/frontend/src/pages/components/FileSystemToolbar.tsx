@@ -63,7 +63,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
         <ViewToggle
           viewMode={viewMode}
           onChange={onViewModeChange}
-          className="data-tour-view-toggle"
+          dataTour="view-toggle-list"
         />
 
         {isTrashView && onClearTrash && trashItemsCount > 0 && (
