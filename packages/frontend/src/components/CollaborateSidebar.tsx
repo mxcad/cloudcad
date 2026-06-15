@@ -70,7 +70,11 @@ async function fetchMyProjectIds(): Promise<string[]> {
   }
 }
 
-export const CollaborateSidebar: React.FC = () => {
+interface CollaborateSidebarProps {
+  visible: boolean;
+}
+
+export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible }) => {
   const { user } = useAuth();
   const {
     currentFileId,
@@ -275,17 +279,17 @@ export const CollaborateSidebar: React.FC = () => {
 
   // Initial fetch
   useEffect(() => {
-    if (isCadReady) {
+    if (isCadReady && visible) {
       fetchWorks(true);
     }
-  }, [isCadReady, fetchWorks]);
+  }, [isCadReady, visible, fetchWorks]);
 
   // Resolve names
   useEffect(() => {
-    if (works.length > 0) {
+    if (visible && works.length > 0) {
       resolveNames(works);
     }
-  }, [works]);
+  }, [visible, works]);
 
   // Sync resolved name to editor title
   useEffect(() => {
@@ -297,13 +301,13 @@ export const CollaborateSidebar: React.FC = () => {
 
   // Re-fetch works when current file changes
   useEffect(() => {
-    if (!isCadReady || !currentFileId) return;
+    if (!visible || !isCadReady || !currentFileId) return;
     fetchWorks(true);
-  }, [currentFileId, isCadReady, fetchWorks]);
+  }, [visible, currentFileId, isCadReady, fetchWorks]);
 
   // Polling
   useEffect(() => {
-    if (!isCadReady) return;
+    if (!visible || !isCadReady) return;
     autoJoinTimerRef.current = setInterval(() => {
       fetchWorks();
     }, 8000);
@@ -313,10 +317,11 @@ export const CollaborateSidebar: React.FC = () => {
         autoJoinTimerRef.current = null;
       }
     };
-  }, [isCadReady, fetchWorks]);
+  }, [visible, isCadReady, fetchWorks]);
 
   // Re-fetch works after file open completes
   useEffect(() => {
+    if (!visible) return;
     const onFileOpenComplete = () => {
       fetchWorks(true);
     };
@@ -324,15 +329,16 @@ export const CollaborateSidebar: React.FC = () => {
     return () => {
       window.removeEventListener('mxcad-file-open-complete', onFileOpenComplete);
     };
-  }, [fetchWorks]);
+  }, [visible, fetchWorks]);
 
   // Sync local state with store (handles external collaboration exit, e.g. openFile/openFile_noCache)
   useEffect(() => {
+    if (!visible) return;
     if (!isInCollaboration && collaborationWorkId === null && currentWorkId !== null) {
       setCurrentWorkId(null);
       fetchWorks();
     }
-  }, [isInCollaboration, collaborationWorkId, currentWorkId, fetchWorks]);
+  }, [visible, isInCollaboration, collaborationWorkId, currentWorkId, fetchWorks]);
 
   // After auto-join fetches works, sync currentFileId from work data
   useEffect(() => {

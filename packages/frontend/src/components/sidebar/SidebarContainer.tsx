@@ -453,7 +453,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
             </div>
           ) : (
             <div className={styles.content}>
-              <CollaborateSidebar />
+              <CollaborateSidebar visible={activeTab === 'collaborate'} />
             </div>
           )}
         </div>
