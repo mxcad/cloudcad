@@ -61,7 +61,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
-  const { checkPermission } = useProjectPermission();
+  const { checkPermission, refreshProjectPermissions } = useProjectPermission();
 
   const loadMembers = useCallback(async () => {
     setErrorMessage('');
@@ -163,6 +163,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setLoading(true);
       setLoadingPermissions(true);
 
+      // 清除权限缓存，确保每次打开弹框都重新请求最新权限
+      refreshProjectPermissions(projectId);
+
       // 并行加载数据和权限
       Promise.all([
         loadMembers(),
@@ -206,6 +209,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       // 重新获取完整成员列表（addProjectMember 返回的是 Prisma 嵌套结构，
       // 而成员列表需要扁平化的 ProjectMemberDto）
       await loadMembers();
+      refreshProjectPermissions(projectId);
 
       // 重置表单
       setNewEmail('');
@@ -232,6 +236,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       await fileSystemControllerRemoveProjectMember({ path: { projectId, userId } });
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
+      refreshProjectPermissions(projectId);
     } catch (error) {
       if (
         (error as Error & { response?: { status?: number } }).response
@@ -254,6 +259,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
+      refreshProjectPermissions(projectId);
+      // 重新检查当前用户权限（可能是修改了自己的角色）
+      const newCanManage = await checkPermission(
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_MANAGE
+      );
+      const newCanAssign = await checkPermission(
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_ASSIGN
+      );
+      setCanManageMembers(newCanManage);
+      setCanAssignRoles(newCanAssign);
     } catch (error) {
       if (
         (error as Error & { response?: { status?: number } }).response
@@ -284,6 +301,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
       // 刷新成员列表
       await loadMembers();
+      refreshProjectPermissions(projectId);
 
       setShowTransferModal(false);
       setTransferTarget(null);
@@ -330,28 +348,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
           {/* 添加成员按钮/表单 */}
           {!showAddForm ? (
-            canManageMembers ? (
-              <button
-                data-tour="invite-member-btn"
-                onClick={() => setShowAddForm(true)}
-                className="w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors"
-                style={{
-                  borderColor: 'var(--border-strong)',
-                  color: 'var(--text-tertiary)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--primary-400)';
-                  e.currentTarget.style.color = 'var(--primary-600)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border-strong)';
-                  e.currentTarget.style.color = 'var(--text-tertiary)';
-                }}
-              >
-                <UserPlus size={18} />
-                添加成员
-              </button>
-            ) : loadingPermissions ? (
+            loadingPermissions ? (
               <div
                 className="w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2"
                 style={{
@@ -367,7 +364,35 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   检查权限中...
                 </span>
               </div>
-            ) : null
+            ) : (
+              <Tooltip content={canManageMembers ? undefined : '需要成员管理权限'}>
+                <button
+                  data-tour="invite-member-btn"
+                  onClick={() => canManageMembers && setShowAddForm(true)}
+                  disabled={!canManageMembers}
+                  className={`w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                    !canManageMembers ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  style={{
+                    borderColor: canManageMembers ? 'var(--border-strong)' : 'var(--border-default)',
+                    color: 'var(--text-tertiary)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!canManageMembers) return;
+                    e.currentTarget.style.borderColor = 'var(--primary-400)';
+                    e.currentTarget.style.color = 'var(--primary-600)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!canManageMembers) return;
+                    e.currentTarget.style.borderColor = 'var(--border-strong)';
+                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                  }}
+                >
+                  <UserPlus size={18} />
+                  添加成员
+                </button>
+              </Tooltip>
+            )
           ) : (
             <form
               onSubmit={handleAddMember}
@@ -686,22 +711,28 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                           ))}
                       </select>
                     )}
-                    {!isOwner && canManageMembers && (
-                      <Tooltip content="转让项目所有权">
+                    {!isOwner && (
+                      <Tooltip content={canManageMembers ? '转让项目所有权' : '需要成员管理权限'}>
                         <button
                           onClick={() => {
+                            if (!canManageMembers) return;
                             setTransferTarget(member);
                             setShowTransferModal(true);
                           }}
-                          className="p-1.5 rounded flex-shrink-0"
+                          disabled={!canManageMembers}
+                          className={`p-1.5 rounded flex-shrink-0 ${
+                            !canManageMembers ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={(e) => {
+                            if (!canManageMembers) return;
                             e.currentTarget.style.color =
                               'var(--primary-600)';
                             e.currentTarget.style.background =
                               'var(--primary-50)';
                           }}
                           onMouseLeave={(e) => {
+                            if (!canManageMembers) return;
                             e.currentTarget.style.color =
                               'var(--text-muted)';
                             e.currentTarget.style.background =
@@ -712,18 +743,23 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         </button>
                       </Tooltip>
                     )}
-                    {!isOwner && canManageMembers && (
-                      <Tooltip content="移除成员">
+                    {!isOwner && (
+                      <Tooltip content={canManageMembers ? '移除成员' : '需要成员管理权限'}>
                         <button
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="p-1.5 rounded flex-shrink-0"
+                          onClick={() => canManageMembers && handleRemoveMember(member.id)}
+                          disabled={!canManageMembers}
+                          className={`p-1.5 rounded flex-shrink-0 ${
+                            !canManageMembers ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={(e) => {
+                            if (!canManageMembers) return;
                             e.currentTarget.style.color = 'var(--error)';
                             e.currentTarget.style.background =
                               'var(--error-light)';
                           }}
                           onMouseLeave={(e) => {
+                            if (!canManageMembers) return;
                             e.currentTarget.style.color =
                               'var(--text-muted)';
                             e.currentTarget.style.background =

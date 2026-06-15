@@ -284,23 +284,22 @@ export class ProjectPermissionService {
    * - project:permission:${userId}:${projectId}:${permission} - 项目权限缓存
    */
   async clearUserCache(userId: string, projectId: string): Promise<void> {
-    if (this.permissionStore) {
-      await this.permissionStore.clearProjectCache(projectId);
-      return;
-    }
-
     // 清除项目所有者缓存
-    this.cacheService.delete(`project:owner:${userId}:${projectId}`);
+    await this.cacheService.delete(`project:owner:${userId}:${projectId}`);
 
     // 清除用户角色缓存
-    this.cacheService.delete(`project:role:${userId}:${projectId}`);
+    await this.cacheService.delete(`project:role:${userId}:${projectId}`);
 
     // 清除所有权限缓存
     const permissions = Object.values(ProjectPermission);
     for (const permission of permissions) {
-      this.cacheService.delete(
+      await this.cacheService.delete(
         `project:permission:${userId}:${projectId}:${permission}`
       );
+    }
+
+    if (this.permissionStore) {
+      await this.permissionStore.clearProjectCache(projectId);
     }
   }
 

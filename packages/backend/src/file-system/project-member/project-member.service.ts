@@ -174,6 +174,7 @@ export class ProjectMemberService {
       });
 
       await this.permissionService.clearNodeCache(projectId);
+      await this.projectPermissionService.clearUserCache(userId, projectId);
 
       await this.auditLogService.log(
         AuditAction.ADD_MEMBER,
@@ -302,6 +303,7 @@ export class ProjectMemberService {
         });
 
         await this.permissionService.clearNodeCache(projectId);
+        await this.projectPermissionService.clearUserCache(userId, projectId);
 
         await this.auditLogService.log(
           AuditAction.UPDATE_MEMBER,
@@ -395,6 +397,7 @@ export class ProjectMemberService {
       }
 
       await this.permissionService.clearNodeCache(projectId);
+      await this.projectPermissionService.clearUserCache(userId, projectId);
 
       await this.auditLogService.log(
         AuditAction.REMOVE_MEMBER,

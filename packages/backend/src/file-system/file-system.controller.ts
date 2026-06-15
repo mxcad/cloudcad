@@ -670,7 +670,6 @@ export class FileSystemController {
   // ==================== 项目成员管理 ====================
 
   @Get('projects/:projectId/members')
-  @RequireProjectPermission(ProjectPermission.PROJECT_MEMBER_MANAGE)
   @ApiOperation({ summary: '获取项目成员列表' })
   @ApiResponse({
     status: 200,

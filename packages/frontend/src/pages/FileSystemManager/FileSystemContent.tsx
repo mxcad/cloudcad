@@ -249,7 +249,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
         }
       };
     }
-    if (node.isRoot && permissions.canManageMembers && onShowMembers) {
+    if (node.isRoot && onShowMembers) {
       onShowMembersHandler = () => onShowMembers(node);
     }
     if (node.isRoot && permissions.canManageRoles && onShowRoles) {
