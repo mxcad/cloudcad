@@ -148,8 +148,7 @@ export const CollaborateSidebar: React.FC = () => {
         setWorks((prev) => {
           const serverIds = new Set(filtered.map((w) => w.work_id));
           const merged = filtered.map((serverWork) => {
-            const local = prev.find((w) => w.work_id === serverWork.work_id);
-            return local || serverWork;
+            return serverWork;
           });
           const localOnly = prev.filter((w) => !serverIds.has(w.work_id));
           if (localOnly.length === 0) return merged;
