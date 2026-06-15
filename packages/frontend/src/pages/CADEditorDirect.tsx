@@ -17,7 +17,7 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { Z_LAYERS } from '@/constants/layers';
 import { ProjectPermission, SystemPermission } from '../constants/permissions';
 import { usePermission } from '../hooks/usePermission';
-import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerCheckProjectPermission, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload, shareControllerResolveShareNode } from '@/api-sdk';
+import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerDownloadNodeWithFormat, fileSystemControllerGetUserProjectPermissions, libraryControllerGetDrawingNode, libraryControllerGetBlockNode, publicFileControllerConvertAndDownload, shareControllerResolveShareNode } from '@/api-sdk';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { PdfExportModal } from '../components/modals/PdfExportModal';
@@ -354,14 +354,11 @@ export const CADEditorDirect: React.FC = () => {
 
     const checkPermissions = async () => {
       try {
-        const [saveRes, exportRes, externalRefRes] = await Promise.all([
-          fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.CAD_SAVE } }),
-          fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.FILE_DOWNLOAD } }),
-          fileSystemControllerCheckProjectPermission({ path: { projectId: urlProjectId }, query: { permission: ProjectPermission.CAD_EXTERNAL_REFERENCE } }),
-        ]);
-        const save = saveRes.data?.hasPermission || false;
-        const export_ = exportRes.data?.hasPermission || false;
-        const externalRef = externalRefRes.data?.hasPermission || false;
+        const { data } = await fileSystemControllerGetUserProjectPermissions({ path: { projectId: urlProjectId } });
+        const permissions = data?.permissions || [];
+        const save = permissions.includes(ProjectPermission.CAD_SAVE);
+        const export_ = permissions.includes(ProjectPermission.FILE_DOWNLOAD);
+        const externalRef = permissions.includes(ProjectPermission.CAD_EXTERNAL_REFERENCE);
         setCanSave(save);
         setCanExport(export_);
         setCanManageExternalRef(externalRef);
