@@ -1,6 +1,6 @@
 /**
  * 用户引导上下文 - 管理引导状态
- * - dismissed 状态持久化到 localStorage
+ * - dismissed / completedGuides 状态持久化到 localStorage
  * - 其他状态仅内存存储（会话级别）
  */
 import React, {
@@ -22,8 +22,9 @@ import type {
 import { tourGuides as defaultGuides } from '../config/tourGuides';
 import { useAuth } from './AuthContext';
 
-/** localStorage 存储键名（仅用于 dismissed 状态） */
+/** localStorage 存储键名 */
 const TOUR_DISMISSED_KEY = 'cloudcad_tour_dismissed';
+const TOUR_COMPLETED_KEY = 'cloudcad_tour_completed';
 
 /**
  * 引导模式运行时状态（模块级变量，用于跨组件通信）
@@ -64,6 +65,29 @@ function saveDismissedState(dismissed: boolean): void {
     localStorage.setItem(TOUR_DISMISSED_KEY, String(dismissed));
   } catch {
     // 忽略存储错误（如隐私模式）
+  }
+}
+
+/**
+ * 从 localStorage 读取已完成引导列表
+ */
+function loadCompletedGuides(): string[] {
+  try {
+    const data = localStorage.getItem(TOUR_COMPLETED_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 保存已完成引导列表到 localStorage
+ */
+function saveCompletedGuides(guides: string[]): void {
+  try {
+    localStorage.setItem(TOUR_COMPLETED_KEY, JSON.stringify(guides));
+  } catch {
+    // 忽略存储错误
   }
 }
 
@@ -204,8 +228,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 内存状态（不持久化）
-  const [completedGuides, setCompletedGuides] = useState<string[]>([]);
+  // completedGuides 从 localStorage 初始化，跨页面刷新保持
+  const [completedGuides, setCompletedGuides] = useState<string[]>(() =>
+    loadCompletedGuides()
+  );
   const [isActive, setIsActive] = useState(false);
   /** 引导模式状态（用于控制特定行为，如 CAD 文件在当前页面打开） */
   const [isTourMode, setIsTourMode] = useState(false);
@@ -287,6 +313,11 @@ export const TourProvider: React.FC<TourProviderProps> = ({
       }, 500);
     }
   }, [location.pathname, currentGuide]);
+
+  // 持久化已完成引导列表到 localStorage
+  useEffect(() => {
+    saveCompletedGuides(completedGuides);
+  }, [completedGuides]);
 
   /**
    * 执行插入的步骤（用于前置条件解决）
