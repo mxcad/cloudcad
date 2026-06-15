@@ -2,13 +2,40 @@
 import { ref, onMounted } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
 import {
-  cooperateControllerCreateShare,
-  cooperateControllerRevokeShare,
-  cooperateControllerListShares,
-  cooperateControllerUpdateShare,
+  shareControllerCreateShare,
+  shareControllerRevokeShare,
+  shareControllerListShares,
 } from '../api-sdk';
 import { useUser } from '../composables/useUser';
 import { useEditorState } from '../composables/useEditorState';
+
+type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
+
+function getExpiresInSeconds(expiration: ExpirationOption, customDays: number): number | undefined {
+  if (expiration === 'never') return undefined;
+  if (expiration === 'custom') return customDays * 86400;
+  const map: Record<string, number> = {
+    '2h': 7200, '6h': 21600, '12h': 43200, '1d': 86400, '3d': 259200, '7d': 604800,
+  };
+  return map[expiration];
+}
+
+function isExpired(expiresAt: string | null): boolean {
+  if (!expiresAt) return false;
+  return new Date(expiresAt).getTime() <= Date.now();
+}
+
+function getExpiryLabel(expiresAt: string | null): string {
+  if (!expiresAt) return '永不过期';
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff <= 0) return '已过期';
+  const days = Math.ceil(diff / 86400000);
+  if (days === 0) {
+    const hours = Math.ceil(diff / 3600000);
+    return `${hours} 小时后过期`;
+  }
+  return `${days} 天后过期`;
+}
 
 interface ShareItem {
   id: string;
@@ -16,7 +43,6 @@ interface ShareItem {
   url: string;
   fileId: string;
   fileName: string;
-  collaborationEnabled: boolean;
   expiresAt: string | null;
   usedCount: number;
   createdAt: string;
@@ -34,8 +60,7 @@ const creating = ref(false);
 const loading = ref(false);
 const step = ref<'form' | 'result'>('form');
 
-const collaborationEnabled = ref(false);
-const expiration = ref<'never' | '1d' | '3d' | '7d' | 'custom'>('never');
+const expiration = ref<ExpirationOption>('never');
 const customDays = ref(7);
 
 const createdUrl = ref('');
@@ -43,6 +68,17 @@ const createdToken = ref('');
 const createdExpiresAt = ref<string | null>(null);
 
 const existingShares = ref<ShareItem[]>([]);
+
+const expiryOptions: { value: ExpirationOption; label: string }[] = [
+  { value: 'never', label: '永不过期' },
+  { value: '2h', label: '2 小时' },
+  { value: '6h', label: '6 小时' },
+  { value: '12h', label: '12 小时' },
+  { value: '1d', label: '1 天' },
+  { value: '3d', label: '3 天' },
+  { value: '7d', label: '7 天' },
+  { value: 'custom', label: '自定义' },
+];
 
 onMounted(async () => {
   if (!state.fileId || !isAuthenticated.value) return;
@@ -52,30 +88,17 @@ onMounted(async () => {
 async function loadExistingShares() {
   loading.value = true;
   try {
-    const result = await cooperateControllerListShares({
+    const result = await shareControllerListShares({
       query: { fileId: state.fileId!, pageSize: 50 },
     });
     if (!result.error && result.data) {
       const data = result.data as unknown as { items: ShareItem[] };
-      existingShares.value = (data.items || []).filter(
-        (s) => !s.expiresAt || new Date(s.expiresAt) > new Date()
-      );
+      existingShares.value = data.items || [];
     }
   } catch {
     // silently fail
   }
   loading.value = false;
-}
-
-function getExpiresInSeconds(): number | undefined {
-  switch (expiration.value) {
-    case 'never': return undefined;
-    case '1d': return 86400;
-    case '3d': return 259200;
-    case '7d': return 604800;
-    case 'custom': return customDays.value * 86400;
-    default: return undefined;
-  }
 }
 
 async function handleCreate() {
@@ -90,11 +113,10 @@ async function handleCreate() {
 
   creating.value = true;
   try {
-    const expiresIn = getExpiresInSeconds();
-    const result = await cooperateControllerCreateShare({
+    const expiresIn = getExpiresInSeconds(expiration.value, customDays.value);
+    const result = await shareControllerCreateShare({
       body: {
         fileId: state.fileId,
-        collaborationEnabled: collaborationEnabled.value,
         ...(expiresIn !== undefined ? { expiresIn } : {}),
       },
     });
@@ -128,7 +150,7 @@ async function handleRevoke(token: string) {
   }
 
   try {
-    const result = await cooperateControllerRevokeShare({
+    const result = await shareControllerRevokeShare({
       path: { token },
     });
     if (!result.error) {
@@ -146,28 +168,15 @@ async function handleRevoke(token: string) {
   }
 }
 
-async function handleToggleCollab(token: string, enabled: boolean) {
-  try {
-    const result = await cooperateControllerUpdateShare({
-      path: { token },
-      body: { collaborationEnabled: enabled },
-    });
-    if (!result.error) {
-      existingShares.value = existingShares.value.map((s) =>
-        s.token === token ? { ...s, collaborationEnabled: enabled } : s
-      );
-      showToast(enabled ? '已开启协同' : '已关闭协同');
-    }
-  } catch {
-    showToast('修改失败');
-  }
-}
-
 function handleCopy(url: string) {
   navigator.clipboard.writeText(url).then(
     () => showToast('链接已复制'),
     () => showToast('复制失败')
   );
+}
+
+function handleOpen(url: string) {
+  window.open(url, '_blank');
 }
 
 function handleClose() {
@@ -178,23 +187,6 @@ function handleClose() {
 function handleBack() {
   step.value = 'form';
 }
-
-function getExpiryLabel(item: { expiresAt: string | null }): string {
-  if (!item.expiresAt) return '永不过期';
-  const expires = typeof item.expiresAt === 'string' ? item.expiresAt : (item.expiresAt as unknown as string);
-  const diff = new Date(expires).getTime() - Date.now();
-  if (diff <= 0) return '已过期';
-  const days = Math.ceil(diff / 86400000);
-  return `${days}天后过期`;
-}
-
-const expiryOptions = [
-  { value: 'never' as const, label: '永不过期' },
-  { value: '1d' as const, label: '1天' },
-  { value: '3d' as const, label: '3天' },
-  { value: '7d' as const, label: '7天' },
-  { value: 'custom' as const, label: '自定义' },
-];
 </script>
 
 <template>
@@ -205,6 +197,7 @@ const expiryOptions = [
     :style="{ height: '70vh' }"
     closeable
     title="分享图纸"
+    overlay-class="share-popup-overlay"
     @close="handleClose"
   >
     <div class="share-container">
@@ -225,14 +218,6 @@ const expiryOptions = [
         <div class="share-file-name-bar">
           <van-icon name="description-o" size="18" color="#666" />
           <span>{{ state.fileName || '当前图纸' }}</span>
-        </div>
-
-        <div class="share-form-group">
-          <div class="share-form-row">
-            <span class="share-form-label">允许加入实时协同</span>
-            <van-switch v-model="collaborationEnabled" size="24" />
-          </div>
-          <p class="share-form-hint">开启后，接收者可加入实时协同编辑</p>
         </div>
 
         <div class="share-form-group">
@@ -258,7 +243,6 @@ const expiryOptions = [
               placeholder="输入天数"
               :min="1"
               :max="365"
-              style="width: 120px;"
             />
           </div>
         </div>
@@ -286,20 +270,22 @@ const expiryOptions = [
             <div class="share-existing-info">
               <div class="share-existing-url">
                 <span class="share-existing-token">/share/{{ item.token.slice(0, 8) }}...</span>
-                <span
-                  :class="['share-existing-collab', item.collaborationEnabled ? 'on' : 'off']"
-                  @click="handleToggleCollab(item.token, !item.collaborationEnabled)"
+                <van-tag
+                  v-if="isExpired(item.expiresAt)"
+                  type="danger"
+                  size="medium"
                 >
-                  {{ item.collaborationEnabled ? '协同开' : '协同关' }}
-                </span>
+                  已过期
+                </van-tag>
               </div>
               <div class="share-existing-meta">
-                <span>{{ getExpiryLabel(item) }}</span>
-                <span>· {{ item.usedCount }}次</span>
+                <span>{{ getExpiryLabel(item.expiresAt) }}</span>
+                <span>· {{ item.usedCount }} 次</span>
               </div>
             </div>
             <div class="share-existing-actions">
-              <van-button size="mini" plain @click="handleCopy(item.url)">复制</van-button>
+              <van-button size="mini" plain icon="eye-o" @click="handleOpen(item.url)">打开</van-button>
+              <van-button size="mini" plain icon="description-o" @click="handleCopy(item.url)">复制</van-button>
               <van-button size="mini" plain type="danger" @click="handleRevoke(item.token)">撤销</van-button>
             </div>
           </div>
@@ -324,9 +310,8 @@ const expiryOptions = [
             </van-button>
           </div>
 
-          <div class="share-result-info">
-            <span>协同: {{ collaborationEnabled ? '开启' : '关闭' }}</span>
-            <span v-if="createdExpiresAt">· {{ getExpiryLabel({ expiresAt: createdExpiresAt }) }}</span>
+          <div v-if="createdExpiresAt" class="share-result-info">
+            <span>{{ getExpiryLabel(createdExpiresAt) }}</span>
           </div>
 
           <div class="share-result-actions">
@@ -353,6 +338,7 @@ const expiryOptions = [
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  font-size: 15px;
 }
 
 .share-header {
@@ -363,7 +349,7 @@ const expiryOptions = [
 }
 
 .share-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   margin-left: 12px;
 }
@@ -375,7 +361,7 @@ const expiryOptions = [
   padding: 10px 14px;
   background: #f5f5f5;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   margin-bottom: 16px;
 }
@@ -384,27 +370,11 @@ const expiryOptions = [
   margin-bottom: 20px;
 }
 
-.share-form-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .share-form-label {
   font-size: 15px;
   font-weight: 500;
   display: block;
-  margin-bottom: 8px;
-}
-
-.share-form-row .share-form-label {
-  margin-bottom: 0;
-}
-
-.share-form-hint {
-  font-size: 12px;
-  color: #999;
-  margin-top: 6px;
+  margin-bottom: 10px;
 }
 
 .share-expiry-grid {
@@ -415,11 +385,11 @@ const expiryOptions = [
 
 .share-expiry-btn {
   flex: 1;
-  min-width: 60px;
+  min-width: 56px;
 }
 
 .share-custom-days {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .share-existing {
@@ -427,10 +397,10 @@ const expiryOptions = [
 }
 
 .share-existing-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: #666;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .share-existing-item {
@@ -455,37 +425,20 @@ const expiryOptions = [
 }
 
 .share-existing-token {
-  font-size: 13px;
+  font-size: 15px;
   color: #333;
   font-family: monospace;
 }
 
-.share-existing-collab {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.share-existing-collab.on {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.share-existing-collab.off {
-  background: #fff3e0;
-  color: #e65100;
-}
-
 .share-existing-meta {
-  font-size: 11px;
+  font-size: 15px;
   color: #999;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .share-existing-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
   margin-left: 8px;
 }
@@ -498,7 +451,7 @@ const expiryOptions = [
 }
 
 .share-result-title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   margin-top: 12px;
   margin-bottom: 20px;
@@ -517,19 +470,37 @@ const expiryOptions = [
 
 .share-result-url-text {
   flex: 1;
-  font-size: 12px;
+  font-size: 15px;
   color: #333;
   word-break: break-all;
   font-family: monospace;
 }
 
 .share-result-info {
-  font-size: 13px;
+  font-size: 15px;
   color: #666;
   margin-bottom: 24px;
 }
 
 .share-result-actions {
   width: 100%;
+}
+</style>
+
+<style>
+.share-popup-overlay .van-popup__title {
+  font-size: 15px;
+}
+
+.share-popup-overlay .van-button {
+  font-size: 15px;
+}
+
+.share-popup-overlay .van-field__label {
+  font-size: 15px;
+}
+
+.share-popup-overlay .van-tag {
+  font-size: 15px;
 }
 </style>

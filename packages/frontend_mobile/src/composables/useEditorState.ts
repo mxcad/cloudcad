@@ -17,6 +17,8 @@ interface EditorState {
   isPersonalSpace: boolean;
   isModified: boolean;
   fileName: string;
+  currentVersion: number | undefined;
+  isPublicFile: boolean;
   updatedAt: string | null;
   expectedTimestamp: string | null;
 }
@@ -36,6 +38,8 @@ const state = reactive<EditorState>({
   isPersonalSpace: false,
   isModified: false,
   fileName: '',
+  currentVersion: undefined,
+  isPublicFile: false,
   updatedAt: null,
   expectedTimestamp: null,
 });
@@ -90,6 +94,29 @@ export function useEditorState() {
     state.expectedTimestamp = val;
   }
 
+  function setCurrentVersion(version: number | undefined) {
+    state.currentVersion = version;
+  }
+
+  function setIsPublicFile(val: boolean) {
+    state.isPublicFile = val;
+  }
+
+  function setNewFileInfo() {
+    state.fileId = '';
+    state.projectId = null;
+    state.fileInfo = null;
+    state.isPersonalSpace = false;
+    state.fileName = 'new.dwg';
+    state.updatedAt = null;
+    state.expectedTimestamp = null;
+    state.permissions = {
+      canSave: false,
+      canExport: false,
+      canManageExternalRef: false,
+    };
+  }
+
   function reset() {
     state.isActive = false;
     state.loading = false;
@@ -105,8 +132,21 @@ export function useEditorState() {
     state.isPersonalSpace = false;
     state.isModified = false;
     state.fileName = '';
+    state.currentVersion = undefined;
+    state.isPublicFile = false;
     state.updatedAt = null;
     state.expectedTimestamp = null;
+  }
+
+  function resetNewFile() {
+    reset();
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('fileId');
+    url.searchParams.delete('nodeId');
+    url.searchParams.delete('hash');
+    url.searchParams.delete('v');
+    window.history.replaceState(null, '', url.pathname + url.search);
   }
 
   return {
@@ -123,6 +163,10 @@ export function useEditorState() {
     setIsActive,
     setUpdatedAt,
     setExpectedTimestamp,
+    setCurrentVersion,
+    setIsPublicFile,
+    setNewFileInfo,
     reset,
+    resetNewFile,
   };
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { cooperateControllerResolveShareNode } from '../../api-sdk';
+import { shareControllerResolveShareNode } from '../../api-sdk';
 import { showToast } from 'vant';
 import { useUser } from '../../composables/useUser';
 
@@ -9,7 +9,6 @@ const { isAuthenticated } = useUser();
 const loading = ref(true);
 const error = ref<string | null>(null);
 const fileName = ref('');
-const collaborationEnabled = ref(false);
 const fileId = ref('');
 const token = ref('');
 
@@ -27,7 +26,7 @@ onMounted(async () => {
   }
 
   try {
-    const result = await cooperateControllerResolveShareNode({
+    const result = await shareControllerResolveShareNode({
       path: { token: token.value },
     });
     if (result.error) {
@@ -38,11 +37,9 @@ onMounted(async () => {
     const data = result.data as {
       name: string;
       id: string;
-      collaborationEnabled: boolean;
     };
     fileName.value = data.name || '未知图纸';
     fileId.value = data.id;
-    collaborationEnabled.value = data.collaborationEnabled ?? false;
   } catch {
     error.value = '加载分享信息失败';
   }
@@ -78,16 +75,8 @@ function handleLogin() {
       <van-icon name="share-o" size="64" color="#1989fa" />
       <p class="share-landing-title">图纸分享</p>
       <div class="share-file-info">
-        <van-icon name="description-o" size="24" color="#666" />
+        <van-icon name="description-o" size="20" color="#666" />
         <span class="share-file-name">{{ fileName }}</span>
-      </div>
-      <div v-if="collaborationEnabled" class="share-collab-badge">
-        <van-icon name="friends-o" size="14" />
-        <span>允许实时协同</span>
-      </div>
-      <div v-else class="share-collab-badge share-collab-badge-off">
-        <van-icon name="lock" size="14" />
-        <span>仅查看</span>
       </div>
 
       <div class="share-actions">
@@ -156,7 +145,7 @@ function handleLogin() {
   align-items: center;
   gap: 8px;
   margin-top: 20px;
-  padding: 12px 20px;
+  padding: 12px 16px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -173,23 +162,6 @@ function handleLogin() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.share-collab-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-  padding: 4px 12px;
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-radius: 20px;
-  font-size: 12px;
-}
-
-.share-collab-badge-off {
-  background: #fff3e0;
-  color: #e65100;
 }
 
 .share-actions {

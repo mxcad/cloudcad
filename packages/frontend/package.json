@@ -43,7 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.556.0",
-    "mxcad-app": "^1.0.67",
+    "mxcad-app": "^1.0.68",
     "openapi-client-axios": "^7.5.5",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.1",

@@ -212,3 +212,15 @@ export function useCooperate() {
     exitWork,
   };
 }
+
+export function exitCollaborationIfNeeded(): void {
+  try {
+    const cooperate = getCooperate();
+    if (!cooperate) return;
+    const ret = cooperate.exitWrok();
+    if (ret === 0) {
+      useEditorState().setIsModified(false);
+    }
+  } catch {
+  }
+}
