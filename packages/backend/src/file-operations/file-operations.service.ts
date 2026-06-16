@@ -598,66 +598,25 @@ export class FileOperationsService {
 
   async clearProjectTrash(projectId: string, userId: string) {
     try {
-      // 获取项目信息用于缓存清除
-      const project = await this.prisma.fileSystemNode.findUnique({
-        where: { id: projectId },
-        select: { ownerId: true },
+      // 使用与 getTrashItems 相同的查询逻辑，找到项目下所有已删除节点
+      const allProjectNodeIds = await this.getAllProjectNodeIds(projectId);
+
+      const trashItems = await this.prisma.fileSystemNode.findMany({
+        where: {
+          id: { in: allProjectNodeIds },
+          deletedAt: { not: null },
+        },
+        select: { id: true },
       });
 
-      // 1. 收集所有需要删除的文件信息
-      const filesToDelete: Array<{
-        path: string;
-        fileHash: string | null;
-        nodeId: string;
-      }> = [];
-      const nodesToDelete: string[] = [];
+      const ids = trashItems.map(item => item.id);
+      this.logger.log(`清空项目回收站: 找到 ${ids.length} 个项目待删除`);
 
-      // 2. 递归收集文件信息（不执行删除操作）
-      await this.collectFilesToDelete(projectId, filesToDelete, nodesToDelete);
-
-      // 3. 在事务中执行数据库操作（快速完成）
-      await this.prisma.$transaction(
-        async (tx) => {
-          // 更新子文件节点状态（用 updateMany 避免并发删除导致记录不存在）
-          const fileNodeIds = filesToDelete
-            .filter((f) => f.path)
-            .map((f) => f.nodeId);
-          if (fileNodeIds.length > 0) {
-            await tx.fileSystemNode.updateMany({
-              where: { id: { in: fileNodeIds } },
-              data: { deletedFromStorage: new Date() },
-            });
-          }
-
-          // 批量删除子节点
-          if (nodesToDelete.length > 0) {
-            await tx.fileSystemNode.deleteMany({
-              where: { id: { in: nodesToDelete } },
-            });
-          }
-        },
-        {
-          timeout: 30000, // 增加事务超时时间到30秒
-        }
-      );
-
-      // 4. 在事务外部执行耗时的文件系统操作
-      for (const file of filesToDelete) {
-        if (file.path) {
-          await this.deleteFileFromStorage(file.path, file.fileHash, true);
-        }
+      if (ids.length === 0) {
+        return { message: '项目回收站中没有任何项目' };
       }
 
-      // 清除配额缓存
-      if (project?.ownerId) {
-        await this.storageInfoService.invalidateQuotaCache(
-          project.ownerId,
-          projectId
-        );
-      }
-
-      this.logger.log(`项目回收站已清空: ${projectId}`);
-      return { message: '项目回收站已清空' };
+      return this.permanentlyDeleteTrashItems(ids, userId);
     } catch (error) {
       this.logger.error(`清空项目回收站失败: ${error.message}`, error.stack);
       throw error;
@@ -1577,96 +1536,42 @@ export class FileOperationsService {
 
   async clearTrash(userId: string) {
     try {
-      // 查询用户可访问的活跃项目（用于定位孤儿节点 — 已删除但所属项目未删除的文件/文件夹）
-      const accessibleProjects = await this.prisma.fileSystemNode.findMany({
+      // 使用与 getTrashItems 完全相同的查询条件，确保清除的正是回收站显示的集合
+      const accessibleProjectFilter: Prisma.FileSystemNodeWhereInput = {
+        isRoot: true,
+        deletedAt: null,
+        libraryKey: null,
+        OR: [
+          { ownerId: userId },
+          { projectMembers: { some: { userId } } },
+        ],
+      };
+
+      const userAccessFilter = [
+        { ownerId: userId },
+        { projectMembers: { some: { userId } } },
+      ];
+
+      const trashItems = await this.prisma.fileSystemNode.findMany({
         where: {
-          isRoot: true,
-          deletedAt: null,
+          deletedAt: { not: null },
           libraryKey: null,
           OR: [
-            { ownerId: userId },
-            { projectMembers: { some: { userId } } },
+            { project: accessibleProjectFilter },
+            { isRoot: true, OR: userAccessFilter },
           ],
         },
         select: { id: true },
       });
-      const accessibleProjectIds = new Set(accessibleProjects.map((p) => p.id));
 
-      // 查询所有已删除的项目（用户可访问的）
-      const deletedProjects = await this.prisma.fileSystemNode.findMany({
-        where: {
-          isRoot: true,
-          deletedAt: { not: null },
-          libraryKey: null,
-          OR: [
-            { ownerId: userId },
-            { projectMembers: { some: { userId } } },
-          ],
-        },
-        select: { id: true, ownerId: true },
-      });
+      const ids = trashItems.map(item => item.id);
+      this.logger.log(`清空回收站: 找到 ${ids.length} 个项目待删除`);
 
-      for (const project of deletedProjects) {
-        const hasPermission = await this.projectPermissionService.checkPermission(
-          userId, project.id, ProjectPermission.FILE_TRASH_MANAGE
-        );
-        if (!hasPermission) {
-          throw new ForbiddenException(`没有权限清空项目 ${project.id} 的回收站`);
-        }
+      if (ids.length === 0) {
+        return { message: '回收站中没有任何项目' };
       }
 
-      // 查询所有已删除的非根节点（孤儿节点 — 所属项目为活跃项目的已删除文件/文件夹）
-      const orphanNodes = await this.prisma.fileSystemNode.findMany({
-        where: {
-          deletedAt: { not: null },
-          projectId: { in: [...accessibleProjectIds] },
-          isRoot: false,
-        },
-        select: { id: true, isFolder: true, path: true, fileHash: true },
-      });
-
-      // 清理孤儿节点：逐节点递归处理（文件夹也会递归清理其子文件）
-      for (const node of orphanNodes) {
-        try {
-          if (node.isFolder) {
-            await this.permanentlyDeleteNode(node.id, false);
-          } else {
-            if (node.path) {
-              await this.deleteFileIfNotReferenced(this.prisma, node.id, node.path, node.fileHash);
-            }
-            await this.prisma.fileSystemNode.delete({ where: { id: node.id } });
-          }
-        } catch (error) {
-          this.logger.error(`清空回收站时删除孤儿节点失败: ${node.id}, ${error.message}`, error.stack);
-        }
-      }
-
-      // 清理已删除的项目（每个独立 try-catch 防止单个项目失败阻断全部）
-      for (const project of deletedProjects) {
-        try {
-          await this.permanentlyDeleteProject(project.id, false);
-        } catch (error) {
-          this.logger.error(`清空回收站时删除项目失败: ${project.id}, ${error.message}`, error.stack);
-        }
-      }
-
-      await this.storageInfoService.invalidateQuotaCache(userId);
-
-      if (this.versionControlService.isReady()) {
-        try {
-          const commitResult = await this.versionControlService.commitWorkingCopy(`清空用户回收站: ${userId}`);
-          if (commitResult.success) {
-            this.logger.log(`清空回收站的 SVN 更改已提交: ${userId}`);
-          } else {
-            this.logger.warn(`清空回收站的 SVN 更改提交失败: ${userId}, 原因: ${commitResult.message}`);
-          }
-        } catch (svnError) {
-          this.logger.error(`清空回收站的 SVN 更改提交失败: ${userId}, 错误: ${svnError.message}`);
-        }
-      }
-
-      this.logger.log(`用户回收站已清空: ${userId}`);
-      return { message: '回收站已清空' };
+      return this.permanentlyDeleteTrashItems(ids, userId);
     } catch (error) {
       this.logger.error(`清空回收站失败: ${error.message}`, error.stack);
       throw error;

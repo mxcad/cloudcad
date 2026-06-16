@@ -50,11 +50,11 @@ function onCancel() { emit('cancel') }
 
 <template>
   <van-popup
-    :show="show"
-    :title="title"
-    :position="position"
-    :round="round"
-    :closeable="closeable"
+    :show="props.show"
+    :title="props.title"
+    :position="props.position"
+    :round="props.round"
+    :closeable="props.closeable"
     :style="popupStyle"
     safe-area-inset-bottom
     @close="onClose"
@@ -66,14 +66,14 @@ function onCancel() { emit('cancel') }
       <slot />
     </div>
 
-    <div v-if="showFooter || $slots.footer" class="popup-footer">
+    <div v-if="props.showFooter || $slots.footer" class="popup-footer">
       <slot name="footer">
         <div class="popup-footer-default">
-          <van-button v-if="!hideCancel" plain block @click="onCancel">
-            {{ cancelText }}
+          <van-button v-if="!props.hideCancel" plain block @click="onCancel">
+            {{ props.cancelText }}
           </van-button>
-          <van-button type="primary" block :loading="confirmLoading" @click="onConfirm">
-            {{ confirmText }}
+          <van-button type="primary" block :loading="props.confirmLoading" @click="onConfirm">
+            {{ props.confirmText }}
           </van-button>
         </div>
       </slot>
