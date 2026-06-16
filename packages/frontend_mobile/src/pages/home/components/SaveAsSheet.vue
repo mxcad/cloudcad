@@ -5,6 +5,7 @@ import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
 import type { FileSystemNodeDto } from '../../../api-sdk';
+import PopupBase from '../../../components/PopupBase.vue';
 
 interface FolderNode {
   id: string;
@@ -238,68 +239,58 @@ function selectFolder(nodeId: string) {
   saveAs.selectedParentId.value = nodeId;
   step.value = 'form';
 }
+
+function onClose() {
+  emit('close');
+}
 </script>
 
 <template>
-  <van-popup
+  <PopupBase
     :show="show"
-    position="bottom"
-    round
-    :style="{ height: '85vh' }"
-    @close="emit('close')"
+    :title="step === 'form' ? '另存为' : '选择文件夹'"
+    :height="'85vh'"
+    :body-padding="'0'"
     @opened="init"
+    @close="onClose"
+    @update:show="onClose"
   >
     <!-- Folder Picker View -->
     <template v-if="step === 'folder'">
-      <div class="sheet-header">
-        <button class="sheet-back" @click="step = 'form'">← 返回</button>
-        <span class="sheet-title">选择文件夹</span>
-        <span class="sheet-spacer"></span>
+      <div class="folder-breadcrumb">
+        <span class="folder-breadcrumb-item" @click="goUp">根目录</span>
+        <template v-for="(p, i) in folderPath" :key="p.id">
+          <span class="folder-breadcrumb-sep">/</span>
+          <span class="folder-breadcrumb-item" @click="folderPath.splice(i + 1); enterFolder(p.id, p.name)">{{ p.name }}</span>
+        </template>
       </div>
-      <div class="sheet-body">
-        <!-- Breadcrumb -->
-        <div class="folder-breadcrumb">
-          <span class="folder-breadcrumb-item" @click="goUp">根目录</span>
-          <template v-for="(p, i) in folderPath" :key="p.id">
-            <span class="folder-breadcrumb-sep">/</span>
-            <span class="folder-breadcrumb-item" @click="folderPath.splice(i + 1); enterFolder(p.id, p.name)">{{ p.name }}</span>
-          </template>
-        </div>
-        <van-loading v-if="folderLoading" style="margin-top: 40px;" />
-        <van-cell-group v-else>
-          <van-cell
-            v-for="node in folderNodes"
-            :key="node.id"
-            :title="node.name"
-            is-link
-            @click="enterFolder(node.id, node.name)"
-          />
-          <van-empty v-if="folderNodes.length === 0" description="无子文件夹" />
-          <!-- Select current folder button -->
-          <van-button
-            v-if="folderPath.length > 0"
-            type="primary"
-            block
-            style="margin-top: 16px;"
-            @click="selectFolder(folderPath[folderPath.length - 1].id)"
-          >
-            选择当前文件夹
-          </van-button>
-        </van-cell-group>
-      </div>
+      <van-loading v-if="folderLoading" class="loading-state" />
+      <van-cell-group v-else>
+        <van-cell
+          v-for="node in folderNodes"
+          :key="node.id"
+          :title="node.name"
+          is-link
+          @click="enterFolder(node.id, node.name)"
+        />
+        <van-empty v-if="folderNodes.length === 0" description="无子文件夹" />
+        <van-button
+          v-if="folderPath.length > 0"
+          type="primary"
+          block
+          class="select-folder-btn"
+          @click="selectFolder(folderPath[folderPath.length - 1].id)"
+        >
+          选择当前文件夹
+        </van-button>
+      </van-cell-group>
     </template>
 
     <!-- Main Form View -->
     <template v-else>
-      <div class="sheet-header">
-        <span class="sheet-title">另存为</span>
-        <button class="sheet-close" @click="emit('close')">✕</button>
-      </div>
-
       <div class="sheet-body">
         <div v-if="error" class="sheet-error">{{ error }}</div>
 
-        <!-- File Name -->
         <div class="sheet-field">
           <label class="sheet-label">文件名</label>
           <van-field
@@ -310,7 +301,6 @@ function selectFolder(nodeId: string) {
           />
         </div>
 
-        <!-- Destination Type -->
         <div class="sheet-field">
           <label class="sheet-label">保存到</label>
           <van-radio-group v-model="saveAs.targetType.value" direction="horizontal">
@@ -325,7 +315,6 @@ function selectFolder(nodeId: string) {
           </van-radio-group>
         </div>
 
-        <!-- Project Selector -->
         <div v-if="saveAs.targetType.value === 'project'" class="sheet-field">
           <label class="sheet-label">选择项目</label>
           <van-field
@@ -337,7 +326,6 @@ function selectFolder(nodeId: string) {
           />
         </div>
 
-        <!-- Library Type Selector -->
         <div v-if="saveAs.targetType.value === 'library'" class="sheet-field">
           <label class="sheet-label">选择资源库</label>
           <van-radio-group v-model="saveAs.libraryType.value" direction="horizontal">
@@ -346,7 +334,6 @@ function selectFolder(nodeId: string) {
           </van-radio-group>
         </div>
 
-        <!-- Folder Selector -->
         <div class="sheet-field">
           <label class="sheet-label">保存位置</label>
           <van-button
@@ -359,7 +346,6 @@ function selectFolder(nodeId: string) {
           </van-button>
         </div>
 
-        <!-- Format Selector -->
         <div class="sheet-field">
           <label class="sheet-label">保存格式</label>
           <van-radio-group v-model="saveAs.format.value" direction="horizontal">
@@ -370,9 +356,10 @@ function selectFolder(nodeId: string) {
           </van-radio-group>
         </div>
       </div>
+    </template>
 
-      <!-- Footer Buttons -->
-      <div class="sheet-footer">
+    <template #footer>
+      <template v-if="step === 'form'">
         <van-button
           type="default"
           @click="handleSaveLocal"
@@ -389,81 +376,53 @@ function selectFolder(nodeId: string) {
         >
           保存
         </van-button>
-      </div>
+      </template>
     </template>
-  </van-popup>
+  </PopupBase>
 
   <!-- Project Picker Popup -->
-  <van-popup
+  <PopupBase
     v-model:show="showProjectPicker"
-    position="bottom"
-    round
+    title="选择项目"
+    :height="'auto'"
+    :body-padding="'0'"
   >
     <van-picker
       :columns="projectColumns"
       @confirm="onProjectConfirm"
       @cancel="showProjectPicker = false"
     />
-  </van-popup>
+  </PopupBase>
 </template>
 
-<style scoped>
-.sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.sheet-title {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.sheet-close, .sheet-back {
-  background: none;
-  border: none;
-  font-size: 16px;
-  padding: 4px 8px;
-}
-
-.sheet-spacer {
-  width: 40px;
+<style scoped lang="scss">
+.loading-state {
+  margin-top: 40px;
 }
 
 .sheet-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+  padding: var(--space-lg);
 }
 
 .sheet-field {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-xl);
 }
 
 .sheet-label {
   display: block;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  margin-bottom: 8px;
-  color: #666;
+  margin-bottom: var(--space-sm);
+  color: var(--text-tertiary);
 }
 
 .sheet-error {
-  padding: 10px 16px;
-  background: #fff0f0;
-  color: #ff4444;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-
-.sheet-footer {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  border-top: 1px solid #eee;
+  padding: 10px var(--space-lg);
+  background: rgba(255, 68, 68, 0.1);
+  color: var(--danger);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-sm);
 }
 
 .footer-btn {
@@ -471,20 +430,24 @@ function selectFolder(nodeId: string) {
 }
 
 .folder-breadcrumb {
-  padding: 8px 0;
+  padding: var(--space-sm) var(--space-lg);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .folder-breadcrumb-item {
-  color: #1989fa;
+  color: var(--primary);
   cursor: pointer;
 }
 
 .folder-breadcrumb-sep {
-  color: #999;
+  color: var(--text-muted);
+}
+
+.select-folder-btn {
+  margin: var(--space-lg);
 }
 </style>

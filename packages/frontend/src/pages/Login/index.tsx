@@ -119,6 +119,29 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
+      // 检测是否是移动端 window.open 打开的新标签（跨域 redirect 模式）
+      const params = new URLSearchParams(location.search);
+      const redirectParam = params.get('redirect');
+      if (redirectParam) {
+        try {
+          const redirectUrl = new URL(redirectParam);
+          if (redirectUrl.origin !== window.location.origin) {
+            const accessToken = localStorage.getItem('accessToken');
+            if (accessToken) {
+              redirectUrl.searchParams.set('accessToken', accessToken);
+              const refreshToken = localStorage.getItem('refreshToken');
+              if (refreshToken) redirectUrl.searchParams.set('refreshToken', refreshToken);
+              const user = localStorage.getItem('user');
+              if (user) redirectUrl.searchParams.set('user', user);
+              window.location.href = redirectUrl.toString();
+              return;
+            }
+          }
+        } catch {
+          // redirect 不是合法 URL，回退
+        }
+      }
+
       // 优先使用 session 中保存的 returnUrl（来自 session 过期），其次使用路由 state.from
       const returnUrl = getReturnUrl();
       const from = (location.state as LocationState)?.from || returnUrl || '/';

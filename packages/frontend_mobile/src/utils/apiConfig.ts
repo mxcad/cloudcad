@@ -48,15 +48,6 @@ export function removeRefreshToken(): void {
   localStorage.removeItem('refreshToken');
 }
 
-function parseJwtExp(token: string): number | null {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1] || ''));
-    return payload.exp ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
 async function tryRefreshToken(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
@@ -154,51 +145,21 @@ export function handleApiError(error: unknown, context?: string): string {
   return message;
 }
 
-// ── Proactive Token Refresh ───────────────────────────────────
-
-let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-
-function scheduleProactiveRefresh() {
-  if (refreshTimer !== null) {
-    clearTimeout(refreshTimer);
-    refreshTimer = null;
+/**
+ * 获取 PC 端登录页面 URL。
+ * 移动端通过 window.open 打开，PC 端登录后 redirect 回移动端 URL 带回 token。
+ * 同端口 storage 事件触发原标签页同步认证状态。
+ * @param redirectUrl 登录成功后要跳转的移动端 URL
+ */
+export function getPCLoginUrl(redirectUrl?: string): string {
+  let url: string;
+  if (import.meta.env.DEV) {
+    url = 'http://localhost:3000/login';
+  } else {
+    url = '/login';
   }
-
-  const token = getAccessToken();
-  if (!token) return;
-
-  const expMs = parseJwtExp(token);
-  if (!expMs) return;
-
-  const now = Date.now();
-  const REFRESH_AHEAD_MS = 5 * 60 * 1000;
-  const delay = expMs - now - REFRESH_AHEAD_MS;
-
-  if (delay <= 60_000) {
-    if (delay <= 0) return;
-    tryRefreshToken().then((ok) => {
-      if (ok) scheduleProactiveRefresh();
-    });
-    return;
+  if (redirectUrl) {
+    url += `?redirect=${encodeURIComponent(redirectUrl)}`;
   }
-
-  refreshTimer = setTimeout(() => {
-    tryRefreshToken().then((ok) => {
-      if (ok) scheduleProactiveRefresh();
-    });
-  }, delay);
+  return url;
 }
-
-export function triggerProactiveRefresh(): void {
-  scheduleProactiveRefresh();
-}
-
-export function cancelProactiveRefresh(): void {
-  if (refreshTimer !== null) {
-    clearTimeout(refreshTimer);
-    refreshTimer = null;
-  }
-}
-
-// 初始化：页面加载时启动主动刷新
-scheduleProactiveRefresh();

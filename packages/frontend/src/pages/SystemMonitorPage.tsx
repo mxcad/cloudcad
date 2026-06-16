@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { healthControllerCheck, adminControllerCleanupStorage, adminControllerGetCleanupStats, adminControllerGetOrphanStats, adminControllerCleanupOrphans, adminControllerGetDeletedFileStats } from '@/api-sdk';
+import { healthControllerCheck } from '@/api-sdk';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -38,7 +38,6 @@ function formatBytes(bytes: number): string {
 interface HealthStatus {
   status: 'up' | 'down';
   message: string;
-  timestamp: string;
 }
 
 // 系统健康状态接口
@@ -66,25 +65,8 @@ export const SystemMonitorPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
-  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [refreshCountdown, setRefreshCountdown] = useState(30);
   
-  // 存储清理相关状态
-  const [cleanupStats, setCleanupStats] = useState<{ total: number; expiryDate: string; delayDays: number } | null>(null);
-  const [cleanupLoading, setCleanupLoading] = useState(false);
-  const [cleanupError, setCleanupError] = useState<string | null>(null);
-  const [cleanupSuccess, setCleanupSuccess] = useState<string | null>(null);
-  const [cleanupResult, setCleanupResult] = useState<{ deletedNodes: number; deletedDirectories: number; freedSpace: number; errors: string[] } | null>(null);
-
-  // 孤儿文件相关状态
-  const [orphanStats, setOrphanStats] = useState<{ localOrphanCount: number; localOrphanTotalSize: number; dbOrphanCount: number } | null>(null);
-  const [orphanCleanupLoading, setOrphanCleanupLoading] = useState(false);
-  const [orphanCleanupError, setOrphanCleanupError] = useState<string | null>(null);
-  const [orphanCleanupSuccess, setOrphanCleanupSuccess] = useState<string | null>(null);
-
-  // 标记删除文件统计
-  const [deletedFileStats, setDeletedFileStats] = useState<{ trashCount: number; storageMarkedCount: number; deletedProjectCount: number; localOrphanCount: number; localOrphanTotalSize: number; dbOrphanCount: number } | null>(null);
-
   // 检查权限
   useEffect(() => {
     const canAccess = hasPermission(SystemPermission.SYSTEM_MONITOR);
@@ -99,7 +81,6 @@ export const SystemMonitorPage: React.FC = () => {
     try {
       const healthData = await healthControllerCheck().then(r => r.data);
       if (healthData && healthData.info) {
-        const timestamp = new Date().toISOString();
         const databaseInfo = healthData.info.database;
         const storageInfo = healthData.info.storage;
         setSystemHealth({
@@ -107,16 +88,13 @@ export const SystemMonitorPage: React.FC = () => {
             status: databaseInfo?.status === 'up' ? 'up' : 'down',
             message: safeMessage(databaseInfo?.message,
               databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
-            timestamp,
           },
           storage: {
             status: storageInfo?.status === 'up' ? 'up' : 'down',
             message: safeMessage(storageInfo?.message,
               storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
-            timestamp,
           },
         });
-        setLastRefreshTime(new Date());
         setRefreshCountdown(30);
       } else {
         throw new Error('无效的响应数据格式');
@@ -129,97 +107,16 @@ export const SystemMonitorPage: React.FC = () => {
     }
   }, []);
 
-  // 获取存储清理统计信息
-  const fetchCleanupStats = useCallback(async () => {
-    try {
-      const response = await adminControllerGetCleanupStats().then(r => r.data);
-      if (response) {
-        setCleanupStats(response as unknown as { total: number; expiryDate: string; delayDays: number });
-      } else {
-        setCleanupStats({ total: 0, expiryDate: new Date().toISOString(), delayDays: 30 });
-      }
-    } catch (err) {
-      console.error('获取存储清理统计失败:', err);
-    }
-  }, []);
-
-  // 执行存储清理
-  const handleCleanupStorage = useCallback(async () => {
-    setCleanupLoading(true);
-    setCleanupError(null);
-    setCleanupSuccess(null);
-    setCleanupResult(null);
-    try {
-      const response = await adminControllerCleanupStorage().then(r => r.data);
-      setCleanupSuccess('存储清理完成');
-      setCleanupResult(response as unknown as { deletedNodes: number; deletedDirectories: number; freedSpace: number; errors: string[] });
-      await fetchCleanupStats();
-    } catch (err) {
-      setCleanupError('存储清理失败');
-      console.error('存储清理失败:', err);
-    } finally {
-      setCleanupLoading(false);
-    }
-  }, [fetchCleanupStats]);
-
-  // 获取孤儿文件统计
-  const fetchOrphanStats = useCallback(async () => {
-    try {
-      const response = await adminControllerGetOrphanStats().then(r => r.data);
-      if (response) {
-        setOrphanStats(response as unknown as { localOrphanCount: number; localOrphanTotalSize: number; dbOrphanCount: number });
-      }
-    } catch (err) {
-      console.error('获取孤儿文件统计失败:', err);
-    }
-  }, []);
-
-  // 获取标记删除文件统计
-  const fetchDeletedFileStats = useCallback(async () => {
-    try {
-      const response = await adminControllerGetDeletedFileStats().then(r => r.data);
-      if (response) {
-        setDeletedFileStats(response as unknown as { trashCount: number; storageMarkedCount: number; deletedProjectCount: number; localOrphanCount: number; localOrphanTotalSize: number; dbOrphanCount: number });
-      }
-    } catch (err) {
-      console.error('获取标记删除文件统计失败:', err);
-    }
-  }, []);
-
-  // 执行孤儿文件清理
-  const handleCleanupOrphans = useCallback(async () => {
-    setOrphanCleanupLoading(true);
-    setOrphanCleanupError(null);
-    setOrphanCleanupSuccess(null);
-    try {
-      await adminControllerCleanupOrphans();
-      setOrphanCleanupSuccess('孤儿文件清理完成');
-      await fetchOrphanStats();
-      await fetchDeletedFileStats();
-    } catch (err) {
-      setOrphanCleanupError('孤儿文件清理失败');
-      console.error('孤儿文件清理失败:', err);
-    } finally {
-      setOrphanCleanupLoading(false);
-    }
-  }, [fetchOrphanStats, fetchDeletedFileStats]);
-
   // 自动刷新逻辑
   useEffect(() => {
     if (!permissionChecked || !hasAccess) return;
     
     fetchSystemHealth();
-    fetchCleanupStats();
-    fetchOrphanStats();
-    fetchDeletedFileStats();
     
     const interval = setInterval(() => {
       setRefreshCountdown((prev) => {
         if (prev <= 1) {
           fetchSystemHealth();
-          fetchCleanupStats();
-          fetchOrphanStats();
-          fetchDeletedFileStats();
           return 30;
         }
         return prev - 1;
@@ -227,7 +124,7 @@ export const SystemMonitorPage: React.FC = () => {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [permissionChecked, hasAccess, fetchSystemHealth, fetchCleanupStats, fetchOrphanStats, fetchDeletedFileStats]);
+  }, [permissionChecked, hasAccess, fetchSystemHealth]);
 
   // 等待权限检查
   if (!permissionChecked) {
@@ -315,10 +212,6 @@ export const SystemMonitorPage: React.FC = () => {
         <section className="section">
           <div className="section-header">
             <h2>核心服务</h2>
-            <span className="section-badge">
-              <Clock size={14} />
-              {lastRefreshTime.toLocaleTimeString('zh-CN')}
-            </span>
           </div>
           
           <div className="service-grid">
@@ -329,7 +222,6 @@ export const SystemMonitorPage: React.FC = () => {
               icon={Database}
               status={systemHealth?.database.status || 'down'}
               message={safeMessage(systemHealth?.database.message, '检测中...')}
-              timestamp={systemHealth?.database.timestamp}
               loading={loading && !systemHealth}
               isDark={isDark}
             />
@@ -341,7 +233,6 @@ export const SystemMonitorPage: React.FC = () => {
               icon={HardDrive}
               status={systemHealth?.storage.status || 'down'}
               message={String(systemHealth?.storage.message || '检测中...')}
-              timestamp={systemHealth?.storage.timestamp}
               loading={loading && !systemHealth}
               isDark={isDark}
             />
@@ -353,7 +244,6 @@ export const SystemMonitorPage: React.FC = () => {
               icon={Server}
               status="up"
               message="服务运行正常"
-              timestamp={new Date().toISOString()}
               loading={false}
               isDark={isDark}
             />
@@ -403,197 +293,6 @@ export const SystemMonitorPage: React.FC = () => {
           </div>
         </section>
 
-        {/* 存储清理 */}
-        <section className="section">
-          <div className="section-header">
-            <h2>存储清理</h2>
-          </div>
-          
-          <div className="cleanup-section">
-            {/* 清理统计 */}
-            <div className="cleanup-stats">
-              <div className="cleanup-stats-grid">
-                <div className="cleanup-stat-card">
-                  <HardDrive size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">待清理文件</span>
-                    <span className="stat-value">{cleanupStats?.total || 0}</span>
-                  </div>
-                </div>
-                <div className="cleanup-stat-card">
-                  <Clock size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">延迟天数</span>
-                    <span className="stat-value">{cleanupStats?.delayDays || 30} 天</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 清理操作 */}
-            <div className="cleanup-actions">
-              <Button
-                variant="primary"
-                className="cleanup-button"
-                onClick={handleCleanupStorage}
-                loading={cleanupLoading}
-                icon={HardDrive}
-              >
-                {cleanupLoading ? '清理中...' : '立即清理存储'}
-              </Button>
-              <p className="cleanup-hint">
-                清理已标记为删除的文件，释放存储空间
-              </p>
-            </div>
-            
-            {/* 清理结果 */}
-            {cleanupSuccess && (
-              <div className="cleanup-result success">
-                <CheckCircle size={20} />
-                <div className="result-content">
-                  <h4>{cleanupSuccess}</h4>
-                  {cleanupResult && (
-                    <div className="result-details">
-                      <p>删除文件: {cleanupResult.deletedNodes} 个</p>
-                      <p>清理目录: {cleanupResult.deletedDirectories} 个</p>
-                      {cleanupResult.errors && cleanupResult.errors.length > 0 && (
-                        <p className="error-count">
-                          错误: {cleanupResult.errors.length} 个
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {cleanupError && (
-              <div className="cleanup-result error">
-                <XCircle size={20} />
-                <div className="result-content">
-                  <h4>{cleanupError}</h4>
-                  <p>请检查系统日志以了解详细信息</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 标记删除文件统计 */}
-        <section className="section">
-          <div className="section-header">
-            <h2>标记删除文件统计</h2>
-          </div>
-          
-          <div className="cleanup-section">
-            <div className="cleanup-stats">
-              <div className="cleanup-stats-grid">
-                <div className="cleanup-stat-card">
-                  <AlertTriangle size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">回收站文件</span>
-                    <span className="stat-value">{deletedFileStats?.trashCount ?? '...'}</span>
-                  </div>
-                </div>
-                <div className="cleanup-stat-card">
-                  <HardDrive size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">待清理存储</span>
-                    <span className="stat-value">{deletedFileStats?.storageMarkedCount ?? '...'}</span>
-                  </div>
-                </div>
-                <div className="cleanup-stat-card">
-                  <XCircle size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">已删除项目</span>
-                    <span className="stat-value">{deletedFileStats?.deletedProjectCount ?? '...'}</span>
-                  </div>
-                </div>
-                <div className="cleanup-stat-card">
-                  <Info size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">本地孤立文件</span>
-                    <span className="stat-value">{deletedFileStats?.localOrphanCount ?? '...'}</span>
-                  </div>
-                </div>
-                <div className="cleanup-stat-card">
-                  <Database size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">DB 孤立记录</span>
-                    <span className="stat-value">{deletedFileStats?.dbOrphanCount ?? '...'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {deletedFileStats && deletedFileStats.localOrphanTotalSize > 0 && (
-              <p className="cleanup-hint" style={{ marginTop: '0.5rem' }}>
-                本地孤立文件总大小: {formatBytes(deletedFileStats.localOrphanTotalSize)}
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* 孤儿文件清理 */}
-        <section className="section">
-          <div className="section-header">
-            <h2>孤儿文件清理</h2>
-          </div>
-          
-          <div className="cleanup-section">
-            <div className="cleanup-stats">
-              <div className="cleanup-stats-grid">
-                <div className="cleanup-stat-card">
-                  <HardDrive size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">本地孤儿文件</span>
-                    <span className="stat-value">{orphanStats?.localOrphanCount ?? '...'}</span>
-                  </div>
-                </div>
-                <div className="cleanup-stat-card">
-                  <Database size={20} />
-                  <div className="stat-content">
-                    <span className="stat-label">DB 孤儿记录</span>
-                    <span className="stat-value">{orphanStats?.dbOrphanCount ?? '...'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="cleanup-actions">
-              <Button
-                variant="primary"
-                className="cleanup-button"
-                onClick={handleCleanupOrphans}
-                loading={orphanCleanupLoading}
-                icon={HardDrive}
-              >
-                {orphanCleanupLoading ? '清理中...' : '清理孤儿文件'}
-              </Button>
-              <p className="cleanup-hint">
-                清理本地孤立文件（磁盘有但数据库无）和 DB 孤立记录（数据库有但磁盘文件丢失）
-              </p>
-            </div>
-            
-            {orphanCleanupSuccess && (
-              <div className="cleanup-result success">
-                <CheckCircle size={20} />
-                <div className="result-content">
-                  <h4>{orphanCleanupSuccess}</h4>
-                </div>
-              </div>
-            )}
-            
-            {orphanCleanupError && (
-              <div className="cleanup-result error">
-                <XCircle size={20} />
-                <div className="result-content">
-                  <h4>{orphanCleanupError}</h4>
-                  <p>请检查系统日志以了解详细信息</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
       </main>
 
       <style>{baseStyles}</style>
@@ -609,7 +308,6 @@ interface ServiceCardProps {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   status: 'up' | 'down';
   message: string;
-  timestamp?: string;
   loading?: boolean;
   isDark: boolean;
 }
@@ -620,7 +318,6 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   icon: Icon,
   status,
   message,
-  timestamp,
   loading,
   isDark,
 }) => {
@@ -646,14 +343,6 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           <span className="detail-label">状态消息</span>
           <span className="detail-value">{message}</span>
         </div>
-        {timestamp && (
-          <div className="detail-row">
-            <span className="detail-label">检测时间</span>
-            <span className="detail-value">
-              {new Date(timestamp).toLocaleString('zh-CN')}
-            </span>
-          </div>
-        )}
       </div>
       
       {/* 背景装饰 */}
@@ -872,7 +561,20 @@ const baseStyles = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-description {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin: 0 0 1rem;
+    line-height: 1.6;
+    max-width: 720px;
+  }
+
+  .desc-highlight {
+    color: var(--primary-500);
+    font-weight: 500;
   }
 
   .section-header h2 {
@@ -1011,6 +713,13 @@ const baseStyles = `
     font-size: var(--text-2xl);
     font-weight: 600;
     color: var(--text-primary);
+  }
+
+  .stat-desc {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    line-height: 1.4;
+    margin-top: 0.125rem;
   }
 
   .cleanup-actions {

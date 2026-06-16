@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import DialogBase from '../../../components/DialogBase.vue';
+
+const props = withDefaults(defineProps<{
+  waiting?: boolean;
+}>(), {
+  waiting: false,
+});
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -9,7 +16,6 @@ const emit = defineEmits<{
 const show = ref(true);
 
 function onLogin() {
-  show.value = false;
   emit('login');
 }
 
@@ -20,47 +26,58 @@ function onClose() {
 </script>
 
 <template>
-  <van-dialog
-    v-model:show="show"
+  <DialogBase
+    :show="show"
     title="需要登录"
-    :show-confirm-button="false"
-    :show-cancel-button="false"
     closeable
+    :close-on-click-overlay="!waiting"
     @close="onClose"
   >
-    <div class="login-prompt-body">
-      <van-icon name="contact" size="48" color="#1989fa" />
+    <div v-if="!waiting" class="login-prompt-body">
+      <van-icon name="contact" size="48" color="var(--primary)" />
       <p class="login-prompt-text">请先登录后再执行此操作</p>
     </div>
+    <div v-else class="login-prompt-body">
+      <van-loading type="spinner" size="48" color="var(--primary)" />
+      <p class="login-prompt-text">请在打开的页面中完成登录...</p>
+    </div>
     <template #footer>
-      <div class="login-prompt-footer">
+      <div v-if="!waiting" class="login-prompt-footer">
         <van-button type="primary" block @click="onLogin">
           前往登录
         </van-button>
-        <van-button plain block style="margin-top: 8px;" @click="onClose">
+        <van-button plain block @click="onClose">
           取消
         </van-button>
       </div>
+      <div v-else class="login-prompt-footer">
+        <van-button plain block @click="onClose">
+          取消等待
+        </van-button>
+      </div>
     </template>
-  </van-dialog>
+  </DialogBase>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .login-prompt-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 16px;
+  padding: var(--space-xl) var(--space-lg) var(--space-lg);
 }
 
 .login-prompt-text {
-  margin-top: 12px;
-  font-size: 14px;
-  color: #666;
+  margin-top: var(--space-md);
+  font-size: var(--font-size-body);
+  color: var(--text-tertiary);
   text-align: center;
 }
 
 .login-prompt-footer {
-  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0 var(--space-lg) var(--space-lg);
 }
 </style>

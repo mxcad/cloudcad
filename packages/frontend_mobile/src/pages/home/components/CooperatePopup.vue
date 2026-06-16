@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useCooperate } from '../../../composables/useCooperate';
 import { useUser } from '../../../composables/useUser';
+import PopupBase from '../../../components/PopupBase.vue';
 
 interface Work {
   link_user_data: string[];
@@ -92,57 +93,25 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
 </script>
 
 <template>
-  <van-popup
+  <PopupBase
     v-model:show="show"
-    position="bottom"
-    round
-    :style="{ height: '60vh' }"
-    closeable
     title="实时协同"
+    :height="'60vh'"
+    :body-padding="'0'"
     @close="handleClose"
   >
-    <div class="cooperate-container">
-      <div class="cooperate-header">
-        <span class="cooperate-title">实时协同</span>
-        <div class="cooperate-actions">
-          <van-button
-            size="small"
-            type="primary"
-            :disabled="!isCadReady || connecting"
-            :loading="connecting"
-            @click="handleCreateWork"
-          >
-            创建协同
-          </van-button>
-          <van-button
-            size="small"
-            plain
-            :disabled="loading"
-            :loading="loading"
-            @click="fetchWorks"
-            style="margin-left: 8px;"
-          >
-            刷新列表
-          </van-button>
-        </div>
-      </div>
-
+    <div class="cooperate-body">
       <div v-if="!isCadReady" class="cooperate-status">
-        <van-icon name="warning-o" size="32" color="#999" />
+        <van-icon name="warning-o" size="32" color="var(--text-muted)" />
         <p>CAD 引擎未就绪</p>
       </div>
 
       <div v-else-if="currentWorkId !== null" class="cooperate-session">
         <div class="cooperate-session-info">
-          <van-icon name="friends-o" size="24" color="#07c160" />
+          <van-icon name="friends-o" size="24" color="var(--success)" />
           <span>当前协同: {{ currentWorkId }}</span>
         </div>
-        <van-button
-          size="small"
-          type="danger"
-          plain
-          @click="handleExitWork"
-        >
+        <van-button size="small" type="danger" plain @click="handleExitWork">
           退出
         </van-button>
       </div>
@@ -153,7 +122,7 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
       </div>
 
       <div v-else-if="works.length === 0" class="cooperate-status">
-        <van-icon name="info-o" size="32" color="#999" />
+        <van-icon name="info-o" size="32" color="var(--text-muted)" />
         <p>暂无可用协同</p>
         <span class="cooperate-hint">点击"创建协同"开始协作</span>
       </div>
@@ -166,7 +135,7 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
           class="cooperate-list-item"
         >
           <div class="cooperate-list-item-info">
-            <van-icon name="friends-o" size="20" color="#1989fa" />
+            <van-icon name="friends-o" size="20" color="var(--primary)" />
             <span>{{ getWorkName(work) }}</span>
           </div>
           <van-button
@@ -182,31 +151,44 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
         </div>
       </div>
     </div>
-  </van-popup>
+
+    <template #footer>
+      <div class="cooperate-footer">
+        <van-button
+          size="small"
+          type="primary"
+          :disabled="!isCadReady || connecting"
+          :loading="connecting"
+          @click="handleCreateWork"
+        >
+          创建协同
+        </van-button>
+        <van-button
+          size="small"
+          plain
+          :disabled="loading"
+          :loading="loading"
+          @click="fetchWorks"
+        >
+          刷新列表
+        </van-button>
+      </div>
+    </template>
+  </PopupBase>
 </template>
 
-<style scoped>
-.cooperate-container {
-  padding: 16px;
-  height: 100%;
+<style scoped lang="scss">
+.cooperate-body {
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
-.cooperate-header {
+.cooperate-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.cooperate-title {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.cooperate-actions {
-  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
 }
 
 .cooperate-status {
@@ -215,59 +197,63 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #999;
+  gap: var(--space-sm);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body);
 }
 
 .cooperate-hint {
-  font-size: 12px;
-  color: #bbb;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
 .cooperate-session {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #f0f9f0;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  margin: var(--space-md) var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
 }
 
 .cooperate-session-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-sm);
+  font-size: var(--font-size-body);
   font-weight: 500;
 }
 
 .cooperate-list {
   flex: 1;
   overflow-y: auto;
+  padding: 0 var(--space-lg) var(--space-md);
 }
 
 .cooperate-list-title {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  color: #666;
-  margin-bottom: 8px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
 }
 
 .cooperate-list-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
 }
 
 .cooperate-list-item-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-sm);
+  font-size: var(--font-size-body);
+  color: var(--text-primary);
 }
 </style>

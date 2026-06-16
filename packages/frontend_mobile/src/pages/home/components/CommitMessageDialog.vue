@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import DialogBase from '../../../components/DialogBase.vue';
 
 const emit = defineEmits<{
   (e: 'confirm', message: string): void;
@@ -21,22 +22,20 @@ function onCancel() {
 </script>
 
 <template>
-  <van-dialog
-    v-model:show="show"
+  <DialogBase
+    :show="show"
     title="保存文件"
     show-cancel-button
-    confirm-button-text="保存"
+    confirm-text="保存"
     @confirm="onConfirm"
     @cancel="onCancel"
   >
-    <div style="padding: 16px;">
-      <van-field
-        v-model="commitMessage"
-        type="textarea"
-        rows="2"
-        placeholder="修改说明（可选）"
-        autosize
-      />
-    </div>
-  </van-dialog>
+    <van-field
+      v-model="commitMessage"
+      type="textarea"
+      rows="2"
+      placeholder="修改说明（可选）"
+      autosize
+    />
+  </DialogBase>
 </template>

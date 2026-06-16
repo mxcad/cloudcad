@@ -7,8 +7,10 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    DialogBase: typeof import('./src/components/DialogBase.vue')['default']
     MxIcon: typeof import('./src/components/MxIcon.vue')['default']
     MxToolbar: typeof import('./src/components/MxToolbar.vue')['default']
+    PopupBase: typeof import('./src/components/PopupBase.vue')['default']
     SharePopup: typeof import('./src/components/SharePopup.vue')['default']
     VanButton: typeof import('vant/es')['Button']
     VanCell: typeof import('vant/es')['Cell']

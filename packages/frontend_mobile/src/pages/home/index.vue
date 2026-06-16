@@ -28,6 +28,7 @@ import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from '../../composable
 
     import { showToast, showConfirmDialog } from 'vant';
 import { showToastOnce } from '@/utils/toast';
+import { getPCLoginUrl } from '@/utils/apiConfig';
 import { exitCollaborationIfNeeded } from '../../composables/useCooperate';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
     import SaveAsSheet from './components/SaveAsSheet.vue';
@@ -177,6 +178,7 @@ import MxToolbar from '@/components/MxToolbar.vue';
     const canManageLibrary = ref(false)
     const showVersionHistory = ref(false)
     const showLoginPrompt = ref(false)
+    const loginPromptWaiting = ref(false)
     const pendingActionAfterLogin = ref<'save' | 'version-history' | null>(null)
     const showCooperate = ref(false)
     const showShare = ref(false)
@@ -255,17 +257,47 @@ import MxToolbar from '@/components/MxToolbar.vue';
     }
 
     function onLoginPromptLogin() {
-        showLoginPrompt.value = false
+        loginPromptWaiting.value = true
         if (pendingActionAfterLogin.value) {
             sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value)
             pendingActionAfterLogin.value = null
         }
-        const currentUrl = encodeURIComponent(window.location.href)
-        window.location.href = `/login?redirect=${currentUrl}`
+
+        const win = window.open(getPCLoginUrl(window.location.href), 'pc-login')
+
+        if (!win) {
+            loginPromptWaiting.value = false
+            showLoginPrompt.value = false
+            window.location.href = getPCLoginUrl()
+            return
+        }
+
+        // storage 事件监听：新标签页写入 token 后触发 refresh
+        function onStorage(event: StorageEvent) {
+            if (event.key === 'accessToken' && event.newValue) {
+                window.removeEventListener('storage', onStorage)
+                const { refresh } = useUser()
+                refresh()
+
+                showLoginPrompt.value = false
+                loginPromptWaiting.value = false
+
+                const pending = sessionStorage.getItem('pendingAction')
+                if (pending) {
+                    sessionStorage.removeItem('pendingAction')
+                    setTimeout(() => {
+                        if (pending === 'save') showCommitDialog.value = true
+                        else if (pending === 'version-history') showVersionHistory.value = true
+                    }, 500)
+                }
+            }
+        }
+        window.addEventListener('storage', onStorage)
     }
 
     function onLoginPromptClose() {
         showLoginPrompt.value = false
+        loginPromptWaiting.value = false
     }
 
     async function handleNewFile() {
@@ -466,7 +498,7 @@ import MxToolbar from '@/components/MxToolbar.vue';
             :can-manage-library="canManageLibrary" @close="onSaveAsClose" @success="onSaveAsSuccess"
             @login-required="showLoginPrompt = true" />
         <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
-        <LoginPromptPopup v-if="showLoginPrompt" @login="onLoginPromptLogin" @close="onLoginPromptClose" />
+        <LoginPromptPopup v-if="showLoginPrompt" :waiting="loginPromptWaiting" @login="onLoginPromptLogin" @close="onLoginPromptClose" />
         <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
         <SharePopup v-if="showShare" @close="showShare = false" />
         <canvas id="mxCanvas"></canvas>

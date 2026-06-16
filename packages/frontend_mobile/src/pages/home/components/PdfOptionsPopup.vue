@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import PopupBase from '../../../components/PopupBase.vue'
 
 export interface PdfOptions {
   width: string
@@ -31,91 +32,63 @@ function onCancel() {
 </script>
 
 <template>
-  <van-popup
+  <PopupBase
     v-model:show="show"
-    position="bottom"
-    round
-    :style="{ maxHeight: '70vh' }"
-    closeable
+    title="导出 PDF"
+    show-footer
+    confirm-text="确认导出"
+    :max-height="'70vh'"
+    @confirm="onConfirm"
+    @cancel="onCancel"
     @close="emit('cancel')"
   >
-    <div class="export-popup">
-      <div class="export-title">导出 PDF</div>
-
-      <div class="export-body">
-        <div class="input-row">
-          <div class="input-group">
-            <label class="input-label">宽度（像素）</label>
-            <input
-              v-model="options.width"
-              class="text-input"
-              type="number"
-              placeholder="2000"
-            />
-          </div>
-          <div class="input-group">
-            <label class="input-label">高度（像素）</label>
-            <input
-              v-model="options.height"
-              class="text-input"
-              type="number"
-              placeholder="2000"
-            />
-          </div>
+    <div class="pdf-options">
+      <div class="input-row">
+        <div class="input-group">
+          <label class="input-label">宽度（像素）</label>
+          <input
+            v-model="options.width"
+            class="text-input"
+            type="number"
+            placeholder="2000"
+          />
         </div>
-
-        <div class="toggle-group">
-          <label class="input-label">颜色策略</label>
-          <div class="toggle-row">
-            <button
-              :class="['toggle-btn', { active: options.colorPolicy === 'mono' }]"
-              @click="options.colorPolicy = 'mono'"
-            >
-              黑白
-            </button>
-            <button
-              :class="['toggle-btn', { active: options.colorPolicy === 'color' }]"
-              @click="options.colorPolicy = 'color'"
-            >
-              彩色
-            </button>
-          </div>
+        <div class="input-group">
+          <label class="input-label">高度（像素）</label>
+          <input
+            v-model="options.height"
+            class="text-input"
+            type="number"
+            placeholder="2000"
+          />
         </div>
       </div>
-
-      <div class="export-footer">
-        <van-button plain block round @click="onCancel">取消</van-button>
-        <van-button type="primary" block round @click="onConfirm">确认导出</van-button>
+      <div class="toggle-group">
+        <label class="input-label">颜色策略</label>
+        <div class="toggle-row">
+          <button
+            :class="['toggle-btn', { active: options.colorPolicy === 'mono' }]"
+            @click="options.colorPolicy = 'mono'"
+          >
+            黑白
+          </button>
+          <button
+            :class="['toggle-btn', { active: options.colorPolicy === 'color' }]"
+            @click="options.colorPolicy = 'color'"
+          >
+            彩色
+          </button>
+        </div>
       </div>
     </div>
-  </van-popup>
+  </PopupBase>
 </template>
 
 <style scoped lang="scss">
-.export-popup {
-  display: flex;
-  flex-direction: column;
-  min-height: 40vh;
-  max-height: 70vh;
-}
-
-.export-title {
-  font-size: 16px;
-  font-weight: 600;
-  text-align: center;
-  padding: 20px 16px 0;
-}
-
-.export-body {
-  flex: 1;
-  padding: 24px 20px 8px;
-  overflow-y: auto;
-}
-
 .input-row {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
 }
 
 .input-group {
@@ -124,64 +97,52 @@ function onCancel() {
 
 .input-label {
   display: block;
-  font-size: 14px;
-  color: #969799;
-  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
 }
 
 .text-input {
   width: 100%;
   height: 44px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid #ebedf0;
-  background: #f7f8fa;
-  font-size: 15px;
-  color: #323233;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  font-size: var(--font-size-body);
+  color: var(--text-primary);
   box-sizing: border-box;
   outline: none;
 
   &:focus {
-    border-color: #1989fa;
+    border-color: var(--primary);
   }
 }
 
 .toggle-group {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-lg);
 }
 
 .toggle-row {
   display: flex;
-  gap: 12px;
-  margin-top: 8px;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
 }
 
 .toggle-btn {
   flex: 1;
   height: 44px;
-  border-radius: 8px;
-  border: 1px solid #ebedf0;
-  background: #f7f8fa;
-  font-size: 15px;
-  color: #646566;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  font-size: var(--font-size-body);
+  color: var(--text-secondary);
   transition: all 0.2s;
 
   &.active {
-    background: #1989fa;
+    background: var(--primary);
     color: #fff;
-    border-color: #1989fa;
-  }
-}
-
-.export-footer {
-  display: flex;
-  gap: 12px;
-  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid #ebedf0;
-
-  :deep(.van-button) {
-    font-size: 15px;
-    height: 44px;
+    border-color: var(--primary);
   }
 }
 </style>

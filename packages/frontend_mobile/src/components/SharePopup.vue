@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
+import PopupBase from './PopupBase.vue';
 import {
   shareControllerCreateShare,
   shareControllerRevokeShare,
@@ -190,33 +191,43 @@ function handleBack() {
 </script>
 
 <template>
-  <van-popup
+  <PopupBase
     v-model:show="show"
-    position="bottom"
-    round
-    :style="{ height: '70vh' }"
-    closeable
     title="分享图纸"
-    overlay-class="share-popup-overlay"
+    :height="'70vh'"
+    :body-padding="'0'"
     @close="handleClose"
   >
     <div class="share-container">
-      <div class="share-header">
-        <van-button
-          v-if="step === 'result'"
-          size="small"
-          plain
-          @click="handleBack"
-        >
-          返回
-        </van-button>
-        <span class="share-title">{{ step === 'form' ? '分享图纸' : '分享链接已创建' }}</span>
+      <div v-if="step === 'result'" class="share-result">
+        <van-icon name="success" size="64" color="var(--success)" />
+        <p class="share-result-title">分享链接已创建</p>
+
+        <div class="share-result-url">
+          <span class="share-result-url-text">{{ createdUrl }}</span>
+          <van-button size="small" type="primary" plain @click="handleCopy(createdUrl)">
+            复制
+          </van-button>
+        </div>
+
+        <div v-if="createdExpiresAt" class="share-result-info">
+          <span>{{ getExpiryLabel(createdExpiresAt) }}</span>
+        </div>
+
+        <div class="share-result-actions">
+          <van-button type="danger" plain block round @click="handleRevoke(createdToken)">
+            撤销分享
+          </van-button>
+        </div>
+
+        <div class="share-result-back">
+          <van-button plain block round @click="handleBack">返回</van-button>
+        </div>
       </div>
 
-      <!-- Step 1: Create form -->
-      <template v-if="step === 'form'">
+      <template v-else>
         <div class="share-file-name-bar">
-          <van-icon name="description-o" size="18" color="#666" />
+          <van-icon name="description-o" size="18" color="var(--text-tertiary)" />
           <span>{{ state.fileName || '当前图纸' }}</span>
         </div>
 
@@ -259,7 +270,6 @@ function handleBack() {
           创建分享链接
         </van-button>
 
-        <!-- Existing shares list -->
         <div v-if="existingShares.length > 0" class="share-existing">
           <div class="share-existing-title">已有分享链接 ({{ existingShares.length }})</div>
           <div
@@ -270,11 +280,7 @@ function handleBack() {
             <div class="share-existing-info">
               <div class="share-existing-url">
                 <span class="share-existing-token">/share/{{ item.token.slice(0, 8) }}...</span>
-                <van-tag
-                  v-if="isExpired(item.expiresAt)"
-                  type="danger"
-                  size="medium"
-                >
+                <van-tag v-if="isExpired(item.expiresAt)" type="danger" size="medium">
                   已过期
                 </van-tag>
               </div>
@@ -291,87 +297,38 @@ function handleBack() {
           </div>
         </div>
       </template>
-
-      <!-- Step 2: Result -->
-      <template v-if="step === 'result'">
-        <div class="share-result">
-          <van-icon name="success" size="64" color="#07c160" />
-          <p class="share-result-title">分享链接已创建</p>
-
-          <div class="share-result-url">
-            <span class="share-result-url-text">{{ createdUrl }}</span>
-            <van-button
-              size="small"
-              type="primary"
-              plain
-              @click="handleCopy(createdUrl)"
-            >
-              复制
-            </van-button>
-          </div>
-
-          <div v-if="createdExpiresAt" class="share-result-info">
-            <span>{{ getExpiryLabel(createdExpiresAt) }}</span>
-          </div>
-
-          <div class="share-result-actions">
-            <van-button
-              type="danger"
-              plain
-              block
-              round
-              @click="handleRevoke(createdToken)"
-            >
-              撤销分享
-            </van-button>
-          </div>
-        </div>
-      </template>
     </div>
-  </van-popup>
+  </PopupBase>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .share-container {
-  padding: 16px;
+  padding: var(--space-lg);
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  font-size: 15px;
-}
-
-.share-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-  min-height: 36px;
-}
-
-.share-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin-left: 12px;
+  font-size: var(--font-size-body);
 }
 
 .share-file-name-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   padding: 10px 14px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  font-size: 15px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
   font-weight: 500;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-lg);
 }
 
 .share-form-group {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-xl);
 }
 
 .share-form-label {
-  font-size: 15px;
+  font-size: var(--font-size-body);
   font-weight: 500;
   display: block;
   margin-bottom: 10px;
@@ -380,7 +337,7 @@ function handleBack() {
 .share-expiry-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .share-expiry-btn {
@@ -393,13 +350,13 @@ function handleBack() {
 }
 
 .share-existing {
-  margin-top: 24px;
+  margin-top: var(--space-xl);
 }
 
 .share-existing-title {
-  font-size: 15px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  color: #666;
+  color: var(--text-tertiary);
   margin-bottom: 10px;
 }
 
@@ -408,9 +365,9 @@ function handleBack() {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
 }
 
 .share-existing-info {
@@ -425,14 +382,14 @@ function handleBack() {
 }
 
 .share-existing-token {
-  font-size: 15px;
-  color: #333;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
   font-family: monospace;
 }
 
 .share-existing-meta {
-  font-size: 15px;
-  color: #999;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
@@ -440,67 +397,54 @@ function handleBack() {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: var(--space-sm);
 }
 
 .share-result {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 24px;
+  padding-top: var(--space-xl);
 }
 
 .share-result-title {
-  font-size: 15px;
+  font-size: var(--font-size-title);
   font-weight: 600;
-  margin-top: 12px;
-  margin-bottom: 20px;
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-xl);
 }
 
 .share-result-url {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   width: 100%;
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
 }
 
 .share-result-url-text {
   flex: 1;
-  font-size: 15px;
-  color: #333;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
   word-break: break-all;
   font-family: monospace;
 }
 
 .share-result-info {
-  font-size: 15px;
-  color: #666;
-  margin-bottom: 24px;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-xl);
 }
 
 .share-result-actions {
   width: 100%;
 }
-</style>
 
-<style>
-.share-popup-overlay .van-popup__title {
-  font-size: 15px;
-}
-
-.share-popup-overlay .van-button {
-  font-size: 15px;
-}
-
-.share-popup-overlay .van-field__label {
-  font-size: 15px;
-}
-
-.share-popup-overlay .van-tag {
-  font-size: 15px;
+.share-result-back {
+  width: 100%;
+  margin-top: var(--space-md);
 }
 </style>

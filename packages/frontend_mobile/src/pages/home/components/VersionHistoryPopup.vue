@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useVersionHistory, type VersionEntry } from '../../../composables/useVersionHistory';
+import PopupBase from '../../../components/PopupBase.vue';
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -41,104 +42,77 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <van-popup
-    :show="show"
-    position="bottom"
-    round
-    :style="{ height: '80vh' }"
+  <PopupBase
+    v-model:show="show"
+    title="版本历史"
+    :height="'80vh'"
+    :body-padding="'0'"
     @close="onClose"
   >
-    <div class="popup-header">
-      <span class="popup-title">版本历史</span>
-      <button class="popup-close" @click="onClose">✕</button>
+    <van-loading v-if="loading" class="loading-state" />
+
+    <div v-else-if="error" class="error-state">
+      <van-icon name="warning-o" color="var(--danger)" size="40" />
+      <p>{{ error }}</p>
+      <van-button size="small" @click="loadHistory">重试</van-button>
     </div>
 
-    <div class="popup-body">
-      <van-loading v-if="loading" style="margin-top: 40px;" />
+    <template v-else-if="entries.length === 0">
+      <van-empty description="暂无版本历史" />
+    </template>
 
-      <div v-else-if="error" class="error-state">
-        <van-icon name="warning-o" color="#ff4444" size="40" />
-        <p>{{ error }}</p>
-        <van-button size="small" @click="loadHistory">重试</van-button>
-      </div>
-
-      <template v-else-if="entries.length === 0">
-        <van-empty description="暂无版本历史" />
-      </template>
-
-      <div v-else class="version-list">
-        <div
-          v-for="entry in entries"
-          :key="entry.revision"
-          class="version-item"
-          @click="onSelectVersion(entry)"
-        >
-          <div class="version-revision">r{{ entry.revision }}</div>
-          <div class="version-info">
-            <div class="version-message">{{ entry.message || '无说明' }}</div>
-            <div class="version-meta">
-              <span class="version-author">{{ entry.author || entry.userName || '未知' }}</span>
-              <span class="version-date">{{ formatDate(entry.date) }}</span>
-            </div>
+    <div v-else class="version-list">
+      <div
+        v-for="entry in entries"
+        :key="entry.revision"
+        class="version-item"
+        @click="onSelectVersion(entry)"
+      >
+        <div class="version-revision">r{{ entry.revision }}</div>
+        <div class="version-info">
+          <div class="version-message">{{ entry.message || '无说明' }}</div>
+          <div class="version-meta">
+            <span class="version-author">{{ entry.author || entry.userName || '未知' }}</span>
+            <span class="version-date">{{ formatDate(entry.date) }}</span>
           </div>
-          <van-icon name="arrow" class="version-arrow" />
         </div>
+        <van-icon name="arrow" class="version-arrow" />
       </div>
     </div>
-  </van-popup>
+  </PopupBase>
 </template>
 
-<style scoped>
-.popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.popup-title {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.popup-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  padding: 4px 8px;
-}
-
-.popup-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 16px;
+<style scoped lang="scss">
+.loading-state {
+  margin-top: 40px;
 }
 
 .error-state {
   text-align: center;
-  padding: 40px 16px;
-  color: #666;
+  padding: 40px var(--space-lg);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body);
 }
 
 .version-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
 }
 
 .version-item {
   display: flex;
   align-items: center;
-  padding: 12px;
-  border-radius: 8px;
-  background: #f8f8f8;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .version-item:active {
-  background: #eee;
+  background: var(--active-color);
 }
 
 .version-revision {
@@ -148,12 +122,12 @@ function formatDate(dateStr: string): string {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #1989fa;
+  background: var(--primary);
   color: #fff;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   flex-shrink: 0;
-  margin-right: 12px;
+  margin-right: var(--space-md);
 }
 
 .version-info {
@@ -162,23 +136,24 @@ function formatDate(dateStr: string): string {
 }
 
 .version-message {
-  font-size: 14px;
+  font-size: var(--font-size-body);
   font-weight: 500;
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
 }
 
 .version-meta {
   display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #999;
+  gap: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
 .version-arrow {
-  color: #ccc;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 </style>

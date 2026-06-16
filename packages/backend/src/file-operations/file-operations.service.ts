@@ -1577,10 +1577,27 @@ export class FileOperationsService {
 
   async clearTrash(userId: string) {
     try {
-      const projects = await this.prisma.fileSystemNode.findMany({
+      // 查询用户可访问的活跃项目（用于定位孤儿节点 — 已删除但所属项目未删除的文件/文件夹）
+      const accessibleProjects = await this.prisma.fileSystemNode.findMany({
+        where: {
+          isRoot: true,
+          deletedAt: null,
+          libraryKey: null,
+          OR: [
+            { ownerId: userId },
+            { projectMembers: { some: { userId } } },
+          ],
+        },
+        select: { id: true },
+      });
+      const accessibleProjectIds = new Set(accessibleProjects.map((p) => p.id));
+
+      // 查询所有已删除的项目（用户可访问的）
+      const deletedProjects = await this.prisma.fileSystemNode.findMany({
         where: {
           isRoot: true,
           deletedAt: { not: null },
+          libraryKey: null,
           OR: [
             { ownerId: userId },
             { projectMembers: { some: { userId } } },
@@ -1589,7 +1606,7 @@ export class FileOperationsService {
         select: { id: true, ownerId: true },
       });
 
-      for (const project of projects) {
+      for (const project of deletedProjects) {
         const hasPermission = await this.projectPermissionService.checkPermission(
           userId, project.id, ProjectPermission.FILE_TRASH_MANAGE
         );
@@ -1598,28 +1615,39 @@ export class FileOperationsService {
         }
       }
 
-      const nodes = await this.prisma.fileSystemNode.findMany({
+      // 查询所有已删除的非根节点（孤儿节点 — 所属项目为活跃项目的已删除文件/文件夹）
+      const orphanNodes = await this.prisma.fileSystemNode.findMany({
         where: {
           deletedAt: { not: null },
-          projectId: { in: projects.map((p) => p.id) },
+          projectId: { in: [...accessibleProjectIds] },
           isRoot: false,
         },
         select: { id: true, isFolder: true, path: true, fileHash: true },
       });
 
-      for (const project of projects) {
-        await this.permanentlyDeleteProject(project.id, false);
-      }
-
-      for (const node of nodes) {
-        if (!node.isFolder && node.path) {
-          await this.deleteFileIfNotReferenced(this.prisma, node.id, node.path, node.fileHash);
+      // 清理孤儿节点：逐节点递归处理（文件夹也会递归清理其子文件）
+      for (const node of orphanNodes) {
+        try {
+          if (node.isFolder) {
+            await this.permanentlyDeleteNode(node.id, false);
+          } else {
+            if (node.path) {
+              await this.deleteFileIfNotReferenced(this.prisma, node.id, node.path, node.fileHash);
+            }
+            await this.prisma.fileSystemNode.delete({ where: { id: node.id } });
+          }
+        } catch (error) {
+          this.logger.error(`清空回收站时删除孤儿节点失败: ${node.id}, ${error.message}`, error.stack);
         }
       }
 
-      const deleteNodeIds = nodes.map((n) => n.id);
-      if (deleteNodeIds.length > 0) {
-        await this.prisma.fileSystemNode.deleteMany({ where: { id: { in: deleteNodeIds } } });
+      // 清理已删除的项目（每个独立 try-catch 防止单个项目失败阻断全部）
+      for (const project of deletedProjects) {
+        try {
+          await this.permanentlyDeleteProject(project.id, false);
+        } catch (error) {
+          this.logger.error(`清空回收站时删除项目失败: ${project.id}, ${error.message}`, error.stack);
+        }
       }
 
       await this.storageInfoService.invalidateQuotaCache(userId);

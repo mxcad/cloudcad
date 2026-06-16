@@ -1,12 +1,35 @@
 import { ref, readonly, onMounted } from 'vue';
-import { authControllerGetProfile } from '../api-sdk';
-import { triggerProactiveRefresh, cancelProactiveRefresh } from '../utils/apiConfig';
+import { getPCLoginUrl } from '../utils/apiConfig';
 
 interface UserInfo {
   id: string;
   username: string;
   email: string;
   avatar?: string;
+}
+
+/**
+ * 从 URL 提取 PC 端登录后 redirect 回来的 token（跨端口开发场景）。
+ * 新标签页加载时运行，存入 localStorage 后自动关闭。
+ */
+function extractTokensFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const accessToken = params.get('accessToken');
+  if (!accessToken) return;
+  localStorage.setItem('accessToken', accessToken);
+  const refreshToken = params.get('refreshToken');
+  if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+  const user = params.get('user');
+  if (user) localStorage.setItem('user', user);
+  const url = new URL(window.location.href);
+  url.searchParams.delete('accessToken');
+  url.searchParams.delete('refreshToken');
+  url.searchParams.delete('user');
+  window.history.replaceState({}, '', url.toString());
+  window.close();
+}
+if (typeof window !== 'undefined') {
+  extractTokensFromUrl();
 }
 
 function readUserFromStorage(): UserInfo | null {
@@ -21,50 +44,17 @@ function readUserFromStorage(): UserInfo | null {
   return null;
 }
 
-function hasToken(): boolean {
-  const at = localStorage.getItem('accessToken');
-  const rt = localStorage.getItem('refreshToken');
-  return !!(at || rt);
+function hasAuth(): boolean {
+  return !!localStorage.getItem('accessToken');
 }
 
 const user = ref<UserInfo | null>(readUserFromStorage());
-const isAuthenticated = ref(hasToken());
-const loading = ref(hasToken());
-
-async function validateToken() {
-  if (!hasToken()) {
-    loading.value = false;
-    return;
-  }
-
-  try {
-    const res = await authControllerGetProfile();
-    if (res.error) {
-      throw res.error;
-    }
-    const profile = res.data as unknown as UserInfo;
-    user.value = profile;
-    isAuthenticated.value = true;
-    localStorage.setItem('user', JSON.stringify(profile));
-    triggerProactiveRefresh();
-  } catch {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    user.value = null;
-    isAuthenticated.value = false;
-  } finally {
-    loading.value = false;
-  }
-}
+const isAuthenticated = ref(hasAuth());
 
 export function useUser() {
   function refresh() {
     user.value = readUserFromStorage();
-    isAuthenticated.value = hasToken();
-    if (isAuthenticated.value && !loading.value) {
-      triggerProactiveRefresh();
-    }
+    isAuthenticated.value = hasAuth();
   }
 
   onMounted(() => {
@@ -72,13 +62,12 @@ export function useUser() {
   });
 
   function logout() {
-    cancelProactiveRefresh();
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     user.value = null;
     isAuthenticated.value = false;
-    window.location.href = '/login';
+    window.location.href = getPCLoginUrl();
   }
 
   function hasPermission(permission: string): boolean {
@@ -99,15 +88,8 @@ export function useUser() {
   return {
     user: readonly(user),
     isAuthenticated: readonly(isAuthenticated),
-    loading: readonly(loading),
     refresh,
     logout,
     hasPermission,
   };
-}
-
-// 模块加载时立即执行一次 token 验证（不受 onMounted 限制）
-// 使 useUser() 的消费者在组件挂载前就能拿到验证结果
-if (typeof window !== 'undefined') {
-  validateToken();
 }
