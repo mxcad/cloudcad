@@ -292,7 +292,7 @@ export function useLibraryQuery({
         useAllFiles,
         effectiveNodeId || '__disabled__',
       ),
-      { page, limit, refreshKey },
+      { page, limit },
     ] as const,
     queryFn: async (): Promise<ChildrenData> => {
       let data: NodeListResponseDto;
