@@ -63,7 +63,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const dismissedByClickRef = useRef(false);
 
   // 清除定时器
   const clearTimeouts = useCallback(() => {
@@ -300,11 +299,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
     switch (trigger) {
       case 'hover':
         return {
-          onMouseEnter: () => { dismissedByClickRef.current = false; showTooltip(); },
-          onMouseLeave: () => { dismissedByClickRef.current = false; hideTooltip(); },
-          onFocus: () => { if (!dismissedByClickRef.current) showTooltip(); },
-          onBlur: () => { dismissedByClickRef.current = false; hideTooltip(); },
-          onPointerDown: () => { clearTimeouts(); setIsVisible(false); dismissedByClickRef.current = true; },
+          onMouseEnter: showTooltip,
+          onMouseLeave: hideTooltip,
+          onPointerDown: () => { clearTimeouts(); setIsVisible(false); },
         };
       case 'click':
         return {
