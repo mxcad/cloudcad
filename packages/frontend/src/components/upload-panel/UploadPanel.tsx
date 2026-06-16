@@ -72,7 +72,7 @@ function TaskIcon({ task }: { task: UploadTask }) {
     case 'waiting':
       return <Clock size={14} />;
     case 'uploading':
-      return <Upload size={14} />;
+      return <Loader2 size={14} />;
     case 'processing':
       return <Loader2 size={14} />;
     case 'done':

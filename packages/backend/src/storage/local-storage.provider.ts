@@ -332,4 +332,67 @@ export class LocalStorageProvider implements StorageProvider {
       return 0;
     }
   }
+
+  /**
+   * 获取目录下的子目录名称列表（用于遍历所有节点ID）
+   */
+  async listSubdirectories(dirKey: string): Promise<string[]> {
+    try {
+      const absolutePath = this.getAbsolutePath(dirKey);
+      if (!(await this.directoryExists(dirKey))) {
+        return [];
+      }
+
+      const entries = await fsPromises.readdir(absolutePath, {
+        withFileTypes: true,
+      });
+      return entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name);
+    } catch (error) {
+      this.logger.error(`获取子目录列表失败: ${dirKey}`, error.stack);
+      return [];
+    }
+  }
+
+  /**
+   * 获取目录总大小（字节）
+   */
+  async getDirectorySize(dirKey: string): Promise<number> {
+    try {
+      const absolutePath = this.getAbsolutePath(dirKey);
+      if (!(await this.directoryExists(dirKey))) {
+        return 0;
+      }
+
+      let totalSize = 0;
+      const stack: string[] = [absolutePath];
+
+      while (stack.length > 0) {
+        const currentPath = stack.pop()!;
+        const entries = await fsPromises.readdir(currentPath, {
+          withFileTypes: true,
+        });
+
+        for (const entry of entries) {
+          const fullPath = path.join(currentPath, entry.name);
+          if (entry.isDirectory()) {
+            stack.push(fullPath);
+          } else {
+            try {
+              const stats = await fsPromises.stat(fullPath);
+              totalSize += stats.size;
+            } catch {
+              // 文件可能已删除，忽略
+            }
+          }
+        }
+      }
+
+      return totalSize;
+    } catch (error) {
+      this.logger.error(`获取目录大小失败: ${dirKey}`, error.stack);
+      return 0;
+    }
+  }
 }

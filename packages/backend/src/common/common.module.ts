@@ -12,6 +12,7 @@ import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
 import { StorageModule } from '../storage/storage.module';
 import { CacheArchitectureModule } from '../cache-architecture/cache-architecture.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { PermissionService } from './services/permission.service';
 import { PermissionCacheService } from './services/permission-cache.service';
 import { RolesCacheService } from './services/roles-cache.service';
@@ -31,7 +32,7 @@ import { UserCleanupController } from './controllers/user-cleanup.controller';
 import { ConcurrencyManager } from './concurrency/concurrency-manager';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, RedisModule, StorageModule, forwardRef(() => CacheArchitectureModule)],
+  imports: [ConfigModule, DatabaseModule, RedisModule, StorageModule, forwardRef(() => CacheArchitectureModule), RuntimeConfigModule],
   providers: [
     PermissionService,
     PermissionCacheService,

@@ -189,4 +189,76 @@ export class AdminController {
       data: stats,
     };
   }
+
+  // ────────────────────────────────────────────────────────────
+  // 孤儿文件检测与清理
+  // ────────────────────────────────────────────────────────────
+
+  @Get('storage/orphans/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取孤儿文件统计（本地孤立+DB孤立）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取孤儿文件统计成功',
+  })
+  async getOrphanStats() {
+    const stats = await this.storageCleanupService.getOrphanStats();
+    return {
+      message: '孤儿文件统计',
+      data: {
+        localOrphanCount: stats.localOrphanCount,
+        localOrphanTotalSize: stats.localOrphanTotalSize,
+        dbOrphanCount: stats.dbOrphanCount,
+        localOrphans: stats.localOrphans.map((o) => ({
+          nodeId: o.nodeId,
+          directory: o.directory,
+          sizeBytes: o.sizeBytes,
+        })),
+        dbOrphans: stats.dbOrphans.map((o) => ({
+          nodeId: o.nodeId,
+          name: o.name,
+          projectId: o.projectId,
+        })),
+      },
+    };
+  }
+
+  @Post('storage/orphans/cleanup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '手动触发孤儿文件清理' })
+  @ApiResponse({
+    status: 200,
+    description: '孤儿文件清理完成',
+  })
+  async cleanupOrphans() {
+    const result = await this.storageCleanupService.cleanupOrphans();
+    return {
+      message: '孤儿文件清理完成',
+      data: {
+        deletedNodes: result.deletedNodes,
+        deletedDirectories: result.deletedDirectories,
+        freedSpace: result.freedSpace,
+        errors: result.errors,
+      },
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 标记删除文件统计
+  // ────────────────────────────────────────────────────────────
+
+  @Get('storage/deleted-files/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取标记删除文件统计（回收站+待清理+已删项目+孤儿）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取标记删除文件统计成功',
+  })
+  async getDeletedFileStats() {
+    const stats = await this.storageCleanupService.getDeletedFileStats();
+    return {
+      message: '标记删除文件统计',
+      data: stats,
+    };
+  }
 }

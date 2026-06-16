@@ -7367,6 +7367,48 @@ export type AdminControllerGetCleanupStatsResponses = {
     200: unknown;
 };
 
+export type AdminControllerGetOrphanStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/storage/orphans/stats';
+};
+
+export type AdminControllerGetOrphanStatsResponses = {
+    /**
+     * 获取孤儿文件统计成功
+     */
+    200: unknown;
+};
+
+export type AdminControllerCleanupOrphansData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/storage/orphans/cleanup';
+};
+
+export type AdminControllerCleanupOrphansResponses = {
+    /**
+     * 孤儿文件清理完成
+     */
+    200: unknown;
+};
+
+export type AdminControllerGetDeletedFileStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/storage/deleted-files/stats';
+};
+
+export type AdminControllerGetDeletedFileStatsResponses = {
+    /**
+     * 获取标记删除文件统计成功
+     */
+    200: unknown;
+};
+
 export type HealthControllerLivenessData = {
     body?: never;
     path?: never;

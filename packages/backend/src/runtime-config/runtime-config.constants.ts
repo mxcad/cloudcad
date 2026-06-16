@@ -165,6 +165,56 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
   },
 
+  // 存储清理配置
+  {
+    key: 'storageCleanupDelayDays',
+    type: 'number',
+    category: 'storage',
+    description: '过期存储文件清理延迟天数',
+    defaultValue: 30,
+    isPublic: false,
+  },
+  {
+    key: 'storageCleanupEnabled',
+    type: 'boolean',
+    category: 'storage',
+    description: '是否启用过期存储文件自动清理',
+    defaultValue: true,
+    isPublic: false,
+  },
+  {
+    key: 'trashCleanupDelayDays',
+    type: 'number',
+    category: 'storage',
+    description: '回收站文件清理延迟天数',
+    defaultValue: 30,
+    isPublic: false,
+  },
+  {
+    key: 'trashCleanupEnabled',
+    type: 'boolean',
+    category: 'storage',
+    description: '是否启用回收站文件自动清理',
+    defaultValue: true,
+    isPublic: false,
+  },
+  {
+    key: 'orphanCleanupDelayDays',
+    type: 'number',
+    category: 'storage',
+    description: '孤儿文件清理延迟天数（标记后多少天可清理）',
+    defaultValue: 7,
+    isPublic: false,
+  },
+  {
+    key: 'orphanCleanupEnabled',
+    type: 'boolean',
+    category: 'storage',
+    description: '是否启用孤儿文件自动清理',
+    defaultValue: true,
+    isPublic: false,
+  },
+
   // 系统配置
   {
     key: 'systemNotice',

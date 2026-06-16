@@ -195,6 +195,24 @@ export default (): AppConfig => {
 		cronExpression: process.env.USER_CLEANUP_CRON || "0 4 * * *",
 	},
 
+	storageCleanup: {
+		delayDays: parseInt(process.env.STORAGE_CLEANUP_DELAY_DAYS || "30", 10) || 30,
+		enabled: parseBoolean(process.env.ENABLE_STORAGE_CLEANUP, true),
+		cronExpression: process.env.STORAGE_CLEANUP_CRON || "0 3 * * *",
+	},
+
+	trashCleanup: {
+		delayDays: parseInt(process.env.TRASH_CLEANUP_DELAY_DAYS || "30", 10) || 30,
+		enabled: parseBoolean(process.env.ENABLE_TRASH_CLEANUP, true),
+		cronExpression: process.env.TRASH_CLEANUP_CRON || "0 4 * * *",
+	},
+
+	orphanCleanup: {
+		delayDays: parseInt(process.env.ORPHAN_CLEANUP_DELAY_DAYS || "7", 10) || 7,
+		enabled: parseBoolean(process.env.ENABLE_ORPHAN_CLEANUP, true),
+		cronExpression: process.env.ORPHAN_CLEANUP_CRON || "0 2 * * * 0",
+	},
+
 	fileLock: {
 		timeout: parseInt(process.env.FILE_LOCK_TIMEOUT || "300000", 10) || 300000, // 5分钟
 		retryInterval:

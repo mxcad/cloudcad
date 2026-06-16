@@ -13,7 +13,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { StorageManager } from './storage-manager.service';
+import { DirectoryAllocator } from './directory-allocator.service';
+import { LocalStorageProvider } from '../../storage/local-storage.provider';
 import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
+import type { AppConfig } from '../../config/app.config';
+import { ProjectStatus } from '@prisma/client';
 
 export interface CleanupResult {
   success: boolean;
@@ -23,32 +28,128 @@ export interface CleanupResult {
   errors: string[];
 }
 
+export interface LocalOrphanInfo {
+  nodeId: string;
+  directory: string;
+  fullPath: string;
+  sizeBytes: number;
+}
+
+export interface DBOrphanInfo {
+  nodeId: string;
+  path: string;
+  name: string;
+  ownerId: string;
+  projectId: string;
+}
+
+export interface OrphanStats {
+  localOrphans: LocalOrphanInfo[];
+  dbOrphans: DBOrphanInfo[];
+  localOrphanCount: number;
+  dbOrphanCount: number;
+  localOrphanTotalSize: number;
+}
+
+export interface DeletedFileStats {
+  /** 回收站中文件数量 (deletedAt != null) */
+  trashCount: number;
+  /** 已标记物理存储待清理的文件数量 (deletedFromStorage != null) */
+  storageMarkedCount: number;
+  /** 已删除的项目数量 (projectStatus = DELETED) */
+  deletedProjectCount: number;
+  /** 本地孤立文件数量 */
+  localOrphanCount: number;
+  /** 本地孤立文件总大小 (字节) */
+  localOrphanTotalSize: number;
+  /** DB 孤立记录数量 */
+  dbOrphanCount: number;
+}
+
 @Injectable()
 export class StorageCleanupService {
   private readonly logger = new Logger(StorageCleanupService.name);
-  private readonly cleanupDelayDays: number;
 
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storageManager: StorageManager,
-    private readonly configService: ConfigService
-  ) {
-    this.cleanupDelayDays = this.configService.get(
-      'STORAGE_CLEANUP_DELAY_DAYS',
-      30
+    private readonly directoryAllocator: DirectoryAllocator,
+    private readonly localStorageProvider: LocalStorageProvider,
+    private readonly configService: ConfigService<AppConfig>,
+    private readonly runtimeConfigService: RuntimeConfigService,
+  ) {}
+
+  // ────────────────────────────────────────────────────────────
+  // 配置读取 —— 优先运行时配置 → 环境变量配置 → 默认值
+  // ────────────────────────────────────────────────────────────
+
+  private async getStorageCleanupDelayDays(): Promise<number> {
+    const runtimeVal = await this.runtimeConfigService.getValue<number>(
+      'storageCleanupDelayDays',
     );
+    if (runtimeVal !== undefined && runtimeVal !== null) return runtimeVal;
+    const envConfig = this.configService.get('storageCleanup', { infer: true });
+    return envConfig?.delayDays ?? 30;
   }
 
-  private get trashCleanupDelayDays(): number {
-    return this.configService.get('TRASH_CLEANUP_DELAY_DAYS', 30);
+  private async isStorageCleanupEnabled(): Promise<boolean> {
+    const runtimeVal = await this.runtimeConfigService.getValue<boolean>(
+      'storageCleanupEnabled',
+    );
+    if (runtimeVal !== undefined && runtimeVal !== null) return runtimeVal;
+    const envConfig = this.configService.get('storageCleanup', { infer: true });
+    return envConfig?.enabled ?? true;
   }
 
-  /**
-   * 清理过期的存储文件
-   * @returns 清理结果
-   */
+  private async getTrashCleanupDelayDays(): Promise<number> {
+    const runtimeVal = await this.runtimeConfigService.getValue<number>(
+      'trashCleanupDelayDays',
+    );
+    if (runtimeVal !== undefined && runtimeVal !== null) return runtimeVal;
+    const envConfig = this.configService.get('trashCleanup', { infer: true });
+    return envConfig?.delayDays ?? 30;
+  }
+
+  private async isTrashCleanupEnabled(): Promise<boolean> {
+    const runtimeVal = await this.runtimeConfigService.getValue<boolean>(
+      'trashCleanupEnabled',
+    );
+    if (runtimeVal !== undefined && runtimeVal !== null) return runtimeVal;
+    const envConfig = this.configService.get('trashCleanup', { infer: true });
+    return envConfig?.enabled ?? true;
+  }
+
+  private async getOrphanCleanupDelayDays(): Promise<number> {
+    const runtimeVal = await this.runtimeConfigService.getValue<number>(
+      'orphanCleanupDelayDays',
+    );
+    if (runtimeVal !== undefined && runtimeVal !== null) return runtimeVal;
+    const envConfig = this.configService.get('orphanCleanup', { infer: true });
+    return envConfig?.delayDays ?? 7;
+  }
+
+  private async isOrphanCleanupEnabled(): Promise<boolean> {
+    const runtimeVal = await this.runtimeConfigService.getValue<boolean>(
+      'orphanCleanupEnabled',
+    );
+    if (runtimeVal !== undefined && runtimeVal !== null) return runtimeVal;
+    const envConfig = this.configService.get('orphanCleanup', { infer: true });
+    return envConfig?.enabled ?? true;
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 过期存储清理（已有方法，配置读取更新）
+  // ────────────────────────────────────────────────────────────
+
   async cleanupExpiredStorage(): Promise<CleanupResult> {
-    this.logger.log('开始清理过期存储文件');
+    const enabled = await this.isStorageCleanupEnabled();
+    if (!enabled) {
+      this.logger.log('存储清理未启用，跳过');
+      return { success: true, deletedNodes: 0, deletedDirectories: 0, freedSpace: 0, errors: [] };
+    }
+
+    const delayDays = await this.getStorageCleanupDelayDays();
+    this.logger.log(`开始清理过期存储文件 (延迟 ${delayDays} 天)`);
 
     const result: CleanupResult = {
       success: true,
@@ -59,46 +160,33 @@ export class StorageCleanupService {
     };
 
     try {
-      // 计算过期时间点
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() - this.cleanupDelayDays);
+      expiryDate.setDate(expiryDate.getDate() - delayDays);
 
-      // 查询所有需要清理的节点
       const nodesToDelete = await this.prisma.fileSystemNode.findMany({
         where: {
-          deletedFromStorage: {
-            not: null,
-            lt: expiryDate,
-          },
-          isFolder: false, // 只清理文件节点
+          deletedFromStorage: { not: null, lt: expiryDate },
+          isFolder: false,
         },
-        select: {
-          id: true,
-          path: true,
-          deletedFromStorage: true,
-        },
+        select: { id: true, path: true, deletedFromStorage: true },
       });
 
       this.logger.log(`找到 ${nodesToDelete.length} 个需要清理的节点`);
 
-      // 清理每个节点的存储
       for (const node of nodesToDelete) {
         try {
-          // 解析路径
           const pathParts = node.path?.split('/') || [];
           if (pathParts.length < 2) {
             this.logger.warn(`节点路径格式错误: ${node.path}`);
             continue;
           }
 
-          const directory = pathParts[0]; // YYYYMM[/N]
-          const nodeId = pathParts[1]; // nodeId
+          const directory = pathParts[0];
+          const nodeId = pathParts[1];
 
-          // 删除节点存储
           await this.storageManager.deleteNodeStorage(nodeId, directory);
           result.deletedNodes++;
 
-          // 清空 deletedFromStorage 字段
           await this.prisma.fileSystemNode.update({
             where: { id: node.id },
             data: { deletedFromStorage: null },
@@ -112,18 +200,14 @@ export class StorageCleanupService {
         }
       }
 
-      // 清理空目录
       const cleanedDirs = await this.storageManager.cleanupEmptyDirectories();
       result.deletedDirectories = cleanedDirs;
 
       this.logger.log(
-        `清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`
+        `清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`,
       );
 
-      if (result.errors.length > 0) {
-        result.success = false;
-      }
-
+      if (result.errors.length > 0) result.success = false;
       return result;
     } catch (error) {
       this.logger.error('清理过期存储失败', error.stack);
@@ -133,27 +217,18 @@ export class StorageCleanupService {
     }
   }
 
-  /**
-   * 清理指定节点的存储（立即删除）
-   * @param nodeId 节点 ID
-   * @param path 节点路径
-   * @returns 是否成功
-   */
   async cleanupNodeStorage(nodeId: string, path: string): Promise<boolean> {
     try {
-      // 解析路径
       const pathParts = path.split('/');
       if (pathParts.length < 2) {
         this.logger.warn(`节点路径格式错误: ${path}`);
         return false;
       }
 
-      const directory = pathParts[0]; // YYYYMM[/N]
+      const directory = pathParts[0];
 
-      // 删除节点存储
       await this.storageManager.deleteNodeStorage(nodeId, directory);
 
-      // 清空 deletedFromStorage 字段
       await this.prisma.fileSystemNode.update({
         where: { id: nodeId },
         data: { deletedFromStorage: null },
@@ -167,41 +242,38 @@ export class StorageCleanupService {
     }
   }
 
-  /**
-   * 获取待清理节点统计
-   * @returns 统计信息
-   */
   async getPendingCleanupStats(): Promise<{
     total: number;
     expiryDate: Date;
     delayDays: number;
   }> {
+    const delayDays = await this.getStorageCleanupDelayDays();
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() - this.cleanupDelayDays);
+    expiryDate.setDate(expiryDate.getDate() - delayDays);
 
     const total = await this.prisma.fileSystemNode.count({
       where: {
-        deletedFromStorage: {
-          not: null,
-          lt: expiryDate,
-        },
+        deletedFromStorage: { not: null, lt: expiryDate },
         isFolder: false,
       },
     });
 
-    return {
-      total,
-      expiryDate,
-      delayDays: this.cleanupDelayDays,
-    };
+    return { total, expiryDate, delayDays };
   }
 
-  /**
-   * 清理回收站过期文件
-   * @returns 清理结果
-   */
+  // ────────────────────────────────────────────────────────────
+  // 回收站清理（已有方法，配置读取更新）
+  // ────────────────────────────────────────────────────────────
+
   async cleanupExpiredTrash(): Promise<CleanupResult> {
-    this.logger.log('开始清理回收站过期文件');
+    const enabled = await this.isTrashCleanupEnabled();
+    if (!enabled) {
+      this.logger.log('回收站清理未启用，跳过');
+      return { success: true, deletedNodes: 0, deletedDirectories: 0, freedSpace: 0, errors: [] };
+    }
+
+    const delayDays = await this.getTrashCleanupDelayDays();
+    this.logger.log(`开始清理回收站过期文件 (延迟 ${delayDays} 天)`);
 
     const result: CleanupResult = {
       success: true,
@@ -212,62 +284,33 @@ export class StorageCleanupService {
     };
 
     try {
-      // 计算过期时间点
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() - this.trashCleanupDelayDays);
+      expiryDate.setDate(expiryDate.getDate() - delayDays);
 
-      // 查询所有需要清理的回收站项目
       const trashItems = await this.prisma.fileSystemNode.findMany({
-        where: {
-          deletedAt: {
-            not: null,
-            lt: expiryDate,
-          },
-        },
-        select: {
-          id: true,
-          isRoot: true,
-          isFolder: true,
-          path: true,
-          fileHash: true,
-          ownerId: true,
-          projectId: true,
-        },
+        where: { deletedAt: { not: null, lt: expiryDate } },
+        select: { id: true, isRoot: true, isFolder: true, path: true, fileHash: true, ownerId: true, projectId: true },
       });
 
       this.logger.log(`找到 ${trashItems.length} 个需要清理的回收站项目`);
 
-      // 清理每个回收站项目
       for (const item of trashItems) {
         try {
           if (item.isRoot) {
-            // 清理整个项目
-            await this.prisma.fileSystemNode.delete({
-              where: { id: item.id },
-            });
+            await this.prisma.fileSystemNode.delete({ where: { id: item.id } });
             result.deletedNodes++;
           } else if (!item.isFolder && item.path) {
-            // 清理单个文件
-            // 解析路径
             const pathParts = item.path?.split('/') || [];
             if (pathParts.length >= 2) {
-              const directory = pathParts[0]; // YYYYMM[/N]
-              const nodeId = pathParts[1]; // nodeId
-
-              // 删除节点存储
+              const directory = pathParts[0];
+              const nodeId = pathParts[1];
               await this.storageManager.deleteNodeStorage(nodeId, directory);
               result.deletedNodes++;
-
-              // 删除数据库记录
-              await this.prisma.fileSystemNode.delete({
-                where: { id: item.id },
-              });
+              await this.prisma.fileSystemNode.delete({ where: { id: item.id } });
             }
           } else if (item.isFolder) {
-            // 清理文件夹（递归删除其中的文件）
             await this.cleanupFolderRecursive(item.id, result);
           }
-
           this.logger.log(`清理回收站项目成功: ${item.id}`);
         } catch (error) {
           const errorMsg = `清理回收站项目失败: ${item.id}, ${error.message}`;
@@ -276,18 +319,14 @@ export class StorageCleanupService {
         }
       }
 
-      // 清理空目录
       const cleanedDirs = await this.storageManager.cleanupEmptyDirectories();
       result.deletedDirectories = cleanedDirs;
 
       this.logger.log(
-        `回收站清理完成: 删除项目 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`
+        `回收站清理完成: 删除项目 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`,
       );
 
-      if (result.errors.length > 0) {
-        result.success = false;
-      }
-
+      if (result.errors.length > 0) result.success = false;
       return result;
     } catch (error) {
       this.logger.error('清理回收站失败', error.stack);
@@ -297,85 +336,50 @@ export class StorageCleanupService {
     }
   }
 
-  /**
-   * 递归清理文件夹
-   */
-  private async cleanupFolderRecursive(
-    folderId: string,
-    result: CleanupResult
-  ): Promise<void> {
+  private async cleanupFolderRecursive(folderId: string, result: CleanupResult): Promise<void> {
     const children = await this.prisma.fileSystemNode.findMany({
       where: { parentId: folderId },
-      select: {
-        id: true,
-        isFolder: true,
-        path: true,
-      },
+      select: { id: true, isFolder: true, path: true },
     });
 
     for (const child of children) {
       if (child.isFolder) {
         await this.cleanupFolderRecursive(child.id, result);
       } else if (child.path) {
-        // 清理文件
         const pathParts = child.path?.split('/') || [];
         if (pathParts.length >= 2) {
-          const directory = pathParts[0]; // YYYYMM[/N]
-          const nodeId = pathParts[1]; // nodeId
-
+          const directory = pathParts[0];
+          const nodeId = pathParts[1];
           try {
             await this.storageManager.deleteNodeStorage(nodeId, directory);
             result.deletedNodes++;
           } catch (error) {
-            const errorMsg = `清理文件失败: ${child.id}, ${error.message}`;
-            this.logger.error(errorMsg, error.stack);
-            result.errors.push(errorMsg);
+            result.errors.push(`清理文件失败: ${child.id}, ${error.message}`);
           }
         }
-
-        // 删除数据库记录
-        await this.prisma.fileSystemNode.delete({
-          where: { id: child.id },
-        });
+        await this.prisma.fileSystemNode.delete({ where: { id: child.id } });
       }
     }
 
-    // 删除文件夹本身
-    await this.prisma.fileSystemNode.delete({
-      where: { id: folderId },
-    });
+    await this.prisma.fileSystemNode.delete({ where: { id: folderId } });
   }
 
-  /**
-   * 手动触发清理（管理员功能）
-   * @param delayDays 延迟天数（覆盖默认值）
-   * @returns 清理结果
-   */
+  // ────────────────────────────────────────────────────────────
+  // 手动清理（已有方法）
+  // ────────────────────────────────────────────────────────────
+
   async manualCleanup(delayDays?: number): Promise<CleanupResult> {
-    const actualDelayDays =
-      delayDays !== undefined ? delayDays : this.cleanupDelayDays;
+    const actualDelayDays = delayDays !== undefined ? delayDays : await this.getStorageCleanupDelayDays();
     if (delayDays !== undefined) {
       this.logger.log(`使用自定义延迟天数: ${delayDays}`);
     }
 
-    // 计算过期时间点
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() - actualDelayDays);
 
-    // 查询所有需要清理的节点
     const nodesToDelete = await this.prisma.fileSystemNode.findMany({
-      where: {
-        deletedFromStorage: {
-          not: null,
-          lt: expiryDate,
-        },
-        isFolder: false, // 只清理文件节点
-      },
-      select: {
-        id: true,
-        path: true,
-        deletedFromStorage: true,
-      },
+      where: { deletedFromStorage: { not: null, lt: expiryDate }, isFolder: false },
+      select: { id: true, path: true, deletedFromStorage: true },
     });
 
     this.logger.log(`找到 ${nodesToDelete.length} 个需要清理的节点`);
@@ -389,24 +393,20 @@ export class StorageCleanupService {
     };
 
     try {
-      // 清理每个节点的存储
       for (const node of nodesToDelete) {
         try {
-          // 解析路径
           const pathParts = node.path?.split('/') || [];
           if (pathParts.length < 2) {
             this.logger.warn(`节点路径格式错误: ${node.path}`);
             continue;
           }
 
-          const directory = pathParts[0]; // YYYYMM[/N]
-          const nodeId = pathParts[1]; // nodeId
+          const directory = pathParts[0];
+          const nodeId = pathParts[1];
 
-          // 删除节点存储
           await this.storageManager.deleteNodeStorage(nodeId, directory);
           result.deletedNodes++;
 
-          // 清空 deletedFromStorage 字段
           await this.prisma.fileSystemNode.update({
             where: { id: node.id },
             data: { deletedFromStorage: null },
@@ -414,7 +414,270 @@ export class StorageCleanupService {
 
           this.logger.log(`清理节点成功: ${node.id}`);
         } catch (error) {
-          const errorMsg = `清理节点失败: ${node.id}, ${error.message}`;
+          result.errors.push(`清理节点失败: ${node.id}, ${error.message}`);
+        }
+      }
+
+      const cleanedDirs = await this.storageManager.cleanupEmptyDirectories();
+      result.deletedDirectories = cleanedDirs;
+
+      this.logger.log(
+        `清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`,
+      );
+
+      if (result.errors.length > 0) result.success = false;
+      return result;
+    } catch (error) {
+      this.logger.error('清理过期存储失败', error.stack);
+      result.success = false;
+      result.errors.push(error.message);
+      return result;
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 本地孤立文件检测（磁盘有但数据库无）
+  // ────────────────────────────────────────────────────────────
+
+  async detectLocalOrphans(): Promise<LocalOrphanInfo[]> {
+    this.logger.log('开始检测本地孤立文件');
+
+    const orphans: LocalOrphanInfo[] = [];
+
+    try {
+      const directories = await this.directoryAllocator.listDirectories();
+      this.logger.log(`存储目录数量: ${directories.length}`);
+
+      const allLocalNodeIds: { nodeId: string; directory: string }[] = [];
+      const BATCH_SIZE = 500;
+
+      // 遍历所有 YYYYMM 目录，收集 nodeId
+      for (const dir of directories) {
+        try {
+          const subdirs = await this.localStorageProvider.listSubdirectories(dir.name);
+          for (const nodeId of subdirs) {
+            allLocalNodeIds.push({ nodeId, directory: dir.name });
+          }
+        } catch (error) {
+          this.logger.warn(`扫描目录 ${dir.name} 失败: ${error.message}`);
+        }
+      }
+
+      this.logger.log(`磁盘上共找到 ${allLocalNodeIds.length} 个节点目录`);
+
+      // 分批查询数据库
+      for (let i = 0; i < allLocalNodeIds.length; i += BATCH_SIZE) {
+        const batch = allLocalNodeIds.slice(i, i + BATCH_SIZE);
+        const ids = batch.map((n) => n.nodeId);
+
+        const existingNodes = await this.prisma.fileSystemNode.findMany({
+          where: { id: { in: ids } },
+          select: { id: true },
+        });
+        const existingIds = new Set(existingNodes.map((n) => n.id));
+
+        for (const { nodeId, directory } of batch) {
+          if (!existingIds.has(nodeId)) {
+            try {
+              const dirKey = `${directory}/${nodeId}`;
+              const sizeBytes = await this.localStorageProvider.getDirectorySize(dirKey);
+              const fullPath = this.storageManager.getFullPath(dirKey);
+
+              orphans.push({ nodeId, directory, fullPath, sizeBytes });
+            } catch (error) {
+              orphans.push({ nodeId, directory, fullPath: '', sizeBytes: 0 });
+            }
+          }
+        }
+      }
+
+      this.logger.log(
+        `本地孤立文件检测完成: 共 ${orphans.length} 个, 总大小 ${orphans.reduce((s, o) => s + o.sizeBytes, 0)} 字节`,
+      );
+
+      return orphans;
+    } catch (error) {
+      this.logger.error('检测本地孤立文件失败', error.stack);
+      return orphans;
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // DB 孤立记录检测（数据库有但磁盘无）
+  // ────────────────────────────────────────────────────────────
+
+  async detectDBOrphans(): Promise<DBOrphanInfo[]> {
+    this.logger.log('开始检测 DB 孤立记录');
+
+    const orphans: DBOrphanInfo[] = [];
+
+    try {
+      const nodes = await this.prisma.fileSystemNode.findMany({
+        where: {
+          isFolder: false,
+          isRoot: false,
+          path: { not: null },
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          path: true,
+          name: true,
+          ownerId: true,
+          projectId: true,
+        },
+        take: 10000,
+      });
+
+      this.logger.log(`数据库中查询到 ${nodes.length} 个文件记录`);
+
+      for (const node of nodes) {
+        try {
+          const pathParts = node.path?.split('/') || [];
+          if (pathParts.length < 2) continue;
+
+          const directory = pathParts[0];
+          const nodeId = pathParts[1];
+
+          const exists = await this.storageManager.nodeStorageExists(nodeId, directory);
+          if (!exists) {
+            orphans.push({
+              nodeId: node.id,
+              path: node.path,
+              name: node.name,
+              ownerId: node.ownerId,
+              projectId: node.projectId,
+            });
+          }
+        } catch (error) {
+          this.logger.warn(`检查节点 ${node.id} 存储失败: ${error.message}`);
+        }
+      }
+
+      this.logger.log(
+        `DB 孤立记录检测完成: 共 ${orphans.length} 个`,
+      );
+
+      return orphans;
+    } catch (error) {
+      this.logger.error('检测 DB 孤立记录失败', error.stack);
+      return orphans;
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 获取孤儿统计
+  // ────────────────────────────────────────────────────────────
+
+  async getOrphanStats(): Promise<OrphanStats> {
+    const [localOrphans, dbOrphans] = await Promise.all([
+      this.detectLocalOrphans(),
+      this.detectDBOrphans(),
+    ]);
+
+    return {
+      localOrphans,
+      dbOrphans,
+      localOrphanCount: localOrphans.length,
+      dbOrphanCount: dbOrphans.length,
+      localOrphanTotalSize: localOrphans.reduce((s, o) => s + o.sizeBytes, 0),
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 获取标记删除文件统计
+  // ────────────────────────────────────────────────────────────
+
+  async getDeletedFileStats(): Promise<DeletedFileStats> {
+    this.logger.log('开始统计标记删除文件');
+
+    try {
+      const [trashCount, storageMarkedCount, deletedProjectCount, orphanStats] =
+        await Promise.all([
+          this.prisma.fileSystemNode.count({
+            where: { deletedAt: { not: null } },
+          }),
+          this.prisma.fileSystemNode.count({
+            where: { deletedFromStorage: { not: null } },
+          }),
+          this.prisma.fileSystemNode.count({
+            where: { projectStatus: ProjectStatus.DELETED },
+          }),
+          this.getOrphanStats(),
+        ]);
+
+      return {
+        trashCount,
+        storageMarkedCount,
+        deletedProjectCount,
+        localOrphanCount: orphanStats.localOrphanCount,
+        localOrphanTotalSize: orphanStats.localOrphanTotalSize,
+        dbOrphanCount: orphanStats.dbOrphanCount,
+      };
+    } catch (error) {
+      this.logger.error('统计标记删除文件失败', error.stack);
+      return {
+        trashCount: 0,
+        storageMarkedCount: 0,
+        deletedProjectCount: 0,
+        localOrphanCount: 0,
+        localOrphanTotalSize: 0,
+        dbOrphanCount: 0,
+      };
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 清理孤儿文件
+  // ────────────────────────────────────────────────────────────
+
+  async cleanupOrphans(options?: { localOrphans?: LocalOrphanInfo[]; dbOrphans?: DBOrphanInfo[] }): Promise<CleanupResult> {
+    const enabled = await this.isOrphanCleanupEnabled();
+    if (!enabled) {
+      this.logger.log('孤儿文件清理未启用，跳过');
+      return { success: true, deletedNodes: 0, deletedDirectories: 0, freedSpace: 0, errors: [] };
+    }
+
+    this.logger.log('开始清理孤儿文件');
+
+    const result: CleanupResult = {
+      success: true,
+      deletedNodes: 0,
+      deletedDirectories: 0,
+      freedSpace: 0,
+      errors: [],
+    };
+
+    try {
+      // 获取孤儿列表
+      const localOrphans = options?.localOrphans ?? (await this.detectLocalOrphans());
+      const dbOrphans = options?.dbOrphans ?? (await this.detectDBOrphans());
+
+      // 清理本地孤立文件
+      for (const orphan of localOrphans) {
+        try {
+          await this.storageManager.deleteNodeStorage(orphan.nodeId, orphan.directory);
+          result.deletedNodes++;
+          result.freedSpace += orphan.sizeBytes;
+          this.logger.log(`清理本地孤立文件: ${orphan.nodeId} (${orphan.directory})`);
+        } catch (error) {
+          const errorMsg = `清理本地孤立文件失败: ${orphan.nodeId}, ${error.message}`;
+          this.logger.error(errorMsg, error.stack);
+          result.errors.push(errorMsg);
+        }
+      }
+
+      // 清理 DB 孤立记录（标记为删除，移到回收站）
+      for (const orphan of dbOrphans) {
+        try {
+          await this.prisma.fileSystemNode.update({
+            where: { id: orphan.nodeId },
+            data: { deletedAt: new Date() },
+          });
+          result.deletedNodes++;
+          this.logger.log(`标记 DB 孤立记录为删除: ${orphan.nodeId} (${orphan.name})`);
+        } catch (error) {
+          const errorMsg = `标记 DB 孤立记录失败: ${orphan.nodeId}, ${error.message}`;
           this.logger.error(errorMsg, error.stack);
           result.errors.push(errorMsg);
         }
@@ -425,16 +688,13 @@ export class StorageCleanupService {
       result.deletedDirectories = cleanedDirs;
 
       this.logger.log(
-        `清理完成: 删除节点 ${result.deletedNodes} 个, 清理空目录 ${result.deletedDirectories} 个`
+        `孤儿文件清理完成: 本地 ${localOrphans.length} 个, DB ${dbOrphans.length} 个, 空目录 ${cleanedDirs} 个`,
       );
 
-      if (result.errors.length > 0) {
-        result.success = false;
-      }
-
+      if (result.errors.length > 0) result.success = false;
       return result;
     } catch (error) {
-      this.logger.error('清理过期存储失败', error.stack);
+      this.logger.error('清理孤儿文件失败', error.stack);
       result.success = false;
       result.errors.push(error.message);
       return result;

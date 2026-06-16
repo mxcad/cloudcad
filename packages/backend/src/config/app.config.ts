@@ -218,6 +218,42 @@ export interface StorageConfig {
 }
 
 /**
+ * 存储清理配置
+ */
+export interface StorageCleanupConfig {
+  /** 过期存储清理延迟天数 */
+  delayDays: number;
+  /** 是否启用自动清理 */
+  enabled: boolean;
+  /** Cron 表达式 */
+  cronExpression: string;
+}
+
+/**
+ * 回收站清理配置
+ */
+export interface TrashCleanupConfig {
+  /** 回收站清理延迟天数 */
+  delayDays: number;
+  /** 是否启用自动清理 */
+  enabled: boolean;
+  /** Cron 表达式 */
+  cronExpression: string;
+}
+
+/**
+ * 孤儿文件清理配置
+ */
+export interface OrphanCleanupConfig {
+  /** 孤儿文件标记多久后可清理（天） */
+  delayDays: number;
+  /** 是否启用自动清理 */
+  enabled: boolean;
+  /** Cron 表达式 */
+  cronExpression: string;
+}
+
+/**
  * SVN 配置
  */
 export interface SvnConfig {
@@ -354,6 +390,9 @@ export interface AppConfig {
   product: ProductConfig; // 产品信息配置
   cacheWarmup: CacheWarmupConfig; // 缓存预热配置
   storage: StorageConfig; // 存储配置
+  storageCleanup: StorageCleanupConfig; // 存储清理配置
+  trashCleanup: TrashCleanupConfig; // 回收站清理配置
+  orphanCleanup: OrphanCleanupConfig; // 孤儿文件清理配置
   svn: SvnConfig; // SVN 配置
   log: LogConfig; // 日志配置
   sms: SmsConfig; // 短信配置

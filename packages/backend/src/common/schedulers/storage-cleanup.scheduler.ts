@@ -12,9 +12,11 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { StorageCleanupService } from '../services/storage-cleanup.service';
 import { DiskMonitorService } from '../services/disk-monitor.service';
 import { FileLockService } from '../services/file-lock.service';
+import type { AppConfig } from '../../config/app.config';
 
 @Injectable()
 export class StorageCleanupScheduler {
@@ -23,40 +25,46 @@ export class StorageCleanupScheduler {
   constructor(
     private readonly storageCleanupService: StorageCleanupService,
     private readonly diskMonitorService: DiskMonitorService,
-    private readonly fileLockService: FileLockService
+    private readonly fileLockService: FileLockService,
+    private readonly configService: ConfigService<AppConfig>,
   ) {}
 
-  /**
-   * 每天凌晨 3 点执行清理任务
-   */
+  private get storageCleanupConfig() {
+    return this.configService.get('storageCleanup', { infer: true });
+  }
+
+  private get orphanCleanupConfig() {
+    return this.configService.get('orphanCleanup', { infer: true });
+  }
+
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async handleCleanup() {
+    const config = this.storageCleanupConfig;
+    if (config?.enabled === false) {
+      this.logger.log('存储清理已禁用，跳过');
+      return;
+    }
+
     this.logger.log('Starting scheduled cleanup task');
 
     try {
-      // 执行存储清理
       const result = await this.storageCleanupService.cleanupExpiredStorage();
 
       this.logger.log(
-        `Scheduled cleanup completed: Deleted ${result.deletedNodes} nodes, cleaned ${result.deletedDirectories} empty directories`
+        `Scheduled cleanup completed: Deleted ${result.deletedNodes} nodes, cleaned ${result.deletedDirectories} empty directories`,
       );
 
       if (result.errors.length > 0) {
-        this.logger.warn(
-          `Cleanup task encountered ${result.errors.length} errors`
-        );
+        this.logger.warn(`Cleanup task encountered ${result.errors.length} errors`);
         result.errors.forEach((error, index) => {
           this.logger.warn(`Error ${index + 1}: ${error}`);
         });
       }
 
-      // 检查磁盘状态
       const healthReport = this.diskMonitorService.getHealthReport();
 
       if (!healthReport.healthy) {
-        this.logger.warn(
-          `Disk status abnormal: ${healthReport.status.message}`
-        );
+        this.logger.warn(`Disk status abnormal: ${healthReport.status.message}`);
         this.logger.warn(`Recommendation: ${healthReport.recommendation}`);
       } else {
         this.logger.log(`Disk status normal: ${healthReport.status.message}`);
@@ -66,25 +74,19 @@ export class StorageCleanupScheduler {
     }
   }
 
-  /**
-   * 每天凌晨 4 点执行回收站清理任务
-   */
   @Cron('0 4 * * *')
   async handleTrashCleanup() {
     this.logger.log('Starting scheduled trash cleanup task');
 
     try {
-      // 执行回收站清理
       const result = await this.storageCleanupService.cleanupExpiredTrash();
 
       this.logger.log(
-        `Scheduled trash cleanup completed: Deleted ${result.deletedNodes} items, cleaned ${result.deletedDirectories} empty directories`
+        `Scheduled trash cleanup completed: Deleted ${result.deletedNodes} items, cleaned ${result.deletedDirectories} empty directories`,
       );
 
       if (result.errors.length > 0) {
-        this.logger.warn(
-          `Trash cleanup task encountered ${result.errors.length} errors`
-        );
+        this.logger.warn(`Trash cleanup task encountered ${result.errors.length} errors`);
         result.errors.forEach((error, index) => {
           this.logger.warn(`Error ${index + 1}: ${error}`);
         });
@@ -94,9 +96,6 @@ export class StorageCleanupScheduler {
     }
   }
 
-  /**
-   * 每周清理一次过期锁文件
-   */
   @Cron(CronExpression.EVERY_WEEK)
   async handleLockCleanup() {
     this.logger.log('Starting expired lock file cleanup');
@@ -104,17 +103,12 @@ export class StorageCleanupScheduler {
     try {
       const cleanedCount = await this.fileLockService.cleanupExpiredLocks();
 
-      this.logger.log(
-        `Expired lock file cleanup completed: Cleaned ${cleanedCount} lock files`
-      );
+      this.logger.log(`Expired lock file cleanup completed: Cleaned ${cleanedCount} lock files`);
     } catch (error) {
       this.logger.error('Expired lock file cleanup failed', error.stack);
     }
   }
 
-  /**
-   * 每小时检查一次磁盘状态（仅在警告状态下记录）
-   */
   @Cron(CronExpression.EVERY_HOUR)
   async handleDiskMonitor() {
     try {
@@ -126,6 +120,31 @@ export class StorageCleanupScheduler {
       }
     } catch (error) {
       this.logger.error('Disk status check failed', error.stack);
+    }
+  }
+
+  @Cron('0 2 * * * 0')
+  async handleOrphanCleanup() {
+    const config = this.orphanCleanupConfig;
+    if (config?.enabled === false) {
+      this.logger.log('孤儿文件清理已禁用，跳过');
+      return;
+    }
+
+    this.logger.log('Starting scheduled orphan cleanup task');
+
+    try {
+      const result = await this.storageCleanupService.cleanupOrphans();
+
+      this.logger.log(
+        `Orphan cleanup completed: Deleted ${result.deletedNodes} nodes, cleaned ${result.deletedDirectories} empty directories`,
+      );
+
+      if (result.errors.length > 0) {
+        this.logger.warn(`Orphan cleanup task encountered ${result.errors.length} errors`);
+      }
+    } catch (error) {
+      this.logger.error('Scheduled orphan cleanup task failed', error.stack);
     }
   }
 }
