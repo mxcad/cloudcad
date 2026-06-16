@@ -268,8 +268,11 @@ export class UsersService implements IUserService {
       // 状态筛选（支持特殊值 DELETED 查询已注销用户）
       if (query.status === 'DELETED') {
         where.deletedAt = { not: null };
-      } else if (query.status) {
-        where.status = query.status as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+      } else {
+        where.deletedAt = null;
+        if (query.status) {
+          where.status = query.status as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+        }
       }
 
       // 权限检查：如果提供了 projectId，检查用户是否为项目成员或所有者
@@ -662,6 +665,7 @@ export class UsersService implements IUserService {
         where: { id },
         data: {
           deletedAt: new Date(),
+          status: 'INACTIVE',
           phone: null,
           phoneVerified: false,
           wechatId: null,

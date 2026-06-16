@@ -763,6 +763,14 @@ export const userManagementStyles = `
     color: var(--text-primary);
   }
 
+  .cleanup-confirm-text {
+    font-size: var(--text-md);
+    color: var(--text-primary);
+    line-height: 1.6;
+    text-align: center;
+    padding: var(--space-4) var(--space-2);
+  }
+
   /* ===== 响应式 ===== */
   @media (max-width: 768px) {
     .user-management-container {

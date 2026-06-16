@@ -11,6 +11,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsInt, Min } from 'class-validator';
 
 export class UserCleanupStatsResponseDto {
   @ApiProperty({ description: '待清理用户数', example: 15 })
@@ -31,6 +32,9 @@ export class UserCleanupTriggerDto {
     description: '自定义延迟天数（覆盖默认值）',
     example: 7,
   })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   delayDays?: number;
 }
 

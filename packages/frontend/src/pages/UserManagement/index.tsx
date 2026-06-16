@@ -56,7 +56,6 @@ export const UserManagement = () => {
     roles,
     mailEnabled,
     smsEnabled,
-    cleanupStats,
     createUser,
     updateUser,
     deleteUser,
@@ -495,8 +494,8 @@ export const UserManagement = () => {
       <Modal
         isOpen={cleanupModalOpen}
         onClose={() => setCleanupModalOpen(false)}
-        title="清理已注销用户数据"
-        className="max-w-md"
+        title="确认清理"
+        className="max-w-sm"
         footer={
           <div className="modal-footer">
             <Button variant="secondary" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>取消</Button>
@@ -504,7 +503,7 @@ export const UserManagement = () => {
               onClick={async () => {
                 setCleanupLoading(true);
                 try {
-                  const result = await triggerCleanup();
+                  const result = await triggerCleanup(0);
                   showSuccess(result?.message || '清理完成');
                   setCleanupModalOpen(false);
                   await loadUsers();
@@ -515,29 +514,15 @@ export const UserManagement = () => {
                 }
               }}
               disabled={cleanupLoading}
+              variant="danger"
               className="submit-btn"
             >
-              {cleanupLoading ? <><Loader2 size={16} className="animate-spin" />清理中...</> : <><Sparkles size={16} className="mr-1" />立即清理</>}
+              {cleanupLoading ? <><Loader2 size={16} className="animate-spin" />清理中...</> : '确认清理'}
             </Button>
           </div>
         }
       >
-        <div className="cleanup-config-content">
-          <div className="cleanup-stats">
-            <div className="cleanup-stat-item">
-              <span className="cleanup-stat-label">待清理用户</span>
-              <span className="cleanup-stat-value">{cleanupStats?.pendingCleanup ?? 0}</span>
-            </div>
-            <div className="cleanup-stat-item">
-              <span className="cleanup-stat-label">冷静期</span>
-              <span className="cleanup-stat-value">{cleanupStats?.delayDays ?? 30} 天</span>
-            </div>
-            <div className="cleanup-stat-item">
-              <span className="cleanup-stat-label">过期截止</span>
-              <span className="cleanup-stat-value">{cleanupStats?.expiryDate ? new Date(cleanupStats.expiryDate).toLocaleDateString('zh-CN') : '-'}</span>
-            </div>
-          </div>
-        </div>
+        <p className="cleanup-confirm-text">确定要清理所有已注销的用户吗？此操作不可恢复。</p>
       </Modal>
     </div>
   );

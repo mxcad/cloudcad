@@ -84,6 +84,10 @@ export class UserCleanupService {
           result.deletedUploadSessions += userResult.deletedUploadSessions;
           result.deletedConfigLogs += userResult.deletedConfigLogs;
           result.markedForStorageCleanup += userResult.markedForStorageCleanup;
+
+          await this.prisma.user.delete({
+            where: { id: user.id },
+          });
         } catch (error) {
           const errorMsg = `清理用户 ${user.id} 失败: ${error.message}`;
           this.logger.error(errorMsg, error.stack);
@@ -245,10 +249,7 @@ export class UserCleanupService {
 
     const pendingCleanup = await this.prisma.user.count({
       where: {
-        deletedAt: {
-          not: null,
-          lt: expiryDate,
-        },
+        deletedAt: { not: null },
       },
     });
 
@@ -313,6 +314,10 @@ export class UserCleanupService {
           result.deletedUploadSessions += userResult.deletedUploadSessions;
           result.deletedConfigLogs += userResult.deletedConfigLogs;
           result.markedForStorageCleanup += userResult.markedForStorageCleanup;
+
+          await this.prisma.user.delete({
+            where: { id: user.id },
+          });
         } catch (error) {
           result.errors.push({ userId: user.id, message: error.message });
         }

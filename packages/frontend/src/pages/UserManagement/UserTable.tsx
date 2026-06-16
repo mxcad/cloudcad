@@ -11,6 +11,7 @@ export interface UserTableUser {
   phone?: string;
   avatar?: string;
   status?: string;
+  deletedAt?: string | null;
   role?: { id?: string; name: string; isSystem?: boolean };
 }
 
@@ -125,13 +126,17 @@ export function UserTable({
                 </Button>
               </td>
               <td className="cell-status">
-                <Tag variant={user.status === 'ACTIVE' ? 'success' : user.status === 'INACTIVE' ? 'warning' : 'error'}>
-                  {user.status === 'ACTIVE'
-                    ? '正常'
-                    : user.status === 'INACTIVE'
-                      ? '未激活'
-                      : '已禁用'}
-                </Tag>
+                {user.deletedAt ? (
+                  <Tag variant="error">已注销</Tag>
+                ) : (
+                  <Tag variant={user.status === 'ACTIVE' ? 'success' : user.status === 'INACTIVE' ? 'warning' : 'error'}>
+                    {user.status === 'ACTIVE'
+                      ? '正常'
+                      : user.status === 'INACTIVE'
+                        ? '未激活'
+                        : '已禁用'}
+                  </Tag>
+                )}
               </td>
               <td className="cell-actions">
                 <div className="action-buttons">
