@@ -42,7 +42,7 @@ export type UploadManagerEvent =
   | { type: 'task-added'; taskId: string }
   | { type: 'task-started'; taskId: string }
   | { type: 'task-progress'; taskId: string; progress: number }
-  | { type: 'task-processing'; taskId: string }
+  | { type: 'task-processing'; taskId: string; result: MxCadUploadResult }
   | { type: 'task-completed'; taskId: string; result: MxCadUploadResult }
   | { type: 'task-failed'; taskId: string; error: string }
   | { type: 'task-paused'; taskId: string }
@@ -186,6 +186,27 @@ export class UploadManager {
     }
   }
 
+  finalizeTask(taskId: string): void {
+    const task = this.tasks.get(taskId);
+    if (!task || task.status !== 'processing') return;
+
+    task.status = 'done';
+    this.emit({ type: 'task-completed', taskId, result: task.result! });
+    this.onTaskDone?.(task);
+    this.maybeAutoClear();
+  }
+
+  failTask(taskId: string, error: string): void {
+    const task = this.tasks.get(taskId);
+    if (!task || task.status !== 'processing') return;
+
+    task.status = 'failed';
+    task.error = error;
+    this.emit({ type: 'task-failed', taskId, error });
+    this.onTaskFailed?.(task);
+    this.maybeAutoClear();
+  }
+
   retryTask(taskId: string): void {
     const task = this.tasks.get(taskId);
     if (!task) return;
@@ -321,14 +342,10 @@ export class UploadManager {
         }
       );
 
-      task.status = 'processing';
       task.progress = 100;
-      this.emit({ type: 'task-processing', taskId });
       task.result = result;
-
-      task.status = 'done';
-      this.emit({ type: 'task-completed', taskId, result });
-      this.onTaskDone?.(task);
+      task.status = 'processing';
+      this.emit({ type: 'task-processing', taskId, result });
     } catch (error) {
       if ((task as UploadTask).status === 'cancelled') {
         this.activeCount--;
@@ -341,22 +358,23 @@ export class UploadManager {
       task.error = message;
       this.emit({ type: 'task-failed', taskId, error: message });
       this.onTaskFailed?.(task);
+      this.maybeAutoClear();
     } finally {
       const currentStatus = (task as UploadTask).status;
       if (currentStatus !== 'cancelled') {
         this.activeCount--;
         this.emit({ type: 'queue-changed' });
       }
-      this.checkAllComplete();
       this.processQueue();
     }
   }
 
-  private checkAllComplete(): void {
+  private maybeAutoClear(): void {
     const stats = this.getStats();
     const active = stats.uploading + stats.waiting;
     if (active === 0 && stats.total > 0) {
       this.onAllComplete?.();
+      this.clearCompleted();
     }
   }
 }

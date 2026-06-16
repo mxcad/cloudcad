@@ -9,7 +9,6 @@ import { useMxCadUploadNative } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
-import { useUIStore } from '../stores/uiStore';
 import { globalShowToast } from '../contexts/NotificationContext';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
@@ -59,8 +58,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     ref
   ) => {
     const { isAuthenticated } = useAuth();
-    const { setGlobalLoading, setLoadingMessage, setLoadingProgress } = useUIStore();
     const [currentNodeId, setCurrentNodeId] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
     const { selectRawFiles } = useMxCadUploadNative();
     const { addFiles } = useUploadManager({ maxConcurrent: 3 });
     const unsubRef = useRef<(() => void) | null>(null);
@@ -112,34 +111,33 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
       setCurrentNodeId(effectiveNodeId || '');
 
-      if (openAfterUpload) {
-        setGlobalLoading(true, `正在上传 ${allowedFiles.length} 个文件...`);
-      }
-
       const manager = getUploadManager();
-      if (!manager) return;
+      if (!manager) {
+        console.error('[MxCadUploader] UploadManager 未初始化，无法上传');
+        globalShowToast('上传管理器未初始化，请刷新页面后重试', 'error');
+        return;
+      }
 
       unsubRef.current?.();
 
+      setIsUploading(true);
       let pendingCount = allowedFiles.length;
 
       const listener: UploadListener = async (event) => {
-        if (event.type === 'task-completed') {
-          pendingCount--;
+        if (event.type === 'task-processing') {
           const task = manager.getTask(event.taskId);
           if (!task?.result) return;
 
           try {
             if (openAfterUpload) {
-              setLoadingMessage('正在打开图纸中...');
               const { openUploadedFile } = await import('../services/mxcadManager');
               await openUploadedFile(task.result.nodeId, effectiveNodeId || '');
             } else {
-              setLoadingMessage('图纸转换中...');
               const { waitForFileReady } = await import('../services/mxcadManager');
               await waitForFileReady(task.result.nodeId);
             }
 
+            manager.finalizeTask(event.taskId);
             onSuccess?.();
 
             const isSkipXrefCheck = task.fileName.toLowerCase().endsWith('.mxweb');
@@ -152,20 +150,20 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : '文件处理失败';
+            manager.failTask(event.taskId, errorMessage);
             globalShowToast(errorMessage, 'error');
             onError?.(errorMessage);
           }
 
-          if (pendingCount <= 0) {
-            setGlobalLoading(false);
-          }
+          pendingCount--;
+          if (pendingCount <= 0) setIsUploading(false);
         }
 
         if (event.type === 'task-failed') {
           pendingCount--;
-          if (pendingCount <= 0) {
-            setGlobalLoading(false);
-          }
+          if (pendingCount <= 0) setIsUploading(false);
+          const errorMsg = event.error || '上传失败';
+          globalShowToast(`文件上传失败: ${errorMsg}`, 'error');
         }
       };
 
@@ -182,8 +180,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       openAfterUpload,
       enableExternalReferenceCheck,
       externalReferenceUpload,
-      setGlobalLoading,
-      setLoadingMessage,
+      setIsUploading,
     ]);
 
     useImperativeHandle(
@@ -194,22 +191,20 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       [handleSelectFiles]
     );
 
-    const { globalLoading } = useUIStore();
-
     return (
       <div className="mxcad-uploader">
         <Tooltip content={!isAuthenticated ? '请先登录后再上传文件' : '上传 CAD 文件'}>
           <Button
             data-tour="upload-btn"
             onClick={handleSelectFiles}
-            disabled={globalLoading || !isAuthenticated}
+            disabled={isUploading || !isAuthenticated}
             variant="secondary"
             size="sm"
-            loading={globalLoading}
-            icon={globalLoading ? undefined : (isAuthenticated ? Upload : undefined)}
+            loading={isUploading}
+            icon={isUploading ? undefined : (isAuthenticated ? Upload : undefined)}
             className={buttonClassName}
           >
-            {globalLoading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
+            {isUploading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
           </Button>
         </Tooltip>
 

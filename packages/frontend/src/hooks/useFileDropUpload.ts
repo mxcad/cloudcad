@@ -6,9 +6,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useUploadManager } from './useUploadManager';
 import { getUploadManager } from '../utils/uploadManager';
+import { globalShowToast } from '../contexts/NotificationContext';
 import type { UploadListener } from '../utils/uploadManager';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
+const UPLOAD_TIMEOUT_MS = 120000;
 
 interface UseFileDropUploadOptions {
   nodeId: string | (() => string);
@@ -25,14 +27,31 @@ export function useFileDropUpload({
   const [uploading, setUploading] = useState(false);
   const dragCounterRef = useRef(0);
   const unsubRef = useRef<(() => void) | null>(null);
+  const uploadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { addFiles } = useUploadManager({ maxConcurrent: 3 });
 
   useEffect(() => {
     return () => {
       unsubRef.current?.();
       unsubRef.current = null;
+      if (uploadingTimeoutRef.current) {
+        clearTimeout(uploadingTimeoutRef.current);
+        uploadingTimeoutRef.current = null;
+      }
     };
   }, []);
+
+  const clearUploadingTimeout = useCallback(() => {
+    if (uploadingTimeoutRef.current) {
+      clearTimeout(uploadingTimeoutRef.current);
+      uploadingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const resetUploading = useCallback(() => {
+    clearUploadingTimeout();
+    setUploading(false);
+  }, [clearUploadingTimeout]);
 
   const filterAllowedFiles = useCallback((files: FileList | File[]): File[] => {
     return Array.from(files).filter((file) => {
@@ -41,13 +60,34 @@ export function useFileDropUpload({
     });
   }, []);
 
+  useEffect(() => {
+    if (uploading) {
+      uploadingTimeoutRef.current = setTimeout(() => {
+        console.warn('[useFileDropUpload] 上传超时，已自动重置上传状态');
+        resetUploading();
+      }, UPLOAD_TIMEOUT_MS);
+    }
+    return () => {
+      if (uploadingTimeoutRef.current) {
+        clearTimeout(uploadingTimeoutRef.current);
+        uploadingTimeoutRef.current = null;
+      }
+    };
+  }, [uploading, resetUploading]);
+
   const handleFilesUpload = useCallback(
     async (files: File[]) => {
-      if (files.length === 0 || uploading) return;
+      if (files.length === 0) return;
+
+      if (uploading) {
+        console.warn('[useFileDropUpload] 上次上传未完成，忽略此次操作');
+        return;
+      }
 
       const resolvedNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
       if (!resolvedNodeId) {
         console.warn('[useFileDropUpload] 无法获取上传目标目录');
+        globalShowToast('无法获取上传目标目录，请刷新后重试', 'warning');
         return;
       }
 
@@ -55,7 +95,8 @@ export function useFileDropUpload({
 
       const manager = getUploadManager();
       if (!manager) {
-        setUploading(false);
+        console.error('[useFileDropUpload] UploadManager 未初始化');
+        resetUploading();
         return;
       }
 
@@ -64,8 +105,7 @@ export function useFileDropUpload({
       let pendingCount = files.length;
 
       const listener: UploadListener = async (event) => {
-        if (event.type === 'task-completed') {
-          pendingCount--;
+        if (event.type === 'task-processing') {
           const task = manager.getTask(event.taskId);
           if (!task?.result) return;
 
@@ -78,20 +118,25 @@ export function useFileDropUpload({
               const { waitForFileReady } = await import('../services/mxcadManager');
               await waitForFileReady(task.result.nodeId);
             }
+
+            manager.finalizeTask(event.taskId);
             onSuccess?.();
           } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '文件处理失败';
+            manager.failTask(event.taskId, errorMessage);
             console.error('[useFileDropUpload] 后处理失败:', error);
           }
 
+          pendingCount--;
           if (pendingCount <= 0) {
-            setUploading(false);
+            resetUploading();
           }
         }
 
         if (event.type === 'task-failed') {
           pendingCount--;
           if (pendingCount <= 0) {
-            setUploading(false);
+            resetUploading();
           }
         }
       };
@@ -100,7 +145,7 @@ export function useFileDropUpload({
 
       addFiles(files, resolvedNodeId);
     },
-    [nodeId, uploading, onSuccess, openAfterUpload, addFiles]
+    [nodeId, uploading, onSuccess, openAfterUpload, addFiles, resetUploading]
   );
 
   const handleDragEnter = useCallback(
