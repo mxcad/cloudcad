@@ -4,6 +4,7 @@ import { CSS_CLASSES } from '../../services/mxcadManager/mxcadTypes';
 
 interface DropIndicatorProps {
   visible: boolean;
+  fileCount?: number;
 }
 
 /**
@@ -12,7 +13,7 @@ interface DropIndicatorProps {
  * 当用户拖拽文件到 mxcad-app 容器上方时显示，
  * 提示松开即可打开图纸。
  */
-export const DropIndicator: React.FC<DropIndicatorProps> = ({ visible }) => {
+export const DropIndicator: React.FC<DropIndicatorProps> = ({ visible, fileCount = 1 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const portalRef = useRef<HTMLDivElement | null>(null);
 
@@ -49,7 +50,11 @@ export const DropIndicator: React.FC<DropIndicatorProps> = ({ visible }) => {
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
-        <p className="drop-indicator-text">松开即可打开图纸</p>
+        <p className="drop-indicator-text">
+          {fileCount > 1
+            ? `松开即可上传 ${fileCount} 个文件`
+            : '松开即可打开图纸'}
+        </p>
       </div>
     </div>,
     containerRef.current

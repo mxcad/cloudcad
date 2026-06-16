@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { MoreIcon } from '../FileIcons';
 import { type ActionType, type FileAction, ACTION_VARIANT_MAP, getActionGroups } from './fileActionConfig';
 import { Tooltip } from '../ui/Tooltip';
@@ -22,6 +22,11 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onCloseMenu,
 }) => {
   const { main, secondary, destructive } = getActionGroups(actions);
+
+  const handleClose = useCallback(() => {
+    onCloseMenu();
+    setTimeout(() => { menuButtonRef.current?.blur(); }, 0);
+  }, [onCloseMenu, menuButtonRef]);
 
   if (actions.length === 0) return null;
 
@@ -50,7 +55,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
               key={action.type}
               variant={ACTION_VARIANT_MAP[action.type]}
               icon={action.icon}
-              onClick={() => { onAction(action.type); onCloseMenu(); }}
+              onClick={() => { onAction(action.type); handleClose(); }}
               {...(action.props as Record<string, unknown>)}
             >
               {action.label}
@@ -64,7 +69,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
                   key={action.type}
                   variant={ACTION_VARIANT_MAP[action.type]}
                   icon={action.icon}
-                  onClick={() => { onAction(action.type); onCloseMenu(); }}
+                  onClick={() => { onAction(action.type); handleClose(); }}
                   {...(action.props as Record<string, unknown>)}
                 >
                   {action.label}
@@ -80,7 +85,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
               key={action.type}
               variant="danger"
               icon={action.icon}
-              onClick={() => { onAction(action.type); onCloseMenu(); }}
+              onClick={() => { onAction(action.type); handleClose(); }}
             >
               {action.label}
             </Menu.Item>

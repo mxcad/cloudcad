@@ -22,6 +22,21 @@
       "icon": "dakai"
     },
     {
+      "text": "保存到云图",
+      "icon": "baocun",
+      "cmd": "Mx_SaveToCloud"
+    },
+    {
+      "text": "另存为到云图",
+      "icon": "baocun",
+      "cmd": "Mx_SaveAsToCloud"
+    },
+    {
+      "text": "另存为",
+      "icon": "baocun",
+      "cmd": "Mx_SaveAsMxWeb"
+    },
+    {
       "text": "导出",
       "icon": "geshi",
       "cmd": "Mx_export"

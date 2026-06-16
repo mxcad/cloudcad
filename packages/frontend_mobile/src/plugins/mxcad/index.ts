@@ -15,6 +15,13 @@ export const createMxCAD = async () => {
     mode,
   } = getParamsFromUrl();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasSpecificFile = urlParams.has('fileId') || urlParams.has('nodeId') || urlParams.has('hash') || urlParams.has('fileHash');
+
+  if (!file && !hasSpecificFile) {
+    file = new URL("../../../public/empty.mxweb", import.meta.url).href;
+  }
+
   if (
     (mode !== "2d" && mode !== "2d-st" && mode !== "st") ||
     typeof mode === "undefined"

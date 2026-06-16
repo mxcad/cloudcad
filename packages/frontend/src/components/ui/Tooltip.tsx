@@ -200,6 +200,26 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [isVisible, calculatePosition]);
 
+  // 点击外部关闭（处理弹框遮罩截获鼠标事件导致 onMouseLeave 无法触发的情况）
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleOutsidePointerDown = (e: PointerEvent) => {
+      if (
+        !triggerRef.current?.contains(e.target as Node) &&
+        !tooltipRef.current?.contains(e.target as Node)
+      ) {
+        clearTimeouts();
+        setIsVisible(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+    };
+  }, [isVisible, clearTimeouts]);
+
   // 清理定时器
   useEffect(() => {
     return () => {

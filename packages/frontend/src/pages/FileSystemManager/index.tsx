@@ -927,6 +927,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             onCreateProject={openCreateProject}
             onGoBack={handleGoBack}
             onBreadcrumbNavigate={(crumb) => {
+              if (isTrashView && crumb.id !== 'trash') {
+                handleToggleTrashView();
+              }
               if (isPersonalSpaceMode) {
                 if (crumb.isRoot) {
                   navigate('/personal-space');

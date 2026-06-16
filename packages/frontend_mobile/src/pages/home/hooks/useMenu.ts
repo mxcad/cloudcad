@@ -6,6 +6,8 @@ import { injectVoerkaI18n } from "@voerkai18n/vue"
 import { MxCpp } from "mxcad"
 import { PopoverAction } from "vant"
 import { ref } from "vue"
+import { useSave } from "../../../composables/useSave"
+import { saveAsToCloudTrigger } from "../../../composables/useSaveAs"
 
 export const useMenu = () => {
     const i18n = injectVoerkaI18n()
@@ -122,6 +124,13 @@ export const useMenu = () => {
     addCommand("Mx_export", showExportSubMenu)
     addCommand("Mx_saveDwg", showExportSubMenu)
     addCommand("Mx_exportPDF", showExportSubMenu)
+    addCommand("Mx_SaveToCloud", async () => {
+        const { save } = useSave()
+        await save()
+    })
+    addCommand("Mx_SaveAsToCloud", () => {
+        saveAsToCloudTrigger.value++
+    })
     const onSelectMenu = (action: PopoverAction) => {
         action.cmd && callCommand(action.cmd)
         action.call && action.call()

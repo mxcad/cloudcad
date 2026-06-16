@@ -3,36 +3,37 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, useCallback, useRef } from 'react';
-import { uploadSingleFile } from '../utils/mxcadUploadUtils';
-import { useUIStore } from '../stores/uiStore';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useUploadManager } from './useUploadManager';
+import { getUploadManager } from '../utils/uploadManager';
+import type { UploadListener } from '../utils/uploadManager';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
 
 interface UseFileDropUploadOptions {
-  /** 当前目录的节点 ID，或返回节点 ID 的 getter 函数（drop 时动态获取） */
   nodeId: string | (() => string);
-  /** 上传成功回调 */
   onSuccess?: () => void;
-  /** 上传完成后是否打开图纸，默认true。列表页上传应设置为false */
   openAfterUpload?: boolean;
 }
 
-/**
- * 文件拖拽上传 Hook
- *
- * 处理从桌面/文件管理器拖拽文件到文件列表的上传逻辑。
- * 核心上传管线复用 uploadSingleFile（与 MxCadUploader 共用）。
- */
-export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }: UseFileDropUploadOptions) {
+export function useFileDropUpload({
+  nodeId,
+  onSuccess,
+  openAfterUpload = true,
+}: UseFileDropUploadOptions) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const dragCounterRef = useRef(0);
-  const { setGlobalLoading, setLoadingMessage, setLoadingProgress } = useUIStore();
+  const unsubRef = useRef<(() => void) | null>(null);
+  const { addFiles } = useUploadManager({ maxConcurrent: 3 });
 
-  /**
-   * 过滤允许的文件类型
-   */
+  useEffect(() => {
+    return () => {
+      unsubRef.current?.();
+      unsubRef.current = null;
+    };
+  }, []);
+
   const filterAllowedFiles = useCallback((files: FileList | File[]): File[] => {
     return Array.from(files).filter((file) => {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -40,14 +41,10 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
     });
   }, []);
 
-  /**
-   * 处理文件上传 - 复用 uploadSingleFile（与正常上传共用管线）
-   */
   const handleFilesUpload = useCallback(
     async (files: File[]) => {
       if (files.length === 0 || uploading) return;
 
-      // Drop 时动态获取 nodeId（支持 getter 函数）
       const resolvedNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
       if (!resolvedNodeId) {
         console.warn('[useFileDropUpload] 无法获取上传目标目录');
@@ -55,59 +52,62 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
       }
 
       setUploading(true);
-      setGlobalLoading(true, `正在上传: ${files[0]!.name}`);
+      addFiles(files, resolvedNodeId);
 
-      for (const file of files) {
-        try {
-          setLoadingMessage(`正在上传: ${file.name}`);
-          const result = await uploadSingleFile(file, resolvedNodeId, (percentage) => {
-            setLoadingProgress(percentage);
-            if (percentage === 100) {
-              setLoadingMessage('图纸转换中...');
-            }
-          });
-
-          // 上传完成，进度条满格（100%时隐藏百分比数字，只显示消息）
-          setLoadingProgress(100);
-
-          if (result.nodeId) {
-            if (openAfterUpload) {
-              // 打开模式：上传完成后延迟1秒再显示"正在打开图纸中"
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              setLoadingMessage('正在打开图纸中...');
-              const { openUploadedFile } = await import('../services/mxcadManager');
-              await openUploadedFile(result.nodeId, resolvedNodeId);
-            } else {
-              // 列表页模式：上传完成直接显示"图纸转换中"
-              setLoadingMessage('图纸转换中...');
-              const { waitForFileReady } = await import('../services/mxcadManager');
-              await waitForFileReady(result.nodeId);
-              setGlobalLoading(false);
-            }
-            onSuccess?.();
-          }
-        } catch (error) {
-          console.error('[useFileDropUpload] 上传失败:', error);
-        }
+      const manager = getUploadManager();
+      if (!manager) {
+        setUploading(false);
+        return;
       }
 
-      setUploading(false);
-      setGlobalLoading(false);
+      // Clean up previous subscription
+      unsubRef.current?.();
+
+      let pendingCount = files.length;
+
+      const listener: UploadListener = async (event) => {
+        if (event.type === 'task-completed') {
+          pendingCount--;
+          const task = manager.getTask(event.taskId);
+          if (!task?.result) return;
+
+          try {
+            if (openAfterUpload) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              const { openUploadedFile } = await import('../services/mxcadManager');
+              await openUploadedFile(task.result.nodeId, resolvedNodeId);
+            } else {
+              const { waitForFileReady } = await import('../services/mxcadManager');
+              await waitForFileReady(task.result.nodeId);
+            }
+            onSuccess?.();
+          } catch (error) {
+            console.error('[useFileDropUpload] 后处理失败:', error);
+          }
+
+          if (pendingCount <= 0) {
+            setUploading(false);
+          }
+        }
+
+        if (event.type === 'task-failed') {
+          pendingCount--;
+          if (pendingCount <= 0) {
+            setUploading(false);
+          }
+        }
+      };
+
+      unsubRef.current = manager.subscribe(listener);
     },
-    [nodeId, uploading, onSuccess, openAfterUpload]
+    [nodeId, uploading, onSuccess, openAfterUpload, addFiles]
   );
 
-  /**
-   * 拖拽进入
-   */
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-
       dragCounterRef.current++;
-
-      // 只处理从外部拖入的文件
       if (e.dataTransfer.types.includes('Files')) {
         setIsDragOver(true);
       }
@@ -115,14 +115,10 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
     []
   );
 
-  /**
-   * 拖拽经过
-   */
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-
       if (e.dataTransfer.types.includes('Files')) {
         e.dataTransfer.dropEffect = 'copy';
       }
@@ -130,16 +126,11 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
     []
   );
 
-  /**
-   * 拖拽离开
-   */
   const handleDragLeave = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-
       dragCounterRef.current--;
-
       if (dragCounterRef.current === 0) {
         setIsDragOver(false);
       }
@@ -147,14 +138,10 @@ export function useFileDropUpload({ nodeId, onSuccess, openAfterUpload = true }:
     []
   );
 
-  /**
-   * 放下文件
-   */
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-
       dragCounterRef.current = 0;
       setIsDragOver(false);
 

@@ -67,6 +67,7 @@ const getPickerEl = (): PickerElement => {
     picker.id = pickerId;
     picker.type = 'file';
     picker.accept = '.dwg,.dxf,.mxweb';
+    picker.multiple = true;
     picker.style.display = 'none';
     document.body.appendChild(picker);
   }
@@ -78,6 +79,24 @@ const getPickerEl = (): PickerElement => {
  */
 export const useMxCadUploadNative = () => {
   const currentConfigRef = useRef<MxCadUploadConfig>({});
+
+  /**
+   * 触发文件选择（无上传，仅返回选中的文件列表）
+   */
+  const selectRawFiles = useCallback((): Promise<File[]> => {
+    return new Promise((resolve) => {
+      const inputElement = getPickerEl();
+
+      inputElement.onchange = (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        const result = files ? Array.from(files) : [];
+        inputElement.value = '';
+        resolve(result);
+      };
+
+      inputElement.click();
+    });
+  }, []);
 
   /**
    * 触发文件选择
@@ -154,6 +173,7 @@ export const useMxCadUploadNative = () => {
 
   return {
     selectFiles,
+    selectRawFiles,
     destroy,
   };
 };

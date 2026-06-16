@@ -3,12 +3,9 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { useState, forwardRef, useImperativeHandle, useCallback, useRef, useEffect } from 'react';
 import { Upload } from 'lucide-react';
-import {
-  useMxCadUploadNative,
-  LoadFileParam,
-} from '../hooks/useMxCadUploadNative';
+import { useMxCadUploadNative } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
@@ -16,27 +13,20 @@ import { useUIStore } from '../stores/uiStore';
 import { globalShowToast } from '../contexts/NotificationContext';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
+import { useUploadManager } from '../hooks/useUploadManager';
+import { getUploadManager } from '../utils/uploadManager';
+import type { UploadListener } from '../utils/uploadManager';
 
 interface MxCadUploaderProps {
-  /** 节点ID（项目根目录或文件夹的 FileSystemNode ID） */
   nodeId?: string | (() => string);
-  /** 上传成功回调 */
-  onSuccess?: (param: LoadFileParam) => void;
-  /** 上传失败回调 */
+  onSuccess?: () => void;
   onError?: (error: string) => void;
-  /** 是否显示进度条 */
   showProgress?: boolean;
-  /** 按钮文本 */
   buttonText?: string;
-  /** 按钮样式类名 */
   buttonClassName?: string;
-  /** 外部参照上传成功回调 */
   onExternalReferenceSuccess?: () => void;
-  /** 外部参照跳过上传回调 */
   onExternalReferenceSkip?: () => void;
-  /** 是否启用外部参照检查，默认true。批量导入时应设置为false */
   enableExternalReferenceCheck?: boolean;
-  /** 上传完成后是否打开图纸，默认true。列表页上传应设置为false */
   openAfterUpload?: boolean;
 }
 
@@ -45,14 +35,12 @@ export interface MxCadUploaderRef {
 }
 
 /**
- * MxCAD 文件上传组件（增强版本）
+ * MxCAD 文件上传组件（多文件上传版本）
  *
- * 新增功能：
- * - 自动检测外部参照
- * - 支持外部参照上传
- * - 支持跳过外部参照上传（可选）
+ * 集成 UploadManager 实现多文件并发上传管理。
+ * - 文件选择器支持多文件（multiple）
+ * - 上传队列管理面板在右下角
  * - openAfterUpload: 上传后是否打开图纸（默认true，列表页设为false）
- * - 使用全局通知系统 globalShowToast，与项目其他页面保持一致
  */
 export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
   (
@@ -73,10 +61,10 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const { isAuthenticated } = useAuth();
     const { setGlobalLoading, setLoadingMessage, setLoadingProgress } = useUIStore();
     const [currentNodeId, setCurrentNodeId] = useState('');
+    const { selectRawFiles } = useMxCadUploadNative();
+    const { addFiles } = useUploadManager({ maxConcurrent: 3 });
+    const unsubRef = useRef<(() => void) | null>(null);
 
-    const { selectFiles } = useMxCadUploadNative();
-
-    // 外部参照上传 Hook
     const externalReferenceUpload = useExternalReferenceUpload({
       nodeId: currentNodeId,
       onSuccess: () => {
@@ -90,91 +78,115 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       },
     });
 
-    const handleSelectFiles = useCallback(() => {
-      // 每次上传前都获取最新的 nodeId
-      const currentNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
+    useEffect(() => {
+      return () => {
+        unsubRef.current?.();
+        unsubRef.current = null;
+      };
+    }, []);
 
-      // 检查用户是否已登录
+    const handleSelectFiles = useCallback(async () => {
+      const effectiveNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
       if (!isAuthenticated) {
         globalShowToast('请先登录后再上传文件', 'warning');
         onError?.('用户未登录');
         return;
       }
 
-      selectFiles({
-        nodeId: currentNodeId || undefined,
-        onSuccess: async (param: LoadFileParam) => {
-          // 上传完成，进度条满格（100%时隐藏百分比数字，只显示消息）
-          setLoadingProgress(100);
-          
-          // 保存节点ID
-          param.nodeId && setCurrentNodeId(param.nodeId);
+      const files = await selectRawFiles();
+      if (files.length === 0) return;
+
+      const allowedFiles = files.filter((file) => {
+        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+        return ['.dwg', '.dxf', '.mxweb'].includes(ext);
+      });
+
+      if (allowedFiles.length === 0) {
+        globalShowToast('所选文件类型不支持（支持 .dwg, .dxf, .mxweb）', 'warning');
+        return;
+      }
+
+      if (allowedFiles.length !== files.length) {
+        globalShowToast(`已忽略 ${files.length - allowedFiles.length} 个不支持的文件类型`, 'info');
+      }
+
+      setCurrentNodeId(effectiveNodeId || '');
+
+      if (openAfterUpload) {
+        setGlobalLoading(true, `正在上传 ${allowedFiles.length} 个文件...`);
+      }
+
+      addFiles(allowedFiles, effectiveNodeId || '');
+
+      const manager = getUploadManager();
+      if (!manager) return;
+
+      // Clean up previous subscription
+      unsubRef.current?.();
+
+      let pendingCount = allowedFiles.length;
+
+      const listener: UploadListener = async (event) => {
+        if (event.type === 'task-completed') {
+          pendingCount--;
+          const task = manager.getTask(event.taskId);
+          if (!task?.result) return;
 
           try {
             if (openAfterUpload) {
-              // 打开模式：上传完成后延迟1秒再显示"正在打开图纸中"
-              await new Promise(resolve => setTimeout(resolve, 1000));
               setLoadingMessage('正在打开图纸中...');
               const { openUploadedFile } = await import('../services/mxcadManager');
-              await openUploadedFile(param.nodeId!, currentNodeId || '');
+              await openUploadedFile(task.result.nodeId, effectiveNodeId || '');
             } else {
-              // 列表页模式：上传完成直接显示"图纸转换中"
               setLoadingMessage('图纸转换中...');
               const { waitForFileReady } = await import('../services/mxcadManager');
-              await waitForFileReady(param.nodeId!);
-              // 列表页模式：转换完成后直接隐藏进度条
-              setGlobalLoading(false);
+              await waitForFileReady(task.result.nodeId);
             }
 
-            // 通知父组件上传+转换成功（由父组件决定是否 toast 和刷新列表）
-            onSuccess?.(param);
+            onSuccess?.();
 
-            // 根据开关决定是否检查外部参照
-            // .mxweb 文件跳过（预转换格式，MxCAD 转换引擎不生成 preloading.json）
-            const isSkipXrefCheck = param.name.toLowerCase().endsWith('.mxweb')
+            const isSkipXrefCheck = task.fileName.toLowerCase().endsWith('.mxweb');
             if (enableExternalReferenceCheck && !isSkipXrefCheck) {
-              await externalReferenceUpload.checkMissingReferences(param.nodeId!, true, false);
+              await externalReferenceUpload.checkMissingReferences(
+                task.result.nodeId,
+                true,
+                false
+              );
             }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : '文件处理失败';
             globalShowToast(errorMessage, 'error');
             onError?.(errorMessage);
+          }
+
+          if (pendingCount <= 0) {
             setGlobalLoading(false);
           }
-        },
-        onError: (error: string) => {
-          setGlobalLoading(false);
-          globalShowToast(error, 'error');
-          onError?.(error);
-        },
-        onProgress: (percentage: number) => {
-          setLoadingProgress(percentage);
-          if (percentage === 100) {
-            setLoadingMessage('图纸转换中...');
+        }
+
+        if (event.type === 'task-failed') {
+          pendingCount--;
+          if (pendingCount <= 0) {
+            setGlobalLoading(false);
           }
-        },
-        onFileQueued: (file: File) => {
-          setGlobalLoading(true, `正在上传: ${file.name}`);
-        },
-        onBeginUpload: () => {
-          setLoadingMessage('正在上传...');
-        },
-      });
+        }
+      };
+
+      unsubRef.current = manager.subscribe(listener);
     }, [
       isAuthenticated,
       nodeId,
       onSuccess,
       onError,
-      selectFiles,
-      externalReferenceUpload,
-      enableExternalReferenceCheck,
+      selectRawFiles,
+      addFiles,
       openAfterUpload,
+      enableExternalReferenceCheck,
+      externalReferenceUpload,
       setGlobalLoading,
       setLoadingMessage,
-      setLoadingProgress,
     ]);
 
-    // 暴露方法给父组件
     useImperativeHandle(
       ref,
       () => ({
@@ -202,7 +214,6 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           </Button>
         </Tooltip>
 
-        {/* 外部参照上传模态框 */}
         <ExternalReferenceModal
           isOpen={externalReferenceUpload.isOpen}
           files={externalReferenceUpload.files}

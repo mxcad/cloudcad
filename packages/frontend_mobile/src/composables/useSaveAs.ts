@@ -15,6 +15,8 @@ export type SaveTargetType = 'personal' | 'project' | 'library';
 export type LibraryType = 'drawing' | 'block';
 export type SaveFormat = 'dwg' | 'dxf' | 'pdf' | 'mxweb';
 
+export const saveAsToCloudTrigger = ref(0);
+
 interface ProjectInfo {
   id: string;
   name: string;

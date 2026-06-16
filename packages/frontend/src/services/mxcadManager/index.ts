@@ -55,6 +55,7 @@ import type { CurrentFileInfo, PendingImage } from './mxcadTypes';
 import { showSaveConfirmDialog as _showSaveConfirmDialog } from './mxcadSave';
 import { showDuplicateFileDialog as _showDuplicateFileDialog } from './mxcadCheck';
 import { checkDuplicateFile as _checkDuplicateFile } from './mxcadCheck';
+import { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
 
 
 import { escapeHtml } from '@/utils/sanitize';
@@ -1636,6 +1637,20 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   // 处理待上传图片
   await processPendingImages();
 
+  // 保存成功后更新缩略图
+  try {
+    if (fileId) {
+      setTimeout(async () => {
+        const imageData = await generateThumbnail();
+        if (imageData) {
+          await uploadThumbnail(fileId, imageData);
+        }
+      }, 1000);
+    }
+  } catch (error) {
+    handleError(error, 'mxcadManager: saveToCurrentFile thumbnail');
+  }
+
   resetDocumentModified();
   hideGlobalLoading();
   globalShowToast('文件保存成功', 'success');
@@ -1784,6 +1799,20 @@ async function saveLibraryFile() {
 
     // 处理待上传图片
     await processPendingImages();
+
+    // 保存成功后更新缩略图
+    try {
+      if (fileId) {
+        setTimeout(async () => {
+          const imageData = await generateThumbnail();
+          if (imageData) {
+            await uploadThumbnail(fileId, imageData);
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      handleError(error, 'mxcadManager: saveLibraryFile thumbnail');
+    }
 
     resetDocumentModified();
     hideGlobalLoading();

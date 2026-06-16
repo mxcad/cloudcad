@@ -453,7 +453,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           {revoking ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
           撤销分享
         </Button>
-        <Button variant="primary" onClick={() => { setView('list'); fetchShares(); }} style={{ flex: 1 }}>
+        <Button variant="primary" onClick={onClose} style={{ flex: 1 }}>
           完成
         </Button>
       </div>

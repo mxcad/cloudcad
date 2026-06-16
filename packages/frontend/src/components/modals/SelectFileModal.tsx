@@ -85,17 +85,26 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
 
         const projectsData = projectsRes.data as { nodes?: Array<{ id: string; name?: string }> } | undefined;
         const projectNodes = projectsData?.nodes ?? [];
-        for (const p of projectNodes) {
-          if (p.id) {
-            roots.push({
+        if (projectNodes.length > 0) {
+          const projectChildren: FileEntry[] = projectNodes
+            .filter((p) => p.id)
+            .map((p) => ({
               id: p.id,
               name: p.name || '未命名项目',
               isFolder: true,
               expanded: false,
               loading: false,
               children: [],
-            });
-          }
+            }));
+
+          roots.push({
+            id: '__virtual__my_projects__',
+            name: '我的项目',
+            isFolder: true,
+            expanded: false,
+            loading: false,
+            children: projectChildren,
+          });
         }
 
         setTreeNodes(roots);

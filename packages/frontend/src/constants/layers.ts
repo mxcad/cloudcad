@@ -35,6 +35,8 @@ export const Z_LAYERS = {
   MODAL: 10000,
   /** Dropdown popups (select, autocomplete, etc.) — above modals */
   POPUP: 15000,
+  /** Upload panel — above modals but below loading overlay */
+  UPLOAD_PANEL: 20000,
   /** Tooltips */
   TOOLTIP: 50000,
   /** Global loading overlay (during upload, etc.) */

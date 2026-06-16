@@ -1,6 +1,6 @@
     <script setup lang="ts">
 
-    import { onMounted, onBeforeUnmount, ref, unref, computed } from 'vue';
+    import { onMounted, onBeforeUnmount, ref, unref, computed, watch } from 'vue';
     import { t } from '@/languages';
     import { createMxCAD } from '../../plugins/mxcad';
     import { callCommand } from '@/plugins/mxcad/command';
@@ -23,6 +23,7 @@
     import { checkLibraryPermissions } from '../../services/permissionService';
     import { useEditorState } from '../../composables/useEditorState';
     import { useSave } from '../../composables/useSave';
+import { saveAsToCloudTrigger } from '../../composables/useSaveAs';
     import { useUser } from '../../composables/useUser';
 
     import { showToast, showConfirmDialog } from 'vant';
@@ -165,6 +166,9 @@ import MxToolbar from '@/components/MxToolbar.vue';
     const { isAuthenticated } = useUser()
     const showCommitDialog = ref(false)
     const showSaveAsSheet = ref(false)
+    watch(saveAsToCloudTrigger, () => {
+        showSaveAsSheet.value = true
+    })
     const pendingCommitMessage = ref('')
     const canManageLibrary = ref(false)
     const showVersionHistory = ref(false)
