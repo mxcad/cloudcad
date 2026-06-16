@@ -31,6 +31,8 @@ interface UseLibraryQueryOptions {
   flatMode?: boolean;
   onTotalChange?: (total: number) => void;
   onTotalPagesChange?: (pages: number) => void;
+  /** 刷新计数器，递增时强制重新获取（如同一目录下的删除/重命名） */
+  refreshKey?: number;
 }
 
 interface LibraryData {
@@ -234,6 +236,7 @@ export function useLibraryQuery({
   flatMode = true,
   onTotalChange,
   onTotalPagesChange,
+  refreshKey = 0,
 }: UseLibraryQueryOptions): UseLibraryQueryReturn {
   // ---- 1. 库根节点信息 ----
   const libraryQuery = useQuery({
@@ -289,7 +292,7 @@ export function useLibraryQuery({
         useAllFiles,
         effectiveNodeId || '__disabled__',
       ),
-      { page, limit },
+      { page, limit, refreshKey },
     ] as const,
     queryFn: async (): Promise<ChildrenData> => {
       let data: NodeListResponseDto;

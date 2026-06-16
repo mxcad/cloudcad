@@ -7,11 +7,35 @@ import { MxCpp } from "mxcad"
 import { PopoverAction } from "vant"
 import { ref } from "vue"
 import { useSave } from "../../../composables/useSave"
-import { saveAsToCloudTrigger } from "../../../composables/useSaveAs"
+import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from "../../../composables/useSaveAs"
+import { useEditorState } from "../../../composables/useEditorState"
+import { useUser } from "../../../composables/useUser"
+import { showToast } from "vant"
+
+function isTokenExpired(): boolean {
+  try {
+    const token = localStorage.getItem('accessToken')
+    if (!token) return true
+    const payload = JSON.parse(atob(token.split('.')[1] || ''))
+    if (!payload.exp) return true
+    return payload.exp * 1000 <= Date.now()
+  } catch {
+    return true
+  }
+}
 
 export const useMenu = () => {
     const i18n = injectVoerkaI18n()
     const isShowMenu = ref(false)
+
+    const checkExportPermission = () => {
+        const editorState = useEditorState()
+        if (!editorState.state.permissions.canExport) {
+            showToast('没有导出权限')
+            return false
+        }
+        return true
+    }
 
     const exportActions: PopoverAction[] = [
         {
@@ -19,6 +43,7 @@ export const useMenu = () => {
             icon: 'pdf',
             call: async () => {
                 isShowMenu.value = false
+                if (!checkExportPermission()) return
                 const pdfOptions = await showPdfOptionsDialog()
                 if (pdfOptions) {
                     exportDrawing('pdf', undefined, pdfOptions)
@@ -30,6 +55,7 @@ export const useMenu = () => {
             icon: 'geshi',
             call: async () => {
                 isShowMenu.value = false
+                if (!checkExportPermission()) return
                 const dwgVersion = await showDwgOptionsDialog('dwg')
                 if (dwgVersion) {
                     exportDrawing('dwg', undefined, undefined, { dwgVersion })
@@ -41,6 +67,7 @@ export const useMenu = () => {
             icon: 'geshi',
             call: async () => {
                 isShowMenu.value = false
+                if (!checkExportPermission()) return
                 const dwgVersion = await showDwgOptionsDialog('dxf')
                 if (dwgVersion) {
                     exportDrawing('dxf', undefined, undefined, { dwgVersion })
@@ -50,6 +77,7 @@ export const useMenu = () => {
     ]
 
     const showExportSubMenu = () => {
+        if (!checkExportPermission()) return
         setTimeout(() => {
             isShowMenu.value = true
             actions.value = exportActions
@@ -126,9 +154,26 @@ export const useMenu = () => {
     addCommand("Mx_exportPDF", showExportSubMenu)
     addCommand("Mx_SaveToCloud", async () => {
         const { save } = useSave()
-        await save()
+        const result = await save()
+        if (result.success) return
+        if (result.needLogin) {
+            saveLoginRequiredTrigger.value++
+            return
+        }
+        if (result.needSaveAs) {
+            saveAsToCloudTrigger.value++
+            return
+        }
+        if (result.message) {
+            showToast(result.message)
+        }
     })
     addCommand("Mx_SaveAsToCloud", () => {
+        const { isAuthenticated } = useUser()
+        if (!isAuthenticated.value || isTokenExpired()) {
+            saveLoginRequiredTrigger.value++
+            return
+        }
         saveAsToCloudTrigger.value++
     })
     const onSelectMenu = (action: PopoverAction) => {

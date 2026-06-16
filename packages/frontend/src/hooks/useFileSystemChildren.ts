@@ -24,6 +24,8 @@ interface UseFileSystemChildrenOptions {
   enabled?: boolean;
   /** 项目 ID，用于搜索 API 递归搜索子目录 */
   projectId?: string;
+  /** 刷新计数器，递增时强制重新获取（如同一目录下的删除/重命名） */
+  refreshKey?: number;
 }
 
 interface FileSystemChildrenData {
@@ -55,12 +57,13 @@ export function useFileSystemChildren({
   search,
   enabled = true,
   projectId,
+  refreshKey = 0,
 }: UseFileSystemChildrenOptions): UseFileSystemChildrenReturn {
   const effectiveNodeId = nodeId || '__disabled__';
   const isSearchActive = !!search && search.trim().length > 0;
 
   const { data, isLoading, isFetching, isPlaceholderData, error } = useQuery<FileSystemChildrenData>({
-    queryKey: [...queryKeys.fileSystem.children(effectiveNodeId), { page, limit, search, projectId }] as const,
+    queryKey: [...queryKeys.fileSystem.children(effectiveNodeId), { page, limit, search, projectId, refreshKey }] as const,
     queryFn: async () => {
       if (isSearchActive && projectId) {
         // 搜索模式：调用统一搜索 API 递归搜索子目录

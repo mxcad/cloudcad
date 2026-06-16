@@ -116,12 +116,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         setGlobalLoading(true, `正在上传 ${allowedFiles.length} 个文件...`);
       }
 
-      addFiles(allowedFiles, effectiveNodeId || '');
-
       const manager = getUploadManager();
       if (!manager) return;
 
-      // Clean up previous subscription
       unsubRef.current?.();
 
       let pendingCount = allowedFiles.length;
@@ -173,6 +170,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       };
 
       unsubRef.current = manager.subscribe(listener);
+
+      addFiles(allowedFiles, effectiveNodeId || '');
     }, [
       isAuthenticated,
       nodeId,

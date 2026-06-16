@@ -52,7 +52,6 @@ export function useFileDropUpload({
       }
 
       setUploading(true);
-      addFiles(files, resolvedNodeId);
 
       const manager = getUploadManager();
       if (!manager) {
@@ -60,7 +59,6 @@ export function useFileDropUpload({
         return;
       }
 
-      // Clean up previous subscription
       unsubRef.current?.();
 
       let pendingCount = files.length;
@@ -99,6 +97,8 @@ export function useFileDropUpload({
       };
 
       unsubRef.current = manager.subscribe(listener);
+
+      addFiles(files, resolvedNodeId);
     },
     [nodeId, uploading, onSuccess, openAfterUpload, addFiles]
   );

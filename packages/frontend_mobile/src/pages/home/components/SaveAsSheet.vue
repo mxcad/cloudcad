@@ -108,6 +108,11 @@ async function handleSave() {
     }
   }
 
+  if (saveAs.format.value === 'pdf') {
+    error.value = '云图保存不支持 PDF 格式，请选择其他格式或使用"另存为到本地"';
+    return;
+  }
+
   error.value = null;
 
   try {
@@ -136,18 +141,32 @@ async function handleSave() {
 
 async function handleSaveLocal() {
   try {
-    const blob = await getMxwebBlob();
-    const ext = saveAs.format.value === 'mxweb' ? 'mxweb' : saveAs.format.value;
-    const name = `${saveAs.fileName.value || 'drawing'}.${ext}`;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('已下载到本地');
+    const fmt = saveAs.format.value;
+    if (fmt === 'mxweb') {
+      const blob = await getMxwebBlob();
+      const name = `${saveAs.fileName.value || 'drawing'}.mxweb`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('已下载到本地');
+    } else if (fmt === 'pdf') {
+      const { exportDrawing: exportAndDownload } = await import('../../../services/exportService');
+      const { showPdfOptionsDialog: showPdfOpts } = await import('../../../services/exportService');
+      const pdfOptions = await showPdfOpts();
+      if (pdfOptions) {
+        await exportAndDownload('pdf', saveAs.fileName.value || 'drawing', pdfOptions);
+      } else {
+        return;
+      }
+    } else {
+      const { exportDrawing: exportAndDownload } = await import('../../../services/exportService');
+      await exportAndDownload(fmt, saveAs.fileName.value || 'drawing');
+    }
     emit('close');
   } catch {
     showToast('下载失败');

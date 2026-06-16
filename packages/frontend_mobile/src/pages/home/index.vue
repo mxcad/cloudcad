@@ -23,7 +23,7 @@
     import { checkLibraryPermissions } from '../../services/permissionService';
     import { useEditorState } from '../../composables/useEditorState';
     import { useSave } from '../../composables/useSave';
-import { saveAsToCloudTrigger } from '../../composables/useSaveAs';
+import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from '../../composables/useSaveAs';
     import { useUser } from '../../composables/useUser';
 
     import { showToast, showConfirmDialog } from 'vant';
@@ -169,6 +169,10 @@ import MxToolbar from '@/components/MxToolbar.vue';
     watch(saveAsToCloudTrigger, () => {
         showSaveAsSheet.value = true
     })
+    watch(saveLoginRequiredTrigger, () => {
+        pendingActionAfterLogin.value = 'save'
+        showLoginPrompt.value = true
+    })
     const pendingCommitMessage = ref('')
     const canManageLibrary = ref(false)
     const showVersionHistory = ref(false)
@@ -205,13 +209,19 @@ import MxToolbar from '@/components/MxToolbar.vue';
     }
 
     async function executeSave() {
-        const success = await saveAction(pendingCommitMessage.value)
-        if (!success) {
-            if (!isAuthenticated.value) {
-                showLoginPrompt.value = true
-                return
-            }
+        const result = await saveAction(pendingCommitMessage.value)
+        if (result.success) return
+        if (result.needLogin) {
+            pendingActionAfterLogin.value = 'save'
+            showLoginPrompt.value = true
+            return
+        }
+        if (result.needSaveAs) {
             showSaveAsSheet.value = true
+            return
+        }
+        if (result.message) {
+            showToast(result.message)
         }
     }
 

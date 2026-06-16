@@ -16,6 +16,7 @@ export type LibraryType = 'drawing' | 'block';
 export type SaveFormat = 'dwg' | 'dxf' | 'pdf' | 'mxweb';
 
 export const saveAsToCloudTrigger = ref(0);
+export const saveLoginRequiredTrigger = ref(0);
 
 interface ProjectInfo {
   id: string;
@@ -90,18 +91,19 @@ export function useSaveAs() {
   }): Promise<{ success: boolean; nodeId?: string; message?: string }> {
     saving.value = true;
     try {
+      const safeFormat = params.format === 'pdf' ? 'mxweb' : params.format;
       const result = await saveAs({
         blob: params.blob,
         targetType: params.targetType,
         targetParentId: params.selectedParentId,
-        fileName: `${params.fileName}.${params.format}`,
+        fileName: `${params.fileName}.${safeFormat}`,
         projectId:
           params.targetType === 'project'
             ? params.selectedProjectId
             : undefined,
         libraryType:
           params.targetType === 'library' ? params.libraryType : undefined,
-        commitMessage: `Save as: ${params.fileName}.${params.format}`,
+        commitMessage: `Save as: ${params.fileName}.${safeFormat}`,
       });
       if (pendingImageCount() > 0 && result.nodeId) {
         await processPendingImages(result.nodeId).catch(() => {});
