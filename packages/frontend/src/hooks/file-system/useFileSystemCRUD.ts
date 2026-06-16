@@ -48,6 +48,10 @@ interface UseFileSystemCRUDProps {
   nodes: FileSystemNode[];
   clearSelection: () => void;
   mode: 'project' | 'personal-space';
+  /** 乐观删除：直接从列表移除节点，替代 reloadData()  */
+  removeLocalNode?: (nodeId: string) => void;
+  /** 乐观更新：直接修改列表中节点名称 */
+  updateLocalNode?: (nodeId: string, updates: Partial<Pick<FileSystemNode, 'name'>>) => void;
 }
 
 const validateFolderName = (
@@ -95,6 +99,8 @@ export const useFileSystemCRUD = ({
   nodes,
   clearSelection,
   mode = 'project',
+  removeLocalNode,
+  updateLocalNode,
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
   const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
@@ -257,12 +263,16 @@ export const useFileSystemCRUD = ({
           await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: oldName }, throwOnError: true });
         },
       });
-      loadData();
+      if (updateLocalNode) {
+        updateLocalNode(nodeId, { name: finalName });
+      } else {
+        loadData();
+      }
     } catch (error) {
       const appError = handleError(error, '重命名', 'medium');
       showToast(appError.message, 'error');
     }
-  }, [folderName, editingNode, urlProjectId, loadData, showToast, pushAction]);
+  }, [folderName, editingNode, urlProjectId, loadData, showToast, pushAction, updateLocalNode]);
 
   const handleDelete = useCallback(
     (node: FileSystemNode, permanently: boolean = false) => {
@@ -338,7 +348,11 @@ export const useFileSystemCRUD = ({
           if (permanently && node.isRoot) {
             navigate(mode === 'personal-space' ? '/personal-space' : '/projects');
           } else {
-            loadData();
+            if (removeLocalNode) {
+              removeLocalNode(node.id);
+            } else {
+              loadData();
+            }
           }
         } catch (error) {
           const appError = handleError(error, '删除', 'medium');
@@ -357,6 +371,7 @@ export const useFileSystemCRUD = ({
       showToast,
       isDeleting,
       navigate,
+      removeLocalNode,
     ]
   );
 

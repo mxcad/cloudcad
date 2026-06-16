@@ -115,6 +115,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     reset: resetNodes,
     error: loadNodesError,
     libraryRootId: loadRootId,
+    removeLocalNode,
+    updateLocalNode,
   } = useLoadNodes(isLibraryMode, libraryType, projectId, pageSize);
 
   // Library categories
@@ -367,7 +369,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   }, [redoStack, undoStoreRedo, currentProjectId, refreshNodes, showToast]);
 
   // Library operations
-  const libraryOperations = useLibraryOperations({ libraryType: libraryType || 'drawing', showToast, refreshNodes, showConfirm });
+  const libraryOperations = useLibraryOperations({ libraryType: libraryType || 'drawing', showToast, refreshNodes, showConfirm, removeLocalNode, updateLocalNode });
 
   // CRUD hook
   const currentNode = useMemo(() => {
@@ -384,6 +386,8 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     showToast, showConfirm, selectedNodes: new Set(), nodes,
     clearSelection: () => { },
     mode: isPersonalSpace ? 'personal-space' : 'project',
+    removeLocalNode,
+    updateLocalNode,
   });
 
   const {

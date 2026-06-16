@@ -49,6 +49,10 @@ export interface LibraryOperationOptions {
     type?: 'danger' | 'warning' | 'info',
     confirmText?: string
   ) => void;
+  /** 乐观删除：直接从列表移除节点 */
+  removeLocalNode?: (nodeId: string) => void;
+  /** 乐观更新：直接修改列表中节点名称 */
+  updateLocalNode?: (nodeId: string, updates: { name: string }) => void;
 }
 
 export interface LibraryNode {
@@ -97,6 +101,8 @@ export function useLibraryOperations({
   showToast,
   refreshNodes,
   showConfirm,
+  removeLocalNode,
+  updateLocalNode,
 }: LibraryOperationOptions): UseLibraryOperationsReturn {
   // 下载节点（简单下载）
   const handleDownload = useCallback(
@@ -179,7 +185,11 @@ export function useLibraryOperations({
                 : libraryControllerDeleteBlockNode;
             await apiMethod({ path: { nodeId: node.id }, query: { permanently: true }, throwOnError: true });
             showToast('删除成功', 'success');
-            refreshNodes();
+            if (removeLocalNode) {
+              removeLocalNode(node.id);
+            } else {
+              refreshNodes();
+            }
           } catch (error) {
             console.error('删除失败:', error);
             showToast(getErrorMessage(error), 'error');
@@ -189,7 +199,7 @@ export function useLibraryOperations({
         '删除'
       );
     },
-    [libraryType, showToast, refreshNodes, showConfirm]
+    [libraryType, showToast, refreshNodes, showConfirm, removeLocalNode]
   );
 
   // 重命名节点
@@ -202,7 +212,11 @@ export function useLibraryOperations({
             : libraryControllerRenameBlockNode;
         await apiMethod({ path: { nodeId }, body: { name: newName }, throwOnError: true });
         showToast('重命名成功', 'success');
-        refreshNodes();
+        if (updateLocalNode) {
+          updateLocalNode(nodeId, { name: newName });
+        } else {
+          refreshNodes();
+        }
         onComplete?.();
       } catch (error) {
         console.error('重命名失败:', error);
@@ -210,7 +224,7 @@ export function useLibraryOperations({
         throw error;
       }
     },
-    [libraryType, showToast, refreshNodes]
+    [libraryType, showToast, refreshNodes, updateLocalNode]
   );
 
   // 移动节点

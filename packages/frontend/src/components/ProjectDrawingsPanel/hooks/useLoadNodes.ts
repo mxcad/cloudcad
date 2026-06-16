@@ -42,6 +42,10 @@ export interface UseLoadNodesReturn {
   buildBreadcrumbPathRef: React.MutableRefObject<(nodeId: string) => Promise<BreadcrumbItem[]>>;
   /** 重置节点列表和分页状态 */
   reset: () => void;
+  /** 乐观删除：直接从本地 displayNodes 移除指定节点，无需重新请求 */
+  removeLocalNode: (nodeId: string) => void;
+  /** 乐观更新：直接修改本地 displayNodes 中的指定节点 */
+  updateLocalNode: (nodeId: string, updates: Partial<Pick<FileSystemNode, 'name'>>) => void;
 }
 
 export function useLoadNodes(
@@ -220,6 +224,20 @@ export function useLoadNodes(
     [isLibraryMode]
   );
 
+  // ── 本地数据操作方法（乐观更新，不需要重新请求） ──
+
+  const removeLocalNode = useCallback((nodeId: string) => {
+    setDisplayNodes((prev) => prev.filter((n) => n.id !== nodeId));
+    setTotal((prev) => Math.max(0, prev - 1));
+    setTotalPages((prev) => Math.max(1, Math.ceil((total - 1) / pageSize) || 1));
+  }, [total, pageSize]);
+
+  const updateLocalNode = useCallback((nodeId: string, updates: Partial<Pick<FileSystemNode, 'name'>>) => {
+    setDisplayNodes((prev) =>
+      prev.map((n) => (n.id === nodeId ? { ...n, ...updates } : n))
+    );
+  }, []);
+
   // ── 重置状态 ──
   const reset = useCallback(() => {
     setCurrentPage(1);
@@ -261,5 +279,7 @@ export function useLoadNodes(
     loadNodesRef,
     buildBreadcrumbPathRef,
     reset,
+    removeLocalNode,
+    updateLocalNode,
   };
 }
