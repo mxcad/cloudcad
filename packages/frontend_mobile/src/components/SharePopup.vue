@@ -257,18 +257,6 @@ function handleBack() {
           </div>
         </div>
 
-        <van-button
-          type="primary"
-          block
-          round
-          size="large"
-          :loading="creating"
-          :disabled="creating"
-          @click="handleCreate"
-        >
-          创建分享链接
-        </van-button>
-
         <div v-if="existingShares.length > 0" class="share-existing">
           <div class="share-existing-title">已有分享链接 ({{ existingShares.length }})</div>
           <div
@@ -297,6 +285,31 @@ function handleBack() {
         </div>
       </template>
     </div>
+
+    <template #footer>
+      <div class="share-footer">
+        <van-button
+          v-if="step === 'form'"
+          type="primary"
+          block
+          round
+          size="large"
+          :loading="creating"
+          :disabled="creating"
+          @click="handleCreate"
+        >
+          创建分享链接
+        </van-button>
+        <template v-if="step === 'result'">
+          <van-button type="danger" plain block round @click="handleRevoke(createdToken)">
+            撤销分享
+          </van-button>
+          <van-button plain block round @click="handleBack" class="share-footer-back">
+            返回
+          </van-button>
+        </template>
+      </div>
+    </template>
   </FloatingPopup>
 </template>
 
@@ -334,14 +347,14 @@ function handleBack() {
 }
 
 .share-expiry-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 
 .share-expiry-btn {
-  flex: 1;
-  min-width: 56px;
+  padding: 0 4px;
+  font-size: var(--van-font-size-sm);
 }
 
 .share-custom-days {
@@ -438,12 +451,14 @@ function handleBack() {
   margin-bottom: var(--space-xl);
 }
 
-.share-result-actions {
-  width: 100%;
+.share-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.share-result-back {
-  width: 100%;
-  margin-top: var(--space-md);
+.share-footer-back {
+  border-color: var(--van-gray-4);
+  color: var(--text-secondary);
 }
 </style>

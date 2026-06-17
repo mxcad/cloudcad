@@ -138,22 +138,17 @@ const boundary = computed(() => ({
   max: realAnchors.value[realAnchors.value.length - 1] ?? Math.round(windowHeight.value * 0.9),
 }))
 
-const totalHeight = computed(() =>
-  Math.round(windowHeight.value * 0.9)
-)
-
 const anchors = computed(() =>
   props.anchors.length >= 2 ? realAnchors.value : [boundary.value.min, boundary.value.max]
 )
 
 const DAMP = 0.2
 
-function ease(moveY: number) {
-  const abs = Math.abs(moveY)
+function ease(value: number) {
   const { min, max } = boundary.value
-  if (abs > max) return -(max + (abs - max) * DAMP)
-  if (abs < min) return -(min - (min - abs) * DAMP)
-  return moveY
+  if (value > max) return max + (value - max) * DAMP
+  if (value < min) return min - (min - value) * DAMP
+  return value
 }
 
 function closest(arr: number[], target: number) {
@@ -161,14 +156,11 @@ function closest(arr: number[], target: number) {
 }
 
 const popupStyle = computed(() => {
-  const total = totalHeight.value
-  const visible = currentVisible.value
-  const translateY = total - visible
   return {
-    height: `${total}px`,
-    minHeight: `${total}px`,
-    transform: `translateY(${translateY}px)`,
-    transition: dragging.value ? 'none' : `${props.duration}s`,
+    height: `${currentVisible.value}px`,
+    transition: dragging.value
+      ? 'none'
+      : `height ${props.duration}s cubic-bezier(0.18, 0.89, 0.32, 1.28)`,
     zIndex: props.zIndex ?? 2005,
   }
 })
@@ -206,14 +198,14 @@ function onTouchMove(event: TouchEvent) {
     const { scrollTop } = contentRef.value
     maxScroll = Math.max(maxScroll, scrollTop)
     if (!props.contentDraggable) return
-    if (currentVisible.value < totalHeight.value) {
+    if (currentVisible.value < boundary.value.max) {
       event.preventDefault()
     } else if (!(scrollTop <= 0 && touchDeltaY > startY) || maxScroll > 0) {
       return
     }
   }
 
-  currentVisible.value = -ease(-touchDeltaY)
+  currentVisible.value = ease(touchDeltaY)
 }
 
 function onTouchEnd() {
@@ -365,7 +357,6 @@ watch(() => props.show, (val) => {
   flex-direction: column;
   touch-action: none;
   background: var(--van-floating-popup-background, #fff);
-  will-change: transform;
 
   &.van-floating-popup--round {
     border-top-left-radius: var(--van-floating-popup-border-radius, 16px);
