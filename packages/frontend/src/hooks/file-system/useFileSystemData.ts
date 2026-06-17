@@ -259,7 +259,7 @@ export const useFileSystemData = ({
 
   // ── Query 4: Trash (unified) ───────────────────────────────────────
   const projectIdForTrash = isTrash && !isProjectRootMode
-    ? (urlNodeId || urlProjectId || '')
+    ? (urlProjectId || '')
     : undefined;
 
   const trashQuery = useQuery({
