@@ -4,6 +4,7 @@ export interface UndoableAction {
   type: 'delete' | 'move' | 'copy' | 'paste-copy' | 'rename' | 'createFolder' | 'createDrawing';
   description: string;
   projectId: string | undefined;
+  nodeIds?: string[];
   execute: () => Promise<void>;
   rollback: () => Promise<void>;
 }
@@ -31,6 +32,7 @@ export interface FileSystemUndoRedoState {
   undo: (currentProjectId: string | undefined) => Promise<void>;
   redo: (currentProjectId: string | undefined) => Promise<void>;
   clearStack: () => void;
+  removeActions: (predicate: (action: UndoableAction) => boolean) => void;
 }
 
 export const useFileSystemUndoRedoStore = create<FileSystemUndoRedoState>(
@@ -100,6 +102,13 @@ export const useFileSystemUndoRedoStore = create<FileSystemUndoRedoState>(
 
     clearStack: () => {
       set({ undoStack: [], redoStack: [] });
+    },
+
+    removeActions: (predicate) => {
+      set((state) => ({
+        undoStack: state.undoStack.filter((a) => !predicate(a)),
+        redoStack: state.redoStack.filter((a) => !predicate(a)),
+      }));
     },
   })
 );

@@ -104,6 +104,8 @@ export const useFileSystemCRUD = ({
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
   const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
+  const removeActions = useFileSystemUndoRedoStore((s) => s.removeActions);
+  const clearUndoStack = useFileSystemUndoRedoStore((s) => s.clearStack);
 
   const selectedNodesRef = useRef(selectedNodes);
   selectedNodesRef.current = selectedNodes;
@@ -332,6 +334,7 @@ export const useFileSystemCRUD = ({
               type: 'delete',
               description: `删除 "${deletedNodeName}"`,
               projectId: urlProjectId || undefined,
+              nodeIds: [deletedNodeId],
               execute: async () => {
                 await fileSystemControllerDeleteNode({ path: { nodeId: deletedNodeId }, query: { permanently: false }, throwOnError: true });
               },
@@ -343,6 +346,8 @@ export const useFileSystemCRUD = ({
                 }
               },
             });
+          } else {
+            removeActions((a) => a.nodeIds?.includes(node.id) ?? false);
           }
 
           if (permanently && node.isRoot) {
@@ -420,6 +425,7 @@ export const useFileSystemCRUD = ({
                 type: 'delete',
                 description: `批量删除 ${nodeIds.length} 个项目`,
                 projectId: urlProjectId || undefined,
+                nodeIds,
                 execute: async () => {
                   await fileSystemControllerBatchDeleteNodes({
                     body: { nodeIds, permanently: false },
@@ -433,6 +439,8 @@ export const useFileSystemCRUD = ({
                   } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
                 },
               });
+            } else {
+              removeActions((a) => a.nodeIds?.some((id) => nodeIds.includes(id)) ?? false);
             }
 
             clearSelection();
@@ -468,6 +476,7 @@ export const useFileSystemCRUD = ({
             type: 'delete',
             description: `批量恢复 ${nodeIds.length} 个项目`,
             projectId: urlProjectId || undefined,
+            nodeIds,
             execute: async () => {
               await fileSystemControllerRestoreTrashItems({ body: { itemIds: nodeIds }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
             },
@@ -621,6 +630,7 @@ export const useFileSystemCRUD = ({
           try {
             await fileSystemControllerClearProjectTrash({ path: { projectId }, throwOnError: true });
             showToast('项目回收站已清空', 'success');
+            clearUndoStack();
             loadData();
           } catch (error) {
             const appError = handleError(error, '清空回收站', 'medium');
@@ -637,6 +647,7 @@ export const useFileSystemCRUD = ({
           try {
             await fileSystemControllerClearTrash({ throwOnError: true });
             showToast('回收站已清空', 'success');
+            clearUndoStack();
             loadData();
           } catch (error) {
             const appError = handleError(error, '清空回收站', 'medium');
