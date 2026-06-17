@@ -83,6 +83,7 @@ export function EditUserModal({
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
               placeholder="留空保持原密码"
+              showPasswordToggle
             />
             {formErrors.password && <span className="error-text">{formErrors.password}</span>}
           </div>

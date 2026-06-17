@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useVersionHistory, type VersionEntry } from '../../../composables/useVersionHistory';
-import PopupBase from '../../../components/PopupBase.vue';
+import FloatingPopup from "../../../components/FloatingPopup.vue"
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -42,11 +42,9 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <PopupBase
+  <FloatingPopup
     v-model:show="show"
     title="版本历史"
-    :height="'80vh'"
-    :body-padding="'0'"
     @close="onClose"
   >
     <van-loading v-if="loading" class="loading-state" />
@@ -79,7 +77,7 @@ function formatDate(dateStr: string): string {
         <van-icon name="arrow" class="version-arrow" />
       </div>
     </div>
-  </PopupBase>
+  </FloatingPopup >
 </template>
 
 <style scoped lang="scss">

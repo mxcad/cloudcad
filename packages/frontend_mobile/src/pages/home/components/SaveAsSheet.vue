@@ -5,7 +5,7 @@ import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
 import type { FileSystemNodeDto } from '../../../api-sdk';
-import PopupBase from '../../../components/PopupBase.vue';
+import FloatingPopup from "../../../components/FloatingPopup.vue"
 
 interface FolderNode {
   id: string;
@@ -246,14 +246,11 @@ function onClose() {
 </script>
 
 <template>
-  <PopupBase
+  <FloatingPopup
     :show="show"
     :title="step === 'form' ? '另存为' : '选择文件夹'"
-    :height="'85vh'"
-    :body-padding="'0'"
-    @opened="init"
+    @open="init"
     @close="onClose"
-    @update:show="onClose"
   >
     <!-- Folder Picker View -->
     <template v-if="step === 'folder'">
@@ -378,21 +375,19 @@ function onClose() {
         </van-button>
       </template>
     </template>
-  </PopupBase>
+  </FloatingPopup>
 
   <!-- Project Picker Popup -->
-  <PopupBase
+  <FloatingPopup
     v-model:show="showProjectPicker"
     title="选择项目"
-    :height="'auto'"
-    :body-padding="'0'"
   >
     <van-picker
       :columns="projectColumns"
       @confirm="onProjectConfirm"
       @cancel="showProjectPicker = false"
     />
-  </PopupBase>
+  </FloatingPopup>
 </template>
 
 <style scoped lang="scss">

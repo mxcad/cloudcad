@@ -866,6 +866,42 @@ export class AuthController {
     return this.authService.unbindWechat(req.user.id);
   }
 
+  @Post('unbind-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '解绑邮箱' })
+  @ApiResponse({
+    status: 200,
+    description: '解绑成功',
+    schema: {
+      example: { success: true, message: '邮箱解绑成功' },
+    },
+  })
+  @ApiResponse({ status: 400, description: '解绑失败' })
+  @ApiBearerAuth()
+  async unbindEmail(
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ success: boolean; message: string }> {
+    return this.authService.unbindEmail(req.user.id);
+  }
+
+  @Post('unbind-phone')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '解绑手机号' })
+  @ApiResponse({
+    status: 200,
+    description: '解绑成功',
+    schema: {
+      example: { success: true, message: '手机号解绑成功' },
+    },
+  })
+  @ApiResponse({ status: 400, description: '解绑失败' })
+  @ApiBearerAuth()
+  async unbindPhone(
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ success: boolean; message: string }> {
+    return this.authService.unbindPhone(req.user.id);
+  }
+
   /**
    * 设置 JWT Cookie，用于 <img> 标签等无法携带 Authorization 头的请求
    */

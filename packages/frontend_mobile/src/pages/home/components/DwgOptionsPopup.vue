@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import PopupBase from '../../../components/PopupBase.vue'
+import { t } from '@/languages'
+import FloatingPopup from "../../../components/FloatingPopup.vue"
 
 const props = defineProps<{
   format: 'dwg' | 'dxf'
@@ -32,21 +33,13 @@ function onConfirm() {
   emit('confirm', selectedVersion.value)
 }
 
-function onCancel() {
-  show.value = false
-  emit('cancel')
-}
+
 </script>
 
 <template>
-  <PopupBase
+  <FloatingPopup
     v-model:show="show"
     :title="title"
-    show-footer
-    confirm-text="确认导出"
-    :max-height="'70vh'"
-    @confirm="onConfirm"
-    @cancel="onCancel"
     @close="emit('cancel')"
   >
     <label class="input-label">AutoCAD 版本</label>
@@ -65,7 +58,14 @@ function onCancel() {
         />
       </button>
     </div>
-  </PopupBase>
+      <template #footer>
+    <div class="container-footer">
+      <van-button type="primary" size="large" @click="onConfirm">
+        {{ t('确认') }}
+      </van-button>
+    </div>
+  </template>
+  </FloatingPopup>
 </template>
 
 <style scoped lang="scss">

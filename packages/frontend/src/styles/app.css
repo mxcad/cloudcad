@@ -943,3 +943,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   animation: highlight-fade 3s ease-out forwards;
   border-radius: var(--radius-md, 6px);
 }
+
+/* 隐藏浏览器默认密码显示/清除按钮 */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none;
+}

@@ -2348,6 +2348,8 @@ class MxCADInstanceManager {
       this.setupInitializationListener();
 
       this.mxcadView.create();
+      // 命令注册
+      import('./cmd/index')
     } catch (error) {
       console.error('MxCADView 实例创建失败', error);
       this.mxcadView = null;

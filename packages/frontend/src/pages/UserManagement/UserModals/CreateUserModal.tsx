@@ -86,6 +86,7 @@ export function CreateUserModal({
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
               placeholder="至少8个字符"
+              showPasswordToggle
             />
             {formErrors.password && <span className="error-text">{formErrors.password}</span>}
           </div>

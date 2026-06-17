@@ -215,6 +215,18 @@ export class AuthFacadeService {
     return this.accountBindingService.unbindWechat(userId);
   }
 
+  async unbindEmail(
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    return this.accountBindingService.unbindEmail(userId);
+  }
+
+  async unbindPhone(
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    return this.accountBindingService.unbindPhone(userId);
+  }
+
   async checkFieldUniqueness(dto: {
     username?: string;
     email?: string;

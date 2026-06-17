@@ -27,8 +27,6 @@ import 'vant/es/row/style'
 import 'vant/es/col/style'
 import 'vant/es/icon/style'
 
-
-
 import { createApp } from 'vue'
 import App from './App.vue'
 
@@ -52,7 +50,6 @@ i18nScope.ready(()=> {
     const app = createApp(App)
      // ‍  应用插件
 // ‍ Application plugin
-
     app.use<VoerkaI18nPluginOptions>(i18nPlugin as any,{
         i18nScope
     })

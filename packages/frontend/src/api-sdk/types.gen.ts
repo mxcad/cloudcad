@@ -4014,6 +4014,48 @@ export type AuthControllerUnbindWechatResponses = {
     200: unknown;
 };
 
+export type AuthControllerUnbindEmailData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/unbind-email';
+};
+
+export type AuthControllerUnbindEmailErrors = {
+    /**
+     * 解绑失败
+     */
+    400: unknown;
+};
+
+export type AuthControllerUnbindEmailResponses = {
+    /**
+     * 解绑成功
+     */
+    200: unknown;
+};
+
+export type AuthControllerUnbindPhoneData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/unbind-phone';
+};
+
+export type AuthControllerUnbindPhoneErrors = {
+    /**
+     * 解绑失败
+     */
+    400: unknown;
+};
+
+export type AuthControllerUnbindPhoneResponses = {
+    /**
+     * 解绑成功
+     */
+    200: unknown;
+};
+
 export type UserCleanupControllerGetStatsData = {
     body?: never;
     path?: never;

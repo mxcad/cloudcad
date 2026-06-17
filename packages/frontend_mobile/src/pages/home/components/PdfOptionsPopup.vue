@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import PopupBase from '../../../components/PopupBase.vue'
-
+import { t } from '@/languages'
+import FloatingPopup from "../../../components/FloatingPopup.vue"
 export interface PdfOptions {
   width: string
   height: string
@@ -32,56 +32,40 @@ function onCancel() {
 </script>
 
 <template>
-  <PopupBase
-    v-model:show="show"
-    title="导出 PDF"
-    show-footer
-    confirm-text="确认导出"
-    :max-height="'70vh'"
-    @confirm="onConfirm"
-    @cancel="onCancel"
-    @close="emit('cancel')"
-  >
+  <FloatingPopup v-model:show="show" :title="t('导出 PDF')" @close="emit('cancel')">
     <div class="pdf-options">
       <div class="input-row">
         <div class="input-group">
-          <label class="input-label">宽度（像素）</label>
-          <input
-            v-model="options.width"
-            class="text-input"
-            type="number"
-            placeholder="2000"
-          />
+          <label class="input-label">{{t('宽度（像素）')}}</label>
+          <input v-model="options.width" class="text-input" type="number" placeholder="2000" />
         </div>
         <div class="input-group">
-          <label class="input-label">高度（像素）</label>
-          <input
-            v-model="options.height"
-            class="text-input"
-            type="number"
-            placeholder="2000"
-          />
+          <label class="input-label">{{t('高度（像素）')}}</label>
+          <input v-model="options.height" class="text-input" type="number" placeholder="2000" />
         </div>
       </div>
       <div class="toggle-group">
-        <label class="input-label">颜色策略</label>
+        <label class="input-label">{{t('颜色策略')}}</label>
         <div class="toggle-row">
-          <button
-            :class="['toggle-btn', { active: options.colorPolicy === 'mono' }]"
-            @click="options.colorPolicy = 'mono'"
-          >
-            黑白
+          <button :class="['toggle-btn', { active: options.colorPolicy === 'mono' }]"
+            @click="options.colorPolicy = 'mono'">
+            {{t('黑白')}}
           </button>
-          <button
-            :class="['toggle-btn', { active: options.colorPolicy === 'color' }]"
-            @click="options.colorPolicy = 'color'"
-          >
-            彩色
+          <button :class="['toggle-btn', { active: options.colorPolicy === 'color' }]"
+            @click="options.colorPolicy = 'color'">
+            {{t('彩色')}}
           </button>
         </div>
       </div>
     </div>
-  </PopupBase>
+    <template #footer>
+      <div class="container-footer">
+        <van-button type="primary" size="large" @click="onConfirm">
+          {{ t('确认') }}
+        </van-button>
+      </div>
+    </template>
+  </FloatingPopup>
 </template>
 
 <style scoped lang="scss">

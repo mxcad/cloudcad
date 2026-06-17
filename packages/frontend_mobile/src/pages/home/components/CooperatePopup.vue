@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { t } from '@/languages';
 import { useCooperate } from '../../../composables/useCooperate';
 import { useUser } from '../../../composables/useUser';
-import PopupBase from '../../../components/PopupBase.vue';
+import FloatingPopup from "../../../components/FloatingPopup.vue"
 
 interface Work {
   link_user_data: string[];
@@ -93,42 +94,40 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
 </script>
 
 <template>
-  <PopupBase
+  <FloatingPopup
     v-model:show="show"
-    title="实时协同"
-    :height="'60vh'"
-    :body-padding="'0'"
+    :title="t('实时协同')"
     @close="handleClose"
   >
     <div class="cooperate-body">
       <div v-if="!isCadReady" class="cooperate-status">
         <van-icon name="warning-o" size="32" color="var(--text-muted)" />
-        <p>CAD 引擎未就绪</p>
+        <p>{{ t('CAD 引擎未就绪') }}</p>
       </div>
 
       <div v-else-if="currentWorkId !== null" class="cooperate-session">
         <div class="cooperate-session-info">
           <van-icon name="friends-o" size="24" color="var(--success)" />
-          <span>当前协同: {{ currentWorkId }}</span>
+          <span>{{ t('当前协同') }}: {{ currentWorkId }}</span>
         </div>
         <van-button size="small" type="danger" plain @click="handleExitWork">
-          退出
+          {{t('退出')}}
         </van-button>
       </div>
 
       <div v-else-if="loading" class="cooperate-status">
         <van-loading />
-        <p>加载中...</p>
+        <p>{{ t('加载中...') }}</p>
       </div>
 
       <div v-else-if="works.length === 0" class="cooperate-status">
         <van-icon name="info-o" size="32" color="var(--text-muted)" />
-        <p>暂无可用协同</p>
-        <span class="cooperate-hint">点击"创建协同"开始协作</span>
+        <p>{{ t('暂无可用协同') }}</p>
+        <span class="cooperate-hint">{{ t('点击"创建协同"开始协作') }}</span>
       </div>
 
       <div v-else class="cooperate-list">
-        <div class="cooperate-list-title">可用协同 ({{ works.length }})</div>
+        <div class="cooperate-list-title">{{ t('可用协同') }} ({{ works.length }})</div>
         <div
           v-for="work in works"
           :key="work.work_id"
@@ -146,7 +145,7 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
             :loading="connecting"
             @click="handleJoinWork(work.work_id)"
           >
-            加入
+            {{ t('加入') }}
           </van-button>
         </div>
       </div>
@@ -161,7 +160,7 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
           :loading="connecting"
           @click="handleCreateWork"
         >
-          创建协同
+          {{ t('创建协同') }}
         </van-button>
         <van-button
           size="small"
@@ -170,11 +169,11 @@ function getWorkName(work: Pick<Work, 'work_data' | 'work_id'>): string {
           :loading="loading"
           @click="fetchWorks"
         >
-          刷新列表
+          {{ t('刷新列表') }}
         </van-button>
       </div>
     </template>
-  </PopupBase>
+  </FloatingPopup>
 </template>
 
 <style scoped lang="scss">

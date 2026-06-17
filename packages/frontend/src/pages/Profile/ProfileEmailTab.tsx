@@ -28,6 +28,7 @@ interface ProfileEmailTabProps {
   onVerifyOldEmail: (e: React.FormEvent) => void;
   onSendNewEmailCode: () => void;
   onRebindEmail: (e: React.FormEvent) => void;
+  onUnbindEmail: () => void;
   onSetEditingEmail: (editing: boolean) => void;
 }
 
@@ -53,6 +54,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
   onVerifyOldEmail,
   onSendNewEmailCode,
   onRebindEmail,
+  onUnbindEmail,
   onSetEditingEmail,
 }) => {
   const email = user?.email;
@@ -81,13 +83,21 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             </div>
           </div>
           {mailEnabled && (
-            <Button
-              variant="primary"
-              icon={Mail}
-              onClick={() => onSetEditingEmail(true)}
-            >
-              换绑邮箱
-            </Button>
+            <div className="button-group">
+              <Button
+                variant="primary"
+                icon={Mail}
+                onClick={() => onSetEditingEmail(true)}
+              >
+                换绑邮箱
+              </Button>
+              <Button
+                variant="danger"
+                onClick={onUnbindEmail}
+              >
+                解绑邮箱
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -221,17 +231,6 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             >
               取消
             </Button>
-            {emailStep === 'inputNew' && (
-              <Button
-                variant="primary"
-                icon={Mail}
-                disabled={!emailForm.email}
-                loading={sendingCode}
-                onClick={onSendNewEmailCode}
-              >
-                {sendingCode ? '发送中...' : '发送验证码'}
-              </Button>
-            )}
             {emailStep === 'verifyNew' && (
               <Button type="submit" variant="primary" loading={loading} icon={CheckCircle}>
                 {loading ? '换绑中...' : '确认换绑'}

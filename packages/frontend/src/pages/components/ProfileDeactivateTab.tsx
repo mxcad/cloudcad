@@ -7,8 +7,6 @@ import {
   MessageCircle,
   CheckCircle,
   Loader2,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import { Button, Select, Checkbox } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
@@ -31,7 +29,6 @@ interface ProfileDeactivateTabProps {
     wechatConfirm: string;
     confirmed: boolean;
   };
-  showPassword: { old: boolean; new: boolean; confirm: boolean };
   deactivateLoading: boolean;
   deactivateCountdown: number;
   loading: boolean;
@@ -47,7 +44,6 @@ interface ProfileDeactivateTabProps {
   onSendEmailCode: () => void;
   onWechatConfirm: () => void;
   onDeactivate: () => void;
-  onTogglePassword: (field: 'old' | 'new' | 'confirm') => void;
   onShowConfirm: (options: {
     title: string;
     message: string;
@@ -61,7 +57,6 @@ interface ProfileDeactivateTabProps {
 export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
   user,
   deactivateForm,
-  showPassword,
   deactivateLoading,
   deactivateCountdown,
   loading,
@@ -75,7 +70,6 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
   onSendEmailCode,
   onWechatConfirm,
   onDeactivate,
-  onTogglePassword,
   onShowConfirm,
   onLogout,
 }) => {
@@ -171,17 +165,11 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
               </label>
               <div className="input-wrapper">
                 <Input
-                  type={showPassword.confirm ? 'text' : 'password'}
+                  type="password"
                   value={deactivateForm.password}
                   onChange={(e) => onPasswordChange(e.target.value)}
                   placeholder="请输入密码"
-                />
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  icon={showPassword.confirm ? EyeOff : Eye}
-                  onClick={() => onTogglePassword('confirm')}
-                  tooltip={showPassword.confirm ? '隐藏密码' : '显示密码'}
+                  showPasswordToggle
                 />
                 <div className="input-glow" />
               </div>

@@ -227,7 +227,42 @@ client.setConfig({
   },
 });
 
-// ── 4. Error tagging ─────────────────────────────────────────
+// ── 4. Global error toast ────────────────────────────────────
+// 自动显示所有后端错误消息，确保前端不静默吞掉任何错误提示
+client.interceptors.response.use(async (response) => {
+  if (!response.ok) {
+    const url = typeof response.url === 'string' ? response.url : '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/forgot-password') || url.includes('/auth/reset-password') || url.includes('/auth/register');
+
+    // 非认证端点的 401：token 刷新逻辑已处理（handleTokenRefreshFailure 会显示 toast），跳过避免重复
+    if (response.status === 401 && !isAuthEndpoint) {
+      return response;
+    }
+
+    try {
+      const cloned = response.clone();
+      const body = await cloned.json();
+      const message = body?.message || body?.error || body?.code || '';
+      if (message && typeof message === 'string') {
+        showGlobalToast(message, 'error');
+      }
+    } catch {
+      // 非 JSON 响应或读取失败，使用默认错误消息
+      if (response.status >= 500) {
+        showGlobalToast('服务器繁忙，请稍后重试', 'error');
+      } else if (response.status === 403) {
+        showGlobalToast('没有权限执行此操作', 'error');
+      } else if (response.status === 404) {
+        showGlobalToast('请求的资源不存在', 'error');
+      } else if (response.status === 429) {
+        showGlobalToast('操作过于频繁，请稍后重试', 'error');
+      }
+    }
+  }
+  return response;
+});
+
+// ── 5. Error tagging ─────────────────────────────────────────
 client.interceptors.error.use(async (error, _response, _request, _options) => {
   if (error && typeof error === 'object') {
     const e = error as Record<string, unknown>;
@@ -239,7 +274,7 @@ client.interceptors.error.use(async (error, _response, _request, _options) => {
   return error;
 });
 
-// ── 5. Proactive Token Refresh ───────────────────────────────
+// ── 6. Proactive Token Refresh ───────────────────────────────
 // 在 access token 过期前 5 分钟主动刷新，避免 401 发生
 
 function parseJwtExp(token: string): number | null {

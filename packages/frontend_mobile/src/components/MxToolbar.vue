@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import BScroll from '@better-scroll/core'
+import { t } from '@/languages'
 import MxIcon from '@/components/MxIcon.vue'
 const { items, isHideItemName = false, isClickToEnlarge = false, isNoScroll = false } = defineProps<{
     items: MxToolbarItem[]

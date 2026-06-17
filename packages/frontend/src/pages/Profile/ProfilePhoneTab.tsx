@@ -21,6 +21,7 @@ interface ProfilePhoneTabProps {
   onSendNewPhoneCode: () => void;
   onRebindPhone: (e: React.FormEvent) => void;
   onBindPhone: (e: React.FormEvent) => void;
+  onUnbindPhone: () => void;
   onFocusField: (field: string | null) => void;
   onSetEditingPhone: (editing: boolean) => void;
 }
@@ -41,6 +42,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
   onSendNewPhoneCode,
   onRebindPhone,
   onBindPhone,
+  onUnbindPhone,
   onFocusField,
   onSetEditingPhone,
 }) => {
@@ -69,13 +71,21 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               <span>找回密码</span>
             </div>
           </div>
-          <Button
-            variant="primary"
-            icon={Phone}
-            onClick={() => onSetEditingPhone(true)}
-          >
-            换绑手机号
-          </Button>
+          <div className="button-group">
+            <Button
+              variant="primary"
+              icon={Phone}
+              onClick={() => onSetEditingPhone(true)}
+            >
+              换绑手机号
+            </Button>
+            <Button
+              variant="danger"
+              onClick={onUnbindPhone}
+            >
+              解绑手机号
+            </Button>
+          </div>
         </div>
       </div>
     );

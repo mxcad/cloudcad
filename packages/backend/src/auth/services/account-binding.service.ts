@@ -530,6 +530,98 @@ export class AccountBindingService {
     };
   }
 
+  async unbindEmail(
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        password: true,
+        wechatId: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+
+    if (!user.email) {
+      throw new BadRequestException('您还未绑定邮箱');
+    }
+
+    const hasPassword = !!user.password;
+    const hasPhone = !!user.phone;
+    const hasWechat = !!user.wechatId;
+
+    if (!hasPassword && !hasPhone && !hasWechat) {
+      throw new BadRequestException(
+        '至少需要保留一种登录方式（设置密码、绑定手机或绑定微信）'
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId, deletedAt: null },
+      data: {
+        email: null,
+        emailVerified: false,
+        emailVerifiedAt: null,
+      },
+    });
+
+    this.logger.log(`邮箱解绑成功: 用户ID ${userId}`);
+
+    return { success: true, message: '邮箱解绑成功' };
+  }
+
+  async unbindPhone(
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        password: true,
+        wechatId: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+
+    if (!user.phone) {
+      throw new BadRequestException('您还未绑定手机号');
+    }
+
+    const hasPassword = !!user.password;
+    const hasEmail = !!user.email;
+    const hasWechat = !!user.wechatId;
+
+    if (!hasPassword && !hasEmail && !hasWechat) {
+      throw new BadRequestException(
+        '至少需要保留一种登录方式（设置密码、绑定邮箱或绑定微信）'
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId, deletedAt: null },
+      data: {
+        phone: null,
+        phoneVerified: false,
+        phoneVerifiedAt: null,
+      },
+    });
+
+    this.logger.log(`手机号解绑成功: 用户ID ${userId}`);
+
+    return { success: true, message: '手机号解绑成功' };
+  }
+
   async checkFieldUniqueness(dto: {
     username?: string;
     email?: string;

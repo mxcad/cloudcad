@@ -5,8 +5,7 @@ import { UploadFileInfo, UploadState } from './types'
 import { publicFileControllerUploadExtReference } from '@/api-sdk'
 import { classifyApiError } from '@/utils/errorHandler'
 import { showToast } from 'vant'
-import PopupBase from '@/components/PopupBase.vue'
-
+import FloatingPopup from "../../../../components/FloatingPopup.vue"
 const props = defineProps<{ files: UploadFileInfo[] }>()
 const emit = defineEmits<{ close: [result: { data: boolean }] }>()
 
@@ -138,12 +137,10 @@ async function uploadFiles() {
 </script>
 
 <template>
-  <PopupBase
+  <FloatingPopup
     v-model:show="show"
     title="上传外部参照"
-    :height="'80vh'"
     :closeable="false"
-    :body-padding="'0'"
     @close="onClose('skip')"
   >
     <!-- Overall Progress -->
@@ -214,7 +211,7 @@ async function uploadFiles() {
         </van-button>
       </div>
     </template>
-  </PopupBase>
+  </FloatingPopup>
 </template>
 
 <style scoped lang="scss">

@@ -27,23 +27,13 @@ function isTokenExpired(): boolean {
 export const useMenu = () => {
     const i18n = injectVoerkaI18n()
     const isShowMenu = ref(false)
-
-    const checkExportPermission = () => {
-        const editorState = useEditorState()
-        if (!editorState.state.permissions.canExport) {
-            showToast('没有导出权限')
-            return false
-        }
-        return true
-    }
-
     const exportActions: PopoverAction[] = [
         {
             text: '导出 PDF',
             icon: 'pdf',
             call: async () => {
                 isShowMenu.value = false
-                if (!checkExportPermission()) return
+   
                 const pdfOptions = await showPdfOptionsDialog()
                 if (pdfOptions) {
                     exportDrawing('pdf', undefined, pdfOptions)
@@ -55,7 +45,7 @@ export const useMenu = () => {
             icon: 'geshi',
             call: async () => {
                 isShowMenu.value = false
-                if (!checkExportPermission()) return
+     
                 const dwgVersion = await showDwgOptionsDialog('dwg')
                 if (dwgVersion) {
                     exportDrawing('dwg', undefined, undefined, { dwgVersion })
@@ -67,7 +57,7 @@ export const useMenu = () => {
             icon: 'geshi',
             call: async () => {
                 isShowMenu.value = false
-                if (!checkExportPermission()) return
+
                 const dwgVersion = await showDwgOptionsDialog('dxf')
                 if (dwgVersion) {
                     exportDrawing('dxf', undefined, undefined, { dwgVersion })
@@ -77,7 +67,6 @@ export const useMenu = () => {
     ]
 
     const showExportSubMenu = () => {
-        if (!checkExportPermission()) return
         setTimeout(() => {
             isShowMenu.value = true
             actions.value = exportActions

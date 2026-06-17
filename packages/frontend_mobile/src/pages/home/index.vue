@@ -442,7 +442,6 @@ import MxToolbar from '@/components/MxToolbar.vue';
 
         </div>
         <div class="cmd_operation_btn_list" v-if="isRunCmd">
-            cmdTipObj
             <template v-if="cmdTipObj?.keys">
                 <van-button color="#363636c4" size="small" style="margin-right: 5px; margin-bottom: 5px;"
                     v-for="item in cmdTipObj.keys" @click.stop="item?.key && sendInputCmd(item.key)">{{ item.label

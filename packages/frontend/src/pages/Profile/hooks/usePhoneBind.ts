@@ -5,6 +5,7 @@ import {
   authControllerVerifyUnbindPhoneCode,
   authControllerBindPhone,
   authControllerRebindPhone,
+  authControllerUnbindPhone,
 } from '@/api-sdk';
 import type { VerifyUnbindCodeDto, BindPhoneDto, RebindPhoneDto } from '@/api-sdk/types.gen';
 
@@ -57,17 +58,27 @@ export const usePhoneBind = () => {
     },
   });
 
+  const unbindPhone = useMutation({
+    mutationFn: async () => {
+      const result = await authControllerUnbindPhone();
+      if (result.error) throw result.error;
+      return result.data as { success?: boolean; message?: string };
+    },
+  });
+
   return {
     sendSmsCode: sendSmsCode.mutateAsync,
     sendUnbindPhoneCode: sendUnbindPhoneCode.mutateAsync,
     verifyUnbindPhone: verifyUnbindPhone.mutateAsync,
     bindPhone: bindPhone.mutateAsync,
     rebindPhone: rebindPhone.mutateAsync,
+    unbindPhone: unbindPhone.mutateAsync,
     loading:
       sendSmsCode.isPending ||
       sendUnbindPhoneCode.isPending ||
       verifyUnbindPhone.isPending ||
       bindPhone.isPending ||
-      rebindPhone.isPending,
+      rebindPhone.isPending ||
+      unbindPhone.isPending,
   };
 };

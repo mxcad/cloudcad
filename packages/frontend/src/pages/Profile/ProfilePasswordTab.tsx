@@ -3,9 +3,6 @@ import {
   Lock,
   Key,
   CheckCircle,
-  Eye,
-  EyeOff,
-  Loader2,
   Shield,
 } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
@@ -20,13 +17,11 @@ interface ProfilePasswordTabProps {
     newPassword: string;
     confirmPassword: string;
   };
-  showPassword: { old: boolean; new: boolean; confirm: boolean };
   focusedField: string | null;
   passwordStrength: { strength: number; label: string; color: string };
   loading: boolean;
   onPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPasswordSubmit: (e: React.FormEvent) => void;
-  onTogglePassword: (field: 'old' | 'new' | 'confirm') => void;
   onFocusField: (field: string | null) => void;
   onNavigate: (path: string) => void;
 }
@@ -34,13 +29,11 @@ interface ProfilePasswordTabProps {
 export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
   user,
   passwordForm,
-  showPassword,
   focusedField,
   passwordStrength,
   loading,
   onPasswordChange,
   onPasswordSubmit,
-  onTogglePassword,
   onFocusField,
   onNavigate,
 }) => {
@@ -57,7 +50,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             </label>
             <div className="input-wrapper">
               <Input
-                type={showPassword.old ? 'text' : 'password'}
+                type="password"
                 name="oldPassword"
                 value={passwordForm.oldPassword}
                 onChange={onPasswordChange}
@@ -65,13 +58,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
                 onBlur={() => onFocusField(null)}
                 placeholder="请输入当前密码"
                 required={!user || user.hasPassword === true}
-              />
-              <Button
-                variant="secondary"
-                size="xs"
-                icon={showPassword.old ? EyeOff : Eye}
-                onClick={() => onTogglePassword('old')}
-                tooltip={showPassword.old ? '隐藏密码' : '显示密码'}
+                showPasswordToggle
               />
               <div className="input-glow" />
             </div>
@@ -111,7 +98,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
           </label>
           <div className="input-wrapper">
             <Input
-              type={showPassword.new ? 'text' : 'password'}
+              type="password"
               name="newPassword"
               value={passwordForm.newPassword}
               onChange={onPasswordChange}
@@ -119,13 +106,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               onBlur={() => onFocusField(null)}
               placeholder="至少8位，包含大小写字母和数字"
               required
-            />
-            <Button
-              variant="secondary"
-              size="xs"
-              icon={showPassword.new ? EyeOff : Eye}
-              onClick={() => onTogglePassword('new')}
-              tooltip={showPassword.new ? '隐藏密码' : '显示密码'}
+              showPasswordToggle
             />
             <div className="input-glow" />
           </div>
@@ -159,7 +140,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
           </label>
           <div className="input-wrapper">
             <Input
-              type={showPassword.confirm ? 'text' : 'password'}
+              type="password"
               name="confirmPassword"
               value={passwordForm.confirmPassword}
               onChange={onPasswordChange}
@@ -167,13 +148,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               onBlur={() => onFocusField(null)}
               placeholder="再次输入新密码"
               required
-            />
-            <Button
-              variant="secondary"
-              size="xs"
-              icon={showPassword.confirm ? EyeOff : Eye}
-              onClick={() => onTogglePassword('confirm')}
-              tooltip={showPassword.confirm ? '隐藏密码' : '显示密码'}
+              showPasswordToggle
             />
             <div className="input-glow" />
           </div>

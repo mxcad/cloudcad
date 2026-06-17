@@ -5,6 +5,7 @@ import {
   authControllerSendUnbindEmailCode,
   authControllerVerifyUnbindEmailCode,
   authControllerRebindEmail,
+  authControllerUnbindEmail,
 } from '@/api-sdk';
 import type { BindEmailDto, VerifyUnbindCodeDto, RebindEmailDto } from '@/api-sdk/types.gen';
 
@@ -57,17 +58,27 @@ export const useEmailBind = () => {
     },
   });
 
+  const unbindEmail = useMutation({
+    mutationFn: async () => {
+      const result = await authControllerUnbindEmail();
+      if (result.error) throw result.error;
+      return result.data as { success?: boolean; message?: string };
+    },
+  });
+
   return {
     sendBindCode: sendBindCode.mutateAsync,
     verifyBindEmail: verifyBindEmail.mutateAsync,
     sendUnbindCode: sendUnbindCode.mutateAsync,
     verifyUnbindEmail: verifyUnbindEmail.mutateAsync,
     rebindEmail: rebindEmail.mutateAsync,
+    unbindEmail: unbindEmail.mutateAsync,
     loading:
       sendBindCode.isPending ||
       verifyBindEmail.isPending ||
       sendUnbindCode.isPending ||
       verifyUnbindEmail.isPending ||
-      rebindEmail.isPending,
+      rebindEmail.isPending ||
+      unbindEmail.isPending,
   };
 };

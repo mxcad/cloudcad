@@ -56,8 +56,8 @@ export const Profile: React.FC = () => {
   const { isDark } = useTheme();
   const { showToast, showConfirm } = useNotification();
   const { changePassword } = usePasswordChange();
-  const { sendBindCode, verifyBindEmail, sendUnbindCode, verifyUnbindEmail, rebindEmail } = useEmailBind();
-  const { sendSmsCode, sendUnbindPhoneCode, verifyUnbindPhone, bindPhone, rebindPhone } = usePhoneBind();
+  const { sendBindCode, verifyBindEmail, sendUnbindCode, verifyUnbindEmail, rebindEmail, unbindEmail } = useEmailBind();
+  const { sendSmsCode, sendUnbindPhoneCode, verifyUnbindPhone, bindPhone, rebindPhone, unbindPhone } = usePhoneBind();
   const { bindWechat, unbindWechat } = useWechatBind();
   const { deactivateAccount, resendVerification } = useAccountDeactivate();
 
@@ -80,11 +80,6 @@ export const Profile: React.FC = () => {
     oldPassword: '',
     newPassword: '',
     confirmPassword: '',
-  });
-  const [showPassword, setShowPassword] = useState({
-    old: false,
-    new: false,
-    confirm: false,
   });
 
   const [deactivateForm, setDeactivateForm] = useState(() => {
@@ -407,7 +402,7 @@ export const Profile: React.FC = () => {
     try {
       const response = await verifyUnbindEmail({ code: emailForm.code });
       if (response?.success) {
-        setSuccess('原邮箱验证通过');
+        setCountdown(0);
         setEmailVerifyToken(response.token || '');
         setEmailStep('inputNew');
         setEmailForm({ email: '', code: '' });
@@ -769,6 +764,74 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const handleUnbindEmail = async () => {
+    const confirmed = await showConfirm({
+      title: '解绑邮箱',
+      message: '确定要解绑邮箱吗？解绑后将无法通过邮箱找回密码。',
+      confirmText: '确认解绑',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await unbindEmail();
+      if (response?.success) {
+        showToast('邮箱解绑成功', 'success');
+        setSuccess('邮箱解绑成功');
+        await refreshUser();
+      } else {
+        setError(response?.message || '解绑失败');
+        showToast(response?.message || '解绑失败', 'error');
+      }
+    } catch (err) {
+      const errorMsg =
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+        (err as Error).message ||
+        '解绑失败';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnbindPhone = async () => {
+    const confirmed = await showConfirm({
+      title: '解绑手机号',
+      message: '确定要解绑手机号吗？解绑后将无法通过手机号登录。',
+      confirmText: '确认解绑',
+      cancelText: '取消',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await unbindPhone();
+      if (response?.success) {
+        showToast('手机号解绑成功', 'success');
+        setSuccess('手机号解绑成功');
+        await refreshUser();
+      } else {
+        setError(response?.message || '解绑失败');
+        showToast(response?.message || '解绑失败', 'error');
+      }
+    } catch (err) {
+      const errorMsg =
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+        (err as Error).message ||
+        '解绑失败';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeactivate = async () => {
     try {
       setDeactivateLoading(true);
@@ -965,16 +1028,12 @@ export const Profile: React.FC = () => {
               <ProfilePasswordTab
                 user={user}
                 passwordForm={passwordForm}
-                showPassword={showPassword}
                 focusedField={focusedField}
                 passwordStrength={passwordStrength}
                 loading={loading}
 
                 onPasswordChange={handlePasswordChange}
                 onPasswordSubmit={handlePasswordSubmit}
-                onTogglePassword={(field) =>
-                  setShowPassword((p) => ({ ...p, [field]: !p[field] }))
-                }
                 onFocusField={setFocusedField}
                 onNavigate={navigate}
               />
@@ -1001,6 +1060,7 @@ export const Profile: React.FC = () => {
                 onVerifyOldEmail={handleVerifyOldEmail}
                 onSendNewEmailCode={handleSendNewEmailCode}
                 onRebindEmail={handleRebindEmail}
+                onUnbindEmail={handleUnbindEmail}
                 onSetEditingEmail={handleSetEditingEmail}
               />
             )}
@@ -1023,6 +1083,7 @@ export const Profile: React.FC = () => {
                 onSendNewPhoneCode={handleSendNewPhoneCode}
                 onRebindPhone={handleRebindPhone}
                 onBindPhone={handleBindPhone}
+                onUnbindPhone={handleUnbindPhone}
                 onFocusField={setFocusedField}
                 onSetEditingPhone={setIsEditingPhone}
               />
@@ -1030,6 +1091,7 @@ export const Profile: React.FC = () => {
 
             {activeTab === 'wechat' && wechatEnabled && (
               <ProfileWechatTab
+                wechatId={user?.wechatId as string | null | undefined}
                 loading={loading}
 
                 onBind={wechatBindOpen}
@@ -1041,7 +1103,6 @@ export const Profile: React.FC = () => {
               <ProfileDeactivateTab
                 user={user}
                 deactivateForm={deactivateForm}
-                showPassword={showPassword}
                 deactivateLoading={deactivateLoading}
                 deactivateCountdown={deactivateCountdown}
                 loading={loading}
@@ -1077,9 +1138,6 @@ export const Profile: React.FC = () => {
                   setSuccess('微信验证成功');
                 }}
                 onDeactivate={handleDeactivate}
-                onTogglePassword={(field) =>
-                  setShowPassword((p) => ({ ...p, [field]: !p[field] }))
-                }
                 onShowConfirm={showConfirm}
                 onLogout={logout}
               />

@@ -4,8 +4,6 @@ import {
   Lock,
   Phone,
   Mail,
-  Eye,
-  EyeOff,
   MessageCircle,
   CheckCircle,
 } from 'lucide-react';
@@ -28,12 +26,6 @@ interface DeactivateForm {
   confirmed: boolean;
 }
 
-interface ShowPassword {
-  old: boolean;
-  new: boolean;
-  confirm: boolean;
-}
-
 interface ProfileAccountTabProps {
   user: {
     hasPassword?: boolean;
@@ -45,16 +37,12 @@ interface ProfileAccountTabProps {
   deactivateForm: DeactivateForm;
   deactivateLoading: boolean;
   deactivateCountdown: number;
-  showPassword: ShowPassword;
   onSetDeactivateForm: (
     form: DeactivateForm | ((prev: DeactivateForm) => DeactivateForm)
   ) => void;
   onSetDeactivateLoading: (value: boolean) => void;
   onSetDeactivateCountdown: (
     value: number | ((prev: number) => number)
-  ) => void;
-  onSetShowPassword: (
-    show: ShowPassword | ((prev: ShowPassword) => ShowPassword)
   ) => void;
   onLogout: () => Promise<void>;
   onShowConfirm: (options: {
@@ -72,11 +60,9 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
   deactivateForm,
   deactivateLoading,
   deactivateCountdown,
-  showPassword,
   onSetDeactivateForm,
   onSetDeactivateLoading,
   onSetDeactivateCountdown,
-  onSetShowPassword,
   onLogout,
   onShowConfirm,
   onShowToast,
@@ -143,7 +129,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
               </label>
               <div className="input-wrapper">
                 <Input
-                  type={showPassword.confirm ? 'text' : 'password'}
+                  type="password"
                   value={deactivateForm.password}
                   onChange={(e) =>
                     onSetDeactivateForm((f) => ({
@@ -152,18 +138,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                     }))
                   }
                   placeholder="请输入密码"
-                />
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  icon={showPassword.confirm ? EyeOff : Eye}
-                  onClick={() =>
-                    onSetShowPassword((p) => ({
-                      ...p,
-                      confirm: !p.confirm,
-                    }))
-                  }
-                  tooltip={showPassword.confirm ? '隐藏密码' : '显示密码'}
+                  showPasswordToggle
                 />
                 <div className="input-glow" />
               </div>

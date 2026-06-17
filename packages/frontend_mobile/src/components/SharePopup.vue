@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
-import PopupBase from './PopupBase.vue';
+
 import {
   shareControllerCreateShare,
   shareControllerRevokeShare,
   shareControllerListShares,
 } from '../api-sdk';
+import FloatingPopup from "../components/FloatingPopup.vue"
 import { useUser } from '../composables/useUser';
 import { useEditorState } from '../composables/useEditorState';
 
@@ -191,11 +192,9 @@ function handleBack() {
 </script>
 
 <template>
-  <PopupBase
+  <FloatingPopup
     v-model:show="show"
     title="分享图纸"
-    :height="'70vh'"
-    :body-padding="'0'"
     @close="handleClose"
   >
     <div class="share-container">
@@ -298,7 +297,7 @@ function handleBack() {
         </div>
       </template>
     </div>
-  </PopupBase>
+  </FloatingPopup>
 </template>
 
 <style scoped lang="scss">

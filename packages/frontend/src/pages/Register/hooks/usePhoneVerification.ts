@@ -40,21 +40,18 @@ export function usePhoneVerification({ setFieldErrors }: PhoneVerificationOption
   // 处理倒计时
   useEffect(() => {
     if (countdown > 0) {
-      countdownRef.current = setInterval(() => {
+      const id = setInterval(() => {
         setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) {
-              clearInterval(countdownRef.current);
-            }
-            return 0;
-          }
+          if (prev <= 1) return 0;
           return prev - 1;
         });
       }, 1000);
+      countdownRef.current = id;
     }
     return () => {
-      if (countdownRef.current && countdown <= 0) {
+      if (countdownRef.current) {
         clearInterval(countdownRef.current);
+        countdownRef.current = null;
       }
     };
     // Dependency: trigger effect when countdown transitions from 0 to positive
