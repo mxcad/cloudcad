@@ -1543,6 +1543,10 @@ export type FileSystemNodeDto = {
      */
     projectId?: string;
     /**
+     * 回收站中被级联删除的子节点数量（仅回收站场景使用）
+     */
+    childrenCountTrash?: number;
+    /**
      * 祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）
      */
     ancestorPath?: string;
@@ -1783,6 +1787,10 @@ export type NodeTreeResponseDto = {
      * 项目 ID
      */
     projectId?: string;
+    /**
+     * 回收站中被级联删除的子节点数量（仅回收站场景使用）
+     */
+    childrenCountTrash?: number;
     /**
      * 祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）
      */

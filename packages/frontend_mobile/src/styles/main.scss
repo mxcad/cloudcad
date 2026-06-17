@@ -23,6 +23,19 @@
     --van-popup-title-font-size: var(--font-size-title);
     // --van-dialog-background: #292929;
     --van-dialog-has-title-message-text-color: #fff // Field
+    
+    --van-floating-popup-header-height: 48px;
+    --van-floating-popup-header-font-size: var(--van-font-size-lg);
+    --van-floating-popup-header-close-icon-size: 22px;
+    --van-floating-popup-header-close-icon-color: var(--van-gray-5);
+    --van-floating-popup-header-text-font-size: var(--van-font-size-md);
+    --van-floating-popup-header-color: var(--van-gray-6);
+    --van-floating-popup-header-action-padding: 0 var(--van-padding-md);
+    --van-floating-popup-border-radius: 16px;
+    --van-floating-popup-background: var(--van-background-2);
+    --van-floating-popup-bar-width: 20px;
+    --van-floating-popup-bar-height: 3px;
+    --van-floating-popup-bar-color: var(--van-gray-5);
   }
   
   .van-toast {
