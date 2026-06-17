@@ -822,6 +822,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     clearClipboard();
   }, [clearSelection, clearClipboard]);
 
+  const canCut = projectPermissionsRecord['FILE_MOVE'] !== false;
+  const canCopy = projectPermissionsRecord['FILE_COPY'] !== false;
+  const canDelete = projectPermissionsRecord['FILE_DELETE'] !== false;
+  const canRestore = projectPermissionsRecord['FILE_TRASH_MANAGE'] !== false;
+  const canPaste = clipboardMode === 'cut' ? canCut : canCopy;
+
   const bottomBar = (showSelectionBar || showClipboardBar) ? (
     <div className="flex items-center gap-4">
       {showSelectionBar && (
@@ -830,22 +836,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
 
           {isTrashView && (
-            <Button variant="secondary" onClick={handleBatchRestore} className="text-emerald-400 hover:text-white">恢复</Button>
+            <Button variant="secondary" onClick={handleBatchRestore} disabled={!canRestore} className="text-emerald-400 hover:text-white">恢复</Button>
           )}
 
           {!isTrashView && !isAtRoot && (
             <>
-               <Button variant="secondary" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>剪切</Button>
-              <Button variant="secondary" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
+               <Button variant="secondary" onClick={clipboardHandleCut} disabled={!canCut} style={{ color: 'var(--text-secondary)' }}>剪切</Button>
+              <Button variant="secondary" onClick={clipboardHandleCopy} disabled={!canCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
             </>
           )}
 
           {isTrashView && (
-            <Button variant="secondary" onClick={() => handleBatchDelete(true)} style={{ color: 'var(--error)' }}>彻底删除</Button>
+            <Button variant="secondary" onClick={() => handleBatchDelete(true)} disabled={!canDelete || !canRestore} style={{ color: 'var(--error)' }}>彻底删除</Button>
           )}
 
           {!isTrashView && (
-            <Button variant="secondary" onClick={() => handleBatchDelete(false)} style={{ color: 'var(--error)' }}>删除</Button>
+            <Button variant="secondary" onClick={() => handleBatchDelete(false)} disabled={!canDelete} style={{ color: 'var(--error)' }}>删除</Button>
           )}
         </>
       )}
@@ -855,7 +861,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           <Button
             variant="secondary"
             onClick={clipboardHandlePaste}
-            disabled={clipboardItems.length === 0}
+            disabled={clipboardItems.length === 0 || !canPaste}
             style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }}
             className="relative px-3"
           >

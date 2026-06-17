@@ -381,10 +381,10 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               canShare: nodePerms.canShare,
               canViewVersionHistory: nodePerms.canViewVersionHistory,
               canManageExternalReference: nodePerms.canManageExternalReference,
-              canManageTrash: projectPermissions['FILE_TRASH_MANAGE'] ?? false,
-              canMove: projectPermissions['FILE_MOVE'] ?? false,
-              canCopy: projectPermissions['FILE_COPY'] ?? false,
-              canCreate: projectPermissions['FILE_CREATE'] ?? false,
+              canMove: nodePerms.canMove,
+              canCopy: nodePerms.canCopy,
+              canCreate: projectPermissions['FILE_CREATE'] ?? true,
+              canManageTrash: !!onRestore || !!onPermanentlyDelete,
               onDownload: !!onDownload,
               onShowVersionHistory: !!onShowVersionHistory,
               onEdit: !!nodePerms.onEdit,
@@ -404,13 +404,9 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               onCopyClipboard: !!onCopyClipboard,
               onCut: !!onCut,
               onDownloadFolder: !!onDownloadFolder,
-              onCopyPath: !!onCopyPath,
-              };
-              const fileDelPerm = projectPermissions['FILE_DELETE'] !== false;
-              const fileMovePerm = projectPermissions['FILE_MOVE'] !== false;
-              const fileCopyPerm = projectPermissions['FILE_COPY'] !== false;
-              const fileTrashPerm = projectPermissions['FILE_TRASH_MANAGE'] !== false;
-              const availableActions = getAvailableActions(actionProps);
+               onCopyPath: !!onCopyPath,
+             };
+             const availableActions = getAvailableActions(actionProps);
             const { main, secondary, destructive } = getActionGroups(availableActions);
             return (
               <>

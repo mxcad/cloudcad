@@ -476,6 +476,17 @@ export class FileOperationsService {
               deletedByCascade: false,
             },
           });
+
+          // 恢复子节点中处于 DELETED 状态的文件状态为 COMPLETED，
+          // 避免子节点因之前被单独删除而残留 DELETED 状态，导致后续删除时报 "DELETED → DELETED"
+          await this.prisma.fileSystemNode.updateMany({
+            where: {
+              id: { in: childNodeIds },
+              fileStatus: PrismaFileStatus.DELETED,
+            },
+            data: { fileStatus: PrismaFileStatus.COMPLETED },
+          });
+
           this.logger.log(
             `${nodeType}恢复: 级联恢复了 ${childNodeIds.length} 个子节点`
           );

@@ -372,7 +372,6 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
       // 在回收站视图中显示恢复按钮
       return isTrash && !!onRestore;
     },
-    permissionCheck: ({ canManageTrash }) => canManageTrash !== false,
   },
   delete: {
     type: 'delete',
@@ -403,8 +402,6 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isTrash, isRoot, onPermanentlyDelete }) =>
       // 在回收站视图中显示彻底删除按钮
       isTrash && !!onPermanentlyDelete,
-    permissionCheck: ({ canDelete, canManageTrash }) =>
-      canDelete !== false && canManageTrash !== false,
   },
   edit: {
     type: 'edit',

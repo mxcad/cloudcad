@@ -15,6 +15,10 @@ interface UseFileSystemShortcutsOptions {
   onClearSelection: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  canCopy?: boolean;
+  canCut?: boolean;
+  canDelete?: boolean;
+  canPaste?: boolean;
 }
 
 function isInputFocused(): boolean {
@@ -41,6 +45,10 @@ export function useFileSystemShortcuts({
   onClearSelection,
   canUndo,
   canRedo,
+  canCopy = true,
+  canCut = true,
+  canDelete = true,
+  canPaste = true,
 }: UseFileSystemShortcutsOptions) {
   const onUndoRef = useRef(onUndo);
   onUndoRef.current = onUndo;
@@ -63,6 +71,14 @@ export function useFileSystemShortcuts({
   canUndoRef.current = canUndo;
   const canRedoRef = useRef(canRedo);
   canRedoRef.current = canRedo;
+  const canCopyRef = useRef(canCopy);
+  canCopyRef.current = canCopy;
+  const canCutRef = useRef(canCut);
+  canCutRef.current = canCut;
+  const canDeleteRef = useRef(canDelete);
+  canDeleteRef.current = canDelete;
+  const canPasteRef = useRef(canPaste);
+  canPasteRef.current = canPaste;
 
   useEffect(() => {
     if (!enabled) return;
@@ -100,16 +116,19 @@ export function useFileSystemShortcuts({
             return;
           }
           case 'c': {
+            if (!canCopyRef.current) return;
             e.preventDefault();
             onCopyRef.current();
             return;
           }
           case 'x': {
+            if (!canCutRef.current) return;
             e.preventDefault();
             onCutRef.current();
             return;
           }
           case 'v': {
+            if (!canPasteRef.current) return;
             e.preventDefault();
             void onPasteRef.current().catch(() => {});
             return;
@@ -121,6 +140,7 @@ export function useFileSystemShortcuts({
       switch (e.key) {
         case 'Delete':
         case 'Del': {
+          if (!canDeleteRef.current) return;
           e.preventDefault();
           onDeleteSelectedRef.current();
           return;
