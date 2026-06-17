@@ -41,6 +41,7 @@ import VConsole from "vconsole";
 import { i18nPlugin, VoerkaI18nPluginOptions } from '@voerkai18n/vue'
 import { i18nScope } from './languages'
 import "./styles/index.scss"
+import "vant/es/index.css"
 import { getParamsFromUrl } from './utils/paramsFromUrl.js';
 import { setupApiClient } from './utils/apiConfig';
 setToastDefaultOptions({
