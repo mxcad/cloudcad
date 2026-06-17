@@ -404,6 +404,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     onClearSelection: clearSelection,
     canUndo: undoStack.length > 0,
     canRedo: redoStack.length > 0,
+    canCopy,
+    canCut,
+    canDelete,
+    canPaste,
   });
 
   const {
