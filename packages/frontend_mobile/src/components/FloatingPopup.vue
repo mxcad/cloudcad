@@ -247,8 +247,19 @@ function handleResize() {
   windowHeight.value = window.innerHeight
 }
 
+function setAnchorHeight() {
+  const h = anchors.value[0] ?? boundary.value.min
+  currentHeight.value = Math.max(h, 100)
+  nextTick(() => measureHeader())
+}
+
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  if (props.show) {
+    currentHeight.value = anchors.value[0] ?? boundary.value.min
+  } else {
+    currentHeight.value = 100
+  }
 })
 
 onUnmounted(() => {
@@ -257,11 +268,9 @@ onUnmounted(() => {
 
 watch(() => props.show, (val) => {
   if (val) {
-    const h = anchors.value[0] ?? boundary.value.min
-    currentHeight.value = h > 0 ? h : boundary.value.min
-    nextTick(() => measureHeader())
+    setAnchorHeight()
   }
-}, { flush: 'sync' })
+})
 </script>
 
 <style scoped lang="scss">
