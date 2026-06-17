@@ -7,14 +7,16 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useDashboardProjects } from '../hooks/useDashboardProjects';
+import { useStorageQuota } from '../hooks/useStorageQuota';
+import { queryKeys } from '@/lib/queryKeys';
 import { formatFileSize } from '../utils/fileUtils';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
 import { ViewAllFilesModal } from '../components/modals/ViewAllFilesModal';
 import { ViewAllProjectsModal } from '../components/modals/ViewAllProjectsModal';
 import { toFileSystemNode, FileSystemNode } from '../types/filesystem';
-import { usersControllerGetDashboardStats, fileSystemControllerGetStorageQuota } from '@/api-sdk';
-import type { UserDashboardStatsDto, StorageInfoDto } from '@/api-sdk';
+import { usersControllerGetDashboardStats } from '@/api-sdk';
+import type { UserDashboardStatsDto } from '@/api-sdk';
 
 // Lucide 图标
 import { RefreshCw } from 'lucide-react';
@@ -172,21 +174,7 @@ export const Dashboard: React.FC = () => {
   const finalStats = refreshedStats ?? dashboardStats;
 
   // 存储配额数据（与侧边栏同一数据源）
-  const [quotaStorage, setQuotaStorage] = useState<StorageInfoDto | null>(null);
-  const [quotaLoading, setQuotaLoading] = useState(true);
-
-  useEffect(() => {
-    if (user) {
-      setQuotaLoading(true);
-      fileSystemControllerGetStorageQuota({ query: { nodeId: '', userId: user.id || '' } })
-        .then((result: { data?: StorageInfoDto }) => {
-          const data = result?.data as StorageInfoDto | undefined;
-          if (data) setQuotaStorage(data);
-        })
-        .catch(() => {})
-        .finally(() => setQuotaLoading(false));
-    }
-  }, [user]);
+  const { data: quotaStorage, isLoading: quotaLoading } = useStorageQuota();
 
   const {
     projects: rawProjects,
@@ -226,6 +214,7 @@ export const Dashboard: React.FC = () => {
       }
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
     } finally {
       setIsRefreshing(false);
     }

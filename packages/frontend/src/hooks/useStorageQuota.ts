@@ -1,24 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { fileSystemControllerGetStorageQuota } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
+import { useAuth } from '@/contexts/AuthContext';
+import type { StorageInfoDto } from '@/api-sdk';
 
-export function useStorageQuota(userId: string | undefined) {
-  const query = useQuery({
+export function useStorageQuota() {
+  const { user } = useAuth();
+
+  return useQuery({
     queryKey: queryKeys.fileSystem.storageQuota,
     queryFn: async () => {
       const result = await fileSystemControllerGetStorageQuota({
-        query: { nodeId: '', userId: userId || '' },
+        query: { nodeId: '', userId: user?.id || '' },
       });
-      if (result.error) throw result.error;
-      return result.data;
+      return (result.data as StorageInfoDto) ?? null;
     },
-    enabled: !!userId,
+    enabled: !!user,
   });
-
-  return {
-    data: query.data ?? null,
-    loading: query.isLoading,
-    isFetching: query.isFetching,
-    error: query.error ? '加载存储空间信息失败' : null,
-  };
 }

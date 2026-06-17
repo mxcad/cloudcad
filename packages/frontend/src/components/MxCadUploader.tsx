@@ -4,7 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, forwardRef, useImperativeHandle, useCallback, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Upload } from 'lucide-react';
+import { queryKeys } from '@/lib/queryKeys';
 import { useMxCadUploadNative } from '../hooks/useMxCadUploadNative';
 import { useAuth } from '../contexts/AuthContext';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
@@ -61,6 +63,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const [isUploading, setIsUploading] = useState(false);
     const { selectRawFiles } = useMxCadUploadNative();
     const { addFiles, manager } = useUploadManager({ maxConcurrent: 3 });
+    const queryClient = useQueryClient();
     const unsubRef = useRef<(() => void) | null>(null);
 
     const externalReferenceUpload = useExternalReferenceUpload({
@@ -154,12 +157,20 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
           }
 
           pendingCount--;
-          if (pendingCount <= 0) setIsUploading(false);
+          if (pendingCount <= 0) {
+            setIsUploading(false);
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
+          }
         }
 
         if (event.type === 'task-failed') {
           pendingCount--;
-          if (pendingCount <= 0) setIsUploading(false);
+          if (pendingCount <= 0) {
+            setIsUploading(false);
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
+          }
           const errorMsg = event.error || '上传失败';
           globalShowToast(`文件上传失败: ${errorMsg}`, 'error');
         }

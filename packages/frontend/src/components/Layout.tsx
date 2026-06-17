@@ -1,7 +1,6 @@
 import type React from 'react';
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { fileSystemControllerGetStorageQuota, StorageInfoDto } from '@/api-sdk';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
@@ -19,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
 import { useTour } from '../contexts/TourContext';
+import { useStorageQuota } from '../hooks/useStorageQuota';
 
 // Lucide 图标导入
 import { LayoutDashboard } from 'lucide-react';
@@ -164,9 +164,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // 存储空间状态
-  const [storageInfo, setStorageInfo] = useState<StorageInfoDto | null>(null);
-  const [storageLoading, setStorageLoading] = useState(true);
+  // 存储空间
+  const { data: storageInfo, isLoading: storageLoading } = useStorageQuota();
 
   // 角色名称映射
   const getRoleDisplayName = useCallback((roleName: string): string => {
@@ -180,25 +179,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     };
     return roleMap[roleName] || roleName;
   }, []);
-
-  // 获取存储空间信息
-  useEffect(() => {
-    if (user && !loading) {
-      setStorageLoading(true);
-      fileSystemControllerGetStorageQuota({ query: { nodeId: '', userId: user?.id || '' } })
-        .then((result: { data?: StorageInfoDto }) => {
-          const data = result?.data as StorageInfoDto | undefined;
-          if (data) {
-            setStorageInfo(data);
-          }
-        })
-        .catch(() => {
-        })
-        .finally(() => {
-          setStorageLoading(false);
-        });
-    }
-  }, [user, loading]);
 
   // 时钟更新
   useEffect(() => {

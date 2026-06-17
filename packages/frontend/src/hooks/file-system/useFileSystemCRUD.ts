@@ -12,6 +12,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   fileSystemControllerCreateProject,
   fileSystemControllerCreateFolder,
@@ -26,6 +27,7 @@ import {
 import { fileSystemControllerBatchDeleteNodes } from '@/api-sdk';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 
+import { queryKeys } from '@/lib/queryKeys';
 import { FileSystemNode } from '@/types/filesystem';
 import { handleError } from '@/utils/errorHandler';
 
@@ -103,6 +105,7 @@ export const useFileSystemCRUD = ({
   updateLocalNode,
 }: UseFileSystemCRUDProps) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
   const removeActions = useFileSystemUndoRedoStore((s) => s.removeActions);
   const clearUndoStack = useFileSystemUndoRedoStore((s) => s.clearStack);
@@ -164,13 +167,14 @@ export const useFileSystemCRUD = ({
         });
       }
       loadData();
+      queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
       return null;
     } catch (error) {
       const appError = handleError(error, '创建文件夹', 'medium');
       showToast(appError.message, 'error');
       return null;
     }
-  }, [folderName, urlProjectId, currentNode, loadData, showToast]);
+  }, [folderName, urlProjectId, currentNode, loadData, showToast, queryClient]);
 
   const handleCreateDrawing = useCallback(async () => {
     if (!urlProjectId) {
@@ -215,13 +219,14 @@ export const useFileSystemCRUD = ({
         });
       }
       loadData();
+      queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
       return null;
     } catch (error) {
       const appError = handleError(error, '创建图纸', 'medium');
       showToast(appError.message, 'error');
       return null;
     }
-  }, [drawingName, urlProjectId, currentNode, loadData, showToast, pushAction]);
+  }, [drawingName, urlProjectId, currentNode, loadData, showToast, pushAction, queryClient]);
 
   const handleRename = useCallback(async () => {
     if (!editingNode || !urlProjectId) {
@@ -359,6 +364,7 @@ export const useFileSystemCRUD = ({
               loadData();
             }
           }
+          queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
         } catch (error) {
           const appError = handleError(error, '删除', 'medium');
           showToast(appError.message, 'error');
@@ -445,6 +451,7 @@ export const useFileSystemCRUD = ({
 
             clearSelection();
             loadData();
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
             const appError = handleError(error, '批量删除', 'medium');
             showToast(appError.message, 'error');
@@ -454,7 +461,7 @@ export const useFileSystemCRUD = ({
         permanently ? '彻底删除' : '删除'
       );
     },
-    [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId]
+    [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId, queryClient]
   );
 
   const handleBatchRestore = useCallback(() => {
@@ -489,6 +496,7 @@ export const useFileSystemCRUD = ({
           });
           clearSelection();
           loadData();
+          queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
         } catch (error) {
           let errorMessage = '批量恢复失败';
           if (error instanceof Error) {
@@ -500,7 +508,7 @@ export const useFileSystemCRUD = ({
       'warning',
       '恢复'
     );
-  }, [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId]);
+  }, [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId, queryClient]);
 
   const handleOpenRename = useCallback((node: FileSystemNode) => {
     setEditingNode(node);
@@ -527,13 +535,14 @@ export const useFileSystemCRUD = ({
         });
         showToast('项目创建成功', 'success');
         loadData();
+        queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
       } catch (error) {
         const appError = handleError(error, '创建项目', 'medium');
         showToast(appError.message, 'error');
         throw error;
       }
     },
-    [loadData, showToast]
+    [loadData, showToast, queryClient]
   );
 
   const handleUpdateProject = useCallback(
@@ -609,6 +618,7 @@ export const useFileSystemCRUD = ({
             }
             showToast(`已恢复 "${node.name}"`, 'success');
             loadData();
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
             const appError = handleError(error, '恢复节点', 'medium');
             showToast(appError.message, 'error');
@@ -617,7 +627,7 @@ export const useFileSystemCRUD = ({
         'warning'
       );
     },
-    [showConfirm, showToast, loadData]
+    [showConfirm, showToast, loadData, queryClient]
   );
 
   // 清空回收站（项目内清空调用 clearProjectTrash，全局清空调用 clearTrash）
@@ -632,6 +642,7 @@ export const useFileSystemCRUD = ({
             showToast('项目回收站已清空', 'success');
             clearUndoStack();
             loadData();
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
             const appError = handleError(error, '清空回收站', 'medium');
             showToast(appError.message, 'error');
@@ -649,6 +660,7 @@ export const useFileSystemCRUD = ({
             showToast('回收站已清空', 'success');
             clearUndoStack();
             loadData();
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
             const appError = handleError(error, '清空回收站', 'medium');
             showToast(appError.message, 'error');
@@ -657,7 +669,7 @@ export const useFileSystemCRUD = ({
         'danger'
       );
     }
-  }, [showConfirm, showToast, loadData]);
+  }, [showConfirm, showToast, loadData, queryClient]);
 
   return {
     showCreateFolderModal,

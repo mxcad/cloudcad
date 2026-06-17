@@ -4,7 +4,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUploadManager } from './useUploadManager';
+import { queryKeys } from '@/lib/queryKeys';
 import { globalShowToast } from '../contexts/NotificationContext';
 import type { UploadListener } from '../utils/uploadManager';
 
@@ -27,6 +29,7 @@ export function useFileDropUpload({
   const dragCounterRef = useRef(0);
   const unsubRef = useRef<(() => void) | null>(null);
   const uploadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queryClient = useQueryClient();
   const { addFiles, manager } = useUploadManager({ maxConcurrent: 3 });
 
   useEffect(() => {
@@ -127,6 +130,8 @@ export function useFileDropUpload({
 
           pendingCount--;
           if (pendingCount <= 0) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
             resetUploading();
           }
         }
@@ -134,6 +139,8 @@ export function useFileDropUpload({
         if (event.type === 'task-failed') {
           pendingCount--;
           if (pendingCount <= 0) {
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
+            queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
             resetUploading();
           }
         }
