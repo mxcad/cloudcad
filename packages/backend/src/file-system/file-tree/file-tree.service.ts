@@ -685,6 +685,7 @@ export class FileTreeService {
 
         const where: Prisma.FileSystemNodeWhereInput = {
           deletedAt: { not: null },
+          deletedByCascade: false,
         };
 
         const projectRoot = await this.prisma.fileSystemNode.findUnique({
@@ -752,6 +753,8 @@ export class FileTreeService {
           });
         }
 
+        await this.attachChildrenCountTrash(nodes as FileSystemNodeDto[]);
+
         return { nodes, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
       }
 
@@ -777,6 +780,7 @@ export class FileTreeService {
 
       const where: Prisma.FileSystemNodeWhereInput = {
         deletedAt: { not: null },
+        deletedByCascade: false,
         libraryKey: null,
         OR: [
           { project: accessibleProjectFilter },
@@ -821,6 +825,8 @@ export class FileTreeService {
           if (n.parentId) n.ancestorPath = pathMap.get(n.parentId);
         });
       }
+
+      await this.attachChildrenCountTrash(nodes as FileSystemNodeDto[]);
 
       return { nodes, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
     } catch (error) {
@@ -879,6 +885,30 @@ export class FileTreeService {
       if (row.path) map.set(row.id, row.path);
     }
     return map;
+  }
+
+  /**
+   * 为回收站列表中的文件夹附加 childrenCountTrash（被级联删除的子节点数量）
+   */
+  private async attachChildrenCountTrash(nodes: FileSystemNodeDto[]): Promise<void> {
+    const folderIds = nodes.filter((n) => n.isFolder).map((n) => n.id);
+    if (folderIds.length === 0) return;
+
+    const counts = await this.prisma.fileSystemNode.groupBy({
+      by: ['parentId'],
+      where: {
+        parentId: { in: folderIds },
+        deletedAt: { not: null },
+        deletedByCascade: true,
+      },
+      _count: { id: true },
+    });
+    const countMap = new Map(
+      counts.map((c) => [c.parentId, c._count.id]),
+    );
+    nodes.forEach((n) => {
+      if (n.isFolder) n.childrenCountTrash = countMap.get(n.id) || 0;
+    });
   }
 
   /**

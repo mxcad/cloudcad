@@ -463,8 +463,8 @@ export class FileOperationsService {
         }
       }
 
-      // 如果是恢复项目根节点，需要级联恢复所有被级联删除的子节点
-      if (node.isRoot) {
+      // 如果是恢复项目根节点 或 普通文件夹，需要级联恢复所有被级联删除的子节点
+      if (node.isRoot || node.isFolder) {
         const childNodeIds: string[] = [];
         await this.collectChildNodes(nodeId, childNodeIds);
 
@@ -605,6 +605,7 @@ export class FileOperationsService {
         where: {
           id: { in: allProjectNodeIds },
           deletedAt: { not: null },
+          deletedByCascade: false,
         },
         select: { id: true },
       });
@@ -1555,6 +1556,7 @@ export class FileOperationsService {
       const trashItems = await this.prisma.fileSystemNode.findMany({
         where: {
           deletedAt: { not: null },
+          deletedByCascade: false,
           libraryKey: null,
           OR: [
             { project: accessibleProjectFilter },

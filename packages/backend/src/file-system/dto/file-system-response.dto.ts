@@ -90,6 +90,12 @@ export class FileSystemNodeDto {
 	projectId?: string;
 
 	@ApiProperty({
+		description: "回收站中被级联删除的子节点数量（仅回收站场景使用）",
+		required: false,
+	})
+	childrenCountTrash?: number;
+
+	@ApiProperty({
 		description: "祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）",
 		required: false,
 	})

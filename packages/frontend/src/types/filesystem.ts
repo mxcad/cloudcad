@@ -62,6 +62,8 @@ export interface FileSystemNode extends FileSystemNodeDto {
     files: number;
     folders: number;
   };
+  /** 回收站中被级联删除的子节点数量 */
+  childrenCountTrash?: number;
   /** 是否有缺失的外部参照 */
   hasMissingExternalReferences?: boolean;
   /** 缺失的外部参照数量 */
