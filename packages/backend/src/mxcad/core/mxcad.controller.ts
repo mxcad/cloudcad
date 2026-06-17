@@ -1042,7 +1042,9 @@ export class MxCadController {
     req: Request
   ): Promise<void> {
     const normalizedFilename = filename.replace(/,/g, '/');
-    const shareToken = req.query.shareToken as string | undefined;
+    const shareToken =
+      (req.query.shareToken as string | undefined) ||
+      (req.headers['x-share-token'] as string | undefined);
 
     if (shareToken) {
       await this.shareService.validateShareFileAccess(

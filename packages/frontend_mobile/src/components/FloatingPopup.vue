@@ -228,6 +228,7 @@ async function handleClose() {
     if (result === false) return
   }
   innerShow.value = false
+  emit('update:show', false)
 }
 
 async function onOverlayClick(event: MouseEvent) {

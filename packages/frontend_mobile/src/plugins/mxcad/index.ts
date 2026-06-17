@@ -7,7 +7,7 @@ import { openMxWeb } from "./openMxWeb";
 /**Create MxCad APP Control
  
  */
-export const createMxCAD = async () => {
+export const createMxCAD = async (fileUrl?: string) => {
   const mxcad = new McObject();
 
   let {
@@ -15,11 +15,16 @@ export const createMxCAD = async () => {
     mode,
   } = getParamsFromUrl();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const hasSpecificFile = urlParams.has('fileId') || urlParams.has('nodeId') || urlParams.has('hash') || urlParams.has('fileHash');
+  // 如果传入了 fileUrl，优先使用（分享链接/外部指定文件时走这里，像 PC 端 MxCADView 初始化传 openFile 一样）
+  if (fileUrl) {
+    file = fileUrl
+  } else {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSpecificFile = urlParams.has('fileId') || urlParams.has('nodeId') || urlParams.has('hash') || urlParams.has('fileHash');
 
-  if (!file && !hasSpecificFile) {
-    file = new URL("../../../public/empty.mxweb", import.meta.url).href;
+    if (!file && !hasSpecificFile) {
+      file = new URL("../../../public/empty.mxweb", import.meta.url).href;
+    }
   }
 
   if (

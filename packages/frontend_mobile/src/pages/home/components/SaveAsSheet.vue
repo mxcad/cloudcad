@@ -251,6 +251,7 @@ function onClose() {
     :title="step === 'form' ? '另存为' : '选择文件夹'"
     @open="init"
     @close="onClose"
+    @update:show="onClose"
   >
     <!-- Folder Picker View -->
     <template v-if="step === 'folder'">

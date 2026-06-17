@@ -135,9 +135,6 @@ export const useMenu = () => {
     addCommand("Mx_ShowCollaborate", () => {
         window.dispatchEvent(new CustomEvent('mxcad-show-collaborate'))
     })
-    addCommand("Mx_ShowShare", () => {
-        window.dispatchEvent(new CustomEvent('mxcad-show-share'))
-    })
     addCommand("Mx_export", showExportSubMenu)
     addCommand("Mx_saveDwg", showExportSubMenu)
     addCommand("Mx_exportPDF", showExportSubMenu)

@@ -18,25 +18,24 @@
     import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
     import { useFooterToolbar } from './hooks/useFooterToolbar';
     import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
-    import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs } from '../../composables/useFileLoader';
+    import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs, type FileOpenOptions } from '../../composables/useFileLoader';
     import { isHashLike, resolvePublicExtRefUrl } from '../../services/publicFileService';
     import { checkLibraryPermissions } from '../../services/permissionService';
     import { useEditorState } from '../../composables/useEditorState';
     import { useSave } from '../../composables/useSave';
-import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from '../../composables/useSaveAs';
+    import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from '../../composables/useSaveAs';
     import { useUser } from '../../composables/useUser';
 
-    import { showToast, showConfirmDialog } from 'vant';
-import { showToastOnce } from '@/utils/toast';
-import { getPCLoginUrl } from '@/utils/apiConfig';
-import { exitCollaborationIfNeeded } from '../../composables/useCooperate';
-import CommitMessageDialog from './components/CommitMessageDialog.vue';
+    import { showToast, showConfirmDialog, showLoadingToast, closeToast } from 'vant';
+    import { showToastOnce } from '@/utils/toast';
+    import { getPCLoginUrl } from '@/utils/apiConfig';
+    import { exitCollaborationIfNeeded, getCooperate, encodeUserData, parseWorkData, exitGuardRef } from '../../composables/useCooperate';
+    import CommitMessageDialog from './components/CommitMessageDialog.vue';
     import SaveAsSheet from './components/SaveAsSheet.vue';
     import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
     import LoginPromptPopup from './components/LoginPromptPopup.vue';
-import CooperatePopup from './components/CooperatePopup.vue';
-import SharePopup from '@/components/SharePopup.vue';
-import MxToolbar from '@/components/MxToolbar.vue';
+    import CooperatePopup from './components/CooperatePopup.vue';
+    import MxToolbar from '@/components/MxToolbar.vue';
 
     BScroll.use(ObserveDOM)
     BScroll.use(ObserveImage)
@@ -153,18 +152,23 @@ import MxToolbar from '@/components/MxToolbar.vue';
         loadByNodeId,
         loadByHash,
         getFileIdFromUrl,
+        getNodeIdFromUrl,
         getHashFromUrl,
         getVersionFromUrl,
     } = useFileLoader()
     const editorState = useEditorState()
     const drawName = computed(() => {
+      if (editorState.state.isInCollaboration) {
+        return `[协同中] ${editorState.state.fileName}`
+      }
       return editorState.state.fileName
     })
+    const isInCollaboration = computed(() => editorState.state.isInCollaboration)
     const currentVersion = computed(() => editorState.state.currentVersion)
     const isPublicFile = computed(() => editorState.state.isPublicFile)
 
     const { saving, save: saveAction } = useSave()
-    const { isAuthenticated } = useUser()
+    const { user, isAuthenticated } = useUser()
     const showCommitDialog = ref(false)
     const showSaveAsSheet = ref(false)
     watch(saveAsToCloudTrigger, () => {
@@ -181,7 +185,6 @@ import MxToolbar from '@/components/MxToolbar.vue';
     const loginPromptWaiting = ref(false)
     const pendingActionAfterLogin = ref<'save' | 'version-history' | null>(null)
     const showCooperate = ref(false)
-    const showShare = ref(false)
 
     checkLibraryPermissions().then(result => {
         canManageLibrary.value = result.canManageDrawing || result.canManageBlock
@@ -333,42 +336,240 @@ import MxToolbar from '@/components/MxToolbar.vue';
     }
 
     const handleShowCollaborate = () => { showCooperate.value = true }
-    const handleShowShare = () => { showShare.value = true }
 
     onMounted(async () => {
         window.addEventListener('open-version-history', onShowVersionHistory)
         window.addEventListener('mxcad-new-file', handleNewFile)
         window.addEventListener('mxcad-show-collaborate', handleShowCollaborate)
-        window.addEventListener('mxcad-show-share', handleShowShare)
+
+        // Auto-join cleanup reference
+        let autoJoinCleanup: (() => void) | null = null
 
         onBeforeUnmount(() => {
             window.removeEventListener('open-version-history', onShowVersionHistory)
             window.removeEventListener('mxcad-new-file', handleNewFile)
             window.removeEventListener('mxcad-show-collaborate', handleShowCollaborate)
-            window.removeEventListener('mxcad-show-share', handleShowShare)
+            autoJoinCleanup?.()
+            // 组件卸载时重置协同分享状态（与 PC CADEditorDirect.tsx cleanup 对齐）
+            if (editorState.state.fromCollabShare) {
+                editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
+            }
         })
 
+        // ====== 协同分享自动加入（与 PC CollaborateSidebar.tsx L364-L513 对齐） ======
+        function startAutoJoin(workId: number) {
+            const MAX_RETRIES = 30
+            let retryCount = 0
+            let cancelled = false
+            const timers: ReturnType<typeof setTimeout>[] = []
+
+            const toast = showLoadingToast('正在打开协同文件...')
+
+            autoJoinCleanup = () => {
+                cancelled = true
+                timers.forEach(t => clearTimeout(t))
+                try { closeToast() } catch {}
+            }
+
+            const tryJoin = () => {
+                if (cancelled) return
+
+                // 用户未登录则取消自动加入（与 PC 对齐）
+                if (!user.value) {
+                    cancelled = true
+                    autoJoinCleanup?.()
+                    autoJoinCleanup = null
+                    showToast('请先登录')
+                    editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
+                    return
+                }
+
+                // 退出守卫激活时重试（与 PC exitGuardRef 对齐）
+                if (exitGuardRef.current) {
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++
+                        timers.push(setTimeout(tryJoin, 1000))
+                    }
+                    return
+                }
+
+                const cooperate = getCooperate()
+                if (!cooperate) {
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++
+                        timers.push(setTimeout(tryJoin, 1000))
+                    }
+                    return
+                }
+
+                const userData = {
+                    v: 1 as const,
+                    id: user.value.id,
+                    name: user.value.username,
+                    avatar: user.value.avatar,
+                }
+
+                cooperate.joinWork(
+                    workId,
+                    (iRet: number) => {
+                        console.log(`[Mobile auto-join] attempt ${retryCount + 1}, joinWork returned:`, iRet)
+                        if (iRet === 0 || iRet === 17) {
+                            cancelled = true
+                            autoJoinCleanup?.()
+                            autoJoinCleanup = null
+                            editorState.setCollaborationState({ isInCollaboration: true, workId })
+                            // 从协同 work data 解析真实图纸名（与 PC CollaborateSidebar pendingJoinWorkIdRef 逻辑对齐）
+                            ;(function resolveWorkName() {
+                                const cooperate = getCooperate()
+                                if (!cooperate) return
+                                cooperate.getWorks((workList) => {
+                                    const joined = workList.find((w: { work_id: number }) => w.work_id === workId)
+                                    if (!joined) return
+                                    const data = parseWorkData(joined.work_data)
+                                    if (data && data.v === 3 && data.drawingName) {
+                                        editorState.setFileName(data.drawingName)
+                                    }
+                                })
+                            })()
+                            showToast(iRet === 0 ? '已加入协同' : '已恢复协同连接')
+                        } else if (iRet < 0) {
+                            if (!cancelled && retryCount < MAX_RETRIES) {
+                                retryCount++
+                                timers.push(setTimeout(tryJoin, 1000))
+                            } else {
+                                autoJoinCleanup?.()
+                                autoJoinCleanup = null
+                                showToast('加入协同超时')
+                                editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
+                            }
+                        } else {
+                            autoJoinCleanup?.()
+                            autoJoinCleanup = null
+                            showToast(`加入协同失败，错误码: ${iRet}`)
+                            editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
+                        }
+                    },
+                    userData.id,
+                    encodeUserData(userData)
+                )
+            }
+
+            timers.push(setTimeout(tryJoin, 500))
+        }
+
+        // ====== 解析 URL 参数 ======
+        const searchParams = new URLSearchParams(window.location.search)
+        const fileId = getFileIdFromUrl()
+        const fileHash = getHashFromUrl()
+        const libraryKey = (searchParams.get('library') as 'drawing' | 'block' | null) || undefined
+        const shareToken = searchParams.get('shareToken') || undefined
+        const collabWorkId = searchParams.get('collabWorkId')
+        const collabDrawingId = searchParams.get('drawingId')
+        const collabProjectId = searchParams.get('projectId')
+
+        // ====== 协同分享链接（与 PC CADEditorDirect.tsx L316-L343 + CollaborateSidebar.tsx L364-L513 对齐） ======
+        if (collabWorkId) {
+            const workId = parseInt(collabWorkId, 10)
+            if (!isNaN(workId) && workId > 0) {
+                editorState.setFileId(collabDrawingId || fileId || '')
+                if (collabProjectId) {
+                    editorState.setProjectId(collabProjectId)
+                }
+                editorState.setCollabShareState({ fromCollabShare: true, targetWorkId: workId })
+                // 协同模式下只初始化 CAD 引擎，不打开文件（由协同 SDK 自动加载）
+                const mxcad = await createMxCAD()
+                mxcad.on('databaseModify', () => { editorState.setIsModified(true) })
+                mxcad.on('openFileComplete', () => { editorState.setIsModified(false) })
+                initEditObjectToolbar(mxcad)
+                editorState.setFileName('协作图纸')
+                // 启动自动加入协同（与 PC CollaborateSidebar.tsx 的 auto-join useEffect 对齐）
+                startAutoJoin(workId)
+                return
+            }
+        }
+
+        // ====== History stack fix（与 PC L244-L259 对齐） ======
+        if (fileId && window.history.length <= 1) {
+            const backUrl = searchParams.get('back')
+            if (backUrl) {
+                const cadEditorPath = window.location.pathname + window.location.search
+                window.history.replaceState(null, '', backUrl)
+                window.history.pushState(null, '', cadEditorPath)
+            }
+        }
+
+        // ====== 分享链接：在创建 CAD 引擎前解析 token，初始化时直接打开文件（与 PC 端对齐） ======
+          if (shareToken && fileId && !collabWorkId) {
+            try {
+              const { shareControllerResolveShareNode } = await import('../../api-sdk');
+              const { data: raw } = await shareControllerResolveShareNode({ path: { token: shareToken } });
+              if (raw) {
+                const info = raw as Record<string, any>
+                if (info.deletedAt) throw new Error('文件已被删除')
+                if (!info.fileHash) throw new Error('文件尚未转换完成')
+                if (!info.path) throw new Error('文件路径不存在')
+                if (!info.updatedAt) throw new Error('无法构造文件访问URL')
+
+                editorState.setFileId(fileId)
+                editorState.setFileInfo(info)
+                editorState.setFileName(info.name || '')
+                editorState.setUpdatedAt(info.updatedAt || null)
+                editorState.setProjectId(null)
+                editorState.setPermissions({ canSave: false, canExport: true, canManageExternalRef: false })
+
+                // 构造文件 URL，与 PC 端 buildFileUrl / CADEditorDirect.tsx L844 一致
+                const ts = new Date(info.updatedAt).getTime()
+                const mxwebUrl = `/api/v1/mxcad/filesData/${info.path}?t=${ts}&shareToken=${shareToken}`
+
+                const mxcad = await createMxCAD(mxwebUrl)
+                mxcad.on('databaseModify', () => { editorState.setIsModified(true) })
+                mxcad.on('openFileComplete', () => { editorState.setIsModified(false) })
+                initEditObjectToolbar(mxcad)
+
+                editorState.setIsActive(true)
+                editorState.setLoading(false)
+                return
+              }
+            } catch (e) {
+              console.error('分享文件加载失败:', e)
+              // 失败时继续走后面的常规流程（loadByNodeId）
+            }
+          }
+
+        // ====== 初始化 CAD 引擎（非分享链接） ======
         const mxcad = await createMxCAD()
         mxcad.on('databaseModify', () => {
             editorState.setIsModified(true)
         })
-
         mxcad.on('openFileComplete', () => {
             editorState.setIsModified(false)
         })
 
         initEditObjectToolbar(mxcad)
 
-        const fileId = getFileIdFromUrl()
-        const fileHash = getHashFromUrl()
+        // ====== 根据文件源打开图纸 ======
+        const openOptions: FileOpenOptions = {}
+        let fileSource: 'project' | 'library' | 'share' | 'public' | 'none' = 'none'
+
+        if (libraryKey) {
+            openOptions.libraryKey = libraryKey
+            fileSource = 'library'
+        } else if (shareToken) {
+            openOptions.shareToken = shareToken
+            fileSource = 'share'
+        }
 
         if (fileId) {
-            const ok = await loadByNodeId(fileId)
+            fileSource = fileSource === 'none' ? 'project' : fileSource
+            const ok = await loadByNodeId(fileId, Object.keys(openOptions).length ? openOptions : undefined)
             if (ok) {
                 editorState.setCurrentVersion(getVersionFromUrl())
-                checkFileExternalRefs(fileId)
+                if (fileSource === 'project') {
+                    checkFileExternalRefs(fileId)
+                }
             }
         } else if (fileHash && isHashLike(fileHash)) {
+            fileSource = 'public'
             editorState.setIsPublicFile(true)
             const ok = await loadByHash(fileHash)
             if (ok) {
@@ -499,7 +700,6 @@ import MxToolbar from '@/components/MxToolbar.vue';
         <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
         <LoginPromptPopup v-if="showLoginPrompt" :waiting="loginPromptWaiting" @login="onLoginPromptLogin" @close="onLoginPromptClose" />
         <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
-        <SharePopup v-if="showShare" @close="showShare = false" />
         <canvas id="mxCanvas"></canvas>
         <div class="history_box">
             <transition name="slide">
