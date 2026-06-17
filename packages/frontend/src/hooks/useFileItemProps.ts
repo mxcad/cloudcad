@@ -56,6 +56,8 @@ export const getFileItemPermissionProps = (
   canDownload: boolean;
   canViewVersionHistory: boolean;
   canManageExternalReference: boolean;
+  canMove: boolean;
+  canCopy: boolean;
   canManageMembers?: boolean;
   canManageRoles?: boolean;
 } => {
@@ -81,6 +83,8 @@ export const getFileItemPermissionProps = (
       projectPermissions[ProjectPermission.VERSION_READ] ?? false,
     canManageExternalReference:
       projectPermissions[ProjectPermission.CAD_EXTERNAL_REFERENCE] ?? false,
+    canMove: projectPermissions[ProjectPermission.FILE_MOVE] ?? false,
+    canCopy: projectPermissions[ProjectPermission.FILE_COPY] ?? false,
     canManageMembers: isRoot ? rootPerms.canManageMembers : undefined,
     canManageRoles: isRoot ? rootPerms.canManageRoles : undefined,
   };

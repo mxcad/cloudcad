@@ -3,6 +3,8 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input } from '@/components/ui/Input';
 
+const MXWEB_SUFFIX = '.mxweb';
+
 interface NewDrawingModalProps {
   isOpen: boolean;
   drawingName: string;
@@ -25,6 +27,13 @@ export const NewDrawingModal: React.FC<NewDrawingModalProps> = ({
     onClose();
   };
 
+  const handleNameChange = (value: string) => {
+    if (value.endsWith(MXWEB_SUFFIX)) {
+      value = value.slice(0, -MXWEB_SUFFIX.length);
+    }
+    onDrawingNameChange(value);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -44,13 +53,20 @@ export const NewDrawingModal: React.FC<NewDrawingModalProps> = ({
           <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
             名称
           </label>
-          <Input
-            value={drawingName}
-            onChange={(e) => onDrawingNameChange(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && onCreate()}
-            placeholder="请输入图纸名称"
-            autoFocus
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ flex: 1 }}>
+              <Input
+                value={drawingName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && onCreate()}
+                placeholder="请输入图纸名称"
+                autoFocus
+              />
+            </div>
+            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', userSelect: 'none' }}>
+              {MXWEB_SUFFIX}
+            </span>
+          </div>
         </div>
       </div>
     </Modal>

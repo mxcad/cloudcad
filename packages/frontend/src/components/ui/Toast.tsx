@@ -39,7 +39,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
       <span className="text-sm font-medium">{message}</span>
       <button
         onClick={onClose}
-        className="opacity-60 hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-[var(--bg-tertiary)]"
+        className="ml-auto opacity-60 hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-[var(--bg-tertiary)]"
         style={{ color: 'var(--text-tertiary)' }}
       >
         <X size={16} />

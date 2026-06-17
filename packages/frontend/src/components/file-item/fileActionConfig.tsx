@@ -68,6 +68,9 @@ export interface FileActionCheckProps {
   canViewVersionHistory?: boolean;
   canManageExternalReference?: boolean;
   canManageTrash?: boolean;
+  canMove?: boolean;
+  canCopy?: boolean;
+  canCreate?: boolean;
   onDownload?: boolean;
   onShowVersionHistory?: boolean;
   onEdit?: boolean;
@@ -369,6 +372,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
       // 在回收站视图中显示恢复按钮
       return isTrash && !!onRestore;
     },
+    permissionCheck: ({ canManageTrash }) => canManageTrash !== false,
   },
   delete: {
     type: 'delete',
@@ -399,6 +403,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isTrash, isRoot, onPermanentlyDelete }) =>
       // 在回收站视图中显示彻底删除按钮
       isTrash && !!onPermanentlyDelete,
+    permissionCheck: ({ canDelete, canManageTrash }) =>
+      canDelete !== false && canManageTrash !== false,
   },
   edit: {
     type: 'edit',
@@ -487,6 +493,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-slate-50',
     visibilityCheck: ({ isFolder, isRoot, isTrash, onNewFolder }) =>
       isFolder && !isRoot && !isTrash && !!onNewFolder,
+    permissionCheck: ({ canCreate }) => canCreate !== false,
   },
   copy_clipboard: {
     type: 'copy_clipboard',
@@ -497,6 +504,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-slate-50',
     visibilityCheck: ({ isRoot, isTrash, onCopyClipboard }) =>
       !isRoot && !isTrash && !!onCopyClipboard,
+    permissionCheck: ({ canCopy }) => canCopy !== false,
   },
   cut: {
     type: 'cut',
@@ -507,6 +515,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-slate-50',
     visibilityCheck: ({ isRoot, isTrash, onCut }) =>
       !isRoot && !isTrash && !!onCut,
+    permissionCheck: ({ canMove }) => canMove !== false,
   },
   download_folder: {
     type: 'download_folder',
