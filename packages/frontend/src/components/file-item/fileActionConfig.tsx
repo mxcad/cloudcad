@@ -500,7 +500,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   cut: {
     type: 'cut',
-    label: '移动',
+    label: '剪切',
     tooltip: '剪切到剪贴板',
     icon: <Icons.Cut />,
     colorClass: 'text-slate-700',

@@ -673,7 +673,7 @@ export const LibraryManager: React.FC = () => {
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
           {canManage && (
             <>
-              <Button variant="secondary" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+              <Button variant="secondary" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>剪切</Button>
               <Button variant="secondary" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>复制</Button>
               <Button variant="secondary" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>删除</Button>
             </>

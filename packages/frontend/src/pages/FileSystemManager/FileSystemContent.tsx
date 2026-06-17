@@ -351,7 +351,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               )}
               {!isAtRoot && !isTrashView && onBatchMove && (
                 <Menu.Item onClick={() => { onBatchMove(); closeContextMenu(); }}>
-                  移动
+                  剪切
                 </Menu.Item>
               )}
               {!isAtRoot && !isTrashView && onBatchCopy && (
@@ -568,7 +568,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                     icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 15 21 15 21 19 17 19" /><line x1="3" y1="11" x2="21" y2="11" /><polyline points="7 7 3 11 7 15" /></svg>}
                     onClick={() => { onBatchMove(); closeContextMenu(); }}
                   >
-                    移动
+                    剪切
                   </Menu.Item>
                 )}
                 {onBatchDelete && (

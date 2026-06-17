@@ -835,7 +835,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
           {!isTrashView && !isAtRoot && (
             <>
-              <Button variant="secondary" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>移动</Button>
+               <Button variant="secondary" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>剪切</Button>
               <Button variant="secondary" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
             </>
           )}
