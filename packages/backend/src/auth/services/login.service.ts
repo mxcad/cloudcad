@@ -96,7 +96,7 @@ export class LoginService {
       this.logger.warn(
         `登录失败 - 账号已禁用: ${account} (状态: ${user.status})`
       );
-      throw new UnauthorizedException('账号已被禁用');
+      throw new UnauthorizedException('账号已被注销');
     }
 
     // 先验证密码，防止未认证用户探测验证状态或获取 tempToken

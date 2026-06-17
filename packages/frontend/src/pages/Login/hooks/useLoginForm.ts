@@ -222,7 +222,7 @@ export function useLoginForm(): UseLoginFormReturn {
           (err as Error).message ||
           t('登录失败，请检查账号和密码');
 
-        if (errorMessage.includes('账号已被禁用')) {
+        if (errorMessage.includes('账号已被注销')) {
           setShowSupportModal(true);
           return;
         }

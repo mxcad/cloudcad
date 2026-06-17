@@ -231,6 +231,7 @@
 
 .upload-task-icon.processing {
   color: var(--info);
+  animation: spin 1s linear infinite;
 }
 
 .upload-task-icon.done {

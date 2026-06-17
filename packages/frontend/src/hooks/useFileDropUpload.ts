@@ -5,7 +5,6 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useUploadManager } from './useUploadManager';
-import { getUploadManager } from '../utils/uploadManager';
 import { globalShowToast } from '../contexts/NotificationContext';
 import type { UploadListener } from '../utils/uploadManager';
 
@@ -28,7 +27,7 @@ export function useFileDropUpload({
   const dragCounterRef = useRef(0);
   const unsubRef = useRef<(() => void) | null>(null);
   const uploadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { addFiles } = useUploadManager({ maxConcurrent: 3 });
+  const { addFiles, manager } = useUploadManager({ maxConcurrent: 3 });
 
   useEffect(() => {
     return () => {
@@ -93,7 +92,6 @@ export function useFileDropUpload({
 
       setUploading(true);
 
-      const manager = getUploadManager();
       if (!manager) {
         console.error('[useFileDropUpload] UploadManager 未初始化');
         resetUploading();

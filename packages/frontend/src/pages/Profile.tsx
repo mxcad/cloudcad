@@ -212,22 +212,19 @@ export const Profile: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (countdown > 0) {
-      countdownRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) clearInterval(countdownRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    if (countdown <= 0) return;
+    const id = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+    countdownRef.current = id;
     return () => {
-      if (countdownRef.current && countdown <= 0)
-        clearInterval(countdownRef.current);
+      clearInterval(id);
+      countdownRef.current = null;
     };
-  }, [countdown > 0]);
+  }, [countdown]);
 
   const handlePasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -543,14 +540,15 @@ export const Profile: React.FC = () => {
         setCountdown(60);
         setPhoneStep('verifyNew');
       } else {
-        setError(response?.message || '发送验证码失败');
+        showToast(response?.message || '发送验证码失败', 'error');
       }
     } catch (err) {
-      setError(
+      showToast(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          '发送验证码失败',
+        'error'
       );
     } finally {
       setSendingCode(false);
@@ -566,14 +564,15 @@ export const Profile: React.FC = () => {
         setSuccess('验证码已发送到原手机号');
         setCountdown(60);
       } else {
-        setError(response?.message || '发送验证码失败');
+        showToast(response?.message || '发送验证码失败', 'error');
       }
     } catch (err) {
-      setError(
+      showToast(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          '发送验证码失败',
+        'error'
       );
     } finally {
       setSendingCode(false);
@@ -626,14 +625,15 @@ export const Profile: React.FC = () => {
         setCountdown(60);
         setPhoneStep('verifyNew');
       } else {
-        setError(response?.message || '发送验证码失败');
+        showToast(response?.message || '发送验证码失败', 'error');
       }
     } catch (err) {
-      setError(
+      showToast(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          '发送验证码失败',
+        'error'
       );
     } finally {
       setSendingCode(false);

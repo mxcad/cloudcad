@@ -13,7 +13,6 @@ import { globalShowToast } from '../contexts/NotificationContext';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
 import { useUploadManager } from '../hooks/useUploadManager';
-import { getUploadManager } from '../utils/uploadManager';
 import type { UploadListener } from '../utils/uploadManager';
 
 interface MxCadUploaderProps {
@@ -61,7 +60,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const [currentNodeId, setCurrentNodeId] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const { selectRawFiles } = useMxCadUploadNative();
-    const { addFiles } = useUploadManager({ maxConcurrent: 3 });
+    const { addFiles, manager } = useUploadManager({ maxConcurrent: 3 });
     const unsubRef = useRef<(() => void) | null>(null);
 
     const externalReferenceUpload = useExternalReferenceUpload({
@@ -111,7 +110,6 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
       setCurrentNodeId(effectiveNodeId || '');
 
-      const manager = getUploadManager();
       if (!manager) {
         console.error('[MxCadUploader] UploadManager 未初始化，无法上传');
         globalShowToast('上传管理器未初始化，请刷新页面后重试', 'error');

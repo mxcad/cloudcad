@@ -187,7 +187,7 @@ export class LocalAuthProvider implements IAuthProvider {
     }
 
     if (user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('账号已被禁用');
+      throw new UnauthorizedException('账号已被注销');
     }
 
     const tokens = await this.authTokenService.generateTokens(user);
@@ -571,7 +571,7 @@ export class LocalAuthProvider implements IAuthProvider {
     }
 
     if (user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('账号已被禁用');
+      throw new UnauthorizedException('账号已被注销');
     }
 
     await this.prisma.user.update({

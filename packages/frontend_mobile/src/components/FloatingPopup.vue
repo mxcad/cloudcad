@@ -8,7 +8,7 @@
     :overlay-style="overlayStyle"
     :close-on-click-overlay="false"
     :lock-scroll="lockScroll"
-    :lazy-render="lazyRender"
+    :lazy-render="false"
     :teleport="teleport"
     :duration="duration"
     :z-index="zIndex"
@@ -27,6 +27,7 @@
       :class="{ 'van-safe-area-bottom': safeAreaInsetBottom }"
       :style="bodyStyle"
       @touchstart.passive="onTouchStart"
+      @touchmove="onTouchMove"
       @touchend="onTouchEnd"
       @touchcancel="onTouchEnd"
     >
@@ -64,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 const props = withDefaults(defineProps<{
   show?: boolean
@@ -125,6 +126,7 @@ const contentRef = ref<HTMLElement>()
 const currentHeight = ref(0)
 const dragging = ref(false)
 const windowHeight = ref(window.innerHeight)
+const headerHeight = ref(0)
 
 let startY = 0
 let maxScroll = -1
@@ -158,13 +160,16 @@ function closest(arr: number[], target: number) {
   return arr.reduce((pre, cur) => Math.abs(pre - target) < Math.abs(cur - target) ? pre : cur)
 }
 
-const bodyStyle = computed(() => ({
-  height: `${boundary.value.max}px`,
-  transform: `translateY(calc(100% - ${currentHeight.value}px))`,
-  transition: dragging.value
-    ? 'none'
-    : `transform ${props.duration}s cubic-bezier(0.18, 0.89, 0.32, 1.28)`,
-}))
+const bodyStyle = computed(() => {
+  const h = currentHeight.value
+  return {
+    height: h > 0 ? `${h}px` : '0px',
+    maxHeight: `${boundary.value.max}px`,
+    transition: dragging.value
+      ? 'none'
+      : `height ${props.duration}s cubic-bezier(0.18, 0.89, 0.32, 1.28)`,
+  }
+})
 
 function resetTouch() {
   touchStartY = 0
@@ -229,42 +234,44 @@ async function onOverlayClick(event: MouseEvent) {
   }
 }
 
+function measureHeader() {
+  if (rootRef.value) {
+    const h = rootRef.value.querySelector('.van-floating-popup__header')
+    if (h) {
+      headerHeight.value = h.getBoundingClientRect().height
+    }
+  }
+}
+
 function handleResize() {
   windowHeight.value = window.innerHeight
 }
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
-  const el = rootRef.value
-  if (el) {
-    el.addEventListener('touchmove', onTouchMove, { passive: false })
-  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  const el = rootRef.value
-  if (el) {
-    el.removeEventListener('touchmove', onTouchMove as any)
-  }
 })
 
 watch(() => props.show, (val) => {
   if (val) {
-    currentHeight.value = anchors.value[0] ?? boundary.value.min
+    const h = anchors.value[0] ?? boundary.value.min
+    currentHeight.value = h > 0 ? h : boundary.value.min
+    nextTick(() => measureHeader())
   }
-})
+}, { flush: 'sync' })
 </script>
 
 <style scoped lang="scss">
 .van-floating-popup__body {
   display: flex;
   flex-direction: column;
-  will-change: transform;
-  -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
   background: var(--van-floating-popup-background, #fff);
   overflow: hidden;
+  min-height: 0;
 
   :deep(.van-floating-popup__header) {
     display: flex;
@@ -323,11 +330,5 @@ watch(() => props.show, (val) => {
     flex-shrink: 0;
     background: var(--van-floating-popup-background, #fff);
   }
-}
-</style>
-
-<style>
-.van-floating-popup.van-popup--bottom {
-  overflow: hidden;
 }
 </style>

@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useSyncExternalStore, useCallback, useRef } from 'react';
+import { useSyncExternalStore, useCallback, useRef, useMemo } from 'react';
 import {
   getUploadManager,
   createUploadManager,
@@ -116,6 +116,7 @@ export function useUploadManager(options: UseUploadManagerOptions = {}) {
     clearCompleted,
     tasks: activeTasks,
     stats,
+    manager,
   };
 }
 
