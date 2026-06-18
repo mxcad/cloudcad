@@ -11,6 +11,7 @@ export interface MobileUploadOptions {
   hash: string;
   nodeId: string;
   forceUpload?: boolean;
+  skipDb?: boolean;
   onBeginUpload?: () => void;
   onProgress?: (percentage: number) => void;
   onFileQueued?: (file: File) => void;
@@ -49,6 +50,7 @@ export async function uploadFile(
     hash,
     nodeId,
     forceUpload,
+    skipDb,
     onBeginUpload,
     onProgress,
     onFileQueued,
@@ -85,7 +87,7 @@ export async function uploadFile(
     }
   }
 
-  if (file.size <= chunkSize) {
+  if (file.size <= chunkSize && !skipDb) {
     onBeginUpload?.();
 
     await mxCadControllerUploadFile({
@@ -143,7 +145,7 @@ export async function uploadFile(
         size: file.size,
         nodeId,
         file: chunk,
-        skipDb: true,
+        skipDb,
       },
     });
 

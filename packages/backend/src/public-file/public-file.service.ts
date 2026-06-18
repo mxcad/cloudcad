@@ -14,6 +14,8 @@ import { Injectable, Logger, BadRequestException, NotFoundException, Optional } 
 import { PublicFileUploadService } from './services/public-file-upload.service';
 import { FileConversionService } from '../mxcad/conversion/file-conversion.service';
 import { ConvertFileParamsDto } from './dto';
+import { DatabaseService } from '../database/database.service';
+import { StorageManager } from '../common/services/storage-manager.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -42,12 +44,15 @@ export class PublicFileService {
 
   constructor(
     private readonly uploadService: PublicFileUploadService,
+    private readonly databaseService: DatabaseService,
+    private readonly storageManager: StorageManager,
     @Optional() private readonly fileConversionService?: FileConversionService
   ) {}
 
   /**
    * 在 uploads 目录下扁平查找 mxweb 文件
    * 如 findMxwebFile("abc123") → uploads/abc123.dwg.mxweb
+   * 如果 uploads 目录未找到，则通过 DB 查询 fileHash 匹配的节点，从存储路径读取
    */
   async findMxwebFile(hash: string): Promise<string | null> {
     const files = await this.uploadService.findFilesByPrefix(hash);
@@ -57,6 +62,25 @@ export class PublicFileService {
     if (mxwebFile) {
       return path.join(this.uploadService.getUploadPath(), mxwebFile);
     }
+
+    // 未在 uploads 目录找到，尝试查询 DB 中 fileHash 匹配的节点
+    try {
+      const node = await this.databaseService.fileSystemNode.findFirst({
+        where: { fileHash: hash, deletedAt: null },
+        select: { path: true },
+      });
+
+      if (node?.path) {
+        const fullPath = this.storageManager.getFullPath(node.path);
+        if (fullPath && fs.existsSync(fullPath)) {
+          this.logger.log(`[findMxwebFile] 通过 DB 查询到文件: hash=${hash}, path=${fullPath}`);
+          return fullPath;
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`[findMxwebFile] DB 查询失败: ${error.message}`);
+    }
+
     return null;
   }
 

@@ -68,7 +68,7 @@ export async function exportDrawing(
       return;
     }
 
-    const convertedBlob = await result.response?.blob();
+    const convertedBlob = result?.data as Blob | undefined;
     if (!convertedBlob || convertedBlob.size === 0) {
       showToast('转换失败：无返回数据');
       return;

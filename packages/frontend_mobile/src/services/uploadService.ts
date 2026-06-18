@@ -4,22 +4,19 @@ import {
 } from '../api-sdk';
 import { calculateFileHash } from '../utils/hashUtils';
 import { getApiBaseUrl } from '../utils/apiConfig';
+import { uploadFile } from './mobileUploadService';
 
 export async function uploadFileForConversion(blob: Blob, fileName: string = 'file.mxweb'): Promise<string | null> {
   try {
     const file = new File([blob], fileName, { type: blob.type || 'application/octet-stream' });
     const hash = await calculateFileHash(file);
 
-    const result = await mxCadControllerUploadFile({
-      body: {
-        file,
-        hash,
-        name: fileName,
-        size: file.size,
-        skipDb: true,
-      },
+    await uploadFile({
+      file,
+      hash,
+      nodeId: '',
+      skipDb: true,
     });
-    if (result.error) return null;
     return hash;
   } catch {
     return null;
