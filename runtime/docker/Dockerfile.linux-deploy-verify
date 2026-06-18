@@ -3,10 +3,11 @@
 #
 # 使用方式：
 #   docker build -f runtime/docker/Dockerfile.linux-deploy-verify \
-#       --build-arg PACKAGE=cloudcad-deploy-*.tar.gz \
+#       --build-arg PACKAGE=cloudcad-deploy-{OS}-{ARCH}.tar.gz \
 #       --build-arg BASE_IMAGE=rockylinux:9 \
 #       -t cloudcad-verify .
 #   docker run --rm --network none cloudcad-verify
+#   例: PACKAGE=cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
 #
 # 支持的 BASE_IMAGE（glibc 系统）：
 #   - node:20-bullseye-slim (Debian 11, 默认)
@@ -48,6 +49,7 @@ RUN if command -v apt-get &> /dev/null; then \
 WORKDIR /app
 
 # 构建参数：部署包文件名
+# 例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
 ARG PACKAGE=cloudcad-deploy-linux.tar.gz
 
 # 复制并解压部署包

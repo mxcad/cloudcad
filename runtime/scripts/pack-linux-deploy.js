@@ -131,8 +131,9 @@ async function buildPackImage(os = 'centos7', useSystemLib = false) {
 
 /**
  * 执行打包
+ * @param {string} os 目标操作系统（用于传递给容器内 pack-offline.js）
  */
-async function runPack() {
+async function runPack(os = 'centos7') {
   log('执行打包...');
   
   // 确保输出目录存在
@@ -141,7 +142,7 @@ async function runPack() {
   // 只挂载 release 目录用于输出（项目代码已在镜像构建时复制）
   // 注意：Windows 路径在 Docker 中需要转换格式
   const releaseDir = OUTPUT_DIR.replace(/\\/g, '/');
-  await runCommand(`docker run --rm -v "${releaseDir}:/app/release" ${IMAGE_NAME}`);
+  await runCommand(`docker run --rm -e TARGET_OS=${os} -v "${releaseDir}:/app/release" ${IMAGE_NAME}`);
   
   log('✓ 打包完成');
 }
@@ -155,7 +156,7 @@ function findDeployPackage() {
   }
   
   const files = fs.readdirSync(OUTPUT_DIR);
-  const pattern = /^cloudcad-deploy-.*-linux\.(tar\.gz|7z)$/;
+  const pattern = /^cloudcad-deploy-.+\.(tar\.gz|7z)$/;
   
   for (const file of files) {
     if (pattern.test(file)) {
@@ -197,7 +198,8 @@ CloudCAD Linux 部署包打包入口
   2. 在容器内执行:
      - node scripts/extract-linux-runtime.js
      - node scripts/pack-offline.js --deploy --linux
-  3. 输出: release/cloudcad-deploy-*.tar.gz
+  3. 输出: release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
+     例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
 
 验证部署包（独立脚本）：
   node scripts/verify-linux-deploy.js            验证最新包
@@ -416,7 +418,7 @@ async function main() {
     // 2. 执行打包
     log('');
     log('[2/2] 执行打包...');
-    await runPack();
+    await runPack(os);
     
     // 查找生成的包
     const packageFile = findDeployPackage();

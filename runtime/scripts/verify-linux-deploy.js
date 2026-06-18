@@ -90,7 +90,7 @@ function findLatestDeployPackage() {
   }
   
   const files = fs.readdirSync(OUTPUT_DIR);
-  const pattern = /^cloudcad-deploy-.*-linux\.(tar\.gz|7z)$/;
+  const pattern = /^cloudcad-deploy-.+\.(tar\.gz|7z)$/;
   
   const packages = files
     .filter(f => pattern.test(f))

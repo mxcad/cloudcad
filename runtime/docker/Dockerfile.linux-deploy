@@ -18,7 +18,10 @@
 #   - rockylinux:9 (glibc 2.34)
 #
 # 输出：
-#   release/cloudcad-deploy-*.tar.gz
+#   release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
+#   例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
+#   OS: centos7/ubuntu22/ubuntu24/rocky8/rocky9/debian
+#   ARCH: x86_64/aarch64/armv7l
 
 ARG BASE_IMAGE=centos:7
 FROM ${BASE_IMAGE}

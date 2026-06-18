@@ -45,6 +45,16 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
+function getArchName() {
+  const archMap = {
+    x64: 'x86_64',
+    arm64: 'aarch64',
+    arm: 'armv7l',
+    ia32: 'i686',
+  };
+  return archMap[process.arch] || process.arch;
+}
+
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
@@ -1015,9 +1025,15 @@ async function packDeploy(platform) {
   log(` CloudCAD v${VERSION} 部署包打包工具`);
   log('============================================');
   log(`输出目录: ${OUTPUT_DIR}`);
-  log(
-    `目标平台: ${platform === 'all' ? '全平台' : platform === 'win' ? 'Windows' : 'Linux'}`
-  );
+  const deployLabel =
+    platform === 'all'
+      ? '全平台'
+      : platform === 'win'
+        ? 'Windows'
+        : process.env.TARGET_OS
+          ? `${process.env.TARGET_OS} (${getArchName()})`
+          : 'Linux';
+  log(`目标平台: ${deployLabel}`);
   log('');
 
   // 检查 Linux runtime
@@ -1061,7 +1077,9 @@ async function packDeploy(platform) {
         ? 'all-platforms'
         : platform === 'win'
           ? 'windows'
-          : 'linux';
+          : process.env.TARGET_OS
+            ? `${process.env.TARGET_OS}-${getArchName()}`
+            : 'linux';
     const baseName = `cloudcad-deploy-${VERSION}-${DATE}-${platformSuffix}`;
 
     // Linux 平台使用 tar.gz（Linux 默认支持，无需额外工具）

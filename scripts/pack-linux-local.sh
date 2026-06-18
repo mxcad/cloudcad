@@ -32,6 +32,38 @@ cleanup() {
 }
 trap cleanup EXIT
 
+detect_os() {
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    case "$ID" in
+      ubuntu)
+        case "$VERSION_ID" in
+          22.*) echo "ubuntu22" ;;
+          24.*) echo "ubuntu24" ;;
+          *) echo "ubuntu${VERSION_ID}" ;;
+        esac
+        ;;
+      centos)
+        case "$VERSION_ID" in
+          7*) echo "centos7" ;;
+          *) echo "centos${VERSION_ID}" ;;
+        esac
+        ;;
+      rockylinux|rocky)
+        case "$VERSION_ID" in
+          8*) echo "rocky8" ;;
+          9*) echo "rocky9" ;;
+          *) echo "rocky${VERSION_ID}" ;;
+        esac
+        ;;
+      debian) echo "debian" ;;
+      *) echo "linux" ;;
+    esac
+  else
+    echo "linux"
+  fi
+}
+
 show_help() {
   cat <<EOF
 CloudCAD 本地 Linux 部署包打包脚本（无需 Docker）
@@ -44,8 +76,9 @@ CloudCAD 本地 Linux 部署包打包脚本（无需 Docker）
 
 流程：
   1. node scripts/extract-linux-runtime.js  提取运行时到 runtime/linux/
-  2. node scripts/pack-offline.js --deploy --linux  构建并打包
-  3. 输出: release/cloudcad-deploy-*.tar.gz
+  2. TARGET_OS=\$(detect_os) node scripts/pack-offline.js --deploy --linux  构建并打包
+  3. 输出: release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
+     例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
 
 前提条件（脚本会自动检查）：
   - Linux 环境
@@ -102,18 +135,21 @@ step_extract() {
 }
 
 step_pack() {
+  local target_os
+  target_os=$(detect_os)
   log ""
   log "============================================"
   log " 步骤 2/2: 构建并打包部署包"
   log "============================================"
+  log "检测到本机系统: ${target_os} ($(uname -m))"
 
-  node "$SCRIPT_DIR/pack-offline.js --deploy --linux"
+  TARGET_OS="$target_os" node "$SCRIPT_DIR/pack-offline.js" --deploy --linux
   ok "部署包打包完成"
 }
 
 show_result() {
   local pkg
-  pkg=$(ls -t release/cloudcad-deploy-*-linux.tar.gz 2>/dev/null | head -1)
+  pkg=$(ls -t release/cloudcad-deploy-*.tar.gz 2>/dev/null | head -1)
   if [ -n "$pkg" ]; then
     local size
     size=$(du -h "$pkg" | cut -f1)
