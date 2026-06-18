@@ -370,13 +370,34 @@ function extractPostgresYum(outputPath) {
   // PostgreSQL 需要 share/postgresql/15/ 目录结构
   log('  → 复制 PostgreSQL share 目录...');
   if (fs.existsSync(pgShareDir)) {
-    // 创建正确的目录结构: share/postgresql/15/
     const targetShareDir = path.join(shareDir, 'postgresql', '15');
     ensureDir(targetShareDir);
     execSync(`cp -r ${pgShareDir}/* ${targetShareDir}/`, { stdio: 'inherit' });
     log(`  ✓ share 目录: ${targetShareDir}`);
+
+    log('  → 创建 share/ 兼容符号链接（rootless 支持）...');
+    const entries = fs.readdirSync(targetShareDir);
+    for (const entry of entries) {
+      const linkPath = path.join(shareDir, entry);
+      const target = path.join('postgresql/15', entry);
+      if (!fs.existsSync(linkPath)) {
+        fs.symlinkSync(target, linkPath, entry.includes('.') ? 'file' : 'dir');
+      }
+    }
+    log(`  ✓ 已创建 ${entries.length} 个符号链接`);
   }
-  
+
+  // 编译 LD_PRELOAD 路径重定向库
+  const redirectC = path.join(PROJECT_ROOT, 'runtime/scripts/pg-path-redirect.c');
+  const redirectSo = path.join(libDir, 'pg-path-redirect.so');
+  if (fs.existsSync(redirectC)) {
+    log('  → 编译 pg-path-redirect.so（rootless LD_PRELOAD 支持）...');
+    execSync(`gcc -shared -fPIC -o ${redirectSo} -ldl ${redirectC}`, { stdio: 'pipe' });
+    if (fs.existsSync(redirectSo)) {
+      log(`  ✓ pg-path-redirect.so 已编译: ${redirectSo}`);
+    }
+  }
+
   // 收集所有二进制文件的依赖库
   log('  → 收集依赖库...');
   for (const bin of binaries) {
@@ -644,13 +665,34 @@ function extractPostgresApt(outputPath) {
   log('  → 复制 PostgreSQL share 目录...');
   const pgShareDir = '/usr/share/postgresql/15';
   if (fs.existsSync(pgShareDir)) {
-    // 创建正确的目录结构: share/postgresql/15/
     const targetShareDir = path.join(shareDir, 'postgresql', '15');
     ensureDir(targetShareDir);
     execSync(`cp -r ${pgShareDir}/* ${targetShareDir}/`, { stdio: 'inherit' });
     log(`  ✓ share 目录: ${targetShareDir}`);
+
+    log('  → 创建 share/ 兼容符号链接（rootless 支持）...');
+    const entries = fs.readdirSync(targetShareDir);
+    for (const entry of entries) {
+      const linkPath = path.join(shareDir, entry);
+      const target = path.join('postgresql/15', entry);
+      if (!fs.existsSync(linkPath)) {
+        fs.symlinkSync(target, linkPath, entry.includes('.') ? 'file' : 'dir');
+      }
+    }
+    log(`  ✓ 已创建 ${entries.length} 个符号链接`);
   }
-  
+
+  // 编译 LD_PRELOAD 路径重定向库
+  const redirectC = path.join(PROJECT_ROOT, 'runtime/scripts/pg-path-redirect.c');
+  const redirectSo = path.join(libDir, 'pg-path-redirect.so');
+  if (fs.existsSync(redirectC)) {
+    log('  → 编译 pg-path-redirect.so（rootless LD_PRELOAD 支持）...');
+    execSync(`gcc -shared -fPIC -o ${redirectSo} -ldl ${redirectC}`, { stdio: 'pipe' });
+    if (fs.existsSync(redirectSo)) {
+      log(`  ✓ pg-path-redirect.so 已编译: ${redirectSo}`);
+    }
+  }
+
   // 复制 libpq 和相关库（Ubuntu/Debian 路径）
   log('  → 复制 libpq 和依赖库...');
   const libPaths = [

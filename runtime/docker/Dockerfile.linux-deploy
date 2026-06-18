@@ -39,7 +39,7 @@ RUN if command -v apt-get &> /dev/null; then \
       sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
       sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
       apt-get update && \
-      apt-get install -y curl wget git gnupg2 lsb-release ca-certificates && \
+      apt-get install -y curl wget git gnupg2 lsb-release ca-certificates gcc && \
       # PostgreSQL 15 - 使用阿里云镜像 \
       curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
       echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] https://mirrors.aliyun.com/postgresql/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
@@ -48,7 +48,7 @@ RUN if command -v apt-get &> /dev/null; then \
       rm -rf /var/lib/apt/lists/*; \
     elif command -v dnf &> /dev/null; then \
       # Rocky/RHEL 8/9 \
-      dnf install -y curl wget git && \
+      dnf install -y curl wget git gcc && \
       # PostgreSQL 15 \
       dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %rhel)-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
       dnf install -y postgresql15-server postgresql15 redis subversion && \
@@ -60,7 +60,7 @@ RUN if command -v apt-get &> /dev/null; then \
       yum install -y epel-release && \
       sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel* && \
       sed -i 's|#baseurl=https://download.fedoraproject.org/pub|baseurl=https://archive.fedoraproject.org/pub|g' /etc/yum.repos.d/epel* && \
-      yum install -y curl wget git which && \
+      yum install -y curl wget git which gcc && \
       # PostgreSQL 15 \
       echo "[pgdg15]" > /etc/yum.repos.d/pgdg-15.repo && \
       echo "name=PostgreSQL 15 for RHEL/CentOS 7 - x86_64" >> /etc/yum.repos.d/pgdg-15.repo && \

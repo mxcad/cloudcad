@@ -132,44 +132,40 @@ function initLinuxSystem() {
       fs.mkdirSync(pgSocketDir, { recursive: true });
       log('info', `创建 PostgreSQL socket 目录: ${pgSocketDir}`);
     } catch (e) {
-      // 可能需要 root 权限，尝试使用 data 目录
-      log('warn', `无法创建 ${pgSocketDir}，使用替代路径`);
+      // 可能需要 root 权限，使用 data 目录下的替代路径
+      const altSocketDir = path.join(DATA_DIR, 'postgres', 'sockets');
+      ensureDir(altSocketDir);
+      log('warn', `无法创建 ${pgSocketDir}，使用替代路径: ${altSocketDir}`);
+      // 设置环境变量让后续 pg_ctl 使用替代 socket 目录
+      process.env.PG_SOCKET_DIR = altSocketDir;
     }
   }
 
-  // 2. 创建 PostgreSQL share 目录符号链接（PostgreSQL 硬编码路径）
-  // share 目录结构: share/postgresql/15/postgres.bki
-  const pgShareTarget = path.join(
+  // 2. 验证 PostgreSQL share 目录可访问
+  // postgres 运行时 get_share_path() 返回 bin/../share/
+  // 需要确保 share/timezonesets 等路径可访问
+  // 方案1（构建时，推荐）：extract-linux-runtime.js 在 share/ 下创建了
+  //   指向 share/postgresql/15/* 的符号链接（rootless，无需 sudo）
+  // 方案2（运行时）：/usr/share/postgresql/15 如果存在则直接使用（系统 PG）
+  const pgShareCheckPath = path.join(
     PLATFORM_DIR,
     PG_DIR_NAME,
     'share',
-    'postgresql',
-    '15'
+    'timezonesets'
   );
-  const pgShareLink = '/usr/share/postgresql/15';
+  const pgSystemShare = '/usr/share/postgresql/15';
 
-  if (fs.existsSync(pgShareTarget) && !fs.existsSync(pgShareLink)) {
-    try {
-      // 确保父目录存在
-      ensureDir('/usr/share/postgresql');
-      fs.symlinkSync(pgShareTarget, pgShareLink, 'dir');
-      log(
-        'info',
-        `创建 PostgreSQL share 符号链接: ${pgShareLink} -> ${pgShareTarget}`
-      );
-    } catch (e) {
-      // 可能需要 root 权限
-      log('warn', `无法创建符号链接 ${pgShareLink}: ${e.message}`);
-      // 尝试复制文件（备用方案）
-      try {
-        ensureDir(pgShareLink);
-        spawnSync('cp', ['-r', `${pgShareTarget}/.`, pgShareLink], {
-          stdio: 'pipe',
-        });
-        log('info', `已复制 PostgreSQL share 文件到 ${pgShareLink}`);
-      } catch (copyErr) {
-        log('warn', `复制 share 文件失败: ${copyErr.message}`);
-      }
+  // 优先检查构建时创建的 share/ 级别兼容 symlink
+  let shareAccessible = fs.existsSync(pgShareCheckPath);
+
+  // 如果构建时 symlink 不存在，检查系统 PG
+  if (!shareAccessible) {
+    if (fs.existsSync(pgSystemShare)) {
+      log('info', `${pgSystemShare} 已存在（系统 PostgreSQL），直接使用`);
+      shareAccessible = true;
+    } else {
+      log('warn', '未检测到 PostgreSQL share 目录的可访问符号链接');
+      log('warn', '请重新构建部署包（extract-linux-runtime.js 已添加兼容性修复）');
     }
   }
 
@@ -218,20 +214,41 @@ function getEnv(extra = {}) {
       : PG_LIB_DIR;
   }
 
+  // Linux 下设置 LD_PRELOAD 路径重定向（rootless 运行）
+  // 拦截 postgres 对 /usr/share/postgresql/15 硬编码路径的访问
+  if (IS_LINUX && PG_LIB_DIR && PG_SHARE_DIR) {
+    const redirectSo = path.join(PG_LIB_DIR, 'pg-path-redirect.so');
+    if (fs.existsSync(redirectSo)) {
+      const existingPreload = env.LD_PRELOAD || '';
+      const preloadEntry = redirectSo;
+      env.LD_PRELOAD = existingPreload
+        ? `${preloadEntry}:${existingPreload}`
+        : preloadEntry;
+      env.PG_REDIRECT_SHARE_DIR = PG_SHARE_DIR;
+    }
+  }
+
   return env;
 }
 
 // 初始化数据目录
 function initDatabase() {
-  // 先执行 Linux 系统初始化
-  initLinuxSystem();
-
   if (fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
     return true;
   }
 
   log('info', '初始化 PostgreSQL 数据目录...');
   ensureDir(PG_DATA_DIR);
+
+  // 如果目录已存在但 PG_VERSION 不存在，说明之前初始化失败有残留文件
+  // 需要清空，否则 initdb 因 "directory exists but is not empty" 而拒绝执行
+  if (!fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
+    const entries = fs.readdirSync(PG_DATA_DIR);
+    for (const entry of entries) {
+      const fullPath = path.join(PG_DATA_DIR, entry);
+      fs.rmSync(fullPath, { recursive: true, force: true });
+    }
+  }
 
   // Linux 下 PostgreSQL 不允许以 root 运行
   if (IS_LINUX && process.getuid() === 0) {
@@ -318,7 +335,7 @@ function initDatabase() {
     return false;
   }
 
-  // Windows 分支 - 不指定 -L，让 initdb 自动查找 share 目录
+  // Linux 非 root 或 Windows 分支 - 指定 -L 让 initdb 找到打包的 share 文件
   const initdbArgs = [
     '-D',
     PG_DATA_DIR,
@@ -330,6 +347,9 @@ function initDatabase() {
     'utf8',
     '--locale=C',
   ];
+  if (PG_SHARE_DIR) {
+    initdbArgs.push('-L', PG_SHARE_DIR);
+  }
 
   log('info', `执行 initdb: ${initdb}`);
   log('info', `参数: ${initdbArgs.join(' ')}`);
@@ -374,11 +394,32 @@ function isRunning() {
 }
 
 // 启动 PostgreSQL
+function writePgAutoConf() {
+  // 写入 postgresql.auto.conf（每次启动都执行，确保 socket/port 配置正确）
+  // 升级场景下 data/postgres 已存在，initdb 不会重跑，但需确保 socket 配置
+  const socketDir = process.env.PG_SOCKET_DIR;
+  if (socketDir && fs.existsSync(PG_DATA_DIR)) {
+    const autoConf = path.join(PG_DATA_DIR, 'postgresql.auto.conf');
+    let content = '';
+    content += `unix_socket_directories = '${socketDir.replace(/'/g, "\\'")}'\n`;
+    content += `port = ${PG_PORT}\n`;
+    fs.writeFileSync(autoConf, content, 'utf8');
+    log('info', `已更新 postgresql.auto.conf（socket=${socketDir}, port=${PG_PORT}）`);
+  }
+}
+
 function startPostgres() {
   if (isRunning()) {
     log('info', 'PostgreSQL 已在运行');
     return true;
   }
+
+  // Linux 系统初始化（socket 目录、share 目录验证等）
+  // 必须在 writePgAutoConf 之前执行，因为后者需要 process.env.PG_SOCKET_DIR
+  initLinuxSystem();
+
+  // 写入 socket/port 配置（每次启动都执行，确保即使升级场景也正确）
+  writePgAutoConf();
 
   // 初始化
   if (!initDatabase()) {
