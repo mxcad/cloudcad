@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { t } from '@/languages';
-import { useCooperate, parseWorkData, getWorkCreator, parseUserData, type Work } from '../../../composables/useCooperate';
+import { parseWorkData, getWorkCreator, parseUserData, type Work } from '../../../composables/useCooperate';
 import { useUser } from '../../../composables/useUser';
-import { useEditorState } from '../../../composables/useEditorState';
+import { useEditorStore } from '../../../stores/editor';
+import { useCollabStore } from '../../../stores/collab';
+import { storeToRefs } from 'pinia';
 import { showConfirmDialog } from 'vant';
 import FloatingPopup from "../../../components/FloatingPopup.vue"
 import CollabShareModal from "../../../components/CollabShareModal.vue"
+import WorkCard from "../../../components/WorkCard.vue"
 
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
 const { user } = useUser();
-const { state, setCollaborationState } = useEditorState();
+const editorStore = useEditorStore();
+const collabStore = useCollabStore();
 
 const {
   isCadReady,
@@ -24,11 +28,9 @@ const {
   fileNameCache,
   projectNameCache,
   myProjectIds,
-  fetchWorks,
-  createWork,
-  joinWork,
-  exitWork,
-} = useCooperate();
+} = storeToRefs(collabStore);
+
+const { fetchWorks, createWork, joinWork, exitWork } = collabStore;
 
 const show = ref(true);
 const showShareWorkId = ref<number | null>(null);
@@ -46,7 +48,7 @@ onBeforeUnmount(() => {
 
 // --- 当前文件的协同 work ---
 const currentFileWorks = computed(() => {
-  const fileId = state.fileId;
+  const fileId = editorStore.state.fileId;
   const filtered = works.value.filter((w) => {
     const data = parseWorkData(w.work_data);
     if (!data) return false;
@@ -99,7 +101,7 @@ function mapWorkToDisplay(w: Work): WorkDisplay {
     work: w,
     projectName,
     drawingName,
-    isCurrentFile: data?.drawingId === state.fileId,
+    isCurrentFile: data?.drawingId === editorStore.state.fileId,
     isJoined: currentWorkId.value === w.work_id,
     onlineCount: w.link_user_ids.length,
     creatorName: creator.name || '',
@@ -138,7 +140,7 @@ const activeWork = computed(() =>
 // --- Handlers ---
 
 async function checkUnsavedBeforeAction(): Promise<boolean> {
-  if (state.isModified) {
+  if (editorStore.state.isModified) {
     try {
       await showConfirmDialog({
         title: '未保存的更改',
@@ -215,7 +217,7 @@ function mapUser() {
         <div v-if="currentWorkId !== null && activeWork" class="session-bar">
           <div class="session-row">
             <span class="session-dot" />
-            <span class="session-name">{{ state.fileName || t('当前图纸') }}</span>
+            <span class="session-name">{{ editorStore.state.fileName || t('当前图纸') }}</span>
           </div>
           <div class="session-row">
             <span class="session-count">{{ activeWork.link_user_ids.length }}人在线</span>
@@ -230,76 +232,41 @@ function mapUser() {
         <div class="list">
           <div v-if="currentFileWorks.length > 0 && currentWorkId === null" class="group">
             <div class="group-title">当前图纸</div>
-            <div v-for="w in currentFileWorks" :key="w.work_id" class="card">
-              <div class="card-row">
-                <span class="card-name">{{ mapWorkToDisplay(w).drawingName }}</span>
-                <span class="card-online">{{ w.link_user_ids.length }}在线</span>
-              </div>
-              <div class="card-actions">
-                <van-button size="small" plain round @click="handleShare(w.work_id)">分享</van-button>
-                <van-button size="small" type="primary" round :loading="connecting" :disabled="connecting" @click="handleJoinWork(w.work_id)">加入</van-button>
-              </div>
-            </div>
+            <WorkCard
+              v-for="w in currentFileWorks"
+              :key="w.work_id"
+              :display="mapWorkToDisplay(w)"
+              :connecting="connecting"
+              :show-footer="false"
+              @share="handleShare"
+              @join="handleJoinWork"
+            />
           </div>
 
           <div v-if="myWorks.length > 0" class="group">
             <div class="group-title">我创建的</div>
-            <div v-for="w in myWorks" :key="w.work.work_id" class="card" :class="{ 'card-joined': w.isJoined }">
-              <div class="card-row">
-                <div class="card-info">
-                  <span class="card-name">{{ w.drawingName }}</span>
-                  <span class="card-meta">{{ w.projectName }}{{ w.creatorName ? ' · ' + w.creatorName : '' }}</span>
-                </div>
-                <span class="card-online">{{ w.onlineCount }}在线</span>
-              </div>
-              <div class="card-footer">
-                <div class="card-avatars">
-                  <template v-if="w.participants.length === 0">
-                    <span class="card-no-users">暂无参与者</span>
-                  </template>
-                  <div v-for="(p, i) in w.participants.slice(0, 5)" :key="i" class="avatar" :title="p.name">
-                    <img v-if="p.avatar" :src="p.avatar" class="avatar-img" />
-                    <span v-else class="avatar-txt">{{ p.name?.[0] || '?' }}</span>
-                  </div>
-                  <div v-if="w.participants.length > 5" class="avatar avatar-more">+{{ w.participants.length - 5 }}</div>
-                </div>
-                <div class="card-actions">
-                  <van-button size="small" plain round @click="handleShare(w.work.work_id)">分享</van-button>
-                  <van-button v-if="w.isJoined" size="small" type="danger" plain round @click="handleExitWork">退出</van-button>
-                  <van-button v-else size="small" type="primary" round :loading="connecting" :disabled="connecting" @click="handleJoinWork(w.work.work_id)">加入</van-button>
-                </div>
-              </div>
-            </div>
+            <WorkCard
+              v-for="w in myWorks"
+              :key="w.work.work_id"
+              :display="w"
+              :connecting="connecting"
+              @share="handleShare"
+              @join="handleJoinWork"
+              @exit="handleExitWork"
+            />
           </div>
 
           <div v-if="projectWorks.length > 0" class="group">
             <div class="group-title">项目协同</div>
-            <div v-for="w in projectWorks" :key="w.work.work_id" class="card" :class="{ 'card-joined': w.isJoined }">
-              <div class="card-row">
-                <div class="card-info">
-                  <span class="card-name">{{ w.drawingName }}</span>
-                  <span class="card-meta">{{ w.projectName }}{{ w.creatorName ? ' · ' + w.creatorName : '' }}</span>
-                </div>
-                <span class="card-online">{{ w.onlineCount }}在线</span>
-              </div>
-              <div class="card-footer">
-                <div class="card-avatars">
-                  <template v-if="w.participants.length === 0">
-                    <span class="card-no-users">暂无参与者</span>
-                  </template>
-                  <div v-for="(p, i) in w.participants.slice(0, 5)" :key="i" class="avatar" :title="p.name">
-                    <img v-if="p.avatar" :src="p.avatar" class="avatar-img" />
-                    <span v-else class="avatar-txt">{{ p.name?.[0] || '?' }}</span>
-                  </div>
-                  <div v-if="w.participants.length > 5" class="avatar avatar-more">+{{ w.participants.length - 5 }}</div>
-                </div>
-                <div class="card-actions">
-                  <van-button size="small" plain round @click="handleShare(w.work.work_id)">分享</van-button>
-                  <van-button v-if="w.isJoined" size="small" type="danger" plain round @click="handleExitWork">退出</van-button>
-                  <van-button v-else size="small" type="primary" round :loading="connecting" :disabled="connecting" @click="handleJoinWork(w.work.work_id)">加入</van-button>
-                </div>
-              </div>
-            </div>
+            <WorkCard
+              v-for="w in projectWorks"
+              :key="w.work.work_id"
+              :display="w"
+              :connecting="connecting"
+              @share="handleShare"
+              @join="handleJoinWork"
+              @exit="handleExitWork"
+            />
           </div>
         </div>
       </template>
@@ -381,7 +348,7 @@ function mapUser() {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--success, #52c41a);
+  background: var(--success);
   flex-shrink: 0;
   margin-right: var(--space-sm);
   animation: pulse 2s infinite;
@@ -428,118 +395,4 @@ function mapUser() {
   padding: var(--space-sm) var(--space-lg) var(--space-xs);
 }
 
-// --- 卡片 ---
-.card {
-  margin: var(--space-xs) var(--space-lg);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-elevated);
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-}
-
-.card-joined {
-  border-color: var(--primary);
-}
-
-.card-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: var(--space-sm);
-}
-
-.card-info {
-  flex: 1;
-  min-width: 0;
-  margin-right: var(--space-sm);
-}
-
-.card-name {
-  display: block;
-  font-size: var(--font-size-body);
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-meta {
-  display: block;
-  font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-  margin-top: 2px;
-}
-
-.card-online {
-  font-size: var(--font-size-sm);
-  color: var(--primary);
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.card-avatars {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.card-no-users {
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-}
-
-.card-actions {
-  display: flex;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-}
-
-// --- 头像 ---
-.avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 500;
-  border: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-txt {
-  background: var(--primary-light);
-  color: var(--primary);
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatar-more {
-  background: var(--bg-secondary);
-  color: var(--text-tertiary);
-  font-size: 9px;
-}
 </style>

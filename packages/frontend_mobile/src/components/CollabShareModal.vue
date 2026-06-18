@@ -113,7 +113,7 @@ function handleClose() {
   padding: 12px;
   background: #fff;
   border-radius: 12px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
 }
 
 .share-qr-img {
@@ -125,22 +125,22 @@ function handleClose() {
 .share-qr-placeholder {
   width: 160px;
   height: 160px;
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--bg-secondary);
   border-radius: 4px;
 }
 
 .share-url-section {
   width: 100%;
   padding: 8px 12px;
-  background: var(--bg-tertiary, #fafafa);
+  background: var(--bg-tertiary);
   border-radius: 8px;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border-color);
 }
 
 .share-url-text {
   display: block;
   font-size: 11px;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   word-break: break-all;
   line-height: 1.5;
 }

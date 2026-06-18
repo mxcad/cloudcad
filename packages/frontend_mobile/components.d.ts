@@ -12,6 +12,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AvatarGroup: typeof import('./src/components/AvatarGroup.vue')['default']
     CollabShareModal: typeof import('./src/components/CollabShareModal.vue')['default']
     DialogBase: typeof import('./src/components/DialogBase.vue')['default']
     FloatingPopup: typeof import('./src/components/FloatingPopup.vue')['default']
@@ -37,11 +38,13 @@ declare module 'vue' {
     VanRadioGroup: typeof import('vant/es')['RadioGroup']
     VanTag: typeof import('vant/es')['Tag']
     VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
+    WorkCard: typeof import('./src/components/WorkCard.vue')['default']
   }
 }
 
 // For TSX support
 declare global {
+  const AvatarGroup: typeof import('./src/components/AvatarGroup.vue')['default']
   const CollabShareModal: typeof import('./src/components/CollabShareModal.vue')['default']
   const DialogBase: typeof import('./src/components/DialogBase.vue')['default']
   const FloatingPopup: typeof import('./src/components/FloatingPopup.vue')['default']
@@ -67,4 +70,5 @@ declare global {
   const VanRadioGroup: typeof import('vant/es')['RadioGroup']
   const VanTag: typeof import('vant/es')['Tag']
   const VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
+  const WorkCard: typeof import('./src/components/WorkCard.vue')['default']
 }

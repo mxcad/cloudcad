@@ -28,6 +28,7 @@ import 'vant/es/col/style'
 import 'vant/es/icon/style'
 
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 
 import 'lib-flexible'
@@ -54,6 +55,7 @@ i18nScope.ready(()=> {
     app.use<VoerkaI18nPluginOptions>(i18nPlugin as any,{
         i18nScope
     })
+    app.use(createPinia())
     app.use(plugins)
 
     setupApiClient()

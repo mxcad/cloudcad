@@ -30,6 +30,9 @@
     import { showToastOnce } from '@/utils/toast';
     import { getPCLoginUrl } from '@/utils/apiConfig';
     import { exitCollaborationIfNeeded, getCooperate, encodeUserData, parseWorkData, exitGuardRef } from '../../composables/useCooperate';
+    import { useUrlParams } from '../../composables/useUrlParams';
+    import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
+    import { useShareFileLoad } from '../../composables/useShareFileLoad';
     import CommitMessageDialog from './components/CommitMessageDialog.vue';
     import SaveAsSheet from './components/SaveAsSheet.vue';
     import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
@@ -361,107 +364,6 @@
             }
         })
 
-        // ====== 协同分享自动加入（与 PC CollaborateSidebar.tsx L364-L513 对齐） ======
-        function startAutoJoin(workId: number) {
-            const MAX_RETRIES = 30
-            let retryCount = 0
-            let cancelled = false
-            const timers: ReturnType<typeof setTimeout>[] = []
-
-            const toast = showLoadingToast('正在打开协同文件...')
-
-            autoJoinCleanup = () => {
-                cancelled = true
-                timers.forEach(t => clearTimeout(t))
-                try { closeToast() } catch {}
-            }
-
-            const tryJoin = () => {
-                if (cancelled) return
-
-                // 用户未登录则取消自动加入（与 PC 对齐）
-                if (!user.value) {
-                    cancelled = true
-                    autoJoinCleanup?.()
-                    autoJoinCleanup = null
-                    showToast('请先登录')
-                    editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
-                    return
-                }
-
-                // 退出守卫激活时重试（与 PC exitGuardRef 对齐）
-                if (exitGuardRef.current) {
-                    if (retryCount < MAX_RETRIES) {
-                        retryCount++
-                        timers.push(setTimeout(tryJoin, 1000))
-                    }
-                    return
-                }
-
-                const cooperate = getCooperate()
-                if (!cooperate) {
-                    if (retryCount < MAX_RETRIES) {
-                        retryCount++
-                        timers.push(setTimeout(tryJoin, 1000))
-                    }
-                    return
-                }
-
-                const userData = {
-                    v: 1 as const,
-                    id: user.value.id,
-                    name: user.value.username,
-                    avatar: user.value.avatar,
-                }
-
-                cooperate.joinWork(
-                    workId,
-                    (iRet: number) => {
-                        console.log(`[Mobile auto-join] attempt ${retryCount + 1}, joinWork returned:`, iRet)
-                        if (iRet === 0 || iRet === 17) {
-                            cancelled = true
-                            autoJoinCleanup?.()
-                            autoJoinCleanup = null
-                            editorState.setCollaborationState({ isInCollaboration: true, workId })
-                            // 从协同 work data 解析真实图纸名（与 PC CollaborateSidebar pendingJoinWorkIdRef 逻辑对齐）
-                            ;(function resolveWorkName() {
-                                const cooperate = getCooperate()
-                                if (!cooperate) return
-                                cooperate.getWorks((workList) => {
-                                    const joined = workList.find((w: { work_id: number }) => w.work_id === workId)
-                                    if (!joined) return
-                                    const data = parseWorkData(joined.work_data)
-                                    if (data && data.v === 3 && data.drawingName) {
-                                        editorState.setFileName(data.drawingName)
-                                    }
-                                })
-                            })()
-                            showToast(iRet === 0 ? '已加入协同' : '已恢复协同连接')
-                        } else if (iRet < 0) {
-                            if (!cancelled && retryCount < MAX_RETRIES) {
-                                retryCount++
-                                timers.push(setTimeout(tryJoin, 1000))
-                            } else {
-                                autoJoinCleanup?.()
-                                autoJoinCleanup = null
-                                showToast('加入协同超时')
-                                editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
-                            }
-                        } else {
-                            autoJoinCleanup?.()
-                            autoJoinCleanup = null
-                            showToast(`加入协同失败，错误码: ${iRet}`)
-                            editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })
-                        }
-                    },
-                    userData.id,
-                    encodeUserData(userData)
-                )
-            }
-
-            timers.push(setTimeout(tryJoin, 500))
-        }
-
         // ====== 解析 URL 参数 ======
         const searchParams = new URLSearchParams(window.location.search)
         const fileId = getFileIdFromUrl()
@@ -487,8 +389,8 @@
                 mxcad.on('openFileComplete', () => { editorState.setIsModified(false) })
                 initEditObjectToolbar(mxcad)
                 editorState.setFileName('协作图纸')
-                // 启动自动加入协同（与 PC CollaborateSidebar.tsx 的 auto-join useEffect 对齐）
-                startAutoJoin(workId)
+                const { startAutoJoin } = useCollabAutoJoin(user)
+                autoJoinCleanup = startAutoJoin(workId)
                 return
             }
         }
@@ -507,43 +409,11 @@
             }
         }
 
-        // ====== 分享链接：在创建 CAD 引擎前解析 token，初始化时直接打开文件（与 PC 端对齐） ======
-          if (shareToken && fileId && !collabWorkId) {
-            try {
-              const { shareControllerResolveShareNode } = await import('../../api-sdk');
-              const { data: raw } = await shareControllerResolveShareNode({ path: { token: shareToken } });
-              if (raw) {
-                const info = raw as Record<string, any>
-                if (info.deletedAt) throw new Error('文件已被删除')
-                if (!info.fileHash) throw new Error('文件尚未转换完成')
-                if (!info.path) throw new Error('文件路径不存在')
-                if (!info.updatedAt) throw new Error('无法构造文件访问URL')
-
-                editorState.setFileId(fileId)
-                editorState.setFileInfo(info)
-                editorState.setFileName(info.name || '')
-                editorState.setUpdatedAt(info.updatedAt || null)
-                editorState.setProjectId(null)
-                editorState.setPermissions({ canSave: false, canExport: true, canManageExternalRef: false })
-
-                // 构造文件 URL，与 PC 端 buildFileUrl / CADEditorDirect.tsx L844 一致
-                const ts = new Date(info.updatedAt).getTime()
-                const mxwebUrl = `/api/v1/mxcad/filesData/${info.path}?t=${ts}&shareToken=${shareToken}`
-
-                const mxcad = await createMxCAD(mxwebUrl)
-                mxcad.on('databaseModify', () => { editorState.setIsModified(true) })
-                mxcad.on('openFileComplete', () => { editorState.setIsModified(false) })
-                initEditObjectToolbar(mxcad)
-
-                editorState.setIsActive(true)
-                editorState.setLoading(false)
-                return
-              }
-            } catch (e) {
-              console.error('分享文件加载失败:', e)
-              // 失败时继续走后面的常规流程（loadByNodeId）
-            }
-          }
+        // ====== 分享链接处理（使用 useShareFileLoad） ======
+        if (shareToken && fileId && !collabWorkId) {
+          const loaded = await useShareFileLoad(shareToken, fileId, createMxCAD, initEditObjectToolbar)
+          if (loaded) return
+        }
 
         // ====== 初始化 CAD 引擎（非分享链接） ======
         const mxcad = await createMxCAD()
