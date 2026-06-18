@@ -41,6 +41,7 @@
     "pack:linux-deploy:ubuntu22": "node scripts/pack-linux-deploy.js --os ubuntu22",
     "pack:linux-deploy:ubuntu24": "node scripts/pack-linux-deploy.js --os ubuntu24",
     "pack:linux-deploy:rocky9": "node scripts/pack-linux-deploy.js --os rocky9",
+    "pack:linux-local": "bash scripts/pack-linux-local.sh",
     "verify:linux": "node scripts/verify-linux-deploy.js",
     "verify:linux:debian": "node scripts/verify-linux-deploy.js --os debian",
     "verify:linux:ubuntu22": "node scripts/verify-linux-deploy.js --os ubuntu22",
