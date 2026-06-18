@@ -24,16 +24,18 @@ export function svnCheckout(
 ): void;
 
 /**
- * 添加文件或目录到 SVN 版本控制
+ * 添加文件或目录到SVN版本控制
  * @param targetPaths - 目标路径数组
  * @param isRecursive - 是否递归
  * @param noIgnore - 是否绕过全局忽略规则（默认 false），设为 true 时添加 --no-ignore 标志
+ * @param parents - 是否自动添加缺失的父目录（默认 false），设为 true 时添加 --parents 标志
  * @param callback - 回调函数
  */
 export function svnAdd(
   targetPaths: string[],
   isRecursive: boolean,
   noIgnore: boolean,
+  parents: boolean,
   callback: SvnCallback
 ): void;
 

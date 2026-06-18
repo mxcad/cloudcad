@@ -357,26 +357,14 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       const relativePath = path.relative(filesDataRoot, directoryPath);
       const pathParts = relativePath.split(path.sep);
 
-      let currentPath = filesDataRoot;
-      for (let i = 0; i < pathParts.length; i++) {
-        currentPath = path.join(currentPath, pathParts[i]);
-        const isTargetDirectory = i === pathParts.length - 1;
-
-        try {
-          if (isTargetDirectory) {
-            // 使用 --depth infinity 递归添加
-            await svnAddAsync([currentPath], true, false);
-            this.logger.log(`递归添加目录: ${currentPath}`);
-          } else {
-            // 父目录只 add 不单独 commit，避免产生虚假版本
-            await svnAddAsync([currentPath], false, false);
-          }
-        } catch (error) {
-          if (!error.message.includes('already under version control')) {
-            this.logger.warn(
-              `添加目录失败: ${currentPath}, 错误: ${error.message}`
-            );
-          }
+      try {
+        await svnAddAsync([directoryPath], true, false, true);
+        this.logger.log(`递归添加目录: ${directoryPath}`);
+      } catch (error) {
+        if (!error.message.includes('already under version control')) {
+          this.logger.warn(
+            `添加目录失败: ${directoryPath}, 错误: ${error.message}`
+          );
         }
       }
 
@@ -441,7 +429,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       const parentDirs = this.collectParentDirectories(filePaths);
       for (const dir of parentDirs) {
         try {
-          await svnAddAsync([dir], false, false);
+          await svnAddAsync([dir], false, false, false);
         } catch (error) {
           if (!error.message.includes('already under version control')) {
             this.logger.warn(
@@ -451,7 +439,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         }
       }
 
-      await svnAddAsync(filePaths, false, true);
+      await svnAddAsync(filePaths, false, true, false);
       const allPaths = [...parentDirs, ...filePaths];
       const result = await svnCommitAsync(
         allPaths,
