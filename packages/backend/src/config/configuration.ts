@@ -20,8 +20,16 @@ import type { AppConfig } from "./app.config";
 const isWindows = os.platform() === "win32";
 
 /**
+ * 项目根目录
+ * 当前文件: packages/backend/dist/config/configuration.js
+ * 向上 4 级: config/ → dist/ → backend/ → packages/ → <项目根目录>
+ * 依赖: __dirname 始终指向当前模块所在目录，不随启动方式变化
+ */
+const PROJECT_ROOT = path.resolve(__dirname, "../../../../");
+
+/**
  * 解析路径为绝对路径
- * 如果是相对路径，基于项目根目录（packages/backend 的上两级）解析
+ * 如果是相对路径，基于项目根目录解析
  * @param inputPath 输入路径
  * @returns 绝对路径
  */
@@ -35,10 +43,7 @@ function resolvePath(inputPath: string): string {
 		return path.normalize(inputPath);
 	}
 
-	// 相对路径：基于项目根目录解析
-	// process.cwd() 通常是 packages/backend，项目根目录是其上两级
-	const projectRoot = path.join(process.cwd(), "..", "..");
-	return path.resolve(projectRoot, inputPath);
+	return path.resolve(PROJECT_ROOT, inputPath);
 }
 
 /**
