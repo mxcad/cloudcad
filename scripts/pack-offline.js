@@ -830,9 +830,12 @@ async function prepareDeployStore() {
   ].join(',');
 
   // 使用环境变量设置 store 目录（比修改 .npmrc 更可靠）
+  // 注意：Linux 上环境变量名大小写敏感，必须用小写 npm_config_ 前缀
+  // CI=true 防止 pnpm 在非交互式环境弹出确认提示（如 node_modules 被清空后重新安装）
   const env = {
     ...process.env,
-    NPM_CONFIG_STORE_DIR: storePath,
+    CI: 'true',
+    npm_config_store_dir: storePath,
     PRISMA_CLI_BINARY_TARGETS: PRISMA_BINARY_TARGETS,
   };
 
