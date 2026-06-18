@@ -17,7 +17,9 @@ async function OpenDwgImp(param: FilePickerResult, noCache: boolean): Promise<bo
     if (type === "mxweb") {
         const filePath = URL.createObjectURL(file.source);
         editorState.reset();
+        editorState.setLoading(true);
         const opened = await openMxWeb(filePath);
+        editorState.setLoading(false);
         if (opened) {
             editorState.setIsActive(true);
             editorState.setFileName(param.name);

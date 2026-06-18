@@ -84,7 +84,12 @@
         } else {
             const backUrl = new URLSearchParams(window.location.search).get('back')
             if (backUrl) {
-                window.location.href = backUrl
+                const url = new URL(backUrl, window.location.origin)
+                const fileId = getFileIdFromUrl()
+                if (fileId && !url.searchParams.has('fileId')) {
+                    url.searchParams.set('fileId', fileId)
+                }
+                window.location.href = url.toString()
             }
         }
     }
@@ -492,8 +497,12 @@
         if (fileId && window.history.length <= 1) {
             const backUrl = searchParams.get('back')
             if (backUrl) {
+                const url = new URL(backUrl, window.location.origin)
+                if (!url.searchParams.has('fileId')) {
+                    url.searchParams.set('fileId', fileId)
+                }
                 const cadEditorPath = window.location.pathname + window.location.search
-                window.history.replaceState(null, '', backUrl)
+                window.history.replaceState(null, '', url.toString())
                 window.history.pushState(null, '', cadEditorPath)
             }
         }
@@ -560,8 +569,10 @@
         }
 
         if (fileId) {
+           
             fileSource = fileSource === 'none' ? 'project' : fileSource
             const ok = await loadByNodeId(fileId, Object.keys(openOptions).length ? openOptions : undefined)
+   
             if (ok) {
                 editorState.setCurrentVersion(getVersionFromUrl())
                 if (fileSource === 'project') {
@@ -680,14 +691,14 @@
         <button class="needle-handle ring" ref="handle" @touchstart="onTouchstart"></button>
 
         <!-- Loading overlay -->
-        <div class="loading-overlay" v-if="fileLoading">
+        <div class="loading-overlay" v-if="fileLoading || editorState.state.loading">
             <div class="loading-content">
                 <van-loading color="#fff" type="spinner" />
                 <p class="loading-text">{{ fileProgress }}</p>
             </div>
         </div>
         <!-- Error overlay -->
-        <div class="loading-overlay" v-if="fileError && !fileLoading">
+        <div class="loading-overlay" v-if="fileError && !fileLoading && !editorState.state.loading">
             <div class="loading-content">
                 <van-icon name="warning-o" color="#ff4444" size="48" />
                 <p class="loading-text">{{ fileError }}</p>
