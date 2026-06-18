@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 
@@ -23,7 +29,6 @@ import {
 import { FileSystemNode } from '../types/filesystem';
 import { Card } from './ui/Card';
 import { Tooltip } from './ui/Tooltip';
-import { Menu } from './ui/Menu';
 
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
@@ -55,6 +60,7 @@ interface FileItemProps {
   canViewVersionHistory?: boolean;
   canManageTrash?: boolean;
   canManageExternalReference?: boolean;
+  canCreate?: boolean;
   /** 文件名字体大小，默认不设置（继承父元素字体大小） */
   fontSize?: number | string;
   /** 隐藏文件类型标签（文件夹/DWG/DXF 等徽章） */
@@ -137,6 +143,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   canViewVersionHistory = false,
   canManageExternalReference = false,
   canManageTrash = false,
+  canCreate = false,
   fontSize,
   hideTypeTag = false,
   forceCompactActions = false,
@@ -224,7 +231,12 @@ export const FileItem: React.FC<FileItemProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       try {
-        const hasExternalReference = await externalReferenceUpload.checkMissingReferences(undefined, false, true);
+        const hasExternalReference =
+          await externalReferenceUpload.checkMissingReferences(
+            undefined,
+            false,
+            true
+          );
 
         if (!hasExternalReference) {
           console.info(`[FileItem] 文件 "${node.name}" 没有外部参照`);
@@ -258,7 +270,9 @@ export const FileItem: React.FC<FileItemProps> = ({
         return;
       }
 
-      if ((e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')) {
+      if (
+        (e.target as HTMLElement).closest('[role="menu"], [data-menu-content]')
+      ) {
         return;
       }
 
@@ -285,7 +299,15 @@ export const FileItem: React.FC<FileItemProps> = ({
         onEnter(node);
       }
     },
-    [node, onSelect, onEnter, hideSelectionCircle, doubleClickToOpen, isRubberBanding, isSelected]
+    [
+      node,
+      onSelect,
+      onEnter,
+      hideSelectionCircle,
+      doubleClickToOpen,
+      isRubberBanding,
+      isSelected,
+    ]
   );
 
   const handleDoubleClick = useCallback(
@@ -406,6 +428,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     canViewVersionHistory,
     canManageExternalReference,
     canManageTrash: !!onRestore || !!onPermanentlyDelete,
+    canCreate,
     onDownload: !!onDownload,
     onShowVersionHistory: !!onShowVersionHistory,
     onEdit: !!onEdit,
@@ -416,7 +439,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     onCopy: !!onCopy,
     onRestore: !!onRestore,
     onPermanentlyDelete: !!onPermanentlyDelete,
-    onDeleteNode: isRoot ? !!onDeleteNode : (!!onDeleteNode || !!onDelete),
+    onDeleteNode: isRoot ? !!onDeleteNode : !!onDeleteNode || !!onDelete,
     isSearchResult,
     onOpen: !!onOpen,
     onOpenInNewTab: !!onOpenInNewTab,
@@ -430,9 +453,14 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   const availableActions = getAvailableActions(actionProps);
 
-  const handleAction = useCallback((type: ActionType) => {
-    actionHandlers[type]?.(new MouseEvent('click') as unknown as React.MouseEvent);
-  }, [actionHandlers]);
+  const handleAction = useCallback(
+    (type: ActionType) => {
+      actionHandlers[type]?.(
+        new MouseEvent('click') as unknown as React.MouseEvent
+      );
+    },
+    [actionHandlers]
+  );
 
   useEffect(() => {
     if (viewMode !== 'list') return;
@@ -481,7 +509,10 @@ export const FileItem: React.FC<FileItemProps> = ({
         <Tooltip content={node.ancestorPath || ''} position="bottom">
           <span
             className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium leading-none max-w-full truncate"
-            style={{ background: 'var(--primary-100)', color: 'var(--primary-600)' }}
+            style={{
+              background: 'var(--primary-100)',
+              color: 'var(--primary-600)',
+            }}
           >
             {abbreviateSearchPath(displayAncestorPath)}
           </span>
@@ -492,13 +523,22 @@ export const FileItem: React.FC<FileItemProps> = ({
       <Tooltip content={node.ancestorPath || ''} position="bottom">
         <span
           className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium leading-none max-w-full truncate"
-          style={{ background: 'var(--primary-100)', color: 'var(--primary-600)' }}
+          style={{
+            background: 'var(--primary-100)',
+            color: 'var(--primary-600)',
+          }}
         >
           {displayAncestorPath}
         </span>
       </Tooltip>
     );
-  }, [isSearchResult, isTrash, displayAncestorPath, viewMode, node.ancestorPath]);
+  }, [
+    isSearchResult,
+    isTrash,
+    displayAncestorPath,
+    viewMode,
+    node.ancestorPath,
+  ]);
 
   if (viewMode === 'grid') {
     const showSelectedStyle = isSelected;
@@ -506,133 +546,154 @@ export const FileItem: React.FC<FileItemProps> = ({
 
     return (
       <>
-      <Card
-        variant="outlined"
-        padding="none"
-        radius={galleryMode ? 'sm' : undefined}
-        data-tour="file-item"
-        data-node-id={node.id}
-        title={doubleClickToOpen ? '双击打开' : undefined}
-        className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto select-none
+        <Card
+          variant="outlined"
+          padding="none"
+          radius={galleryMode ? 'sm' : undefined}
+          data-tour="file-item"
+          data-node-id={node.id}
+          title={doubleClickToOpen ? '双击打开' : undefined}
+          className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto select-none
           ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
           ${showSelectedStyle ? 'shadow-md' : ''}
           ${isDropTarget ? 'shadow-md' : ''}
           ${!showSelectedStyle && !isDropTarget && !galleryMode ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
           ${!showSelectedStyle && !isDropTarget && galleryMode ? 'hover:shadow-lg' : ''}
         `}
-        style={{
-          background: showSelectedStyle || isDropTarget
-            ? 'var(--primary-50)'
-            : 'var(--bg-drawing-card)',
-          border: showSelectedStyle || isDropTarget
-            ? '2px solid var(--primary-500)'
-            : undefined,
-        }}
-        onMouseEnter={(e) => {
-          setIsHovered(true);
-          if (!showSelectedStyle && !isDropTarget) {
-            if (galleryMode) {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-            } else {
-              e.currentTarget.style.borderColor = 'var(--primary-400)';
+          style={{
+            background:
+              showSelectedStyle || isDropTarget
+                ? 'var(--primary-50)'
+                : 'var(--bg-drawing-card)',
+            border:
+              showSelectedStyle || isDropTarget
+                ? '2px solid var(--primary-500)'
+                : undefined,
+          }}
+          onMouseEnter={(e) => {
+            setIsHovered(true);
+            if (!showSelectedStyle && !isDropTarget) {
+              if (galleryMode) {
+                e.currentTarget.style.background = 'var(--bg-tertiary)';
+              } else {
+                e.currentTarget.style.borderColor = 'var(--primary-400)';
+              }
             }
-          }
-        }}
-        onMouseLeave={(e) => {
-          setIsHovered(false);
-          setShowMenu(false);
-          onDragLeave?.();
-          if (!showSelectedStyle && !isDropTarget) {
-            if (galleryMode) {
-              e.currentTarget.style.background = 'var(--bg-drawing-card)';
-            } else {
-              e.currentTarget.style.borderColor = 'var(--border-default)';
+          }}
+          onMouseLeave={(e) => {
+            setIsHovered(false);
+            setShowMenu(false);
+            onDragLeave?.();
+            if (!showSelectedStyle && !isDropTarget) {
+              if (galleryMode) {
+                e.currentTarget.style.background = 'var(--bg-drawing-card)';
+              } else {
+                e.currentTarget.style.borderColor = 'var(--border-default)';
+              }
             }
+          }}
+          onMouseDown={(e) => {
+            if (hideSelectionCircle && !isRubberBanding) e.stopPropagation();
+          }}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          draggable={
+            hideSelectionCircle &&
+            !!onDragStart &&
+            !node.isRoot &&
+            !isRubberBanding
           }
-        }}
-        onMouseDown={(e) => { if (hideSelectionCircle && !isRubberBanding) e.stopPropagation(); }}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        draggable={hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding}
-        onDragStart={(e) => { onDragStart?.(e, node); }}
-        onDragOver={(e) => onDragOver?.(e, node)}
-        onDrop={(e) => onDrop?.(e, node)}
-      >
-        {!hideSelectionCircle && (
-          <FileItemSelection
-            isSelected={isSelected}
-            onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
-            isGrid
-            isDraggable={!!onDragStart && !node.isRoot && !isRubberBanding}
-          />
-        )}
+          onDragStart={(e) => {
+            onDragStart?.(e, node);
+          }}
+          onDragOver={(e) => onDragOver?.(e, node)}
+          onDrop={(e) => onDrop?.(e, node)}
+        >
+          {!hideSelectionCircle && (
+            <FileItemSelection
+              isSelected={isSelected}
+              onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
+              isGrid
+              isDraggable={!!onDragStart && !node.isRoot && !isRubberBanding}
+            />
+          )}
 
-        {galleryMode ? (
-          <div className="flex flex-col h-full p-2">
-            <div
-              className="flex-1 flex items-center justify-center overflow-hidden mb-2"
-            >
-              <Thumbnail
-                node={node}
-                size={thumbnailSize}
-                galleryMode={galleryMode}
-              />
+          {galleryMode ? (
+            <div className="flex flex-col h-full p-2">
+              <div className="flex-1 flex items-center justify-center overflow-hidden mb-2">
+                <Thumbnail
+                  node={node}
+                  size={thumbnailSize}
+                  galleryMode={galleryMode}
+                />
+              </div>
+              <div className="flex flex-col items-center pb-2">
+                <FileItemInfo
+                  node={node}
+                  isGrid
+                  galleryMode={galleryMode}
+                  fontSize={fontSize}
+                  searchPathBadge={searchPathBadge}
+                />
+                <FileItemExternalReferenceWarning node={node} isGrid />
+              </div>
             </div>
-            <div className="flex flex-col items-center pb-2">
-              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} searchPathBadge={searchPathBadge} />
-              <FileItemExternalReferenceWarning node={node} isGrid />
-            </div>
-          </div>
-        ) : (
-          <div className="p-6 pb-4">
-            <div
-              className="mx-auto mb-4 flex items-center justify-center transition-transform duration-200
+          ) : (
+            <div className="p-6 pb-4">
+              <div
+                className="mx-auto mb-4 flex items-center justify-center transition-transform duration-200
                 ${isHovered && !showSelectedStyle ? 'scale-110' : ''}
                 ${showSelectedStyle ? 'scale-105' : ''}
               "
-              style={{ width: thumbnailSize, height: thumbnailSize }}
-            >
-              <Thumbnail
-                node={node}
-                size={thumbnailSize}
-                galleryMode={galleryMode}
-              />
-            </div>
+                style={{ width: thumbnailSize, height: thumbnailSize }}
+              >
+                <Thumbnail
+                  node={node}
+                  size={thumbnailSize}
+                  galleryMode={galleryMode}
+                />
+              </div>
 
-            <div className="flex flex-col items-center">
-              <FileItemInfo node={node} isGrid galleryMode={galleryMode} fontSize={fontSize} searchPathBadge={searchPathBadge} />
-              <FileItemExternalReferenceWarning node={node} isGrid />
+              <div className="flex flex-col items-center">
+                <FileItemInfo
+                  node={node}
+                  isGrid
+                  galleryMode={galleryMode}
+                  fontSize={fontSize}
+                  searchPathBadge={searchPathBadge}
+                />
+                <FileItemExternalReferenceWarning node={node} isGrid />
+              </div>
             </div>
+          )}
+
+          <div
+            className={`absolute top-1 right-1 transition-opacity duration-200 z-20 pointer-events-auto ${
+              isHovered || showMenu ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <FileItemMenu
+              actions={availableActions}
+              onAction={handleAction}
+              showMenu={showMenu}
+              menuButtonRef={menuButtonRef}
+              onOpenMenu={handleToggleMenu}
+              onCloseMenu={handleCloseMenu}
+            />
           </div>
-        )}
 
-        <div
-          className={`absolute top-1 right-1 transition-opacity duration-200 z-20 pointer-events-auto ${
-            isHovered || showMenu ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <FileItemMenu
-            actions={availableActions}
-            onAction={handleAction}
-            showMenu={showMenu}
-            menuButtonRef={menuButtonRef}
-            onOpenMenu={handleToggleMenu}
-            onCloseMenu={handleCloseMenu}
+          <ExternalReferenceModal
+            isOpen={externalReferenceUpload.isOpen}
+            files={externalReferenceUpload.files}
+            loading={externalReferenceUpload.loading}
+            onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
+            onComplete={externalReferenceUpload.complete}
+            onSkip={externalReferenceUpload.skip}
+            onClose={externalReferenceUpload.close}
+            isCADEditor={false}
           />
-        </div>
-
-        <ExternalReferenceModal
-          isOpen={externalReferenceUpload.isOpen}
-          files={externalReferenceUpload.files}
-          loading={externalReferenceUpload.loading}
-          onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
-          onComplete={externalReferenceUpload.complete}
-          onSkip={externalReferenceUpload.skip}
-          onClose={externalReferenceUpload.close}
-          isCADEditor={false}
-        />
-      </Card>
-    </>
+        </Card>
+      </>
     );
   }
 
@@ -662,9 +723,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             className="font-medium text-sm"
             style={{ color: 'var(--text-primary)' }}
             title={
-              node.isFolder
-                ? node.name
-                : node.name.replace(/\.[^/.]+$/, '')
+              node.isFolder ? node.name : node.name.replace(/\.[^/.]+$/, '')
             }
           >
             <span
@@ -697,190 +756,187 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   return (
     <>
-    <div
-      ref={listItemRef}
-      data-tour="file-item"
-      data-node-id={node.id}
-      title={doubleClickToOpen ? '双击打开' : undefined}
-      className={`group relative flex items-center rounded-lg transition-all duration-200 cursor-pointer select-none
+      <div
+        ref={listItemRef}
+        data-tour="file-item"
+        data-node-id={node.id}
+        title={doubleClickToOpen ? '双击打开' : undefined}
+        className={`group relative flex items-center rounded-lg transition-all duration-200 cursor-pointer select-none
         ${galleryMode ? 'gap-2' : 'gap-4'}
         ${isSelected ? '' : 'hover:border-[var(--border-default)]'}
       `}
-      style={{
-        background: isSelected ? 'var(--primary-50)' : 'transparent',
-        border: isSelected
-          ? '1px solid var(--primary-200)'
-          : '1px solid transparent',
-      }}
-      onMouseEnter={(e) => {
-        setIsHovered(true);
-        if (!isSelected) {
-          e.currentTarget.style.background = 'var(--bg-tertiary)';
+        style={{
+          background: isSelected ? 'var(--primary-50)' : 'transparent',
+          border: isSelected
+            ? '1px solid var(--primary-200)'
+            : '1px solid transparent',
+        }}
+        onMouseEnter={(e) => {
+          setIsHovered(true);
+          if (!isSelected) {
+            e.currentTarget.style.background = 'var(--bg-tertiary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          setIsHovered(false);
+          setShowMenu(false);
+          onDragLeave?.();
+          if (!isSelected) {
+            e.currentTarget.style.background = 'transparent';
+          }
+        }}
+        onMouseDown={(e) => {
+          if (hideSelectionCircle && !isRubberBanding) e.stopPropagation();
+        }}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        draggable={
+          hideSelectionCircle &&
+          !!onDragStart &&
+          !node.isRoot &&
+          !isRubberBanding
         }
-      }}
-      onMouseLeave={(e) => {
-        setIsHovered(false);
-        setShowMenu(false);
-        onDragLeave?.();
-        if (!isSelected) {
-          e.currentTarget.style.background = 'transparent';
-        }
-      }}
-      onMouseDown={(e) => { if (hideSelectionCircle && !isRubberBanding) e.stopPropagation(); }}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      draggable={hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding}
-      onDragStart={(e) => { onDragStart?.(e, node); }}
-      onDragOver={(e) => onDragOver?.(e, node)}
-      onDrop={(e) => onDrop?.(e, node)}
-    >
-      {!hideSelectionCircle && (
-        <div className="p-1">
-          <FileItemSelection
-            isSelected={isSelected}
-            onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
-            isDraggable={!!onDragStart && !node.isRoot && !isRubberBanding}
-          />
-        </div>
-      )}
-
-      <div className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? 'w-14 h-14' : 'w-10 h-10'}`}>
-              <Thumbnail
-                node={node}
-                size={galleryMode ? 56 : 40}
-                galleryMode={galleryMode}
-              />
-      </div>
-
-      <div className={`flex-1 min-w-0 ${galleryMode ? 'p-2' : 'p-3'}`}>
-        <FileItemInfo node={node} galleryMode={galleryMode} fontSize={fontSize} searchPathBadge={searchPathBadge} />
-      </div>
-
-      {!galleryMode && !hideTypeTag && !isSearchResult && (
-        <div className="p-3">
-          <FileItemTypeTag node={node} />
-        </div>
-      )}
-
-      <div
-        data-tour="file-item-actions"
-        className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? 'p-2' : 'p-3'}`}
+        onDragStart={(e) => {
+          onDragStart?.(e, node);
+        }}
+        onDragOver={(e) => onDragOver?.(e, node)}
+        onDrop={(e) => onDrop?.(e, node)}
       >
-        {(forceCompactActions || useCompactActions) ? (
-          <div className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}>
-          <FileItemMenu
-            actions={availableActions}
-            onAction={handleAction}
-            showMenu={showMenu}
-            menuButtonRef={menuButtonRef}
-            onOpenMenu={handleToggleMenu}
-            onCloseMenu={handleCloseMenu}
-          />
+        {!hideSelectionCircle && (
+          <div className="p-1">
+            <FileItemSelection
+              isSelected={isSelected}
+              onSelect={(isShift) => onSelect?.(node.id, true, isShift)}
+              isDraggable={!!onDragStart && !node.isRoot && !isRubberBanding}
+            />
           </div>
-        ) : (
-          <>
-            {(() => {
-              const { main: btnMainActions, secondary: btnSecondaryActions, destructive: btnDestructiveActions } = getActionGroups(availableActions);
-              return (
-                <>
-                  {btnMainActions.map((action) => (
-                    <Tooltip key={action.type} content={action.tooltip} position="top">
-                      <button
-                        {...action.props}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          actionHandlers[action.type]?.(e);
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${
-                          action.colorClass || 'text-slate-500'
-                        } ${action.hoverClass || 'hover:bg-slate-100'}`}
-                      >
-                        <span className="inline-block scale-110 origin-center">
-                          {React.cloneElement(
-                            action.icon as React.ReactElement<{
-                              width?: number;
-                              height?: number;
-                            }>,
-                            { width: 18, height: 18 }
-                          )}
-                        </span>
-                      </button>
-                    </Tooltip>
-                  ))}
-                  {btnDestructiveActions.map((action) => (
-                    <Tooltip key={action.type} content={action.tooltip} position="top">
-                      <button
-                        {...action.props}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          actionHandlers[action.type]?.(e);
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${
-                          action.colorClass || 'text-slate-500'
-                        } ${action.hoverClass || 'hover:bg-slate-100'}`}
-                      >
-                        <span className="inline-block scale-110 origin-center">
-                          {React.cloneElement(
-                            action.icon as React.ReactElement<{
-                              width?: number;
-                              height?: number;
-                            }>,
-                            { width: 18, height: 18 }
-                          )}
-                        </span>
-                      </button>
-                    </Tooltip>
-                  ))}
-                  {btnSecondaryActions.length > 0 && (
-                    <Menu modal={false}>
-                      <Tooltip content="其他操作" position="top">
-                        <Menu.Trigger>
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2 rounded-lg transition-colors text-slate-500 hover:bg-slate-100"
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <circle cx="12" cy="5" r="1" />
-                              <circle cx="12" cy="12" r="1" />
-                              <circle cx="12" cy="19" r="1" />
-                            </svg>
-                          </button>
-                        </Menu.Trigger>
-                      </Tooltip>
-                      <Menu.Content align="end" side="bottom" sideOffset={4}>
-                        {btnSecondaryActions.map((action) => (
-                          <Menu.Item
-                            key={action.type}
-                            variant="default"
-                            icon={action.icon}
-                            onClick={() => {
-                              handleAction(action.type);
-                            }}
-                          >
-                            {action.label}
-                          </Menu.Item>
-                        ))}
-                      </Menu.Content>
-                    </Menu>
-                  )}
-                </>
-              );
-            })()}
-          </>
         )}
-      </div>
 
-      <ExternalReferenceModal
-        isOpen={externalReferenceUpload.isOpen}
-        files={externalReferenceUpload.files}
-        loading={externalReferenceUpload.loading}
-        onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
-        onComplete={externalReferenceUpload.complete}
-        onSkip={externalReferenceUpload.skip}
-        onClose={externalReferenceUpload.close}
-        isCADEditor={false}
-      />
-    </div>
+        <div
+          className={`flex-shrink-0 flex items-center justify-center ${galleryMode ? 'w-14 h-14' : 'w-10 h-10'}`}
+        >
+          <Thumbnail
+            node={node}
+            size={galleryMode ? 56 : 40}
+            galleryMode={galleryMode}
+          />
+        </div>
+
+        <div className={`flex-1 min-w-0 ${galleryMode ? 'p-2' : 'p-3'}`}>
+          <FileItemInfo
+            node={node}
+            galleryMode={galleryMode}
+            fontSize={fontSize}
+            searchPathBadge={searchPathBadge}
+          />
+        </div>
+
+        {!galleryMode && !hideTypeTag && !isSearchResult && (
+          <div className="p-3">
+            <FileItemTypeTag node={node} />
+          </div>
+        )}
+
+        <div
+          data-tour="file-item-actions"
+          className={`flex items-center gap-1 opacity-100 transition-opacity duration-200 flex-shrink-0 ${galleryMode ? 'p-2' : 'p-3'}`}
+        >
+          {forceCompactActions || useCompactActions ? (
+            <div
+              className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <FileItemMenu
+                actions={availableActions}
+                onAction={handleAction}
+                showMenu={showMenu}
+                menuButtonRef={menuButtonRef}
+                onOpenMenu={handleToggleMenu}
+                onCloseMenu={handleCloseMenu}
+              />
+            </div>
+          ) : (
+            <>
+              {(() => {
+                const {
+                  main: btnMainActions,
+                  destructive: btnDestructiveActions,
+                } = getActionGroups(availableActions);
+                return (
+                  <>
+                    {btnMainActions.map((action) => (
+                      <Tooltip
+                        key={action.type}
+                        content={action.tooltip}
+                        position="top"
+                      >
+                        <button
+                          {...action.props}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            actionHandlers[action.type]?.(e);
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${
+                            action.colorClass || 'text-slate-500'
+                          } ${action.hoverClass || 'hover:bg-slate-100'}`}
+                        >
+                          <span className="inline-block scale-110 origin-center">
+                            {React.cloneElement(
+                              action.icon as React.ReactElement<{
+                                width?: number;
+                                height?: number;
+                              }>,
+                              { width: 18, height: 18 }
+                            )}
+                          </span>
+                        </button>
+                      </Tooltip>
+                    ))}
+                    {btnDestructiveActions.map((action) => (
+                      <Tooltip
+                        key={action.type}
+                        content={action.tooltip}
+                        position="top"
+                      >
+                        <button
+                          {...action.props}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            actionHandlers[action.type]?.(e);
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${
+                            action.colorClass || 'text-slate-500'
+                          } ${action.hoverClass || 'hover:bg-slate-100'}`}
+                        >
+                          <span className="inline-block scale-110 origin-center">
+                            {React.cloneElement(
+                              action.icon as React.ReactElement<{
+                                width?: number;
+                                height?: number;
+                              }>,
+                              { width: 18, height: 18 }
+                            )}
+                          </span>
+                        </button>
+                      </Tooltip>
+                    ))}
+                  </>
+                );
+              })()}
+            </>
+          )}
+        </div>
+
+        <ExternalReferenceModal
+          isOpen={externalReferenceUpload.isOpen}
+          files={externalReferenceUpload.files}
+          loading={externalReferenceUpload.loading}
+          onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
+          onComplete={externalReferenceUpload.complete}
+          onSkip={externalReferenceUpload.skip}
+          onClose={externalReferenceUpload.close}
+          isCADEditor={false}
+        />
+      </div>
     </>
   );
 };

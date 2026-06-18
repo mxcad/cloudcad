@@ -103,6 +103,18 @@ export function setupApiClient(): void {
     },
   });
 
+  // Bearer Token request interceptor — 与 PC packages/frontend/src/config/clientSetup.ts 对齐
+  client.interceptors.request.use((request) => {
+    const token = getAccessToken();
+    if (token) {
+      request.headers.set('Authorization', `Bearer ${token}`);
+    }
+    if (request.headers.get('Content-Type') === 'null') {
+      request.headers.delete('Content-Type');
+    }
+    return request;
+  });
+
   client.interceptors.error.use(async (error, response, _request, _options) => {
     if (error && typeof error === 'object') {
       const e = error as Record<string, unknown>;

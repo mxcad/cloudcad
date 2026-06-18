@@ -40,7 +40,7 @@ interface FileSystemHeaderProps {
   onSearchSubmit: () => void;
   onSelectAll: () => void;
   onToggleTrashView: () => void;
-  onClearTrash: (projectId?: string) => void;
+  onClearTrash?: (projectId?: string) => void;
   onProjectFilterChange: (filter: ProjectFilterType) => void;
   onRefresh: () => void;
   onCreateFolder?: () => void;
@@ -50,7 +50,10 @@ interface FileSystemHeaderProps {
   onBreadcrumbNavigate: (crumb: BreadcrumbItem & { isRoot?: boolean }) => void;
   /** 面包屑路径提交（编辑模式） */
   onBreadcrumbPathSubmit?: (path: string) => void;
-  showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'info'
+  ) => void;
   clipboardCount?: number;
   clipboardMode?: string | null;
   onCopy?: () => void;
@@ -62,6 +65,10 @@ interface FileSystemHeaderProps {
   hideTrashButton?: boolean;
   /** 隐藏返回按钮 */
   hideBackButton?: boolean;
+  /** 文件创建权限 */
+  canCreate?: boolean;
+  /** 文件上传权限 */
+  canUpload?: boolean;
   /** 自定义右侧操作区（在创建/上传按钮之后、回收站和项目筛选之前渲染） */
   renderExtraActions?: React.ReactNode;
 }
@@ -107,6 +114,8 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   onSearchFiltersChange,
   hideTrashButton = false,
   hideBackButton = false,
+  canCreate = true,
+  canUpload = true,
   renderExtraActions,
 }) => {
   const navigate = useNavigate();
@@ -186,14 +195,17 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           {!hideBackButton && (
-            <Tooltip content={isPersonalSpaceMode
-              ? isAtRoot
-                ? '返回我的图纸'
-                : '返回上一级'
-              : isAtRoot
-                ? '返回项目列表'
-                : '返回上一级'
-            }>
+            <Tooltip
+              content={
+                isPersonalSpaceMode
+                  ? isAtRoot
+                    ? '返回我的图纸'
+                    : '返回上一级'
+                  : isAtRoot
+                    ? '返回项目列表'
+                    : '返回上一级'
+              }
+            >
               <button
                 onClick={handleBackButton}
                 className="p-2 rounded-xl transition-all flex-shrink-0"
@@ -226,7 +238,11 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             className="min-w-0 flex-1 overflow-x-auto no-scrollbar"
           >
             <BreadcrumbNavigation
-              breadcrumbs={breadcrumbs as unknown as Parameters<typeof BreadcrumbNavigation>[0]['breadcrumbs']}
+              breadcrumbs={
+                breadcrumbs as unknown as Parameters<
+                  typeof BreadcrumbNavigation
+                >[0]['breadcrumbs']
+              }
               onNavigate={handleBreadcrumbNav}
               editable={!isTrashView && !isAtRoot}
               onPathSubmit={onBreadcrumbPathSubmit}
@@ -244,7 +260,10 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               style={{ color: 'var(--text-tertiary)' }}
               className="hover:bg-[var(--bg-tertiary)]"
             >
-              <RefreshIcon size={16} className={isFetching ? 'animate-spin' : ''} />
+              <RefreshIcon
+                size={16}
+                className={isFetching ? 'animate-spin' : ''}
+              />
             </Button>
           </Tooltip>
 
@@ -270,7 +289,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </>
           ) : (
             <>
-              {!isTrashView && (
+              {!isTrashView && canCreate && (
                 <>
                   {onCreateDrawing && (
                     <Tooltip content="新建图纸">
@@ -316,7 +335,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </>
           )}
 
-          {!isAtRoot && !isTrashView && (
+          {!isAtRoot && !isTrashView && canUpload && (
             <MxCadUploader
               ref={uploaderRef}
               nodeId={() => getCurrentParentId()}
@@ -325,8 +344,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               onSuccess={onRefresh}
               onExternalReferenceSuccess={onRefresh}
               openAfterUpload={false}
-              onError={(err: string) => {
-              }}
+              onError={(err: string) => {}}
             />
           )}
 
@@ -380,7 +398,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         onViewModeChange={onSetViewMode}
         loading={loading}
         isTrashView={isTrashView}
-        onClearTrash={() => onClearTrash()}
+        onClearTrash={onClearTrash ? () => onClearTrash() : undefined}
         trashItemsCount={isTrashView ? nodesCount : 0}
         isAtRoot={isAtRoot}
         isProjectRootMode={isProjectRootMode}

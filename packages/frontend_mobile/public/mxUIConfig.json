@@ -62,9 +62,9 @@
       "cmd": "Mx_versionHistory"
     },
     {
-      "text": "分享",
+      "text": "实时协同",
       "icon": "fenxiang",
-      "cmd": "Mx_ShowShare"
+      "cmd": "Mx_ShowCollaborate"
     }
   ],
   "?toolbarData": "底部工具栏",

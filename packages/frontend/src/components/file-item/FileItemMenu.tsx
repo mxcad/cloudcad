@@ -1,6 +1,11 @@
 import React, { useCallback } from 'react';
 import { MoreIcon } from '../FileIcons';
-import { type ActionType, type FileAction, ACTION_VARIANT_MAP, getActionGroups } from './fileActionConfig';
+import {
+  type ActionType,
+  type FileAction,
+  ACTION_VARIANT_MAP,
+  getActionGroups,
+} from './fileActionConfig';
 import { Tooltip } from '../ui/Tooltip';
 import { Menu } from '../ui/Menu';
 
@@ -21,21 +26,27 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
   onOpenMenu,
   onCloseMenu,
 }) => {
-  const { main, secondary, destructive } = getActionGroups(actions);
+  const { main, destructive } = getActionGroups(actions);
 
   const handleClose = useCallback(() => {
     onCloseMenu();
-    setTimeout(() => { menuButtonRef.current?.blur(); }, 0);
+    setTimeout(() => {
+      menuButtonRef.current?.blur();
+    }, 0);
   }, [onCloseMenu, menuButtonRef]);
 
   if (actions.length === 0) return null;
 
   return (
     <>
-      <Menu open={showMenu} onOpenChange={(open) => {
-        if (open) onOpenMenu();
-        else onCloseMenu();
-      }} modal={false}>
+      <Menu
+        open={showMenu}
+        onOpenChange={(open) => {
+          if (open) onOpenMenu();
+          else onCloseMenu();
+        }}
+        modal={false}
+      >
         <Tooltip content="更多操作" position="top">
           <Menu.Trigger>
             <button
@@ -55,37 +66,27 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
               key={action.type}
               variant={ACTION_VARIANT_MAP[action.type]}
               icon={action.icon}
-              onClick={() => { onAction(action.type); handleClose(); }}
+              onClick={() => {
+                onAction(action.type);
+                handleClose();
+              }}
               {...(action.props as Record<string, unknown>)}
             >
               {action.label}
             </Menu.Item>
           ))}
 
-          {secondary.length > 0 && (
-            <Menu.Submenu label="其他操作" icon={secondary[0]?.icon}>
-              {secondary.map((action) => (
-                <Menu.Item
-                  key={action.type}
-                  variant={ACTION_VARIANT_MAP[action.type]}
-                  icon={action.icon}
-                  onClick={() => { onAction(action.type); handleClose(); }}
-                  {...(action.props as Record<string, unknown>)}
-                >
-                  {action.label}
-                </Menu.Item>
-              ))}
-            </Menu.Submenu>
-          )}
-
-          {(destructive.length > 0) && (main.length > 0 || secondary.length > 0) && <Menu.Separator />}
+          {destructive.length > 0 && main.length > 0 && <Menu.Separator />}
 
           {destructive.map((action) => (
             <Menu.Item
               key={action.type}
               variant="danger"
               icon={action.icon}
-              onClick={() => { onAction(action.type); handleClose(); }}
+              onClick={() => {
+                onAction(action.type);
+                handleClose();
+              }}
             >
               {action.label}
             </Menu.Item>

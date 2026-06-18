@@ -42,28 +42,46 @@ function tryParseRawJson(raw: string): Record<string, unknown> | null {
   }
 }
 
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function base64ToUtf8(raw: string): string {
+  const binary = atob(raw);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 function tryBase64Decode(raw: string): string | null {
   try {
-    return atob(raw);
+    return base64ToUtf8(raw);
   } catch {
     return null;
   }
 }
 
 export function encodeWorkData(data: CollaborateWorkData): string {
-  return btoa(JSON.stringify(data));
+  return utf8ToBase64(JSON.stringify(data));
 }
 
 export function encodeUserData(data: CollaborateUserData): string {
-  return btoa(JSON.stringify(data));
+  return utf8ToBase64(JSON.stringify(data));
 }
 
 export function encodeV2WorkData(data: Omit<CollaborateWorkDataV2, 'v'>): string {
-  return btoa(JSON.stringify({ v: 2, ...data }));
+  return utf8ToBase64(JSON.stringify({ v: 2, ...data }));
 }
 
 export function encodeV3WorkData(data: Omit<CollaborateWorkDataV3, 'v'>): string {
-  return btoa(JSON.stringify({ v: 3, ...data }));
+  return utf8ToBase64(JSON.stringify({ v: 3, ...data }));
 }
 
 export function parseWorkData(raw: string): CollaborateWorkData | null {

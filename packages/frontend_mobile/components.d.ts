@@ -12,6 +12,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    CollabShareModal: typeof import('./src/components/CollabShareModal.vue')['default']
     DialogBase: typeof import('./src/components/DialogBase.vue')['default']
     FloatingPopup: typeof import('./src/components/FloatingPopup.vue')['default']
     MxIcon: typeof import('./src/components/MxIcon.vue')['default']
@@ -41,6 +42,7 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const CollabShareModal: typeof import('./src/components/CollabShareModal.vue')['default']
   const DialogBase: typeof import('./src/components/DialogBase.vue')['default']
   const FloatingPopup: typeof import('./src/components/FloatingPopup.vue')['default']
   const MxIcon: typeof import('./src/components/MxIcon.vue')['default']

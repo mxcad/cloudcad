@@ -262,33 +262,68 @@ const Icons = {
     </svg>
   ),
   FolderOpen: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   ),
   ExternalLink: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
   ),
   FolderUp: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" />
       <polyline points="15 15 18 12 21 15" />
       <line x1="18" y1="12" x2="18" y2="21" />
     </svg>
   ),
   NewFolder: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1" />
       <line x1="12" y1="11" x2="12" y2="17" />
       <line x1="9" y1="14" x2="15" y2="14" />
     </svg>
   ),
   Cut: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <circle cx="6" cy="6" r="3" />
       <circle cx="6" cy="18" r="3" />
       <line x1="8.12" y1="8.12" x2="15.88" y2="15.88" />
@@ -372,6 +407,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
       // 在回收站视图中显示恢复按钮
       return isTrash && !!onRestore;
     },
+    permissionCheck: ({ canManageTrash }) => canManageTrash !== false,
   },
   delete: {
     type: 'delete',
@@ -402,6 +438,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isTrash, isRoot, onPermanentlyDelete }) =>
       // 在回收站视图中显示彻底删除按钮
       isTrash && !!onPermanentlyDelete,
+    permissionCheck: ({ canManageTrash }) => canManageTrash !== false,
   },
   edit: {
     type: 'edit',
@@ -476,8 +513,14 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     icon: <Icons.FolderUp />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
-    visibilityCheck: ({ isRoot, isTrash, isSearchResult, onOpenFileLocation }) => {
-      if (isRoot || isTrash || !isSearchResult || !onOpenFileLocation) return false;
+    visibilityCheck: ({
+      isRoot,
+      isTrash,
+      isSearchResult,
+      onOpenFileLocation,
+    }) => {
+      if (isRoot || isTrash || !isSearchResult || !onOpenFileLocation)
+        return false;
       return true;
     },
   },
@@ -523,6 +566,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     hoverClass: 'hover:bg-slate-50',
     visibilityCheck: ({ isFolder, isRoot, isTrash, onDownloadFolder }) =>
       isFolder && !isRoot && !isTrash && !!onDownloadFolder,
+    permissionCheck: ({ canDownload }) => canDownload !== false,
   },
   copy_path: {
     type: 'copy_path',
@@ -585,7 +629,10 @@ export const getAction = (type: ActionType): FileAction => {
 /**
  * 操作变体映射（共享给右键菜单和三点菜单）
  */
-export const ACTION_VARIANT_MAP: Record<string, 'default' | 'danger' | 'success' | 'info' | 'warning'> = {
+export const ACTION_VARIANT_MAP: Record<
+  string,
+  'default' | 'danger' | 'success' | 'info' | 'warning'
+> = {
   upload_external_reference: 'warning',
   download: 'default',
   view_version_history: 'info',
@@ -610,19 +657,12 @@ export const ACTION_VARIANT_MAP: Record<string, 'default' | 'danger' | 'success'
   copy_path: 'default',
 };
 
-const SECONDARY_ACTION_TYPES = new Set<ActionType>([
-  'move', 'copy', 'copy_clipboard', 'cut',
-  'open_in_new_tab', 'open_file_location', 'copy_path',
-  'new_folder',
-]);
-
 /**
- * 将操作列表分组为主操作、次要操作（子菜单）、危险操作
+ * 将操作列表分组为主操作和危险操作
  */
 export function getActionGroups(actions: FileAction[]) {
   return {
-    secondary: actions.filter((a) => SECONDARY_ACTION_TYPES.has(a.type)),
-    main: actions.filter((a) => !a.isDestructive && !SECONDARY_ACTION_TYPES.has(a.type)),
+    main: actions.filter((a) => !a.isDestructive),
     destructive: actions.filter((a) => a.isDestructive),
   };
 }

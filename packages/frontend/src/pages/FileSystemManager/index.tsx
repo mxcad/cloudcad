@@ -1,10 +1,12 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import { createPortal } from 'react-dom';
-import {
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -39,7 +41,10 @@ import { ShareDialog } from '@/components/modals/ShareDialog';
 import { isAbortError, handleError } from '@/utils/errorHandler';
 import { client } from '@/api-sdk/client.gen';
 import type { ProjectFilterType } from '@/api-sdk';
-import { useFileSystemClipboardStore, type ClipboardMode } from '@/stores/fileSystemClipboardStore';
+import {
+  useFileSystemClipboardStore,
+  type ClipboardMode,
+} from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { useFileSystemShortcuts } from '@/hooks/file-system/useFileSystemShortcuts';
 
@@ -171,13 +176,17 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   const isAtRoot = mode === 'personal-space' ? false : !urlProjectId;
   const displayNodes = Array.isArray(nodes) ? nodes : [];
-  const [accumulatedNodes, setAccumulatedNodes] = useState<FileSystemNode[]>(displayNodes);
+  const [accumulatedNodes, setAccumulatedNodes] =
+    useState<FileSystemNode[]>(displayNodes);
   const loadDirectionRef = useRef<'next' | 'prev' | null>(null);
 
-  const handleScrollPageChange = useCallback((page: number, direction: 'prev' | 'next') => {
-    loadDirectionRef.current = direction;
-    handlePageChange(page);
-  }, [handlePageChange]);
+  const handleScrollPageChange = useCallback(
+    (page: number, direction: 'prev' | 'next') => {
+      loadDirectionRef.current = direction;
+      handlePageChange(page);
+    },
+    [handlePageChange]
+  );
 
   useEffect(() => {
     const dir = loadDirectionRef.current;
@@ -187,14 +196,18 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       setAccumulatedNodes((prev) => {
         const map = new Map<string, FileSystemNode>();
         prev.forEach((n) => map.set(n.id, n));
-        displayNodes.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        displayNodes.forEach((n) => {
+          if (!map.has(n.id)) map.set(n.id, n);
+        });
         return Array.from(map.values());
       });
     } else if (dir === 'prev') {
       setAccumulatedNodes((prev) => {
         const map = new Map<string, FileSystemNode>();
         displayNodes.forEach((n) => map.set(n.id, n));
-        prev.forEach((n) => { if (!map.has(n.id)) map.set(n.id, n); });
+        prev.forEach((n) => {
+          if (!map.has(n.id)) map.set(n.id, n);
+        });
         return Array.from(map.values());
       });
     } else {
@@ -206,13 +219,19 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   const currentAncestorPath = useMemo(() => {
     if (isAtRoot || isTrashView || breadcrumbs.length <= 1) return '';
-    return breadcrumbs.slice(1).map((c) => c.name).join(' > ');
+    return breadcrumbs
+      .slice(1)
+      .map((c) => c.name)
+      .join(' > ');
   }, [isAtRoot, isTrashView, breadcrumbs]);
 
-  const handleFileOpen = useCallback((node: FileSystemNode) => {
-    clearSelection();
-    handleFileOpenRaw(node);
-  }, [clearSelection, handleFileOpenRaw]);
+  const handleFileOpen = useCallback(
+    (node: FileSystemNode) => {
+      clearSelection();
+      handleFileOpenRaw(node);
+    },
+    [clearSelection, handleFileOpenRaw]
+  );
 
   const clipboardHandleCopy = useCallback(() => {
     if (selectedNodes.size === 0) {
@@ -259,7 +278,8 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     }
 
     if (projectId) {
-      const sourceProjectId = useFileSystemClipboardStore.getState().sourceProjectId;
+      const sourceProjectId =
+        useFileSystemClipboardStore.getState().sourceProjectId;
       if (sourceProjectId && sourceProjectId !== projectId) {
         showToast('不能跨项目粘贴', 'error');
         return;
@@ -274,9 +294,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
     try {
       if (clipboardMode === 'cut') {
-        const origParentIds = useFileSystemClipboardStore.getState().sourceParentIds;
+        const origParentIds =
+          useFileSystemClipboardStore.getState().sourceParentIds;
         for (const nodeId of items) {
-          const result = await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+          const result = await fileSystemControllerMoveNode({
+            path: { nodeId },
+            body: { targetParentId },
+            throwOnError: true,
+          });
         }
         clearClipboard();
         showToast('粘贴成功', 'success');
@@ -286,13 +311,21 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           projectId: urlProjectId || undefined,
           execute: async () => {
             for (const nodeId of items) {
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
+              await fileSystemControllerMoveNode({
+                path: { nodeId },
+                body: { targetParentId },
+                throwOnError: true,
+              });
             }
           },
           rollback: async () => {
             for (const [nodeId, srcParentId] of Object.entries(origParentIds)) {
               if (!srcParentId) continue;
-              await fileSystemControllerMoveNode({ path: { nodeId }, body: { targetParentId: srcParentId }, throwOnError: true });
+              await fileSystemControllerMoveNode({
+                path: { nodeId },
+                body: { targetParentId: srcParentId },
+                throwOnError: true,
+              });
             }
           },
         };
@@ -301,12 +334,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         const createdIdsRef: { current: string[] } = { current: [] };
         for (const nodeId of items) {
           try {
-            const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
-            const data = (result as unknown as { data?: { id?: string } })?.data || result;
+            const result = await fileSystemControllerCopyNode({
+              path: { nodeId },
+              body: { targetParentId },
+              throwOnError: true,
+            });
+            const data =
+              (result as unknown as { data?: { id?: string } })?.data || result;
             const newId = (data as unknown as { id?: string })?.id || '';
             if (newId) createdIdsRef.current.push(newId);
-          } catch (e) {
-          }
+          } catch (e) {}
         }
         showToast('粘贴成功', 'success');
         if (createdIdsRef.current.length > 0) {
@@ -317,8 +354,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             execute: async () => {
               const newIds: string[] = [];
               for (const nodeId of items) {
-                const result = await fileSystemControllerCopyNode({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
-                const data = (result as unknown as { data?: { id?: string } })?.data || result;
+                const result = await fileSystemControllerCopyNode({
+                  path: { nodeId },
+                  body: { targetParentId },
+                  throwOnError: true,
+                });
+                const data =
+                  (result as unknown as { data?: { id?: string } })?.data ||
+                  result;
                 const newId = (data as unknown as { id?: string })?.id || '';
                 if (newId) newIds.push(newId);
               }
@@ -327,9 +370,19 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             rollback: async () => {
               for (const id of createdIdsRef.current) {
                 try {
-                  await fileSystemControllerDeleteNode({ path: { nodeId: id }, query: { permanently: true }, throwOnError: true });
+                  await fileSystemControllerDeleteNode({
+                    path: { nodeId: id },
+                    query: { permanently: true },
+                    throwOnError: true,
+                  });
                 } catch (e) {
-                  if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'NOT_FOUND') continue;
+                  if (
+                    e &&
+                    typeof e === 'object' &&
+                    'code' in e &&
+                    (e as { code: string }).code === 'NOT_FOUND'
+                  )
+                    continue;
                   throw e;
                 }
               }
@@ -342,11 +395,24 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       const appError = handleError(error, '粘贴', 'medium');
       showToast(appError.message, 'error');
     }
-  }, [clipboardItems, clipboardMode, projectId, currentNode, nodes, clearClipboard, handleRefresh, showToast, pushAction]);
+  }, [
+    clipboardItems,
+    clipboardMode,
+    projectId,
+    currentNode,
+    nodes,
+    clearClipboard,
+    handleRefresh,
+    showToast,
+    pushAction,
+  ]);
 
-  const handleRubberBandSelect = useCallback((nodeIds: string[]) => {
-    selectNodes(nodeIds);
-  }, [selectNodes]);
+  const handleRubberBandSelect = useCallback(
+    (nodeIds: string[]) => {
+      selectNodes(nodeIds);
+    },
+    [selectNodes]
+  );
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedNodes.size === 0) return;
@@ -391,6 +457,19 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     }
   }, [redoStack, undoStoreRedo, projectId, handleRefresh, showToast]);
 
+  const { permissions: projectPermissions } =
+    useProjectPermissions(urlProjectId);
+
+  const projectPermissionsRecord: Record<string, boolean> =
+    projectPermissions as unknown as Record<string, boolean>;
+
+  const canCut = projectPermissionsRecord['FILE_MOVE'] !== false;
+  const canCopy = projectPermissionsRecord['FILE_COPY'] !== false;
+  const canDelete = projectPermissionsRecord['FILE_DELETE'] !== false;
+  const canRestore = projectPermissionsRecord['FILE_TRASH_MANAGE'] !== false;
+  const canUpload = projectPermissionsRecord['FILE_UPLOAD'] !== false;
+  const canPaste = clipboardMode === 'cut' ? canCut : canCopy;
+
   useFileSystemShortcuts({
     containerRef,
     enabled: true,
@@ -408,6 +487,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     canCut,
     canDelete,
     canPaste,
+    canRename: projectPermissionsRecord['FILE_EDIT'] !== false,
   });
 
   const {
@@ -444,7 +524,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     } else if (personalSpaceQuery.isError) {
       setPersonalSpaceIdLoading(false);
     }
-  }, [personalSpaceQuery.data, personalSpaceQuery.isError, setPersonalSpaceId, setPersonalSpaceIdLoading]);
+  }, [
+    personalSpaceQuery.data,
+    personalSpaceQuery.isError,
+    setPersonalSpaceId,
+    setPersonalSpaceIdLoading,
+  ]);
 
   const { hasPermission } = usePermission();
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
@@ -465,12 +550,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   >(new Map());
 
   const [permissionsLoading, setPermissionsLoading] = useState(false);
-
-  const { permissions: projectPermissions } =
-    useProjectPermissions(urlProjectId);
-
-  const projectPermissionsRecord: Record<string, boolean> =
-    projectPermissions as unknown as Record<string, boolean>;
 
   const {
     showVersionHistoryModal,
@@ -527,13 +606,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     }
   }, [currentNode]);
 
-  const { isDragOver: isFileDragOver, dropHandlers: fileDropHandlers } = useFileDropUpload({
-    nodeId: getCurrentParentId,
-    openAfterUpload: false,
-    onSuccess: () => {
-      handleRefresh();
-    },
-  });
+  const { isDragOver: isFileDragOver, dropHandlers: fileDropHandlers } =
+    useFileDropUpload({
+      nodeId: getCurrentParentId,
+      openAfterUpload: false,
+      onSuccess: () => {
+        handleRefresh();
+      },
+    });
 
   useEffect(() => {
     if (!user) return;
@@ -570,7 +650,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               canManageNodeRoles(user, nodeId),
             ]);
 
-          return { nodeId, canEdit, canDelete, canManageMembers, canManageRoles };
+          return {
+            nodeId,
+            canEdit,
+            canDelete,
+            canManageMembers,
+            canManageRoles,
+          };
         });
 
         const permissionsResults = await Promise.all(permissionsPromises);
@@ -654,7 +740,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     const pageNum = parseInt(pageFromUrl, 10);
     if (isNaN(pageNum) || pageNum < 1) return;
 
-    if (prevPageFromUrlRef.current !== pageFromUrl || pagination.page !== pageNum) {
+    if (
+      prevPageFromUrlRef.current !== pageFromUrl ||
+      pagination.page !== pageNum
+    ) {
       prevPageFromUrlRef.current = pageFromUrl;
       handlePageChange(pageNum);
     }
@@ -679,111 +768,147 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const buildNodeUrl = useCallback((node: FileSystemNode): string => {
-    if (mode === 'personal-space') {
-      return `/personal-space/${node.id}`;
-    }
-    const pid = urlProjectId || node.projectId;
-    if (pid) {
-      return `/projects/${pid}/files/${node.id}`;
-    }
-    return '#';
-  }, [mode, urlProjectId]);
-
-  const handleOpen = useCallback((node: FileSystemNode) => {
-    handleEnterFolder(node);
-  }, [handleEnterFolder]);
-
-  const handleOpenInNewTab = useCallback((node: FileSystemNode) => {
-    const url = buildNodeUrl(node);
-    if (url !== '#') window.open(window.location.origin + url, '_blank');
-  }, [buildNodeUrl]);
-
-  const handleBreadcrumbPathSubmit = useCallback(async (path: string) => {
-    // 编辑框使用 " / " 分隔，后端要求 " > " 分隔
-    const normalizedPath = path.replace(/\s*\/\s*/g, ' > ');
-    const query: Record<string, string> = { path: normalizedPath };
-    if (mode === 'project' && urlProjectId) {
-      query.projectId = urlProjectId;
-    }
-    if (!query.projectId && mode !== 'personal-space') return;
-    try {
-      const { data } = await client.get({
-        url: `/api/v1/file-system/resolve-path`,
-        query,
-        throwOnError: true,
-      });
-      const node = data as unknown as FileSystemNode;
-      if (node?.id) {
-        const url = buildNodeUrl(node);
-        navigate(url);
+  const buildNodeUrl = useCallback(
+    (node: FileSystemNode): string => {
+      if (mode === 'personal-space') {
+        return `/personal-space/${node.id}`;
       }
-    } catch {
-      showToast('路径不存在或无法访问', 'error');
-    }
-  }, [mode, urlProjectId, navigate, buildNodeUrl, showToast]);
+      const pid = urlProjectId || node.projectId;
+      if (pid) {
+        return `/projects/${pid}/files/${node.id}`;
+      }
+      return '#';
+    },
+    [mode, urlProjectId]
+  );
 
-  const handleOpenFileLocation = useCallback(async (node: FileSystemNode) => {
-    if (!node.parentId) return;
-    try {
-      const pageSize = pagination?.limit || 30;
-      type ContextResponse = { 200: { parentId: string; pageNumber: number } };
-      const { data } = await client.get<ContextResponse, unknown, true>({
-        url: `/api/v1/file-system/nodes/${node.id}/parent-context`,
-        query: { pageSize },
-        throwOnError: true,
-      });
-      const ctx = data as unknown as { parentId: string; pageNumber: number };
-      const baseUrl = buildNodeUrl({ ...node, id: node.parentId } as FileSystemNode);
-      const url = `${window.location.origin}${baseUrl}?highlight=${node.id}&page=${ctx.pageNumber}`;
-      window.open(url, '_blank');
-    } catch {
-      const baseUrl = buildNodeUrl({ ...node, id: node.parentId } as FileSystemNode);
-      window.open(window.location.origin + baseUrl, '_blank');
-    }
-  }, [buildNodeUrl, pagination]);
+  const handleOpen = useCallback(
+    (node: FileSystemNode) => {
+      handleEnterFolder(node);
+    },
+    [handleEnterFolder]
+  );
 
-  const handleNewFolder = useCallback((node: FileSystemNode) => {
-    const store = useFileSystemStore.getState();
-    store.setCurrentParentId(node.id);
-    setShowCreateFolderModal(true);
-  }, [setShowCreateFolderModal]);
+  const handleOpenInNewTab = useCallback(
+    (node: FileSystemNode) => {
+      const url = buildNodeUrl(node);
+      if (url !== '#') window.open(window.location.origin + url, '_blank');
+    },
+    [buildNodeUrl]
+  );
 
-  const handleCopyClipboard = useCallback((node: FileSystemNode) => {
-    useFileSystemClipboardStore.getState().setClipboard(
-      [node.id],
-      'copy',
-      urlProjectId || '',
-      { [node.id]: node.parentId || '' },
-    );
-    showToast('已复制', 'info');
-  }, [urlProjectId, showToast]);
+  const handleBreadcrumbPathSubmit = useCallback(
+    async (path: string) => {
+      // 编辑框使用 " / " 分隔，后端要求 " > " 分隔
+      const normalizedPath = path.replace(/\s*\/\s*/g, ' > ');
+      const query: Record<string, string> = { path: normalizedPath };
+      if (mode === 'project' && urlProjectId) {
+        query.projectId = urlProjectId;
+      }
+      if (!query.projectId && mode !== 'personal-space') return;
+      try {
+        const { data } = await client.get({
+          url: `/api/v1/file-system/resolve-path`,
+          query,
+          throwOnError: true,
+        });
+        const node = data as unknown as FileSystemNode;
+        if (node?.id) {
+          const url = buildNodeUrl(node);
+          navigate(url);
+        }
+      } catch {
+        showToast('路径不存在或无法访问', 'error');
+      }
+    },
+    [mode, urlProjectId, navigate, buildNodeUrl, showToast]
+  );
 
-  const handleCut = useCallback((node: FileSystemNode) => {
-    useFileSystemClipboardStore.getState().setClipboard(
-      [node.id],
-      'cut',
-      urlProjectId || '',
-      { [node.id]: node.parentId || '' },
-    );
-    showToast('已剪切', 'info');
-  }, [urlProjectId, showToast]);
+  const handleOpenFileLocation = useCallback(
+    async (node: FileSystemNode) => {
+      if (!node.parentId) return;
+      try {
+        const pageSize = pagination?.limit || 30;
+        type ContextResponse = {
+          200: { parentId: string; pageNumber: number };
+        };
+        const { data } = await client.get<ContextResponse, unknown, true>({
+          url: `/api/v1/file-system/nodes/${node.id}/parent-context`,
+          query: { pageSize },
+          throwOnError: true,
+        });
+        const ctx = data as unknown as { parentId: string; pageNumber: number };
+        const baseUrl = buildNodeUrl({
+          ...node,
+          id: node.parentId,
+        } as FileSystemNode);
+        const url = `${window.location.origin}${baseUrl}?highlight=${node.id}&page=${ctx.pageNumber}`;
+        window.open(url, '_blank');
+      } catch {
+        const baseUrl = buildNodeUrl({
+          ...node,
+          id: node.parentId,
+        } as FileSystemNode);
+        window.open(window.location.origin + baseUrl, '_blank');
+      }
+    },
+    [buildNodeUrl, pagination]
+  );
 
-  const handleDownloadFolder = useCallback((node: FileSystemNode) => {
-    handleDownload(node);
-  }, [handleDownload]);
+  const handleNewFolder = useCallback(
+    (node: FileSystemNode) => {
+      const store = useFileSystemStore.getState();
+      store.setCurrentParentId(node.id);
+      setShowCreateFolderModal(true);
+    },
+    [setShowCreateFolderModal]
+  );
 
-  const handleCopyPath = useCallback(async (node: FileSystemNode) => {
-    const path = node.ancestorPath
-      ? `${node.ancestorPath} > ${node.name}`
-      : node.name;
-    try {
-      await navigator.clipboard.writeText(path);
-      showToast('路径已复制到剪贴板', 'success');
-    } catch {
-      showToast('复制失败', 'error');
-    }
-  }, [showToast]);
+  const handleCopyClipboard = useCallback(
+    (node: FileSystemNode) => {
+      useFileSystemClipboardStore
+        .getState()
+        .setClipboard([node.id], 'copy', urlProjectId || '', {
+          [node.id]: node.parentId || '',
+        });
+      showToast('已复制', 'info');
+    },
+    [urlProjectId, showToast]
+  );
+
+  const handleCut = useCallback(
+    (node: FileSystemNode) => {
+      useFileSystemClipboardStore
+        .getState()
+        .setClipboard([node.id], 'cut', urlProjectId || '', {
+          [node.id]: node.parentId || '',
+        });
+      showToast('已剪切', 'info');
+    },
+    [urlProjectId, showToast]
+  );
+
+  const handleDownloadFolder = useCallback(
+    (node: FileSystemNode) => {
+      handleDownload(node);
+    },
+    [handleDownload]
+  );
+
+  const handleCopyPath = useCallback(
+    async (node: FileSystemNode) => {
+      const path = node.ancestorPath
+        ? `${node.ancestorPath} > ${node.name}`
+        : node.name;
+      try {
+        await navigator.clipboard.writeText(path);
+        showToast('路径已复制到剪贴板', 'success');
+      } catch {
+        showToast('复制失败', 'error');
+      }
+    },
+    [showToast]
+  );
 
   const handleSubmitProject = useCallback(
     (e: React.FormEvent) => {
@@ -792,21 +917,29 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         handleUpdateProjectSubmit(async (id, data) => {
           await fileSystemControllerUpdateNode({
             path: { nodeId: id },
-            body: { name: data.name ?? undefined, description: data.description },
+            body: {
+              name: data.name ?? undefined,
+              description: data.description,
+            },
             throwOnError: true,
           } as Parameters<typeof fileSystemControllerUpdateNode>[0]);
         });
       } else {
         handleCreateProjectSubmit(async (name, description) => {
-          await fileSystemControllerCreateProject({ body: { name, description }, throwOnError: true } as Parameters<typeof fileSystemControllerCreateProject>[0]);
+          await fileSystemControllerCreateProject({
+            body: { name, description },
+            throwOnError: true,
+          } as Parameters<typeof fileSystemControllerCreateProject>[0]);
         });
       }
     },
     [editingProject, handleCreateProjectSubmit, handleUpdateProjectSubmit]
   );
 
-  const handleUploadExternalReference = useCallback((_node: FileSystemNode) => {
-  }, []);
+  const handleUploadExternalReference = useCallback(
+    (_node: FileSystemNode) => {},
+    []
+  );
 
   const { handleDragStart, handleDragOver, handleDragLeave, handleDrop } =
     useDragAndDrop({
@@ -819,82 +952,150 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     });
 
   const showSelectionBar = selectedNodes.size > 0;
-  const showClipboardBar = !isAtRoot && selectedNodes.size === 0 && clipboardItems.length > 0;
+  const showClipboardBar =
+    !isAtRoot && selectedNodes.size === 0 && clipboardItems.length > 0;
 
   const handleCancelBar = useCallback(() => {
     clearSelection();
     clearClipboard();
   }, [clearSelection, clearClipboard]);
 
-  const canCut = projectPermissionsRecord['FILE_MOVE'] !== false;
-  const canCopy = projectPermissionsRecord['FILE_COPY'] !== false;
-  const canDelete = projectPermissionsRecord['FILE_DELETE'] !== false;
-  const canRestore = projectPermissionsRecord['FILE_TRASH_MANAGE'] !== false;
-  const canPaste = clipboardMode === 'cut' ? canCut : canCopy;
+  const bottomBar =
+    showSelectionBar || showClipboardBar ? (
+      <div className="flex items-center gap-4">
+        {showSelectionBar && (
+          <>
+            <span
+              className="text-sm font-semibold whitespace-nowrap"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              已选中 {selectedNodes.size} 项
+            </span>
+            <div
+              className="w-px h-4"
+              style={{ background: 'var(--border-default)' }}
+            />
 
-  const bottomBar = (showSelectionBar || showClipboardBar) ? (
-    <div className="flex items-center gap-4">
-      {showSelectionBar && (
-        <>
-          <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
-          <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
-
-          {isTrashView && (
-            <Button variant="secondary" onClick={handleBatchRestore} disabled={!canRestore} className="text-emerald-400 hover:text-white">恢复</Button>
-          )}
-
-          {!isTrashView && !isAtRoot && (
-            <>
-               <Button variant="secondary" onClick={clipboardHandleCut} disabled={!canCut} style={{ color: 'var(--text-secondary)' }}>剪切</Button>
-              <Button variant="secondary" onClick={clipboardHandleCopy} disabled={!canCopy} style={{ color: 'var(--text-secondary)' }}>复制</Button>
-            </>
-          )}
-
-          {isTrashView && (
-            <Button variant="secondary" onClick={() => handleBatchDelete(true)} disabled={!canDelete || !canRestore} style={{ color: 'var(--error)' }}>彻底删除</Button>
-          )}
-
-          {!isTrashView && (
-            <Button variant="secondary" onClick={() => handleBatchDelete(false)} disabled={!canDelete} style={{ color: 'var(--error)' }}>删除</Button>
-          )}
-        </>
-      )}
-
-      {(!showSelectionBar || (!isAtRoot && !isTrashView)) && (
-        <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-          <Button
-            variant="secondary"
-            onClick={clipboardHandlePaste}
-            disabled={clipboardItems.length === 0 || !canPaste}
-            style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }}
-            className="relative px-3"
-          >
-            粘贴
-            {clipboardItems.length > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
-                {clipboardItems.length}
-              </span>
+            {isTrashView && (
+              <Button
+                variant="secondary"
+                onClick={handleBatchRestore}
+                disabled={!canRestore}
+                className="text-emerald-400 hover:text-white"
+              >
+                恢复
+              </Button>
             )}
-          </Button>
-          {clipboardItems.length > 0 && (
+
+            {!isTrashView && !isAtRoot && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={clipboardHandleCut}
+                  disabled={!canCut}
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  剪切
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={clipboardHandleCopy}
+                  disabled={!canCopy}
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  复制
+                </Button>
+              </>
+            )}
+
+            {isTrashView && (
+              <Button
+                variant="secondary"
+                onClick={() => handleBatchDelete(true)}
+                disabled={!canDelete || !canRestore}
+                style={{ color: 'var(--error)' }}
+              >
+                彻底删除
+              </Button>
+            )}
+
+            {!isTrashView && (
+              <Button
+                variant="secondary"
+                onClick={() => handleBatchDelete(false)}
+                disabled={!canDelete}
+                style={{ color: 'var(--error)' }}
+              >
+                删除
+              </Button>
+            )}
+          </>
+        )}
+
+        {(!showSelectionBar || (!isAtRoot && !isTrashView)) && (
+          <div
+            className="flex items-center gap-0 rounded-lg"
+            style={{
+              border: '1px solid var(--border-default)',
+              overflow: 'hidden',
+            }}
+          >
             <Button
               variant="secondary"
-              onClick={clearClipboard}
-              style={{ color: 'var(--text-muted)', border: 'none', borderRadius: 0, padding: '0 8px' }}
+              onClick={clipboardHandlePaste}
+              disabled={clipboardItems.length === 0 || !canPaste}
+              style={{
+                color: 'var(--text-secondary)',
+                border: 'none',
+                borderRadius: 0,
+              }}
+              className="relative px-3"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
+              粘贴
+              {clipboardItems.length > 0 && (
+                <span
+                  className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
+                  style={{ background: 'var(--primary-500)', color: '#fff' }}
+                >
+                  {clipboardItems.length}
+                </span>
+              )}
             </Button>
-          )}
-        </div>
-      )}
+            {clipboardItems.length > 0 && (
+              <Button
+                variant="secondary"
+                onClick={clearClipboard}
+                style={{
+                  color: 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: 0,
+                  padding: '0 8px',
+                }}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </Button>
+            )}
+          </div>
+        )}
 
-      <Button variant="secondary" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
-        取消
-      </Button>
-    </div>
-  ) : undefined;
+        <Button
+          variant="secondary"
+          onClick={handleCancelBar}
+          style={{ color: 'var(--text-muted)' }}
+        >
+          取消
+        </Button>
+      </div>
+    ) : undefined;
 
   const showEmpty = displayNodes.length === 0 && !loading && !error;
 
@@ -922,14 +1123,25 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             projectFilter={projectFilter}
             breadcrumbs={breadcrumbs}
             canCreateProject={canCreateProject}
+            canCreate={projectPermissionsRecord['FILE_CREATE'] !== false}
+            canUpload={projectPermissionsRecord['FILE_UPLOAD'] !== false}
             uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
-            getCurrentParentId={() => currentNode?.id || urlNodeId || urlProjectId || ''}
+            getCurrentParentId={() =>
+              currentNode?.id || urlNodeId || urlProjectId || ''
+            }
             onSetSearchTerm={setSearchTerm}
             onSetViewMode={setViewMode}
             onSearchSubmit={handleSearchSubmit}
             onSelectAll={handleSelectAll}
             onToggleTrashView={handleToggleTrashView}
-            onClearTrash={() => handleClearTrash(isTrashView && !isAtRoot ? urlProjectId : undefined)}
+            onClearTrash={
+              canRestore
+                ? () =>
+                    handleClearTrash(
+                      isTrashView && !isAtRoot ? urlProjectId : undefined
+                    )
+                : undefined
+            }
             onProjectFilterChange={setProjectFilter}
             onRefresh={handleRefresh}
             onCreateFolder={() => setShowCreateFolderModal(true)}
@@ -976,13 +1188,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           >
             <div
               className="h-full rounded-2xl flex flex-col overflow-hidden"
-              {...(!isAtRoot ? fileDropHandlers : {})}
+              {...(!isAtRoot && canUpload ? fileDropHandlers : {})}
             >
               {isFileDragOver && (
                 <div
                   className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl pointer-events-none m-0"
                   style={{
-                    background: 'color-mix(in srgb, var(--primary-500) 8%, transparent)',
+                    background:
+                      'color-mix(in srgb, var(--primary-500) 8%, transparent)',
                     border: '2px dashed var(--primary-400)',
                   }}
                 >
@@ -993,8 +1206,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                       boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                     }}
                   >
-                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--primary-500)' }} />
-                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>释放文件以上传到当前目录</span>
+                    <div
+                      className="w-2 h-2 rounded-full animate-pulse"
+                      style={{ background: 'var(--primary-500)' }}
+                    />
+                    <span
+                      className="font-medium"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      释放文件以上传到当前目录
+                    </span>
                   </div>
                 </div>
               )}
@@ -1017,7 +1238,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               ) : (
                 <div className="flex-1 min-h-0 flex flex-col">
                   <FileSystemContent
-                    onClearTrash={() => handleClearTrash(isTrashView && !isAtRoot ? urlProjectId : undefined)}
+                    onClearTrash={() =>
+                      handleClearTrash(
+                        isTrashView && !isAtRoot ? urlProjectId : undefined
+                      )
+                    }
                     nodes={viewNodes}
                     viewMode={viewMode}
                     isTrashView={isTrashView}
@@ -1035,16 +1260,35 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     onRename={handleOpenRename}
                     onRefresh={handleRefresh}
                     onRestore={isTrashView ? handleRestoreNode : undefined}
-                    onEdit={isAtRoot ? (node: FileSystemNode) => openEditProject(node) : undefined}
-                    onDeleteNode={isAtRoot ? (node: FileSystemNode) => {
-                      if (isTrashView) {
-                        handlePermanentlyDeleteProject(node.id, node.name);
-                      } else {
-                        handleDeleteProject(node.id, node.name);
-                      }
-                    } : undefined}
-                    onShowMembers={isAtRoot ? (node: FileSystemNode) => handleShowMembers(node) : undefined}
-                    onShowRoles={isAtRoot ? (node: FileSystemNode) => handleShowRoles(node) : undefined}
+                    onEdit={
+                      isAtRoot
+                        ? (node: FileSystemNode) => openEditProject(node)
+                        : undefined
+                    }
+                    onDeleteNode={
+                      isAtRoot
+                        ? (node: FileSystemNode) => {
+                            if (isTrashView) {
+                              handlePermanentlyDeleteProject(
+                                node.id,
+                                node.name
+                              );
+                            } else {
+                              handleDeleteProject(node.id, node.name);
+                            }
+                          }
+                        : undefined
+                    }
+                    onShowMembers={
+                      isAtRoot
+                        ? (node: FileSystemNode) => handleShowMembers(node)
+                        : undefined
+                    }
+                    onShowRoles={
+                      isAtRoot
+                        ? (node: FileSystemNode) => handleShowRoles(node)
+                        : undefined
+                    }
                     onMove={handleMove}
                     onCopy={handleCopy}
                     onShowVersionHistory={handleShowVersionHistory}
@@ -1053,7 +1297,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    fileDropHandlers={fileDropHandlers}
+                    fileDropHandlers={canUpload ? fileDropHandlers : undefined}
                     isFileDragOver={isFileDragOver}
                     onPageChange={handlePageChange}
                     onPageSizeChange={handlePageSizeChange}
@@ -1063,7 +1307,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     onBatchDelete={() => handleBatchDelete(isTrashView)}
                     onBatchMove={clipboardHandleCut}
                     onBatchCopy={clipboardHandleCopy}
-                    onBatchRestore={isTrashView ? handleBatchRestore : undefined}
+                    onBatchRestore={
+                      isTrashView ? handleBatchRestore : undefined
+                    }
                     loading={loading || isFetching}
                     currentPage={paginationMeta?.page}
                     totalPages={paginationMeta?.totalPages}
@@ -1079,11 +1325,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     onCut={handleCut}
                     onDownloadFolder={handleDownloadFolder}
                     onCopyPath={handleCopyPath}
-                    onCreateFolderInCurrentDir={() => setShowCreateFolderModal(true)}
-                    onCreateDrawingInCurrentDir={() => setShowCreateDrawingModal(true)}
+                    onCreateFolderInCurrentDir={() =>
+                      setShowCreateFolderModal(true)
+                    }
+                    onCreateDrawingInCurrentDir={() =>
+                      setShowCreateDrawingModal(true)
+                    }
                     onUpload={() => uploaderRef.current?.triggerUpload()}
                     onPasteInCurrentDir={clipboardHandlePaste}
                     clipboardHasItems={clipboardItems.length > 0}
+                    clipboardMode={clipboardMode}
                     onCreateProject={openCreateProject}
                   />
                 </div>
@@ -1092,7 +1343,13 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           </div>
           {bottomBar && (
             <div className="flex-shrink-0 flex justify-center">
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+              <div
+                className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                }}
+              >
                 {bottomBar}
               </div>
             </div>
@@ -1151,7 +1408,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         title="确认删除项目"
         footer={
           <>
-            <Button variant="secondary" onClick={cancelDelete} disabled={projectLoading}>
+            <Button
+              variant="secondary"
+              onClick={cancelDelete}
+              disabled={projectLoading}
+            >
               取消
             </Button>
             <Button
@@ -1167,9 +1428,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         <div className="space-y-4">
           <div
             className="flex items-start gap-3 p-4 rounded-lg"
-            style={{ background: 'var(--warning-dim)', border: '1px solid var(--warning)' }}
+            style={{
+              background: 'var(--warning-dim)',
+              border: '1px solid var(--warning)',
+            }}
           >
-            <AlertCircle size={20} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--warning)' }} />
+            <AlertCircle
+              size={20}
+              className="flex-shrink-0 mt-0.5"
+              style={{ color: 'var(--warning)' }}
+            />
             <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               <p className="font-semibold mb-1">重要提示</p>
               <p style={{ color: 'var(--text-tertiary)' }}>
@@ -1179,15 +1447,27 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           </div>
           {projectToDelete && (
             <div className="space-y-2">
-              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
                 删除项目：
               </p>
-              <div className="p-3 rounded-lg" style={{ background: 'var(--bg-tertiary)' }}>
-                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              <div
+                className="p-3 rounded-lg"
+                style={{ background: 'var(--bg-tertiary)' }}
+              >
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
                   {projectToDelete.name}
                 </p>
                 {projectToDelete.description && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
                     {projectToDelete.description}
                   </p>
                 )}
@@ -1267,7 +1547,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         }}
         fileId={shareFileId ?? undefined}
       />
-
     </>
   );
 };

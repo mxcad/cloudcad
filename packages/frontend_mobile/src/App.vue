@@ -11,14 +11,17 @@ import { isAndroidOrIOS } from './utils/isAndroidOrIOS'
 const isShareRoute = /^\/share\//.test(window.location.pathname);
 
 if (!isShareRoute && !isAndroidOrIOS() && serverConfig?.isAutomaticJumpToDesktopPage) {
-  if (import.meta.env.DEV) {
-    window.location.replace(
-      'http://localhost:3000/cad-editor' + window.location.search
-    )
-  } else {
-    const desktopUrl = serverConfig.desktopPageUrl || '/cad-editor'
-    window.location.replace(desktopUrl + window.location.search)
+  const params = new URLSearchParams(window.location.search)
+  const fileId = params.get('fileId')
+  let targetPath = import.meta.env.DEV
+    ? 'http://localhost:3000/cad-editor'
+    : (serverConfig.desktopPageUrl || '/cad-editor')
+  if (fileId) {
+    params.delete('fileId')
+    targetPath += '/' + fileId
   }
+  const queryString = params.toString()
+  window.location.replace(queryString ? targetPath + '?' + queryString : targetPath)
 }
 </script>
 

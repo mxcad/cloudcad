@@ -26,7 +26,11 @@ function extractTokensFromUrl() {
   url.searchParams.delete('refreshToken');
   url.searchParams.delete('user');
   window.history.replaceState({}, '', url.toString());
-  window.close();
+  // 只有 popup 窗口（移动端登录流程）才关闭自身，
+  // 直接重定向（PC→移动端）时不关闭
+  if (window.opener) {
+    window.close();
+  }
 }
 if (typeof window !== 'undefined') {
   extractTokensFromUrl();

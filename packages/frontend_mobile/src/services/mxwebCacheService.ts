@@ -69,7 +69,18 @@ export async function clearMxwebCache(cacheKey: string): Promise<void> {
   }
 }
 
-export function buildCacheKey(filePath: string, revision?: number): string {
+/**
+ * 构建缓存 key。
+ * @param filePath 文件路径
+ * @param versionOrTimestamp 版本号或 updatedAt 时间戳（毫秒）
+ *   - 传入数字：作为 updatedAt 时间戳 → `{path}?t={ts}`
+ *   - 传入字符串（数字格式）：同上
+ *   - undefined：最新版本 → `{path}?t=latest`
+ */
+export function buildCacheKey(filePath: string, versionOrTimestamp?: number | string): string {
   const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  return revision ? `${cleanPath}?v=${revision}` : cleanPath;
+  if (versionOrTimestamp === undefined) {
+    return `${cleanPath}?t=latest`;
+  }
+  return `${cleanPath}?t=${versionOrTimestamp}`;
 }

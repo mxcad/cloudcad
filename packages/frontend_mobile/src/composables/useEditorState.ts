@@ -21,6 +21,12 @@ interface EditorState {
   isPublicFile: boolean;
   updatedAt: string | null;
   expectedTimestamp: string | null;
+
+  // 协同状态
+  isInCollaboration: boolean;
+  collaborationWorkId: number | null;
+  fromCollabShare: boolean;
+  targetCollabWorkId: number | null;
 }
 
 const state = reactive<EditorState>({
@@ -42,6 +48,10 @@ const state = reactive<EditorState>({
   isPublicFile: false,
   updatedAt: null,
   expectedTimestamp: null,
+  isInCollaboration: false,
+  collaborationWorkId: null,
+  fromCollabShare: false,
+  targetCollabWorkId: null,
 });
 
 export function useEditorState() {
@@ -102,6 +112,16 @@ export function useEditorState() {
     state.isPublicFile = val;
   }
 
+  function setCollaborationState({ isInCollaboration, workId }: { isInCollaboration: boolean; workId: number | null }) {
+    state.isInCollaboration = isInCollaboration;
+    state.collaborationWorkId = workId;
+  }
+
+  function setCollabShareState({ fromCollabShare, targetWorkId }: { fromCollabShare: boolean; targetWorkId: number | null }) {
+    state.fromCollabShare = fromCollabShare;
+    state.targetCollabWorkId = targetWorkId;
+  }
+
   function setNewFileInfo() {
     state.fileId = '';
     state.projectId = null;
@@ -136,6 +156,10 @@ export function useEditorState() {
     state.isPublicFile = false;
     state.updatedAt = null;
     state.expectedTimestamp = null;
+    state.isInCollaboration = false;
+    state.collaborationWorkId = null;
+    state.fromCollabShare = false;
+    state.targetCollabWorkId = null;
   }
 
   function resetNewFile() {
@@ -165,6 +189,8 @@ export function useEditorState() {
     setExpectedTimestamp,
     setCurrentVersion,
     setIsPublicFile,
+    setCollaborationState,
+    setCollabShareState,
     setNewFileInfo,
     reset,
     resetNewFile,

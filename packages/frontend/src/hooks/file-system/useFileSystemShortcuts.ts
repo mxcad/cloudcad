@@ -19,12 +19,14 @@ interface UseFileSystemShortcutsOptions {
   canCut?: boolean;
   canDelete?: boolean;
   canPaste?: boolean;
+  canRename?: boolean;
 }
 
 function isInputFocused(): boolean {
   const tag = document.activeElement?.tagName?.toLowerCase();
   if (tag === 'input' || tag === 'textarea') return true;
-  if (document.activeElement?.getAttribute('contenteditable') === 'true') return true;
+  if (document.activeElement?.getAttribute('contenteditable') === 'true')
+    return true;
   return false;
 }
 
@@ -49,6 +51,7 @@ export function useFileSystemShortcuts({
   canCut = true,
   canDelete = true,
   canPaste = true,
+  canRename = true,
 }: UseFileSystemShortcutsOptions) {
   const onUndoRef = useRef(onUndo);
   onUndoRef.current = onUndo;
@@ -79,6 +82,8 @@ export function useFileSystemShortcuts({
   canDeleteRef.current = canDelete;
   const canPasteRef = useRef(canPaste);
   canPasteRef.current = canPaste;
+  const canRenameRef = useRef(canRename);
+  canRenameRef.current = canRename;
 
   useEffect(() => {
     if (!enabled) return;
@@ -88,7 +93,11 @@ export function useFileSystemShortcuts({
 
       if (containerRef?.current) {
         const activeEl = document.activeElement;
-        if (activeEl && activeEl !== document.body && !containerRef.current.contains(activeEl)) {
+        if (
+          activeEl &&
+          activeEl !== document.body &&
+          !containerRef.current.contains(activeEl)
+        ) {
           return;
         }
       }
@@ -146,6 +155,7 @@ export function useFileSystemShortcuts({
           return;
         }
         case 'F2': {
+          if (!canRenameRef.current) return;
           e.preventDefault();
           onRenameSelectedRef.current();
           return;

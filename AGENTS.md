@@ -142,6 +142,64 @@ const fileInfo = store.currentFileInfo;
 - 使用 `postcss-pxtorem` + `lib-flexible` 做移动端适配
 - 构建时自动编译 i18n → vite build
 
+### 移动端协同 (frontend_mobile) 实现要点
+
+**核心文件**:
+| 文件 | 作用 |
+|------|------|
+| `src/composables/useCooperate.ts` | 协同 SDK 封装（V3 work data、CRUD、participants、name resolution） |
+| `src/composables/useEditorState.ts` | 协同状态（`isInCollaboration`、`collaborationWorkId`、`fromCollabShare`、`targetCollabWorkId`） |
+| `src/pages/home/index.vue` | URL 参数解析、auto-join 重试（`startAutoJoin`）、"协同中"指示器 |
+| `src/pages/home/components/CooperatePopup.vue` | 协同弹窗 UI（会话卡片+分组列表，`#footer` slot 放创建按钮） |
+| `src/components/CollabShareModal.vue` | 协同分享弹窗（URL + QR code + 复制） |
+
+**协同 SDK (mxcad-app cooperate) 行为**:
+- `createWrok()` → 用 V3 work data（含 `drawingName`、`sourceType`、`creatorId`）创建 session，创建成功后**自动加入**，无需再调 `joinWork`
+- `joinWork()` → 连接已有 session，SDK **内部自动加载文件**
+- `exitWrok()` → 断开连接，回退本地编辑
+- `getWorks()` → 获取活跃 work 列表，回调返回 `Work[]`
+- `init()` 只需调用一次（通过模块级 `cooperateInit` 守卫）
+
+**状态管理**（和 PC 不同，PC 用 Zustand，移动端用 Vue reactive）:
+- `useCooperate()` 返回 module-level `ref`（跨组件实例共享），包括 `works`、`currentWorkId`、`fileNameCache`、`projectNameCache`、`myProjectIds`
+- `useEditorState()` 管理协同状态字段：`isInCollaboration`、`collaborationWorkId`、`fromCollabShare`、`targetCollabWorkId`
+- 退出/创建/加入操作会在两者之间同步（通过 `useEditorState().setCollaborationState()`）
+
+**工作数据编码**:
+- 统一使用 V3 work data（对齐 PC `collaboration.ts`）: `encodeV3WorkData()` / `encodeUserData()` / `parseWorkData()` / `parseUserData()`
+- 编码用 `TextEncoder`/`TextDecoder` 处理中文，PC 同样的 `utf8ToBase64` / `base64ToUtf8`
+- work_data 中 `drawingName` 通过 SDK `getWorks()` 回调后，从 V3 字段解析得到
+
+**API 认证**:
+- hey-api client 的 auth interceptor 在 `src/utils/apiConfig.ts` 的 `setupApiClient()` 中配置，`main.ts` 启动时调用
+- 使用 `client.interceptors.request.use()` 注入 `Authorization: Bearer`（与 PC `clientSetup.ts` 一致）
+- token 从 `localStorage.getItem('accessToken')` 读取
+
+**Auto-join 流程**:
+- URL 含 `collabWorkId` 时 → `index.vue` onMounted 中解析 → 设置 `fromCollabShare` + `targetCollabWorkId` → 初始化 CAD 引擎 → 调用 `startAutoJoin(workId)`
+- `startAutoJoin` 内重试循环：500ms 后开始，每 1s 重试，最多 30 次
+- 重试前检查：`user` 是否登录、`exitGuardRef` 是否激活
+- 成功后：设置 `isInCollaboration` → 调 `getWorks()` 从 work_data 解析 `drawingName` → 更新文件名
+- 退出后设置 `exitGuardRef`（3s 后清除），防止 auto-join 干扰
+
+**并发控制**:
+- `joiningLockRef`：阻止并发 joinWork（module-level 对象引用）
+- `exitGuardRef`：阻止退出后立即自动加入
+- `handleCreateWork`/`handleJoinWork` 前检查 `connecting` ref + 未保存更改确认
+
+**UI 约定**:
+- 所有弹窗继承 `FloatingPopup` 组件
+- 底部主操作按钮必须放在 `<template #footer>` slot 中（`block round size="large"`），和 SharePopup 一致
+- 字体/间距使用全局 CSS 变量：`var(--font-size-body)` `var(--font-size-sm)` `var(--space-lg)` `var(--space-md)` `var(--text-primary)` `var(--bg-elevated)` `var(--border-color)` 等
+- 卡片 10px 圆角，`var(--space-md) var(--space-lg)` 内边距
+- 按钮统一 `round` 圆角 + `size="small"`（卡片内）/ `size="large"`（footer）
+- 头像 26px 圆，最多显示 5 个头像，超出 +N
+
+**入口**:
+- 顶部菜单 "实时协同"（`Mx_ShowCollaborate` cmd）在 `mxUIConfig.json` 中注册
+- 命令注册在 `useMenu.ts`：`addCommand("Mx_ShowCollaborate", ...)` → `window.dispatchEvent('mxcad-show-collaborate')`
+- `index.vue` 监听该事件 → 设置 `showCooperate = true` → 渲染 `CooperatePopup`
+
 ---
 
 ### 后端规则
