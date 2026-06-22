@@ -28,6 +28,7 @@ import { RedisStore } from 'connect-redis';
 import { AppModule } from './app.module';
 import configuration from './config/configuration';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import jwt from 'jsonwebtoken';
 
 const logger = new Logger('Bootstrap');
 
@@ -152,6 +153,55 @@ async function bootstrap() {
     logger.log(`Session cookie domain: ${config.session.cookieDomain}`);
   }
   logger.log(`Session cookie sameSite: ${config.session.cookieSameSite}`);
+
+  // 协同服务认证中间件
+  // 在转发前检查用户是否已登录，防止未鉴权的用户创建/加入协同
+  server.use('/api/cooperate', (req, res, next) => {
+    let userId: string | null = null;
+
+    // 1. Session 方式（浏览器同源请求自动携带 Cookie）
+    if (req.session?.userId) {
+      userId = String(req.session.userId);
+    }
+
+    // 2. JWT 方式（auth_token cookie 或 Authorization header）
+    if (!userId) {
+      const token =
+        req.headers.authorization?.startsWith('Bearer ')
+          ? req.headers.authorization.slice(7)
+          : parseCookie(req.headers.cookie, 'auth_token');
+      if (token) {
+        try {
+          const payload = jwt.verify(token, config.jwt.secret) as { sub: string };
+          userId = payload.sub;
+        } catch {
+          return res.status(401).json({ message: '登录已过期，请重新登录' });
+        }
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: '需要登录才能使用协同功能' });
+    }
+
+    req.headers['x-user-id'] = userId;
+    next();
+  });
+
+  /**
+   * 从 Cookie 头中解析指定名称的值
+   */
+  function parseCookie(cookieHeader: string | undefined, name: string): string | null {
+    if (!cookieHeader) return null;
+    for (const part of cookieHeader.split(';')) {
+      const eqIdx = part.indexOf('=');
+      if (eqIdx === -1) continue;
+      const key = part.slice(0, eqIdx).trim();
+      const value = part.slice(eqIdx + 1).trim();
+      if (key === name) return value;
+    }
+    return null;
+  }
 
   // 协同服务反向代理
   // /api/cooperate/** → 协同服务 /**（去掉 /api/cooperate 前缀）
