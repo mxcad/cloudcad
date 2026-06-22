@@ -42,6 +42,4 @@ export interface PaymentGateway {
   queryOrder(orderNo: string): Promise<QueryOrderResult>;
 
   refund(orderNo: string, amount: number): Promise<void>;
-
-  completePayment?(orderNo: string): Promise<void>;
 }

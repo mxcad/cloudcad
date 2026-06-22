@@ -85,6 +85,12 @@ export class BillingService {
       },
     });
 
+    if (gateway.name === 'mock') {
+      await this.handleMockCallback(orderNo);
+      const updated = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
+      return this.buildPayResponse(updated!, plan, result, true);
+    }
+
     return this.buildPayResponse(order, plan, result);
   }
 
@@ -134,11 +140,6 @@ export class BillingService {
     if (!order) throw new Error(`order not found: ${orderNo}`);
 
     const gateway = this.gatewayFactory.getGateway('mock');
-    
-    if (typeof gateway.completePayment === 'function') {
-      await gateway.completePayment(orderNo);
-    }
-
     const verified = await gateway.verifyWebhook({
       out_trade_no: orderNo,
       transaction_id: `mock_txn_${Date.now()}`,
