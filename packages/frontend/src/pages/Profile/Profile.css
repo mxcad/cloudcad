@@ -356,6 +356,7 @@
 
 .button-group {
   display: flex;
+  justify-content: center;
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
