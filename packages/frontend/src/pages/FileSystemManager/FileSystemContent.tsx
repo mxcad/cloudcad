@@ -391,7 +391,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
               onShowVersionHistory={
                 !node.isFolder &&
                 !isTrashView &&
-                (node.extension === '.dwg' || node.extension === '.dxf')
+                (node.extension === '.dwg' || node.extension === '.dxf' || node.extension === '.mxweb')
                   ? onShowVersionHistory
                   : undefined
               }

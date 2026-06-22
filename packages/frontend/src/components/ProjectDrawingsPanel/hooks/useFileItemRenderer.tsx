@@ -158,7 +158,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           onDownload={isLibraryMode ? handleLibraryDownload : handleDownload}
           onDelete={isLibraryMode ? handleLibraryDelete : handleDelete}
           onRename={isLibraryMode ? handleLibraryOpenRename : handleOpenRename}
-          onShowVersionHistory={isLibraryMode ? undefined : (!node.isFolder && !node.isRoot && (node.extension === '.dwg' || node.extension === '.dxf') ? handleShowVersionHistory : undefined)}
+          onShowVersionHistory={isLibraryMode ? undefined : (!node.isFolder && !node.isRoot && (node.extension === '.dwg' || node.extension === '.dxf' || node.extension === '.mxweb') ? handleShowVersionHistory : undefined)}
           onMove={!isLibraryMode && !node.isRoot ? handleMove : undefined}
           onCopy={!isLibraryMode && !node.isRoot ? handleCopy : undefined}
           onDragStart={!isLibraryMode ? handleDragStart : undefined}
