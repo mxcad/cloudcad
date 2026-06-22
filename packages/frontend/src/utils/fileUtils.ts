@@ -90,7 +90,7 @@ export const formatRelativeTime = (dateString: string): string => {
 
 export const isCadFile = (extension: string | null | undefined): boolean => {
   if (!extension) return false;
-  const cadExtensions = ['.dwg', '.dxf'];
+  const cadExtensions = ['.dwg', '.dxf', '.mxweb'];
   return cadExtensions.includes(extension.toLowerCase());
 };
 

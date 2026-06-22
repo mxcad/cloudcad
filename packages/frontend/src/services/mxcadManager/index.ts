@@ -1640,12 +1640,10 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
   // 保存成功后更新缩略图
   try {
     if (fileId) {
-      setTimeout(async () => {
-        const imageData = await generateThumbnail();
-        if (imageData) {
-          await uploadThumbnail(fileId, imageData);
-        }
-      }, 1000);
+      const imageData = await generateThumbnail();
+      if (imageData) {
+        await uploadThumbnail(fileId, imageData);
+      }
     }
   } catch (error) {
     handleError(error, 'mxcadManager: saveToCurrentFile thumbnail');
@@ -1803,12 +1801,10 @@ async function saveLibraryFile() {
     // 保存成功后更新缩略图
     try {
       if (fileId) {
-        setTimeout(async () => {
-          const imageData = await generateThumbnail();
-          if (imageData) {
-            await uploadThumbnail(fileId, imageData);
-          }
-        }, 1000);
+        const imageData = await generateThumbnail();
+        if (imageData) {
+          await uploadThumbnail(fileId, imageData);
+        }
       }
     } catch (error) {
       handleError(error, 'mxcadManager: saveLibraryFile thumbnail');
@@ -2046,65 +2042,6 @@ class MxCADInstanceManager {
   }
 
   /**
-   * 获取图框截图并生成缩略图
-   */
-  private async generateThumbnail(): Promise<string | undefined> {
-    try {
-      const mxcad = MxCpp.getCurrentMxCAD();
-      mxcad.setAttribute({ ShowCoordinate: false });
-
-      const { minPt, maxPt } = mxcad
-        .getDatabase()
-        .currentSpace.getBoundingBox();
-
-      const w = Math.abs(minPt.x - maxPt.x);
-      const h = Math.abs(minPt.y - maxPt.y);
-
-      if (
-        w < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE ||
-        h < THUMBNAIL_CONFIG.MIN_DRAWING_SIZE
-      ) {
-        return undefined;
-      }
-
-      const scale = Math.min(
-        THUMBNAIL_CONFIG.TARGET_SIZE / w,
-        THUMBNAIL_CONFIG.TARGET_SIZE / h
-      );
-      const centerX = (minPt.x + maxPt.x) / 2;
-      const centerY = (minPt.y + maxPt.y) / 2;
-
-      const newMinPt = new McGePoint3d({
-        x: centerX - THUMBNAIL_CONFIG.TARGET_SIZE / 2 / scale,
-        y: centerY - THUMBNAIL_CONFIG.TARGET_SIZE / 2 / scale,
-      });
-
-      const newMaxPt = new McGePoint3d({
-        x: centerX + THUMBNAIL_CONFIG.TARGET_SIZE / 2 / scale,
-        y: centerY + THUMBNAIL_CONFIG.TARGET_SIZE / 2 / scale,
-      });
-
-      return new Promise<string | undefined>((resolve, reject) => {
-        mxcad.mxdraw.createCanvasImageData(
-          (imageData: string) => {
-            mxcad.setAttribute({ ShowCoordinate: true });
-            resolve(imageData);
-          },
-          {
-            width: THUMBNAIL_CONFIG.TARGET_SIZE,
-            height: THUMBNAIL_CONFIG.TARGET_SIZE,
-            range_pt1: newMinPt,
-            range_pt2: newMaxPt,
-          }
-        );
-      });
-    } catch (error) {
-      console.error('生成缩略图失败', error);
-      return undefined;
-    }
-  }
-
-  /**
    * 上传缩略图
    */
   private async uploadThumbnail(
@@ -2194,7 +2131,7 @@ class MxCADInstanceManager {
               useCADEditorStore.getState().patchCurrentFileInfo({ name: mxFileName });
             }
           }
-        } catch {}
+        } catch { }
         useCADEditorStore.getState().setCurrentFileName(getFileInfo()!.name);
         globalThis.MxPluginContext.useFileName().fileName.value =
           formatEditorFileName(getFileInfo()!.name);
@@ -2223,13 +2160,10 @@ class MxCADInstanceManager {
           const thumbnailResult = await thumbnailControllerCheckThumbnail({ path: { nodeId: fileId } });
 
           if (!thumbnailResult?.data?.exists) {
-            setTimeout(async ()=> {
-              const imageData = await this.generateThumbnail();
+            const imageData = await generateThumbnail();
             if (imageData) {
               await this.uploadThumbnail(fileId, imageData);
             }
-            }, 1000)
-            
           }
         } catch (error) {
           handleError(error, 'mxcadManager: setupFileOpenListener thumbnail');

@@ -280,7 +280,7 @@ model User {
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/billing/plans` | 套餐列表（前端定价页渲染） |
+| GET | `/api/billing/plans` | 套餐列表（前端会员中心渲染） |
 | POST | `/api/billing/webhook/wechat` | 微信支付回调（返回 XML） |
 
 ### 用户 API（需 JWT 认证）
@@ -327,7 +327,7 @@ BillingService.createOrder():
     │
     ▼
 前端根据 gateway 判断:
-├─ mock:   自动 POST /api/admin/billing/mock-callback → 走完整回调流程
+├─ mock:   管理员通过管理 API 触发回调 → 走完整回调流程
 ├─ wechat: JSAPI 调起 WeixinJSBridge → 用户支付 → 微信回调
     │
     ▼
@@ -360,7 +360,7 @@ BillingService 统一处理（mock 和微信走同一个事务方法）:
 ### Mock 模式（开发/测试）— 前端零感知
 
 ```
-开发者在 Pricing 页点击"开通会员"
+开发者在会员中心点击"开通会员"
     │
     ▼
 POST /api/billing/orders { planId }
@@ -368,14 +368,39 @@ POST /api/billing/orders { planId }
     ▼
 BillingService.createOrder():
   ├─ 创建 PaymentOrder { status: PENDING }
-  ├─ MockPaymentGateway 返回 mock 参数
-  ├─ **自动调用 handleMockCallback(orderNo)**  ← 同步完成，不额外请求
-  │     └─ handlePaymentNotify(verified) 事务激活会员
-  └─ 返回 { orderNo, status: "SUCCEEDED", ... }
+  ├─ MockPaymentGateway.createPayment() → 生成 prepay_id + payParams
+  └─ 返回 { orderNo, status: "PENDING", payParams, ... }
     │
     ▼
-前端收到 status: "SUCCEEDED" → 跳转到 /billing 显示会员已激活
+前端轮询 GET /api/billing/orders/:orderNo → status 仍为 PENDING
+    │
+    ▼
+管理员调用 POST /api/admin/billing/mock-callback { orderNo }
+    │
+    ▼
+MockPaymentGateway.completePayment() → 更新订单状态为 SUCCESS
+    │
+    ▼
+BillingService.handlePaymentNotify() → 激活会员
+    │
+    ▼
+前端轮询 → status = SUCCEEDED
 ```
+
+**Mock 模式测试流程**：
+1. 前端调用 `POST /api/billing/orders` 创建订单（返回 `status: PENDING`）
+2. MockPaymentGateway 模拟微信统一下单，生成 `prepay_id` 和签名的 `payParams`
+3. 前端收到 `payParams` 后，轮询 `GET /api/billing/orders/:orderNo` 查询状态
+4. 管理员通过 `POST /api/admin/billing/mock-callback` 手动触发支付完成
+5. MockPaymentGateway 更新内部订单状态为 `SUCCESS`
+6. `handlePaymentNotify` 执行事务：更新订单 + 激活会员
+7. 前端轮询到 `status: SUCCEEDED`，显示支付成功
+
+**MockPaymentGateway 内部状态管理**：
+- 维护内存订单表，记录 `orderNo → { status, amount, prepayId, transactionId }`
+- 创建支付时状态为 `NOTPAY`
+- `completePayment()` 后状态变为 `SUCCESS`
+- `queryOrder()` 返回真实状态，支持 `NOTPAY` / `SUCCESS` / `REFUND` / `CLOSED`
 
 ---
 
@@ -522,14 +547,6 @@ export class BillingService {
       },
     });
 
-    // Mock 模式：自动完成支付，前端无需调起支付 SDK
-    if (gateway.name === 'mock') {
-      await this.handleMockCallback(orderNo);
-      // ★ 回调后再查一次，确保返回 DB 中最新的 status（SUCCEEDED）
-      const updated = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
-      return this.buildPayResponse(updated!, plan, dto.tradeType, result, true);
-    }
-
     return this.buildPayResponse(order, plan, dto.tradeType, result);
   }
 
@@ -571,9 +588,6 @@ export class BillingService {
     });
   }
 
-  // 注意：handleMockCallback 在 createOrder 同步流程中调用，
-  // 此时 order 刚创建（status=PENDING），不会触发幂等跳过，但设计上 safe。
-
   /** 微信回调入口（WebhookController 调用） */
   async handleWechatNotify(xml: string): Promise<string> {
     try {
@@ -588,7 +602,7 @@ export class BillingService {
     }
   }
 
-  /** Mock 回调入口（createOrder 内联调用 + 管理 API 手动调用） */
+  /** Mock 回调入口（管理 API 手动调用） */
   async handleMockCallback(orderNo: string): Promise<void> {
     const order = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
     if (!order) throw new Error(`order not found: ${orderNo}`);
@@ -1000,23 +1014,12 @@ mock 模式下下单流程:
   → 后端创建 PaymentOrder, status = PENDING
   → 调用 MockPaymentGateway.createPayment()
   → 返回 JSAPI 调起参数（和微信结构一样）
-  → 后端**立即自动完成**：同一请求内调用 handleMockCallback
-  → 更新 status = SUCCEEDED + 激活会员
-  → 返回 { orderNo, status: "SUCCEEDED" }
+  → 返回 { orderNo, status: "PENDING" }
   ↑
-前端收到 SUCCEEDED → 直接跳转到 /billing 看到会员已生效
+前端轮询 GET /api/billing/orders/:orderNo 等待状态变更
 ```
 
-即 `POST /api/billing/orders` 在 mock 模式下是一个**同步完成**的操作：
-- 创建订单
-- 模拟支付成功
-- 激活会员
-- 一次性返回 `status: "SUCCEEDED"`
-
-前端轮询 `GET /api/billing/orders/:orderNo` 第一次就能查到 `SUCCEEDED`。
-
-> 注：`POST /api/admin/billing/mock-callback` 管理 API 依然保留，
-> 供自动化测试场景手动控制回调时机。开发日常使用自动完成即可。
+即 `POST /api/billing/orders` 在 mock 模式下返回 `status: "PENDING"`，需要管理员通过管理 API 手动触发回调完成支付。
 
 ### 测试模式适用场景
 
@@ -1044,7 +1047,7 @@ mock 模式下下单流程:
 
 - **幂等性**：同一回调请求并发 2 次 → 仅激活 1 次会员
 - **并发安全**：同一 PENDING 订单并发处理 → `updateMany` 影响行数为 1
-- **Mock 全流程**：`POST /api/billing/orders` → 自动回调 → `status=SUCCEEDED` → 会员激活
+- **Mock 全流程**：`POST /api/billing/orders` → 调用 mock-callback → `status=SUCCEEDED` → 会员激活
 - **微信回调全流程**：模拟微信 XML 回调 → `handlePaymentNotify` → 状态变更 + 会员激活
 - **退款**：SUCCEEDED 订单退款 → `status=REFUNDED` → `tier=FREE` + `expiresAt` 置为过去
 - **PENDING 复用**：2h 内同套餐订单复用旧 `orderNo`
@@ -1211,20 +1214,18 @@ async function seedMembershipPlans(prisma: PrismaClient) {
 ### 路由
 
 ```
-/pricing    → 定价页（GET /api/billing/plans 动态渲染）
-/billing    → 我的会员（GET /api/billing/membership + /orders）
+/billing    → 会员中心（个人信息 + 会员状态 + 续费 + 套餐选择）
 ```
 
 ### 组件
 
 ```
 components/billing/
-├── PricingCard.tsx          // 套餐卡片
-├── PricingPage.tsx          // 定价页
-├── BillingPage.tsx          // 我的会员页
+├── BillingPage.tsx          // 会员中心主页面
+├── MembershipCard.tsx       // 会员状态卡片
+├── PlanSelector.tsx         // 套餐选择器
 ├── OrderHistory.tsx         // 购买记录
-├── MembershipBadge.tsx      // 头像旁 Pro 标签
-└── WechatPayButton.tsx      // 微信支付按钮（封装 JSAPI 调起）
+└── MembershipBadge.tsx      // 头像旁 Pro 标签
 ```
 
 ### 侧边栏
@@ -1232,7 +1233,7 @@ components/billing/
 ```tsx
 // Layout.tsx menuItems 追加
 {
-  to: '/pricing',
+  to: '/billing',
   icon: Crown,
   label: '会员中心',
   visible: true,
@@ -1320,12 +1321,10 @@ async remindExpiring() {
 | 19 | `BillingCron`（过期降级 + PENDING 清理） | `billing-cron.service.ts` | 1 |
 | 20 | Nginx/IP Guard 白名单 Webhook 路径 | nginx 配置 / guard | 17 |
 | 21 | 种子数据（含 features） | `prisma/seed.ts` | 1 |
-| 22 | 前端 Pricing 页 | `pages/Pricing.tsx` | 16 |
-| 23 | 前端 Billing 页 | `pages/Billing.tsx` | 16 |
-| 24 | 侧边栏入口 | `Layout.tsx` | 22 |
-| 25 | 移动端页面 | `frontend_mobile/` | 22 |
-| 26 | Mock 模式全流程测试（无需微信） | - | 18, 19 |
-| 27 | 微信沙箱全流程测试 | - | 18, 20 |
+| 22 | 前端会员中心页（含套餐选择、续费、订单记录） | `pages/Billing.tsx` | 16 |
+| 23 | 侧边栏入口 | `Layout.tsx` | 22 |
+| 24 | Mock 模式全流程测试（无需微信） | - | 18, 19 |
+| 25 | 微信沙箱全流程测试 | - | 18, 20 |
 
-> **开发建议**：先完成 #8-#12 的接口 + Mock 实现，不依赖微信商户号即可开发 #13-#24 的所有业务逻辑。
-> 微信支付联调（#27）可以放到最后，PAYMENT_PROVIDER=mock 可以覆盖 90% 的开发调试场景。
+> **开发建议**：先完成 #8-#12 的接口 + Mock 实现，不依赖微信商户号即可开发 #13-#23 的所有业务逻辑。
+> 微信支付联调（#25）可以放到最后，PAYMENT_PROVIDER=mock 可以覆盖 90% 的开发调试场景。

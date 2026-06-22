@@ -7,7 +7,7 @@
 export const PAGE_SIZE = 30;
 
 /** 图纸文件扩展名 */
-export const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt'];
+export const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt', '.mxweb'];
 
 /** API base URL for constructing thumbnail URLs */
 export const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
