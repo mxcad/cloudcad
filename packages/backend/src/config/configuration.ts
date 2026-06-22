@@ -425,6 +425,24 @@ export default (): AppConfig => {
 		) || 500,
 	},
 
+	// 支付配置
+	// 注意：支付开关（paymentEnabled）已迁移到运行时配置系统
+	// payment.provider 环境变量仅在生产模式生效
+	payment: {
+		provider:
+			(process.env.PAYMENT_PROVIDER as 'mock' | 'wechat_pay') || 'mock',
+	},
+
+	// 微信支付配置
+	wechatPay: {
+		appId: process.env.WECHATPAY_APPID || '',
+		mchId: process.env.WECHATPAY_MCHID || '',
+		key: process.env.WECHATPAY_KEY || '',
+		notifyUrl: process.env.WECHATPAY_NOTIFY_URL || '',
+		certPath: process.env.WECHATPAY_CERT_PATH || undefined,
+		keyPath: process.env.WECHATPAY_KEY_PATH || undefined,
+	},
+
 	// 短信配置
 	// 注意：短信服务开关（smsEnabled）已迁移到运行时配置系统
 	// 可在管理界面动态开启/关闭，无需重启服务

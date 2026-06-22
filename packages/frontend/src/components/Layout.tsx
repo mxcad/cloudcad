@@ -19,6 +19,7 @@ import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
 import { useTour } from '../contexts/TourContext';
 import { useStorageQuota } from '../hooks/useStorageQuota';
+import MembershipBadge from './billing/MembershipBadge';
 
 // Lucide 图标导入
 import { LayoutDashboard } from 'lucide-react';
@@ -32,7 +33,7 @@ import { ScrollText } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
-import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library, Share2 } from 'lucide-react';
+import { Menu as MenuIcon, X, HardDrive, ChevronDown, HelpCircle, Library, Share2, User, DollarSign } from 'lucide-react';
 import { Menu } from './ui/Menu';
 
 interface NavItemProps {
@@ -252,6 +253,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         visible: true,
       },
       {
+        to: '/profile',
+        icon: User,
+        label: '个人资料',
+        visible: true,
+      },
+      {
         to: '/library',
         icon: Library,
         label: '公共资源库',
@@ -277,6 +284,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         label: '角色权限',
         visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
         dataTour: 'sidebar-roles',
+      },
+      {
+        to: '/admin/billing',
+        icon: DollarSign,
+        label: '支付管理',
+        visible: hasPermission(SystemPermission.SYSTEM_CONFIG_READ),
       },
       {
         to: '/audit-logs',
@@ -423,7 +436,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </p>
               {menuItems
                 .filter((item) => item.visible)
-                .slice(0, 4)
+                .slice(0, 5)
                 .map((item) => (
                   <NavItem
                     key={item.to}
@@ -434,7 +447,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
 
             {/* 管理菜单 */}
-            {menuItems.some((item, idx) => idx >= 4 && item.visible) && (
+            {menuItems.some((item, idx) => idx >= 5 && item.visible) && (
               <div
                 className="pt-2 border-t"
                 style={{ borderColor: 'var(--border-default)' }}
@@ -446,7 +459,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   系统管理
                 </p>
                 {menuItems
-                  .filter((item, idx) => idx >= 4 && item.visible)
+                  .filter((item, idx) => idx >= 5 && item.visible)
                   .map((item) => (
                     <NavItem
                       key={item.to}
@@ -606,6 +619,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                             user?.email ||
                             '用户')}
                         </TruncateText>
+                        <MembershipBadge />
                       </p>
                       <p
                         className="text-xs truncate"
@@ -633,7 +647,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     icon={<Settings size={16} />}
                     onClick={() => {
                       setShowUserMenu(false);
-                      window.location.href = '/profile';
+                      navigate('/profile');
                     }}
                   >
                     个人设置

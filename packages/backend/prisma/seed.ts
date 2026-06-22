@@ -256,7 +256,48 @@ async function main() {
     console.log(`  密码: ${adminPassword}`);
   }
 
+  // 创建会员套餐种子数据
+  await seedMembershipPlans(prisma);
+
   console.log('种子数据初始化完成!');
+}
+
+async function seedMembershipPlans(prisma: PrismaClient) {
+  const exists = await prisma.membershipPlan.findFirst();
+  if (exists) return;
+
+  await prisma.membershipPlan.createMany({
+    data: [
+      {
+        name: '月度会员',
+        durationDays: 30,
+        price: 2400,
+        originalPrice: 3000,
+        sortOrder: 1,
+        tier: 'PRO',
+        features: { maxStorage: 1073741824, maxProjects: 50, maxCollaborators: 5, versionHistoryDays: 30 },
+      },
+      {
+        name: '半年会员',
+        durationDays: 180,
+        price: 14000,
+        originalPrice: 18000,
+        sortOrder: 2,
+        tier: 'PRO',
+        features: { maxStorage: 2147483648, maxProjects: 100, maxCollaborators: 10, versionHistoryDays: 90 },
+      },
+      {
+        name: '年度会员',
+        durationDays: 365,
+        price: 26000,
+        originalPrice: 28800,
+        sortOrder: 3,
+        tier: 'PRO',
+        features: { maxStorage: 5368709120, maxProjects: 200, maxCollaborators: 20, versionHistoryDays: 365 },
+      },
+    ],
+  });
+  console.log('membership plans seeded');
 }
 
 main()

@@ -24,7 +24,8 @@ export type RuntimeConfigCategory =
   | 'user'
   | 'system'
   | 'wechat'
-  | 'storage';
+  | 'storage'
+  | 'billing';
 
 /**
  * 运行时配置项定义

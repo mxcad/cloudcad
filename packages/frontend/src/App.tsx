@@ -83,6 +83,7 @@ const LibraryManager = lazy(() => import('./pages/LibraryManager'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const SystemMonitorPage = lazy(() => import('./pages/SystemMonitorPage'));
 const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
+const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
 
 // ============================================================================
 // 路由保护组件
@@ -514,6 +515,26 @@ function AppContent() {
                       >
                         <Suspense fallback={<PageLoader />}>
                           <SystemMonitorPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 会员中心 - 重定向到个人资料 */}
+                  <Route
+                    path="/billing"
+                    element={<Navigate to="/profile?tab=membership" replace />}
+                  />
+
+                  {/* 支付管理 - 需要 SYSTEM_CONFIG_READ 权限 */}
+                  <Route
+                    path="/admin/billing"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <AdminBillingPage />
                         </Suspense>
                       </PermissionRoute>
                     }

@@ -340,6 +340,20 @@ export interface ThumbnailConfig {
   backgroundColor: string;
 }
 
+export interface PaymentConfig {
+  /** 支付提供商 (mock | wechat_pay) */
+  provider: string;
+}
+
+export interface WechatPayConfig {
+  appId: string;
+  mchId: string;
+  key: string;
+  notifyUrl: string;
+  certPath?: string;
+  keyPath?: string;
+}
+
 export interface CooperateConfig {
   /** 协同服务地址 */
   url: string;
@@ -396,6 +410,8 @@ export interface AppConfig {
   svn: SvnConfig; // SVN 配置
   log: LogConfig; // 日志配置
   sms: SmsConfig; // 短信配置
+  payment: PaymentConfig; // 支付配置
+  wechatPay: WechatPayConfig; // 微信支付配置
   thumbnail: ThumbnailConfig; // 缩略图自动生成配置
   cooperate: CooperateConfig; // 协同服务配置
 }

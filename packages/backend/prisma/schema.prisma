@@ -35,6 +35,8 @@ model User {
   role                 Role             @relation(fields: [roleId], references: [id])
   refreshTokens        RefreshToken[]
   fileShares           FileShare[]
+  membership           UserMembership?
+  paymentOrders        PaymentOrder[]
 
   @@index([deletedAt])
   @@map("users")
@@ -458,6 +460,78 @@ model FileShare {
   @@index([token])
   @@index([createdBy])
   @@map("file_shares")
+}
+
+enum MembershipTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum OrderStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CLOSED
+  TIMEOUT
+}
+
+model MembershipPlan {
+  id            String           @id @default(cuid())
+  name          String
+  durationDays  Int
+  price         Int
+  originalPrice Int?
+  tier          MembershipTier   @default(PRO)
+  sortOrder     Int
+  isActive      Boolean          @default(true)
+  features      Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  orders        PaymentOrder[]
+  @@unique([sortOrder, isActive])
+  @@map("membership_plans")
+}
+
+model PaymentOrder {
+  id              String        @id @default(cuid())
+  orderNo         String        @unique
+  userId          String
+  planId          String
+  amount          Int
+  status          OrderStatus   @default(PENDING)
+  gateway         String        @default("wechat_pay")
+  gatewayOrderId  String?
+  tradeType       String?
+  gatewayPaidId   String?
+  description     String?
+  paidAt          DateTime?
+  failedAt        DateTime?
+  closedAt        DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id])
+  plan            MembershipPlan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status, createdAt])
+  @@map("payment_orders")
+}
+
+model UserMembership {
+  id        String           @id @default(cuid())
+  userId    String           @unique
+  tier      MembershipTier   @default(FREE)
+  expiresAt DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
+  @@map("user_memberships")
 }
 
 enum PolicyType {

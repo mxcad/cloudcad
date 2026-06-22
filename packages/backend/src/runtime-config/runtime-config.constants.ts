@@ -215,6 +215,16 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
   },
 
+  // 支付配置
+  {
+    key: 'paymentEnabled',
+    type: 'boolean',
+    category: 'billing',
+    description: '支付功能开关（关闭时强制回退 mock 模式）',
+    defaultValue: false,
+    isPublic: false,
+  },
+
   // 系统配置
   {
     key: 'systemNotice',

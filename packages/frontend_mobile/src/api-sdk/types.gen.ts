@@ -2908,6 +2908,43 @@ export type SaveLibraryAsDto = {
     fileName?: string;
 };
 
+export type CreateOrderDto = {
+    /**
+     * 套餐 ID
+     */
+    planId: string;
+    /**
+     * 交易类型
+     */
+    tradeType: 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP';
+    /**
+     * 用户 openid（JSAPI 必传）
+     */
+    openid?: string;
+    /**
+     * 客户端 IP
+     */
+    ip?: string;
+};
+
+export type RefundDto = {
+    /**
+     * 订单号
+     */
+    orderNo: string;
+    /**
+     * 退款原因
+     */
+    reason?: string;
+};
+
+export type MockCallbackDto = {
+    /**
+     * 订单号
+     */
+    orderNo: string;
+};
+
 /**
  * 项目权限枚举
  */
@@ -8717,3 +8754,143 @@ export type LibraryControllerBatchCopyBlockNodesResponses = {
 };
 
 export type LibraryControllerBatchCopyBlockNodesResponse = LibraryControllerBatchCopyBlockNodesResponses[keyof LibraryControllerBatchCopyBlockNodesResponses];
+
+export type BillingControllerGetPlansData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/plans';
+};
+
+export type BillingControllerGetPlansResponses = {
+    200: unknown;
+};
+
+export type BillingControllerGetMembershipData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/membership';
+};
+
+export type BillingControllerGetMembershipResponses = {
+    200: unknown;
+};
+
+export type BillingControllerGetOrdersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/orders';
+};
+
+export type BillingControllerGetOrdersResponses = {
+    200: unknown;
+};
+
+export type BillingControllerCreateOrderData = {
+    body: CreateOrderDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/orders';
+};
+
+export type BillingControllerCreateOrderResponses = {
+    201: unknown;
+};
+
+export type BillingControllerQueryOrderData = {
+    body?: never;
+    path: {
+        orderNo: string;
+    };
+    query?: never;
+    url: '/api/v1/billing/orders/{orderNo}/query';
+};
+
+export type BillingControllerQueryOrderResponses = {
+    201: unknown;
+};
+
+export type BillingControllerGetOrderData = {
+    body?: never;
+    path: {
+        orderNo: string;
+    };
+    query?: never;
+    url: '/api/v1/billing/orders/{orderNo}';
+};
+
+export type BillingControllerGetOrderResponses = {
+    200: unknown;
+};
+
+export type BillingAdminControllerGetAllPlansData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/billing/plans';
+};
+
+export type BillingAdminControllerGetAllPlansResponses = {
+    200: unknown;
+};
+
+export type BillingAdminControllerCreatePlanData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/billing/plans';
+};
+
+export type BillingAdminControllerCreatePlanResponses = {
+    201: unknown;
+};
+
+export type BillingAdminControllerDeactivatePlanData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/billing/plans/{id}';
+};
+
+export type BillingAdminControllerDeactivatePlanResponses = {
+    200: unknown;
+};
+
+export type BillingAdminControllerUpdatePlanData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/billing/plans/{id}';
+};
+
+export type BillingAdminControllerUpdatePlanResponses = {
+    200: unknown;
+};
+
+export type BillingAdminControllerRefundData = {
+    body: RefundDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/billing/refund';
+};
+
+export type BillingAdminControllerRefundResponses = {
+    201: unknown;
+};
+
+export type BillingAdminControllerMockCallbackData = {
+    body: MockCallbackDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/billing/mock-callback';
+};
+
+export type BillingAdminControllerMockCallbackResponses = {
+    201: unknown;
+};

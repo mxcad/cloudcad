@@ -4,7 +4,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { useWechatAuth } from '../hooks/useWechatAuth';
@@ -29,6 +29,8 @@ import {
   CheckCircle,
   AlertCircle,
   Crown,
+  Check,
+  X as XIcon,
 } from 'lucide-react';
 import { ProfileInfoTab } from './components/ProfileInfoTab';
 import { ProfilePasswordTab } from './Profile/ProfilePasswordTab';
@@ -37,6 +39,17 @@ import { ProfilePhoneTab } from './Profile/ProfilePhoneTab';
 import { ProfileWechatTab } from './Profile/ProfileWechatTab';
 import { ProfileDeactivateTab } from './components/ProfileDeactivateTab';
 import { Button, TabButton, Tabs } from '@/components/ui';
+import OrderHistory, { type Order } from '@/components/billing/OrderHistory';
+import { type Plan } from '@/components/billing/PricingCard';
+import WechatPayButton from '@/components/billing/WechatPayButton';
+import PlanSelectOverlay from '@/components/billing/PlanSelectOverlay';
+import { Modal } from '@/components/ui/Modal';
+import {
+  billingControllerGetPlans,
+  billingControllerGetMembership,
+  billingControllerGetOrders,
+  billingControllerCreateOrder,
+} from '@/api-sdk';
 import './Profile/Profile.css';
 
 type TabType =
@@ -45,10 +58,46 @@ type TabType =
   | 'email'
   | 'deactivate'
   | 'phone'
-  | 'wechat';
+  | 'wechat'
+  | 'membership';
+
+interface Membership {
+  tier: string;
+  expiresAt: string | null;
+  daysRemaining: number;
+}
+
+const FREE_FEATURES: Record<string, number> = {
+  maxStorage: 104857600,
+  maxProjects: 5,
+  maxCollaborators: 0,
+  versionHistoryDays: 0,
+};
+
+const FEATURE_LABELS: Record<string, string> = {
+  maxStorage: '存储空间',
+  maxProjects: '项目数量',
+  maxCollaborators: '协作者数量',
+  versionHistoryDays: '版本历史',
+};
+
+const FEATURE_FMT: Record<string, (v: any) => string> = {
+  maxStorage: (v) => {
+    const gb = (v as number) / 1073741824;
+    return gb >= 1024 ? `${(gb / 1024).toFixed(1)}TB` : `${gb.toFixed(0)}GB`;
+  },
+  maxProjects: (v) => `${v} 个`,
+  maxCollaborators: (v) => `${v} 人`,
+  versionHistoryDays: (v) => (v === 0 ? '无' : `${v} 天`),
+};
+
+const TIER_LABEL: Record<string, string> = {
+  FREE: '免费用户',
+  PRO: '专业版会员',
+  ENTERPRISE: '企业版会员',
+};
 
 export const Profile: React.FC = () => {
-  useDocumentTitle('个人资料');
   const navigate = useNavigate();
   const { user, logout, login, refreshUser } = useAuth();
   const { config: runtimeConfig } = useRuntimeConfig();
@@ -65,7 +114,16 @@ export const Profile: React.FC = () => {
   const smsEnabled = runtimeConfig.smsEnabled ?? false;
   const wechatEnabled = runtimeConfig.wechatEnabled ?? false;
 
-  const [activeTab, setActiveTab] = useState<TabType>('info');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'membership') return 'membership';
+    return 'info';
+  });
+
+  useDocumentTitle(
+    activeTab === 'membership' ? '会员中心' : '个人资料'
+  );
 
   const visibleTabs: TabType[] = [
     'info',
@@ -73,6 +131,7 @@ export const Profile: React.FC = () => {
     ...(mailEnabled ? (['email'] as TabType[]) : []),
     ...(smsEnabled ? (['phone'] as TabType[]) : []),
     ...(wechatEnabled ? (['wechat'] as TabType[]) : []),
+    'membership',
     'deactivate',
   ];
 
@@ -164,6 +223,167 @@ export const Profile: React.FC = () => {
       setLoading(false);
     },
   });
+
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [membership, setMembership] = useState<Membership | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [paymentOrder, setPaymentOrder] = useState<{
+    orderNo: string;
+    gateway: string;
+    payParams: Record<string, any> | null;
+    codeUrl: string | null;
+    amount: number;
+  } | null>(null);
+
+  const [showPlanSelect, setShowPlanSelect] = useState(false);
+  const [memSubTab, setMemSubTab] = useState<'compare' | 'orders'>('compare');
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadBillingData = useCallback(async () => {
+    try {
+      const [planRes, memRes, ordRes]: any = await Promise.all([
+        billingControllerGetPlans(),
+        billingControllerGetMembership(),
+        billingControllerGetOrders(),
+      ]);
+      const list = planRes?.data;
+      if (Array.isArray(list) && list.length > 0) setPlans(list as Plan[]);
+      if (memRes?.data) setMembership(memRes.data as Membership);
+      if (Array.isArray(ordRes?.data)) setOrders(ordRes.data as Order[]);
+    } catch {
+      // billing data is supplementary, don't block the page
+    } finally {
+      setBillingLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setBillingLoading(true);
+    loadBillingData();
+  }, [loadBillingData]);
+
+  const hasPending = orders.some((o) => o.status === 'PENDING');
+  useEffect(() => {
+    if (activeTab !== 'membership') return;
+    if (hasPending && !pollRef.current) {
+      pollRef.current = setInterval(loadBillingData, 10000);
+    }
+    if (!hasPending && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [hasPending, loadBillingData, activeTab]);
+
+  const handlePurchase = async (planId: string) => {
+    setPurchasing(planId);
+    try {
+      const res: any = await billingControllerCreateOrder({
+        body: { planId, tradeType: 'JSAPI' },
+      });
+      const orderData = res?.data;
+      if (res?.error || !orderData) {
+        window.dispatchEvent(
+          new CustomEvent('cloudcad:toast', {
+            detail: { message: '创建订单失败', type: 'error' },
+          }),
+        );
+        return;
+      }
+
+      if (orderData.status === 'SUCCEEDED') {
+        window.dispatchEvent(
+          new CustomEvent('cloudcad:toast', {
+            detail: { message: '开通成功！', type: 'success' },
+          }),
+        );
+        loadBillingData();
+      } else if (orderData.status === 'PENDING') {
+        setPaymentOrder({
+          orderNo: orderData.orderNo,
+          gateway: orderData.gateway,
+          payParams: orderData.payParams || null,
+          codeUrl: orderData.codeUrl || null,
+          amount: orderData.amount,
+        });
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent('cloudcad:toast', {
+          detail: { message: '创建订单失败', type: 'error' },
+        }),
+      );
+    } finally {
+      setPurchasing(null);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentOrder(null);
+    window.dispatchEvent(
+      new CustomEvent('cloudcad:toast', {
+        detail: { message: '支付成功！', type: 'success' },
+      }),
+    );
+    loadBillingData();
+  };
+
+  const handlePaymentError = (msg: string) => {
+    window.dispatchEvent(
+      new CustomEvent('cloudcad:toast', {
+        detail: { message: msg, type: 'error' },
+      }),
+    );
+  };
+
+  const handleContinuePayment = async (order: Order) => {
+    try {
+      const res: any = await billingControllerCreateOrder({
+        body: { planId: order.planId, tradeType: 'JSAPI' },
+      });
+      const orderData = res?.data;
+      if (res?.error || !orderData) {
+        window.dispatchEvent(
+          new CustomEvent('cloudcad:toast', {
+            detail: { message: '获取支付信息失败', type: 'error' },
+          }),
+        );
+        return;
+      }
+      if (orderData.status === 'SUCCEEDED') {
+        window.dispatchEvent(
+          new CustomEvent('cloudcad:toast', {
+            detail: { message: '开通成功！', type: 'success' },
+          }),
+        );
+        loadBillingData();
+        return;
+      }
+      if (orderData.status === 'PENDING') {
+        setPaymentOrder({
+          orderNo: orderData.orderNo,
+          gateway: orderData.gateway,
+          payParams: orderData.payParams || null,
+          codeUrl: orderData.codeUrl || null,
+          amount: orderData.amount,
+        });
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent('cloudcad:toast', {
+          detail: { message: '获取支付信息失败', type: 'error' },
+        }),
+      );
+    }
+  };
 
   const getPasswordStrength = (
     password: string
@@ -1000,6 +1220,13 @@ export const Profile: React.FC = () => {
               </TabButton>
             )}
             <TabButton
+              active={activeTab === 'membership'}
+              icon={Crown}
+              onClick={() => switchTab('membership')}
+            >
+              会员信息
+            </TabButton>
+            <TabButton
               active={activeTab === 'deactivate'}
               icon={AlertTriangle}
               onClick={() => switchTab('deactivate')}
@@ -1099,6 +1326,149 @@ export const Profile: React.FC = () => {
               />
             )}
 
+            {activeTab === 'membership' && (
+              <div className="p-6 space-y-6">
+                {billingLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid var(--border-default)', borderTopColor: 'var(--accent)' }} />
+                  </div>
+                ) : (
+                  <>
+                    {/* 会员状态卡片 */}
+                    <div className="rounded-xl p-5" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)' }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Crown size={28} className={(!membership || membership.tier === 'FREE') ? 'text-gray-400' : 'text-yellow-500'} />
+                          <div>
+                            <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                              {TIER_LABEL[membership?.tier || 'FREE']}
+                            </p>
+                            {membership && membership.tier !== 'FREE' && membership.expiresAt ? (
+                              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                                有效期至 {new Date(membership.expiresAt).toLocaleDateString('zh-CN')}
+                                {membership.daysRemaining > 0 && `（剩余 ${membership.daysRemaining} 天）`}
+                              </p>
+                            ) : (
+                              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>开通会员解锁更多功能</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant={(!membership || membership.tier === 'FREE') ? 'primary' : 'outline'}
+                          size="sm"
+                          onClick={() => setShowPlanSelect(true)}
+                        >
+                          {(!membership || membership.tier === 'FREE') ? '开通会员' : '续费'}
+                        </Button>
+                      </div>
+                      {membership && membership.tier !== 'FREE' && membership.daysRemaining > 0 && membership.daysRemaining <= 7 && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg mt-3" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                          <AlertTriangle size={16} className="text-yellow-500 shrink-0" />
+                          <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>您的会员将在 <strong>{membership.daysRemaining}</strong> 天后到期，请及时续费</span>
+                          <Button variant="outline" size="sm" onClick={() => setShowPlanSelect(true)}>立即续费</Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 待支付提醒 */}
+                    {hasPending && (
+                      <div className="flex items-center gap-2 px-4 py-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                        <AlertTriangle size={16} className="text-yellow-500 shrink-0" />
+                        <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>您有待支付的订单，请尽快完成支付</span>
+                      </div>
+                    )}
+
+                    {/* 子 tab：功能对比 | 购买记录 */}
+                    <div className="flex gap-4 border-b pb-3" style={{ borderColor: 'var(--border-default)' }}>
+                      <button
+                        className="text-sm font-medium pb-1 transition-colors"
+                        style={{
+                          color: memSubTab === 'compare' ? 'var(--accent-600)' : 'var(--text-secondary)',
+                          borderBottom: memSubTab === 'compare' ? '2px solid var(--accent-600)' : '2px solid transparent',
+                        }}
+                        onClick={() => setMemSubTab('compare')}
+                      >
+                        功能对比
+                      </button>
+                      <button
+                        className="text-sm font-medium pb-1 transition-colors"
+                        style={{
+                          color: memSubTab === 'orders' ? 'var(--accent-600)' : 'var(--text-secondary)',
+                          borderBottom: memSubTab === 'orders' ? '2px solid var(--accent-600)' : '2px solid transparent',
+                        }}
+                        onClick={() => setMemSubTab('orders')}
+                      >
+                        购买记录
+                      </button>
+                    </div>
+
+                    {/* 功能对比 */}
+                    {memSubTab === 'compare' && plans.length > 0 && (
+                      <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-default)' }}>
+                        <table className="w-full text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--bg-tertiary)' }}>
+                              <th className="text-left px-4 py-3 font-semibold text-text-primary">功能</th>
+                              <th className="text-center px-4 py-3 font-semibold text-text-primary">免费</th>
+                              {plans.map((p) => (
+                                <th key={p.id} className="text-center px-4 py-3 font-semibold text-text-primary">
+                                  {p.name}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(['maxStorage', 'maxProjects', 'maxCollaborators', 'versionHistoryDays'] as const).map((key) => (
+                              <tr key={key} style={{ borderTop: '1px solid var(--border-default)' }}>
+                                <td className="px-4 py-3 text-text-primary">{FEATURE_LABELS[key]}</td>
+                                <td className="text-center px-4 py-3">{FEATURE_FMT[key]!(FREE_FEATURES[key])}</td>
+                                {plans.map((p) => (
+                                  <td key={p.id} className="text-center px-4 py-3" style={{ color: 'var(--success-500)' }}>
+                                    {p.features ? FEATURE_FMT[key]!(p.features[key]) : '-'}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                            <tr style={{ borderTop: '1px solid var(--border-default)' }}>
+                              <td className="px-4 py-3 text-text-primary">协作用户管理</td>
+                              <td className="text-center px-4 py-3"><XIcon size={16} className="inline" style={{ color: 'var(--error-500)' }} /></td>
+                              {plans.map((p) => (
+                                <td key={p.id} className="text-center px-4 py-3"><Check size={16} className="inline" style={{ color: 'var(--success-500)' }} /></td>
+                              ))}
+                            </tr>
+                            <tr style={{ borderTop: '1px solid var(--border-default)' }}>
+                              <td className="px-4 py-3 text-text-primary">版本历史管理</td>
+                              <td className="text-center px-4 py-3"><XIcon size={16} className="inline" style={{ color: 'var(--error-500)' }} /></td>
+                              {plans.map((p) => (
+                                <td key={p.id} className="text-center px-4 py-3"><Check size={16} className="inline" style={{ color: 'var(--success-500)' }} /></td>
+                              ))}
+                            </tr>
+                            <tr style={{ borderTop: '1px solid var(--border-default)' }}>
+                              <td className="px-4 py-3 text-text-primary">高级 API 调用</td>
+                              <td className="text-center px-4 py-3"><XIcon size={16} className="inline" style={{ color: 'var(--error-500)' }} /></td>
+                              {plans.map((p) => (
+                                <td key={p.id} className="text-center px-4 py-3"><Check size={16} className="inline" style={{ color: 'var(--success-500)' }} /></td>
+                              ))}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* 购买记录 */}
+                    {memSubTab === 'orders' && (
+                      <OrderHistory
+                        orders={orders}
+                        loading={billingLoading}
+                        onRefresh={loadBillingData}
+                        onContinuePayment={handleContinuePayment}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {activeTab === 'deactivate' && (
               <ProfileDeactivateTab
                 user={user}
@@ -1144,8 +1514,36 @@ export const Profile: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
 
+        {paymentOrder && (
+          <Modal
+            isOpen={true}
+            onClose={() => setPaymentOrder(null)}
+            title="订单支付"
+            size="sm"
+          >
+            <WechatPayButton
+              orderNo={paymentOrder.orderNo}
+              gateway={paymentOrder.gateway}
+              payParams={paymentOrder.payParams}
+              codeUrl={paymentOrder.codeUrl}
+              amount={paymentOrder.amount}
+              onSuccess={handlePaymentSuccess}
+              onError={handlePaymentError}
+              onClose={() => setPaymentOrder(null)}
+            />
+          </Modal>
+        )}
+
+        <PlanSelectOverlay
+          open={showPlanSelect}
+          plans={plans}
+          purchasing={purchasing}
+          isAuthenticated={!!user}
+          onPurchase={(planId) => handlePurchase(planId)}
+          onClose={() => setShowPlanSelect(false)}
+        />
+      </div>
       </div>
   );
 };
