@@ -56,7 +56,16 @@ export class BillingService {
       orderBy: { createdAt: 'desc' },
     });
     if (pending) {
-      return this.buildPayResponse(pending, plan);
+      const gateway = await this.gatewayFactory.getActiveGateway();
+      const result = await gateway.createPayment({
+        orderNo: pending.orderNo,
+        amount: pending.amount,
+        description: pending.description || plan.name,
+        tradeType: dto.tradeType,
+        openid: dto.openid,
+        ip: dto.ip || '127.0.0.1',
+      });
+      return this.buildPayResponse(pending, plan, result);
     }
 
     const orderNo = generateOrderNo();

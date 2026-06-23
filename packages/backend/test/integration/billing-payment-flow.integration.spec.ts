@@ -17,8 +17,8 @@ describe("Billing → Payment Flow (Mock Mode) Integration", () => {
   let testUserPassword: string;
   let testUserId: string;
   let accessToken: string;
-  let plan1: { id: string; price: number };
-  let plan2: { id: string; price: number };
+  let plan1: { id: string; price: number; name: string };
+  let plan2: { id: string; price: number; name: string };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({

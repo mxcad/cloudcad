@@ -231,9 +231,9 @@ export const Profile: React.FC = () => {
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [paymentOrder, setPaymentOrder] = useState<{
     orderNo: string;
-    gateway: string;
     payParams: Record<string, any> | null;
     codeUrl: string | null;
+    redirectUrl: string | null;
     amount: number;
   } | null>(null);
 
@@ -307,11 +307,19 @@ export const Profile: React.FC = () => {
         );
         loadBillingData();
       } else if (orderData.status === 'PENDING') {
+        if (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl) {
+          window.dispatchEvent(
+            new CustomEvent('cloudcad:toast', {
+              detail: { message: '获取支付信息失败', type: 'error' },
+            }),
+          );
+          return;
+        }
         setPaymentOrder({
           orderNo: orderData.orderNo,
-          gateway: orderData.gateway,
           payParams: orderData.payParams || null,
           codeUrl: orderData.codeUrl || null,
+          redirectUrl: orderData.redirectUrl || null,
           amount: orderData.amount,
         });
       }
@@ -368,11 +376,19 @@ export const Profile: React.FC = () => {
         return;
       }
       if (orderData.status === 'PENDING') {
+        if (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl) {
+          window.dispatchEvent(
+            new CustomEvent('cloudcad:toast', {
+              detail: { message: '获取支付信息失败', type: 'error' },
+            }),
+          );
+          return;
+        }
         setPaymentOrder({
           orderNo: orderData.orderNo,
-          gateway: orderData.gateway,
           payParams: orderData.payParams || null,
           codeUrl: orderData.codeUrl || null,
+          redirectUrl: orderData.redirectUrl || null,
           amount: orderData.amount,
         });
       }
@@ -1524,9 +1540,9 @@ export const Profile: React.FC = () => {
           >
             <WechatPayButton
               orderNo={paymentOrder.orderNo}
-              gateway={paymentOrder.gateway}
               payParams={paymentOrder.payParams}
               codeUrl={paymentOrder.codeUrl}
+              redirectUrl={paymentOrder.redirectUrl}
               amount={paymentOrder.amount}
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}

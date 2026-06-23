@@ -5,6 +5,7 @@
     import { createMxCAD } from '../../plugins/mxcad';
     import { callCommand } from '@/plugins/mxcad/command';
     import { uiConfig } from '@/config/uiConfig';
+    import { serverConfig } from '@/config/serverConfig';
     import BScroll from '@better-scroll/core';
     import ObserveDOM from '@better-scroll/observe-dom'
     import ObserveImage from '@better-scroll/observe-image';
@@ -83,19 +84,10 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
     const color = ref("#fff")
 
     function doGoBack() {
-        if (window.history.length > 1) {
-            window.history.back()
-        } else {
-            const backUrl = new URLSearchParams(window.location.search).get('back')
-            if (backUrl) {
-                const url = new URL(backUrl, window.location.origin)
-                const fileId = getFileIdFromUrl()
-                if (fileId && !url.searchParams.has('fileId')) {
-                    url.searchParams.set('fileId', fileId)
-                }
-                window.location.href = url.toString()
-            }
-        }
+        const target = import.meta.env.DEV
+            ? 'http://localhost:3000/projects'
+            : (serverConfig?.desktopPageUrl?.replace(/\/[^/]*$/, '') || '') + '/projects'
+        window.location.href = target
     }
 
     function goBack() {
