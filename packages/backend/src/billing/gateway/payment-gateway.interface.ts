@@ -5,6 +5,7 @@ export interface CreatePaymentParams {
   tradeType: string;
   openid?: string;
   ip: string;
+  redirectUrl?: string;
 }
 
 export interface CreatePaymentResult {

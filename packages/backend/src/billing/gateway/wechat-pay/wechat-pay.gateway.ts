@@ -77,6 +77,11 @@ export class WechatPayGateway implements PaymentGateway {
       data.openid = params.openid;
     }
 
+    // MWEB 需要 redirect_url 参数，支付完成后微信跳转回此地址
+    if (params.tradeType === 'MWEB' && params.redirectUrl) {
+      data.redirect_url = params.redirectUrl;
+    }
+
     data.sign = md5Sign(data, this.key);
 
     const result = await this.requestWechatApi('/pay/unifiedorder', data);

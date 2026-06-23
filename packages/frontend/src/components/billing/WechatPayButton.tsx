@@ -47,10 +47,10 @@ export default function WechatPayButton({
         // WeixinJSBridge 可能尚未加载完成，等待 ready 事件
         const onReady = () => {
           document.removeEventListener('WeixinJSBridgeReady', onReady);
-          WeixinJSBridge.invoke(
+          (WeixinJSBridge as any).invoke(
             'getBrandWCPayRequest',
             payParams,
-            (res) => {
+            (res: { err_msg: string }) => {
               if (res.err_msg === 'get_brand_wcpay_request:ok') resolve();
               else if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error('支付已取消'));
               else reject(new Error(res.err_msg || '支付失败'));
@@ -136,7 +136,8 @@ export default function WechatPayButton({
     if (redirectUrl && isMobile && !isWeChat && !redirectAttempted.current) {
       redirectAttempted.current = true;
       startPolling();
-      window.location.href = redirectUrl;
+      // 延迟跳转确保轮询先注册
+      setTimeout(() => { window.location.href = redirectUrl; }, 100);
     }
   }, [redirectUrl, isMobile, isWeChat, startPolling]);
 

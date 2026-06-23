@@ -19,4 +19,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   ip?: string;
+
+  @ApiProperty({ description: '支付成功后跳转回的前端 URL（MWEB 必传）', required: false })
+  @IsOptional()
+  @IsString()
+  redirectUrl?: string;
 }

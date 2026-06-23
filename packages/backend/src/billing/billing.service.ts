@@ -97,6 +97,7 @@ export class BillingService {
         tradeType: dto.tradeType,
         openid: dto.openid,
         ip: dto.ip || '127.0.0.1',
+        redirectUrl: dto.redirectUrl,
       });
       if (result.gatewayOrderId && result.gatewayOrderId !== pending.gatewayOrderId) {
         await this.prisma.paymentOrder.update({
@@ -118,6 +119,7 @@ export class BillingService {
       tradeType: dto.tradeType,
       openid: dto.openid,
       ip,
+      redirectUrl: dto.redirectUrl,
     });
 
     const order = await this.prisma.paymentOrder.create({

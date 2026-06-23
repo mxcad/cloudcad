@@ -97,7 +97,6 @@ export const ProfileMembershipTab: React.FC = () => {
       setBillingLoading(false);
     }
   }, []);
-  }, []);
 
   useEffect(() => {
     loadBillingData();
@@ -109,6 +108,19 @@ export const ProfileMembershipTab: React.FC = () => {
     return () => { clearInterval(id); };
   }, [loadBillingData]);
 
+  // MWEB 支付返回后自动刷新订单状态
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('paymentReturn') === '1') {
+      // 清除 URL 参数防止刷新后重复触发
+      const url = new URL(window.location.href);
+      url.searchParams.delete('paymentReturn');
+      window.history.replaceState({}, '', url.toString());
+      // 立即刷新订单数据
+      loadBillingData();
+    }
+  }, [loadBillingData]);
+
   const detectTradeType = (): 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP' => {
     const ua = navigator.userAgent;
     if (/MicroMessenger/i.test(ua)) return 'JSAPI';
@@ -117,9 +129,15 @@ export const ProfileMembershipTab: React.FC = () => {
   };
 
   const doCreateOrder = async (planId: string) => {
-    const res: any = await billingControllerCreateOrder({
-      body: { planId, tradeType: detectTradeType() },
-    });
+    // MWEB 需要传 redirectUrl，支付完成后微信跳转回来
+    const tradeType = detectTradeType();
+    const body: any = { planId, tradeType };
+    if (tradeType === 'MWEB') {
+      const returnUrl = new URL(window.location.href);
+      returnUrl.searchParams.set('paymentReturn', '1');
+      body.redirectUrl = returnUrl.toString();
+    }
+    const res: any = await billingControllerCreateOrder({ body });
     const orderData = res?.data;
     if (res?.error || !orderData) {
       window.dispatchEvent(
