@@ -22,12 +22,6 @@ export class PlansService {
     return plans.map(this.toPlanResponse);
   }
 
-  async getPlanById(id: string) {
-    const plan = await this.prisma.membershipPlan.findUnique({ where: { id } });
-    if (!plan) throw new NotFoundException('plan not found');
-    return this.toPlanResponse(plan);
-  }
-
   async createPlan(data: {
     name: string;
     durationDays: number;
@@ -39,6 +33,13 @@ export class PlansService {
   }) {
     if (data.originalPrice != null && data.originalPrice < data.price) {
       throw new BadRequestException('originalPrice must be >= price');
+    }
+    if (data.features !== undefined) {
+      try {
+        JSON.parse(JSON.stringify(data.features));
+      } catch {
+        throw new BadRequestException('features must be JSON-serializable');
+      }
     }
     try {
       const plan = await this.prisma.membershipPlan.create({

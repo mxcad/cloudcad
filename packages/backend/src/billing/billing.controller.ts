@@ -142,6 +142,7 @@ export class BillingAdminController {
 
   @Post('mock-callback')
   @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @Throttle({ default: { limit: 3, ttl: 10000 } })
   @ApiOperation({ summary: '模拟支付回调（仅 mock 模式）' })
   async mockCallback(@Body() dto: MockCallbackDto) {
     await this.billingService.handleMockCallback(dto.orderNo);

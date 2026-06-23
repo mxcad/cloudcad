@@ -97,6 +97,7 @@ export const ProfileMembershipTab: React.FC = () => {
       setBillingLoading(false);
     }
   }, []);
+  }, []);
 
   useEffect(() => {
     loadBillingData();

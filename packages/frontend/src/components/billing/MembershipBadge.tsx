@@ -35,7 +35,7 @@ export default function MembershipBadge() {
           setMembership(data);
         }
       } catch {
-        // 忽略错误，不显示徽章
+        console.warn('获取会员信息失败，不显示徽章');
       }
     })();
   }, [user]);

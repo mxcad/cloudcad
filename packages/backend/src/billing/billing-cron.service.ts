@@ -14,7 +14,7 @@ export class BillingCron {
   async downgradeExpiredMemberships() {
     const { count } = await this.prisma.userMembership.updateMany({
       where: { expiresAt: { lte: new Date(), not: null } },
-      data: { tier: MembershipTier.FREE, expiresAt: null },
+      data: { tier: MembershipTier.FREE },
     });
     if (count > 0) {
       this.logger.log(`downgraded ${count} expired memberships`);

@@ -100,7 +100,7 @@ export class BillingService {
       });
       if (result.gatewayOrderId && result.gatewayOrderId !== pending.gatewayOrderId) {
         await this.prisma.paymentOrder.update({
-          where: { id: pending.id },
+          where: { id: pending.id, status: OrderStatus.PENDING },
           data: { gatewayOrderId: result.gatewayOrderId },
         });
       }

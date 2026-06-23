@@ -51,20 +51,6 @@ describe("PlansService", () => {
     });
   });
 
-  describe("getPlanById", () => {
-    it("should return plan when found", async () => {
-      mockPrisma.membershipPlan.findUnique.mockResolvedValue(mockPlan);
-      const result = await service.getPlanById("plan-1");
-      expect(result.id).toBe("plan-1");
-      expect(result.priceYuan).toBe(24);
-    });
-
-    it("should throw NotFoundException when plan not found", async () => {
-      mockPrisma.membershipPlan.findUnique.mockResolvedValue(null);
-      await expect(service.getPlanById("nonexistent")).rejects.toThrow(NotFoundException);
-    });
-  });
-
   describe("createPlan", () => {
     it("should create plan when valid", async () => {
       const input = {

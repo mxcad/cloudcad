@@ -94,10 +94,18 @@ export default function WechatPayButton({
   }, [invokeWechatPay, onSuccess, onError]);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingCountRef = useRef(0);
+  const MAX_POLLING_ATTEMPTS = 120; // 最多轮询 120 次（5s * 120 = 10min）
 
   const startPolling = useCallback(() => {
     if (pollingRef.current) return;
+    pollingCountRef.current = 0;
     pollingRef.current = setInterval(async () => {
+      pollingCountRef.current += 1;
+      if (pollingCountRef.current > MAX_POLLING_ATTEMPTS) {
+        if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+        return;
+      }
       try {
         const res = await billingControllerQueryOrder({ path: { orderNo } });
         const order = res?.data as Record<string, any> | undefined;
