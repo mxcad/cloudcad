@@ -146,14 +146,6 @@ export const ProfileMembershipTab: React.FC = () => {
       return null;
     }
 
-    if (orderData.status === 'SUCCEEDED') {
-      window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '开通成功！', type: 'success' } }),
-      );
-      loadBillingData();
-      return null;
-    }
-
     if (orderData.status !== 'PENDING' || (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl)) {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '获取支付信息失败', type: 'error' } }),

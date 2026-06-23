@@ -93,18 +93,23 @@ export class BillingService {
       const result = await gateway.createPayment({
         orderNo: pending.orderNo,
         amount: pending.amount,
-        description: pending.description || plan.name,
+        description: plan.name,
         tradeType: dto.tradeType,
         openid: dto.openid,
         ip: dto.ip || '127.0.0.1',
         redirectUrl: dto.redirectUrl,
       });
+      const updateData: Record<string, any> = { gatewayOrderId: result.gatewayOrderId };
+      // 复用 pending 订单时同步更新 tradeType（用户可能切换支付方式）和 description（套餐名可能已变更）
+      if (dto.tradeType !== pending.tradeType) updateData.tradeType = dto.tradeType;
+      if (plan.name !== pending.description) updateData.description = plan.name;
       if (result.gatewayOrderId && result.gatewayOrderId !== pending.gatewayOrderId) {
-        await this.prisma.paymentOrder.update({
-          where: { id: pending.id, status: OrderStatus.PENDING },
-          data: { gatewayOrderId: result.gatewayOrderId },
-        });
+        updateData.gatewayOrderId = result.gatewayOrderId;
       }
+      await this.prisma.paymentOrder.update({
+        where: { id: pending.id, status: OrderStatus.PENDING },
+        data: updateData,
+      });
       const updated = await this.prisma.paymentOrder.findUnique({ where: { id: pending.id } });
       return this.buildPayResponse(updated!, plan, result);
     }
@@ -230,24 +235,25 @@ export class BillingService {
       const result = await gateway.queryOrder(orderNo);
       switch (result.status) {
         case 'SUCCESS':
-          if (result.gatewayOrderId) {
-            const amount = result.amount ?? order.amount;
-            if (amount !== order.amount) {
-              await this.prisma.paymentOrder.update({
-                where: { id: order.id },
-                data: { status: OrderStatus.FAILED, failedAt: new Date(), description: `金额不匹配: order=${order.amount} gateway=${amount}` },
-              });
-              this.logger.warn(`amount mismatch on refresh, order marked FAILED: order=${order.amount} gateway=${amount} orderNo=${orderNo}`);
-              return this.prisma.paymentOrder.findUnique({ where: { orderNo } });
-            }
-            await this.handlePaymentNotify({
-              isValid: true,
-              orderNo,
-              gatewayOrderId: result.gatewayOrderId,
-              amount,
-              paidAt: result.paidAt ?? new Date(),
-            });
+          if (!result.gatewayOrderId) {
+            this.logger.warn(`gateway SUCCESS but no transaction_id: ${orderNo}`);
+            break;
           }
+          if (result.amount != null && result.amount !== order.amount) {
+            this.logger.warn(`amount mismatch on refresh, order FAILED: order=${order.amount} gateway=${result.amount} orderNo=${orderNo}`);
+            await this.prisma.paymentOrder.update({
+              where: { id: order.id },
+              data: { status: OrderStatus.FAILED, failedAt: new Date(), description: `金额不匹配: order=${order.amount} gateway=${result.amount}` },
+            });
+            return this.prisma.paymentOrder.findUnique({ where: { orderNo } });
+          }
+          await this.handlePaymentNotify({
+            isValid: true,
+            orderNo,
+            gatewayOrderId: result.gatewayOrderId,
+            amount: result.amount ?? order.amount,
+            paidAt: result.paidAt ?? new Date(),
+          });
           break;
         case 'CLOSED':
           this.logger.log(`order closed by gateway: ${orderNo}`);
@@ -297,12 +303,25 @@ export class BillingService {
       throw new BadRequestException('only succeeded orders can be refunded');
     }
 
-    // Step 1: Gateway refund first
+    // Step 1: Gateway refund with retry
     const gateway = this.gatewayFactory.getGateway(order.gateway);
-    try {
-      await gateway.refund(orderNo, order.amount);
-    } catch (e) {
-      this.logger.error(`refund gateway call failed: ${orderNo}`, e);
+    let lastError: Error | null = null;
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        await gateway.refund(orderNo, order.amount);
+        lastError = null;
+        break;
+      } catch (e) {
+        lastError = e as Error;
+        this.logger.warn(`refund attempt ${attempt}/${MAX_RETRIES} failed: ${orderNo}`, e);
+        if (attempt < MAX_RETRIES) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
+        }
+      }
+    }
+    if (lastError) {
+      this.logger.error(`refund gateway call failed after ${MAX_RETRIES} attempts: ${orderNo}`, lastError);
       throw new BadRequestException('退款请求发送失败，请稍后重试');
     }
 
@@ -352,7 +371,11 @@ export class BillingService {
         if (w > (MembershipService.TIER_WEIGHT[maxTier] ?? 0)) {
           maxTier = r.plan.tier as MembershipTier;
         }
-        if (!r.paidAt || !r.plan.durationDays) continue;
+        if (!r.paidAt) {
+          this.logger.warn(`recalculate skipping order ${r.orderNo}: paidAt is null for SUCCEEDED order`);
+          continue;
+        }
+        if (!r.plan.durationDays) continue;
 
         // activate 逻辑: base = max(previousExpiresAt, activationTime)
         const base = cursor > r.paidAt ? cursor : r.paidAt;

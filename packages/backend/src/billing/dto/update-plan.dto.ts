@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsBoolean, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsIn, IsBoolean, Min, Max } from 'class-validator';
 
 export class UpdatePlanDto {
   @ApiPropertyOptional({ description: '套餐名称' })
@@ -9,31 +9,31 @@ export class UpdatePlanDto {
 
   @ApiPropertyOptional({ description: '时长（天）' })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(36500)
   durationDays?: number;
 
   @ApiPropertyOptional({ description: '价格（分）' })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
   price?: number;
 
   @ApiPropertyOptional({ description: '原价（分）' })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
   originalPrice?: number | null;
 
-  @ApiPropertyOptional({ description: '会员等级' })
+  @ApiPropertyOptional({ description: '会员等级', enum: ['FREE', 'PRO'] })
   @IsOptional()
-  @IsString()
+  @IsIn(['FREE', 'PRO'])
   tier?: string;
 
   @ApiPropertyOptional({ description: '排序' })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   sortOrder?: number;
 
   @ApiPropertyOptional({ description: '是否上架' })

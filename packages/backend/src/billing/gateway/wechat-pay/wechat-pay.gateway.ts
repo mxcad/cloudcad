@@ -6,7 +6,11 @@ import axios from 'axios';
 import { buildXML, parseXML, generateNonceStr, md5Sign, parseTimeEnd } from './wechat-pay.util';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
 
-/** 用于重放攻击防护的 nonce 缓存（5 分钟内已见过的 nonce 拒绝） */
+/**
+ * 用于重放攻击防护的 nonce 缓存（5 分钟内已见过的 nonce 拒绝）
+ * 注意：此为进程级缓存，多实例部署时重放攻击防护能力有限。
+ * 关键防护依赖 handlePaymentNotify 的乐观锁（status=PENDING 条件更新）。
+ */
 const RECENT_NONCES = new Set<string>();
 let NONCE_CLEANUP_TIMEOUT: ReturnType<typeof setTimeout> | null = null;
 function markNonceUsed(nonce: string): void {
@@ -53,6 +57,8 @@ export class WechatPayGateway implements PaymentGateway {
         pfx: fs.readFileSync(certPath),
         passphrase: this.mchId,
       });
+    } else {
+      this.logger.warn(`wechat pay cert not configured — refund API (/secapi/pay/refund) will fail in production`);
     }
   }
 
@@ -114,6 +120,17 @@ export class WechatPayGateway implements PaymentGateway {
     const xml = typeof payload === 'string' ? payload : payload;
     const parsed = parseXML(xml);
     const data = parsed?.xml ?? parsed;
+
+    if (!data || typeof data !== 'object') {
+      this.logger.warn(`invalid wechat webhook XML: cannot parse`);
+      return {
+        isValid: false,
+        orderNo: '',
+        gatewayOrderId: '',
+        amount: 0,
+        paidAt: new Date(),
+      };
+    }
 
     // 使用排除法构建签名数据：取所有字段除 sign 外参与签名
     // 比白名单更健壮，微信新增字段不会导致签名验证失败

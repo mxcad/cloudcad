@@ -47,7 +47,7 @@ describe("BillingCron", () => {
   });
 
   describe("timeoutPendingOrders", () => {
-    it("should timeout pending orders older than 24h", async () => {
+    it("should timeout pending orders older than 2h", async () => {
       mockPrisma.paymentOrder.updateMany.mockResolvedValue({ count: 2 });
       await service.timeoutPendingOrders();
       expect(mockPrisma.paymentOrder.updateMany).toHaveBeenCalledWith({

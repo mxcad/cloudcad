@@ -107,9 +107,18 @@ export class PlansService {
   async deactivatePlan(id: string) {
     const plan = await this.prisma.membershipPlan.findUnique({ where: { id } });
     if (!plan) throw new NotFoundException('plan not found');
+
+    // 检查同一 sortOrder 下是否已有 isActive=false 的记录，避免 @@unique([sortOrder, isActive]) 冲突
+    const existingInactive = await this.prisma.membershipPlan.findFirst({
+      where: { sortOrder: plan.sortOrder, isActive: false, id: { not: id } },
+    });
+
     const updated = await this.prisma.membershipPlan.update({
       where: { id },
-      data: { isActive: false },
+      data: {
+        isActive: false,
+        ...(existingInactive ? { sortOrder: -(Date.now() % 1000000) } : {}),
+      },
     });
     return this.toPlanResponse(updated);
   }

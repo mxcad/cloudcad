@@ -136,8 +136,8 @@ export default function WechatPayButton({
     if (redirectUrl && isMobile && !isWeChat && !redirectAttempted.current) {
       redirectAttempted.current = true;
       startPolling();
-      // 延迟跳转确保轮询先注册
-      setTimeout(() => { window.location.href = redirectUrl; }, 100);
+      // 延迟跳转确保轮询先注册并发出第一次请求；用户跳转后由 paymentReturn 参数兜底
+      setTimeout(() => { window.location.href = redirectUrl; }, 500);
     }
   }, [redirectUrl, isMobile, isWeChat, startPolling]);
 
