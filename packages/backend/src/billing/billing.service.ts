@@ -233,7 +233,12 @@ export class BillingService {
           if (result.gatewayOrderId) {
             const amount = result.amount ?? order.amount;
             if (amount !== order.amount) {
-              this.logger.warn(`amount mismatch on refresh: order=${order.amount} gateway=${amount}`);
+              await this.prisma.paymentOrder.update({
+                where: { id: order.id },
+                data: { status: OrderStatus.FAILED, failedAt: new Date(), description: `金额不匹配: order=${order.amount} gateway=${amount}` },
+              });
+              this.logger.warn(`amount mismatch on refresh, order marked FAILED: order=${order.amount} gateway=${amount} orderNo=${orderNo}`);
+              return this.prisma.paymentOrder.findUnique({ where: { orderNo } });
             }
             await this.handlePaymentNotify({
               isValid: true,
@@ -336,26 +341,32 @@ export class BillingService {
         return;
       }
 
+      // 按 paidAt 升序重新模拟激活序列，与 MembershipService.activate 累加逻辑一致
+      remaining.sort((a, b) => (a.paidAt?.getTime() ?? 0) - (b.paidAt?.getTime() ?? 0));
+
+      let cursor = new Date(0);
       let maxTier: MembershipTier = MembershipTier.FREE;
-      let latestExpires = new Date(0);
+
       for (const r of remaining) {
         const w = MembershipService.TIER_WEIGHT[r.plan.tier] ?? 0;
         if (w > (MembershipService.TIER_WEIGHT[maxTier] ?? 0)) {
           maxTier = r.plan.tier as MembershipTier;
         }
-        if (r.paidAt && r.plan.durationDays) {
-          const exp = new Date(r.paidAt.getTime() + r.plan.durationDays * 86400000);
-          if (exp > latestExpires) latestExpires = exp;
-        }
+        if (!r.paidAt || !r.plan.durationDays) continue;
+
+        // activate 逻辑: base = max(previousExpiresAt, activationTime)
+        const base = cursor > r.paidAt ? cursor : r.paidAt;
+        cursor = new Date(base.getTime() + r.plan.durationDays * 86400000);
       }
-      // 确保 not-a-number 或 invalid date 不会传播
-      if (Number.isNaN(latestExpires.getTime())) latestExpires = now;
+
+      // 没有有效订单可计算时兜底
+      if (cursor.getTime() === 0 || Number.isNaN(cursor.getTime())) cursor = now;
 
       await tx.userMembership.update({
         where: { userId: refundedOrder.userId },
         data: {
           tier: maxTier as any,
-          expiresAt: latestExpires > now ? latestExpires : now,
+          expiresAt: cursor > now ? cursor : now,
         },
       });
     });

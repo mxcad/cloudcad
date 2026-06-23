@@ -354,6 +354,7 @@ export const ProfileMembershipTab: React.FC = () => {
               onPageChange={(p) => {
                 setOrderPage(p);
                 orderPageRef.current = p;
+                setBillingLoading(true);
                 loadBillingData();
               }}
             />

@@ -19,7 +19,7 @@ export class WebhookController {
   async wechatNotify(@Req() req: Request, @Res() res: Response) {
     const enabled = await this.runtimeConfigService.getValue<boolean>('paymentEnabled', false);
     if (!enabled) {
-      res.setHeader('Content-Type', 'application/xml');
+      res.status(503).setHeader('Content-Type', 'application/xml');
       res.send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[payment disabled]]></return_msg></xml>');
       return;
     }
@@ -32,6 +32,10 @@ export class WebhookController {
     }
     const result = await this.billingService.handleWechatNotify(rawBody);
     res.setHeader('Content-Type', 'application/xml');
+    const isSuccess = result.includes('return_code><![CDATA[SUCCESS]]></return_code>');
+    if (!isSuccess) {
+      res.status(500);
+    }
     res.send(result);
   }
 }

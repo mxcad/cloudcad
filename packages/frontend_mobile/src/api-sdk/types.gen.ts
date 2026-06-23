@@ -2925,6 +2925,10 @@ export type CreateOrderDto = {
      * 客户端 IP
      */
     ip?: string;
+    /**
+     * 支付成功后跳转回的前端 URL（MWEB 必传）
+     */
+    redirectUrl?: string;
 };
 
 export type UpdatePlanDto = {

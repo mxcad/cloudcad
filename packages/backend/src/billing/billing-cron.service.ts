@@ -23,7 +23,7 @@ export class BillingCron {
 
   @Cron('0 */2 * * *')
   async timeoutPendingOrders() {
-    const cutoff = new Date(Date.now() - 6 * 3600000);
+    const cutoff = new Date(Date.now() - 2 * 3600000);
     const { count } = await this.prisma.paymentOrder.updateMany({
       where: {
         status: OrderStatus.PENDING,
