@@ -32,3 +32,19 @@ export function parseXML(xml: string): any {
 export function generateNonceStr(): string {
   return crypto.randomBytes(16).toString('hex');
 }
+
+/**
+ * 解析微信支付 time_end 格式 (yyyyMMddHHmmss) 为 Date
+ * 微信回调 time_end 示例: "20260623142059"
+ * 不能直接用 new Date(str) 因为 Safari 不识别该格式
+ */
+export function parseTimeEnd(str: string | undefined): Date {
+  if (!str || str.length < 14) return new Date();
+  const y = +str.slice(0, 4);
+  const m = +str.slice(4, 6) - 1;
+  const d = +str.slice(6, 8);
+  const h = +str.slice(8, 10);
+  const min = +str.slice(10, 12);
+  const s = +str.slice(12, 14);
+  return new Date(y, m, d, h, min, s);
+}

@@ -67,6 +67,14 @@ export class BillingController {
     return this.billingService.refreshOrder(req.user.id, orderNo);
   }
 
+  @Post('orders/:orderNo/mock-scan')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '模拟支付（仅 mock 模式）' })
+  async mockScan(@Req() req: any, @Param('orderNo') orderNo: string) {
+    return this.billingService.mockScan(req.user.id, orderNo);
+  }
+
   @Get('orders/:orderNo')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

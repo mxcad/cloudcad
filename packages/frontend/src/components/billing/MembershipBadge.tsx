@@ -10,7 +10,6 @@ interface MembershipInfo {
 
 const TIER_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   PRO: { label: 'Pro', bg: 'var(--accent-100)', text: 'var(--accent-700)' },
-  ENTERPRISE: { label: 'Enterprise', bg: 'var(--primary-100)', text: 'var(--primary-700)' },
 };
 
 let cachedMembership: { data: MembershipInfo; ts: number; userId: string } | null = null;

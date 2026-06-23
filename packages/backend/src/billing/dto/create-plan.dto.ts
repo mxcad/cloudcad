@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsEnum, Min, Max } from 'class-validator';
-import { MembershipTier } from '../enums/billing.enum';
+import { IsString, IsNumber, IsOptional, Min, Max } from 'class-validator';
 
 export class CreatePlanDto {
   @ApiProperty({ description: '套餐名称' })
@@ -24,8 +23,8 @@ export class CreatePlanDto {
   @Min(0)
   originalPrice?: number | null;
 
-  @ApiProperty({ description: '会员等级', enum: [MembershipTier.PRO, MembershipTier.ENTERPRISE] })
-  @IsEnum(MembershipTier)
+  @ApiProperty({ description: '会员等级', enum: ['PRO'] })
+  @IsString()
   tier: string;
 
   @ApiProperty({ description: '排序' })

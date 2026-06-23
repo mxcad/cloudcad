@@ -224,6 +224,14 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: false,
   },
+  {
+    key: 'mockPaymentDelayMs',
+    type: 'number',
+    category: 'billing',
+    description: '模拟支付延迟毫秒数',
+    defaultValue: 15000,
+    isPublic: false,
+  },
 
   // 系统配置
   {

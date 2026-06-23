@@ -2988,7 +2988,7 @@ export type CreatePlanDto = {
     /**
      * 会员等级
      */
-    tier: 'PRO' | 'ENTERPRISE';
+    tier: 'PRO';
     /**
      * 排序
      */
@@ -8892,6 +8892,19 @@ export type BillingControllerQueryOrderData = {
 };
 
 export type BillingControllerQueryOrderResponses = {
+    201: unknown;
+};
+
+export type BillingControllerMockScanData = {
+    body?: never;
+    path: {
+        orderNo: string;
+    };
+    query?: never;
+    url: '/api/v1/billing/orders/{orderNo}/mock-scan';
+};
+
+export type BillingControllerMockScanResponses = {
     201: unknown;
 };
 

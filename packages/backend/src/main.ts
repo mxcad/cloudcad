@@ -84,6 +84,20 @@ async function bootstrap() {
       },
     })(req, res, next);
   });
+  // XML body parser（微信支付回调使用 XML，需要捕获 rawBody 用于签名验证）
+  server.use((req, res, next) => {
+    const ct = req.headers['content-type'] || '';
+    if (!ct.includes('xml')) return next();
+    express.text({
+      type: ['text/xml', 'application/xml'],
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        if (buf && buf.length) {
+          req.rawBody = buf.toString('utf8');
+        }
+      },
+    })(req, res, next);
+  });
   server.use((req, res, next) => {
     const ct = req.headers['content-type'] || '';
     if (ct.includes('multipart/form-data')) {

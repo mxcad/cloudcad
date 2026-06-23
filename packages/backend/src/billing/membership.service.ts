@@ -13,7 +13,6 @@ export class MembershipService {
   static readonly TIER_WEIGHT: Record<string, number> = {
     [MembershipTier.FREE]: 0,
     [MembershipTier.PRO]: 1,
-    [MembershipTier.ENTERPRISE]: 2,
   };
 
   constructor(private prisma: DatabaseService) {}

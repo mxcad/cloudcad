@@ -295,24 +295,6 @@ async function seedMembershipPlans(prisma: PrismaClient) {
         tier: 'PRO',
         features: { maxStorage: 5368709120, maxProjects: 200, maxCollaborators: 20, versionHistoryDays: 365 },
       },
-      {
-        name: '企业版月度',
-        durationDays: 30,
-        price: 8000,
-        originalPrice: 10000,
-        sortOrder: 4,
-        tier: 'ENTERPRISE',
-        features: { maxStorage: 10737418240, maxProjects: 500, maxCollaborators: 50, versionHistoryDays: 90 },
-      },
-      {
-        name: '企业版年度',
-        durationDays: 365,
-        price: 88000,
-        originalPrice: 96000,
-        sortOrder: 5,
-        tier: 'ENTERPRISE',
-        features: { maxStorage: 53687091200, maxProjects: 2000, maxCollaborators: 200, versionHistoryDays: 365 },
-      },
     ],
   });
   console.log('membership plans seeded');

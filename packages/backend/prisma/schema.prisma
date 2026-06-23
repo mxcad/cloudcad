@@ -465,7 +465,6 @@ model FileShare {
 enum MembershipTier {
   FREE
   PRO
-  ENTERPRISE
 }
 
 enum OrderStatus {

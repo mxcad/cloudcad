@@ -81,11 +81,11 @@ describe("MembershipService", () => {
       const future = new Date(Date.now() + 30 * 86400000);
       mockPrisma.userMembership.findUnique.mockResolvedValue({
         userId: "user-1",
-        tier: "ENTERPRISE",
+        tier: "PRO",
         expiresAt: future,
       });
       const result = await service.getEffectiveTier("user-1");
-      expect(result).toBe("ENTERPRISE");
+      expect(result).toBe("PRO");
     });
   });
 });

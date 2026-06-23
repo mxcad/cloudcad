@@ -41,31 +41,48 @@ export default function WechatPayButton({
   const isWeChat = useMemo(() => /MicroMessenger/i.test(navigator.userAgent), []);
   const isMobile = useMemo(() => /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent), []);
 
+  const invokeWechatPay = useCallback(() => {
+    return new Promise<void>((resolve, reject) => {
+      if (typeof WeixinJSBridge === 'undefined') {
+        // WeixinJSBridge 可能尚未加载完成，等待 ready 事件
+        const onReady = () => {
+          document.removeEventListener('WeixinJSBridgeReady', onReady);
+          WeixinJSBridge.invoke(
+            'getBrandWCPayRequest',
+            payParams,
+            (res) => {
+              if (res.err_msg === 'get_brand_wcpay_request:ok') resolve();
+              else if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error('支付已取消'));
+              else reject(new Error(res.err_msg || '支付失败'));
+            },
+          );
+        };
+        document.addEventListener('WeixinJSBridgeReady', onReady);
+        // 5 秒超时 — 若 WeixinJSBridge 仍未就绪则降级提示
+        setTimeout(() => {
+          document.removeEventListener('WeixinJSBridgeReady', onReady);
+          reject(new Error('微信支付组件加载超时，请刷新页面重试'));
+        }, 5000);
+        return;
+      }
+      WeixinJSBridge.invoke(
+        'getBrandWCPayRequest',
+        payParams,
+        (res) => {
+          if (res.err_msg === 'get_brand_wcpay_request:ok') resolve();
+          else if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error('支付已取消'));
+          else reject(new Error(res.err_msg || '支付失败'));
+        },
+      );
+    });
+  }, [payParams]);
+
   const handlePay = useCallback(async () => {
     setPayState('paying');
     setErrorMsg('');
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        if (typeof WeixinJSBridge === 'undefined') {
-          reject(new Error('WeixinJSBridge not available'));
-          return;
-        }
-        WeixinJSBridge.invoke(
-          'getBrandWCPayRequest',
-          payParams,
-          (res) => {
-            if (res.err_msg === 'get_brand_wcpay_request:ok') {
-              resolve();
-            } else if (res.err_msg === 'get_brand_wcpay_request:cancel') {
-              reject(new Error('支付已取消'));
-            } else {
-              reject(new Error(res.err_msg || '支付失败'));
-            }
-          },
-        );
-      });
-
+      await invokeWechatPay();
       setPayState('success');
       onSuccess();
     } catch (err: any) {
@@ -74,7 +91,7 @@ export default function WechatPayButton({
       setPayState('error');
       onError(msg);
     }
-  }, [payParams, onSuccess, onError]);
+  }, [invokeWechatPay, onSuccess, onError]);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

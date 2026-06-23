@@ -312,7 +312,7 @@ export default function AdminBillingPage() {
                             <span className="line-through ml-1">¥{plan.originalPriceYuan.toFixed(2)}</span>
                           )}
                           {' · '}
-                          {plan.tier === 'PRO' ? '专业版' : '企业版'}
+                          专业版
                           {' · '}
                           {plan.durationDays >= 365 ? `${(plan.durationDays / 365).toFixed(0)}年` : `${plan.durationDays}天`}
                         </p>
@@ -570,7 +570,6 @@ function PlanForm({
           onChange={(v) => set('tier', v)}
           options={[
             { label: '专业版 (PRO)', value: 'PRO' },
-            { label: '企业版 (ENTERPRISE)', value: 'ENTERPRISE' },
           ]}
         />
       </div>

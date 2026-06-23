@@ -48,7 +48,6 @@ const FEATURE_FMT: Record<string, (v: number) => string> = {
 const TIER_LABEL: Record<string, string> = {
   FREE: '免费用户',
   PRO: '专业版会员',
-  ENTERPRISE: '企业版会员',
 };
 
 export const ProfileMembershipTab: React.FC = () => {
@@ -333,7 +332,11 @@ export const ProfileMembershipTab: React.FC = () => {
               onContinuePayment={handleContinuePayment}
               page={orderPage}
               total={orderTotal}
-              onPageChange={(p) => setOrderPage(p)}
+              onPageChange={(p) => {
+                setOrderPage(p);
+                orderPageRef.current = p;
+                loadBillingData();
+              }}
             />
           )}
         </>

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { Prisma } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { PaymentGatewayFactory } from './gateway/payment-gateway.factory';
+import { MockPaymentGateway } from './gateway/mock/mock-payment.gateway';
 import { MembershipService } from './membership.service';
 import { PlansService } from './plans.service';
 import { OrderStatus, MembershipTier } from './enums/billing.enum';
@@ -33,7 +34,7 @@ interface RefundOrderInfo {
 
 function generateOrderNo(): string {
   const suffix = randomUUID().replace(/-/g, '').substring(0, 24);
-  return `MC${suffix}`;
+  return `PAY${suffix}`;
 }
 
 @Injectable()
@@ -132,12 +133,6 @@ export class BillingService {
       },
     });
 
-    if (gateway.name === 'mock') {
-      await this.handleMockCallback(orderNo);
-      const updated = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
-      return this.buildPayResponse(updated!, plan, result, true);
-    }
-
     return this.buildPayResponse(order, plan, result);
   }
 
@@ -231,24 +226,58 @@ export class BillingService {
     try {
       const gateway = this.gatewayFactory.getGateway(order.gateway);
       const result = await gateway.queryOrder(orderNo);
-      if (result.status === 'SUCCESS' && result.gatewayOrderId) {
-        const amount = result.amount ?? order.amount;
-        if (amount !== order.amount) {
-          this.logger.warn(`amount mismatch on refresh: order=${order.amount} gateway=${amount}`);
-        }
-        await this.handlePaymentNotify({
-          isValid: true,
-          orderNo,
-          gatewayOrderId: result.gatewayOrderId,
-          amount,
-          paidAt: result.paidAt ?? new Date(),
-        });
+      switch (result.status) {
+        case 'SUCCESS':
+          if (result.gatewayOrderId) {
+            const amount = result.amount ?? order.amount;
+            if (amount !== order.amount) {
+              this.logger.warn(`amount mismatch on refresh: order=${order.amount} gateway=${amount}`);
+            }
+            await this.handlePaymentNotify({
+              isValid: true,
+              orderNo,
+              gatewayOrderId: result.gatewayOrderId,
+              amount,
+              paidAt: result.paidAt ?? new Date(),
+            });
+          }
+          break;
+        case 'CLOSED':
+          this.logger.log(`order closed by gateway: ${orderNo}`);
+          await this.prisma.paymentOrder.update({
+            where: { id: order.id },
+            data: { status: OrderStatus.CLOSED, closedAt: new Date() },
+          });
+          break;
+        case 'NOTPAY':
+          // 微信支付二维码已过期但微信返回 NOTPAY，标记为 TIMEOUT
+          if (order.createdAt < new Date(Date.now() - 7200000)) {
+            this.logger.log(`order exceeded 2h window, marking timeout: ${orderNo}`);
+            await this.prisma.paymentOrder.update({
+              where: { id: order.id },
+              data: { status: OrderStatus.TIMEOUT, closedAt: new Date() },
+            });
+          }
+          break;
       }
     } catch (e) {
       this.logger.warn(`query order failed: ${orderNo}`, e);
     }
 
     return this.prisma.paymentOrder.findUnique({ where: { orderNo } });
+  }
+
+  async mockScan(userId: string, orderNo: string) {
+    const order = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
+    if (!order) throw new NotFoundException('order not found');
+    if (order.userId !== userId) throw new NotFoundException('order not found');
+    if (order.gateway !== 'mock') throw new NotFoundException('order not found');
+    if (order.status !== OrderStatus.PENDING) return order;
+
+    const mockGateway = this.gatewayFactory.getGateway('mock') as MockPaymentGateway;
+    mockGateway.forceComplete(orderNo);
+
+    return this.refreshOrder(userId, orderNo);
   }
 
   async refund(orderNo: string, reason?: string): Promise<void> {
@@ -288,6 +317,7 @@ export class BillingService {
 
   private async recalculateMembershipAfterRefund(refundedOrder: RefundOrderInfo) {
     await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
       const remaining = await tx.paymentOrder.findMany({
         where: {
           userId: refundedOrder.userId,
@@ -299,7 +329,7 @@ export class BillingService {
       if (remaining.length === 0) {
         await tx.userMembership.update({
           where: { userId: refundedOrder.userId },
-          data: { expiresAt: new Date(), tier: MembershipTier.FREE },
+          data: { expiresAt: now, tier: MembershipTier.FREE },
         });
         return;
       }
@@ -316,8 +346,9 @@ export class BillingService {
           if (exp > latestExpires) latestExpires = exp;
         }
       }
+      // 确保 not-a-number 或 invalid date 不会传播
+      if (Number.isNaN(latestExpires.getTime())) latestExpires = now;
 
-      const now = new Date();
       await tx.userMembership.update({
         where: { userId: refundedOrder.userId },
         data: {
@@ -328,7 +359,7 @@ export class BillingService {
     });
   }
 
-  private buildPayResponse(order: BuildPayOrder, plan: BuildPayPlan, gatewayResult?: CreatePaymentResult, isMock?: boolean) {
+  private buildPayResponse(order: BuildPayOrder, plan: BuildPayPlan, gatewayResult?: CreatePaymentResult) {
     return {
       id: order.id,
       orderNo: order.orderNo,

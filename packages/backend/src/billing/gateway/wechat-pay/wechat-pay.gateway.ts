@@ -3,8 +3,24 @@ import { ConfigService } from '@nestjs/config';
 import * as https from 'node:https';
 import * as fs from 'node:fs';
 import axios from 'axios';
-import { buildXML, parseXML, generateNonceStr, md5Sign } from './wechat-pay.util';
+import { buildXML, parseXML, generateNonceStr, md5Sign, parseTimeEnd } from './wechat-pay.util';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
+
+/** 用于重放攻击防护的 nonce 缓存（5 分钟内已见过的 nonce 拒绝） */
+const RECENT_NONCES = new Set<string>();
+let NONCE_CLEANUP_TIMEOUT: ReturnType<typeof setTimeout> | null = null;
+function markNonceUsed(nonce: string): void {
+  RECENT_NONCES.add(nonce);
+  if (!NONCE_CLEANUP_TIMEOUT) {
+    NONCE_CLEANUP_TIMEOUT = setTimeout(() => {
+      RECENT_NONCES.clear();
+      NONCE_CLEANUP_TIMEOUT = null;
+    }, 300000);
+  }
+}
+function isNonceUsed(nonce: string): boolean {
+  return RECENT_NONCES.has(nonce);
+}
 
 @Injectable()
 export class WechatPayGateway implements PaymentGateway {
@@ -94,13 +110,13 @@ export class WechatPayGateway implements PaymentGateway {
     const parsed = parseXML(xml);
     const data = parsed?.xml ?? parsed;
 
-    const SIGN_FIELDS = ['appid', 'mch_id', 'device_info', 'nonce_str', 'sign', 'sign_type', 'result_code', 'err_code', 'err_code_des', 'openid', 'is_subscribe', 'trade_type', 'bank_type', 'total_fee', 'settlement_total_fee', 'fee_type', 'cash_fee', 'cash_fee_type', 'coupon_fee', 'coupon_count', 'coupon_type_$n', 'coupon_id_$n', 'coupon_fee_$n', 'transaction_id', 'out_trade_no', 'attach', 'time_end', 'return_code', 'return_msg'];
-
+    // 使用排除法构建签名数据：取所有字段除 sign 外参与签名
+    // 比白名单更健壮，微信新增字段不会导致签名验证失败
     const receivedSign = data.sign as string;
     const signData: Record<string, any> = {};
-    for (const field of SIGN_FIELDS) {
-      if (field !== 'sign' && data[field] !== undefined) {
-        signData[field] = data[field];
+    for (const key of Object.keys(data)) {
+      if (key !== 'sign' && data[key] != null && data[key] !== '') {
+        signData[key] = data[key];
       }
     }
     const calculatedSign = md5Sign(signData, this.key);
@@ -115,6 +131,20 @@ export class WechatPayGateway implements PaymentGateway {
       };
     }
 
+    // 重放攻击防护：检查 nonce_str 是否已使用过
+    const nonce = data.nonce_str as string;
+    if (nonce && isNonceUsed(nonce)) {
+      this.logger.warn(`replay attack detected: nonce=${nonce}`);
+      return {
+        isValid: false,
+        orderNo: '',
+        gatewayOrderId: '',
+        amount: 0,
+        paidAt: new Date(),
+      };
+    }
+    if (nonce) markNonceUsed(nonce);
+
     const isValid = data.return_code === 'SUCCESS' && data.result_code === 'SUCCESS';
 
     return {
@@ -122,7 +152,7 @@ export class WechatPayGateway implements PaymentGateway {
       orderNo: data.out_trade_no as string,
       gatewayOrderId: data.transaction_id as string,
       amount: parseInt(data.total_fee as string, 10),
-      paidAt: new Date(data.time_end as string),
+      paidAt: parseTimeEnd(data.time_end as string | undefined),
     };
   }
 
@@ -143,7 +173,7 @@ export class WechatPayGateway implements PaymentGateway {
           status: 'SUCCESS',
           gatewayOrderId: result.transaction_id as string,
           amount: parseInt(result.total_fee as string, 10),
-          paidAt: result.time_end ? new Date(result.time_end as string) : undefined,
+          paidAt: result.time_end ? parseTimeEnd(result.time_end as string) : undefined,
         };
       case 'NOTPAY':
         return { status: 'NOTPAY' };
@@ -162,7 +192,7 @@ export class WechatPayGateway implements PaymentGateway {
       mch_id: this.mchId,
       nonce_str: generateNonceStr(),
       out_trade_no: orderNo,
-      out_refund_no: `RF${orderNo.slice(2)}`,
+      out_refund_no: generateNonceStr().slice(0, 28),
       total_fee: amount,
       refund_fee: amount,
     };

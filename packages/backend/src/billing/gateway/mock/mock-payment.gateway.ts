@@ -2,12 +2,23 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'node:crypto';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
 
+interface OrderRecord {
+  amount: number;
+  createdAt: number;
+}
+
 @Injectable()
 export class MockPaymentGateway implements PaymentGateway {
   readonly name = 'mock';
+  private delayMs = 15000;
   private readonly logger = new Logger(MockPaymentGateway.name);
   private refundedOrders = new Set<string>();
-  private orders = new Map<string, number>();
+  private completedOrders = new Set<string>();
+  private orders = new Map<string, OrderRecord>();
+
+  setDelayMs(ms: number): void {
+    this.delayMs = ms;
+  }
 
   async createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
     const mockPrepayId = `mock_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
@@ -17,7 +28,7 @@ export class MockPaymentGateway implements PaymentGateway {
       `商品=${params.description}, tradeType=${params.tradeType}`
     );
 
-    this.orders.set(params.orderNo, params.amount);
+    this.orders.set(params.orderNo, { amount: params.amount, createdAt: Date.now() });
 
     await new Promise(r => setTimeout(r, 300));
 
@@ -51,19 +62,47 @@ export class MockPaymentGateway implements PaymentGateway {
 
   async queryOrder(orderNo: string): Promise<QueryOrderResult> {
     this.logger.log(`[Mock Pay] 查询订单: ${orderNo}`);
+
     if (this.refundedOrders.has(orderNo)) {
       return { status: 'REFUND' };
     }
-    return {
-      status: 'SUCCESS',
-      gatewayOrderId: `mock_${orderNo}`,
-      amount: this.orders.get(orderNo) ?? 0,
-      paidAt: new Date(),
-    };
+
+    if (this.completedOrders.has(orderNo)) {
+      return {
+        status: 'SUCCESS',
+        gatewayOrderId: `mock_${orderNo}`,
+        amount: this.orders.get(orderNo)?.amount ?? 0,
+        paidAt: new Date(),
+      };
+    }
+
+    const order = this.orders.get(orderNo);
+    if (!order) {
+      return { status: 'NOTPAY' };
+    }
+
+    const elapsed = Date.now() - order.createdAt;
+
+    if (elapsed >= this.delayMs) {
+      this.logger.log(`[Mock Pay] 订单 ${orderNo} 已超 ${this.delayMs}ms，自动完成`);
+      return {
+        status: 'SUCCESS',
+        gatewayOrderId: `mock_${orderNo}`,
+        amount: order.amount,
+        paidAt: new Date(),
+      };
+    }
+
+    return { status: 'NOTPAY' };
   }
 
   async refund(orderNo: string, _amount: number): Promise<void> {
     this.logger.log(`[Mock Pay] 退款: 订单=${orderNo}, 金额=${_amount}分`);
     this.refundedOrders.add(orderNo);
+  }
+
+  forceComplete(orderNo: string): void {
+    this.logger.log(`[Mock Pay] 强制完成: 订单=${orderNo}`);
+    this.completedOrders.add(orderNo);
   }
 }
