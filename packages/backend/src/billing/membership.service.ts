@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { MembershipTier } from './enums/billing.enum';
 import type { MembershipPlan } from '@prisma/client';
 
-type PrismaTx = Omit<DatabaseService, '$on' | '$connect' | '$disconnect' | '$use' | '$transaction' | '$extends'>;
+type PrismaTx = Prisma.TransactionClient;
 
 @Injectable()
 export class MembershipService {
@@ -39,7 +40,7 @@ export class MembershipService {
     return tx.userMembership.upsert({
       where: { userId },
       create: { userId, tier: plan.tier as MembershipTier, expiresAt: newExpiresAt },
-      update: { tier: effectiveTier as MembershipTier, expiresAt: newExpiresAt },
+      update: { tier: effectiveTier, expiresAt: newExpiresAt },
     });
   }
 

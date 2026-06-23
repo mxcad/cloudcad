@@ -53,7 +53,10 @@ export class WechatPayGateway implements PaymentGateway {
       trade_type: params.tradeType,
     };
 
-    if (params.tradeType === 'JSAPI' && params.openid) {
+    if (params.tradeType === 'JSAPI') {
+      if (!params.openid) {
+        throw new Error('trade_type JSAPI requires openid');
+      }
       data.openid = params.openid;
     }
 
@@ -90,9 +93,15 @@ export class WechatPayGateway implements PaymentGateway {
     const parsed = parseXML(xml);
     const data = parsed?.xml ?? parsed;
 
+    const SIGN_FIELDS = ['appid', 'mch_id', 'device_info', 'nonce_str', 'sign', 'sign_type', 'result_code', 'err_code', 'err_code_des', 'openid', 'is_subscribe', 'trade_type', 'bank_type', 'total_fee', 'settlement_total_fee', 'fee_type', 'cash_fee', 'cash_fee_type', 'coupon_fee', 'coupon_count', 'coupon_type_$n', 'coupon_id_$n', 'coupon_fee_$n', 'transaction_id', 'out_trade_no', 'attach', 'time_end', 'return_code', 'return_msg'];
+
     const receivedSign = data.sign as string;
-    const signData = { ...data };
-    delete signData.sign;
+    const signData: Record<string, any> = {};
+    for (const field of SIGN_FIELDS) {
+      if (field !== 'sign' && data[field] !== undefined) {
+        signData[field] = data[field];
+      }
+    }
     const calculatedSign = md5Sign(signData, this.key);
 
     if (calculatedSign !== receivedSign) {

@@ -12,15 +12,26 @@ const TIER_CONFIG: Record<string, { label: string; bg: string; text: string }> =
   ENTERPRISE: { label: 'Enterprise', bg: 'var(--primary-100)', text: 'var(--primary-700)' },
 };
 
+let cachedMembership: { data: MembershipInfo; ts: number } | null = null;
+const CACHE_TTL = 120000;
+
 export default function MembershipBadge() {
   const [membership, setMembership] = useState<MembershipInfo | null>(null);
 
   useEffect(() => {
+    if (cachedMembership && Date.now() - cachedMembership.ts < CACHE_TTL) {
+      setMembership(cachedMembership.data);
+      return;
+    }
     (async () => {
       try {
         const res = await billingControllerGetMembership();
         const info = res?.data;
-        if (info) setMembership(info as unknown as MembershipInfo);
+        if (info) {
+          const data = info as unknown as MembershipInfo;
+          cachedMembership = { data, ts: Date.now() };
+          setMembership(data);
+        }
       } catch {
         // 忽略错误，不显示徽章
       }

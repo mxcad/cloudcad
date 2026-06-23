@@ -1,9 +1,13 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 
-const WECHAT_IP_WHITELIST = [
-  '103.244.8.0/24',
-  '103.244.52.0/24',
-];
+function resolveWhitelist(): string[] {
+  const env = process.env.WECHAT_IP_WHITELIST;
+  if (env) return env.split(',').map((s) => s.trim());
+  return [
+    '103.244.8.0/24',
+    '103.244.52.0/24',
+  ];
+}
 
 function getClientIp(req: any): string {
   const forwarded = req.headers?.['x-forwarded-for'];
@@ -27,6 +31,7 @@ export class WechatIpGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest();
     const ip = getClientIp(req);
-    return WECHAT_IP_WHITELIST.some((cidr) => ipInCIDR(ip, cidr));
+    const whitelist = resolveWhitelist();
+    return whitelist.some((cidr) => ipInCIDR(ip, cidr));
   }
 }

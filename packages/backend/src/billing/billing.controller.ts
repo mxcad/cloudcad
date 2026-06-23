@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { BillingService } from './billing.service';
 import { PlansService } from './plans.service';
@@ -8,6 +8,7 @@ import { RefundDto } from './dto/refund.dto';
 import { MockCallbackDto } from './dto/mock-callback.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { ListOrdersQueryDto } from './dto/order-query.dto';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { Public } from '../auth/decorators/public.decorator';
@@ -41,13 +42,16 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '订单历史' })
-  async getOrders(@Req() req: any) {
-    return this.billingService.getUserOrders(req.user.id);
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getOrders(@Req() req: any, @Query() query: ListOrdersQueryDto) {
+    return this.billingService.getUserOrders(req.user.id, query.page, query.limit);
   }
 
   @Post('orders')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @UsePipes(new ValidationPipe({ transform: true }))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: '创建订单' })
   async createOrder(@Req() req: any, @Body() dto: CreateOrderDto) {
@@ -59,16 +63,16 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '查单兜底' })
-  async queryOrder(@Param('orderNo') orderNo: string) {
-    return this.billingService.refreshOrder(orderNo);
+  async queryOrder(@Req() req: any, @Param('orderNo') orderNo: string) {
+    return this.billingService.refreshOrder(req.user.id, orderNo);
   }
 
   @Get('orders/:orderNo')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '查询单个订单' })
-  async getOrder(@Param('orderNo') orderNo: string) {
-    return this.billingService.queryOrder(orderNo);
+  async getOrder(@Req() req: any, @Param('orderNo') orderNo: string) {
+    return this.billingService.queryOrder(req.user.id, orderNo);
   }
 }
 
@@ -81,6 +85,15 @@ export class BillingAdminController {
     private billingService: BillingService,
     private plansService: PlansService,
   ) {}
+
+  @Get('orders')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @ApiOperation({ summary: '所有订单（分页）' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getAllOrders(@Query() query: ListOrdersQueryDto) {
+    return this.billingService.getAllOrders(query.page, query.limit);
+  }
 
   @Get('plans')
   @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])

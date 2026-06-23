@@ -147,15 +147,17 @@ describe("Billing → Payment Flow (Mock Mode) Integration", () => {
       expect(response.body.expiresAt).toBeDefined();
     });
 
-    it("T3-S3: GET /v1/billing/orders — should list orders", async () => {
+    it("T3-S3: GET /v1/billing/orders — should list orders (paginated)", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/billing/orders")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThanOrEqual(1);
-      const order = response.body[0];
+      expect(response.body.items).toBeDefined();
+      expect(Array.isArray(response.body.items)).toBe(true);
+      expect(response.body.items.length).toBeGreaterThanOrEqual(1);
+      expect(response.body.total).toBeGreaterThanOrEqual(1);
+      const order = response.body.items[0];
       expect(order.orderNo).toBeDefined();
       expect(order.status).toBe("SUCCEEDED");
       expect(order.amount).toBe(plan1.price);
@@ -240,15 +242,81 @@ describe("Billing → Payment Flow (Mock Mode) Integration", () => {
   });
 
   describe("T5: Membership state after refund", () => {
-    it("T5-S1: GET /v1/billing/membership — should show FREE after refund", async () => {
+    it("T5-S1: Should create second order (annual) before refund test", async () => {
+      // Buy annual plan so we have 2 SUCCEEDED orders
+      const response = await request(app.getHttpServer())
+        .post("/v1/billing/orders")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ planId: plan2.id, tradeType: "JSAPI" })
+        .expect(201);
+      expect(response.body.status).toBe("SUCCEEDED");
+    });
+
+    it("T5-S2: GET /v1/billing/membership — should show PRO membership (annual)", async () => {
       const response = await request(app.getHttpServer())
         .get("/v1/billing/membership")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
+      expect(response.body.tier).toBe("PRO");
+      expect(response.body.daysRemaining).toBeGreaterThan(300);
+    });
 
-      // After refund, membership should be downgraded
-      expect(response.body.tier).toBe("FREE");
-      expect(response.body.daysRemaining).toBe(0);
+    it("T5-S3: Refund the first (monthly) order — membership should stay PRO (annual remains)", async () => {
+      const ordersRes = await request(app.getHttpServer())
+        .get("/v1/billing/orders")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .expect(200);
+      const firstOrder = ordersRes.body.items.find((o: any) => o.planId === plan1.id);
+      expect(firstOrder).toBeDefined();
+
+      // Login as admin
+      const adminRes = await request(app.getHttpServer())
+        .post("/v1/auth/login")
+        .send({ email: "admin@mxdraw.com", password: "admin123456" })
+        .expect(201);
+      const adminToken = adminRes.body.accessToken;
+
+      await request(app.getHttpServer())
+        .post("/v1/admin/billing/refund")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ orderNo: firstOrder.orderNo, reason: "Test refund with remaining order" })
+        .expect(201);
+
+      // Membership should still be PRO (annual order remains)
+      const memRes = await request(app.getHttpServer())
+        .get("/v1/billing/membership")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .expect(200);
+      expect(memRes.body.tier).toBe("PRO");
+      expect(memRes.body.daysRemaining).toBeGreaterThan(300);
+    });
+
+    it("T5-S4: Refund remaining annual order — membership should become FREE", async () => {
+      const ordersRes = await request(app.getHttpServer())
+        .get("/v1/billing/orders")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .expect(200);
+      const annualOrder = ordersRes.body.items.find((o: any) => o.planId === plan2.id && o.status === "SUCCEEDED");
+      expect(annualOrder).toBeDefined();
+
+      const adminRes = await request(app.getHttpServer())
+        .post("/v1/auth/login")
+        .send({ email: "admin@mxdraw.com", password: "admin123456" })
+        .expect(201);
+      const adminToken = adminRes.body.accessToken;
+
+      await request(app.getHttpServer())
+        .post("/v1/admin/billing/refund")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ orderNo: annualOrder.orderNo, reason: "Refund last order" })
+        .expect(201);
+
+      const memRes = await request(app.getHttpServer())
+        .get("/v1/billing/membership")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .expect(200);
+      expect(memRes.body.tier).toBe("FREE");
+      expect(memRes.body.daysRemaining).toBe(0);
     });
   });
 
@@ -280,6 +348,23 @@ describe("Billing → Payment Flow (Mock Mode) Integration", () => {
       // Should reuse existing PENDING orderNo (not be SUCCEEDED)
       expect(response.body.orderNo).toBe(pendingOrderNo);
       expect(response.body.status).toBe("PENDING");
+    });
+
+    it("T6-S3: GET /v1/admin/billing/orders — admin can list all orders", async () => {
+      const adminRes = await request(app.getHttpServer())
+        .post("/v1/auth/login")
+        .send({ email: "admin@mxdraw.com", password: "admin123456" })
+        .expect(201);
+      const adminToken = adminRes.body.accessToken;
+
+      const response = await request(app.getHttpServer())
+        .get("/v1/admin/billing/orders")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.items).toBeDefined();
+      expect(Array.isArray(response.body.items)).toBe(true);
+      expect(response.body.total).toBeGreaterThan(0);
     });
   });
 });

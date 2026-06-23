@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -41,9 +40,9 @@ const RETRYABLE_STATUSES = ['FAILED', 'CLOSED', 'TIMEOUT'];
 export default function OrderHistory({
   orders,
   loading,
+  onRefresh,
   onContinuePayment,
 }: OrderHistoryProps) {
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
 
   const total = orders.length;
@@ -56,9 +55,6 @@ export default function OrderHistory({
         <div className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
           <Clock size={40} className="mx-auto mb-3" />
           <p>暂无购买记录</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/profile?tab=membership')}>
-            去开通会员
-          </Button>
         </div>
       </Card>
     );

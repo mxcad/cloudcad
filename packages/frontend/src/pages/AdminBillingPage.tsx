@@ -17,6 +17,7 @@ import {
   billingAdminControllerDeactivatePlan,
   billingAdminControllerRefund,
   billingAdminControllerMockCallback,
+  billingAdminControllerGetAllOrders,
 } from '@/api-sdk';
 import type { Plan } from '@/components/billing/PricingCard';
 
@@ -65,8 +66,26 @@ export default function AdminBillingPage() {
   const [refundReason, setRefundReason] = useState('');
   const [mockOrderNo, setMockOrderNo] = useState('');
 
-  const [orderSearch, setOrderSearch] = useState('');
+  const [allOrders, setAllOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderPage, setOrderPage] = useState(1);
+  const [orderTotal, setOrderTotal] = useState(0);
+
+  const loadAllOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      const res: any = await billingAdminControllerGetAllOrders({ query: { page: orderPage, limit: PAGE_SIZE } });
+      const body = res?.data;
+      if (body) {
+        setAllOrders(Array.isArray(body.items) ? body.items : []);
+        setOrderTotal(body.total ?? 0);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [orderPage]);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
@@ -223,7 +242,7 @@ export default function AdminBillingPage() {
     setShowCreateModal(true);
   };
 
-  const filteredOrders = []; // 后端无 admin 查单接口，预留
+  useEffect(() => { if (tab === 'operations') loadAllOrders(); }, [tab, loadAllOrders]);
 
   return (
     <div className="page-content-theme min-h-screen p-6">
@@ -331,7 +350,68 @@ export default function AdminBillingPage() {
 
         {/* 订单操作 Tab */}
         {tab === 'operations' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <>
+            {/* 订单列表 */}
+            <Card variant="outlined" padding="lg" radius="xl" className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-text-primary">全部订单</h3>
+                <Button variant="outline" size="sm" icon={RefreshCw} onClick={loadAllOrders}>
+                  刷新
+                </Button>
+              </div>
+              {ordersLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 rounded-full animate-spin" style={{ border: '2px solid var(--border-default)', borderTopColor: 'var(--primary-500)' }} />
+                </div>
+              ) : allOrders.length === 0 ? (
+                <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>暂无订单</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                        <th className="text-left px-3 py-2 text-text-secondary">订单号</th>
+                        <th className="text-left px-3 py-2 text-text-secondary">用户</th>
+                        <th className="text-left px-3 py-2 text-text-secondary">套餐</th>
+                        <th className="text-right px-3 py-2 text-text-secondary">金额</th>
+                        <th className="text-center px-3 py-2 text-text-secondary">状态</th>
+                        <th className="text-right px-3 py-2 text-text-secondary">时间</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allOrders.map((o: any) => (
+                        <tr key={o.id} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                          <td className="px-3 py-2 font-mono text-xs text-text-primary">{o.orderNo}</td>
+                          <td className="px-3 py-2 text-text-primary">{o.user?.email || o.user?.username || o.userId}</td>
+                          <td className="px-3 py-2 text-text-primary">{o.plan?.name || '-'}</td>
+                          <td className="px-3 py-2 text-right text-text-primary">¥{(o.amount / 100).toFixed(2)}</td>
+                          <td className="px-3 py-2 text-center">
+                            <Tag variant={
+                              o.status === 'SUCCEEDED' ? 'success' :
+                              o.status === 'PENDING' ? 'warning' :
+                              o.status === 'REFUNDED' ? 'neutral' : 'error'
+                            }>
+                              {o.status}
+                            </Tag>
+                          </td>
+                          <td className="px-3 py-2 text-right text-text-tertiary">{new Date(o.createdAt).toLocaleDateString('zh-CN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {orderTotal > PAGE_SIZE && (
+                    <div className="mt-4 flex justify-center">
+                      <Pagination
+                        meta={{ total: orderTotal, page: orderPage, limit: PAGE_SIZE, totalPages: Math.ceil(orderTotal / PAGE_SIZE) }}
+                        onPageChange={(p) => setOrderPage(p)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card variant="outlined" padding="lg" radius="xl">
               <div className="flex items-center gap-2 mb-4">
                 <DollarSign size={20} style={{ color: 'var(--warning-500)' }} />
@@ -387,6 +467,7 @@ export default function AdminBillingPage() {
               </div>
             </Card>
           </div>
+          </>
         )}
       </div>
 
@@ -474,7 +555,7 @@ function PlanForm({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1 text-text-primary">价格（分）</label>
+          <label className="block text-sm font-medium mb-1 text-text-primary">价格（分 = 元 × 100，如 2400 = ¥24.00）</label>
           <Input type="number" value={String(form.price)} onChange={(e) => set('price', Number(e.target.value))} />
         </div>
         <div>

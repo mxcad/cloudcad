@@ -252,7 +252,10 @@ export const Profile: React.FC = () => {
       const list = planRes?.data;
       if (Array.isArray(list) && list.length > 0) setPlans(list as Plan[]);
       if (memRes?.data) setMembership(memRes.data as Membership);
-      if (Array.isArray(ordRes?.data)) setOrders(ordRes.data as Order[]);
+      if (ordRes?.data) {
+        const data = ordRes.data;
+        setOrders(Array.isArray(data) ? data as Order[] : (data.items ?? []) as Order[]);
+      }
     } catch {
       // billing data is supplementary, don't block the page
     } finally {
@@ -265,69 +268,65 @@ export const Profile: React.FC = () => {
     loadBillingData();
   }, [loadBillingData]);
 
-  const hasPending = orders.some((o) => o.status === 'PENDING');
+  // Poll for pending orders when on membership tab (30s interval)
   useEffect(() => {
     if (activeTab !== 'membership') return;
-    if (hasPending && !pollRef.current) {
-      pollRef.current = setInterval(loadBillingData, 10000);
+    const id = setInterval(() => { loadBillingData(); }, 30000);
+    pollRef.current = id;
+    return () => { clearInterval(id); pollRef.current = null; };
+  }, [activeTab, loadBillingData]);
+
+  const detectTradeType = (): 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP' => {
+    const ua = navigator.userAgent;
+    if (/MicroMessenger/i.test(ua)) return 'JSAPI';
+    if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) return 'MWEB';
+    return 'NATIVE';
+  };
+
+  const doCreateOrder = async (planId: string) => {
+    const res: any = await billingControllerCreateOrder({
+      body: { planId, tradeType: detectTradeType() },
+    });
+    const orderData = res?.data;
+    if (res?.error || !orderData) {
+      window.dispatchEvent(
+        new CustomEvent('cloudcad:toast', { detail: { message: '创建订单失败', type: 'error' } }),
+      );
+      return null;
     }
-    if (!hasPending && pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+
+    if (orderData.status === 'SUCCEEDED') {
+      window.dispatchEvent(
+        new CustomEvent('cloudcad:toast', { detail: { message: '开通成功！', type: 'success' } }),
+      );
+      loadBillingData();
+      return null;
     }
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
+
+    if (orderData.status !== 'PENDING' || (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl)) {
+      window.dispatchEvent(
+        new CustomEvent('cloudcad:toast', { detail: { message: '获取支付信息失败', type: 'error' } }),
+      );
+      return null;
+    }
+
+    return {
+      orderNo: orderData.orderNo,
+      payParams: orderData.payParams || null,
+      codeUrl: orderData.codeUrl || null,
+      redirectUrl: orderData.redirectUrl || null,
+      amount: orderData.amount,
     };
-  }, [hasPending, loadBillingData, activeTab]);
+  };
 
   const handlePurchase = async (planId: string) => {
     setPurchasing(planId);
     try {
-      const res: any = await billingControllerCreateOrder({
-        body: { planId, tradeType: 'JSAPI' },
-      });
-      const orderData = res?.data;
-      if (res?.error || !orderData) {
-        window.dispatchEvent(
-          new CustomEvent('cloudcad:toast', {
-            detail: { message: '创建订单失败', type: 'error' },
-          }),
-        );
-        return;
-      }
-
-      if (orderData.status === 'SUCCEEDED') {
-        window.dispatchEvent(
-          new CustomEvent('cloudcad:toast', {
-            detail: { message: '开通成功！', type: 'success' },
-          }),
-        );
-        loadBillingData();
-      } else if (orderData.status === 'PENDING') {
-        if (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl) {
-          window.dispatchEvent(
-            new CustomEvent('cloudcad:toast', {
-              detail: { message: '获取支付信息失败', type: 'error' },
-            }),
-          );
-          return;
-        }
-        setPaymentOrder({
-          orderNo: orderData.orderNo,
-          payParams: orderData.payParams || null,
-          codeUrl: orderData.codeUrl || null,
-          redirectUrl: orderData.redirectUrl || null,
-          amount: orderData.amount,
-        });
-      }
+      const payment = await doCreateOrder(planId);
+      if (payment) setPaymentOrder(payment);
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', {
-          detail: { message: '创建订单失败', type: 'error' },
-        }),
+        new CustomEvent('cloudcad:toast', { detail: { message: '创建订单失败', type: 'error' } }),
       );
     } finally {
       setPurchasing(null);
@@ -354,49 +353,11 @@ export const Profile: React.FC = () => {
 
   const handleContinuePayment = async (order: Order) => {
     try {
-      const res: any = await billingControllerCreateOrder({
-        body: { planId: order.planId, tradeType: 'JSAPI' },
-      });
-      const orderData = res?.data;
-      if (res?.error || !orderData) {
-        window.dispatchEvent(
-          new CustomEvent('cloudcad:toast', {
-            detail: { message: '获取支付信息失败', type: 'error' },
-          }),
-        );
-        return;
-      }
-      if (orderData.status === 'SUCCEEDED') {
-        window.dispatchEvent(
-          new CustomEvent('cloudcad:toast', {
-            detail: { message: '开通成功！', type: 'success' },
-          }),
-        );
-        loadBillingData();
-        return;
-      }
-      if (orderData.status === 'PENDING') {
-        if (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl) {
-          window.dispatchEvent(
-            new CustomEvent('cloudcad:toast', {
-              detail: { message: '获取支付信息失败', type: 'error' },
-            }),
-          );
-          return;
-        }
-        setPaymentOrder({
-          orderNo: orderData.orderNo,
-          payParams: orderData.payParams || null,
-          codeUrl: orderData.codeUrl || null,
-          redirectUrl: orderData.redirectUrl || null,
-          amount: orderData.amount,
-        });
-      }
+      const payment = await doCreateOrder(order.planId);
+      if (payment) setPaymentOrder(payment);
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', {
-          detail: { message: '获取支付信息失败', type: 'error' },
-        }),
+        new CustomEvent('cloudcad:toast', { detail: { message: '获取支付信息失败', type: 'error' } }),
       );
     }
   };
@@ -1387,7 +1348,7 @@ export const Profile: React.FC = () => {
                     </div>
 
                     {/* 待支付提醒 */}
-                    {hasPending && (
+                    {orders.some((o) => o.status === 'PENDING') && (
                       <div className="flex items-center gap-2 px-4 py-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
                         <AlertTriangle size={16} className="text-yellow-500 shrink-0" />
                         <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>您有待支付的订单，请尽快完成支付</span>

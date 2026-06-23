@@ -9,6 +9,7 @@ export class BillingCron {
 
   constructor(private prisma: DatabaseService) {}
 
+  // 服务器本地时间 02:00 执行（建议服务器时区设为 UTC+8）
   @Cron('0 2 * * *')
   async downgradeExpiredMemberships() {
     const { count } = await this.prisma.userMembership.updateMany({
