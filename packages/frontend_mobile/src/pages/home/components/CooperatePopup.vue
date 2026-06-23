@@ -30,7 +30,7 @@ const {
   myProjectIds,
 } = storeToRefs(collabStore);
 
-const { fetchWorks, createWork, joinWork, exitWork } = collabStore;
+const { fetchWorks, createWork, joinWork, exitWork, startCadCheck, stopCadCheck } = collabStore;
 
 const show = ref(true);
 const showShareWorkId = ref<number | null>(null);
@@ -38,12 +38,14 @@ const showShareWorkId = ref<number | null>(null);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
+  startCadCheck();
   fetchWorks();
   pollTimer = setInterval(fetchWorks, 8000);
 });
 
 onBeforeUnmount(() => {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  stopCadCheck();
 });
 
 // --- 当前文件的协同 work ---
