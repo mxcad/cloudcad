@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { MembershipPlan } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 
 @Injectable()
@@ -34,7 +35,7 @@ export class PlansService {
     originalPrice?: number | null;
     tier: string;
     sortOrder: number;
-    features?: any;
+    features?: Prisma.JsonValue;
   }) {
     if (data.originalPrice != null && data.originalPrice < data.price) {
       throw new BadRequestException('originalPrice must be >= price');
@@ -68,7 +69,7 @@ export class PlansService {
     tier?: string;
     sortOrder?: number;
     isActive?: boolean;
-    features?: any;
+    features?: Prisma.JsonValue;
   }) {
     const plan = await this.prisma.membershipPlan.findUnique({ where: { id } });
     if (!plan) throw new NotFoundException('plan not found');
@@ -112,7 +113,7 @@ export class PlansService {
     return this.toPlanResponse(updated);
   }
 
-  private toPlanResponse(plan: any) {
+  private toPlanResponse(plan: MembershipPlan) {
     return {
       id: plan.id,
       name: plan.name,

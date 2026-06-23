@@ -7,7 +7,29 @@ import { PlansService } from './plans.service';
 import { OrderStatus, MembershipTier } from './enums/billing.enum';
 import { randomUUID } from 'node:crypto';
 import type { CreateOrderDto } from './dto/create-order.dto';
-import type { WebhookVerifyResult } from './gateway/payment-gateway.interface';
+import type { WebhookVerifyResult, CreatePaymentResult } from './gateway/payment-gateway.interface';
+
+interface BuildPayOrder {
+  id: string;
+  orderNo: string;
+  planId: string;
+  amount: number;
+  status: string;
+  gateway: string;
+  gatewayOrderId: string | null;
+  createdAt: Date;
+}
+
+interface BuildPayPlan {
+  name: string;
+  durationDays: number;
+  price: number;
+}
+
+interface RefundOrderInfo {
+  userId: string;
+  plan: { tier: string; durationDays: number | null };
+}
 
 function generateOrderNo(): string {
   const suffix = randomUUID().replace(/-/g, '').substring(0, 24);
@@ -264,7 +286,7 @@ export class BillingService {
     this.logger.log(`refund completed: orderNo=${orderNo}, reason=${reason}`);
   }
 
-  private async recalculateMembershipAfterRefund(refundedOrder: any) {
+  private async recalculateMembershipAfterRefund(refundedOrder: RefundOrderInfo) {
     await this.prisma.$transaction(async (tx) => {
       const remaining = await tx.paymentOrder.findMany({
         where: {
@@ -306,7 +328,7 @@ export class BillingService {
     });
   }
 
-  private buildPayResponse(order: any, plan: any, gatewayResult?: any, isMock?: boolean) {
+  private buildPayResponse(order: BuildPayOrder, plan: BuildPayPlan, gatewayResult?: CreatePaymentResult, isMock?: boolean) {
     return {
       id: order.id,
       orderNo: order.orderNo,
