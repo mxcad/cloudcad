@@ -13,9 +13,13 @@ export class WebhookController {
   @UseGuards(WechatIpGuard)
   @ApiExcludeEndpoint()
   async wechatNotify(@Req() req: Request, @Res() res: Response) {
-    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    const xml = typeof rawBody === 'string' ? rawBody : String(rawBody);
-    const result = await this.billingService.handleWechatNotify(xml);
+    const rawBody: string = (req as any).rawBody || '';
+    if (!rawBody) {
+      res.status(400).setHeader('Content-Type', 'application/xml');
+      res.send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[empty body]]></return_msg></xml>');
+      return;
+    }
+    const result = await this.billingService.handleWechatNotify(rawBody);
     res.setHeader('Content-Type', 'application/xml');
     res.send(result);
   }

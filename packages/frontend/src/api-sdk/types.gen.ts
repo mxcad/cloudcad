@@ -2927,6 +2927,80 @@ export type CreateOrderDto = {
     ip?: string;
 };
 
+export type UpdatePlanDto = {
+    /**
+     * 套餐名称
+     */
+    name?: string;
+    /**
+     * 时长（天）
+     */
+    durationDays?: number;
+    /**
+     * 价格（分）
+     */
+    price?: number;
+    /**
+     * 原价（分）
+     */
+    originalPrice?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 会员等级
+     */
+    tier?: string;
+    /**
+     * 排序
+     */
+    sortOrder?: number;
+    /**
+     * 是否上架
+     */
+    isActive?: boolean;
+    /**
+     * 功能列表
+     */
+    features?: {
+        [key: string]: unknown;
+    };
+};
+
+export type CreatePlanDto = {
+    /**
+     * 套餐名称
+     */
+    name: string;
+    /**
+     * 时长（天）
+     */
+    durationDays: number;
+    /**
+     * 价格（分）
+     */
+    price: number;
+    /**
+     * 原价（分）
+     */
+    originalPrice?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 会员等级
+     */
+    tier: 'PRO' | 'ENTERPRISE';
+    /**
+     * 排序
+     */
+    sortOrder: number;
+    /**
+     * 功能列表
+     */
+    features?: {
+        [key: string]: unknown;
+    };
+};
+
 export type RefundDto = {
     /**
      * 订单号
@@ -8780,7 +8854,16 @@ export type BillingControllerGetMembershipResponses = {
 export type BillingControllerGetOrdersData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * 页码
+         */
+        page?: number;
+        /**
+         * 每页数量
+         */
+        limit?: number;
+    };
     url: '/api/v1/billing/orders';
 };
 
@@ -8825,6 +8908,26 @@ export type BillingControllerGetOrderResponses = {
     200: unknown;
 };
 
+export type BillingAdminControllerGetAllOrdersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 页码
+         */
+        page?: number;
+        /**
+         * 每页数量
+         */
+        limit?: number;
+    };
+    url: '/api/v1/admin/billing/orders';
+};
+
+export type BillingAdminControllerGetAllOrdersResponses = {
+    200: unknown;
+};
+
 export type BillingAdminControllerGetAllPlansData = {
     body?: never;
     path?: never;
@@ -8837,7 +8940,7 @@ export type BillingAdminControllerGetAllPlansResponses = {
 };
 
 export type BillingAdminControllerCreatePlanData = {
-    body?: never;
+    body: CreatePlanDto;
     path?: never;
     query?: never;
     url: '/api/v1/admin/billing/plans';
@@ -8861,7 +8964,7 @@ export type BillingAdminControllerDeactivatePlanResponses = {
 };
 
 export type BillingAdminControllerUpdatePlanData = {
-    body?: never;
+    body: UpdatePlanDto;
     path: {
         id: string;
     };

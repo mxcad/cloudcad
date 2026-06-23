@@ -75,7 +75,14 @@ async function bootstrap() {
     if (ct.includes('multipart/form-data')) {
       return next();
     }
-    express.json({ limit: '50mb' })(req, res, next);
+    express.json({
+      limit: '50mb',
+      verify: (req: any, _res, buf) => {
+        if (buf && buf.length) {
+          req.rawBody = buf.toString('utf8');
+        }
+      },
+    })(req, res, next);
   });
   server.use((req, res, next) => {
     const ct = req.headers['content-type'] || '';

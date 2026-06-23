@@ -7,6 +7,7 @@ export class MockPaymentGateway implements PaymentGateway {
   readonly name = 'mock';
   private readonly logger = new Logger(MockPaymentGateway.name);
   private refundedOrders = new Set<string>();
+  private orders = new Map<string, number>();
 
   async createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
     const mockPrepayId = `mock_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
@@ -15,6 +16,8 @@ export class MockPaymentGateway implements PaymentGateway {
       `[Mock Pay] 创建支付: 订单=${params.orderNo}, 金额=${params.amount}分, ` +
       `商品=${params.description}, tradeType=${params.tradeType}`
     );
+
+    this.orders.set(params.orderNo, params.amount);
 
     await new Promise(r => setTimeout(r, 300));
 
@@ -54,7 +57,7 @@ export class MockPaymentGateway implements PaymentGateway {
     return {
       status: 'SUCCESS',
       gatewayOrderId: `mock_${orderNo}`,
-      amount: 0,
+      amount: this.orders.get(orderNo) ?? 0,
       paidAt: new Date(),
     };
   }

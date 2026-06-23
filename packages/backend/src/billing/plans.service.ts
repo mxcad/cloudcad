@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 
 @Injectable()
@@ -38,18 +39,25 @@ export class PlansService {
     if (data.originalPrice != null && data.originalPrice < data.price) {
       throw new BadRequestException('originalPrice must be >= price');
     }
-    const plan = await this.prisma.membershipPlan.create({
-      data: {
-        name: data.name,
-        durationDays: data.durationDays,
-        price: data.price,
-        originalPrice: data.originalPrice ?? null,
-        tier: data.tier as any,
-        sortOrder: data.sortOrder,
-        features: data.features ?? undefined,
-      },
-    });
-    return this.toPlanResponse(plan);
+    try {
+      const plan = await this.prisma.membershipPlan.create({
+        data: {
+          name: data.name,
+          durationDays: data.durationDays,
+          price: data.price,
+          originalPrice: data.originalPrice ?? null,
+          tier: data.tier as any,
+          sortOrder: data.sortOrder,
+          features: data.features ?? undefined,
+        },
+      });
+      return this.toPlanResponse(plan);
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('sortOrder already exists');
+      }
+      throw e;
+    }
   }
 
   async updatePlan(id: string, data: {
@@ -71,20 +79,27 @@ export class PlansService {
       throw new BadRequestException('originalPrice must be >= price');
     }
 
-    const updated = await this.prisma.membershipPlan.update({
-      where: { id },
-      data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.durationDays !== undefined && { durationDays: data.durationDays }),
-        ...(data.price !== undefined && { price: data.price }),
-        ...(data.originalPrice !== undefined && { originalPrice: data.originalPrice }),
-        ...(data.tier !== undefined && { tier: data.tier as any }),
-        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(data.features !== undefined && { features: data.features }),
-      },
-    });
-    return this.toPlanResponse(updated);
+    try {
+      const updated = await this.prisma.membershipPlan.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.durationDays !== undefined && { durationDays: data.durationDays }),
+          ...(data.price !== undefined && { price: data.price }),
+          ...(data.originalPrice !== undefined && { originalPrice: data.originalPrice }),
+          ...(data.tier !== undefined && { tier: data.tier as any }),
+          ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
+          ...(data.features !== undefined && { features: data.features }),
+        },
+      });
+      return this.toPlanResponse(updated);
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('sortOrder already exists');
+      }
+      throw e;
+    }
   }
 
   async deactivatePlan(id: string) {

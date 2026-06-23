@@ -243,14 +243,28 @@ jest.mock("../conversion", () => {
 });
 
 // Mock @nestjs-modules/mailer (module not available in dev environment)
+class MockMailerService {
+	sendMail = jest.fn().mockResolvedValue(undefined);
+}
+const mockMailModule = {
+	module: class {},
+	providers: [MockMailerService],
+	exports: [MockMailerService],
+};
+
 jest.mock("@nestjs-modules/mailer", () => ({
 	MailerModule: {
-		forRoot: jest.fn().mockReturnValue({
-			module: class {},
-			providers: [],
-			exports: [],
-		}),
+		forRoot: jest.fn().mockReturnValue(mockMailModule),
+		forRootAsync: jest.fn().mockReturnValue(mockMailModule),
 	},
+	MailerService: MockMailerService,
+	HandlebarsAdapter: jest.fn().mockImplementation(() => ({
+		compile: jest
+			.fn()
+			.mockReturnValue(jest.fn().mockReturnValue("<html></html>")),
+	})),
+}));
+jest.mock("@nestjs-modules/mailer/adapters/handlebars.adapter", () => ({
 	HandlebarsAdapter: jest.fn().mockImplementation(() => ({
 		compile: jest
 			.fn()
