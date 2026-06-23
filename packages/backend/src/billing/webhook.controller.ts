@@ -1,6 +1,7 @@
-import { Controller, Post, Req, Res } from '@nestjs/common';
+import { Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { BillingService } from './billing.service';
+import { WechatIpGuard } from './wechat-ip.guard';
 import type { Request, Response } from 'express';
 
 @ApiTags('Billing Webhook')
@@ -9,6 +10,7 @@ export class WebhookController {
   constructor(private billingService: BillingService) {}
 
   @Post('wechat')
+  @UseGuards(WechatIpGuard)
   @ApiExcludeEndpoint()
   async wechatNotify(@Req() req: Request, @Res() res: Response) {
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);

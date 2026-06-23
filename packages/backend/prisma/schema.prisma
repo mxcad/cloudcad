@@ -490,7 +490,7 @@ model MembershipPlan {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   orders        PaymentOrder[]
-  @@unique([sortOrder, isActive])
+  @@unique([sortOrder])
   @@map("membership_plans")
 }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { BillingService } from './billing.service';
@@ -6,6 +6,8 @@ import { PlansService } from './plans.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { RefundDto } from './dto/refund.dto';
 import { MockCallbackDto } from './dto/mock-callback.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { Public } from '../auth/decorators/public.decorator';
@@ -90,14 +92,15 @@ export class BillingAdminController {
   @Put('plans/:id')
   @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
   @ApiOperation({ summary: '修改套餐' })
-  async updatePlan(@Param('id') id: string, @Body() data: any) {
+  async updatePlan(@Param('id') id: string, @Body() data: UpdatePlanDto) {
     return this.plansService.updatePlan(id, data);
   }
 
   @Post('plans')
   @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
   @ApiOperation({ summary: '新增套餐' })
-  async createPlan(@Body() data: any) {
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async createPlan(@Body() data: CreatePlanDto) {
     return this.plansService.createPlan(data);
   }
 

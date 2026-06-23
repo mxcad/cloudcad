@@ -18,9 +18,9 @@ export default function MembershipBadge() {
   useEffect(() => {
     (async () => {
       try {
-        const res: any = await billingControllerGetMembership();
+        const res = await billingControllerGetMembership();
         const info = res?.data;
-        if (info) setMembership(info as MembershipInfo);
+        if (info) setMembership(info as unknown as MembershipInfo);
       } catch {
         // 忽略错误，不显示徽章
       }

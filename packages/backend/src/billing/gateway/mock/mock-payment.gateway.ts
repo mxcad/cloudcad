@@ -6,6 +6,7 @@ import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookV
 export class MockPaymentGateway implements PaymentGateway {
   readonly name = 'mock';
   private readonly logger = new Logger(MockPaymentGateway.name);
+  private refundedOrders = new Set<string>();
 
   async createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
     const mockPrepayId = `mock_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
@@ -47,6 +48,9 @@ export class MockPaymentGateway implements PaymentGateway {
 
   async queryOrder(orderNo: string): Promise<QueryOrderResult> {
     this.logger.log(`[Mock Pay] 查询订单: ${orderNo}`);
+    if (this.refundedOrders.has(orderNo)) {
+      return { status: 'REFUND' };
+    }
     return {
       status: 'SUCCESS',
       gatewayOrderId: `mock_${orderNo}`,
@@ -55,7 +59,8 @@ export class MockPaymentGateway implements PaymentGateway {
     };
   }
 
-  async refund(_orderNo: string, _amount: number): Promise<void> {
-    this.logger.log(`[Mock Pay] 退款: 订单=${_orderNo}, 金额=${_amount}分`);
+  async refund(orderNo: string, _amount: number): Promise<void> {
+    this.logger.log(`[Mock Pay] 退款: 订单=${orderNo}, 金额=${_amount}分`);
+    this.refundedOrders.add(orderNo);
   }
 }

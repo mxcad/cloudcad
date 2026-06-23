@@ -9,7 +9,7 @@ type PrismaTx = Omit<DatabaseService, '$on' | '$connect' | '$disconnect' | '$use
 export class MembershipService {
   private readonly logger = new Logger(MembershipService.name);
 
-  private static readonly TIER_WEIGHT: Record<string, number> = {
+  static readonly TIER_WEIGHT: Record<string, number> = {
     [MembershipTier.FREE]: 0,
     [MembershipTier.PRO]: 1,
     [MembershipTier.ENTERPRISE]: 2,
@@ -57,6 +57,7 @@ export class MembershipService {
 
   async getEffectiveTier(userId: string): Promise<MembershipTier> {
     const m = await this.prisma.userMembership.findUnique({ where: { userId } });
-    return (m?.tier ?? MembershipTier.FREE) as MembershipTier;
+    if (!m || !m.expiresAt || m.expiresAt <= new Date()) return MembershipTier.FREE;
+    return m.tier as MembershipTier;
   }
 }

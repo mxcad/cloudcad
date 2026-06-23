@@ -64,20 +64,21 @@ export class WechatPayGateway implements PaymentGateway {
     return {
       gatewayOrderId: result.prepay_id as string,
       codeUrl: result.code_url as string | undefined,
-      payParams: {
-        appId: this.appId,
-        timeStamp: String(Math.floor(Date.now() / 1000)),
-        nonceStr: generateNonceStr(),
-        package: `prepay_id=${result.prepay_id}`,
-        signType: 'MD5',
-        paySign: md5Sign({
+      payParams: (() => {
+        const timeStamp = String(Math.floor(Date.now() / 1000));
+        const nonceStr = generateNonceStr();
+        const signParams = {
           appId: this.appId,
-          timeStamp: String(Math.floor(Date.now() / 1000)),
-          nonceStr: generateNonceStr(),
+          timeStamp,
+          nonceStr,
           package: `prepay_id=${result.prepay_id}`,
           signType: 'MD5',
-        }, this.key),
-      },
+        };
+        return {
+          ...signParams,
+          paySign: md5Sign(signParams, this.key),
+        };
+      })(),
     };
   }
 

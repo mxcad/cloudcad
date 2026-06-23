@@ -11,18 +11,12 @@ export class BillingCron {
 
   @Cron('0 2 * * *')
   async downgradeExpiredMemberships() {
-    const expired = await this.prisma.userMembership.findMany({
+    const { count } = await this.prisma.userMembership.updateMany({
       where: { expiresAt: { lte: new Date(), not: null } },
+      data: { tier: MembershipTier.FREE, expiresAt: null },
     });
-    for (const m of expired) {
-      await this.prisma.userMembership.update({
-        where: { id: m.id },
-        data: { tier: MembershipTier.FREE, expiresAt: null },
-      });
-      this.logger.log(`membership expired & downgraded: userId=${m.userId}`);
-    }
-    if (expired.length > 0) {
-      this.logger.log(`downgraded ${expired.length} expired memberships`);
+    if (count > 0) {
+      this.logger.log(`downgraded ${count} expired memberships`);
     }
   }
 

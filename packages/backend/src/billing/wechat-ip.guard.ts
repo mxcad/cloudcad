@@ -1,11 +1,18 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
-import { Observable } from 'rxjs';
 
 const WECHAT_IP_WHITELIST = [
   '103.244.8.0/24',
   '103.244.52.0/24',
-  // Add more WeChat IP ranges as needed
 ];
+
+function getClientIp(req: any): string {
+  const forwarded = req.headers?.['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    const ip = forwarded.split(',')[0].trim();
+    if (ip) return ip;
+  }
+  return req.ip || req.connection?.remoteAddress || '';
+}
 
 function ipInCIDR(ip: string, cidr: string): boolean {
   const [range, bits] = cidr.split('/');
@@ -17,9 +24,9 @@ function ipInCIDR(ip: string, cidr: string): boolean {
 
 @Injectable()
 export class WechatIpGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest();
-    const ip = req.ip || req.connection?.remoteAddress || '';
+    const ip = getClientIp(req);
     return WECHAT_IP_WHITELIST.some((cidr) => ipInCIDR(ip, cidr));
   }
 }

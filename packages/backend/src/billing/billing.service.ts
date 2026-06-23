@@ -3,7 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { PaymentGatewayFactory } from './gateway/payment-gateway.factory';
 import { MembershipService } from './membership.service';
 import { PlansService } from './plans.service';
-import { OrderStatus } from './enums/billing.enum';
+import { OrderStatus, MembershipTier } from './enums/billing.enum';
 import { randomUUID } from 'node:crypto';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import type { WebhookVerifyResult } from './gateway/payment-gateway.interface';
@@ -172,11 +172,15 @@ export class BillingService {
       const gateway = this.gatewayFactory.getGateway(order.gateway);
       const result = await gateway.queryOrder(orderNo);
       if (result.status === 'SUCCESS' && result.gatewayOrderId) {
+        const amount = result.amount ?? order.amount;
+        if (amount !== order.amount) {
+          this.logger.warn(`amount mismatch on refresh: order=${order.amount} gateway=${amount}`);
+        }
         await this.handlePaymentNotify({
           isValid: true,
           orderNo,
           gatewayOrderId: result.gatewayOrderId,
-          amount: result.amount ?? order.amount,
+          amount,
           paidAt: result.paidAt ?? new Date(),
         });
       }
@@ -188,7 +192,10 @@ export class BillingService {
   }
 
   async refund(orderNo: string, reason?: string): Promise<void> {
-    const order = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
+    const order = await this.prisma.paymentOrder.findUnique({
+      where: { orderNo },
+      include: { plan: true },
+    });
     if (!order) throw new NotFoundException('order not found');
     if (order.status !== OrderStatus.SUCCEEDED) {
       throw new BadRequestException('only succeeded orders can be refunded');
@@ -207,10 +214,41 @@ export class BillingService {
       });
       if (count === 0) return;
 
-      await tx.userMembership.update({
-        where: { userId: order.userId },
-        data: { expiresAt: new Date(), tier: 'FREE' as any },
+      const remaining = await tx.paymentOrder.findMany({
+        where: {
+          userId: order.userId,
+          status: OrderStatus.SUCCEEDED,
+          id: { not: order.id },
+        },
+        include: { plan: true },
       });
+
+      if (remaining.length === 0) {
+        await tx.userMembership.update({
+          where: { userId: order.userId },
+          data: { expiresAt: new Date(), tier: 'FREE' as any },
+        });
+      } else {
+        let maxTier: string = MembershipTier.FREE;
+        let latestExpires = new Date();
+        for (const r of remaining) {
+          const w = MembershipService.TIER_WEIGHT[r.plan.tier] ?? 0;
+          if (w > (MembershipService.TIER_WEIGHT[maxTier] ?? 0)) {
+            maxTier = r.plan.tier;
+          }
+          if (r.paidAt && r.plan.durationDays) {
+            const exp = new Date(r.paidAt.getTime() + r.plan.durationDays * 86400000);
+            if (exp > latestExpires) latestExpires = exp;
+          }
+        }
+        await tx.userMembership.update({
+          where: { userId: order.userId },
+          data: {
+            tier: maxTier as any,
+            expiresAt: latestExpires > new Date() ? latestExpires : new Date(),
+          },
+        });
+      }
     });
 
     this.logger.log(`refund completed: orderNo=${orderNo}, reason=${reason}`);

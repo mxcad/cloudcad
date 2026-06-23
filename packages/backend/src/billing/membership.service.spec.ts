@@ -66,7 +66,7 @@ describe("MembershipService", () => {
       expect(result).toBe("FREE");
     });
 
-    it("should return stored tier even if expired", async () => {
+    it("should return FREE when expired", async () => {
       const yesterday = new Date(Date.now() - 86400000);
       mockPrisma.userMembership.findUnique.mockResolvedValue({
         userId: "user-1",
@@ -74,7 +74,18 @@ describe("MembershipService", () => {
         expiresAt: yesterday,
       });
       const result = await service.getEffectiveTier("user-1");
-      expect(result).toBe("PRO");
+      expect(result).toBe("FREE");
+    });
+
+    it("should return stored tier when active", async () => {
+      const future = new Date(Date.now() + 30 * 86400000);
+      mockPrisma.userMembership.findUnique.mockResolvedValue({
+        userId: "user-1",
+        tier: "ENTERPRISE",
+        expiresAt: future,
+      });
+      const result = await service.getEffectiveTier("user-1");
+      expect(result).toBe("ENTERPRISE");
     });
   });
 });
