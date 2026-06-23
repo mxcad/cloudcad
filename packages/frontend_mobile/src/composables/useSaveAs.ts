@@ -9,6 +9,7 @@ import {
   processPendingImages,
   pendingImageCount,
 } from '../services/pendingImageService';
+import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { showToast } from 'vant';
 
 export type SaveTargetType = 'personal' | 'project' | 'library';
@@ -106,8 +107,12 @@ export function useSaveAs() {
           params.targetType === 'library' ? params.libraryType : undefined,
         commitMessage: `Save as: ${params.fileName}.${safeFormat}`,
       });
-      if (pendingImageCount() > 0 && result.nodeId) {
-        await processPendingImages(result.nodeId).catch(() => {});
+      if (result.nodeId) {
+        if (pendingImageCount() > 0) {
+          await processPendingImages(result.nodeId).catch(() => {});
+        }
+        // 异步上传缩略图（失败不影响主流程）
+        uploadThumbnailForNode(result.nodeId).catch(() => {});
       }
       saving.value = false;
       return { success: true, nodeId: result.nodeId };

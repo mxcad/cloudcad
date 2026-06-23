@@ -19,6 +19,7 @@
     import { useFooterToolbar } from './hooks/useFooterToolbar';
     import { useFloatingRightBtnList } from './hooks/useFloatingRightBtnList';
     import { useFileLoader, checkFileExternalRefs, checkPublicFileExternalRefs, type FileOpenOptions } from '../../composables/useFileLoader';
+import { uploadThumbnailForNode } from '../../services/thumbnailService';
     import { isHashLike, resolvePublicExtRefUrl } from '../../services/publicFileService';
     import { checkLibraryPermissions } from '../../services/permissionService';
     import { useEditorState } from '../../composables/useEditorState';
@@ -422,6 +423,11 @@
         })
         mxcad.on('openFileComplete', () => {
             editorState.setIsModified(false)
+            // 打开文件后异步生成并上传缩略图（参考 PC setupFileOpenListener）
+            const fileId = editorState.state.fileId
+            if (fileId) {
+                uploadThumbnailForNode(fileId).catch(() => {})
+            }
         })
 
         initEditObjectToolbar(mxcad)
