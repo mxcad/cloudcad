@@ -75,7 +75,14 @@ export class BillingService {
         openid: dto.openid,
         ip: dto.ip || '127.0.0.1',
       });
-      return this.buildPayResponse(pending, plan, result);
+      if (result.gatewayOrderId && result.gatewayOrderId !== pending.gatewayOrderId) {
+        await this.prisma.paymentOrder.update({
+          where: { id: pending.id },
+          data: { gatewayOrderId: result.gatewayOrderId },
+        });
+      }
+      const updated = await this.prisma.paymentOrder.findUnique({ where: { id: pending.id } });
+      return this.buildPayResponse(updated!, plan, result);
     }
 
     const orderNo = generateOrderNo();
@@ -124,6 +131,10 @@ export class BillingService {
 
       if (order.amount !== verified.amount) {
         this.logger.warn(`amount mismatch, skipping: order=${order.amount} callback=${verified.amount} orderNo=${verified.orderNo}`);
+        await txClient.paymentOrder.update({
+          where: { id: order.id },
+          data: { status: OrderStatus.FAILED, failedAt: new Date(), description: `金额不匹配: order=${order.amount} callback=${verified.amount}` },
+        });
         return;
       }
 

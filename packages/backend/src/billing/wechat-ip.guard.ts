@@ -19,7 +19,9 @@ function getClientIp(req: any): string {
 }
 
 function ipInCIDR(ip: string, cidr: string): boolean {
-  const [range, bits] = cidr.split('/');
+  const parts = cidr.split('/');
+  if (parts.length !== 2) return false;
+  const [range, bits] = parts;
   const mask = ~(2 ** (32 - parseInt(bits, 10)) - 1);
   const ipNum = ip.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
   const rangeNum = range.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;

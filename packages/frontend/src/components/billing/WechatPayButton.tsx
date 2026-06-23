@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { QRCodeSVG } from 'qrcode.react';
+import { billingControllerQueryOrder } from '@/api-sdk';
 
 declare const WeixinJSBridge: {
   invoke: (
@@ -27,6 +28,7 @@ export default function WechatPayButton({
   payParams,
   codeUrl,
   redirectUrl,
+  orderNo,
   amount,
   onSuccess,
   onError,
@@ -74,12 +76,44 @@ export default function WechatPayButton({
     }
   }, [payParams, onSuccess, onError]);
 
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startPolling = useCallback(() => {
+    if (pollingRef.current) return;
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await billingControllerQueryOrder({ path: { orderNo } });
+        const order = res?.data as Record<string, any> | undefined;
+        if (order?.status === 'SUCCEEDED') {
+          if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+          setPayState('success');
+          onSuccess();
+        }
+      } catch {
+        // polling error, retry on next interval
+      }
+    }, 5000);
+  }, [orderNo, onSuccess]);
+
+  useEffect(() => {
+    if (codeUrl && !redirectUrl) {
+      startPolling();
+    }
+    if (payState === 'success' || payState === 'error') {
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+    }
+    return () => {
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+    };
+  }, [codeUrl, redirectUrl, payState, startPolling]);
+
   useEffect(() => {
     if (redirectUrl && isMobile && !isWeChat && !redirectAttempted.current) {
       redirectAttempted.current = true;
+      startPolling();
       window.location.href = redirectUrl;
     }
-  }, [redirectUrl, isMobile, isWeChat]);
+  }, [redirectUrl, isMobile, isWeChat, startPolling]);
 
   if (isWeChat && payParams) {
     return (

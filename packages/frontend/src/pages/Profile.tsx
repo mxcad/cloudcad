@@ -243,13 +243,16 @@ export const Profile: React.FC = () => {
   const [memSubTab, setMemSubTab] = useState<'compare' | 'orders'>('compare');
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const orderPageRef = useRef(orderPage);
+  orderPageRef.current = orderPage;
 
   const loadBillingData = useCallback(async () => {
+    const currentPage = orderPageRef.current;
     try {
       const [planRes, memRes, ordRes]: any = await Promise.all([
         billingControllerGetPlans(),
         billingControllerGetMembership(),
-        billingControllerGetOrders({ query: { page: orderPage, limit: 10 } }),
+        billingControllerGetOrders({ query: { page: currentPage, limit: 10 } }),
       ]);
       const list = planRes?.data;
       if (Array.isArray(list) && list.length > 0) setPlans(list as Plan[]);
@@ -267,7 +270,7 @@ export const Profile: React.FC = () => {
     } finally {
       setBillingLoading(false);
     }
-  }, [orderPage]);
+  }, []);
 
   useEffect(() => {
     setBillingLoading(true);
