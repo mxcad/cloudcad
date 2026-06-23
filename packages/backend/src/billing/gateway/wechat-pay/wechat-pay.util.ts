@@ -14,6 +14,7 @@ const builder = new XMLBuilder({
 
 export function md5Sign(params: Record<string, any>, key: string): string {
   const sorted = Object.keys(params)
+    .filter((k) => params[k] != null && params[k] !== '')
     .sort()
     .map((k) => `${k}=${params[k]}`)
     .join('&') + `&key=${key}`;

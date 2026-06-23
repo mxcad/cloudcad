@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { billingControllerGetMembership } from '@/api-sdk';
 
 interface MembershipInfo {
@@ -12,14 +13,16 @@ const TIER_CONFIG: Record<string, { label: string; bg: string; text: string }> =
   ENTERPRISE: { label: 'Enterprise', bg: 'var(--primary-100)', text: 'var(--primary-700)' },
 };
 
-let cachedMembership: { data: MembershipInfo; ts: number } | null = null;
+let cachedMembership: { data: MembershipInfo; ts: number; userId: string } | null = null;
 const CACHE_TTL = 120000;
 
 export default function MembershipBadge() {
   const [membership, setMembership] = useState<MembershipInfo | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (cachedMembership && Date.now() - cachedMembership.ts < CACHE_TTL) {
+    if (!user) return;
+    if (cachedMembership && cachedMembership.userId === user.id && Date.now() - cachedMembership.ts < CACHE_TTL) {
       setMembership(cachedMembership.data);
       return;
     }
@@ -29,14 +32,14 @@ export default function MembershipBadge() {
         const info = res?.data;
         if (info) {
           const data = info as unknown as MembershipInfo;
-          cachedMembership = { data, ts: Date.now() };
+          cachedMembership = { data, ts: Date.now(), userId: user.id };
           setMembership(data);
         }
       } catch {
         // 忽略错误，不显示徽章
       }
     })();
-  }, []);
+  }, [user]);
 
   if (!membership || membership.tier === 'FREE' || membership.daysRemaining <= 0) return null;
 

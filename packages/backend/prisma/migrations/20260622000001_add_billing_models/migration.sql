@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "MembershipTier" AS ENUM ('FREE', 'PRO', 'ENTERPRISE');
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED', 'CLOSED', 'TIMEOUT');
 

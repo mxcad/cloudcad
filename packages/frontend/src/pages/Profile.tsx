@@ -227,6 +227,8 @@ export const Profile: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderTotal, setOrderTotal] = useState(0);
   const [billingLoading, setBillingLoading] = useState(false);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [paymentOrder, setPaymentOrder] = useState<{
@@ -247,21 +249,25 @@ export const Profile: React.FC = () => {
       const [planRes, memRes, ordRes]: any = await Promise.all([
         billingControllerGetPlans(),
         billingControllerGetMembership(),
-        billingControllerGetOrders(),
+        billingControllerGetOrders({ query: { page: orderPage, limit: 10 } }),
       ]);
       const list = planRes?.data;
       if (Array.isArray(list) && list.length > 0) setPlans(list as Plan[]);
       if (memRes?.data) setMembership(memRes.data as Membership);
       if (ordRes?.data) {
         const data = ordRes.data;
-        setOrders(Array.isArray(data) ? data as Order[] : (data.items ?? []) as Order[]);
+        const items = Array.isArray(data) ? data as Order[] : (data.items ?? []) as Order[];
+        setOrders(items);
+        if (!Array.isArray(data) && typeof data.total === 'number') {
+          setOrderTotal(data.total);
+        }
       }
     } catch {
       // billing data is supplementary, don't block the page
     } finally {
       setBillingLoading(false);
     }
-  }, []);
+  }, [orderPage]);
 
   useEffect(() => {
     setBillingLoading(true);
@@ -1439,6 +1445,9 @@ export const Profile: React.FC = () => {
                         loading={billingLoading}
                         onRefresh={loadBillingData}
                         onContinuePayment={handleContinuePayment}
+                        page={orderPage}
+                        total={orderTotal}
+                        onPageChange={(p) => setOrderPage(p)}
                       />
                     )}
                   </>

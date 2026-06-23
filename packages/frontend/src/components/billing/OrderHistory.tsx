@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -22,9 +21,10 @@ interface OrderHistoryProps {
   loading?: boolean;
   onRefresh: () => void;
   onContinuePayment: (order: Order) => void;
+  page?: number;
+  total?: number;
+  onPageChange?: (page: number) => void;
 }
-
-const PAGE_SIZE = 10;
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon?: React.ReactNode }> = {
   PENDING: { label: '待支付', color: 'var(--warning-500)' },
@@ -42,13 +42,10 @@ export default function OrderHistory({
   loading,
   onRefresh,
   onContinuePayment,
+  page = 1,
+  total = 0,
+  onPageChange,
 }: OrderHistoryProps) {
-  const [page, setPage] = useState(1);
-
-  const total = orders.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pagedOrders = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   if (!loading && orders.length === 0) {
     return (
       <Card variant="outlined" padding="lg" radius="xl">
@@ -60,9 +57,11 @@ export default function OrderHistory({
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / 10));
+
   return (
     <div className="space-y-3">
-      {pagedOrders.map((order) => {
+      {orders.map((order) => {
         const statusInfo = STATUS_MAP[order.status] || {
           label: order.status,
           color: 'var(--text-tertiary)',
@@ -111,10 +110,10 @@ export default function OrderHistory({
         );
       })}
 
-      {totalPages > 1 && (
+      {totalPages > 1 && onPageChange && (
         <Pagination
-          meta={{ total, page, limit: PAGE_SIZE, totalPages }}
-          onPageChange={setPage}
+          meta={{ total, page, limit: 10, totalPages }}
+          onPageChange={onPageChange}
         />
       )}
     </div>

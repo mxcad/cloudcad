@@ -53,18 +53,20 @@ export class BillingService {
     });
     if (!plan) throw new NotFoundException('plan not found or inactive');
 
+    const gateway = await this.gatewayFactory.getActiveGateway();
+
     const twoHoursAgo = new Date(Date.now() - 2 * 3600000);
     const pending = await this.prisma.paymentOrder.findFirst({
       where: {
         userId,
         planId: plan.id,
         status: OrderStatus.PENDING,
+        gateway: gateway.name,
         createdAt: { gte: twoHoursAgo },
       },
       orderBy: { createdAt: 'desc' },
     });
     if (pending) {
-      const gateway = await this.gatewayFactory.getActiveGateway();
       const result = await gateway.createPayment({
         orderNo: pending.orderNo,
         amount: pending.amount,
@@ -77,7 +79,6 @@ export class BillingService {
     }
 
     const orderNo = generateOrderNo();
-    const gateway = await this.gatewayFactory.getActiveGateway();
 
     const ip = dto.ip || '127.0.0.1';
     const result = await gateway.createPayment({
@@ -122,7 +123,8 @@ export class BillingService {
       if (order.status !== OrderStatus.PENDING) return;
 
       if (order.amount !== verified.amount) {
-        throw new BadRequestException(`amount mismatch: order=${order.amount} callback=${verified.amount}`);
+        this.logger.warn(`amount mismatch, skipping: order=${order.amount} callback=${verified.amount} orderNo=${verified.orderNo}`);
+        return;
       }
 
       const { count } = await txClient.paymentOrder.updateMany({
@@ -226,27 +228,23 @@ export class BillingService {
       throw new BadRequestException('only succeeded orders can be refunded');
     }
 
-    // Step 1: DB first — optimistic lock, mark as REFUNDED
+    // Step 1: Gateway refund first
+    const gateway = this.gatewayFactory.getGateway(order.gateway);
+    try {
+      await gateway.refund(orderNo, order.amount);
+    } catch (e) {
+      this.logger.error(`refund gateway call failed: ${orderNo}`, e);
+      throw new BadRequestException('退款请求发送失败，请稍后重试');
+    }
+
+    // Step 2: DB update — optimistic lock, mark as REFUNDED
     const { count } = await this.prisma.paymentOrder.updateMany({
       where: { id: order.id, status: OrderStatus.SUCCEEDED },
       data: { status: OrderStatus.REFUNDED, refundedAt: new Date() },
     });
     if (count === 0) {
-      throw new BadRequestException('order has already been refunded');
-    }
-
-    // Step 2: Gateway refund
-    try {
-      const gateway = this.gatewayFactory.getGateway(order.gateway);
-      await gateway.refund(orderNo, order.amount);
-    } catch (e) {
-      // Compensating transaction: revert to SUCCEEDED
-      await this.prisma.paymentOrder.updateMany({
-        where: { id: order.id, status: OrderStatus.REFUNDED },
-        data: { status: OrderStatus.SUCCEEDED, refundedAt: null },
-      });
-      this.logger.error(`refund failed, order reverted: ${orderNo}`, e);
-      throw new BadRequestException('退款请求失败，订单状态已恢复');
+      this.logger.warn(`refund gateway succeeded but order already refunded: ${orderNo}`);
+      return;
     }
 
     // Step 3: Recalculate membership
@@ -256,42 +254,44 @@ export class BillingService {
   }
 
   private async recalculateMembershipAfterRefund(refundedOrder: any) {
-    const remaining = await this.prisma.paymentOrder.findMany({
-      where: {
-        userId: refundedOrder.userId,
-        status: OrderStatus.SUCCEEDED,
-      },
-      include: { plan: true },
-    });
-
-    if (remaining.length === 0) {
-      await this.prisma.userMembership.update({
-        where: { userId: refundedOrder.userId },
-        data: { expiresAt: new Date(), tier: MembershipTier.FREE },
+    await this.prisma.$transaction(async (tx) => {
+      const remaining = await tx.paymentOrder.findMany({
+        where: {
+          userId: refundedOrder.userId,
+          status: OrderStatus.SUCCEEDED,
+        },
+        include: { plan: true },
       });
-      return;
-    }
 
-    let maxTier: MembershipTier = MembershipTier.FREE;
-    let latestExpires = new Date(0);
-    for (const r of remaining) {
-      const w = MembershipService.TIER_WEIGHT[r.plan.tier] ?? 0;
-      if (w > (MembershipService.TIER_WEIGHT[maxTier] ?? 0)) {
-        maxTier = r.plan.tier as MembershipTier;
+      if (remaining.length === 0) {
+        await tx.userMembership.update({
+          where: { userId: refundedOrder.userId },
+          data: { expiresAt: new Date(), tier: MembershipTier.FREE },
+        });
+        return;
       }
-      if (r.paidAt && r.plan.durationDays) {
-        const exp = new Date(r.paidAt.getTime() + r.plan.durationDays * 86400000);
-        if (exp > latestExpires) latestExpires = exp;
-      }
-    }
 
-    const now = new Date();
-    await this.prisma.userMembership.update({
-      where: { userId: refundedOrder.userId },
-      data: {
-        tier: maxTier as any,
-        expiresAt: latestExpires > now ? latestExpires : now,
-      },
+      let maxTier: MembershipTier = MembershipTier.FREE;
+      let latestExpires = new Date(0);
+      for (const r of remaining) {
+        const w = MembershipService.TIER_WEIGHT[r.plan.tier] ?? 0;
+        if (w > (MembershipService.TIER_WEIGHT[maxTier] ?? 0)) {
+          maxTier = r.plan.tier as MembershipTier;
+        }
+        if (r.paidAt && r.plan.durationDays) {
+          const exp = new Date(r.paidAt.getTime() + r.plan.durationDays * 86400000);
+          if (exp > latestExpires) latestExpires = exp;
+        }
+      }
+
+      const now = new Date();
+      await tx.userMembership.update({
+        where: { userId: refundedOrder.userId },
+        data: {
+          tier: maxTier as any,
+          expiresAt: latestExpires > now ? latestExpires : now,
+        },
+      });
     });
   }
 

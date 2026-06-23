@@ -48,6 +48,7 @@ export class WechatPayGateway implements PaymentGateway {
       body: params.description,
       out_trade_no: params.orderNo,
       total_fee: params.amount,
+      fee_type: 'CNY',
       spbill_create_ip: params.ip,
       notify_url: this.notifyUrl,
       trade_type: params.tradeType,
@@ -114,8 +115,10 @@ export class WechatPayGateway implements PaymentGateway {
       };
     }
 
+    const isValid = data.return_code === 'SUCCESS' && data.result_code === 'SUCCESS';
+
     return {
-      isValid: data.return_code === 'SUCCESS',
+      isValid,
       orderNo: data.out_trade_no as string,
       gatewayOrderId: data.transaction_id as string,
       amount: parseInt(data.total_fee as string, 10),
