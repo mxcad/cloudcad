@@ -10,11 +10,13 @@ import {
 import {
   fileSystemControllerGetPersonalSpace,
   fileSystemControllerCheckProjectPermission,
+  fileSystemControllerGetNode,
 } from '../api-sdk';
 import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { processPendingImages } from '../services/pendingImageService';
+import { buildCacheKey, clearMxwebCache, setMxwebCache } from '../services/mxwebCacheService';
 import { handleApiError } from '../utils/apiConfig';
-import { showToast } from 'vant';
+import { showToast, showLoadingToast, closeToast } from 'vant';
 import { PERMISSIONS } from '../services/permissionService';
 
 const saving = ref(false);
@@ -56,6 +58,40 @@ function checkLibraryPermission(): boolean {
   }
 }
 
+/** 保存后更新 IndexedDB 缓存和编辑器状态（参考 PC 端 saveToCurrentFile） */
+async function updateCacheAndState(
+  nodeId: string,
+  blob: Blob,
+  editorState: ReturnType<typeof useEditorState>,
+): Promise<void> {
+  try {
+    const nodeResult = await fileSystemControllerGetNode({ path: { nodeId } });
+    const nodeInfo = nodeResult.data as { updatedAt?: string; path?: string } | undefined;
+    if (!nodeInfo) return;
+
+    // 更新乐观锁时间戳
+    if (nodeInfo.updatedAt) {
+      editorState.setExpectedTimestamp(nodeInfo.updatedAt);
+    }
+
+    // 更新 IndexedDB 缓存
+    if (nodeInfo.path) {
+      const arrayBuffer = await blob.arrayBuffer();
+      const timestamp = nodeInfo.updatedAt
+        ? new Date(nodeInfo.updatedAt).getTime()
+        : Date.now();
+      const cacheKey = buildCacheKey(nodeInfo.path, timestamp);
+      await clearMxwebCache(cacheKey).catch(() => {});
+      await setMxwebCache(cacheKey, arrayBuffer).catch(() => {});
+    }
+
+    // 重置文档修改状态
+    editorState.setIsModified(false);
+  } catch {
+    // 缓存更新失败不影响主流程
+  }
+}
+
 export function useSave() {
   const editorState = useEditorState();
   const { isAuthenticated } = useUser();
@@ -68,15 +104,18 @@ export function useSave() {
     }
 
     saving.value = true;
+    showLoadingToast({ message: '正在保存文件...', forbidClick: true, duration: 0 });
 
     try {
       if (state.isPublicFile) {
         saving.value = false;
+        closeToast();
         return { success: false, message: '公开文件不支持保存' };
       }
 
       if (!state.permissions.canSave && state.fileId) {
         saving.value = false;
+        closeToast();
         return { success: false, needSaveAs: true, message: '没有保存权限，请另存为' };
       }
 
@@ -84,6 +123,7 @@ export function useSave() {
 
       if (!state.fileId) {
         saving.value = false;
+        closeToast();
         return { success: false, needSaveAs: true, message: '请另存为到云图' };
       }
 
@@ -105,11 +145,11 @@ export function useSave() {
       const isMyDrawing = !!(personalSpaceId && parentId && parentId === personalSpaceId);
 
       if (isMyDrawing) {
-        const result = await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
-        if (result.updatedAt) {
-          editorState.setExpectedTimestamp(result.updatedAt);
-        }
+        await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
+        // 后处理：缓存更新 + 状态重置
+        await updateCacheAndState(state.fileId, blob, editorState);
         await processPendingImages(state.fileId).catch(() => {});
+        closeToast();
         showToast('保存成功');
         uploadThumbnailForNode(state.fileId).catch(() => {});
         saving.value = false;
@@ -123,13 +163,17 @@ export function useSave() {
           } else {
             await saveLibraryDrawing(state.fileId, blob);
           }
+          // 后处理：缓存更新 + 状态重置
+          await updateCacheAndState(state.fileId, blob, editorState);
           await processPendingImages(state.fileId).catch(() => {});
+          closeToast();
           showToast('保存成功');
           uploadThumbnailForNode(state.fileId).catch(() => {});
           saving.value = false;
           return { success: true };
         }
         saving.value = false;
+        closeToast();
         return { success: false, needSaveAs: true, message: '无资源库管理权限，请另存为到其他位置' };
       }
 
@@ -140,11 +184,11 @@ export function useSave() {
             query: { permission: PERMISSIONS.CAD_SAVE as any },
           });
           if (!permResult.error && permResult.data?.hasPermission) {
-            const result = await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
-            if (result.updatedAt) {
-              editorState.setExpectedTimestamp(result.updatedAt);
-            }
+            await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
+            // 后处理：缓存更新 + 状态重置
+            await updateCacheAndState(state.fileId, blob, editorState);
             await processPendingImages(state.fileId).catch(() => {});
+            closeToast();
             showToast('保存成功');
             uploadThumbnailForNode(state.fileId).catch(() => {});
             saving.value = false;
@@ -156,8 +200,10 @@ export function useSave() {
       }
 
       saving.value = false;
+      closeToast();
       return { success: false, needSaveAs: true, message: '请另存为到云图' };
     } catch (e: unknown) {
+      closeToast();
       handleApiError(e, '保存失败');
       saving.value = false;
       return { success: false, message: '保存失败' };

@@ -17,6 +17,7 @@ export type SaveFormat = 'dwg' | 'dxf' | 'pdf' | 'mxweb';
 
 export const saveAsToCloudTrigger = ref(0);
 export const saveLoginRequiredTrigger = ref(0);
+export const saveToCloudTrigger = ref(0);
 
 interface ProjectInfo {
   id: string;

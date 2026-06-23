@@ -23,7 +23,7 @@
     import { checkLibraryPermissions } from '../../services/permissionService';
     import { useEditorState } from '../../composables/useEditorState';
     import { useSave } from '../../composables/useSave';
-    import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from '../../composables/useSaveAs';
+    import { saveAsToCloudTrigger, saveLoginRequiredTrigger, saveToCloudTrigger } from '../../composables/useSaveAs';
     import { useUser } from '../../composables/useUser';
 
     import { showToast, showConfirmDialog, showLoadingToast, closeToast } from 'vant';
@@ -186,6 +186,23 @@
         pendingActionAfterLogin.value = 'save'
         showLoginPrompt.value = true
     })
+    watch(saveToCloudTrigger, () => {
+        const state = editorState.state
+        if (state.isPublicFile) {
+            showToast('公开文件不支持保存')
+            return
+        }
+        if (!state.permissions.canSave) {
+            showToast('没有保存权限')
+            return
+        }
+        if (!isAuthenticated.value) {
+            pendingActionAfterLogin.value = 'save'
+            showLoginPrompt.value = true
+            return
+        }
+        showCommitDialog.value = true
+    })
     const pendingCommitMessage = ref('')
     const canManageLibrary = ref(false)
     const showVersionHistory = ref(false)
@@ -197,23 +214,6 @@
     checkLibraryPermissions().then(result => {
         canManageLibrary.value = result.canManageDrawing || result.canManageBlock
     })
-
-    async function onSaveClick() {
-        if (isPublicFile.value) {
-            showToast('公开文件不支持保存')
-            return
-        }
-        if (!editorState.state.permissions.canSave) {
-            showToast('没有保存权限')
-            return
-        }
-        if (!isAuthenticated.value) {
-            pendingActionAfterLogin.value = 'save'
-            showLoginPrompt.value = true
-            return
-        }
-        showCommitDialog.value = true
-    }
 
     function onCommitConfirm(message: string) {
         pendingCommitMessage.value = message
@@ -499,7 +499,7 @@
             <span v-if="currentVersion" class="version-badge">r{{ currentVersion }}</span>
             <div class="top_toolbar">
                 <button class="item" :disabled="saving || isPublicFile || !editorState.state.permissions.canSave"
-                    @click="onSaveClick">
+                    @click="callCommand('Mx_SaveToCloud')">
                     <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
                 </button>
                 <button class="item" @click="callCommand('Mx_ZoomE')">

@@ -6,11 +6,8 @@ import { injectVoerkaI18n } from "@voerkai18n/vue"
 import { MxCpp } from "mxcad"
 import { PopoverAction } from "vant"
 import { ref } from "vue"
-import { useSave } from "../../../composables/useSave"
-import { saveAsToCloudTrigger, saveLoginRequiredTrigger } from "../../../composables/useSaveAs"
-import { useEditorState } from "../../../composables/useEditorState"
+import { saveToCloudTrigger, saveAsToCloudTrigger, saveLoginRequiredTrigger } from "../../../composables/useSaveAs"
 import { useUser } from "../../../composables/useUser"
-import { showToast } from "vant"
 
 function isTokenExpired(): boolean {
   try {
@@ -138,21 +135,8 @@ export const useMenu = () => {
     addCommand("Mx_export", showExportSubMenu)
     addCommand("Mx_saveDwg", showExportSubMenu)
     addCommand("Mx_exportPDF", showExportSubMenu)
-    addCommand("Mx_SaveToCloud", async () => {
-        const { save } = useSave()
-        const result = await save()
-        if (result.success) return
-        if (result.needLogin) {
-            saveLoginRequiredTrigger.value++
-            return
-        }
-        if (result.needSaveAs) {
-            saveAsToCloudTrigger.value++
-            return
-        }
-        if (result.message) {
-            showToast(result.message)
-        }
+    addCommand("Mx_SaveToCloud", () => {
+        saveToCloudTrigger.value++
     })
     addCommand("Mx_SaveAsToCloud", () => {
         const { isAuthenticated } = useUser()
