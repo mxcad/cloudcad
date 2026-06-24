@@ -7,7 +7,7 @@ import { PlansService } from './plans.service';
 import { BillingService } from './billing.service';
 import { OrderStatus, MembershipTier } from './enums/billing.enum';
 // eslint-disable-next-line @typescript-eslint/no-empty-interface -- used for jest.Mocked type inference
-interface PaymentGatewayLike { name: string; createPayment: any; verifyWebhook: any; queryOrder: any; refund: any; }
+interface PaymentGatewayLike { name: string; createPayment: any; verifyWebhook: any; queryOrder: any; refund: any; forceComplete?: any; }
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -70,6 +70,7 @@ describe('BillingService', () => {
       verifyWebhook: jest.fn(),
       queryOrder: jest.fn(),
       refund: jest.fn(),
+      forceComplete: jest.fn(),
     };
 
     prisma = {
@@ -443,7 +444,9 @@ describe('BillingService', () => {
     });
 
     it('should handle SUCCESS from gateway', async () => {
-      prisma.paymentOrder.findUnique.mockResolvedValue(mockOrder);
+      prisma.paymentOrder.findUnique
+        .mockResolvedValueOnce(mockOrder)
+        .mockResolvedValue({ ...mockOrder, status: OrderStatus.SUCCEEDED });
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
       mockGateway.queryOrder.mockResolvedValue({
         status: 'SUCCESS',
@@ -460,31 +463,33 @@ describe('BillingService', () => {
         };
         await cb(tx);
       });
-      prisma.paymentOrder.findUnique.mockResolvedValue({ ...mockOrder, status: OrderStatus.SUCCEEDED });
 
       const result = await service.refreshOrder('user-1', 'PAYtest123');
       expect(membershipService.activate).toHaveBeenCalled();
+      expect(result.status).toBe(OrderStatus.SUCCEEDED);
     });
 
     it('should mark FAILED on amount mismatch from gateway', async () => {
-      prisma.paymentOrder.findUnique.mockResolvedValue(mockOrder);
+      prisma.paymentOrder.findUnique
+        .mockResolvedValueOnce(mockOrder)
+        .mockResolvedValue({ ...mockOrder, status: OrderStatus.FAILED });
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
       mockGateway.queryOrder.mockResolvedValue({
         status: 'SUCCESS',
         gatewayOrderId: 'txn-001',
         amount: 100,
       });
-      prisma.paymentOrder.findUnique.mockResolvedValue({ ...mockOrder, status: OrderStatus.FAILED });
 
       const result = await service.refreshOrder('user-1', 'PAYtest123');
       expect(result.status).toBe(OrderStatus.FAILED);
     });
 
     it('should handle CLOSED from gateway', async () => {
-      prisma.paymentOrder.findUnique.mockResolvedValue(mockOrder);
+      prisma.paymentOrder.findUnique
+        .mockResolvedValueOnce(mockOrder)
+        .mockResolvedValue({ ...mockOrder, status: OrderStatus.CLOSED });
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
       mockGateway.queryOrder.mockResolvedValue({ status: 'CLOSED' });
-      prisma.paymentOrder.findUnique.mockResolvedValue({ ...mockOrder, status: OrderStatus.CLOSED });
 
       const result = await service.refreshOrder('user-1', 'PAYtest123');
       expect(result.status).toBe(OrderStatus.CLOSED);
@@ -492,10 +497,11 @@ describe('BillingService', () => {
 
     it('should mark TIMEOUT for old NOTPAY orders', async () => {
       const oldOrder = { ...mockOrder, createdAt: new Date(Date.now() - 3 * 3600000) };
-      prisma.paymentOrder.findUnique.mockResolvedValue(oldOrder);
+      prisma.paymentOrder.findUnique
+        .mockResolvedValueOnce(oldOrder)
+        .mockResolvedValue({ ...oldOrder, status: OrderStatus.TIMEOUT });
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
       mockGateway.queryOrder.mockResolvedValue({ status: 'NOTPAY' });
-      prisma.paymentOrder.findUnique.mockResolvedValue({ ...oldOrder, status: OrderStatus.TIMEOUT });
 
       const result = await service.refreshOrder('user-1', 'PAYtest123');
       expect(result.status).toBe(OrderStatus.TIMEOUT);
@@ -504,7 +510,10 @@ describe('BillingService', () => {
 
   describe('mockScan', () => {
     it('should force complete and refresh mock order', async () => {
-      prisma.paymentOrder.findUnique.mockResolvedValue(mockOrder);
+      prisma.paymentOrder.findUnique
+        .mockResolvedValueOnce(mockOrder)   // mockScan line 291
+        .mockResolvedValueOnce(mockOrder)   // refreshOrder line 235
+        .mockResolvedValue({ ...mockOrder, status: OrderStatus.SUCCEEDED }); // refreshOrder line 287
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
       mockGateway.queryOrder.mockResolvedValue({ status: 'SUCCESS', gatewayOrderId: 'mock_xxx', amount: 2400 });
       prisma.$transaction.mockImplementation(async (cb: any) => {
@@ -516,7 +525,6 @@ describe('BillingService', () => {
         };
         await cb(tx);
       });
-      prisma.paymentOrder.findUnique.mockResolvedValue({ ...mockOrder, status: OrderStatus.SUCCEEDED });
 
       await service.mockScan('user-1', 'PAYtest123');
       expect(membershipService.activate).toHaveBeenCalled();
@@ -527,6 +535,15 @@ describe('BillingService', () => {
     it('should throw on non-SUCCEEDED order', async () => {
       prisma.paymentOrder.findUnique.mockResolvedValue(mockOrder);
       await expect(service.refund('PAYtest123')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw when optimistic lock fails (already refunded)', async () => {
+      const succeededOrder = { ...mockOrder, status: OrderStatus.SUCCEEDED, plan: mockPlan };
+      prisma.paymentOrder.findUnique.mockResolvedValue(succeededOrder);
+      prisma.paymentOrder.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.refund('PAYtest123', 'test refund')).rejects.toThrow(BadRequestException);
+      expect(mockGateway.refund).not.toHaveBeenCalled();
     });
 
     it('should process refund successfully', async () => {
@@ -541,7 +558,7 @@ describe('BillingService', () => {
             findMany: jest.fn().mockResolvedValue([]),
           },
           userMembership: {
-            update: jest.fn(),
+            upsert: jest.fn(),
           },
         };
         await cb(tx);
@@ -550,24 +567,41 @@ describe('BillingService', () => {
       await service.refund('PAYtest123', 'test refund');
       expect(mockGateway.refund).toHaveBeenCalledWith('PAYtest123', 2400);
     });
+
+    it('should rollback DB on gateway failure', async () => {
+      const succeededOrder = { ...mockOrder, status: OrderStatus.SUCCEEDED, plan: mockPlan };
+      prisma.paymentOrder.findUnique.mockResolvedValue(succeededOrder);
+      gatewayFactory.getGateway.mockReturnValue(mockGateway);
+      mockGateway.refund.mockRejectedValue(new Error('gateway timeout'));
+      prisma.paymentOrder.updateMany.mockResolvedValue({ count: 1 });
+      prisma.paymentOrder.update.mockResolvedValue({ ...succeededOrder, status: OrderStatus.SUCCEEDED });
+
+      await expect(service.refund('PAYtest123', 'gateway error')).rejects.toThrow(BadRequestException);
+      // Should rollback status to SUCCEEDED
+      expect(prisma.paymentOrder.update).toHaveBeenCalledWith({
+        where: { id: succeededOrder.id },
+        data: { status: OrderStatus.SUCCEEDED, refundedAt: null, refundReason: null },
+      });
+    });
   });
 
   describe('recalculateMembershipAfterRefund', () => {
     it('should set FREE when no remaining orders', async () => {
       prisma.$transaction.mockImplementation(async (cb: any) => {
-        const updateMock = jest.fn();
+        const upsertMock = jest.fn();
         const tx = {
           paymentOrder: {
             findMany: jest.fn().mockResolvedValue([]),
           },
           userMembership: {
-            update: updateMock,
+            upsert: upsertMock,
           },
         };
         await cb(tx);
-        expect(updateMock).toHaveBeenCalledWith({
+        expect(upsertMock).toHaveBeenCalledWith({
           where: { userId: 'user-1' },
-          data: { expiresAt: expect.any(Date), tier: MembershipTier.FREE },
+          create: { userId: 'user-1', expiresAt: null, tier: MembershipTier.FREE },
+          update: { expiresAt: null, tier: MembershipTier.FREE },
         });
       });
     });
@@ -587,21 +621,21 @@ describe('BillingService', () => {
       };
 
       prisma.$transaction.mockImplementation(async (cb: any) => {
-        const updateMock = jest.fn();
+        const upsertMock = jest.fn();
         const tx = {
           paymentOrder: {
             findMany: jest.fn().mockResolvedValue([order1, order2]),
           },
           userMembership: {
-            update: updateMock,
+            upsert: upsertMock,
           },
         };
         await cb(tx);
         // 30 + 60 ≈ 90 days from order1.paidAt
-        expect(updateMock).toHaveBeenCalled();
-        const updateArg = updateMock.mock.calls[0][0];
-        expect(updateArg.data.tier).toBe(MembershipTier.PRO);
-        const expiresAt = updateArg.data.expiresAt.getTime();
+        expect(upsertMock).toHaveBeenCalled();
+        const upsertArg = upsertMock.mock.calls[0][0];
+        expect(upsertArg.update.tier).toBe(MembershipTier.PRO);
+        const expiresAt = upsertArg.update.expiresAt.getTime();
         const expectedMin = new Date('2026-01-01').getTime() + 89 * 86400000;
         const expectedMax = new Date('2026-01-01').getTime() + 91 * 86400000;
         expect(expiresAt).toBeGreaterThan(expectedMin);

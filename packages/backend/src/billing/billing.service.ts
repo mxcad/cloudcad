@@ -29,7 +29,7 @@ interface BuildPayPlan {
 
 interface RefundOrderInfo {
   userId: string;
-  plan: { tier: string; durationDays: number | null };
+  plan: { tier: string; durationDays: number };
 }
 
 function generateOrderNo(): string {
@@ -215,13 +215,13 @@ export class BillingService {
     const order = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
     if (!order) throw new Error(`order not found: ${orderNo}`);
 
-    const gateway = this.gatewayFactory.getGateway('mock');
-    const verified = await gateway.verifyWebhook({
-      out_trade_no: orderNo,
-      transaction_id: `mock_txn_${Date.now()}`,
-      total_fee: order.amount,
-    }, {});
-    await this.handlePaymentNotify(verified);
+    await this.handlePaymentNotify({
+      isValid: true,
+      orderNo,
+      gatewayOrderId: `manual_${Date.now()}`,
+      amount: order.amount,
+      paidAt: new Date(),
+    });
   }
 
   async queryOrder(userId: string, orderNo: string) {
@@ -310,13 +310,24 @@ export class BillingService {
       throw new BadRequestException('only succeeded orders can be refunded');
     }
 
-    // Step 1: Gateway refund with retry
+    // Step 1: DB optimistic lock — mark as REFUNDED first (prevent double-refund)
+    const { count } = await this.prisma.paymentOrder.updateMany({
+      where: { id: order.id, status: OrderStatus.SUCCEEDED },
+      data: { status: OrderStatus.REFUNDED, refundedAt: new Date(), refundReason: reason },
+    });
+    if (count === 0) {
+      throw new BadRequestException('订单已被退款或状态已变更，请刷新后重试');
+    }
+
+    // Step 2: Gateway refund with retry
     const gateway = this.gatewayFactory.getGateway(order.gateway);
+    let gatewayOk = false;
     let lastError: Error | null = null;
     const MAX_RETRIES = 3;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         await gateway.refund(orderNo, order.amount);
+        gatewayOk = true;
         lastError = null;
         break;
       } catch (e) {
@@ -327,19 +338,15 @@ export class BillingService {
         }
       }
     }
-    if (lastError) {
-      this.logger.error(`refund gateway call failed after ${MAX_RETRIES} attempts: ${orderNo}`, lastError);
-      throw new BadRequestException('退款请求发送失败，请稍后重试');
-    }
 
-    // Step 2: DB update — optimistic lock, mark as REFUNDED
-    const { count } = await this.prisma.paymentOrder.updateMany({
-      where: { id: order.id, status: OrderStatus.SUCCEEDED },
-      data: { status: OrderStatus.REFUNDED, refundedAt: new Date(), refundReason: reason },
-    });
-    if (count === 0) {
-      this.logger.warn(`refund gateway succeeded but order already refunded: ${orderNo}`);
-      return;
+    if (!gatewayOk) {
+      // Gateway failed — rollback DB status to SUCCEEDED
+      await this.prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.SUCCEEDED, refundedAt: null, refundReason: null },
+      });
+      this.logger.error(`refund gateway failed after ${MAX_RETRIES} attempts, rolled back: ${orderNo}`, lastError);
+      throw new BadRequestException('退款请求发送失败，订单状态已恢复');
     }
 
     // Step 3: Recalculate membership
@@ -350,7 +357,6 @@ export class BillingService {
 
   private async recalculateMembershipAfterRefund(refundedOrder: RefundOrderInfo) {
     await this.prisma.$transaction(async (tx) => {
-      const now = new Date();
       const remaining = await tx.paymentOrder.findMany({
         where: {
           userId: refundedOrder.userId,
@@ -360,9 +366,10 @@ export class BillingService {
       });
 
       if (remaining.length === 0) {
-        await tx.userMembership.update({
+        await tx.userMembership.upsert({
           where: { userId: refundedOrder.userId },
-          data: { expiresAt: now, tier: MembershipTier.FREE },
+          create: { userId: refundedOrder.userId, expiresAt: null, tier: MembershipTier.FREE },
+          update: { expiresAt: null, tier: MembershipTier.FREE },
         });
         return;
       }
@@ -370,6 +377,7 @@ export class BillingService {
       // 按 paidAt 升序重新模拟激活序列，与 MembershipService.activate 累加逻辑一致
       remaining.sort((a, b) => (a.paidAt?.getTime() ?? 0) - (b.paidAt?.getTime() ?? 0));
 
+      const now = new Date();
       let cursor = new Date(0);
       let maxTier: MembershipTier = MembershipTier.FREE;
 
@@ -392,9 +400,14 @@ export class BillingService {
       // 没有有效订单可计算时兜底
       if (cursor.getTime() === 0 || Number.isNaN(cursor.getTime())) cursor = now;
 
-      await tx.userMembership.update({
+      await tx.userMembership.upsert({
         where: { userId: refundedOrder.userId },
-        data: {
+        create: {
+          userId: refundedOrder.userId,
+          tier: maxTier as MembershipTier,
+          expiresAt: cursor > now ? cursor : now,
+        },
+        update: {
           tier: maxTier as any,
           expiresAt: cursor > now ? cursor : now,
         },

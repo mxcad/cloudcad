@@ -139,6 +139,7 @@ export class BillingAdminController {
 
   @Post('refund')
   @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
+  @UsePipes(new ValidationPipe({ transform: true }))
   @ApiOperation({ summary: '退款' })
   async refund(@Body() dto: RefundDto) {
     await this.billingService.refund(dto.orderNo, dto.reason);

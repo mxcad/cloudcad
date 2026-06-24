@@ -8931,7 +8931,7 @@ export type BillingControllerGetOrdersData = {
         /**
          * 订单状态筛选
          */
-        status?: string;
+        status?: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'CLOSED' | 'TIMEOUT';
         /**
          * 关键词搜索（订单号）
          */
@@ -9009,7 +9009,7 @@ export type BillingAdminControllerGetAllOrdersData = {
         /**
          * 订单状态筛选
          */
-        status?: string;
+        status?: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'CLOSED' | 'TIMEOUT';
         /**
          * 关键词搜索（订单号）
          */
