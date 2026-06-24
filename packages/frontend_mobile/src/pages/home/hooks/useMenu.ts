@@ -39,7 +39,7 @@ export const useMenu = () => {
         },
         {
             text: '导出 DWG',
-            icon: 'geshi',
+            icon: 'Dwg',
             call: async () => {
                 isShowMenu.value = false
      
@@ -51,7 +51,7 @@ export const useMenu = () => {
         },
         {
             text: '导出 DXF',
-            icon: 'geshi',
+            icon: 'DXF',
             call: async () => {
                 isShowMenu.value = false
 

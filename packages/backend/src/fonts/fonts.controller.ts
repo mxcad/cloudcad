@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -24,11 +25,11 @@ import {
   Query,
   Req,
   StreamableFile,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -40,11 +41,6 @@ import {
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-// 扩展 Request 类型以包含 Multer 文件属性
-interface RequestWithFiles extends Request {
-  files?: Express.Multer.File[];
-  file?: Express.Multer.File;
-}
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
@@ -90,36 +86,33 @@ export class FontsController {
   }
 
   /**
-   * 上传字体文件
+   * 上传字体文件（支持多文件）
    */
   @Post('upload')
   @ApiOperation({
     summary: '上传字体文件',
-    description: '上传字体文件到指定目录',
+    description: '上传字体文件到指定目录，支持一次上传多个文件',
   })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files', 50))
   @RequirePermissions([SystemPermission.SYSTEM_FONT_UPLOAD])
   async uploadFont(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() uploadFontDto: UploadFontDto,
-    @Req() req: Request
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() uploadFontDto: UploadFontDto
   ) {
     try {
       this.logger.log(`[uploadFont] 收到上传请求`);
-      this.logger.log(`[uploadFont] 文件对象: ${file ? '存在' : '不存在'}`);
+      this.logger.log(`[uploadFont] 文件数量: ${files?.length ?? 0}`);
       this.logger.log(`[uploadFont] target: ${uploadFontDto?.target}`);
-      this.logger.log(
-        `[uploadFont] req.files: ${(req as RequestWithFiles).files ? '存在' : '不存在'}`
-      );
-      this.logger.log(
-        `[uploadFont] req.file: ${(req as RequestWithFiles).file ? '存在' : '不存在'}`
-      );
+
+      if (!files || files.length === 0) {
+        throw new BadRequestException('未提供文件');
+      }
 
       const target = uploadFontDto.target || FontUploadTarget.BOTH;
 
-      const result = await this.fontsService.uploadFont(file, target);
-      return { message: result.message, font: result.font };
+      const results = await this.fontsService.uploadFonts(files, target);
+      return { message: `成功上传 ${results.length} 个字体文件`, fonts: results };
     } catch (error) {
       this.logger.error(`上传字体失败: ${error.message}`, error.stack);
       throw error;

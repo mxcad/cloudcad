@@ -2953,7 +2953,7 @@ export type UpdatePlanDto = {
     /**
      * 会员等级
      */
-    tier?: string;
+    tier?: 'FREE' | 'PRO';
     /**
      * 排序
      */
@@ -2992,7 +2992,7 @@ export type CreatePlanDto = {
     /**
      * 会员等级
      */
-    tier: 'PRO';
+    tier: 'FREE' | 'PRO';
     /**
      * 排序
      */

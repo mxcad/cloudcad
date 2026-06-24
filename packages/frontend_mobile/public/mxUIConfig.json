@@ -8,7 +8,7 @@
     },
     {
       "text": "语言",
-      "icon": "buju",
+      "icon": "duoyuyan",
       "cmd": "Mx_languages"
     },
     {
@@ -18,7 +18,7 @@
     },
     {
       "text": "无缓存打开",
-      "cmd": "OpenDwg_DoNotUseCache",
+      "cmd": "OpenDwg_DoNotUseCache", 
       "icon": "dakai"
     },
     {
@@ -58,12 +58,12 @@
     },
     {
       "text": "版本历史",
-      "icon": "buju",
+      "icon": "banben",
       "cmd": "Mx_versionHistory"
     },
     {
       "text": "实时协同",
-      "icon": "fenxiang",
+      "icon": "xietong",
       "cmd": "Mx_ShowCollaborate"
     }
   ],

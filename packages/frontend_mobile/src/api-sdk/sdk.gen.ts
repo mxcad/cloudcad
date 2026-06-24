@@ -1606,7 +1606,7 @@ export const fontsControllerGetFonts = <ThrowOnError extends boolean = false>(op
 /**
  * 上传字体文件
  *
- * 上传字体文件到指定目录
+ * 上传字体文件到指定目录，支持一次上传多个文件
  */
 export const fontsControllerUploadFont = <ThrowOnError extends boolean = false>(options: Options<FontsControllerUploadFontData, ThrowOnError>) => (options.client ?? client).post<FontsControllerUploadFontResponses, unknown, ThrowOnError>({
     ...formDataBodySerializer,

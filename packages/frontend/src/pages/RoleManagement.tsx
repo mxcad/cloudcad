@@ -498,7 +498,7 @@ export const RoleManagement = () => {
                   {!role.isSystem && canDeleteRoles && (
                     <Button
                       variant="secondary"
-                      size="sm"
+                      size="md"
                       onClick={() => handleDeleteProjectRole(role.id)}
                       className="delete-btn"
                       title="删除角色"
@@ -572,7 +572,7 @@ export const RoleManagement = () => {
                   {!role.isSystem && canDeleteRoles && (
                     <Button
                       variant="secondary"
-                      size="sm"
+                      size="md"
                       onClick={() => handleDeleteSystemRole(role.id)}
                       className="delete-btn"
                       title="删除角色"

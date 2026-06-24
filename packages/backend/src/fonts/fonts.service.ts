@@ -41,10 +41,7 @@ export interface FontInfo {
 /**
  * 字体上传结果接口
  */
-export interface FontUploadResult {
-  message: string;
-  font: FontInfo;
-}
+export type FontUploadResult = FontInfo;
 
 /**
  * 字体管理服务
@@ -188,61 +185,90 @@ export class FontsService implements OnModuleInit {
   }
 
   /**
-   * 上传字体文件
+   * 上传字体文件（单文件，内部使用）
    */
-  async uploadFont(
+  private async uploadSingleFont(
     file: Express.Multer.File,
     target: FontUploadTarget = FontUploadTarget.BOTH
   ): Promise<FontUploadResult> {
+    await this.validateFontFile(file);
+
+    const rawName = file.originalname;
+    const fileName = path.basename(rawName);
+    const fileExt = path.extname(fileName).toLowerCase();
+
+    // 根据目标上传到相应目录
+    if (
+      target === FontUploadTarget.BACKEND ||
+      target === FontUploadTarget.BOTH
+    ) {
+      const backendPath = path.join(this.backendFontsDir, fileName);
+      await fs.writeFile(backendPath, file.buffer);
+      this.logger.log(`字体已上传到后端目录: ${backendPath}`);
+    }
+
+    if (
+      target === FontUploadTarget.FRONTEND ||
+      target === FontUploadTarget.BOTH
+    ) {
+      const frontendPath = path.join(this.frontendFontsDir, fileName);
+      await fs.writeFile(frontendPath, file.buffer);
+      this.logger.log(`字体已上传到前端目录: ${frontendPath}`);
+    }
+
+    return {
+      name: fileName,
+      size: file.size,
+      extension: fileExt,
+      existsInBackend: target !== FontUploadTarget.FRONTEND,
+      existsInFrontend: target !== FontUploadTarget.BACKEND,
+      creator: '系统管理员',
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+  }
+
+  /**
+   * 批量上传字体文件
+   */
+  async uploadFonts(
+    files: Express.Multer.File[],
+    target: FontUploadTarget = FontUploadTarget.BOTH
+  ): Promise<FontUploadResult[]> {
     try {
-      // 验证文件
-      await this.validateFontFile(file);
-
-      const rawName = file.originalname;
-      const fileName = path.basename(rawName);
-      const fileExt = path.extname(fileName).toLowerCase();
-
-      // 确保目录存在
       await this.ensureDirectoriesExist();
 
-      const results: Array<{ location: string; path: string }> = [];
+      const results: FontUploadResult[] = [];
+      const errors: Array<{ fileName: string; error: string }> = [];
 
-      // 根据目标上传到相应目录
-      if (
-        target === FontUploadTarget.BACKEND ||
-        target === FontUploadTarget.BOTH
-      ) {
-        const backendPath = path.join(this.backendFontsDir, fileName);
-        await fs.writeFile(backendPath, file.buffer);
-        results.push({ location: 'backend', path: backendPath });
-        this.logger.log(`字体已上传到后端目录: ${backendPath}`);
+      for (const file of files) {
+        try {
+          const result = await this.uploadSingleFont(file, target);
+          results.push(result);
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : '未知错误';
+          errors.push({ fileName: file.originalname, error: msg });
+          this.logger.error(`上传字体 ${file.originalname} 失败: ${msg}`);
+        }
       }
 
-      if (
-        target === FontUploadTarget.FRONTEND ||
-        target === FontUploadTarget.BOTH
-      ) {
-        const frontendPath = path.join(this.frontendFontsDir, fileName);
-        await fs.writeFile(frontendPath, file.buffer);
-        results.push({ location: 'frontend', path: frontendPath });
-        this.logger.log(`字体已上传到前端目录: ${frontendPath}`);
+      if (results.length === 0 && errors.length > 0) {
+        throw new BadRequestException(
+          `所有文件上传失败: ${errors.map((e) => `${e.fileName}: ${e.error}`).join('; ')}`
+        );
       }
 
-      // 返回字体信息
-      const fontInfo = {
-        name: fileName,
-        size: file.size,
-        extension: fileExt,
-        existsInBackend: target !== FontUploadTarget.FRONTEND,
-        existsInFrontend: target !== FontUploadTarget.BACKEND,
-        createdAt: new Date(),
-      };
+      if (errors.length > 0) {
+        this.logger.warn(
+          `部分文件上传失败: ${errors.map((e) => `${e.fileName}: ${e.error}`).join('; ')}`
+        );
+      }
 
-      return {
-        message: `字体文件 ${fileName} 上传成功`,
-        font: fontInfo,
-      };
+      return results;
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       this.logger.error(`上传字体失败: ${error.message}`, error.stack);
       throw new BadRequestException(`上传字体失败: ${error.message}`);
     }

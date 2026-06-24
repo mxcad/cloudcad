@@ -937,49 +937,66 @@ function UploadFontModal({
   defaultTarget = 'both',
 }: UploadFontModalProps) {
   const { showToast } = useNotification();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [target, setTarget] = useState<'backend' | 'frontend' | 'both'>(
     defaultTarget
   );
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const handleFileChange = (selectedFile: File | null) => {
-    if (!selectedFile) return;
+  const validExtensions = [
+    '.ttf',
+    '.otf',
+    '.woff',
+    '.woff2',
+    '.eot',
+    '.ttc',
+    '.shx',
+  ];
 
-    // 验证文件类型
-    const validExtensions = [
-      '.ttf',
-      '.otf',
-      '.woff',
-      '.woff2',
-      '.eot',
-      '.ttc',
-      '.shx',
-    ];
+  const validateFile = (selectedFile: File) => {
     const ext = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
+    return validExtensions.includes(ext);
+  };
 
-    if (!validExtensions.includes(ext)) {
-      showToast('不支持的文件类型，请上传字体文件', 'warning');
-      return;
+  const addFiles = (newFiles: FileList | File[]) => {
+    const valid: File[] = [];
+    for (const f of Array.from(newFiles)) {
+      if (!validateFile(f)) {
+        showToast(`不支持的文件类型: ${f.name}`, 'warning');
+        continue;
+      }
+      if (files.some((existing) => existing.name === f.name && existing.size === f.size)) {
+        continue;
+      }
+      valid.push(f);
     }
+    if (valid.length > 0) {
+      setFiles((prev) => [...prev, ...valid]);
+    }
+  };
 
-    setFile(selectedFile);
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFileChange = (selectedFiles: FileList | null) => {
+    if (!selectedFiles || selectedFiles.length === 0) return;
+    addFiles(selectedFiles);
   };
 
   const handleUpload = async () => {
-    if (!file) {
+    if (files.length === 0) {
       showToast('请选择文件', 'warning');
       return;
     }
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('target', target);
-      await fontsControllerUploadFont({ body: formData as any });
-      showToast('上传成功', 'success');
+      await fontsControllerUploadFont({
+        body: { files: files, target: target } as any,
+      });
+      showToast(`成功上传 ${files.length} 个字体文件`, 'success');
       onSuccess();
     } catch (error) {
       console.error('上传失败:', error);
@@ -1002,8 +1019,13 @@ function UploadFontModal({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const droppedFile = e.dataTransfer.files[0];
-    handleFileChange(droppedFile ?? null);
+    if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
   };
 
   return (
@@ -1024,7 +1046,7 @@ function UploadFontModal({
                 上传字体
               </h2>
               <p className="text-sm text-text-tertiary">
-                支持 TTF、OTF、WOFF 等格式
+                支持 TTF、OTF、WOFF 等格式，可一次选择多个文件
               </p>
             </div>
           </div>
@@ -1041,40 +1063,52 @@ function UploadFontModal({
             className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${
               dragOver
                 ? 'border-primary-500 bg-primary-50'
-                : file
+                : files.length > 0
                   ? 'border-success bg-success-light'
                   : 'border-border-default hover:border-border-strong bg-bg-tertiary/50'
             }`}
           >
             <input
               type="file"
-              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+              multiple
+              onChange={(e) => handleFileChange(e.target.files)}
               accept=".ttf,.otf,.woff,.woff2,.eot,.ttc,.shx"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
 
-            {file ? (
-              <div className="animate-scale-in">
+            {files.length > 0 ? (
+              <div className="animate-scale-in text-left">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success/20 flex items-center justify-center">
                   <Palette size={32} className="text-success" />
                 </div>
-                <h3 className="font-medium text-text-primary mb-1">
-                  <FileNameText>{file.name}</FileNameText>
-                </h3>
-                <p className="text-sm text-text-tertiary">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-                <Button
-                  variant="secondary"
-                  size="xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                  }}
-                  className="mt-3 text-error"
-                >
-                  移除文件
-                </Button>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {files.map((f, i) => (
+                    <div
+                      key={`${f.name}-${f.size}`}
+                      className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-bg-tertiary/50"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {f.name}
+                        </p>
+                        <p className="text-xs text-text-tertiary">
+                          {formatFileSize(f.size)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(i);
+                        }}
+                        className="shrink-0 text-error"
+                      >
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div>
@@ -1092,11 +1126,18 @@ function UploadFontModal({
                   点击或拖拽文件到此处
                 </h3>
                 <p className="text-sm text-text-tertiary">
-                  支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX
+                  支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX，可一次选择多个文件
                 </p>
               </div>
             )}
           </div>
+
+          {/* 已选文件数量 */}
+          {files.length > 1 && (
+            <p className="text-sm text-text-tertiary text-center">
+              已选择 {files.length} 个文件
+            </p>
+          )}
 
           {/* 上传目标选择 */}
           <div>
@@ -1125,10 +1166,12 @@ function UploadFontModal({
           <Button
             icon={Upload}
             loading={uploading}
-            disabled={!file}
+            disabled={files.length === 0}
             onClick={handleUpload}
           >
-            {uploading ? '上传中...' : '上传'}
+            {uploading
+              ? '上传中...'
+              : `上传${files.length > 0 ? ` (${files.length})` : ''}`}
           </Button>
         </div>
       </div>

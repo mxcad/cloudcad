@@ -290,10 +290,10 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                                 </Button>
                                 <Button
                                   variant="secondary"
-                                  size="sm"
+                                  size="md"
                                   onClick={() => handleDeleteRole(role)}
                                 >
-                                  <Trash2 size={16} className="text-red-500" />
+                                  <Trash2 size={18} className="text-red-500" />
                                 </Button>
                               </div>
                             )}

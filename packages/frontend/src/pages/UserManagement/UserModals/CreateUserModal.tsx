@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { getRoleDisplayName } from '@/constants/permissions';
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ export function CreateUserModal({
           <Select
             value={formData.roleId}
             onChange={(value) => onFormChange('roleId', value)}
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
+            options={roles.map((role) => ({ value: role.id, label: getRoleDisplayName(role.name, role.isSystem ?? false) }))}
             placeholder="请选择角色"
           />
         </div>

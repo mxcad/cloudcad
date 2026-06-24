@@ -2,6 +2,7 @@ import { User } from 'lucide-react';
 import { TruncateText } from '@/components/ui/TruncateText';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
+import { getRoleDisplayName } from '@/constants/permissions';
 
 export interface UserTableUser {
   id: string;
@@ -111,7 +112,7 @@ export function UserTable({
               )}
               <td className="cell-role">
                 <Tag variant="primary">
-                  {user.role?.name || '未知角色'}
+                  {getRoleDisplayName(user.role?.name ?? '', user.role?.isSystem ?? false) || '未知角色'}
                 </Tag>
               </td>
               <td className="cell-quota">
