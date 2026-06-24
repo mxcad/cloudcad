@@ -510,6 +510,8 @@ function getPermissionLabel(permission) {
     SYSTEM_FONT_DELETE: '删除字体',
     SYSTEM_FONT_DOWNLOAD: '下载字体',
     SYSTEM_ADMIN: '系统管理',
+    SYSTEM_BILLING_READ: '查看支付管理',
+    SYSTEM_BILLING_WRITE: '管理支付',
     SYSTEM_MONITOR: '系统监控',
     SYSTEM_CONFIG_READ: '查看配置',
     SYSTEM_CONFIG_WRITE: '修改配置',

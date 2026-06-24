@@ -95,7 +95,7 @@ export class BillingAdminController {
   ) {}
 
   @Get('orders')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_READ])
   @ApiOperation({ summary: '所有订单（分页）' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -104,21 +104,21 @@ export class BillingAdminController {
   }
 
   @Get('plans')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_READ])
   @ApiOperation({ summary: '所有套餐（含已下架）' })
   async getAllPlans() {
     return this.plansService.getAllPlans();
   }
 
   @Put('plans/:id')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
   @ApiOperation({ summary: '修改套餐' })
   async updatePlan(@Param('id') id: string, @Body() data: UpdatePlanDto) {
     return this.plansService.updatePlan(id, data);
   }
 
   @Post('plans')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
   @ApiOperation({ summary: '新增套餐' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async createPlan(@Body() data: CreatePlanDto) {
@@ -126,14 +126,14 @@ export class BillingAdminController {
   }
 
   @Delete('plans/:id')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
   @ApiOperation({ summary: '下架套餐' })
   async deactivatePlan(@Param('id') id: string) {
     return this.plansService.deactivatePlan(id);
   }
 
   @Post('refund')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
   @ApiOperation({ summary: '退款' })
   async refund(@Body() dto: RefundDto) {
     await this.billingService.refund(dto.orderNo, dto.reason);
@@ -141,7 +141,7 @@ export class BillingAdminController {
   }
 
   @Post('mock-callback')
-  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
   @Throttle({ default: { limit: 3, ttl: 10000 } })
   @ApiOperation({ summary: '模拟支付回调（仅 mock 模式）' })
   async mockCallback(@Body() dto: MockCallbackDto) {

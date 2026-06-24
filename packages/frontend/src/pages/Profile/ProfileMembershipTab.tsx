@@ -72,6 +72,8 @@ export const ProfileMembershipTab: React.FC = () => {
   const orderPageRef = useRef(orderPage);
   orderPageRef.current = orderPage;
 
+  const prevRefundedIds = useRef<Set<string>>(new Set());
+
   const loadBillingData = useCallback(async () => {
     const currentPage = orderPageRef.current;
     try {
@@ -89,6 +91,19 @@ export const ProfileMembershipTab: React.FC = () => {
         setOrders(items);
         if (!Array.isArray(data) && typeof data.total === 'number') {
           setOrderTotal(data.total);
+        }
+
+        const newRefunded = items.filter(
+          (o: Order) => o.status === 'REFUNDED' && !prevRefundedIds.current.has(o.id),
+        );
+        if (newRefunded.length > 0) {
+          newRefunded.forEach((o: Order) => prevRefundedIds.current.add(o.id));
+          const desc = newRefunded.length === 1
+            ? `订单 ${(newRefunded[0] as Order).orderNo.slice(-8)} 已退款`
+            : `${newRefunded.length} 个订单已退款`;
+          window.dispatchEvent(
+            new CustomEvent('cloudcad:toast', { detail: { message: desc, type: 'info' } }),
+          );
         }
       }
     } catch {

@@ -1,4 +1,4 @@
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
@@ -13,6 +13,8 @@ export interface Order {
   tradeType: string | null;
   description: string | null;
   paidAt: string | null;
+  refundedAt: string | null;
+  refundReason: string | null;
   createdAt: string;
 }
 
@@ -59,6 +61,11 @@ export default function OrderHistory({
 
   const totalPages = Math.max(1, Math.ceil(total / 10));
 
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="space-y-3">
       {orders.map((order) => {
@@ -68,21 +75,35 @@ export default function OrderHistory({
         };
         const isPending = order.status === 'PENDING';
         const canRetry = RETRYABLE_STATUSES.includes(order.status);
+        const isRefunded = order.status === 'REFUNDED';
 
         return (
           <Card key={order.id} variant="outlined" padding="md" radius="xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {order.description || `订单 ${order.orderNo}`}
+            <div className="flex items-start justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                  {order.description || '订单'}
                 </p>
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  {order.orderNo}
+                </p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
                   ¥{(order.amount / 100).toFixed(2)} ·{' '}
                   {new Date(order.createdAt).toLocaleDateString('zh-CN')}
                 </p>
+                {isRefunded && order.refundedAt && (
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                    退款时间：{formatDateTime(order.refundedAt)}
+                  </p>
+                )}
+                {isRefunded && order.refundReason && (
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                    退款原因：{order.refundReason}
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5" style={{ color: statusInfo.color }}>
+              <div className="flex items-center gap-3 shrink-0 ml-3">
+                <span className="flex items-center gap-1.5 whitespace-nowrap" style={{ color: statusInfo.color }}>
                   {statusInfo.icon}
                   {statusInfo.label}
                 </span>

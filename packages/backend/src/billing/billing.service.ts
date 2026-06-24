@@ -328,7 +328,7 @@ export class BillingService {
     // Step 2: DB update — optimistic lock, mark as REFUNDED
     const { count } = await this.prisma.paymentOrder.updateMany({
       where: { id: order.id, status: OrderStatus.SUCCEEDED },
-      data: { status: OrderStatus.REFUNDED, refundedAt: new Date() },
+      data: { status: OrderStatus.REFUNDED, refundedAt: new Date(), refundReason: reason },
     });
     if (count === 0) {
       this.logger.warn(`refund gateway succeeded but order already refunded: ${orderNo}`);

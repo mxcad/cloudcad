@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-06-10T08:21:01.099Z
+ * 生成时间: 2026-06-24T06:57:55.022Z
  * 来源: Prisma Schema (packages/backend/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/backend/prisma/schema.prisma 文件，
@@ -29,6 +29,8 @@ export const SystemPermission = {
   SYSTEM_FONT_DELETE: 'SYSTEM_FONT_DELETE',
   SYSTEM_FONT_DOWNLOAD: 'SYSTEM_FONT_DOWNLOAD',
   SYSTEM_ADMIN: 'SYSTEM_ADMIN',
+  SYSTEM_BILLING_READ: 'SYSTEM_BILLING_READ',
+  SYSTEM_BILLING_WRITE: 'SYSTEM_BILLING_WRITE',
   SYSTEM_MONITOR: 'SYSTEM_MONITOR',
   SYSTEM_CONFIG_READ: 'SYSTEM_CONFIG_READ',
   SYSTEM_CONFIG_WRITE: 'SYSTEM_CONFIG_WRITE',
@@ -159,6 +161,8 @@ export const PERMISSION_GROUPS = {
       label: '系统权限',
       items: [
         { key: 'SYSTEM_ADMIN', label: '系统管理' },
+        { key: 'SYSTEM_BILLING_READ', label: '查看支付管理' },
+        { key: 'SYSTEM_BILLING_WRITE', label: '管理支付' },
         { key: 'SYSTEM_MONITOR', label: '系统监控' },
         { key: 'SYSTEM_CONFIG_READ', label: '查看配置' },
         { key: 'SYSTEM_CONFIG_WRITE', label: '修改配置' },

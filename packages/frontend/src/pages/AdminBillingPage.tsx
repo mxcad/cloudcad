@@ -366,39 +366,54 @@ export default function AdminBillingPage() {
               ) : allOrders.length === 0 ? (
                 <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>暂无订单</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                        <th className="text-left px-3 py-2 text-text-secondary">订单号</th>
-                        <th className="text-left px-3 py-2 text-text-secondary">用户</th>
-                        <th className="text-left px-3 py-2 text-text-secondary">套餐</th>
-                        <th className="text-right px-3 py-2 text-text-secondary">金额</th>
-                        <th className="text-center px-3 py-2 text-text-secondary">状态</th>
-                        <th className="text-right px-3 py-2 text-text-secondary">时间</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allOrders.map((o: any) => (
-                        <tr key={o.id} style={{ borderBottom: '1px solid var(--border-default)' }}>
-                          <td className="px-3 py-2 font-mono text-xs text-text-primary">{o.orderNo}</td>
-                          <td className="px-3 py-2 text-text-primary">{o.user?.email || o.user?.username || o.userId}</td>
-                          <td className="px-3 py-2 text-text-primary">{o.plan?.name || '-'}</td>
-                          <td className="px-3 py-2 text-right text-text-primary">¥{(o.amount / 100).toFixed(2)}</td>
-                          <td className="px-3 py-2 text-center">
-                            <Tag variant={
-                              o.status === 'SUCCEEDED' ? 'success' :
-                              o.status === 'PENDING' ? 'warning' :
-                              o.status === 'REFUNDED' ? 'neutral' : 'error'
-                            }>
-                              {o.status}
-                            </Tag>
-                          </td>
-                          <td className="px-3 py-2 text-right text-text-tertiary">{new Date(o.createdAt).toLocaleDateString('zh-CN')}</td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                          <th className="text-left px-3 py-2 text-text-secondary">订单号</th>
+                          <th className="text-left px-3 py-2 text-text-secondary">用户</th>
+                          <th className="text-left px-3 py-2 text-text-secondary">套餐</th>
+                          <th className="text-right px-3 py-2 text-text-secondary">金额</th>
+                          <th className="text-center px-3 py-2 text-text-secondary">状态</th>
+                          <th className="text-right px-3 py-2 text-text-secondary">时间</th>
+                          <th className="text-center px-3 py-2 text-text-secondary">操作</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {allOrders.map((o: any) => (
+                          <tr key={o.id} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                            <td className="px-3 py-2 font-mono text-xs text-text-primary">{o.orderNo}</td>
+                            <td className="px-3 py-2 text-text-primary">{o.user?.email || o.user?.username || o.userId}</td>
+                            <td className="px-3 py-2 text-text-primary">{o.plan?.name || '-'}</td>
+                            <td className="px-3 py-2 text-right text-text-primary">¥{(o.amount / 100).toFixed(2)}</td>
+                            <td className="px-3 py-2 text-center">
+                              <Tag variant={
+                                o.status === 'SUCCEEDED' ? 'success' :
+                                o.status === 'PENDING' ? 'warning' :
+                                o.status === 'REFUNDED' ? 'neutral' : 'error'
+                              }>
+                                {o.status}
+                              </Tag>
+                            </td>
+                            <td className="px-3 py-2 text-right text-text-tertiary">{new Date(o.createdAt).toLocaleDateString('zh-CN')}</td>
+                            <td className="px-3 py-2 text-center">
+                              {o.status === 'SUCCEEDED' && (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => {
+                                    setRefundOrderNo(o.orderNo);
+                                    setShowRefundModal(true);
+                                  }}
+                                >
+                                  退款
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   {orderTotal > PAGE_SIZE && (
                     <div className="mt-4 flex justify-center">
                       <Pagination
@@ -523,6 +538,31 @@ export default function AdminBillingPage() {
         <p style={{ color: 'var(--text-secondary)' }}>
           下架后新用户将无法购买此套餐，已有 PENDING 订单仍可完成支付。确定要下架吗？
         </p>
+      </Modal>
+
+      {/* 退款确认 */}
+      <Modal
+        isOpen={showRefundModal}
+        onClose={() => setShowRefundModal(false)}
+        title="退款确认"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowRefundModal(false)}>取消</Button>
+            <Button variant="danger" onClick={handleRefund}>确认退款</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p style={{ color: 'var(--text-secondary)' }}>
+            确定对订单 <span className="font-mono text-text-primary">{refundOrderNo}</span> 执行退款？
+          </p>
+          <Input
+            placeholder="退款原因（可选）"
+            value={refundReason}
+            onChange={(e) => setRefundReason(e.target.value)}
+          />
+        </div>
       </Modal>
     </div>
   );

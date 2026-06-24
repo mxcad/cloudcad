@@ -526,12 +526,12 @@ function AppContent() {
                     element={<Navigate to="/profile?tab=membership" replace />}
                   />
 
-                  {/* 支付管理 - 需要 SYSTEM_CONFIG_READ 权限 */}
+                  {/* 支付管理 - 需要 SYSTEM_BILLING_READ 权限 */}
                   <Route
                     path="/admin/billing"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                        permission={SystemPermission.SYSTEM_BILLING_READ}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminBillingPage />

@@ -348,6 +348,8 @@ enum Permission {
   SYSTEM_FONT_DELETE
   SYSTEM_FONT_DOWNLOAD
   SYSTEM_ADMIN
+  SYSTEM_BILLING_READ
+  SYSTEM_BILLING_WRITE
   SYSTEM_MONITOR
   SYSTEM_CONFIG_READ
   SYSTEM_CONFIG_WRITE
@@ -509,6 +511,7 @@ model PaymentOrder {
   failedAt        DateTime?
   closedAt        DateTime?
   refundedAt      DateTime?
+  refundReason    String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   user            User          @relation(fields: [userId], references: [id])

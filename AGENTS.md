@@ -136,11 +136,12 @@ const fileInfo = store.currentFileInfo;
 - `init()` 只需调用一次（通过 `cooperateInitRef` 守卫）
 - 分享链接 + `collaborationEnabled=true` 时，`CADEditorDirect.tsx` 跳过 `doOpenMxFile`，由 `CollaborateSidebar` 的 auto-join 接管
 
-**移动端 (frontend_mobile)**:
+**移动端 (frontend_mobile) — 范围说明**:
 - Vue 3 + Vite 4 + TypeScript 4.9 + vant 组件库
 - `voerkai18n` 国际化，同样有 `library` 配置文件需检查
 - 使用 `postcss-pxtorem` + `lib-flexible` 做移动端适配
 - 构建时自动编译 i18n → vite build
+- **该包仅实现 CAD 编辑器功能（对照 frontend 的编辑器功能），不包含计费/支付/会员/订单/退款等业务功能**。所有与计费相关的后端 API SDK 虽已自动生成（供 PC frontend 使用），但移动端不会实现任何计费 UI 或交互。修改涉及计费的 API 时无需考虑移动端兼容性。
 
 ### 移动端协同 (frontend_mobile) 实现要点
 
