@@ -1,6 +1,8 @@
-import { Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 
 export interface Order {
@@ -26,6 +28,9 @@ interface OrderHistoryProps {
   page?: number;
   total?: number;
   onPageChange?: (page: number) => void;
+  searchKeyword?: string;
+  searchStatus?: string;
+  onSearchChange?: (keyword: string, status: string) => void;
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon?: React.ReactNode }> = {
@@ -47,8 +52,26 @@ export default function OrderHistory({
   page = 1,
   total = 0,
   onPageChange,
+  searchKeyword = '',
+  searchStatus = '',
+  onSearchChange,
 }: OrderHistoryProps) {
-  if (!loading && orders.length === 0) {
+  const totalPages = Math.max(1, Math.ceil(total / 10));
+
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleKeywordChange = (val: string) => {
+    onSearchChange?.(val, searchStatus);
+  };
+
+  const handleStatusChange = (val: string) => {
+    onSearchChange?.(searchKeyword, val);
+  };
+
+  if (!loading && orders.length === 0 && !searchKeyword && !searchStatus) {
     return (
       <Card variant="outlined" padding="lg" radius="xl">
         <div className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
@@ -59,77 +82,100 @@ export default function OrderHistory({
     );
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / 10));
-
-  const formatDateTime = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
     <div className="space-y-3">
-      {orders.map((order) => {
-        const statusInfo = STATUS_MAP[order.status] || {
-          label: order.status,
-          color: 'var(--text-tertiary)',
-        };
-        const isPending = order.status === 'PENDING';
-        const canRetry = RETRYABLE_STATUSES.includes(order.status);
-        const isRefunded = order.status === 'REFUNDED';
+      {/* Search bar */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
+          <Input
+            placeholder="搜索订单号"
+            value={searchKeyword}
+            onChange={(e) => handleKeywordChange(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Select
+          value={searchStatus}
+          onChange={handleStatusChange}
+          placeholder="全部状态"
+          clearable
+          options={[
+            { value: 'PENDING', label: '待支付' },
+            { value: 'SUCCEEDED', label: '已完成' },
+            { value: 'FAILED', label: '支付失败' },
+            { value: 'REFUNDED', label: '已退款' },
+            { value: 'CLOSED', label: '已取消' },
+            { value: 'TIMEOUT', label: '超时未支付' },
+          ]}
+          className="w-36"
+        />
+        <Button variant="outline" size="sm" icon={RefreshCw} onClick={onRefresh} />
+      </div>
 
-        return (
-          <Card key={order.id} variant="outlined" padding="md" radius="xl">
-            <div className="flex items-start justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                  {order.description || '订单'}
-                </p>
-                <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                  {order.orderNo}
-                </p>
-                <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                  ¥{(order.amount / 100).toFixed(2)} ·{' '}
-                  {new Date(order.createdAt).toLocaleDateString('zh-CN')}
-                </p>
-                {isRefunded && order.refundedAt && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                    退款时间：{formatDateTime(order.refundedAt)}
-                  </p>
-                )}
-                {isRefunded && order.refundReason && (
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                    退款原因：{order.refundReason}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-3 shrink-0 ml-3">
-                <span className="flex items-center gap-1.5 whitespace-nowrap" style={{ color: statusInfo.color }}>
-                  {statusInfo.icon}
-                  {statusInfo.label}
-                </span>
-                {isPending && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onContinuePayment(order)}
-                  >
-                    继续支付
-                  </Button>
-                )}
-                {canRetry && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onContinuePayment(order)}
-                  >
-                    重新购买
-                  </Button>
-                )}
-              </div>
-            </div>
-          </Card>
-        );
-      })}
+      {orders.length === 0 ? (
+        <div className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
+          <Search size={40} className="mx-auto mb-3" />
+          <p>未找到匹配的订单</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((order) => {
+            const statusInfo = STATUS_MAP[order.status] || {
+              label: order.status,
+              color: 'var(--text-tertiary)',
+            };
+            const isPending = order.status === 'PENDING';
+            const canRetry = RETRYABLE_STATUSES.includes(order.status);
+            const isRefunded = order.status === 'REFUNDED';
+
+            return (
+              <Card key={order.id} variant="outlined" padding="md" radius="xl">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {order.description || '订单'}
+                    </p>
+                    <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                      {order.orderNo}
+                    </p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                      ¥{(order.amount / 100).toFixed(2)} ·{' '}
+                      {new Date(order.createdAt).toLocaleDateString('zh-CN')}
+                    </p>
+                    {isRefunded && order.refundedAt && (
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                        退款时间：{formatDateTime(order.refundedAt)}
+                      </p>
+                    )}
+                    {isRefunded && order.refundReason && (
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                        退款原因：{order.refundReason}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
+                    <span className="flex items-center gap-1.5 whitespace-nowrap" style={{ color: statusInfo.color }}>
+                      {statusInfo.icon}
+                      {statusInfo.label}
+                    </span>
+                    {isPending && (
+                      <Button variant="primary" size="sm" onClick={() => onContinuePayment(order)}>
+                        继续支付
+                      </Button>
+                    )}
+                    {canRetry && (
+                      <Button variant="outline" size="sm" onClick={() => onContinuePayment(order)}>
+                        重新购买
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {totalPages > 1 && onPageChange && (
         <Pagination

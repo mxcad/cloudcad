@@ -5,10 +5,11 @@ import { BillingService } from './billing.service';
 import { PlansService } from './plans.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { RefundDto } from './dto/refund.dto';
-import { MockCallbackDto } from './dto/mock-callback.dto';
+import { ManualCompleteDto } from './dto/manual-complete.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { ListOrdersQueryDto } from './dto/order-query.dto';
+import { OrderStatus } from './enums/billing.enum';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { Public } from '../auth/decorators/public.decorator';
@@ -44,8 +45,10 @@ export class BillingController {
   @ApiOperation({ summary: '订单历史' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
+  @ApiQuery({ name: 'keyword', required: false, type: String })
   async getOrders(@Req() req: any, @Query() query: ListOrdersQueryDto) {
-    return this.billingService.getUserOrders(req.user.id, query.page, query.limit);
+    return this.billingService.getUserOrders(req.user.id, query.page, query.limit, query.status, query.keyword);
   }
 
   @Post('orders')
@@ -99,8 +102,10 @@ export class BillingAdminController {
   @ApiOperation({ summary: '所有订单（分页）' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
+  @ApiQuery({ name: 'keyword', required: false, type: String })
   async getAllOrders(@Query() query: ListOrdersQueryDto) {
-    return this.billingService.getAllOrders(query.page, query.limit);
+    return this.billingService.getAllOrders(query.page, query.limit, query.status, query.keyword);
   }
 
   @Get('plans')
@@ -140,12 +145,12 @@ export class BillingAdminController {
     return { success: true };
   }
 
-  @Post('mock-callback')
+  @Post('manual-complete')
   @RequirePermissions([SystemPermission.SYSTEM_BILLING_WRITE])
   @Throttle({ default: { limit: 3, ttl: 10000 } })
-  @ApiOperation({ summary: '模拟支付回调（仅 mock 模式）' })
-  async mockCallback(@Body() dto: MockCallbackDto) {
-    await this.billingService.handleMockCallback(dto.orderNo);
+  @ApiOperation({ summary: '手动补单（用户已付但订单未完成时触发）' })
+  async manualComplete(@Body() dto: ManualCompleteDto) {
+    await this.billingService.manualComplete(dto.orderNo);
     return { success: true };
   }
 }

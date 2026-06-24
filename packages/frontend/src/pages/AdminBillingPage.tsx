@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/Select';
 import { Tag } from '@/components/ui/Tag';
 import { Pagination } from '@/components/ui/Pagination';
 import {
-  Plus, Edit2, Trash2, RefreshCw, DollarSign, Smartphone,
+  Plus, Edit2, Trash2, RefreshCw, DollarSign, Smartphone, Search,
 } from 'lucide-react';
 import {
   billingAdminControllerGetAllPlans,
@@ -16,7 +16,7 @@ import {
   billingAdminControllerUpdatePlan,
   billingAdminControllerDeactivatePlan,
   billingAdminControllerRefund,
-  billingAdminControllerMockCallback,
+  billingAdminControllerManualComplete,
   billingAdminControllerGetAllOrders,
 } from '@/api-sdk';
 import type { Plan } from '@/components/billing/PricingCard';
@@ -70,11 +70,13 @@ export default function AdminBillingPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderPage, setOrderPage] = useState(1);
   const [orderTotal, setOrderTotal] = useState(0);
+  const [orderSearchKeyword, setOrderSearchKeyword] = useState('');
+  const [orderSearchStatus, setOrderSearchStatus] = useState('');
 
   const loadAllOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
-      const res: any = await billingAdminControllerGetAllOrders({ query: { page: orderPage, limit: PAGE_SIZE } });
+      const res: any = await billingAdminControllerGetAllOrders({ query: { page: orderPage, limit: PAGE_SIZE, keyword: orderSearchKeyword || undefined, status: orderSearchStatus || undefined } });
       const body = res?.data;
       if (body) {
         setAllOrders(Array.isArray(body.items) ? body.items : []);
@@ -85,7 +87,7 @@ export default function AdminBillingPage() {
     } finally {
       setOrdersLoading(false);
     }
-  }, [orderPage]);
+  }, [orderPage, orderSearchKeyword, orderSearchStatus]);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
@@ -210,7 +212,7 @@ export default function AdminBillingPage() {
   const handleMockCallback = async () => {
     if (!mockOrderNo) return;
     try {
-      await billingAdminControllerMockCallback({ body: { orderNo: mockOrderNo } });
+      await billingAdminControllerManualComplete({ body: { orderNo: mockOrderNo } });
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '模拟回调成功', type: 'success' } }),
       );
@@ -359,6 +361,38 @@ export default function AdminBillingPage() {
                   刷新
                 </Button>
               </div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="relative flex-1 max-w-xs">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
+                  <Input
+                    placeholder="搜索订单号"
+                    value={orderSearchKeyword}
+                    onChange={(e) => {
+                      setOrderSearchKeyword(e.target.value);
+                      setOrderPage(1);
+                    }}
+                    className="pl-8"
+                  />
+                </div>
+                <Select
+                  value={orderSearchStatus}
+                  onChange={(v) => {
+                    setOrderSearchStatus(v);
+                    setOrderPage(1);
+                  }}
+                  placeholder="全部状态"
+                  clearable
+                  options={[
+                    { value: 'PENDING', label: '待支付' },
+                    { value: 'SUCCEEDED', label: '已完成' },
+                    { value: 'FAILED', label: '支付失败' },
+                    { value: 'REFUNDED', label: '已退款' },
+                    { value: 'CLOSED', label: '已取消' },
+                    { value: 'TIMEOUT', label: '超时未支付' },
+                  ]}
+                  className="w-36"
+                />
+              </div>
               {ordersLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="w-6 h-6 rounded-full animate-spin" style={{ border: '2px solid var(--border-default)', borderTopColor: 'var(--primary-500)' }} />
@@ -460,10 +494,10 @@ export default function AdminBillingPage() {
             <Card variant="outlined" padding="lg" radius="xl">
               <div className="flex items-center gap-2 mb-4">
                 <Smartphone size={20} style={{ color: 'var(--accent-500)' }} />
-                <h3 className="font-semibold text-text-primary">模拟支付回调</h3>
+                <h3 className="font-semibold text-text-primary">手动补单</h3>
               </div>
               <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                输入订单号模拟支付成功回调。仅 mock 模式下可用，PENDING 状态订单可用。
+                用户已付但订单未成功（如回调未送达），输入订单号手动触发完成。
               </p>
               <div className="space-y-3">
                 <Input
@@ -477,7 +511,7 @@ export default function AdminBillingPage() {
                   onClick={handleMockCallback}
                   disabled={!mockOrderNo}
                 >
-                  执行模拟回调
+                  执行补单
                 </Button>
               </div>
             </Card>

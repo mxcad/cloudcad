@@ -56,16 +56,19 @@ export class BillingService {
     return this.membershipService.getMembership(userId);
   }
 
-  async getUserOrders(userId: string, page = 1, limit = 20) {
+  async getUserOrders(userId: string, page = 1, limit = 20, status?: string, keyword?: string) {
     const skip = (page - 1) * limit;
+    const where: any = { userId };
+    if (status) where.status = status;
+    if (keyword) where.orderNo = { contains: keyword };
     const [items, total] = await Promise.all([
       this.prisma.paymentOrder.findMany({
-        where: { userId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      this.prisma.paymentOrder.count({ where: { userId } }),
+      this.prisma.paymentOrder.count({ where }),
     ]);
     return { items, total, page, limit };
   }
@@ -177,16 +180,20 @@ export class BillingService {
     });
   }
 
-  async getAllOrders(page = 1, limit = 20) {
+  async getAllOrders(page = 1, limit = 20, status?: string, keyword?: string) {
     const skip = (page - 1) * limit;
+    const where: any = {};
+    if (status) where.status = status;
+    if (keyword) where.orderNo = { contains: keyword };
     const [items, total] = await Promise.all([
       this.prisma.paymentOrder.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
         include: { user: { select: { id: true, email: true, username: true } }, plan: { select: { name: true } } },
       }),
-      this.prisma.paymentOrder.count(),
+      this.prisma.paymentOrder.count({ where }),
     ]);
     return { items, total, page, limit };
   }
@@ -204,7 +211,7 @@ export class BillingService {
     }
   }
 
-  async handleMockCallback(orderNo: string): Promise<void> {
+  async manualComplete(orderNo: string): Promise<void> {
     const order = await this.prisma.paymentOrder.findUnique({ where: { orderNo } });
     if (!order) throw new Error(`order not found: ${orderNo}`);
 

@@ -3039,7 +3039,7 @@ export type RefundDto = {
     reason?: string;
 };
 
-export type MockCallbackDto = {
+export type ManualCompleteDto = {
     /**
      * 订单号
      */
@@ -8928,6 +8928,14 @@ export type BillingControllerGetOrdersData = {
          * 每页数量
          */
         limit?: number;
+        /**
+         * 订单状态筛选
+         */
+        status?: string;
+        /**
+         * 关键词搜索（订单号）
+         */
+        keyword?: string;
     };
     url: '/api/v1/billing/orders';
 };
@@ -8998,6 +9006,14 @@ export type BillingAdminControllerGetAllOrdersData = {
          * 每页数量
          */
         limit?: number;
+        /**
+         * 订单状态筛选
+         */
+        status?: string;
+        /**
+         * 关键词搜索（订单号）
+         */
+        keyword?: string;
     };
     url: '/api/v1/admin/billing/orders';
 };
@@ -9065,13 +9081,13 @@ export type BillingAdminControllerRefundResponses = {
     201: unknown;
 };
 
-export type BillingAdminControllerMockCallbackData = {
-    body: MockCallbackDto;
+export type BillingAdminControllerManualCompleteData = {
+    body: ManualCompleteDto;
     path?: never;
     query?: never;
-    url: '/api/v1/admin/billing/mock-callback';
+    url: '/api/v1/admin/billing/manual-complete';
 };
 
-export type BillingAdminControllerMockCallbackResponses = {
+export type BillingAdminControllerManualCompleteResponses = {
     201: unknown;
 };

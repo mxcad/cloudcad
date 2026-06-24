@@ -69,18 +69,29 @@ export const ProfileMembershipTab: React.FC = () => {
   const [showPlanSelect, setShowPlanSelect] = useState(false);
   const [memSubTab, setMemSubTab] = useState<'compare' | 'orders'>('compare');
 
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchStatus, setSearchStatus] = useState('');
+
   const orderPageRef = useRef(orderPage);
   orderPageRef.current = orderPage;
+
+  const searchKeywordRef = useRef(searchKeyword);
+  searchKeywordRef.current = searchKeyword;
+
+  const searchStatusRef = useRef(searchStatus);
+  searchStatusRef.current = searchStatus;
 
   const prevRefundedIds = useRef<Set<string>>(new Set());
 
   const loadBillingData = useCallback(async () => {
     const currentPage = orderPageRef.current;
+    const kw = searchKeywordRef.current;
+    const st = searchStatusRef.current;
     try {
       const [planRes, memRes, ordRes]: any = await Promise.all([
         billingControllerGetPlans(),
         billingControllerGetMembership(),
-        billingControllerGetOrders({ query: { page: currentPage, limit: 10 } }),
+        billingControllerGetOrders({ query: { page: currentPage, limit: 10, keyword: kw || undefined, status: st || undefined } }),
       ]);
       const list = planRes?.data;
       if (Array.isArray(list) && list.length > 0) setPlans(list as Plan[]);
@@ -218,6 +229,16 @@ export const ProfileMembershipTab: React.FC = () => {
         new CustomEvent('cloudcad:toast', { detail: { message: '获取支付信息失败', type: 'error' } }),
       );
     }
+  };
+
+  const handleSearchChange = (keyword: string, status: string) => {
+    setSearchKeyword(keyword);
+    setSearchStatus(status);
+    searchKeywordRef.current = keyword;
+    searchStatusRef.current = status;
+    setOrderPage(1);
+    orderPageRef.current = 1;
+    loadBillingData();
   };
 
   return (
@@ -364,6 +385,9 @@ export const ProfileMembershipTab: React.FC = () => {
                 setBillingLoading(true);
                 loadBillingData();
               }}
+              searchKeyword={searchKeyword}
+              searchStatus={searchStatus}
+              onSearchChange={handleSearchChange}
             />
           )}
         </>

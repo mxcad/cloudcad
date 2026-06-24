@@ -372,7 +372,7 @@ describe('BillingService', () => {
     });
   });
 
-  describe('handleMockCallback', () => {
+  describe('manualComplete', () => {
     it('should verify and notify for mock callback', async () => {
       prisma.paymentOrder.findUnique.mockResolvedValue(mockOrder);
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
@@ -393,7 +393,7 @@ describe('BillingService', () => {
         await cb(tx);
       });
 
-      await service.handleMockCallback('PAYtest123');
+      await service.manualComplete('PAYtest123');
       expect(membershipService.activate).toHaveBeenCalled();
     });
   });
