@@ -1,4 +1,4 @@
-import { md5Sign, buildXML, parseXML, generateNonceStr } from "./wechat-pay.util";
+import { md5Sign, hmacSha256Sign, sign, buildXML, parseXML, generateNonceStr } from "./wechat-pay.util";
 
 describe("WechatPayUtil", () => {
   describe("md5Sign", () => {
@@ -29,6 +29,54 @@ describe("WechatPayUtil", () => {
       const sign1 = md5Sign(params, "key1");
       const sign2 = md5Sign(params, "key2");
       expect(sign1).not.toBe(sign2);
+    });
+  });
+
+  describe("hmacSha256Sign", () => {
+    it("should generate a 64-character uppercase hex string", () => {
+      const params = { appid: "wx123", mch_id: "456", nonce_str: "test_nonce" };
+      const signValue = hmacSha256Sign(params, "test_key");
+      expect(signValue).toBeDefined();
+      expect(signValue.length).toBe(64);
+      expect(/^[A-F0-9]{64}$/.test(signValue)).toBe(true);
+    });
+
+    it("should be deterministic for same input", () => {
+      const params = { appid: "wx123", mch_id: "456" };
+      const sign1 = hmacSha256Sign(params, "key");
+      const sign2 = hmacSha256Sign(params, "key");
+      expect(sign1).toBe(sign2);
+    });
+
+    it("should produce different output than MD5 for same input", () => {
+      const params = { appid: "wx123", mch_id: "456" };
+      const md5Result = md5Sign(params, "key");
+      const hmacResult = hmacSha256Sign(params, "key");
+      expect(md5Result).not.toBe(hmacResult);
+    });
+
+    it("should produce different signatures for different keys", () => {
+      const params = { appid: "wx123", mch_id: "456" };
+      const sign1 = hmacSha256Sign(params, "key1");
+      const sign2 = hmacSha256Sign(params, "key2");
+      expect(sign1).not.toBe(sign2);
+    });
+  });
+
+  describe("sign", () => {
+    it("should default to MD5", () => {
+      const params = { appid: "wx123" };
+      expect(sign(params, "key")).toBe(md5Sign(params, "key"));
+    });
+
+    it("should use MD5 when type=MD5", () => {
+      const params = { appid: "wx123" };
+      expect(sign(params, "key", "MD5")).toBe(md5Sign(params, "key"));
+    });
+
+    it("should use HMAC-SHA256 when type=HMAC-SHA256", () => {
+      const params = { appid: "wx123" };
+      expect(sign(params, "key", "HMAC-SHA256")).toBe(hmacSha256Sign(params, "key"));
     });
   });
 

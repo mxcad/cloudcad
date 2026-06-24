@@ -12,13 +12,26 @@ const builder = new XMLBuilder({
   cdataPropName: '__cdata',
 });
 
-export function md5Sign(params: Record<string, any>, key: string): string {
-  const sorted = Object.keys(params)
+function buildSignString(params: Record<string, any>): string {
+  return Object.keys(params)
     .filter((k) => params[k] != null && params[k] !== '')
     .sort()
     .map((k) => `${k}=${params[k]}`)
-    .join('&') + `&key=${key}`;
-  return crypto.createHash('md5').update(sorted, 'utf8').digest('hex').toUpperCase();
+    .join('&');
+}
+
+export function md5Sign(params: Record<string, any>, key: string): string {
+  const str = buildSignString(params) + `&key=${key}`;
+  return crypto.createHash('md5').update(str, 'utf8').digest('hex').toUpperCase();
+}
+
+export function hmacSha256Sign(params: Record<string, any>, key: string): string {
+  const str = buildSignString(params) + `&key=${key}`;
+  return crypto.createHmac('sha256', key).update(str, 'utf8').digest('hex').toUpperCase();
+}
+
+export function sign(params: Record<string, any>, key: string, type: 'MD5' | 'HMAC-SHA256' = 'MD5'): string {
+  return type === 'HMAC-SHA256' ? hmacSha256Sign(params, key) : md5Sign(params, key);
 }
 
 export function buildXML(root: string, data: Record<string, any>): string {

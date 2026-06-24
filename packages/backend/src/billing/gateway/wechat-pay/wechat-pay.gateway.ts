@@ -1,30 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 import * as https from 'node:https';
 import * as fs from 'node:fs';
 import axios from 'axios';
-import { buildXML, parseXML, generateNonceStr, md5Sign, parseTimeEnd } from './wechat-pay.util';
+import { buildXML, parseXML, generateNonceStr, sign, parseTimeEnd } from './wechat-pay.util';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
 
-/**
- * 用于重放攻击防护的 nonce 缓存（5 分钟内已见过的 nonce 拒绝）
- * 注意：此为进程级缓存，多实例部署时重放攻击防护能力有限。
- * 关键防护依赖 handlePaymentNotify 的乐观锁（status=PENDING 条件更新）。
- */
-const RECENT_NONCES = new Set<string>();
-let NONCE_CLEANUP_TIMEOUT: ReturnType<typeof setTimeout> | null = null;
-function markNonceUsed(nonce: string): void {
-  RECENT_NONCES.add(nonce);
-  if (!NONCE_CLEANUP_TIMEOUT) {
-    NONCE_CLEANUP_TIMEOUT = setTimeout(() => {
-      RECENT_NONCES.clear();
-      NONCE_CLEANUP_TIMEOUT = null;
-    }, 300000);
-  }
-}
-function isNonceUsed(nonce: string): boolean {
-  return RECENT_NONCES.has(nonce);
-}
+const NONCE_TTL = 300;
+const REFUND_PREFIX = 'wx:refund:';
+const NONCE_PREFIX = 'wx:nonce:';
 
 @Injectable()
 export class WechatPayGateway implements PaymentGateway {
@@ -37,13 +23,18 @@ export class WechatPayGateway implements PaymentGateway {
   private readonly mchId: string;
   private readonly key: string;
   private readonly notifyUrl: string;
+  private readonly signType: 'MD5' | 'HMAC-SHA256';
   private readonly httpsAgent?: https.Agent;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @InjectRedis() private readonly redis: Redis,
+  ) {
     this.appId = this.configService.get<string>('wechatPay.appId', '');
     this.mchId = this.configService.get<string>('wechatPay.mchId', '');
     this.key = this.configService.get<string>('wechatPay.key', '');
     this.notifyUrl = this.configService.get<string>('wechatPay.notifyUrl', '');
+    this.signType = this.configService.get<'MD5' | 'HMAC-SHA256'>('wechatPay.signType', 'MD5');
 
     const certPath = this.configService.get<string>('wechatPay.certPath');
     const keyPath = this.configService.get<string>('wechatPay.keyPath');
@@ -76,6 +67,10 @@ export class WechatPayGateway implements PaymentGateway {
       trade_type: params.tradeType,
     };
 
+    if (this.signType === 'HMAC-SHA256') {
+      data.sign_type = 'HMAC-SHA256';
+    }
+
     if (params.tradeType === 'JSAPI') {
       if (!params.openid) {
         throw new Error('trade_type JSAPI requires openid');
@@ -83,33 +78,32 @@ export class WechatPayGateway implements PaymentGateway {
       data.openid = params.openid;
     }
 
-    // MWEB 需要 redirect_url 参数，支付完成后微信跳转回此地址
     if (params.tradeType === 'MWEB' && params.redirectUrl) {
       data.redirect_url = params.redirectUrl;
     }
 
-    data.sign = md5Sign(data, this.key);
+    data.sign = sign(data, this.key, this.signType);
 
     const result = await this.requestWechatApi('/pay/unifiedorder', data);
+
+    const h5SignType = 'MD5';
+    const timeStamp = String(Math.floor(Date.now() / 1000));
+    const nonceStr = generateNonceStr();
+    const signParams = {
+      appId: this.appId,
+      timeStamp,
+      nonceStr,
+      package: `prepay_id=${result.prepay_id}`,
+      signType: h5SignType,
+    };
 
     return {
       gatewayOrderId: result.prepay_id as string,
       codeUrl: result.code_url as string | undefined,
-      payParams: (() => {
-        const timeStamp = String(Math.floor(Date.now() / 1000));
-        const nonceStr = generateNonceStr();
-        const signParams = {
-          appId: this.appId,
-          timeStamp,
-          nonceStr,
-          package: `prepay_id=${result.prepay_id}`,
-          signType: 'MD5',
-        };
-        return {
-          ...signParams,
-          paySign: md5Sign(signParams, this.key),
-        };
-      })(),
+      payParams: {
+        ...signParams,
+        paySign: sign(signParams, this.key, h5SignType),
+      },
     };
   }
 
@@ -132,8 +126,10 @@ export class WechatPayGateway implements PaymentGateway {
       };
     }
 
+    // 自动识别签名类型：根据回调中的 sign_type 字段
+    const signType: 'MD5' | 'HMAC-SHA256' = data.sign_type === 'HMAC-SHA256' ? 'HMAC-SHA256' : 'MD5';
+
     // 使用排除法构建签名数据：取所有字段除 sign 外参与签名
-    // 比白名单更健壮，微信新增字段不会导致签名验证失败
     const receivedSign = data.sign as string;
     const signData: Record<string, any> = {};
     for (const key of Object.keys(data)) {
@@ -141,7 +137,7 @@ export class WechatPayGateway implements PaymentGateway {
         signData[key] = data[key];
       }
     }
-    const calculatedSign = md5Sign(signData, this.key);
+    const calculatedSign = sign(signData, this.key, signType);
 
     if (calculatedSign !== receivedSign) {
       return {
@@ -153,19 +149,22 @@ export class WechatPayGateway implements PaymentGateway {
       };
     }
 
-    // 重放攻击防护：检查 nonce_str 是否已使用过
+    // 重放攻击防护 (Redis 共享缓存)
     const nonce = data.nonce_str as string;
-    if (nonce && isNonceUsed(nonce)) {
-      this.logger.warn(`replay attack detected: nonce=${nonce}`);
-      return {
-        isValid: false,
-        orderNo: '',
-        gatewayOrderId: '',
-        amount: 0,
-        paidAt: new Date(),
-      };
+    if (nonce) {
+      const used = await this.redis.exists(`${NONCE_PREFIX}${nonce}`);
+      if (used) {
+        this.logger.warn(`replay attack detected: nonce=${nonce}`);
+        return {
+          isValid: false,
+          orderNo: '',
+          gatewayOrderId: '',
+          amount: 0,
+          paidAt: new Date(),
+        };
+      }
+      await this.redis.setex(`${NONCE_PREFIX}${nonce}`, NONCE_TTL, '1');
     }
-    if (nonce) markNonceUsed(nonce);
 
     const isValid = data.return_code === 'SUCCESS' && data.result_code === 'SUCCESS';
 
@@ -185,7 +184,10 @@ export class WechatPayGateway implements PaymentGateway {
       out_trade_no: orderNo,
       nonce_str: generateNonceStr(),
     };
-    data.sign = md5Sign(data, this.key);
+    if (this.signType === 'HMAC-SHA256') {
+      data.sign_type = 'HMAC-SHA256';
+    }
+    data.sign = sign(data, this.key, this.signType);
 
     const result = await this.requestWechatApi('/pay/orderquery', data);
 
@@ -209,18 +211,34 @@ export class WechatPayGateway implements PaymentGateway {
   }
 
   async refund(orderNo: string, amount: number): Promise<void> {
-    const data: Record<string, any> = {
-      appid: this.appId,
-      mch_id: this.mchId,
-      nonce_str: generateNonceStr(),
-      out_trade_no: orderNo,
-      out_refund_no: generateNonceStr().slice(0, 28),
-      total_fee: amount,
-      refund_fee: amount,
-    };
-    data.sign = md5Sign(data, this.key);
+    const refundKey = `${REFUND_PREFIX}${orderNo}`;
+    const alreadyRefunding = await this.redis.setnx(refundKey, '1');
+    if (!alreadyRefunding) {
+      this.logger.warn(`duplicate refund blocked: ${orderNo}`);
+      return;
+    }
+    await this.redis.expire(refundKey, 3600);
 
-    await this.requestWechatApi('/secapi/pay/refund', data, true);
+    try {
+      const data: Record<string, any> = {
+        appid: this.appId,
+        mch_id: this.mchId,
+        nonce_str: generateNonceStr(),
+        out_trade_no: orderNo,
+        out_refund_no: `RF${orderNo.slice(0, 26)}`,
+        total_fee: amount,
+        refund_fee: amount,
+      };
+      if (this.signType === 'HMAC-SHA256') {
+        data.sign_type = 'HMAC-SHA256';
+      }
+      data.sign = sign(data, this.key, this.signType);
+
+      await this.requestWechatApi('/secapi/pay/refund', data, true);
+    } catch (err) {
+      await this.redis.del(refundKey);
+      throw err;
+    }
   }
 
   private async requestWechatApi(
@@ -245,10 +263,13 @@ export class WechatPayGateway implements PaymentGateway {
         const parsed = parseXML(res.data);
         if (parsed?.xml?.return_code === 'SUCCESS') {
           if (parsed.xml.result_code === 'FAIL') {
+            this.logger.warn(`wechat api business error: path=${path} err_code=${parsed.xml.err_code} err_code_des=${parsed.xml.err_code_des}`);
             throw new Error(`wechat api business error: ${parsed.xml.err_code_des}`);
           }
+          this.logger.log(`wechat api success: path=${path} return_code=SUCCESS`);
           return parsed.xml;
         }
+        this.logger.warn(`wechat api error: path=${path} return_msg=${parsed?.xml?.return_msg}`);
         throw new Error(`wechat api error: ${parsed?.xml?.return_msg}`);
       } catch (err: any) {
         const isNetworkError = err?.code === 'ECONNREFUSED'
