@@ -358,6 +358,9 @@ const baseStyles = `
     padding: 2rem;
     background: transparent;
     font-family: var(--font-family-base);
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
   }
 
   /* 加载状态 */

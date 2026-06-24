@@ -389,6 +389,7 @@ export class SearchService {
       project: {
         isRoot: true,
         deletedAt: null,
+        personalSpaceKey: null,
         libraryKey: null,
         OR: [
           { ownerId: userId },

@@ -472,6 +472,23 @@ export class FileSystemController {
     return this.fileTreeService.getRootNode(nodeId);
   }
 
+  @Get('nodes/:nodeId/parent-context')
+  @RequireProjectPermission(ProjectPermission.FILE_OPEN)
+  @ApiOperation({ summary: '获取节点在父目录中的分页上下文（用于搜索结果高亮定位）' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: '每页数量，默认50' })
+  @ApiQuery({ name: 'sortBy', required: false, description: '排序字段：name/createdAt/updatedAt/size' })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: '排序方向' })
+  @ApiResponse({ status: 200, description: '获取分页上下文成功', type: ParentContextDto })
+  @ApiResponse({ status: 404, description: '节点不存在或没有父节点' })
+  async getParentContext(
+    @Param('nodeId') nodeId: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+  ) {
+    return this.fileTreeService.getParentContext(nodeId, pageSize ? parseInt(pageSize, 10) : 50, sortBy, sortOrder);
+  }
+
   @Post("nodes/:nodeId/restore")
   @RequirePermissions([SystemPermission.PROJECT_CREATE])
   @CsrfProtected()

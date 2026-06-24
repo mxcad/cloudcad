@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FilePlus, FolderPlus, RefreshCw } from 'lucide-react';
+import { FilePlus, FolderPlus, RefreshCw, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Tooltip } from '@/components/ui/Tooltip';
-import MxCadUploader, { MxCadUploaderRef } from '@/components/MxCadUploader';
+import { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
 import { RefreshIcon } from '@/components/FileIcons';
@@ -336,16 +336,18 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
           )}
 
           {!isAtRoot && !isTrashView && canUpload && (
-            <MxCadUploader
-              ref={uploaderRef}
-              nodeId={() => getCurrentParentId()}
-              buttonText=""
-              buttonClassName="hidden"
-              onSuccess={onRefresh}
-              onExternalReferenceSuccess={onRefresh}
-              openAfterUpload={false}
-              onError={(err: string) => {}}
-            />
+            <Tooltip content="上传 CAD 文件">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => uploaderRef.current?.triggerUpload()}
+                disabled={loading}
+                className="hover:bg-[var(--bg-tertiary)]"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                <Upload size={16} />
+              </Button>
+            </Tooltip>
           )}
 
           {renderExtraActions}

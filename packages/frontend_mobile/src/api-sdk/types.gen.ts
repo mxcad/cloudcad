@@ -1706,6 +1706,29 @@ export type CreateDrawingDto = {
     name?: string;
 };
 
+export type ParentContextDto = {
+    /**
+     * 父节点 ID
+     */
+    parentId: string;
+    /**
+     * 目标文件在父目录中的页码
+     */
+    pageNumber: number;
+    /**
+     * 目标文件在该页中的位置（从 1 开始）
+     */
+    positionInPage: number;
+    /**
+     * 父目录总页数
+     */
+    totalPages: number;
+    /**
+     * 父目录总节点数
+     */
+    total: number;
+};
+
 export type NodeTreeResponseDto = {
     /**
      * 节点 ID
@@ -5667,6 +5690,44 @@ export type FileSystemControllerGetRootNodeResponses = {
 };
 
 export type FileSystemControllerGetRootNodeResponse = FileSystemControllerGetRootNodeResponses[keyof FileSystemControllerGetRootNodeResponses];
+
+export type FileSystemControllerGetParentContextData = {
+    body?: never;
+    path: {
+        nodeId: string;
+    };
+    query?: {
+        /**
+         * 每页数量，默认50
+         */
+        pageSize?: number;
+        /**
+         * 排序字段：name/createdAt/updatedAt/size
+         */
+        sortBy?: string;
+        /**
+         * 排序方向
+         */
+        sortOrder?: 'asc' | 'desc';
+    };
+    url: '/api/v1/file-system/nodes/{nodeId}/parent-context';
+};
+
+export type FileSystemControllerGetParentContextErrors = {
+    /**
+     * 节点不存在或没有父节点
+     */
+    404: unknown;
+};
+
+export type FileSystemControllerGetParentContextResponses = {
+    /**
+     * 获取分页上下文成功
+     */
+    200: ParentContextDto;
+};
+
+export type FileSystemControllerGetParentContextResponse = FileSystemControllerGetParentContextResponses[keyof FileSystemControllerGetParentContextResponses];
 
 export type FileSystemControllerRestoreNodeData = {
     body?: never;

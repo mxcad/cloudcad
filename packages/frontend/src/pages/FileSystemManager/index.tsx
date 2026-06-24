@@ -1547,6 +1547,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         }}
         fileId={shareFileId ?? undefined}
       />
+
+      <div style={{ display: 'none' }}>
+        <MxCadUploader
+          ref={uploaderRef}
+          nodeId={() => getCurrentParentId()}
+          openAfterUpload={false}
+          onSuccess={handleRefresh}
+          onExternalReferenceSuccess={handleRefresh}
+        />
+      </div>
     </>
   );
 };
