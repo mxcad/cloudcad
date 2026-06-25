@@ -44,7 +44,7 @@ export class SearchService {
       keyword = parsed.keyword;
       if (parsed.extension) extension = parsed.extension;
       if (parsed.type !== SearchType.ALL) type = parsed.type;
-      if (parsed.fileStatus) fileStatus = parsed.fileStatus as any;
+      if (parsed.fileStatus) fileStatus = parsed.fileStatus;
       if (parsed.sortBy) sortBy = parsed.sortBy;
       if (parsed.sortOrder) sortOrder = parsed.sortOrder;
     }
@@ -57,26 +57,24 @@ export class SearchService {
     const skip = (page - 1) * limit;
 
     // Explicit DTO fields override parsed syntax
-    const dateRange: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null =
+    const dateRange =
       dto.modifiedAtFrom || dto.modifiedAtTo
         ? {
-            field: 'updatedAt',
-            operator: '>=',
-            value: dto.modifiedAtFrom ? new Date(dto.modifiedAtFrom) : new Date(0),
+            field: 'updatedAt' as const,
+            gte: dto.modifiedAtFrom ? new Date(dto.modifiedAtFrom) : undefined,
+            lte: dto.modifiedAtTo ? new Date(dto.modifiedAtTo) : undefined,
           }
       : dto.createdAtFrom || dto.createdAtTo
         ? {
-            field: 'createdAt',
-            operator: '>=',
-            value: dto.createdAtFrom ? new Date(dto.createdAtFrom) : new Date(0),
+            field: 'createdAt' as const,
+            gte: dto.createdAtFrom ? new Date(dto.createdAtFrom) : undefined,
+            lte: dto.createdAtTo ? new Date(dto.createdAtTo) : undefined,
           }
       : parsed.dateRange;
 
-    const sizeRange: { operator: '>' | '<'; value: number } | null =
-      dto.sizeMin !== undefined
-        ? { operator: '>', value: dto.sizeMin }
-      : dto.sizeMax !== undefined
-        ? { operator: '<', value: dto.sizeMax }
+    const sizeRange =
+      dto.sizeMin !== undefined || dto.sizeMax !== undefined
+        ? { gte: dto.sizeMin, lte: dto.sizeMax }
       : parsed.sizeRange;
 
     const extra = {
@@ -187,8 +185,8 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
       exactPhrase?: string | null;
       excludeTerms?: string[];
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | { gte?: number; lte?: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -217,8 +215,9 @@ export class SearchService {
       deletedAt: null,
       personalSpaceKey: null,
       libraryKey: null,
-      AND: permissionAnd,
     };
+
+    const andFilters: Prisma.FileSystemNodeWhereInput[] = [...permissionAnd];
 
     const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
     if (ftsMatch.matched) {
@@ -231,7 +230,11 @@ export class SearchService {
     }
 
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });
-    this.applyRangeFilters(where, { dateRange, sizeRange });
+    this.applyRangeFilters(where, andFilters, { dateRange, sizeRange });
+
+    if (andFilters.length > 0) {
+      where.AND = andFilters;
+    }
 
     this.checkAborted(signal);
 
@@ -279,8 +282,8 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
       exactPhrase?: string | null;
       excludeTerms?: string[];
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | { gte?: number; lte?: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -328,6 +331,8 @@ export class SearchService {
       isRoot: false,
     };
 
+    const andFilters: Prisma.FileSystemNodeWhereInput[] = [];
+
     if (!ftsMatch.matched && keyword) {
       where.OR = [
         { name: { contains: keyword, mode: 'insensitive' } },
@@ -339,7 +344,11 @@ export class SearchService {
     else if (type === SearchType.FOLDER) where.isFolder = true;
     if (extension) {
       const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
-      if (extensions.length > 0) where.extension = { in: extensions };
+      if (extensions.length > 0) {
+        andFilters.push({
+          OR: [{ isFolder: true }, { extension: { in: extensions } }],
+        });
+      }
     }
     if (fileStatus) {
       const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
@@ -347,7 +356,11 @@ export class SearchService {
     }
 
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });
-    this.applyRangeFilters(where, { dateRange, sizeRange });
+    this.applyRangeFilters(where, andFilters, { dateRange, sizeRange });
+
+    if (andFilters.length > 0) {
+      where.AND = andFilters;
+    }
 
     this.checkAborted(signal);
 
@@ -356,7 +369,7 @@ export class SearchService {
         where,
         skip,
         take: safeLimit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [{ isFolder: 'desc' }, { [sortBy]: sortOrder }],
         select: {
           id: true,
           name: true,
@@ -402,14 +415,15 @@ export class SearchService {
       skip: number;
       sortBy: string;
       sortOrder: 'asc' | 'desc';
+      extension?: string;
       exactPhrase?: string | null;
       excludeTerms?: string[];
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | { gte?: number; lte?: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
-    const { keyword, skip, limit, sortBy, sortOrder, exactPhrase, excludeTerms, dateRange, sizeRange } = params;
+    const { keyword, skip, limit, sortBy, sortOrder, extension, exactPhrase, excludeTerms, dateRange, sizeRange } = params;
     const safeLimit = Number(limit) || 50;
 
     // 使用 Prisma relation filter 合并两次查询为一次 JOIN
@@ -427,6 +441,8 @@ export class SearchService {
       },
     };
 
+    const andFilters: Prisma.FileSystemNodeWhereInput[] = [];
+
     const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
     if (ftsMatch.matched) {
       where.id = { in: [...ftsMatch.ids] };
@@ -437,8 +453,21 @@ export class SearchService {
       ];
     }
 
+    if (extension) {
+      const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+      if (extensions.length > 0) {
+        andFilters.push({
+          OR: [{ isFolder: true }, { extension: { in: extensions } }],
+        });
+      }
+    }
+
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });
-    this.applyRangeFilters(where, { dateRange, sizeRange });
+    this.applyRangeFilters(where, andFilters, { dateRange, sizeRange });
+
+    if (andFilters.length > 0) {
+      where.AND = andFilters;
+    }
 
     this.checkAborted(signal);
 
@@ -447,7 +476,7 @@ export class SearchService {
         where,
         skip,
         take: safeLimit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [{ isFolder: 'desc' }, { [sortBy]: sortOrder }],
         select: {
           id: true,
           name: true,
@@ -490,6 +519,7 @@ export class SearchService {
       libraryKey?: string;
       type: SearchType;
       extension?: string;
+      fileStatus?: string;
       page: number;
       limit: number;
       skip: number;
@@ -497,8 +527,8 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
       exactPhrase?: string | null;
       excludeTerms?: string[];
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | { gte?: number; lte?: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -507,6 +537,7 @@ export class SearchService {
       libraryKey,
       type,
       extension,
+      fileStatus,
       skip,
       limit,
       sortBy,
@@ -528,6 +559,8 @@ export class SearchService {
       isRoot: false,
     };
 
+    const andFilters: Prisma.FileSystemNodeWhereInput[] = [];
+
     const ftsMatch = await this.ftsQueryBuilder.matchIds(keyword);
     if (ftsMatch.matched) {
       where.id = { in: [...ftsMatch.ids] };
@@ -539,7 +572,11 @@ export class SearchService {
     }
 
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });
-    this.applyRangeFilters(where, { dateRange, sizeRange });
+    this.applyRangeFilters(where, andFilters, { dateRange, sizeRange });
+
+    if (andFilters.length > 0) {
+      where.AND = andFilters;
+    }
 
     this.logger.log(`[资源库搜索] 查询条件: ${JSON.stringify(where)}`);
 
@@ -557,7 +594,7 @@ export class SearchService {
         where,
         skip,
         take: safeLimit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [{ isFolder: 'desc' }, { [sortBy]: sortOrder }],
         select: {
           id: true,
           name: true,
@@ -612,8 +649,8 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
       exactPhrase?: string | null;
       excludeTerms?: string[];
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | { gte?: number; lte?: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -674,8 +711,8 @@ export class SearchService {
       sortOrder: 'asc' | 'desc';
       exactPhrase?: string | null;
       excludeTerms?: string[];
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date } | null;
+      sizeRange?: { operator: '>' | '<'; value: number } | { gte?: number; lte?: number } | null;
     },
     signal?: AbortSignal,
   ): Promise<NodeListResponseDto> {
@@ -723,6 +760,8 @@ export class SearchService {
       isRoot: false,
     };
 
+    const andFilters: Prisma.FileSystemNodeWhereInput[] = [];
+
     if (!ftsMatch.matched && keyword) {
       where.OR = [
         { name: { contains: keyword, mode: 'insensitive' } },
@@ -734,7 +773,11 @@ export class SearchService {
     else if (type === SearchType.FOLDER) where.isFolder = true;
     if (extension) {
       const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
-      if (extensions.length > 0) where.extension = { in: extensions };
+      if (extensions.length > 0) {
+        andFilters.push({
+          OR: [{ isFolder: true }, { extension: { in: extensions } }],
+        });
+      }
     }
     if (fileStatus) {
       const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
@@ -742,7 +785,11 @@ export class SearchService {
     }
 
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });
-    this.applyRangeFilters(where, { dateRange, sizeRange });
+    this.applyRangeFilters(where, andFilters, { dateRange, sizeRange });
+
+    if (andFilters.length > 0) {
+      where.AND = andFilters;
+    }
 
     this.checkAborted(signal);
 
@@ -751,7 +798,7 @@ export class SearchService {
         where,
         skip,
         take: safeLimit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [{ isFolder: 'desc' }, { [sortBy]: sortOrder }],
         select: {
           id: true,
           name: true,
@@ -799,7 +846,9 @@ export class SearchService {
         name: { equals: extra.exactPhrase, mode: 'insensitive' },
       };
       if (where.OR) {
-        (where.OR as Prisma.FileSystemNodeWhereInput[]).push(exactCond);
+        const orArr = Array.isArray(where.OR) ? where.OR : [where.OR];
+        orArr.push(exactCond);
+        where.OR = orArr;
       } else {
         where.OR = [exactCond];
       }
@@ -819,21 +868,61 @@ export class SearchService {
 
   /**
    * 注入 dateRange（modified:>/created:>）和 sizeRange（size:>）过滤条件
+   * 支持新旧两种格式：
+   *   - 旧: { field, operator, value }（来自搜索语法解析器）
+   *   - 新: { field, gte?, lte? }（来自 DTO 字段）
    */
   private applyRangeFilters(
     where: Prisma.FileSystemNodeWhereInput,
+    andFilters: Prisma.FileSystemNodeWhereInput[],
     extra: {
-      dateRange?: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null;
-      sizeRange?: { operator: '>' | '<'; value: number } | null;
+      dateRange?:
+        | { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date }
+        | { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date }
+        | null;
+      sizeRange?:
+        | { operator: '>' | '<'; value: number }
+        | { gte?: number; lte?: number }
+        | null;
     },
   ): void {
     if (extra.dateRange) {
-      const opMap: Record<string, 'gt' | 'lt' | 'gte'> = { '>': 'gt', '<': 'lt', '>=': 'gte' };
-      (where as any)[extra.dateRange.field] = { [opMap[extra.dateRange.operator]]: extra.dateRange.value };
+      const dtFilter: { gte?: Date; lte?: Date; gt?: Date; lt?: Date } = {};
+      if ('gte' in extra.dateRange || 'lte' in extra.dateRange) {
+        const dr = extra.dateRange as { field: 'createdAt' | 'updatedAt'; gte?: Date; lte?: Date };
+        if (dr.gte) dtFilter.gte = dr.gte;
+        if (dr.lte) dtFilter.lte = dr.lte;
+      } else {
+        const dr = extra.dateRange as { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date };
+        if (dr.operator === '>') dtFilter.gt = dr.value;
+        else if (dr.operator === '<') dtFilter.lt = dr.value;
+        else if (dr.operator === '>=') dtFilter.gte = dr.value;
+      }
+      if (Object.keys(dtFilter).length > 0) {
+        const field = extra.dateRange.field;
+        if (field === 'updatedAt') {
+          where.updatedAt = dtFilter;
+        } else {
+          where.createdAt = dtFilter;
+        }
+      }
     }
     if (extra.sizeRange) {
-      const opMap: Record<string, 'gt' | 'lt'> = { '>': 'gt', '<': 'lt' };
-      (where as any).size = { [opMap[extra.sizeRange.operator]]: extra.sizeRange.value };
+      const szFilter: { gte?: number; lte?: number; gt?: number; lt?: number } = {};
+      if ('gte' in extra.sizeRange || 'lte' in extra.sizeRange) {
+        const sr = extra.sizeRange as { gte?: number; lte?: number };
+        if (sr.gte !== undefined) szFilter.gte = sr.gte;
+        if (sr.lte !== undefined) szFilter.lte = sr.lte;
+      } else {
+        const sr = extra.sizeRange as { operator: string; value: number };
+        if (sr.operator === '>') szFilter.gt = sr.value;
+        else if (sr.operator === '<') szFilter.lt = sr.value;
+      }
+      if (Object.keys(szFilter).length > 0) {
+        andFilters.push({
+          OR: [{ isFolder: true }, { size: szFilter }],
+        });
+      }
     }
   }
 

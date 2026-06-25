@@ -122,7 +122,7 @@ export const useFileSystemData = ({
   // ── Query 2: Children / Projects list ──────────────────────────────
   const childrenQuery = useQuery({
     queryKey: isProjectRootMode
-      ? [...queryKeys.fileSystem.children('__projects'), { filter: projectFilter, page: pagination.page, limit: pagination.limit }]
+      ? [...queryKeys.fileSystem.children('__projects'), { filter: projectFilter, page: pagination.page, limit: pagination.limit, sortBy: searchFilters.sortBy, sortOrder: searchFilters.sortOrder }]
       : [...queryKeys.fileSystem.children(effectiveNodeId), { page: pagination.page, limit: pagination.limit }],
     queryFn: async () => {
       if (isProjectRootMode) {
@@ -131,6 +131,8 @@ export const useFileSystemData = ({
             filter: projectFilter,
             page: pagination.page,
             limit: pagination.limit,
+            sortBy: searchFilters.sortBy || undefined,
+            sortOrder: (searchFilters.sortOrder as 'asc' | 'desc') || undefined,
           },
         });
 

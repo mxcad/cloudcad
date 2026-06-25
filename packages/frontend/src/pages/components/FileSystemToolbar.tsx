@@ -37,9 +37,10 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
   searchFilters,
   onSearchFiltersChange,
 }) => {
+  const scope = isProjectRootMode && !searchTerm ? 'project' : 'project_files';
   const filterChips = useMemo(
-    () => (searchFilters && onSearchFiltersChange ? getActiveFilterChips(searchFilters, onSearchFiltersChange) : []),
-    [searchFilters, onSearchFiltersChange],
+    () => (searchFilters && onSearchFiltersChange ? getActiveFilterChips(searchFilters, onSearchFiltersChange, scope) : []),
+    [searchFilters, onSearchFiltersChange, scope],
   );
 
   return (
@@ -60,12 +61,12 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
             <SearchFilters
               filters={searchFilters}
               onChange={onSearchFiltersChange}
-              scope={isProjectRootMode ? 'project' : 'project_files'}
+              scope={scope}
             />
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <ViewToggle
             viewMode={viewMode}
             onChange={onViewModeChange}

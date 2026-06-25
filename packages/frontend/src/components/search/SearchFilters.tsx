@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Filter, X, Calendar, CalendarPlus, FileText, Ruler, ArrowUpDown } from 'lucide-react';
-import { Select, type SelectOption } from '@/components/ui/Select';
+import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Z_LAYERS } from '@/constants/layers';
 import { formatFileSize, toBytes, FileSizeInput, type SizeUnit } from '@/components/ui/FileSize';
@@ -68,6 +68,16 @@ const sortOptions: { value: string; label: string; sortBy: string; sortOrder: 'a
   { value: 'size|desc',         label: '从大到小',       sortBy: 'size',      sortOrder: 'desc' },
 ];
 
+const projectSortOptions: { value: string; label: string; sortBy: string; sortOrder: 'asc' | 'desc' }[] = [
+  { value: '',                  label: '默认排序',       sortBy: 'updatedAt', sortOrder: 'desc' },
+  { value: 'updatedAt|desc',    label: '更新时间 ↑',     sortBy: 'updatedAt', sortOrder: 'desc' },
+  { value: 'updatedAt|asc',     label: '更新时间 ↓',     sortBy: 'updatedAt', sortOrder: 'asc' },
+  { value: 'createdAt|desc',    label: '创建时间 ↑',     sortBy: 'createdAt', sortOrder: 'desc' },
+  { value: 'createdAt|asc',     label: '创建时间 ↓',     sortBy: 'createdAt', sortOrder: 'asc' },
+  { value: 'name|asc',          label: '名称 A-Z',       sortBy: 'name',      sortOrder: 'asc' },
+  { value: 'name|desc',         label: '名称 Z-A',       sortBy: 'name',      sortOrder: 'desc' },
+];
+
 function getCurrentSortValue(sortBy?: string, sortOrder?: 'asc' | 'desc'): string {
   if (!sortBy) return '';
   return `${sortBy}|${sortOrder || 'desc'}`;
@@ -102,55 +112,60 @@ export interface FilterChip {
 export function getActiveFilterChips(
   filters: SearchFilterValues,
   onChange: (f: SearchFilterValues) => void,
+  scope?: 'project' | 'project_files',
 ): FilterChip[] {
   const chips: FilterChip[] = [];
 
-  if (filters.extensions && filters.extensions.length > 0) {
-    chips.push({
-      key: 'extensions',
-      label: `格式: ${filters.extensions.join(', ')}`,
-      onRemove: () => onChange(cleanFilters({ ...filters, extensions: undefined })),
-    });
-  }
+  // 文件专属过滤（项目模式不显示）
+  if (scope !== 'project') {
+    if (filters.extensions && filters.extensions.length > 0) {
+      chips.push({
+        key: 'extensions',
+        label: `格式: ${filters.extensions.join(', ')}`,
+        onRemove: () => onChange(cleanFilters({ ...filters, extensions: undefined })),
+      });
+    }
 
-  if (filters.timeRange) {
-    const opt = timePresets.find((o) => o.value === filters.timeRange);
-    chips.push({
-      key: 'timeRange',
-      label: `修改: ${opt?.label || filters.timeRange}`,
-      onRemove: () => onChange(cleanFilters({ ...filters, timeRange: undefined })),
-    });
-  }
+    if (filters.timeRange) {
+      const opt = timePresets.find((o) => o.value === filters.timeRange);
+      chips.push({
+        key: 'timeRange',
+        label: `修改: ${opt?.label || filters.timeRange}`,
+        onRemove: () => onChange(cleanFilters({ ...filters, timeRange: undefined })),
+      });
+    }
 
-  const modifiedLabel = getDateLabel(filters.modifiedAtFrom, filters.modifiedAtTo);
-  if (modifiedLabel) {
-    chips.push({
-      key: 'modifiedAt',
-      label: `修改: ${modifiedLabel}`,
-      onRemove: () => onChange(cleanFilters({ ...filters, modifiedAtFrom: undefined, modifiedAtTo: undefined })),
-    });
-  }
+    const modifiedLabel = getDateLabel(filters.modifiedAtFrom, filters.modifiedAtTo);
+    if (modifiedLabel) {
+      chips.push({
+        key: 'modifiedAt',
+        label: `修改: ${modifiedLabel}`,
+        onRemove: () => onChange(cleanFilters({ ...filters, modifiedAtFrom: undefined, modifiedAtTo: undefined })),
+      });
+    }
 
-  const createdLabel = getDateLabel(filters.createdAtFrom, filters.createdAtTo);
-  if (createdLabel) {
-    chips.push({
-      key: 'createdAt',
-      label: `创建: ${createdLabel}`,
-      onRemove: () => onChange(cleanFilters({ ...filters, createdAtFrom: undefined, createdAtTo: undefined })),
-    });
-  }
+    const createdLabel = getDateLabel(filters.createdAtFrom, filters.createdAtTo);
+    if (createdLabel) {
+      chips.push({
+        key: 'createdAt',
+        label: `创建: ${createdLabel}`,
+        onRemove: () => onChange(cleanFilters({ ...filters, createdAtFrom: undefined, createdAtTo: undefined })),
+      });
+    }
 
-  const sizeLabel = getSizeLabel(filters.sizeMin, filters.sizeMax);
-  if (sizeLabel) {
-    chips.push({
-      key: 'size',
-      label: `大小: ${sizeLabel}`,
-      onRemove: () => onChange(cleanFilters({ ...filters, sizeMin: undefined, sizeMax: undefined })),
-    });
+    const sizeLabel = getSizeLabel(filters.sizeMin, filters.sizeMax);
+    if (sizeLabel) {
+      chips.push({
+        key: 'size',
+        label: `大小: ${sizeLabel}`,
+        onRemove: () => onChange(cleanFilters({ ...filters, sizeMin: undefined, sizeMax: undefined })),
+      });
+    }
   }
 
   if (filters.sortBy) {
-    const sortOption = sortOptions.find(
+    const opts = scope === 'project' ? projectSortOptions : sortOptions;
+    const sortOption = opts.find(
       (o) => o.sortBy === filters.sortBy && o.sortOrder === filters.sortOrder,
     );
     chips.push({
@@ -333,6 +348,22 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               )}
             </div>
 
+            <div className="space-y-1.5">
+              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <ArrowUpDown size={12} className="inline mr-1" />
+                排序
+              </label>
+              <Select
+                options={scope === 'project' ? projectSortOptions : sortOptions}
+                value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
+                onChange={(v) => {
+                  const parsed = parseSortValue(v);
+                  onChange(cleanFilters({ ...filters, ...parsed }));
+                }}
+                size="sm"
+              />
+            </div>
+
             {scope === 'project_files' && (
               <div className="space-y-1.5">
                 <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -347,24 +378,56 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               </div>
             )}
 
+            {scope === 'project_files' && (
             <div className="space-y-1.5">
               <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <ArrowUpDown size={12} className="inline mr-1" />
-                排序
+                <Ruler size={12} className="inline mr-1" />
+                文件大小
               </label>
               <Select
-                options={sortOptions}
-                value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
+                options={SIZE_PRESETS}
+                value={
+                  filters.sizeMin !== undefined || filters.sizeMax !== undefined
+                    ? SIZE_PRESETS.find(
+                        (p) => p.min === filters.sizeMin && p.max === filters.sizeMax,
+                      )?.value || ''
+                    : ''
+                }
                 onChange={(v) => {
-                  const parsed = parseSortValue(v);
-                  onChange(cleanFilters({ ...filters, ...parsed }));
+                  const preset = SIZE_PRESETS.find((p) => p.value === v);
+                  if (preset) {
+                    onChange(cleanFilters({ ...filters, sizeMin: preset.min, sizeMax: preset.max }));
+                  }
                 }}
                 size="sm"
               />
+              <div className="flex items-center gap-1">
+                <FileSizeInput
+                  value={filters.sizeMin}
+                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMin: v }))}
+                  unit={sizeUnit}
+                  onUnitChange={setSizeUnit}
+                  placeholder="最小"
+                  min={0}
+                />
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
+                <FileSizeInput
+                  value={filters.sizeMax}
+                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMax: v }))}
+                  unit={sizeUnit}
+                  onUnitChange={setSizeUnit}
+                  placeholder="最大"
+                  min={0}
+                />
+              </div>
             </div>
+            )}
 
-            <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
+            {scope === 'project_files' && (
+              <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
+            )}
 
+            {scope === 'project_files' && (
             <div className="space-y-1.5">
               <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 <Calendar size={12} className="inline mr-1" />
@@ -428,7 +491,9 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 ))}
               </div>
             </div>
+            )}
 
+            {scope === 'project_files' && (
             <div className="space-y-1.5">
               <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 <CalendarPlus size={12} className="inline mr-1" />
@@ -466,51 +531,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>止</span>
               </div>
             </div>
-
-            <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
-
-            <div className="space-y-1.5">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <Ruler size={12} className="inline mr-1" />
-                文件大小
-              </label>
-              <Select
-                options={SIZE_PRESETS}
-                value={
-                  filters.sizeMin !== undefined || filters.sizeMax !== undefined
-                    ? SIZE_PRESETS.find(
-                        (p) => p.min === filters.sizeMin && p.max === filters.sizeMax,
-                      )?.value || ''
-                    : ''
-                }
-                onChange={(v) => {
-                  const preset = SIZE_PRESETS.find((p) => p.value === v);
-                  if (preset) {
-                    onChange(cleanFilters({ ...filters, sizeMin: preset.min, sizeMax: preset.max }));
-                  }
-                }}
-                size="sm"
-              />
-              <div className="flex items-center gap-1">
-                <FileSizeInput
-                  value={filters.sizeMin}
-                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMin: v }))}
-                  unit={sizeUnit}
-                  onUnitChange={setSizeUnit}
-                  placeholder="最小"
-                  min={0}
-                />
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
-                <FileSizeInput
-                  value={filters.sizeMax}
-                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMax: v }))}
-                  unit={sizeUnit}
-                  onUnitChange={setSizeUnit}
-                  placeholder="最大"
-                  min={0}
-                />
-              </div>
-            </div>
+            )}
 
           </div>
         </>,

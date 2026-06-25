@@ -513,7 +513,7 @@ export class FileTreeService {
           skip,
           take: safeLimit,
           orderBy: sortBy
-            ? { [sortBy]: sortOrder }
+            ? [{ isFolder: 'desc' }, { [sortBy]: sortOrder || 'desc' }]
             : [{ isFolder: 'desc' }, { name: 'asc' }],
           include: {
             owner: {

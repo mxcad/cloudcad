@@ -38,10 +38,10 @@ export interface FileSystemState {
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
 
-  // Sort settings
-  sortBy: 'name' | 'date' | 'size' | 'type';
+  // Sort settings (values aligned with API: name/createdAt/updatedAt/size)
+  sortBy: 'name' | 'updatedAt' | 'createdAt' | 'size';
   sortOrder: 'asc' | 'desc';
-  setSortBy: (by: 'name' | 'date' | 'size' | 'type') => void;
+  setSortBy: (by: 'name' | 'updatedAt' | 'createdAt' | 'size') => void;
   setSortOrder: (order: 'asc' | 'desc') => void;
 
   // Search
