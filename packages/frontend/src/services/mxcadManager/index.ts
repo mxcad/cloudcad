@@ -2278,7 +2278,9 @@ class MxCADInstanceManager {
       const viewOptions = this.buildViewOptions(openFile);
       this.mxcadView = new MxCADView(viewOptions);
 
-      this.setupFileOpenListener();
+      // setupFileOpenListener 将在 mxcadApplicationCreatedMxCADObject
+      // 事件中由 setupInitializationListener 调用（此时 mxcad 才可用），
+      // 此处提前调用会导致重复注册 openFileComplete 回调，使 generateThumbnail 触发两次
       this.setupInitializationListener();
 
       this.mxcadView.create();
