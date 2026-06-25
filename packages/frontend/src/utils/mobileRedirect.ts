@@ -31,7 +31,7 @@ export function getMobileRedirectUrl(
   // 否则移动端只收到 ?nodeId=...&back=...，丢失了真正的 fileId
   const searchParams = new URLSearchParams(window.location.search);
   const match = window.location.pathname.match(/^\/cad-editor\/([^/]+)$/);
-  if (match) {
+  if (match?.[1]) {
     searchParams.set('fileId', match[1]);
   }
 

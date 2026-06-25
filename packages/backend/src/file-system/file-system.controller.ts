@@ -266,6 +266,7 @@ export class FileSystemController {
   @ApiQuery({ name: 'sortOrder', required: false })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'extension', required: false })
+  @ApiQuery({ name: 'fileStatus', required: false })
   @ApiResponse({
     status: 200,
     description: '获取回收站列表成功',
@@ -280,8 +281,9 @@ export class FileSystemController {
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     @Query('search') search?: string,
     @Query('extension') extension?: string,
+    @Query('fileStatus') fileStatus?: string,
   ) {
-    return this.fileTreeService.getTrashItems(req.user.id, { projectId, page, limit, sortBy, sortOrder, search, extension });
+    return this.fileTreeService.getTrashItems(req.user.id, { projectId, page, limit, sortBy, sortOrder, search, extension, fileStatus });
   }
 
   @Post("trash/restore")

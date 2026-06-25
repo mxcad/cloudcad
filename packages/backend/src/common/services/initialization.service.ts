@@ -94,6 +94,8 @@ export class InitializationService implements OnModuleInit {
             'SYSTEM_FONT_DELETE',
             'SYSTEM_FONT_DOWNLOAD',
             'SYSTEM_ADMIN',
+            'SYSTEM_BILLING_READ',
+            'SYSTEM_BILLING_WRITE',
             'SYSTEM_MONITOR',
             'SYSTEM_CONFIG_READ',
             'SYSTEM_CONFIG_WRITE',

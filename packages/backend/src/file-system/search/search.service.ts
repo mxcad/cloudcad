@@ -56,11 +56,40 @@ export class SearchService {
 
     const skip = (page - 1) * limit;
 
+    // Explicit DTO fields override parsed syntax
+    const dateRange: { field: 'createdAt' | 'updatedAt'; operator: '>' | '<' | '>='; value: Date } | null =
+      dto.modifiedAtFrom || dto.modifiedAtTo
+        ? {
+            field: 'updatedAt',
+            operator: '>=',
+            value: dto.modifiedAtFrom ? new Date(dto.modifiedAtFrom) : new Date(0),
+          }
+      : dto.createdAtFrom || dto.createdAtTo
+        ? {
+            field: 'createdAt',
+            operator: '>=',
+            value: dto.createdAtFrom ? new Date(dto.createdAtFrom) : new Date(0),
+          }
+      : parsed.dateRange;
+
+    const sizeRange: { operator: '>' | '<'; value: number } | null =
+      dto.sizeMin !== undefined
+        ? { operator: '>', value: dto.sizeMin }
+      : dto.sizeMax !== undefined
+        ? { operator: '<', value: dto.sizeMax }
+      : parsed.sizeRange;
+
     const extra = {
       exactPhrase: parsed.exactPhrase,
       excludeTerms: parsed.excludeTerms,
-      dateRange: parsed.dateRange,
-      sizeRange: parsed.sizeRange,
+      dateRange,
+      sizeRange,
+      modifiedAtFrom: dto.modifiedAtFrom,
+      modifiedAtTo: dto.modifiedAtTo,
+      createdAtFrom: dto.createdAtFrom,
+      createdAtTo: dto.createdAtTo,
+      sizeMin: dto.sizeMin,
+      sizeMax: dto.sizeMax,
     };
 
     switch (scope) {
@@ -308,13 +337,13 @@ export class SearchService {
 
     if (type === SearchType.FILE) where.isFolder = false;
     else if (type === SearchType.FOLDER) where.isFolder = true;
-    if (extension) where.extension = extension;
+    if (extension) {
+      const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+      if (extensions.length > 0) where.extension = { in: extensions };
+    }
     if (fileStatus) {
-      const validStatuses = Object.values(FileStatus) as string[];
-      if (!validStatuses.includes(fileStatus)) {
-        throw new BadRequestException(`无效的文件状态: ${fileStatus}`);
-      }
-      where.fileStatus = fileStatus as FileStatus;
+      const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 0) where.fileStatus = { in: statuses as FileStatus[] };
     }
 
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });
@@ -516,7 +545,10 @@ export class SearchService {
 
     if (type === SearchType.FILE) where.isFolder = false;
     else if (type === SearchType.FOLDER) where.isFolder = true;
-    if (extension) where.extension = extension;
+    if (extension) {
+      const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+      if (extensions.length > 0) where.extension = { in: extensions };
+    }
 
     this.checkAborted(signal);
 
@@ -700,13 +732,13 @@ export class SearchService {
 
     if (type === SearchType.FILE) where.isFolder = false;
     else if (type === SearchType.FOLDER) where.isFolder = true;
-    if (extension) where.extension = extension;
+    if (extension) {
+      const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+      if (extensions.length > 0) where.extension = { in: extensions };
+    }
     if (fileStatus) {
-      const validStatuses = Object.values(FileStatus) as string[];
-      if (!validStatuses.includes(fileStatus)) {
-        throw new BadRequestException(`无效的文件状态: ${fileStatus}`);
-      }
-      where.fileStatus = fileStatus as FileStatus;
+      const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 0) where.fileStatus = { in: statuses as FileStatus[] };
     }
 
     this.applyExtraFilters(where, { exactPhrase, excludeTerms });

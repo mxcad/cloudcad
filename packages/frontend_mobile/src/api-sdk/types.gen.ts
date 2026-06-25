@@ -1655,8 +1655,6 @@ export type BatchOperationResponseDto = {
     errors?: Array<string>;
 };
 
-export type FileStatus = 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'DELETED';
-
 export type ProjectTrashResponseDto = {
     /**
      * 节点列表
@@ -5443,6 +5441,7 @@ export type FileSystemControllerGetTrashData = {
         sortOrder?: string;
         search?: string;
         extension?: string;
+        fileStatus?: string;
     };
     url: '/api/v1/file-system/trash';
 };
@@ -5535,9 +5534,33 @@ export type FileSystemControllerGetProjectTrashData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */
@@ -5846,9 +5869,33 @@ export type FileSystemControllerGetChildrenData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */
@@ -6548,9 +6595,33 @@ export type FileSystemControllerSearchData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */
@@ -8187,9 +8258,33 @@ export type LibraryControllerGetDrawingChildrenData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */
@@ -8242,9 +8337,33 @@ export type LibraryControllerGetDrawingAllFilesData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */
@@ -8563,9 +8682,33 @@ export type LibraryControllerGetBlockChildrenData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */
@@ -8618,9 +8761,33 @@ export type LibraryControllerGetBlockAllFilesData = {
          */
         extension?: string;
         /**
-         * 文件状态
+         * 文件状态（支持逗号分隔多选）
          */
-        fileStatus?: FileStatus;
+        fileStatus?: string;
+        /**
+         * 修改时间起始（ISO 日期）
+         */
+        modifiedAtFrom?: string;
+        /**
+         * 修改时间结束（ISO 日期）
+         */
+        modifiedAtTo?: string;
+        /**
+         * 创建时间起始（ISO 日期）
+         */
+        createdAtFrom?: string;
+        /**
+         * 创建时间结束（ISO 日期）
+         */
+        createdAtTo?: string;
+        /**
+         * 文件大小下限（字节）
+         */
+        sizeMin?: number;
+        /**
+         * 文件大小上限（字节）
+         */
+        sizeMax?: number;
         /**
          * 页码
          */

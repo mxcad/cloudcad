@@ -93,7 +93,12 @@ export const useFileSystemData = ({
   // ── Derived mode flags for query enabled checks ─────────────────────
   const isTrash = isTrashView;
   const hasSearch = !!searchQuery;
-  const hasFilter = !!(searchFilters.extension || searchFilters.timeRange || searchFilters.sortBy);
+  const hasFilter = !!((searchFilters.extensions && searchFilters.extensions.length > 0) ||
+    searchFilters.timeRange ||
+    searchFilters.modifiedAtFrom || searchFilters.modifiedAtTo ||
+    searchFilters.createdAtFrom || searchFilters.createdAtTo ||
+    searchFilters.sizeMin !== undefined || searchFilters.sizeMax !== undefined ||
+    searchFilters.sortBy);
   const shouldSearch = hasSearch || hasFilter;
 
   // Effective node ID for personal-space and folder modes
@@ -161,6 +166,15 @@ export const useFileSystemData = ({
           page: pagination.page,
           limit: pagination.limit,
           search: searchQuery || undefined,
+          extension: (hasFilter && searchFilters.extensions && searchFilters.extensions.length > 0) ? searchFilters.extensions.join(',') : undefined,
+          modifiedAtFrom: (hasFilter && searchFilters.modifiedAtFrom) ? searchFilters.modifiedAtFrom : undefined,
+          modifiedAtTo: (hasFilter && searchFilters.modifiedAtTo) ? searchFilters.modifiedAtTo : undefined,
+          createdAtFrom: (hasFilter && searchFilters.createdAtFrom) ? searchFilters.createdAtFrom : undefined,
+          createdAtTo: (hasFilter && searchFilters.createdAtTo) ? searchFilters.createdAtTo : undefined,
+          sizeMin: (hasFilter && searchFilters.sizeMin !== undefined) ? searchFilters.sizeMin : undefined,
+          sizeMax: (hasFilter && searchFilters.sizeMax !== undefined) ? searchFilters.sizeMax : undefined,
+          sortBy: (hasFilter && searchFilters.sortBy) ? searchFilters.sortBy : undefined,
+          sortOrder: (hasFilter && searchFilters.sortOrder) ? searchFilters.sortOrder : undefined,
         },
       });
 
@@ -189,7 +203,8 @@ export const useFileSystemData = ({
   });
 
   // ── Query 3: Search results ────────────────────────────────────────
-  const effectiveSearchKeyword = searchFilters.timeRange
+  // Inject timeRange as modified syntax for backward compat with search parser
+  const effectiveSearchKeyword = searchFilters.timeRange && !searchFilters.modifiedAtFrom
     ? `modified:>${searchFilters.timeRange} ${searchQuery}`.trim()
     : searchQuery;
 
@@ -227,8 +242,13 @@ export const useFileSystemData = ({
           projectId: searchProjectId,
           page: pagination.page,
           limit: pagination.limit,
-          extension: searchFilters.extension || undefined,
-          fileStatus: undefined,
+          extension: (searchFilters.extensions && searchFilters.extensions.length > 0) ? searchFilters.extensions.join(',') : undefined,
+          modifiedAtFrom: searchFilters.modifiedAtFrom || undefined,
+          modifiedAtTo: searchFilters.modifiedAtTo || undefined,
+          createdAtFrom: searchFilters.createdAtFrom || undefined,
+          createdAtTo: searchFilters.createdAtTo || undefined,
+          sizeMin: searchFilters.sizeMin,
+          sizeMax: searchFilters.sizeMax,
           sortBy: searchFilters.sortBy || undefined,
           sortOrder: searchFilters.sortOrder || undefined,
         },
@@ -263,7 +283,7 @@ export const useFileSystemData = ({
     : undefined;
 
   const trashQuery = useQuery({
-    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery, extension: searchFilters.extension, sortBy: searchFilters.sortBy, sortOrder: searchFilters.sortOrder }] as const,
+    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery, ...searchFilters }] as const,
     queryFn: async () => {
       const response = await fileSystemControllerGetTrash({
         query: {
@@ -271,7 +291,7 @@ export const useFileSystemData = ({
           page: pagination.page,
           limit: pagination.limit,
           search: searchQuery || undefined,
-          extension: searchFilters.extension || undefined,
+          extension: (searchFilters.extensions && searchFilters.extensions.length > 0) ? searchFilters.extensions.join(',') : undefined,
           sortBy: searchFilters.sortBy || undefined,
           sortOrder: searchFilters.sortOrder || undefined,
         },
@@ -354,7 +374,7 @@ export const useFileSystemData = ({
       nodeQuery.data &&
       !isProjectRootMode &&
       !isTrash &&
-      !hasSearch
+      !shouldSearch
     ) {
       fetchBreadcrumbs(nodeQuery.data);
     }
@@ -362,7 +382,7 @@ export const useFileSystemData = ({
     nodeQuery.data,
     isProjectRootMode,
     isTrash,
-    hasSearch,
+    shouldSearch,
     fetchBreadcrumbs,
   ]);
 
@@ -409,7 +429,7 @@ export const useFileSystemData = ({
     if (isTrash && trashQuery.data) {
       return trashQuery.data;
     }
-    if (hasSearch && searchQueryResult.data) {
+    if (shouldSearch && searchQueryResult.data) {
       return searchQueryResult.data;
     }
     if (childrenQuery.data) {
@@ -477,19 +497,19 @@ export const useFileSystemData = ({
 
   const loading = isTrash
     ? trashQuery.isLoading
-    : (hasSearch && searchQueryResult.isLoading) ||
-      (!hasSearch && !isProjectRootMode && nodeQuery.isLoading) ||
-      (!hasSearch && childrenQuery.isLoading);
+    : (shouldSearch && searchQueryResult.isLoading) ||
+      (!shouldSearch && !isProjectRootMode && nodeQuery.isLoading) ||
+      (!shouldSearch && childrenQuery.isLoading);
 
   const isFetching = isTrash
     ? trashQuery.isFetching
-    : (hasSearch && searchQueryResult.isFetching) ||
-      (!hasSearch && !isProjectRootMode && nodeQuery.isFetching) ||
-      (!hasSearch && childrenQuery.isFetching);
+    : (shouldSearch && searchQueryResult.isFetching) ||
+      (!shouldSearch && !isProjectRootMode && nodeQuery.isFetching) ||
+      (!shouldSearch && childrenQuery.isFetching);
 
   const error = isTrash
     ? trashQuery.error
-    : hasSearch
+    : shouldSearch
       ? searchQueryResult.error
       : nodeQuery.error || childrenQuery.error;
 

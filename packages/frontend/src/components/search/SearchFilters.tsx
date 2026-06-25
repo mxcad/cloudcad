@@ -1,72 +1,61 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, Calendar, FileText, Ruler, ArrowUpDown } from 'lucide-react';
 import { Select, type SelectOption } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Z_LAYERS } from '@/constants/layers';
 
 export interface SearchFilterValues {
-  extension?: string;
+  extensions?: string[];
   timeRange?: string;
+  modifiedAtFrom?: string;
+  modifiedAtTo?: string;
+  createdAtFrom?: string;
+  createdAtTo?: string;
+  sizeMin?: number;
+  sizeMax?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
 
 function cleanFilters(f: SearchFilterValues): SearchFilterValues {
   const out: SearchFilterValues = {};
-  if (f.extension) out.extension = f.extension;
+  if (f.extensions && f.extensions.length > 0) out.extensions = [...f.extensions];
   if (f.timeRange) out.timeRange = f.timeRange;
+  if (f.modifiedAtFrom) out.modifiedAtFrom = f.modifiedAtFrom;
+  if (f.modifiedAtTo) out.modifiedAtTo = f.modifiedAtTo;
+  if (f.createdAtFrom) out.createdAtFrom = f.createdAtFrom;
+  if (f.createdAtTo) out.createdAtTo = f.createdAtTo;
+  if (f.sizeMin !== undefined) out.sizeMin = f.sizeMin;
+  if (f.sizeMax !== undefined) out.sizeMax = f.sizeMax;
   if (f.sortBy) out.sortBy = f.sortBy;
   if (f.sortOrder) out.sortOrder = f.sortOrder;
   return out;
 }
 
-interface SearchFiltersProps {
-  filters: SearchFilterValues;
-  onChange: (filters: SearchFilterValues) => void;
-  scope?: 'project' | 'project_files';
-}
-
-const extOptions: SelectOption[] = [
-  { value: '', label: '全部格式' },
+const extOptions = [
   { value: '.dwg', label: 'DWG 图纸' },
   { value: '.dxf', label: 'DXF 图纸' },
-  { value: '.dwt', label: 'DWT 图纸模板' },
-  { value: '.dwf', label: 'DWF 设计' },
-  { value: '.pdf', label: 'PDF 文档' },
-  { value: '.doc', label: 'Word 文档' },
-  { value: '.docx', label: 'Word 文档' },
-  { value: '.xls', label: 'Excel 表格' },
-  { value: '.xlsx', label: 'Excel 表格' },
-  { value: '.ppt', label: 'PPT 演示' },
-  { value: '.pptx', label: 'PPT 演示' },
-  { value: '.png', label: 'PNG 图片' },
-  { value: '.jpg', label: 'JPG 图片' },
-  { value: '.jpeg', label: 'JPEG 图片' },
-  { value: '.bmp', label: 'BMP 图片' },
-  { value: '.tif', label: 'TIFF 图片' },
-  { value: '.tiff', label: 'TIFF 图片' },
-  { value: '.gif', label: 'GIF 图片' },
-  { value: '.svg', label: 'SVG 矢量图' },
-  { value: '.zip', label: 'ZIP 压缩包' },
-  { value: '.rar', label: 'RAR 压缩包' },
-  { value: '.7z', label: '7Z 压缩包' },
-  { value: '.txt', label: 'TXT 文本' },
-  { value: '.csv', label: 'CSV 表格' },
-  { value: '.json', label: 'JSON 数据' },
-  { value: '.xml', label: 'XML 数据' },
-  { value: '.md', label: 'Markdown' },
+  { value: '.mxweb', label: 'MXWEB 文件' },
 ];
 
-const timeOptions: SelectOption[] = [
-  { value: '', label: '全部时间' },
+const SIZE_PRESETS: { value: string; label: string; min?: number; max?: number }[] = [
+  { value: '', label: '全部大小' },
+  { value: 'lt1mb', label: '< 1 MB', max: 1_000_000 },
+  { value: '1mb-10mb', label: '1 MB - 10 MB', min: 1_000_000, max: 10_000_000 },
+  { value: '10mb-100mb', label: '10 MB - 100 MB', min: 10_000_000, max: 100_000_000 },
+  { value: 'gt100mb', label: '> 100 MB', min: 100_000_000 },
+];
+
+const timePresets: { value: string; label: string }[] = [
+  { value: '', label: '不限' },
   { value: '-1d', label: '今天' },
   { value: '-7d', label: '最近 7 天' },
   { value: '-30d', label: '最近 30 天' },
   { value: '-90d', label: '最近 90 天' },
 ];
 
-const SORT_OPTIONS: { value: string; label: string; sortBy: string; sortOrder: 'asc' | 'desc' }[] = [
+const sortOptions: { value: string; label: string; sortBy: string; sortOrder: 'asc' | 'desc' }[] = [
   { value: '',                  label: '默认排序',       sortBy: 'updatedAt', sortOrder: 'desc' },
   { value: 'updatedAt|desc',    label: '更新时间 ↑',     sortBy: 'updatedAt', sortOrder: 'desc' },
   { value: 'updatedAt|asc',     label: '更新时间 ↓',     sortBy: 'updatedAt', sortOrder: 'asc' },
@@ -89,6 +78,147 @@ function parseSortValue(value: string): { sortBy?: string; sortOrder?: 'asc' | '
   return { sortBy: parts[0], sortOrder: (parts[1] as 'asc' | 'desc') || 'desc' };
 }
 
+function formatBytes(bytes?: number): string {
+  if (bytes === undefined) return '';
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;
+  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
+
+function getSizeLabel(min?: number, max?: number): string | undefined {
+  if (min !== undefined && max !== undefined) return `${formatBytes(min)} ~ ${formatBytes(max)}`;
+  if (min !== undefined) return `> ${formatBytes(min)}`;
+  if (max !== undefined) return `< ${formatBytes(max)}`;
+  return undefined;
+}
+
+function getDateLabel(from?: string, to?: string): string | undefined {
+  if (from && to) return `${from.slice(0, 10)} ~ ${to.slice(0, 10)}`;
+  if (from) return `从 ${from.slice(0, 10)}`;
+  if (to) return `到 ${to.slice(0, 10)}`;
+  return undefined;
+}
+
+export interface FilterChip {
+  key: string;
+  label: string;
+  onRemove: () => void;
+}
+
+export function getActiveFilterChips(
+  filters: SearchFilterValues,
+  onChange: (f: SearchFilterValues) => void,
+): FilterChip[] {
+  const chips: FilterChip[] = [];
+
+  if (filters.extensions && filters.extensions.length > 0) {
+    chips.push({
+      key: 'extensions',
+      label: `格式: ${filters.extensions.join(', ')}`,
+      onRemove: () => onChange(cleanFilters({ ...filters, extensions: undefined })),
+    });
+  }
+
+  if (filters.timeRange) {
+    const opt = timePresets.find((o) => o.value === filters.timeRange);
+    chips.push({
+      key: 'timeRange',
+      label: `修改: ${opt?.label || filters.timeRange}`,
+      onRemove: () => onChange(cleanFilters({ ...filters, timeRange: undefined })),
+    });
+  }
+
+  const modifiedLabel = getDateLabel(filters.modifiedAtFrom, filters.modifiedAtTo);
+  if (modifiedLabel) {
+    chips.push({
+      key: 'modifiedAt',
+      label: `修改: ${modifiedLabel}`,
+      onRemove: () => onChange(cleanFilters({ ...filters, modifiedAtFrom: undefined, modifiedAtTo: undefined })),
+    });
+  }
+
+  const createdLabel = getDateLabel(filters.createdAtFrom, filters.createdAtTo);
+  if (createdLabel) {
+    chips.push({
+      key: 'createdAt',
+      label: `创建: ${createdLabel}`,
+      onRemove: () => onChange(cleanFilters({ ...filters, createdAtFrom: undefined, createdAtTo: undefined })),
+    });
+  }
+
+  const sizeLabel = getSizeLabel(filters.sizeMin, filters.sizeMax);
+  if (sizeLabel) {
+    chips.push({
+      key: 'size',
+      label: `大小: ${sizeLabel}`,
+      onRemove: () => onChange(cleanFilters({ ...filters, sizeMin: undefined, sizeMax: undefined })),
+    });
+  }
+
+  if (filters.sortBy) {
+    const sortOption = sortOptions.find(
+      (o) => o.sortBy === filters.sortBy && o.sortOrder === filters.sortOrder,
+    );
+    chips.push({
+      key: 'sort',
+      label: `排序: ${sortOption?.label || `${filters.sortBy} ${filters.sortOrder}`}`,
+      onRemove: () => onChange(cleanFilters({ ...filters, sortBy: undefined, sortOrder: undefined })),
+    });
+  }
+
+  return chips;
+}
+
+function CheckboxList<T extends string>({
+  options,
+  selected,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  selected: T[];
+  onChange: (v: T[]) => void;
+}) {
+  const toggle = useCallback(
+    (value: T) => {
+      if (selected.includes(value)) {
+        onChange(selected.filter((v) => v !== value));
+      } else {
+        onChange([...selected, value]);
+      }
+    },
+    [selected, onChange],
+  );
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => {
+        const isActive = selected.includes(opt.value);
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => toggle(opt.value)}
+            className="px-2 py-1 text-xs rounded-[3px] transition-all duration-150"
+            style={{
+              background: isActive ? 'var(--info)' : 'var(--bg-tertiary)',
+              color: isActive ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${isActive ? 'var(--info)' : 'var(--border-subtle)'}`,
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface SearchFiltersProps {
+  filters: SearchFilterValues;
+  onChange: (filters: SearchFilterValues) => void;
+  scope?: 'project' | 'project_files';
+}
+
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
   filters,
   onChange,
@@ -104,30 +234,20 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    const handleClose = () => closePanel();
-    window.addEventListener('scroll', handleClose, true);
-    window.addEventListener('resize', handleClose);
+    const handleResize = () => closePanel();
+    window.addEventListener('resize', handleResize);
     return () => {
-      window.removeEventListener('scroll', handleClose, true);
-      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('resize', handleResize);
     };
   }, [open, closePanel]);
 
-  const hasActiveFilters = !!(filters.extension || filters.timeRange || filters.sortBy);
-
-  const handleChange = useCallback(
-    (key: keyof SearchFilterValues, value: string) => {
-      onChange(cleanFilters({ ...filters, [key]: value || undefined }));
-    },
-    [filters, onChange],
-  );
-
-  const handleSortChange = useCallback(
-    (value: string) => {
-      const parsed = parseSortValue(value);
-      onChange(cleanFilters({ ...filters, ...parsed }));
-    },
-    [filters, onChange],
+  const hasActiveFilters = !!(
+    (filters.extensions && filters.extensions.length > 0) ||
+    filters.timeRange ||
+    filters.modifiedAtFrom || filters.modifiedAtTo ||
+    filters.createdAtFrom || filters.createdAtTo ||
+    filters.sizeMin !== undefined || filters.sizeMax !== undefined ||
+    filters.sortBy
   );
 
   const clearAll = useCallback(() => {
@@ -137,7 +257,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   const openPanel = useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const panelW = 260;
+      const panelW = 300;
       let left = rect.right - panelW;
       const gap = 12;
       if (left < gap) left = gap;
@@ -191,7 +311,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             onClick={closePanel}
           />
           <div
-            className="p-3 rounded-lg shadow-lg space-y-3 min-w-[260px] max-h-[70vh] overflow-y-auto"
+            className="p-3 rounded-lg shadow-lg space-y-3 min-w-[300px] max-h-[80vh] overflow-y-auto"
             style={{
               ...panelStyle,
               zIndex: Z_LAYERS.POPUP,
@@ -216,37 +336,208 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             </div>
 
             {scope === 'project_files' && (
-              <div className="space-y-2">
-                <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>扩展名</label>
-                <Select
+              <div className="space-y-1.5">
+                <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  <FileText size={12} className="inline mr-1" />
+                  文件格式（多选）
+                </label>
+                <CheckboxList
                   options={extOptions}
-                  value={filters.extension || ''}
-                  onChange={(v) => handleChange('extension', v)}
-                  size="sm"
-                  searchable
+                  selected={filters.extensions || []}
+                  onChange={(v) => onChange(cleanFilters({ ...filters, extensions: v.length > 0 ? v : undefined }))}
                 />
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>修改时间</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <ArrowUpDown size={12} className="inline mr-1" />
+                排序
+              </label>
               <Select
-                options={timeOptions}
-                value={filters.timeRange || ''}
-                onChange={(v) => handleChange('timeRange', v)}
+                options={sortOptions}
+                value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
+                onChange={(v) => {
+                  const parsed = parseSortValue(v);
+                  onChange(cleanFilters({ ...filters, ...parsed }));
+                }}
                 size="sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>排序</label>
+            <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <Calendar size={12} className="inline mr-1" />
+                修改时间
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={filters.modifiedAtFrom ? filters.modifiedAtFrom.slice(0, 10) : ''}
+                  onChange={(e) =>
+                    onChange(cleanFilters({ ...filters, modifiedAtFrom: e.target.value || undefined, timeRange: undefined }))
+                  }
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
+                  placeholder="起始"
+                />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>~</span>
+                <input
+                  type="date"
+                  value={filters.modifiedAtTo ? filters.modifiedAtTo.slice(0, 10) : ''}
+                  onChange={(e) =>
+                    onChange(cleanFilters({ ...filters, modifiedAtTo: e.target.value || undefined, timeRange: undefined }))
+                  }
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
+                  placeholder="结束"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {timePresets.slice(1).map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() =>
+                      onChange(
+                        cleanFilters({
+                          ...filters,
+                          timeRange: filters.timeRange === p.value ? undefined : p.value,
+                          modifiedAtFrom: undefined,
+                          modifiedAtTo: undefined,
+                        }),
+                      )
+                    }
+                    className="px-2 py-0.5 text-xs rounded-[3px] transition-all duration-150"
+                    style={{
+                      background: filters.timeRange === p.value ? 'var(--info)' : 'var(--bg-tertiary)',
+                      color: filters.timeRange === p.value ? '#fff' : 'var(--text-tertiary)',
+                      border: `1px solid ${filters.timeRange === p.value ? 'var(--info)' : 'var(--border-subtle)'}`,
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <Calendar size={12} className="inline mr-1" />
+                创建时间
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={filters.createdAtFrom ? filters.createdAtFrom.slice(0, 10) : ''}
+                  onChange={(e) =>
+                    onChange(cleanFilters({ ...filters, createdAtFrom: e.target.value || undefined }))
+                  }
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
+                  placeholder="起始"
+                />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>~</span>
+                <input
+                  type="date"
+                  value={filters.createdAtTo ? filters.createdAtTo.slice(0, 10) : ''}
+                  onChange={(e) =>
+                    onChange(cleanFilters({ ...filters, createdAtTo: e.target.value || undefined }))
+                  }
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
+                  placeholder="结束"
+                />
+              </div>
+            </div>
+
+            <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                <Ruler size={12} className="inline mr-1" />
+                文件大小
+              </label>
               <Select
-                options={SORT_OPTIONS}
-                value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
-                onChange={handleSortChange}
+                options={SIZE_PRESETS}
+                value={
+                  filters.sizeMin !== undefined || filters.sizeMax !== undefined
+                    ? SIZE_PRESETS.find(
+                        (p) => p.min === filters.sizeMin && p.max === filters.sizeMax,
+                      )?.value || ''
+                    : ''
+                }
+                onChange={(v) => {
+                  const preset = SIZE_PRESETS.find((p) => p.value === v);
+                  if (preset) {
+                    onChange(cleanFilters({ ...filters, sizeMin: preset.min, sizeMax: preset.max }));
+                  }
+                }}
                 size="sm"
               />
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  value={filters.sizeMin !== undefined ? filters.sizeMin : ''}
+                  onChange={(e) =>
+                    onChange(
+                      cleanFilters({
+                        ...filters,
+                        sizeMin: e.target.value ? Number(e.target.value) : undefined,
+                      }),
+                    )
+                  }
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
+                  placeholder="最小 (bytes)"
+                  min={0}
+                />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>~</span>
+                <input
+                  type="number"
+                  value={filters.sizeMax !== undefined ? filters.sizeMax : ''}
+                  onChange={(e) =>
+                    onChange(
+                      cleanFilters({
+                        ...filters,
+                        sizeMax: e.target.value ? Number(e.target.value) : undefined,
+                      }),
+                    )
+                  }
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-primary)',
+                  }}
+                  placeholder="最大 (bytes)"
+                  min={0}
+                />
+              </div>
             </div>
+
           </div>
         </>,
         document.body,

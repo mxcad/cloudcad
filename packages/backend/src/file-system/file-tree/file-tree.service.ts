@@ -398,6 +398,12 @@ export class FileTreeService {
       nodeType,
       extension,
       fileStatus,
+      modifiedAtFrom,
+      modifiedAtTo,
+      createdAtFrom,
+      createdAtTo,
+      sizeMin,
+      sizeMax,
       page = 1,
       limit = 50,
       sortBy,
@@ -446,11 +452,43 @@ export class FileTreeService {
     }
 
     if (extension) {
-      where.extension = extension;
+      const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+      if (extensions.length > 0) {
+        const extensionCond: Prisma.FileSystemNodeWhereInput = { extension: { in: extensions } };
+        if (where.OR) {
+          (where.OR as Prisma.FileSystemNodeWhereInput[]).push(extensionCond, { isFolder: true });
+        } else {
+          where.OR = [{ isFolder: true }, extensionCond];
+        }
+      }
     }
 
     if (fileStatus) {
-      where.fileStatus = fileStatus;
+      const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 0) {
+        where.fileStatus = { in: statuses as FileStatus[] };
+      }
+    }
+
+    if (createdAtFrom || createdAtTo) {
+      const filter: Prisma.DateTimeFilter = {};
+      if (createdAtFrom) filter.gte = new Date(createdAtFrom);
+      if (createdAtTo) filter.lte = new Date(createdAtTo);
+      where.createdAt = filter;
+    }
+
+    if (modifiedAtFrom || modifiedAtTo) {
+      const filter: Prisma.DateTimeFilter = {};
+      if (modifiedAtFrom) filter.gte = new Date(modifiedAtFrom);
+      if (modifiedAtTo) filter.lte = new Date(modifiedAtTo);
+      where.updatedAt = filter;
+    }
+
+    if (sizeMin !== undefined || sizeMax !== undefined) {
+      const filter: Prisma.IntFilter = {};
+      if (sizeMin !== undefined) filter.gte = sizeMin;
+      if (sizeMax !== undefined) filter.lte = sizeMax;
+      where.size = filter;
     }
 
     try {
@@ -672,10 +710,11 @@ export class FileTreeService {
       sortOrder?: 'asc' | 'desc';
       search?: string;
       extension?: string;
+      fileStatus?: string;
     }
   ) {
     try {
-      const { projectId, page, limit, sortBy, sortOrder, search, extension } = options || {};
+      const { projectId, page, limit, sortBy, sortOrder, search, extension, fileStatus } = options || {};
 
       // ── Project-scoped trash ─────────────────────────────────────
       if (projectId) {
@@ -725,7 +764,12 @@ export class FileTreeService {
         }
 
         if (extension) {
-          where.extension = extension;
+          const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+          if (extensions.length > 0) where.extension = { in: extensions };
+        }
+        if (fileStatus) {
+          const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
+          if (statuses.length > 0) where.fileStatus = { in: statuses as FileStatus[] };
         }
 
         const [nodes, total] = await Promise.all([
@@ -800,7 +844,12 @@ export class FileTreeService {
       }
 
       if (extension) {
-        where.extension = extension;
+        const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+        if (extensions.length > 0) where.extension = { in: extensions };
+      }
+      if (fileStatus) {
+        const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
+        if (statuses.length > 0) where.fileStatus = { in: statuses as FileStatus[] };
       }
 
       const [nodes, total] = await Promise.all([
@@ -1100,11 +1149,13 @@ export class FileTreeService {
       }
 
       if (extension) {
-        where.extension = extension;
+        const extensions = extension.split(',').map(s => s.trim()).filter(Boolean);
+        if (extensions.length > 0) where.extension = { in: extensions };
       }
 
       if (fileStatus) {
-        where.fileStatus = fileStatus;
+        const statuses = fileStatus.split(',').map(s => s.trim()).filter(Boolean);
+        if (statuses.length > 0) where.fileStatus = { in: statuses as FileStatus[] };
       }
 
       // 查询文件列表和总数

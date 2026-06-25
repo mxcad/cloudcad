@@ -22,7 +22,6 @@ export class MyAlignedDimension extends MxDbAlignedDimension {
 
 async function Mx_Linear() {
     // 让用户在图上点取第一点.
-    let myThis = this;
     const getPoint = new MrxDbgUiPrPoint();
     getPoint.setMessage("指定第一点:");
     getPoint.go((status) => {
@@ -121,7 +120,6 @@ function BR_AngleMeasure() {
 
 function BR_CoordMeasure() {
     // 让用户在图上点取第一点.
-    let myThis = this;
     const getPoint = new MrxDbgUiPrPoint();
     getPoint.setMessage("指定坐标点:");
     getPoint.go((status) => {
