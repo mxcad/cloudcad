@@ -366,11 +366,6 @@ export class ShareService {
       );
       throw new ForbiddenException('分享令牌与请求的文件不匹配');
     }
-
-    await this.prisma.fileShare.update({
-      where: { id: share.id },
-      data: { usedCount: { increment: 1 } },
-    });
   }
 
   async updateShare(token: string, userId: string, dto: UpdateShareDto) {
