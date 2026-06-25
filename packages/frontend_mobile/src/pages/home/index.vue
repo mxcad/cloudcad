@@ -351,6 +351,8 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
             window.removeEventListener('mxcad-new-file', handleNewFile)
             window.removeEventListener('mxcad-show-collaborate', handleShowCollaborate)
             autoJoinCleanup?.()
+            // 离开页面时退出当前协同会话
+            exitCollaborationIfNeeded()
             // 组件卸载时重置协同分享状态（与 PC CADEditorDirect.tsx cleanup 对齐）
             if (editorState.state.fromCollabShare) {
                 editorState.setCollabShareState({ fromCollabShare: false, targetWorkId: null })

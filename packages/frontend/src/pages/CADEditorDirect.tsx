@@ -36,6 +36,7 @@ import { DropIndicator } from '../components/drop-indicator/DropIndicator';
 import { uploadFile } from '../utils/mxcadUploadUtils';
 import { calculateFileHash } from '../utils/hashUtils';
 import { saveAsFileDialog } from 'mxcad';
+import { exitCurrentCollaboration } from '@/services/collaborationService';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/PdfExportModal';
@@ -543,6 +544,9 @@ export const CADEditorDirect: React.FC = () => {
 
   // 隐藏编辑器
   const hideEditor = useCallback(() => {
+    // 退出当前协同会话（路由导航离开 CAD 编辑器时清理）
+    exitCurrentCollaboration();
+
     setIsActiveLocal(false);
     setIsActive(false);
     setLoading(false);
