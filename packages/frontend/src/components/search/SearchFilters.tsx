@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Filter, X, Calendar, FileText, Ruler, ArrowUpDown } from 'lucide-react';
+import { Filter, X, Calendar, CalendarPlus, FileText, Ruler, ArrowUpDown } from 'lucide-react';
 import { Select, type SelectOption } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Z_LAYERS } from '@/constants/layers';
+import { formatFileSize, toBytes, FileSizeInput, type SizeUnit } from '@/components/ui/FileSize';
 
 export interface SearchFilterValues {
   extensions?: string[];
@@ -41,10 +42,10 @@ const extOptions = [
 
 const SIZE_PRESETS: { value: string; label: string; min?: number; max?: number }[] = [
   { value: '', label: '全部大小' },
-  { value: 'lt1mb', label: '< 1 MB', max: 1_000_000 },
-  { value: '1mb-10mb', label: '1 MB - 10 MB', min: 1_000_000, max: 10_000_000 },
-  { value: '10mb-100mb', label: '10 MB - 100 MB', min: 10_000_000, max: 100_000_000 },
-  { value: 'gt100mb', label: '> 100 MB', min: 100_000_000 },
+  { value: 'lt1mb', label: '< 1 MB', max: toBytes(1, 'MB') },
+  { value: '1mb-10mb', label: '1 MB - 10 MB', min: toBytes(1, 'MB'), max: toBytes(10, 'MB') },
+  { value: '10mb-100mb', label: '10 MB - 100 MB', min: toBytes(10, 'MB'), max: toBytes(100, 'MB') },
+  { value: 'gt100mb', label: '> 100 MB', min: toBytes(100, 'MB') },
 ];
 
 const timePresets: { value: string; label: string }[] = [
@@ -78,17 +79,10 @@ function parseSortValue(value: string): { sortBy?: string; sortOrder?: 'asc' | '
   return { sortBy: parts[0], sortOrder: (parts[1] as 'asc' | 'desc') || 'desc' };
 }
 
-function formatBytes(bytes?: number): string {
-  if (bytes === undefined) return '';
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;
-  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`;
-  return `${bytes} B`;
-}
-
 function getSizeLabel(min?: number, max?: number): string | undefined {
-  if (min !== undefined && max !== undefined) return `${formatBytes(min)} ~ ${formatBytes(max)}`;
-  if (min !== undefined) return `> ${formatBytes(min)}`;
-  if (max !== undefined) return `< ${formatBytes(max)}`;
+  if (min !== undefined && max !== undefined) return `${formatFileSize(min)} ~ ${formatFileSize(max)}`;
+  if (min !== undefined) return `> ${formatFileSize(min)}`;
+  if (max !== undefined) return `< ${formatFileSize(max)}`;
   return undefined;
 }
 
@@ -227,6 +221,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
   const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
+  const [sizeUnit, setSizeUnit] = useState<SizeUnit>('MB');
 
   const closePanel = useCallback(() => {
     setOpen(false);
@@ -234,10 +229,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    const handleResize = () => closePanel();
-    window.addEventListener('resize', handleResize);
+    const closeOnScroll = () => closePanel();
+    const closeOnResize = () => closePanel();
+    window.addEventListener('scroll', closeOnScroll, true);
+    window.addEventListener('resize', closeOnResize);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', closeOnScroll, true);
+      window.removeEventListener('resize', closeOnResize);
     };
   }, [open, closePanel]);
 
@@ -372,36 +370,36 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 <Calendar size={12} className="inline mr-1" />
                 修改时间
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>起</span>
                 <input
                   type="date"
                   value={filters.modifiedAtFrom ? filters.modifiedAtFrom.slice(0, 10) : ''}
                   onChange={(e) =>
                     onChange(cleanFilters({ ...filters, modifiedAtFrom: e.target.value || undefined, timeRange: undefined }))
                   }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
                   style={{
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
                   }}
-                  placeholder="起始"
                 />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>~</span>
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
                 <input
                   type="date"
                   value={filters.modifiedAtTo ? filters.modifiedAtTo.slice(0, 10) : ''}
                   onChange={(e) =>
                     onChange(cleanFilters({ ...filters, modifiedAtTo: e.target.value || undefined, timeRange: undefined }))
                   }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
                   style={{
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
                   }}
-                  placeholder="结束"
                 />
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>止</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {timePresets.slice(1).map((p) => (
@@ -433,39 +431,39 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
             <div className="space-y-1.5">
               <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <Calendar size={12} className="inline mr-1" />
+                <CalendarPlus size={12} className="inline mr-1" />
                 创建时间
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>起</span>
                 <input
                   type="date"
                   value={filters.createdAtFrom ? filters.createdAtFrom.slice(0, 10) : ''}
                   onChange={(e) =>
                     onChange(cleanFilters({ ...filters, createdAtFrom: e.target.value || undefined }))
                   }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
                   style={{
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
                   }}
-                  placeholder="起始"
                 />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>~</span>
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
                 <input
                   type="date"
                   value={filters.createdAtTo ? filters.createdAtTo.slice(0, 10) : ''}
                   onChange={(e) =>
                     onChange(cleanFilters({ ...filters, createdAtTo: e.target.value || undefined }))
                   }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px]"
+                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
                   style={{
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
                   }}
-                  placeholder="结束"
                 />
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>止</span>
               </div>
             </div>
 
@@ -493,46 +491,22 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 }}
                 size="sm"
               />
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  value={filters.sizeMin !== undefined ? filters.sizeMin : ''}
-                  onChange={(e) =>
-                    onChange(
-                      cleanFilters({
-                        ...filters,
-                        sizeMin: e.target.value ? Number(e.target.value) : undefined,
-                      }),
-                    )
-                  }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-primary)',
-                  }}
-                  placeholder="最小 (bytes)"
+              <div className="flex items-center gap-1">
+                <FileSizeInput
+                  value={filters.sizeMin}
+                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMin: v }))}
+                  unit={sizeUnit}
+                  onUnitChange={setSizeUnit}
+                  placeholder="最小"
                   min={0}
                 />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>~</span>
-                <input
-                  type="number"
-                  value={filters.sizeMax !== undefined ? filters.sizeMax : ''}
-                  onChange={(e) =>
-                    onChange(
-                      cleanFilters({
-                        ...filters,
-                        sizeMax: e.target.value ? Number(e.target.value) : undefined,
-                      }),
-                    )
-                  }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-primary)',
-                  }}
-                  placeholder="最大 (bytes)"
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
+                <FileSizeInput
+                  value={filters.sizeMax}
+                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMax: v }))}
+                  unit={sizeUnit}
+                  onUnitChange={setSizeUnit}
+                  placeholder="最大"
                   min={0}
                 />
               </div>

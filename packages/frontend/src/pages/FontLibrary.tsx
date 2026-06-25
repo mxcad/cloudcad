@@ -35,6 +35,7 @@ import type { TagVariant } from '@/components/ui/Tag';
 import { usePermission } from '../hooks/usePermission';
 import { useNotification } from '../contexts/NotificationContext';
 import { getErrorMessage } from '../utils/errorHandler';
+import { formatFileSize } from '../components/ui/FileSize';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -387,15 +388,6 @@ export default function FontLibrary(props: FontLibraryProps) {
       console.error('下载字体失败:', error);
       showToast(getErrorMessage(error), 'error');
     }
-  };
-
-  // 格式化文件大小
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   // 格式化日期
@@ -1022,10 +1014,6 @@ function UploadFontModal({
     if (e.dataTransfer.files.length > 0) {
       addFiles(e.dataTransfer.files);
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
   };
 
   return (

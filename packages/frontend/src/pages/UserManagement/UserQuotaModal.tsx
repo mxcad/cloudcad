@@ -4,7 +4,7 @@ import { User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Loader2 } from 'lucide-react';
-import { FileNameInput } from '@/components/ui/FileNameInput';
+import { FileSizeInput } from '@/components/ui/FileSize';
 
 interface UserQuotaModalProps {
   isOpen: boolean;
@@ -73,18 +73,15 @@ export function UserQuotaModal({
             <HardDrive size={16} />
             <span>个人空间存储配额</span>
           </label>
-          <FileNameInput
-            type="number"
-            value={quota}
-            onChange={(e) => {
-              const gb = parseInt(e.target.value, 10);
-              if (!isNaN(gb) && gb >= 0) {
-                onQuotaChange(gb);
-              }
+          <FileSizeInput
+            value={quota > 0 ? quota * 1024 * 1024 * 1024 : 0}
+            onChange={(bytes) => {
+              if (bytes === undefined) return;
+              onQuotaChange(parseFloat((bytes / (1024 * 1024 * 1024)).toFixed(2)));
             }}
-            min="0"
-            step="1"
-            suffix="GB"
+            min={0}
+            defaultUnit="GB"
+            units={['MB', 'GB', 'TB']}
           />
           <p className="quota-hint">
             默认配额：{defaultQuota} GB

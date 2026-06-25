@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { RefreshIcon } from '../../components/FileIcons';
 import { SearchInput } from '@/components/search/SearchInput';
 import { SearchFilters, type SearchFilterValues, getActiveFilterChips } from '@/components/search/SearchFilters';
 import { ViewToggle } from '@/components/common/ViewToggle';

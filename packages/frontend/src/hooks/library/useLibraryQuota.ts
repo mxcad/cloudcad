@@ -83,9 +83,9 @@ export function useLibraryQuota({
           setLibraryStorageInfo(storageInfo);
           setQuotaIsDefault(storageInfo.isDefault ?? true);
           // total 是字节，转换为 GB
-          const totalGB = Math.round(
-            (storageInfo.total || defaultVal * 1024 * 1024 * 1024) /
-              (1024 * 1024 * 1024)
+          const totalGB = parseFloat(
+            ((storageInfo.total || defaultVal * 1024 * 1024 * 1024) /
+              (1024 * 1024 * 1024)).toFixed(2)
           );
           setLibraryQuota(totalGB);
         }

@@ -22,15 +22,8 @@ import {
 import { Z_LAYERS } from '../../constants/layers';
 import { useUploadManager } from '../../hooks/useUploadManager';
 import type { UploadTask } from '../../utils/uploadManager';
+import { formatFileSize } from '../ui/FileSize';
 import './UploadPanel.css';
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 function getStatusLabel(task: UploadTask): string {
   switch (task.status) {

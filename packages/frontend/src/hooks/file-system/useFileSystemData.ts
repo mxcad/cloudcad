@@ -242,15 +242,15 @@ export const useFileSystemData = ({
           projectId: searchProjectId,
           page: pagination.page,
           limit: pagination.limit,
-          extension: (searchFilters.extensions && searchFilters.extensions.length > 0) ? searchFilters.extensions.join(',') : undefined,
-          modifiedAtFrom: searchFilters.modifiedAtFrom || undefined,
-          modifiedAtTo: searchFilters.modifiedAtTo || undefined,
-          createdAtFrom: searchFilters.createdAtFrom || undefined,
-          createdAtTo: searchFilters.createdAtTo || undefined,
-          sizeMin: searchFilters.sizeMin,
-          sizeMax: searchFilters.sizeMax,
-          sortBy: searchFilters.sortBy || undefined,
-          sortOrder: searchFilters.sortOrder || undefined,
+          extension: (hasFilter && searchFilters.extensions && searchFilters.extensions.length > 0) ? searchFilters.extensions.join(',') : undefined,
+          modifiedAtFrom: (hasFilter && searchFilters.modifiedAtFrom) || undefined,
+          modifiedAtTo: (hasFilter && searchFilters.modifiedAtTo) || undefined,
+          createdAtFrom: (hasFilter && searchFilters.createdAtFrom) || undefined,
+          createdAtTo: (hasFilter && searchFilters.createdAtTo) || undefined,
+          sizeMin: (hasFilter && searchFilters.sizeMin !== undefined) ? searchFilters.sizeMin : undefined,
+          sizeMax: (hasFilter && searchFilters.sizeMax !== undefined) ? searchFilters.sizeMax : undefined,
+          sortBy: (hasFilter && searchFilters.sortBy) || undefined,
+          sortOrder: (hasFilter && searchFilters.sortOrder) || undefined,
         },
         signal: abortSignal,
       });
@@ -283,7 +283,7 @@ export const useFileSystemData = ({
     : undefined;
 
   const trashQuery = useQuery({
-    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery, ...searchFilters }] as const,
+    queryKey: [...queryKeys.fileSystem.trash, { projectId: projectIdForTrash, page: pagination.page, limit: pagination.limit, search: searchQuery, extensions: searchFilters.extensions, sortBy: searchFilters.sortBy, sortOrder: searchFilters.sortOrder }] as const,
     queryFn: async () => {
       const response = await fileSystemControllerGetTrash({
         query: {

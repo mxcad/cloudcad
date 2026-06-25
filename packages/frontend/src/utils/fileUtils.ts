@@ -12,16 +12,9 @@
 
 import { FileSystemNode } from '../types/filesystem';
 import { API_BASE_URL } from '../config/apiConfig';
+import { formatFileSize as _formatFileSize } from '../components/ui/FileSize';
 
-export const formatFileSize = (bytes: number | null | undefined): string => {
-  if (!bytes) return '-';
-
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
+export const formatFileSize = _formatFileSize;
 
 export const getFileIcon = (node: FileSystemNode) => {
   if (node.isFolder) {

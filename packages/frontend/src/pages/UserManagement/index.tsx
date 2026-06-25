@@ -260,7 +260,7 @@ export const UserManagement = () => {
     try {
       const info = await getStorageQuota(user.id);
       if (info?.total) {
-        setUserQuota(Math.round(info.total / (1024 * 1024 * 1024)));
+        setUserQuota(parseFloat((info.total / (1024 * 1024 * 1024)).toFixed(2)));
       }
       if (info?.nodeId) {
         setQuotaNodeId(info.nodeId);

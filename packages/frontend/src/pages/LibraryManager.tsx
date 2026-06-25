@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { FileNameInput } from '../components/ui/FileNameInput';
+import { FileSizeInput, formatFileSize } from '../components/ui/FileSize';
 import { DownloadFormatModal } from '../components/modals/DownloadFormatModal';
 import { RenameModal } from '../components/modals/RenameModal';
 import { LibrarySelectFolderModal } from '../components/modals/LibrarySelectFolderModal';
@@ -38,7 +38,7 @@ import { EmptyFolderIcon } from '../components/FileIcons';
 import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
-import { formatFileSize } from '../utils/fileUtils';
+
 import { FileSystemHeader } from './FileSystemManager/FileSystemHeader';
 import { FileSystemContent } from './FileSystemManager/FileSystemContent';
 import { FileSystemStates } from './FileSystemManager/FileSystemStates';
@@ -1092,18 +1092,15 @@ export const LibraryManager: React.FC = () => {
               <HardDrive size={16} />
               <span>库存储配额</span>
             </label>
-            <FileNameInput
-              type="number"
-              value={libraryQuota}
-              onChange={(e) => {
-                const gb = parseInt(e.target.value, 10);
-                if (!isNaN(gb) && gb >= 0) {
-                  setLibraryQuota(gb);
-                }
+            <FileSizeInput
+              value={libraryQuota > 0 ? libraryQuota * 1024 * 1024 * 1024 : 0}
+              onChange={(bytes) => {
+                if (bytes === undefined) return;
+                setLibraryQuota(parseFloat((bytes / (1024 * 1024 * 1024)).toFixed(2)));
               }}
-              min="0"
-              step="1"
-              suffix="GB"
+              min={0}
+              defaultUnit="GB"
+              units={['MB', 'GB', 'TB']}
             />
             <p className="quota-hint">
               默认配额：{defaultLibraryQuota} GB

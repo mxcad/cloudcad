@@ -136,14 +136,6 @@ interface ResourceListProps {
   onPageSizeChange?: (pageSize: number) => void;
 }
 
-/** 格式化文件大小 */
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 /** 格式化日期 */
 function formatDate(dateString?: string): string {
   if (!dateString) return '';

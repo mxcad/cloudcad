@@ -101,7 +101,7 @@ model FileSystemNode {
   deletedByCascade               Boolean          @default(false)
   deletedFromStorage             DateTime?
   projectId                      String?
-  storageQuota                   Int?             @default(-1)
+  storageQuota                   Float?           @default(-1)
   searchVector                   Unsupported("tsvector")?
   owner                          User             @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   parent                         FileSystemNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
