@@ -338,6 +338,7 @@ export const Profile: React.FC = () => {
     }
     try {
       await sendBindCode({ email: emailForm.email });
+      setCountdown(60);
       setEmailStep('verify');
       setSuccess('验证码已发送到您的邮箱');
     } catch (err) {
@@ -349,6 +350,25 @@ export const Profile: React.FC = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendBindCode = async () => {
+    setSendingCode(true);
+    setError(null);
+    try {
+      await sendBindCode({ email: emailForm.email });
+      setSuccess('验证码已重新发送到您的邮箱');
+      setCountdown(60);
+    } catch (err) {
+      setError(
+        (err as Error & { response?: { data?: { message?: string } } }).response
+          ?.data?.message ||
+          (err as Error).message ||
+          '发送验证码失败'
+      );
+    } finally {
+      setSendingCode(false);
     }
   };
 
@@ -825,6 +845,7 @@ export const Profile: React.FC = () => {
       if (response?.success) {
         showToast('手机号解绑成功', 'success');
         setSuccess('手机号解绑成功');
+        setCountdown(0);
         await refreshUser();
       } else {
         setError(response?.message || '解绑失败');
@@ -1073,6 +1094,7 @@ export const Profile: React.FC = () => {
                 onEmailChange={handleEmailChange}
                 onSendBindCode={handleSendBindCode}
                 onVerifyBindEmail={handleVerifyBindEmail}
+                onResendBindCode={handleResendBindCode}
                 onFocusField={setFocusedField}
                 onSendUnbindCode={handleSendUnbindEmailCode}
                 onVerifyOldEmail={handleVerifyOldEmail}

@@ -133,7 +133,6 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
           <div className="button-group">
             <Button
               variant="secondary"
-              size="sm"
               className="flex-1"
               onClick={() => onSetEditingPhone(false)}
             >
@@ -225,7 +224,6 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
             {isRebind ? (
               <Button
                 variant="secondary"
-                size="sm"
                 className="flex-1"
                 onClick={() => onSetEditingPhone(false)}
               >
@@ -234,7 +232,6 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
             ) : (
               <Button
                 variant="secondary"
-                size="sm"
                 className="flex-1"
                 onClick={() => {
                   onPhoneChange({

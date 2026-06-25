@@ -24,6 +24,7 @@ interface ProfileEmailTabProps {
   onEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSendBindCode: (e: React.FormEvent) => void;
   onVerifyBindEmail: (e: React.FormEvent) => void;
+  onResendBindCode?: () => void;
   onSendUnbindCode: () => void;
   onVerifyOldEmail: (e: React.FormEvent) => void;
   onSendNewEmailCode: () => void;
@@ -50,6 +51,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
   onEmailChange,
   onSendBindCode,
   onVerifyBindEmail,
+  onResendBindCode,
   onSendUnbindCode,
   onVerifyOldEmail,
   onSendNewEmailCode,
@@ -146,7 +148,6 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
           <div className="button-group">
             <Button
               variant="secondary"
-              size="sm"
               className="flex-1"
               onClick={() => onSetEditingEmail(false)}
             >
@@ -225,7 +226,6 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
           <div className="button-group">
             <Button
               variant="secondary"
-              size="sm"
               className="flex-1"
               onClick={() => onSetEditingEmail(false)}
             >
@@ -284,7 +284,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 <Shield size={14} />
                 验证码
               </label>
-              <div className="input-wrapper">
+              <div className="input-wrapper has-button">
                 <Input
                   type="text"
                   name="code"
@@ -296,18 +296,23 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                   maxLength={6}
                   required
                 />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={countdown > 0}
+                  loading={sendingCode}
+                  onClick={onResendBindCode}
+                >
+                  {countdown > 0 ? `${countdown}s` : '获取验证码'}
+                </Button>
                 <div className="input-glow" />
               </div>
             </div>
             <div className="button-group">
               <Button
                 variant="secondary"
-                size="sm"
                 className="flex-1"
-                onClick={() => {
-                  onEmailChange(createChangeEvent('email', ''));
-                  onEmailChange(createChangeEvent('code', ''));
-                }}
+                onClick={() => onSetEditingEmail(false)}
               >
                 返回修改
               </Button>
