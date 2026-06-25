@@ -1042,9 +1042,9 @@ export const LibraryManager: React.FC = () => {
         onClose={() => setShowDirectoryImport(false)}
         targetParentId={currentNode?.id || libraryId || ''}
         libraryType={libraryType}
-        onSuccess={() => {
+        onSuccess={(success) => {
           refresh();
-          showToast('批量导入成功', 'success');
+          showToast(success ? '批量导入成功' : '批量导入完成（部分文件导入失败）', success ? 'success' : 'warning');
         }}
       />
 
