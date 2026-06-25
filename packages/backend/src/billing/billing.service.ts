@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Prisma as PrismaType } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { PaymentGatewayFactory } from './gateway/payment-gateway.factory';
 import { MockPaymentGateway } from './gateway/mock/mock-payment.gateway';
@@ -58,8 +59,8 @@ export class BillingService {
 
   async getUserOrders(userId: string, page = 1, limit = 20, status?: string, keyword?: string) {
     const skip = (page - 1) * limit;
-    const where: any = { userId };
-    if (status) where.status = status;
+    const where: PrismaType.PaymentOrderWhereInput = { userId };
+    if (status) where.status = status as OrderStatus;
     if (keyword) where.orderNo = { contains: keyword };
     const [items, total] = await Promise.all([
       this.prisma.paymentOrder.findMany({
@@ -102,7 +103,7 @@ export class BillingService {
         ip: dto.ip || '127.0.0.1',
         redirectUrl: dto.redirectUrl,
       });
-      const updateData: Record<string, any> = { gatewayOrderId: result.gatewayOrderId };
+      const updateData: PrismaType.PaymentOrderUncheckedUpdateInput = { gatewayOrderId: result.gatewayOrderId };
       // 复用 pending 订单时同步更新 tradeType（用户可能切换支付方式）和 description（套餐名可能已变更）
       if (dto.tradeType !== pending.tradeType) updateData.tradeType = dto.tradeType;
       if (plan.name !== pending.description) updateData.description = plan.name;
@@ -182,8 +183,8 @@ export class BillingService {
 
   async getAllOrders(page = 1, limit = 20, status?: string, keyword?: string) {
     const skip = (page - 1) * limit;
-    const where: any = {};
-    if (status) where.status = status;
+    const where: PrismaType.PaymentOrderWhereInput = {};
+    if (status) where.status = status as OrderStatus;
     if (keyword) where.orderNo = { contains: keyword };
     const [items, total] = await Promise.all([
       this.prisma.paymentOrder.findMany({
@@ -264,18 +265,24 @@ export class BillingService {
           break;
         case 'CLOSED':
           this.logger.log(`order closed by gateway: ${orderNo}`);
-          await this.prisma.paymentOrder.update({
-            where: { id: order.id },
-            data: { status: OrderStatus.CLOSED, closedAt: new Date() },
+          await this.prisma.$transaction(async (tx) => {
+            const txClient = tx as Prisma.TransactionClient;
+            await txClient.paymentOrder.update({
+              where: { id: order.id },
+              data: { status: OrderStatus.CLOSED, closedAt: new Date() },
+            });
           });
           break;
         case 'NOTPAY':
           // 微信支付二维码已过期但微信返回 NOTPAY，标记为 TIMEOUT
           if (order.createdAt < new Date(Date.now() - 7200000)) {
             this.logger.log(`order exceeded 2h window, marking timeout: ${orderNo}`);
-            await this.prisma.paymentOrder.update({
-              where: { id: order.id },
-              data: { status: OrderStatus.TIMEOUT, closedAt: new Date() },
+            await this.prisma.$transaction(async (tx) => {
+              const txClient = tx as Prisma.TransactionClient;
+              await txClient.paymentOrder.update({
+                where: { id: order.id },
+                data: { status: OrderStatus.TIMEOUT, closedAt: new Date() },
+              });
             });
           }
           break;
@@ -408,7 +415,7 @@ export class BillingService {
           expiresAt: cursor > now ? cursor : now,
         },
         update: {
-          tier: maxTier as any,
+          tier: maxTier as MembershipTier,
           expiresAt: cursor > now ? cursor : now,
         },
       });

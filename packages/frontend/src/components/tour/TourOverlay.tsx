@@ -105,6 +105,39 @@ function isElementVisible(element: HTMLElement): boolean {
 }
 
 /**
+ * 获取元素在视口中的可见矩形（裁剪到最近滚动容器的可视区域）
+ */
+function getVisibleRect(element: HTMLElement): DOMRect {
+  const rect = element.getBoundingClientRect();
+  const scrollParent = getScrollParent(element);
+
+  let clipTop = 0;
+  let clipLeft = 0;
+  let clipRight = window.innerWidth;
+  let clipBottom = window.innerHeight;
+
+  if (scrollParent !== document.body && scrollParent !== document.documentElement) {
+    const parentRect = (scrollParent as HTMLElement).getBoundingClientRect();
+    clipTop = parentRect.top;
+    clipLeft = parentRect.left;
+    clipRight = parentRect.right;
+    clipBottom = parentRect.bottom;
+  }
+
+  const visibleTop = Math.max(rect.top, clipTop);
+  const visibleLeft = Math.max(rect.left, clipLeft);
+  const visibleBottom = Math.min(rect.bottom, clipBottom);
+  const visibleRight = Math.min(rect.right, clipRight);
+
+  return new DOMRect(
+    visibleLeft,
+    visibleTop,
+    Math.max(0, visibleRight - visibleLeft),
+    Math.max(0, visibleBottom - visibleTop)
+  );
+}
+
+/**
  * 滚动到目标元素
  */
 function scrollIntoView(element: HTMLElement): void {
@@ -257,7 +290,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
   const updateHighlightPosition = useCallback(() => {
     if (!highlight.element) return;
     
-    const rect = highlight.element.getBoundingClientRect();
+    const rect = getVisibleRect(highlight.element);
     setHighlight(prev => ({ ...prev, rect }));
   }, [highlight.element]);
 
@@ -281,7 +314,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
       
       if (result.element) {
         scrollIntoView(result.element);
-        const rect = result.element.getBoundingClientRect();
+        const rect = getVisibleRect(result.element);
         setHighlight({
           rect,
           element: result.element,

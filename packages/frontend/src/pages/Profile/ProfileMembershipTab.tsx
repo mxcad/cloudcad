@@ -88,16 +88,17 @@ export const ProfileMembershipTab: React.FC = () => {
     const kw = searchKeywordRef.current;
     const st = searchStatusRef.current;
     try {
-      const [planRes, memRes, ordRes]: any = await Promise.all([
+      const [planRes, memRes, ordRes] = await Promise.all([
         billingControllerGetPlans(),
         billingControllerGetMembership(),
-        billingControllerGetOrders({ query: { page: currentPage, limit: 10, keyword: kw || undefined, status: st || undefined } }),
+        billingControllerGetOrders({ query: { page: currentPage, limit: 10, keyword: kw || undefined, status: (st || undefined) as 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'CLOSED' | 'TIMEOUT' | undefined } }),
       ]);
       const list = planRes?.data;
       if (Array.isArray(list) && list.length > 0) setPlans(list as Plan[]);
       if (memRes?.data) setMembership(memRes.data as Membership);
       if (ordRes?.data) {
-        const data = ordRes.data;
+        type OrderList = { items: Order[]; total: number };
+        const data = ordRes.data as OrderList;
         const items = Array.isArray(data) ? data as Order[] : (data.items ?? []) as Order[];
         setOrders(items);
         if (!Array.isArray(data) && typeof data.total === 'number') {
@@ -105,12 +106,12 @@ export const ProfileMembershipTab: React.FC = () => {
         }
 
         const newRefunded = items.filter(
-          (o: Order) => o.status === 'REFUNDED' && !prevRefundedIds.current.has(o.id),
+          (o) => o.status === 'REFUNDED' && !prevRefundedIds.current.has(o.id),
         );
         if (newRefunded.length > 0) {
-          newRefunded.forEach((o: Order) => prevRefundedIds.current.add(o.id));
+          newRefunded.forEach((o) => prevRefundedIds.current.add(o.id));
           const desc = newRefunded.length === 1
-            ? `订单 ${(newRefunded[0] as Order).orderNo.slice(-8)} 已退款`
+            ? `订单 ${newRefunded[0]!.orderNo.slice(-8)} 已退款`
             : `${newRefunded.length} 个订单已退款`;
           window.dispatchEvent(
             new CustomEvent('cloudcad:toast', { detail: { message: desc, type: 'info' } }),
@@ -157,14 +158,14 @@ export const ProfileMembershipTab: React.FC = () => {
   const doCreateOrder = async (planId: string) => {
     // MWEB 需要传 redirectUrl，支付完成后微信跳转回来
     const tradeType = detectTradeType();
-    const body: any = { planId, tradeType };
+    const body: { planId: string; tradeType: 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP'; redirectUrl?: string } = { planId, tradeType: tradeType as 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP' };
     if (tradeType === 'MWEB') {
       const returnUrl = new URL(window.location.href);
       returnUrl.searchParams.set('paymentReturn', '1');
       body.redirectUrl = returnUrl.toString();
     }
-    const res: any = await billingControllerCreateOrder({ body });
-    const orderData = res?.data;
+    const res = await billingControllerCreateOrder({ body });
+    const orderData = res?.data as Record<string, unknown> | undefined;
     if (res?.error || !orderData) {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '创建订单失败', type: 'error' } }),
@@ -180,11 +181,11 @@ export const ProfileMembershipTab: React.FC = () => {
     }
 
     return {
-      orderNo: orderData.orderNo,
-      payParams: orderData.payParams || null,
-      codeUrl: orderData.codeUrl || null,
-      redirectUrl: orderData.redirectUrl || null,
-      amount: orderData.amount,
+      orderNo: orderData.orderNo as string,
+      payParams: (orderData.payParams as Record<string, unknown>) || null,
+      codeUrl: (orderData.codeUrl as string) || null,
+      redirectUrl: (orderData.redirectUrl as string) || null,
+      amount: orderData.amount as number,
     };
   };
 

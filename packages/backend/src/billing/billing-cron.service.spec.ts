@@ -36,7 +36,7 @@ describe("BillingCron", () => {
         where: {
           expiresAt: { lte: expect.any(Date), not: null },
         },
-        data: { tier: MembershipTier.FREE },
+        data: { tier: MembershipTier.FREE, expiresAt: null },
       });
     });
 

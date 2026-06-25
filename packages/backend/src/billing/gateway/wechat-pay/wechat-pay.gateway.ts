@@ -86,7 +86,6 @@ export class WechatPayGateway implements PaymentGateway {
 
     const result = await this.requestWechatApi('/pay/unifiedorder', data);
 
-    const h5SignType = 'MD5';
     const timeStamp = String(Math.floor(Date.now() / 1000));
     const nonceStr = generateNonceStr();
     const signParams = {
@@ -94,7 +93,7 @@ export class WechatPayGateway implements PaymentGateway {
       timeStamp,
       nonceStr,
       package: `prepay_id=${result.prepay_id}`,
-      signType: h5SignType,
+      signType: this.signType,
     };
 
     return {
@@ -102,7 +101,7 @@ export class WechatPayGateway implements PaymentGateway {
       codeUrl: result.code_url as string | undefined,
       payParams: {
         ...signParams,
-        paySign: sign(signParams, this.key, h5SignType),
+        paySign: sign(signParams, this.key, this.signType),
       },
     };
   }
@@ -235,6 +234,7 @@ export class WechatPayGateway implements PaymentGateway {
       data.sign = sign(data, this.key, this.signType);
 
       await this.requestWechatApi('/secapi/pay/refund', data, true);
+      await this.redis.del(refundKey);
     } catch (err) {
       await this.redis.del(refundKey);
       throw err;

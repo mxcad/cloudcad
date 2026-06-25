@@ -25,6 +25,18 @@ const PAGE_SIZE = 10;
 
 type AdminTab = 'plans' | 'operations';
 
+interface AdminOrder {
+  id: string;
+  orderNo: string;
+  userId: string;
+  amount: number;
+  status: string;
+  gateway: string;
+  createdAt: string;
+  user?: { id: string; email?: string; username?: string };
+  plan?: { name: string };
+}
+
 interface PlanFormData {
   name: string;
   durationDays: number;
@@ -66,7 +78,7 @@ export default function AdminBillingPage() {
   const [refundReason, setRefundReason] = useState('');
   const [mockOrderNo, setMockOrderNo] = useState('');
 
-  const [allOrders, setAllOrders] = useState<any[]>([]);
+  const [allOrders, setAllOrders] = useState<AdminOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [orderPage, setOrderPage] = useState(1);
   const [orderTotal, setOrderTotal] = useState(0);
@@ -76,10 +88,10 @@ export default function AdminBillingPage() {
   const loadAllOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
-      const res: any = await billingAdminControllerGetAllOrders({ query: { page: orderPage, limit: PAGE_SIZE, keyword: orderSearchKeyword || undefined, status: orderSearchStatus || undefined } });
-      const body = res?.data;
+      const res = await billingAdminControllerGetAllOrders({ query: { page: orderPage, limit: PAGE_SIZE, keyword: orderSearchKeyword || undefined, status: (orderSearchStatus || undefined) as 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' | 'CLOSED' | 'TIMEOUT' | undefined } });
+      const body = res?.data as { items?: AdminOrder[]; total?: number } | undefined;
       if (body) {
-        setAllOrders(Array.isArray(body.items) ? body.items : []);
+        setAllOrders(body.items ?? []);
         setOrderTotal(body.total ?? 0);
       }
     } catch {
@@ -92,11 +104,10 @@ export default function AdminBillingPage() {
   const loadPlans = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await billingAdminControllerGetAllPlans();
-      const list = res?.data;
+      const res = await billingAdminControllerGetAllPlans();
+      const list = res?.data as (Plan & { isActive: boolean })[] | undefined;
       if (Array.isArray(list)) setPlans(list);
-    } catch (err) {
-      console.error('Failed to load admin plans', err);
+    } catch {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '加载套餐列表失败', type: 'error' } }),
       );
@@ -112,8 +123,9 @@ export default function AdminBillingPage() {
   const handleCreate = async () => {
     setSaving(true);
     try {
-      let features: any = {};
-      try { features = JSON.parse(form.features); } catch { features = {}; }
+      let features: Record<string, unknown> = {};
+      try { features = JSON.parse(form.features) as Record<string, unknown>; } catch { features = {}; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (billingAdminControllerCreatePlan as any)({
         body: {
           name: form.name,
@@ -131,7 +143,7 @@ export default function AdminBillingPage() {
       setShowCreateModal(false);
       setForm(EMPTY_FORM);
       loadPlans();
-    } catch (err) {
+    } catch {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '创建失败', type: 'error' } }),
       );
@@ -144,8 +156,9 @@ export default function AdminBillingPage() {
     if (!editingId) return;
     setSaving(true);
     try {
-      let features: any = {};
-      try { features = JSON.parse(form.features); } catch { features = {}; }
+      let features: Record<string, unknown> = {};
+      try { features = JSON.parse(form.features) as Record<string, unknown>; } catch { features = {}; }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (billingAdminControllerUpdatePlan as any)({
         path: { id: editingId },
         body: {
@@ -164,7 +177,7 @@ export default function AdminBillingPage() {
       setShowEditModal(false);
       setEditingId(null);
       loadPlans();
-    } catch (err) {
+    } catch {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '修改失败', type: 'error' } }),
       );
@@ -202,7 +215,7 @@ export default function AdminBillingPage() {
       setShowRefundModal(false);
       setRefundOrderNo('');
       setRefundReason('');
-    } catch (err) {
+    } catch {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '退款失败', type: 'error' } }),
       );
@@ -218,14 +231,14 @@ export default function AdminBillingPage() {
       );
       setShowMockCallbackModal(false);
       setMockOrderNo('');
-    } catch (err) {
+    } catch {
       window.dispatchEvent(
         new CustomEvent('cloudcad:toast', { detail: { message: '模拟回调失败', type: 'error' } }),
       );
     }
   };
 
-  const openEdit = (plan: any) => {
+  const openEdit = (plan: Plan & { isActive: boolean }) => {
     setEditingId(plan.id);
     setForm({
       name: plan.name || '',
@@ -414,7 +427,7 @@ export default function AdminBillingPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {allOrders.map((o: any) => (
+                        {allOrders.map((o) => (
                           <tr key={o.id} style={{ borderBottom: '1px solid var(--border-default)' }}>
                             <td className="px-3 py-2 font-mono text-xs text-text-primary">{o.orderNo}</td>
                             <td className="px-3 py-2 text-text-primary">{o.user?.email || o.user?.username || o.userId}</td>

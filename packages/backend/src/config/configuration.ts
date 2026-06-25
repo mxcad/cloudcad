@@ -438,6 +438,7 @@ export default (): AppConfig => {
 		appId: process.env.WECHATPAY_APPID || '',
 		mchId: process.env.WECHATPAY_MCHID || '',
 		key: process.env.WECHATPAY_KEY || '',
+		signType: (process.env.WECHATPAY_SIGN_TYPE as 'MD5' | 'HMAC-SHA256') || 'MD5',
 		notifyUrl: process.env.WECHATPAY_NOTIFY_URL || '',
 		certPath: process.env.WECHATPAY_CERT_PATH || undefined,
 		keyPath: process.env.WECHATPAY_KEY_PATH || undefined,

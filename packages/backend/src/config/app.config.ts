@@ -349,6 +349,7 @@ export interface WechatPayConfig {
   appId: string;
   mchId: string;
   key: string;
+  signType: 'MD5' | 'HMAC-SHA256';
   notifyUrl: string;
   certPath?: string;
   keyPath?: string;

@@ -1,3 +1,4 @@
+import { useCallback, useRef } from 'react';
 import { Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -63,9 +64,14 @@ export default function OrderHistory({
     return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleKeywordChange = (val: string) => {
-    onSearchChange?.(val, searchStatus);
-  };
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleKeywordChange = useCallback((val: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onSearchChange?.(val, searchStatus);
+    }, 400);
+  }, [onSearchChange, searchStatus]);
 
   const handleStatusChange = (val: string) => {
     onSearchChange?.(searchKeyword, val);

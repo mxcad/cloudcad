@@ -2970,9 +2970,7 @@ export type UpdatePlanDto = {
     /**
      * 原价（分）
      */
-    originalPrice?: {
-        [key: string]: unknown;
-    };
+    originalPrice?: number;
     /**
      * 会员等级
      */
@@ -3009,9 +3007,7 @@ export type CreatePlanDto = {
     /**
      * 原价（分）
      */
-    originalPrice?: {
-        [key: string]: unknown;
-    };
+    originalPrice?: number;
     /**
      * 会员等级
      */

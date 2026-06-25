@@ -20,7 +20,7 @@ export class UpdatePlanDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ description: '原价（分）' })
+  @ApiPropertyOptional({ description: '原价（分）', type: Number })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -41,7 +41,7 @@ export class UpdatePlanDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ description: '功能列表' })
+  @ApiPropertyOptional({ description: '功能列表', type: Object })
   @IsOptional()
   features?: any;
 }

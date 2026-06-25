@@ -5,6 +5,13 @@ import { WechatIpGuard } from './wechat-ip.guard';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import type { Request, Response } from 'express';
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
+declare module 'express' {
+  interface Request {
+    rawBody?: string;
+  }
+}
+
 @ApiTags('Billing Webhook')
 @Controller('billing/webhook')
 export class WebhookController {
@@ -28,7 +35,7 @@ export class WebhookController {
         return;
       }
 
-      const rawBody: string = (req as any).rawBody || '';
+      const rawBody = req.rawBody || '';
       if (!rawBody) {
         res.status(400).setHeader('Content-Type', 'application/xml');
         res.send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[empty body]]></return_msg></xml>');

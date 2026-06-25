@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, ConflictException }
 import { Prisma } from '@prisma/client';
 import type { MembershipPlan } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- used for runtime cast
+import { MembershipTier } from './enums/billing.enum';
 
 @Injectable()
 export class PlansService {
@@ -48,7 +50,7 @@ export class PlansService {
           durationDays: data.durationDays,
           price: data.price,
           originalPrice: data.originalPrice ?? null,
-          tier: data.tier as any,
+          tier: data.tier as MembershipTier,
           sortOrder: data.sortOrder,
           features: data.features ?? undefined,
         },
@@ -89,7 +91,7 @@ export class PlansService {
           ...(data.durationDays !== undefined && { durationDays: data.durationDays }),
           ...(data.price !== undefined && { price: data.price }),
           ...(data.originalPrice !== undefined && { originalPrice: data.originalPrice }),
-          ...(data.tier !== undefined && { tier: data.tier as any }),
+          ...(data.tier !== undefined && { tier: data.tier as MembershipTier }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
           ...(data.isActive !== undefined && { isActive: data.isActive }),
           ...(data.features !== undefined && { features: data.features }),
