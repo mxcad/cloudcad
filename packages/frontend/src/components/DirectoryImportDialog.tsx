@@ -50,6 +50,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   const [error, setError] = useState<string>('');
   const [autoXrefDiscovery, setAutoXrefDiscovery] = useState(enableAutoXrefDiscovery);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importResultRef = useRef<{ success: boolean } | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     fileTree,
@@ -128,11 +130,13 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
       );
 
       setStep('result');
+      importResultRef.current = result;
 
       if (onSuccess) {
-        setTimeout(() => {
+        closeTimerRef.current = setTimeout(() => {
           onSuccess(result.success);
           reset();
+          importResultRef.current = null;
           setStep('select');
           setError('');
           onClose();
@@ -157,14 +161,25 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
    * 处理关闭
    */
   const handleCloseModal = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
     if (step === 'importing') {
       cancelImport();
     }
+
+    if (step === 'result' && importResultRef.current && onSuccess) {
+      onSuccess(importResultRef.current.success);
+    }
+
     reset();
+    importResultRef.current = null;
     setStep('select');
     setError('');
     onClose();
-  }, [step, cancelImport, reset, onClose]);
+  }, [step, cancelImport, reset, onSuccess, onClose]);
 
   /**
    * 统计文件树（按扩展名分类）
