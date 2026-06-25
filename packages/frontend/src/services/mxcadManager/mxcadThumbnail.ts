@@ -136,7 +136,10 @@ export async function generateThumbnail(
         (imageData: string) => {
           mxcad.setAttribute({ ShowCoordinate: true });
           resolve(imageData);
-          mxcad.mxdraw.updateCanvasSize()
+          requestAnimationFrame(()=> {
+            mxcad.mxdraw.updateCanvasSize()
+          })
+          
         },
         {
           width: targetSize,

@@ -40,7 +40,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
           return parts.join(' · ') || '暂无描述';
         }
         if (node.isFolder) {
-          return `${node._count?.children || 0} 个项目`;
+          return `${node.childrenCountTrash ?? node._count?.children ?? 0} 个项目`;
         }
         if (galleryMode) {
           return formatDate(node.updatedAt);
@@ -52,6 +52,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
         node.description,
         node.isFolder,
         node._count?.children,
+        node.childrenCountTrash,
         node.size,
         node.updatedAt,
         galleryMode,
