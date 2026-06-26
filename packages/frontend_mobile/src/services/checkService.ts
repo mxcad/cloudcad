@@ -1,6 +1,7 @@
 import {
   mxCadControllerCheckFileExist,
 } from '../api-sdk';
+import { sanitizeFileName } from '../utils/sanitizeFileName';
 
 export interface DuplicateCheckResult {
   isDuplicate: boolean;
@@ -14,11 +15,12 @@ export async function checkDuplicateFile(
   nodeId?: string,
 ): Promise<DuplicateCheckResult> {
   try {
+    const safeName = sanitizeFileName(filename);
     const result = await mxCadControllerCheckFileExist({
       body: {
         fileSize,
         fileHash,
-        filename,
+        filename: safeName,
         nodeId: nodeId || '',
       },
     });

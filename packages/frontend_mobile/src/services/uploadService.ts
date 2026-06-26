@@ -4,11 +4,13 @@ import {
 } from '../api-sdk';
 import { calculateFileHash } from '../utils/hashUtils';
 import { getApiBaseUrl } from '../utils/apiConfig';
+import { sanitizeFileName } from '../utils/sanitizeFileName';
 import { uploadFile } from './mobileUploadService';
 
 export async function uploadFileForConversion(blob: Blob, fileName: string = 'file.mxweb'): Promise<string | null> {
   try {
-    const file = new File([blob], fileName, { type: blob.type || 'application/octet-stream' });
+    const safeFileName = sanitizeFileName(fileName);
+    const file = new File([blob], safeFileName, { type: blob.type || 'application/octet-stream' });
     const hash = await calculateFileHash(file);
 
     await uploadFile({
@@ -33,8 +35,9 @@ export interface PublicUploadResult {
 export async function uploadPublicFile(file: File): Promise<PublicUploadResult | null> {
   try {
     const hash = await calculateFileHash(file);
+    const safeName = sanitizeFileName(file.name);
 
-    const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '.mxweb';
+    const ext = safeName.includes('.') ? safeName.substring(safeName.lastIndexOf('.')) : '.mxweb';
     const mxwebFilename = `${hash}${ext}.mxweb`;
     const apiBaseUrl = getApiBaseUrl();
     const baseUrl = (() => {
@@ -46,20 +49,20 @@ export async function uploadPublicFile(file: File): Promise<PublicUploadResult |
       body: {
         fileSize: file.size,
         fileHash: hash,
-        filename: file.name,
+        filename: safeName,
         nodeId: '',
       },
     });
 
     if (existResult.data?.exists) {
-      return { hash, url, isCached: true, fileName: file.name };
+      return { hash, url, isCached: true, fileName: safeName };
     }
 
     const uploadResult = await mxCadControllerUploadFile({
       body: {
         file,
         hash,
-        name: file.name,
+        name: safeName,
         size: file.size,
         nodeId: '',
       },
@@ -67,7 +70,7 @@ export async function uploadPublicFile(file: File): Promise<PublicUploadResult |
 
     if (uploadResult.error) return null;
 
-    return { hash, url, isCached: false, fileName: file.name };
+    return { hash, url, isCached: false, fileName: safeName };
   } catch {
     return null;
   }

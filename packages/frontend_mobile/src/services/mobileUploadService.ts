@@ -5,6 +5,7 @@ import {
 } from '@/api-sdk/sdk.gen';
 import { handleApiError } from '@/utils/apiConfig';
 import { calculateFileHash } from '@/utils/hashUtils';
+import { sanitizeFileName } from '@/utils/sanitizeFileName';
 
 export interface MobileUploadOptions {
   file: File;
@@ -58,6 +59,11 @@ export async function uploadFile(
 
   onFileQueued?.(file);
 
+  const safeName = sanitizeFileName(file.name);
+  const safeFile = safeName !== file.name
+    ? new File([file], safeName, { type: file.type })
+    : file;
+
   const chunkSize = 5 * 1024 * 1024;
   const totalChunks = Math.ceil(file.size / chunkSize);
 
@@ -68,7 +74,7 @@ export async function uploadFile(
       body: {
         fileSize: file.size,
         fileHash: hash,
-        filename: file.name,
+        filename: safeName,
         nodeId,
       },
     });
@@ -78,10 +84,10 @@ export async function uploadFile(
       return {
         file,
         hash,
-        name: file.name,
+        name: safeName,
         size: file.size,
         type: file.type,
-        ext: getFileExt(file.name),
+        ext: getFileExt(safeName),
         isUseServerExistingFile: true,
       };
     }
@@ -92,11 +98,11 @@ export async function uploadFile(
 
     await mxCadControllerUploadFile({
       body: {
-        name: file.name,
+        name: safeName,
         hash,
         size: file.size,
         nodeId,
-        file,
+        file: safeFile,
       },
     });
 
@@ -105,10 +111,10 @@ export async function uploadFile(
     return {
       file,
       hash,
-      name: file.name,
+      name: safeName,
       size: file.size,
       type: file.type,
-      ext: getFileExt(file.name),
+      ext: getFileExt(safeName),
       isUseServerExistingFile: false,
     };
   }
@@ -126,7 +132,7 @@ export async function uploadFile(
         chunks: totalChunks,
         size: chunk.size,
         fileHash: hash,
-        filename: file.name,
+        filename: safeName,
         nodeId,
       },
     });
@@ -140,7 +146,7 @@ export async function uploadFile(
       body: {
         chunk: chunkIndex,
         chunks: totalChunks,
-        name: file.name,
+        name: safeName,
         hash,
         size: file.size,
         nodeId,
@@ -159,10 +165,10 @@ export async function uploadFile(
   return {
     file,
     hash,
-    name: file.name,
+    name: safeName,
     size: file.size,
     type: file.type,
-    ext: getFileExt(file.name),
+    ext: getFileExt(safeName),
     isUseServerExistingFile: false,
   };
   } catch (e) {

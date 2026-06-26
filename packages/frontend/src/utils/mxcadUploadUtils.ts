@@ -13,6 +13,7 @@ import { JsonValue } from './../api-sdk/core/queryKeySerializer.gen';
 ///////////////////////////////////////////////////////////////////////////////
 import { mxCadControllerCheckFileExist, mxCadControllerCheckChunkExist, mxCadControllerUploadFile } from "@/api-sdk"
 import { calculateFileHash } from './hashUtils';
+import { sanitizeFileName } from './fileUtils';
 
 /**
  * 当前上传最大文件大小（字节），可由外部动态更新
@@ -159,6 +160,12 @@ export async function uploadFile(
   // 触发文件排队回调
   onFileQueued?.(file);
 
+  // 清理文件名中的控制字符和非法字符，防止 busboy 拒绝
+  const safeName = sanitizeFileName(file.name);
+  const safeFile = safeName !== file.name
+    ? new File([file], safeName, { type: file.type })
+    : file;
+
   const chunkSize = 5 * 1024 * 1024; // 5MB
   const totalChunks = Math.ceil(file.size / chunkSize);
 
@@ -167,7 +174,7 @@ export async function uploadFile(
     const existRequest = {
       fileSize: file.size,
       fileHash: hash,
-      filename: file.name,
+      filename: safeName,
       nodeId,
       conflictStrategy,
     };
@@ -183,7 +190,7 @@ export async function uploadFile(
         file,
         hash,
         nodeId: data.nodeId || nodeId,
-        name: file.name,
+        name: safeName,
         size: file.size,
         type: file.type,
         isUseServerExistingFile: !!data.nodeId,
@@ -198,12 +205,12 @@ export async function uploadFile(
 
     const uploadData = await mxCadControllerUploadFile({
       body: {
-        name: file.name,
+        name: safeName,
         hash,
         size: file.size,
         nodeId,
         conflictStrategy,
-        file,
+        file: safeFile,
       }
     });
 
@@ -213,7 +220,7 @@ export async function uploadFile(
       file,
       hash,
       nodeId: uploadData.data?.nodeId ?? nodeId,
-      name: file.name,
+      name: safeName,
       size: file.size,
       type: file.type,
       isUseServerExistingFile: false,
@@ -239,7 +246,7 @@ export async function uploadFile(
       chunks: totalChunks,
       size: chunk.size,
       fileHash: hash,
-      filename: file.name,
+      filename: safeName,
       nodeId,
     };
     const chunkData = await mxCadControllerCheckChunkExist({
@@ -262,7 +269,7 @@ export async function uploadFile(
       body: {
         chunk: chunkIndex,
         chunks: totalChunks,
-        name: file.name,
+        name: safeName,
         hash: hash,
         size: file.size,
         nodeId: nodeId,
@@ -287,7 +294,7 @@ export async function uploadFile(
           file,
           hash,
           nodeId: uploadData.data!.nodeId,
-          name: file.name,
+          name: safeName,
           size: file.size,
           type: file.type,
           isUseServerExistingFile: true,
@@ -310,7 +317,7 @@ export async function uploadFile(
     const mergeData = await mxCadControllerUploadFile({
       body: {
         chunks: totalChunks,
-        name: file.name,
+        name: safeName,
         hash: hash,
         size: file.size,
         nodeId: nodeId,
@@ -329,7 +336,7 @@ export async function uploadFile(
         file,
         hash,
         nodeId: mergeData.data?.nodeId ?? '',
-        name: file.name,
+        name: safeName,
         size: file.size,
         type: file.type,
         isUseServerExistingFile: true,
@@ -349,7 +356,7 @@ export async function uploadFile(
     file,
     hash,
     nodeId: finalNodeId,
-    name: file.name,
+    name: safeName,
     size: file.size,
     type: file.type,
     isUseServerExistingFile: false,

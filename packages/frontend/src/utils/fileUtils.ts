@@ -205,7 +205,7 @@ export function isCadFileByName(fileName: string): boolean {
  * @returns 清理后的文件名
  */
 export function sanitizeFileName(name: string): string {
-  return name.replace(/[<>:"/\\|?*]/g, '_');
+  return name.replace(/[\x00-\x1F\x7F<>:"/\\|?*]/g, '');
 }
 
 /**

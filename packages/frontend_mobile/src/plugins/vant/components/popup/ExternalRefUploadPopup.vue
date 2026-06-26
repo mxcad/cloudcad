@@ -4,6 +4,7 @@ import { t } from '@/languages'
 import { UploadFileInfo, UploadState } from './types'
 import { publicFileControllerUploadExtReference } from '@/api-sdk'
 import { classifyApiError } from '@/utils/errorHandler'
+import { sanitizeFileName } from '@/utils/sanitizeFileName'
 import { showToast } from 'vant'
 import FloatingPopup from "../../../../components/FloatingPopup.vue"
 const props = defineProps<{ files: UploadFileInfo[] }>()
@@ -48,6 +49,7 @@ function onClose(reason: 'skip' | 'complete') {
 async function uploadSingleFile(info: UploadFileInfo, file: File): Promise<void> {
   info.uploadState = UploadState.uploading
   info.progress = 10
+  const safeName = sanitizeFileName(info.name)
 
   try {
     const chunkSize = 1 * 1024 * 1024
@@ -58,7 +60,7 @@ async function uploadSingleFile(info: UploadFileInfo, file: File): Promise<void>
     if (file.size <= chunkSize) {
       info.progress = 30
       const result = await publicFileControllerUploadExtReference({
-        body: { file, srcFileHash: info.hash, extRefFile: info.name } as never,
+        body: { file, srcFileHash: info.hash, extRefFile: safeName } as never,
       })
       if (result.error) {
         info.uploadState = UploadState.fail
@@ -80,7 +82,7 @@ async function uploadSingleFile(info: UploadFileInfo, file: File): Promise<void>
         body: {
           file: chunk,
           srcFileHash: info.hash,
-          extRefFile: info.name,
+          extRefFile: safeName,
           chunk: chunkIndex,
           chunks: totalChunks,
         } as never,

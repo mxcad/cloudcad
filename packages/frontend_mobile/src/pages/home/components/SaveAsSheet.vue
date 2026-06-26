@@ -36,7 +36,7 @@ const folderPath = ref<Array<{ id: string; name: string }>>([]);
 const folderNodes = ref<FolderNode[]>([]);
 const folderLoading = ref(false);
 
-const invalidChars = /[\\/:*?"<>|]/;
+const invalidChars = /[\x00-\x1F\x7F\\/:*?"<>|]/;
 
 const projectColumns = computed(() =>
   saveAs.projects.value.map(p => ({ text: p.name, value: p.id }))
