@@ -11,7 +11,7 @@ interface LibrarySelectFolderModalProps {
   libraryType: 'drawing' | 'block';
   currentNodeId: string;
   onClose: () => void;
-  onConfirm: (targetParentId: string) => void;
+  onConfirm: (targetParentId: string, folderName?: string) => void;
 }
 
 interface FolderNode extends FileSystemNode {
@@ -28,8 +28,6 @@ export const LibrarySelectFolderModal: React.FC<
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [libraryName, setLibraryName] = useState<string>('');
-
   const { getLibrary, getChildren } = useLibraryFolders(libraryType);
 
   const loadFolderTree = useCallback(async () => {
@@ -40,7 +38,6 @@ export const LibrarySelectFolderModal: React.FC<
 
     try {
       const library = await getLibrary();
-      setLibraryName(library.name);
 
       const rootFolders = await getChildren(library.id, currentNodeId);
 
@@ -134,11 +131,23 @@ export const LibrarySelectFolderModal: React.FC<
     setSelectedFolderId(nodeId);
   }, []);
 
+  const findNodeById = (nodes: FolderNode[], id: string): FolderNode | undefined => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
   const handleConfirm = useCallback(() => {
     if (selectedFolderId) {
-      onConfirm(selectedFolderId);
+      const node = findNodeById(folderTree, selectedFolderId);
+      onConfirm(selectedFolderId, node?.name);
     }
-  }, [selectedFolderId, onConfirm]);
+  }, [selectedFolderId, folderTree, onConfirm]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`选择目标文件夹`}>
@@ -149,10 +158,10 @@ export const LibrarySelectFolderModal: React.FC<
           </div>
         )}
 
-        <div className="max-h-80 overflow-y-auto border rounded-lg">
+        <div className="max-h-80 overflow-y-auto border rounded-[3px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-primary)' }}>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 size={24} className="animate-spin text-gray-400" />
+              <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
             </div>
           ) : folderTree.length === 0 ? (
             <div className="p-4 text-center" style={{ color: 'var(--text-muted)' }}>

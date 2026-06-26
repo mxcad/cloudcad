@@ -38,16 +38,26 @@ export const FileTree: React.FC<FileTreeProps> = ({
       return (
         <div key={node.id}>
           <div
-            className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all duration-200 hover:bg-slate-50 border border-transparent"
+            className="flex items-center gap-1.5 px-2 h-[24px] text-xs rounded-[3px] cursor-pointer select-none transition-colors duration-150"
             style={{
               paddingLeft: `${level * indent + 8}px`,
-              ...(isSelected && {
-                background: 'var(--primary-50)',
-                color: 'var(--primary-700)',
-                borderColor: 'var(--primary-200)',
-              }),
+              color: isSelected ? 'var(--info)' : node.isFolder ? 'var(--text-secondary)' : 'var(--text-primary)',
+              background: isSelected ? 'rgba(0,156,255,0.1)' : 'transparent',
+              fontWeight: isSelected ? 500 : 400,
             }}
             onClick={() => onSelect(node)}
+            onMouseEnter={(e) => {
+              if (!isSelected) {
+                e.currentTarget.style.background = 'var(--menu-highlight)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSelected) {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = node.isFolder ? 'var(--text-secondary)' : 'var(--text-primary)';
+              }
+            }}
           >
             {showExpandButton ? (
               <button
@@ -72,29 +82,20 @@ export const FileTree: React.FC<FileTreeProps> = ({
             )}
 
             {node.isFolder ? (
-              <Folder size={18} className="flex-shrink-0" style={{ color: isSelected ? 'var(--primary-600)' : undefined }} />
+              <Folder size={14} className="flex-shrink-0" style={{ color: isSelected ? 'var(--info)' : undefined }} />
             ) : (
-              <FileText size={18} className="flex-shrink-0" style={{ color: isSelected ? 'var(--primary-600)' : 'var(--text-tertiary)' }} />
+              <FileText size={14} className="flex-shrink-0" style={{ color: isSelected ? 'var(--info)' : 'var(--text-tertiary)' }} />
             )}
 
-            <span
-              className="flex-1 truncate"
-              style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: isSelected ? 500 : 400,
-                color: isSelected ? 'var(--primary-700)' : node.isFolder ? 'var(--text-secondary)' : 'var(--text-primary)',
-              }}
-            >
-              {node.name}
-            </span>
+            <span className="flex-1 truncate">{node.name}</span>
 
             {isSelected && (
-              <Check size={18} className="flex-shrink-0" style={{ color: 'var(--primary-600)' }} />
+              <Check size={14} className="flex-shrink-0" style={{ color: 'var(--info)' }} />
             )}
           </div>
 
           {node.expanded && node.children && node.children.length > 0 && (
-            <div className={showConnector ? 'border-l border-slate-200 ml-1' : ''}>
+            <div className={showConnector ? 'border-l ml-1' : ''} style={{ borderColor: 'var(--border-default)' }}>
               {renderTree(node.children, level + 1)}
             </div>
           )}

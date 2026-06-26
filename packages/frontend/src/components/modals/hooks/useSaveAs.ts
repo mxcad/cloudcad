@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fileSystemControllerGetProjects } from '@/api-sdk';
 import type { FileSystemNodeDto } from '@/api-sdk';
-import { handleError } from '@/utils/errorHandler';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
 import { calculateFileHash } from '@/utils/hashUtils';
 
@@ -17,7 +16,7 @@ interface SaveAsParams {
   libraryType?: 'drawing' | 'block';
   selectedProjectId: string;
   selectedParentId: string;
-  format: 'dwg' | 'dxf' | 'pdf' | 'mxweb';
+  format: 'dwg' | 'dxf' | 'mxweb';
   fileName: string;
   mxwebBlob: Blob;
 }
@@ -45,10 +44,11 @@ export const useSaveAs = ({
   const [libraryType, setLibraryType] = useState<'drawing' | 'block'>('drawing');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedParentId, setSelectedParentId] = useState<string>('');
-  const [format, setFormat] = useState<'dwg' | 'dxf' | 'pdf' | 'mxweb'>('dwg');
+  const [format, setFormat] = useState<'dwg' | 'dxf' | 'mxweb'>('dwg');
   const [fileName, setFileName] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [selectedFolderName, setSelectedFolderName] = useState<string>('');
 
   // 查询项目列表
   const { data: projects = [] } = useQuery<ProjectWithPermission[]>({
@@ -73,6 +73,7 @@ export const useSaveAs = ({
       setSelectedProjectId('');
       const initialParentId = personalSpaceId || '';
       setSelectedParentId(initialParentId);
+      setSelectedFolderName('');
       setFormat('dwg');
       setError(null);
 
@@ -144,60 +145,14 @@ export const useSaveAs = ({
     },
   });
 
-  const handleConfirm = useCallback(async () => {
-    if (!(fileName || '').trim()) {
-      setError('请输入文件名');
-      return;
-    }
-
-    const invalidChars = /[\\/:*?"<>|]/;
-    if (invalidChars.test(fileName)) {
-      setError('文件名不能包含以下字符: \\ / : * ? " < > |');
-      return;
-    }
-
-    if (!selectedParentId) {
-      if (targetType === 'personal') {
-        setSelectedParentId(getFolderPickerProjectId() || '');
-      } else if (targetType === 'project') {
-        if (!selectedProjectId) {
-          setError('请先选择项目');
-          return;
-        }
-        setSelectedParentId(selectedProjectId);
-      } else if (targetType === 'library') {
-        setError('请选择公开资源库中的保存位置');
-        return;
-      }
-    }
-
-    setError(null);
-
-    try {
-      const result = await saveMutation.mutateAsync({
-        targetType,
-        libraryType,
-        selectedProjectId,
-        selectedParentId,
-        format,
-        fileName,
-        mxwebBlob: new Blob(), // placeholder, actual blob passed by caller
-      });
-
-      return result;
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '保存失败，请稍后重试');
-      return null;
-    }
-  }, [fileName, selectedParentId, targetType, selectedProjectId, libraryType, format, getFolderPickerProjectId, saveMutation]);
-
-  const handleClose = useCallback(() => {
-    setError(null);
+  const handleFolderConfirm = useCallback((targetParentId: string, folderName?: string) => {
+    setSelectedParentId(targetParentId);
+    setSelectedFolderName(folderName || '');
+    setShowFolderPicker(false);
   }, []);
 
-  const handleFolderConfirm = useCallback((targetParentId: string) => {
-    setSelectedParentId(targetParentId);
-    setShowFolderPicker(false);
+  const resetError = useCallback(() => {
+    setError(null);
   }, []);
 
   return {
@@ -217,12 +172,13 @@ export const useSaveAs = ({
     setError,
     showFolderPicker,
     setShowFolderPicker,
+    selectedFolderName,
+    setSelectedFolderName,
     projects,
     loading: saveMutation.isPending,
     saving: saveMutation.isPending,
     getFolderPickerProjectId,
-    handleConfirm,
-    handleClose,
+    resetError,
     handleFolderConfirm,
     saveMutation,
   };

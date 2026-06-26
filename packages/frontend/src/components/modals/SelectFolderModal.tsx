@@ -12,7 +12,7 @@ interface SelectFolderModalProps {
   currentNodeId: string; // 当前节点 ID（排除自身及其子节点）
   projectId?: string; // 项目 ID
   onClose: () => void;
-  onConfirm: (targetParentId: string) => void;
+  onConfirm: (targetParentId: string, folderName?: string) => void;
   /** 确认按钮文字，默认为"确认" */
   confirmButtonText?: string;
 }
@@ -152,9 +152,21 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   // 递归渲染文件夹树
 
 
+  const findNodeById = (nodes: FolderNode[], id: string): FolderNode | undefined => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
   const handleConfirm = () => {
     if (selectedFolderId) {
-      onConfirm(selectedFolderId);
+      const node = findNodeById(folderTree, selectedFolderId);
+      onConfirm(selectedFolderId, node?.name);
     }
   };
 
@@ -183,34 +195,6 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       }
     >
       <div className="space-y-4">
-        {/* 项目信息 */}
-        {projectName && projectId && (
-          <div 
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer bg-slate-50 border-slate-200`}
-            style={{
-              ...(selectedFolderId === projectId && {
-                background: 'var(--primary-50)',
-                color: 'var(--primary-700)',
-                borderColor: 'var(--primary-200)',
-              }),
-            }}
-            onClick={() => selectFolder(projectId)}
-          >
-            <Folder 
-              size={16} 
-              className={selectedFolderId === projectId ? '' : 'text-amber-500'} 
-              style={{ color: selectedFolderId === projectId ? 'var(--primary-600)' : undefined }}
-            />
-            <span className="font-medium" style={{ color: selectedFolderId === projectId ? 'var(--primary-700)' : 'var(--text-secondary)' }}>
-              {projectName}
-            </span>
-            <span className="ml-auto" style={{ color: 'var(--text-muted)' }}>项目根目录</span>
-            {selectedFolderId === projectId && (
-              <Check size={16} style={{ color: 'var(--primary-600)' }} />
-            )}
-          </div>
-        )}
-
         {/* 加载状态 */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
@@ -229,18 +213,47 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {/* 空状态 */}
         {!loading && !error && folderTree.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12">
-            <Folder size={48} className="text-slate-300 mb-3" />
+            <Folder size={48} className="mb-3" style={{ color: 'var(--text-muted)' }} />
             <p style={{ color: 'var(--text-tertiary)' }}>暂无可用文件夹</p>
           </div>
         )}
 
-        {/* 文件夹树 */}
+        {/* 文件夹列表 */}
         {!loading && !error && folderTree.length > 0 && (
-          <div className="space-y-2">
-            <p style={{ color: 'var(--text-muted)' }}>
+          <div className="border rounded-[3px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-primary)' }}>
+            <div className="px-2 pt-1.5 pb-0.5" style={{ color: 'var(--text-muted)' }}>
               点击文件夹名称选择，点击箭头展开/折叠
-            </p>
-            <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-lg bg-white">
+            </div>
+            {projectName && projectId && (
+              <div
+                className="flex items-center gap-1.5 px-2 h-[24px] text-xs rounded-none cursor-pointer select-none transition-colors duration-150"
+                style={{
+                  color: selectedFolderId === projectId ? 'var(--info)' : 'var(--text-secondary)',
+                  background: selectedFolderId === projectId ? 'rgba(0,156,255,0.1)' : '',
+                  fontWeight: selectedFolderId === projectId ? 500 : 400,
+                }}
+                onClick={() => selectFolder(projectId)}
+                onMouseEnter={(e) => {
+                  if (selectedFolderId !== projectId) {
+                    e.currentTarget.style.background = 'var(--menu-highlight)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedFolderId !== projectId) {
+                    e.currentTarget.style.background = '';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }
+                }}
+              >
+                <Folder size={14} className="shrink-0" style={{ color: selectedFolderId === projectId ? 'var(--info)' : undefined }} />
+                <span className="flex-1 truncate">{projectName}</span>
+                {selectedFolderId === projectId && (
+                  <Check size={14} className="shrink-0" style={{ color: 'var(--info)' }} />
+                )}
+              </div>
+            )}
+            <div className="max-h-80 overflow-y-auto">
               <FileTree
                 nodes={folderTree}
                 selectedId={selectedFolderId}

@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { FileNameInput } from '@/components/ui/FileNameInput';
-import { Folder } from 'lucide-react';
+import { Folder, ChevronRight } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
+import { LibrarySelectFolderModal } from './LibrarySelectFolderModal';
 import { useSaveAs } from './hooks/useSaveAs';
-import { globalShowToast } from '../../contexts/NotificationContext';
+import { useLibraryFolders } from './hooks/useLibraryFolders';
 import { usePermission } from '../../hooks/usePermission';
 import { SystemPermission } from '../../constants/permissions';
 
@@ -54,7 +55,9 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     projects,
     saving,
     getFolderPickerProjectId,
-    handleClose: resetError,
+    resetError,
+    selectedFolderName,
+    setSelectedFolderName,
     handleFolderConfirm,
     saveMutation,
   } = useSaveAs({ isOpen, personalSpaceId, currentFileName });
@@ -63,6 +66,16 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
   const hasLibraryPermission =
     hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE) ||
     hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE);
+
+  const { getLibrary } = useLibraryFolders(libraryType);
+
+  // 切换 library/更换资源库类型时自动获取库根目录
+  useEffect(() => {
+    if (targetType !== 'library') return;
+    getLibrary()
+      .then((lib) => setSelectedParentId(lib.id))
+      .catch(() => {});
+  }, [targetType, libraryType, getLibrary]);
 
   const handleConfirm = async () => {
     // Validate file name
@@ -162,13 +175,13 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       >
         <div className="space-y-4">
           {error && (
-            <div className="p-3 rounded-lg" style={{ background: 'var(--bg-error)', border: '1px solid var(--border-error)', color: 'var(--error)' }}>
+            <div className="p-3 rounded-lg bg-[var(--bg-error)] border border-[var(--border-error)] text-[var(--error)]">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block font-medium mb-2 text-[var(--text-secondary)]">
               文件名
             </label>
             <FileNameInput
@@ -182,17 +195,21 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block font-medium mb-2 text-[var(--text-secondary)]">
               保存到
             </label>
             <Select
               value={targetType}
               onChange={(val) => {
-                setTargetType(val as 'personal' | 'project' | 'library');
-                if (val === 'personal') {
+                const newType = val as 'personal' | 'project' | 'library';
+                setTargetType(newType);
+                setSelectedFolderName('');
+                if (newType === 'personal') {
                   setSelectedParentId(personalSpaceId || '');
+                } else if (newType === 'project') {
+                  setSelectedParentId(selectedProjectId || '');
                 } else {
-                  setSelectedParentId(val);
+                  setSelectedParentId('');
                 }
               }}
               options={[
@@ -205,7 +222,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           {targetType === 'project' && (
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              <label className="block font-medium mb-2 text-[var(--text-secondary)]">
                 选择项目
               </label>
               <Select
@@ -213,6 +230,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                 onChange={(val) => {
                   setSelectedProjectId(val);
                   setSelectedParentId(val);
+                  setSelectedFolderName('');
                 }}
                 placeholder="请选择项目"
                 options={projects.map((p) => ({ value: p.id, label: p.name }))}
@@ -223,12 +241,16 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           {targetType === 'library' && (
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              <label className="block font-medium mb-2 text-[var(--text-secondary)]">
                 选择资源库
               </label>
               <Select
                 value={libraryType}
-                onChange={(val) => setLibraryType(val as 'drawing' | 'block')}
+                onChange={(val) => {
+                  setLibraryType(val as 'drawing' | 'block');
+                  setSelectedFolderName('');
+                  setSelectedParentId('');
+                }}
                 options={[
                   { value: 'drawing', label: '图纸库' },
                   { value: 'block', label: '图块库' },
@@ -239,40 +261,52 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           )}
 
           <div>
-            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block font-medium mb-2 text-[var(--text-secondary)]">
               保存位置
             </label>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setShowFolderPicker(true);
+            <div
+              className="flex items-center w-full h-[24px] px-2 py-1 text-xs gap-1.5 rounded-[3px] cursor-pointer transition-all duration-200 hover:border-[var(--border-strong)]"
+              style={{
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-primary)',
               }}
-              className="w-full"
+              onClick={() => setShowFolderPicker(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setShowFolderPicker(true);
+                }
+              }}
             >
-              <Folder className="w-5 h-5 text-slate-400" />
+              <Folder size={14} className="shrink-0" style={{ color: 'var(--text-muted)' }} />
               <span className="flex-1 text-left truncate">
-                {selectedParentId
-                  ? targetType === 'personal'
-                    ? '我的图纸'
-                    : projects.find((p) => p.id === selectedProjectId)?.name ||
-                      '选择文件夹'
-                  : '点击选择文件夹'}
+                {selectedFolderName
+                  ? selectedFolderName
+                  : selectedParentId
+                    ? targetType === 'personal'
+                      ? '我的图纸'
+                      : targetType === 'library'
+                        ? '公开资源库'
+                        : projects.find((p) => p.id === selectedProjectId)?.name || '选择文件夹'
+                    : '点击选择文件夹'}
               </span>
-            </Button>
+              <ChevronRight size={14} className="shrink-0" style={{ color: 'var(--text-muted)' }} />
+            </div>
           </div>
 
           <div>
-            <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block font-medium mb-2 text-[var(--text-secondary)]">
               保存格式
             </label>
             <Select
               value={format}
-              onChange={(val) => setFormat(val as 'dwg' | 'dxf' | 'pdf' | 'mxweb')}
+              onChange={(val) => setFormat(val as 'dwg' | 'dxf' | 'mxweb')}
               options={[
                 { value: 'dwg', label: 'DWG' },
                 { value: 'dxf', label: 'DXF' },
-                { value: 'pdf', label: 'PDF' },
                 { value: 'mxweb', label: 'MXWEB' },
               ]}
               disabled={saving}
@@ -281,13 +315,23 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
         </div>
       </Modal>
 
-      <SelectFolderModal
-        isOpen={showFolderPicker}
-        currentNodeId=""
-        projectId={getFolderPickerProjectId()}
-        onClose={() => setShowFolderPicker(false)}
-        onConfirm={handleFolderConfirm}
-      />
+      {targetType === 'library' ? (
+        <LibrarySelectFolderModal
+          isOpen={showFolderPicker}
+          libraryType={libraryType}
+          currentNodeId=""
+          onClose={() => setShowFolderPicker(false)}
+          onConfirm={handleFolderConfirm}
+        />
+      ) : (
+        <SelectFolderModal
+          isOpen={showFolderPicker}
+          currentNodeId=""
+          projectId={getFolderPickerProjectId()}
+          onClose={() => setShowFolderPicker(false)}
+          onConfirm={handleFolderConfirm}
+        />
+      )}
     </>
   );
 };
