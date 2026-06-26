@@ -88,7 +88,6 @@ interface FileSystemContentProps {
   highlightNodeId?: string;
   onCreateFolderInCurrentDir?: () => void;
   onCreateDrawingInCurrentDir?: () => void;
-  onUpload?: () => void;
   onPasteInCurrentDir?: () => void;
   clipboardHasItems?: boolean;
   clipboardMode?: 'copy' | 'cut' | null;
@@ -154,7 +153,6 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   onCopyPath,
   onCreateFolderInCurrentDir,
   onCreateDrawingInCurrentDir,
-  onUpload,
   onPasteInCurrentDir,
   clipboardHasItems = false,
   clipboardMode = null,
@@ -896,30 +894,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 新建文件夹
               </Menu.Item>
             )}
-            {!isAtRoot && onUpload && canUpload && (
-              <Menu.Item
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                }
-                onClick={() => {
-                  onUpload?.();
-                  closeContextMenu();
-                }}
-              >
-                上传
-              </Menu.Item>
-            )}
+
             {clipboardHasItems && canPaste && (
               <Menu.Item
                 icon={

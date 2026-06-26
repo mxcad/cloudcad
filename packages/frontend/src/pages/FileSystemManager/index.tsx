@@ -1125,9 +1125,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             canCreateProject={canCreateProject}
             canCreate={projectPermissionsRecord['FILE_CREATE'] !== false}
             canUpload={projectPermissionsRecord['FILE_UPLOAD'] !== false}
-            uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
-            getCurrentParentId={() =>
-              currentNode?.id || urlNodeId || urlProjectId || ''
+            uploadButton={
+              <MxCadUploader
+                ref={uploaderRef}
+                nodeId={() => currentNode?.id || urlNodeId || urlProjectId || ''}
+                openAfterUpload={false}
+                onSuccess={handleRefresh}
+                onExternalReferenceSuccess={handleRefresh}
+                buttonText=""
+                buttonClassName="hover:bg-[var(--bg-tertiary)]"
+              />
             }
             onSetSearchTerm={setSearchTerm}
             onSetViewMode={setViewMode}
@@ -1331,7 +1338,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                     onCreateDrawingInCurrentDir={() =>
                       setShowCreateDrawingModal(true)
                     }
-                    onUpload={() => uploaderRef.current?.triggerUpload()}
                     onPasteInCurrentDir={clipboardHandlePaste}
                     clipboardHasItems={clipboardItems.length > 0}
                     clipboardMode={clipboardMode}
@@ -1548,15 +1554,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         fileId={shareFileId ?? undefined}
       />
 
-      <div style={{ display: 'none' }}>
-        <MxCadUploader
-          ref={uploaderRef}
-          nodeId={() => getCurrentParentId()}
-          openAfterUpload={false}
-          onSuccess={handleRefresh}
-          onExternalReferenceSuccess={handleRefresh}
-        />
-      </div>
     </>
   );
 };

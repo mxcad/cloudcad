@@ -33,7 +33,7 @@ import {
   libraryControllerDeleteBlockNode,
 } from '@/api-sdk';
 import { SystemPermission } from '../constants/permissions';
-import MxCadUploader, { MxCadUploaderRef } from '../components/MxCadUploader';
+import MxCadUploader from '../components/MxCadUploader';
 import { EmptyFolderIcon } from '../components/FileIcons';
 import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -201,8 +201,6 @@ export const LibraryManager: React.FC = () => {
     showConfirm,
   });
 
-  // 上传组件 ref - 完全复用项目管理的 MxCadUploader
-  const uploaderRef = useRef<MxCadUploaderRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 剪贴板
@@ -471,20 +469,6 @@ export const LibraryManager: React.FC = () => {
       });
     },
     [nodes, libraryOperations]
-  );
-
-  // 上传成功回调（MxCadUploader 不再自己弹 toast，由这里统一处理）
-  const handleUploadSuccess = useCallback(() => {
-    refresh();
-    showToast('文件上传成功', 'success');
-  }, [refresh, showToast]);
-
-  // 上传失败回调（MxCadUploader 已通过 globalShowToast 显示了错误，这里不再重复提示）
-  const handleUploadError = useCallback(
-    (_error: string) => {
-      // 错误已由 MxCadUploader 的 globalShowToast 统一处理
-    },
-    []
   );
 
   // 下载文件（免登录）
@@ -791,8 +775,15 @@ export const LibraryManager: React.FC = () => {
             projectFilter="all"
             breadcrumbs={breadcrumbs}
             canCreateProject={false}
-            uploaderRef={uploaderRef as React.RefObject<MxCadUploaderRef>}
-            getCurrentParentId={() => currentNode?.id || libraryId || ''}
+            uploadButton={canManage && (
+              <MxCadUploader
+                nodeId={() => currentNode?.id || libraryId || ''}
+                openAfterUpload={false}
+                onSuccess={() => { refresh(); showToast('文件上传成功', 'success'); }}
+                buttonText=""
+                buttonClassName="hover:bg-[var(--bg-tertiary)]"
+              />
+            )}
             onSetSearchTerm={setSearchTerm}
             onSetViewMode={setViewMode}
             onSearchSubmit={handleSearchSubmit}
@@ -941,7 +932,6 @@ export const LibraryManager: React.FC = () => {
                     onCopyClipboard={canManage ? (node) => clipboardHandleCopy() : undefined}
                     onCut={canManage ? (node) => clipboardHandleCut() : undefined}
                     onCreateFolderInCurrentDir={canManage ? openCreateFolderModal : undefined}
-                    onUpload={canManage ? () => uploaderRef.current?.triggerUpload() : undefined}
                     onPasteInCurrentDir={clipboardHandlePaste}
                     clipboardHasItems={clipboardItems.length > 0}
                   />
@@ -1047,17 +1037,6 @@ export const LibraryManager: React.FC = () => {
           showToast(success ? '批量导入成功' : '批量导入完成（部分文件导入失败）', success ? 'success' : 'warning');
         }}
       />
-
-      {/* 隐藏的 MxCadUploader — uploaderRef 通过它连接实际组件 */}
-      <div style={{ display: 'none' }}>
-        <MxCadUploader
-          ref={uploaderRef}
-          nodeId={() => currentNode?.id || libraryId || ''}
-          openAfterUpload={false}
-          onSuccess={handleUploadSuccess}
-          onError={handleUploadError}
-        />
-      </div>
 
       {/* 存储配额配置模态框 */}
       <Modal

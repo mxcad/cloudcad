@@ -1,10 +1,9 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FilePlus, FolderPlus, RefreshCw, Upload } from 'lucide-react';
+import { FilePlus, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { BreadcrumbNavigation } from '@/components/BreadcrumbNavigation';
 import { FileSystemToolbar, ProjectFilterTabs } from '@/pages/components';
 import { RefreshIcon } from '@/components/FileIcons';
@@ -33,8 +32,7 @@ interface FileSystemHeaderProps {
   projectFilter: ProjectFilterType;
   breadcrumbs: BreadcrumbItem[];
   canCreateProject: boolean;
-  uploaderRef: React.RefObject<MxCadUploaderRef>;
-  getCurrentParentId: () => string;
+  uploadButton?: React.ReactNode;
   onSetSearchTerm: (term: string) => void;
   onSetViewMode: (mode: 'grid' | 'list') => void;
   onSearchSubmit: () => void;
@@ -88,8 +86,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
   projectFilter,
   breadcrumbs,
   canCreateProject,
-  uploaderRef,
-  getCurrentParentId,
+  uploadButton,
   onSetSearchTerm,
   onSetViewMode,
   onSearchSubmit,
@@ -335,20 +332,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
             </>
           )}
 
-          {!isAtRoot && !isTrashView && canUpload && (
-            <Tooltip content="上传 CAD 文件">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => uploaderRef.current?.triggerUpload()}
-                disabled={loading}
-                className="hover:bg-[var(--bg-tertiary)]"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                <Upload size={16} />
-              </Button>
-            </Tooltip>
-          )}
+          {!isAtRoot && !isTrashView && canUpload && uploadButton}
 
           {renderExtraActions}
 
