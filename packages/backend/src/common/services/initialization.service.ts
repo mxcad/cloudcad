@@ -65,6 +65,7 @@ export class InitializationService implements OnModuleInit {
     await this.checkAndCreateInitialAdmin();
     await this.ensureAllUsersHavePersonalSpace();
     await this.ensurePublicLibraries();
+    await this.seedMembershipPlans();
 
     const duration = Date.now() - startTime;
     this.logger.log(`✅ 系统初始化完成，耗时 ${duration}ms`);
@@ -673,5 +674,59 @@ export class InitializationService implements OnModuleInit {
   async isFirstStartup(): Promise<boolean> {
     const userCount = await this.prisma.user.count();
     return userCount === 0;
+  }
+
+  /**
+   * 初始化会员套餐（仅表空时创建，已有数据则完全跳过）
+   *
+   * 设计原则：
+   * - 仅首次部署时自动创建三个默认套餐
+   * - 升级覆盖时如果已有套餐数据（无论是否被用户修改/删除），一律不动
+   * - 未来新增套餐通过发版说明告知用户手动执行升级脚本
+   */
+  private async seedMembershipPlans(): Promise<void> {
+    try {
+      const exists = await this.prisma.membershipPlan.findFirst();
+      if (exists) {
+        this.logger.log('会员套餐数据已存在，跳过初始化');
+        return;
+      }
+
+      await this.prisma.membershipPlan.createMany({
+        data: [
+          {
+            name: '月度会员',
+            durationDays: 30,
+            price: 2400,
+            originalPrice: 3000,
+            sortOrder: 1,
+            tier: 'PRO',
+            features: { maxStorage: 1073741824, maxProjects: 50, maxCollaborators: 5, versionHistoryDays: 30 },
+          },
+          {
+            name: '半年会员',
+            durationDays: 180,
+            price: 14000,
+            originalPrice: 18000,
+            sortOrder: 2,
+            tier: 'PRO',
+            features: { maxStorage: 2147483648, maxProjects: 100, maxCollaborators: 10, versionHistoryDays: 90 },
+          },
+          {
+            name: '年度会员',
+            durationDays: 365,
+            price: 26000,
+            originalPrice: 28800,
+            sortOrder: 3,
+            tier: 'PRO',
+            features: { maxStorage: 5368709120, maxProjects: 200, maxCollaborators: 20, versionHistoryDays: 365 },
+          },
+        ],
+      });
+
+      this.logger.log('✅ 默认会员套餐创建完成（3 个）');
+    } catch (error) {
+      this.logger.error('创建默认会员套餐失败', error);
+    }
   }
 }
