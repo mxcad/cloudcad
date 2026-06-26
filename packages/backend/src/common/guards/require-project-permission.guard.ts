@@ -229,16 +229,43 @@ export class RequireProjectPermissionGuard implements CanActivate {
   }): Promise<string | null> {
     // 从路由参数中获取
     if (request.params?.projectId) {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: request.params.projectId },
+        select: { id: true, isRoot: true, projectId: true, parentId: true },
+      });
+      if (node) {
+        if (node.isRoot) return node.id;
+        if (node.projectId) return node.projectId;
+        if (node.parentId) return this.extractProjectIdFromNode(node.parentId);
+      }
       return request.params.projectId;
     }
 
     // 从查询参数中获取
     if (request.query?.projectId) {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: request.query.projectId },
+        select: { id: true, isRoot: true, projectId: true, parentId: true },
+      });
+      if (node) {
+        if (node.isRoot) return node.id;
+        if (node.projectId) return node.projectId;
+        if (node.parentId) return this.extractProjectIdFromNode(node.parentId);
+      }
       return request.query.projectId;
     }
 
     // 从请求体中获取
     if (request.body?.projectId) {
+      const node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: request.body.projectId },
+        select: { id: true, isRoot: true, projectId: true, parentId: true },
+      });
+      if (node) {
+        if (node.isRoot) return node.id;
+        if (node.projectId) return node.projectId;
+        if (node.parentId) return this.extractProjectIdFromNode(node.parentId);
+      }
       return request.body.projectId;
     }
 

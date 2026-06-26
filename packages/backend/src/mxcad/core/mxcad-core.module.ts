@@ -11,14 +11,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
 import { MulterModule } from '@nestjs/platform-express';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
 import { join } from 'path';
 import * as fs from 'fs';
-import { DatabaseModule } from '../../database/database.module';
 import { AppConfig } from '../../config/app.config';
+import { JwtModule } from '@nestjs/jwt';
+import { DatabaseModule } from '../../database/database.module';
 import { CommonModule } from '../../common/common.module';
 import { FileSystemModule } from '../../file-system/file-system.module';
 import { FilePermissionModule } from '../../file-system/file-permission/file-permission.module';
@@ -56,16 +56,6 @@ import { SaveController } from '../save/save.controller';
 @Module({
   imports: [
     ConfigModule,
-    DatabaseModule,
-    CommonModule,
-    RuntimeConfigModule,
-    FileSystemModule,
-    FilePermissionModule,
-    StorageQuotaModule,
-    StorageModule,
-    VersionControlModule,
-    RolesModule,
-    JwtModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService<AppConfig>) => {
@@ -101,12 +91,22 @@ import { SaveController } from '../save/save.controller';
           limits: {
             fileSize: maxFileSize,
             fields: 20,
-            fieldSize: 1024 * 1024,
+            fieldSize: 10 * 1024 * 1024,
           },
         };
       },
       inject: [ConfigService],
     }),
+    DatabaseModule,
+    CommonModule,
+    RuntimeConfigModule,
+    FileSystemModule,
+    FilePermissionModule,
+    StorageQuotaModule,
+    StorageModule,
+    VersionControlModule,
+    RolesModule,
+    JwtModule,
     ShareModule,
     MxcadInfraModule,
     MxcadConversionModule,

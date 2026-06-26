@@ -11,10 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module, forwardRef } from '@nestjs/common';
-import { MulterModule } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { join } from 'path';
-import * as fs from 'fs';
 import { MxcadInfraModule } from './infra/mxcad-infra.module';
 import { MxcadConversionModule } from './conversion/mxcad-conversion.module';
 import { MxcadNodeModule } from './node/mxcad-node.module';
@@ -52,47 +48,6 @@ import { ConversionModule } from '../conversion';
           expiresIn: configService.get('jwt.expiresIn', { infer: true }),
         },
       }),
-      inject: [ConfigService],
-    }),
-    MulterModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService<AppConfig>) => {
-        const config = configService.get('mxcadUploadPath', { infer: true });
-        const tempPath = configService.get('mxcadTempPath', { infer: true });
-        const maxFileSize = configService.get('upload.maxSize', { infer: true }) as number || 500 * 1024 * 1024;
-
-        return {
-          storage: diskStorage({
-            destination: (req, file, cb) => {
-              if (req.body.chunk !== undefined) {
-                const fileMd5 = req.body.hash;
-                const tmpDir = join(tempPath, `chunk_${fileMd5}`);
-                fs.mkdirSync(tmpDir, { recursive: true });
-                cb(null, tmpDir);
-              } else {
-                fs.mkdirSync(config, { recursive: true });
-                cb(null, config);
-              }
-            },
-            filename: (req, file, cb) => {
-              const fileMd5 = req.body.hash;
-              if (req.body.chunk !== undefined) {
-                cb(null, `${req.body.chunk}_${fileMd5}`);
-              } else if (fileMd5) {
-                const ext = file.originalname.split('.').pop();
-                cb(null, `${fileMd5}.${ext}`);
-              } else {
-                cb(null, file.originalname);
-              }
-            },
-          }),
-          limits: {
-            fileSize: maxFileSize,
-            fields: 20,
-            fieldSize: 1024 * 1024,
-          },
-        };
-      },
       inject: [ConfigService],
     }),
     MxcadInfraModule,

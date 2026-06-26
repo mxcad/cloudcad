@@ -867,16 +867,19 @@ export class MxCadController {
       return res.status(400).json({ code: -1, message: '无效的文件路径' });
     }
 
-    try {
-      await this.authorizeFilesDataAccess(filename, req);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        return res.status(404).json({ code: -1, message: error.message });
+    // HEAD 请求跳过授权（MxCAD SDK 内部 HEAD 请求无法携带认证头）
+    if (req.method !== 'HEAD') {
+      try {
+        await this.authorizeFilesDataAccess(filename, req);
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          return res.status(404).json({ code: -1, message: error.message });
+        }
+        if (error instanceof UnauthorizedException || error instanceof ForbiddenException) {
+          return res.status(401).json({ code: -1, message: error.message });
+        }
+        throw error;
       }
-      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) {
-        return res.status(401).json({ code: -1, message: error.message });
-      }
-      throw error;
     }
 
     const versionParam = req.query.v as string | undefined;
@@ -1055,6 +1058,11 @@ export class MxCadController {
     }
 
     // 常规访问：验证 JWT 用户的项目权限
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
+
     const node = await this.mxCadService.getFileSystemNodeByPath(
       normalizedFilename
     );
@@ -1063,7 +1071,7 @@ export class MxCadController {
     }
 
     const hasAccess = await this.permissionService.getNodeAccessRole(
-      (req as any).user?.id,
+      userId,
       node.id
     );
     if (!hasAccess) {

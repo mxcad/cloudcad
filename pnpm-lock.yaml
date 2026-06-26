@@ -104,6 +104,9 @@ importers:
       '@prisma/client':
         specifier: ^7.1.0
         version: 7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@5.0.4))(typescript@5.0.4)
+      '@swc/core-win32-x64-msvc':
+        specifier: ^1.15.43
+        version: 1.15.43
       archiver:
         specifier: ^7.0.1
         version: 7.0.1
@@ -187,7 +190,7 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0(@swc/core@1.15.40)(chokidar@4.0.3)
       '@swc/core':
-        specifier: ^1.15.33
+        specifier: ^1.15.40
         version: 1.15.40
       '@types/archiver':
         specifier: ^7.0.0
@@ -3457,6 +3460,12 @@ packages:
 
   '@swc/core-win32-x64-msvc@1.15.40':
     resolution: {integrity: sha512-OXtKsLU1bVtInzzDEAY2sYiF/rl4tvAnLLLpuMp3HzAOQZ5A+i69AKDhA1YLQTaMAqO3vzyYNVAYVRMPtSYD4w==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@swc/core-win32-x64-msvc@1.15.43':
+    resolution: {integrity: sha512-h8MLDHZcfIukwQWj03rIJZx1I0E81AYj2X7J/nGErG4nz+QAv6G1Z+peotvinL3lqpbo32tLYSMFo32/ySzxKg==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [win32]
@@ -14662,6 +14671,8 @@ snapshots:
 
   '@swc/core-win32-x64-msvc@1.15.40':
     optional: true
+
+  '@swc/core-win32-x64-msvc@1.15.43': {}
 
   '@swc/core@1.15.40':
     dependencies:
