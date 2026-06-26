@@ -1048,6 +1048,17 @@ export const LibraryManager: React.FC = () => {
         }}
       />
 
+      {/* 隐藏的 MxCadUploader — uploaderRef 通过它连接实际组件 */}
+      <div style={{ display: 'none' }}>
+        <MxCadUploader
+          ref={uploaderRef}
+          nodeId={() => currentNode?.id || libraryId || ''}
+          openAfterUpload={false}
+          onSuccess={handleUploadSuccess}
+          onError={handleUploadError}
+        />
+      </div>
+
       {/* 存储配额配置模态框 */}
       <Modal
         isOpen={quotaModalOpen}
