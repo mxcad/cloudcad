@@ -29,6 +29,8 @@ const args = process.argv.slice(2);
 const isDeployMode = args[0] === 'deploy';
 let isFirstDeploy = false; // 标记是否为首次部署（.env 刚创建）
 
+
+
 // ==================== 配置 ====================
 
 const PLATFORM = os.platform();
@@ -44,6 +46,28 @@ const PLATFORM_DIR = IS_WINDOWS
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PM2_HOME = path.join(DATA_DIR, 'pm2');
+
+// 从 myServerConfig.json 读取移动端访问路径名
+function getMobileAccessPath() {
+  const root = path.resolve(__dirname, '..', '..');
+  const configPaths = [
+    path.join(root, 'data', 'configs', 'frontend', 'ini', 'myServerConfig.json'),
+    path.join(root, 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'),
+  ];
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.mobileAccessPath && typeof config.mobileAccessPath === 'string') {
+          return config.mobileAccessPath;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+  return 'mxcad_mobile';
+}
 
 // 解析 .env 文件（提前定义，供 getPorts 使用）
 function parseEnvFileSimple(filePath) {
@@ -1885,7 +1909,8 @@ async function waitForServicesForeground(backendProcess, backendStderr) {
   log('green', '╠══════════════════════════════════════════════════════════╣');
   log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
   log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
-  log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/mxcad_mobile/  ║');
+  const map = getMobileAccessPath();
+  log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/' + map + '/  ║');
   log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
   log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
   log('green', '╠══════════════════════════════════════════════════════════╣');
@@ -2063,7 +2088,8 @@ async function startAppServices(mode) {
     log('green', '╠══════════════════════════════════════════════════════════╣');
     log('green', '║  后端:  http://localhost:' + PORTS.backend + '           ║');
     log('green', '║  前端:  http://localhost:' + PORTS.frontend + '           ║');
-    log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/mxcad_mobile/  ║');
+    const map = getMobileAccessPath();
+    log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/' + map + '/  ║');
     log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
     log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
     log(

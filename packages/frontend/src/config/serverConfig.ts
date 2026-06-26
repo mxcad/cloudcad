@@ -46,6 +46,7 @@ interface ServerConfigType {
   trueTypeFont?: string[][];
   isAutomaticJumpToMobilePage?: boolean;
   mobilePageUrl?: string;
+  mobileAccessPath?: string;
   file_ext_name?: string;
   useUtf8?: boolean;
   speechRecognitionModel?: string;

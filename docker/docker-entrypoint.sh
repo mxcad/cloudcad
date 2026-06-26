@@ -201,10 +201,42 @@ run_migrations() {
     log_info "数据库迁移完成"
 }
 
+# ==================== 配置 Nginx ====================
+
+configure_nginx() {
+    log_info "配置 Nginx..."
+
+    # 从 myServerConfig.json 读取移动端访问路径名
+    local config_path=""
+    if [ -f "/app/data/configs/frontend/ini/myServerConfig.json" ]; then
+        config_path="/app/data/configs/frontend/ini/myServerConfig.json"
+    elif [ -f "/var/www/html/ini/myServerConfig.json" ]; then
+        config_path="/var/www/html/ini/myServerConfig.json"
+    fi
+
+    local mobile_path="mxcad_mobile"
+    if [ -n "$config_path" ]; then
+        mobile_path=$(node -e "
+try {
+    const c = JSON.parse(require('fs').readFileSync('$config_path','utf8'));
+    process.stdout.write(c.mobileAccessPath || 'mxcad_mobile');
+} catch(e) {
+    process.stdout.write('mxcad_mobile');
+}
+")
+    fi
+
+    export MOBILE_ACCESS_PATH="$mobile_path"
+    sed -i "s|__MOBILE_PATH__|$MOBILE_ACCESS_PATH|g" /etc/nginx/http.d/default.conf
+    log_info "移动端访问路径: /$MOBILE_ACCESS_PATH"
+}
+
 # ==================== 启动 Nginx ====================
 
 start_nginx() {
     log_info "启动 Nginx..."
+    
+    configure_nginx
     
     # 测试配置
     nginx -t 2>/dev/null || {

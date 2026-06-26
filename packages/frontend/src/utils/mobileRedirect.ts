@@ -3,6 +3,7 @@ import { getConfig } from '../config/getConfig';
 interface MobileRedirectConfig {
   isAutomaticJumpToMobilePage?: boolean;
   mobilePageUrl?: string;
+  mobileAccessPath?: string;
 }
 
 const CONFIG_URL = `${window.location.origin}/ini/myServerConfig.json`;
@@ -25,7 +26,7 @@ export function getMobileRedirectUrl(
 
   const baseUrl = import.meta.env.DEV
     ? 'http://localhost:7001/'
-    : config.mobilePageUrl || '/mxcad_mobile/';
+    : config.mobilePageUrl || `/${config.mobileAccessPath || 'mxcad_mobile'}/`;
 
   // 将 URL path 中的 fileId（/cad-editor/{fileId}）作为 query param 传递，
   // 否则移动端只收到 ?nodeId=...&back=...，丢失了真正的 fileId

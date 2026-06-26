@@ -19,6 +19,21 @@ import Voerkai18nPlugin from '@voerkai18n/vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+
+  // 从 myServerConfig.json 读取移动端访问路径名（dev proxy 使用）
+  let mobileAccessPath = 'mxcad_mobile';
+  try {
+    const { readFileSync } = require('fs');
+    const serverConfig = JSON.parse(
+      readFileSync(path.resolve(__dirname, 'public', 'ini', 'myServerConfig.json'), 'utf8')
+    );
+    if (serverConfig.mobileAccessPath && typeof serverConfig.mobileAccessPath === 'string') {
+      mobileAccessPath = serverConfig.mobileAccessPath;
+    }
+  } catch (e) {
+    // 使用默认值
+  }
+
   return {
     server: {
       port: parseInt(env.FRONTEND_PORT || '3000', 10),
@@ -30,10 +45,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
-        '/mxcad_mobile/': {
+        [`/${mobileAccessPath}/`]: {
           target: 'http://localhost:7001',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/mxcad_mobile(\/|$)/, '/'),
+          rewrite: (path) => path.replace(new RegExp(`^/${mobileAccessPath}(/|$)`), '/'),
           ws: true,
         },
       },

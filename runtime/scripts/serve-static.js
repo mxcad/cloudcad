@@ -17,13 +17,40 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 
+// 从 myServerConfig.json 读取移动端访问路径名
+function getMobileAccessPath() {
+  const configPaths = [
+    // 部署模式运行时配置
+    path.resolve(__dirname, '..', '..', 'data', 'configs', 'frontend', 'ini', 'myServerConfig.json'),
+    // 开发/构建模式源码配置
+    path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'),
+    // 前端 dist 配置（部分部署场景）
+    path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist', 'ini', 'myServerConfig.json'),
+  ];
+  for (const configPath of configPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.mobileAccessPath && typeof config.mobileAccessPath === 'string') {
+          return config.mobileAccessPath;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+  return 'mxcad_mobile';
+}
+
 // 解析命令行参数
 function parseArgs() {
   const args = process.argv.slice(2);
+  const mobileAccessPath = getMobileAccessPath();
   const options = {
     port: parseInt(process.env.FRONTEND_PORT || '3000', 10),
     dir: path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist'),
-    mobileDir: path.resolve(__dirname, '..', '..', 'packages', 'frontend_mobile', 'dist'),
+    mobilePath: mobileAccessPath,
+    mobileDir: path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist', mobileAccessPath),
     apiTarget: process.env.BACKEND_URL || 'http://localhost:3001',
     spa: true,
   };
@@ -37,6 +64,10 @@ function parseArgs() {
       i++;
     } else if (args[i] === '--mobile-dir' && args[i + 1]) {
       options.mobileDir = path.resolve(args[i + 1]);
+      i++;
+    } else if (args[i] === '--mobile-path' && args[i + 1]) {
+      options.mobilePath = args[i + 1];
+      options.mobileDir = path.resolve(options.dir, args[i + 1]);
       i++;
     } else if (args[i] === '--api-target' && args[i + 1]) {
       options.apiTarget = args[i + 1];
@@ -221,10 +252,11 @@ function createServer(options) {
       return;
     }
 
-    // 移动端页面：/mxcad_mobile 路径
-    if (urlPath.startsWith('/mxcad_mobile')) {
-      const mobilePath = urlPath.replace(/^\/mxcad_mobile/, '') || '/';
-      let filePath = path.join(options.mobileDir, mobilePath);
+    // 移动端页面：根据 mobilePath 配置的路径
+    const mobilePrefix = '/' + options.mobilePath;
+    if (urlPath === mobilePrefix || urlPath.startsWith(mobilePrefix + '/')) {
+      const mobileRelPath = urlPath.replace(new RegExp('^' + mobilePrefix), '') || '/';
+      let filePath = path.join(options.mobileDir, mobileRelPath);
 
       if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
         filePath = path.join(filePath, 'index.html');
@@ -276,7 +308,7 @@ function main() {
     console.log(`  桌面端: ${options.dir}`);
     console.log(`  移动端: ${options.mobileDir}`);
     console.log(`  地址: http://localhost:${options.port}`);
-    console.log(`  移动端: http://localhost:${options.port}/mxcad_mobile/`);
+    console.log(`  移动端: http://localhost:${options.port}/${options.mobilePath}/`);
     console.log(`  API 代理: /api -> ${options.apiTarget}`);
     console.log(`  SPA:  ${options.spa ? '启用' : '禁用'}`);
   });

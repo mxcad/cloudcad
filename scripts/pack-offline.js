@@ -1012,6 +1012,32 @@ function prepareDeployDir(platform) {
     }
   }
 
+  // 复制移动端前端构建产物到前端 dist 子目录下
+  const mobileDistSrc = path.join(
+    PROJECT_ROOT, 'packages', 'frontend_mobile', 'dist'
+  );
+  const sourceConfigPath = path.join(
+    PROJECT_ROOT, 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'
+  );
+  let mobileAccessPath = 'mxcad_mobile';
+  if (fs.existsSync(sourceConfigPath)) {
+    try {
+      const sourceConfig = JSON.parse(fs.readFileSync(sourceConfigPath, 'utf8'));
+      if (sourceConfig.mobileAccessPath && typeof sourceConfig.mobileAccessPath === 'string') {
+        mobileAccessPath = sourceConfig.mobileAccessPath;
+      }
+    } catch (e) {
+      // 读取失败用默认值
+    }
+  }
+  const mobileDistDest = path.join(tempDir, 'packages', 'frontend', 'dist', mobileAccessPath);
+  if (fs.existsSync(mobileDistSrc)) {
+    copyDir(mobileDistSrc, mobileDistDest);
+    log(`复制移动端前端: packages/frontend_mobile/dist/ → packages/frontend/dist/${mobileAccessPath}/`);
+  } else {
+    log('警告: packages/frontend_mobile/dist 不存在，跳过移动端复制');
+  }
+
   // 创建部署包标记文件（让 start.bat 能够识别这是部署包）
   fs.writeFileSync(path.join(tempDir, '.deploy'), '');
   log('创建 .deploy 标记文件');

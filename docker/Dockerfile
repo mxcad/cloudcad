@@ -89,6 +89,13 @@ COPY packages/frontend_mobile ./packages/frontend_mobile
 WORKDIR /app/packages/frontend_mobile
 RUN pnpm run build
 
+# 合并移动端 dist 到前端 dist（同域名部署）
+WORKDIR /app
+RUN MOBILE_PATH=$(node -e "const c=JSON.parse(require('fs').readFileSync('packages/frontend/public/ini/myServerConfig.json','utf8'));process.stdout.write(c.mobileAccessPath||'mxcad_mobile')") && \
+    mkdir -p packages/frontend/dist/$MOBILE_PATH && \
+    cp -r packages/frontend_mobile/dist/* packages/frontend/dist/$MOBILE_PATH/ && \
+    echo "Merged mobile dist at packages/frontend/dist/$MOBILE_PATH"
+
 # ==================== 生产镜像 ====================
 FROM node:20.19.5-alpine AS production
 WORKDIR /app
@@ -126,8 +133,8 @@ COPY packages/svnVersionTool ./packages/svnVersionTool
 
 # 复制构建产物（只有构建结果变化才会更新）
 COPY --from=backend-builder /app/packages/backend/dist ./packages/backend/dist
+# frontend/dist 已包含合并后的移动端 dist（路径由 myServerConfig.json 的 mobileAccessPath 控制）
 COPY --from=frontend-builder /app/packages/frontend/dist /var/www/html
-COPY --from=frontend-builder /app/packages/frontend_mobile/dist /var/www/html/mxcad_mobile
 
 # 复制 mxcadassembly (Linux 运行时)
 COPY runtime/linux/mxcad ./runtime/linux/mxcad

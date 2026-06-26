@@ -66,6 +66,8 @@
   "isAutomaticJumpToMobilePage": true,
   "?mobilePageUrl": "跳转的移动端页面的网络路径如/mxcad_mobile/或者https://xxx.com/mxcad_mobile",
   "mobilePageUrl": "/mxcad_mobile/",
+  "?mobileAccessPath": "移动端页面访问路径名，默认 mxcad_mobile，修改后需重新部署",
+  "mobileAccessPath": "mxcad_mobile",
   "?file_ext_name": "cad文件格式的扩展名",
   "file_ext_name": "mxweb",
   "?useUtf8": "使用Utf8编码",

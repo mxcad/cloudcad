@@ -133,6 +133,18 @@ function validateConfig(data, basePath = '') {
     }
   });
 
+  // Validate string fields
+  const stringFields = [
+    'mobileAccessPath',
+    'file_ext_name',
+    'speechRecognitionModel',
+  ];
+  stringFields.forEach((field) => {
+    if (data[field] !== undefined && typeof data[field] !== 'string') {
+      errors.push({ path: basePath + field, error: '必须是字符串类型' });
+    }
+  });
+
   // Validate array fields
   if (data.font !== undefined) {
     if (!Array.isArray(data.font)) {
