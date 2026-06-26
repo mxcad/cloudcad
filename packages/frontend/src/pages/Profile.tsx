@@ -38,6 +38,7 @@ import { ProfileWechatTab } from './Profile/ProfileWechatTab';
 import { ProfileMembershipTab } from './Profile/ProfileMembershipTab';
 import { ProfileDeactivateTab } from './components/ProfileDeactivateTab';
 import { Button, TabButton, Tabs } from '@/components/ui';
+import { billingControllerGetMembership } from '@/api-sdk';
 import './Profile/Profile.css';
 
 type TabType =
@@ -72,6 +73,16 @@ export const Profile: React.FC = () => {
     if (tabParam === 'membership') return 'membership';
     return 'info';
   });
+  const [membershipTier, setMembershipTier] = useState<string | null>(null);
+
+  useEffect(() => {
+    billingControllerGetMembership()
+      .then((res) => {
+        const data = res?.data as { tier?: string } | undefined;
+        if (data?.tier) setMembershipTier(data.tier);
+      })
+      .catch(() => {});
+  }, []);
 
   useDocumentTitle(
     activeTab === 'membership' ? '会员中心' : '个人资料'
@@ -973,9 +984,11 @@ export const Profile: React.FC = () => {
                     <User size={40} />
                   </div>
                 )}
-                <div className="avatar-badge">
-                  <Crown size={12} />
-                </div>
+                {membershipTier && membershipTier !== 'FREE' && (
+                  <div className="avatar-badge">
+                    <Crown size={12} />
+                  </div>
+                )}
               </div>
               <div className="user-info">
                 <h1 className="user-name">
