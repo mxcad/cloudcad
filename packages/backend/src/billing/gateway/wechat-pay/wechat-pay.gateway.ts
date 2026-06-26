@@ -4,7 +4,6 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import * as https from 'node:https';
 import * as fs from 'node:fs';
-import axios from 'axios';
 import { buildXML, parseXML, generateNonceStr, sign, parseTimeEnd } from './wechat-pay.util';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
 
@@ -252,15 +251,8 @@ export class WechatPayGateway implements PaymentGateway {
     for (let i = 0; i < domains.length; i++) {
       try {
         const url = `${domains[i]}${path}`;
-        const config: Record<string, any> = {
-          headers: { 'Content-Type': 'application/xml' },
-          timeout: 10000,
-        };
-        if (useCert && this.httpsAgent) {
-          config.httpsAgent = this.httpsAgent;
-        }
-        const res = await axios.post(url, xml, config);
-        const parsed = parseXML(res.data);
+        const body = await this.httpPost(url, xml, useCert);
+        const parsed = parseXML(body);
         if (parsed?.xml?.return_code === 'SUCCESS') {
           if (parsed.xml.result_code === 'FAIL') {
             this.logger.warn(`wechat api business error: path=${path} err_code=${parsed.xml.err_code} err_code_des=${parsed.xml.err_code_des}`);
@@ -275,7 +267,7 @@ export class WechatPayGateway implements PaymentGateway {
         const isNetworkError = err?.code === 'ECONNREFUSED'
           || err?.code === 'ETIMEDOUT'
           || err?.code === 'ECONNRESET'
-          || err?.response?.status === 503;
+          || err?.statusCode === 503;
         if (isNetworkError && i < domains.length - 1) {
           this.logger.warn(`wechat api domain failed, switching to backup: ${domains[i]}`);
           continue;
@@ -284,5 +276,52 @@ export class WechatPayGateway implements PaymentGateway {
       }
     }
     throw new Error('all wechat pay domains are unavailable');
+  }
+
+  private httpPost(url: string, body: string, useCert = false): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const u = new URL(url);
+      const agent = useCert && this.httpsAgent ? this.httpsAgent : undefined;
+      const options: https.RequestOptions = {
+        hostname: u.hostname,
+        port: u.port || 443,
+        path: u.pathname + u.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/xml',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 10000,
+        agent,
+      };
+
+      const req = https.request(options, (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => {
+          const raw = Buffer.concat(chunks).toString('utf-8');
+          if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+            const err = new Error(`HTTP ${res.statusCode}`);
+            (err as any).statusCode = res.statusCode;
+            reject(err);
+            return;
+          }
+          resolve(raw);
+        });
+      });
+
+      req.on('error', (err) => {
+        reject(err);
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        const err = new Error('request timeout');
+        (err as any).code = 'ETIMEDOUT';
+        reject(err);
+      });
+
+      req.write(body);
+      req.end();
+    });
   }
 }

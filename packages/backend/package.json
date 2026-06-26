@@ -58,7 +58,6 @@
     "@nestjs/throttler": "^6.5.0",
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
-    "@swc/core-win32-x64-msvc": "^1.15.43",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "cache-manager": "^7.2.8",

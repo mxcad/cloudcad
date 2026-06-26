@@ -1289,7 +1289,7 @@ export const CADEditorDirect: React.FC = () => {
     // 显示确认弹窗（与缩略图生成并发执行）
     const confirmPromise = showConfirm({
       title: '打开新图纸',
-      message: `"${saveAsFileName}" 已保存成功，是否在新标签页中打开？`,
+      message: `"${result.fileName}" 已保存成功，是否在新标签页中打开？`,
       confirmText: '打开',
       cancelText: '关闭',
       type: 'info',
