@@ -46,6 +46,12 @@ export class StorageQuotaInterceptor implements NestInterceptor {
     next: CallHandler
   ): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
+    const ct = request.headers['content-type'];
+    if (ct?.includes('multipart/form-data')) {
+      this.logger.log(
+        `Content-Type: ${ct}, Content-Length: ${request.headers['content-length']}`
+      );
+    }
     const user = request.user;
 
     // 仅对已认证用户进行检查

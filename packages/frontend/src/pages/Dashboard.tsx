@@ -301,6 +301,11 @@ export const Dashboard: React.FC = () => {
     };
   }, [finalStats]);
 
+  const fileTypeSubtitle = finalStats?.fileTypeStats
+    ? [stats.dwgFiles && `DWG ${stats.dwgFiles}`, stats.dxfFiles && `DXF ${stats.dxfFiles}`]
+        .filter(Boolean)
+        .join(' / ')
+    : undefined;
   const userName = user?.nickname || user?.username || '用户';
 
   // 最近更新的项目（前5个）
@@ -390,7 +395,7 @@ export const Dashboard: React.FC = () => {
         <StatCard
           title="图纸文件"
           value={stats.files}
-          subtitle={`DWG ${stats.dwgFiles} / DXF ${stats.dxfFiles}`}
+          subtitle={fileTypeSubtitle}
           icon={FileText}
           color="var(--accent-500)"
           onClick={() => navigate('/personal-space')}
