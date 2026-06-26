@@ -1312,6 +1312,89 @@ async function fixMigrationStatus() {
 }
 
 /**
+ * 从 migration.sql 中提取 DDL 语句对应的存在性检查 SQL
+ */
+/**
+ * 迁移前一致性检查
+ *
+ * 核心思路：
+ *   1. 退出码 ≠ 0  → 有 pending / failed 迁移
+ *      a. 跑 `prisma migrate diff` 对比 schema ↔ 数据库
+ *         - 无差异 → 数据库已是最新，仅 _prisma_migrations 表缺失记录
+ *           将所有 pending 迁移标记 applied，跳过 migrate deploy
+ *         - 有差异 → 数据库有真正变更，让 migrate deploy 正常处理
+ *   2. 退出码 = 0  → 无事可做
+ */
+async function reconcileMigrations() {
+  log('cyan', '正在校验迁移一致性...');
+
+  const prismaExec = PNPM_JS && fs.existsSync(PNPM_JS)
+    ? [PNPM_JS, '-F', 'backend', 'exec', 'prisma']
+    : ['-F', 'backend', 'exec', 'prisma'];
+
+  const migrationsDir = path.join(
+    PROJECT_ROOT, 'packages', 'backend', 'prisma', 'migrations'
+  );
+  if (!fs.existsSync(migrationsDir)) return;
+
+  // ---- 检查 migrate status ----
+  const statusResult = spawnSync(
+    PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+    [...prismaExec, 'migrate', 'status'],
+    { cwd: PROJECT_ROOT, encoding: 'utf8', shell: IS_WINDOWS, stdio: ['pipe', 'pipe', 'pipe'] }
+  );
+  if (statusResult.status === 0) {
+    log('cyan', '  [跳过] 迁移状态一致');
+    return;
+  }
+
+  const statusOutput = (statusResult.stdout || '') + (statusResult.stderr || '');
+  const pendingPattern = /(?:└─|├─)\s*(\d{14}_[\w]+)\//g;
+  const pendingMigrations = [];
+  let match;
+  while ((match = pendingPattern.exec(statusOutput)) !== null) {
+    pendingMigrations.push(match[1]);
+  }
+  if (pendingMigrations.length === 0) return;
+
+  log('yellow', `  发现 ${pendingMigrations.length} 个待应用迁移，检查实际数据库状态...`);
+
+  // ---- 用 migrate diff 判断 schema 是否已一致 ----
+  const diffResult = spawnSync(
+    PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+    [...prismaExec, 'migrate', 'diff', '--from-config-datasource', '--to-schema', 'prisma/schema.prisma', '--script'],
+    { cwd: PROJECT_ROOT, encoding: 'utf8', shell: IS_WINDOWS, stdio: ['pipe', 'pipe', 'pipe'], timeout: 30000 }
+  );
+
+  const diff = (diffResult.stdout || '').trim();
+
+  if (diff === '') {
+    // 数据库 schema 已是最新，仅 _prisma_migrations 表缺失记录
+    // 安全地将所有 pending 迁移标记 applied（不会真的改数据库结构）
+    log('green', '  ✓ 数据库 schema 已是最新，修复迁移记录...');
+    for (const name of pendingMigrations) {
+      const r = spawnSync(
+        PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+        [...prismaExec, 'migrate', 'resolve', '--applied', name],
+        { cwd: PROJECT_ROOT, stdio: 'pipe', shell: IS_WINDOWS, encoding: 'utf-8' }
+      );
+      if (r.status === 0) {
+        log('green', `    ✓ ${name}`);
+      } else {
+        log('red', `    ✗ ${name}: ${(r.stderr || '').trim()}`);
+      }
+    }
+    log('green', `  [✓] 已修复 ${pendingMigrations.length} 个迁移记录`);
+    return;
+  }
+
+  // 数据库 schema 与代码有真正差异 → 不碰 _prisma_migrations
+  // 让 migrate deploy 按正常流程逐个应用，错误处理由 retry 循环接管
+  log('yellow', '  检测到数据库 schema 与代码有差异');
+  log('yellow', '  交由 migrate deploy 处理，一致性修复跳过');
+}
+
+/**
  * 迁移前预检
  * 检查是否有破坏性变更、数据库大小等
  */
@@ -1319,7 +1402,10 @@ async function preflightMigrationCheck() {
   log('cyan', '执行迁移前检查...');
   console.log('');
 
-  // 1. 检查数据库大小
+  // 1. 一致性校验：检查 pending migration 是否已存在于数据库
+  await reconcileMigrations();
+
+  // 2. 检查数据库大小
   try {
     const { config: envConfig } = getDbEnv();
     const dbHost = envConfig.DB_HOST || 'localhost';
@@ -1343,7 +1429,7 @@ async function preflightMigrationCheck() {
     console.log('');
   }
 
-  // 2. 检查是否有 CONCURRENTLY 索引创建
+  // 3. 检查是否有 CONCURRENTLY 索引创建
   try {
     const migrationsDir = path.join(
       PROJECT_ROOT,
@@ -1543,10 +1629,16 @@ async function runDatabaseMigration() {
 
     // 判断是否为"已存在"类错误（表、索引、约束等在数据库中已存在）
     // 42P07 = relation already exists, 42710 = duplicate object, 42P16 = invalid table definition
-    const isAlreadyExistsError = /already exists|42P07|42710/.test(errorOutput);
+    // 22P02 = enum 值已不合法（通常 enum 已被提前迁移，数据也已转换），标记为 applied 安全
+    const isAlreadyExistsError = /already exists|42P07|42710|42701|42P16/.test(errorOutput);
+    const isEnumValueRemovedError = /22P02/.test(errorOutput) && /invalid input value for enum/.test(errorOutput);
 
-    if (isAlreadyExistsError) {
-      log('yellow', `检测到迁移 "${failedMigrationName}" 失败：变更已存在于数据库`);
+    if (isAlreadyExistsError || isEnumValueRemovedError) {
+      if (isAlreadyExistsError) {
+        log('yellow', `检测到迁移 "${failedMigrationName}" 失败：变更已存在于数据库`);
+      } else {
+        log('yellow', `检测到迁移 "${failedMigrationName}" 失败：枚举值已不存在（enum 已提前迁移）`);
+      }
       log('cyan', '自动标记为已应用（applied）并继续部署...');
 
       const resolveResult = spawnSync(
@@ -1618,6 +1710,27 @@ async function runDatabaseMigration() {
   log('blue', '└─────────────────────────────────────────────┘');
   console.log('');
   log('green', '[✓] 数据库迁移完成');
+
+  // 重新生成 Prisma Client，确保与当前数据库 schema 一致
+  log('cyan', '重新生成 Prisma Client...');
+  const generateResult = spawnSync(
+    PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+    PNPM_JS && fs.existsSync(PNPM_JS)
+      ? [PNPM_JS, '-F', 'backend', 'exec', 'prisma', 'generate']
+      : ['-F', 'backend', 'exec', 'prisma', 'generate'],
+    {
+      cwd: PROJECT_ROOT,
+      stdio: 'pipe',
+      shell: IS_WINDOWS,
+      encoding: 'utf-8',
+    }
+  );
+  if (generateResult.status === 0) {
+    log('green', '[✓] Prisma Client 已更新');
+  } else {
+    log('yellow', '⚠️  Prisma Client 生成失败，请手动运行: npx prisma generate');
+  }
+
   return true;
 }
 

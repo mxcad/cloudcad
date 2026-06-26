@@ -11,6 +11,16 @@ const NONCE_TTL = 300;
 const REFUND_PREFIX = 'wx:refund:';
 const NONCE_PREFIX = 'wx:nonce:';
 
+/** 安全提取 fast-xml-parser 的文本值（处理 CDATA 对象） */
+function xmlText(val: unknown): string {
+  if (val == null) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && '__cdata' in (val as Record<string, unknown>)) {
+    return String((val as Record<string, unknown>).__cdata ?? '');
+  }
+  return JSON.stringify(val);
+}
+
 @Injectable()
 export class WechatPayGateway implements PaymentGateway {
   readonly name = 'wechat_pay';
@@ -255,14 +265,14 @@ export class WechatPayGateway implements PaymentGateway {
         const parsed = parseXML(body);
         if (parsed?.xml?.return_code === 'SUCCESS') {
           if (parsed.xml.result_code === 'FAIL') {
-            this.logger.warn(`wechat api business error: path=${path} err_code=${parsed.xml.err_code} err_code_des=${parsed.xml.err_code_des}`);
-            throw new Error(`wechat api business error: ${parsed.xml.err_code_des}`);
+            this.logger.warn(`wechat api business error: path=${path} err_code=${xmlText(parsed.xml.err_code)} err_code_des=${xmlText(parsed.xml.err_code_des)}`);
+            throw new Error(`wechat api business error: ${xmlText(parsed.xml.err_code_des)}`);
           }
           this.logger.log(`wechat api success: path=${path} return_code=SUCCESS`);
           return parsed.xml;
         }
-        this.logger.warn(`wechat api error: path=${path} return_msg=${parsed?.xml?.return_msg}`);
-        throw new Error(`wechat api error: ${parsed?.xml?.return_msg}`);
+        this.logger.warn(`wechat api error: path=${path} return_msg=${xmlText(parsed?.xml?.return_msg)}`);
+        throw new Error(`wechat api error: ${xmlText(parsed?.xml?.return_msg)}`);
       } catch (err: any) {
         const isNetworkError = err?.code === 'ECONNREFUSED'
           || err?.code === 'ETIMEDOUT'

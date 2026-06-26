@@ -3,7 +3,7 @@ import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 const parser = new XMLParser({
   ignoreAttributes: false,
-  cdataPropName: '__cdata',
+  cdataPropName: false,
   parseTagValue: false,
 });
 

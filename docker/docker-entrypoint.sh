@@ -171,12 +171,15 @@ run_migrations() {
             fi
         fi
         
-        # 执行迁移
-        npx prisma migrate deploy --schema=prisma/schema.prisma 2>&1 | while IFS= read -r line; do
-            log_info "│  $line"
-        done
-        
-        local exit_code=${PIPESTATUS[0]}
+        # 执行迁移（用临时文件替代管道，兼容 BusyBox ash）
+        npx prisma migrate deploy --schema=prisma/schema.prisma > /tmp/prisma-migrate-output.log 2>&1
+        local exit_code=$?
+        if [ -s /tmp/prisma-migrate-output.log ]; then
+            while IFS= read -r line; do
+                log_info "│  $line"
+            done < /tmp/prisma-migrate-output.log
+        fi
+        rm -f /tmp/prisma-migrate-output.log
         local end_time=$(date +%s)
         local elapsed=$((end_time - start_time))
         
