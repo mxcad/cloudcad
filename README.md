@@ -15,6 +15,8 @@
 
 ## 项目预览
 
+<!-- 截图待补充：documents/user-guide/imgs/ -->
+<!--
 ### 登录页面
 ![登录页面](documents/user-guide/imgs/01-login.png)
 
@@ -30,6 +32,7 @@
 ### 用户与权限管理
 ![用户管理](documents/user-guide/imgs/07-user-management.png)
 ![角色权限](documents/user-guide/imgs/08-role-permissions.png)
+-->
 
 ---
 
@@ -122,7 +125,8 @@ cloudcad/
 │   ├── backend/        # NestJS 后端服务 (端口 3001)
 │   ├── frontend/       # React 前端应用 (端口 3000)
 │   ├── config-service/ # 部署配置中心 (端口 3002)
-    │   └── mxVersionTool/  # MX 版本控制工具
+│   ├── frontend_mobile/ # 移动端 H5 应用
+│   └── mxVersionTool/   # MX 版本控制工具
 ├── docker/             # Docker 部署配置
 ├── runtime/            # 运行时依赖 (Node.js、PostgreSQL、Redis、MX、MxCAD)
 │   ├── windows/        # Windows 离线运行时

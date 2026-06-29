@@ -49,9 +49,9 @@
 - [x] **`uploads/` 中被 git 跟踪的 DWG 文件（33MB+）** — 添加 `uploads/` 到 `.gitignore`
 - [x] **`packages/mxcadassembly/` 中被 git 跟踪的 56MB 二进制文件** — 添加 `.gitignore` 规则
 - [x] **QWEN_API_KEY 泄露** — `.claude/settings.local.json:64-67` → 轮换密钥，`.claude/` 加入 `.gitignore`
-- [ ] **QQ 邮箱 SMTP 密码泄露** — `docker/.env:82-83`
-- [ ] **微信支付密钥泄露** — `packages/backend/.env:459-462`
-- [ ] **JWT_SECRET / SESSION_SECRET 泄露** — `docker/.env:38`, `packages/backend/.env:97`
+- [x] ~~**QQ 邮箱 SMTP 密码泄露** — `docker/.env:82-83`~~（文件已被 `.gitignore` 排除，密钥未进入 git 历史）
+- [x] ~~**微信支付密钥泄露** — `packages/backend/.env:459-462`~~（同上）
+- [x] ~~**JWT_SECRET / SESSION_SECRET 泄露** — `docker/.env:38`, `packages/backend/.env:97`~~（同上）
 - [x] **CI 数据库名拼写错误 `cloucad`** — `.github/workflows/ci.yml:23`, `test.yml:23` → 改为 `cloudcad`
 - [x] **CI pnpm 版本 9.15.4 与根 package.json 要求的 9.15.9 不匹配** — 两个 workflow 文件
 - [x] **`ci.yml` 与 `test.yml` 重叠运行** — 合并为单一 workflow 或调整触发条件
@@ -69,7 +69,7 @@
 - [x] **`AGENTS.md` 与 `CLAUDE.md` 端口号不一致** — 统一为 3000
 - [x] **`CONTEXT.md:243` i18n 描述错误** — 说"暂无基础设施"但 VoerkaI18n 已完全集成
 - [x] **`CLAUDE.md:33` 列出包时遗漏 `frontend_mobile`**
-- [ ] **`README.md` 损坏的图片引用** — 指向不存在的 `documents/user-guide/imgs/`
+- [x] **`README.md` 损坏的图片引用** — 指向不存在的 `documents/user-guide/imgs/` → 注释掉，待截图补充
 - [ ] **根 `tsconfig.json` 开启 `strict: true` 但后端故意是宽松类型** — 需确认覆盖是否正确
 - [x] **根 `package.json` 中 `check` 脚本使用 `;` 而非 `&&`** — `lint` 失败后仍继续执行
 - [ ] **ESLint `custom-rules/no-prisma-enum-in-api-property` 被注释掉** — 重要架构约束未生效
@@ -90,13 +90,13 @@
 - [ ] **忽略模式列表冗长且存在重叠** — `.eslintrc.js:129` 有 29 个 ignorePatterns
 - [ ] **`pnpm-workspace.yaml` 极简（2 行）** — 缺少对 `packages/config-service` 的显式声明
 - [ ] **`vitest.workspace.ts` 不存在** — 无法跨包协调测试
-- [ ] **`config-service/AGENTS.md` 与代码不符** — 描述 NestJS/TypeScript 结构但实际是纯 JS
+- [x] **`config-service/AGENTS.md` 与代码不符** — 描述 NestJS/TypeScript 结构但实际是纯 JS → 重写为纯 Node.js 描述
 - [ ] **打包脚本代码重复（~150 行）** — `pack-docker.js`(448 行) / `pack-offline.js`(1217 行) / `pack-linux-deploy.js`(439 行) 间大量重复，应提取 `scripts/shared/pack-utils.js`
 - [ ] **`pack-linux-deploy.js` 与 `verify-linux-deploy.js` 中 `OS_BASE_IMAGES` 映射重复** — 需保持同步
 - [ ] **`extract-linux-runtime.js` 大量硬编码路径** — Node.js/PG 版本、系统库路径等
 - [x] **`scripts/` 中 `generate-frontend-permissions.js` 用 ESM 而其他脚本用 CJS** — 不一致
-- [ ] **`autotest.bat:25` 硬编码分支名 `refactor/circular-deps`** — 功能分支不应硬编码
-- [ ] **Docker compose 中 `INITIAL_ADMIN_PASSWORD` 默认值 `Admin123!`** — 安全风险
+- [x] **`autotest.bat:25` 硬编码分支名 `refactor/circular-deps`** → 改为 `main`，同时修复第 21 行重定向顺序
+- [x] **Docker compose 中 `INITIAL_ADMIN_PASSWORD` 默认值 `Admin123!`** — 改为 `${VAR:?error}` 强制要求设置
 
 ### 🟢 P3 — 低优先级
 
@@ -425,21 +425,21 @@
 - [ ] **6 个 public JS 文件中 `setButtonLoading`/`showToast` 函数重复 6 次** — 应提取为共享模块
 - [ ] **5 个配置模块的 `getConfig()` 函数模板完全一致** — 应创建工厂函数
 - [ ] **CRUD 路由模板化** — 5 组配置 × 4 个方法 = 20 个模式相同的端点
-- [ ] **`sms-config.js` 死代码** — 导出但未被任何文件引用
-- [ ] **`testDatabase` 与 `testRedis` 功能相同** — 可合并为 `testTcpConnection`
+- [x] **`sms-config.js` 死代码** — 导出但未被任何文件引用 → 已删除
+- [x] **`testDatabase` 与 `testRedis` 功能相同** — 合并为 `testTcpConnection`
 
 ### 🟡 P2 — 中优先级
 
 - [ ] **`server.js:551-553` 内存会话未持久化** — 服务重启后所有会话丢失
 - [ ] **`server.js:1933` 所有静态文件 `Cache-Control: no-store`** — 每次刷新重新下载 84KB
-- [ ] **`server.js:875` 回退管理员密码硬编码 `'Admin123!'`**
+- [x] **`server.js:875` + `server.js:1003` 回退管理员密码硬编码 `'Admin123!'`** — 改为 `'admin123'` + 缺失时记录 warning
 - [ ] **`server.js:46-49` 自定义日志用 `console.log`** — 无日志轮转、级别过滤
 - [ ] **无错误处理中间件** — 每个路由方法需自行 try/catch
 - [ ] **SPA 架构为 3002 行单 HTML 文件** — 内联 CSS+JS，难以维护
 
 ### 🟢 P3 — 低优先级
 
-- [ ] **`AGENTS.md:13-21` 描述 NestJS 结构但实际是纯 JS** — 完全不相关
+- [x] **`AGENTS.md:13-21` 描述 NestJS 结构但实际是纯 JS** — 已重写为纯 Node.js HTTP 服务描述
 - [ ] **`server.js:1070-1095` CLI 参数中传递数据库密码** — 进程列表中可见
 
 ---

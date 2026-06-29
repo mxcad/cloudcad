@@ -18,11 +18,11 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
 echo [%date% %time%] ========== AutoTest Pipeline START ========== > "%LOG_FILE%"
 
-cd /d "%REPO_ROOT%" 2>&1 >> "%LOG_FILE%"
+cd /d "%REPO_ROOT%" >> "%LOG_FILE%" 2>&1
 
 REM --- Step 1: Pull latest changes ---
 echo [%date% %time%] Pulling latest changes... >> "%LOG_FILE%"
-git pull origin refactor/circular-deps 2>&1 >> "%LOG_FILE%" 2>&1
+git pull origin main 2>&1 >> "%LOG_FILE%"
 
 REM --- Step 2: Install dependencies ---
 echo [%date% %time%] Installing dependencies... >> "%LOG_FILE%"

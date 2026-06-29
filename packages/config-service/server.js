@@ -632,28 +632,7 @@ function recordLoginAttempt(ip, success) {
 
 // ==================== 连接测试 ====================
 
-async function testDatabase(config) {
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    const timeout = setTimeout(() => {
-      socket.destroy();
-      resolve({ success: false, error: '连接超时' });
-    }, 5000);
-
-    socket.connect(config.port, config.host, () => {
-      clearTimeout(timeout);
-      socket.destroy();
-      resolve({ success: true });
-    });
-
-    socket.on('error', (err) => {
-      clearTimeout(timeout);
-      resolve({ success: false, error: err.message });
-    });
-  });
-}
-
-async function testRedis(config) {
+async function testTcpConnection(config) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     const timeout = setTimeout(() => {
@@ -872,7 +851,10 @@ async function handleApi(req, res, pathname, searchParams) {
 
     const body = await parseBody(req);
     const env = parseEnvFile(ENV_PATH);
-    const adminPassword = env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+    if (!env.INITIAL_ADMIN_PASSWORD) {
+      log('warn', 'INITIAL_ADMIN_PASSWORD 未设置，使用默认密码（不安全）');
+    }
+    const adminPassword = env.INITIAL_ADMIN_PASSWORD || 'admin123';
 
     if (body.password === adminPassword) {
       recordLoginAttempt(ip, true);
@@ -1018,7 +1000,10 @@ async function handleApi(req, res, pathname, searchParams) {
 
     // 验证旧密码
     const env = parseEnvFile(ENV_PATH);
-    const currentPassword = env.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+    if (!env.INITIAL_ADMIN_PASSWORD) {
+      log('warn', 'INITIAL_ADMIN_PASSWORD 未设置，使用默认密码（不安全）');
+    }
+    const currentPassword = env.INITIAL_ADMIN_PASSWORD || 'admin123';
 
     if (oldPassword !== currentPassword) {
       sendJson(res, 400, { error: '旧密码错误' });
@@ -1300,7 +1285,7 @@ async function handleApi(req, res, pathname, searchParams) {
     if (!session) return;
 
     const env = parseEnvFile(ENV_PATH);
-    const result = await testDatabase({
+    const result = await testTcpConnection({
       host: env.DB_HOST || 'localhost',
       port: parseInt(env.DB_PORT || '5432'),
     });
@@ -1314,7 +1299,7 @@ async function handleApi(req, res, pathname, searchParams) {
     if (!session) return;
 
     const env = parseEnvFile(ENV_PATH);
-    const result = await testRedis({
+    const result = await testTcpConnection({
       host: env.REDIS_HOST || 'localhost',
       port: parseInt(env.REDIS_PORT || '6379'),
     });
