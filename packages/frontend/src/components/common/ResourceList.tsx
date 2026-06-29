@@ -14,6 +14,7 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import { SearchInput } from '@/components/search/SearchInput';
 import { FileImage, ChevronRight, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { LOADING_TIMEOUT } from '@/constants/timeouts';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { Pagination } from '@/components/ui/Pagination';
 import { ViewToggle } from '@/components/common/ViewToggle';
@@ -599,7 +600,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     // loading 为 true 且 items 为空，启动超时计时器
     loadingTimerRef.current = setTimeout(() => {
       setLoadingTimedOut(true);
-    }, 10_000);
+    }, LOADING_TIMEOUT);
 
     return () => {
       if (loadingTimerRef.current) {

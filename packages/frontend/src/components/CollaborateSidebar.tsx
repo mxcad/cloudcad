@@ -43,6 +43,12 @@ import {
   hideGlobalLoading,
 } from '../utils/loadingUtils';
 import { CurrentFilePanel } from './CurrentFilePanel';
+import {
+  FETCH_WORKS_TIMEOUT,
+  POLL_INTERVAL,
+  AUTO_JOIN_SAFETY_TIMEOUT,
+  AUTO_JOIN_MAX_RETRIES,
+} from '@/constants/timeouts';
 import { WorkListPanel } from './WorkListPanel';
 import styles from './CollaborateSidebar.module.css';
 
@@ -124,7 +130,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
 
     const timeoutId = setTimeout(() => {
       setLoading(false);
-    }, 30000);
+    }, FETCH_WORKS_TIMEOUT);
 
     try {
       setMyProjectIds(await fetchMyProjectIds());
@@ -310,7 +316,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     if (!visible || !isCadReady) return;
     autoJoinTimerRef.current = setInterval(() => {
       fetchWorks();
-    }, 8000);
+    }, POLL_INTERVAL);
     return () => {
       if (autoJoinTimerRef.current) {
         clearInterval(autoJoinTimerRef.current);
@@ -378,12 +384,12 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
 
     let cancelled = false;
     let retryCount = 0;
-    const MAX_RETRIES = 30;
+    const MAX_RETRIES = AUTO_JOIN_MAX_RETRIES;
 
     // Safety fallback: hide loading after 15s if the collaborative file never loads
     const safetyTimer = setTimeout(() => {
       hideGlobalLoading('autoJoin-safetyTimeout');
-    }, 15000);
+    }, AUTO_JOIN_SAFETY_TIMEOUT);
 
     const userData: CollaborateUserData = {
       v: 1,
@@ -679,7 +685,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         // Safety fallback: if the file-open event never fires, still hide loading
         const safetyTimer = setTimeout(() => {
           hideGlobalLoading('handleJoin-safetyTimeout');
-        }, 15000);
+    }, AUTO_JOIN_SAFETY_TIMEOUT);
 
         const onFileOpen = () => {
           clearTimeout(safetyTimer);

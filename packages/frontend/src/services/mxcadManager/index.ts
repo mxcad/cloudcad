@@ -1949,7 +1949,7 @@ class MxCADContainerManager {
         right: 0;
         bottom: 0;
         visibility: hidden;
-        z-index: -1; /* Z_LAYERS.CAD_EDITOR hidden */
+        z-index: ${Z_LAYERS.BACKGROUND - 1}; /* below BACKGROUND when hidden */
         pointer-events: none;
       `;
       document.body.appendChild(container);
@@ -1974,17 +1974,15 @@ class MxCADContainerManager {
     if (this.globalContainer) {
       // 使用 visibility + z-index 方案，保护 WebGL 上下文不被销毁
       // visibility: hidden 保持元素在渲染树中，WebGL 上下文不会丢失
-      // z-index 只在隐藏时设置为 -1，显示时设置为 9998
-      // CADEditorDirect 容器 z-index: 9999，侧边栏在其中
-      // MxCAD 容器 z-index: 9998，在 CADEditorDirect 之下，但编辑器内容区域透明
-      // pointer-events 禁用交互
+      // 隐藏时 z-index = BACKGROUND - 1，显示时 = Z_LAYERS.CAD_EDITOR
+      // CADEditorDirect 容器覆盖在 MxCAD 之上
       if (show) {
         this.globalContainer.style.visibility = 'visible';
         this.globalContainer.style.zIndex = String(Z_LAYERS.CAD_EDITOR);
         this.globalContainer.style.pointerEvents = 'auto';
       } else {
         this.globalContainer.style.visibility = 'hidden';
-        this.globalContainer.style.zIndex = '-1';
+        this.globalContainer.style.zIndex = String(Z_LAYERS.BACKGROUND - 1);
         this.globalContainer.style.pointerEvents = 'none';
       }
     }

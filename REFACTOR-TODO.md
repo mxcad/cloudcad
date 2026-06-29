@@ -142,7 +142,7 @@
 - [ ] **合并 `styles/theme.css` (915 行) 与 `styles/app.css` (961 行)** — 消除重复主题变量
 - [ ] **消除两处重复的 `@keyframes` 动画定义** — `theme.css:663-727` 与 `app.css:143-207`
 - [ ] **`app.css` 中硬编码 `rgba(255,255,255,0.8)` 等值** — 应使用 CSS 变量
-- [ ] **`mxcadManager/index.ts:1953` 硬编码 `z-index: -1`** — 应使用 `Z_LAYERS` 常量
+- [x] **`mxcadManager/index.ts:1953` 硬编码 `z-index: -1`** — 应使用 `Z_LAYERS` 常量
 - [ ] **仅 1 个根级 `<ErrorBoundary>`，无页面级边界** — CADEditorDirect、Profile、FontLibrary 等复杂页面无独立错误边界
 - [ ] **竞态条件：多处 useEffect 无 AbortController**：
   - [ ] `CADEditorDirect.tsx:235-260` — 多个异步操作无中止信号
@@ -193,13 +193,13 @@
   - [ ] 修复 24 个高级 npm 安全漏洞
 - [ ] **`appConfig.ts:82` 与 `fileSystemStore.ts:73` 默认 pageSize 冲突**（20 vs 30）
 - [x] **`mxcadManager/index.ts:1118` 参数名 `ages` 应为 `args`** — 拼写错误
-- [ ] **魔数散落** — 需抽取为命名常量：
-  - [ ] `5000` brand config timeout (`index.tsx:55`)
-  - [ ] `30000` queryClient staleTime (`index.tsx:33`)
-  - [ ] `30000` fetchWorks timeout (`CollaborateSidebar.tsx:127`)
-  - [ ] `15000` auto-join safety timeout (`CollaborateSidebar.tsx:386`)
-  - [ ] `8000` poll interval (`CollaborateSidebar.tsx:313`)
-  - [ ] `10000` ResourceList loading timeout (`ResourceList.tsx:602`)
+- [x] **魔数散落** — 需抽取为命名常量：
+  - [x] `5000` brand config timeout (`index.tsx:55`)
+  - [x] `30000` queryClient staleTime (`index.tsx:33`)
+  - [x] `30000` fetchWorks timeout (`CollaborateSidebar.tsx:127`)
+  - [x] `15000` auto-join safety timeout (`CollaborateSidebar.tsx:386`)
+  - [x] `8000` poll interval (`CollaborateSidebar.tsx:313`)
+  - [x] `10000` ResourceList loading timeout (`ResourceList.tsx:602`)
 
 ### 🟢 P3 — 低优先级
 

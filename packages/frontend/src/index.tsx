@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 
 import { fetchBrandConfig } from './constants/appConfig';
+import { STALE_TIME_DEFAULT, INIT_TIMEOUT } from './constants/timeouts';
 import { ErrorBoundary } from './components/ErrorBoundary';
 // import { VoerkaI18nProvider, useVoerkaI18n } from '@voerkai18n/react';
 // import { i18nScope } from './languages';
@@ -30,7 +31,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      staleTime: STALE_TIME_DEFAULT,
       refetchOnWindowFocus: false,
     },
   },
@@ -55,7 +56,7 @@ const AppInitializer: React.FC = () => {
     const timeoutId = setTimeout(() => {
       console.warn('[CloudCAD] Brand Config 超时，继续渲染');
       setIsReady(true);
-    }, 5000);
+    }, INIT_TIMEOUT);
 
     fetchBrandConfig()
       .then((brandConfig) => {
