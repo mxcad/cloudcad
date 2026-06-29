@@ -45,10 +45,10 @@
 
 ### 🔴 P0 — 安全 / 阻塞
 
-- [ ] **`temp/` 中被 git 跟踪的 1571 个文件（含 71MB node.exe）** — 添加 `temp/` 到 `.gitignore`，清理 git 历史
-- [ ] **`uploads/` 中被 git 跟踪的 DWG 文件（33MB+）** — 添加 `uploads/` 到 `.gitignore`
-- [ ] **`packages/mxcadassembly/` 中被 git 跟踪的 56MB 二进制文件** — 添加 `.gitignore` 规则
-- [ ] **QWEN_API_KEY 泄露** — `.claude/settings.local.json:64-67` → 轮换密钥，`.claude/` 加入 `.gitignore`
+- [x] **`temp/` 中被 git 跟踪的 1571 个文件（含 71MB node.exe）** — 添加 `temp/` 到 `.gitignore`，清理 git 历史
+- [x] **`uploads/` 中被 git 跟踪的 DWG 文件（33MB+）** — 添加 `uploads/` 到 `.gitignore`
+- [x] **`packages/mxcadassembly/` 中被 git 跟踪的 56MB 二进制文件** — 添加 `.gitignore` 规则
+- [x] **QWEN_API_KEY 泄露** — `.claude/settings.local.json:64-67` → 轮换密钥，`.claude/` 加入 `.gitignore`
 - [ ] **QQ 邮箱 SMTP 密码泄露** — `docker/.env:82-83`
 - [ ] **微信支付密钥泄露** — `packages/backend/.env:459-462`
 - [ ] **JWT_SECRET / SESSION_SECRET 泄露** — `docker/.env:38`, `packages/backend/.env:97`

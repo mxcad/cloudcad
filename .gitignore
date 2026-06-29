@@ -120,9 +120,20 @@ runtime/cache/
 
 # Git worktrees
 .worktrees/
+temp.claude/worktrees/
 .gitnexus
 
 # SVN
 .svn/
 
-temp.claude/worktrees/
+# Temporary deploy artifacts
+temp/
+
+# User uploaded files (prevent accidental tracking)
+uploads/
+
+# MXCAD assembly binaries
+packages/mxcadassembly/
+
+# Local Claude settings (user-specific secrets, not team config)
+.claude/settings.local.json
