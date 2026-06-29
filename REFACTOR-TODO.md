@@ -56,8 +56,8 @@
 - [x] **CI pnpm 版本 9.15.4 与根 package.json 要求的 9.15.9 不匹配** — 两个 workflow 文件
 - [x] **`ci.yml` 与 `test.yml` 重叠运行** — 合并为单一 workflow 或调整触发条件
 - [x] **CI 不运行前端测试** — `ci.yml` 中只有 `type-check`，缺少 `pnpm test`
-- [ ] **Dockerfile 容器以 root 运行** — 从未设置 `USER` 指令，违反最小权限原则
-- [ ] **Dockerfile 数据目录权限过大** — `chmod -R 755 /app/data`（全局可读），应仅为 700
+- [x] **Dockerfile 容器以 root 运行** — 从未设置 `USER` 指令，违反最小权限原则 (改用 su-exec 降权运行服务进程)
+- [x] **Dockerfile 数据目录权限过大** — `chmod -R 755 /app/data`（全局可读），应仅为 700
 - [x] **`batch-import-library.js:8` 硬编码管理员密码 `'Admin123!'`** — 源代码中明文凭据
 - [x] **`.npmrc` 缺少 `registry=` 和 `strict-ssl=true`** — 无安全锁定
 - [x] **`scripts/` 中 `autotest.bat:10` 硬编码仓库路径** — `D:\project\cloudcad` 与工作目录不符
@@ -74,7 +74,7 @@
 - [x] **根 `package.json` 中 `check` 脚本使用 `;` 而非 `&&`** — `lint` 失败后仍继续执行
 - [ ] **ESLint `custom-rules/no-prisma-enum-in-api-property` 被注释掉** — 重要架构约束未生效
 - [ ] **`.prettierrc` 设置 `endOfLine: "lf"`** — 在 Windows 上可能导致 git 行尾问题
-- [ ] **Dockerfile 中 pnpm 硬编码 9.15.4** — 与要求的不一致
+- [x] **Dockerfile 中 pnpm 硬编码 9.15.4** — 与要求的不一致
 - [ ] **Docker entrypoint 使用 `prisma db push --accept-data-loss`** — 生产环境可能产生破坏
 - [ ] **nginx 配置缺少 `Content-Security-Policy` 头部**
 - [ ] **nginx 配置仅 HTTP 无 HTTPS** — 所有流量明文传输
@@ -85,10 +85,10 @@
 
 ### 🟡 P2 — 中优先级
 
-- [ ] **`check` 脚本运行顺序** — `lint` → `format:check` → `type-check`，当前用 `;` 忽略失败
+- [x] **`check` 脚本运行顺序** — `lint` → `format:check` → `type-check`，当前用 `;` 忽略失败（已全部为 `&&`）
 - [ ] **`.eslintrc.js` 中后端规则几乎完全禁用了所有 TS 规则** — ESLint 对后端代码几乎无约束
 - [ ] **忽略模式列表冗长且存在重叠** — `.eslintrc.js:129` 有 29 个 ignorePatterns
-- [ ] **`pnpm-workspace.yaml` 极简（2 行）** — 缺少对 `packages/config-service` 的显式声明
+- [x] **`pnpm-workspace.yaml` 极简（2 行）** — 缺少对 `packages/config-service` 的显式声明
 - [ ] **`vitest.workspace.ts` 不存在** — 无法跨包协调测试
 - [x] **`config-service/AGENTS.md` 与代码不符** — 描述 NestJS/TypeScript 结构但实际是纯 JS → 重写为纯 Node.js 描述
 - [ ] **打包脚本代码重复（~150 行）** — `pack-docker.js`(448 行) / `pack-offline.js`(1217 行) / `pack-linux-deploy.js`(439 行) 间大量重复，应提取 `scripts/shared/pack-utils.js`
@@ -144,15 +144,15 @@
 - [ ] **`app.css` 中硬编码 `rgba(255,255,255,0.8)` 等值** — 应使用 CSS 变量
 - [x] **`mxcadManager/index.ts:1953` 硬编码 `z-index: -1`** — 应使用 `Z_LAYERS` 常量
 - [ ] **仅 1 个根级 `<ErrorBoundary>`，无页面级边界** — CADEditorDirect、Profile、FontLibrary 等复杂页面无独立错误边界
-- [ ] **竞态条件：多处 useEffect 无 AbortController**：
-  - [ ] `CADEditorDirect.tsx:235-260` — 多个异步操作无中止信号
-  - [ ] `Profile.tsx:79-86` — 会员数据提取无 AbortController
-  - [ ] `useFileSystemChildren.ts:53-89` — 快速导航时可能 setState 到已卸载组件
+- [x] **竞态条件：多处 useEffect 无 AbortController**：
+  - [x] `CADEditorDirect.tsx:347-373` — checkPermissions 权限加载添加 AbortController（原行号 235-260 已过时）
+  - [x] `Profile.tsx:79-86` — 会员数据提取添加 AbortController
+  - [x] `useFileSystemChildren.ts:53-89` — 使用 React Query 自动处理竞态，无需手动 AbortController
 - [x] **`mxcadManager/index.ts:159` `beforeunload` 事件监听器从不清理** — 未调用 `removeEventListener`
-- [ ] **`Profile.tsx:895` `setTimeout` 在 `logout` 中的定时器未在卸载时清除**
-- [ ] **`ProfileMembershipTab.tsx:134` `setInterval(loadBillingData, 30000)` 轮询无清除** — 组件卸载后仍运行
-- [ ] **`BreadcrumbNavigation.tsx:52` `setTimeout(() => {...}, 5000)` 未保存 ref 也不清理**
-- [ ] **`CollaborateSidebar.tsx:125` setTimeout 保存为局部变量** — 快速重入可能泄漏
+- [x] **`Profile.tsx:895` `setTimeout` 在 `logout` 中的定时器未在卸载时清除** — 改为 `deactivateTimeoutRef` + cleanup useEffect
+- [x] **`ProfileMembershipTab.tsx:134` `setInterval(loadBillingData, 30000)` 轮询无清除** — 代码已有 cleanup（`return () => clearInterval(id)`），已修复
+- [x] **`BreadcrumbNavigation.tsx:52` `setTimeout` 未保存 ref 也不清理** — 改为 `editTimeoutRef` + cleanup useEffect
+- [x] **`CollaborateSidebar.tsx:125` setTimeout 保存为局部变量** — `fetchWorks` timeout 保存到 ref + catch 清理；exit handler 两个 setTimeout 保存到 ref + cleanup useEffect
 
 ### 🟡 P2 — 中优先级
 
@@ -478,7 +478,7 @@
 
 ---
 
-> 统计：**共 252 个条目**（P0: 49, P1: 67, P2: 88, P3: 48）
+> 统计：**共 252 个条目**（P0: 49, P1: 67, P2: 88, P3: 48） → 已完成 145 个
 
 ---
 

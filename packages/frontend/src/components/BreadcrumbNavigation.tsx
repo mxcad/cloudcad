@@ -34,6 +34,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const editTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -49,11 +50,15 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   const startEditing = useCallback(() => {
     setEditValue(pathString);
     setIsEditing(true);
-    setTimeout(() => {
+    editTimeoutRef.current = setTimeout(() => {
       editInputRef.current?.focus();
       editInputRef.current?.select();
     }, 50);
   }, [pathString]);
+
+  useEffect(() => {
+    return () => clearTimeout(editTimeoutRef.current);
+  }, []);
 
   const cancelEditing = useCallback(() => {
     setIsEditing(false);

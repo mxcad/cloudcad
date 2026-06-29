@@ -118,6 +118,9 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
   const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingJoinWorkIdRef = useRef<number | null>(null);
   const fetchVersionRef = useRef(0);
+  const fetchWorksTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const exitGuardTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const exitFetchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Sync workId state with store
   const setCurrentWorkId = useCallback((id: number | null) => {
@@ -131,6 +134,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     const timeoutId = setTimeout(() => {
       setLoading(false);
     }, FETCH_WORKS_TIMEOUT);
+    fetchWorksTimeoutRef.current = timeoutId;
 
     try {
       setMyProjectIds(await fetchMyProjectIds());
@@ -166,6 +170,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         });
       });
     } catch (error) {
+      clearTimeout(fetchWorksTimeoutRef.current);
       setLoading(false);
     }
   }, []);
@@ -345,6 +350,14 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
       fetchWorks();
     }
   }, [visible, isInCollaboration, collaborationWorkId, currentWorkId, fetchWorks]);
+
+  // Cleanup exit timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(exitGuardTimerRef.current);
+      clearTimeout(exitFetchTimerRef.current);
+    };
+  }, []);
 
   // After auto-join fetches works, sync currentFileId from work data
   useEffect(() => {
@@ -749,13 +762,13 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         setCurrentWorkId(null);
         setCollaborationState({ isInCollaboration: false, workId: null });
         exitGuardRef.current = true;
-        setTimeout(() => { exitGuardRef.current = false; }, 3000);
+        exitGuardTimerRef.current = setTimeout(() => { exitGuardRef.current = false; }, 3000);
         refreshFileName();
         if (exitedWorkId !== null) {
           setWorks((prev) => prev.filter((w) => w.work_id !== exitedWorkId));
         }
         // 延迟获取，等待 SDK 状态更新
-        setTimeout(() => fetchWorks(), 300);
+        exitFetchTimerRef.current = setTimeout(() => fetchWorks(), 300);
         showToast('已退出协同', 'success');
       } else {
         // 退出失败也刷新，确保列表与服务器一致

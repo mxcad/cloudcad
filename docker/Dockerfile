@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ curl dumb-init subversion
 
 # 安装 pnpm（单独一层）
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # 先复制依赖描述文件（利用缓存：代码改动不影响依赖层）
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./ 
@@ -104,7 +104,7 @@ WORKDIR /app
 RUN apk add --no-cache dumb-init curl subversion nginx netcat-openbsd openssl
 
 # 启用 pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # 复制依赖描述文件（复用缓存）
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -147,7 +147,13 @@ COPY docker/nginx/nginx.conf /etc/nginx/http.d/default.conf
 
 # 创建数据目录并设置权限（统一在 /app/data/ 下）
 RUN mkdir -p /app/data/files /app/data/logs /app/data/svn-repo /app/data/uploads /app/data/temp /run/nginx && \
-    chmod -R 755 /app/data
+    adduser -D -h /home/cloudcad cloudcad && \
+    mkdir -p /home/cloudcad && chown cloudcad:cloudcad /home/cloudcad && \
+    chown -R cloudcad:cloudcad /app/data && \
+    chmod -R 700 /app/data
+
+# 安装 su-exec（用于降权运行服务进程）
+RUN apk add --no-cache su-exec
 
 # 暴露端口
 EXPOSE 80 3001 3000

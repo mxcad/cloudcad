@@ -309,7 +309,7 @@ npm install -g pnpm
 
 # 或使用 corepack
 corepack enable
-corepack prepare pnpm@9.15.4 --activate
+corepack prepare pnpm@9.15.9 --activate
 ```
 
 ### 6. 数据库迁移失败

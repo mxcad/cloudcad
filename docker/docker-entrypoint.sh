@@ -62,6 +62,7 @@ init_mx() {
     else
         log_info "MX 仓库已存在: $mx_repo_path"
     fi
+    chown -R cloudcad:cloudcad "$mx_repo_path"
     
     # 开发模式：修复 MX 工作副本 URL
     if [ "${DEV_MODE:-false}" = "true" ] || [ "${NODE_ENV:-production}" = "development" ]; then
@@ -259,7 +260,7 @@ start_cooperate() {
     if [ -f "$cooperate_script" ]; then
         log_info "启动协同服务..."
         cd /app/runtime/scripts
-        node cooperate-manager.js &
+        su-exec cloudcad node cooperate-manager.js &
         log_info "协同服务已启动"
     else
         log_warn "协同服务脚本不存在: $cooperate_script"
@@ -293,7 +294,7 @@ main() {
     # 7. 启动后端服务
     log_info "启动后端服务..."
     cd /app/packages/backend
-    exec node dist/src/main.js
+    exec su-exec cloudcad node dist/src/main.js
 }
 
 # 执行主流程

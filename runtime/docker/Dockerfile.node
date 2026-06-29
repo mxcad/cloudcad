@@ -13,7 +13,7 @@
 FROM node:20-bullseye-slim AS builder
 
 # 安装 pnpm 和 pm2（直接安装，不用 corepack，支持离线环境）
-RUN npm install -g pnpm@9.15.4 pm2
+RUN npm install -g pnpm@9.15.9 pm2
 
 # 创建提取目录
 WORKDIR /extract

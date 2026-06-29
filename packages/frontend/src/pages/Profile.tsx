@@ -75,15 +75,22 @@ export const Profile: React.FC = () => {
     return 'info';
   });
   const [membershipTier, setMembershipTier] = useState<string | null>(null);
+  const deactivateTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (!MEMBERSHIP_ENABLED) return;
-    billingControllerGetMembership()
+    const abortController = new AbortController();
+    billingControllerGetMembership({ signal: abortController.signal })
       .then((res) => {
         const data = res?.data as { tier?: string } | undefined;
         if (data?.tier) setMembershipTier(data.tier);
       })
       .catch(() => {});
+    return () => abortController.abort();
+  }, []);
+
+  useEffect(() => {
+    return () => clearTimeout(deactivateTimeoutRef.current);
   }, []);
 
   useDocumentTitle(
@@ -892,7 +899,7 @@ export const Profile: React.FC = () => {
 
       setSuccess('账户已注销，30天后自动清理数据');
 
-      setTimeout(() => {
+      deactivateTimeoutRef.current = setTimeout(() => {
         logout();
       }, 1500);
     } catch (err) {

@@ -353,9 +353,11 @@ export const CADEditorDirect: React.FC = () => {
       return;
     }
 
+    const abortController = new AbortController();
+
     const checkPermissions = async () => {
       try {
-        const { data } = await fileSystemControllerGetUserProjectPermissions({ path: { projectId: urlProjectId } });
+        const { data } = await fileSystemControllerGetUserProjectPermissions({ signal: abortController.signal, path: { projectId: urlProjectId } });
         const permissions = data?.permissions || [];
         const save = permissions.includes(ProjectPermission.CAD_SAVE);
         const export_ = permissions.includes(ProjectPermission.FILE_DOWNLOAD);
@@ -370,6 +372,7 @@ export const CADEditorDirect: React.FC = () => {
     };
 
     checkPermissions();
+    return () => abortController.abort();
   }, [urlProjectId, setPermissions]);
 
   const loadMxCADDependencies = async () => {

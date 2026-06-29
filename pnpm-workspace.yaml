@@ -1,2 +1,4 @@
+# CloudCAD pnpm workspace — 所有 packages/* 子目录均为工作空间包
+# 当前包含：frontend, backend, frontend_mobile, config-service, mxVersionTool
 packages:
   - 'packages/*'
