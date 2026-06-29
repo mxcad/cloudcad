@@ -45,12 +45,11 @@ describe("PaymentGatewayFactory", () => {
   });
 
   describe("getActiveGateway", () => {
-    it("should return mock gateway when paymentEnabled is false", async () => {
+    it("should throw error when paymentEnabled is false", async () => {
       const runtimeConfig = module.get<RuntimeConfigService>(RuntimeConfigService);
       jest.spyOn(runtimeConfig, "getValue").mockResolvedValue(false);
 
-      const gateway = await factory.getActiveGateway();
-      expect(gateway.name).toBe("mock");
+      await expect(factory.getActiveGateway()).rejects.toThrow("payment is disabled");
     });
 
     it("should return wechat_pay gateway when paymentEnabled is true and provider is wechat_pay", async () => {

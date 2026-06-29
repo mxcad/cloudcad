@@ -220,16 +220,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     key: 'paymentEnabled',
     type: 'boolean',
     category: 'billing',
-    description: '支付功能开关（关闭时强制回退 mock 模式）',
+    description: '支付功能开关',
     defaultValue: false,
-    isPublic: false,
-  },
-  {
-    key: 'mockPaymentDelayMs',
-    type: 'number',
-    category: 'billing',
-    description: '模拟支付延迟毫秒数',
-    defaultValue: 15000,
     isPublic: false,
   },
 

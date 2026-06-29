@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
   readonly VITE_APP_NAME: string;
   readonly VITE_APP_LOGO?: string;
+  readonly VITE_MEMBERSHIP_ENABLED?: string;
   readonly MODE: string;
   readonly DEV: boolean;
   readonly PROD: boolean;

@@ -39,6 +39,7 @@ import { ProfileMembershipTab } from './Profile/ProfileMembershipTab';
 import { ProfileDeactivateTab } from './components/ProfileDeactivateTab';
 import { Button, TabButton, Tabs } from '@/components/ui';
 import { billingControllerGetMembership } from '@/api-sdk';
+import { MEMBERSHIP_ENABLED } from '@/constants/appConfig';
 import './Profile/Profile.css';
 
 type TabType =
@@ -70,12 +71,13 @@ export const Profile: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === 'membership') return 'membership';
+    if (tabParam === 'membership' && MEMBERSHIP_ENABLED) return 'membership';
     return 'info';
   });
   const [membershipTier, setMembershipTier] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!MEMBERSHIP_ENABLED) return;
     billingControllerGetMembership()
       .then((res) => {
         const data = res?.data as { tier?: string } | undefined;
@@ -85,7 +87,7 @@ export const Profile: React.FC = () => {
   }, []);
 
   useDocumentTitle(
-    activeTab === 'membership' ? '会员中心' : '个人资料'
+    activeTab === 'membership' && MEMBERSHIP_ENABLED ? '会员中心' : '个人资料'
   );
 
   const visibleTabs: TabType[] = [
@@ -94,7 +96,7 @@ export const Profile: React.FC = () => {
     ...(mailEnabled ? (['email'] as TabType[]) : []),
     ...(smsEnabled ? (['phone'] as TabType[]) : []),
     ...(wechatEnabled ? (['wechat'] as TabType[]) : []),
-    'membership',
+    ...(MEMBERSHIP_ENABLED ? (['membership'] as TabType[]) : []),
     'deactivate',
   ];
 
@@ -984,7 +986,7 @@ export const Profile: React.FC = () => {
                     <User size={40} />
                   </div>
                 )}
-                {membershipTier && membershipTier !== 'FREE' && (
+                {MEMBERSHIP_ENABLED && membershipTier && membershipTier !== 'FREE' && (
                   <div className="avatar-badge">
                     <Crown size={12} />
                   </div>
@@ -1044,13 +1046,15 @@ export const Profile: React.FC = () => {
                 微信绑定
               </TabButton>
             )}
-            <TabButton
-              active={activeTab === 'membership'}
-              icon={Crown}
-              onClick={() => switchTab('membership')}
-            >
-              会员信息
-            </TabButton>
+            {MEMBERSHIP_ENABLED && (
+              <TabButton
+                active={activeTab === 'membership'}
+                icon={Crown}
+                onClick={() => switchTab('membership')}
+              >
+                会员信息
+              </TabButton>
+            )}
             <TabButton
               active={activeTab === 'deactivate'}
               icon={AlertTriangle}
@@ -1152,7 +1156,7 @@ export const Profile: React.FC = () => {
               />
             )}
 
-            {activeTab === 'membership' && <ProfileMembershipTab />}
+            {MEMBERSHIP_ENABLED && activeTab === 'membership' && <ProfileMembershipTab />}
 
             {activeTab === 'deactivate' && (
               <ProfileDeactivateTab

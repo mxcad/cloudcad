@@ -71,6 +71,9 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
  */
 export const APP_COOPERATE_URL = import.meta.env.VITE_APP_COOPERATE_URL || '/api/cooperate';
 
+/** 会员/支付功能开关 */
+export const MEMBERSHIP_ENABLED = import.meta.env.VITE_MEMBERSHIP_ENABLED === 'true';
+
 /**
  * 分页配置
  */

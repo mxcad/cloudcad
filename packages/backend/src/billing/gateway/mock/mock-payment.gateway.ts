@@ -10,15 +10,11 @@ interface OrderRecord {
 @Injectable()
 export class MockPaymentGateway implements PaymentGateway {
   readonly name = 'mock';
-  private delayMs = 15000;
+  private readonly delayMs = 15000;
   private readonly logger = new Logger(MockPaymentGateway.name);
   private refundedOrders = new Set<string>();
   private completedOrders = new Set<string>();
   private orders = new Map<string, OrderRecord>();
-
-  setDelayMs(ms: number): void {
-    this.delayMs = ms;
-  }
 
   async createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
     const mockPrepayId = `mock_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;

@@ -42,7 +42,7 @@ export class PaymentGatewayFactory {
 
   private async resolveProvider(): Promise<string> {
     const runtimeEnabled = await this.runtimeConfigService.getValue<boolean>('paymentEnabled', false);
-    if (!runtimeEnabled) return 'mock';
+    if (!runtimeEnabled) throw new Error('payment is disabled');
     return this.configService.get<string>('payment.provider', 'mock');
   }
 }
