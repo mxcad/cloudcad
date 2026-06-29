@@ -1,14 +1,14 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import type { SvnLogEntryDto } from '@/api-sdk';
+import type { MxLogEntryDto } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 import { History } from 'lucide-react';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;
   node: FileSystemNode | null;
-  entries: SvnLogEntryDto[];
+  entries: MxLogEntryDto[];
   loading: boolean;
   error: string | null;
   onClose: () => void;

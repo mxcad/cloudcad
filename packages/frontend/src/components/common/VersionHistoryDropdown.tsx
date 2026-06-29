@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { History, Loader2, ExternalLink } from 'lucide-react';
-import { versionControlControllerGetFileHistory, SvnLogEntryDto } from '@/api-sdk';
+import { versionControlControllerGetFileHistory, MxLogEntryDto } from '@/api-sdk';
 import { Tooltip } from '../ui/Tooltip';
 import { Menu } from '../ui/Menu';
 
@@ -81,8 +81,8 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [entries, setEntries] = useState<SvnLogEntryDto[]>([]);
-  const [hoveredEntry, setHoveredEntry] = useState<SvnLogEntryDto | null>(null);
+  const [entries, setEntries] = useState<MxLogEntryDto[]>([]);
+  const [hoveredEntry, setHoveredEntry] = useState<MxLogEntryDto | null>(null);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -110,7 +110,7 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
     }
   }, [projectId, filePath]);
 
-  const handleVersionClick = (entry: SvnLogEntryDto) => {
+  const handleVersionClick = (entry: MxLogEntryDto) => {
     if (onViewVersion) {
       onViewVersion(entry.revision, fileId, parentId);
     } else {

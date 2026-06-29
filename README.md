@@ -120,7 +120,7 @@ svn --version
 cloudcad/
 ├── packages/
 │   ├── backend/        # NestJS 后端服务 (端口 3001)
-│   ├── frontend/       # React 前端应用 (端口 5173)
+│   ├── frontend/       # React 前端应用 (端口 3000)
 │   ├── config-service/ # 部署配置中心 (端口 3002)
     │   └── mxVersionTool/  # MX 版本控制工具
 ├── docker/             # Docker 部署配置
@@ -192,7 +192,7 @@ pnpm dev
 
 | 服务     | 地址                           | 说明       |
 | -------- | ------------------------------ | ---------- |
-| 前端     | http://localhost:5173          | React 应用 |
+| 前端     | http://localhost:3000          | React 应用 |
 | 后端 API | http://localhost:3001/api      | NestJS API |
 | API 文档 | http://localhost:3001/api/docs | Swagger UI |
 

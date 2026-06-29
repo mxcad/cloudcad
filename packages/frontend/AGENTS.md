@@ -75,7 +75,7 @@ packages/frontend/
 
 ```bash
 # Frontend specific (in packages/frontend)
-pnpm dev              # Start development server (port 5173)
+pnpm dev              # Start development server (port 3000)
 pnpm build            # Build production version
 pnpm test             # Run Vitest tests
 pnpm test:ui          # Run UI mode tests

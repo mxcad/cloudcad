@@ -20,7 +20,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: postgres
-          POSTGRES_DB: cloucad
+          POSTGRES_DB: cloudcad
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -51,7 +51,7 @@ jobs:
       - name: 安装 pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 9.15.4
+          version: 9.15.9
 
       - name: 获取 pnpm 存储目录
         shell: bash
@@ -81,7 +81,7 @@ jobs:
           DB_PORT=5432
           DB_USERNAME=postgres
           DB_PASSWORD=password
-          DB_DATABASE=cloucad
+          DB_DATABASE=cloudcad
           DB_SSL=false
           DB_MAX_CONNECTIONS=20
           DB_CONNECTION_TIMEOUT=30000
@@ -98,7 +98,7 @@ jobs:
           MINIO_ACCESS_KEY=minioadmin
           MINIO_SECRET_KEY=minioadmin
           MINIO_REGION=us-east-1
-          MINIO_BUCKET=cloucad
+          MINIO_BUCKET=cloudcad
           UPLOAD_MAX_SIZE=104857600
           UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
           EOF

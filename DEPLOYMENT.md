@@ -90,7 +90,7 @@ pnpm dev
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 前端 | http://localhost:5173 | Vite 开发服务器 |
+| 前端 | http://localhost:3000 | Vite 开发服务器 |
 | 后端 API | http://localhost:3001/api | NestJS 开发服务器 |
 | API 文档 | http://localhost:3001/api/docs | Swagger UI |
 
