@@ -421,7 +421,7 @@ export class FileMergeService {
               }
             }
 
-            // 注意：公开资源库上传不需要提交 SVN
+            // 注意：公开资源库上传不需要提交 MX
             if (!context.isLibrary) {
               try {
                 const nodeDirectory = storageInfo.nodeDirectoryPath;
@@ -432,10 +432,10 @@ export class FileMergeService {
                   context.userId,
                   `User${context.userId}`
                 );
-              } catch (svnError) {
+              } catch (mxError) {
                 this.logger.error(
-                  `[mergeConvertFile] SVN 提交异常`,
-                  svnError.stack
+                  `[mergeConvertFile] MX 提交异常`,
+                  mxError.stack
                 );
               }
             }
@@ -588,7 +588,7 @@ export class FileMergeService {
             storageInfo.fileRelativePath
           );
 
-          // 注意：公开资源库上传不需要提交 SVN
+          // 注意：公开资源库上传不需要提交 MX
           if (!context.isLibrary) {
             try {
               const nodeDirectory = storageInfo.nodeDirectoryPath;
@@ -598,10 +598,10 @@ export class FileMergeService {
                 context.userId,
                 `User${context.userId}`
               );
-            } catch (svnError) {
+            } catch (mxError) {
               this.logger.error(
-                `[mergeChunksWithPermission] MXWeb SVN 提交异常`,
-                svnError.stack
+                `[mergeChunksWithPermission] MXWeb MX 提交异常`,
+                mxError.stack
               );
             }
           }
@@ -686,7 +686,7 @@ export class FileMergeService {
             storageInfo.fileRelativePath
           );
 
-          // 注意：公开资源库上传不需要提交 SVN
+          // 注意：公开资源库上传不需要提交 MX
           if (!context.isLibrary) {
             try {
               const nodeDirectory = storageInfo.nodeDirectoryPath;
@@ -697,10 +697,10 @@ export class FileMergeService {
                 context.userId,
                 `User${context.userId}`
               );
-            } catch (svnError) {
+            } catch (mxError) {
               this.logger.error(
-                `[mergeChunksWithPermission] SVN 提交异常`,
-                svnError.stack
+                `[mergeChunksWithPermission] MX 提交异常`,
+                mxError.stack
               );
             }
           }
@@ -945,7 +945,7 @@ export class FileMergeService {
             }
           }
 
-          // 注意：公开资源库上传不需要提交 SVN
+          // 注意：公开资源库上传不需要提交 MX
           this.logger.log(
             `[performFileExistenceCheck] context.isLibrary = ${context.isLibrary}, finalFileName = ${finalFileName}`
           );
@@ -959,15 +959,15 @@ export class FileMergeService {
                 context.userId,
                 `User${context.userId}`
               );
-            } catch (svnError) {
+            } catch (mxError) {
               this.logger.error(
-                `[performFileExistenceCheck] SVN 提交异常`,
-                svnError.stack
+                `[performFileExistenceCheck] MX 提交异常`,
+                mxError.stack
               );
             }
           } else {
             this.logger.log(
-              `[performFileExistenceCheck] 跳过 SVN 提交: ${finalFileName} (公开资源库)`
+              `[performFileExistenceCheck] 跳过 MX 提交: ${finalFileName} (公开资源库)`
             );
           }
 
@@ -1018,7 +1018,7 @@ export class FileMergeService {
    * 处理一个已完成上传的完整文件（无需分片合并）
    *
    * 用于分片上传合并后的完整文件：文件已在 uploads 目录中完成重命名（{hash}.{ext}），
-   * 只需格式转换 + 创建节点 + 复制文件到节点目录 + 缩略图 + SVN。
+   * 只需格式转换 + 创建节点 + 复制文件到节点目录 + 缩略图 + MX。
    * 不再模拟分片合并流程（临时 chunk 目录、单 chunk 文件复制等）。
    *
    * 包含并发控制：同一 hash 的文件通过 CacheManagerService 防重处理。
@@ -1144,7 +1144,7 @@ export class FileMergeService {
         this.logger.log(`[processUploadedFile] 状态转换: PROCESSING → COMPLETED (${newNodeId})`);
       }
 
-      // Step 3: 复制文件 + 缩略图 + SVN（后处理）
+      // Step 3: 复制文件 + 缩略图 + MX（后处理）
       if (context?.userId && context?.nodeId) {
         const storageInfo = await this.storageManager.allocateNodeStorage(newNodeId);
         const filesInUpload = await fsPromises.readdir(uploadPath);
@@ -1199,7 +1199,7 @@ export class FileMergeService {
           }
         }
 
-        // SVN（公开资源库跳过）
+        // MX（公开资源库跳过）
         if (!context.isLibrary) {
           try {
             await this.versionControlService.commitNodeDirectory(
@@ -1208,8 +1208,8 @@ export class FileMergeService {
               context.userId,
               `User${context.userId}`,
             );
-          } catch (svnErr) {
-            this.logger.error(`[processUploadedFile] SVN 异常`, svnErr.stack);
+          } catch (mxErr) {
+            this.logger.error(`[processUploadedFile] MX 异常`, mxErr.stack);
           }
         }
 

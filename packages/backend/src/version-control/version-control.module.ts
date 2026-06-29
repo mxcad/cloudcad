@@ -13,7 +13,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { VersionControlController } from './version-control.controller';
-import { SvnVersionControlProvider } from './providers/svn-version-control.provider';
+import { MxVersionControlProvider } from './providers/mx-version-control.provider';
 import { VERSION_CONTROL_TOKEN } from './interfaces/version-control.interface';
 import { RolesModule } from '../roles/roles.module';
 import { DatabaseModule } from '../database/database.module';
@@ -30,10 +30,10 @@ import { FileSystemModule } from '../file-system/file-system.module';
   ],
   controllers: [VersionControlController],
   providers: [
-    SvnVersionControlProvider,
+    MxVersionControlProvider,
     {
       provide: VERSION_CONTROL_TOKEN,
-      useExisting: SvnVersionControlProvider,
+      useExisting: MxVersionControlProvider,
     },
   ],
   exports: [VERSION_CONTROL_TOKEN],

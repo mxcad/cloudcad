@@ -87,7 +87,7 @@ services:
       UPLOAD_ALLOWED_TYPES: ${UPLOAD_ALLOWED_TYPES:-.dwg,.dxf,.pdf,.png,.jpg,.jpeg}
       # 文件存储路径（容器内路径）
       FILES_DATA_PATH: /app/data/files
-      SVN_REPO_PATH: /app/data/svn-repo
+      MX_REPO_PATH: /app/data/svn-repo
       MXCAD_UPLOAD_PATH: /app/data/uploads
       MXCAD_TEMP_PATH: /app/data/temp
       MXCAD_ASSEMBLY_PATH: /app/runtime/linux/mxcad/mxcadassembly
@@ -143,7 +143,7 @@ networks:
 #   postgres_data:
 #   redis_data:
 #   files_data:
-#   svn_repo:
+#   mx_repo:
 #   uploads:
 #   temp:
 #   logs:

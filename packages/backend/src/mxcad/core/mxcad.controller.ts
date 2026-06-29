@@ -1105,7 +1105,7 @@ export class MxCadController {
       });
       const absoluteFilePath = path.resolve(filesDataPath, filename);
 
-      // 对于 HEAD 请求，直接返回本地文件信息（当前版本），不从 SVN 获取
+      // 对于 HEAD 请求，直接返回本地文件信息（当前版本），不从 MX 获取
       if (isHeadRequest) {
         this.logger.log(`HEAD 请求 - 返回本地文件信息: ${absoluteFilePath}`);
 
@@ -1135,7 +1135,7 @@ export class MxCadController {
 
       // GET 请求：从版本控制服务获取历史版本文件内容
       this.logger.log(
-        `GET 请求 - 从 SVN 获取历史版本: ${filename} v${version}`
+        `GET 请求 - 从 MX 获取历史版本: ${filename} v${version}`
       );
 
       // 对于历史版本，忽略条件请求头，始终返回完整内容
@@ -1183,9 +1183,9 @@ export class MxCadController {
               );
             }
           } else {
-            // 没有缓存，需要从 SVN 获取 bin 文件并转换
+            // 没有缓存，需要从 MX 获取 bin 文件并转换
             this.logger.log(
-              `历史版本 mxweb 不存在，从 SVN 获取 .bin 分片文件并转换`
+              `历史版本 mxweb 不存在，从 MX 获取 .bin 分片文件并转换`
             );
 
             // 创建转换任务（先声明，后存入锁，再执行）
@@ -1215,7 +1215,7 @@ export class MxCadController {
                   throw new NotFoundException('历史版本目录不存在');
                 }
 
-                // 过滤出真正的 .bin 文件（SVN 目录中可能同时包含 .mxweb 备份文件）
+                // 过滤出真正的 .bin 文件（MX 目录中可能同时包含 .mxweb 备份文件）
                 const binFiles = listResult.files.filter(
                   (f: string) => f.endsWith('.bin')
                 );
@@ -1327,9 +1327,9 @@ export class MxCadController {
                 `成功返回初始版本 mxweb: ${initialMxwebName} (本地文件)`
               );
             } else {
-              // _initial.mxweb 不存在，从 SVN 提取原始文件并转换
+              // _initial.mxweb 不存在，从 MX 提取原始文件并转换
               this.logger.log(
-                `_initial.mxweb 不存在，从 SVN 提取原始文件: ${filename} v${version}`
+                `_initial.mxweb 不存在，从 MX 提取原始文件: ${filename} v${version}`
               );
 
               const originalResult =
@@ -1340,7 +1340,7 @@ export class MxCadController {
 
               if (!originalResult.success || !originalResult.content) {
                 this.logger.error(
-                  `SVN 原始文件提取失败: ${filename} v${version}`
+                  `MX 原始文件提取失败: ${filename} v${version}`
                 );
                 return res.status(404).json({
                   code: -1,
@@ -1427,7 +1427,7 @@ export class MxCadController {
           }
         }
       } else {
-        // 非 .mxweb 文件（如 .dwg、.json 等），直接从 SVN 获取
+        // 非 .mxweb 文件（如 .dwg、.json 等），直接从 MX 获取
         const result =
           await this.versionControlService.getFileContentAtRevision(
             absoluteFilePath,

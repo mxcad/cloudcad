@@ -638,8 +638,8 @@ function getDeployIncludeList(platform) {
     },
     // SVN 版本工具
     {
-      src: 'packages/svnVersionTool',
-      dest: 'packages/svnVersionTool',
+      src: 'packages/mxVersionTool',
+      dest: 'packages/mxVersionTool',
       isDir: true,
     },
     // 部署配置中心（0 依赖独立服务）

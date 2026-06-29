@@ -331,7 +331,7 @@ async function bootstrap() {
     logger.log('  - Redis 连接: 已完成 (异步)');
     logger.log('  - 数据库连接: 已完成 (带超时控制)');
     logger.log('  - 系统初始化: 已完成 (并行优化)');
-    logger.log('  - SVN 初始化: 异步后台执行中');
+    logger.log('  - MX 初始化: 异步后台执行中');
     logger.log('  - 缓存预热: 已禁用 (改为懒加载)');
   }
 }

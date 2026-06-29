@@ -27,36 +27,36 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { Readable } from 'stream';
 
-const svnBehaviors: Record<string, Function> = {};
+const mxBehaviors: Record<string, Function> = {};
 
-function installSvn(name: string, fn: Function) {
-  svnBehaviors[name] = fn;
+function installMx(name: string, fn: Function) {
+  mxBehaviors[name] = fn;
 }
 
-function svnOk(result: string) {
+function mxOk(result: string) {
   return (...args: any[]) => {
     const cb = args[args.length - 1];
     if (typeof cb === 'function') cb(null, result);
   };
 }
 
-const svnNames = [
-  'svnCheckout', 'svnAdd', 'svnCommit', 'svnDelete', 'svnadminCreate',
-  'svnImport', 'svnLog', 'svnCat', 'svnList', 'svnPropset', 'svnUpdate', 'svnCleanup',
+const mxNames = [
+  'mxCheckout', 'mxAdd', 'mxCommit', 'mxDelete', 'mxadminCreate',
+  'mxImport', 'mxLog', 'mxCat', 'mxList', 'mxPropset', 'mxUpdate', 'mxCleanup',
 ];
 
-const svnMockObj: Record<string, Function> = {};
-for (const name of svnNames) {
+const mxMockObj: Record<string, Function> = {};
+for (const name of mxNames) {
   const dispatcher = (...args: any[]) => {
-    const handler = svnBehaviors[name];
+    const handler = mxBehaviors[name];
     if (handler) return handler(...args);
     const cb = args[args.length - 1];
     if (typeof cb === 'function') cb(null, '');
   };
-  svnMockObj[name] = dispatcher;
+  mxMockObj[name] = dispatcher;
 }
 
-jest.mock('@cloudcad/svn-version-tool', () => svnMockObj);
+jest.mock('@cloudcad/mx-version-tool', () => mxMockObj);
 
 jest.mock('fs', () => {
   const actual = jest.requireActual('fs');
@@ -70,19 +70,19 @@ jest.mock('fs', () => {
   };
 });
 
-function resetSvnDefaults() {
-  installSvn('svnCheckout', svnOk('Checked out'));
-  installSvn('svnAdd', svnOk('A  file'));
-  installSvn('svnCommit', svnOk('Committed revision 1.'));
-  installSvn('svnDelete', svnOk('D  file'));
-  installSvn('svnadminCreate', svnOk('Created'));
-  installSvn('svnImport', svnOk('Imported'));
-  installSvn('svnLog', svnOk(`<?xml version="1.0"?><log><logentry revision="1"><author>testuser</author><date>2024-01-01T10:00:00.000000Z</date><msg>{"type":"file_operation","message":"Save as: test.dwg","userName":"TestUser"}</msg><paths><path action="A" kind="file">/test.dwg</path></paths></logentry></log>`));
-  installSvn('svnCat', svnOk('file content'));
-  installSvn('svnList', svnOk('file1.dwg\nfile2.dxf'));
-  installSvn('svnPropset', svnOk('property set'));
-  installSvn('svnUpdate', svnOk('Updated'));
-  installSvn('svnCleanup', svnOk('Cleanup'));
+function resetMxDefaults() {
+  installMx('mxCheckout', mxOk('Checked out'));
+  installMx('mxAdd', mxOk('A  file'));
+  installMx('mxCommit', mxOk('Committed revision 1.'));
+  installMx('mxDelete', mxOk('D  file'));
+  installMx('mxadminCreate', mxOk('Created'));
+  installMx('mxImport', mxOk('Imported'));
+  installMx('mxLog', mxOk(`<?xml version="1.0"?><log><logentry revision="1"><author>testuser</author><date>2024-01-01T10:00:00.000000Z</date><msg>{"type":"file_operation","message":"Save as: test.dwg","userName":"TestUser"}</msg><paths><path action="A" kind="file">/test.dwg</path></paths></logentry></log>`));
+  installMx('mxCat', mxOk('file content'));
+  installMx('mxList', mxOk('file1.dwg\nfile2.dxf'));
+  installMx('mxPropset', mxOk('property set'));
+  installMx('mxUpdate', mxOk('Updated'));
+  installMx('mxCleanup', mxOk('Cleanup'));
 }
 
 const mockVersionControl: Partial<IVersionControl> = {
@@ -129,7 +129,7 @@ describe('CAD Save As → Node Duplication → Independent Version Chain Integra
   let saveAsService: SaveAsService;
 
   beforeEach(async () => {
-    resetSvnDefaults();
+    resetMxDefaults();
     jest.clearAllMocks();
 
     const mockFileSystemService = {

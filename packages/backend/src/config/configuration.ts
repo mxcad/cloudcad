@@ -269,7 +269,7 @@ export default (): AppConfig => {
 
 	// 存储路径配置（默认在 data/ 目录下）
 	filesDataPath: resolvePath(process.env.FILES_DATA_PATH || "data/files"),
-	svnRepoPath: resolvePath(process.env.SVN_REPO_PATH || "data/svn-repo"),
+	mxRepoPath: resolvePath(process.env.MX_REPO_PATH || "data/svn-repo"),
 	mxcadUploadPath: resolvePath(process.env.MXCAD_UPLOAD_PATH || "data/uploads"),
 	mxcadTempPath: resolvePath(process.env.MXCAD_TEMP_PATH || "data/temp"),
 
@@ -406,9 +406,9 @@ export default (): AppConfig => {
 		nodeLimit: parseInt(process.env.FILES_NODE_LIMIT || "300000", 10) || 300000, // 单目录最大节点数
 	},
 
-	// SVN 配置
-	svn: {
-		ignorePatterns: parseStringArray(process.env.SVN_IGNORE_PATTERNS, [
+	// MX 配置
+	mx: {
+		ignorePatterns: parseStringArray(process.env.MX_IGNORE_PATTERNS, [
 			"*.mxweb",
 			"*.dwg",
 			"*.jpg",
@@ -462,7 +462,7 @@ export default (): AppConfig => {
 			secretKey: process.env.TENCENT_SECRET_KEY || "",
 			appId: process.env.TENCENT_SMS_APP_ID || "",
 			signName: process.env.TENCENT_SMS_SIGN_NAME || "",
-			templateId: process.env.TENCENT_SMS_TEMPLATE_ID || "",
+			templateCode: process.env.TENCENT_SMS_TEMPLATE_CODE || "",
 			region: process.env.TENCENT_SMS_REGION || "ap-guangzhou",
 		},
 		limits: {

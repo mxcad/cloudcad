@@ -263,7 +263,7 @@ describe('Workflow 1: Upload → Convert → Open Integration Tests', () => {
       // Verify node path was updated
       expect(fileSystemServiceMain.updateNodePath).toHaveBeenCalled();
 
-      // Verify SVN commit was called
+      // Verify MX commit was called
       expect(versionControlService.commitNodeDirectory).toHaveBeenCalled();
     });
   });
@@ -420,8 +420,8 @@ describe('Workflow 1: Upload → Convert → Open Integration Tests', () => {
     });
   });
 
-  describe('Scenario 7: Edge Case - Library File Upload (Skip SVN)', () => {
-    it('should skip SVN commit for library files', async () => {
+  describe('Scenario 7: Edge Case - Library File Upload (Skip MX)', () => {
+    it('should skip MX commit for library files', async () => {
       fileConversionService.convertFile.mockResolvedValue({
         isOk: true,
         ret: { code: 0, tz: true },

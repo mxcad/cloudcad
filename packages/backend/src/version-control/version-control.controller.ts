@@ -37,7 +37,7 @@ import {
   IVersionControl,
   VERSION_CONTROL_TOKEN,
 } from './interfaces/version-control.interface';
-import { SvnLogResponseDto, FileContentResponseDto } from './dto';
+import { MxLogResponseDto, FileContentResponseDto } from './dto';
 
 @ApiTags('version-control')
 @Controller('version-control')
@@ -49,13 +49,13 @@ export class VersionControlController {
   ) {}
 
   /**
-   * 获取节点的 SVN 提交历史（自动提取目录路径）
+   * 获取节点的 MX 提交历史（自动提取目录路径）
    * 传入文件路径时，会自动提取所在目录的历史记录
    * 这样可以看到节点目录下所有文件的变更记录
    */
   @Get('history')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '获取节点的 SVN 提交历史' })
+  @ApiOperation({ summary: '获取节点的 MX 提交历史' })
   @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
   @ApiQuery({
     name: 'filePath',
@@ -70,7 +70,7 @@ export class VersionControlController {
   })
   @ApiOkResponse({
     description: '获取成功',
-    type: SvnLogResponseDto,
+    type: MxLogResponseDto,
   })
   @ApiResponse({ status: 400, description: '请求参数错误' })
   @ApiResponse({ status: 401, description: '未授权' })
@@ -80,7 +80,7 @@ export class VersionControlController {
     @Query('projectId') projectId: string,
     @Query('filePath') filePath: string,
     @Query('limit') limit?: number
-  ): Promise<SvnLogResponseDto> {
+  ): Promise<MxLogResponseDto> {
     const result = await this.versionControlService.getFileHistory(filePath, limit);
     return {
       success: result.success,

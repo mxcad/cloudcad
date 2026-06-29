@@ -122,9 +122,9 @@ cloudcad/
 │   ├── backend/        # NestJS 后端服务 (端口 3001)
 │   ├── frontend/       # React 前端应用 (端口 5173)
 │   ├── config-service/ # 部署配置中心 (端口 3002)
-│   └── svnVersionTool/ # SVN 版本控制工具
+    │   └── mxVersionTool/  # MX 版本控制工具
 ├── docker/             # Docker 部署配置
-├── runtime/            # 运行时依赖 (Node.js、PostgreSQL、Redis、SVN、MxCAD)
+├── runtime/            # 运行时依赖 (Node.js、PostgreSQL、Redis、MX、MxCAD)
 │   ├── windows/        # Windows 离线运行时
 │   ├── linux/          # Linux 离线运行时
 │   └── scripts/         # 启动脚本

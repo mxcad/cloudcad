@@ -112,8 +112,8 @@ const INCLUDE_LIST = [
   // 配置中心服务
   { src: 'packages/config-service', dest: 'packages/config-service', isDir: true },
   
-  // SVN 版本工具
-  { src: 'packages/svnVersionTool', dest: 'packages/svnVersionTool', isDir: true },
+  // MX 版本工具
+  { src: 'packages/mxVersionTool', dest: 'packages/mxVersionTool', isDir: true },
   
   // Docker 配置
   { src: 'docker', dest: 'docker', isDir: true },

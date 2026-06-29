@@ -5,30 +5,33 @@ const fs = require('fs');
 const platform = os.platform();
 const isWindows = platform === 'win32';
 
-// runtime 目录位于项目根目录，svnVersionTool 位于 packages/svnVersionTool
+// runtime 目录位于项目根目录，mxVersionTool 位于 packages/mxVersionTool
 // 需要向上两级到达项目根目录
 const projectRoot = path.resolve(__dirname, '..', '..');
 const runtimeDir = path.join(projectRoot, 'runtime', isWindows ? 'windows' : 'linux');
-const subversionDir = path.join(runtimeDir, 'subversion');
 
-// 检测是否使用内嵌 runtime（检查 subversion 目录是否存在，不存在则回退到系统环境）
-const useRuntime = fs.existsSync(subversionDir);
+// runtime 目录名（仅 Windows 改）
+const versionDirName = isWindows ? 'mxversion' : 'subversion';
+const versionDir = path.join(runtimeDir, versionDirName);
 
-// runtime 内的 svn 可执行文件名
-const svnExeName = isWindows ? 'svn.exe' : 'svn';
+// 检测是否使用内嵌 runtime（检查目录是否存在，不存在则回退到系统环境）
+const useRuntime = fs.existsSync(versionDir);
 
-const svnPath = useRuntime
-  ? path.join(subversionDir, svnExeName)
-  : 'svn';
+// runtime 内的 mx 可执行文件名
+const mxExeName = isWindows ? 'mx.exe' : 'svn';
+
+const mxPath = useRuntime
+  ? path.join(versionDir, mxExeName)
+  : (isWindows ? 'mx' : 'svn');
 
 /**
- * 获取 SVN 共享库路径（仅 Linux 平台）
+ * 获取 MX 共享库路径（仅 Linux 平台）
  * @returns {string|null} 共享库路径，Windows 平台返回 null
  */
-function getSvnLibPath() {
+function getMxLibPath() {
   if (isWindows) return null;
   if (!useRuntime) return null;
-  return path.join(subversionDir, 'lib');
+  return path.join(versionDir, 'lib');
 }
 
 /**
@@ -38,7 +41,7 @@ function getSvnLibPath() {
 function getExecOptions() {
   const options = { windowsHide: true };
   
-  const libPath = getSvnLibPath();
+  const libPath = getMxLibPath();
   if (libPath) {
     options.env = { ...process.env };
     options.env.LD_LIBRARY_PATH = libPath + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '');
@@ -54,7 +57,7 @@ function getExecOptions() {
 function getSpawnOptions() {
   const options = { windowsHide: true };
   
-  const libPath = getSvnLibPath();
+  const libPath = getMxLibPath();
   if (libPath) {
     options.env = { ...process.env };
     options.env.LD_LIBRARY_PATH = libPath + (process.env.LD_LIBRARY_PATH ? ':' + process.env.LD_LIBRARY_PATH : '');
@@ -64,8 +67,8 @@ function getSpawnOptions() {
 }
 
 module.exports = {
-  default: svnPath,
-  getSvnLibPath,
+  default: mxPath,
+  getMxLibPath,
   getExecOptions,
   getSpawnOptions,
   useRuntime

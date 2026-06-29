@@ -1,19 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { default: svnPath } = require('./svnpath');
-const { executeSpawn } = require('./svn-executor');
+const { default: mxPath } = require('./mxpath');
+const { executeSpawn } = require('./mx-executor');
 
-/**
- * 向SVN仓库提交更改
- * @param {string[]} targetPaths 目标路径数组
- * @param {string} message 提交日志
- * @param {boolean} isRecursive 是否递归
- * @param {string} username 用户名
- * @param {string} password 密码
- * @param {function} callback 回调函数
- */
-function svnCommit(
+function mxCommit(
   targetPaths,
   message,
   isRecursive,
@@ -31,11 +22,9 @@ function svnCommit(
   if (message) {
     tempFile = path.join(
       os.tmpdir(),
-      `svn-commit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`
+      `mx-commit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`
     );
-    // 写入 UTF-8 编码
     fs.writeFileSync(tempFile, message, 'utf8');
-    // 关键：添加 --encoding UTF-8 参数
     args.push('-F', tempFile, '--encoding', 'UTF-8');
   } else {
     args.push('-m', '');
@@ -51,27 +40,19 @@ function svnCommit(
     args.push('--password', password);
   }
 
-  executeSpawn(svnPath, args)
+  executeSpawn(mxPath, args)
     .then(stdout => {
       if (tempFile && fs.existsSync(tempFile)) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (e) {
-          /* ignore */
-        }
+        try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
       }
       callback(null, stdout);
     })
     .catch(error => {
       if (tempFile && fs.existsSync(tempFile)) {
-        try {
-          fs.unlinkSync(tempFile);
-        } catch (e) {
-          /* ignore */
-        }
+        try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
       }
       callback(error);
     });
 }
 
-module.exports = svnCommit;
+module.exports = mxCommit;

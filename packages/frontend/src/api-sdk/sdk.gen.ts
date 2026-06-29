@@ -1587,7 +1587,7 @@ export const fileSystemControllerResolvePath = <ThrowOnError extends boolean = f
 });
 
 /**
- * 获取节点的 SVN 提交历史
+ * 获取节点的 MX 提交历史
  */
 export const versionControlControllerGetFileHistory = <ThrowOnError extends boolean = false>(options: Options<VersionControlControllerGetFileHistoryData, ThrowOnError>) => (options.client ?? client).get<VersionControlControllerGetFileHistoryResponses, VersionControlControllerGetFileHistoryErrors, ThrowOnError>({ url: '/api/v1/version-control/history', ...options });
 

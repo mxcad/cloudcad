@@ -41,7 +41,7 @@
     "@alicloud/dysmsapi20170525": "^4.5.0",
     "@alicloud/openapi-client": "^0.4.15",
     "@alicloud/tea-util": "^1.4.11",
-    "@cloudcad/svn-version-tool": "workspace:*",
+    "@cloudcad/mx-version-tool": "workspace:*",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/cache-manager": "^3.1.2",

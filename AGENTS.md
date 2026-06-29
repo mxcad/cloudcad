@@ -26,7 +26,7 @@
 | `packages/backend` | NestJS 11 + Express 5 + Prisma 7 + PostgreSQL + Redis | 3001 | `src/main.ts` |
 | `packages/frontend_mobile` | Vue 3 + Vite 4 + vant + VoerkaI18n（对照 frontend CAD 编辑器功能的移动 H5 版本） | — | `src/main.ts` |
 | `packages/config-service` | **纯 Node.js HTTP** (0 依赖, 非 NestJS) | 3002 | `server.js` |
-| `packages/svnVersionTool` | **CommonJS** SVN CLI 包装器 (无 build 步骤) | — | `svncmd.js` |
+| `packages/mxVersionTool` | **CommonJS** MX CLI 包装器 (无 build 步骤) | — | `mxcmd.js` |
 
 ---
 

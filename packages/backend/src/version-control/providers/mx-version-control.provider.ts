@@ -19,19 +19,21 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../../config/app.config';
 import {
-  svnCheckout,
-  svnAdd,
-  svnCommit,
-  svnDelete,
-  svnadminCreate,
-  svnImport,
-  svnLog,
-  svnCat,
-  svnList,
-  svnPropset,
-  svnUpdate,
-  svnCleanup,
-} from '@cloudcad/svn-version-tool';
+  mxCheckout,
+  mxAdd,
+  mxCommit,
+  mxDelete,
+  mxadminCreate,
+  mxImport,
+  mxLog,
+  mxCat,
+  mxList,
+  mxPropset,
+  mxUpdate,
+  mxCleanup,
+  mxSwitch,
+  getPlatformInfo,
+} from '@cloudcad/mx-version-tool';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -46,42 +48,49 @@ import {
   HistoryPath,
 } from '../interfaces/version-control.interface';
 
-const svnCheckoutAsync = promisify(svnCheckout);
-const svnAddAsync = promisify(svnAdd);
-const svnCommitAsync = promisify(svnCommit);
-const svnDeleteAsync = promisify(svnDelete);
-const svnadminCreateAsync = promisify(svnadminCreate);
-const svnImportAsync = promisify(svnImport);
-const svnLogAsync = promisify(svnLog);
-const svnCatAsync = promisify(svnCat);
-const svnListAsync = promisify(svnList) as (
+const mxCheckoutAsync = promisify(mxCheckout);
+const mxAddAsync = promisify(mxAdd);
+const mxCommitAsync = promisify(mxCommit);
+const mxDeleteAsync = promisify(mxDelete);
+const mxadminCreateAsync = promisify(mxadminCreate);
+const mxImportAsync = promisify(mxImport);
+const mxLogAsync = promisify(mxLog);
+const mxCatAsync = promisify(mxCat);
+const mxListAsync = promisify(mxList) as (
   repoUrl: string,
   isRecursive: boolean,
   revision: number | null,
   username: string | null,
   password: string | null
 ) => Promise<string>;
-const svnPropsetAsync = promisify(svnPropset);
-const svnUpdateAsync = promisify(svnUpdate);
-const svnCleanupAsync = promisify(svnCleanup);
+const mxPropsetAsync = promisify(mxPropset);
+const mxUpdateAsync = promisify(mxUpdate);
+const mxCleanupAsync = promisify(mxCleanup);
+const mxSwitchAsync = promisify(mxSwitch) as (
+  oldUrl: string,
+  newUrl: string,
+  targetPath: string,
+  username: string | null,
+  password: string | null
+) => Promise<string>;
 
 @Injectable()
-export class SvnVersionControlProvider implements IVersionControl, OnModuleInit {
-  private readonly logger = new Logger(SvnVersionControlProvider.name);
-  private readonly svnRepoPath: string;
+export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
+  private readonly logger = new Logger(MxVersionControlProvider.name);
+  private readonly mxRepoPath: string;
   private readonly filesDataPath: string;
-  private readonly svnIgnorePatterns: string[];
+  private readonly mxIgnorePatterns: string[];
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    const svnRepoPath = this.configService.get('svnRepoPath', { infer: true });
-    if (!svnRepoPath) {
+    const mxRepoPath = this.configService.get('mxRepoPath', { infer: true });
+    if (!mxRepoPath) {
       throw new InternalServerErrorException(
-        '缺少 svnRepoPath 配置，请检查版本控制模块的环境变量',
+        '缺少 mxRepoPath 配置，请检查版本控制模块的环境变量',
       );
     }
-    this.svnRepoPath = svnRepoPath;
+    this.mxRepoPath = mxRepoPath;
 
     const filesDataPath = this.configService.get('filesDataPath', {
       infer: true,
@@ -93,22 +102,24 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
     this.filesDataPath = filesDataPath;
 
-    this.svnIgnorePatterns =
-      this.configService.get('svn', { infer: true })?.ignorePatterns || [];
+    this.mxIgnorePatterns =
+      this.configService.get('mx', { infer: true })?.ignorePatterns || [];
 
-    this.logger.log(`SVN 仓库路径: ${this.svnRepoPath}`);
+    this.logger.log(`MX 仓库路径: ${this.mxRepoPath}`);
     this.logger.log(`filesData 路径: ${this.filesDataPath}`);
-    this.logger.log(`SVN 忽略模式: ${this.svnIgnorePatterns.join(', ')}`);
+    this.logger.log(`MX 忽略模式: ${this.mxIgnorePatterns.join(', ')}`);
+    this.logger.log(`MX_REPO_PATH 环境变量: ${process.env.MX_REPO_PATH || '(未设置)'}`);
+    this.logger.log(`FILES_DATA_PATH 环境变量: ${process.env.FILES_DATA_PATH || '(未设置)'}`);
   }
 
   async onModuleInit(): Promise<void> {
-    this.initPromise = this.initializeSvnRepository()
+    this.initPromise = this.initializeMxRepository()
       .then(() => {
-        this.logger.log('SVN 版本控制初始化完成（异步）');
+        this.logger.log('MX 版本控制初始化完成（异步）');
         this.isInitialized = true;
       })
       .catch((error) => {
-        this.logger.error(`SVN 初始化失败: ${error.message}`, error.stack);
+        this.logger.error(`MX 初始化失败: ${error.message}`, error.stack);
         this.isInitialized = false;
       });
   }
@@ -127,71 +138,72 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     await this.initPromise;
   }
 
-  private async initializeSvnRepository(): Promise<void> {
-    if (!fs.existsSync(this.svnRepoPath)) {
-      this.logger.log(`创建 SVN 仓库: ${this.svnRepoPath}`);
-      await svnadminCreateAsync(this.svnRepoPath);
-      this.logger.log(`SVN 仓库创建成功`);
+  private async initializeMxRepository(): Promise<void> {
+    if (!fs.existsSync(this.mxRepoPath)) {
+      this.logger.log(`创建 MX 仓库: ${this.mxRepoPath}`);
+      await mxadminCreateAsync(this.mxRepoPath);
+      this.logger.log(`MX 仓库创建成功`);
     } else {
-      this.logger.log(`SVN 仓库已存在: ${this.svnRepoPath}`);
+      this.logger.log(`MX 仓库已存在: ${this.mxRepoPath}`);
     }
 
-    const svnDir = path.join(this.filesDataPath, '.svn');
-    if (!fs.existsSync(svnDir)) {
+    const mxDir = path.join(this.filesDataPath, '.svn');
+    if (!fs.existsSync(mxDir)) {
       const filesDataExists = fs.existsSync(this.filesDataPath);
       const filesDataIsEmpty =
         !filesDataExists || fs.readdirSync(this.filesDataPath).length === 0;
 
       if (filesDataIsEmpty) {
-        const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}`;
-        this.logger.log(`检出 SVN 仓库: ${repoUrl} -> ${this.filesDataPath}`);
+        const repoUrl = `file:///${this.mxRepoPath.replace(/\\/g, '/')}`;
+        this.logger.log(`检出 MX 仓库: ${repoUrl} -> ${this.filesDataPath}`);
 
         if (!filesDataExists) {
           fs.mkdirSync(this.filesDataPath, { recursive: true });
         }
 
-        await svnCheckoutAsync(repoUrl, this.filesDataPath, null, null);
-        this.logger.log(`SVN 检出成功`);
+        await mxCheckoutAsync(repoUrl, this.filesDataPath, null, null);
+        this.logger.log(`MX 检出成功`);
       } else {
-        const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}`;
-        this.logger.warn(`filesData 不为空，使用 svn import 导入现有内容...`);
+        const repoUrl = `file:///${this.mxRepoPath.replace(/\\/g, '/')}`;
+        this.logger.warn(`filesData 不为空，使用 mx import 导入现有内容...`);
 
         try {
-          const importResult = await svnImportAsync(
+          const importResult = await mxImportAsync(
             this.filesDataPath,
             repoUrl,
             'Initial import'
           );
-          this.logger.log(`svn import 成功: ${importResult}`);
+          this.logger.log(`mx import 成功: ${importResult}`);
         } catch (error) {
           if (error.message && error.message.includes('E160020')) {
-            this.logger.warn(`SVN 仓库已有数据，跳过 import`);
+            this.logger.warn(`MX 仓库已有数据，跳过 import`);
           } else {
-            this.logger.error(`svn import 失败: ${error.message}`);
+            this.logger.error(`mx import 失败: ${error.message}`);
             throw error;
           }
         }
 
         try {
           this.logger.log(`创建工作副本...`);
-          await svnCheckoutAsync(repoUrl, this.filesDataPath, null, null);
-          this.logger.log(`SVN 检出成功`);
+          await mxCheckoutAsync(repoUrl, this.filesDataPath, null, null);
+          this.logger.log(`MX 检出成功`);
         } catch (error) {
-          this.logger.error(`SVN checkout 失败: ${error.message}`);
+          this.logger.error(`MX checkout 失败: ${error.message}`);
           throw error;
         }
       }
     } else {
-      this.logger.log(`filesData 已是 SVN 工作副本`);
+      this.logger.log(`filesData 已是 MX 工作副本`);
+      await this.ensureWorkingCopyUrl();
     }
 
     this.isInitialized = true;
-    this.logger.log('SVN 版本控制初始化完成');
+    this.logger.log('MX 版本控制初始化完成');
 
     await this.setupGlobalIgnores();
   }
 
-  private isSvnLockedError(error: Error): boolean {
+  private isMxLockedError(error: Error): boolean {
     return (
       error.message.includes('E155004') ||
       error.message.includes('locked') ||
@@ -206,14 +218,14 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     try {
       return await operation();
     } catch (error) {
-      if (this.isSvnLockedError(error)) {
+      if (this.isMxLockedError(error)) {
         this.logger.warn(`${operationName} 遇到锁定错误，尝试 cleanup...`);
         try {
-          await svnCleanupAsync(this.filesDataPath);
-          this.logger.log('SVN cleanup 成功，重试操作...');
+          await mxCleanupAsync(this.filesDataPath);
+          this.logger.log('MX cleanup 成功，重试操作...');
           return await operation();
         } catch (cleanupError) {
-          this.logger.error(`SVN cleanup 失败: ${cleanupError.message}`);
+          this.logger.error(`MX cleanup 失败: ${cleanupError.message}`);
           throw error;
         }
       }
@@ -222,26 +234,26 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   }
 
   private async setupGlobalIgnores(): Promise<void> {
-    if (this.svnIgnorePatterns.length === 0) {
-      this.logger.log('未配置 SVN 忽略模式，跳过设置');
+    if (this.mxIgnorePatterns.length === 0) {
+      this.logger.log('未配置 MX 忽略模式，跳过设置');
       return;
     }
 
     try {
-      this.logger.log('更新 SVN 工作副本...');
+      this.logger.log('更新 MX 工作副本...');
       await this.executeWithLockRetry(
-        () => svnUpdateAsync(this.filesDataPath, null, null),
-        'svn update'
+        () => mxUpdateAsync(this.filesDataPath, null, null),
+        'mx update'
       );
-      this.logger.log('SVN 工作副本更新成功');
+      this.logger.log('MX 工作副本更新成功');
 
-      const ignoreValue = this.svnIgnorePatterns.join('\n');
+      const ignoreValue = this.mxIgnorePatterns.join('\n');
 
       this.logger.log(
-        `设置 svn:global-ignores: ${this.svnIgnorePatterns.join(', ')}`
+        `设置 svn:global-ignores: ${this.mxIgnorePatterns.join(', ')}`
       );
 
-      await svnPropsetAsync(
+      await mxPropsetAsync(
         this.filesDataPath,
         'svn:global-ignores',
         ignoreValue
@@ -250,11 +262,11 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       const commitMessage = JSON.stringify({
         type: 'update_ignores',
         message: 'Update global ignore patterns',
-        patterns: this.svnIgnorePatterns,
+        patterns: this.mxIgnorePatterns,
         timestamp: new Date().toISOString(),
       });
 
-      await svnCommitAsync(
+      await mxCommitAsync(
         [this.filesDataPath],
         commitMessage,
         false,
@@ -310,15 +322,13 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
 
   async isFirstCommit(directoryPath: string): Promise<boolean> {
     try {
-      // 构建仓库 URL
       const relativePath = path.relative(this.filesDataPath, directoryPath);
-      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
+      const repoUrl = `file:///${this.mxRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
 
-      // 尝试列出目录内容，如果成功说明目录已在 SVN 中
-      await svnListAsync(repoUrl, false, null, null, null);
-      return false; // 目录已在 SVN 中，不是首次提交
+      await mxListAsync(repoUrl, false, null, null, null);
+      return false;
     } catch {
-      return true; // 目录不在 SVN 中，是首次提交
+      return true;
     }
   }
 
@@ -334,12 +344,11 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   ): Promise<CommitResult> {
     await this.ensureInitialized();
 
-    // 路径安全校验：防止路径遍历攻击
     FileUtils.validatePath(directoryPath, this.filesDataPath);
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化，跳过提交');
-      return { success: false, message: 'SVN 未初始化' };
+      this.logger.warn('MX 未初始化，跳过提交');
+      return { success: false, message: 'MX 未初始化' };
     }
 
     let backedUpFilePaths: string[] = [];
@@ -358,7 +367,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       const pathParts = relativePath.split(path.sep);
 
       try {
-        await svnAddAsync([directoryPath], true, false, true);
+        await mxAddAsync([directoryPath], true, false, true);
         this.logger.log(`递归添加目录: ${directoryPath}`);
       } catch (error) {
         if (!error.message.includes('already under version control')) {
@@ -377,7 +386,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       };
       const fullMessage = JSON.stringify(commitData);
 
-      const result = await svnCommitAsync(
+      const result = await mxCommitAsync(
         [directoryPath],
         fullMessage,
         true,
@@ -386,6 +395,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       );
 
       this.logger.log(`目录提交成功: ${directoryPath}`);
+      this.logger.debug(`[MX_COMMIT 原始输出] ${result}`);
       return {
         success: true,
         message: '提交成功',
@@ -397,7 +407,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       );
 
       this.logger.warn(
-        `SVN 提交失败，已备份 ${backedUpFilePaths.length} 个文件路径，调用方可能需要清理相关资源`
+        `MX 提交失败，已备份 ${backedUpFilePaths.length} 个文件路径，调用方可能需要清理相关资源`
       );
 
       return {
@@ -416,8 +426,8 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     await this.ensureInitialized();
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化，跳过提交');
-      return { success: false, message: 'SVN 未初始化' };
+      this.logger.warn('MX 未初始化，跳过提交');
+      return { success: false, message: 'MX 未初始化' };
     }
 
     if (filePaths.length === 0) {
@@ -425,11 +435,10 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
 
     try {
-      // 确保文件的父目录链已被 SVN 版本控制（只 add 不单独 commit，避免产生虚假版本）
       const parentDirs = this.collectParentDirectories(filePaths);
       for (const dir of parentDirs) {
         try {
-          await svnAddAsync([dir], false, false, false);
+          await mxAddAsync([dir], false, false, false);
         } catch (error) {
           if (!error.message.includes('already under version control')) {
             this.logger.warn(
@@ -439,9 +448,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         }
       }
 
-      await svnAddAsync(filePaths, false, true, false);
+      await mxAddAsync(filePaths, false, true, false);
       const allPaths = [...parentDirs, ...filePaths];
-      const result = await svnCommitAsync(
+      const result = await mxCommitAsync(
         allPaths,
         message,
         false,
@@ -450,6 +459,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       );
 
       this.logger.log(`批量提交成功: ${filePaths.length} 个文件`);
+      this.logger.debug(`[MX_COMMIT 原始输出] ${result}`);
       return {
         success: true,
         message: '提交成功',
@@ -468,12 +478,12 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     await this.ensureInitialized();
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化，跳过提交');
-      return { success: false, message: 'SVN 未初始化' };
+      this.logger.warn('MX 未初始化，跳过提交');
+      return { success: false, message: 'MX 未初始化' };
     }
 
     try {
-      const result = await svnCommitAsync(
+      const result = await mxCommitAsync(
         [this.filesDataPath],
         message,
         true,
@@ -482,6 +492,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       );
 
       this.logger.log(`工作副本已提交: ${message}`);
+      this.logger.debug(`[MX_COMMIT 原始输出] ${result}`);
       return {
         success: true,
         message: '提交成功',
@@ -499,16 +510,15 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   async deleteNodeDirectory(directoryPath: string): Promise<CommitResult> {
     await this.ensureInitialized();
 
-    // 路径安全校验：防止路径遍历攻击
     FileUtils.validatePath(directoryPath, this.filesDataPath);
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化，跳过删除');
-      return { success: false, message: 'SVN 未初始化' };
+      this.logger.warn('MX 未初始化，跳过删除');
+      return { success: false, message: 'MX 未初始化' };
     }
 
     try {
-      const result = await svnDeleteAsync(
+      const result = await mxDeleteAsync(
         [directoryPath],
         true,
         true,
@@ -516,7 +526,8 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         null
       );
 
-      this.logger.log(`目录已从 SVN 标记删除: ${directoryPath}`);
+      this.logger.log(`目录已从 MX 标记删除: ${directoryPath}`);
+      this.logger.debug(`[MX_DELETE 原始输出] ${result}`);
       return {
         success: true,
         message: '删除成功',
@@ -524,7 +535,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
       };
     } catch (error) {
       this.logger.error(
-        `目录从 SVN 标记删除失败: ${directoryPath}, 错误: ${error.message}`
+        `目录从 MX 标记删除失败: ${directoryPath}, 错误: ${error.message}`
       );
       return {
         success: false,
@@ -537,8 +548,8 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     await this.ensureInitialized();
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化');
-      return { success: false, message: 'SVN 未初始化', entries: [] };
+      this.logger.warn('MX 未初始化');
+      return { success: false, message: 'MX 未初始化', entries: [] };
     }
 
     try {
@@ -559,13 +570,13 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         directoryPath = relativePath;
       }
 
-      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${directoryPath.replace(/\\/g, '/')}`;
+      const repoUrl = `file:///${this.mxRepoPath.replace(/\\/g, '/')}/${directoryPath.replace(/\\/g, '/')}`;
 
       this.logger.log(
-        `[SVN] 获取目录历史 - 原始路径: ${path}, 目录路径: ${directoryPath}, 仓库URL: ${repoUrl}`
+        `[MX] 获取目录历史 - 原始路径: ${path}, 目录路径: ${directoryPath}, 仓库URL: ${repoUrl}`
       );
 
-      const xmlResult = await svnLogAsync(
+      const xmlResult = await mxLogAsync(
         repoUrl,
         limit || 50,
         true,
@@ -573,7 +584,9 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         null
       );
 
-      const entries = this.parseSvnLogXml(xmlResult || '');
+      this.logger.debug(`[MX_LOG 原始XML] ${xmlResult || '(空)'}`);
+
+      const entries = this.parseMxLogXml(xmlResult || '', true);
 
       this.logger.log(
         `获取目录历史成功: ${directoryPath}, 共 ${entries.length} 条记录`
@@ -595,7 +608,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
   }
 
-  private parseSvnLogXml(xmlString: string): HistoryEntry[] {
+  private parseMxLogXml(xmlString: string, debugLog = false): HistoryEntry[] {
     const entries: HistoryEntry[] = [];
 
     const logEntryRegex =
@@ -626,7 +639,6 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
           message = commitData.message || rawMessage;
           userName = commitData.userName;
         } catch {
-          // JSON 解析失败，使用原始消息
         }
       }
 
@@ -643,6 +655,12 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
             path: this.decodeXmlEntities(pathMatch[3] || ''),
           });
         }
+      }
+
+      if (debugLog) {
+        this.logger.debug(
+          `[MX_LOG 解析条目] r${revision} | 作者: ${author} | 日期: ${date.toISOString()} | 消息: ${message.substring(0, 200)} | 文件数: ${paths.length}`
+        );
       }
 
       entries.push({
@@ -696,24 +714,23 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   ): Promise<ListResult> {
     await this.ensureInitialized();
 
-    // 路径安全校验：防止路径遍历攻击
     FileUtils.validatePath(directoryPath, this.filesDataPath);
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化');
-      return { success: false, message: 'SVN 未初始化' };
+      this.logger.warn('MX 未初始化');
+      return { success: false, message: 'MX 未初始化' };
     }
 
     try {
       const relativePath =
         path.relative(this.filesDataPath, directoryPath) || directoryPath;
-      const repoUrl = `file:///${this.svnRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
+      const repoUrl = `file:///${this.mxRepoPath.replace(/\\/g, '/')}/${relativePath.replace(/\\/g, '/')}`;
 
       this.logger.log(
-        `[SVN] 列出目录内容 - 目录: ${relativePath}, 版本: r${revision}, URL: ${repoUrl}`
+        `[MX] 列出目录内容 - 目录: ${relativePath}, 版本: r${revision}, URL: ${repoUrl}`
       );
 
-      const result = await svnListAsync(repoUrl, false, Number(revision), null, null);
+      const result = await mxListAsync(repoUrl, false, Number(revision), null, null);
 
       const files = result
         .split('\n')
@@ -746,12 +763,11 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
   ): Promise<FileContentResult> {
     await this.ensureInitialized();
 
-    // 路径安全校验：防止路径遍历攻击
     FileUtils.validatePath(filePath, this.filesDataPath);
 
     if (!this.isInitialized) {
-      this.logger.warn('SVN 未初始化');
-      return { success: false, message: 'SVN 未初始化' };
+      this.logger.warn('MX 未初始化');
+      return { success: false, message: 'MX 未初始化' };
     }
 
     try {
@@ -759,7 +775,7 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
         path.relative(this.filesDataPath, filePath) || filePath;
       const targetPath = path.join(this.filesDataPath, relativePath);
 
-      const contentStr = await svnCatAsync(targetPath, Number(revision), null, null);
+      const contentStr = await mxCatAsync(targetPath, Number(revision), null, null);
       const content = Buffer.from(contentStr);
 
       if (!content) {
@@ -791,4 +807,43 @@ export class SvnVersionControlProvider implements IVersionControl, OnModuleInit 
     }
   }
 
+  private async ensureWorkingCopyUrl(): Promise<void> {
+    const expectedUrl = `file:///${this.mxRepoPath.replace(/\\/g, '/')}`;
+
+    try {
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      const { stdout } = await execAsync(
+        `"${getPlatformInfo().mxPath}" info --show-item url "${this.filesDataPath}"`,
+        { windowsHide: true }
+      );
+      const currentUrl = (stdout || '').trim();
+
+      if (!currentUrl) {
+        this.logger.warn('无法获取工作副本 URL，跳过 URL 检查');
+        return;
+      }
+
+      if (currentUrl !== expectedUrl) {
+        this.logger.log(
+          `工作副本 URL 不匹配: ${currentUrl} -> ${expectedUrl}，正在修正...`
+        );
+        try {
+          await mxSwitchAsync(currentUrl, expectedUrl, this.filesDataPath, null, null);
+          this.logger.log('工作副本 URL 修正成功');
+        } catch (switchError) {
+          this.logger.error(
+            `工作副本 URL 修正失败: ${switchError.message}`
+          );
+        }
+      } else {
+        this.logger.debug(`工作副本 URL 正确: ${currentUrl}`);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `获取工作副本 URL 失败 (${error.message})，跳过 URL 检查`
+      );
+    }
+  }
 }

@@ -32,7 +32,7 @@ _避免_: 权利、许可
 _避免_: 上传状态、处理状态
 
 **版本（Version）**:
-图纸在某个时间点的 SVN 快照。每次保存图纸时，后端自动提交一次 SVN，生成一个新的 VersionRecord。一个 FileNode 拥有多个 VersionRecord，构成版本历史链。资源库不产生版本。
+图纸在某个时间点的 MX 快照。每次保存图纸时，后端自动提交一次 MX，生成一个新的 VersionRecord。一个 FileNode 拥有多个 VersionRecord，构成版本历史链。资源库不产生版本。
 _避免_: 修订、历史记录
 
 **审计日志（AuditLog）**:

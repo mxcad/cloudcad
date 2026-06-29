@@ -133,7 +133,7 @@ Feature: 图纸保存
 | 场景 | 文件 | 状态 |
 |------|------|:---:|
 | 覆盖保存 Happy Path | `cad-save-version.integration.spec.ts` | ✅ |
-| SVN 提交成功 | `workflow-2-save-svn-version.integration.spec.ts` | ✅ |
+| SVN 提交成功 | `workflow-2-save-mx-version.integration.spec.ts` | ✅ |
 | 另存为 | `cad-save-as-duplicate-version-chain.integration.spec.ts` | ✅ |
 | 无权限 → 403 | ❌ | ❌ |
 | nodeId 不存在 → 404 | ❌ | ❌ |

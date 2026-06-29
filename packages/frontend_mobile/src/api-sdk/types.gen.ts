@@ -1997,7 +1997,7 @@ export type ProjectFilter = 'all' | 'owned' | 'joined';
 
 export type LibraryType = 'drawing' | 'block';
 
-export type SvnLogPathDto = {
+export type MxLogPathDto = {
     /**
      * 变更动作类型
      */
@@ -2012,7 +2012,7 @@ export type SvnLogPathDto = {
     path: string;
 };
 
-export type SvnLogEntryDto = {
+export type MxLogEntryDto = {
     /**
      * 修订版本号
      */
@@ -2036,10 +2036,10 @@ export type SvnLogEntryDto = {
     /**
      * 变更路径列表
      */
-    paths?: Array<SvnLogPathDto>;
+    paths?: Array<MxLogPathDto>;
 };
 
-export type SvnLogResponseDto = {
+export type MxLogResponseDto = {
     /**
      * 操作是否成功
      */
@@ -2051,7 +2051,7 @@ export type SvnLogResponseDto = {
     /**
      * 提交记录条目列表
      */
-    entries: Array<SvnLogEntryDto>;
+    entries: Array<MxLogEntryDto>;
 };
 
 export type FileContentResponseDto = {
@@ -2210,7 +2210,7 @@ export type UploadFilesDto = {
      */
     conflictStrategy?: 'skip' | 'overwrite' | 'rename';
     /**
-     * 跳过 DB/转换/SVN 等后续操作，仅上传文件到 uploads 目录
+     * 跳过 DB/转换/MX 等后续操作，仅上传文件到 uploads 目录
      */
     skipDb?: boolean;
 };
@@ -6729,7 +6729,7 @@ export type VersionControlControllerGetFileHistoryResponses = {
     /**
      * 获取成功
      */
-    200: SvnLogResponseDto;
+    200: MxLogResponseDto;
 };
 
 export type VersionControlControllerGetFileHistoryResponse = VersionControlControllerGetFileHistoryResponses[keyof VersionControlControllerGetFileHistoryResponses];

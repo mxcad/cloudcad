@@ -138,7 +138,7 @@
 测试代码中约有 **200+ 处** `as any`。这在测试中是常见做法，用于创建 mock 对象。大部分可接受，但有以下问题：
 
 **后端测试尤其严重**：
-- `backend/test/integration/workflow-2-save-svn-version.integration.spec.ts` — 16 处 `stream: null as any`
+- `backend/test/integration/workflow-2-save-mx-version.integration.spec.ts` — 16 处 `stream: null as any`
 - `backend/test/integration/cad-save-version.integration.spec.ts` — 10 处
 - 多个 spec 文件使用 `as any` 创建 mock request/response 对象
 

@@ -23,9 +23,9 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 import {
-  checkSvnAvailableSync,
+  checkMxAvailableSync,
   getPlatformInfo,
-} from '@cloudcad/svn-version-tool';
+} from '@cloudcad/mx-version-tool';
 
 const execAsync = promisify(exec);
 
@@ -51,19 +51,19 @@ export class LinuxInitService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const platformInfo = getPlatformInfo();
     this.logger.log(
-      `当前平台: ${platformInfo.platform}, SVN 路径: ${platformInfo.svnPath}`
+      `当前平台: ${platformInfo.platform}, MX 路径: ${platformInfo.mxPath}`
     );
 
-    // 检查 SVN 是否可用
-    const svnCheck = checkSvnAvailableSync();
-    if (!svnCheck.available) {
-      this.logger.error(`SVN 检查失败: ${svnCheck.message}`);
-      // Linux 平台 SVN 必须安装
+    // 检查 MX 是否可用
+    const mxCheck = checkMxAvailableSync();
+    if (!mxCheck.available) {
+      this.logger.error(`MX 检查失败: ${mxCheck.message}`);
+      // Linux 平台 MX 必须安装
       if (os.platform() === 'linux') {
-        throw new InternalServerErrorException(svnCheck.message);
+        throw new InternalServerErrorException(mxCheck.message);
       }
     } else {
-      this.logger.log(`SVN 检查通过: ${svnCheck.message}`);
+      this.logger.log(`MX 检查通过: ${mxCheck.message}`);
     }
 
     // 仅在 Linux 平台执行环境初始化
@@ -196,10 +196,10 @@ export class LinuxInitService implements OnModuleInit {
   }> {
     const issues: string[] = [];
 
-    // 检查 SVN 是否可用（所有平台）
-    const svnCheck = checkSvnAvailableSync();
-    if (!svnCheck.available) {
-      issues.push(`SVN 不可用: ${svnCheck.message}`);
+    // 检查 MX 是否可用（所有平台）
+    const mxCheck = checkMxAvailableSync();
+    if (!mxCheck.available) {
+      issues.push(`MX 不可用: ${mxCheck.message}`);
     }
 
     if (os.platform() !== 'linux') {

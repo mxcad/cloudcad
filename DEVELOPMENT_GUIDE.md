@@ -157,7 +157,7 @@ cloudcad/
 │   ├── frontend/           # 前端应用
 │   ├── backend/            # 后端服务
 │   ├── config-service/     # 配置中心
-│   └── svnVersionTool/     # SVN 工具
+    │   └── mxVersionTool/      # MX 工具
 ├── docker/                 # Docker 部署
 ├── runtime/                # 运行时配置
 ├── scripts/                # 构建脚本

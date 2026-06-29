@@ -45,45 +45,45 @@ check_env() {
     log_info "环境变量检查通过"
 }
 
-# ==================== SVN 初始化 ====================
+# ==================== MX 初始化 ====================
 
-init_svn() {
-    local svn_repo_path="${SVN_REPO_PATH:-/app/data/svn-repo}"
+init_mx() {
+    local mx_repo_path="${MX_REPO_PATH:-/app/data/svn-repo}"
     local files_data_path="${FILES_DATA_PATH:-/app/data/files}"
     
-    log_info "检查 SVN 仓库..."
+    log_info "检查 MX 仓库..."
     
-    # 创建 SVN 仓库（如果不存在）
-    if [ ! -d "$svn_repo_path/db" ]; then
-        log_info "初始化 SVN 仓库: $svn_repo_path"
-        svnadmin create "$svn_repo_path" 2>/dev/null || {
-            log_warn "SVN 仓库创建失败或已存在"
+    # 创建 MX 仓库（如果不存在）
+    if [ ! -d "$mx_repo_path/db" ]; then
+        log_info "初始化 MX 仓库: $mx_repo_path"
+        svnadmin create "$mx_repo_path" 2>/dev/null || {
+            log_warn "MX 仓库创建失败或已存在"
         }
     else
-        log_info "SVN 仓库已存在: $svn_repo_path"
+        log_info "MX 仓库已存在: $mx_repo_path"
     fi
     
-    # 开发模式：修复 SVN 工作副本 URL
+    # 开发模式：修复 MX 工作副本 URL
     if [ "${DEV_MODE:-false}" = "true" ] || [ "${NODE_ENV:-production}" = "development" ]; then
-        log_info "开发模式：检查 SVN 工作副本..."
+        log_info "开发模式：检查 MX 工作副本..."
         
         local svn_dir="$files_data_path/.svn"
         
         if [ -d "$svn_dir" ]; then
-            log_info "检测到 SVN 工作副本，检查 URL 配置..."
+            log_info "检测到 MX 工作副本，检查 URL 配置..."
             
             local current_url=$(svn info "$files_data_path" 2>/dev/null | grep "^Repository Root:" | cut -d' ' -f3- || echo "")
-            local correct_url="file://$svn_repo_path"
+            local correct_url="file://$mx_repo_path"
             
             if [ -n "$current_url" ] && [ "$current_url" != "$correct_url" ]; then
-                log_info "SVN URL 需要重定向: $current_url -> $correct_url"
+                log_info "MX URL 需要重定向: $current_url -> $correct_url"
                 svn switch --relocate "$current_url" "$correct_url" "$files_data_path" 2>/dev/null || {
                     log_warn "URL 重定向失败，删除 .svn 目录重新初始化..."
                     rm -rf "$svn_dir"
                 }
-                log_info "SVN URL 重定向完成"
+                log_info "MX URL 重定向完成"
             else
-                log_info "SVN URL 配置正确: $correct_url"
+                log_info "MX URL 配置正确: $correct_url"
             fi
         fi
     fi
@@ -274,8 +274,8 @@ main() {
     # 1. 环境检查
     check_env
     
-    # 2. SVN 初始化
-    init_svn
+    # 2. MX 初始化
+    init_mx
     
     # 3. 等待依赖服务
     wait_for_db || exit 1

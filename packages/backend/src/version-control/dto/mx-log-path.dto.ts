@@ -12,10 +12,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 
-/**
- * SVN 提交记录中的变更路径 DTO
- */
-export class SvnLogPathDto {
+export class MxLogPathDto {
   @ApiProperty({
     description: '变更动作类型',
     enum: ['A', 'M', 'D', 'R'],

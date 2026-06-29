@@ -11,12 +11,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SvnLogPathDto } from './svn-log-path.dto';
+import { MxLogPathDto } from './mx-log-path.dto';
 
-/**
- * SVN 提交记录条目 DTO
- */
-export class SvnLogEntryDto {
+export class MxLogEntryDto {
   @ApiProperty({
     description: '修订版本号',
     example: 123,
@@ -51,7 +48,7 @@ export class SvnLogEntryDto {
 
   @ApiPropertyOptional({
     description: '变更路径列表',
-    type: () => [SvnLogPathDto],
+    type: () => [MxLogPathDto],
   })
-  paths?: SvnLogPathDto[];
+  paths?: MxLogPathDto[];
 }

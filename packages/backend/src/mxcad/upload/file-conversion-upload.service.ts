@@ -296,7 +296,7 @@ export class FileConversionUploadService {
           }
         }
 
-        // 注意：公开资源库上传不需要提交 SVN
+        // 注意：公开资源库上传不需要提交 MX
         if (!context.isLibrary) {
           try {
             const nodeDirectory = storageInfo.nodeDirectoryPath;
@@ -307,10 +307,10 @@ export class FileConversionUploadService {
               context.userId,
               `User${context.userId}`
             );
-          } catch (svnError) {
+          } catch (mxError) {
             this.logger.error(
-              `[uploadAndConvertFileWithPermission] SVN 提交异常`,
-              svnError.stack
+              `[uploadAndConvertFileWithPermission] MX 提交异常`,
+              mxError.stack
             );
           }
         }
@@ -376,7 +376,7 @@ export class FileConversionUploadService {
             storageInfo.fileRelativePath
           );
 
-          // 同时保存 nodeId.mxweb 作为初始备份（SVN 只提交此文件，用于灾难恢复）
+          // 同时保存 nodeId.mxweb 作为初始备份（MX 只提交此文件，用于灾难恢复）
           const backupFileName = `${newNodeId}.mxweb`;
           const backupRelativePath = `${storageInfo.nodeDirectoryRelativePath}/${backupFileName}`;
           await this.storageService.copyFromFs(filePath, backupRelativePath);
@@ -384,16 +384,16 @@ export class FileConversionUploadService {
 
           if (!context.isLibrary) {
             try {
-              // SVN 只提交 nodeId.mxweb 初始备份文件，不提交工作文件
+              // MX 只提交 nodeId.mxweb 初始备份文件，不提交工作文件
               const backupAbsolutePath = `${storageInfo.nodeDirectoryPath}/${backupFileName}`;
               await this.versionControlService.commitFiles(
                 [backupAbsolutePath],
                 `Upload MXWeb file: ${backupFileName}`,
               );
-            } catch (svnError) {
+            } catch (mxError) {
               this.logger.error(
-                `[uploadAndConvertFileWithPermission] MXWeb SVN 提交异常`,
-                svnError.stack
+                `[uploadAndConvertFileWithPermission] MXWeb MX 提交异常`,
+                mxError.stack
               );
             }
           }
@@ -771,8 +771,8 @@ export class FileConversionUploadService {
         }
       }
 
-      // 保存原始上传文件作为灾难恢复备份（如 {nodeId}.dwg），SVN 只提交此文件
-      // 转换后的 {nodeId}.{ext}.mxweb 是工作文件，每次覆盖保存都会更新，不提交 SVN
+      // 保存原始上传文件作为灾难恢复备份（如 {nodeId}.dwg），MX 只提交此文件
+      // 转换后的 {nodeId}.{ext}.mxweb 是工作文件，每次覆盖保存都会更新，不提交 MX
       const originalExt = path.extname(originalName).toLowerCase();
       let originalBackupPath = '';
       if (originalFilePath && await fsPromises.access(originalFilePath).then(() => true).catch(() => false)) {
@@ -786,18 +786,18 @@ export class FileConversionUploadService {
         );
       }
 
-      // 注意：公开资源库上传不需要提交 SVN
-      // SVN 只提交原始上传文件（如 .dwg/.dxf），不提交转换后的 .mxweb 工作文件
+      // 注意：公开资源库上传不需要提交 MX
+      // MX 只提交原始上传文件（如 .dwg/.dxf），不提交转换后的 .mxweb 工作文件
       if (!context.isLibrary && originalBackupPath) {
         try {
           await this.versionControlService.commitFiles(
             [originalBackupPath],
             `Upload file: ${originalName}`,
           );
-        } catch (svnError) {
+        } catch (mxError) {
           this.logger.error(
-            `[handleFileNodeCreation] SVN 提交异常`,
-            svnError.stack
+            `[handleFileNodeCreation] MX 提交异常`,
+            mxError.stack
           );
         }
       }

@@ -88,8 +88,8 @@ pnpm prisma studio    # Open Prisma GUI
 - **Authentication**: JWT-based with access token (1h) and refresh token (7d)
 - **Cooperation Service**: Runs on port 3091, handles real-time collaboration
 - **File Storage**: Files stored in `data/files/`, metadata in PostgreSQL
-- **SVN Integration**: Uses `svnVersionTool` package for version control operations
+- **MX Integration**: Uses `mxVersionTool` package for version control operations
 - **Environment Variables**: Critical variables in `.env`:
   - `DATABASE_URL`, `JWT_SECRET`, `DB_PASSWORD`, `MXCAD_ASSEMBLY_PATH`
   - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
-  - `FILES_DATA_PATH`, `SVN_REPO_PATH`
+  - `FILES_DATA_PATH`, `MX_REPO_PATH`

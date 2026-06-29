@@ -19,43 +19,43 @@ import { SaveAsService } from '../../src/mxcad/save/save-as.service';
 import * as path from 'path';
 import { Readable } from 'stream';
 
-// Mock the SVN module
-const svnBehaviors: Record<string, Function> = {};
+// Mock the MX module
+const mxBehaviors: Record<string, Function> = {};
 
-function installSvn(name: string, fn: Function) {
-  svnBehaviors[name] = fn;
+function installMx(name: string, fn: Function) {
+  mxBehaviors[name] = fn;
 }
 
-function svnOk(result: string) {
+function mxOk(result: string) {
   return (...args: any[]) => {
     const cb = args[args.length - 1];
     if (typeof cb === 'function') cb(null, result);
   };
 }
 
-const svnNames = [
-  'svnCheckout', 'svnAdd', 'svnCommit', 'svnDelete', 'svnadminCreate',
-  'svnImport', 'svnLog', 'svnCat', 'svnList', 'svnPropset', 'svnUpdate', 'svnCleanup',
+const mxNames = [
+  'mxCheckout', 'mxAdd', 'mxCommit', 'mxDelete', 'mxadminCreate',
+  'mxImport', 'mxLog', 'mxCat', 'mxList', 'mxPropset', 'mxUpdate', 'mxCleanup',
 ];
 
-const svnMockObj: Record<string, Function> = {};
-for (const name of svnNames) {
+const mxMockObj: Record<string, Function> = {};
+for (const name of mxNames) {
   const dispatcher = (...args: any[]) => {
-    const handler = svnBehaviors[name];
+    const handler = mxBehaviors[name];
     if (handler) return handler(...args);
     const cb = args[args.length - 1];
     if (typeof cb === 'function') cb(null, '');
   };
-  svnMockObj[name] = dispatcher;
+  mxMockObj[name] = dispatcher;
 }
 
-jest.mock('@cloudcad/svn-version-tool', () => svnMockObj);
+jest.mock('@cloudcad/mx-version-tool', () => mxMockObj);
 
 jest.mock('../../src/conversion', () => ({
   ProcessRunnerService: jest.fn(),
 }));
 
-describe('Workflow 2: Save → SVN Commit → Version History Integration Tests', () => {
+describe('Workflow 2: Save → MX Commit → Version History Integration Tests', () => {
   let saveAsService: SaveAsService;
   let mockVersionControl: jest.Mocked<IVersionControl>;
   let mockFileSystemService: jest.Mocked<FileSystemService>;
@@ -72,19 +72,19 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
   const mockFileName = 'my-drawing.dwg';
 
   beforeEach(async () => {
-    // Reset SVN mocks
-    installSvn('svnCheckout', svnOk('Checked out'));
-    installSvn('svnAdd', svnOk('A  file'));
-    installSvn('svnCommit', svnOk('Committed revision 1.'));
-    installSvn('svnDelete', svnOk('D  file'));
-    installSvn('svnadminCreate', svnOk('Created'));
-    installSvn('svnImport', svnOk('Imported'));
-    installSvn('svnLog', svnOk(`<?xml version="1.0"?><log><logentry revision="1"><author>testuser</author><date>2024-01-01T10:00:00.000000Z</date><msg>{"type":"file_operation","message":"Save as: test.dwg","userName":"Test User"}</msg><paths><path action="A" kind="file">/test.dwg</path></paths></logentry></log>`));
-    installSvn('svnCat', svnOk('file content'));
-    installSvn('svnList', svnOk('file1.dwg\nfile2.dxf'));
-    installSvn('svnPropset', svnOk('property set'));
-    installSvn('svnUpdate', svnOk('Updated'));
-    installSvn('svnCleanup', svnOk('Cleanup'));
+    // Reset MX mocks
+    installMx('mxCheckout', mxOk('Checked out'));
+    installMx('mxAdd', mxOk('A  file'));
+    installMx('mxCommit', mxOk('Committed revision 1.'));
+    installMx('mxDelete', mxOk('D  file'));
+    installMx('mxadminCreate', mxOk('Created'));
+    installMx('mxImport', mxOk('Imported'));
+    installMx('mxLog', mxOk(`<?xml version="1.0"?><log><logentry revision="1"><author>testuser</author><date>2024-01-01T10:00:00.000000Z</date><msg>{"type":"file_operation","message":"Save as: test.dwg","userName":"Test User"}</msg><paths><path action="A" kind="file">/test.dwg</path></paths></logentry></log>`));
+    installMx('mxCat', mxOk('file content'));
+    installMx('mxList', mxOk('file1.dwg\nfile2.dxf'));
+    installMx('mxPropset', mxOk('property set'));
+    installMx('mxUpdate', mxOk('Updated'));
+    installMx('mxCleanup', mxOk('Cleanup'));
 
     // Setup mocks for all services
     mockVersionControl = {
@@ -178,8 +178,8 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
     saveAsService = module.get<SaveAsService>(SaveAsService);
   });
 
-  describe('Scenario 1: Normal Workflow - Save MXWeb → Create Node → SVN Commit', () => {
-    it('should successfully save a CAD file and commit to SVN', async () => {
+  describe('Scenario 1: Normal Workflow - Save MXWeb → Create Node → MX Commit', () => {
+    it('should successfully save a CAD file and commit to MX', async () => {
       const mockFile = {
         path: path.join(process.cwd(), 'test-temp', 'test.mxweb'),
         originalname: 'test.mxweb',
@@ -213,7 +213,7 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
       // Verify storage was allocated
       expect(mockStorageManager.allocateNodeStorage).toHaveBeenCalled();
 
-      // Verify SVN commit was called
+      // Verify MX commit was called
       expect(mockVersionControl.commitNodeDirectory).toHaveBeenCalledWith(
         expect.any(String),
         'Initial save of my drawing',
@@ -285,9 +285,9 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
     });
   });
 
-  describe('Scenario 4: Exception Case - SVN Commit Failure', () => {
-    it('should handle SVN commit failure gracefully', async () => {
-      mockVersionControl.commitNodeDirectory.mockRejectedValueOnce(new Error('SVN commit failed: network error'));
+  describe('Scenario 4: Exception Case - MX Commit Failure', () => {
+    it('should handle MX commit failure gracefully', async () => {
+      mockVersionControl.commitNodeDirectory.mockRejectedValueOnce(new Error('MX commit failed: network error'));
 
       const mockFile = {
         path: path.join(process.cwd(), 'test-temp', 'test.mxweb'),
@@ -385,8 +385,8 @@ describe('Workflow 2: Save → SVN Commit → Version History Integration Tests'
     });
   });
 
-  describe('Scenario 7: Edge Case - Library File Save (Skip SVN)', () => {
-    it('should skip SVN commit for library files', async () => {
+  describe('Scenario 7: Edge Case - Library File Save (Skip MX)', () => {
+    it('should skip MX commit for library files', async () => {
       const mockFile = {
         path: path.join(process.cwd(), 'test-temp', 'library-item.mxweb'),
         originalname: 'library-item.mxweb',

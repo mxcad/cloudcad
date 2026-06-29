@@ -1,0 +1,42 @@
+{
+  "name": "@cloudcad/mx-version-tool",
+  "version": "1.0.0",
+  "description": "MX 版本控制工具包，提供 MX 仓库管理、检出、添加、提交等操作",
+  "main": "mxcmd.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "dev": "node -e process.exit(0)",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "mx",
+    "version-control"
+  ],
+  "author": "CloudCAD Team",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "mxcmd.js",
+    "mx-executor.js",
+    "mxcheckout.js",
+    "mxadd.js",
+    "mxcommit.js",
+    "mxlist.js",
+    "mxadmincreate.js",
+    "mximport.js",
+    "mxdelete.js",
+    "mxlog.js",
+    "mxcat.js",
+    "mxpropset.js",
+    "mxupdate.js",
+    "mxcleanup.js",
+    "mxpath.js",
+    "mxadminpath.js",
+    "mxcheck.js",
+    "mxresolve.js",
+    "index.d.ts",
+    "README.md"
+  ]
+}

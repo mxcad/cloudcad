@@ -333,7 +333,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
   });
 
   describe('T3: 公共资源库场景', () => {
-    it('T3-S1: 公共资源库文件保存应跳过SVN提交', async () => {
+    it('T3-S1: 公共资源库文件保存应跳过MX提交', async () => {
       const testNode = {
         id: 'library-node-id',
         name: 'library.dwg',
@@ -370,7 +370,7 @@ describe('CAD并发保存→乐观锁冲突(409)集成测试', () => {
       );
 
       expect(result.success).toBe(true);
-      // 验证没有调用 SVN 提交
+      // 验证没有调用 MX 提交
       expect(mockVersionControl.commitNodeDirectory).not.toHaveBeenCalled();
     });
   });

@@ -1,14 +1,8 @@
 const { exec, spawn, execFile } = require('child_process');
-const svnPathModule = require('./svnpath');
+const mxPathModule = require('./mxpath');
 
-/**
- * 执行 SVN 命令（使用 exec）
- * @param {string} command 完整的命令字符串
- * @param {Object} options 额外的选项
- * @returns {Promise<string>} 命令执行结果
- */
 function executeCommand(command, options = {}) {
-  const execOptions = svnPathModule.getExecOptions();
+  const execOptions = mxPathModule.getExecOptions();
   Object.assign(execOptions, options);
   
   return new Promise((resolve, reject) => {
@@ -22,15 +16,8 @@ function executeCommand(command, options = {}) {
   });
 }
 
-/**
- * 执行 SVN 命令（使用 spawn）
- * @param {string} executable 可执行文件路径
- * @param {string[]} args 命令参数数组
- * @param {Object} options 额外的选项
- * @returns {Promise<string>} 命令执行结果
- */
 function executeSpawn(executable, args, options = {}) {
-  const spawnOptions = svnPathModule.getSpawnOptions();
+  const spawnOptions = mxPathModule.getSpawnOptions();
   Object.assign(spawnOptions, options);
   
   return new Promise((resolve, reject) => {
@@ -60,15 +47,8 @@ function executeSpawn(executable, args, options = {}) {
   });
 }
 
-/**
- * 执行 SVN 命令（使用 execFile）
- * @param {string} executable 可执行文件路径
- * @param {string[]} args 命令参数数组
- * @param {Object} options 额外的选项
- * @returns {Promise<string|Buffer>} 命令执行结果
- */
 function executeExecFile(executable, args, options = {}) {
-  const execOptions = svnPathModule.getExecOptions();
+  const execOptions = mxPathModule.getExecOptions();
   Object.assign(execOptions, options);
   
   return new Promise((resolve, reject) => {

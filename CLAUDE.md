@@ -22,14 +22,14 @@ CloudCAD — web-based CAD collaboration platform (online DWG/DXF editing, SVN v
 
 **Stack:** NestJS (Express) + Prisma + PostgreSQL + Redis | React 19 + Vite + Tailwind CSS v4 + Zustand + Radix UI | pnpm monorepo
 
-**Environment:** Node.js >= 20.19.5 | pnpm >= 9.15.9 | PostgreSQL 15 | Redis 7 | SVN 1.14.x
+**Environment:** Node.js >= 20.19.5 | pnpm >= 9.15.9 | PostgreSQL 15 | Redis 7 | MX 1.14.x
 
 ```
 packages/
 ├── backend/          # NestJS API (port 3001)
 ├── frontend/         # React 19 SPA (port 5173)
 ├── config-service/   # Deployment config center (port 3002)
-└── svnVersionTool/   # SVN subprocess wrapper
+└── mxVersionTool/    # MX subprocess wrapper
 ```
 
 ## Critical Gotchas

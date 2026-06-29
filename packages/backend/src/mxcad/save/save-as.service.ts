@@ -166,7 +166,7 @@ export class SaveAsService {
       await fsPromises.copyFile(file.path, mxwebTargetPath);
       this.logger.log(`[SaveAs] mxweb文件保存成功: ${mxwebTargetPath}`);
 
-      // 同时保存 nodeId.mxweb 作为初始备份（灾难恢复用，SVN 只提交此文件）
+      // 同时保存 nodeId.mxweb 作为初始备份（灾难恢复用，MX 只提交此文件）
       const backupFileName = `${newNodeId}.mxweb`;
       const backupPath = path.join(nodeDirectory, backupFileName);
       await fsPromises.copyFile(file.path, backupPath);
@@ -186,36 +186,36 @@ export class SaveAsService {
       });
       this.logger.log(`[SaveAs] 文件保存成功: nodeId=${newNodeId}, fileHash=${fileHash}`);
 
-      // SVN 提交需要使用绝对路径
+      // MX 提交需要使用绝对路径
       // nodeDirectory 已经是绝对路径（如 D:\...\filesData\202604\nodeId）
 
-      // 只对项目和个人空间文件进行 SVN 提交，跳过图纸库和图块库
+      // 只对项目和个人空间文件进行 MX 提交，跳过图纸库和图块库
       if (targetType === 'project' && projectId) {
         try {
-          // SVN 只提交 nodeId.mxweb 初始备份（灾难恢复用），不提交工作文件
+          // MX 只提交 nodeId.mxweb 初始备份（灾难恢复用），不提交工作文件
           await this.versionControlService.commitFiles(
             [backupPath],
             commitMessage || `Save as: ${finalFileName}`,
           );
-          this.logger.log(`[SaveAs] 项目文件 SVN 提交成功`);
-        } catch (svnError) {
-          this.logger.warn(`[SaveAs] SVN 提交失败: ${svnError.message}`);
+          this.logger.log(`[SaveAs] 项目文件 MX 提交成功`);
+        } catch (mxError) {
+          this.logger.warn(`[SaveAs] MX 提交失败: ${mxError.message}`);
         }
       } else if (targetType === 'personal') {
         try {
-          // SVN 只提交 nodeId.mxweb 初始备份（灾难恢复用），不提交工作文件
+          // MX 只提交 nodeId.mxweb 初始备份（灾难恢复用），不提交工作文件
           await this.versionControlService.commitFiles(
             [backupPath],
             commitMessage || `Save as: ${finalFileName}`,
           );
-          this.logger.log(`[SaveAs] 个人空间文件 SVN 提交成功`);
-        } catch (svnError) {
-          this.logger.warn(`[SaveAs] SVN 提交失败: ${svnError.message}`);
+          this.logger.log(`[SaveAs] 个人空间文件 MX 提交成功`);
+        } catch (mxError) {
+          this.logger.warn(`[SaveAs] MX 提交失败: ${mxError.message}`);
         }
       } else {
-        // 跳过图纸库和图块库的 SVN 提交
+        // 跳过图纸库和图块库的 MX 提交
         this.logger.log(
-          `[SaveAs] 跳过 SVN 提交: ${finalFileName} (图纸库/图块库文件)`
+          `[SaveAs] 跳过 MX 提交: ${finalFileName} (图纸库/图块库文件)`
         );
       }
 
@@ -347,16 +347,16 @@ export class SaveAsService {
       });
       this.logger.log(`[SaveAsByHash] 文件保存成功: nodeId=${newNodeId}, fileHash=${newFileHash}`);
 
-      // SVN 提交
+      // MX 提交
       if (targetType === 'project' && projectId) {
         try {
           await this.versionControlService.commitFiles(
             [backupPath],
             commitMessage || `Save as: ${finalFileName}`,
           );
-          this.logger.log(`[SaveAsByHash] 项目文件 SVN 提交成功`);
-        } catch (svnError) {
-          this.logger.warn(`[SaveAsByHash] SVN 提交失败: ${svnError.message}`);
+          this.logger.log(`[SaveAsByHash] 项目文件 MX 提交成功`);
+        } catch (mxError) {
+          this.logger.warn(`[SaveAsByHash] MX 提交失败: ${mxError.message}`);
         }
       } else if (targetType === 'personal') {
         try {
@@ -364,12 +364,12 @@ export class SaveAsService {
             [backupPath],
             commitMessage || `Save as: ${finalFileName}`,
           );
-          this.logger.log(`[SaveAsByHash] 个人空间文件 SVN 提交成功`);
-        } catch (svnError) {
-          this.logger.warn(`[SaveAsByHash] SVN 提交失败: ${svnError.message}`);
+          this.logger.log(`[SaveAsByHash] 个人空间文件 MX 提交成功`);
+        } catch (mxError) {
+          this.logger.warn(`[SaveAsByHash] MX 提交失败: ${mxError.message}`);
         }
       } else {
-        this.logger.log(`[SaveAsByHash] 跳过 SVN 提交: ${finalFileName} (图纸库/图块库文件)`);
+        this.logger.log(`[SaveAsByHash] 跳过 MX 提交: ${finalFileName} (图纸库/图块库文件)`);
       }
 
       return {

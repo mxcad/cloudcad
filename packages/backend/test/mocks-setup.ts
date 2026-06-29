@@ -1,4 +1,4 @@
-jest.mock('@cloudcad/svn-version-tool', () => svnMockObj);
+jest.mock('@cloudcad/mx-version-tool', () => mxMockObj);
 
 jest.mock('../src/conversion', () => ({
   ProcessRunnerService: jest.fn(),

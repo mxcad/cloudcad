@@ -11,12 +11,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { SvnLogEntryDto } from './svn-log-entry.dto';
+import { MxLogEntryDto } from './mx-log-entry.dto';
 
-/**
- * SVN 提交历史响应 DTO
- */
-export class SvnLogResponseDto {
+export class MxLogResponseDto {
   @ApiProperty({
     description: '操作是否成功',
     example: true,
@@ -31,7 +28,7 @@ export class SvnLogResponseDto {
 
   @ApiProperty({
     description: '提交记录条目列表',
-    type: () => [SvnLogEntryDto],
+    type: () => [MxLogEntryDto],
   })
-  entries: SvnLogEntryDto[];
+  entries: MxLogEntryDto[];
 }

@@ -281,7 +281,7 @@ describe('FileConversionUploadService - CAD Upload→Convert→Open Integration'
     });
 
     describe('Case 3: Edge Cases', () => {
-      it('should skip SVN commit when uploading to library (isLibrary=true)', async () => {
+      it('should skip MX commit when uploading to library (isLibrary=true)', async () => {
         fileConversionService.convertFile.mockResolvedValue({
           isOk: true,
           ret: { code: 0, tz: true },
@@ -398,14 +398,14 @@ describe('FileConversionUploadService - CAD Upload→Convert→Open Integration'
         expect(storageManager.allocateNodeStorage).not.toHaveBeenCalled();
       });
 
-      it('should handle SVN commit failure gracefully', async () => {
+      it('should handle MX commit failure gracefully', async () => {
         fileConversionService.convertFile.mockResolvedValue({
           isOk: true,
           ret: { code: 0, tz: true },
         });
 
         versionControlService.commitNodeDirectory.mockRejectedValue(
-          new Error('SVN commit failed')
+          new Error('MX commit failed')
         );
 
         const result = await service.uploadAndConvertFileWithPermission(mockUploadOptions);

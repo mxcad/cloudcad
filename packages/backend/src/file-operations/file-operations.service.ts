@@ -1062,15 +1062,15 @@ export class FileOperationsService {
           const deleteResult =
             await this.versionControlService.deleteNodeDirectory(nodeDirectory);
           if (deleteResult.success) {
-            this.logger.log(`节点目录已从 SVN 标记删除: ${nodeDirectory}`);
+            this.logger.log(`节点目录已从 MX 标记删除: ${nodeDirectory}`);
           } else {
             this.logger.warn(
-              `节点目录从 SVN 标记删除失败: ${nodeDirectory}, 原因: ${deleteResult.message}`
+              `节点目录从 MX 标记删除失败: ${nodeDirectory}, 原因: ${deleteResult.message}`
             );
           }
-        } catch (svnError) {
+        } catch (mxError) {
           this.logger.error(
-            `节点目录从 SVN 标记删除失败: ${nodeDirectory}, 错误: ${svnError.message}`
+            `节点目录从 MX 标记删除失败: ${nodeDirectory}, 错误: ${mxError.message}`
           );
         }
       }
@@ -1147,7 +1147,7 @@ export class FileOperationsService {
   async deleteFileFromStorage(
     nodePath: string,
     fileHash: string | null,
-    commitSvn: boolean
+    commitMx: boolean
   ): Promise<void> {
     if (!nodePath) return;
 
@@ -1176,17 +1176,17 @@ export class FileOperationsService {
       });
       const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
 
-      if (commitSvn && this.versionControlService.isReady()) {
+      if (commitMx && this.versionControlService.isReady()) {
         try {
           const deleteResult =
             await this.versionControlService.deleteNodeDirectory(nodeDirectory);
           if (deleteResult.success) {
-            this.logger.log(`节点目录已从 SVN 标记删除: ${nodeDirectory}`);
+            this.logger.log(`节点目录已从 MX 标记删除: ${nodeDirectory}`);
           }
-        } catch (svnError) {
+        } catch (mxError) {
           this.logger.error(
-            `节点目录从 SVN 标记删除失败: ${nodeDirectory}`,
-            svnError
+            `节点目录从 MX 标记删除失败: ${nodeDirectory}`,
+            mxError
           );
         }
       }
@@ -1210,7 +1210,7 @@ export class FileOperationsService {
     }
   }
 
-  async permanentlyDeleteProject(projectId: string, commitSvn: boolean = true) {
+  async permanentlyDeleteProject(projectId: string, commitMx: boolean = true) {
     try {
       const project = await this.prisma.fileSystemNode.findUnique({
         where: { id: projectId },
@@ -1278,7 +1278,7 @@ export class FileOperationsService {
       // 4. 在事务外部执行耗时的文件系统操作
       for (const file of filesToDelete) {
         if (file.path) {
-          await this.deleteFileFromStorage(file.path, file.fileHash, commitSvn);
+          await this.deleteFileFromStorage(file.path, file.fileHash, commitMx);
         }
       }
 
@@ -1287,7 +1287,7 @@ export class FileOperationsService {
         await this.deleteFileFromStorage(
           project.path,
           project.fileHash,
-          commitSvn
+          commitMx
         );
       }
 
@@ -1296,22 +1296,22 @@ export class FileOperationsService {
         await this.storageInfoService.invalidateQuotaCache(project.ownerId);
       }
 
-      if (commitSvn && this.versionControlService.isReady()) {
+      if (commitMx && this.versionControlService.isReady()) {
         try {
           const commitResult =
             await this.versionControlService.commitWorkingCopy(
               `删除项目: ${project.name} (${projectId})`
             );
           if (commitResult.success) {
-            this.logger.log(`删除项目的 SVN 更改已提交: ${project.name}`);
+            this.logger.log(`删除项目的 MX 更改已提交: ${project.name}`);
           } else {
             this.logger.warn(
-              `删除项目的 SVN 更改提交失败: ${project.name}, 原因: ${commitResult.message}`
+              `删除项目的 MX 更改提交失败: ${project.name}, 原因: ${commitResult.message}`
             );
           }
-        } catch (svnError) {
+        } catch (mxError) {
           this.logger.error(
-            `删除项目的 SVN 更改提交失败: ${project.name}, 错误: ${svnError.message}`
+            `删除项目的 MX 更改提交失败: ${project.name}, 错误: ${mxError.message}`
           );
         }
       }
@@ -1324,7 +1324,7 @@ export class FileOperationsService {
     }
   }
 
-  async permanentlyDeleteNode(nodeId: string, commitSvn: boolean = true) {
+  async permanentlyDeleteNode(nodeId: string, commitMx: boolean = true) {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
@@ -1391,13 +1391,13 @@ export class FileOperationsService {
       // 4. 在事务外部执行耗时的文件系统操作
       for (const file of filesToDelete) {
         if (file.path) {
-          await this.deleteFileFromStorage(file.path, file.fileHash, commitSvn);
+          await this.deleteFileFromStorage(file.path, file.fileHash, commitMx);
         }
       }
 
       // 5. 处理主节点的文件删除（如果是文件）
       if (!node.isFolder && node.path) {
-        await this.deleteFileFromStorage(node.path, node.fileHash, commitSvn);
+        await this.deleteFileFromStorage(node.path, node.fileHash, commitMx);
       }
 
       // 清除配额缓存
@@ -1408,22 +1408,22 @@ export class FileOperationsService {
         );
       }
 
-      if (commitSvn && this.versionControlService.isReady()) {
+      if (commitMx && this.versionControlService.isReady()) {
         try {
           const commitResult =
             await this.versionControlService.commitWorkingCopy(
               `删除节点: ${node.name} (${nodeId})`
             );
           if (commitResult.success) {
-            this.logger.log(`删除节点的 SVN 更改已提交: ${node.name}`);
+            this.logger.log(`删除节点的 MX 更改已提交: ${node.name}`);
           } else {
             this.logger.warn(
-              `删除节点的 SVN 更改提交失败: ${node.name}, 原因: ${commitResult.message}`
+              `删除节点的 MX 更改提交失败: ${node.name}, 原因: ${commitResult.message}`
             );
           }
-        } catch (svnError) {
+        } catch (mxError) {
           this.logger.error(
-            `删除节点的 SVN 更改提交失败: ${node.name}, 错误: ${svnError.message}`
+            `删除节点的 MX 更改提交失败: ${node.name}, 错误: ${mxError.message}`
           );
         }
       }
@@ -1529,12 +1529,12 @@ export class FileOperationsService {
             `批量删除 ${items.length} 个项目/节点`
           );
           if (commitResult.success) {
-            this.logger.log(`批量删除的 SVN 更改已提交: ${items.length} 个项目/节点`);
+            this.logger.log(`批量删除的 MX 更改已提交: ${items.length} 个项目/节点`);
           } else {
-            this.logger.warn(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`);
+            this.logger.warn(`批量删除的 MX 更改提交失败: ${items.length} 个项目/节点, 原因: ${commitResult.message}`);
           }
-        } catch (svnError) {
-          this.logger.error(`批量删除的 SVN 更改提交失败: ${items.length} 个项目/节点, 错误: ${svnError.message}`);
+        } catch (mxError) {
+          this.logger.error(`批量删除的 MX 更改提交失败: ${items.length} 个项目/节点, 错误: ${mxError.message}`);
         }
       }
 

@@ -260,7 +260,7 @@ describe('Workflow 3: Delete → Reference Count → Recycle Bin → Permanent D
       // Verify physical storage deletion was attempted
       expect(mockStorageProvider.deleteAll).toHaveBeenCalled();
 
-      // Verify SVN operations if applicable
+      // Verify MX operations if applicable
       expect(mockVersionControlService.deleteNodeDirectory).toHaveBeenCalled();
       expect(mockVersionControlService.commitWorkingCopy).toHaveBeenCalled();
     });

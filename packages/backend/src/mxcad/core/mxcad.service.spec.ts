@@ -526,7 +526,7 @@ describe("MxCadService", () => {
 			expect(r.message).toContain("仅支持 .mxweb");
 		});
 
-		it("succeeds for project file with SVN commit", async () => {
+		it("succeeds for project file with MX commit", async () => {
 			mockNodeService.findById.mockResolvedValue({
 				id: "n1",
 				path: "2026/n1/f.mxweb",
@@ -556,7 +556,7 @@ describe("MxCadService", () => {
 			expect(mockVersionControl.commitNodeDirectory).toHaveBeenCalled();
 		});
 
-		it("skips SVN commit for library files", async () => {
+		it("skips MX commit for library files", async () => {
 			mockNodeService.findById.mockResolvedValue({
 				id: "n1",
 				path: "2026/n1/f.mxweb",
@@ -605,7 +605,7 @@ describe("MxCadService", () => {
 			expect(mockConversionService.convertFile).not.toHaveBeenCalled();
 		});
 
-		it("handles SVN commit failure gracefully", async () => {
+		it("handles MX commit failure gracefully", async () => {
 			mockNodeService.findById.mockResolvedValue({
 				id: "n1",
 				path: "2026/n1/f.mxweb",
@@ -622,7 +622,7 @@ describe("MxCadService", () => {
 			});
 			mockVersionControl.commitNodeDirectory.mockResolvedValue({
 				success: false,
-				message: "SVN error",
+				message: "MX error",
 			});
 			const r = await service.saveMxwebFile("n1", mockFile, "u1", "User");
 			expect(r.success).toBe(true);

@@ -16,7 +16,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/frontend_mobile/package.json ./packages/frontend_mobile/
-COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
+COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
 
 # 安装所有依赖（单独一层，代码改动不会触发重新安装）
 # --ignore-scripts 跳过其他包的 postinstall，避免本地依赖问题
@@ -37,8 +37,8 @@ RUN pnpm --filter backend exec prisma generate
 FROM base AS backend-builder
 WORKDIR /app
 
-# 复制 svnVersionTool 源代码（后端依赖此包）
-COPY packages/svnVersionTool ./packages/svnVersionTool
+# 复制 mxVersionTool 源代码（后端依赖此包）
+COPY packages/mxVersionTool ./packages/mxVersionTool
 
 # 复制后端源代码（只有代码改动才会触发此层重建）
 COPY packages/backend/src ./packages/backend/src
@@ -109,27 +109,27 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 # 复制依赖描述文件（复用缓存）
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
-COPY packages/svnVersionTool/package.json ./packages/svnVersionTool/
+COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
 
 # 复制 Prisma schema 和 migrations（生产迁移需要）
 COPY packages/backend/prisma ./packages/backend/prisma
 COPY packages/backend/prisma.config.ts ./packages/backend/
 
 # 安装生产依赖 + Prisma CLI（用于 migrate deploy）
-RUN pnpm install --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile --ignore-scripts
+RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --frozen-lockfile --ignore-scripts
 
 # 生成 Prisma Client
 RUN pnpm --filter backend exec prisma generate
 
 # 移除 devDependencies 减小镜像体积（保留 prisma CLI）
-RUN pnpm --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile --prod || \
-    pnpm install --filter backend --filter @cloudcad/svn-version-tool --frozen-lockfile --prod
+RUN pnpm --filter backend --filter @cloudcad/mx-version-tool --frozen-lockfile --prod || \
+    pnpm install --filter backend --filter @cloudcad/mx-version-tool --frozen-lockfile --prod
 
 # 重新安装 prisma 和 tsx（migrate deploy 需要）
 RUN pnpm --filter backend add prisma@^7.1.0 tsx --ignore-scripts
 
-# 复制 svnVersionTool 源代码
-COPY packages/svnVersionTool ./packages/svnVersionTool
+# 复制 mxVersionTool 源代码
+COPY packages/mxVersionTool ./packages/mxVersionTool
 
 # 复制构建产物（只有构建结果变化才会更新）
 COPY --from=backend-builder /app/packages/backend/dist ./packages/backend/dist

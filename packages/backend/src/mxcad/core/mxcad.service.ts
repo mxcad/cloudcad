@@ -694,8 +694,8 @@ export class MxCadService {
         this.logger.log(`[saveMxwebFile] 跳过生成 bin 文件: ${node.name}`);
       }
 
-      // 只有非公共资源库（libraryKey 为 null）才提交到 SVN 版本控制
-      // 公共资源库（图纸库、图块库等）的文件不参与 SVN 版本管理
+      // 只有非公共资源库（libraryKey 为 null）才提交到 MX 版本控制
+      // 公共资源库（图纸库、图块库等）的文件不参与 MX 版本管理
       // 首次提交：提交原始文件（dwg、mxweb、dxf）用于灾难恢复
       // 后续提交：提交 bin 文件用于版本管理
       if (!fullNode.libraryKey) {
@@ -705,10 +705,10 @@ export class MxCadService {
           : `Save: ${node.name}`;
 
         this.logger.log(
-          `[saveMxwebFile] 提交到 SVN: ${nodeDirectory}, 消息: ${message}`
+          `[saveMxwebFile] 提交到 MX: ${nodeDirectory}, 消息: ${message}`
         );
 
-        // 检查是否是首次提交（目录中是否有文件已在 SVN 版本控制下）
+        // 检查是否是首次提交（目录中是否有文件已在 MX 版本控制下）
         const isFirstCommit = await this.versionControlService.isFirstCommit(nodeDirectory);
         this.logger.log(`[saveMxwebFile] 目录 ${nodeDirectory} 首次提交: ${isFirstCommit}`);
 
@@ -756,7 +756,7 @@ export class MxCadService {
         }
       } else {
         this.logger.log(
-          `[saveMxwebFile] 跳过 SVN 提交: ${fullNode.name} (公共资源库: ${fullNode.libraryKey})`
+          `[saveMxwebFile] 跳过 MX 提交: ${fullNode.name} (公共资源库: ${fullNode.libraryKey})`
         );
       }
 

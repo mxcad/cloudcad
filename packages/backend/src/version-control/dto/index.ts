@@ -5,12 +5,12 @@
 // Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
 // software must include the following copyright statement.
 // This application should reach an agreement with Chengdu Dream Kaide
-// Technology Co., Ltd. to use this software, its documentation, or related
+// Technology Co., Ltd. to use software, its documentation, or related
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-export { SvnLogPathDto } from './svn-log-path.dto';
-export { SvnLogEntryDto } from './svn-log-entry.dto';
-export { SvnLogResponseDto } from './svn-log-response.dto';
+export { MxLogPathDto } from './mx-log-path.dto';
+export { MxLogEntryDto } from './mx-log-entry.dto';
+export { MxLogResponseDto } from './mx-log-response.dto';
 export { FileContentResponseDto } from './file-content-response.dto';
