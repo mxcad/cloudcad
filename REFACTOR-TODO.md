@@ -192,7 +192,7 @@
   - [ ] 升级依赖：eslint 8→10, vite 6→8, `@hey-api/client-fetch` 已弃用
   - [ ] 修复 24 个高级 npm 安全漏洞
 - [ ] **`appConfig.ts:82` 与 `fileSystemStore.ts:73` 默认 pageSize 冲突**（20 vs 30）
-- [ ] **`mxcadManager/index.ts:1118` 参数名 `ages` 应为 `args`** — 拼写错误
+- [x] **`mxcadManager/index.ts:1118` 参数名 `ages` 应为 `args`** — 拼写错误
 - [ ] **魔数散落** — 需抽取为命名常量：
   - [ ] `5000` brand config timeout (`index.tsx:55`)
   - [ ] `30000` queryClient staleTime (`index.tsx:33`)
@@ -205,7 +205,7 @@
 
 - [ ] **仅 3 处 `React.memo`** — 大型列表页面（用户管理、文件系统）需补充
 - [ ] **调试日志**：`CADEditorDirect.tsx:394`、`CollaborateSidebar.tsx:407` 的 `console.log`
-- [ ] **`CollaborateSidebar.module.css` 导入但文件不存在** — `CollaborateSidebar.tsx:47`
+- [x] ~~**`CollaborateSidebar.module.css` 导入但文件不存在** — `CollaborateSidebar.tsx:47`~~（文件实际存在且被 4 个组件使用，TODO 记录有误）
 - [ ] **后端 API 调用直接使用 `fetch` 而非 SDK** — `mxcadManager/index.ts` 中 `/api/v1/mxcad/savemxweb/` 多处
 - [ ] **`useMxCadEditor.ts` 中注释掉的 serverConfig 代码** — 第 43-83 行可能已废弃
 - [ ] **`@ts-ignore` / `@ts-expect-error` 共 8 处** — 尤其业务代码（非测试文件）中的应修复
@@ -250,7 +250,7 @@
   - [ ] `m_mx_trim.ts` 与 `m_mx_extend.ts` 重复 ~25 行窗交/栏选/撤销处理逻辑
   - [ ] `m_mx_fillet.ts`(1707 行) 与 `m_mx_chamfer.ts`(1199 行) 重复 ~400 行几何计算逻辑
   - [ ] `m_mx_copy/move/rotate/mirror` 中包围盒绘制模式重复
-- [ ] **`src/plugins/mxcad/command/CommandManager.ts` (149 行) 死代码** — 从未被任何文件导入
+- [x] **`src/plugins/mxcad/command/CommandManager.ts` (149 行) 死代码** — 从未被任何文件导入
 - [ ] **零测试覆盖** — 整个 mobile 包无任何测试文件或测试基础设施
 - [ ] **`useUser.ts:64-66` 事件监听器泄漏** — `onMounted` 中的 `storage` 监听器无 `onBeforeUnmount` 清理
 - [ ] **`m_mx_polyline.ts:73-74,923` keydown 事件监听器可能泄漏** — `return` 分支未调用 `removeEventListener`
@@ -272,8 +272,8 @@
   - [ ] `AvatarGroup.vue` — 从未被使用
   - [ ] `exportService.ts` 中 `showExportDialog()` / `showExportMenu()` — 未被引用
   - [ ] `index.vue:15` 中 `import { drawArc }` — 未在文件中使用
-  - [ ] `main.scss:64-119` 注释掉的 `.van-dialog` 样式（~55 行）
-  - [ ] `main.scss:1-12` 空的 `@media` 查询块
+- [x] `main.scss:64-119` 注释掉的 `.van-dialog` 样式（~55 行）
+- [x] `main.scss:1-12` 空的 `@media` 查询块
 - [ ] **类型安全**：
   - [ ] `m_mx_polyline.ts` 中 `any` 严重滥用（16+ 处 `data: any` / `nextData: any`）
   - [ ] 6 处 `as any` 强制类型转换

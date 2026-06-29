@@ -1112,12 +1112,12 @@ const openFile = async (noCache?: boolean) => {
  */
 MxFun.addCommand('openFile', () => openFile());
 MxFun.addCommand('openFile_noCache', () => openFile(true));
-MxFun.addCommand('__openWebFile__', (ages: Parameters<McObject['openWebFile']>) => {
-  console.log(ages)
+MxFun.addCommand('__openWebFile__', (args: Parameters<McObject['openWebFile']>) => {
+  console.log(args)
   const mxcad = MxCpp.getCurrentMxCAD();
   if (!mxcad) return
 
-  mxcad.openWebFile(...ages)
+  mxcad.openWebFile(...args)
 })
 
 /**

@@ -1,13 +1,4 @@
-@media screen and (orientation: portrait) {
-    /* 竖屏样式 */
-  
-  }
-  
-  @media screen and (orientation: landscape) {
-    /* 横屏样式 */
-  }
-  
-  :root:root{
+:root:root{
     // ‍  自定义
 // ‍ Customize
 
@@ -22,7 +13,8 @@
     --van-popover-action-font-size: var(--van-font-size-xs);
     --van-popup-title-font-size: var(--font-size-title);
     // --van-dialog-background: #292929;
-    --van-dialog-has-title-message-text-color: #fff // Field
+    --van-dialog-has-title-message-text-color: #fff;
+    // Field
     
     --van-floating-popup-header-height: 48px;
     --van-floating-popup-header-font-size: var(--van-font-size-lg);
@@ -58,66 +50,6 @@
       width: 100%;
       height: 100%;
   }
-  // ‍  重置dialog样式
-// ‍ Reset dialog style
-
-  // .van-dialog {
-  //   border-radius: 16px;
-  //   // Cell
-  //   --van-cell-vertical-padding: 20px;
-  //   --van-cell-horizontal-padding: 10px;
-  //   --van-cell-background: transition;
-  
-  //   // Field
-  //   --van-field-label-width: auto;
-  //   --van-field-label-color: #fff;
-  //   --van-field-icon-size: 10px;
-  
-  //   .van-field {
-  //     justify-content: space-between;
-  
-  //     &.van-cell:after {
-  //       content: unset;
-  //     }
-  
-  //     .van-field__label {
-  //       width: 200px;
-  //       text-align: right;
-  //       font-size: var(--van-font-size-xs);
-  //     }
-  
-  //     .van-field__value {
-  //       background: #E3E3E3;
-  //       padding: 0 16px;
-  //       border-radius: var(--van-radius-sm);
-  //     }
-  //   }
-  
-  //   .van-dialog__header {
-  //     font-weight: unset;
-  //     background-color: #494747;
-  //     color: #fff;
-  //     --van-dialog-header-padding-top: 0;
-  //     padding: 20px 0;
-  //   }
-  
-  //   .van-dialog__message--has-title {
-  //     padding: 30px 40px;
-  //   }
-  
-  //   .van-dialog__confirm,
-  //   .van-dialog__cancel {
-  //     border-radius: 0;
-  //     background: #494747;
-  //     color: #00ACA0;
-  //   }
-  
-  //   .van-dialog__footer::after,
-  //   .van-dialog__confirm::after {
-  //     content: unset
-  //   }
-  // }
-  
   
   
   * {
@@ -170,10 +102,9 @@
     }
   }
   
-  ;
-
   
   /**
+
   * 适配 iphone 底部安全区（指示条，配合index.html <meta name="viewport" ... />使用
   */
   @supports (bottom: env(safe-area-inset-bottom)){
