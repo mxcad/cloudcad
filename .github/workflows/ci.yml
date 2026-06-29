@@ -121,11 +121,8 @@ jobs:
           cd packages/backend
           pnpm db:push
 
-      - name: 生成 API SDK 并运行代码质量检查
+      - name: 运行代码质量检查
         run: |
-          cd packages/frontend
-          pnpm generate:sdk
-          cd ../..
           pnpm lint
           pnpm format:check
           pnpm type-check
@@ -139,11 +136,21 @@ jobs:
           cd packages/backend
           pnpm test:ci
 
-      - name: 运行前端测试
+      - name: 运行权限测试套件
+        run: |
+          cd packages/backend
+          pnpm test:permission
+
+      - name: 运行权限场景测试
+        run: |
+          cd packages/backend
+          pnpm test:permission:scenarios
+
+      - name: 生成 API SDK 并运行前端测试
         run: |
           cd packages/frontend
           pnpm generate:sdk
-          pnpm type-check
+          pnpm test
 
       - name: 上传测试覆盖率报告
         uses: codecov/codecov-action@v3

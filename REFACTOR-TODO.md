@@ -54,8 +54,8 @@
 - [ ] **JWT_SECRET / SESSION_SECRET 泄露** — `docker/.env:38`, `packages/backend/.env:97`
 - [x] **CI 数据库名拼写错误 `cloucad`** — `.github/workflows/ci.yml:23`, `test.yml:23` → 改为 `cloudcad`
 - [x] **CI pnpm 版本 9.15.4 与根 package.json 要求的 9.15.9 不匹配** — 两个 workflow 文件
-- [ ] **`ci.yml` 与 `test.yml` 重叠运行** — 合并为单一 workflow 或调整触发条件
-- [ ] **CI 不运行前端测试** — `ci.yml` 中只有 `type-check`，缺少 `pnpm test`
+- [x] **`ci.yml` 与 `test.yml` 重叠运行** — 合并为单一 workflow 或调整触发条件
+- [x] **CI 不运行前端测试** — `ci.yml` 中只有 `type-check`，缺少 `pnpm test`
 - [ ] **Dockerfile 容器以 root 运行** — 从未设置 `USER` 指令，违反最小权限原则
 - [ ] **Dockerfile 数据目录权限过大** — `chmod -R 755 /app/data`（全局可读），应仅为 700
 - [x] **`batch-import-library.js:8` 硬编码管理员密码 `'Admin123!'`** — 源代码中明文凭据
