@@ -6,8 +6,8 @@ const path = require('path');
 const config = {
   baseUrl: 'http://localhost:3001',
   admin: {
-    username: 'admin',
-    password: 'Admin123!'
+    username: process.env.ADMIN_USERNAME || 'admin',
+    password: process.env.ADMIN_PASSWORD || 'Admin123!'
   },
   libraries: {
     drawing: {

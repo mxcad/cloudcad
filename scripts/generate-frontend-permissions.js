@@ -8,12 +8,8 @@
  *   pnpm generate:frontend-permissions
  */
 
-import { readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const { readFileSync, writeFileSync } = require('fs');
+const { join, dirname } = require('path');
 
 /**
  * 从 Prisma Schema 中提取枚举值

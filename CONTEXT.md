@@ -240,7 +240,7 @@ Tus 协议已完全移除，当前使用自实现的手动分片上传。
 - **颜色/主题**: 所有颜色必须使用 `--color-*`（Tailwind 侧）或 `--bg-*/--text-*/--border-*/--primary-*/--accent-*`（组件侧）CSS 变量。禁止硬编码色值（如 `#6366f1`、`white`、`#333`）。支持亮色/深色双主题。
 - **字体**: 使用 `--font-family-base` / `--font-family-mono` CSS 变量，不硬编码字体栈。
 - **间距/圆角/阴影**: 使用 Tailwind token 或 `--spacing-*` / `--radius-*` / `--shadow-*` CSS 变量。
-- **i18n**: 暂无基础设施，所有用户可见字符串直接写中文。预留 i18n 扩展点。
+- **i18n**: 已集成 VoerkaI18n（子库模式），所有用户可见字符串必须使用 `t()` 函数。每次 `pnpm i18n:compile` 后需检查 `src/languages/index.ts` 中 `library: true` 未被重置。
 
 ### 2. 复用优先
 

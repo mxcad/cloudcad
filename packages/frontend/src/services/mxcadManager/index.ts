@@ -151,32 +151,29 @@ export function resetDocumentModified(): void {
   documentModified = false;
 }
 
-/**
- * 设置浏览器关闭保护
- * 当文档有未保存的更改时，阻止用户关闭浏览器标签页或窗口
- */
-function setupBeforeUnloadHandler(): void {
-  window.addEventListener('beforeunload', (e: BeforeUnloadEvent) => {
-    // 退出当前协同会话
-    exitCollaborationIfNeeded();
+const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+  exitCollaborationIfNeeded();
 
-    // 如果正在主动离开页面（已弹过确认），跳过二次弹窗
-    if (isLeavingPageRef.current) {
-      e.returnValue = '';
-      return;
-    }
-    if (isDocumentModified()) {
-      // 标准做法：设置 returnValue 并返回提示文本
-      e.preventDefault();
-      e.returnValue = '您有未保存的更改，确定要离开吗？';
-      return e.returnValue;
-    }
-    // 没有修改时，删除 returnValue（某些浏览器需要）
+  if (isLeavingPageRef.current) {
     e.returnValue = '';
-  });
+    return;
+  }
+  if (isDocumentModified()) {
+    e.preventDefault();
+    e.returnValue = '您有未保存的更改，确定要离开吗？';
+    return e.returnValue;
+  }
+  e.returnValue = '';
+};
+
+function setupBeforeUnloadHandler(): void {
+  window.addEventListener('beforeunload', beforeUnloadHandler);
 }
 
-// 在模块加载时自动启用浏览器关闭保护
+export function teardownBeforeUnloadHandler(): void {
+  window.removeEventListener('beforeunload', beforeUnloadHandler);
+}
+
 setupBeforeUnloadHandler();
 
 /**

@@ -56,7 +56,7 @@ init_mx() {
     # 创建 MX 仓库（如果不存在）
     if [ ! -d "$mx_repo_path/db" ]; then
         log_info "初始化 MX 仓库: $mx_repo_path"
-        svnadmin create "$mx_repo_path" 2>/dev/null || {
+        svnadmin create "$mx_repo_path" 2>&1 || {
             log_warn "MX 仓库创建失败或已存在"
         }
     else
@@ -77,7 +77,7 @@ init_mx() {
             
             if [ -n "$current_url" ] && [ "$current_url" != "$correct_url" ]; then
                 log_info "MX URL 需要重定向: $current_url -> $correct_url"
-                svn switch --relocate "$current_url" "$correct_url" "$files_data_path" 2>/dev/null || {
+                svn switch --relocate "$current_url" "$correct_url" "$files_data_path" 2>&1 || {
                     log_warn "URL 重定向失败，删除 .svn 目录重新初始化..."
                     rm -rf "$svn_dir"
                 }
@@ -242,7 +242,7 @@ start_nginx() {
     configure_nginx
     
     # 测试配置
-    nginx -t 2>/dev/null || {
+    nginx -t || {
         log_error "Nginx 配置检查失败"
         return 1
     }

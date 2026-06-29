@@ -58,29 +58,29 @@
 - [ ] **CI 不运行前端测试** — `ci.yml` 中只有 `type-check`，缺少 `pnpm test`
 - [ ] **Dockerfile 容器以 root 运行** — 从未设置 `USER` 指令，违反最小权限原则
 - [ ] **Dockerfile 数据目录权限过大** — `chmod -R 755 /app/data`（全局可读），应仅为 700
-- [ ] **`batch-import-library.js:8` 硬编码管理员密码 `'Admin123!'`** — 源代码中明文凭据
-- [ ] **`.npmrc` 缺少 `registry=` 和 `strict-ssl=true`** — 无安全锁定
-- [ ] **`scripts/` 中 `autotest.bat:10` 硬编码仓库路径** — `D:\project\cloudcad` 与工作目录不符
+- [x] **`batch-import-library.js:8` 硬编码管理员密码 `'Admin123!'`** — 源代码中明文凭据
+- [x] **`.npmrc` 缺少 `registry=` 和 `strict-ssl=true`** — 无安全锁定
+- [x] **`scripts/` 中 `autotest.bat:10` 硬编码仓库路径** — `D:\project\cloudcad` 与工作目录不符
 
 ### 🟠 P1 — 高优先级
 
 - [x] **`CLAUDE.md:29` 端口号写 5173 但实际是 3000** — 统一为 3000
 - [x] **`README.md` 端口号也写 5173** — 同样需要修正
 - [x] **`AGENTS.md` 与 `CLAUDE.md` 端口号不一致** — 统一为 3000
-- [ ] **`CONTEXT.md:243` i18n 描述错误** — 说"暂无基础设施"但 VoerkaI18n 已完全集成
+- [x] **`CONTEXT.md:243` i18n 描述错误** — 说"暂无基础设施"但 VoerkaI18n 已完全集成
 - [x] **`CLAUDE.md:33` 列出包时遗漏 `frontend_mobile`**
 - [ ] **`README.md` 损坏的图片引用** — 指向不存在的 `documents/user-guide/imgs/`
 - [ ] **根 `tsconfig.json` 开启 `strict: true` 但后端故意是宽松类型** — 需确认覆盖是否正确
-- [ ] **根 `package.json` 中 `check` 脚本使用 `;` 而非 `&&`** — `lint` 失败后仍继续执行
+- [x] **根 `package.json` 中 `check` 脚本使用 `;` 而非 `&&`** — `lint` 失败后仍继续执行
 - [ ] **ESLint `custom-rules/no-prisma-enum-in-api-property` 被注释掉** — 重要架构约束未生效
 - [ ] **`.prettierrc` 设置 `endOfLine: "lf"`** — 在 Windows 上可能导致 git 行尾问题
 - [ ] **Dockerfile 中 pnpm 硬编码 9.15.4** — 与要求的不一致
 - [ ] **Docker entrypoint 使用 `prisma db push --accept-data-loss`** — 生产环境可能产生破坏
 - [ ] **nginx 配置缺少 `Content-Security-Policy` 头部**
 - [ ] **nginx 配置仅 HTTP 无 HTTPS** — 所有流量明文传输
-- [ ] **Docker entrypoint `nginx -t 2>/dev/null` 语法错误** — 抑制了 test 输出而非 stdout
+- [x] **Docker entrypoint `nginx -t 2>/dev/null` 语法错误** — 抑制了 test 输出而非 stdout
 - [ ] **无 Husky / git hooks** — 无 pre-commit 验证，开发人员可能提交无效代码
-- [ ] **Docker entrypoint `svnadmin create` / `svn switch` 错误被 `2>/dev/null` 抑制** — 静默吞错误
+- [x] **Docker entrypoint `svnadmin create` / `svn switch` 错误被 `2>/dev/null` 抑制** — 静默吞错误
 - [ ] **Docker entrypoint background 协同进程可能变孤儿** — `exec` 替换 shell 后无法管理
 
 ### 🟡 P2 — 中优先级
@@ -94,7 +94,7 @@
 - [ ] **打包脚本代码重复（~150 行）** — `pack-docker.js`(448 行) / `pack-offline.js`(1217 行) / `pack-linux-deploy.js`(439 行) 间大量重复，应提取 `scripts/shared/pack-utils.js`
 - [ ] **`pack-linux-deploy.js` 与 `verify-linux-deploy.js` 中 `OS_BASE_IMAGES` 映射重复** — 需保持同步
 - [ ] **`extract-linux-runtime.js` 大量硬编码路径** — Node.js/PG 版本、系统库路径等
-- [ ] **`scripts/` 中 `generate-frontend-permissions.js` 用 ESM 而其他脚本用 CJS** — 不一致
+- [x] **`scripts/` 中 `generate-frontend-permissions.js` 用 ESM 而其他脚本用 CJS** — 不一致
 - [ ] **`autotest.bat:25` 硬编码分支名 `refactor/circular-deps`** — 功能分支不应硬编码
 - [ ] **Docker compose 中 `INITIAL_ADMIN_PASSWORD` 默认值 `Admin123!`** — 安全风险
 
@@ -148,7 +148,7 @@
   - [ ] `CADEditorDirect.tsx:235-260` — 多个异步操作无中止信号
   - [ ] `Profile.tsx:79-86` — 会员数据提取无 AbortController
   - [ ] `useFileSystemChildren.ts:53-89` — 快速导航时可能 setState 到已卸载组件
-- [ ] **`mxcadManager/index.ts:159` `beforeunload` 事件监听器从不清理** — 未调用 `removeEventListener`
+- [x] **`mxcadManager/index.ts:159` `beforeunload` 事件监听器从不清理** — 未调用 `removeEventListener`
 - [ ] **`Profile.tsx:895` `setTimeout` 在 `logout` 中的定时器未在卸载时清除**
 - [ ] **`ProfileMembershipTab.tsx:134` `setInterval(loadBillingData, 30000)` 轮询无清除** — 组件卸载后仍运行
 - [ ] **`BreadcrumbNavigation.tsx:52` `setTimeout(() => {...}, 5000)` 未保存 ref 也不清理**
@@ -221,9 +221,9 @@
 
 ### 🔴 P0 — 阻塞
 
-- [ ] **`src/plugins/axios/` 整个插件是死代码** — 项目使用 hey-api SDK 而非 axios
-  - [ ] **`appPostApi.ts:37` 硬编码安全 token `"yjd0VY6sWG6B4pLuQ5eZ5Q=="`** — 明文凭据，应立即移除
-- [ ] **`vite.config.ts:28` 使用已弃用的 `reactivityTransform: true`** — Vue 3.5 将移除
+- [x] **`src/plugins/axios/` 整个插件是死代码** — 项目使用 hey-api SDK 而非 axios
+  - [x] **`appPostApi.ts:37` 硬编码安全 token `"yjd0VY6sWG6B4pLuQ5eZ5Q=="`** — 明文凭据，应立即移除
+- [x] **`vite.config.ts:28` 使用已弃用的 `reactivityTransform: true`** — Vue 3.5 将移除
 
 ### 🟠 P1 — 高优先级
 
@@ -417,7 +417,7 @@
 
 ### 🔴 P0 — 阻塞
 
-- [ ] **`public/frontend-config.js` 中 6 个函数定义了两次** — 后定义覆盖前定义（`collectComplexItems`, `saveUiConfig`, `importUiConfig`, `exportUiConfig`, `resetUiConfig`, `refreshUiConfig`）
+- [x] **`public/frontend-config.js` 中 6 个函数定义了两次** — 后定义覆盖前定义（`collectComplexItems`, `saveUiConfig`, `importUiConfig`, `exportUiConfig`, `resetUiConfig`, `refreshUiConfig`）
 - [ ] **`server.js` (1961 行) 拆分** — 所有路由 + 认证 + 数据库操作集中在一个文件
 
 ### 🟠 P1 — 高优先级

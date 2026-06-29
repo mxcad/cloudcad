@@ -25,9 +25,7 @@ export default ({ command, mode }) => {
         targets: ['defaults', 'not IE 11']
       }),
       Voerkai18nPlugin({}),
-      vue({
-        reactivityTransform: true
-      }),
+      vue(),
       vueJsx(),
       AutoImport({
         resolvers: [VantResolver()],

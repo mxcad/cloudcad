@@ -7,7 +7,7 @@ REM Scheduled hourly via Windows Task Scheduler
 REM Runs all tests, fixes failures, auto-commits
 REM ============================================================
 
-set "REPO_ROOT=D:\project\cloudcad"
+set "REPO_ROOT=%~dp0.."
 set "LOG_DIR=%REPO_ROOT%\logs\autotest"
 set "TIMESTAMP=%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%%time:~6,2%"
 set "TIMESTAMP=%TIMESTAMP: =0%"
