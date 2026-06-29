@@ -68,7 +68,7 @@ import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumb
 import { fileSystemControllerGetNode, fileSystemControllerGetRootNode, fileSystemControllerGetPersonalSpace } from '@/api-sdk';
 import { libraryControllerGetDrawingNode, libraryControllerGetBlockNode, saveControllerSaveMxwebToNode } from '@/api-sdk';
 import { MxFun } from 'mxdraw';
-import { FetchAttributes, McGePoint3d, MxCpp, saveAsFileDialog } from 'mxcad';
+import { FetchAttributes, McGePoint3d, McObject, MxCpp, saveAsFileDialog } from 'mxcad';
 import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
@@ -1115,7 +1115,12 @@ const openFile = async (noCache?: boolean) => {
  */
 MxFun.addCommand('openFile', () => openFile());
 MxFun.addCommand('openFile_noCache', () => openFile(true));
+MxFun.addCommand('__openWebFile__', (...ages: Parameters<McObject['openWebFile']>)=> {
+  const mxcad = MxCpp.getCurrentMxCAD();
+  if(!mxcad) return
 
+  mxcad.openWebFile(...ages)
+})
 
 /**
  * Mx_NewFile 命令处理函数：新建文件
@@ -1150,7 +1155,9 @@ const handleNewFileCommand = async () => {
     // 3. 调用 mxcad.openWebFile() 清空画布
     const mxcad = MxCpp.getCurrentMxCAD();
     if (mxcad) {
-      mxcad.openWebFile(new URL('../../../public/empty.mxweb', import.meta.url).href, void 0, void 0, void 0, 1)
+      mxcad.clearMxCurrentSelect()
+      MxFun.sendStringToExecute('__openWebFile__', new URL('../../../public/empty.mxweb', import.meta.url).href, void 0, void 0, void 0, 1)
+     
       const { initLayerList } = store.useLayer()
       const { initColorIndexList } = store.useColor()
       const { initLineTypeList } = store.useLineType()
@@ -1481,6 +1488,7 @@ MxFun.addCommand('Mx_Save', async () => {
   }
 });
 
+
 /**
  * 保存到当前文件（原有逻辑）
  */
@@ -1801,7 +1809,7 @@ async function saveLibraryFile() {
     // 保存成功后更新缩略图
     try {
       if (fileId) {
-        const imageData = await generateThumbnail();
+        const imageData = await generateThumbnail(true);
         if (imageData) {
           await uploadThumbnail(fileId, imageData);
         }

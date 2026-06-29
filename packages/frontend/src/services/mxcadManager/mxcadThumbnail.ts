@@ -20,6 +20,7 @@
 import { thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail } from '@/api-sdk';
 import type { UploadThumbnailDto } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
+import { McGePoint3d } from 'mxdraw';
 
 /**
  * 检查节点是否已有缩略图
@@ -93,11 +94,13 @@ export function dataURLtoBlob(dataURL: string): Blob | undefined {
  * 此函数依赖 MxCpp.getCurrentMxCAD() 和 McGePoint3d，
  * 在单元测试环境中不可用，仅在生产 Builder 中调用。
  *
+ * @param isUseViewCADCoord 是否使用getViewCADCoord返回当前视区的显示范围,cad坐标 作为包围盒范围
  * @param targetSize 缩略图目标尺寸（默认 200）
  * @param minDrawingSize 最小图纸尺寸（默认 100）
  * @returns Promise<string | undefined> 图像 DataURL，或未生成时返回 undefined
  */
 export async function generateThumbnail(
+  isUseViewCADCoord = false,
   targetSize: number = 200,
   minDrawingSize: number = 100
 ): Promise<string | undefined> {
@@ -107,8 +110,17 @@ export async function generateThumbnail(
 
     const mxcad = MxCpp.getCurrentMxCAD();
     mxcad.setAttribute({ ShowCoordinate: false });
-
-    const { minPt, maxPt } = mxcad.getDatabase().currentSpace.getBoundingBox();
+    let maxPt!: McGePoint3d
+    let minPt!: McGePoint3d
+    if(isUseViewCADCoord) {
+      const box = mxcad.getViewCADCoord()
+      minPt = box.pt1
+      maxPt = box.pt3
+    }else {
+      const box = mxcad.getDatabase().currentSpace.getBoundingBox();
+      minPt = box.minPt
+      maxPt = box.maxPt
+    }
 
     const w = Math.abs(minPt.x - maxPt.x);
     const h = Math.abs(minPt.y - maxPt.y);
