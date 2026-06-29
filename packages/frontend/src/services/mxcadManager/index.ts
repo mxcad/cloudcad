@@ -1115,9 +1115,10 @@ const openFile = async (noCache?: boolean) => {
  */
 MxFun.addCommand('openFile', () => openFile());
 MxFun.addCommand('openFile_noCache', () => openFile(true));
-MxFun.addCommand('__openWebFile__', (...ages: Parameters<McObject['openWebFile']>)=> {
+MxFun.addCommand('__openWebFile__', (ages: Parameters<McObject['openWebFile']>) => {
+  console.log(ages)
   const mxcad = MxCpp.getCurrentMxCAD();
-  if(!mxcad) return
+  if (!mxcad) return
 
   mxcad.openWebFile(...ages)
 })
@@ -1155,9 +1156,8 @@ const handleNewFileCommand = async () => {
     // 3. 调用 mxcad.openWebFile() 清空画布
     const mxcad = MxCpp.getCurrentMxCAD();
     if (mxcad) {
-      mxcad.clearMxCurrentSelect()
-      MxFun.sendStringToExecute('__openWebFile__', new URL('../../../public/empty.mxweb', import.meta.url).href, void 0, void 0, void 0, 1)
-     
+
+      MxFun.sendStringToExecute('__openWebFile__', [new URL('../../../public/empty.mxweb', import.meta.url).href, void 0, void 0, void 0, 1])
       const { initLayerList } = store.useLayer()
       const { initColorIndexList } = store.useColor()
       const { initLineTypeList } = store.useLineType()
@@ -2375,15 +2375,16 @@ class MxCADInstanceManager {
         attempt++
       ) {
         try {
-          mxcad.openWebFile(
-            fileUrl,
-            undefined,
-            true,
-            token
-              ? { requestHeaders: { Authorization: `Bearer ${token}` } }
-              : undefined,
-            noCache ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE | FetchAttributes.EMSCRIPTEN_FETCH_REPLACE : 0
-          );
+          MxFun.sendStringToExecute('__openWebFile__',
+            [
+              fileUrl,
+              undefined,
+              true,
+              token
+                ? { requestHeaders: { Authorization: `Bearer ${token}` } }
+                : undefined,
+              noCache ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY | FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE | FetchAttributes.EMSCRIPTEN_FETCH_REPLACE : 0
+            ]);
           break;
         } catch (error) {
           const err = error as Error;
@@ -2480,15 +2481,13 @@ class MxCADInstanceManager {
             attempt++
           ) {
             try {
-              this.mxcadView!.mxcad!.openWebFile(
-                url,
+              MxFun.sendStringToExecute('__openWebFile__', [url,
                 undefined,
                 true,
                 token
                   ? { requestHeaders: { Authorization: `Bearer ${token}` } }
                   : undefined,
-                0
-              );
+                0])
               return; // 等待 openFileComplete
             } catch (error) {
               const err = error as Error;
