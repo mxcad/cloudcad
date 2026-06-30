@@ -1000,125 +1000,62 @@
         ],
         "$id": 936
     },
-    "项目所有者": {
-        "zh-TW": "項目所有者",
-        "en-US": "Project owner",
-        "ko-KR": "프로젝트 소유자",
+    "注册失败，服务器返回数据异常": {
+        "zh-TW": "注册失敗,服務器返回數據异常",
+        "en-US": "Registration failed. Server returned abnormal data",
+        "ko-KR": "등록 실패. 서버가 비정상 데이터를 반환했습니다",
         "$files": [
-            "src/constants/permissions.ts(8182-8191)",
-            "src/components/modals/MembersModal.tsx(24705-24714)"
+            "src/contexts/AuthContext.tsx(6595-6613)"
         ],
-        "$id": 2673
+        "$id": 945
     },
-    "项目管理员": {
-        "zh-TW": "項目管理員",
-        "en-US": "Project Manager",
-        "ko-KR": "프로젝트 관리자",
+    "注册成功": {
+        "zh-TW": "注册成功",
+        "en-US": "Registration successful",
+        "ko-KR": "등록 성공",
         "$files": [
-            "src/constants/permissions.ts(8211-8220)"
+            "src/contexts/AuthContext.tsx(7170-7178)"
         ],
-        "$id": 2674
+        "$id": 946
     },
-    "项目编辑者": {
-        "zh-TW": "項目編輯者",
-        "en-US": "Project Editor",
-        "ko-KR": "프로젝트 편집자",
+    "确定": {
+        "zh-TW": "確定",
+        "en-US": "OK",
+        "ko-KR": "확인",
         "$files": [
-            "src/constants/permissions.ts(8241-8250)"
+            "src/contexts/NotificationContext.tsx(6337-6343)",
+            "src/contexts/NotificationContext.tsx(6689-6695)",
+            "src/contexts/NotificationContext.tsx(7481-7487)",
+            "src/contexts/NotificationContext.tsx(10782-10788)",
+            "src/contexts/NotificationContext.tsx(11278-11284)",
+            "src/contexts/NotificationContext.tsx(11809-11815)",
+            "src/pages/RoleManagement.tsx(23977-23983)"
         ],
-        "$id": 2675
+        "$id": 947
     },
-    "项目成员": {
-        "zh-TW": "項目成員",
-        "en-US": "Project members",
-        "ko-KR": "프로젝트 멤버",
+    "保存": {
+        "zh-TW": "保存",
+        "en-US": "Save",
+        "ko-KR": "저장",
         "$files": [
-            "src/constants/permissions.ts(8271-8279)",
-            "src/components/modals/MembersModal.tsx(10161-10169)"
+            "src/contexts/NotificationContext.tsx(7063-7069)",
+            "src/pages/AdminBillingPage.tsx(22708-22714)",
+            "src/pages/LibraryManager.tsx(38274-38280)",
+            "src/components/modals/EditExpiryModal.tsx(3180-3186)",
+            "src/components/modals/SaveAsModal.tsx(4832-4838)",
+            "src/services/mxcadManager/index.ts(7246-7252)"
         ],
-        "$id": 2676
+        "$id": 948
     },
-    "项目查看者": {
-        "zh-TW": "項目查看者",
-        "en-US": "Project Viewer",
-        "ko-KR": "항목 뷰어",
+    "不保存": {
+        "zh-TW": "不保存",
+        "en-US": "Don't Save",
+        "ko-KR": "저장하지 않음",
         "$files": [
-            "src/constants/permissions.ts(8300-8309)"
+            "src/contexts/NotificationContext.tsx(7090-7097)",
+            "src/services/mxcadManager/index.ts(7273-7280)"
         ],
-        "$id": 2677
-    },
-    "永不过期": {
-        "zh-TW": "永不過期",
-        "en-US": "Never expires",
-        "ko-KR": "만료되지 않음",
-        "$files": [
-            "src/constants/share.ts(211-219)",
-            "src/constants/share.ts(2051-2059)"
-        ],
-        "$id": 937
-    },
-    "2 小时": {
-        "zh-TW": "2小時",
-        "en-US": "2 hours",
-        "ko-KR": "2시간",
-        "$files": [
-            "src/constants/share.ts(231-239)"
-        ],
-        "$id": 938
-    },
-    "6 小时": {
-        "zh-TW": "6小時",
-        "en-US": "6 hours",
-        "ko-KR": "6시간",
-        "$files": [
-            "src/constants/share.ts(251-259)"
-        ],
-        "$id": 939
-    },
-    "12 小时": {
-        "zh-TW": "12小時",
-        "en-US": "12 hours",
-        "ko-KR": "12시간",
-        "$files": [
-            "src/constants/share.ts(272-281)"
-        ],
-        "$id": 940
-    },
-    "1 天": {
-        "zh-TW": "1天",
-        "en-US": "1 day",
-        "ko-KR": "1일",
-        "$files": [
-            "src/constants/share.ts(293-300)"
-        ],
-        "$id": 941
-    },
-    "3 天": {
-        "zh-TW": "3天",
-        "en-US": "3 days",
-        "ko-KR": "3일",
-        "$files": [
-            "src/constants/share.ts(312-319)"
-        ],
-        "$id": 942
-    },
-    "7 天": {
-        "zh-TW": "7天",
-        "en-US": "7 days",
-        "ko-KR": "7일",
-        "$files": [
-            "src/constants/share.ts(331-338)"
-        ],
-        "$id": 943
-    },
-    "自定义": {
-        "zh-TW": "自定義",
-        "en-US": "Custom",
-        "ko-KR": "사용자 정의",
-        "$files": [
-            "src/constants/share.ts(352-359)"
-        ],
-        "$id": 944
+        "$id": 949
     },
     "根目录": {
         "zh-TW": "根目錄",
@@ -1388,62 +1325,125 @@
         ],
         "$id": 976
     },
-    "注册失败，服务器返回数据异常": {
-        "zh-TW": "注册失敗,服務器返回數據异常",
-        "en-US": "Registration failed. Server returned abnormal data",
-        "ko-KR": "등록 실패. 서버가 비정상 데이터를 반환했습니다",
+    "项目所有者": {
+        "zh-TW": "項目所有者",
+        "en-US": "Project owner",
+        "ko-KR": "프로젝트 소유자",
         "$files": [
-            "src/contexts/AuthContext.tsx(6595-6613)"
+            "src/constants/permissions.ts(8182-8191)",
+            "src/components/modals/MembersModal.tsx(24705-24714)"
         ],
-        "$id": 945
+        "$id": 2673
     },
-    "注册成功": {
-        "zh-TW": "注册成功",
-        "en-US": "Registration successful",
-        "ko-KR": "등록 성공",
+    "项目管理员": {
+        "zh-TW": "項目管理員",
+        "en-US": "Project Manager",
+        "ko-KR": "프로젝트 관리자",
         "$files": [
-            "src/contexts/AuthContext.tsx(7170-7178)"
+            "src/constants/permissions.ts(8211-8220)"
         ],
-        "$id": 946
+        "$id": 2674
     },
-    "确定": {
-        "zh-TW": "確定",
-        "en-US": "OK",
-        "ko-KR": "확인",
+    "项目编辑者": {
+        "zh-TW": "項目編輯者",
+        "en-US": "Project Editor",
+        "ko-KR": "프로젝트 편집자",
         "$files": [
-            "src/contexts/NotificationContext.tsx(6337-6343)",
-            "src/contexts/NotificationContext.tsx(6689-6695)",
-            "src/contexts/NotificationContext.tsx(7481-7487)",
-            "src/contexts/NotificationContext.tsx(10782-10788)",
-            "src/contexts/NotificationContext.tsx(11278-11284)",
-            "src/contexts/NotificationContext.tsx(11809-11815)",
-            "src/pages/RoleManagement.tsx(23977-23983)"
+            "src/constants/permissions.ts(8241-8250)"
         ],
-        "$id": 947
+        "$id": 2675
     },
-    "保存": {
-        "zh-TW": "保存",
-        "en-US": "Save",
-        "ko-KR": "저장",
+    "项目成员": {
+        "zh-TW": "項目成員",
+        "en-US": "Project members",
+        "ko-KR": "프로젝트 멤버",
         "$files": [
-            "src/contexts/NotificationContext.tsx(7063-7069)",
-            "src/pages/AdminBillingPage.tsx(22708-22714)",
-            "src/pages/LibraryManager.tsx(38274-38280)",
-            "src/components/modals/EditExpiryModal.tsx(3180-3186)",
-            "src/components/modals/SaveAsModal.tsx(4832-4838)",
-            "src/services/mxcadManager/index.ts(7246-7252)"
+            "src/constants/permissions.ts(8271-8279)",
+            "src/components/modals/MembersModal.tsx(10161-10169)"
         ],
-        "$id": 948
+        "$id": 2676
     },
-    "不保存": {
-        "zh-TW": "不保存",
-        "en-US": "Don't Save",
-        "ko-KR": "저장하지 않음",
+    "项目查看者": {
+        "zh-TW": "項目查看者",
+        "en-US": "Project Viewer",
+        "ko-KR": "항목 뷰어",
         "$files": [
-            "src/contexts/NotificationContext.tsx(7090-7097)",
-            "src/services/mxcadManager/index.ts(7273-7280)"
+            "src/constants/permissions.ts(8300-8309)"
         ],
-        "$id": 949
+        "$id": 2677
+    },
+    "永不过期": {
+        "zh-TW": "永不過期",
+        "en-US": "Never expires",
+        "ko-KR": "만료되지 않음",
+        "$files": [
+            "src/constants/share.ts(211-219)",
+            "src/constants/share.ts(2051-2059)"
+        ],
+        "$id": 937
+    },
+    "2 小时": {
+        "zh-TW": "2小時",
+        "en-US": "2 hours",
+        "ko-KR": "2시간",
+        "$files": [
+            "src/constants/share.ts(231-239)"
+        ],
+        "$id": 938
+    },
+    "6 小时": {
+        "zh-TW": "6小時",
+        "en-US": "6 hours",
+        "ko-KR": "6시간",
+        "$files": [
+            "src/constants/share.ts(251-259)"
+        ],
+        "$id": 939
+    },
+    "12 小时": {
+        "zh-TW": "12小時",
+        "en-US": "12 hours",
+        "ko-KR": "12시간",
+        "$files": [
+            "src/constants/share.ts(272-281)"
+        ],
+        "$id": 940
+    },
+    "1 天": {
+        "zh-TW": "1天",
+        "en-US": "1 day",
+        "ko-KR": "1일",
+        "$files": [
+            "src/constants/share.ts(293-300)"
+        ],
+        "$id": 941
+    },
+    "3 天": {
+        "zh-TW": "3天",
+        "en-US": "3 days",
+        "ko-KR": "3일",
+        "$files": [
+            "src/constants/share.ts(312-319)"
+        ],
+        "$id": 942
+    },
+    "7 天": {
+        "zh-TW": "7天",
+        "en-US": "7 days",
+        "ko-KR": "7일",
+        "$files": [
+            "src/constants/share.ts(331-338)"
+        ],
+        "$id": 943
+    },
+    "自定义": {
+        "zh-TW": "自定義",
+        "en-US": "Custom",
+        "ko-KR": "사용자 정의",
+        "$files": [
+            "src/constants/share.ts(352-359)"
+        ],
+        "$id": 944
     },
     "加载套餐列表失败": {
         "zh-TW": "加載套餐清單失敗",
@@ -2855,8 +2855,8 @@
             "src/pages/EmailVerification.tsx(4004-4014)",
             "src/pages/PhoneVerification.tsx(3152-3162)",
             "src/pages/Register.tsx(16893-16903)",
-            "src/pages/Login/components/PhoneLoginForm.tsx(2575-2585)",
-            "src/pages/Login/hooks/loginFormSchema.ts(702-712)"
+            "src/pages/Login/hooks/loginFormSchema.ts(702-712)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(2575-2585)"
         ],
         "$id": 1039
     },
@@ -3854,8 +3854,8 @@
             "src/pages/ForgotPassword.tsx(30221-30231)",
             "src/pages/PhoneVerification.tsx(3331-3341)",
             "src/pages/Register.tsx(15204-15214)",
-            "src/pages/Login/components/PhoneLoginForm.tsx(1698-1708)",
-            "src/pages/Login/hooks/loginFormSchema.ts(609-619)"
+            "src/pages/Login/hooks/loginFormSchema.ts(609-619)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(1698-1708)"
         ],
         "$id": 1138
     },
@@ -8854,15 +8854,96 @@
         ],
         "$id": 1451
     },
+    "请输入账号": {
+        "zh-TW": "請輸入帳號",
+        "en-US": "Please enter your account",
+        "ko-KR": "계정을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/loginFormSchema.ts(449-458)"
+        ],
+        "$id": 1472
+    },
     "请输入密码": {
         "zh-TW": "請輸入密碼",
         "en-US": "Please enter your password",
         "ko-KR": "비밀번호를 입력하세요",
         "$files": [
-            "src/pages/Login/components/AccountLoginForm.tsx(2796-2805)",
-            "src/pages/Login/hooks/loginFormSchema.ts(505-514)"
+            "src/pages/Login/hooks/loginFormSchema.ts(505-514)",
+            "src/pages/Login/components/AccountLoginForm.tsx(2796-2805)"
         ],
         "$id": 1453
+    },
+    "手机号、邮箱或用户名": {
+        "zh-TW": "手機號、郵箱或用戶名",
+        "en-US": "Phone, email, or username",
+        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4576-4590)"
+        ],
+        "$id": 1473
+    },
+    "手机号或用户名": {
+        "zh-TW": "手機號或用戶名",
+        "en-US": "Phone number or username",
+        "ko-KR": "휴대폰 번호 또는 사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4621-4632)"
+        ],
+        "$id": 1474
+    },
+    "邮箱或用户名": {
+        "zh-TW": "郵箱或用戶名",
+        "en-US": "Email or username",
+        "ko-KR": "이메일 또는 사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4664-4674)"
+        ],
+        "$id": 1475
+    },
+    "请输入手机号、邮箱或用户名": {
+        "zh-TW": "請輸入手機號、郵箱或用戶名",
+        "en-US": "Please enter your phone, email, or username",
+        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4836-4853)"
+        ],
+        "$id": 1477
+    },
+    "请输入手机号或用户名": {
+        "zh-TW": "請輸入手機號或用戶名",
+        "en-US": "Please enter your phone number or username",
+        "ko-KR": "휴대폰 번호 또는 사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4884-4898)"
+        ],
+        "$id": 1478
+    },
+    "请输入邮箱或用户名": {
+        "zh-TW": "請輸入郵箱或用戶名",
+        "en-US": "Please enter your email or username",
+        "ko-KR": "이메일 또는 사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4930-4943)"
+        ],
+        "$id": 1479
+    },
+    "登录失败，请检查账号和密码": {
+        "zh-TW": "登入失敗,請檢查帳號和密碼",
+        "en-US": "Login failed. Please check your account and password",
+        "ko-KR": "로그인에 실패했습니다. 계정과 비밀번호를 확인하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(7024-7041)"
+        ],
+        "$id": 1481
+    },
+    "登录失败，请重试": {
+        "zh-TW": "登入失敗,請重試",
+        "en-US": "Login failed. Please try again",
+        "ko-KR": "로그인에 실패했습니다. 다시 시도하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(8993-9005)"
+        ],
+        "$id": 1482
     },
     "隐藏密码": {
         "zh-TW": "隱藏密碼",
@@ -8981,86 +9062,5 @@
             "src/pages/Login/components/WechatLoginButton.tsx(615-623)"
         ],
         "$id": 1471
-    },
-    "请输入账号": {
-        "zh-TW": "請輸入帳號",
-        "en-US": "Please enter your account",
-        "ko-KR": "계정을 입력하세요",
-        "$files": [
-            "src/pages/Login/hooks/loginFormSchema.ts(449-458)"
-        ],
-        "$id": 1472
-    },
-    "手机号、邮箱或用户名": {
-        "zh-TW": "手機號、郵箱或用戶名",
-        "en-US": "Phone, email, or username",
-        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(4576-4590)"
-        ],
-        "$id": 1473
-    },
-    "手机号或用户名": {
-        "zh-TW": "手機號或用戶名",
-        "en-US": "Phone number or username",
-        "ko-KR": "휴대폰 번호 또는 사용자명",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(4621-4632)"
-        ],
-        "$id": 1474
-    },
-    "邮箱或用户名": {
-        "zh-TW": "郵箱或用戶名",
-        "en-US": "Email or username",
-        "ko-KR": "이메일 또는 사용자명",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(4664-4674)"
-        ],
-        "$id": 1475
-    },
-    "请输入手机号、邮箱或用户名": {
-        "zh-TW": "請輸入手機號、郵箱或用戶名",
-        "en-US": "Please enter your phone, email, or username",
-        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명을 입력하세요",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(4836-4853)"
-        ],
-        "$id": 1477
-    },
-    "请输入手机号或用户名": {
-        "zh-TW": "請輸入手機號或用戶名",
-        "en-US": "Please enter your phone number or username",
-        "ko-KR": "휴대폰 번호 또는 사용자명을 입력하세요",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(4884-4898)"
-        ],
-        "$id": 1478
-    },
-    "请输入邮箱或用户名": {
-        "zh-TW": "請輸入郵箱或用戶名",
-        "en-US": "Please enter your email or username",
-        "ko-KR": "이메일 또는 사용자명을 입력하세요",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(4930-4943)"
-        ],
-        "$id": 1479
-    },
-    "登录失败，请检查账号和密码": {
-        "zh-TW": "登入失敗,請檢查帳號和密碼",
-        "en-US": "Login failed. Please check your account and password",
-        "ko-KR": "로그인에 실패했습니다. 계정과 비밀번호를 확인하세요",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(7024-7041)"
-        ],
-        "$id": 1481
-    },
-    "登录失败，请重试": {
-        "zh-TW": "登入失敗,請重試",
-        "en-US": "Login failed. Please try again",
-        "ko-KR": "로그인에 실패했습니다. 다시 시도하세요",
-        "$files": [
-            "src/pages/Login/hooks/useLoginForm.ts(8993-9005)"
-        ],
-        "$id": 1482
     }
 }
