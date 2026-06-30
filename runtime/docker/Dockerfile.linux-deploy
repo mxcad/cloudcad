@@ -112,6 +112,7 @@ COPY packages/mxVersionTool ./packages/mxVersionTool
 COPY packages/config-service ./packages/config-service
 COPY scripts ./scripts
 COPY runtime ./runtime
+COPY languages ./languages
 COPY tsconfig.json ./
 
 # 复制启动/停止脚本
