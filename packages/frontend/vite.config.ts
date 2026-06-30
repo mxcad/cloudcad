@@ -75,6 +75,8 @@ export default defineConfig(({ mode }) => {
       target: 'esnext',
       // 启用 minify
       minify: 'esbuild',
+      // 生成 source map 方便调试
+      // sourcemap: true,
       // 代码分割策略
       rollupOptions: {
         output: {

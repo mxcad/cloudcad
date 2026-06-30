@@ -16,9 +16,6 @@ const messages = {
     'zh-TW'    : ()=>import("./messages/zh-TW"),
 }
 
-
-const isLibrary = (typeof globalThis !== 'undefined' && (globalThis as any).VoerkaI18n) ? true : false
-
 export const i18nScope = new VoerkaI18nScope<TranslateComponentType,TransformResultType>({    
     id: "frontend__0_0_0",                              // 当前作用域的id
     idMap,                                              // 消息id映射列表
@@ -30,7 +27,7 @@ export const i18nScope = new VoerkaI18nScope<TranslateComponentType,TransformRes
     loader,                                             // 语言包加载器
     transform,
     ...settings,
-    library: isLibrary
+    library: false
 }) 
 
 

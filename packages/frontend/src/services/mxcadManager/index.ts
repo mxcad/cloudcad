@@ -226,6 +226,134 @@ export function showUnsavedChangesDialog(): Promise<
 }
 
 /**
+ * Mx_Save 命令：保存当前 CAD 文件
+ */
+MxFun.addCommand('Mx_Save', async () => {
+  try {
+    // 检查登录状态（同时验证 JWT 是否过期）
+    const { isAuthenticated } = await import('../../utils/authCheck');
+    const { isAccessTokenExpired: tokenExpired } = await import('../../utils/tokenUtils');
+    if (!isAuthenticated() || tokenExpired()) {
+      // 未登录或 token 已过期，触发登录提示事件
+      window.dispatchEvent(
+        new CustomEvent('mxcad-save-required', {
+          detail: { action: '保存文件' },
+        })
+      );
+      return;
+    }
+
+    if (!getFileInfo()) {
+      // 没有打开的文件（可能是空白画布新建的文件），弹出保存弹窗
+      const { isAuthenticated: authCheck } = await import('../../utils/authCheck');
+      const { isAccessTokenExpired: tokenExpiredCheck } = await import('../../utils/tokenUtils');
+      if (!authCheck() || tokenExpiredCheck()) {
+        window.dispatchEvent(
+          new CustomEvent('mxcad-save-required', {
+            detail: { action: '保存文件' },
+          })
+        );
+        return;
+      }
+      let personalSpaceId: string | null = null;
+      try {
+        personalSpaceId = await getPersonalSpaceId();
+      } catch {
+        // 获取私人空间 ID 失败（如 token 过期），降级为 null
+      }
+      await showSaveAsDialog(personalSpaceId, 'untitled');
+      return;
+    }
+
+    let personalSpaceId: string | null = null;
+    try {
+      personalSpaceId = await getPersonalSpaceId();
+    } catch {
+      // 获取私人空间 ID 失败（如 token 过期），降级为 null
+    }
+
+    // 判断是否是我的图纸（个人空间中的图纸）
+    const isMyDrawing =
+      personalSpaceId && getFileInfo()!.parentId === personalSpaceId;
+
+    // 判断是否是公共资源库文件（通过 libraryKey 判断）
+    const isLibraryFile = !!getFileInfo()?.libraryKey;
+
+    // 如果是我的图纸，直接保存
+    if (isMyDrawing) {
+      await saveToCurrentFile(personalSpaceId);
+      return;
+    }
+
+    // 如果是公共资源库文件（需要判断用户是否有库管理权限）
+    if (isLibraryFile) {
+      // 检查用户是否有库管理权限
+      // 检查 localStorage 中的用户权限
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const userData = JSON.parse(userStr);
+          const userPermissions = userData?.role?.permissions || [];
+          const permissionStrings = userPermissions.map(
+            (p: string | { permission: string }) => (typeof p === 'string' ? p : p.permission)
+          );
+
+          const hasLibraryPermission =
+            permissionStrings.includes('LIBRARY_DRAWING_MANAGE') ||
+            permissionStrings.includes('LIBRARY_BLOCK_MANAGE');
+
+          if (hasLibraryPermission) {
+            await saveLibraryFile();
+          } else {
+            const fileName = getFileInfo()?.name || 'untitled';
+            await showSaveAsDialog(personalSpaceId, fileName);
+          }
+        } catch (error) {
+          handleError(error, 'mxcadManager: Mx_Save library permission check');
+          const fileName = getFileInfo()?.name || 'untitled';
+          await showSaveAsDialog(personalSpaceId, fileName);
+        }
+      } else {
+        // 无用户数据，弹出另存为
+        const fileName = getFileInfo()?.name || 'untitled';
+        await showSaveAsDialog(personalSpaceId, fileName);
+      }
+      return;
+    }
+
+    // 如果是项目图纸，需要检查用户是否有保存权限
+    const fileInfoForSave = getFileInfo()!;
+    if (fileInfoForSave.projectId) {
+      try {
+        const response = await fileSystemControllerCheckProjectPermission({
+          path: { projectId: fileInfoForSave.projectId },
+          query: { permission: 'CAD_SAVE' },
+        });
+        if (response.data?.hasPermission) {
+          // 用户有该项目保存权限，直接保存
+          await saveToCurrentFile(personalSpaceId);
+          return;
+        }
+        // 没有权限，继续执行弹出另存为窗口
+      } catch (error) {
+        handleError(error, 'mxcadManager: Mx_Save project permission check');
+        // 权限检查失败，继续执行弹出另存为窗口
+      }
+    }
+
+    // 非我的图纸 或 没有项目保存权限，弹出另存为窗口
+    const fileName = getFileInfo()?.name || 'untitled';
+    await showSaveAsDialog(personalSpaceId, fileName);
+  } catch (error) {
+    handleError(error, 'mxcadManager: Mx_Save');
+    hideGlobalLoading();
+    const errorMessage =
+      error instanceof Error ? error.message : t('保存失败，请稍后重试');
+    globalShowToast(errorMessage, 'error');
+  }
+});
+
+/**
  * 检查是否有未保存的更改并提示用户
  * @returns Promise<boolean> 是否可以继续操作（true=可以继续，false=用户取消）
  */
@@ -243,7 +371,7 @@ export async function checkAndConfirmUnsavedChanges(): Promise<boolean> {
   if (choice === 'save') {
     // 触发保存命令
     try {
-      await MxFun.sendStringToExecute('Mx_Save');
+      MxFun.sendStringToExecute('Mx_Save');
       // 等待保存完成
       await new Promise((resolve) => setTimeout(resolve, 500));
       // 保存后检查是否还有未保存的更改
@@ -1113,7 +1241,6 @@ const openFile = async (noCache?: boolean) => {
 MxFun.addCommand('openFile', () => openFile());
 MxFun.addCommand('openFile_noCache', () => openFile(true));
 MxFun.addCommand('__openWebFile__', (args: Parameters<McObject['openWebFile']>) => {
-  console.log(args)
   const mxcad = MxCpp.getCurrentMxCAD();
   if (!mxcad) return
 
@@ -1248,6 +1375,20 @@ MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
     handleError(error, 'Mx_SaveAsMxWeb');
   }
 });
+
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      // 只有这里处理，其他同元素监听器被跳过
+      MxFun.removeCommand('Mx_QSave'); //删除mxcad-app内部的保存命令
+      MxFun.sendStringToExecute('Mx_Save');
+    }
+  },
+  true
+);
 
 /**
  * Mx_ExportPDF 命令：导出为 PDF（弹出 PDF 导出参数设置框）
