@@ -29,6 +29,7 @@ import {
   SystemPermission,
 } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { useTheme } from '../contexts/ThemeContext';
 import type { UserResponseDto as UserDto, CreateRoleDto, CreateProjectRoleDto } from '@/api-sdk';
 import { roleManagementStyles } from './RoleManagementStyles';
@@ -65,7 +66,7 @@ type ProjectRole = {
  * - 专业的角色权限配置
  */
 export const RoleManagement = () => {
-  useDocumentTitle('角色权限');
+  useDocumentTitle(t('角色权限'));
   const { isDark } = useTheme();
   const { hasPermission } = usePermission();
   const [activeTab, setActiveTab] = useState<'system' | 'project'>('project');
@@ -201,7 +202,7 @@ export const RoleManagement = () => {
 
   const handleSaveSystemRole = async () => {
     if (!systemRoleName) {
-      showError('请输入角色名称');
+      showError(t('请输入角色名称'));
       return;
     }
 
@@ -216,7 +217,7 @@ export const RoleManagement = () => {
             permissions: selectedSystemPerms as CreateRoleDto['permissions'],
           },
         });
-        showSuccess('角色更新成功');
+        showSuccess(t('角色更新成功'));
       } else {
         await rolesControllerCreate({
           body: {
@@ -227,7 +228,7 @@ export const RoleManagement = () => {
             level: 0,
           },
         });
-        showSuccess('角色创建成功');
+        showSuccess(t('角色创建成功'));
       }
 
       setSystemModalOpen(false);
@@ -236,7 +237,7 @@ export const RoleManagement = () => {
       const message =
         (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
         (error as Error).message ||
-        '保存失败';
+        t('保存失败');
       showError(message);
     } finally {
       setLoading(false);
@@ -277,7 +278,7 @@ export const RoleManagement = () => {
 
   const handleSaveProjectRole = async () => {
     if (!projectRoleName) {
-      showError('请输入角色名称');
+      showError(t('请输入角色名称'));
       return;
     }
 
@@ -292,7 +293,7 @@ export const RoleManagement = () => {
             permissions: selectedProjectPerms as CreateProjectRoleDto['permissions'],
           },
         });
-        showSuccess('角色更新成功');
+        showSuccess(t('角色更新成功'));
       } else {
         await rolesControllerCreateProjectRole({
           body: {
@@ -301,7 +302,7 @@ export const RoleManagement = () => {
             permissions: selectedProjectPerms as CreateProjectRoleDto['permissions'],
           },
         });
-        showSuccess('角色创建成功');
+        showSuccess(t('角色创建成功'));
       }
 
       setProjectModalOpen(false);
@@ -310,7 +311,7 @@ export const RoleManagement = () => {
       const message =
         (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
         (error as Error).message ||
-        '保存失败';
+        t('保存失败');
       showError(message);
     } finally {
       setLoading(false);
@@ -320,7 +321,7 @@ export const RoleManagement = () => {
   const handleDeleteProjectRole = (id: string) => {
     const role = projectRoles.find(r => r.id === id);
     if (role?.isSystem) {
-      showError('系统默认项目角色不允许删除');
+      showError(t('系统默认项目角色不允许删除'));
       return;
     }
     setRoleToDelete(id);
@@ -340,11 +341,11 @@ export const RoleManagement = () => {
         await rolesControllerDeleteProjectRole({ path: { id: roleToDelete } });
         loadProjectRoles();
       }
-      showSuccess('角色删除成功');
+      showSuccess(t('角色删除成功'));
     } catch (error) {
       const message =
         (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
-        '删除失败';
+        t('删除失败');
       showError(message);
     } finally {
       setLoading(false);
@@ -398,9 +399,9 @@ export const RoleManagement = () => {
           <div className="access-denied-icon">
             <AlertCircle size={48} />
           </div>
-          <h2 className="access-denied-title">访问被拒绝</h2>
-          <p className="access-denied-text">您没有权限访问此页面。</p>
-          <p className="access-denied-hint">请联系管理员获取角色管理权限。</p>
+          <h2 className="access-denied-title">{t('访问被拒绝')}</h2>
+          <p className="access-denied-text">{t('您没有权限访问此页面。')}</p>
+          <p className="access-denied-hint">{t('请联系管理员获取角色管理权限。')}</p>
         </div>
         <style>{roleManagementStyles}</style>
       </div>
@@ -424,22 +425,22 @@ export const RoleManagement = () => {
             <Shield size={24} />
           </div>
           <div>
-            <h1 className="page-title">角色与权限</h1>
+            <h1 className="page-title">{t('角色与权限')}</h1>
             <p className="page-subtitle">
-              管理系统角色和项目角色及其操作权限
+              {t('管理系统角色和项目角色及其操作权限')}
             </p>
           </div>
         </div>
         
         {/* 搜索框 */}
         <SearchInput
-          placeholder="搜索角色..."
+          placeholder={t('搜索角色...')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
 
         {/* 刷新按钮 */}
-        <Button variant="secondary" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" tooltip="刷新角色数据" />
+        <Button variant="secondary" onClick={initialize} loading={loading} icon={RefreshCw} className="refresh-button" tooltip={t('刷新角色数据')} />
       </div>
 
       {/* Tab 切换 */}
@@ -449,7 +450,7 @@ export const RoleManagement = () => {
           icon={Users}
           onClick={() => setActiveTab('project')}
         >
-          项目角色
+          {t('项目角色')}
         </Tab>
         {canReadSystemRoles && (
           <Tab
@@ -458,7 +459,7 @@ export const RoleManagement = () => {
             onClick={() => setActiveTab('system')}
             data-tour="system-roles-tab"
           >
-            系统角色
+            {t('系统角色')}
           </Tab>
         )}
       </Tabs>
@@ -468,9 +469,9 @@ export const RoleManagement = () => {
         <div className="roles-section">
           <div className="section-header">
             <div>
-              <h2 className="section-title">项目角色</h2>
+              <h2 className="section-title">{t('项目角色')}</h2>
               <p className="section-subtitle">
-                系统默认项目角色，所有项目共享使用
+                {t('系统默认项目角色，所有项目共享使用')}
               </p>
             </div>
           </div>
@@ -486,12 +487,12 @@ export const RoleManagement = () => {
                   <div className="role-info">
                     <h3 className="role-name">
                       {getRoleDisplayName(role.name, role.isSystem)}
-                      {role.isSystem && <Tag variant="primary" size="xs">系统</Tag>}
+                      {role.isSystem && <Tag variant="primary" size="xs">{t('系统')}</Tag>}
                     </h3>
-                    <p className="role-description">{role.description || '暂无描述'}</p>
+                    <p className="role-description">{role.description || t('暂无描述')}</p>
                     {!role.isSystem && (
                       <p className="role-members">
-                        {role._count.members} 个成员
+                        {t(`${role._count.members} 个成员`)}
                       </p>
                     )}
                   </div>
@@ -501,14 +502,14 @@ export const RoleManagement = () => {
                       size="md"
                       onClick={() => handleDeleteProjectRole(role.id)}
                       className="delete-btn"
-                      title="删除角色"
+                      title={t('删除角色')}
                       icon={Trash2}
                     />
                   )}
                 </div>
 
                 <div className="role-permissions">
-                  <h4 className="permissions-title">拥有权限</h4>
+                  <h4 className="permissions-title">{t('拥有权限')}</h4>
                   <div className="permissions-list">
                     {renderPermissionTags(role.permissions, 'project')}
                     {role.permissions.length > 6 && (
@@ -526,7 +527,7 @@ export const RoleManagement = () => {
                       className="w-full"
                       onClick={() => handleEditProjectRole(role)}
                     >
-                      配置权限
+                      {t('配置权限')}
                     </Button>
                   </div>
                 )}
@@ -541,15 +542,15 @@ export const RoleManagement = () => {
         <div className="roles-section">
           <div className="section-header">
             <div>
-              <h2 className="section-title">系统角色</h2>
+              <h2 className="section-title">{t('系统角色')}</h2>
               <p className="section-subtitle">
-                管理系统用户的角色和权限，系统默认角色不可删除
+                {t('管理系统用户的角色和权限，系统默认角色不可删除')}
               </p>
             </div>
             {canCreateRoles && (
               <Button onClick={handleCreateSystemRole} disabled={loading} data-tour="create-role-btn">
                 <Plus size={18} />
-                新建角色
+                {t('新建角色')}
               </Button>
             )}
           </div>
@@ -565,9 +566,9 @@ export const RoleManagement = () => {
                   <div className="role-info">
                     <h3 className="role-name">
                       {getRoleDisplayName(role.name, role.isSystem)}
-                      {role.isSystem && <Tag variant="primary" size="xs">系统</Tag>}
+                      {role.isSystem && <Tag variant="primary" size="xs">{t('系统')}</Tag>}
                     </h3>
-                    <p className="role-description">{role.description || '暂无描述'}</p>
+                    <p className="role-description">{role.description || t('暂无描述')}</p>
                   </div>
                   {!role.isSystem && canDeleteRoles && (
                     <Button
@@ -575,14 +576,14 @@ export const RoleManagement = () => {
                       size="md"
                       onClick={() => handleDeleteSystemRole(role.id)}
                       className="delete-btn"
-                      title="删除角色"
+                      title={t('删除角色')}
                       icon={Trash2}
                     />
                   )}
                 </div>
 
                 <div className="role-permissions">
-                  <h4 className="permissions-title">拥有权限</h4>
+                  <h4 className="permissions-title">{t('拥有权限')}</h4>
                   <div className="permissions-list">
                     {renderPermissionTags(role.permissions, 'system')}
                     {role.permissions.length > 6 && (
@@ -612,7 +613,7 @@ export const RoleManagement = () => {
       <PermissionConfigModal
         isOpen={systemModalOpen}
         onClose={() => setSystemModalOpen(false)}
-        title={editingSystemRole ? '配置系统角色权限' : '新建系统角色'}
+        title={editingSystemRole ? t('配置系统角色权限') : t('新建系统角色')}
         roleName={systemRoleName}
         roleDesc={systemRoleDesc}
         onNameChange={setSystemRoleName}
@@ -630,7 +631,7 @@ export const RoleManagement = () => {
       <PermissionConfigModal
         isOpen={projectModalOpen}
         onClose={() => setProjectModalOpen(false)}
-        title={editingProjectRole ? '配置项目角色权限' : '新建项目角色'}
+        title={editingProjectRole ? t('配置项目角色权限') : t('新建项目角色')}
         roleName={projectRoleName}
         roleDesc={projectRoleDesc}
         onNameChange={setProjectRoleName}
@@ -651,7 +652,7 @@ export const RoleManagement = () => {
           setDeleteConfirmOpen(false);
           setRoleToDelete(null);
         }}
-        title="确认删除角色"
+        title={t('确认删除角色')}
         footer={
           <div className="modal-footer">
             <Button
@@ -662,7 +663,7 @@ export const RoleManagement = () => {
               }}
               disabled={loading}
             >
-              取消
+              {t('取消')}
             </Button>
             <Button
               onClick={confirmDelete}
@@ -672,10 +673,10 @@ export const RoleManagement = () => {
               {loading ? (
                 <>
                   <RefreshCw size={18} className="animate-spin" />
-                  删除中...
+                  {t('删除中...')}
                 </>
               ) : (
-                '确认删除'
+                t('确认删除')
               )}
             </Button>
           </div>
@@ -685,9 +686,9 @@ export const RoleManagement = () => {
           <div className="delete-warning-box">
             <AlertCircle size={24} />
             <div>
-              <p className="delete-warning-title">重要提示</p>
+              <p className="delete-warning-title">{t('重要提示')}</p>
               <p className="delete-warning-text">
-                删除后，属于该角色的用户将需要重新分配角色。此操作不可恢复。
+                {t('删除后，属于该角色的用户将需要重新分配角色。此操作不可恢复。')}
               </p>
             </div>
           </div>
@@ -701,10 +702,10 @@ export const RoleManagement = () => {
           setErrorModalOpen(false);
           setErrorModalMessage('');
         }}
-        title="提示"
+        title={t('提示')}
         footer={
           <Button onClick={() => setErrorModalOpen(false)}>
-            确定
+            {t('确定')}
           </Button>
         }
       >

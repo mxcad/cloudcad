@@ -51,6 +51,7 @@ import {
 } from '@/constants/timeouts';
 import { WorkListPanel } from './WorkListPanel';
 import styles from './CollaborateSidebar.module.css';
+import { t } from '@/languages';
 
 interface Work {
   link_user_data: string[];
@@ -201,7 +202,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             });
           }
         } catch {
-          resolvedDrawings.push({ id, name: `图纸 ${id.slice(0, 6)}...` });
+          resolvedDrawings.push({ id, name: `${t('图纸')} ${id.slice(0, 6)}...` });
         }
       }),
       ...[...projectIds].map(async (id) => {
@@ -216,7 +217,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             });
           }
         } catch {
-          resolvedProjects.push({ id, name: `项目 ${id.slice(0, 6)}...` });
+          resolvedProjects.push({ id, name: `${t('项目')} ${id.slice(0, 6)}...` });
         }
       }),
     ]);
@@ -393,7 +394,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     }
 
     setWaitingForSession(true);
-    showGlobalLoading('正在打开协同文件...', 'autoJoin');
+    showGlobalLoading(t('正在打开协同文件...'), 'autoJoin');
 
     let cancelled = false;
     let retryCount = 0;
@@ -423,7 +424,6 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
       cooperate.joinWork(
         targetCollabWorkId,
         (iRet: number) => {
-          console.log(`Auto-join attempt ${retryCount + 1}, joinWork returned:`, iRet);
           if (iRet === 0) {
             // 加入成功 — 保持 loading，等待协同文件加载完成
             cancelled = true;
@@ -502,7 +502,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
               clearTimeout(safetyTimer);
               hideGlobalLoading('autoJoin');
               setWaitingForSession(false);
-              showToast('加入协同超时', 'warning');
+              showToast(t('加入协同超时'), 'warning');
               setCollabShareState({ fromCollabShare: false, targetWorkId: null });
             }
           } else {
@@ -511,7 +511,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             clearTimeout(safetyTimer);
             hideGlobalLoading('autoJoin');
             setWaitingForSession(false);
-            showToast(`加入协同失败，错误码: ${iRet}`, 'error');
+            showToast(`${t('加入协同失败，错误码: ')}${iRet}`, 'error');
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           }
         },
@@ -550,13 +550,13 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
       setCreating(true);
       const cooperate = getCooperate();
       if (!cooperate) {
-        showToast('协同对象未初始化', 'error');
+        showToast(t('协同对象未初始化'), 'error');
         setCreating(false);
         return;
       }
 
       if (currentFileId === undefined || !user) {
-        showToast('请先打开图纸并登录', 'error');
+        showToast(t('请先打开图纸并登录'), 'error');
         setCreating(false);
         return;
       }
@@ -569,7 +569,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
       };
 
       const fileInfo = mxcadManager.getCurrentFileInfo();
-      const drawingName = fileInfo?.name || '未命名图纸';
+      const drawingName = fileInfo?.name || t('未命名图纸');
       let sourceType: CollaborateWorkDataV3['sourceType'];
       let libraryKey: 'drawing' | 'block' | undefined;
 
@@ -599,7 +599,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         creatorAvatar: user.avatar ?? undefined,
       });
 
-      showGlobalLoading('正在创建协同...', 'handleCreate');
+      showGlobalLoading(t('正在创建协同...'), 'handleCreate');
       cooperate.createWrok(
         (workid: number) => {
           hideGlobalLoading('handleCreate-success');
@@ -622,7 +622,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             fetchWorks();
           } else {
             const errorCode = -workid;
-            showToast(`创建协同失败，错误码: ${errorCode}`, 'error');
+            showToast(`${t('创建协同失败，错误码: ')}${errorCode}`, 'error');
           }
         },
         workDataPayload,
@@ -675,14 +675,14 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         setJoiningWorkId(workId);
         const cooperate = getCooperate();
         if (!cooperate) {
-          showToast('协同对象未初始化', 'error');
+          showToast(t('协同对象未初始化'), 'error');
           setJoiningWorkId(null);
           joiningLockRef.current = false;
           return;
         }
 
         if (!user) {
-          showToast('请先登录', 'error');
+          showToast(t('请先登录'), 'error');
           setJoiningWorkId(null);
           joiningLockRef.current = false;
           return;
@@ -706,7 +706,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         };
         window.addEventListener('mxcad-file-open-complete', onFileOpen, { once: true });
 
-        showGlobalLoading('正在打开协同文件...', 'handleJoin');
+        showGlobalLoading(t('正在打开协同文件...'), 'handleJoin');
         cooperate.joinWork(
           workId,
           async (iRet: number) => {
@@ -729,7 +729,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
               clearTimeout(safetyTimer);
               hideGlobalLoading('handleJoin-error');
               fetchWorks();
-              showToast(`加入协同失败，错误码: ${iRet}`, 'error');
+              showToast(`${t('加入协同失败，错误码: ')}${iRet}`, 'error');
             }
           },
           user.id,
@@ -752,7 +752,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     try {
       const cooperate = getCooperate();
       if (!cooperate) {
-        showToast('协同对象未初始化', 'error');
+        showToast(t('协同对象未初始化'), 'error');
         return;
       }
 
@@ -769,11 +769,11 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
         }
         // 延迟获取，等待 SDK 状态更新
         exitFetchTimerRef.current = setTimeout(() => fetchWorks(), 300);
-        showToast('已退出协同', 'success');
+        showToast(t('已退出协同'), 'success');
       } else {
         // 退出失败也刷新，确保列表与服务器一致
         fetchWorks();
-        showToast(`退出协同失败，错误码: ${ret}`, 'error');
+        showToast(`${t('退出协同失败，错误码: ')}${ret}`, 'error');
       }
     } catch (error) {
       console.error('退出协同失败:', error);
@@ -825,11 +825,11 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
           return {
             work: w,
             projectName: data?.projectId
-              ? projectNameCache[data.projectId] ?? '未知项目'
-              : '个人空间',
+              ? projectNameCache[data.projectId] ?? t('未知项目')
+              : t('个人空间'),
             drawingName: (data?.drawingId && fileNameCache[data.drawingId]
               ? fileNameCache[data.drawingId]
-              : (data && data.v === 3 ? data.drawingName : undefined)) || '未知图纸',
+              : (data && data.v === 3 ? data.drawingName : undefined)) || t('未知图纸'),
             isCurrentFile: data?.drawingId === currentFileId,
             isJoined: currentWorkId === w.work_id,
             onlineCount: w.link_user_ids.length,
@@ -858,11 +858,11 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
           return {
             work: w,
             projectName: data?.projectId
-              ? projectNameCache[data.projectId] ?? '未知项目'
+              ? projectNameCache[data.projectId] ?? t('未知项目')
               : '',
             drawingName: (data?.drawingId && fileNameCache[data.drawingId]
               ? fileNameCache[data.drawingId]
-              : (data && data.v === 3 ? data.drawingName : undefined)) || '未知图纸',
+              : (data && data.v === 3 ? data.drawingName : undefined)) || t('未知图纸'),
             isCurrentFile: data?.drawingId === currentFileId,
             isJoined: currentWorkId === w.work_id,
             onlineCount: w.link_user_ids.length,
@@ -876,7 +876,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
     if (currentFileId === null || currentFileId === undefined) return '';
     const cached = fileNameCache[currentFileId];
     if (cached) return cached;
-    return storeFileName || '当前图纸';
+    return storeFileName || t('当前图纸');
   }, [currentFileId, fileNameCache, storeFileName]);
 
   return (
@@ -889,7 +889,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             size="sm"
             onClick={() => setActiveSubTab('current')}
           >
-            当前图纸
+            {t('当前图纸')}
           </Tab>
           <Tab
             active={activeSubTab === 'list'}
@@ -897,7 +897,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
             size="sm"
             onClick={() => setActiveSubTab('list')}
           >
-            协同列表
+            {t('协同列表')}
           </Tab>
         </Tabs>
 
@@ -905,8 +905,8 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({ visible 
           className={styles.toolbarRefreshBtn}
           onClick={() => fetchWorks(true)}
           disabled={loading}
-          title="刷新列表"
-          aria-label="刷新列表"
+          title={t('刷新列表')}
+          aria-label={t('刷新列表')}
         >
           <RefreshCw className={loading ? 'animate-spin' : ''} />
         </button>

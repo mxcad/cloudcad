@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useEmailVerification } from '../hooks/useEmailVerification';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -34,7 +35,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
  * - 完美主题适配
  */
 export const EmailVerification: React.FC = () => {
-  useDocumentTitle('邮箱验证');
+  useDocumentTitle(t('邮箱验证'));
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyEmailAndLogin, isAuthenticated } = useAuth();
@@ -91,7 +92,7 @@ export const EmailVerification: React.FC = () => {
             (err as Error & { response?: { data?: { message?: string } } }).response
               ?.data?.message ||
             (err as Error).message ||
-            '发送验证码失败，请手动点击重发';
+            t('发送验证码失败，请手动点击重发');
           setError(errorMessage);
         });
       }
@@ -113,15 +114,15 @@ export const EmailVerification: React.FC = () => {
 
   const handleVerifyCode = async () => {
     if (!verificationCode.trim()) {
-      setError('请输入验证码');
+      setError(t('请输入验证码'));
       return;
     }
     if (verificationCode.length !== 6) {
-      setError('验证码应为6位数字');
+      setError(t('验证码应为6位数字'));
       return;
     }
     if (!email) {
-      setError(bindMode ? '请输入邮箱地址' : '邮箱地址缺失，请重新注册');
+      setError(bindMode ? t('请输入邮箱地址') : t('邮箱地址缺失，请重新注册'));
       return;
     }
 
@@ -173,7 +174,7 @@ export const EmailVerification: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '验证失败，请检查验证码是否正确或已过期'
+          t('验证失败，请检查验证码是否正确或已过期')
       );
     } finally {
       setLoading(false);
@@ -182,13 +183,13 @@ export const EmailVerification: React.FC = () => {
 
   const handleResendEmail = useCallback(async () => {
     if (!email) {
-      setError('请先输入邮箱地址');
+      setError(t('请先输入邮箱地址'));
       return;
     }
 
     // 验证邮箱格式
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('请输入有效的邮箱地址');
+      setError(t('请输入有效的邮箱地址'));
       return;
     }
 
@@ -209,7 +210,7 @@ export const EmailVerification: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
         (err as Error).message ||
-        '发送失败，请稍后重试';
+        t('发送失败，请稍后重试');
       setError(errorMessage);
     } finally {
       setResendLoading(false);
@@ -231,9 +232,9 @@ export const EmailVerification: React.FC = () => {
               <div className="success-icon">
                 <CheckCircle size={32} />
               </div>
-              <h2 className="success-title">邮箱验证成功！</h2>
+              <h2 className="success-title">{t('邮箱验证成功！')}</h2>
               <p className="success-subtitle">
-                账号已激活，即将自动跳转到登录页...
+                {t('账号已激活，即将自动跳转到登录页...')}
               </p>
             </div>
           </div>
@@ -274,7 +275,7 @@ export const EmailVerification: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">{bindMode ? '绑定您的邮箱地址' : phoneRegisterData ? '验证邮箱完成注册' : '验证您的邮箱地址'}</p>
+            <p className="app-tagline">{bindMode ? t('绑定您的邮箱地址') : phoneRegisterData ? t('验证邮箱完成注册') : t('验证您的邮箱地址')}</p>
           </div>
 
           {/* 邮件提示 */}
@@ -283,16 +284,16 @@ export const EmailVerification: React.FC = () => {
               <Mail size={24} />
             </div>
             {bindMode && !emailSent ? (
-              <p className="email-text">您的账号需要绑定邮箱才能继续使用</p>
+              <p className="email-text">{t('您的账号需要绑定邮箱才能继续使用')}</p>
             ) : phoneRegisterData && !email ? (
-              <p className="email-text">请输入您的邮箱地址用于完成注册</p>
+              <p className="email-text">{t('请输入您的邮箱地址用于完成注册')}</p>
             ) : email ? (
               <p className="email-text">
-                我们已向 <span className="email-highlight">{email}</span>{' '}
-                发送了验证码
+                {t('我们已向')} <span className="email-highlight">{email}</span>{' '}
+                {t('发送了验证码')}
               </p>
             ) : (
-              <p className="email-text">请输入您收到的6位数字验证码</p>
+              <p className="email-text">{t('请输入您收到的6位数字验证码')}</p>
             )}
           </div>
 
@@ -300,7 +301,7 @@ export const EmailVerification: React.FC = () => {
           {(bindMode || phoneRegisterData) && !emailSent && (
             <div className="code-section" style={{ marginBottom: '1.25rem' }}>
               <label htmlFor="email" className="code-label">
-                邮箱地址
+                {t('邮箱地址')}
               </label>
               <input
                 id="email"
@@ -310,7 +311,7 @@ export const EmailVerification: React.FC = () => {
                   setEmail(e.target.value);
                   if (error) setError(null);
                 }}
-                placeholder="请输入邮箱地址"
+                placeholder={t('请输入邮箱地址')}
                 className="code-input"
                 style={{ fontSize: '1rem', fontWeight: 400, letterSpacing: 'normal', textAlign: 'left' }}
                 disabled={loading}
@@ -330,7 +331,7 @@ export const EmailVerification: React.FC = () => {
           {resendSuccess && (
             <div className="alert alert-success">
               <CheckCircle size={18} className="alert-icon" />
-              <span>验证邮件已重新发送，请查收</span>
+              <span>{t('验证邮件已重新发送，请查收')}</span>
             </div>
           )}
 
@@ -338,7 +339,7 @@ export const EmailVerification: React.FC = () => {
           {email && (
             <div className="code-section">
               <label htmlFor="code" className="code-label">
-                验证码
+                {t('验证码')}
               </label>
               <input
                 id="code"
@@ -350,11 +351,11 @@ export const EmailVerification: React.FC = () => {
                   setVerificationCode(value);
                   if (error) setError(null);
                 }}
-                placeholder="请输入6位数字验证码"
+                placeholder={t('请输入6位数字验证码')}
                 className="code-input"
                 disabled={loading}
               />
-              <p className="code-hint">验证码为6位数字，请查看邮件</p>
+              <p className="code-hint">{t('验证码为6位数字，请查看邮件')}</p>
             </div>
           )}
 
@@ -368,10 +369,10 @@ export const EmailVerification: React.FC = () => {
             className="w-full mb-5"
           >
             {loading ? (
-              <span>验证中...</span>
+              <span>{t('验证中...')}</span>
             ) : (
               <>
-                <span>验证</span>
+                <span>{t('验证')}</span>
                 <CheckCircle size={18} />
               </>
             )}
@@ -379,11 +380,11 @@ export const EmailVerification: React.FC = () => {
 
           {/* 帮助信息 */}
           <div className="help-section">
-            <h4 className="help-title">没有收到邮件？</h4>
+            <h4 className="help-title">{t('没有收到邮件？')}</h4>
             <ul className="help-list">
-              <li>• 检查垃圾邮件文件夹</li>
-              <li>• 确认邮箱地址正确</li>
-              <li>• 验证码15分钟内有效</li>
+              <li>{t('• 检查垃圾邮件文件夹')}</li>
+              <li>{t('• 确认邮箱地址正确')}</li>
+              <li>{t('• 验证码15分钟内有效')}</li>
             </ul>
           </div>
 
@@ -400,31 +401,31 @@ export const EmailVerification: React.FC = () => {
               {resendCooldown > 0 ? (
                 <>
                   <RefreshCw size={16} />
-                  <span>{resendCooldown}秒后可重新发送</span>
+                  <span>{t(`${resendCooldown}秒后可重新发送`)}</span>
                 </>
               ) : (
                 <>
                   <RefreshCw size={16} />
-                  <span>{!emailSent && (bindMode || phoneRegisterData) ? '发送验证邮件' : '重新发送验证邮件'}</span>
+                  <span>{!emailSent && (bindMode || phoneRegisterData) ? t('发送验证邮件') : t('重新发送验证邮件')}</span>
                 </>
               )}
             </Button>
 
             <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>
               <ArrowLeft size={16} />
-              <span>返回登录</span>
+              <span>{t('返回登录')}</span>
             </Button>
           </div>
 
           {/* 特性图标 */}
           <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+            <div className="feature-dot" data-tooltip={t('高性能 CAD 在线预览')}>
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip={t('多用户实时协同编辑')}>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip={t('企业级数据安全保障')}>
               <ShieldCheck size={14} />
             </div>
           </div>

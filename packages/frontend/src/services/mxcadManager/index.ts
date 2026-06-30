@@ -18,6 +18,7 @@
  */
 
 import { Z_LAYERS } from '@/constants/layers';
+import { t } from '@/languages';
 
 // ==================== 从子模块重新导出 ====================
 
@@ -61,7 +62,6 @@ import { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
 import { escapeHtml } from '@/utils/sanitize';
 
 // ==================== 外部依赖 ====================
-// @ts-ignore
 import "mxcad-app/style"
 import { MxCADView, store } from 'mxcad-app';
 import { mxCadControllerCheckFileExist, thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail, fileSystemControllerCheckProjectPermission, mxCadControllerUploadExtReferenceImage, publicFileControllerConvertAndDownload } from '@/api-sdk';
@@ -97,8 +97,8 @@ function formatEditorFileName(fileName: string): string {
   const { isInCollaboration } = useCADEditorStore.getState();
   const prefixes: string[] = [];
 
-  if (isInCollaboration) prefixes.push('[协同中]');
-  if (!isLoggedIn) prefixes.push('[未登录]');
+  if (isInCollaboration) prefixes.push(t('[协同中]'));
+  if (!isLoggedIn) prefixes.push(t('[未登录]'));
 
   if (fileName === 'empty_template.mxweb' || fileName === 'empty.mxweb') {
     return prefixes.join(' - ');
@@ -160,7 +160,7 @@ const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
   }
   if (isDocumentModified()) {
     e.preventDefault();
-    e.returnValue = '您有未保存的更改，确定要离开吗？';
+    e.returnValue = t('您有未保存的更改，确定要离开吗？');
     return e.returnValue;
   }
   e.returnValue = '';
@@ -212,11 +212,11 @@ export function showUnsavedChangesDialog(): Promise<
   'save' | 'discard' | 'cancel'
 > {
   return globalShowThreeButtonConfirm({
-    title: '未保存的更改',
-    message: '当前图纸有未保存的更改，是否保存？',
-    confirmText: '保存',
-    discardText: '不保存',
-    cancelText: '取消',
+    title: t('未保存的更改'),
+    message: t('当前图纸有未保存的更改，是否保存？'),
+    confirmText: t('保存'),
+    discardText: t('不保存'),
+    cancelText: t('取消'),
     dialogType: 'warning',
   }).then((value) => {
     if (value === 'confirm') return 'save';
@@ -505,7 +505,7 @@ async function getUploadTargetNodeId(): Promise<string> {
   const personalSpace = personalSpaceResponse.data;
 
   if (!personalSpace?.id) {
-    throw new Error('无法获取私人空间，请联系管理员');
+    throw new Error(t('无法获取私人空间，请联系管理员'));
   }
 
   // 2. 判断当前是否打开了文件
@@ -590,7 +590,7 @@ export async function waitForFileReady(
     }
 
     if (attempt < maxAttempts) {
-      setLoadingMessage(`文件转换中，请稍候... (${attempt}/${maxAttempts})`);
+      setLoadingMessage(`${t('文件转换中，请稍候...')} (${attempt}/${maxAttempts})`);
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
   }
@@ -607,14 +607,14 @@ export async function openUploadedFile(
   uploadTargetNodeId: string
 ): Promise<void> {
   exitCollaborationIfNeeded();
-  showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
+  showGlobalLoading(t(DEFAULT_MESSAGES.OPENING_FILE));
 
   // 等待文件转换完成
   const fileInfo = await waitForFileReady(newNodeId);
 
   if (!fileInfo) {
     hideGlobalLoading();
-    throw new Error('文件转换未完成，请稍后在文件列表中查看');
+    throw new Error(t('文件转换未完成，请稍后在文件列表中查看'));
   }
 
   const projectId = await getProjectId(uploadTargetNodeId, fileInfo, newNodeId);
@@ -669,7 +669,7 @@ export async function openLibraryDrawing(
       return;
     }
 
-    showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
+    showGlobalLoading(t(DEFAULT_MESSAGES.OPENING_FILE));
 
     // 2. 如果没有传入 fileName 和 nodePath，从 API 获取
     let finalFileName = fileName;
@@ -680,7 +680,7 @@ export async function openLibraryDrawing(
       const nodeResponse = await libraryControllerGetDrawingNode({ path: { nodeId } });
       const node = nodeResponse.data;
       if (!node) {
-        throw new Error('无法获取图纸库文件信息');
+        throw new Error(t('无法获取图纸库文件信息'));
       }
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
@@ -689,12 +689,12 @@ export async function openLibraryDrawing(
 
     // 确保 finalNodePath 有值
     if (!finalNodePath) {
-      throw new Error('无法获取文件路径');
+      throw new Error(t('无法获取文件路径'));
     }
 
     // 确保 finalFileName 有值
     if (!finalFileName) {
-      throw new Error('无法获取文件名');
+      throw new Error(t('无法获取文件名'));
     }
 
     // 3. 构建图纸库文件 URL（使用 node.path，与项目文件保持一致）
@@ -761,7 +761,7 @@ export async function openLibraryBlock(
       return;
     }
 
-    showGlobalLoading(DEFAULT_MESSAGES.OPENING_FILE);
+    showGlobalLoading(t(DEFAULT_MESSAGES.OPENING_FILE));
 
     // 2. 如果没有传入 fileName 和 nodePath，从 API 获取
     let finalFileName = fileName;
@@ -772,7 +772,7 @@ export async function openLibraryBlock(
       const nodeResponse = await libraryControllerGetBlockNode({ path: { nodeId } });
       const node = nodeResponse.data;
       if (!node) {
-        throw new Error('无法获取图块库文件信息');
+        throw new Error(t('无法获取图块库文件信息'));
       }
       finalFileName = finalFileName || node.name;
       finalNodePath = finalNodePath || node.path;
@@ -781,12 +781,12 @@ export async function openLibraryBlock(
 
     // 确保 finalNodePath 有值
     if (!finalNodePath) {
-      throw new Error('无法获取文件路径');
+      throw new Error(t('无法获取文件路径'));
     }
 
     // 确保 finalFileName 有值
     if (!finalFileName) {
-      throw new Error('无法获取文件名');
+      throw new Error(t('无法获取文件名'));
     }
 
     // 3. 构建图块库文件 URL
@@ -858,7 +858,7 @@ function isCadFile(filename: string): boolean {
  */
 async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> {
   try {
-    showGlobalLoading('正在计算文件哈希...');
+    showGlobalLoading(t('正在计算文件哈希...'));
 
     // 1. 计算文件 hash
     const hash = await calculateFileHash(file);
@@ -867,7 +867,7 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
     const virtualUrl = `${StoragePathConstants.LOCAL_MXWEB_CACHE_PREFIX}/${hash}${StoragePathConstants.MXWEB_EXTENSION}`;
 
     // 3. 检查 IndexedDB 中是否已有缓存
-    setLoadingMessage('正在检查本地缓存...');
+    setLoadingMessage(t('正在检查本地缓存...'));
 
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open('emscripten_filesystem', 1);
@@ -892,7 +892,7 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
 
     // 4. 如果缓存不存在或是 noCache 模式，写入 IndexedDB
     if (needsWrite) {
-      setLoadingMessage('正在缓存文件...');
+      setLoadingMessage(t('正在缓存文件...'));
 
       const arrayBuffer = await file.arrayBuffer();
       const transaction = db.transaction(['FILES'], 'readwrite');
@@ -917,14 +917,14 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
       personalSpaceId: null,
     });
 
-    setLoadingMessage('正在打开文件...');
+    setLoadingMessage(t('正在打开文件...'));
     await mxcadManager.openFile(virtualUrl, noCache);
 
     hideGlobalLoading();
   } catch (error) {
     hideGlobalLoading();
     const errorMessage =
-      error instanceof Error ? error.message : '打开文件失败';
+      error instanceof Error ? error.message : t('打开文件失败');
     globalShowToast(errorMessage, 'error');
   }
 }
@@ -936,12 +936,12 @@ async function openLocalMxwebFile(file: File, noCache?: boolean): Promise<void> 
  */
 export async function handlePublicUpload(file: File, noCache?: boolean): Promise<void> {
   try {
-    showGlobalLoading('正在计算文件哈希...');
+    showGlobalLoading(t('正在计算文件哈希...'));
     const hash = await calculateFileHash(file);
 
     // 非 noCache 模式下检查缓存（包括匿名用户）
     if (!noCache) {
-      setLoadingMessage('正在检查缓存...');
+      setLoadingMessage(t('正在检查缓存...'));
       const existData = await mxCadControllerCheckFileExist({
         body: {
           fileSize: file.size,
@@ -962,7 +962,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
             noCache: noCache,
             callback: async () => {
               try {
-                showGlobalLoading('正在打开文件...');
+                showGlobalLoading(t('正在打开文件...'));
                 const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
                 const mxwebFilename = `${hash}${ext}.mxweb`;
                 const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
@@ -982,7 +982,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
                 hideGlobalLoading();
               } catch (error) {
                 hideGlobalLoading();
-                const errorMessage = error instanceof Error ? error.message : '文件打开失败';
+                const errorMessage = error instanceof Error ? error.message : t('文件打开失败');
                 globalShowToast(errorMessage, 'error');
               }
             },
@@ -994,7 +994,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
     }
 
     // 缓存未命中，继续上传
-    setLoadingMessage('正在上传文件...');
+    setLoadingMessage(t('正在上传文件...'));
     await uploadMxCadFile({
       file,
       hash,
@@ -1002,9 +1002,9 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
       forceUpload: true, // 公开上传始终启用强制上传模式，允许 nodeId 为空
       onProgress: (percentage: number) => {
         if (percentage === 100) {
-          setLoadingMessage('图纸转换中...');
+          setLoadingMessage(t('图纸转换中...'));
         } else {
-          setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
+          setLoadingMessage(`${t('正在上传文件...')} ${percentage.toFixed(1)}%`);
         }
       },
     });
@@ -1020,7 +1020,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
         noCache: noCache,
         callback: async () => {
           try {
-            showGlobalLoading('正在打开文件...');
+            showGlobalLoading(t('正在打开文件...'));
             // 扁平存储：{hash}.{ext}.mxweb（如 abc123.dwg.mxweb），通过 accessFileByHashPattern 端点访问
             const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
             const mxwebFilename = `${hash}${ext}.mxweb`;
@@ -1041,7 +1041,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
             hideGlobalLoading();
           } catch (error) {
             hideGlobalLoading();
-            const errorMessage = error instanceof Error ? error.message : '文件打开失败';
+            const errorMessage = error instanceof Error ? error.message : t('文件打开失败');
             globalShowToast(errorMessage, 'error');
           }
         }
@@ -1051,7 +1051,7 @@ export async function handlePublicUpload(file: File, noCache?: boolean): Promise
   } catch (error) {
     hideGlobalLoading();
     const errorMessage =
-      error instanceof Error ? error.message : '文件上传失败';
+      error instanceof Error ? error.message : t('文件上传失败');
     globalShowToast(errorMessage, 'error');
   }
 }
@@ -1079,10 +1079,10 @@ const openFile = async (noCache?: boolean) => {
 
         // 检查是否为 CAD 文件
         if (!isCadFile(selectedFile.name)) {
-          globalShowToast(
-            '不支持的文件格式，请选择 .dwg、.dxf、.mxweb',
-            'error'
-          );
+  globalShowToast(
+    t('不支持的文件格式，请选择 .dwg、.dxf、.mxweb'),
+    'error'
+  );
           picker.value = '';
           return;
         }
@@ -1100,7 +1100,7 @@ const openFile = async (noCache?: boolean) => {
   } catch (error) {
     handleError(error, 'mxcadManager: openFile');
     globalShowToast(
-      error instanceof Error ? error.message : '命令执行失败',
+      error instanceof Error ? error.message : t('命令执行失败'),
       'error'
     );
   }
@@ -1181,12 +1181,12 @@ const handleNewFileCommand = async () => {
         },
       })
     );
-    successOnce("已新建空白图纸")
+    successOnce(t("已新建空白图纸"))
 
   } catch (error) {
     console.error('新建文件失败:', error);
     globalShowToast(
-      error instanceof Error ? error.message : '新建文件失败',
+      error instanceof Error ? error.message : t('新建文件失败'),
       'error'
     );
   }
@@ -1210,7 +1210,7 @@ async function triggerSaveAs() {
     personalSpaceId = await getPersonalSpaceId();
   } catch {
     // 获取私人空间 ID 失败，降级为 null
-    globalShowToast('登录状态可能已过期，请保存到本地或重新登录', 'warning');
+    globalShowToast(t('登录状态可能已过期，请保存到本地或重新登录'), 'warning');
   }
   await showSaveAsDialog(personalSpaceId, fileName);
 }
@@ -1234,14 +1234,14 @@ MxFun.addCommand('Mx_SaveAsMxWeb', async () => {
       blob: saved.blob,
       filename: `${nameWithoutExt}.mxweb`,
       types: [{
-        description: 'MXWEB 文件',
+        description: t('MXWEB 文件'),
         accept: { 'application/octet-stream': ['.mxweb'] },
       }],
     });
 
     hideGlobalLoading();
     if (saveResult !== false) {
-      globalShowToast('文件已保存到本地', 'success');
+      globalShowToast(t('文件已保存到本地'), 'success');
     }
   } catch (error) {
     hideGlobalLoading();
@@ -1312,77 +1312,21 @@ MxFun.addCommand('Mx_SaveAsToCloud', async () => {
     cancelLoginRedirect();
     window.dispatchEvent(
       new CustomEvent('mxcad-save-required', {
-        detail: { action: '保存文件' },
+        detail: { action: t('保存文件') },
       })
     );
     return;
   }
-  await triggerSaveAs();
-});
 
-/**
- * Mx_ShowSidebar 命令：显示图库侧边栏
- */
-MxFun.addCommand('Mx_ShowSidebar', () => {
-  window.dispatchEvent(
-    new CustomEvent('mxcad-open-sidebar', {
-      detail: { type: 'gallery' },
-    })
-  );
-});
-
-// ==================== Mx_ShowCollaborate 命令 ====================
-
-/**
- * Mx_ShowCollaborate 命令：显示协同侧边栏
- */
-MxFun.addCommand('Mx_ShowCollaborate', () => {
-  window.dispatchEvent(
-    new CustomEvent('mxcad-open-sidebar', {
-      detail: { type: 'collaborate' },
-    })
-  );
-});
-
-document.addEventListener(
-  'keydown',
-  (e) => {
-    if (e.ctrlKey && e.key === 's') {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      // 只有这里处理，其他同元素监听器被跳过
-      MxFun.removeCommand('Mx_QSave'); //删除mxcad-app内部的保存命令
-      MxFun.sendStringToExecute('Mx_Save');
-    }
-  },
-  true
-); // useCapture=true 捕获阶段处理
-/**
- * Mx_Save 命令：保存当前 CAD 文件
- */
-MxFun.addCommand('Mx_Save', async () => {
   try {
-    // 检查登录状态（同时验证 JWT 是否过期）
-    const { isAuthenticated } = await import('../../utils/authCheck');
-    const { isAccessTokenExpired: tokenExpired } = await import('../../utils/tokenUtils');
-    if (!isAuthenticated() || tokenExpired()) {
-      // 未登录或 token 已过期，触发登录提示事件
-      window.dispatchEvent(
-        new CustomEvent('mxcad-save-required', {
-          detail: { action: '保存文件' },
-        })
-      );
-      return;
-    }
-
-    if (!getFileInfo()) {
+  if (!getFileInfo()) {
       // 没有打开的文件（可能是空白画布新建的文件），弹出保存弹窗
       const { isAuthenticated: authCheck } = await import('../../utils/authCheck');
       const { isAccessTokenExpired: tokenExpiredCheck } = await import('../../utils/tokenUtils');
       if (!authCheck() || tokenExpiredCheck()) {
         window.dispatchEvent(
           new CustomEvent('mxcad-save-required', {
-            detail: { action: '保存文件' },
+              detail: { action: t('保存文件') },
           })
         );
         return;
@@ -1480,7 +1424,7 @@ MxFun.addCommand('Mx_Save', async () => {
     handleError(error, 'mxcadManager: Mx_Save');
     hideGlobalLoading();
     const errorMessage =
-      error instanceof Error ? error.message : '保存失败，请稍后重试';
+      error instanceof Error ? error.message : t('保存失败，请稍后重试');
     globalShowToast(errorMessage, 'error');
   }
 });
@@ -1498,19 +1442,19 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
         query: { permission: 'CAD_SAVE' },
       });
       if (!response.data?.hasPermission) {
-        globalShowToast('您没有保存图纸的权限', 'error');
+        globalShowToast(t('您没有保存图纸的权限'), 'error');
         return;
       }
     } catch (error) {
       handleError(error, 'mxcadManager: saveToCurrentFile permission check');
-      globalShowToast('权限检查失败，请稍后重试', 'error');
+      globalShowToast(t('权限检查失败，请稍后重试'), 'error');
       return;
     }
   }
 
   const fileInfo = getFileInfo();
   if (!fileInfo) {
-    globalShowToast('保存失败：文件信息丢失', 'error');
+    globalShowToast(t('保存失败：文件信息丢失'), 'error');
     return;
   }
   const { fileId, name, expectedTimestamp } = fileInfo;
@@ -1519,7 +1463,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     return;
   }
 
-  showGlobalLoading('正在保存文件...');
+  showGlobalLoading(t('正在保存文件...'));
 
   const savedFile = await new Promise<{
     blob: Blob;
@@ -1559,7 +1503,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
     );
   });
 
-  setLoadingMessage('正在上传到服务器...');
+  setLoadingMessage(t('正在上传到服务器...'));
 
   try {
     const filename = savedFile.filename.replace(/\.[^/.]+$/, '') + '.mxweb';
@@ -1580,14 +1524,14 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
       body: saveFormData,
     });
     if (!response.ok) {
-      const errBody = await response.json().catch(() => ({ message: '上传失败，请稍后重试' }));
-      throw new Error((errBody as { message?: string }).message || '上传失败，请稍后重试');
+      const errBody = await response.json().catch(() => ({ message: t('上传失败，请稍后重试') }));
+      throw new Error((errBody as { message?: string }).message || t('上传失败，请稍后重试'));
     }
   } catch (uploadError) {
     handleError(uploadError, 'mxcadManager: saveToCurrentFile upload');
     hideGlobalLoading();
     globalShowToast(
-      uploadError instanceof Error ? uploadError.message : '上传失败，请稍后重试',
+      uploadError instanceof Error ? uploadError.message : t('上传失败，请稍后重试'),
       'error',
     );
     return;
@@ -1656,7 +1600,7 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
 
   resetDocumentModified();
   hideGlobalLoading();
-  globalShowToast('文件保存成功', 'success');
+  globalShowToast(t('文件保存成功'), 'success');
 }
 
 /**
@@ -1665,14 +1609,14 @@ async function saveToCurrentFile(personalSpaceId: string | null) {
 async function saveLibraryFile() {
   const fileInfo = getFileInfo();
   if (!fileInfo) {
-    globalShowToast('保存失败：文件信息丢失', 'error');
+    globalShowToast(t('保存失败：文件信息丢失'), 'error');
     return;
   }
   let { fileId, name, libraryKey, path: nodePath, expectedTimestamp } = fileInfo;
   const commitMessage = ''; // Library files don't have user-facing commit messages
 
   if (!libraryKey) {
-    globalShowToast('保存失败：未知的资源库类型', 'error');
+    globalShowToast(t('保存失败：未知的资源库类型'), 'error');
     return;
   }
 
@@ -1697,11 +1641,11 @@ async function saveLibraryFile() {
   }
 
   if (!nodePath) {
-    globalShowToast('保存失败：缺少文件路径信息', 'error');
+    globalShowToast(t('保存失败：缺少文件路径信息'), 'error');
     return;
   }
 
-  showGlobalLoading('正在保存文件...');
+  showGlobalLoading(t('正在保存文件...'));
 
   const savedFile = await new Promise<{
     blob: Blob;
@@ -1742,7 +1686,7 @@ async function saveLibraryFile() {
   });
 
   try {
-    setLoadingMessage('正在上传到服务器...');
+    setLoadingMessage(t('正在上传到服务器...'));
 
     const file = new File([savedFile.blob], `${libraryKey}.mxweb`, { type: savedFile.blob.type });
     const hash = await calculateFileHash(file);
@@ -1761,8 +1705,8 @@ async function saveLibraryFile() {
       body: saveFormData,
     });
     if (!response.ok) {
-      const errBody = await response.json().catch(() => ({ message: '保存失败' }));
-      throw new Error((errBody as { message?: string }).message || '保存失败');
+      const errBody = await response.json().catch(() => ({ message: t('保存失败') }));
+      throw new Error((errBody as { message?: string }).message || t('保存失败'));
     }
 
     // 更新本地缓存 - 使用 node.path 构建正确的 URL
@@ -1817,12 +1761,12 @@ async function saveLibraryFile() {
 
     resetDocumentModified();
     hideGlobalLoading();
-    globalShowToast('文件保存成功', 'success');
+    globalShowToast(t('文件保存成功'), 'success');
   } catch (error) {
     handleError(error, 'mxcadManager: saveLibraryFile');
     hideGlobalLoading();
     globalShowToast(
-      error instanceof Error ? error.message : '保存失败，请稍后重试',
+      error instanceof Error ? error.message : t('保存失败，请稍后重试'),
       'error'
     );
   }
@@ -1859,7 +1803,7 @@ async function saveCurrentDrawingToBlob(fileName: string): Promise<{
 }> {
   const name = fileName || 'untitled';
 
-  showGlobalLoading('正在保存文件...');
+  showGlobalLoading(t('正在保存文件...'));
 
   const savedFile = await new Promise<{
     blob: Blob;
@@ -1965,7 +1909,7 @@ class MxCADContainerManager {
 
   getContainer(): HTMLElement {
     if (!this.globalContainer) {
-      throw new Error('全局容器未创建');
+      throw new Error(t('全局容器未创建'));
     }
     return this.globalContainer;
   }
@@ -2029,7 +1973,7 @@ class MxCADInstanceManager {
         await this.openFile(initialFileUrl);
       }
       if (!this.mxcadView) {
-        throw new Error('MxCADView 初始化失败，实例为空');
+        throw new Error(t('MxCADView 初始化失败，实例为空'));
       }
       return this.mxcadView;
     }
@@ -2039,7 +1983,7 @@ class MxCADInstanceManager {
     this.initPromise = null;
 
     if (!this.mxcadView) {
-      throw new Error('MxCADView 初始化失败，实例为空');
+      throw new Error(t('MxCADView 初始化失败，实例为空'));
     }
     return this.mxcadView;
   }
@@ -2309,7 +2253,7 @@ class MxCADInstanceManager {
 
   async openFile(fileUrl: string, noCache?: boolean): Promise<void> {
     if (!this.mxcadView || !this.isInitialized) {
-      throw new Error('MxCADView 实例未初始化');
+      throw new Error(t('MxCADView 实例未初始化'));
     }
 
     currentMxwebUrl = fileUrl;
@@ -2327,14 +2271,14 @@ class MxCADInstanceManager {
     }
 
     if (!this.mxcadView?.mxcad) {
-      throw new Error('mxcad 对象不可用');
+      throw new Error(t('mxcad 对象不可用'));
     }
 
     // 等待文件真正打开完成（监听 openFileComplete 事件）
     return new Promise<void>(async (resolve, reject) => {
       const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error('文件打开超时'));
+        reject(new Error(t('文件打开超时')));
       }, 60000);
 
       const cleanup = () => {
@@ -2435,7 +2379,7 @@ class MxCADInstanceManager {
       return false;
     }
 
-    showGlobalLoading('正在加载图纸...');
+    showGlobalLoading(t('正在加载图纸...'));
 
     // 等待文件打开完成（与 openFile 同样的模式）
     return new Promise<boolean>((resolve) => {
@@ -2663,7 +2607,7 @@ MxFun.addCommand('Mx_InsertImageWithUpload', () => {
       entity
     });
 
-    globalShowToast('图片已插入，将在保存时自动上传', 'success');
+    globalShowToast(t('图片已插入，将在保存时自动上传'), 'success');
   });
 });
 
@@ -2702,7 +2646,7 @@ export async function processPendingImages(): Promise<void> {
       // 下载图片数据
       const response = await fetch(img.url);
       if (!response.ok) {
-        throw new Error(`下载图片失败: ${response.status}`);
+        throw new Error(`${t('下载图片失败: ')}${response.status}`);
       }
       const blob = await response.blob();
       const file = new File([blob], img.fileName, { type: blob.type });

@@ -3,17 +3,18 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { Download } from 'lucide-react';
+import { t } from '@/languages';
 
 export interface DwgOptions {
   dwgVersion: number;
 }
 
 const DWG_VERSION_OPTIONS = [
-  { value: 23, label: 'CAD 2000（默认）' },
-  { value: 25, label: 'CAD 2004' },
-  { value: 27, label: 'CAD 2007' },
-  { value: 29, label: 'CAD 2010' },
-  { value: 33, label: 'CAD 2018' },
+  { value: 23, label: t('CAD 2000（默认）') },
+  { value: 25, label: t('CAD 2004') },
+  { value: 27, label: t('CAD 2007') },
+  { value: 29, label: t('CAD 2010') },
+  { value: 33, label: t('CAD 2018') },
 ];
 
 interface DwgExportModalProps {
@@ -57,11 +58,11 @@ export const DwgExportModal: React.FC<DwgExportModalProps> = ({
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            取消
+            {t('取消')}
           </Button>
           <Button onClick={handleExport} loading={loading}>
             <Download className="w-4 h-4 mr-2" />
-            导出
+            {t('导出')}
           </Button>
         </>
       }
@@ -75,7 +76,7 @@ export const DwgExportModal: React.FC<DwgExportModalProps> = ({
           }}
         >
           <p style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-medium">文件：</span>
+            <span className="font-medium">{t('文件：')}</span>
             <span className="ml-2 font-mono">{displayFileName}</span>
           </p>
         </div>
@@ -100,7 +101,7 @@ export const DwgExportModal: React.FC<DwgExportModalProps> = ({
               className="block font-medium mb-1"
               style={{ color: 'var(--text-secondary)' }}
             >
-              图纸版本
+              {t('图纸版本')}
             </label>
             <Select
               value={dwgVersion}

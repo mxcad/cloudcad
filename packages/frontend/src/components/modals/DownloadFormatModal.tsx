@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Download } from 'lucide-react';
+import { t } from '@/languages';
 
 export type DownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
 
@@ -18,11 +19,11 @@ export interface DwgOptions {
 }
 
 const DWG_VERSION_OPTIONS = [
-  { value: 23, label: 'CAD 2000（默认）' },
-  { value: 25, label: 'CAD 2004' },
-  { value: 27, label: 'CAD 2007' },
-  { value: 29, label: 'CAD 2010' },
-  { value: 33, label: 'CAD 2018' },
+  { value: 23, label: t('CAD 2000（默认）') },
+  { value: 25, label: t('CAD 2004') },
+  { value: 27, label: t('CAD 2007') },
+  { value: 29, label: t('CAD 2010') },
+  { value: 33, label: t('CAD 2018') },
 ];
 
 interface DownloadFormatModalProps {
@@ -82,15 +83,15 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       closeOnOverlayClick={!loading}
-      title="选择下载格式"
+      title={t('选择下载格式')}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            取消
+            {t('取消')}
           </Button>
           <Button onClick={handleDownload} loading={loading}>
             <Download className="w-4 h-4 mr-2" />
-            下载
+            {t('下载')}
           </Button>
         </>
       }
@@ -104,7 +105,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
           }}
         >
           <p style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-medium">文件：</span>
+            <span className="font-medium">{t('文件：')}</span>
             <span className="ml-2 font-mono">
               {getDisplayFileName(fileName, format)}
             </span>
@@ -117,16 +118,16 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
             className="block font-medium mb-3"
             style={{ color: 'var(--text-secondary)' }}
           >
-            选择下载格式 *
-          </label>
+             {t('选择下载格式 *')}
+           </label>
           <Select
             value={format}
             onChange={(val) => setFormat(val as DownloadFormat)}
             options={[
-              { value: 'mxweb', label: 'MXWEB 格式（默认）' },
-              { value: 'dwg', label: 'DWG 格式' },
-              { value: 'dxf', label: 'DXF 格式' },
-              { value: 'pdf', label: 'PDF 格式' },
+              { value: 'mxweb', label: t('MXWEB 格式（默认）') },
+              { value: 'dwg', label: t('DWG 格式') },
+              { value: 'dxf', label: t('DXF 格式') },
+              { value: 'pdf', label: t('PDF 格式') },
             ]}
           />
         </div>
@@ -144,7 +145,7 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
               className="font-medium"
               style={{ color: 'var(--text-secondary)' }}
             >
-              PDF 导出参数
+              {t('PDF 导出参数')}
             </p>
 
             <div className="grid grid-cols-2 gap-4">
@@ -153,8 +154,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                   className="block font-medium mb-1"
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  宽度（像素）
-                </label>
+                   {t('宽度（像素）')}
+                 </label>
                 <Input
                   value={pdfOptions.width}
                   onChange={(e) =>
@@ -168,8 +169,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                   className="block font-medium mb-1"
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  高度（像素）
-                </label>
+                   {t('高度（像素）')}
+                 </label>
                 <Input
                   value={pdfOptions.height}
                   onChange={(e) =>
@@ -185,8 +186,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                 className="block font-medium mb-1"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                颜色策略
-              </label>
+                 {t('颜色策略')}
+               </label>
               <Select
                 value={pdfOptions.colorPolicy}
                 onChange={(val) =>
@@ -196,8 +197,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                   })
                 }
                 options={[
-                  { value: 'mono', label: '黑白（单色）' },
-                  { value: 'color', label: '彩色' },
+                  { value: 'mono', label: t('黑白（单色）') },
+                  { value: 'color', label: t('彩色') },
                 ]}
                 size="sm"
               />
@@ -226,8 +227,8 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
                 className="block font-medium mb-1"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                图纸版本
-              </label>
+                 {t('图纸版本')}
+               </label>
               <Select
                 value={dwgVersion}
                 onChange={(val) => setDwgVersion(Number(val))}
@@ -244,16 +245,16 @@ export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
           style={{ color: 'var(--text-tertiary)' }}
         >
           <p>
-            • <strong>MXWEB</strong>：CloudCAD 专用格式，可直接在线编辑
+            • <strong>MXWEB</strong>{t('：CloudCAD 专用格式，可直接在线编辑')}
           </p>
           <p>
-            • <strong>DWG</strong>：AutoCAD 原生格式，需要转换时间
+            • <strong>DWG</strong>{t('：AutoCAD 原生格式，需要转换时间')}
           </p>
           <p>
-            • <strong>DXF</strong>：Drawing Exchange Format，需要转换时间
+            • <strong>DXF</strong>{t('：Drawing Exchange Format，需要转换时间')}
           </p>
           <p>
-            • <strong>PDF</strong>：便携式文档格式，需要转换时间
+            • <strong>PDF</strong>{t('：便携式文档格式，需要转换时间')}
           </p>
         </div>
       </div>

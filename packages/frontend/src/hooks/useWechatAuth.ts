@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { authControllerGetWechatAuthUrl } from '@/api-sdk';
+import { t } from '@/languages';
 
 export type WechatPurpose = 'login' | 'bind' | 'deactivate';
 
@@ -95,7 +96,7 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
         (err as Error & { response?: { data?: { message?: string } } })
           ?.response?.data?.message ||
         (err as Error).message ||
-        '获取授权链接失败';
+        t('获取授权链接失败');
       onError?.(errorMsg);
     } finally {
       loadingRef.current = false;

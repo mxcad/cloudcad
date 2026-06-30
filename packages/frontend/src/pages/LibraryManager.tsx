@@ -37,6 +37,7 @@ import MxCadUploader from '../components/MxCadUploader';
 import { EmptyFolderIcon } from '../components/FileIcons';
 import type { FileSystemNode } from '../types/filesystem';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { DirectoryImportDialog } from '../components/DirectoryImportDialog';
 
 import { FileSystemHeader } from './FileSystemManager/FileSystemHeader';
@@ -66,7 +67,7 @@ export const LibraryManager: React.FC = () => {
   const libraryType: 'drawing' | 'block' =
     urlLibraryType === 'block' ? 'block' : 'drawing';
 
-  useDocumentTitle(libraryType === 'drawing' ? '图纸库' : '图块库');
+  useDocumentTitle(libraryType === 'drawing' ? t('图纸库') : t('图块库'));
 
   // 分页状态 - useLibraryPagination hook
   const {
@@ -219,16 +220,16 @@ export const LibraryManager: React.FC = () => {
   // 剪贴板操作
   const clipboardHandleCopy = useCallback(() => {
     if (selectedNodes.size === 0) {
-      showToast('请先选择要复制的文件', 'info');
+      showToast(t('请先选择要复制的文件'), 'info');
       return;
     }
     setClipboard(Array.from(selectedNodes), 'copy', libraryId || '');
-    showToast(`已复制 ${selectedNodes.size} 个项目`, 'info');
+    showToast(t(`已复制 ${selectedNodes.size} 个项目`), 'info');
   }, [selectedNodes, setClipboard, libraryId, showToast]);
 
   const clipboardHandleCut = useCallback(() => {
     if (selectedNodes.size === 0) {
-      showToast('请先选择要剪切的文件', 'info');
+      showToast(t('请先选择要剪切的文件'), 'info');
       return;
     }
     const nodeIds = Array.from(selectedNodes);
@@ -238,14 +239,14 @@ export const LibraryManager: React.FC = () => {
       if (node?.parentId) sourceParentIds[id] = node.parentId;
     }
     setClipboard(nodeIds, 'cut', libraryId || '', sourceParentIds);
-    showToast(`已剪切 ${selectedNodes.size} 个项目`, 'info');
+    showToast(t(`已剪切 ${selectedNodes.size} 个项目`), 'info');
   }, [selectedNodes, nodes, setClipboard, libraryId, showToast]);
 
   const clipboardHandlePaste = useCallback(async () => {
     if (clipboardItems.length === 0 || !clipboardMode) return;
     const targetParentId = currentNode?.id || libraryId;
     if (!targetParentId) {
-      showToast('无法确定粘贴位置', 'error');
+      showToast(t('无法确定粘贴位置'), 'error');
       return;
     }
     try {
@@ -254,10 +255,10 @@ export const LibraryManager: React.FC = () => {
           await moveNode(nodeId, targetParentId);
         }
         clearClipboard();
-        showToast('粘贴成功', 'success');
+        showToast(t('粘贴成功'), 'success');
         pushAction({
           type: 'move',
-          description: `移动 ${clipboardItems.length} 个项目`,
+          description: t(`移动 ${clipboardItems.length} 个项目`),
           projectId: libraryId || undefined,
           execute: async () => {
             for (const nodeId of clipboardItems) {
@@ -292,11 +293,11 @@ export const LibraryManager: React.FC = () => {
             // 单个复制失败不影响其他
           }
         }
-        showToast('粘贴成功', 'success');
+        showToast(t('粘贴成功'), 'success');
         if (createdIdsRef.current.length > 0) {
           pushAction({
             type: 'paste-copy',
-            description: `复制 ${clipboardItems.length} 个项目`,
+            description: t(`复制 ${clipboardItems.length} 个项目`),
             projectId: libraryId || undefined,
             execute: async () => {
               const newIds: string[] = [];
@@ -327,7 +328,7 @@ export const LibraryManager: React.FC = () => {
       }
       refresh();
     } catch (error) {
-      showToast('粘贴失败', 'error');
+      showToast(t('粘贴失败'), 'error');
     }
   }, [clipboardItems, clipboardMode, currentNode, libraryId, moveNode, clearClipboard, showToast, pushAction, refresh, libraryType]);
 
@@ -366,10 +367,10 @@ export const LibraryManager: React.FC = () => {
       const action = undoStack[undoStack.length - 1];
       if (!action) return;
       await undoStoreUndo(libraryId || undefined);
-      showToast(`已撤销: ${action.description}`, 'info');
+      showToast(t(`已撤销: ${action.description}`), 'info');
       refresh();
     } catch (error) {
-      showToast('撤销失败', 'error');
+      showToast(t('撤销失败'), 'error');
     }
   }, [undoStack, undoStoreUndo, libraryId, showToast, refresh]);
 
@@ -382,7 +383,7 @@ export const LibraryManager: React.FC = () => {
       showToast(`已重做: ${action.description}`, 'info');
       refresh();
     } catch (error) {
-      showToast('重做失败', 'error');
+      showToast(t('重做失败'), 'error');
     }
   }, [redoStack, undoStoreRedo, libraryId, showToast, refresh]);
 
@@ -446,9 +447,9 @@ export const LibraryManager: React.FC = () => {
         const parentId = currentNode?.id || libraryId || undefined;
         await createFolder(name, parentId);
         closeCreateFolderModal();
-        showToast('文件夹创建成功', 'success');
+        showToast(t('文件夹创建成功'), 'success');
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : '创建失败';
+        const message = err instanceof Error ? err.message : t('创建失败');
         showToast(message, 'error');
       }
     },
@@ -694,17 +695,17 @@ export const LibraryManager: React.FC = () => {
     <div className="flex flex-col items-center justify-center h-full">
       <EmptyFolderIcon size={80} className="text-slate-300 mb-6 animate-float" />
       <h3 className="text-xl font-bold text-slate-900 mb-2" style={{ color: 'var(--text-primary)' }}>
-        {isFolderMode ? '文件夹是空的' : '资源库暂无内容'}
+        {isFolderMode ? t('文件夹是空的') : t('资源库暂无内容')}
       </h3>
       <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
         {canManage
-          ? '上传文件或创建文件夹开始使用'
-          : '资源库暂无内容，请稍后再来'}
+          ? t('上传文件或创建文件夹开始使用')
+          : t('资源库暂无内容，请稍后再来')}
       </p>
       {canManage && (
         <div className="flex gap-2">
           <Button onClick={openCreateFolderModal} variant="outline">
-            创建文件夹
+            {t('创建文件夹')}
           </Button>
         </div>
       )}
@@ -718,13 +719,13 @@ export const LibraryManager: React.FC = () => {
         value={libraryType}
         onChange={(val) => handleSwitchLibrary(val as 'drawing' | 'block')}
         options={[
-          { value: 'drawing', label: '图纸库' },
-          { value: 'block', label: '图块库' },
+          { value: 'drawing', label: t('图纸库') },
+          { value: 'block', label: t('图块库') },
         ]}
         size="sm"
       />
       {canManage && (
-        <Tooltip content="存储配额">
+        <Tooltip content={t('存储配额')}>
           <Button
             onClick={openQuotaModal}
             variant="secondary"
@@ -779,7 +780,7 @@ export const LibraryManager: React.FC = () => {
               <MxCadUploader
                 nodeId={() => currentNode?.id || libraryId || ''}
                 openAfterUpload={false}
-                onSuccess={() => { refresh(); showToast('文件上传成功', 'success'); }}
+                onSuccess={() => {                 refresh(); showToast(t('文件上传成功'), 'success');  }}
                 buttonText=""
                 buttonClassName="hover:bg-[var(--bg-tertiary)]"
               />
@@ -887,7 +888,7 @@ export const LibraryManager: React.FC = () => {
                     onBatchDelete={canManage ? (() => {
                       const nodeIds = Array.from(selectedNodes);
                       const count = nodeIds.length;
-                      showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
+    showConfirm(t('确认删除'), t(`确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`), async () => {
                         try {
                           const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
                           const fn = libraryType === 'drawing'
@@ -900,9 +901,9 @@ export const LibraryManager: React.FC = () => {
                           if (error) throw error;
                           const result = data as unknown as { successCount: number; failedCount: number };
                           if (result.failedCount > 0) {
-                            showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+          showToast(t(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`), 'warning');
                           } else {
-                            showToast(`成功删除 ${count} 个项目`, 'success');
+          showToast(t(`成功删除 ${count} 个项目`), 'success');
                           }
                           clearSelection();
                           await refresh();
@@ -953,7 +954,7 @@ export const LibraryManager: React.FC = () => {
       <Modal
         isOpen={isCreateFolderModalOpen}
         onClose={closeCreateFolderModal}
-        title="新建文件夹"
+        title={t('新建文件夹')}
       >
         <form
           onSubmit={(e) => {
@@ -972,14 +973,14 @@ export const LibraryManager: React.FC = () => {
                 className="block text-sm font-medium mb-1"
                 style={{ color: 'var(--text-primary)' }}
               >
-                文件夹名称
+                {t('文件夹名称')}
               </label>
               <Input
                 type="text"
                 id="folderName"
                 name="name"
                 required
-                placeholder="请输入文件夹名称"
+                placeholder={t('请输入文件夹名称')}
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -988,10 +989,10 @@ export const LibraryManager: React.FC = () => {
                 variant="outline"
                 onClick={closeCreateFolderModal}
               >
-                取消
+                {t('取消')}
               </Button>
               <Button type="submit" variant="primary">
-                创建
+                {t('创建')}
               </Button>
             </div>
           </div>
@@ -1034,7 +1035,7 @@ export const LibraryManager: React.FC = () => {
         libraryType={libraryType}
         onSuccess={(success) => {
           refresh();
-          showToast(success ? '批量导入成功' : '批量导入完成（部分文件导入失败）', success ? 'success' : 'warning');
+          showToast(success ? t('批量导入成功') : t('批量导入完成（部分文件导入失败）'), success ? 'success' : 'warning');
         }}
       />
 
@@ -1042,7 +1043,7 @@ export const LibraryManager: React.FC = () => {
       <Modal
         isOpen={quotaModalOpen}
         onClose={closeQuotaModal}
-        title="配置公共资源库存储配额"
+        title={t('配置公共资源库存储配额')}
         className="max-w-md"
         footer={
           <div className="modal-footer">
@@ -1051,7 +1052,7 @@ export const LibraryManager: React.FC = () => {
               onClick={closeQuotaModal}
               disabled={quotaLoading}
             >
-              取消
+              {t('取消')}
             </Button>
             <Button
               onClick={saveLibraryQuota}
@@ -1059,7 +1060,7 @@ export const LibraryManager: React.FC = () => {
               icon={Save}
               className="submit-btn"
             >
-              保存
+              {t('保存')}
             </Button>
           </div>
         }
@@ -1071,16 +1072,16 @@ export const LibraryManager: React.FC = () => {
             </div>
             <div className="library-info-text">
               <p className="library-name">
-                {libraryType === 'drawing' ? '图纸库' : '图块库'}
+                {libraryType === 'drawing' ? t('图纸库') : t('图块库')}
               </p>
-              <p className="library-type">公共资源库</p>
+              <p className="library-type">{t('公共资源库')}</p>
             </div>
           </div>
 
           <div className="quota-form">
             <label className="quota-label">
               <HardDrive size={16} />
-              <span>库存储配额</span>
+              <span>{t('库存储配额')}</span>
             </label>
             <FileSizeInput
               value={libraryQuota > 0 ? libraryQuota * 1024 * 1024 * 1024 : 0}
@@ -1093,8 +1094,8 @@ export const LibraryManager: React.FC = () => {
               units={['MB', 'GB', 'TB']}
             />
             <p className="quota-hint">
-              默认配额：{defaultLibraryQuota} GB
-              {libraryQuota === 0 && <span style={{ color: 'var(--text-muted)' }}>（跟随系统）</span>}
+              {t('默认配额：{quota} GB').replace('{quota}', String(defaultLibraryQuota))}
+              {libraryQuota === 0 && <span style={{ color: 'var(--text-muted)' }}>{t('（跟随系统）')}</span>}
             </p>
             {libraryStorageInfo && (
               <div className="quota-preview">
@@ -1107,7 +1108,7 @@ export const LibraryManager: React.FC = () => {
                   />
                 </div>
                 <p className="quota-text">
-                  已使用：{formatFileSize(libraryStorageInfo.used)} /{' '}
+                  {t('已使用：')}{formatFileSize(libraryStorageInfo.used)} /{' '}
                   {formatFileSize(libraryStorageInfo.total)} (
                   {libraryStorageInfo.usagePercent?.toFixed(1)}%)
                 </p>

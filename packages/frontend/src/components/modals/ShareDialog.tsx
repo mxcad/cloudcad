@@ -20,6 +20,7 @@ import {
   EXPIRATION_VALUES,
   formatExpiryDate,
 } from '@/constants/share';
+import { t } from '@/languages';
 import './ShareManageDialog.css';
 
 interface ShareListItem {
@@ -84,7 +85,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           path: { fileId: resolvedFileId },
         });
         if (response.error) {
-          setListError('获取分享链接失败');
+          setListError(t('获取分享链接失败'));
           return;
         }
         const fetched = (response.data as ShareListItem[]) ?? [];
@@ -94,7 +95,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           query: { fileId: resolvedFileId, page: 1, pageSize: 50 },
         });
         if (result.error) {
-          setListError('获取分享列表失败');
+          setListError(t('获取分享列表失败'));
           return;
         }
         const data = result.data as { items: ShareListItemDto[] } | undefined;
@@ -112,7 +113,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         }
       }
     } catch {
-      setListError('获取分享列表失败');
+      setListError(t('获取分享列表失败'));
     } finally {
       setListLoading(false);
     }
@@ -144,7 +145,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
   const createShare = useCallback(async () => {
     if (!resolvedFileId) {
-      showToast('请先打开图纸', 'error');
+      showToast(t('请先打开图纸'), 'error');
       return;
     }
 
@@ -171,7 +172,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       }
       const raw = result.data as Record<string, unknown> | undefined;
       if (!raw || typeof raw.token !== 'string') {
-        showToast('创建分享链接失败', 'error');
+        showToast(t('创建分享链接失败'), 'error');
         return;
       }
       const data: ShareInfo = {
@@ -213,7 +214,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setShareInfo(null);
       setView('list');
       fetchShares();
-      showToast('分享已撤销', 'success');
+      showToast(t('分享已撤销'), 'success');
       setShowRevokeConfirm(false);
       setRevokeTarget(null);
     } catch (error) {
@@ -257,7 +258,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         return;
       }
       setItems((prev) => prev.filter((i) => i.token !== revokeTarget));
-      showToast('分享已撤销', 'success');
+      showToast(t('分享已撤销'), 'success');
       setShowRevokeConfirm(false);
       setRevokeTarget(null);
     } catch (error) {
@@ -273,9 +274,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       await navigator.clipboard.writeText(fullUrl);
       setCopiedToken(token ?? linkUrl);
       setTimeout(() => setCopiedToken(null), 2000);
-      showToast('链接已复制', 'success');
+      showToast(t('链接已复制'), 'success');
     } catch {
-      showToast('复制失败', 'error');
+      showToast(t('复制失败'), 'error');
     }
   };
 
@@ -295,7 +296,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             }}
           >
             <Plus size={14} />
-            新建分享
+            {t('新建分享')}
           </Button>
         </div>
       )}
@@ -307,17 +308,17 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       ) : listError ? (
         <div className="share-dialog-error">
           <p>{listError}</p>
-          <Button variant="secondary" size="sm" onClick={fetchShares}>重试</Button>
+          <Button variant="secondary" size="sm" onClick={fetchShares}>{t('重试')}</Button>
         </div>
       ) : items.length === 0 ? (
         <div className="share-dialog-empty">
           <p className="share-dialog-empty-title">
-            {readOnly ? '当前没有可复制的分享链接' : '还没有分享过这个文件'}
+            {readOnly ? t('当前没有可复制的分享链接') : t('还没有分享过这个文件')}
           </p>
           {!readOnly && (
             <Button variant="primary" size="sm" style={{ marginTop: '12px' }} onClick={() => { setExpiration('7d'); setCustomDays(1); setView('create'); }}>
-              新建分享
-            </Button>
+               {t('新建分享')}
+             </Button>
           )}
         </div>
       ) : (
@@ -325,9 +326,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           <table className="share-dialog-table">
             <thead>
               <tr>
-                <th>链接</th>
-                <th>有效期</th>
-                <th>操作</th>
+                <th>{t('链接')}</th>
+                <th>{t('有效期')}</th>
+                <th>{t('操作')}</th>
               </tr>
             </thead>
             <tbody>
@@ -341,7 +342,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       <button
                         onClick={() => handleCopyItem(item.url, item.token)}
                         className="share-dialog-copy-btn"
-                        title="复制链接"
+                        title={t('复制链接')}
                       >
                         {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                       </button>
@@ -358,7 +359,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                           size="xs"
                           icon={Trash2}
                           onClick={() => confirmRevokeItem(item.token)}
-                          tooltip="撤销分享"
+                          tooltip={t('撤销分享')}
                           style={{ color: 'var(--error)' }}
                         />
                       )}
@@ -376,7 +377,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   const renderCreateView = () => (
     <div className="share-dialog-create-body">
       <div className="share-dialog-create-section">
-        <span className="share-dialog-create-label">有效期</span>
+        <span className="share-dialog-create-label">{t('有效期')}</span>
         <div className="share-dialog-expiration-group">
           {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map(
             (key) => (
@@ -401,19 +402,19 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               onChange={(e) => setCustomDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
               className="share-dialog-custom-input"
             />
-            <span className="share-dialog-custom-label">天后过期</span>
+            <span className="share-dialog-custom-label">{t('天后过期')}</span>
           </div>
         )}
       </div>
 
       <Button variant="primary" onClick={createShare} className="share-dialog-action-btn">
-        生成分享链接
+        {t('生成分享链接')}
       </Button>
 
       {items.length > 0 && (
         <Button variant="secondary" onClick={() => setView('list')} className="share-dialog-action-btn">
           <ArrowLeft size={14} />
-          返回分享列表
+          {t('返回分享列表')}
         </Button>
       )}
     </div>
@@ -438,23 +439,23 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         <span className="share-dialog-url-text">{fullUrl}</span>
         <button onClick={copyLink} className={`share-dialog-copy-link-btn ${copied ? 'share-dialog-copy-link-btn--copied' : ''}`}>
           {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? '已复制' : '复制'}
+          {copied ? t('已复制') : t('复制')}
         </button>
       </div>
 
       {shareInfo!.expiresAt && (
         <span className="share-dialog-expiry-hint">
-          有效期至: {new Date(shareInfo!.expiresAt).toLocaleString()}
+          {t('有效期至: {date}').replace('{date}', new Date(shareInfo!.expiresAt).toLocaleString())}
         </span>
       )}
 
       <div className="share-dialog-created-actions">
         <Button variant="secondary" onClick={confirmRevokeCurrent} disabled={revoking} style={{ flex: 1 }}>
           {revoking ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-          撤销分享
+          {t('撤销分享')}
         </Button>
         <Button variant="primary" onClick={onClose} style={{ flex: 1 }}>
-          完成
+          {t('完成')}
         </Button>
       </div>
     </div>
@@ -463,13 +464,13 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   const renderLoadingView = () => (
     <div className="share-dialog-loading-view">
       <Loader2 size={24} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
-      <span className="share-dialog-loading-text">正在生成分享链接...</span>
+      <span className="share-dialog-loading-text">{t('正在生成分享链接...')}</span>
     </div>
   );
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={readOnly ? '复制分享链接' : '分享图纸'} size={readOnly ? 'md' : (view === 'list' ? 'md' : 'sm')}>
+      <Modal isOpen={isOpen} onClose={onClose} title={readOnly ? t('复制分享链接') : t('分享图纸')} size={readOnly ? 'md' : (view === 'list' ? 'md' : 'sm')}>
         {readOnly ? (
           renderListView()
         ) : (

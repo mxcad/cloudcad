@@ -5,6 +5,17 @@ declare module 'vue' {
   export function watch(source: any, callback: any, options?: any): any;
 }
 
+/** mxcad-app/style — CSS side-effect import */
+declare module 'mxcad-app/style';
+
+/** Non-standard but widely-supported webkitdirectory attribute */
+import 'react';
+declare module 'react' {
+  interface InputHTMLAttributes<T> {
+    webkitdirectory?: string;
+  }
+}
+
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
   readonly VITE_APP_NAME: string;

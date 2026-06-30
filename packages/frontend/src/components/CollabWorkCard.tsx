@@ -8,6 +8,7 @@ import {
 } from '../types/collaboration';
 import type { CollaborateWorkDataV3 } from '../types/collaboration';
 import { CollabShareModal } from './CollabShareModal';
+import { t } from '@/languages';
 import styles from './CollaborateSidebar.module.css';
 
 export interface WorkData {
@@ -65,14 +66,14 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
             </div>
           )}
         </div>
-        <span className={styles.workCardBadge}>{onlineCount}在线</span>
+        <span className={styles.workCardBadge}>{onlineCount}{t('在线')}</span>
       </div>
 
       <div className={styles.workCardFooter}>
         <div className={styles.workCardAvatars}>
-          {participants.length === 0 && <span className={styles.workCardNoUsers}>暂无参与者</span>}
+          {participants.length === 0 && <span className={styles.workCardNoUsers}>{t('暂无参与者')}</span>}
           {participants.map((ud, i) => {
-            let name = `用户${i + 1}`;
+            let name = `${t('用户')}${i + 1}`;
             let avatar: string | undefined;
             try {
               const parsed = JSON.parse(atob(ud));
@@ -102,7 +103,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
             icon={Share2}
             onClick={() => setShowShare(true)}
           >
-            分享
+            {t('分享')}
           </Button>
           {isJoined ? (
             <Button
@@ -111,7 +112,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
               icon={LogOut}
               onClick={onExit}
             >
-              退出
+              {t('退出')}
             </Button>
           ) : (
             <Button
@@ -122,7 +123,7 @@ export const CollabWorkCard: React.FC<CollabWorkCardProps> = ({
               loading={isJoining}
               onClick={() => onJoin(work.work_id)}
             >
-              加入
+              {t('加入')}
             </Button>
           )}
         </div>

@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { Upload } from 'lucide-react';
 import { AlertTriangle } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
+import { t } from '@/languages';
 
 interface ExternalReferenceModalProps {
   /** 模态框是否打开 */
@@ -114,29 +115,29 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
   const getStatusText = (file: ExternalReferenceFile) => {
     // 优先显示上传状态
     if (file.uploadState === 'success') {
-      return '已完成';
+      return t('已完成');
     }
     if (file.uploadState === 'fail') {
-      return '上传失败';
+      return t('上传失败');
     }
     if (file.uploadState === 'uploading') {
-      return '上传中';
+      return t('上传中');
     }
 
     // 如果文件已存在，显示"已上传"
     if (file.exists) {
-      return '已上传';
+      return t('已上传');
     }
 
     // 默认状态
-    return '待上传';
+    return t('待上传');
   };
 
   const modalContent = (
     <Modal
       isOpen={isOpen}
       onClose={onSkip}
-      title="管理外部参照文件"
+      title={t('管理外部参照文件')}
       size="lg"
       contentClassName="p-0"
       footer={
@@ -154,12 +155,12 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               {hasUploading ? (
                 <>
                   <Loader2 size={14} className="mr-1.5 animate-spin" data-testid="icon-loader" />
-                  上传中...
+                  {t('上传中...')}
                 </>
               ) : (
                 <>
                   <Upload size={14} className="mr-1.5" />
-                  选择并上传
+                  {t('选择并上传')}
                 </>
               )}
             </Button>
@@ -180,7 +181,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
             data-tour="xref-complete-btn"
             className="min-w-[72px] h-8"
           >
-            {isCADEditor ? '继续打开' : '完成'}
+            {isCADEditor ? t('继续打开') : t('完成')}
           </Button>
         </div>
       }
@@ -197,16 +198,16 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
               <thead className="sticky top-0 z-10">
                 <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                   <th className="px-3 py-2 text-left font-medium w-12" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-                    状态
+                    {t('状态')}
                   </th>
                   <th className="px-3 py-2 text-left font-medium" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-                    文件名
+                    {t('文件名')}
                   </th>
                   <th className="px-3 py-2 text-center font-medium w-20" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-                    类型
+                    {t('类型')}
                   </th>
                   <th className="px-3 py-2 text-right font-medium w-24" style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-                    进度
+                    {t('进度')}
                   </th>
                 </tr>
               </thead>
@@ -250,7 +251,7 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                        {file.type === 'img' ? '图片' : 'DWG'}
+                        {file.type === 'img' ? t('图片') : 'DWG'}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right align-middle">
@@ -272,9 +273,9 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
                       ) : file.uploadState === 'success' ? (
                         <span style={{ color: 'var(--success)', fontSize: '0.75rem' }}>100%</span>
                       ) : file.uploadState === 'fail' ? (
-                        <span style={{ color: 'var(--error)', fontSize: '0.75rem' }}>失败</span>
+                        <span style={{ color: 'var(--error)', fontSize: '0.75rem' }}>{t('失败')}</span>
                       ) : file.exists ? (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>可覆盖</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t('可覆盖')}</span>
                       ) : (
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>-</span>
                       )}
@@ -286,14 +287,14 @@ export const ExternalReferenceModal: React.FC<ExternalReferenceModalProps> = ({
           </div>
         ) : (
           <div className="rounded-lg p-6 text-center" style={{ color: 'var(--text-muted)' }}>
-            暂无外部参照文件
+            {t('暂无外部参照文件')}
           </div>
         )}
 
         {hasUploading && (
           <div className="mt-3 space-y-1.5">
             <div className="flex items-center justify-between" style={{ fontSize: '0.75rem' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>正在上传...</span>
+              <span style={{ color: 'var(--text-secondary)' }}>{t('正在上传...')}</span>
               <span style={{ color: 'var(--primary-500)' }}>
                 {files.filter((f) => f.uploadState === 'success').length} /{' '}
                 {files.length}

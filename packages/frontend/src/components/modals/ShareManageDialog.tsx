@@ -14,6 +14,7 @@ import { ShareDialog } from './ShareDialog';
 import { EditExpiryModal } from './EditExpiryModal';
 import { ConfirmRevokeModal } from './ConfirmRevokeModal';
 import { formatExpiryDate } from '@/constants/share';
+import { t } from '@/languages';
 import './ShareManageDialog.css';
 
 interface ShareManageDialogProps {
@@ -85,7 +86,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
         return;
       }
       setItems((prev) => prev.filter((i) => i.token !== revokeTarget));
-      showToast('分享已撤销', 'success');
+      showToast(t('分享已撤销'), 'success');
       setShowRevokeConfirm(false);
       setRevokeTarget(null);
     } catch (error) {
@@ -101,9 +102,9 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
       await navigator.clipboard.writeText(fullUrl);
       setCopiedToken(token ?? linkUrl);
       setTimeout(() => setCopiedToken(null), 2000);
-      showToast('链接已复制', 'success');
+      showToast(t('链接已复制'), 'success');
     } catch {
-      showToast('复制失败', 'error');
+      showToast(t('复制失败'), 'error');
     }
   };
 
@@ -123,7 +124,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
         showToast(getErrorMessage(result.error), 'error');
         return;
       }
-      showToast('有效期已更新', 'success');
+      showToast(t('有效期已更新'), 'success');
       setShowEditModal(false);
       setEditTarget(null);
       fetchShares();
@@ -134,7 +135,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={`"${fileName}" 的分享链接`} size="md">
+      <Modal isOpen={isOpen} onClose={onClose} title={t('"${fileName}" 的分享链接').replace('${fileName}', fileName)} size="md">
         <div className="share-dialog-body">
           <div className="share-dialog-toolbar">
             <Button
@@ -143,7 +144,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
               onClick={() => setCreateDialogOpen(true)}
             >
               <Plus size={14} />
-              新建分享
+              {t('新建分享')}
             </Button>
           </div>
 
@@ -154,15 +155,15 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
           ) : error ? (
             <div className="share-dialog-error">
               <p>{error}</p>
-              <Button variant="secondary" size="sm" onClick={fetchShares}>重试</Button>
+              <Button variant="secondary" size="sm" onClick={fetchShares}>{t('重试')}</Button>
             </div>
           ) : items.length === 0 ? (
             <div className="share-dialog-empty">
               <p className="share-dialog-empty-title">
-                还没有分享过这个文件
+                {t('还没有分享过这个文件')}
               </p>
               <Button variant="primary" size="sm" style={{ marginTop: '12px' }} onClick={() => setCreateDialogOpen(true)}>
-                新建分享
+                {t('新建分享')}
               </Button>
             </div>
           ) : (
@@ -170,10 +171,10 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
               <table className="share-dialog-table">
                 <thead>
                   <tr>
-                    <th>链接</th>
-                    <th>有效期</th>
-                    <th>次数</th>
-                    <th>操作</th>
+                    <th>{t('链接')}</th>
+                    <th>{t('有效期')}</th>
+                    <th>{t('次数')}</th>
+                    <th>{t('操作')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -187,7 +188,7 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                           <button
                             onClick={() => handleCopy(item.url, item.token)}
                             className="share-dialog-copy-btn"
-                            title="复制链接"
+                            title={t('复制链接')}
                           >
                             {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                           </button>
@@ -209,21 +210,21 @@ export const ShareManageDialog: React.FC<ShareManageDialogProps> = ({
                             size="xs"
                             icon={ExternalLink}
                             onClick={() => window.open(item.url, '_blank')}
-                            tooltip="打开文件"
+                            tooltip={t('打开文件')}
                           />
                           <Button
                             variant="secondary"
                             size="xs"
                             icon={Edit3}
                             onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
-                            tooltip="修改有效期"
+                            tooltip={t('修改有效期')}
                           />
                           <Button
                             variant="secondary"
                             size="xs"
                             icon={Trash2}
                             onClick={() => confirmRevoke(item.token)}
-                            tooltip="撤销分享"
+                            tooltip={t('撤销分享')}
                             style={{ color: 'var(--error)' }}
                           />
                         </div>

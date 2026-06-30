@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { t } from '@/languages';
 
 interface ConfirmRevokeModalProps {
   isOpen: boolean;
@@ -15,8 +16,8 @@ export const ConfirmRevokeModal: React.FC<ConfirmRevokeModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = '确认撤销',
-  message = '确定要撤销此分享链接？链接失效后访问者将无法打开图纸。',
+  title = t('确认撤销'),
+  message = t('确定要撤销此分享链接？链接失效后访问者将无法打开图纸。'),
   loading = false,
 }) => {
   return (
@@ -26,14 +27,14 @@ export const ConfirmRevokeModal: React.FC<ConfirmRevokeModalProps> = ({
           {message}
         </p>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>取消</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>{t('取消')}</Button>
           <Button
             variant="primary"
             onClick={onConfirm}
             loading={loading}
             style={{ background: 'var(--error)', borderColor: 'var(--error)' }}
           >
-            确认撤销
+            {t('确认撤销')}
           </Button>
         </div>
       </div>

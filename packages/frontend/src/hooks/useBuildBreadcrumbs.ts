@@ -6,6 +6,7 @@
 import { useCallback } from 'react';
 import { fileSystemControllerGetNode } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
+import { t } from '@/languages';
 
 export interface BreadcrumbItem {
   id: string;
@@ -45,13 +46,13 @@ export function useBuildBreadcrumbs() {
       }
 
       if (path.length === 0) {
-        return [{ id: nodeId, name: '根目录' }];
+        return [{ id: nodeId, name: t('根目录') }];
       }
 
       return path;
     } catch (error: unknown) {
       handleError(error, 'useBuildBreadcrumbs: 构建面包屑路径失败');
-      return [{ id: nodeId, name: '根目录' }];
+      return [{ id: nodeId, name: t('根目录') }];
     }
   }, []);
 

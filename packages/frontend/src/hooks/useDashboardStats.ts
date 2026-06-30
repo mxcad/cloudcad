@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { usersControllerGetDashboardStats } from '@/api-sdk';
 import type { UserDashboardStatsDto } from '@/api-sdk';
+import { t } from '@/languages';
 
 const DASHBOARD_STATS_KEY = ['dashboard', 'stats'] as const;
 
@@ -18,6 +19,6 @@ export function useDashboardStats() {
     data: query.data ?? null,
     loading: query.isLoading,
     isFetching: query.isFetching,
-    error: query.error ? '加载统计数据失败' : null,
+    error: query.error ? t('加载统计数据失败') : null,
   };
 }

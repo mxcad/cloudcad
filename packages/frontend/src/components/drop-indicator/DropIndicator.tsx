@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CSS_CLASSES } from '../../services/mxcadManager/mxcadTypes';
+import { t } from '@/languages';
 
 interface DropIndicatorProps {
   visible: boolean;
@@ -52,8 +53,8 @@ export const DropIndicator: React.FC<DropIndicatorProps> = ({ visible, fileCount
         </svg>
         <p className="drop-indicator-text">
           {fileCount > 1
-            ? `松开即可上传 ${fileCount} 个文件`
-            : '松开即可打开图纸'}
+            ? t(`松开即可上传 ${fileCount} 个文件`)
+            : t('松开即可打开图纸')}
         </p>
       </div>
     </div>,

@@ -136,12 +136,12 @@
 - [ ] **`CollaborateSidebar.tsx` (928 行) 拆分**：
   - [ ] auto-join 逻辑抽成 hook
   - [ ] 三个过滤列表抽成子组件
-- [ ] **硬编码中文未走 i18n `t()`**：
-  - [ ] `mxcadManager/index.ts:1087` — `"不支持的文件格式"`
-  - [ ] `mxcadManager/index.ts` + `CADEditorDirect.tsx` + `CollaborateSidebar.tsx` 中所有硬编码字符串
-- [ ] **合并 `styles/theme.css` (915 行) 与 `styles/app.css` (961 行)** — 消除重复主题变量
-- [ ] **消除两处重复的 `@keyframes` 动画定义** — `theme.css:663-727` 与 `app.css:143-207`
-- [ ] **`app.css` 中硬编码 `rgba(255,255,255,0.8)` 等值** — 应使用 CSS 变量
+- [x] **硬编码中文未走 i18n `t()`**：
+  - [x] `mxcadManager/index.ts:1087` — `"不支持的文件格式"`
+  - [x] `mxcadManager/index.ts` + `CADEditorDirect.tsx` + `CollaborateSidebar.tsx` 中所有硬编码字符串
+- [x] **合并 `styles/theme.css` (927 行) 与 `styles/app.css` (844 行)** — 消除重复主题变量（radius/transition/font/shadow 从 app.css 移除，保留 theme.css 统一管理）
+- [x] **消除两处重复的 `@keyframes` 动画定义** — 从 app.css 删除 9 个与 theme.css 重复的 keyframes（fade-in、scale-in、slide-up、slide-in-right、pulse-soft、slide-in-top、spin、bounce、shimmer#2），保留 4 个 unique（shimmer#1、float、skeleton-loading、highlight-fade）
+- [x] **`app.css` 中硬编码 `rgba(255,255,255,0.8)` 等值** — 添加 `--glass-bg`/`--glass-border` CSS 变量到 theme.css，替换 `.glass`、`.backdrop-blur-xl` 及深色主题状态色的 rgba
 - [x] **`mxcadManager/index.ts:1953` 硬编码 `z-index: -1`** — 应使用 `Z_LAYERS` 常量
 - [ ] **仅 1 个根级 `<ErrorBoundary>`，无页面级边界** — CADEditorDirect、Profile、FontLibrary 等复杂页面无独立错误边界
 - [x] **竞态条件：多处 useEffect 无 AbortController**：
@@ -165,7 +165,7 @@
   - [ ] `Mx_ExportPDF` / `Mx_ExportDWG` / `Mx_ExportDXF` 合并
 - [ ] **`FileItem.tsx:42-129` 深度 prop drilling（40+ props）** — 应整合到 `FileItemConfig` Context 或单一 `PermissionMap`
 - [ ] **`Profile.tsx:103-150` 手动表单 state 无 react-hook-form** — 密码/邮箱/手机表单无验证框架
-- [ ] **`FontLibrary.tsx:283` render 中 `new Set(fonts.map(f => f.name))` 无 useMemo**
+- [x] **`FontLibrary.tsx:283` render 中 `new Set(fonts.map(f => f.name))` 无 useMemo**（283 行在事件处理器内无需 memo，408 行已在 useMemo 中）
 - [ ] **`useFileItemProps.ts:103` `useMemo` 返回 `Map`** — 每次创建新 Map 引用，破坏 memo 目的
 - [ ] **`TourStartModal.tsx:100` 使用 `key={index}`** — 静态列表可接受但应使用稳定 ID
 - [ ] **`ExternalReferenceModal.tsx:216` 使用 `key={index}`**
@@ -204,11 +204,11 @@
 ### 🟢 P3 — 低优先级
 
 - [ ] **仅 3 处 `React.memo`** — 大型列表页面（用户管理、文件系统）需补充
-- [ ] **调试日志**：`CADEditorDirect.tsx:394`、`CollaborateSidebar.tsx:407` 的 `console.log`
+- [x] **调试日志**：`CADEditorDirect.tsx:394`、`CollaborateSidebar.tsx:407` 的 `console.log`
 - [x] ~~**`CollaborateSidebar.module.css` 导入但文件不存在** — `CollaborateSidebar.tsx:47`~~（文件实际存在且被 4 个组件使用，TODO 记录有误）
 - [ ] **后端 API 调用直接使用 `fetch` 而非 SDK** — `mxcadManager/index.ts` 中 `/api/v1/mxcad/savemxweb/` 多处
 - [ ] **`useMxCadEditor.ts` 中注释掉的 serverConfig 代码** — 第 43-83 行可能已废弃
-- [ ] **`@ts-ignore` / `@ts-expect-error` 共 8 处** — 尤其业务代码（非测试文件）中的应修复
+- [x] **`@ts-ignore` / `@ts-expect-error` 共 8 处** — 尤其业务代码（非测试文件）中的应修复
 - [ ] **导入路径不一致** — 混用 `@/` 别名和 `../../` 相对路径
 - [ ] **Hook 导出/返回值不一致** — `export function` vs `export const` 混用，返回值形状各异
 - [ ] **`app.css` 中可能未使用的 CSS 类** — `.loader`、`@keyframes skeleton-loading` 等
@@ -478,7 +478,7 @@
 
 ---
 
-> 统计：**共 252 个条目**（P0: 49, P1: 67, P2: 88, P3: 48） → 已完成 145 个
+> 统计：**共 252 个条目**（P0: 49, P1: 67, P2: 88, P3: 48） → 已完成 151 个
 
 ---
 

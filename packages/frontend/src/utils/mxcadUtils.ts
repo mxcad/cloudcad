@@ -12,6 +12,7 @@
 
 ﻿import { StoragePathConstants } from '../constants/storage.constants';
 import { ValidationHelper as StorageValidationHelper } from '../constants/storage.constants';
+import { t } from '@/languages';
 
 /**
  * 错误处理工具
@@ -58,11 +59,11 @@ export class ErrorHandler {
  */
 export class FileStatusHelper {
   private static statusTextMap = {
-    UPLOADING: '正在上传',
-    PROCESSING: '正在处理',
-    COMPLETED: '已完成',
-    FAILED: '处理失败',
-    DELETED: '已删除',
+    UPLOADING: t('正在上传'),
+    PROCESSING: t('正在处理'),
+    COMPLETED: t('已完成'),
+    FAILED: t('处理失败'),
+    DELETED: t('已删除'),
   } as const;
 
   static getStatusText(status: string): string {
@@ -107,7 +108,7 @@ export class UrlHelper {
     // 验证路径格式，防止路径遍历攻击
     if (!StorageValidationHelper.isValidNodePath(nodePath)) {
       console.error('无效的节点路径格式', { nodePath });
-      throw new Error('无效的节点路径格式');
+      throw new Error(t('无效的节点路径格式'));
     }
 
     // 使用常量拼接路径

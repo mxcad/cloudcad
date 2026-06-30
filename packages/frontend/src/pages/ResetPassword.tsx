@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -48,7 +49,7 @@ interface LocationState {
  * - 完美主题适配
  */
 export const ResetPassword: React.FC = () => {
-  useDocumentTitle('重置密码');
+  useDocumentTitle(t('重置密码'));
   const navigate = useNavigate();
   const location = useLocation();
   const { config: brandConfig } = useBrandConfig();
@@ -91,7 +92,7 @@ export const ResetPassword: React.FC = () => {
       setSuccess(true);
       setTimeout(() => {
         navigate('/login', {
-          state: { message: '密码重置成功，请使用新密码登录' },
+          state: { message: t('密码重置成功，请使用新密码登录') },
         });
       }, 2000);
     }
@@ -186,7 +187,7 @@ export const ResetPassword: React.FC = () => {
                     type="email"
                     autoComplete="email"
                     className="input-field"
-                    placeholder="请输入邮箱地址"
+                    placeholder={t('请输入邮箱地址')}
                     value={emailFromState}
                     readOnly
                   />
@@ -205,7 +206,7 @@ export const ResetPassword: React.FC = () => {
                     type="tel"
                     autoComplete="tel"
                     className="input-field"
-                    placeholder="请输入手机号码"
+                    placeholder={t('请输入手机号码')}
                     value={phoneFromState}
                     readOnly
                   />
@@ -225,7 +226,7 @@ export const ResetPassword: React.FC = () => {
                   type="text"
                   maxLength={6}
                   className="input-field"
-                  placeholder="请输入6位验证码"
+                  placeholder={t('请输入6位验证码')}
                   {...register('code')}
                 />
                 <div className="input-glow" />
@@ -243,7 +244,7 @@ export const ResetPassword: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   className="input-field"
-                  placeholder="新密码（至少8个字符）"
+                  placeholder={t('新密码（至少8个字符）')}
                   {...register('newPassword')}
                 />
                 <Button
@@ -269,7 +270,7 @@ export const ResetPassword: React.FC = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   className="input-field"
-                  placeholder="请再次输入新密码"
+                  placeholder={t('请再次输入新密码')}
                   {...register('confirmPassword')}
                 />
                 <Button
@@ -298,13 +299,13 @@ export const ResetPassword: React.FC = () => {
 
           {/* 特性图标 */}
           <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+            <div className="feature-dot" data-tooltip={t('高性能 CAD 在线预览')}>
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip={t('多用户实时协同编辑')}>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip={t('企业级数据安全保障')}>
               <ShieldCheck size={14} />
             </div>
           </div>

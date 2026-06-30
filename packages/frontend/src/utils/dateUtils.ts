@@ -9,6 +9,8 @@
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
+import { t } from '@/languages';
+
 /**
  * 日期工具函数
  */
@@ -79,13 +81,13 @@ export function getRelativeTime(date: string | Date | number): string {
   const days = Math.floor(hours / 24);
   
   if (seconds < 60) {
-    return '刚刚';
+    return t('刚刚');
   } else if (minutes < 60) {
-    return `${minutes}分钟前`;
+    return t(`${minutes}分钟前`);
   } else if (hours < 24) {
-    return `${hours}小时前`;
+    return t(`${hours}小时前`);
   } else if (days < 30) {
-    return `${days}天前`;
+    return t(`${days}天前`);
   } else {
     return formatDate(d);
   }

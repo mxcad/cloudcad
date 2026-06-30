@@ -49,15 +49,15 @@ export const getErrorMessage = (error: unknown): string => {
     try {
       const str = JSON.stringify(error);
       if (str === '{}') {
-        return '请求失败，请检查网络或联系管理员';
+        return t('请求失败，请检查网络或联系管理员');
       }
       return str;
     } catch {
-      return '未知错误';
+      return t('未知错误');
     }
   }
 
-  return '未知错误';
+  return t('未知错误');
 };
 
 /**
@@ -175,6 +175,7 @@ export const isAuthError = (error: unknown): boolean => {
   return false;
 };
 
+import { t } from '@/languages';
 import { globalShowToast } from '../contexts/NotificationContext';
 
 /**

@@ -38,12 +38,13 @@ import { getErrorMessage } from '../utils/errorHandler';
 import { formatFileSize } from '../components/ui/FileSize';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 
 interface FontLibraryProps {}
 
 // 字体文件类型配置 - 使用颜色和 lucide 图标
 const FONT_TYPES = [
-  { value: '', label: '全部格式', color: '#6366f1', Icon: FolderOpen },
+  { value: '', label: t('全部格式'), color: '#6366f1', Icon: FolderOpen },
   { value: '.ttf', label: 'TTF', color: '#22c55e', Icon: Type },
   { value: '.otf', label: 'OTF', color: '#009cff', Icon: FileText },
   { value: '.woff', label: 'WOFF', color: '#f59e0b', Icon: FileBox },
@@ -87,7 +88,7 @@ const getFontIcon = (
 };
 
 export default function FontLibrary(props: FontLibraryProps) {
-  useDocumentTitle('字体库');
+  useDocumentTitle(t('字体库'));
   const { hasPermission } = usePermission();
   const { showToast, showConfirm } = useNotification();
 
@@ -287,8 +288,8 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 删除字体
   const handleDelete = async (fontName: string) => {
     const confirmed = await showConfirm({
-      title: '确认删除',
-      message: `确定要删除字体 "${fontName}" 吗？`,
+      title: t('确认删除'),
+      message: t(`确定要删除字体 "${fontName}" 吗？`),
       type: 'danger',
     });
     if (!confirmed) return;
@@ -308,7 +309,7 @@ export default function FontLibrary(props: FontLibraryProps) {
         newSet.delete(fontName);
         return newSet;
       });
-      showToast('删除成功', 'success');
+      showToast(t('删除成功'), 'success');
     } catch (error) {
       console.error('删除字体失败:', error);
       showToast(getErrorMessage(error), 'error');
@@ -318,13 +319,13 @@ export default function FontLibrary(props: FontLibraryProps) {
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedFonts.size === 0) {
-      showToast('请先选择要删除的字体', 'warning');
+      showToast(t('请先选择要删除的字体'), 'warning');
       return;
     }
 
     const confirmed = await showConfirm({
-      title: '确认批量删除',
-      message: `确定要删除选中的 ${selectedFonts.size} 个字体吗？`,
+      title: t('确认批量删除'),
+      message: t(`确定要删除选中的 ${selectedFonts.size} 个字体吗？`),
       type: 'danger',
     });
     if (!confirmed) return;
@@ -345,11 +346,11 @@ export default function FontLibrary(props: FontLibraryProps) {
       };
       if (result.failedCount > 0) {
         showToast(
-          `成功删除 ${result.successCount} 个，${result.failedCount} 个失败`,
+          t(`成功删除 ${result.successCount} 个，${result.failedCount} 个失败`),
           'warning'
         );
       } else {
-        showToast('批量删除成功', 'success');
+        showToast(t('批量删除成功'), 'success');
       }
       setSelectedFonts(new Set());
       await fetchFonts();
@@ -373,7 +374,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       } else if (data instanceof Blob) {
         blob = data;
       } else {
-        throw new Error('无法获取字体文件数据');
+        throw new Error(t('无法获取字体文件数据'));
       }
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -383,7 +384,7 @@ export default function FontLibrary(props: FontLibraryProps) {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      showToast('下载成功', 'success');
+      showToast(t('下载成功'), 'success');
     } catch (error) {
       console.error('下载字体失败:', error);
       showToast(getErrorMessage(error), 'error');
@@ -498,7 +499,7 @@ export default function FontLibrary(props: FontLibraryProps) {
             {/* 搜索框 */}
             <div className="flex-1 min-w-[240px]">
               <SearchInput
-                placeholder="搜索字体名称..."
+                placeholder={t('搜索字体名称...')}
                 value={filters.name}
                 onChange={(e) => handleFilterChange('name', e.target.value)}
               />
@@ -522,7 +523,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               icon={Filter}
               onClick={() => setShowFilters(!showFilters)}
             >
-              筛选
+              {t('筛选')}
               <ChevronDown
                 size={14}
                 className={`transition-transform ${showFilters ? 'rotate-180' : ''}`}
@@ -535,7 +536,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               filters.startTime ||
               filters.endTime) && (
               <Button variant="secondary" icon={X} onClick={handleReset}>
-                清除
+                {t('清除')}
               </Button>
             )}
 
@@ -623,11 +624,11 @@ export default function FontLibrary(props: FontLibraryProps) {
 
         {/* 排序选项 */}
         <div className="flex items-center gap-4 mb-4 text-sm">
-          <span className="text-text-tertiary">排序：</span>
+          <span className="text-text-tertiary">{t('排序：')}</span>
           {[
-            { key: 'createdAt', label: '修改时间' },
-            { key: 'name', label: '名称' },
-            { key: 'size', label: '大小' },
+            { key: 'createdAt', label: t('修改时间') },
+            { key: 'name', label: t('名称') },
+            { key: 'size', label: t('大小') },
           ].map(({ key, label }) => (
             <Button
               variant="secondary"
@@ -670,19 +671,19 @@ export default function FontLibrary(props: FontLibraryProps) {
                   </div>
                 </div>
                 <h3 className="text-lg font-medium text-text-primary mb-1">
-                  暂无字体
+                  {t('暂无字体')}
                 </h3>
                 <p className="text-text-tertiary text-sm mb-4">
                   {filters.name || filters.extension
-                    ? '没有找到匹配的字体'
-                    : '当前位置没有字体文件'}
+                    ? t('没有找到匹配的字体')
+                    : t('当前位置没有字体文件')}
                 </p>
                 {canUploadFonts && !filters.name && !filters.extension && (
                   <Button
                     icon={Upload}
                     onClick={() => setShowUploadModal(true)}
                   >
-                    上传第一个字体
+                    {t('上传第一个字体')}
                   </Button>
                 )}
               </div>
@@ -714,7 +715,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                           variant="secondary"
                           icon={Download}
                           onClick={() => handleDownload(font.name)}
-                          tooltip="下载"
+                          tooltip={t('下载')}
                         />
                       )}
                       {canDeleteFonts && (
@@ -722,7 +723,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                           variant="secondary"
                           icon={Trash2}
                           onClick={() => handleDelete(font.name)}
-                          tooltip="删除"
+                          tooltip={t('删除')}
                         />
                       )}
                     </div>
@@ -846,7 +847,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                                 <FileNameText>{font.name}</FileNameText>
                               </p>
                               <p className="text-xs text-text-muted">
-                                {font.creator || '系统管理员'}
+                                {font.creator || t('系统管理员')}
                               </p>
                             </div>
                           </div>
@@ -869,7 +870,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                                 variant="secondary"
                                 icon={Download}
                                 onClick={() => handleDownload(font.name)}
-                                tooltip="下载"
+                                tooltip={t('下载')}
                               />
                             )}
                             {canDeleteFonts && (
@@ -877,7 +878,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                                 variant="secondary"
                                 icon={Trash2}
                                 onClick={() => handleDelete(font.name)}
-                                tooltip="删除"
+                                tooltip={t('删除')}
                               />
                             )}
                           </div>
@@ -955,7 +956,7 @@ function UploadFontModal({
     const valid: File[] = [];
     for (const f of Array.from(newFiles)) {
       if (!validateFile(f)) {
-        showToast(`不支持的文件类型: ${f.name}`, 'warning');
+        showToast(t(`不支持的文件类型: ${f.name}`), 'warning');
         continue;
       }
       if (files.some((existing) => existing.name === f.name && existing.size === f.size)) {
@@ -979,7 +980,7 @@ function UploadFontModal({
 
   const handleUpload = async () => {
     if (files.length === 0) {
-      showToast('请选择文件', 'warning');
+      showToast(t('请选择文件'), 'warning');
       return;
     }
 
@@ -988,7 +989,7 @@ function UploadFontModal({
       await fontsControllerUploadFont({
         body: { files: files, target: target } as any,
       });
-      showToast(`成功上传 ${files.length} 个字体文件`, 'success');
+      showToast(t(`成功上传 ${files.length} 个字体文件`), 'success');
       onSuccess();
     } catch (error) {
       console.error('上传失败:', error);
@@ -1031,14 +1032,14 @@ function UploadFontModal({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-text-primary">
-                上传字体
+                {t('上传字体')}
               </h2>
               <p className="text-sm text-text-tertiary">
-                支持 TTF、OTF、WOFF 等格式，可一次选择多个文件
+                {t('支持 TTF、OTF、WOFF 等格式，可一次选择多个文件')}
               </p>
             </div>
           </div>
-          <Button variant="secondary" icon={X} onClick={onClose} tooltip="关闭" />
+          <Button variant="secondary" icon={X} onClick={onClose} tooltip={t('关闭')} />
         </div>
 
         {/* 内容 */}
@@ -1111,10 +1112,10 @@ function UploadFontModal({
                   </div>
                 </div>
                 <h3 className="font-medium text-text-primary mb-1">
-                  点击或拖拽文件到此处
+                  {t('点击或拖拽文件到此处')}
                 </h3>
                 <p className="text-sm text-text-tertiary">
-                  支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX，可一次选择多个文件
+                  {t('支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX，可一次选择多个文件')}
                 </p>
               </div>
             )}
@@ -1123,14 +1124,14 @@ function UploadFontModal({
           {/* 已选文件数量 */}
           {files.length > 1 && (
             <p className="text-sm text-text-tertiary text-center">
-              已选择 {files.length} 个文件
+              {t('已选择 {count} 个文件').replace('{count}', String(files.length))}
             </p>
           )}
 
           {/* 上传目标选择 */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-3">
-              上传位置
+              {t('上传位置')}
             </label>
             <Select
               value={target}
@@ -1138,9 +1139,9 @@ function UploadFontModal({
                 setTarget(val as 'backend' | 'frontend' | 'both')
               }
               options={[
-                { value: 'both', label: '同时上传（后端和前端）' },
-                { value: 'backend', label: '仅后端（转换程序）' },
-                { value: 'frontend', label: '仅前端（Web 显示）' },
+                { value: 'both', label: t('同时上传（后端和前端）') },
+                { value: 'backend', label: t('仅后端（转换程序）') },
+                { value: 'frontend', label: t('仅前端（Web 显示）') },
               ]}
             />
           </div>
@@ -1149,7 +1150,7 @@ function UploadFontModal({
         {/* 底部按钮 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default">
           <Button variant="outline" onClick={onClose} disabled={uploading}>
-            取消
+            {t('取消')}
           </Button>
           <Button
             icon={Upload}
@@ -1158,8 +1159,8 @@ function UploadFontModal({
             onClick={handleUpload}
           >
             {uploading
-              ? '上传中...'
-              : `上传${files.length > 0 ? ` (${files.length})` : ''}`}
+              ? t('上传中...')
+              : t(`上传${files.length > 0 ? ` (${files.length})` : ''}`)}
           </Button>
         </div>
       </div>

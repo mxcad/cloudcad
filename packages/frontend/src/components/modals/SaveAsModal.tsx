@@ -10,6 +10,7 @@ import { useSaveAs } from './hooks/useSaveAs';
 import { useLibraryFolders } from './hooks/useLibraryFolders';
 import { usePermission } from '../../hooks/usePermission';
 import { SystemPermission } from '../../constants/permissions';
+import { t } from '@/languages';
 
 interface SaveAsModalProps {
   isOpen: boolean;
@@ -80,14 +81,14 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
   const handleConfirm = async () => {
     // Validate file name
     if (!(fileName || '').trim()) {
-      setError('请输入文件名');
+      setError(t('请输入文件名'));
       return;
     }
 
     // Validate file name format
     const invalidChars = /[\\/:*?"<>|]/;
     if (invalidChars.test(fileName)) {
-      setError('文件名不能包含以下字符: \\ / : * ? " < > |');
+      setError(t('文件名不能包含以下字符: \\ / : * ? " < > |'));
       return;
     }
 
@@ -103,19 +104,19 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
         setSelectedParentId(effectiveParentId);
       } else if (targetType === 'project') {
         if (!effectiveProjectId) {
-          setError('请先选择项目');
+          setError(t('请先选择项目'));
           return;
         }
         effectiveParentId = effectiveProjectId;
         setSelectedParentId(effectiveProjectId);
       } else if (targetType === 'library') {
-        setError('请选择公开资源库中的保存位置');
+        setError(t('请选择公开资源库中的保存位置'));
         return;
       }
     }
 
     if (!effectiveParentId) {
-      setError('请选择保存位置');
+      setError(t('请选择保存位置'));
       return;
     }
 
@@ -141,10 +142,10 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           parentId: result.parentId || '',
         });
       } else {
-        setError(result?.message || '保存失败');
+        setError(result?.message || t('保存失败'));
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '保存失败，请稍后重试');
+      setError(err instanceof Error ? err.message : t('保存失败，请稍后重试'));
     }
   };
 
@@ -160,15 +161,15 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
       <Modal
         isOpen={isOpen && !showFolderPicker}
         onClose={handleClose}
-        title="另存为"
+        title={t('另存为')}
         className="max-w-md"
         footer={
           <>
             <Button variant="secondary" onClick={handleClose} disabled={saving}>
-              取消
+              {t('取消')}
             </Button>
             <Button onClick={handleConfirm} disabled={saving}>
-              {saving ? '保存中...' : '保存'}
+              {saving ? t('保存中...') : t('保存')}
             </Button>
           </>
         }
@@ -182,12 +183,12 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              文件名
+              {t('文件名')}
             </label>
             <FileNameInput
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              placeholder="请输入文件名"
+              placeholder={t('请输入文件名')}
               disabled={saving}
               suffix={`.${format}`}
               suffixVariant="text"
@@ -196,7 +197,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              保存到
+              {t('保存到')}
             </label>
             <Select
               value={targetType}
@@ -213,9 +214,9 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                 }
               }}
               options={[
-                { value: 'personal', label: '我的图纸' },
-                { value: 'project', label: '项目文件夹' },
-                ...(hasLibraryPermission ? [{ value: 'library' as const, label: '公开资源库' }] : []),
+                { value: 'personal', label: t('我的图纸') },
+                { value: 'project', label: t('项目文件夹') },
+                ...(hasLibraryPermission ? [{ value: 'library' as const, label: t('公开资源库') }] : []),
               ]}
             />
           </div>
@@ -223,7 +224,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           {targetType === 'project' && (
             <div>
               <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-                选择项目
+                {t('选择项目')}
               </label>
               <Select
                 value={selectedProjectId}
@@ -232,7 +233,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                   setSelectedParentId(val);
                   setSelectedFolderName('');
                 }}
-                placeholder="请选择项目"
+                placeholder={t('请选择项目')}
                 options={projects.map((p) => ({ value: p.id, label: p.name }))}
                 disabled={saving}
               />
@@ -242,7 +243,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           {targetType === 'library' && (
             <div>
               <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-                选择资源库
+                {t('选择资源库')}
               </label>
               <Select
                 value={libraryType}
@@ -252,8 +253,8 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                   setSelectedParentId('');
                 }}
                 options={[
-                  { value: 'drawing', label: '图纸库' },
-                  { value: 'block', label: '图块库' },
+                  { value: 'drawing', label: t('图纸库') },
+                  { value: 'block', label: t('图块库') },
                 ]}
                 disabled={saving}
               />
@@ -262,7 +263,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              保存位置
+              {t('保存位置')}
             </label>
             <div
               className="flex items-center w-full h-[24px] px-2 py-1 text-xs gap-1.5 rounded-[3px] cursor-pointer transition-all duration-200 hover:border-[var(--border-strong)]"
@@ -287,11 +288,11 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                   ? selectedFolderName
                   : selectedParentId
                     ? targetType === 'personal'
-                      ? '我的图纸'
+                      ? t('我的图纸')
                       : targetType === 'library'
-                        ? '公开资源库'
-                        : projects.find((p) => p.id === selectedProjectId)?.name || '选择文件夹'
-                    : '点击选择文件夹'}
+                        ? t('公开资源库')
+                        : projects.find((p) => p.id === selectedProjectId)?.name || t('选择文件夹')
+                    : t('点击选择文件夹')}
               </span>
               <ChevronRight size={14} className="shrink-0" style={{ color: 'var(--text-muted)' }} />
             </div>
@@ -299,7 +300,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
 
           <div>
             <label className="block font-medium mb-2 text-[var(--text-secondary)]">
-              保存格式
+              {t('保存格式')}
             </label>
             <Select
               value={format}

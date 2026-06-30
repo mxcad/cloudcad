@@ -18,6 +18,7 @@ import {
   authControllerGetWechatAuthUrl,
 } from '@/api-sdk';
 import type { UserDto } from '@/api-sdk';
+import { t } from '@/languages';
 import { setTokenRefreshCallback } from '@/config/clientSetup';
 import { triggerProactiveRefresh, cancelProactiveRefresh } from '@/config/clientSetup';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
@@ -209,7 +210,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // 如果 API 返回的 data 为空，抛出错误
       if (!authData) {
-        throw new Error('注册失败，服务器返回数据异常');
+        throw new Error(t('注册失败，服务器返回数据异常'));
       }
 
       // 直接注册成功：后端返回 { accessToken, refreshToken, user }
@@ -229,7 +230,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 启动主动 token 刷新
       triggerProactiveRefresh();
 
-      return { message: '注册成功' };
+      return { message: t('注册成功') };
     },
     []
   );

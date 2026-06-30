@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUploadManager } from './useUploadManager';
 import { queryKeys } from '@/lib/queryKeys';
 import { globalShowToast } from '../contexts/NotificationContext';
+import { t } from '@/languages';
 import type { UploadListener } from '../utils/uploadManager';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
@@ -89,7 +90,7 @@ export function useFileDropUpload({
       const resolvedNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
       if (!resolvedNodeId) {
         console.warn('[useFileDropUpload] 无法获取上传目标目录');
-        globalShowToast('无法获取上传目标目录，请刷新后重试', 'warning');
+        globalShowToast(t('无法获取上传目标目录，请刷新后重试'), 'warning');
         return;
       }
 
@@ -123,7 +124,7 @@ export function useFileDropUpload({
             manager.finalizeTask(event.taskId);
             onSuccess?.();
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '文件处理失败';
+            const errorMessage = error instanceof Error ? error.message : t('文件处理失败');
             manager.failTask(event.taskId, errorMessage);
             console.error('[useFileDropUpload] 后处理失败:', error);
           }

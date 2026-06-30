@@ -12,6 +12,7 @@
 
 import { useState, useCallback } from 'react';
 import { FileSystemNode } from '../types/filesystem';
+import { t } from '@/languages';
 
 interface UseProjectManagementOptions {
   onProjectCreated?: () => void;
@@ -83,7 +84,7 @@ export function useProjectManagement(
         options.onProjectCreated?.();
         closeModal();
       } catch (error) {
-        const errorMessage = (error as Error).message || '创建项目失败';
+        const errorMessage = (error as Error).message || t('创建项目失败');
         options.showToast?.(errorMessage, 'error');
       } finally {
         setLoading(false);
@@ -110,7 +111,7 @@ export function useProjectManagement(
         options.onProjectUpdated?.();
         closeModal();
       } catch (error) {
-        const errorMessage = (error as Error).message || '更新项目失败';
+        const errorMessage = (error as Error).message || t('更新项目失败');
         options.showToast?.(errorMessage, 'error');
       } finally {
         setLoading(false);
@@ -142,7 +143,7 @@ export function useProjectManagement(
       setProjectToDelete(null);
       setDeleteCallback(null);
     } catch (error) {
-      const errorMessage = (error as Error).message || '删除项目失败';
+      const errorMessage = (error as Error).message || t('删除项目失败');
       options.showToast?.(errorMessage, 'error');
     } finally {
       setLoading(false);

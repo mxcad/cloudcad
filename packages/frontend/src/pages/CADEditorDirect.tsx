@@ -37,6 +37,7 @@ import { uploadFile } from '../utils/mxcadUploadUtils';
 import { calculateFileHash } from '../utils/hashUtils';
 import { saveAsFileDialog } from 'mxcad';
 import { exitCurrentCollaboration } from '@/services/collaborationService';
+import { t } from '@/languages';
 
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/PdfExportModal';
@@ -394,7 +395,6 @@ export const CADEditorDirect: React.FC = () => {
   const initThemeSync = async () => {
     // 防止重复初始化主题同步
     if (isThemeSyncInitialized.current) {
-      console.log('[ThemeSync] 已初始化，跳过');
       return;
     }
 
@@ -465,13 +465,13 @@ export const CADEditorDirect: React.FC = () => {
     // 注册打印/剪切回调
     mxcadApp.initPrintConfig({
       callback: async (data: Blob, params) => {
-        showGlobalLoading('正在上传打印文件...');
+        showGlobalLoading(t('正在上传打印文件...'));
         const file = new File([data], 'print.mxweb', { type: 'application/octet-stream' });
         const hash = await calculateFileHash(file);
         await uploadFile({
           file, hash, nodeId: '', forceUpload: true, skipDb: true,
           onProgress: (percentage: number) => {
-            setLoadingMessage(percentage === 100 ? '打印转换中...' : `正在上传打印文件... ${percentage.toFixed(1)}%`);
+            setLoadingMessage(percentage === 100 ? t('打印转换中...') : `${t('正在上传打印文件...')} ${percentage.toFixed(1)}%`);
             setLoadingProgress(percentage);
           },
         });
@@ -487,13 +487,13 @@ export const CADEditorDirect: React.FC = () => {
     });
     mxcadApp.initCutConfig({
       callback: async (data: Blob, box) => {
-        showGlobalLoading('正在上传裁剪文件...');
+        showGlobalLoading(t('正在上传裁剪文件...'));
         const file = new File([data], 'cut.mxweb', { type: 'application/octet-stream' });
         const hash = await calculateFileHash(file);
         await uploadFile({
           file, hash, nodeId: '', forceUpload: true, skipDb: true,
           onProgress: (percentage: number) => {
-            setLoadingMessage(percentage === 100 ? '裁剪转换中...' : `正在上传裁剪文件... ${percentage.toFixed(1)}%`);
+            setLoadingMessage(percentage === 100 ? t('裁剪转换中...') : `${t('正在上传裁剪文件...')} ${percentage.toFixed(1)}%`);
             setLoadingProgress(percentage);
           },
         });
@@ -510,7 +510,7 @@ export const CADEditorDirect: React.FC = () => {
 
     mxcadApp.initCustomUploadConfig({
       callback: async (file: File) => {
-        showGlobalLoading('正在上传文件...');
+        showGlobalLoading(t('正在上传文件...'));
         const hash = await calculateFileHash(file);
         await uploadFile({
           file,
@@ -518,9 +518,9 @@ export const CADEditorDirect: React.FC = () => {
           nodeId: '',
           onProgress: (percentage: number) => {
             if (percentage === 100) {
-              setLoadingMessage('图纸转换中...');
+              setLoadingMessage(t('图纸转换中...'));
             } else {
-              setLoadingMessage(`正在上传文件... ${percentage.toFixed(1)}%`);
+              setLoadingMessage(`${t('正在上传文件...')} ${percentage.toFixed(1)}%`);
             }
             setLoadingProgress(percentage);
           },
@@ -695,8 +695,8 @@ export const CADEditorDirect: React.FC = () => {
             file = fileData!;
           } catch (error) {
             console.error('通过分享 token 获取文件信息失败:', error);
-            setError('分享文件不存在或已失效');
-            setStoreError('分享文件不存在或已失效');
+            setError(t('分享文件不存在或已失效'));
+            setStoreError(t('分享文件不存在或已失效'));
             setLoading(false);
             setStoreLoading(false);
             return;
@@ -711,14 +711,14 @@ export const CADEditorDirect: React.FC = () => {
             const axiosError = error as { response?: { status?: number } };
             if (axiosError.response?.status === 401) {
               // 确实是认证错误
-              setError('请登录后访问此文件');
-              setStoreError('请登录后访问此文件');
+              setError(t('请登录后访问此文件'));
+              setStoreError(t('请登录后访问此文件'));
             } else if (axiosError.response?.status === 404) {
-              setError('文件不存在或已被删除');
-              setStoreError('文件不存在或已被删除');
+              setError(t('文件不存在或已被删除'));
+              setStoreError(t('文件不存在或已被删除'));
             } else {
-              setError('获取文件信息失败，请检查网络连接');
-              setStoreError('获取文件信息失败，请检查网络连接');
+              setError(t('获取文件信息失败，请检查网络连接'));
+              setStoreError(t('获取文件信息失败，请检查网络连接'));
             }
             setLoading(false);
             setStoreLoading(false);
@@ -727,8 +727,8 @@ export const CADEditorDirect: React.FC = () => {
         }
 
         if (!file) {
-          setError('文件不存在');
-          setStoreError('文件不存在');
+          setError(t('文件不存在'));
+          setStoreError(t('文件不存在'));
           setLoading(false);
           setStoreLoading(false);
           return;
@@ -736,16 +736,16 @@ export const CADEditorDirect: React.FC = () => {
 
         // 检查文件是否在回收站中
         if (file.deletedAt) {
-          setError('文件已被删除');
-          setStoreError('文件已被删除');
+          setError(t('文件已被删除'));
+          setStoreError(t('文件已被删除'));
           setLoading(false);
           setStoreLoading(false);
           return;
         }
 
         if (!file.fileHash) {
-          setError('文件尚未转换完成');
-          setStoreError('文件尚未转换完成');
+          setError(t('文件尚未转换完成'));
+          setStoreError(t('文件尚未转换完成'));
           setLoading(false);
           setStoreLoading(false);
           return;
@@ -769,7 +769,7 @@ export const CADEditorDirect: React.FC = () => {
         if (shouldGetRoot) {
           if (!file.isRoot && file.parentId) {
             try {
-              if (!file.id) throw new Error('节点ID缺失');
+              if (!file.id) throw new Error(t('节点ID缺失'));
               const { data: rootNode } = await fileSystemControllerGetRootNode({ path: { nodeId: file.id } });
               if (rootNode?.id) {
                 projectId = rootNode.id;
@@ -854,7 +854,7 @@ export const CADEditorDirect: React.FC = () => {
           } else {
             // 既无版本参数也无 updatedAt，无法构造文件 URL
             // 恢复旧版 useFileLoader getFileUrl 的保护逻辑
-            setError('无法构造文件访问URL');
+            setError(t('无法构造文件访问URL'));
             setLoading(false);
             return;
           }
@@ -874,7 +874,7 @@ export const CADEditorDirect: React.FC = () => {
         const doOpenMxFile = async (skipFileOpen = false) => {
           if (isInitializedRef.current && mxcadManager.isCreated()) {
             mxcadManager.showMxCAD(true);
-            showGlobalLoading('正在加载图纸...');
+            showGlobalLoading(t('正在加载图纸...'));
             await mxcadManager.openFile(mxcadFileUrl);
             hideGlobalLoading();
             loadedFileUrlRef.current = mxcadFileUrl;
@@ -900,7 +900,7 @@ export const CADEditorDirect: React.FC = () => {
 
           mxcadManager.showMxCAD(true);
           if (!skipFileOpen) {
-            showGlobalLoading('正在加载图纸...');
+            showGlobalLoading(t('正在加载图纸...'));
           }
           await mxcadManager.initializeMxCADView(skipFileOpen ? undefined : mxcadFileUrl);
           if (cancelled) return;
@@ -927,8 +927,8 @@ export const CADEditorDirect: React.FC = () => {
         console.error('加载文件失败:', err);
         if (!cancelled) {
           hideGlobalLoading();
-          setError('CAD编辑器初始化失败');
-          setStoreError('CAD编辑器初始化失败');
+          setError(t('CAD编辑器初始化失败'));
+          setStoreError(t('CAD编辑器初始化失败'));
           setLoading(false);
           setStoreLoading(false);
         }
@@ -1094,8 +1094,8 @@ export const CADEditorDirect: React.FC = () => {
         console.error('初始化 CAD 编辑器失败:', err);
         // 重置组件级 ref，允许重试（替代旧版 window 全局属性）
         homeInitStartedRef.current = false;
-        setError('CAD 编辑器初始化失败，请刷新页面重试');
-        setStoreError('CAD 编辑器初始化失败，请刷新页面重试');
+        setError(t('CAD 编辑器初始化失败，请刷新页面重试'));
+        setStoreError(t('CAD 编辑器初始化失败，请刷新页面重试'));
         setLoading(false);
         setStoreLoading(false);
       }
@@ -1116,10 +1116,10 @@ export const CADEditorDirect: React.FC = () => {
 
       // 另存为操作不需要登录 — 未登录用户直接弹出下载格式选择框
       const action = event.detail?.action || '';
-      if (action.includes('另存为')) return;
+      if (action.includes(t('另存为'))) return;
 
       if (!isAuthenticated) {
-        setLoginPromptAction(action || '保存文件');
+        setLoginPromptAction(action || t('保存文件'));
         setShowLoginPrompt(true);
         event.preventDefault();
       }
@@ -1153,7 +1153,7 @@ export const CADEditorDirect: React.FC = () => {
 
     // 保存当前操作类型到 ref
     if (!loginPromptActionRef.current) {
-      loginPromptActionRef.current = loginPromptAction || '保存文件';
+      loginPromptActionRef.current = loginPromptAction || t('保存文件');
     }
 
     // 设置显示意图为隐藏
@@ -1175,7 +1175,7 @@ export const CADEditorDirect: React.FC = () => {
   useEffect(() => {
     const handleExportEvent = (event: Event) => {
       if (!canExport) {
-        showToast('您没有导出图纸的权限', 'warning');
+        showToast(t('您没有导出图纸的权限'), 'warning');
         return;
       }
       const customEvent = event as CustomEvent<{
@@ -1287,14 +1287,14 @@ export const CADEditorDirect: React.FC = () => {
   }) => {
     setShowSaveAsModal(false);
     setSaveAsBlob(null);
-    showToast('另存为成功', 'success');
+    showToast(t('另存为成功'), 'success');
 
     // 显示确认弹窗（与缩略图生成并发执行）
     const confirmPromise = showConfirm({
-      title: '打开新图纸',
-      message: `"${result.fileName}" 已保存成功，是否在新标签页中打开？`,
-      confirmText: '打开',
-      cancelText: '关闭',
+      title: t('打开新图纸'),
+      message: t('"{fileName}" 已保存成功，是否在新标签页中打开？').replace('{fileName}', result.fileName),
+      confirmText: t('打开'),
+      cancelText: t('关闭'),
       type: 'info',
     });
 
@@ -1465,7 +1465,7 @@ export const CADEditorDirect: React.FC = () => {
         }
       } else {
         if (loginPromptDismissedRef.current) return;
-        setLoginPromptAction('打开文件');
+        setLoginPromptAction(t('打开文件'));
         setShowLoginPrompt(true);
       }
       return;
@@ -1511,7 +1511,7 @@ export const CADEditorDirect: React.FC = () => {
     } catch (error) {
       console.error('打开文件失败:', error);
       showToast(
-        error instanceof Error ? error.message : '打开文件失败',
+        error instanceof Error ? error.message : t('打开文件失败'),
         'error'
       );
     }
@@ -1548,13 +1548,13 @@ export const CADEditorDirect: React.FC = () => {
         });
 
         if (result?.error) {
-          throw new Error('转换失败');
+          throw new Error(t('转换失败'));
         }
 
         const blob = result?.data as Blob | undefined;
 
         if (!blob) {
-          throw new Error('转换失败：无返回数据');
+          throw new Error(t('转换失败：无返回数据'));
         }
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1570,7 +1570,7 @@ export const CADEditorDirect: React.FC = () => {
         setShowDownloadFormatModal(false);
         setSaveAsBlob(null);
         isSaveAsLocalModeRef.current = false;
-        showToast('文件已保存到本地', 'success');
+        showToast(t('文件已保存到本地'), 'success');
         return;
       }
 
@@ -1578,7 +1578,7 @@ export const CADEditorDirect: React.FC = () => {
         path: { nodeId: downloadingNodeId },
         query: { format, ...pdfOptions, ...dwgOptions },
       });
-      if (result?.error) throw new Error('下载失败');
+      if (result?.error) throw new Error(t('下载失败'));
       const blobData = result?.data;
 
       const blob = blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);
@@ -1627,16 +1627,16 @@ export const CADEditorDirect: React.FC = () => {
         },
       });
 
-      if (result?.error) throw new Error('转换失败');
+      if (result?.error) throw new Error(t('转换失败'));
       const blob = result?.data as Blob | undefined;
-      if (!blob) throw new Error('转换失败：无返回数据');
+      if (!blob) throw new Error(t('转换失败：无返回数据'));
 
       const nameWithoutExt = pdfExportFileName.replace(/\.[^.]+$/, '');
       const pdfSaved = await saveAsFileDialog({
         blob,
         filename: `${nameWithoutExt}.pdf`,
         types: [{
-          description: 'PDF 文件',
+          description: t('PDF 文件'),
           accept: { 'application/octet-stream': ['.pdf'] },
         }],
       });
@@ -1644,7 +1644,7 @@ export const CADEditorDirect: React.FC = () => {
       if (pdfSaved !== false) {
         setShowPdfExportModal(false);
         setPdfExportBlob(null);
-        showToast('PDF 文件已保存到本地', 'success');
+        showToast(t('PDF 文件已保存到本地'), 'success');
       }
     } catch (error) {
       console.error('PDF 导出失败:', error);
@@ -1672,16 +1672,16 @@ export const CADEditorDirect: React.FC = () => {
         },
       });
 
-      if (result?.error) throw new Error('转换失败');
+      if (result?.error) throw new Error(t('转换失败'));
       const blob = result?.data as Blob | undefined;
-      if (!blob) throw new Error('转换失败：无返回数据');
+      if (!blob) throw new Error(t('转换失败：无返回数据'));
 
       const nameWithoutExt = dwgExportFileName.replace(/\.[^.]+$/, '');
       const dwgSaved = await saveAsFileDialog({
         blob,
         filename: `${nameWithoutExt}.${dwgExportFormat}`,
         types: [{
-          description: `${dwgExportFormat.toUpperCase()} 文件`,
+          description: `${dwgExportFormat.toUpperCase()} ${t('文件')}`,
           accept: { 'application/octet-stream': [`.${dwgExportFormat}`] },
         }],
       });
@@ -1689,7 +1689,7 @@ export const CADEditorDirect: React.FC = () => {
       if (dwgSaved !== false) {
         setShowDwgExportModal(false);
         setDwgExportBlob(null);
-        showToast(`${dwgExportFormat.toUpperCase()} 文件已保存到本地`, 'success');
+        showToast(`${dwgExportFormat.toUpperCase()} ${t('文件已保存到本地')}`, 'success');
       }
     } catch (error) {
       console.error(`${dwgExportFormat.toUpperCase()} 导出失败:`, error);
@@ -1727,7 +1727,7 @@ export const CADEditorDirect: React.FC = () => {
             onClick={handleGoBack}
             variant="primary"
           >
-            {isHomeMode ? '刷新页面' : '返回项目列表'}
+            {isHomeMode ? t('刷新页面') : t('返回项目列表')}
           </Button>
         </div>
       )}

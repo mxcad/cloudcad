@@ -12,6 +12,7 @@
 
 import { FileSystemNode } from '../types/filesystem';
 import { API_BASE_URL } from '../config/apiConfig';
+import { t } from '@/languages';
 import { formatFileSize as _formatFileSize } from '../components/ui/FileSize';
 
 export const formatFileSize = _formatFileSize;
@@ -63,21 +64,21 @@ export const formatRelativeTime = (dateString: string): string => {
   const diffDay = Math.floor(diffHour / 24);
 
   if (diffSec < 60) {
-    return '刚刚';
+    return t('刚刚');
   } else if (diffMin < 60) {
-    return `${diffMin}分钟前`;
+    return `${diffMin}${t('分钟前')}`;
   } else if (diffHour < 24) {
-    return `${diffHour}小时前`;
+    return `${diffHour}${t('小时前')}`;
   } else if (diffDay === 1) {
-    return '昨天';
+    return t('昨天');
   } else if (diffDay < 7) {
-    return `${diffDay}天前`;
+    return `${diffDay}${t('天前')}`;
   } else if (diffDay < 30) {
-    return `${Math.floor(diffDay / 7)}周前`;
+    return `${Math.floor(diffDay / 7)}${t('周前')}`;
   } else if (diffDay < 365) {
-    return `${Math.floor(diffDay / 30)}个月前`;
+    return `${Math.floor(diffDay / 30)}${t('个月前')}`;
   } else {
-    return `${Math.floor(diffDay / 365)}年前`;
+    return `${Math.floor(diffDay / 365)}${t('年前')}`;
   }
 };
 
@@ -219,30 +220,30 @@ export function validateFolderName(
   const trimmedName = name.trim();
 
   if (!trimmedName) {
-    return { valid: false, error: '名称不能为空' };
+    return { valid: false, error: t('名称不能为空') };
   }
 
   if (trimmedName.length > 255) {
-    return { valid: false, error: '名称长度不能超过 255 个字符' };
+    return { valid: false, error: t('名称长度不能超过 255 个字符') };
   }
 
   const illegalChars = /[<>:"|?*/\\]/;
   if (illegalChars.test(trimmedName)) {
-    return { valid: false, error: '名称包含非法字符：< > : " | ? * / \\' };
+    return { valid: false, error: t('名称包含非法字符：< > : " | ? * / \\') };
   }
 
   // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
-    return { valid: false, error: '名称包含非法字符' };
+    return { valid: false, error: t('名称包含非法字符') };
   }
 
   const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
   if (reservedNames.test(trimmedName)) {
-    return { valid: false, error: '该名称为系统保留名称' };
+    return { valid: false, error: t('该名称为系统保留名称') };
   }
 
   if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
-    return { valid: false, error: '名称不能以点开头或结尾' };
+    return { valid: false, error: t('名称不能以点开头或结尾') };
   }
 
   return { valid: true };

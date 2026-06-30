@@ -9,6 +9,7 @@ import type {
 } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
+import { t } from '@/languages';
 
 const PROJECTS_KEY = ['dashboard', 'projects'] as const;
 
@@ -80,14 +81,14 @@ export function useDashboardProjects() {
       personalSpaceQuery.isFetching ||
       personalFilesQuery.isFetching,
     error: projectsQuery.error
-      ? '加载数据失败'
+      ? t('加载数据失败')
       : personalSpaceQuery.error
-        ? '获取私人空间失败'
+        ? t('获取私人空间失败')
         : null,
     createProject: createProjectMutation.mutateAsync,
     isCreating: createProjectMutation.isPending,
     createError: createProjectMutation.error
-      ? '创建项目失败，请重试'
+      ? t('创建项目失败，请重试')
       : null,
   };
 }

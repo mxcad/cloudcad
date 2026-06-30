@@ -18,7 +18,7 @@
  */
 
 import { thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail } from '@/api-sdk';
-import type { UploadThumbnailDto } from '@/api-sdk';
+
 import { handleError } from '@/utils/errorHandler';
 import { McGePoint3d } from 'mxdraw';
 

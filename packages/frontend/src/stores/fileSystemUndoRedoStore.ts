@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { t } from '@/languages';
 
 export interface UndoableAction {
   type: 'delete' | 'move' | 'copy' | 'paste-copy' | 'rename' | 'createFolder' | 'createDrawing';
@@ -19,7 +20,7 @@ function isProcessingGuard(get: () => FileSystemUndoRedoState): boolean {
 
 function projectGuard(action: UndoableAction, currentProjectId: string | undefined): void {
   if (action.projectId != null && currentProjectId != null && action.projectId !== currentProjectId) {
-    throw new Error('无法撤销：当前项目与操作时的项目不一致');
+    throw new Error(t('无法撤销：当前项目与操作时的项目不一致'));
   }
 }
 

@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { FileSystemNode } from '../../types/filesystem';
+import { t } from '@/languages';
 
 interface FileItemExternalReferenceWarningProps {
   node: FileSystemNode;
@@ -21,7 +22,7 @@ export const FileItemExternalReferenceWarning: React.FC<FileItemExternalReferenc
         <div className="flex items-center justify-center gap-1 mt-1 px-2">
           <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
           <span className="text-xs text-amber-600 whitespace-nowrap">
-            缺失 {missingCount} 个外部参照
+            {t(`缺失 ${missingCount} 个外部参照`)}
           </span>
         </div>
       );

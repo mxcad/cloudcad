@@ -3,6 +3,7 @@ import { healthControllerCheck } from '@/api-sdk';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { useTheme } from '../contexts/ThemeContext';
 
 // Lucide 图标导入
@@ -79,20 +80,20 @@ export const SystemMonitorPage: React.FC = () => {
           database: {
             status: databaseInfo?.status === 'up' ? 'up' : 'down',
             message: safeMessage(databaseInfo?.message,
-              databaseInfo?.status === 'up' ? '数据库连接正常' : '数据库连接异常'),
+              databaseInfo?.status === 'up' ? t('数据库连接正常') : t('数据库连接异常')),
           },
           storage: {
             status: storageInfo?.status === 'up' ? 'up' : 'down',
             message: safeMessage(storageInfo?.message,
-              storageInfo?.status === 'up' ? '存储服务正常' : '存储服务异常'),
+              storageInfo?.status === 'up' ? t('存储服务正常') : t('存储服务异常')),
           },
         });
         setRefreshCountdown(30);
       } else {
-        throw new Error('无效的响应数据格式');
+        throw new Error(t('无效的响应数据格式'));
       }
     } catch (err) {
-      setError('获取系统健康状态失败');
+      setError(t('获取系统健康状态失败'));
       console.error('获取系统健康状态失败:', err);
     } finally {
       setLoading(false);
@@ -162,8 +163,8 @@ export const SystemMonitorPage: React.FC = () => {
               <Activity size={24} />
             </div>
             <div className="title-text">
-              <h1>系统监控</h1>
-              <p>实时监控系统运行状态与性能指标</p>
+              <h1>{t('系统监控')}</h1>
+              <p>{t('实时监控系统运行状态与性能指标')}</p>
             </div>
           </div>
         </div>
@@ -174,7 +175,7 @@ export const SystemMonitorPage: React.FC = () => {
             variant={overallStatus === 'healthy' ? 'success' : overallStatus === 'degraded' ? 'warning' : 'neutral'}
             className="px-3 py-1.5 text-sm"
           >
-            {overallStatus === 'healthy' ? '系统正常' : overallStatus === 'degraded' ? '系统降级' : '检测中'}
+            {overallStatus === 'healthy' ? t('系统正常') : overallStatus === 'degraded' ? t('系统降级') : t('检测中')}
           </Tag>
           
           <Button
@@ -184,7 +185,7 @@ export const SystemMonitorPage: React.FC = () => {
             loading={loading}
             icon={RefreshCw}
           >
-            {loading ? '刷新中...' : '立即刷新'}
+            {loading ? t('刷新中...') : t('立即刷新')}
           </Button>
         </div>
       </header>
@@ -194,7 +195,7 @@ export const SystemMonitorPage: React.FC = () => {
         <div className="error-banner">
           <AlertTriangle size={20} />
           <span>{error}</span>
-          <Button variant="secondary" onClick={fetchSystemHealth}>重试</Button>
+          <Button variant="secondary" onClick={fetchSystemHealth}>{t('重试')}</Button>
         </div>
       )}
 
@@ -203,39 +204,39 @@ export const SystemMonitorPage: React.FC = () => {
         {/* 核心服务状态 */}
         <section className="section">
           <div className="section-header">
-            <h2>核心服务</h2>
+            <h2>{t('核心服务')}</h2>
           </div>
           
           <div className="service-grid">
             {/* 数据库卡片 */}
             <ServiceCard
-              title="PostgreSQL 数据库"
-              description="主数据库连接状态"
+              title={t('PostgreSQL 数据库')}
+              description={t('主数据库连接状态')}
               icon={Database}
               status={systemHealth?.database.status || 'down'}
-              message={safeMessage(systemHealth?.database.message, '检测中...')}
+              message={safeMessage(systemHealth?.database.message, t('检测中...'))}
               loading={loading && !systemHealth}
               isDark={isDark}
             />
             
             {/* 存储服务卡片 */}
             <ServiceCard
-              title="文件存储"
-              description="本地文件系统"
+              title={t('文件存储')}
+              description={t('本地文件系统')}
               icon={HardDrive}
               status={systemHealth?.storage.status || 'down'}
-              message={String(systemHealth?.storage.message || '检测中...')}
+              message={String(systemHealth?.storage.message || t('检测中...'))}
               loading={loading && !systemHealth}
               isDark={isDark}
             />
             
             {/* 应用服务卡片 */}
             <ServiceCard
-              title="应用服务"
-              description="NestJS 后端服务"
+              title={t('应用服务')}
+              description={t('NestJS 后端服务')}
               icon={Server}
               status="up"
-              message="服务运行正常"
+              message={t('服务运行正常')}
               loading={false}
               isDark={isDark}
             />
@@ -245,14 +246,14 @@ export const SystemMonitorPage: React.FC = () => {
         {/* 系统信息 */}
         <section className="section">
           <div className="section-header">
-            <h2>系统信息</h2>
+            <h2>{t('系统信息')}</h2>
           </div>
           
           <div className="info-grid">
             <div className="info-card">
               <Info size={18} />
               <div className="info-content">
-                <span className="info-label">系统名称</span>
+                <span className="info-label">{t('系统名称')}</span>
                 <span className="info-value">CloudCAD Cloud Platform</span>
               </div>
             </div>
@@ -260,9 +261,9 @@ export const SystemMonitorPage: React.FC = () => {
             <div className="info-card">
               <Server size={18} />
               <div className="info-content">
-                <span className="info-label">运行环境</span>
+                <span className="info-label">{t('运行环境')}</span>
                 <span className="info-value">
-                  {import.meta.env.MODE === 'production' ? '生产环境' : '开发环境'}
+                  {import.meta.env.MODE === 'production' ? t('生产环境') : t('开发环境')}
                 </span>
               </div>
             </div>
@@ -270,8 +271,8 @@ export const SystemMonitorPage: React.FC = () => {
             <div className="info-card">
               <Clock size={18} />
               <div className="info-content">
-                <span className="info-label">刷新间隔</span>
-                <span className="info-value">30 秒自动刷新</span>
+                <span className="info-label">{t('刷新间隔')}</span>
+                <span className="info-value">{t('30 秒自动刷新')}</span>
               </div>
             </div>
             
@@ -326,13 +327,13 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           <p>{description}</p>
         </div>
         <Tag variant={isUp ? 'success' : 'error'} icon={isUp ? CheckCircle : XCircle} size="sm">
-          {isUp ? '正常' : '异常'}
+          {isUp ? t('正常') : t('异常')}
         </Tag>
       </div>
       
       <div className="service-details">
         <div className="detail-row">
-          <span className="detail-label">状态消息</span>
+          <span className="detail-label">{t('状态消息')}</span>
           <span className="detail-value">{message}</span>
         </div>
       </div>

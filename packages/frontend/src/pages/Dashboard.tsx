@@ -10,6 +10,7 @@ import { useDashboardProjects } from '../hooks/useDashboardProjects';
 import { useStorageQuota } from '../hooks/useStorageQuota';
 import { queryKeys } from '@/lib/queryKeys';
 import { formatFileSize } from '../utils/fileUtils';
+import { t } from '@/languages';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { FileItem } from '../components/FileItem';
 import { ViewAllFilesModal } from '../components/modals/ViewAllFilesModal';
@@ -151,7 +152,7 @@ const QuickAction: React.FC<QuickActionProps> = ({
 );
 
 export const Dashboard: React.FC = () => {
-  useDocumentTitle('仪表盘');
+  useDocumentTitle(t('仪表盘'));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -223,12 +224,12 @@ export const Dashboard: React.FC = () => {
   // 计算问候语
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 6) setGreeting('夜深了');
-    else if (hour < 9) setGreeting('早上好');
-    else if (hour < 12) setGreeting('上午好');
-    else if (hour < 14) setGreeting('中午好');
-    else if (hour < 18) setGreeting('下午好');
-    else setGreeting('晚上好');
+    if (hour < 6) setGreeting(t('夜深了'));
+    else if (hour < 9) setGreeting(t('早上好'));
+    else if (hour < 12) setGreeting(t('上午好'));
+    else if (hour < 14) setGreeting(t('中午好'));
+    else if (hour < 18) setGreeting(t('下午好'));
+    else setGreeting(t('晚上好'));
   }, []);
 
   // 检测 URL 参数，自动打开创建弹框
@@ -306,7 +307,7 @@ export const Dashboard: React.FC = () => {
         .filter(Boolean)
         .join(' / ')
     : undefined;
-  const userName = user?.nickname || user?.username || '用户';
+  const userName = user?.nickname || user?.username || t('用户');
 
   // 最近更新的项目（前5个）
   const recentProjects = useMemo(() => rawProjects.slice(0, 5), [rawProjects]);
@@ -335,14 +336,14 @@ export const Dashboard: React.FC = () => {
               {greeting}，{userName}
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-              欢迎使用 {appName}，开始您的设计工作
+              {t(`欢迎使用 ${appName}，开始您的设计工作`)}
             </p>
           </div>
 
           {/* 刷新按钮 */}
           <div className="flex gap-3">
-            <Button variant="secondary" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title="刷新仪表盘数据">
-              刷新
+            <Button variant="secondary" icon={RefreshCw} onClick={handleRefreshDashboard} disabled={loading || isRefreshing || isBackgroundFetching} title={t('刷新仪表盘数据')}>
+              {t('刷新')}
             </Button>
           </div>
         </div>
@@ -384,16 +385,16 @@ export const Dashboard: React.FC = () => {
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          title="我的项目"
+          title={t('我的项目')}
           value={stats.projects}
-          subtitle="活跃项目"
+          subtitle={t('活跃项目')}
           icon={FolderOpen}
           color="var(--primary-500)"
           onClick={() => navigate('/projects')}
           loading={loading}
         />
         <StatCard
-          title="图纸文件"
+          title={t('图纸文件')}
           value={stats.files}
           subtitle={fileTypeSubtitle}
           icon={FileText}
@@ -402,16 +403,16 @@ export const Dashboard: React.FC = () => {
           loading={loading}
         />
         <StatCard
-          title="今日上传"
+          title={t('今日上传')}
           value={stats.todayUploads}
-          subtitle="个文件"
+          subtitle={t('个文件')}
           icon={Upload}
           color="#8b5cf6"
           onClick={() => navigate('/personal-space?action=upload')}
           loading={loading}
         />
         <StatCard
-          title="存储使用"
+          title={t('存储使用')}
           value={quotaStorage ? formatFileSize(quotaStorage.used) : '-'}
           subtitle={quotaStorage ? `共 ${formatFileSize(quotaStorage.total)}` : ''}
           icon={HardDrive}
@@ -426,14 +427,14 @@ export const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* 最近访问的文件 */}
           <Section
-            title="最近文件"
+            title={t('最近文件')}
             actions={
               <button
                 onClick={() => setIsViewAllFilesOpen(true)}
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
                 style={{ color: 'var(--primary-500)' }}
               >
-                查看全部
+                {t('查看全部')}
                 <ArrowRight size={14} />
               </button>
             }
@@ -475,22 +476,22 @@ export const Dashboard: React.FC = () => {
                   className="mx-auto mb-2"
                 />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  暂无文件，上传您的第一个图纸
-                </p>
+                   {t('暂无文件，上传您的第一个图纸')}
+                 </p>
               </div>
             )}
           </Section>
 
           {/* 我的项目 */}
           <Section
-            title="最近项目"
+            title={t('最近项目')}
             actions={
               <button
                 onClick={() => setIsViewAllProjectsOpen(true)}
                 className="flex items-center gap-1 text-xs font-medium hover:gap-2 transition-all"
                 style={{ color: 'var(--accent-500)' }}
               >
-                查看全部
+                {t('查看全部')}
                 <ArrowRight size={14} />
               </button>
             }
@@ -538,8 +539,8 @@ export const Dashboard: React.FC = () => {
                   className="mx-auto mb-2"
                 />
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  暂无项目，创建您的第一个项目
-                </p>
+                   {t('暂无项目，创建您的第一个项目')}
+                 </p>
               </div>
             )}
           </Section>
@@ -549,26 +550,26 @@ export const Dashboard: React.FC = () => {
         <div className="space-y-6">
           {/* 快捷操作 */}
           <Section
-            title="快捷操作"
+            title={t('快捷操作')}
             variant="outlined"
             className="rounded-2xl"
           >
             <div className="space-y-1">
               <QuickAction
                 icon={Plus}
-                label="新建项目"
+                label={t('新建项目')}
                 color="var(--primary-500)"
                 onClick={() => setIsProjectModalOpen(true)}
               />
               <QuickAction
                 icon={Upload}
-                label="上传图纸"
+                label={t('上传图纸')}
                 color="var(--accent-500)"
                 onClick={() => navigate('/personal-space?action=upload')}
               />
               <QuickAction
                 icon={FilePlus}
-                label="新建图纸"
+                label={t('新建图纸')}
                 color="var(--primary-500)"
                 onClick={() => navigate('/personal-space?action=new-drawing')}
               />

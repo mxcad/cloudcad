@@ -23,6 +23,7 @@ import type {
 
 import { mxCadControllerUploadExtReferenceImage, mxCadControllerUploadExtReferenceDwg } from '@/api-sdk';
 import { handleError } from '../utils/errorHandler';
+import { t } from '@/languages';
 import { isAuthenticated } from '../utils/authCheck';
 import { useUIStore } from '../stores/uiStore';
 
@@ -368,7 +369,7 @@ export const useExternalReferenceUpload = (
         // 提示未匹配的文件
         selectedFiles.forEach((sf) => {
           if (!prevFiles.some((f) => f.name === sf.name)) {
-            addToast(`未找到匹配的缺失文件: ${sf.name}`, 'warning');
+            addToast(t(`未找到匹配的缺失文件: ${sf.name}`), 'warning');
           }
         });
 
@@ -417,7 +418,7 @@ export const useExternalReferenceUpload = (
       return;
     }
     setLocalLoading(true);
-    setGlobalLoading(true, '正在上传外部参照...');
+    setGlobalLoading(true, t('正在上传外部参照...'));
 
     const id = identifierRef.current;
 
@@ -483,8 +484,8 @@ export const useExternalReferenceUpload = (
           )
         );
       } catch (error) {
-        handleError(error, `上传 ${fileInfo.name} 失败`);
-        config.onError?.(`上传 ${fileInfo.name} 失败`);
+        handleError(error, t(`上传 ${fileInfo.name} 失败`));
+        config.onError?.(t(`上传 ${fileInfo.name} 失败`));
 
         // 更新状态为失败
         setFiles((prevFiles) =>
@@ -602,7 +603,7 @@ export const useExternalReferenceUpload = (
         // 提示未匹配的文件
         selectedFiles.forEach((sf) => {
           if (!prevFiles.some((f) => f.name === sf.name)) {
-            addToast(`未找到匹配的缺失文件: ${sf.name}`, 'warning');
+            addToast(t(`未找到匹配的缺失文件: ${sf.name}`), 'warning');
           }
         });
 

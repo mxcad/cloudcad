@@ -118,8 +118,14 @@
   --text-tooltip: #ffffff;
 
   /* ----------------------------------------
-     1.8 z-index 层级系统
-     ---------------------------------------- */
+     1.8 玻璃态效果
+      ---------------------------------------- */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.2);
+
+  /* ----------------------------------------
+     1.9 z-index 层级系统
+      ---------------------------------------- */
   --z-background: 0;
   --z-content: 10;
   --z-sidebar: 100;
@@ -336,8 +342,14 @@
   --text-tooltip: #f0f4f8;
 
   /* ----------------------------------------
-      2.10 阴影系统
-      ---------------------------------------- */
+       2.10 玻璃态效果
+       ---------------------------------------- */
+  --glass-bg: rgba(26, 29, 33, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* ----------------------------------------
+       2.11 阴影系统
+       ---------------------------------------- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
@@ -834,15 +846,15 @@
 
 /* 6.3 玻璃态效果 */
 .glass-theme {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--glass-border);
 }
 
 [data-theme='dark'] .glass-theme {
-  background: rgba(26, 29, 33, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
 }
 
 /* 6.4 渐变背景 */

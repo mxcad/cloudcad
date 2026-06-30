@@ -17,6 +17,7 @@ import { useWechatBind } from './Profile/hooks/useWechatBind';
 import { useAccountDeactivate } from './Profile/hooks/useAccountDeactivate';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useTheme } from '../contexts/ThemeContext';
+import { t } from '@/languages';
 import {
   ArrowLeft,
   Shield,
@@ -94,7 +95,7 @@ export const Profile: React.FC = () => {
   }, []);
 
   useDocumentTitle(
-    activeTab === 'membership' && MEMBERSHIP_ENABLED ? '会员中心' : '个人资料'
+    activeTab === 'membership' && MEMBERSHIP_ENABLED ? t('会员中心') : t('个人资料')
   );
 
   const visibleTabs: TabType[] = [
@@ -175,17 +176,17 @@ export const Profile: React.FC = () => {
       try {
         const bindRes = await bindWechat({ code: result.code!, state: result.state! });
         if (bindRes?.success) {
-          setSuccess('微信绑定成功');
+          setSuccess(t('微信绑定成功'));
           await refreshUser();
         } else {
-          setError(bindRes?.message || '绑定失败');
+          setError(bindRes?.message || t('绑定失败'));
         }
       } catch (bindErr) {
         setError(
           (bindErr as Error & { response?: { data?: { message?: string } } })
             ?.response?.data?.message ||
             (bindErr as Error).message ||
-            '绑定失败'
+            t('绑定失败')
         );
       }
       setLoading(false);
@@ -206,11 +207,11 @@ export const Profile: React.FC = () => {
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
     const levels = [
-      { label: '太弱', color: '#ef4444' },
-      { label: '较弱', color: '#f97316' },
-      { label: '一般', color: '#eab308' },
-      { label: '较强', color: '#22c55e' },
-      { label: '很强', color: '#10b981' },
+      { label: t('太弱'), color: '#ef4444' },
+      { label: t('较弱'), color: '#f97316' },
+      { label: t('一般'), color: '#eab308' },
+      { label: t('较强'), color: '#22c55e' },
+      { label: t('很强'), color: '#10b981' },
     ];
     return {
       strength: score,
@@ -219,6 +220,7 @@ export const Profile: React.FC = () => {
     };
   };
   const passwordStrength = getPasswordStrength(passwordForm.newPassword);
+
 
   useEffect(() => {
     return () => {
@@ -283,17 +285,17 @@ export const Profile: React.FC = () => {
     setError(null);
     setSuccess(null);
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError('两次输入的新密码不一致');
+      setError(t('两次输入的新密码不一致'));
       setLoading(false);
       return;
     }
     if (passwordForm.newPassword.length < 6) {
-      setError('新密码至少需要6个字符');
+      setError(t('新密码至少需要6个字符'));
       setLoading(false);
       return;
     }
     if (user?.hasPassword !== false && !passwordForm.oldPassword) {
-      setError('请输入当前密码');
+      setError(t('请输入当前密码'));
       setLoading(false);
       return;
     }
@@ -307,7 +309,7 @@ export const Profile: React.FC = () => {
       if (user?.username) {
         try {
           await login(user.username, passwordForm.newPassword);
-          setSuccess(`密码已${user?.hasPassword === false ? '设置' : '修改'}成功`);
+          setSuccess(`${user?.hasPassword === false ? t('密码已设置成功') : t('密码已修改成功')}`);
         } catch (loginErr) {
           console.error('Auto login error:', loginErr);
           // 自动登录失败时，强制退出登录
@@ -340,7 +342,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '密码修改失败'
+          t('密码修改失败')
       );
     } finally {
       setLoading(false);
@@ -352,7 +354,7 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setError(null);
     if (!emailForm.email) {
-      setError('请输入邮箱地址');
+      setError(t('请输入邮箱地址'));
       setLoading(false);
       return;
     }
@@ -360,13 +362,13 @@ export const Profile: React.FC = () => {
       await sendBindCode({ email: emailForm.email });
       setCountdown(60);
       setEmailStep('verify');
-      setSuccess('验证码已发送到您的邮箱');
+      setSuccess(t('验证码已发送到您的邮箱'));
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     } finally {
       setLoading(false);
@@ -378,14 +380,14 @@ export const Profile: React.FC = () => {
     setError(null);
     try {
       await sendBindCode({ email: emailForm.email });
-      setSuccess('验证码已重新发送到您的邮箱');
+      setSuccess(t('验证码已重新发送到您的邮箱'));
       setCountdown(60);
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     } finally {
       setSendingCode(false);
@@ -398,7 +400,7 @@ export const Profile: React.FC = () => {
     setError(null);
     try {
       await verifyBindEmail({ email: emailForm.email, code: emailForm.code });
-      setSuccess('邮箱绑定成功');
+      setSuccess(t('邮箱绑定成功'));
       setEmailStep('input');
       setEmailForm({ email: '', code: '' });
       await refreshUser();
@@ -407,7 +409,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '验证失败'
+          t('验证失败')
       );
     } finally {
       setLoading(false);
@@ -421,17 +423,17 @@ export const Profile: React.FC = () => {
     try {
       const response = await sendUnbindCode();
       if (response?.success) {
-        setSuccess('验证码已发送到原邮箱');
+        setSuccess(t('验证码已发送到原邮箱'));
         setCountdown(60);
       } else {
-        setError(response?.message || '发送验证码失败');
+        setError(response?.message || t('发送验证码失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     } finally {
       setSendingCode(false);
@@ -443,7 +445,7 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setError(null);
     if (!emailForm.code || !/^\d{6}$/.test(emailForm.code)) {
-      setError('请输入 6 位数字验证码');
+      setError(t('请输入 6 位数字验证码'));
       setLoading(false);
       return;
     }
@@ -455,14 +457,14 @@ export const Profile: React.FC = () => {
         setEmailStep('inputNew');
         setEmailForm({ email: '', code: '' });
       } else {
-        setError(response?.message || '验证失败');
+        setError(response?.message || t('验证失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '验证失败'
+          t('验证失败')
       );
     } finally {
       setLoading(false);
@@ -493,14 +495,14 @@ export const Profile: React.FC = () => {
       !emailForm.email ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.email)
     ) {
-      setError('请输入正确的邮箱地址');
+      setError(t('请输入正确的邮箱地址'));
       return;
     }
     setSendingCode(true);
     setError(null);
     try {
       await sendBindCode({ email: emailForm.email, isRebind: true });
-      setSuccess('验证码已发送');
+      setSuccess(t('验证码已发送'));
       setCountdown(60);
       setEmailStep('verifyNew');
     } catch (err) {
@@ -508,7 +510,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     } finally {
       setSendingCode(false);
@@ -523,17 +525,17 @@ export const Profile: React.FC = () => {
       !emailForm.email ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.email)
     ) {
-      setError('请输入正确的邮箱地址');
+      setError(t('请输入正确的邮箱地址'));
       setLoading(false);
       return;
     }
     if (!emailForm.code || !/^\d{6}$/.test(emailForm.code)) {
-      setError('请输入 6 位数字验证码');
+      setError(t('请输入 6 位数字验证码'));
       setLoading(false);
       return;
     }
     if (!emailVerifyToken) {
-      setError('请先验证原邮箱');
+      setError(t('请先验证原邮箱'));
       setLoading(false);
       return;
     }
@@ -544,21 +546,21 @@ export const Profile: React.FC = () => {
         token: emailVerifyToken,
       });
       if (response?.success) {
-        setSuccess('邮箱换绑成功');
+        setSuccess(t('邮箱换绑成功'));
         setEmailStep('input');
         setEmailForm({ email: '', code: '' });
         setEmailVerifyToken('');
         setIsEditingEmail(false);
         await refreshUser();
       } else {
-        setError(response?.message || '换绑失败');
+        setError(response?.message || t('换绑失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '换绑失败'
+          t('换绑失败')
       );
     } finally {
       setLoading(false);
@@ -579,7 +581,7 @@ export const Profile: React.FC = () => {
 
   const handleSendPhoneCode = async () => {
     if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
+      setError(t('请输入正确的手机号'));
       return;
     }
     setSendingCode(true);
@@ -587,18 +589,18 @@ export const Profile: React.FC = () => {
     try {
       const response = await sendSmsCode({ phone: phoneForm.phone });
       if (response?.success) {
-        setSuccess('验证码已发送');
+        setSuccess(t('验证码已发送'));
         setCountdown(60);
         setPhoneStep('verifyNew');
       } else {
-        showToast(response?.message || '发送验证码失败', 'error');
+        showToast(response?.message || t('发送验证码失败'), 'error');
       }
     } catch (err) {
       showToast(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败',
+          t('发送验证码失败'),
         'error'
       );
     } finally {
@@ -612,17 +614,17 @@ export const Profile: React.FC = () => {
     try {
       const response = await sendUnbindPhoneCode();
       if (response?.success) {
-        setSuccess('验证码已发送到原手机号');
+        setSuccess(t('验证码已发送到原手机号'));
         setCountdown(60);
       } else {
-        showToast(response?.message || '发送验证码失败', 'error');
+        showToast(response?.message || t('发送验证码失败'), 'error');
       }
     } catch (err) {
       showToast(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败',
+          t('发送验证码失败'),
         'error'
       );
     } finally {
@@ -635,27 +637,27 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setError(null);
     if (!phoneForm.code || !/^\d{6}$/.test(phoneForm.code)) {
-      setError('请输入 6 位数字验证码');
+      setError(t('请输入 6 位数字验证码'));
       setLoading(false);
       return;
     }
     try {
       const response = await verifyUnbindPhone({ code: phoneForm.code });
       if (response?.success) {
-        setSuccess('原手机号验证通过');
+        setSuccess(t('原手机号验证通过'));
         setVerifyToken(response.token || '');
         setPhoneStep('inputNew');
         setPhoneForm({ phone: '', code: '' });
         setCountdown(0);
       } else {
-        setError(response?.message || '验证失败');
+        setError(response?.message || t('验证失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '验证失败'
+          t('验证失败')
       );
     } finally {
       setLoading(false);
@@ -664,7 +666,7 @@ export const Profile: React.FC = () => {
 
   const handleSendNewPhoneCode = async () => {
     if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
+      setError(t('请输入正确的手机号'));
       return;
     }
     setSendingCode(true);
@@ -672,18 +674,18 @@ export const Profile: React.FC = () => {
     try {
       const response = await sendSmsCode({ phone: phoneForm.phone });
       if (response?.success) {
-        setSuccess('验证码已发送');
+        setSuccess(t('验证码已发送'));
         setCountdown(60);
         setPhoneStep('verifyNew');
       } else {
-        showToast(response?.message || '发送验证码失败', 'error');
+        showToast(response?.message || t('发送验证码失败'), 'error');
       }
     } catch (err) {
       showToast(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败',
+          t('发送验证码失败'),
         'error'
       );
     } finally {
@@ -696,17 +698,17 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setError(null);
     if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
+      setError(t('请输入正确的手机号'));
       setLoading(false);
       return;
     }
     if (!phoneForm.code || !/^\d{6}$/.test(phoneForm.code)) {
-      setError('请输入 6 位数字验证码');
+      setError(t('请输入 6 位数字验证码'));
       setLoading(false);
       return;
     }
     if (!verifyToken) {
-      setError('请先验证原手机号');
+      setError(t('请先验证原手机号'));
       setLoading(false);
       return;
     }
@@ -717,21 +719,21 @@ export const Profile: React.FC = () => {
         token: verifyToken,
       });
       if (response?.success) {
-        setSuccess('手机号换绑成功');
+        setSuccess(t('手机号换绑成功'));
         setPhoneStep('verifyOld');
         setPhoneForm({ phone: '', code: '' });
         setVerifyToken('');
         setIsEditingPhone(false);
         await refreshUser();
       } else {
-        setError(response?.message || '换绑失败');
+        setError(response?.message || t('换绑失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '换绑失败'
+          t('换绑失败')
       );
     } finally {
       setLoading(false);
@@ -743,25 +745,25 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setError(null);
     if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setError('请输入正确的手机号');
+      setError(t('请输入正确的手机号'));
       setLoading(false);
       return;
     }
     if (!phoneForm.code || !/^\d{6}$/.test(phoneForm.code)) {
-      setError('请输入6位数字验证码');
+      setError(t('请输入6位数字验证码'));
       setLoading(false);
       return;
     }
     try {
       const response = await bindPhone({ phone: phoneForm.phone, code: phoneForm.code });
       if (response?.success) {
-        setSuccess('手机号绑定成功');
+        setSuccess(t('手机号绑定成功'));
         setPhoneStep('verifyOld');
         setPhoneForm({ phone: '', code: '' });
         setIsEditingPhone(false);
         await refreshUser();
       } else {
-        setError(response?.message || '绑定失败');
+        setError(response?.message || t('绑定失败'));
       }
     } catch (err) {
       setError(
@@ -783,10 +785,10 @@ export const Profile: React.FC = () => {
 
   const handleUnbindWechat = async () => {
     const confirmed = await showConfirm({
-      title: '解绑微信',
-      message: '确定要解绑微信吗？解绑后需要重新绑定。',
-      confirmText: '确认解绑',
-      cancelText: '取消',
+      title: t('解绑微信'),
+      message: t('确定要解绑微信吗？解绑后需要重新绑定。'),
+      confirmText: t('确认解绑'),
+      cancelText: t('取消'),
       type: 'warning',
     });
     if (!confirmed) return;
@@ -795,19 +797,19 @@ export const Profile: React.FC = () => {
       setError(null);
       const response = await unbindWechat();
       if (response?.success) {
-        showToast('微信解绑成功', 'success');
-        setSuccess('微信解绑成功');
+        showToast(t('微信解绑成功'), 'success');
+        setSuccess(t('微信解绑成功'));
         await refreshUser();
       } else {
-        setError(response?.message || '解绑失败');
-        showToast(response?.message || '解绑失败', 'error');
+        setError(response?.message || t('解绑失败'));
+        showToast(response?.message || t('解绑失败'), 'error');
       }
     } catch (err) {
       const errorMsg =
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
         (err as Error).message ||
-        '解绑失败';
+        t('解绑失败');
       setError(errorMsg);
       showToast(errorMsg, 'error');
     } finally {
@@ -817,10 +819,10 @@ export const Profile: React.FC = () => {
 
   const handleUnbindEmail = async () => {
     const confirmed = await showConfirm({
-      title: '解绑邮箱',
-      message: '确定要解绑邮箱吗？解绑后将无法通过邮箱找回密码。',
-      confirmText: '确认解绑',
-      cancelText: '取消',
+      title: t('解绑邮箱'),
+      message: t('确定要解绑邮箱吗？解绑后将无法通过邮箱找回密码。'),
+      confirmText: t('确认解绑'),
+      cancelText: t('取消'),
       type: 'warning',
     });
     if (!confirmed) return;
@@ -829,19 +831,19 @@ export const Profile: React.FC = () => {
       setError(null);
       const response = await unbindEmail();
       if (response?.success) {
-        showToast('邮箱解绑成功', 'success');
-        setSuccess('邮箱解绑成功');
+        showToast(t('邮箱解绑成功'), 'success');
+        setSuccess(t('邮箱解绑成功'));
         await refreshUser();
       } else {
-        setError(response?.message || '解绑失败');
-        showToast(response?.message || '解绑失败', 'error');
+        setError(response?.message || t('解绑失败'));
+        showToast(response?.message || t('解绑失败'), 'error');
       }
     } catch (err) {
       const errorMsg =
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
         (err as Error).message ||
-        '解绑失败';
+        t('解绑失败');
       setError(errorMsg);
       showToast(errorMsg, 'error');
     } finally {
@@ -851,10 +853,10 @@ export const Profile: React.FC = () => {
 
   const handleUnbindPhone = async () => {
     const confirmed = await showConfirm({
-      title: '解绑手机号',
-      message: '确定要解绑手机号吗？解绑后将无法通过手机号登录。',
-      confirmText: '确认解绑',
-      cancelText: '取消',
+      title: t('解绑手机号'),
+      message: t('确定要解绑手机号吗？解绑后将无法通过手机号登录。'),
+      confirmText: t('确认解绑'),
+      cancelText: t('取消'),
       type: 'warning',
     });
     if (!confirmed) return;
@@ -863,20 +865,20 @@ export const Profile: React.FC = () => {
       setError(null);
       const response = await unbindPhone();
       if (response?.success) {
-        showToast('手机号解绑成功', 'success');
-        setSuccess('手机号解绑成功');
+        showToast(t('手机号解绑成功'), 'success');
+        setSuccess(t('手机号解绑成功'));
         setCountdown(0);
         await refreshUser();
       } else {
-        setError(response?.message || '解绑失败');
-        showToast(response?.message || '解绑失败', 'error');
+        setError(response?.message || t('解绑失败'));
+        showToast(response?.message || t('解绑失败'), 'error');
       }
     } catch (err) {
       const errorMsg =
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
         (err as Error).message ||
-        '解绑失败';
+        t('解绑失败');
       setError(errorMsg);
       showToast(errorMsg, 'error');
     } finally {
@@ -897,7 +899,7 @@ export const Profile: React.FC = () => {
         wechatConfirm: deactivateForm.wechatConfirm || undefined,
       });
 
-      setSuccess('账户已注销，30天后自动清理数据');
+      setSuccess(t('账户已注销，30天后自动清理数据'));
 
       deactivateTimeoutRef.current = setTimeout(() => {
         logout();
@@ -907,7 +909,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '注销失败'
+          t('注销失败')
       );
     } finally {
       setDeactivateLoading(false);
@@ -917,7 +919,7 @@ export const Profile: React.FC = () => {
   const handleSendDeactivatePhoneCode = async () => {
     try {
       if (!user?.phone) {
-        setError('手机号不存在');
+        setError(t('手机号不存在'));
         return;
       }
       const phone = String(user.phone ?? '');
@@ -937,7 +939,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     }
   };
@@ -945,7 +947,7 @@ export const Profile: React.FC = () => {
   const handleSendDeactivateEmailCode = async () => {
     try {
       if (!user?.email) {
-        setError('邮箱不存在');
+        setError(t('邮箱不存在'));
         return;
       }
       const email = String(user.email ?? '');
@@ -965,7 +967,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败'
+          t('发送验证码失败')
       );
     }
   };
@@ -973,7 +975,7 @@ export const Profile: React.FC = () => {
   return (
     <div className="min-h-screen p-6 profile-page" data-theme={isDark ? 'dark' : 'light'}>
       <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate(-1)}>
-        返回
+        {t('返回')}
       </Button>
 
       <div className="profile-container">
@@ -1001,11 +1003,11 @@ export const Profile: React.FC = () => {
               </div>
               <div className="user-info">
                 <h1 className="user-name">
-                  {user?.nickname || user?.username || '用户'}
+                  {user?.nickname || user?.username || t('用户')}
                 </h1>
                 <p className="user-role">
                   <Shield size={14} />
-                  {isAdmin() ? '系统管理员' : '普通用户'}
+                  {isAdmin() ? t('系统管理员') : t('普通用户')}
                 </p>
               </div>
             </div>
@@ -1017,14 +1019,14 @@ export const Profile: React.FC = () => {
               icon={User}
               onClick={() => switchTab('info')}
             >
-              个人信息
+              {t('个人信息')}
             </TabButton>
             <TabButton
               active={activeTab === 'password'}
               icon={Key}
               onClick={() => switchTab('password')}
             >
-              {user?.hasPassword === false ? '设置密码' : '修改密码'}
+              {user?.hasPassword === false ? t('设置密码') : t('修改密码')}
             </TabButton>
             {mailEnabled && (
               <TabButton
@@ -1032,7 +1034,7 @@ export const Profile: React.FC = () => {
                 icon={Mail}
                 onClick={() => switchTab('email')}
               >
-                邮箱绑定
+                {t('邮箱绑定')}
               </TabButton>
             )}
             {smsEnabled && (
@@ -1041,7 +1043,7 @@ export const Profile: React.FC = () => {
                 icon={Phone}
                 onClick={() => switchTab('phone')}
               >
-                手机绑定
+                {t('手机绑定')}
               </TabButton>
             )}
             {wechatEnabled && (
@@ -1050,7 +1052,7 @@ export const Profile: React.FC = () => {
                 icon={MessageCircle}
                 onClick={() => switchTab('wechat')}
               >
-                微信绑定
+                {t('微信绑定')}
               </TabButton>
             )}
             {MEMBERSHIP_ENABLED && (
@@ -1059,7 +1061,7 @@ export const Profile: React.FC = () => {
                 icon={Crown}
                 onClick={() => switchTab('membership')}
               >
-                会员信息
+                {t('会员信息')}
               </TabButton>
             )}
             <TabButton
@@ -1067,7 +1069,7 @@ export const Profile: React.FC = () => {
               icon={AlertTriangle}
               onClick={() => switchTab('deactivate')}
             >
-              注销账户
+               {t('注销账户')}
             </TabButton>
           </Tabs>
 
@@ -1201,7 +1203,7 @@ export const Profile: React.FC = () => {
                     ...f,
                     wechatConfirm: 'confirmed',
                   }));
-                  setSuccess('微信验证成功');
+                  setSuccess(t('微信验证成功'));
                 }}
                 onDeactivate={handleDeactivate}
                 onShowConfirm={showConfirm}

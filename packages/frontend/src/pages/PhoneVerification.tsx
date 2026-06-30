@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePhoneVerification } from '../hooks/usePhoneVerification';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -30,7 +31,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
  * 用于已注册但手机号未验证的用户，验证成功后自动登录
  */
 export const PhoneVerification: React.FC = () => {
-  useDocumentTitle('手机号验证');
+  useDocumentTitle(t('手机号验证'));
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyPhoneAndLogin, isAuthenticated } = useAuth();
@@ -88,21 +89,21 @@ export const PhoneVerification: React.FC = () => {
 
   const handleVerifyCode = async () => {
     if (!verificationCode.trim()) {
-      setError('请输入验证码');
+      setError(t('请输入验证码'));
       return;
     }
     if (verificationCode.length !== 6) {
-      setError('验证码应为6位数字');
+      setError(t('验证码应为6位数字'));
       return;
     }
     if (!phone) {
-      setError(bindMode ? '请输入手机号' : '手机号缺失，请重新登录');
+      setError(bindMode ? t('请输入手机号') : t('手机号缺失，请重新登录'));
       return;
     }
 
     // 绑定模式下验证手机号格式
     if (bindMode && !/^1[3-9]\d{9}$/.test(phone)) {
-      setError('请输入正确的手机号');
+      setError(t('请输入正确的手机号'));
       return;
     }
 
@@ -113,7 +114,7 @@ export const PhoneVerification: React.FC = () => {
       if (bindMode) {
         // 绑定模式：调用绑定手机号接口，返回 token 后存储并通过刷新更新 AuthContext
         const response = await bindPhoneAndLogin({ tempToken, phone, code: verificationCode.trim() });
-        if (!response) throw new Error('绑定手机号失败');
+        if (!response) throw new Error(t('绑定手机号失败'));
         const { accessToken, refreshToken, user: userData } = response
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
@@ -135,7 +136,7 @@ export const PhoneVerification: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '验证失败，请检查验证码是否正确或已过期'
+          t('验证失败，请检查验证码是否正确或已过期')
       );
     } finally {
       setLoading(false);
@@ -150,7 +151,7 @@ export const PhoneVerification: React.FC = () => {
 
     // 验证手机号格式
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setError('请输入正确的手机号');
+      setError(t('请输入正确的手机号'));
       return;
     }
 

@@ -16,6 +16,7 @@ import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
 import { useUploadManager } from '../hooks/useUploadManager';
 import type { UploadListener } from '../utils/uploadManager';
+import { t } from '@/languages';
 
 interface MxCadUploaderProps {
   nodeId?: string | (() => string);
@@ -49,7 +50,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       onSuccess,
       onError,
       showProgress = true,
-      buttonText = '上传 CAD 文件',
+      buttonText = t('上传 CAD 文件'),
       buttonClassName = '',
       onExternalReferenceSuccess,
       onExternalReferenceSkip,
@@ -72,7 +73,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         onExternalReferenceSuccess?.();
       },
       onError: (error) => {
-        globalShowToast(`外部参照上传失败: ${error}`, 'error');
+        globalShowToast(t(`外部参照上传失败: ${error}`), 'error');
       },
       onSkip: () => {
         onExternalReferenceSkip?.();
@@ -89,8 +90,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
     const handleSelectFiles = useCallback(async () => {
       const effectiveNodeId = typeof nodeId === 'function' ? nodeId() : nodeId;
       if (!isAuthenticated) {
-        globalShowToast('请先登录后再上传文件', 'warning');
-        onError?.('用户未登录');
+        globalShowToast(t('请先登录后再上传文件'), 'warning');
+        onError?.(t('用户未登录'));
         return;
       }
 
@@ -103,19 +104,19 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
       });
 
       if (allowedFiles.length === 0) {
-        globalShowToast('所选文件类型不支持（支持 .dwg, .dxf, .mxweb）', 'warning');
+        globalShowToast(t('所选文件类型不支持（支持 .dwg, .dxf, .mxweb）'), 'warning');
         return;
       }
 
       if (allowedFiles.length !== files.length) {
-        globalShowToast(`已忽略 ${files.length - allowedFiles.length} 个不支持的文件类型`, 'info');
+        globalShowToast(t(`已忽略 ${files.length - allowedFiles.length} 个不支持的文件类型`), 'info');
       }
 
       setCurrentNodeId(effectiveNodeId || '');
 
       if (!manager) {
         console.error('[MxCadUploader] UploadManager 未初始化，无法上传');
-        globalShowToast('上传管理器未初始化，请刷新页面后重试', 'error');
+        globalShowToast(t('上传管理器未初始化，请刷新页面后重试'), 'error');
         return;
       }
 
@@ -150,7 +151,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               );
             }
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '文件处理失败';
+            const errorMessage = error instanceof Error ? error.message : t('文件处理失败');
             manager.failTask(event.taskId, errorMessage);
             globalShowToast(errorMessage, 'error');
             onError?.(errorMessage);
@@ -171,8 +172,8 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
             queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.all });
           }
-          const errorMsg = event.error || '上传失败';
-          globalShowToast(`文件上传失败: ${errorMsg}`, 'error');
+          const errorMsg = event.error || t('上传失败');
+          globalShowToast(t(`文件上传失败: ${errorMsg}`), 'error');
         }
       };
 
@@ -202,7 +203,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
     return (
       <div className="mxcad-uploader">
-        <Tooltip content={!isAuthenticated ? '请先登录后再上传文件' : '上传 CAD 文件'}>
+        <Tooltip content={!isAuthenticated ? t('请先登录后再上传文件') : t('上传 CAD 文件')}>
           <Button
             data-tour="upload-btn"
             onClick={handleSelectFiles}
@@ -213,7 +214,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             icon={isUploading ? undefined : (isAuthenticated ? Upload : undefined)}
             className={buttonClassName}
           >
-            {isUploading ? '上传中...' : !isAuthenticated ? '请先登录' : buttonText}
+            {isUploading ? t('上传中...') : !isAuthenticated ? t('请先登录') : buttonText}
           </Button>
         </Tooltip>
 

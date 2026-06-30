@@ -20,6 +20,7 @@ import React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { LogIn } from 'lucide-react';
+import { t } from '@/languages';
 
 interface LoginPromptProps {
   isOpen: boolean;
@@ -38,15 +39,15 @@ export const LoginPrompt: React.FC<LoginPromptProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="需要登录"
+      title={t('需要登录')}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            稍后再说
+            {t('稍后再说')}
           </Button>
           <Button variant="primary" onClick={onLogin}>
             <LogIn size={16} className="mr-2" />
-            立即登录
+            {t('立即登录')}
           </Button>
         </>
       }
@@ -62,13 +63,13 @@ export const LoginPrompt: React.FC<LoginPromptProps> = ({
           className="text-xl font-bold mb-2"
           style={{ color: 'var(--text-primary)' }}
         >
-          登录以继续操作
+          {t('登录以继续操作')}
         </h3>
         <p className="text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
-          「{action}」功能需要登录后才能使用
+          {t('「{action}」功能需要登录后才能使用').replace('{action}', action)}
         </p>
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          登录后可使用完整功能，包括保存文件、管理项目等
+          {t('登录后可使用完整功能，包括保存文件、管理项目等')}
         </p>
       </div>
     </Modal>

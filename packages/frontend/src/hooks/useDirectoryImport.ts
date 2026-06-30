@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { t } from '@/languages';
 import { useState, useCallback, useRef } from 'react';
 // 使用原生分片上传（uploadFile）
 import {
@@ -265,7 +266,7 @@ export function useDirectoryImport() {
         currentFileName: '',
         percentage: 0,
         status: 'scanning',
-        message: '正在扫描目录...',
+        message: t('正在扫描目录...'),
       });
 
       const root: FileTreeNode = {
@@ -364,7 +365,7 @@ export function useDirectoryImport() {
         currentFileName: '',
         percentage: 0,
         status: 'preparing',
-        message: `扫描完成：${fileCount} 个文件，${folderCount} 个文件夹`,
+        message: `${t('扫描完成：')}${fileCount}${t(' 个文件，')}${folderCount}${t(' 个文件夹')}`,
       });
 
       return root;
@@ -388,7 +389,7 @@ export function useDirectoryImport() {
         currentFileName: '',
         percentage: 0,
         status: 'scanning',
-        message: '正在扫描目录...',
+        message: t('正在扫描目录...'),
       });
 
       // 获取根目录名称（从第一个文件的路径提取）
@@ -400,7 +401,7 @@ export function useDirectoryImport() {
           currentFileName: '',
           percentage: 0,
           status: 'failed',
-          message: '目录为空',
+          message: t('目录为空'),
         });
         return [];
       }
@@ -557,7 +558,7 @@ export function useDirectoryImport() {
         currentFileName: '',
         percentage: 0,
         status: 'preparing',
-        message: `已选择 ${selectedDirsRef.current.length} 个目录，共 ${totalFiles} 个文件，${totalFolders} 个文件夹`,
+        message: `${t('已选择 ')}${selectedDirsRef.current.length}${t(' 个目录，共 ')}${totalFiles}${t(' 个文件，')}${totalFolders}${t(' 个文件夹')}`,
       });
 
       return selectedDirsRef.current;
@@ -767,7 +768,7 @@ export function useDirectoryImport() {
         currentFileName: '',
         percentage: 0,
         status: 'uploading',
-        message: '开始导入...',
+        message: t('开始导入...'),
       });
 
       // 递归导入
@@ -816,7 +817,7 @@ export function useDirectoryImport() {
                   stats.skippedFolders++;
                   await importNode(child, existingFolder.id);
                 } else {
-                  throw new Error('文件夹创建失败且未找到已存在的文件夹');
+                  throw new Error(t('文件夹创建失败且未找到已存在的文件夹'));
                 }
               }
             } catch (error) {
@@ -843,7 +844,7 @@ export function useDirectoryImport() {
                   errors.push({
                     fileName: child.name,
                     error:
-                      error instanceof Error ? error.message : '创建文件夹失败',
+                      error instanceof Error ? error.message : t('创建文件夹失败'),
                   });
                   stats.failedFiles++;
                 }
@@ -854,7 +855,7 @@ export function useDirectoryImport() {
                   error:
                     fallbackError instanceof Error
                       ? fallbackError.message
-                      : '创建文件夹失败',
+                      : t('创建文件夹失败'),
                 });
                 stats.failedFiles++;
               }
@@ -871,7 +872,7 @@ export function useDirectoryImport() {
           // 使用并发队列上传文件
           const queue = uploadQueueRef.current;
             if (!queue) {
-              throw new Error('上传队列未初始化');
+              throw new Error(t('上传队列未初始化'));
             }
             const uploadTask = queue.enqueue(async () => {
             if (abortRef.current) return;
@@ -887,7 +888,7 @@ export function useDirectoryImport() {
                   100
               ),
               status: 'uploading',
-              message: `正在上传: ${child.name}`,
+              message: `${t('正在上传: ')}${child.name}`,
             });
 
             try {
@@ -915,14 +916,14 @@ export function useDirectoryImport() {
                 stats.failedFiles++;
                 errors.push({
                   fileName: child.name,
-                  error: '上传失败',
+                  error: t('上传失败'),
                 });
               }
             } catch (error) {
               stats.failedFiles++;
               errors.push({
                 fileName: child.name,
-                error: error instanceof Error ? error.message : '上传失败',
+                error: error instanceof Error ? error.message : t('上传失败'),
               });
             }
           });
@@ -954,8 +955,8 @@ export function useDirectoryImport() {
         percentage: 100,
         status: abortRef.current ? 'failed' : 'completed',
         message: abortRef.current
-          ? '导入已取消'
-          : `导入完成：成功 ${stats.successFiles}，跳过 ${stats.skippedFiles}，失败 ${stats.failedFiles}`,
+          ? t('导入已取消')
+          : `${t('导入完成：成功 ')}${stats.successFiles}${t('，跳过 ')}${stats.skippedFiles}${t('，失败 ')}${stats.failedFiles}`,
       };
 
       setProgress(finalProgress);
@@ -977,7 +978,7 @@ export function useDirectoryImport() {
     setProgress((prev) => ({
       ...prev,
       status: 'failed',
-      message: '导入已取消',
+      message: t('导入已取消'),
     }));
   }, []);
 

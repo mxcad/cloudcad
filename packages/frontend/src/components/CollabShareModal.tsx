@@ -3,6 +3,7 @@ import { Copy, Check, Link2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { t } from '@/languages';
 
 interface CollabShareModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export const CollabShareModal: React.FC<CollabShareModalProps> = ({
   }, [shareUrl]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="分享协同" size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('分享协同')} size="sm">
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '8px 0' }}>
         <div style={{
           background: 'var(--bg-primary)',
@@ -73,12 +74,12 @@ export const CollabShareModal: React.FC<CollabShareModalProps> = ({
             icon={copied ? Check : Copy}
             onClick={handleCopy}
           >
-            {copied ? '已复制' : '复制'}
+            {copied ? t('已复制') : t('复制')}
           </Button>
         </div>
 
         <Button variant="primary" onClick={onClose} style={{ width: '100%' }}>
-          完成
+          {t('完成')}
         </Button>
       </div>
     </Modal>

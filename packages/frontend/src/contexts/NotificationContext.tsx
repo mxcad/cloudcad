@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Z_LAYERS } from '../constants/layers';
+import { t } from '@/languages';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import type { ToastType } from '../components/ui/Toast';
 
@@ -196,8 +197,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     isOpen: false,
     title: '',
     message: '',
-    confirmText: '确定',
-    cancelText: '取消',
+    confirmText: t('确定'),
+    cancelText: t('取消'),
     dialogType: 'warning',
   });
 
@@ -211,7 +212,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     isOpen: false,
     title: '',
     message: '',
-    confirmText: '确定',
+    confirmText: t('确定'),
     dialogType: 'info',
   });
 
@@ -227,9 +228,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     isOpen: false,
     title: '',
     message: '',
-    confirmText: '保存',
-    discardText: '不保存',
-    cancelText: '取消',
+    confirmText: t('保存'),
+    discardText: t('不保存'),
+    cancelText: t('取消'),
     dialogType: 'warning',
   });
 
@@ -246,8 +247,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     title: '',
     label: '',
     defaultValue: '',
-    confirmText: '确定',
-    cancelText: '取消',
+    confirmText: t('确定'),
+    cancelText: t('取消'),
     multiline: false,
   });
   const [promptInputValue, setPromptInputValue] = useState('');
@@ -348,8 +349,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           isOpen: true,
           title: options.title,
           message: options.message,
-          confirmText: options.confirmText || '确定',
-          cancelText: options.cancelText || '取消',
+          confirmText: options.confirmText || t('确定'),
+          cancelText: options.cancelText || t('取消'),
           dialogType: options.type || 'warning',
         });
       });
@@ -365,7 +366,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           isOpen: true,
           title: options.title,
           message: options.message,
-          confirmText: options.confirmText || '确定',
+          confirmText: options.confirmText || t('确定'),
           dialogType: options.type || 'info',
         });
       });
@@ -383,8 +384,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           title: options.title,
           label: options.label,
           defaultValue,
-          confirmText: options.confirmText || '确定',
-          cancelText: options.cancelText || '取消',
+          confirmText: options.confirmText || t('确定'),
+          cancelText: options.cancelText || t('取消'),
           multiline: options.multiline || false,
         });
         setPromptInputValue(defaultValue);
