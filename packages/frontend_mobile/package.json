@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev-force": "vite --host --force",
-    "build": "pnpm setDefaultI18n && pnpm i18nCompile && vite build",
+    "build": "vite build",
     "build:en": "pnpm setEnI18n && pnpm i18nCompile && vite build",
     "preview": "vite preview",
     "generate:sdk": "node scripts/generate-sdk.cjs",
