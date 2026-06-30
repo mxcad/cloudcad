@@ -28,6 +28,7 @@ import { Eye } from 'lucide-react';
 import { EyeOff } from 'lucide-react';
 import { Phone } from 'lucide-react';
 import { MessageSquare } from 'lucide-react';
+import { t, $t } from '@/languages';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -42,7 +43,7 @@ import { Button } from '@/components/ui/Button';
  * - 完美主题：深浅色主题无缝切换
  */
 export const Register: React.FC = () => {
-  useDocumentTitle('注册');
+  useDocumentTitle(t("注册"));
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -126,14 +127,14 @@ export const Register: React.FC = () => {
             <div className="closed-icon">
               <ShieldCheck size={32} />
             </div>
-            <h2 className="closed-title">注册已关闭</h2>
+            <h2 className="closed-title">{t("注册已关闭")}</h2>
             <p className="closed-message">
-              系统管理员已关闭新用户注册功能。
+              {t("系统管理员已关闭新用户注册功能。")}
               <br />
-              如有疑问，请联系管理员。
+              {t("如有疑问，请联系管理员。")}
             </p>
             <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
-              返回登录
+              {t("返回登录")}
             </Button>
           </div>
         </div>
@@ -190,11 +191,11 @@ export const Register: React.FC = () => {
     if (/[^a-zA-Z0-9]/.test(password)) score++;
 
     const levels = [
-      { label: '太弱', color: '#ef4444' },
-      { label: '较弱', color: '#f97316' },
-      { label: '一般', color: '#eab308' },
-      { label: '较强', color: '#22c55e' },
-      { label: '很强', color: '#10b981' },
+      { label: t("太弱"), color: '#ef4444' },
+      { label: t("较弱"), color: '#f97316' },
+      { label: t("一般"), color: '#eab308' },
+      { label: t("较强"), color: '#22c55e' },
+      { label: t("很强"), color: '#10b981' },
     ];
     const level = levels[score] ?? levels[0]!;
     return { strength: score, label: level.label, color: level.color };
@@ -225,7 +226,7 @@ export const Register: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">创建账户，开启云端 CAD 之旅</p>
+            <p className="app-tagline">{t("创建账户，开启云端 CAD 之旅")}</p>
           </div>
 
           {/* 步骤指示器 */}
@@ -236,24 +237,24 @@ export const Register: React.FC = () => {
               <div className="step-number">
                 {currentStep > 1 ? <CheckCircle size={16} /> : 1}
               </div>
-              <span className="step-label">基本信息</span>
+              <span className="step-label">{t("基本信息")}</span>
             </div>
             <div className="step-line" />
             <div className={`step ${currentStep >= 2 ? 'active' : ''}`}>
               <div className="step-number">2</div>
-              <span className="step-label">安全设置</span>
+              <span className="step-label">{t("安全设置")}</span>
             </div>
           </div>
 
           {/* 表单标题 */}
           <div className="form-header">
             <h2 className="form-title">
-              {currentStep === 1 ? '创建账户' : '设置密码'}
+              {currentStep === 1 ? t("创建账户") : t("设置密码")}
             </h2>
             <p className="form-subtitle">
               {currentStep === 1
-                ? '填写您的基本信息'
-                : '设置安全密码以保护账户'}
+                ? t("填写您的基本信息")
+                : t("设置安全密码以保护账户")}
             </p>
           </div>
 
@@ -274,7 +275,7 @@ export const Register: React.FC = () => {
                   className={`input-group ${focusedField === 'username' ? 'focused' : ''} ${fieldErrors.username ? 'error' : ''}`}
                 >
                   <label htmlFor="username" className="input-label">
-                    用户名 <span className="required">*</span>
+                    {t("用户名")} <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
                     <User
@@ -286,7 +287,7 @@ export const Register: React.FC = () => {
                       type="text"
                       required
                       className="input-field"
-                      placeholder="请输入用户名"
+                      placeholder={t("请输入用户名")}
                       {...register('username')}
                       onFocus={() => setFocusedField('username')}
                     />
@@ -301,7 +302,7 @@ export const Register: React.FC = () => {
                   className={`input-group ${focusedField === 'nickname' ? 'focused' : ''} ${fieldErrors.nickname ? 'error' : ''}`}
                 >
                   <label htmlFor="nickname" className="input-label">
-                    昵称
+                    {t("昵称")}
                   </label>
                   <div className="input-wrapper">
                     <Sparkles
@@ -312,7 +313,7 @@ export const Register: React.FC = () => {
                       id="nickname"
                       type="text"
                       className="input-field"
-                      placeholder="请输入昵称（可选）"
+                      placeholder={t("请输入昵称（可选）")}
                       {...register('nickname')}
                       onFocus={() => setFocusedField('nickname')}
                     />
@@ -328,7 +329,7 @@ export const Register: React.FC = () => {
                     className={`input-group ${focusedField === 'email' ? 'focused' : ''} ${fieldErrors.email ? 'error' : ''}`}
                   >
                     <label htmlFor="email" className="input-label">
-                      邮箱地址{' '}
+                      {t("邮箱地址")}{' '}
                       {requireEmailVerification && (
                         <span className="required">*</span>
                       )}
@@ -344,7 +345,7 @@ export const Register: React.FC = () => {
                         autoComplete="email"
                         required={requireEmailVerification}
                         className="input-field"
-                        placeholder="请输入邮箱地址"
+                        placeholder={t("请输入邮箱地址")}
                         {...register('email')}
                         onFocus={() => setFocusedField('email')}
                       />
@@ -363,7 +364,7 @@ export const Register: React.FC = () => {
                       className={`input-group ${focusedField === 'phone' ? 'focused' : ''} ${fieldErrors.phone ? 'error' : ''}`}
                     >
                       <label htmlFor="phone" className="input-label">
-                        手机号{' '}
+                        {t("手机号")}{' '}
                         {requirePhoneVerification && (
                           <span className="required">*</span>
                         )}
@@ -381,7 +382,7 @@ export const Register: React.FC = () => {
                           required={requirePhoneVerification}
                           maxLength={11}
                           className="input-field"
-                          placeholder="请输入手机号"
+                          placeholder={t("请输入手机号")}
                           value={phoneForm.phone}
                           onChange={handlePhoneChange}
                           onFocus={() => setFocusedField('phone')}
@@ -398,7 +399,7 @@ export const Register: React.FC = () => {
                       className={`input-group ${focusedField === 'code' ? 'focused' : ''} ${fieldErrors.code ? 'error' : ''}`}
                     >
                       <label htmlFor="code" className="input-label">
-                        验证码{' '}
+                        {t("验证码")}{' '}
                         {requirePhoneVerification && (
                           <span className="required">*</span>
                         )}
@@ -416,7 +417,7 @@ export const Register: React.FC = () => {
                           required={requirePhoneVerification}
                           maxLength={6}
                           className="input-field has-button"
-                          placeholder="请输入验证码"
+                          placeholder={t("请输入验证码")}
                           value={phoneForm.code}
                           onChange={handlePhoneChange}
                           onFocus={() => setFocusedField('code')}
@@ -433,7 +434,7 @@ export const Register: React.FC = () => {
                           ) : countdown > 0 ? (
                             `${countdown}s`
                           ) : (
-                            '获取验证码'
+                            t("获取验证码")
                           )}
                         </button>
                         <div className="input-glow" />
@@ -450,11 +451,11 @@ export const Register: React.FC = () => {
                   variant="primary"
                   size="lg"
                   className="w-full"
-                  onClick={onNext}
-                  icon={ArrowRight}
-                >
-                  下一步
-                </Button>
+                   onClick={onNext}
+                   icon={ArrowRight}
+                 >
+                   {t("下一步")}
+                 </Button>
               </div>
             )}
 
@@ -465,7 +466,7 @@ export const Register: React.FC = () => {
                   className={`input-group ${focusedField === 'password' ? 'focused' : ''} ${fieldErrors.password ? 'error' : ''}`}
                 >
                   <label htmlFor="password" className="input-label">
-                    密码 <span className="required">*</span>
+                     {t("密码")} <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
                     <Lock
@@ -478,7 +479,7 @@ export const Register: React.FC = () => {
                       autoComplete="new-password"
                       required
                       className="input-field has-toggle"
-                      placeholder="至少8位，包含大小写字母、数字和特殊字符"
+                      placeholder={t("至少8位，包含大小写字母、数字和特殊字符")}
                       {...register('password')}
                       onFocus={() => setFocusedField('password')}
                     />
@@ -521,7 +522,7 @@ export const Register: React.FC = () => {
                   className={`input-group ${focusedField === 'confirmPassword' ? 'focused' : ''} ${fieldErrors.confirmPassword ? 'error' : ''}`}
                 >
                   <label htmlFor="confirmPassword" className="input-label">
-                    确认密码 <span className="required">*</span>
+                     {t("确认密码")} <span className="required">*</span>
                   </label>
                   <div className="input-wrapper">
                     <CheckCircle
@@ -534,7 +535,7 @@ export const Register: React.FC = () => {
                       autoComplete="new-password"
                       required
                       className="input-field has-toggle"
-                      placeholder="请再次输入密码"
+                      placeholder={t("请再次输入密码")}
                       {...register('confirmPassword')}
                       onFocus={() => setFocusedField('confirmPassword')}
                     />
@@ -567,7 +568,7 @@ export const Register: React.FC = () => {
                     icon={ArrowLeft}
                     onClick={handleBack}
                   >
-                    返回
+                    {t("返回")}
                   </Button>
                   <Button
                     type="submit"
@@ -577,7 +578,7 @@ export const Register: React.FC = () => {
                     loading={loading}
                     icon={ArrowRight}
                   >
-                    立即注册
+                    {t("立即注册")}
                   </Button>
                 </div>
               </div>
@@ -587,22 +588,22 @@ export const Register: React.FC = () => {
           {/* 登录链接 */}
           <div className="form-footer">
             <p className="login-text">
-              已有账户？
+              {t("已有账户？")}
               <Button variant="secondary" onClick={() => navigate('/login')}>
-                立即登录
+                {t("立即登录")}
               </Button>
             </p>
           </div>
 
           {/* 底部特性图标 */}
           <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+            <div className="feature-dot" data-tooltip={t("高性能 CAD 在线预览")}>
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip={t("多用户实时协同编辑")}>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip={t("企业级数据安全保障")}>
               <ShieldCheck size={14} />
             </div>
           </div>

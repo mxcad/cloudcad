@@ -377,7 +377,7 @@ export const Dashboard: React.FC = () => {
         >
           <CheckCircle size={20} style={{ color: '#22c55e' }} />
           <span className="text-sm" style={{ color: '#22c55e' }}>
-            项目「{createSuccess}」创建成功！
+            {t("项目")}「{createSuccess}」{t("创建成功！")}
           </span>
         </div>
       )}
@@ -414,7 +414,7 @@ export const Dashboard: React.FC = () => {
         <StatCard
           title={t('存储使用')}
           value={quotaStorage ? formatFileSize(quotaStorage.used) : '-'}
-          subtitle={quotaStorage ? `共 ${formatFileSize(quotaStorage.total)}` : ''}
+          subtitle={quotaStorage ? t("共 ") + formatFileSize(quotaStorage.total) : ''}
           icon={HardDrive}
           color={(quotaStorage?.usagePercent ?? 0) > 90 ? '#ef4444' : '#22c55e'}
           loading={quotaLoading}

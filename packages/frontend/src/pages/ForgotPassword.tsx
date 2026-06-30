@@ -14,6 +14,7 @@ import {
   type ForgotPasswordValues,
 } from './ForgotPassword/forgotPasswordSchema';
 import { useForgotPassword } from './ForgotPassword/useForgotPassword';
+import { t, $t } from '@/languages';
 
 // Lucide 图标
 import { Mail } from 'lucide-react';
@@ -41,7 +42,7 @@ import { Tabs, Tab } from '@/components/ui';
  * - 完美主题适配
  */
 export const ForgotPassword: React.FC = () => {
-  useDocumentTitle('忘记密码');
+  useDocumentTitle(t("忘记密码"));
   const navigate = useNavigate();
   const { config: runtimeConfig } = useRuntimeConfig();
   const { config: brandConfig } = useBrandConfig();
@@ -145,12 +146,12 @@ export const ForgotPassword: React.FC = () => {
               <div className="support-icon">
                 <Phone size={28} />
               </div>
-              <h2 className="support-title">找回密码</h2>
+              <h2 className="support-title">{t("找回密码")}</h2>
               <p className="support-subtitle">
-                邮件和短信服务均未启用，请联系客服重置密码
+                {t("邮件和短信服务均未启用，请联系客服重置密码")}
               </p>
               <div className="support-card">
-                <h3 className="support-card-title">客服联系方式</h3>
+                <h3 className="support-card-title">{t("客服联系方式")}</h3>
                 <div className="support-list">
                   {noChannelInfo.supportEmail && (
                     <a href={`mailto:${noChannelInfo.supportEmail}`} className="support-item">
@@ -165,14 +166,14 @@ export const ForgotPassword: React.FC = () => {
                     </a>
                   )}
                   {!noChannelInfo.supportEmail && !noChannelInfo.supportPhone && (
-                    <p className="support-empty">暂无客服联系方式，请联系系统管理员</p>
+                    <p className="support-empty">{t("暂无客服联系方式，请联系系统管理员")}</p>
                   )}
                 </div>
               </div>
-              <Button variant="secondary" size="lg" className="w-full" onClick={() => navigate('/login')}>
-                <ArrowLeft size={18} />
-                <span>返回登录</span>
-              </Button>
+                <Button variant="secondary" size="lg" className="w-full" onClick={() => navigate('/login')}>
+                  <ArrowLeft size={18} />
+                  <span>{t("返回登录")}</span>
+                </Button>
             </div>
           </div>
           <p className="copyright">© 2026 {appName}. All rights reserved.</p>
@@ -235,13 +236,13 @@ export const ForgotPassword: React.FC = () => {
               <div className="support-icon">
                 <Phone size={28} />
               </div>
-              <h2 className="support-title">找回密码</h2>
+              <h2 className="support-title">{t("找回密码")}</h2>
               <p className="support-subtitle">
-                该找回方式暂不可用，请联系客服重置密码
+                {t("该找回方式暂不可用，请联系客服重置密码")}
               </p>
 
               <div className="support-card">
-                <h3 className="support-card-title">客服联系方式</h3>
+                <h3 className="support-card-title">{t("客服联系方式")}</h3>
                 <div className="support-list">
                   {supportInfo.supportEmail && (
                     <a
@@ -270,7 +271,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
 
               <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
-                返回登录
+                {t("返回登录")}
               </Button>
             </div>
           </div>
@@ -335,20 +336,20 @@ export const ForgotPassword: React.FC = () => {
               <div className="success-icon">
                 <CheckCircle size={32} />
               </div>
-              <h2 className="success-title">验证码已发送</h2>
+              <h2 className="success-title">{t("验证码已发送")}</h2>
               <p className="success-subtitle">
-                我们已向{' '}
+                {t("我们已向")}{' '}
                 <span className="success-email">
                   {successContact}
                 </span>{' '}
-                 发送了验证码
+                  {t("发送了验证码")}
               </p>
 
               <div className="success-card">
                 <div className="success-tip">
                   <AlertCircle size={16} />
                   <span>
-                    请使用验证码重置密码
+                    {t("请使用验证码重置密码")}
                   </span>
                 </div>
               </div>
@@ -365,7 +366,7 @@ export const ForgotPassword: React.FC = () => {
                   }
                   className="primary-button"
                 >
-                  <span>前往重置密码</span>
+                  <span>{t("前往重置密码")}</span>
                   <ArrowRight size={18} />
                 </button>
 
@@ -374,20 +375,20 @@ export const ForgotPassword: React.FC = () => {
                   className="secondary-button"
                 >
                   <ArrowLeft size={18} />
-                  <span>返回登录</span>
+                  <span>{t("返回登录")}</span>
                 </button>
               </div>
             </div>
 
             {/* 特性图 */}
             <div className="features-bar">
-              <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+              <div className="feature-dot" data-tooltip={t("高性能 CAD 在线预览")}>
                 <Cpu size={14} />
               </div>
-              <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+              <div className="feature-dot" data-tooltip={t("多用户实时协同编辑")}>
                 <Boxes size={14} />
               </div>
-              <div className="feature-dot" data-tooltip="企业级数据安全保障">
+              <div className="feature-dot" data-tooltip={t("企业级数据安全保障")}>
                 <ShieldCheck size={14} />
               </div>
             </div>
@@ -452,18 +453,18 @@ export const ForgotPassword: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">找回您的账户密码</p>
+            <p className="app-tagline">{t("找回您的账户密码")}</p>
           </div>
 
           {/* 表单头部 */}
           <div className="form-header">
-            <h2 className="form-title">忘记密码</h2>
+            <h2 className="form-title">{t("忘记密码")}</h2>
             <p className="form-subtitle">
               {mailAvailable && phoneAvailable
-                ? `使用${contactType === 'email' ? '邮箱' : '手机号'}接收验证码`
+                ? $t("使用{method}接收验证码", { method: contactType === 'email' ? t("邮箱") : t("手机号") })
                 : mailAvailable
-                  ? '使用邮箱接收验证码'
-                  : '使用手机号接收验证码'}
+                  ? t("使用邮箱接收验证码")
+                  : t("使用手机号接收验证码")}
             </p>
           </div>
 
@@ -471,10 +472,10 @@ export const ForgotPassword: React.FC = () => {
           {mailAvailable && phoneAvailable && (
           <Tabs>
             <Tab active={contactType === 'email'} icon={Mail} onClick={() => switchContactType('email')}>
-              邮箱
+              {t("邮箱")}
             </Tab>
             <Tab active={contactType === 'phone'} icon={Phone} onClick={() => switchContactType('phone')}>
-              手机号
+              {t("手机号")}
             </Tab>
           </Tabs>
           )}
@@ -487,7 +488,7 @@ export const ForgotPassword: React.FC = () => {
                 className="forgot-link"
                 onClick={() => setShowSupportModal(true)}
               >
-                忘记邮箱?
+                {t("忘记邮箱?")}
               </button>
             )}
             {contactType === 'phone' && (
@@ -496,7 +497,7 @@ export const ForgotPassword: React.FC = () => {
                 className="forgot-link"
                 onClick={() => setShowSupportModal(true)}
               >
-                忘记手机号？
+                {t("忘记手机号？")}
               </button>
             )}
           </div>
@@ -514,7 +515,7 @@ export const ForgotPassword: React.FC = () => {
             {contactType === 'email' ? (
               <div className="input-group">
                 <label htmlFor="email" className="input-label">
-                  邮箱地址
+                  {t("邮箱地址")}
                 </label>
                 <div className="input-wrapper">
                   <Mail size={18} className="input-icon" />
@@ -523,7 +524,7 @@ export const ForgotPassword: React.FC = () => {
                     type="email"
                     autoComplete="email"
                     className="input-field"
-                    placeholder="请输入邮箱地址"
+                    placeholder={t("请输入邮箱地址")}
                     {...register('email')}
                   />
                   <div className="input-glow" />
@@ -532,7 +533,7 @@ export const ForgotPassword: React.FC = () => {
             ) : (
               <div className="input-group">
                 <label htmlFor="phone" className="input-label">
-                  手机号码
+                  {t("手机号码")}
                 </label>
                 <div className="input-wrapper">
                   <Phone size={18} className="input-icon" />
@@ -541,7 +542,7 @@ export const ForgotPassword: React.FC = () => {
                     type="tel"
                     autoComplete="tel"
                     className="input-field"
-                    placeholder="请输入手机号"
+                    placeholder={t("请输入手机号")}
                     {...register('phone')}
                   />
                   <div className="input-glow" />
@@ -552,11 +553,11 @@ export const ForgotPassword: React.FC = () => {
             <Button variant="primary" size="lg" loading={forgotPassword.loading} className="w-full">
               {forgotPassword.loading ? (
                 <>
-                  <span>发送中...</span>
+                  <span>{t("发送中...")}</span>
                 </>
               ) : (
                 <>
-                  <span>发送验证码</span>
+                  <span>{t("发送验证码")}</span>
                   <ArrowRight size={18} className="button-arrow" />
                 </>
               )}
@@ -566,13 +567,13 @@ export const ForgotPassword: React.FC = () => {
           {/* 返回登录 */}
           <div className="form-footer">
             <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
-              返回登录
+              {t("返回登录")}
             </Button>
           </div>
 
           {/* 特性图 */}
           <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+            <div className="feature-dot" data-tooltip={t("高性能 CAD 在线预览")}>
               <Cpu size={14} />
             </div>
             <div className="feature-dot" data-tooltip="多用户实时协同编辑">
@@ -592,7 +593,7 @@ export const ForgotPassword: React.FC = () => {
         <div className="support-modal-overlay">
           <div className="support-modal">
             <div className="support-modal-header">
-              <h3>联系客服</h3>
+              <h3>{t("联系客服")}</h3>
               <button 
                 className="support-modal-close" 
                 onClick={() => setShowSupportModal(false)}
@@ -602,25 +603,25 @@ export const ForgotPassword: React.FC = () => {
             </div>
             <div className="support-modal-content">
               <p className="support-modal-message">
-                如需帮助，请联系客服人员获取支持。
+                {t("如需帮助，请联系客服人员获取支持。")}
               </p>
               <div className="support-contact-info">
                 <div className="support-contact-item">
-                  <span className="support-contact-label">客服邮箱：</span>
+                  <span className="support-contact-label">{t("客服邮箱：")}</span>
                   <a href="mailto:support@cloudcad.com" className="support-contact-link">
                     support@cloudcad.com
                   </a>
                 </div>
                 <div className="support-contact-item">
-                  <span className="support-contact-label">客服电话：</span>
+                  <span className="support-contact-label">{t("客服电话：")}</span>
                   <a href="tel:400-123-4567" className="support-contact-link">
                     400-123-4567
                   </a>
                 </div>
                 <div className="support-contact-item">
-                  <span className="support-contact-label">工作时间：</span>
+                  <span className="support-contact-label">{t("工作时间：")}</span>
                   <span className="support-contact-value">
-                    周一至周日 9:00-18:00
+                    {t("周一至周日 9:00-18:00")}
                   </span>
                 </div>
               </div>
@@ -630,7 +631,7 @@ export const ForgotPassword: React.FC = () => {
                 className="support-modal-button" 
                 onClick={() => setShowSupportModal(false)}
               >
-                关闭
+                {t("关闭")}
               </button>
             </div>
           </div>

@@ -150,7 +150,7 @@ export const useExternalReferenceUpload = (
 
         return data;
       } catch (error) {
-        handleError(error, '获取预加载数据失败');
+        handleError(error, t("获取预加载数据失败"));
 
         return null;
       } finally {
@@ -191,7 +191,7 @@ export const useExternalReferenceUpload = (
         // apiClient 已经自动解包，result 就是 {exists: boolean}
         return result?.exists ?? false;
       } catch (error) {
-        handleError(error, '检查外部参照失败');
+        handleError(error, t("检查外部参照失败"));
         return false;
       }
     },

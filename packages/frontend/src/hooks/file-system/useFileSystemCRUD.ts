@@ -27,6 +27,7 @@ import {
 import { fileSystemControllerBatchDeleteNodes } from '@/api-sdk';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 
+import { t } from '@/languages';
 import { queryKeys } from '@/lib/queryKeys';
 import { FileSystemNode } from '@/types/filesystem';
 import { handleError } from '@/utils/errorHandler';
@@ -62,30 +63,30 @@ const validateFolderName = (
   const trimmedName = name.trim();
 
   if (!trimmedName) {
-    return { valid: false, error: '名称不能为空' };
+    return { valid: false, error: t("名称不能为空") };
   }
 
   if (trimmedName.length > 255) {
-    return { valid: false, error: '名称长度不能超过 255 个字符' };
+    return { valid: false, error: t("名称长度不能超过 255 个字符") };
   }
 
   const illegalChars = /[<>:"|?*/\\]/;
   if (illegalChars.test(trimmedName)) {
-    return { valid: false, error: '名称包含非法字符：< > : " | ? * / \\' };
+      return { valid: false, error: t("名称包含非法字符：< > : \" | ? * / \\") };
   }
 
   // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
-    return { valid: false, error: '名称包含非法字符' };
+    return { valid: false, error: t("名称包含非法字符") };
   }
 
   const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
   if (reservedNames.test(trimmedName)) {
-    return { valid: false, error: '该名称为系统保留名称' };
+    return { valid: false, error: t("该名称为系统保留名称") };
   }
 
   if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
-    return { valid: false, error: '名称不能以点开头或结尾' };
+    return { valid: false, error: t("名称不能以点开头或结尾") };
   }
 
   return { valid: true };
@@ -125,13 +126,13 @@ export const useFileSystemCRUD = ({
 
   const handleCreateFolder = useCallback(async () => {
     if (!urlProjectId) {
-      showToast('项目 ID 不能为空', 'error');
+      showToast(t("项目 ID 不能为空"), 'error');
       return null;
     }
 
     const validation = validateFolderName(folderName);
     if (!validation.valid) {
-      showToast(validation.error || '文件夹名称无效', 'error');
+      showToast(validation.error || t("文件夹名称无效"), 'error');
       return null;
     }
 
@@ -143,7 +144,7 @@ export const useFileSystemCRUD = ({
         body: { name: folderName.trim() },
         throwOnError: true,
       });
-      showToast('文件夹创建成功', 'success');
+      showToast(t("文件夹创建成功"), 'success');
       setFolderName('');
       setShowCreateFolderModal(false);
       const createdId = (newFolder as unknown as { id?: string })?.id || '';
@@ -152,7 +153,7 @@ export const useFileSystemCRUD = ({
         const createdIdHolder = { current: createdId };
         pushAction({
           type: 'createFolder',
-          description: `创建文件夹 "${folderNameTrimmed}"`,
+          description: t("创建文件夹 ") + `"${folderNameTrimmed}"`,
           projectId: urlProjectId || undefined,
           execute: async () => {
             const result = await fileSystemControllerCreateFolder({ path: { parentId: parentNodeId }, body: { name: folderNameTrimmed }, throwOnError: true });
@@ -170,7 +171,7 @@ export const useFileSystemCRUD = ({
       queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
       return null;
     } catch (error) {
-      const appError = handleError(error, '创建文件夹', 'medium');
+      const appError = handleError(error, t("创建文件夹"), 'medium');
       showToast(appError.message, 'error');
       return null;
     }
@@ -178,7 +179,7 @@ export const useFileSystemCRUD = ({
 
   const handleCreateDrawing = useCallback(async () => {
     if (!urlProjectId) {
-      showToast('无法确定创建位置', 'error');
+      showToast(t("无法确定创建位置"), 'error');
       return null;
     }
 
@@ -193,7 +194,7 @@ export const useFileSystemCRUD = ({
         },
         throwOnError: true,
       });
-      showToast('图纸创建成功', 'success');
+      showToast(t("图纸创建成功"), 'success');
       setDrawingName('');
       setShowCreateDrawingModal(false);
       const createdId = (result as unknown as { id?: string })?.id || '';
@@ -201,7 +202,7 @@ export const useFileSystemCRUD = ({
         const createdIdHolder = { current: createdId };
         pushAction({
           type: 'createDrawing',
-          description: `创建图纸 "${drawingNameTrimmed || '未命名'}"`,
+          description: t("创建图纸 ") + "\"" + (drawingNameTrimmed || t("未命名")) + "\"",
           projectId: urlProjectId || undefined,
           execute: async () => {
             const r = await fileSystemControllerCreateDrawing({
@@ -222,7 +223,7 @@ export const useFileSystemCRUD = ({
       queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
       return null;
     } catch (error) {
-      const appError = handleError(error, '创建图纸', 'medium');
+      const appError = handleError(error, t("创建图纸"), 'medium');
       showToast(appError.message, 'error');
       return null;
     }
@@ -230,13 +231,13 @@ export const useFileSystemCRUD = ({
 
   const handleRename = useCallback(async () => {
     if (!editingNode || !urlProjectId) {
-      showToast('参数错误', 'error');
+      showToast(t("参数错误"), 'error');
       return;
     }
 
     const validation = validateFolderName(folderName);
     if (!validation.valid) {
-      showToast(validation.error || '名称无效', 'error');
+      showToast(validation.error || t("名称无效"), 'error');
       return;
     }
 
@@ -255,13 +256,13 @@ export const useFileSystemCRUD = ({
       const nodeId = editingNode.id;
       const oldName = editingNode.name;
       await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: finalName }, throwOnError: true });
-      showToast('重命名成功', 'success');
+      showToast(t("重命名成功"), 'success');
       setFolderName('');
       setShowRenameModal(false);
       setEditingNode(null);
       pushAction({
         type: 'rename',
-        description: `重命名 "${oldName}" → "${finalName}"`,
+          description: t("重命名 ") + "\"" + oldName + "\" " + t("→ ") + "\"" + finalName + "\"",
         projectId: urlProjectId || undefined,
         execute: async () => {
           await fileSystemControllerUpdateNode({ path: { nodeId }, body: { name: finalName }, throwOnError: true });
@@ -276,7 +277,7 @@ export const useFileSystemCRUD = ({
         loadData();
       }
     } catch (error) {
-      const appError = handleError(error, '重命名', 'medium');
+      const appError = handleError(error, t("重命名"), 'medium');
       showToast(appError.message, 'error');
     }
   }, [folderName, editingNode, urlProjectId, loadData, showToast, pushAction, updateLocalNode]);
@@ -291,24 +292,24 @@ export const useFileSystemCRUD = ({
 
       if (permanently) {
         if (node.isRoot) {
-          deleteMessage = `确定要彻底删除项目"${node.name}"吗？此操作将同时删除项目内的所有内容，且不可恢复。`;
+          deleteMessage = t("确定要彻底删除项目") + "\"" + node.name + "\"" + t("吗？此操作将同时删除项目内的所有内容，且不可恢复。");
         } else if (node.isFolder) {
-          deleteMessage = `确定要彻底删除文件夹"${node.name}"吗？此操作将同时删除文件夹内的所有内容，且不可恢复。`;
+          deleteMessage = t("确定要彻底删除文件夹") + "\"" + node.name + "\"" + t("吗？此操作将同时删除文件夹内的所有内容，且不可恢复。");
         } else {
-          deleteMessage = `确定要彻底删除文件"${node.name}"吗？此操作不可恢复。`;
+          deleteMessage = t("确定要彻底删除文件") + "\"" + node.name + "\"" + t("吗？此操作不可恢复。");
         }
       } else {
         if (node.isRoot) {
-          deleteMessage = `确定要将项目"${node.name}"移到回收站吗？可以在回收站中恢复。`;
+          deleteMessage = t("确定要将项目") + "\"" + node.name + "\"" + t("移到回收站吗？可以在回收站中恢复。");
         } else if (node.isFolder) {
-          deleteMessage = `确定要将文件夹"${node.name}"移到回收站吗？可以在回收站中恢复。`;
+          deleteMessage = t("确定要将文件夹") + "\"" + node.name + "\"" + t("移到回收站吗？可以在回收站中恢复。");
         } else {
-          deleteMessage = `确定要将文件"${node.name}"移到回收站吗？可以在回收站中恢复。`;
+          deleteMessage = t("确定要将文件") + "\"" + node.name + "\"" + t("移到回收站吗？可以在回收站中恢复。");
         }
       }
 
       showConfirm(
-      permanently ? '确认彻底删除' : '确认删除',
+      permanently ? t("确认彻底删除") : t("确认删除"),
       deleteMessage,
       async () => {
         try {
@@ -329,7 +330,7 @@ export const useFileSystemCRUD = ({
             }
           }
 
-          showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
+          showToast(permanently ? t("已彻底删除") : t("已移到回收站"), 'success');
 
           if (!permanently) {
             const deletedNodeId = node.id;
@@ -337,7 +338,7 @@ export const useFileSystemCRUD = ({
             const deletedIsRoot = node.isRoot;
             pushAction({
               type: 'delete',
-              description: `删除 "${deletedNodeName}"`,
+              description: t("删除 ") + "\"" + deletedNodeName + "\"",
               projectId: urlProjectId || undefined,
               nodeIds: [deletedNodeId],
               execute: async () => {
@@ -366,14 +367,14 @@ export const useFileSystemCRUD = ({
           }
           queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
         } catch (error) {
-          const appError = handleError(error, '删除', 'medium');
+          const appError = handleError(error, t("删除"), 'medium');
           showToast(appError.message, 'error');
         } finally {
           setIsDeleting(false);
         }
       },
       permanently ? 'danger' : 'warning',
-      permanently ? '彻底删除' : '删除'
+      permanently ? t("彻底删除") : t("删除")
     );
     },
     [
@@ -394,11 +395,11 @@ export const useFileSystemCRUD = ({
       }
 
       const message = permanently
-        ? `确定要彻底删除选中的 ${currentSelected.size} 个项目吗？此操作不可恢复。`
-        : `确定要将选中的 ${currentSelected.size} 个项目移到回收站吗？`;
+        ? t("确定要彻底删除选中的 ") + currentSelected.size + t(" 个项目吗？此操作不可恢复。")
+        : t("确定要将选中的 ") + currentSelected.size + t(" 个项目移到回收站吗？");
 
       showConfirm(
-        permanently ? '确认彻底删除' : '批量删除',
+        permanently ? t("确认彻底删除") : t("批量删除"),
         message,
         async () => {
           try {
@@ -419,17 +420,17 @@ export const useFileSystemCRUD = ({
 
             if (result.failedCount > 0) {
               showToast(
-                `成功删除 ${result.successCount} 项，${result.failedCount} 项失败`,
+                t("成功删除 ") + result.successCount + t(" 项，") + result.failedCount + t(" 项失败"),
                 'warning'
               );
             } else {
-              showToast(permanently ? '已彻底删除' : '已移到回收站', 'success');
+              showToast(permanently ? t("已彻底删除") : t("已移到回收站"), 'success');
             }
 
             if (!permanently) {
               pushAction({
                 type: 'delete',
-                description: `批量删除 ${nodeIds.length} 个项目`,
+                description: t("批量删除 ") + nodeIds.length + t(" 个项目"),
                 projectId: urlProjectId || undefined,
                 nodeIds,
                 execute: async () => {
@@ -453,12 +454,12 @@ export const useFileSystemCRUD = ({
             loadData();
             queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
-            const appError = handleError(error, '批量删除', 'medium');
+            const appError = handleError(error, t("批量删除"), 'medium');
             showToast(appError.message, 'error');
           }
         },
         permanently ? 'danger' : 'warning',
-        permanently ? '彻底删除' : '删除'
+        permanently ? t("彻底删除") : t("删除")
       );
     },
     [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId, queryClient]
@@ -473,15 +474,15 @@ export const useFileSystemCRUD = ({
     const nodeIds = Array.from(currentSelected);
 
     showConfirm(
-      '批量恢复',
-      `确定要恢复选中的 ${nodeIds.length} 个项目吗？`,
+      t("批量恢复"),
+      t("确定要恢复选中的 ") + nodeIds.length + t(" 个项目吗？"),
       async () => {
         try {
           await fileSystemControllerRestoreTrashItems({ body: { itemIds: nodeIds }, throwOnError: true } as unknown as Parameters<typeof fileSystemControllerRestoreTrashItems>[0]);
-          showToast(`已恢复 ${nodeIds.length} 个项目`, 'success');
+          showToast(t("已恢复 ") + nodeIds.length + t(" 个项目"), 'success');
           pushAction({
             type: 'delete',
-            description: `批量恢复 ${nodeIds.length} 个项目`,
+            description: t("批量恢复 ") + nodeIds.length + t(" 个项目"),
             projectId: urlProjectId || undefined,
             nodeIds,
             execute: async () => {
@@ -498,7 +499,7 @@ export const useFileSystemCRUD = ({
           loadData();
           queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
         } catch (error) {
-          let errorMessage = '批量恢复失败';
+          let errorMessage = t("批量恢复失败");
           if (error instanceof Error) {
             errorMessage = error.message;
           }
@@ -506,7 +507,7 @@ export const useFileSystemCRUD = ({
         }
       },
       'warning',
-      '恢复'
+      t("恢复")
     );
   }, [showConfirm, loadData, showToast, clearSelection, pushAction, urlProjectId, queryClient]);
 
@@ -533,11 +534,11 @@ export const useFileSystemCRUD = ({
           body: { name: name.trim(), description: description?.trim() },
           throwOnError: true,
         });
-        showToast('项目创建成功', 'success');
+        showToast(t("项目创建成功"), 'success');
         loadData();
         queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
       } catch (error) {
-        const appError = handleError(error, '创建项目', 'medium');
+        const appError = handleError(error, t("创建项目"), 'medium');
         showToast(appError.message, 'error');
         throw error;
       }
@@ -550,10 +551,10 @@ export const useFileSystemCRUD = ({
       try {
         // TODO: Replace with SDK when backend adds updateProject endpoint
         await fileSystemControllerUpdateNode({ path: { nodeId: id }, body: data, throwOnError: true });
-        showToast('项目更新成功', 'success');
+        showToast(t("项目更新成功"), 'success');
         loadData();
       } catch (error) {
-        const appError = handleError(error, '更新项目', 'medium');
+        const appError = handleError(error, t("更新项目"), 'medium');
         showToast(appError.message, 'error');
         throw error;
       }
@@ -606,8 +607,8 @@ export const useFileSystemCRUD = ({
   const handleRestoreNode = useCallback(
     async (node: FileSystemNode) => {
       showConfirm(
-        '确认恢复',
-        `确定要恢复 "${node.name}" 吗？`,
+        t("确认恢复"),
+        t("确定要恢复 ") + "\"" + node.name + "\"" + t(" 吗？"),
         async () => {
           try {
             if (node.isRoot) {
@@ -616,11 +617,11 @@ export const useFileSystemCRUD = ({
             } else {
               await fileSystemControllerRestoreNode({ path: { nodeId: node.id }, throwOnError: true });
             }
-            showToast(`已恢复 "${node.name}"`, 'success');
+            showToast(t("已恢复 ") + "\"" + node.name + "\"", 'success');
             loadData();
             queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
-            const appError = handleError(error, '恢复节点', 'medium');
+            const appError = handleError(error, t("恢复节点"), 'medium');
             showToast(appError.message, 'error');
           }
         },
@@ -634,17 +635,17 @@ export const useFileSystemCRUD = ({
   const handleClearTrash = useCallback((projectId?: string) => {
     if (projectId) {
       showConfirm(
-        '确认清空回收站',
-        '确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。',
+        t("确认清空回收站"),
+        t("确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。"),
         async () => {
           try {
             await fileSystemControllerClearProjectTrash({ path: { projectId }, throwOnError: true });
-            showToast('项目回收站已清空', 'success');
+            showToast(t("项目回收站已清空"), 'success');
             clearUndoStack();
             loadData();
             queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
-            const appError = handleError(error, '清空回收站', 'medium');
+            const appError = handleError(error, t("清空回收站"), 'medium');
             showToast(appError.message, 'error');
           }
         },
@@ -652,17 +653,17 @@ export const useFileSystemCRUD = ({
       );
     } else {
       showConfirm(
-        '确认清空回收站',
-        '确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。',
+        t("确认清空回收站"),
+        t("确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。"),
         async () => {
           try {
             await fileSystemControllerClearTrash({ throwOnError: true });
-            showToast('回收站已清空', 'success');
+            showToast(t("回收站已清空"), 'success');
             clearUndoStack();
             loadData();
             queryClient.invalidateQueries({ queryKey: queryKeys.fileSystem.storageQuota });
           } catch (error) {
-            const appError = handleError(error, '清空回收站', 'medium');
+            const appError = handleError(error, t("清空回收站"), 'medium');
             showToast(appError.message, 'error');
           }
         },

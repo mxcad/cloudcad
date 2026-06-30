@@ -83,11 +83,11 @@ export function getRelativeTime(date: string | Date | number): string {
   if (seconds < 60) {
     return t('刚刚');
   } else if (minutes < 60) {
-    return t(`${minutes}分钟前`);
+    return minutes + t("分钟前");
   } else if (hours < 24) {
-    return t(`${hours}小时前`);
+    return hours + t("小时前");
   } else if (days < 30) {
-    return t(`${days}天前`);
+    return days + t("天前");
   } else {
     return formatDate(d);
   }

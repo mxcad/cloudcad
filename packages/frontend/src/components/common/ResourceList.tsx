@@ -18,6 +18,7 @@ import { LOADING_TIMEOUT } from '@/constants/timeouts';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { Pagination } from '@/components/ui/Pagination';
 import { ViewToggle } from '@/components/common/ViewToggle';
+import { t } from '@/languages';
 
 const PaginationMemo = React.memo(Pagination);
 import styles from './ResourceList.module.css';
@@ -331,7 +332,7 @@ const CascadeCategorySelector: React.FC<{
             }}
             className={styles.cascadeSelect}
           >
-            <option value="">一级分类</option>
+            <option value="">{t("一级分类")}</option>
             {categories.map(cat => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
@@ -348,13 +349,13 @@ const CascadeCategorySelector: React.FC<{
             className={styles.cascadeSelect}
             disabled={!selectedCategory || subCategories.length === 0}
           >
-            <option value="">二级分类</option>
+            <option value="">{t("二级分类")}</option>
             {subCategories.length > 0 ? (
               subCategories.map(subCat => (
                 <option key={subCat.id} value={subCat.id}>{subCat.name}</option>
               ))
             ) : (
-              <option value="" disabled>暂无分类</option>
+              <option value="" disabled>{t("暂无分类")}</option>
             )}
           </select>
 
@@ -368,7 +369,7 @@ const CascadeCategorySelector: React.FC<{
               }}
               className={styles.cascadeSelect}
             >
-              <option value="">三级分类</option>
+              <option value="">{t("三级分类")}</option>
               {thirdCategories.map(thirdCat => (
                 <option key={thirdCat.id} value={thirdCat.id}>{thirdCat.name}</option>
               ))}
@@ -386,7 +387,7 @@ const CascadeCategorySelector: React.FC<{
             onClick={() => setIsOpen(!isOpen)}
           >
             <span className={styles.cascadeButtonText}>
-              {selectedPath.length > 0 ? selectedPath.join(' > ') : '选择分类'}
+              {selectedPath.length > 0 ? selectedPath.join(' > ') : t("选择分类")}
             </span>
             {selectedPath.length > 0 ? (
               <span
@@ -411,7 +412,7 @@ const CascadeCategorySelector: React.FC<{
             >
               {/* 一级分类 */}
               <div className={styles.cascadeColumn}>
-                <div className={styles.cascadeColumnTitle}>一级分类</div>
+                <div className={styles.cascadeColumnTitle}>{t("一级分类")}</div>
                 <div className={styles.cascadeColumnContent}>
                   <div
                     className={`${styles.cascadeItem} ${!selectedCategory ? styles.selected : ''}`}
@@ -421,7 +422,7 @@ const CascadeCategorySelector: React.FC<{
                       onThirdCategoryChange(null);
                     }}
                   >
-                    全部分类
+                    {t("全部分类")}
                   </div>
                   {categories.map(cat => (
                     <div
@@ -445,7 +446,7 @@ const CascadeCategorySelector: React.FC<{
               {/* 二级分类 */}
               {selectedCategory && subCategories.length > 0 && (
                 <div className={styles.cascadeColumn}>
-                  <div className={styles.cascadeColumnTitle}>二级分类</div>
+                  <div className={styles.cascadeColumnTitle}>{t("二级分类")}</div>
                   <div className={styles.cascadeColumnContent}>
                     <div
                       className={`${styles.cascadeItem} ${!selectedSubCategory ? styles.selected : ''}`}
@@ -454,7 +455,7 @@ const CascadeCategorySelector: React.FC<{
                         onThirdCategoryChange(null);
                       }}
                     >
-                      全部
+                      {t("全部")}
                     </div>
                     {subCategories.map(subCat => (
                       <div
@@ -478,14 +479,14 @@ const CascadeCategorySelector: React.FC<{
               {/* 三级分类 */}
               {selectedSubCategory && thirdCategories.length > 0 && (
                 <div className={styles.cascadeColumn}>
-                  <div className={styles.cascadeColumnTitle}>三级分类</div>
+                  <div className={styles.cascadeColumnTitle}>{t("三级分类")}</div>
                   <div className={styles.cascadeColumnContent}>
                     <div
-                      className={`${styles.cascadeItem} ${!selectedThirdCategory ? styles.selected : ''}`}
-                      onClick={() => onThirdCategoryChange(null)}
-                    >
-                      全部
-                    </div>
+                    className={`${styles.cascadeItem} ${!selectedThirdCategory ? styles.selected : ''}`}
+                    onClick={() => onThirdCategoryChange(null)}
+                  >
+                    {t("全部")}
+                  </div>
                     {thirdCategories.map(thirdCat => (
                       <div
                         key={thirdCat.id}
@@ -524,7 +525,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   thirdCategories,
   selectedThirdCategory,
   onThirdCategoryChange,
-  emptyText = '暂无数据',
+  emptyText = t("暂无数据"),
   showViewToggle = true,
   defaultViewMode = 'list',
   showCategoryFilter = false,
@@ -776,7 +777,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
       {/* 工具栏：搜索 + 视图切换 */}
       <div className={styles.toolbar}>
         <SearchInput
-          placeholder="搜索..."
+          placeholder={t("搜索...")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -784,7 +785,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           {/* 总数显示 */}
           {total !== undefined && total > 0 && (
             <div className={styles.totalCount}>
-              共 <span className={styles.totalCountNumber}>{total}</span> {total === 1 ? '项' : '项'}
+              {t("共")} <span className={styles.totalCountNumber}>{total}</span> {total === 1 ? t("项") : t("项")}
             </div>
           )}
           {/* 工具栏额外内容（如刷新按钮） */}
@@ -848,16 +849,16 @@ export const ResourceList: React.FC<ResourceListProps> = ({
             {loading && (
               <div className={styles.loadingMore}>
                 <Loader2 size={20} className={styles.loadingMoreIcon} />
-                <span>加载中...</span>
+                <span>{t("加载中...")}</span>
               </div>
             )}
             {paginationEnabled ? (
               !loading && totalPages && currentPage === totalPages && (
-                <div className={styles.noMore}>已经是最后一页</div>
+                <div className={styles.noMore}>{t("已经是最后一页")}</div>
               )
             ) : (
               !loading && !hasMore && items.length > 0 && (
-                <div className={styles.noMore}>没有更多了</div>
+                <div className={styles.noMore}>{t("没有更多了")}</div>
               )
             )}
           </div>

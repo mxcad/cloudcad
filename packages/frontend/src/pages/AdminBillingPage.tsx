@@ -19,6 +19,7 @@ import {
   billingAdminControllerManualComplete,
   billingAdminControllerGetAllOrders,
 } from '@/api-sdk';
+import { t, $t } from '@/languages';
 import type { Plan } from '@/components/billing/PricingCard';
 
 const PAGE_SIZE = 10;
@@ -58,7 +59,7 @@ const EMPTY_FORM: PlanFormData = {
 };
 
 export default function AdminBillingPage() {
-  useDocumentTitle('支付管理');
+  useDocumentTitle(t("支付管理"));
 
   const [tab, setTab] = useState<AdminTab>('plans');
   const [plans, setPlans] = useState<(Plan & { isActive: boolean })[]>([]);
@@ -109,7 +110,7 @@ export default function AdminBillingPage() {
       if (Array.isArray(list)) setPlans(list);
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '加载套餐列表失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("加载套餐列表失败"), type: 'error' } }),
       );
     } finally {
       setLoading(false);
@@ -138,14 +139,14 @@ export default function AdminBillingPage() {
         },
       });
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '创建成功', type: 'success' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("创建成功"), type: 'success' } }),
       );
       setShowCreateModal(false);
       setForm(EMPTY_FORM);
       loadPlans();
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '创建失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("创建失败"), type: 'error' } }),
       );
     } finally {
       setSaving(false);
@@ -172,14 +173,14 @@ export default function AdminBillingPage() {
         },
       });
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '修改成功', type: 'success' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("修改成功"), type: 'success' } }),
       );
       setShowEditModal(false);
       setEditingId(null);
       loadPlans();
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '修改失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("修改失败"), type: 'error' } }),
       );
     } finally {
       setSaving(false);
@@ -191,14 +192,14 @@ export default function AdminBillingPage() {
     try {
       await billingAdminControllerDeactivatePlan({ path: { id: deactivatingId } });
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '已下架', type: 'success' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("已下架"), type: 'success' } }),
       );
       setShowDeactivateConfirm(false);
       setDeactivatingId(null);
       loadPlans();
     } catch (err) {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '下架失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("下架失败"), type: 'error' } }),
       );
     }
   };
@@ -210,14 +211,14 @@ export default function AdminBillingPage() {
         body: { orderNo: refundOrderNo, reason: refundReason || undefined },
       });
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '退款成功', type: 'success' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("退款成功"), type: 'success' } }),
       );
       setShowRefundModal(false);
       setRefundOrderNo('');
       setRefundReason('');
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '退款失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("退款失败"), type: 'error' } }),
       );
     }
   };
@@ -227,13 +228,13 @@ export default function AdminBillingPage() {
     try {
       await billingAdminControllerManualComplete({ body: { orderNo: mockOrderNo } });
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '模拟回调成功', type: 'success' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("模拟回调成功"), type: 'success' } }),
       );
       setShowMockCallbackModal(false);
       setMockOrderNo('');
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '模拟回调失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t("模拟回调失败"), type: 'error' } }),
       );
     }
   };
@@ -263,13 +264,13 @@ export default function AdminBillingPage() {
     <div className="page-content-theme min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">支付管理</h1>
+          <h1 className="text-2xl font-bold text-text-primary">{t("支付管理")}</h1>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" icon={RefreshCw} onClick={loadPlans}>
-              刷新
+              {t("刷新")}
             </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={openCreate}>
-              新增套餐
+              {t("新增套餐")}
             </Button>
           </div>
         </div>
@@ -282,7 +283,7 @@ export default function AdminBillingPage() {
             }`}
             onClick={() => setTab('plans')}
           >
-            套餐管理
+            {t("套餐管理")}
           </button>
           <button
             className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -290,7 +291,7 @@ export default function AdminBillingPage() {
             }`}
             onClick={() => setTab('operations')}
           >
-            订单操作
+            {t("订单操作")}
           </button>
         </div>
 
@@ -316,9 +317,9 @@ export default function AdminBillingPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-text-primary">{plan.name}</span>
                           {plan.isActive ? (
-                            <Tag variant="success">上架</Tag>
+                            <Tag variant="success">{t("上架")}</Tag>
                           ) : (
-                            <Tag variant="neutral">已下架</Tag>
+                            <Tag variant="neutral">{t("已下架")}</Tag>
                           )}
                         </div>
                         <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
@@ -327,14 +328,14 @@ export default function AdminBillingPage() {
                             <span className="line-through ml-1">¥{plan.originalPriceYuan.toFixed(2)}</span>
                           )}
                           {' · '}
-                          专业版
+                          {t("专业版")}
                           {' · '}
-                          {plan.durationDays >= 365 ? `${(plan.durationDays / 365).toFixed(0)}年` : `${plan.durationDays}天`}
+                          {plan.durationDays >= 365 ? $t("{n}年", { n: (plan.durationDays / 365).toFixed(0) }) : $t("{n}天", { n: plan.durationDays })}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" icon={Edit2} onClick={() => openEdit(plan)}>
-                          编辑
+                          {t("编辑")}
                         </Button>
                         {plan.isActive && (
                           <Button
@@ -346,7 +347,7 @@ export default function AdminBillingPage() {
                               setShowDeactivateConfirm(true);
                             }}
                           >
-                            下架
+                            {t("下架")}
                           </Button>
                         )}
                       </div>
@@ -355,7 +356,7 @@ export default function AdminBillingPage() {
                 ))}
                 {plans.length === 0 && (
                   <div className="text-center py-16" style={{ color: 'var(--text-tertiary)' }}>
-                    <p>暂无套餐</p>
+                    <p>{t("暂无套餐")}</p>
                   </div>
                 )}
               </div>
@@ -369,16 +370,16 @@ export default function AdminBillingPage() {
             {/* 订单列表 */}
             <Card variant="outlined" padding="lg" radius="xl" className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-text-primary">全部订单</h3>
+                <h3 className="font-semibold text-text-primary">{t("全部订单")}</h3>
                 <Button variant="outline" size="sm" icon={RefreshCw} onClick={loadAllOrders}>
-                  刷新
+                  {t("刷新")}
                 </Button>
               </div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="relative flex-1 max-w-xs">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
                   <Input
-                    placeholder="搜索订单号"
+                    placeholder={t("搜索订单号")}
                     value={orderSearchKeyword}
                     onChange={(e) => {
                       setOrderSearchKeyword(e.target.value);
@@ -393,15 +394,15 @@ export default function AdminBillingPage() {
                     setOrderSearchStatus(v);
                     setOrderPage(1);
                   }}
-                  placeholder="全部状态"
+                  placeholder={t("全部状态")}
                   clearable
                   options={[
-                    { value: 'PENDING', label: '待支付' },
-                    { value: 'SUCCEEDED', label: '已完成' },
-                    { value: 'FAILED', label: '支付失败' },
-                    { value: 'REFUNDED', label: '已退款' },
-                    { value: 'CLOSED', label: '已取消' },
-                    { value: 'TIMEOUT', label: '超时未支付' },
+                    { value: 'PENDING', label: t("待支付") },
+                    { value: 'SUCCEEDED', label: t("已完成") },
+                    { value: 'FAILED', label: t("支付失败") },
+                    { value: 'REFUNDED', label: t("已退款") },
+                    { value: 'CLOSED', label: t("已取消") },
+                    { value: 'TIMEOUT', label: t("超时未支付") },
                   ]}
                   className="w-36"
                 />
@@ -411,19 +412,19 @@ export default function AdminBillingPage() {
                   <div className="w-6 h-6 rounded-full animate-spin" style={{ border: '2px solid var(--border-default)', borderTopColor: 'var(--primary-500)' }} />
                 </div>
               ) : allOrders.length === 0 ? (
-                <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>暂无订单</p>
+                <p className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>{t("暂无订单")}</p>
               ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                          <th className="text-left px-3 py-2 text-text-secondary">订单号</th>
-                          <th className="text-left px-3 py-2 text-text-secondary">用户</th>
-                          <th className="text-left px-3 py-2 text-text-secondary">套餐</th>
-                          <th className="text-right px-3 py-2 text-text-secondary">金额</th>
-                          <th className="text-center px-3 py-2 text-text-secondary">状态</th>
-                          <th className="text-right px-3 py-2 text-text-secondary">时间</th>
-                          <th className="text-center px-3 py-2 text-text-secondary">操作</th>
+                          <th className="text-left px-3 py-2 text-text-secondary">{t("订单号")}</th>
+                          <th className="text-left px-3 py-2 text-text-secondary">{t("用户")}</th>
+                          <th className="text-left px-3 py-2 text-text-secondary">{t("套餐")}</th>
+                          <th className="text-right px-3 py-2 text-text-secondary">{t("金额")}</th>
+                          <th className="text-center px-3 py-2 text-text-secondary">{t("状态")}</th>
+                          <th className="text-right px-3 py-2 text-text-secondary">{t("时间")}</th>
+                          <th className="text-center px-3 py-2 text-text-secondary">{t("操作")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -453,7 +454,7 @@ export default function AdminBillingPage() {
                                     setShowRefundModal(true);
                                   }}
                                 >
-                                  退款
+                                  {t("退款")}
                                 </Button>
                               )}
                             </td>
@@ -477,19 +478,19 @@ export default function AdminBillingPage() {
             <Card variant="outlined" padding="lg" radius="xl">
               <div className="flex items-center gap-2 mb-4">
                 <DollarSign size={20} style={{ color: 'var(--warning-500)' }} />
-                <h3 className="font-semibold text-text-primary">退款</h3>
+                <h3 className="font-semibold text-text-primary">{t("退款")}</h3>
               </div>
               <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                输入订单号执行退款操作。仅已完成的订单可退款。
+                {t("输入订单号执行退款操作。仅已完成的订单可退款。")}
               </p>
               <div className="space-y-3">
                 <Input
-                  placeholder="输入订单号"
+                  placeholder={t("输入订单号")}
                   value={refundOrderNo}
                   onChange={(e) => setRefundOrderNo(e.target.value)}
                 />
                 <Input
-                  placeholder="退款原因（可选）"
+                  placeholder={t("退款原因（可选）")}
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
                 />
@@ -499,7 +500,7 @@ export default function AdminBillingPage() {
                   onClick={handleRefund}
                   disabled={!refundOrderNo}
                 >
-                  执行退款
+                  {t("执行退款")}
                 </Button>
               </div>
             </Card>
@@ -507,14 +508,14 @@ export default function AdminBillingPage() {
             <Card variant="outlined" padding="lg" radius="xl">
               <div className="flex items-center gap-2 mb-4">
                 <Smartphone size={20} style={{ color: 'var(--accent-500)' }} />
-                <h3 className="font-semibold text-text-primary">手动补单</h3>
+                <h3 className="font-semibold text-text-primary">{t("手动补单")}</h3>
               </div>
               <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                用户已付但订单未成功（如回调未送达），输入订单号手动触发完成。
+                {t("用户已付但订单未成功（如回调未送达），输入订单号手动触发完成。")}
               </p>
               <div className="space-y-3">
                 <Input
-                  placeholder="输入订单号"
+                  placeholder={t("输入订单号")}
                   value={mockOrderNo}
                   onChange={(e) => setMockOrderNo(e.target.value)}
                 />
@@ -524,7 +525,7 @@ export default function AdminBillingPage() {
                   onClick={handleMockCallback}
                   disabled={!mockOrderNo}
                 >
-                  执行补单
+                  {t("执行补单")}
                 </Button>
               </div>
             </Card>
@@ -537,13 +538,13 @@ export default function AdminBillingPage() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="新增套餐"
+        title={t("新增套餐")}
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>取消</Button>
+            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>{t("取消")}</Button>
             <Button variant="primary" onClick={handleCreate} loading={saving}>
-              {saving ? '创建中...' : '创建'}
+              {saving ? t("创建中...") : t("创建")}
             </Button>
           </>
         }
@@ -555,13 +556,13 @@ export default function AdminBillingPage() {
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="修改套餐"
+        title={t("修改套餐")}
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>{t("取消")}</Button>
             <Button variant="primary" onClick={handleEdit} loading={saving}>
-              {saving ? '保存中...' : '保存'}
+              {saving ? t("保存中...") : t("保存")}
             </Button>
           </>
         }
@@ -573,17 +574,17 @@ export default function AdminBillingPage() {
       <Modal
         isOpen={showDeactivateConfirm}
         onClose={() => setShowDeactivateConfirm(false)}
-        title="确认下架"
+        title={t("确认下架")}
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowDeactivateConfirm(false)}>取消</Button>
-            <Button variant="danger" onClick={handleDeactivate}>确认下架</Button>
+            <Button variant="secondary" onClick={() => setShowDeactivateConfirm(false)}>{t("取消")}</Button>
+            <Button variant="danger" onClick={handleDeactivate}>{t("确认下架")}</Button>
           </>
         }
       >
         <p style={{ color: 'var(--text-secondary)' }}>
-          下架后新用户将无法购买此套餐，已有 PENDING 订单仍可完成支付。确定要下架吗？
+          {t("下架后新用户将无法购买此套餐，已有 PENDING 订单仍可完成支付。确定要下架吗？")}
         </p>
       </Modal>
 
@@ -591,21 +592,21 @@ export default function AdminBillingPage() {
       <Modal
         isOpen={showRefundModal}
         onClose={() => setShowRefundModal(false)}
-        title="退款确认"
+        title={t("退款确认")}
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowRefundModal(false)}>取消</Button>
-            <Button variant="danger" onClick={handleRefund}>确认退款</Button>
+            <Button variant="secondary" onClick={() => setShowRefundModal(false)}>{t("取消")}</Button>
+            <Button variant="danger" onClick={handleRefund}>{t("确认退款")}</Button>
           </>
         }
       >
         <div className="space-y-3">
           <p style={{ color: 'var(--text-secondary)' }}>
-            确定对订单 <span className="font-mono text-text-primary">{refundOrderNo}</span> 执行退款？
+            {t("确定对订单")} <span className="font-mono text-text-primary">{refundOrderNo}</span> {t("执行退款？")}
           </p>
           <Input
-            placeholder="退款原因（可选）"
+            placeholder={t("退款原因（可选）")}
             value={refundReason}
             onChange={(e) => setRefundReason(e.target.value)}
           />
@@ -627,42 +628,42 @@ function PlanForm({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1 text-text-primary">套餐名称</label>
-        <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="月度会员" />
+        <label className="block text-sm font-medium mb-1 text-text-primary">{t("套餐名称")}</label>
+        <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder={t("月度会员")} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1 text-text-primary">时长（天）</label>
+          <label className="block text-sm font-medium mb-1 text-text-primary">{t("时长（天）")}</label>
           <Input type="number" value={String(form.durationDays)} onChange={(e) => set('durationDays', Number(e.target.value))} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-text-primary">排序</label>
+          <label className="block text-sm font-medium mb-1 text-text-primary">{t("排序")}</label>
           <Input type="number" value={String(form.sortOrder)} onChange={(e) => set('sortOrder', Number(e.target.value))} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1 text-text-primary">价格（分 = 元 × 100，如 2400 = ¥24.00）</label>
+          <label className="block text-sm font-medium mb-1 text-text-primary">{t("价格（分 = 元 × 100，如 2400 = ¥24.00）")}</label>
           <Input type="number" value={String(form.price)} onChange={(e) => set('price', Number(e.target.value))} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1 text-text-primary">原价（分，选填）</label>
+          <label className="block text-sm font-medium mb-1 text-text-primary">{t("原价（分，选填）")}</label>
           <Input type="number" value={form.originalPrice != null ? String(form.originalPrice) : ''} onChange={(e) => set('originalPrice', e.target.value ? Number(e.target.value) : null)} />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-1 text-text-primary">会员等级</label>
+        <label className="block text-sm font-medium mb-1 text-text-primary">{t("会员等级")}</label>
         <Select
           value={form.tier}
           onChange={(v) => set('tier', v)}
           options={[
-            { label: '专业版 (PRO)', value: 'PRO' },
+            { label: t("专业版 (PRO)"), value: 'PRO' },
           ]}
         />
       </div>
       <div>
         <label className="block text-sm font-medium mb-1 text-text-primary">
-          功能配置（JSON）
+          {t("功能配置（JSON）")}
         </label>
         <textarea
           className="w-full px-3 py-2 rounded-lg text-sm font-mono"

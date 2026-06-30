@@ -14,6 +14,7 @@ import {
   ProjectPermission,
   getRoleDisplayName,
 } from '@/constants/permissions';
+import { t, $t } from '@/languages';
 import type { ProjectMemberDto, UserResponseDto } from '@/api-sdk';
 
 interface Member extends ProjectMemberDto {
@@ -71,7 +72,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const membersWithUserId = (response.data ?? []).map((m) => ({ ...m, userId: m.id }));
       setMembers(membersWithUserId as Member[]);
     } catch (error) {
-      setErrorMessage('加载成员列表失败');
+      setErrorMessage(t("加载成员列表失败"));
     }
   }, [projectId]);
 
@@ -95,7 +96,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         setNewRoleId((prev) => prev || defaultRole.id);
       }
     } catch (error) {
-      setErrorMessage('加载项目角色失败');
+      setErrorMessage(t("加载项目角色失败"));
     }
   }, [projectId]);
 
@@ -178,7 +179,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           setCanAssignRoles(results[3]);
         })
         .catch((error) => {
-          setErrorMessage('加载数据失败');
+          setErrorMessage(t("加载数据失败"));
         })
         .finally(() => {
           setLoading(false);
@@ -222,9 +223,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         (error as Error & { response?: { status?: number } }).response
           ?.status === 403
       ) {
-        setErrorMessage('没有权限添加成员');
+        setErrorMessage(t("没有权限添加成员"));
       } else {
-        setErrorMessage('添加成员失败，请重试');
+        setErrorMessage(t("添加成员失败，请重试"));
       }
     } finally {
       setAdding(false);
@@ -242,9 +243,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         (error as Error & { response?: { status?: number } }).response
           ?.status === 403
       ) {
-        setErrorMessage('没有权限移除成员');
+        setErrorMessage(t("没有权限移除成员"));
       } else {
-        setErrorMessage('移除成员失败，请重试');
+        setErrorMessage(t("移除成员失败，请重试"));
       }
     }
   };
@@ -276,14 +277,14 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         (error as Error & { response?: { status?: number } }).response
           ?.status === 403
       ) {
-        setErrorMessage('没有权限更新成员角色');
+        setErrorMessage(t("没有权限更新成员角色"));
       } else if (
         (error as Error & { response?: { status?: number } }).response
           ?.status === 400
       ) {
-        setErrorMessage('不能修改项目所有者的角色');
+        setErrorMessage(t("不能修改项目所有者的角色"));
       } else {
-        setErrorMessage('更新角色失败，请重试');
+        setErrorMessage(t("更新角色失败，请重试"));
       }
     }
   };
@@ -310,9 +311,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         (error as Error & { response?: { status?: number } }).response
           ?.status === 403
       ) {
-        setErrorMessage('没有权限转让项目');
+        setErrorMessage(t("没有权限转让项目"));
       } else {
-        setErrorMessage('转让项目失败，请重试');
+        setErrorMessage(t("转让项目失败，请重试"));
       }
     } finally {
       setTransferring(false);
@@ -324,10 +325,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title="项目成员"
+        title={t("项目成员")}
         footer={
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            {t("关闭")}
           </Button>
         }
       >
@@ -361,11 +362,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   style={{ color: 'var(--text-muted)' }}
                 />
                 <span style={{ color: 'var(--text-muted)' }}>
-                  检查权限中...
+                  {t("检查权限中...")}
                 </span>
               </div>
             ) : (
-              <Tooltip content={canManageMembers ? undefined : '需要成员管理权限'}>
+              <Tooltip content={canManageMembers ? undefined : t("需要成员管理权限")}>
                 <button
                   data-tour="invite-member-btn"
                   onClick={() => canManageMembers && setShowAddForm(true)}
@@ -389,7 +390,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   }}
                 >
                   <UserPlus size={18} />
-                  添加成员
+                  {t("添加成员")}
                 </button>
               </Tooltip>
             )
@@ -411,7 +412,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   className="font-medium"
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  添加新成员
+                  {t("添加新成员")}
                 </span>
                 <button
                   type="button"
@@ -456,7 +457,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     setNewEmail(user.email ?? '');
                     setSearchResults([]);
                   }}
-                  placeholder="搜索用户（邮箱或用户名）"
+                  placeholder={t("搜索用户（邮箱或用户名）")}
                   open={searchResults.length > 0 && !selectedUser}
                   renderItem={(item) => {
                     const user = item as unknown as UserSearchResult;
@@ -565,7 +566,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     disabled={loading}
                     style={{ maxWidth: '200px' }}
                   >
-                    <option value="">请选择角色</option>
+                    <option value="">{t("请选择角色")}</option>
                     {projectRoles
                       .filter((role) => role.name !== 'PROJECT_OWNER')
                       .map((role) => (
@@ -580,7 +581,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     size="sm"
                     disabled={adding || !selectedUser || !newRoleId}
                   >
-                    {adding ? '添加中...' : '添加'}
+                    {adding ? t("添加中...") : t("添加")}
                   </Button>
                 </div>
               </div>
@@ -594,7 +595,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 className="text-sm"
                 style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}
               >
-                共 {filteredMembers.length} 人 
+                {$t("共 {n} 人", { n: filteredMembers.length })} 
               </span>
               <select
                 value={filterRoleId}
@@ -605,7 +606,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   color: 'var(--text-secondary)',
                 }}
               >
-                <option value="">所有角色</option>
+                <option value="">{t("所有角色")}</option>
                 {projectRoles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {getRoleDisplayName(role.name, false)}
@@ -628,7 +629,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   className="ml-2"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
-                  加载中...
+                  {t("加载中...")}
                 </span>
               </div>
             ) : filteredMembers.length === 0 ? (
@@ -636,7 +637,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 className="text-center py-8"
                 style={{ color: 'var(--text-tertiary)' }}
               >
-                {filterRoleId ? '没有符合条件的成员' : '暂无成员'}
+                {filterRoleId ? t("没有符合条件的成员") : t("暂无成员")}
               </div>
             ) : (
               filteredMembers.map((member) => {
@@ -647,7 +648,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   member.nickname ||
                   member.username ||
                   member.email ||
-                  '未知用户';
+                  t("未知用户");
 
                 const avatarLetter =
                   displayName[0]?.toUpperCase() || '?';
@@ -679,13 +680,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                         style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}
                       >
                         <TruncateText>
-                          {member.email || '无邮箱'}
+                          {member.email || t("无邮箱")}
                         </TruncateText>
                       </p>
                     </div>
                     {isOwner ? (
                       <Tag variant="primary" size="sm" className="flex-shrink-0">
-                        项目所有者
+                        {t("项目所有者")}
                       </Tag>
                     ) : (
                       <select
@@ -713,7 +714,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       </select>
                     )}
                     {!isOwner && (
-                      <Tooltip content={canManageMembers ? '转让项目所有权' : '需要成员管理权限'}>
+                      <Tooltip content={canManageMembers ? t("转让项目所有权") : t("需要成员管理权限")}>
                         <button
                           onClick={() => {
                             if (!canManageMembers) return;
@@ -745,7 +746,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       </Tooltip>
                     )}
                     {!isOwner && (
-                      <Tooltip content={canManageMembers ? '移除成员' : '需要成员管理权限'}>
+                      <Tooltip content={canManageMembers ? t("移除成员") : t("需要成员管理权限")}>
                         <button
                           onClick={() => canManageMembers && handleRemoveMember(member.id)}
                           disabled={!canManageMembers}
@@ -787,7 +788,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             setShowTransferModal(false);
             setTransferTarget(null);
           }}
-          title="转让项目所有权"
+          title={t("转让项目所有权")}
           footer={
             <>
               <Button
@@ -797,14 +798,14 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   setTransferTarget(null);
                 }}
               >
-                取消
+                {t("取消")}
               </Button>
               <Button
                 onClick={handleTransferOwnership}
                 disabled={transferring}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                {transferring ? '转让中...' : '确认转让'}
+                {transferring ? t("转让中...") : t("确认转让")}
               </Button>
             </>
           }
@@ -823,9 +824,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 style={{ color: 'var(--warning)' }}
               />
               <div style={{ color: 'var(--text-primary)' }}>
-                <p className="font-semibold mb-1">重要提示</p>
+                <p className="font-semibold mb-1">{t("重要提示")}</p>
                 <p style={{ color: 'var(--text-secondary)' }}>
-                  转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。
+                  {t("转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。")}
                 </p>
               </div>
             </div>
@@ -835,7 +836,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 className="font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                转让给：
+                {t("转让给：")}
               </p>
               <div
                 className="flex items-center gap-3 p-3 rounded-lg"
@@ -874,9 +875,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
             <div
               style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}
             >
-              <p>• 新所有者将获得项目的完全控制权</p>
-              <p>• 您将成为该项目的管理员</p>
-              <p>• 确认转让后，新所有者可以管理项目成员和权限</p>
+              <p>{t("• 新所有者将获得项目的完全控制权")}</p>
+              <p>{t("• 您将成为该项目的管理员")}</p>
+              <p>{t("• 确认转让后，新所有者可以管理项目成员和权限")}</p>
             </div>
           </div>
         </Modal>

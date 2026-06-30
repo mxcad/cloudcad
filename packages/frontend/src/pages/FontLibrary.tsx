@@ -230,9 +230,9 @@ export default function FontLibrary(props: FontLibraryProps) {
             <FileCode size={40} className="text-text-muted" />
           </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">
-            无访问权限
+            {t("无访问权限")}
           </h2>
-          <p className="text-text-tertiary">您没有查看字体库的权限</p>
+          <p className="text-text-tertiary">{t("您没有查看字体库的权限")}</p>
         </div>
       </div>
     );
@@ -418,15 +418,15 @@ export default function FontLibrary(props: FontLibraryProps) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-text-primary mb-1">
-                字体库管理
+                {t("字体库管理")}
               </h1>
               <p className="text-text-tertiary text-sm">
-                管理和维护 CAD 字体文件
+                {t("管理和维护 CAD 字体文件")}
               </p>
             </div>
             {canUploadFonts && (
               <Button icon={Upload} onClick={() => setShowUploadModal(true)}>
-                上传字体
+                {t("上传字体")}
               </Button>
             )}
           </div>
@@ -441,7 +441,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 <p className="text-2xl font-bold text-text-primary">
                   {stats.count}
                 </p>
-                <p className="text-sm text-text-tertiary">字体总数</p>
+                <p className="text-sm text-text-tertiary">{t("字体总数")}</p>
               </div>
             </div>
             <div className="card-theme flex items-center gap-4 group">
@@ -452,7 +452,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 <p className="text-2xl font-bold text-text-primary">
                   {formatFileSize(stats.totalSize)}
                 </p>
-                <p className="text-sm text-text-tertiary">总存储</p>
+                <p className="text-sm text-text-tertiary">{t("总存储")}</p>
               </div>
             </div>
             <div className="card-theme flex items-center gap-4 group">
@@ -463,7 +463,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 <p className="text-2xl font-bold text-text-primary">
                   {stats.typeCount}
                 </p>
-                <p className="text-sm text-text-tertiary">格式种类</p>
+                <p className="text-sm text-text-tertiary">{t("格式种类")}</p>
               </div>
             </div>
           </div>
@@ -479,7 +479,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               setSelectedFonts(new Set());
             }}
           >
-            后端字体（转换程序）
+            {t("后端字体（转换程序）")}
           </Tab>
           <Tab
             active={activeTab === 'frontend'}
@@ -489,7 +489,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               setSelectedFonts(new Set());
             }}
           >
-            前端字体（资源目录）
+            {t("前端字体（资源目录）")}
           </Tab>
         </Tabs>
 
@@ -553,7 +553,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1.5">
                     <Calendar size={14} className="inline mr-1" />
-                    开始日期
+                    {t("开始日期")}
                   </label>
                   <Input
                     type="date"
@@ -566,7 +566,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1.5">
                     <Calendar size={14} className="inline mr-1" />
-                    结束日期
+                    {t("结束日期")}
                   </label>
                   <Input
                     type="date"
@@ -594,11 +594,11 @@ export default function FontLibrary(props: FontLibraryProps) {
                 className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
               />
               <span className="text-sm text-text-secondary">
-                已选择{' '}
+                {t("已选择")}{' '}
                 <span className="font-semibold text-text-primary">
                   {selectedFonts.size}
                 </span>{' '}
-                个字体
+                {t("个字体")}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -607,7 +607,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                 size="xs"
                 onClick={() => setSelectedFonts(new Set())}
               >
-                取消选择
+                {t("取消选择")}
               </Button>
               {canDeleteFonts && (
                 <Button
@@ -615,7 +615,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                   icon={Trash2}
                   onClick={handleBatchDelete}
                 >
-                  批量删除
+                  {t("批量删除")}
                 </Button>
               )}
             </div>
@@ -782,11 +782,11 @@ export default function FontLibrary(props: FontLibraryProps) {
                       className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
                     />
                   </th>
-                  <th>字体文件</th>
-                  <th className="w-24">格式</th>
-                  <th className="w-28">大小</th>
-                  <th className="w-36">修改时间</th>
-                  <th className="w-24 text-right">操作</th>
+                  <th>{t("字体文件")}</th>
+                  <th className="w-24">{t("格式")}</th>
+                  <th className="w-28">{t("大小")}</th>
+                  <th className="w-36">{t("修改时间")}</th>
+                  <th className="w-24 text-right">{t("操作")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -795,7 +795,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                     <td colSpan={6} className="py-12 text-center">
                       <div className="flex items-center justify-center gap-3 text-text-tertiary">
                         <div className="animate-spin w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full" />
-                        加载中...
+                        {t("加载中...")}
                       </div>
                     </td>
                   </tr>
@@ -810,7 +810,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                           </div>
                         </div>
                       </div>
-                      <p className="text-text-tertiary">暂无数据</p>
+                      <p className="text-text-tertiary">{t("暂无数据")}</p>
                     </td>
                   </tr>
                 ) : (
@@ -894,11 +894,11 @@ export default function FontLibrary(props: FontLibraryProps) {
 
         {/* 底部统计 */}
         <div className="mt-6 text-center text-sm text-text-tertiary">
-          共{' '}
+          {t("共")}{' '}
           <span className="text-text-primary font-medium">{fonts.length}</span>{' '}
-          个字体文件
-          {filters.name && ` · 搜索 "${filters.name}"`}
-          {filters.extension && ` · 格式 ${filters.extension}`}
+          {t("个字体文件")}
+          {filters.name && t(" · 搜索 ") + filters.name + '"'}
+          {filters.extension && t(" · 格式 ") + filters.extension}
         </div>
 
         {/* 上传模态框 */}
@@ -1131,7 +1131,7 @@ function UploadFontModal({
           {/* 上传目标选择 */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-3">
-              {t('上传位置')}
+              {t("上传位置")}
             </label>
             <Select
               value={target}
@@ -1150,7 +1150,7 @@ function UploadFontModal({
         {/* 底部按钮 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-default">
           <Button variant="outline" onClick={onClose} disabled={uploading}>
-            {t('取消')}
+            {t("取消")}
           </Button>
           <Button
             icon={Upload}

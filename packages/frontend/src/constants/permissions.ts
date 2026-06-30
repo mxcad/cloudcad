@@ -1,3 +1,5 @@
+import { t } from '@/languages';
+
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
@@ -288,21 +290,21 @@ export const togglePermission = (
  * 系统角色名称映射
  */
 export const SYSTEM_ROLE_NAMES: Record<string, string> = {
-  ADMIN: '系统管理员',
-  USER_MANAGER: '用户管理员',
-  FONT_MANAGER: '字体管理员',
-  USER: '普通用户',
+  ADMIN: t('系统管理员'),
+  USER_MANAGER: t('用户管理员'),
+  FONT_MANAGER: t('字体管理员'),
+  USER: t('普通用户'),
 };
 
 /**
  * 项目角色名称映射
  */
 export const PROJECT_ROLE_NAMES: Record<string, string> = {
-  PROJECT_OWNER: '项目所有者',
-  PROJECT_ADMIN: '项目管理员',
-  PROJECT_EDITOR: '项目编辑者',
-  PROJECT_MEMBER: '项目成员',
-  PROJECT_VIEWER: '项目查看者',
+  PROJECT_OWNER: t('项目所有者'),
+  PROJECT_ADMIN: t('项目管理员'),
+  PROJECT_EDITOR: t('项目编辑者'),
+  PROJECT_MEMBER: t('项目成员'),
+  PROJECT_VIEWER: t('项目查看者'),
 };
 
 /**

@@ -20,6 +20,7 @@ import { InteractiveBackground } from './InteractiveBackground';
 import { useTour } from '../contexts/TourContext';
 import { useStorageQuota } from '../hooks/useStorageQuota';
 import MembershipBadge from './billing/MembershipBadge';
+import { t, $t } from '@/languages';
 
 // Lucide 图标导入
 import { LayoutDashboard } from 'lucide-react';
@@ -171,12 +172,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   // 角色名称映射
   const getRoleDisplayName = useCallback((roleName: string): string => {
     const roleMap: Record<string, string> = {
-      ADMIN: '系统管理员',
-      USER_MANAGER: '用户管理员',
-      FONT_MANAGER: '字体管理员',
-      USER: '普通用户',
-      MANAGER: '项目经理',
-      GUEST: '访客',
+      ADMIN: t("系统管理员"),
+      USER_MANAGER: t("用户管理员"),
+      FONT_MANAGER: t("字体管理员"),
+      USER: t("普通用户"),
+      MANAGER: t("项目经理"),
+      GUEST: t("访客"),
     };
     return roleMap[roleName] || roleName;
   }, []);
@@ -229,39 +230,39 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       {
         to: '/dashboard',
         icon: LayoutDashboard,
-        label: '仪表盘',
+        label: t("仪表盘"),
         visible: true,
       },
       {
         to: '/projects',
         icon: FolderOpen,
-        label: '项目管理',
+        label: t("项目管理"),
         visible: true,
         dataTour: 'sidebar-projects',
       },
       {
         to: '/personal-space',
         icon: FileText,
-        label: '我的图纸',
+        label: t("我的图纸"),
         visible: true,
         dataTour: 'sidebar-personal-space',
       },
       {
         to: '/shares',
         icon: Share2,
-        label: '分享管理',
+        label: t("分享管理"),
         visible: true,
       },
       {
         to: '/profile',
         icon: User,
-        label: '个人资料',
+        label: t("个人资料"),
         visible: true,
       },
       {
         to: '/library',
         icon: Library,
-        label: '公共资源库',
+        label: t("公共资源库"),
         visible:
           hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE) ||
           hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE),
@@ -269,38 +270,38 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       {
         to: '/font-library',
         icon: Type,
-        label: '字体库',
+        label: t("字体库"),
         visible: hasPermission(SystemPermission.SYSTEM_FONT_READ),
       },
       {
         to: '/users',
         icon: Users,
-        label: '用户管理',
+        label: t("用户管理"),
         visible: hasPermission(SystemPermission.SYSTEM_USER_READ),
       },
       {
         to: '/roles',
         icon: ShieldCheck,
-        label: '角色权限',
+        label: t("角色权限"),
         visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
         dataTour: 'sidebar-roles',
       },
       {
         to: '/admin/billing',
         icon: DollarSign,
-        label: '支付管理',
+        label: t("支付管理"),
         visible: hasPermission(SystemPermission.SYSTEM_CONFIG_READ),
       },
       {
         to: '/audit-logs',
         icon: ScrollText,
-        label: '审计日志',
+        label: t("审计日志"),
         visible: hasPermission(SystemPermission.SYSTEM_ADMIN),
       },
       {
         to: '/system-monitor',
         icon: Activity,
-        label: '系统监控',
+        label: t("系统监控"),
         visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
       },
     ],
@@ -410,7 +411,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   className="text-[11px] font-medium tracking-wide mt-0.5"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  CAD 协同平台
+                  {t("CAD 协同平台")}
                 </span>
               </div>
             </Link>
@@ -432,7 +433,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--text-muted)' }}
               >
-                主菜单
+                {t("主菜单")}
               </p>
               {menuItems
                 .filter((item) => item.visible)
@@ -456,7 +457,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   className="px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  系统管理
+                  {t("系统管理")}
                 </p>
                 {menuItems
                   .filter((item, idx) => idx >= 5 && item.visible)
@@ -485,7 +486,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 className="text-sm font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                存储空间
+                {t("存储空间")}
               </span>
             </div>
 
@@ -526,17 +527,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 {storageInfo.usagePercent > 100 && (
                   <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
                     <p className="text-xs text-red-500 font-medium">
-                      ⚠️ 存储空间已超额
+                      {t("⚠️ 存储空间已超额")}
                     </p>
                     <p className="text-xs text-red-400 mt-1">
-                      请联系管理员增加配额或删除不需要的文件
+                      {t("请联系管理员增加配额或删除不需要的文件")}
                     </p>
                   </div>
                 )}
               </>
             ) : (
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                无法加载存储信息
+                {t("无法加载存储信息")}
               </p>
             )}
           </div>
@@ -547,7 +548,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               variant="outline"
               className="w-full justify-start gap-3"
               onClick={openTourCenter}
-              title="查看引导中心"
+              title={t("查看引导中心")}
             >
               <span className="relative">
                 <HelpCircle size={18} />
@@ -559,10 +560,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 )}
               </span>
               <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>
-                帮助引导
+                {t("帮助引导")}
               </span>
               {isTourActive && (
-                <Tag variant="primary" className="ml-auto">进行中</Tag>
+                <Tag variant="primary" className="ml-auto">{t("进行中")}</Tag>
               )}
             </Button>
           </div>
@@ -617,7 +618,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                           {String(user?.nickname ||
                             user?.username ||
                             user?.email ||
-                            '用户')}
+                            t("用户"))}
                         </TruncateText>
                         <MembershipBadge />
                       </p>
@@ -626,10 +627,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                         style={{ color: 'var(--text-muted)' }}
                       >
                         {loading
-                          ? '加载中...'
+                          ? t("加载中...")
                           : user?.role?.name
                             ? getRoleDisplayName(user.role.name)
-                            : '未知角色'}
+                            : t("未知角色")}
                       </p>
                     </div>
 
@@ -650,7 +651,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                       navigate('/profile');
                     }}
                   >
-                    个人设置
+                    {t("个人设置")}
                   </Menu.Item>
                   <Menu.Separator />
                   <Menu.Item
@@ -661,7 +662,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                       setShowLogoutConfirm(true);
                     }}
                   >
-                    退出登录
+                    {t("退出登录")}
                   </Menu.Item>
                 </Menu.Content>
               </Menu>
@@ -726,14 +727,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             {/* 系统设置 */}
             {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
               <div className="p-0.5">
-                <Tooltip content="系统设置">
+                <Tooltip content={t("系统设置")}>
                   <Button
                     variant="secondary"
                     className="relative rounded-xl transition-all duration-300 ease-out
                                hover:scale-110 active:scale-95
                                hover:bg-[var(--bg-tertiary)]
                                group"
-                    aria-label="系统设置"
+                    aria-label={t("系统设置")}
                     onClick={() => navigate('/runtime-config')}
                   >
                     <Settings2 size={20} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-500)]" />
@@ -787,7 +788,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       <Modal
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
-        title="确认退出登录"
+        title={t("确认退出登录")}
         footer={
           <>
             <Button
@@ -795,7 +796,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               onClick={() => setShowLogoutConfirm(false)}
               disabled={isLoggingOut}
             >
-              取消
+              {t("取消")}
             </Button>
             <Button
               variant="danger"
@@ -805,10 +806,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               {isLoggingOut ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  退出中...
+                  {t("退出中...")}
                 </span>
               ) : (
-                '确认退出'
+                t("确认退出")
               )}
             </Button>
           </>
@@ -825,10 +826,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             className="text-xl font-bold mb-2"
             style={{ color: 'var(--text-primary)' }}
           >
-            确认退出登录
+            {t("确认退出登录")}
           </h3>
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            您确定要退出 {appName} 吗？退出后需要重新登录才能访问系统功能。
+            {$t("您确定要退出 {appName} 吗？退出后需要重新登录才能访问系统功能。", { appName })}
           </p>
         </div>
       </Modal>

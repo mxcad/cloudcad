@@ -1,4 +1,5 @@
 import { FileSystemNode } from '../../types/filesystem';
+import { t } from '@/languages';
 
 /**
  * 操作类型
@@ -338,8 +339,8 @@ const Icons = {
 export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   upload_external_reference: {
     type: 'upload_external_reference',
-    label: '外部参照管理',
-    tooltip: '管理外部参照',
+    label: t("外部参照管理"),
+    tooltip: t("管理外部参照"),
     icon: <Icons.Upload />,
     colorClass: 'text-amber-600',
     hoverClass: 'hover:bg-amber-50',
@@ -348,8 +349,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   download: {
     type: 'download',
-    label: '下载',
-    tooltip: '下载',
+    label: t("下载"),
+    tooltip: t("下载"),
     icon: <Icons.Download />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -358,8 +359,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   view_version_history: {
     type: 'view_version_history',
-    label: '版本历史',
-    tooltip: '版本历史',
+    label: t("版本历史"),
+    tooltip: t("版本历史"),
     icon: <Icons.History />,
     colorClass: 'text-blue-600',
     hoverClass: 'hover:bg-blue-50',
@@ -370,8 +371,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   rename: {
     type: 'rename',
-    label: '重命名',
-    tooltip: '重命名',
+    label: t("重命名"),
+    tooltip: t("重命名"),
     icon: <Icons.Edit />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -380,8 +381,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   move: {
     type: 'move',
-    label: '移动到...',
-    tooltip: '移动到',
+    label: t("移动到..."),
+    tooltip: t("移动到"),
     icon: <Icons.Move />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -389,8 +390,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   copy: {
     type: 'copy',
-    label: '复制到...',
-    tooltip: '复制到',
+    label: t("复制到..."),
+    tooltip: t("复制到"),
     icon: <Icons.Copy />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -398,8 +399,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   restore: {
     type: 'restore',
-    label: '恢复',
-    tooltip: '恢复',
+    label: t("恢复"),
+    tooltip: t("恢复"),
     icon: <Icons.Restore />,
     colorClass: 'text-green-600',
     hoverClass: 'hover:bg-green-50',
@@ -411,8 +412,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   delete: {
     type: 'delete',
-    label: '删除',
-    tooltip: '删除',
+    label: t("删除"),
+    tooltip: t("删除"),
     icon: <Icons.Delete />,
     colorClass: 'text-red-600',
     hoverClass: 'hover:bg-red-50',
@@ -429,8 +430,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   permanently_delete: {
     type: 'permanently_delete',
-    label: '彻底删除',
-    tooltip: '彻底删除',
+    label: t("彻底删除"),
+    tooltip: t("彻底删除"),
     icon: <Icons.Delete />,
     colorClass: 'text-red-700',
     hoverClass: 'hover:bg-red-100',
@@ -442,8 +443,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   edit: {
     type: 'edit',
-    label: '编辑',
-    tooltip: '编辑',
+    label: t("编辑"),
+    tooltip: t("编辑"),
     icon: <Icons.Edit />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -453,8 +454,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   share: {
     type: 'share',
-    label: '分享',
-    tooltip: '分享图纸',
+    label: t("分享"),
+    tooltip: t("分享图纸"),
     icon: <Icons.Share />,
     colorClass: 'text-cyan-600',
     hoverClass: 'hover:bg-cyan-50',
@@ -464,8 +465,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   show_members: {
     type: 'show_members',
-    label: '成员',
-    tooltip: '成员',
+    label: t("成员"),
+    tooltip: t("成员"),
     icon: <Icons.Users />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -477,8 +478,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   show_roles: {
     type: 'show_roles',
-    label: '角色管理',
-    tooltip: '角色管理',
+    label: t("角色管理"),
+    tooltip: t("角色管理"),
     icon: <Icons.Settings />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -490,8 +491,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   open: {
     type: 'open',
-    label: '打开',
-    tooltip: '打开文件夹',
+    label: t("打开"),
+    tooltip: t("打开文件夹"),
     icon: <Icons.FolderOpen />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -499,8 +500,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   open_in_new_tab: {
     type: 'open_in_new_tab',
-    label: '新标签页打开',
-    tooltip: '在新标签页中打开',
+    label: t("新标签页打开"),
+    tooltip: t("在新标签页中打开"),
     icon: <Icons.ExternalLink />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -508,8 +509,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   open_file_location: {
     type: 'open_file_location',
-    label: '打开所在位置',
-    tooltip: '在新标签页打开文件所在文件夹',
+    label: t("打开所在位置"),
+    tooltip: t("在新标签页打开文件所在文件夹"),
     icon: <Icons.FolderUp />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -526,8 +527,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   new_folder: {
     type: 'new_folder',
-    label: '新建文件夹',
-    tooltip: '在当前文件夹中新建子文件夹',
+    label: t("新建文件夹"),
+    tooltip: t("在当前文件夹中新建子文件夹"),
     icon: <Icons.NewFolder />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -537,8 +538,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   copy_clipboard: {
     type: 'copy_clipboard',
-    label: '复制',
-    tooltip: '复制到剪贴板',
+    label: t("复制"),
+    tooltip: t("复制到剪贴板"),
     icon: <Icons.Copy />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -548,8 +549,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   cut: {
     type: 'cut',
-    label: '剪切',
-    tooltip: '剪切到剪贴板',
+    label: t("剪切"),
+    tooltip: t("剪切到剪贴板"),
     icon: <Icons.Cut />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -559,8 +560,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   download_folder: {
     type: 'download_folder',
-    label: '下载文件夹',
-    tooltip: '将文件夹打包为 ZIP 下载',
+    label: t("下载文件夹"),
+    tooltip: t("将文件夹打包为 ZIP 下载"),
     icon: <Icons.Download />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
@@ -570,8 +571,8 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
   },
   copy_path: {
     type: 'copy_path',
-    label: '复制路径',
-    tooltip: '复制文件完整路径',
+    label: t("复制路径"),
+    tooltip: t("复制文件完整路径"),
     icon: <Icons.Copy />,
     colorClass: 'text-slate-700',
     hoverClass: 'hover:bg-slate-50',
