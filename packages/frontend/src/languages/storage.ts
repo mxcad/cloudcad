@@ -1,3 +1,5 @@
+import type { IVoerkaI18nStorage } from "@voerkai18n/runtime" 
+
 export default {
     get(key:string){
         if(globalThis.localStorage){
@@ -15,4 +17,4 @@ export default {
             globalThis.localStorage.removeItem(key)
         }
     }
-}
+} as IVoerkaI18nStorage

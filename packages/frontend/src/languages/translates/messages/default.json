@@ -1,0 +1,5754 @@
+{
+    "图纸": {
+        "zh-TW": "圖紙",
+        "en-US": "Drawing",
+        "ko-KR": "도면",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(6696-6702)"
+        ],
+        "$id": 873
+    },
+    "项目": {
+        "zh-TW": "項目",
+        "en-US": "Project",
+        "ko-KR": "프로젝트",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(7195-7201)"
+        ],
+        "$id": 874
+    },
+    "正在打开协同文件...": {
+        "zh-TW": "正在打開協同檔案. ..",
+        "en-US": "Opening collaborative file...",
+        "ko-KR": "협업 파일 여는 중...",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(13164-13179)",
+            "src/components/CollaborateSidebar.tsx(23969-23984)"
+        ],
+        "$id": 875
+    },
+    "加入协同超时": {
+        "zh-TW": "加入協同超時",
+        "en-US": "Join collaboration timed out",
+        "ko-KR": "협업 참여 시간 초과",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(17548-17558)"
+        ],
+        "$id": 876
+    },
+    "加入协同失败，错误码: ": {
+        "zh-TW": "加入協同失敗,錯誤碼：",
+        "en-US": "Failed to join collaboration, error code: ",
+        "ko-KR": "협업 참여 실패, 오류 코드: ",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(17902-17918)",
+            "src/components/CollaborateSidebar.tsx(24911-24927)"
+        ],
+        "$id": 877
+    },
+    "协同对象未初始化": {
+        "zh-TW": "協同對象未初始化",
+        "en-US": "Collaboration object not initialized",
+        "ko-KR": "협업 객체가 초기화되지 않았습니다",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(19163-19175)",
+            "src/components/CollaborateSidebar.tsx(22992-23004)",
+            "src/components/CollaborateSidebar.tsx(25601-25613)"
+        ],
+        "$id": 878
+    },
+    "请先打开图纸并登录": {
+        "zh-TW": "請先打開圖紙並登入",
+        "en-US": "Please open a drawing and log in first",
+        "ko-KR": "먼저 도면을 열고 로그인하세요",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(19315-19328)"
+        ],
+        "$id": 879
+    },
+    "未命名图纸": {
+        "zh-TW": "未命名圖紙",
+        "en-US": "Untitled drawing",
+        "ko-KR": "제목 없는 도면",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(19671-19680)"
+        ],
+        "$id": 880
+    },
+    "正在创建协同...": {
+        "zh-TW": "正在創建協同. ..",
+        "en-US": "Creating collaboration...",
+        "ko-KR": "협업 생성 중...",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(20676-20689)"
+        ],
+        "$id": 881
+    },
+    "创建协同失败，错误码: ": {
+        "zh-TW": "創建協同失敗,錯誤碼：",
+        "en-US": "Failed to create collaboration, error code: ",
+        "ko-KR": "협업 생성 실패, 오류 코드: ",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(21579-21595)"
+        ],
+        "$id": 882
+    },
+    "请先登录": {
+        "zh-TW": "請先登錄",
+        "en-US": "Please log in first",
+        "ko-KR": "먼저 로그인하세요",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(23170-23178)",
+            "src/components/MxCadUploader.tsx(7368-7376)"
+        ],
+        "$id": 883
+    },
+    "已退出协同": {
+        "zh-TW": "已退出協同",
+        "en-US": "Left collaboration",
+        "ko-KR": "협업에서 나갔습니다",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(26320-26329)"
+        ],
+        "$id": 884
+    },
+    "退出协同失败，错误码: ": {
+        "zh-TW": "退出協同失敗,錯誤碼：",
+        "en-US": "Failed to leave collaboration, error code: ",
+        "ko-KR": "협업 나가기 실패, 오류 코드: ",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(26436-26452)"
+        ],
+        "$id": 885
+    },
+    "未知项目": {
+        "zh-TW": "未知項目",
+        "en-US": "Unknown project",
+        "ko-KR": "알 수 없는 프로젝트",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(28193-28201)",
+            "src/components/CollaborateSidebar.tsx(29634-29642)"
+        ],
+        "$id": 886
+    },
+    "个人空间": {
+        "zh-TW": "個人空間",
+        "en-US": "Personal space",
+        "ko-KR": "개인 공간",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(28220-28228)"
+        ],
+        "$id": 887
+    },
+    "未知图纸": {
+        "zh-TW": "未知圖紙",
+        "en-US": "Unknown drawing",
+        "ko-KR": "알 수 없는 도면",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(28429-28437)",
+            "src/components/CollaborateSidebar.tsx(29863-29871)"
+        ],
+        "$id": 888
+    },
+    "当前图纸": {
+        "zh-TW": "當前圖紙",
+        "en-US": "Current drawing",
+        "ko-KR": "현재 도면",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(30470-30478)",
+            "src/components/CollaborateSidebar.tsx(30884-30892)"
+        ],
+        "$id": 889
+    },
+    "协同列表": {
+        "zh-TW": "協同清單",
+        "en-US": "Collaboration list",
+        "ko-KR": "협업 목록",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(31112-31120)"
+        ],
+        "$id": 890
+    },
+    "刷新列表": {
+        "zh-TW": "重繪清單",
+        "en-US": "Refresh list",
+        "ko-KR": "목록 새로고침",
+        "$files": [
+            "src/components/CollaborateSidebar.tsx(31317-31325)",
+            "src/components/CollaborateSidebar.tsx(31351-31359)"
+        ],
+        "$id": 891
+    },
+    "分享协同": {
+        "zh-TW": "分享協同",
+        "en-US": "Share collaboration",
+        "ko-KR": "협업 공유",
+        "$files": [
+            "src/components/CollabShareModal.tsx(1224-1232)"
+        ],
+        "$id": 892
+    },
+    "已复制": {
+        "zh-TW": "已複製",
+        "en-US": "Copied",
+        "ko-KR": "복사됨",
+        "$files": [
+            "src/components/CollabShareModal.tsx(2549-2556)",
+            "src/components/modals/ShareDialog.tsx(14388-14395)"
+        ],
+        "$id": 893
+    },
+    "复制": {
+        "zh-TW": "複製",
+        "en-US": "Copy",
+        "ko-KR": "복사",
+        "$files": [
+            "src/components/CollabShareModal.tsx(2560-2566)",
+            "src/components/modals/ShareDialog.tsx(14399-14405)"
+        ],
+        "$id": 894
+    },
+    "完成": {
+        "zh-TW": "完成",
+        "en-US": "Done",
+        "ko-KR": "완료",
+        "$files": [
+            "src/components/CollabShareModal.tsx(2700-2706)",
+            "src/components/modals/ExternalReferenceModal.tsx(5137-5143)",
+            "src/components/modals/ShareDialog.tsx(15042-15048)"
+        ],
+        "$id": 895
+    },
+    "在线": {
+        "zh-TW": "線上",
+        "en-US": "Online",
+        "ko-KR": "온라인",
+        "$files": [
+            "src/components/CollabWorkCard.tsx(2217-2223)"
+        ],
+        "$id": 896
+    },
+    "暂无参与者": {
+        "zh-TW": "暫無參與者",
+        "en-US": "No participants",
+        "ko-KR": "참여자가 없습니다",
+        "$files": [
+            "src/components/CollabWorkCard.tsx(2429-2438)"
+        ],
+        "$id": 897
+    },
+    "用户": {
+        "zh-TW": "用戶",
+        "en-US": "User",
+        "ko-KR": "사용자",
+        "$files": [
+            "src/components/CollabWorkCard.tsx(2518-2524)",
+            "src/pages/Dashboard.tsx(9614-9620)",
+            "src/pages/Profile.tsx(30725-30731)"
+        ],
+        "$id": 898
+    },
+    "分享": {
+        "zh-TW": "分享",
+        "en-US": "Share",
+        "ko-KR": "공유",
+        "$files": [
+            "src/components/CollabWorkCard.tsx(3571-3577)"
+        ],
+        "$id": 899
+    },
+    "退出": {
+        "zh-TW": "退出",
+        "en-US": "Exit",
+        "ko-KR": "나가기",
+        "$files": [
+            "src/components/CollabWorkCard.tsx(3796-3802)"
+        ],
+        "$id": 900
+    },
+    "加入": {
+        "zh-TW": "加入",
+        "en-US": "Join",
+        "ko-KR": "참여",
+        "$files": [
+            "src/components/CollabWorkCard.tsx(4121-4127)"
+        ],
+        "$id": 901
+    },
+    "所选目录中无支持的格式文件（支持 .mxweb, .dwg, .dxf）": {
+        "zh-TW": "所選目錄中無支持的格式檔案(支持.mxweb,.dwg,.dxf)",
+        "en-US": "No supported format files in selected directory (supports .mxweb, .dwg, .dxf)",
+        "ko-KR": "선택한 디렉토리에 지원되는 형식 파일이 없습니다 (.mxweb, .dwg, .dxf 지원)",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(2921-2961)"
+        ],
+        "$id": 902
+    },
+    "扫描目录失败": {
+        "zh-TW": "掃描目錄失敗",
+        "en-US": "Failed to scan directory",
+        "ko-KR": "디렉토리 스캔 실패",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(3445-3455)"
+        ],
+        "$id": 903
+    },
+    "导入失败": {
+        "zh-TW": "導入失敗",
+        "en-US": "Import failed",
+        "ko-KR": "가져오기 실패",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(4407-4415)",
+            "src/components/DirectoryImportDialog.tsx(13770-13778)"
+        ],
+        "$id": 904
+    },
+    "选择的内容": {
+        "zh-TW": "選擇的內容",
+        "en-US": "Selected content",
+        "ko-KR": "선택한 내용",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(6408-6417)"
+        ],
+        "$id": 905
+    },
+    "选择要导入的目录": {
+        "zh-TW": "選擇要導入的目錄",
+        "en-US": "Select directory to import",
+        "ko-KR": "가져올 디렉토리 선택",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(6663-6675)"
+        ],
+        "$id": 906
+    },
+    "将目录中的文件导入到当前资源库": {
+        "zh-TW": "將目錄中的檔案導入到當前資源庫",
+        "en-US": "Import files from directory to current repository",
+        "ko-KR": "디렉토리의 파일을 현재 저장소로 가져오기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(6758-6777)"
+        ],
+        "$id": 907
+    },
+    "仅支持 .mxweb, .dwg, .dxf 格式，其他格式将自动过滤": {
+        "zh-TW": "僅支持.mxweb,.dwg,.dxf格式,其他格式將自動過濾",
+        "en-US": "Only .mxweb, .dwg, .dxf formats are supported; other formats will be filtered automatically",
+        "ko-KR": ".mxweb, .dwg, .dxf 형식만 지원됩니다. 다른 형식은 자동으로 필터링됩니다",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(6866-6905)"
+        ],
+        "$id": 908
+    },
+    "导入方式：": {
+        "zh-TW": "導入管道：",
+        "en-US": "Import method: ",
+        "ko-KR": "가져오기 방식: ",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(7056-7065)",
+            "src/components/DirectoryImportDialog.tsx(9375-9384)"
+        ],
+        "$id": 909
+    },
+    "导入目录内容": {
+        "zh-TW": "導入目錄內容",
+        "en-US": "Import directory contents",
+        "ko-KR": "디렉토리 내용 가져오기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(7495-7505)",
+            "src/components/DirectoryImportDialog.tsx(9428-9438)"
+        ],
+        "$id": 910
+    },
+    "将目录作为子目录": {
+        "zh-TW": "將目錄作為子目錄",
+        "en-US": "Import directory as subdirectory",
+        "ko-KR": "디렉토리를 하위 디렉토리로 가져오기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(7888-7900)",
+            "src/components/DirectoryImportDialog.tsx(9442-9454)"
+        ],
+        "$id": 911
+    },
+    "将选中目录的内部文件/文件夹导入到当前目录": {
+        "zh-TW": "將選中目錄的內部檔案/資料夾導入到目前的目錄",
+        "en-US": "Import internal files/folders of selected directory to current directory",
+        "ko-KR": "선택한 디렉토리의 내부 파일/폴더를 현재 디렉토리로 가져오기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(8074-8099)"
+        ],
+        "$id": 912
+    },
+    "将整个选中目录作为子目录导入": {
+        "zh-TW": "將整個選中目錄作為子目錄導入",
+        "en-US": "Import entire selected directory as a subdirectory",
+        "ko-KR": "선택한 전체 디렉토리를 하위 디렉토리로 가져오기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(8116-8134)"
+        ],
+        "$id": 913
+    },
+    "选择目录": {
+        "zh-TW": "選擇目錄",
+        "en-US": "Select directory",
+        "ko-KR": "디렉토리 선택",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(8526-8534)"
+        ],
+        "$id": 914
+    },
+    "、": {
+        "zh-TW": "、",
+        "en-US": ", ",
+        "ko-KR": ", ",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(8875-8880)"
+        ],
+        "$id": 915
+    },
+    "冲突处理策略：": {
+        "zh-TW": "衝突處理策略：",
+        "en-US": "Conflict resolution strategy: ",
+        "ko-KR": "충돌 처리 전략: ",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(9599-9610)"
+        ],
+        "$id": 916
+    },
+    "跳过同名文件": {
+        "zh-TW": "跳過同名檔案",
+        "en-US": "Skip files with same name",
+        "ko-KR": "동일한 이름의 파일 건너뛰기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(10099-10109)"
+        ],
+        "$id": 917
+    },
+    "覆盖同名文件": {
+        "zh-TW": "覆蓋同名檔案",
+        "en-US": "Overwrite files with same name",
+        "ko-KR": "동일한 이름의 파일 덮어쓰기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(10578-10588)"
+        ],
+        "$id": 918
+    },
+    "自动重命名（添加序号）": {
+        "zh-TW": "自動重命名(添加序號)",
+        "en-US": "Auto rename (add sequence number)",
+        "ko-KR": "자동 이름 바꾸기 (일련번호 추가)",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(11051-11066)"
+        ],
+        "$id": 919
+    },
+    "自动发现并上传外部参照文件": {
+        "zh-TW": "自動發現並上傳外部參照檔案",
+        "en-US": "Auto-discover and upload external reference files",
+        "ko-KR": "외부 참조 파일 자동 검색 및 업로드",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(11644-11661)"
+        ],
+        "$id": 920
+    },
+    "启用后，导入完成时将自动在目录中搜索图纸的外部参照文件并静默上传（不阻塞弹框关闭）": {
+        "zh-TW": "啟用後,導入完成時將自動在目錄中蒐索圖紙的外部參照檔案並靜默上傳(不阻塞彈框關閉)",
+        "en-US": "When enabled, will automatically search for external reference files in the directory and silently upload them after import (without blocking dialog close)",
+        "ko-KR": "활성화하면 가져오기 완료 시 디렉토리에서 도면의 외부 참조 파일을 자동으로 검색하여 자동 업로드합니다 (대화상자 닫기를 차단하지 않음)",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(11778-11823)"
+        ],
+        "$id": 921
+    },
+    "重新选择": {
+        "zh-TW": "重新選擇",
+        "en-US": "Re-select",
+        "ko-KR": "다시 선택",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(12297-12305)"
+        ],
+        "$id": 922
+    },
+    "取消导入": {
+        "zh-TW": "取消導入",
+        "en-US": "Cancel import",
+        "ko-KR": "가져오기 취소",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(13225-13233)"
+        ],
+        "$id": 923
+    },
+    "导入完成": {
+        "zh-TW": "導入完成",
+        "en-US": "Import complete",
+        "ko-KR": "가져오기 완료",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(13758-13766)"
+        ],
+        "$id": 924
+    },
+    "取消": {
+        "zh-TW": "取消",
+        "en-US": "Cancel",
+        "ko-KR": "취소",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(14292-14298)",
+            "src/components/DirectoryImportDialog.tsx(14642-14648)",
+            "src/contexts/NotificationContext.tsx(6363-6369)",
+            "src/contexts/NotificationContext.tsx(7117-7123)",
+            "src/contexts/NotificationContext.tsx(7507-7513)",
+            "src/contexts/NotificationContext.tsx(10836-10842)",
+            "src/contexts/NotificationContext.tsx(11863-11869)",
+            "src/pages/FontLibrary.tsx(40561-40567)",
+            "src/pages/LibraryManager.tsx(36107-36113)",
+            "src/pages/LibraryManager.tsx(38045-38051)",
+            "src/pages/Profile.tsx(24338-24344)",
+            "src/pages/Profile.tsx(25333-25339)",
+            "src/pages/Profile.tsx(26328-26334)",
+            "src/pages/RoleManagement.tsx(22780-22786)",
+            "src/components/modals/ConfirmRevokeModal.tsx(998-1004)",
+            "src/components/modals/DownloadFormatModal.tsx(2411-2417)",
+            "src/components/modals/DwgExportModal.tsx(1546-1552)",
+            "src/components/modals/EditExpiryModal.tsx(3086-3092)",
+            "src/components/modals/PdfExportModal.tsx(1468-1474)",
+            "src/components/modals/SaveAsModal.tsx(4697-4703)",
+            "src/services/mxcadManager/index.ts(7300-7306)"
+        ],
+        "$id": 925
+    },
+    "开始导入": {
+        "zh-TW": "開始導入",
+        "en-US": "Start import",
+        "ko-KR": "가져오기 시작",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(14408-14416)"
+        ],
+        "$id": 926
+    },
+    "关闭": {
+        "zh-TW": "關閉",
+        "en-US": "Close",
+        "ko-KR": "닫기",
+        "$files": [
+            "src/components/DirectoryImportDialog.tsx(14652-14658)",
+            "src/pages/CADEditorDirect.tsx(44987-44993)",
+            "src/pages/FontLibrary.tsx(36030-36036)"
+        ],
+        "$id": 927
+    },
+    "切换语言": {
+        "zh-TW": "切換語言",
+        "en-US": "Switch Language",
+        "ko-KR": "언어 전환",
+        "$files": [
+            "src/components/LanguageSwitcher.tsx(687-695)",
+            "src/components/LanguageSwitcher.tsx(1022-1030)"
+        ],
+        "$id": 928
+    },
+    "上传 CAD 文件": {
+        "zh-TW": "上傳CAD檔案",
+        "en-US": "Upload CAD file",
+        "ko-KR": "CAD 파일 업로드",
+        "$files": [
+            "src/components/MxCadUploader.tsx(1901-1914)",
+            "src/components/MxCadUploader.tsx(6908-6921)"
+        ],
+        "$id": 929
+    },
+    "请先登录后再上传文件": {
+        "zh-TW": "請先登錄後再上傳文件",
+        "en-US": "Please log in before uploading files",
+        "ko-KR": "파일을 업로드하기 전에 로그인하세요",
+        "$files": [
+            "src/components/MxCadUploader.tsx(3196-3210)",
+            "src/components/MxCadUploader.tsx(6890-6904)"
+        ],
+        "$id": 930
+    },
+    "用户未登录": {
+        "zh-TW": "用戶未登錄",
+        "en-US": "User not logged in",
+        "ko-KR": "사용자가 로그인하지 않았습니다",
+        "$files": [
+            "src/components/MxCadUploader.tsx(3244-3253)"
+        ],
+        "$id": 931
+    },
+    "所选文件类型不支持（支持 .dwg, .dxf, .mxweb）": {
+        "zh-TW": "所選檔案類型不支持(支持.dwg,.dxf,.mxweb)",
+        "en-US": "Selected file type is not supported (supports .dwg, .dxf, .mxweb)",
+        "ko-KR": "선택한 파일 형식이 지원되지 않습니다 (.dwg, .dxf, .mxweb 지원)",
+        "$files": [
+            "src/components/MxCadUploader.tsx(3630-3666)"
+        ],
+        "$id": 932
+    },
+    "上传管理器未初始化，请刷新页面后重试": {
+        "zh-TW": "上傳管理器未初始化,請刷新頁面後重試",
+        "en-US": "Upload manager not initialized. Please refresh and try again",
+        "ko-KR": "업로드 관리자가 초기화되지 않았습니다. 페이지를 새로고침 후 다시 시도하세요",
+        "$files": [
+            "src/components/MxCadUploader.tsx(4028-4050)"
+        ],
+        "$id": 933
+    },
+    "文件处理失败": {
+        "zh-TW": "文件處理失敗",
+        "en-US": "File processing failed",
+        "ko-KR": "파일 처리 실패",
+        "$files": [
+            "src/components/MxCadUploader.tsx(5330-5340)",
+            "src/hooks/useFileDropUpload.ts(4307-4317)"
+        ],
+        "$id": 934
+    },
+    "上传失败": {
+        "zh-TW": "上傳失敗",
+        "en-US": "Upload failed",
+        "ko-KR": "업로드 실패",
+        "$files": [
+            "src/components/MxCadUploader.tsx(6187-6195)",
+            "src/hooks/useDirectoryImport.ts(26836-26844)",
+            "src/hooks/useDirectoryImport.ts(27085-27093)",
+            "src/components/modals/ExternalReferenceModal.tsx(3481-3489)"
+        ],
+        "$id": 935
+    },
+    "上传中...": {
+        "zh-TW": "上傳中. ..",
+        "en-US": "Uploading...",
+        "ko-KR": "업로드 중...",
+        "$files": [
+            "src/components/MxCadUploader.tsx(7335-7345)",
+            "src/pages/FontLibrary.tsx(40803-40813)",
+            "src/components/modals/ExternalReferenceModal.tsx(4415-4425)"
+        ],
+        "$id": 936
+    },
+    "永不过期": {
+        "zh-TW": "永不過期",
+        "en-US": "Never expires",
+        "ko-KR": "만료되지 않음",
+        "$files": [
+            "src/constants/share.ts(211-219)",
+            "src/constants/share.ts(2051-2059)"
+        ],
+        "$id": 937
+    },
+    "2 小时": {
+        "zh-TW": "2小時",
+        "en-US": "2 hours",
+        "ko-KR": "2시간",
+        "$files": [
+            "src/constants/share.ts(231-239)"
+        ],
+        "$id": 938
+    },
+    "6 小时": {
+        "zh-TW": "6小時",
+        "en-US": "6 hours",
+        "ko-KR": "6시간",
+        "$files": [
+            "src/constants/share.ts(251-259)"
+        ],
+        "$id": 939
+    },
+    "12 小时": {
+        "zh-TW": "12小時",
+        "en-US": "12 hours",
+        "ko-KR": "12시간",
+        "$files": [
+            "src/constants/share.ts(272-281)"
+        ],
+        "$id": 940
+    },
+    "1 天": {
+        "zh-TW": "1天",
+        "en-US": "1 day",
+        "ko-KR": "1일",
+        "$files": [
+            "src/constants/share.ts(293-300)"
+        ],
+        "$id": 941
+    },
+    "3 天": {
+        "zh-TW": "3天",
+        "en-US": "3 days",
+        "ko-KR": "3일",
+        "$files": [
+            "src/constants/share.ts(312-319)"
+        ],
+        "$id": 942
+    },
+    "7 天": {
+        "zh-TW": "7天",
+        "en-US": "7 days",
+        "ko-KR": "7일",
+        "$files": [
+            "src/constants/share.ts(331-338)"
+        ],
+        "$id": 943
+    },
+    "自定义": {
+        "zh-TW": "自定義",
+        "en-US": "Custom",
+        "ko-KR": "사용자 정의",
+        "$files": [
+            "src/constants/share.ts(352-359)"
+        ],
+        "$id": 944
+    },
+    "注册失败，服务器返回数据异常": {
+        "zh-TW": "注册失敗,服務器返回數據异常",
+        "en-US": "Registration failed. Server returned abnormal data",
+        "ko-KR": "등록 실패. 서버가 비정상 데이터를 반환했습니다",
+        "$files": [
+            "src/contexts/AuthContext.tsx(6595-6613)"
+        ],
+        "$id": 945
+    },
+    "注册成功": {
+        "zh-TW": "注册成功",
+        "en-US": "Registration successful",
+        "ko-KR": "등록 성공",
+        "$files": [
+            "src/contexts/AuthContext.tsx(7170-7178)"
+        ],
+        "$id": 946
+    },
+    "确定": {
+        "zh-TW": "確定",
+        "en-US": "OK",
+        "ko-KR": "확인",
+        "$files": [
+            "src/contexts/NotificationContext.tsx(6337-6343)",
+            "src/contexts/NotificationContext.tsx(6689-6695)",
+            "src/contexts/NotificationContext.tsx(7481-7487)",
+            "src/contexts/NotificationContext.tsx(10782-10788)",
+            "src/contexts/NotificationContext.tsx(11278-11284)",
+            "src/contexts/NotificationContext.tsx(11809-11815)",
+            "src/pages/RoleManagement.tsx(23977-23983)"
+        ],
+        "$id": 947
+    },
+    "保存": {
+        "zh-TW": "保存",
+        "en-US": "Save",
+        "ko-KR": "저장",
+        "$files": [
+            "src/contexts/NotificationContext.tsx(7063-7069)",
+            "src/pages/LibraryManager.tsx(38274-38280)",
+            "src/components/modals/EditExpiryModal.tsx(3180-3186)",
+            "src/components/modals/SaveAsModal.tsx(4832-4838)",
+            "src/services/mxcadManager/index.ts(7246-7252)"
+        ],
+        "$id": 948
+    },
+    "不保存": {
+        "zh-TW": "不保存",
+        "en-US": "Don't Save",
+        "ko-KR": "저장하지 않음",
+        "$files": [
+            "src/contexts/NotificationContext.tsx(7090-7097)",
+            "src/services/mxcadManager/index.ts(7273-7280)"
+        ],
+        "$id": 949
+    },
+    "根目录": {
+        "zh-TW": "根目錄",
+        "en-US": "Root directory",
+        "ko-KR": "루트 디렉토리",
+        "$files": [
+            "src/hooks/useBuildBreadcrumbs.ts(1611-1618)",
+            "src/hooks/useBuildBreadcrumbs.ts(1783-1790)"
+        ],
+        "$id": 950
+    },
+    "加载数据失败": {
+        "zh-TW": "加載數據失敗",
+        "en-US": "Failed to load data",
+        "ko-KR": "데이터 로드 실패",
+        "$files": [
+            "src/hooks/useDashboardProjects.ts(2752-2762)"
+        ],
+        "$id": 951
+    },
+    "获取私人空间失败": {
+        "zh-TW": "獲取私人空間失敗",
+        "en-US": "Failed to get personal space",
+        "ko-KR": "개인 공간을 가져오지 못했습니다",
+        "$files": [
+            "src/hooks/useDashboardProjects.ts(2809-2821)"
+        ],
+        "$id": 952
+    },
+    "创建项目失败，请重试": {
+        "zh-TW": "創建項目失敗,請重試",
+        "en-US": "Failed to create project. Please try again",
+        "ko-KR": "프로젝트 생성 실패. 다시 시도하세요",
+        "$files": [
+            "src/hooks/useDashboardProjects.ts(3000-3014)"
+        ],
+        "$id": 953
+    },
+    "加载统计数据失败": {
+        "zh-TW": "加載統計資料失敗",
+        "en-US": "Failed to load statistics",
+        "ko-KR": "통계 데이터 로드 실패",
+        "$files": [
+            "src/hooks/useDashboardStats.ts(688-700)"
+        ],
+        "$id": 954
+    },
+    "正在扫描目录...": {
+        "zh-TW": "正在掃描目錄. ..",
+        "en-US": "Scanning directory...",
+        "ko-KR": "디렉토리 스캔 중...",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(6129-6142)",
+            "src/hooks/useDirectoryImport.ts(9557-9570)"
+        ],
+        "$id": 955
+    },
+    "扫描完成：": {
+        "zh-TW": "掃描完成：",
+        "en-US": "Scan complete: ",
+        "ko-KR": "스캔 완료: ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(8981-8990)"
+        ],
+        "$id": 956
+    },
+    " 个文件，": {
+        "zh-TW": "個檔案,",
+        "en-US": " files, ",
+        "ko-KR": "개 파일, ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(9006-9015)",
+            "src/hooks/useDirectoryImport.ts(14581-14590)"
+        ],
+        "$id": 957
+    },
+    " 个文件夹": {
+        "zh-TW": "個資料夾",
+        "en-US": " folders",
+        "ko-KR": "개 폴더",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(9033-9042)",
+            "src/hooks/useDirectoryImport.ts(14609-14618)"
+        ],
+        "$id": 958
+    },
+    "目录为空": {
+        "zh-TW": "目錄為空",
+        "en-US": "Directory is empty",
+        "ko-KR": "디렉토리가 비어 있습니다",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(9860-9868)"
+        ],
+        "$id": 959
+    },
+    "已选择 ": {
+        "zh-TW": "已選擇",
+        "en-US": "Selected ",
+        "ko-KR": "선택됨 ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(14508-14516)"
+        ],
+        "$id": 960
+    },
+    " 个目录，共 ": {
+        "zh-TW": "個目錄,共",
+        "en-US": " directories, total ",
+        "ko-KR": "개 디렉토리, 총 ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(14553-14564)"
+        ],
+        "$id": 961
+    },
+    "开始导入...": {
+        "zh-TW": "開始導入. ..",
+        "en-US": "Starting import...",
+        "ko-KR": "가져오기 시작...",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(20994-21005)"
+        ],
+        "$id": 962
+    },
+    "文件夹创建失败且未找到已存在的文件夹": {
+        "zh-TW": "資料夾創建失敗且未找到已存在的資料夾",
+        "en-US": "Failed to create folder and no existing folder found",
+        "ko-KR": "폴더를 만들지 못했고 기존 폴더를 찾을 수 없습니다",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(23126-23148)"
+        ],
+        "$id": 963
+    },
+    "创建文件夹失败": {
+        "zh-TW": "創建資料夾失敗",
+        "en-US": "Failed to create folder",
+        "ko-KR": "폴더 만들기 실패",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(24348-24359)",
+            "src/hooks/useDirectoryImport.ts(24745-24756)"
+        ],
+        "$id": 964
+    },
+    "上传队列未初始化": {
+        "zh-TW": "上傳隊列未初始化",
+        "en-US": "Upload queue not initialized",
+        "ko-KR": "업로드 대기열이 초기화되지 않았습니다",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(25194-25206)"
+        ],
+        "$id": 965
+    },
+    "正在上传: ": {
+        "zh-TW": "正在上傳：",
+        "en-US": "Uploading: ",
+        "ko-KR": "업로드 중: ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(25816-25826)"
+        ],
+        "$id": 966
+    },
+    "导入已取消": {
+        "zh-TW": "導入已取消",
+        "en-US": "Import cancelled",
+        "ko-KR": "가져오기가 취소되었습니다",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(28070-28079)",
+            "src/hooks/useDirectoryImport.ts(28582-28591)"
+        ],
+        "$id": 967
+    },
+    "导入完成：成功 ": {
+        "zh-TW": "導入完成：成功",
+        "en-US": "Import complete: ",
+        "ko-KR": "가져오기 완료: 성공 ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(28097-28109)"
+        ],
+        "$id": 968
+    },
+    "，跳过 ": {
+        "zh-TW": ",跳過",
+        "en-US": ", skipped ",
+        "ko-KR": ", 건너뜀 ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(28134-28142)"
+        ],
+        "$id": 969
+    },
+    "，失败 ": {
+        "zh-TW": ",失敗",
+        "en-US": ", failed ",
+        "ko-KR": ", 실패 ",
+        "$files": [
+            "src/hooks/useDirectoryImport.ts(28167-28175)"
+        ],
+        "$id": 970
+    },
+    "正在上传外部参照...": {
+        "zh-TW": "正在上傳外部參照. ..",
+        "en-US": "Uploading external references...",
+        "ko-KR": "외부 참조 업로드 중...",
+        "$files": [
+            "src/hooks/useExternalReferenceUpload.ts(12676-12691)"
+        ],
+        "$id": 971
+    },
+    "无法获取上传目标目录，请刷新后重试": {
+        "zh-TW": "無法獲取上傳目標目錄,請重繪後重試",
+        "en-US": "Cannot get upload target directory. Please refresh and try again",
+        "ko-KR": "업로드 대상 디렉토리를 가져올 수 없습니다. 새로고침 후 다시 시도하세요",
+        "$files": [
+            "src/hooks/useFileDropUpload.ts(3141-3162)"
+        ],
+        "$id": 972
+    },
+    "创建项目失败": {
+        "zh-TW": "創建項目失敗",
+        "en-US": "Failed to create project",
+        "ko-KR": "프로젝트 생성 실패",
+        "$files": [
+            "src/hooks/useProjectManagement.ts(2862-2872)"
+        ],
+        "$id": 973
+    },
+    "更新项目失败": {
+        "zh-TW": "更新項目失敗",
+        "en-US": "Failed to update project",
+        "ko-KR": "프로젝트 업데이트 실패",
+        "$files": [
+            "src/hooks/useProjectManagement.ts(3638-3648)"
+        ],
+        "$id": 974
+    },
+    "删除项目失败": {
+        "zh-TW": "删除項目失敗",
+        "en-US": "Failed to delete project",
+        "ko-KR": "프로젝트 삭제 실패",
+        "$files": [
+            "src/hooks/useProjectManagement.ts(4554-4564)"
+        ],
+        "$id": 975
+    },
+    "获取授权链接失败": {
+        "zh-TW": "獲取授權連結失敗",
+        "en-US": "Failed to get authorization link",
+        "ko-KR": "인증 링크를 가져오지 못했습니다",
+        "$files": [
+            "src/hooks/useWechatAuth.ts(2821-2833)"
+        ],
+        "$id": 976
+    },
+    "正在上传打印文件...": {
+        "zh-TW": "正在上傳列印檔案. ..",
+        "en-US": "Uploading print file...",
+        "ko-KR": "인쇄 파일 업로드 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(17624-17639)",
+            "src/pages/CADEditorDirect.tsx(18005-18020)"
+        ],
+        "$id": 977
+    },
+    "打印转换中...": {
+        "zh-TW": "列印轉換中. ..",
+        "en-US": "Print conversion in progress...",
+        "ko-KR": "인쇄 변환 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(17986-17998)"
+        ],
+        "$id": 978
+    },
+    "正在上传裁剪文件...": {
+        "zh-TW": "正在上傳裁剪檔案. ..",
+        "en-US": "Uploading clip file...",
+        "ko-KR": "클립 파일 업로드 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(18570-18585)",
+            "src/pages/CADEditorDirect.tsx(18949-18964)"
+        ],
+        "$id": 979
+    },
+    "裁剪转换中...": {
+        "zh-TW": "裁剪轉換中. ..",
+        "en-US": "Clip conversion in progress...",
+        "ko-KR": "클립 변환 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(18930-18942)"
+        ],
+        "$id": 980
+    },
+    "正在上传文件...": {
+        "zh-TW": "正在上傳文件. ..",
+        "en-US": "Uploading file...",
+        "ko-KR": "파일 업로드 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(19518-19531)",
+            "src/pages/CADEditorDirect.tsx(19868-19881)",
+            "src/services/mxcadManager/index.ts(28453-28466)",
+            "src/services/mxcadManager/index.ts(28776-28789)"
+        ],
+        "$id": 981
+    },
+    "图纸转换中...": {
+        "zh-TW": "圖紙轉換中. ..",
+        "en-US": "Drawing conversion in progress...",
+        "ko-KR": "도면 변환 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(19794-19806)",
+            "src/services/mxcadManager/index.ts(28710-28722)"
+        ],
+        "$id": 982
+    },
+    "分享文件不存在或已失效": {
+        "zh-TW": "分享檔案不存在或已失效",
+        "en-US": "Shared file does not exist or has expired",
+        "ko-KR": "공유 파일이 존재하지 않거나 만료되었습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(25043-25058)",
+            "src/pages/CADEditorDirect.tsx(25089-25104)"
+        ],
+        "$id": 983
+    },
+    "请登录后访问此文件": {
+        "zh-TW": "請登入後訪問此檔案",
+        "en-US": "Please log in to access this file",
+        "ko-KR": "이 파일에 접근하려면 로그인하세요",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(25666-25679)",
+            "src/pages/CADEditorDirect.tsx(25712-25725)"
+        ],
+        "$id": 984
+    },
+    "文件不存在或已被删除": {
+        "zh-TW": "檔案不存在或已被删除",
+        "en-US": "File does not exist or has been deleted",
+        "ko-KR": "파일이 존재하지 않거나 삭제되었습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(25816-25830)",
+            "src/pages/CADEditorDirect.tsx(25863-25877)"
+        ],
+        "$id": 985
+    },
+    "获取文件信息失败，请检查网络连接": {
+        "zh-TW": "獲取檔案資訊失敗,請檢查網絡連接",
+        "en-US": "Failed to get file info. Please check network connection",
+        "ko-KR": "파일 정보를 가져오지 못했습니다. 네트워크 연결을 확인하세요",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(25927-25947)",
+            "src/pages/CADEditorDirect.tsx(25980-26000)"
+        ],
+        "$id": 986
+    },
+    "文件不存在": {
+        "zh-TW": "檔案不存在",
+        "en-US": "File does not exist",
+        "ko-KR": "파일이 존재하지 않습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(26177-26186)",
+            "src/pages/CADEditorDirect.tsx(26215-26224)"
+        ],
+        "$id": 987
+    },
+    "文件已被删除": {
+        "zh-TW": "檔案已被删除",
+        "en-US": "File has been deleted",
+        "ko-KR": "파일이 삭제되었습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(26400-26410)",
+            "src/pages/CADEditorDirect.tsx(26439-26449)"
+        ],
+        "$id": 988
+    },
+    "文件尚未转换完成": {
+        "zh-TW": "檔案尚未轉換完成",
+        "en-US": "File conversion not yet complete",
+        "ko-KR": "파일 변환이 아직 완료되지 않았습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(26601-26613)",
+            "src/pages/CADEditorDirect.tsx(26642-26654)"
+        ],
+        "$id": 989
+    },
+    "节点ID缺失": {
+        "zh-TW": "節點ID缺失",
+        "en-US": "Missing node ID",
+        "ko-KR": "노드 ID가 없습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(27626-27636)"
+        ],
+        "$id": 990
+    },
+    "无法构造文件访问URL": {
+        "zh-TW": "無法構造檔案訪問URL",
+        "en-US": "Cannot construct file access URL",
+        "ko-KR": "파일 접근 URL을 구성할 수 없습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(31254-31269)"
+        ],
+        "$id": 991
+    },
+    "正在加载图纸...": {
+        "zh-TW": "正在加載圖紙. ..",
+        "en-US": "Loading drawing...",
+        "ko-KR": "도면 로딩 중...",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(31971-31984)",
+            "src/pages/CADEditorDirect.tsx(32808-32821)",
+            "src/services/mxcadManager/index.ts(68483-68496)"
+        ],
+        "$id": 992
+    },
+    "CAD编辑器初始化失败": {
+        "zh-TW": "CAD編輯器初始化失敗",
+        "en-US": "CAD editor initialization failed",
+        "ko-KR": "CAD 편집기 초기화 실패",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(33632-33647)",
+            "src/pages/CADEditorDirect.tsx(33676-33691)"
+        ],
+        "$id": 993
+    },
+    "CAD 编辑器初始化失败，请刷新页面重试": {
+        "zh-TW": "CAD編輯器初始化失敗,請刷新頁面重試",
+        "en-US": "CAD editor initialization failed. Please refresh and try again",
+        "ko-KR": "CAD 편집기 초기화 실패. 페이지를 새로고침 후 다시 시도하세요",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(39189-39213)",
+            "src/pages/CADEditorDirect.tsx(39240-39264)"
+        ],
+        "$id": 994
+    },
+    "另存为": {
+        "zh-TW": "另存為",
+        "en-US": "Save As",
+        "ko-KR": "다른 이름으로 저장",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(39873-39880)",
+            "src/components/modals/SaveAsModal.tsx(4527-4534)"
+        ],
+        "$id": 995
+    },
+    "保存文件": {
+        "zh-TW": "保存檔案",
+        "en-US": "Save file",
+        "ko-KR": "파일 저장",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(39965-39973)",
+            "src/pages/CADEditorDirect.tsx(40885-40893)",
+            "src/services/mxcadManager/index.ts(37358-37366)",
+            "src/services/mxcadManager/index.ts(37832-37840)"
+        ],
+        "$id": 996
+    },
+    "您没有导出图纸的权限": {
+        "zh-TW": "您沒有匯出圖紙的許可權",
+        "en-US": "You do not have permission to export drawings",
+        "ko-KR": "도면을 내보낼 권한이 없습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(41416-41430)"
+        ],
+        "$id": 997
+    },
+    "另存为成功": {
+        "zh-TW": "另存為成功",
+        "en-US": "Save As successful",
+        "ko-KR": "다른 이름으로 저장 성공",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(44726-44735)"
+        ],
+        "$id": 998
+    },
+    "打开新图纸": {
+        "zh-TW": "打開新圖紙",
+        "en-US": "Open new drawing",
+        "ko-KR": "새 도면 열기",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(44835-44844)"
+        ],
+        "$id": 999
+    },
+    "\"{fileName}\" 已保存成功，是否在新标签页中打开？": {
+        "zh-TW": "“{fileName}”已保存成功,是否在新標籤頁中打開？",
+        "en-US": "\"{fileName}\" has been saved. Open in a new tab?",
+        "ko-KR": "\"{fileName}\"이(가) 저장되었습니다. 새 탭에서 열까요?",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(44863-44897)"
+        ],
+        "$id": 1000
+    },
+    "打开": {
+        "zh-TW": "打開",
+        "en-US": "Open",
+        "ko-KR": "열기",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(44959-44965)"
+        ],
+        "$id": 1001
+    },
+    "打开文件": {
+        "zh-TW": "打開文件",
+        "en-US": "Open file",
+        "ko-KR": "파일 열기",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(49807-49815)",
+            "src/components/modals/ShareManageDialog.tsx(7757-7765)"
+        ],
+        "$id": 1002
+    },
+    "打开文件失败": {
+        "zh-TW": "打開文件失敗",
+        "en-US": "Failed to open file",
+        "ko-KR": "파일 열기 실패",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(51254-51264)",
+            "src/services/mxcadManager/index.ts(26316-26326)"
+        ],
+        "$id": 1003
+    },
+    "转换失败": {
+        "zh-TW": "轉換失敗",
+        "en-US": "Conversion failed",
+        "ko-KR": "변환 실패",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(52436-52444)",
+            "src/pages/CADEditorDirect.tsx(55095-55103)",
+            "src/pages/CADEditorDirect.tsx(56562-56570)"
+        ],
+        "$id": 1004
+    },
+    "转换失败：无返回数据": {
+        "zh-TW": "轉換失敗：無返回數據",
+        "en-US": "Conversion failed: No data returned",
+        "ko-KR": "변환 실패: 반환된 데이터가 없습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(52568-52582)",
+            "src/pages/CADEditorDirect.tsx(55195-55209)",
+            "src/pages/CADEditorDirect.tsx(56662-56676)"
+        ],
+        "$id": 1005
+    },
+    "文件已保存到本地": {
+        "zh-TW": "檔案已保存到本地",
+        "en-US": "File saved locally",
+        "ko-KR": "파일이 로컬에 저장되었습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(53181-53193)",
+            "src/pages/CADEditorDirect.tsx(57230-57242)",
+            "src/services/mxcadManager/index.ts(35440-35452)"
+        ],
+        "$id": 1006
+    },
+    "下载失败": {
+        "zh-TW": "下載失敗",
+        "en-US": "Download failed",
+        "ko-KR": "다운로드 실패",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(53466-53474)"
+        ],
+        "$id": 1007
+    },
+    "PDF 文件": {
+        "zh-TW": "PDF檔案",
+        "en-US": "PDF File",
+        "ko-KR": "PDF 파일",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(55439-55449)"
+        ],
+        "$id": 1008
+    },
+    "PDF 文件已保存到本地": {
+        "zh-TW": "PDF檔案已保存到本地",
+        "en-US": "PDF file saved locally",
+        "ko-KR": "PDF 파일이 로컬에 저장되었습니다",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(55663-55679)"
+        ],
+        "$id": 1009
+    },
+    "文件": {
+        "zh-TW": "文件",
+        "en-US": "File",
+        "ko-KR": "파일",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(56957-56963)"
+        ],
+        "$id": 1010
+    },
+    "刷新页面": {
+        "zh-TW": "刷新頁面",
+        "en-US": "Refresh page",
+        "ko-KR": "페이지 새로고침",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(58294-58302)"
+        ],
+        "$id": 1011
+    },
+    "返回项目列表": {
+        "zh-TW": "返回項目清單",
+        "en-US": "Back to project list",
+        "ko-KR": "프로젝트 목록으로 돌아가기",
+        "$files": [
+            "src/pages/CADEditorDirect.tsx(58306-58316)"
+        ],
+        "$id": 1012
+    },
+    "仪表盘": {
+        "zh-TW": "儀錶盤",
+        "en-US": "Dashboard",
+        "ko-KR": "대시보드",
+        "$files": [
+            "src/pages/Dashboard.tsx(4795-4802)"
+        ],
+        "$id": 1013
+    },
+    "夜深了": {
+        "zh-TW": "夜深了",
+        "en-US": "It's late",
+        "ko-KR": "늦었습니다",
+        "$files": [
+            "src/pages/Dashboard.tsx(7177-7184)"
+        ],
+        "$id": 1014
+    },
+    "早上好": {
+        "zh-TW": "早上好",
+        "en-US": "Good morning",
+        "ko-KR": "좋은 아침입니다",
+        "$files": [
+            "src/pages/Dashboard.tsx(7224-7231)"
+        ],
+        "$id": 1015
+    },
+    "上午好": {
+        "zh-TW": "上午好",
+        "en-US": "Good morning",
+        "ko-KR": "좋은 아침입니다",
+        "$files": [
+            "src/pages/Dashboard.tsx(7272-7279)"
+        ],
+        "$id": 1016
+    },
+    "中午好": {
+        "zh-TW": "中午好",
+        "en-US": "Good noon",
+        "ko-KR": "좋은 오후입니다",
+        "$files": [
+            "src/pages/Dashboard.tsx(7320-7327)"
+        ],
+        "$id": 1017
+    },
+    "下午好": {
+        "zh-TW": "下午好",
+        "en-US": "Good afternoon",
+        "ko-KR": "좋은 오후입니다",
+        "$files": [
+            "src/pages/Dashboard.tsx(7368-7375)"
+        ],
+        "$id": 1018
+    },
+    "晚上好": {
+        "zh-TW": "晚上好",
+        "en-US": "Good evening",
+        "ko-KR": "좋은 저녁입니다",
+        "$files": [
+            "src/pages/Dashboard.tsx(7401-7408)"
+        ],
+        "$id": 1019
+    },
+    "刷新仪表盘数据": {
+        "zh-TW": "重繪儀錶盤數據",
+        "en-US": "Refresh dashboard data",
+        "ko-KR": "대시보드 데이터 새로고침",
+        "$files": [
+            "src/pages/Dashboard.tsx(11033-11044)"
+        ],
+        "$id": 1020
+    },
+    "刷新": {
+        "zh-TW": "刷新",
+        "en-US": "Refresh",
+        "ko-KR": "새로고침",
+        "$files": [
+            "src/pages/Dashboard.tsx(11064-11070)"
+        ],
+        "$id": 1021
+    },
+    "我的项目": {
+        "zh-TW": "我的項目",
+        "en-US": "My Projects",
+        "ko-KR": "내 프로젝트",
+        "$files": [
+            "src/pages/Dashboard.tsx(12410-12418)"
+        ],
+        "$id": 1022
+    },
+    "活跃项目": {
+        "zh-TW": "活躍項目",
+        "en-US": "Active projects",
+        "ko-KR": "활성 프로젝트",
+        "$files": [
+            "src/pages/Dashboard.tsx(12476-12484)"
+        ],
+        "$id": 1023
+    },
+    "图纸文件": {
+        "zh-TW": "圖紙檔案",
+        "en-US": "Drawing files",
+        "ko-KR": "도면 파일",
+        "$files": [
+            "src/pages/Dashboard.tsx(12681-12689)"
+        ],
+        "$id": 1024
+    },
+    "今日上传": {
+        "zh-TW": "今日上傳",
+        "en-US": "Today's uploads",
+        "ko-KR": "오늘 업로드",
+        "$files": [
+            "src/pages/Dashboard.tsx(12959-12967)"
+        ],
+        "$id": 1025
+    },
+    "个文件": {
+        "zh-TW": "個檔案",
+        "en-US": " files",
+        "ko-KR": "개 파일",
+        "$files": [
+            "src/pages/Dashboard.tsx(13029-13036)"
+        ],
+        "$id": 1026
+    },
+    "存储使用": {
+        "zh-TW": "存儲使用",
+        "en-US": "Storage usage",
+        "ko-KR": "저장소 사용량",
+        "$files": [
+            "src/pages/Dashboard.tsx(13238-13246)"
+        ],
+        "$id": 1027
+    },
+    "最近文件": {
+        "zh-TW": "最近檔案",
+        "en-US": "Recent files",
+        "ko-KR": "최근 파일",
+        "$files": [
+            "src/pages/Dashboard.tsx(13806-13814)"
+        ],
+        "$id": 1028
+    },
+    "查看全部": {
+        "zh-TW": "查看全部",
+        "en-US": "View all",
+        "ko-KR": "전체 보기",
+        "$files": [
+            "src/pages/Dashboard.tsx(14116-14124)",
+            "src/pages/Dashboard.tsx(16186-16194)"
+        ],
+        "$id": 1029
+    },
+    "暂无文件，上传您的第一个图纸": {
+        "zh-TW": "暫無檔案,上傳您的第一個圖紙",
+        "en-US": "No files yet. Upload your first drawing",
+        "ko-KR": "파일이 없습니다. 첫 번째 도면을 업로드하세요",
+        "$files": [
+            "src/pages/Dashboard.tsx(15704-15722)"
+        ],
+        "$id": 1030
+    },
+    "最近项目": {
+        "zh-TW": "最近項目",
+        "en-US": "Recent projects",
+        "ko-KR": "최근 프로젝트",
+        "$files": [
+            "src/pages/Dashboard.tsx(15874-15882)"
+        ],
+        "$id": 1031
+    },
+    "暂无项目，创建您的第一个项目": {
+        "zh-TW": "暫無項目,創建您的第一個項目",
+        "en-US": "No projects yet. Create your first project",
+        "ko-KR": "프로젝트가 없습니다. 첫 번째 프로젝트를 만드세요",
+        "$files": [
+            "src/pages/Dashboard.tsx(17968-17986)"
+        ],
+        "$id": 1032
+    },
+    "快捷操作": {
+        "zh-TW": "快捷操作",
+        "en-US": "Quick actions",
+        "ko-KR": "빠른 작업",
+        "$files": [
+            "src/pages/Dashboard.tsx(18219-18227)"
+        ],
+        "$id": 1033
+    },
+    "新建项目": {
+        "zh-TW": "新建項目",
+        "en-US": "New project",
+        "ko-KR": "새 프로젝트",
+        "$files": [
+            "src/pages/Dashboard.tsx(18434-18442)"
+        ],
+        "$id": 1034
+    },
+    "上传图纸": {
+        "zh-TW": "上傳圖紙",
+        "en-US": "Upload drawing",
+        "ko-KR": "도면 업로드",
+        "$files": [
+            "src/pages/Dashboard.tsx(18651-18659)"
+        ],
+        "$id": 1035
+    },
+    "新建图纸": {
+        "zh-TW": "新建圖紙",
+        "en-US": "New drawing",
+        "ko-KR": "새 도면",
+        "$files": [
+            "src/pages/Dashboard.tsx(18883-18891)"
+        ],
+        "$id": 1036
+    },
+    "邮箱验证": {
+        "zh-TW": "郵箱驗證",
+        "en-US": "Email verification",
+        "ko-KR": "이메일 인증",
+        "$files": [
+            "src/pages/EmailVerification.tsx(1332-1340)"
+        ],
+        "$id": 1037
+    },
+    "发送验证码失败，请手动点击重发": {
+        "zh-TW": "發送驗證碼失敗,請手動點擊重發",
+        "en-US": "Failed to send verification code. Please click resend manually",
+        "ko-KR": "인증번호 전송 실패. 수동으로 재전송을 클릭하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(3483-3502)"
+        ],
+        "$id": 1038
+    },
+    "请输入验证码": {
+        "zh-TW": "請輸入驗證碼",
+        "en-US": "Please enter the verification code",
+        "ko-KR": "인증번호를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(4004-4014)",
+            "src/pages/PhoneVerification.tsx(3152-3162)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(2575-2585)",
+            "src/pages/Login/hooks/loginFormSchema.ts(702-712)"
+        ],
+        "$id": 1039
+    },
+    "验证码应为6位数字": {
+        "zh-TW": "驗證碼應為6比特數位",
+        "en-US": "Verification code should be 6 digits",
+        "ko-KR": "인증번호는 6자리 숫자여야 합니다",
+        "$files": [
+            "src/pages/EmailVerification.tsx(4098-4111)",
+            "src/pages/PhoneVerification.tsx(3246-3259)"
+        ],
+        "$id": 1040
+    },
+    "请输入邮箱地址": {
+        "zh-TW": "請輸入郵箱地址",
+        "en-US": "Please enter email address",
+        "ko-KR": "이메일 주소를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(4183-4194)",
+            "src/pages/EmailVerification.tsx(12206-12217)",
+            "src/pages/Profile.tsx(12235-12246)",
+            "src/pages/ResetPassword.tsx(7713-7724)"
+        ],
+        "$id": 1041
+    },
+    "邮箱地址缺失，请重新注册": {
+        "zh-TW": "郵箱地址缺失,請重新注册",
+        "en-US": "Email address missing. Please register again",
+        "ko-KR": "이메일 주소가 없습니다. 다시 등록하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(4198-4214)"
+        ],
+        "$id": 1042
+    },
+    "验证失败，请检查验证码是否正确或已过期": {
+        "zh-TW": "驗證失敗,請檢查驗證碼是否正確或已過期",
+        "en-US": "Verification failed. Please check if the code is correct or expired",
+        "ko-KR": "인증 실패. 인증번호가 올바른지 또는 만료되지 않았는지 확인하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(6293-6316)",
+            "src/pages/PhoneVerification.tsx(4640-4663)"
+        ],
+        "$id": 1043
+    },
+    "请先输入邮箱地址": {
+        "zh-TW": "請先輸入郵箱地址",
+        "en-US": "Please enter email address first",
+        "ko-KR": "먼저 이메일 주소를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(6476-6488)"
+        ],
+        "$id": 1044
+    },
+    "请输入有效的邮箱地址": {
+        "zh-TW": "請輸入有效的郵箱地址",
+        "en-US": "Please enter a valid email address",
+        "ko-KR": "유효한 이메일 주소를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(6601-6615)",
+            "src/utils/validation.ts(600-614)",
+            "src/utils/validation.ts(1630-1644)"
+        ],
+        "$id": 1045
+    },
+    "发送失败，请稍后重试": {
+        "zh-TW": "發送失敗,請稍後重試",
+        "en-US": "Send failed. Please try again later",
+        "ko-KR": "전송 실패. 나중에 다시 시도하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(7206-7220)"
+        ],
+        "$id": 1046
+    },
+    "邮箱验证成功！": {
+        "zh-TW": "郵箱驗證成功！",
+        "en-US": "Email verified successfully!",
+        "ko-KR": "이메일 인증 성공!",
+        "$files": [
+            "src/pages/EmailVerification.tsx(7953-7964)"
+        ],
+        "$id": 1047
+    },
+    "账号已激活，即将自动跳转到登录页...": {
+        "zh-TW": "帳號已啟動,即將自動跳轉到登入頁. ..",
+        "en-US": "Account activated. Redirecting to login page...",
+        "ko-KR": "계정이 활성화되었습니다. 로그인 페이지로 이동합니다...",
+        "$files": [
+            "src/pages/EmailVerification.tsx(8038-8061)"
+        ],
+        "$id": 1048
+    },
+    "绑定您的邮箱地址": {
+        "zh-TW": "綁定您的郵箱地址",
+        "en-US": "Bind your email address",
+        "ko-KR": "이메일 주소를 연결하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(10816-10828)"
+        ],
+        "$id": 1049
+    },
+    "验证邮箱完成注册": {
+        "zh-TW": "驗證郵箱完成注册",
+        "en-US": "Verify email to complete registration",
+        "ko-KR": "이메일을 인증하여 등록 완료",
+        "$files": [
+            "src/pages/EmailVerification.tsx(10852-10864)"
+        ],
+        "$id": 1050
+    },
+    "验证您的邮箱地址": {
+        "zh-TW": "驗證您的郵箱地址",
+        "en-US": "Verify your email address",
+        "ko-KR": "이메일 주소를 인증하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(10868-10880)"
+        ],
+        "$id": 1051
+    },
+    "您的账号需要绑定邮箱才能继续使用": {
+        "zh-TW": "您的帳號需要綁定郵箱才能繼續使用",
+        "en-US": "Your account needs to bind an email to continue using",
+        "ko-KR": "계속 사용하려면 계정에 이메일을 연결해야 합니다",
+        "$files": [
+            "src/pages/EmailVerification.tsx(11152-11172)"
+        ],
+        "$id": 1052
+    },
+    "请输入您的邮箱地址用于完成注册": {
+        "zh-TW": "請輸入您的郵箱地址用於完成注册",
+        "en-US": "Please enter your email address to complete registration",
+        "ko-KR": "등록을 완료하려면 이메일 주소를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(11270-11289)"
+        ],
+        "$id": 1053
+    },
+    "我们已向": {
+        "zh-TW": "我們已向",
+        "en-US": "We have sent to ",
+        "ko-KR": "다음으로 전송했습니다 ",
+        "$files": [
+            "src/pages/EmailVerification.tsx(11383-11391)"
+        ],
+        "$id": 1054
+    },
+    "发送了验证码": {
+        "zh-TW": "發送了驗證碼",
+        "en-US": " a verification code",
+        "ko-KR": "인증번호를 발송했습니다",
+        "$files": [
+            "src/pages/EmailVerification.tsx(11466-11476)"
+        ],
+        "$id": 1055
+    },
+    "请输入您收到的6位数字验证码": {
+        "zh-TW": "請輸入您收到的6比特數位驗證碼",
+        "en-US": "Please enter the 6-digit verification code you received",
+        "ko-KR": "받은 6자리 인증번호를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(11560-11578)"
+        ],
+        "$id": 1056
+    },
+    "邮箱地址": {
+        "zh-TW": "郵箱地址",
+        "en-US": "Email address",
+        "ko-KR": "이메일 주소",
+        "$files": [
+            "src/pages/EmailVerification.tsx(11883-11891)"
+        ],
+        "$id": 1057
+    },
+    "验证邮件已重新发送，请查收": {
+        "zh-TW": "驗證郵件已重新發送,請查收",
+        "en-US": "Verification email resent. Please check your inbox",
+        "ko-KR": "인증 이메일이 재전송되었습니다. 받은 편지함을 확인하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(12881-12898)"
+        ],
+        "$id": 1058
+    },
+    "验证码": {
+        "zh-TW": "驗證碼",
+        "en-US": "Verification Code",
+        "ko-KR": "인증번호",
+        "$files": [
+            "src/pages/EmailVerification.tsx(13129-13136)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(2095-2102)"
+        ],
+        "$id": 1059
+    },
+    "请输入6位数字验证码": {
+        "zh-TW": "請輸入6比特數位驗證碼",
+        "en-US": "Please enter the 6-digit verification code",
+        "ko-KR": "6자리 인증번호를 입력하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(13561-13575)",
+            "src/pages/Profile.tsx(23284-23298)",
+            "src/pages/Login/hooks/loginFormSchema.ts(738-752)"
+        ],
+        "$id": 1060
+    },
+    "验证码为6位数字，请查看邮件": {
+        "zh-TW": "驗證碼為6比特數位,請查看郵件",
+        "en-US": "The verification code is 6 digits. Please check your email",
+        "ko-KR": "인증번호는 6자리 숫자입니다. 이메일을 확인하세요",
+        "$files": [
+            "src/pages/EmailVerification.tsx(13713-13731)"
+        ],
+        "$id": 1061
+    },
+    "验证中...": {
+        "zh-TW": "驗證中. ..",
+        "en-US": "Verifying...",
+        "ko-KR": "인증 중...",
+        "$files": [
+            "src/pages/EmailVerification.tsx(14120-14130)"
+        ],
+        "$id": 1062
+    },
+    "验证": {
+        "zh-TW": "驗證",
+        "en-US": "Verify",
+        "ko-KR": "인증",
+        "$files": [
+            "src/pages/EmailVerification.tsx(14201-14207)"
+        ],
+        "$id": 1063
+    },
+    "没有收到邮件？": {
+        "zh-TW": "沒有收到郵件？",
+        "en-US": "Didn't receive the email?",
+        "ko-KR": "이메일을 받지 못하셨나요?",
+        "$files": [
+            "src/pages/EmailVerification.tsx(14425-14436)"
+        ],
+        "$id": 1064
+    },
+    "• 检查垃圾邮件文件夹": {
+        "zh-TW": "•檢查垃圾郵件資料夾",
+        "en-US": "• Check spam folder",
+        "ko-KR": "• 스팸 폴더 확인",
+        "$files": [
+            "src/pages/EmailVerification.tsx(14504-14519)"
+        ],
+        "$id": 1065
+    },
+    "• 确认邮箱地址正确": {
+        "zh-TW": "•確認郵箱地址正確",
+        "en-US": "• Confirm email address is correct",
+        "ko-KR": "• 이메일 주소가 올바른지 확인",
+        "$files": [
+            "src/pages/EmailVerification.tsx(14547-14561)"
+        ],
+        "$id": 1066
+    },
+    "• 验证码15分钟内有效": {
+        "zh-TW": "•驗證碼15分鐘內有效",
+        "en-US": "• Verification code is valid for 15 minutes",
+        "ko-KR": "• 인증번호는 15분 동안 유효합니다",
+        "$files": [
+            "src/pages/EmailVerification.tsx(14589-14605)"
+        ],
+        "$id": 1067
+    },
+    "发送验证邮件": {
+        "zh-TW": "發送驗證郵件",
+        "en-US": "Send verification email",
+        "ko-KR": "인증 이메일 보내기",
+        "$files": [
+            "src/pages/EmailVerification.tsx(15335-15345)"
+        ],
+        "$id": 1068
+    },
+    "重新发送验证邮件": {
+        "zh-TW": "重新發送驗證郵件",
+        "en-US": "Resend verification email",
+        "ko-KR": "인증 이메일 재전송",
+        "$files": [
+            "src/pages/EmailVerification.tsx(15349-15361)"
+        ],
+        "$id": 1069
+    },
+    "返回登录": {
+        "zh-TW": "返回登入",
+        "en-US": "Back to login",
+        "ko-KR": "로그인으로 돌아가기",
+        "$files": [
+            "src/pages/EmailVerification.tsx(15583-15591)"
+        ],
+        "$id": 1070
+    },
+    "高性能 CAD 在线预览": {
+        "zh-TW": "高性能CAD線上預覽",
+        "en-US": "High-performance CAD online preview",
+        "ko-KR": "고성능 CAD 온라인 미리보기",
+        "$files": [
+            "src/pages/EmailVerification.tsx(15766-15782)",
+            "src/pages/ResetPassword.tsx(11829-11845)",
+            "src/pages/Login/index.tsx(10328-10344)"
+        ],
+        "$id": 1071
+    },
+    "多用户实时协同编辑": {
+        "zh-TW": "多用戶實时協同編輯",
+        "en-US": "Multi-user real-time collaborative editing",
+        "ko-KR": "다중 사용자 실시간 협업 편집",
+        "$files": [
+            "src/pages/EmailVerification.tsx(15895-15908)",
+            "src/pages/ResetPassword.tsx(11958-11971)",
+            "src/pages/Login/index.tsx(10457-10470)"
+        ],
+        "$id": 1072
+    },
+    "企业级数据安全保障": {
+        "zh-TW": "企業級數據安全保障",
+        "en-US": "Enterprise-grade data security",
+        "ko-KR": "엔터프라이즈급 데이터 보안",
+        "$files": [
+            "src/pages/EmailVerification.tsx(16023-16036)",
+            "src/pages/ResetPassword.tsx(12086-12099)",
+            "src/pages/Login/index.tsx(10585-10598)"
+        ],
+        "$id": 1073
+    },
+    "全部格式": {
+        "zh-TW": "全部格式",
+        "en-US": "All formats",
+        "ko-KR": "모든 형식",
+        "$files": [
+            "src/pages/FontLibrary.tsx(1367-1375)"
+        ],
+        "$id": 1074
+    },
+    "字体库": {
+        "zh-TW": "字體庫",
+        "en-US": "Font library",
+        "ko-KR": "글꼴 라이브러리",
+        "$files": [
+            "src/pages/FontLibrary.tsx(2819-2826)"
+        ],
+        "$id": 1075
+    },
+    "确认删除": {
+        "zh-TW": "確認删除",
+        "en-US": "Confirm delete",
+        "ko-KR": "삭제 확인",
+        "$files": [
+            "src/pages/FontLibrary.tsx(8383-8391)",
+            "src/pages/LibraryManager.tsx(31774-31782)",
+            "src/pages/RoleManagement.tsx(23167-23175)"
+        ],
+        "$id": 1076
+    },
+    "删除成功": {
+        "zh-TW": "删除成功",
+        "en-US": "Delete successful",
+        "ko-KR": "삭제 성공",
+        "$files": [
+            "src/pages/FontLibrary.tsx(8950-8958)"
+        ],
+        "$id": 1077
+    },
+    "请先选择要删除的字体": {
+        "zh-TW": "請先選擇要删除的字體",
+        "en-US": "Please select fonts to delete first",
+        "ko-KR": "삭제할 글꼴을 먼저 선택하세요",
+        "$files": [
+            "src/pages/FontLibrary.tsx(9210-9224)"
+        ],
+        "$id": 1078
+    },
+    "确认批量删除": {
+        "zh-TW": "確認批量删除",
+        "en-US": "Confirm batch delete",
+        "ko-KR": "일괄 삭제 확인",
+        "$files": [
+            "src/pages/FontLibrary.tsx(9320-9330)"
+        ],
+        "$id": 1079
+    },
+    "批量删除成功": {
+        "zh-TW": "批量删除成功",
+        "en-US": "Batch delete successful",
+        "ko-KR": "일괄 삭제 성공",
+        "$files": [
+            "src/pages/FontLibrary.tsx(10166-10176)"
+        ],
+        "$id": 1080
+    },
+    "无法获取字体文件数据": {
+        "zh-TW": "無法獲取字體檔案數據",
+        "en-US": "Cannot get font file data",
+        "ko-KR": "글꼴 파일 데이터를 가져올 수 없습니다",
+        "$files": [
+            "src/pages/FontLibrary.tsx(10932-10946)"
+        ],
+        "$id": 1081
+    },
+    "下载成功": {
+        "zh-TW": "下載成功",
+        "en-US": "Download successful",
+        "ko-KR": "다운로드 성공",
+        "$files": [
+            "src/pages/FontLibrary.tsx(11273-11281)"
+        ],
+        "$id": 1082
+    },
+    "搜索字体名称...": {
+        "zh-TW": "蒐索字體名稱. ..",
+        "en-US": "Search font name...",
+        "ko-KR": "글꼴 이름 검색...",
+        "$files": [
+            "src/pages/FontLibrary.tsx(15404-15417)"
+        ],
+        "$id": 1083
+    },
+    "筛选": {
+        "zh-TW": "篩選",
+        "en-US": "Filter",
+        "ko-KR": "필터",
+        "$files": [
+            "src/pages/FontLibrary.tsx(16165-16171)"
+        ],
+        "$id": 1084
+    },
+    "清除": {
+        "zh-TW": "清除",
+        "en-US": "Clear",
+        "ko-KR": "지우기",
+        "$files": [
+            "src/pages/FontLibrary.tsx(16618-16624)"
+        ],
+        "$id": 1085
+    },
+    "排序：": {
+        "zh-TW": "排序：",
+        "en-US": "Sort: ",
+        "ko-KR": "정렬: ",
+        "$files": [
+            "src/pages/FontLibrary.tsx(19734-19741)"
+        ],
+        "$id": 1086
+    },
+    "修改时间": {
+        "zh-TW": "修改時間",
+        "en-US": "Modified time",
+        "ko-KR": "수정 시간",
+        "$files": [
+            "src/pages/FontLibrary.tsx(19805-19813)"
+        ],
+        "$id": 1087
+    },
+    "名称": {
+        "zh-TW": "名稱",
+        "en-US": "Name",
+        "ko-KR": "이름",
+        "$files": [
+            "src/pages/FontLibrary.tsx(19853-19859)"
+        ],
+        "$id": 1088
+    },
+    "大小": {
+        "zh-TW": "大小",
+        "en-US": "Size",
+        "ko-KR": "크기",
+        "$files": [
+            "src/pages/FontLibrary.tsx(19899-19905)"
+        ],
+        "$id": 1089
+    },
+    "暂无字体": {
+        "zh-TW": "暫無字體",
+        "en-US": "No fonts available",
+        "ko-KR": "글꼴이 없습니다",
+        "$files": [
+            "src/pages/FontLibrary.tsx(21754-21762)"
+        ],
+        "$id": 1090
+    },
+    "没有找到匹配的字体": {
+        "zh-TW": "沒有找到匹配的字體",
+        "en-US": "No matching fonts found",
+        "ko-KR": "일치하는 글꼴을 찾을 수 없습니다",
+        "$files": [
+            "src/pages/FontLibrary.tsx(21930-21943)"
+        ],
+        "$id": 1091
+    },
+    "当前位置没有字体文件": {
+        "zh-TW": "當前位置沒有字體檔案",
+        "en-US": "No font files in current location",
+        "ko-KR": "현재 위치에 글꼴 파일이 없습니다",
+        "$files": [
+            "src/pages/FontLibrary.tsx(21968-21982)"
+        ],
+        "$id": 1092
+    },
+    "上传第一个字体": {
+        "zh-TW": "上傳第一個字體",
+        "en-US": "Upload your first font",
+        "ko-KR": "첫 번째 글꼴 업로드",
+        "$files": [
+            "src/pages/FontLibrary.tsx(22251-22262)"
+        ],
+        "$id": 1093
+    },
+    "下载": {
+        "zh-TW": "下載",
+        "en-US": "Download",
+        "ko-KR": "다운로드",
+        "$files": [
+            "src/pages/FontLibrary.tsx(23773-23779)",
+            "src/pages/FontLibrary.tsx(30965-30971)",
+            "src/components/modals/DownloadFormatModal.tsx(2569-2575)"
+        ],
+        "$id": 1094
+    },
+    "删除": {
+        "zh-TW": "删除",
+        "en-US": "Delete",
+        "ko-KR": "삭제",
+        "$files": [
+            "src/pages/FontLibrary.tsx(24104-24110)",
+            "src/pages/FontLibrary.tsx(31344-31350)"
+        ],
+        "$id": 1095
+    },
+    "系统管理员": {
+        "zh-TW": "系統管理員",
+        "en-US": "System administrator",
+        "ko-KR": "시스템 관리자",
+        "$files": [
+            "src/pages/FontLibrary.tsx(29849-29858)",
+            "src/pages/Profile.tsx(30872-30881)"
+        ],
+        "$id": 1096
+    },
+    "请选择文件": {
+        "zh-TW": "請選擇檔案",
+        "en-US": "Please select a file",
+        "ko-KR": "파일을 선택하세요",
+        "$files": [
+            "src/pages/FontLibrary.tsx(34091-34100)"
+        ],
+        "$id": 1097
+    },
+    "上传字体": {
+        "zh-TW": "上傳字體",
+        "en-US": "Upload font",
+        "ko-KR": "글꼴 업로드",
+        "$files": [
+            "src/pages/FontLibrary.tsx(35753-35761)"
+        ],
+        "$id": 1098
+    },
+    "支持 TTF、OTF、WOFF 等格式，可一次选择多个文件": {
+        "zh-TW": "支持TTF、OTF、WOFF等格式,可一次選擇多個檔案",
+        "en-US": "Supports TTF, OTF, WOFF and other formats. Multiple files can be selected at once",
+        "ko-KR": "TTF, OTF, WOFF 등 형식을 지원합니다. 한 번에 여러 파일을 선택할 수 있습니다",
+        "$files": [
+            "src/pages/FontLibrary.tsx(35861-35894)"
+        ],
+        "$id": 1099
+    },
+    "点击或拖拽文件到此处": {
+        "zh-TW": "點擊或拖拽檔案到此處",
+        "en-US": "Click or drag files here",
+        "ko-KR": "클릭하거나 파일을 여기로 끌어다 놓으세요",
+        "$files": [
+            "src/pages/FontLibrary.tsx(39224-39238)"
+        ],
+        "$id": 1100
+    },
+    "支持 TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX，可一次选择多个文件": {
+        "zh-TW": "支持TTF、OTF、WOFF、WOFF2、EOT、TTC、SHX,可一次選擇多個檔案",
+        "en-US": "Supports TTF, OTF, WOFF, WOFF2, EOT, TTC, SHX. Multiple files can be selected at once",
+        "ko-KR": "TTF, OTF, WOFF, WOFF2, EOT, TTC, SHX를 지원합니다. 한 번에 여러 파일을 선택할 수 있습니다",
+        "$files": [
+            "src/pages/FontLibrary.tsx(39344-39391)"
+        ],
+        "$id": 1101
+    },
+    "已选择 {count} 个文件": {
+        "zh-TW": "已選擇{count}個檔案",
+        "en-US": "Selected {count} files",
+        "ko-KR": "{count}개 파일 선택됨",
+        "$files": [
+            "src/pages/FontLibrary.tsx(39618-39637)"
+        ],
+        "$id": 1102
+    },
+    "上传位置": {
+        "zh-TW": "上傳位置",
+        "en-US": "Upload location",
+        "ko-KR": "업로드 위치",
+        "$files": [
+            "src/pages/FontLibrary.tsx(39858-39866)"
+        ],
+        "$id": 1103
+    },
+    "同时上传（后端和前端）": {
+        "zh-TW": "同時上傳(後端和前端)",
+        "en-US": "Upload both (backend and frontend)",
+        "ko-KR": "모두 업로드 (백엔드 및 프론트엔드)",
+        "$files": [
+            "src/pages/FontLibrary.tsx(40127-40142)"
+        ],
+        "$id": 1104
+    },
+    "仅后端（转换程序）": {
+        "zh-TW": "僅後端(轉換程式)",
+        "en-US": "Backend only (converter)",
+        "ko-KR": "백엔드만 (변환 프로그램)",
+        "$files": [
+            "src/pages/FontLibrary.tsx(40191-40204)"
+        ],
+        "$id": 1105
+    },
+    "仅前端（Web 显示）": {
+        "zh-TW": "僅前端(Web顯示)",
+        "en-US": "Frontend only (Web display)",
+        "ko-KR": "프론트엔드만 (웹 표시)",
+        "$files": [
+            "src/pages/FontLibrary.tsx(40254-40269)"
+        ],
+        "$id": 1106
+    },
+    "图纸库": {
+        "zh-TW": "圖紙庫",
+        "en-US": "Drawing library",
+        "ko-KR": "도면 라이브러리",
+        "$files": [
+            "src/pages/LibraryManager.tsx(3203-3210)",
+            "src/pages/LibraryManager.tsx(24668-24675)",
+            "src/pages/LibraryManager.tsx(38685-38692)",
+            "src/components/modals/SaveAsModal.tsx(7851-7858)"
+        ],
+        "$id": 1107
+    },
+    "图块库": {
+        "zh-TW": "圖塊庫",
+        "en-US": "Block library",
+        "ko-KR": "블록 라이브러리",
+        "$files": [
+            "src/pages/LibraryManager.tsx(3214-3221)",
+            "src/pages/LibraryManager.tsx(24716-24723)",
+            "src/pages/LibraryManager.tsx(38696-38703)",
+            "src/components/modals/SaveAsModal.tsx(7907-7914)"
+        ],
+        "$id": 1108
+    },
+    "请先选择要复制的文件": {
+        "zh-TW": "請先選擇要複製的檔案",
+        "en-US": "Please select files to copy first",
+        "ko-KR": "복사할 파일을 먼저 선택하세요",
+        "$files": [
+            "src/pages/LibraryManager.tsx(7073-7087)"
+        ],
+        "$id": 1109
+    },
+    "请先选择要剪切的文件": {
+        "zh-TW": "請先選擇要剪切的檔案",
+        "en-US": "Please select files to cut first",
+        "ko-KR": "잘라낼 파일을 먼저 선택하세요",
+        "$files": [
+            "src/pages/LibraryManager.tsx(7418-7432)"
+        ],
+        "$id": 1110
+    },
+    "无法确定粘贴位置": {
+        "zh-TW": "無法確定粘貼位置",
+        "en-US": "Cannot determine paste location",
+        "ko-KR": "붙여넣기 위치를 확인할 수 없습니다",
+        "$files": [
+            "src/pages/LibraryManager.tsx(8150-8162)"
+        ],
+        "$id": 1111
+    },
+    "粘贴成功": {
+        "zh-TW": "粘貼成功",
+        "en-US": "Paste successful",
+        "ko-KR": "붙여넣기 성공",
+        "$files": [
+            "src/pages/LibraryManager.tsx(8402-8410)",
+            "src/pages/LibraryManager.tsx(9983-9991)"
+        ],
+        "$id": 1112
+    },
+    "粘贴失败": {
+        "zh-TW": "粘貼失敗",
+        "en-US": "Paste failed",
+        "ko-KR": "붙여넣기 실패",
+        "$files": [
+            "src/pages/LibraryManager.tsx(11440-11448)"
+        ],
+        "$id": 1113
+    },
+    "撤销失败": {
+        "zh-TW": "撤銷失敗",
+        "en-US": "Undo failed",
+        "ko-KR": "실행 취소 실패",
+        "$files": [
+            "src/pages/LibraryManager.tsx(13286-13294)"
+        ],
+        "$id": 1114
+    },
+    "重做失败": {
+        "zh-TW": "重做失敗",
+        "en-US": "Redo failed",
+        "ko-KR": "다시 실행 실패",
+        "$files": [
+            "src/pages/LibraryManager.tsx(13740-13748)"
+        ],
+        "$id": 1115
+    },
+    "文件夹创建成功": {
+        "zh-TW": "資料夾創建成功",
+        "en-US": "Folder created successfully",
+        "ko-KR": "폴더 생성 성공",
+        "$files": [
+            "src/pages/LibraryManager.tsx(15510-15521)"
+        ],
+        "$id": 1116
+    },
+    "创建失败": {
+        "zh-TW": "創建失敗",
+        "en-US": "Create failed",
+        "ko-KR": "생성 실패",
+        "$files": [
+            "src/pages/LibraryManager.tsx(15630-15638)"
+        ],
+        "$id": 1117
+    },
+    "文件夹是空的": {
+        "zh-TW": "資料夾是空的",
+        "en-US": "Folder is empty",
+        "ko-KR": "폴더가 비어 있습니다",
+        "$files": [
+            "src/pages/LibraryManager.tsx(23961-23971)"
+        ],
+        "$id": 1118
+    },
+    "资源库暂无内容": {
+        "zh-TW": "資源庫暫無內容",
+        "en-US": "Repository is empty",
+        "ko-KR": "저장소에 내용이 없습니다",
+        "$files": [
+            "src/pages/LibraryManager.tsx(23975-23986)"
+        ],
+        "$id": 1119
+    },
+    "上传文件或创建文件夹开始使用": {
+        "zh-TW": "上傳文件或創建資料夾開始使用",
+        "en-US": "Upload files or create folders to get started",
+        "ko-KR": "파일을 업로드하거나 폴더를 만들어 시작하세요",
+        "$files": [
+            "src/pages/LibraryManager.tsx(24110-24128)"
+        ],
+        "$id": 1120
+    },
+    "资源库暂无内容，请稍后再来": {
+        "zh-TW": "資源庫暫無內容,請稍後再來",
+        "en-US": "Repository is empty. Please come back later",
+        "ko-KR": "저장소에 내용이 없습니다. 나중에 다시 방문하세요",
+        "$files": [
+            "src/pages/LibraryManager.tsx(24143-24160)"
+        ],
+        "$id": 1121
+    },
+    "创建文件夹": {
+        "zh-TW": "創建資料夾",
+        "en-US": "Create folder",
+        "ko-KR": "폴더 만들기",
+        "$files": [
+            "src/pages/LibraryManager.tsx(24320-24329)"
+        ],
+        "$id": 1122
+    },
+    "存储配额": {
+        "zh-TW": "存儲配額",
+        "en-US": "Storage quota",
+        "ko-KR": "저장소 할당량",
+        "$files": [
+            "src/pages/LibraryManager.tsx(24819-24827)"
+        ],
+        "$id": 1123
+    },
+    "文件上传成功": {
+        "zh-TW": "文件上傳成功",
+        "en-US": "File uploaded successfully",
+        "ko-KR": "파일 업로드 성공",
+        "$files": [
+            "src/pages/LibraryManager.tsx(26880-26890)"
+        ],
+        "$id": 1124
+    },
+    "新建文件夹": {
+        "zh-TW": "新建資料夾",
+        "en-US": "New folder",
+        "ko-KR": "새 폴더",
+        "$files": [
+            "src/pages/LibraryManager.tsx(35012-35021)"
+        ],
+        "$id": 1125
+    },
+    "文件夹名称": {
+        "zh-TW": "資料夾名稱",
+        "en-US": "Folder name",
+        "ko-KR": "폴더 이름",
+        "$files": [
+            "src/pages/LibraryManager.tsx(35621-35630)"
+        ],
+        "$id": 1126
+    },
+    "请输入文件夹名称": {
+        "zh-TW": "請輸入資料夾名稱",
+        "en-US": "Please enter folder name",
+        "ko-KR": "폴더 이름을 입력하세요",
+        "$files": [
+            "src/pages/LibraryManager.tsx(35826-35838)"
+        ],
+        "$id": 1127
+    },
+    "创建": {
+        "zh-TW": "創建",
+        "en-US": "Create",
+        "ko-KR": "만들기",
+        "$files": [
+            "src/pages/LibraryManager.tsx(36215-36221)"
+        ],
+        "$id": 1128
+    },
+    "批量导入成功": {
+        "zh-TW": "批量導入成功",
+        "en-US": "Batch import successful",
+        "ko-KR": "일괄 가져오기 성공",
+        "$files": [
+            "src/pages/LibraryManager.tsx(37552-37562)"
+        ],
+        "$id": 1129
+    },
+    "批量导入完成（部分文件导入失败）": {
+        "zh-TW": "批量導入完成(部分檔案導入失敗)",
+        "en-US": "Batch import complete (some files failed to import)",
+        "ko-KR": "일괄 가져오기 완료 (일부 파일 가져오기 실패)",
+        "$files": [
+            "src/pages/LibraryManager.tsx(37566-37586)"
+        ],
+        "$id": 1130
+    },
+    "配置公共资源库存储配额": {
+        "zh-TW": "配寘公共資源庫存儲配額",
+        "en-US": "Configure public repository storage quota",
+        "ko-KR": "공용 저장소 저장 할당량 구성",
+        "$files": [
+            "src/pages/LibraryManager.tsx(37770-37785)"
+        ],
+        "$id": 1131
+    },
+    "公共资源库": {
+        "zh-TW": "公共資源庫",
+        "en-US": "Public repository",
+        "ko-KR": "공용 저장소",
+        "$files": [
+            "src/pages/LibraryManager.tsx(38770-38779)"
+        ],
+        "$id": 1132
+    },
+    "库存储配额": {
+        "zh-TW": "庫存儲配額",
+        "en-US": "Library storage quota",
+        "ko-KR": "라이브러리 저장 할당량",
+        "$files": [
+            "src/pages/LibraryManager.tsx(38972-38981)"
+        ],
+        "$id": 1133
+    },
+    "默认配额：{quota} GB": {
+        "zh-TW": "默認配額：{quota} GB",
+        "en-US": "Default quota: {quota} GB",
+        "ko-KR": "기본 할당량: {quota} GB",
+        "$files": [
+            "src/pages/LibraryManager.tsx(39485-39504)"
+        ],
+        "$id": 1134
+    },
+    "（跟随系统）": {
+        "zh-TW": "(跟隨系統)",
+        "en-US": "(Follow system)",
+        "ko-KR": "(시스템 따름)",
+        "$files": [
+            "src/pages/LibraryManager.tsx(39639-39649)"
+        ],
+        "$id": 1135
+    },
+    "已使用：": {
+        "zh-TW": "已使用：",
+        "en-US": "Used: ",
+        "ko-KR": "사용됨: ",
+        "$files": [
+            "src/pages/LibraryManager.tsx(40133-40141)"
+        ],
+        "$id": 1136
+    },
+    "手机号验证": {
+        "zh-TW": "手機號驗證",
+        "en-US": "Phone number verification",
+        "ko-KR": "휴대폰 번호 인증",
+        "$files": [
+            "src/pages/PhoneVerification.tsx(1289-1298)"
+        ],
+        "$id": 1137
+    },
+    "请输入手机号": {
+        "zh-TW": "請輸入手機號",
+        "en-US": "Please enter your phone number",
+        "ko-KR": "휴대폰 번호를 입력하세요",
+        "$files": [
+            "src/pages/PhoneVerification.tsx(3331-3341)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(1698-1708)",
+            "src/pages/Login/hooks/loginFormSchema.ts(609-619)"
+        ],
+        "$id": 1138
+    },
+    "手机号缺失，请重新登录": {
+        "zh-TW": "手機號缺失,請重新登入",
+        "en-US": "Phone number missing. Please log in again",
+        "ko-KR": "휴대폰 번호가 없습니다. 다시 로그인하세요",
+        "$files": [
+            "src/pages/PhoneVerification.tsx(3345-3360)"
+        ],
+        "$id": 1139
+    },
+    "请输入正确的手机号": {
+        "zh-TW": "請輸入正確的手機號",
+        "en-US": "Please enter a valid phone number",
+        "ko-KR": "올바른 휴대폰 번호를 입력하세요",
+        "$files": [
+            "src/pages/PhoneVerification.tsx(3478-3491)",
+            "src/pages/PhoneVerification.tsx(4958-4971)",
+            "src/pages/Profile.tsx(18533-18546)",
+            "src/pages/Profile.tsx(20946-20959)",
+            "src/pages/Profile.tsx(21852-21865)",
+            "src/pages/Profile.tsx(23140-23153)",
+            "src/pages/Login/hooks/loginFormSchema.ts(646-659)",
+            "src/pages/Login/hooks/useLoginForm.ts(5337-5350)"
+        ],
+        "$id": 1140
+    },
+    "绑定手机号失败": {
+        "zh-TW": "綁定手機號失敗",
+        "en-US": "Failed to bind phone number",
+        "ko-KR": "휴대폰 번호 연결 실패",
+        "$files": [
+            "src/pages/PhoneVerification.tsx(3802-3813)"
+        ],
+        "$id": 1141
+    },
+    "会员中心": {
+        "zh-TW": "會員中心",
+        "en-US": "Member center",
+        "ko-KR": "멤버십 센터",
+        "$files": [
+            "src/pages/Profile.tsx(3864-3872)"
+        ],
+        "$id": 1142
+    },
+    "个人资料": {
+        "zh-TW": "個人資料",
+        "en-US": "Personal info",
+        "ko-KR": "개인 정보",
+        "$files": [
+            "src/pages/Profile.tsx(3876-3884)"
+        ],
+        "$id": 1143
+    },
+    "微信绑定成功": {
+        "zh-TW": "微信綁定成功",
+        "en-US": "WeChat bind successful",
+        "ko-KR": "WeChat 연결 성공",
+        "$files": [
+            "src/pages/Profile.tsx(6978-6988)"
+        ],
+        "$id": 1144
+    },
+    "绑定失败": {
+        "zh-TW": "綁定失敗",
+        "en-US": "Bind failed",
+        "ko-KR": "연결 실패",
+        "$files": [
+            "src/pages/Profile.tsx(7082-7090)",
+            "src/pages/Profile.tsx(7328-7336)",
+            "src/pages/Profile.tsx(23723-23731)"
+        ],
+        "$id": 1145
+    },
+    "太弱": {
+        "zh-TW": "太弱",
+        "en-US": "Too weak",
+        "ko-KR": "너무 약함",
+        "$files": [
+            "src/pages/Profile.tsx(7930-7936)"
+        ],
+        "$id": 1146
+    },
+    "较弱": {
+        "zh-TW": "較弱",
+        "en-US": "Weak",
+        "ko-KR": "약함",
+        "$files": [
+            "src/pages/Profile.tsx(7975-7981)"
+        ],
+        "$id": 1147
+    },
+    "一般": {
+        "zh-TW": "一般",
+        "en-US": "Medium",
+        "ko-KR": "보통",
+        "$files": [
+            "src/pages/Profile.tsx(8020-8026)"
+        ],
+        "$id": 1148
+    },
+    "较强": {
+        "zh-TW": "較强",
+        "en-US": "Strong",
+        "ko-KR": "강함",
+        "$files": [
+            "src/pages/Profile.tsx(8065-8071)"
+        ],
+        "$id": 1149
+    },
+    "很强": {
+        "zh-TW": "很强",
+        "en-US": "Very strong",
+        "ko-KR": "매우 강함",
+        "$files": [
+            "src/pages/Profile.tsx(8110-8116)"
+        ],
+        "$id": 1150
+    },
+    "两次输入的新密码不一致": {
+        "zh-TW": "兩次輸入的新密碼不一致",
+        "en-US": "The two entered new passwords do not match",
+        "ko-KR": "입력한 두 새 비밀번호가 일치하지 않습니다",
+        "$files": [
+            "src/pages/Profile.tsx(10230-10245)"
+        ],
+        "$id": 1151
+    },
+    "新密码至少需要6个字符": {
+        "zh-TW": "新密碼至少需要6個字元",
+        "en-US": "New password needs at least 6 characters",
+        "ko-KR": "새 비밀번호는 최소 6자 이상이어야 합니다",
+        "$files": [
+            "src/pages/Profile.tsx(10361-10376)"
+        ],
+        "$id": 1152
+    },
+    "请输入当前密码": {
+        "zh-TW": "請輸入當前密碼",
+        "en-US": "Please enter current password",
+        "ko-KR": "현재 비밀번호를 입력하세요",
+        "$files": [
+            "src/pages/Profile.tsx(10513-10524)"
+        ],
+        "$id": 1153
+    },
+    "密码已设置成功": {
+        "zh-TW": "密碼已設定成功",
+        "en-US": "Password set successfully",
+        "ko-KR": "비밀번호 설정 성공",
+        "$files": [
+            "src/pages/Profile.tsx(10952-10963)"
+        ],
+        "$id": 1154
+    },
+    "密码已修改成功": {
+        "zh-TW": "密碼已修改成功",
+        "en-US": "Password changed successfully",
+        "ko-KR": "비밀번호 변경 성공",
+        "$files": [
+            "src/pages/Profile.tsx(10967-10978)"
+        ],
+        "$id": 1155
+    },
+    "密码修改失败": {
+        "zh-TW": "密碼修改失敗",
+        "en-US": "Password change failed",
+        "ko-KR": "비밀번호 변경 실패",
+        "$files": [
+            "src/pages/Profile.tsx(11979-11989)"
+        ],
+        "$id": 1156
+    },
+    "验证码已发送到您的邮箱": {
+        "zh-TW": "驗證碼已發送到您的郵箱",
+        "en-US": "Verification code sent to your email",
+        "ko-KR": "인증번호가 이메일로 전송되었습니다",
+        "$files": [
+            "src/pages/Profile.tsx(12438-12453)"
+        ],
+        "$id": 1157
+    },
+    "发送验证码失败": {
+        "zh-TW": "發送驗證碼失敗",
+        "en-US": "Failed to send verification code",
+        "ko-KR": "인증번호 전송에 실패했습니다",
+        "$files": [
+            "src/pages/Profile.tsx(12655-12666)",
+            "src/pages/Profile.tsx(13158-13169)",
+            "src/pages/Profile.tsx(14203-14214)",
+            "src/pages/Profile.tsx(14425-14436)",
+            "src/pages/Profile.tsx(16538-16549)",
+            "src/pages/Profile.tsx(18887-18898)",
+            "src/pages/Profile.tsx(19119-19130)",
+            "src/pages/Profile.tsx(19534-19545)",
+            "src/pages/Profile.tsx(19766-19777)",
+            "src/pages/Profile.tsx(21300-21311)",
+            "src/pages/Profile.tsx(21532-21543)",
+            "src/pages/Profile.tsx(28692-28703)",
+            "src/pages/Profile.tsx(29437-29448)",
+            "src/pages/Login/hooks/useLoginForm.ts(5771-5782)",
+            "src/pages/Login/hooks/useLoginForm.ts(6004-6015)"
+        ],
+        "$id": 1158
+    },
+    "验证码已重新发送到您的邮箱": {
+        "zh-TW": "驗證碼已重新發送到您的郵箱",
+        "en-US": "Verification code resent to your email",
+        "ko-KR": "인증번호가 이메일로 재전송되었습니다",
+        "$files": [
+            "src/pages/Profile.tsx(12914-12931)"
+        ],
+        "$id": 1159
+    },
+    "邮箱绑定成功": {
+        "zh-TW": "郵箱綁定成功",
+        "en-US": "Email bind successful",
+        "ko-KR": "이메일 연결 성공",
+        "$files": [
+            "src/pages/Profile.tsx(13486-13496)"
+        ],
+        "$id": 1160
+    },
+    "验证失败": {
+        "zh-TW": "驗證失敗",
+        "en-US": "Verification failed",
+        "ko-KR": "인증 실패",
+        "$files": [
+            "src/pages/Profile.tsx(13802-13810)",
+            "src/pages/Profile.tsx(15124-15132)",
+            "src/pages/Profile.tsx(15343-15351)",
+            "src/pages/Profile.tsx(20514-20522)",
+            "src/pages/Profile.tsx(20733-20741)"
+        ],
+        "$id": 1161
+    },
+    "验证码已发送到原邮箱": {
+        "zh-TW": "驗證碼已發送到原郵箱",
+        "en-US": "Verification code sent to original email",
+        "ko-KR": "인증번호가 원래 이메일로 전송되었습니다",
+        "$files": [
+            "src/pages/Profile.tsx(14103-14117)"
+        ],
+        "$id": 1162
+    },
+    "请输入 6 位数字验证码": {
+        "zh-TW": "請輸入6比特數位驗證碼",
+        "en-US": "Please enter the 6-digit verification code",
+        "ko-KR": "6자리 인증번호를 입력하세요",
+        "$files": [
+            "src/pages/Profile.tsx(14722-14738)",
+            "src/pages/Profile.tsx(17019-17035)",
+            "src/pages/Profile.tsx(20081-20097)",
+            "src/pages/Profile.tsx(21996-22012)"
+        ],
+        "$id": 1163
+    },
+    "请输入正确的邮箱地址": {
+        "zh-TW": "請輸入正確的郵箱地址",
+        "en-US": "Please enter a valid email address",
+        "ko-KR": "올바른 이메일 주소를 입력하세요",
+        "$files": [
+            "src/pages/Profile.tsx(16079-16093)",
+            "src/pages/Profile.tsx(16874-16888)"
+        ],
+        "$id": 1164
+    },
+    "验证码已发送": {
+        "zh-TW": "驗證碼已發送",
+        "en-US": "Verification code sent",
+        "ko-KR": "인증번호가 전송되었습니다",
+        "$files": [
+            "src/pages/Profile.tsx(16267-16277)",
+            "src/pages/Profile.tsx(18754-18764)",
+            "src/pages/Profile.tsx(21167-21177)",
+            "src/pages/Login/hooks/useLoginForm.ts(5637-5647)"
+        ],
+        "$id": 1165
+    },
+    "请先验证原邮箱": {
+        "zh-TW": "請先驗證原郵箱",
+        "en-US": "Please verify original email first",
+        "ko-KR": "먼저 원래 이메일을 인증하세요",
+        "$files": [
+            "src/pages/Profile.tsx(17133-17144)"
+        ],
+        "$id": 1166
+    },
+    "邮箱换绑成功": {
+        "zh-TW": "郵箱換綁成功",
+        "en-US": "Email changed successfully",
+        "ko-KR": "이메일 변경 성공",
+        "$files": [
+            "src/pages/Profile.tsx(17412-17422)"
+        ],
+        "$id": 1167
+    },
+    "换绑失败": {
+        "zh-TW": "換綁失敗",
+        "en-US": "Change failed",
+        "ko-KR": "변경 실패",
+        "$files": [
+            "src/pages/Profile.tsx(17660-17668)",
+            "src/pages/Profile.tsx(17879-17887)",
+            "src/pages/Profile.tsx(22628-22636)",
+            "src/pages/Profile.tsx(22847-22855)"
+        ],
+        "$id": 1168
+    },
+    "验证码已发送到原手机号": {
+        "zh-TW": "驗證碼已發送到原手機號",
+        "en-US": "Verification code sent to original phone number",
+        "ko-KR": "인증번호가 원래 휴대폰 번호로 전송되었습니다",
+        "$files": [
+            "src/pages/Profile.tsx(19432-19447)"
+        ],
+        "$id": 1169
+    },
+    "原手机号验证通过": {
+        "zh-TW": "原手機號驗證通過",
+        "en-US": "Original phone number verified",
+        "ko-KR": "원래 휴대폰 번호 인증 완료",
+        "$files": [
+            "src/pages/Profile.tsx(20287-20299)"
+        ],
+        "$id": 1170
+    },
+    "请先验证原手机号": {
+        "zh-TW": "請先驗證原手機號",
+        "en-US": "Please verify original phone number first",
+        "ko-KR": "먼저 원래 휴대폰 번호를 인증하세요",
+        "$files": [
+            "src/pages/Profile.tsx(22105-22117)"
+        ],
+        "$id": 1171
+    },
+    "手机号换绑成功": {
+        "zh-TW": "手機號換綁成功",
+        "en-US": "Phone number changed successfully",
+        "ko-KR": "휴대폰 번호 변경 성공",
+        "$files": [
+            "src/pages/Profile.tsx(22380-22391)"
+        ],
+        "$id": 1172
+    },
+    "手机号绑定成功": {
+        "zh-TW": "手機號綁定成功",
+        "en-US": "Phone number bound successfully",
+        "ko-KR": "휴대폰 번호 연결 성공",
+        "$files": [
+            "src/pages/Profile.tsx(23504-23515)"
+        ],
+        "$id": 1173
+    },
+    "解绑微信": {
+        "zh-TW": "解綁微信",
+        "en-US": "Unlink WeChat",
+        "ko-KR": "WeChat 연결 해제",
+        "$files": [
+            "src/pages/Profile.tsx(24235-24243)"
+        ],
+        "$id": 1174
+    },
+    "确定要解绑微信吗？解绑后需要重新绑定。": {
+        "zh-TW": "確定要解綁微信嗎？ 解綁後需要重新綁定。",
+        "en-US": "Are you sure you want to unlink WeChat? You will need to re-link it afterwards.",
+        "ko-KR": "WeChat 연결을 해제하시겠습니까? 해제 후 다시 연결해야 합니다.",
+        "$files": [
+            "src/pages/Profile.tsx(24262-24285)"
+        ],
+        "$id": 1175
+    },
+    "确认解绑": {
+        "zh-TW": "確認解綁",
+        "en-US": "Confirm unlink",
+        "ko-KR": "연결 해제 확인",
+        "$files": [
+            "src/pages/Profile.tsx(24308-24316)",
+            "src/pages/Profile.tsx(25303-25311)",
+            "src/pages/Profile.tsx(26298-26306)"
+        ],
+        "$id": 1176
+    },
+    "微信解绑成功": {
+        "zh-TW": "微信解綁成功",
+        "en-US": "WeChat unlinked successfully",
+        "ko-KR": "WeChat 연결 해제 성공",
+        "$files": [
+            "src/pages/Profile.tsx(24565-24575)",
+            "src/pages/Profile.tsx(24610-24620)"
+        ],
+        "$id": 1177
+    },
+    "解绑失败": {
+        "zh-TW": "解綁失敗",
+        "en-US": "Unlink failed",
+        "ko-KR": "연결 해제 실패",
+        "$files": [
+            "src/pages/Profile.tsx(24709-24717)",
+            "src/pages/Profile.tsx(24761-24769)",
+            "src/pages/Profile.tsx(24992-25000)",
+            "src/pages/Profile.tsx(25703-25711)",
+            "src/pages/Profile.tsx(25755-25763)",
+            "src/pages/Profile.tsx(25986-25994)",
+            "src/pages/Profile.tsx(26726-26734)",
+            "src/pages/Profile.tsx(26778-26786)",
+            "src/pages/Profile.tsx(27009-27017)"
+        ],
+        "$id": 1178
+    },
+    "解绑邮箱": {
+        "zh-TW": "解綁郵箱",
+        "en-US": "Unlink email",
+        "ko-KR": "이메일 연결 해제",
+        "$files": [
+            "src/pages/Profile.tsx(25225-25233)"
+        ],
+        "$id": 1179
+    },
+    "确定要解绑邮箱吗？解绑后将无法通过邮箱找回密码。": {
+        "zh-TW": "確定要解綁郵箱嗎？ 解綁後將無法通過郵箱找回密碼。",
+        "en-US": "Are you sure you want to unlink email? You won't be able to recover your password via email afterwards.",
+        "ko-KR": "이메일 연결을 해제하시겠습니까? 해제 후에는 이메일로 비밀번호를 찾을 수 없습니다.",
+        "$files": [
+            "src/pages/Profile.tsx(25252-25280)"
+        ],
+        "$id": 1180
+    },
+    "邮箱解绑成功": {
+        "zh-TW": "郵箱解綁成功",
+        "en-US": "Email unlinked successfully",
+        "ko-KR": "이메일 연결 해제 성공",
+        "$files": [
+            "src/pages/Profile.tsx(25559-25569)",
+            "src/pages/Profile.tsx(25604-25614)"
+        ],
+        "$id": 1181
+    },
+    "解绑手机号": {
+        "zh-TW": "解綁手機號",
+        "en-US": "Unlink phone number",
+        "ko-KR": "휴대폰 번호 연결 해제",
+        "$files": [
+            "src/pages/Profile.tsx(26219-26228)"
+        ],
+        "$id": 1182
+    },
+    "确定要解绑手机号吗？解绑后将无法通过手机号登录。": {
+        "zh-TW": "確定要解綁手機號嗎？ 解綁後將無法通過手機號登入。",
+        "en-US": "Are you sure you want to unlink phone number? You won't be able to log in via phone afterwards.",
+        "ko-KR": "휴대폰 번호 연결을 해제하시겠습니까? 해제 후에는 휴대폰 번호로 로그인할 수 없습니다.",
+        "$files": [
+            "src/pages/Profile.tsx(26247-26275)"
+        ],
+        "$id": 1183
+    },
+    "手机号解绑成功": {
+        "zh-TW": "手機號解綁成功",
+        "en-US": "Phone number unlinked successfully",
+        "ko-KR": "휴대폰 번호 연결 해제 성공",
+        "$files": [
+            "src/pages/Profile.tsx(26554-26565)",
+            "src/pages/Profile.tsx(26600-26611)"
+        ],
+        "$id": 1184
+    },
+    "账户已注销，30天后自动清理数据": {
+        "zh-TW": "帳戶已註銷,30天后自動清理數據",
+        "en-US": "Account deactivated. Data will be automatically cleaned after 30 days",
+        "ko-KR": "계정이 해지되었습니다. 30일 후 데이터가 자동으로 정리됩니다",
+        "$files": [
+            "src/pages/Profile.tsx(27586-27606)"
+        ],
+        "$id": 1185
+    },
+    "注销失败": {
+        "zh-TW": "註銷失敗",
+        "en-US": "Deactivation failed",
+        "ko-KR": "해지 실패",
+        "$files": [
+            "src/pages/Profile.tsx(27903-27911)"
+        ],
+        "$id": 1186
+    },
+    "手机号不存在": {
+        "zh-TW": "手機號不存在",
+        "en-US": "Phone number does not exist",
+        "ko-KR": "휴대폰 번호가 존재하지 않습니다",
+        "$files": [
+            "src/pages/Profile.tsx(28102-28112)"
+        ],
+        "$id": 1187
+    },
+    "邮箱不存在": {
+        "zh-TW": "郵箱不存在",
+        "en-US": "Email does not exist",
+        "ko-KR": "이메일이 존재하지 않습니다",
+        "$files": [
+            "src/pages/Profile.tsx(28841-28850)"
+        ],
+        "$id": 1188
+    },
+    "返回": {
+        "zh-TW": "返回",
+        "en-US": "Back",
+        "ko-KR": "뒤로",
+        "$files": [
+            "src/pages/Profile.tsx(29671-29677)"
+        ],
+        "$id": 1189
+    },
+    "普通用户": {
+        "zh-TW": "普通用戶",
+        "en-US": "Regular user",
+        "ko-KR": "일반 사용자",
+        "$files": [
+            "src/pages/Profile.tsx(30885-30893)"
+        ],
+        "$id": 1190
+    },
+    "个人信息": {
+        "zh-TW": "個人資訊",
+        "en-US": "Personal information",
+        "ko-KR": "개인 정보",
+        "$files": [
+            "src/pages/Profile.tsx(31201-31209)"
+        ],
+        "$id": 1191
+    },
+    "设置密码": {
+        "zh-TW": "設置密碼",
+        "en-US": "Set password",
+        "ko-KR": "비밀번호 설정",
+        "$files": [
+            "src/pages/Profile.tsx(31451-31459)"
+        ],
+        "$id": 1192
+    },
+    "修改密码": {
+        "zh-TW": "修改密碼",
+        "en-US": "Change password",
+        "ko-KR": "비밀번호 변경",
+        "$files": [
+            "src/pages/Profile.tsx(31463-31471)"
+        ],
+        "$id": 1193
+    },
+    "邮箱绑定": {
+        "zh-TW": "郵箱綁定",
+        "en-US": "Email bind",
+        "ko-KR": "이메일 연결",
+        "$files": [
+            "src/pages/Profile.tsx(31721-31729)"
+        ],
+        "$id": 1194
+    },
+    "手机绑定": {
+        "zh-TW": "手機綁定",
+        "en-US": "Phone bind",
+        "ko-KR": "휴대폰 연결",
+        "$files": [
+            "src/pages/Profile.tsx(31997-32005)"
+        ],
+        "$id": 1195
+    },
+    "微信绑定": {
+        "zh-TW": "微信綁定",
+        "en-US": "WeChat bind",
+        "ko-KR": "WeChat 연결",
+        "$files": [
+            "src/pages/Profile.tsx(32286-32294)"
+        ],
+        "$id": 1196
+    },
+    "会员信息": {
+        "zh-TW": "會員資訊",
+        "en-US": "Membership info",
+        "ko-KR": "멤버십 정보",
+        "$files": [
+            "src/pages/Profile.tsx(32580-32588)"
+        ],
+        "$id": 1197
+    },
+    "注销账户": {
+        "zh-TW": "註銷帳戶",
+        "en-US": "Deactivate account",
+        "ko-KR": "계정 해지",
+        "$files": [
+            "src/pages/Profile.tsx(32833-32841)"
+        ],
+        "$id": 1198
+    },
+    "微信验证成功": {
+        "zh-TW": "微信驗證成功",
+        "en-US": "WeChat verification successful",
+        "ko-KR": "WeChat 인증 성공",
+        "$files": [
+            "src/pages/Profile.tsx(38082-38092)"
+        ],
+        "$id": 1199
+    },
+    "重置密码": {
+        "zh-TW": "重置密碼",
+        "en-US": "Reset password",
+        "ko-KR": "비밀번호 재설정",
+        "$files": [
+            "src/pages/ResetPassword.tsx(1708-1716)"
+        ],
+        "$id": 1200
+    },
+    "密码重置成功，请使用新密码登录": {
+        "zh-TW": "密碼重置成功,請使用新密碼登入",
+        "en-US": "Password reset successful. Please log in with your new password",
+        "ko-KR": "비밀번호 재설정 성공. 새 비밀번호로 로그인하세요",
+        "$files": [
+            "src/pages/ResetPassword.tsx(3112-3131)"
+        ],
+        "$id": 1201
+    },
+    "请输入手机号码": {
+        "zh-TW": "請輸入手機號碼",
+        "en-US": "Please enter phone number",
+        "ko-KR": "휴대폰 번호를 입력하세요",
+        "$files": [
+            "src/pages/ResetPassword.tsx(8418-8429)"
+        ],
+        "$id": 1202
+    },
+    "请输入6位验证码": {
+        "zh-TW": "請輸入6比特驗證碼",
+        "en-US": "Please enter 6-digit verification code",
+        "ko-KR": "6자리 인증번호를 입력하세요",
+        "$files": [
+            "src/pages/ResetPassword.tsx(9094-9106)"
+        ],
+        "$id": 1203
+    },
+    "新密码（至少8个字符）": {
+        "zh-TW": "新密碼(至少8個字元)",
+        "en-US": "New password (at least 8 characters)",
+        "ko-KR": "새 비밀번호 (최소 8자)",
+        "$files": [
+            "src/pages/ResetPassword.tsx(9768-9783)"
+        ],
+        "$id": 1204
+    },
+    "请再次输入新密码": {
+        "zh-TW": "請再次輸入新密碼",
+        "en-US": "Please enter the new password again",
+        "ko-KR": "새 비밀번호를 다시 입력하세요",
+        "$files": [
+            "src/pages/ResetPassword.tsx(10783-10795)"
+        ],
+        "$id": 1205
+    },
+    "角色权限": {
+        "zh-TW": "角色許可權",
+        "en-US": "Role permissions",
+        "ko-KR": "역할 권한",
+        "$files": [
+            "src/pages/RoleManagement.tsx(2726-2734)"
+        ],
+        "$id": 1206
+    },
+    "请输入角色名称": {
+        "zh-TW": "請輸入角色名稱",
+        "en-US": "Please enter role name",
+        "ko-KR": "역할 이름을 입력하세요",
+        "$files": [
+            "src/pages/RoleManagement.tsx(7210-7221)",
+            "src/pages/RoleManagement.tsx(9415-9426)"
+        ],
+        "$id": 1207
+    },
+    "角色更新成功": {
+        "zh-TW": "角色更新成功",
+        "en-US": "Role update successful",
+        "ko-KR": "역할 업데이트 성공",
+        "$files": [
+            "src/pages/RoleManagement.tsx(7624-7634)",
+            "src/pages/RoleManagement.tsx(9852-9862)"
+        ],
+        "$id": 1208
+    },
+    "角色创建成功": {
+        "zh-TW": "角色創建成功",
+        "en-US": "Role creation successful",
+        "ko-KR": "역할 생성 성공",
+        "$files": [
+            "src/pages/RoleManagement.tsx(7972-7982)",
+            "src/pages/RoleManagement.tsx(10165-10175)"
+        ],
+        "$id": 1209
+    },
+    "保存失败": {
+        "zh-TW": "保存失敗",
+        "en-US": "Save failed",
+        "ko-KR": "저장 실패",
+        "$files": [
+            "src/pages/RoleManagement.tsx(8243-8251)",
+            "src/pages/RoleManagement.tsx(10438-10446)",
+            "src/components/modals/SaveAsModal.tsx(4158-4166)",
+            "src/services/mxcadManager/index.ts(49338-49346)",
+            "src/services/mxcadManager/index.ts(49421-49429)"
+        ],
+        "$id": 1210
+    },
+    "系统默认项目角色不允许删除": {
+        "zh-TW": "系統默認項目角色不允許删除",
+        "en-US": "System default project roles cannot be deleted",
+        "ko-KR": "시스템 기본 프로젝트 역할은 삭제할 수 없습니다",
+        "$files": [
+            "src/pages/RoleManagement.tsx(10686-10703)"
+        ],
+        "$id": 1211
+    },
+    "角色删除成功": {
+        "zh-TW": "角色删除成功",
+        "en-US": "Role deletion successful",
+        "ko-KR": "역할 삭제 성공",
+        "$files": [
+            "src/pages/RoleManagement.tsx(11224-11234)"
+        ],
+        "$id": 1212
+    },
+    "删除失败": {
+        "zh-TW": "删除失敗",
+        "en-US": "Delete failed",
+        "ko-KR": "삭제 실패",
+        "$files": [
+            "src/pages/RoleManagement.tsx(11387-11395)"
+        ],
+        "$id": 1213
+    },
+    "访问被拒绝": {
+        "zh-TW": "訪問被拒絕",
+        "en-US": "Access denied",
+        "ko-KR": "액세스 거부됨",
+        "$files": [
+            "src/pages/RoleManagement.tsx(13413-13422)"
+        ],
+        "$id": 1214
+    },
+    "您没有权限访问此页面。": {
+        "zh-TW": "您沒有許可權訪問此頁面。",
+        "en-US": "You do not have permission to access this page.",
+        "ko-KR": "이 페이지에 접근할 권한이 없습니다.",
+        "$files": [
+            "src/pages/RoleManagement.tsx(13476-13491)"
+        ],
+        "$id": 1215
+    },
+    "请联系管理员获取角色管理权限。": {
+        "zh-TW": "請聯系管理員獲取角色管理許可權。",
+        "en-US": "Please contact the administrator to obtain role management permissions.",
+        "ko-KR": "관리자에게 문의하여 역할 관리 권한을 받으세요.",
+        "$files": [
+            "src/pages/RoleManagement.tsx(13544-13563)"
+        ],
+        "$id": 1216
+    },
+    "角色与权限": {
+        "zh-TW": "角色與許可權",
+        "en-US": "Roles & Permissions",
+        "ko-KR": "역할 및 권한",
+        "$files": [
+            "src/pages/RoleManagement.tsx(14177-14186)"
+        ],
+        "$id": 1217
+    },
+    "管理系统角色和项目角色及其操作权限": {
+        "zh-TW": "管理系統角色和項目角色及其操作許可權",
+        "en-US": "Manage system roles and project roles and their operation permissions",
+        "ko-KR": "시스템 역할 및 프로젝트 역할과 그 작업 권한 관리",
+        "$files": [
+            "src/pages/RoleManagement.tsx(14253-14274)"
+        ],
+        "$id": 1218
+    },
+    "搜索角色...": {
+        "zh-TW": "蒐索角色. ..",
+        "en-US": "Search roles...",
+        "ko-KR": "역할 검색...",
+        "$files": [
+            "src/pages/RoleManagement.tsx(14406-14417)"
+        ],
+        "$id": 1219
+    },
+    "刷新角色数据": {
+        "zh-TW": "重繪角色數據",
+        "en-US": "Refresh role data",
+        "ko-KR": "역할 데이터 새로고침",
+        "$files": [
+            "src/pages/RoleManagement.tsx(14676-14686)"
+        ],
+        "$id": 1220
+    },
+    "项目角色": {
+        "zh-TW": "項目角色",
+        "en-US": "Project roles",
+        "ko-KR": "프로젝트 역할",
+        "$files": [
+            "src/pages/RoleManagement.tsx(14900-14908)",
+            "src/pages/RoleManagement.tsx(15437-15445)"
+        ],
+        "$id": 1221
+    },
+    "系统角色": {
+        "zh-TW": "系統角色",
+        "en-US": "System roles",
+        "ko-KR": "시스템 역할",
+        "$files": [
+            "src/pages/RoleManagement.tsx(15170-15178)",
+            "src/pages/RoleManagement.tsx(18276-18284)"
+        ],
+        "$id": 1222
+    },
+    "系统默认项目角色，所有项目共享使用": {
+        "zh-TW": "系統默認項目角色,所有項目共亯使用",
+        "en-US": "System default project roles, shared across all projects",
+        "ko-KR": "시스템 기본 프로젝트 역할, 모든 프로젝트에서 공유",
+        "$files": [
+            "src/pages/RoleManagement.tsx(15519-15540)"
+        ],
+        "$id": 1223
+    },
+    "系统": {
+        "zh-TW": "系統",
+        "en-US": "System",
+        "ko-KR": "시스템",
+        "$files": [
+            "src/pages/RoleManagement.tsx(16237-16243)",
+            "src/pages/RoleManagement.tsx(19303-19309)"
+        ],
+        "$id": 1224
+    },
+    "暂无描述": {
+        "zh-TW": "暫無描述",
+        "en-US": "No description",
+        "ko-KR": "설명 없음",
+        "$files": [
+            "src/pages/RoleManagement.tsx(16354-16362)",
+            "src/pages/RoleManagement.tsx(19420-19428)"
+        ],
+        "$id": 1225
+    },
+    "删除角色": {
+        "zh-TW": "删除角色",
+        "en-US": "Delete role",
+        "ko-KR": "역할 삭제",
+        "$files": [
+            "src/pages/RoleManagement.tsx(16911-16919)",
+            "src/pages/RoleManagement.tsx(19771-19779)"
+        ],
+        "$id": 1226
+    },
+    "拥有权限": {
+        "zh-TW": "擁有許可權",
+        "en-US": "Has permissions",
+        "ko-KR": "권한 보유",
+        "$files": [
+            "src/pages/RoleManagement.tsx(17137-17145)",
+            "src/pages/RoleManagement.tsx(19997-20005)"
+        ],
+        "$id": 1227
+    },
+    "配置权限": {
+        "zh-TW": "配寘許可權",
+        "en-US": "Configure permissions",
+        "ko-KR": "권한 구성",
+        "$files": [
+            "src/pages/RoleManagement.tsx(17873-17881)"
+        ],
+        "$id": 1228
+    },
+    "管理系统用户的角色和权限，系统默认角色不可删除": {
+        "zh-TW": "管理系統用戶的角色和許可權,系統默認角色不可删除",
+        "en-US": "Manage system user roles and permissions. System default roles cannot be deleted.",
+        "ko-KR": "시스템 사용자 역할 및 권한을 관리합니다. 시스템 기본 역할은 삭제할 수 없습니다.",
+        "$files": [
+            "src/pages/RoleManagement.tsx(18358-18385)"
+        ],
+        "$id": 1229
+    },
+    "新建角色": {
+        "zh-TW": "新建角色",
+        "en-US": "New role",
+        "ko-KR": "새 역할",
+        "$files": [
+            "src/pages/RoleManagement.tsx(18620-18628)"
+        ],
+        "$id": 1230
+    },
+    "配置系统角色权限": {
+        "zh-TW": "配寘系統角色許可權",
+        "en-US": "Configure system role permissions",
+        "ko-KR": "시스템 역할 권한 구성",
+        "$files": [
+            "src/pages/RoleManagement.tsx(20992-21004)"
+        ],
+        "$id": 1231
+    },
+    "新建系统角色": {
+        "zh-TW": "新建系統角色",
+        "en-US": "New system role",
+        "ko-KR": "새 시스템 역할",
+        "$files": [
+            "src/pages/RoleManagement.tsx(21008-21018)"
+        ],
+        "$id": 1232
+    },
+    "配置项目角色权限": {
+        "zh-TW": "配寘項目角色許可權",
+        "en-US": "Configure project role permissions",
+        "ko-KR": "프로젝트 역할 권한 구성",
+        "$files": [
+            "src/pages/RoleManagement.tsx(21705-21717)"
+        ],
+        "$id": 1233
+    },
+    "新建项目角色": {
+        "zh-TW": "新建項目角色",
+        "en-US": "New project role",
+        "ko-KR": "새 프로젝트 역할",
+        "$files": [
+            "src/pages/RoleManagement.tsx(21721-21731)"
+        ],
+        "$id": 1234
+    },
+    "确认删除角色": {
+        "zh-TW": "確認删除角色",
+        "en-US": "Confirm delete role",
+        "ko-KR": "역할 삭제 확인",
+        "$files": [
+            "src/pages/RoleManagement.tsx(22450-22460)"
+        ],
+        "$id": 1235
+    },
+    "删除中...": {
+        "zh-TW": "删除中. ..",
+        "en-US": "Deleting...",
+        "ko-KR": "삭제 중...",
+        "$files": [
+            "src/pages/RoleManagement.tsx(23095-23105)"
+        ],
+        "$id": 1236
+    },
+    "重要提示": {
+        "zh-TW": "重要提示",
+        "en-US": "Important notice",
+        "ko-KR": "중요 알림",
+        "$files": [
+            "src/pages/RoleManagement.tsx(23464-23472)"
+        ],
+        "$id": 1237
+    },
+    "删除后，属于该角色的用户将需要重新分配角色。此操作不可恢复。": {
+        "zh-TW": "删除後,屬於該角色的用戶將需要重新分配角色。 此操作不可恢復。",
+        "en-US": "After deletion, users assigned to this role will need to be reassigned. This operation cannot be undone.",
+        "ko-KR": "삭제 후 이 역할에 속한 사용자는 역할을 다시 할당받아야 합니다. 이 작업은 되돌릴 수 없습니다.",
+        "$files": [
+            "src/pages/RoleManagement.tsx(23548-23582)"
+        ],
+        "$id": 1238
+    },
+    "提示": {
+        "zh-TW": "提示",
+        "en-US": "Prompt",
+        "ko-KR": "알림",
+        "$files": [
+            "src/pages/RoleManagement.tsx(23875-23881)"
+        ],
+        "$id": 1239
+    },
+    "数据库连接正常": {
+        "zh-TW": "資料庫連接正常",
+        "en-US": "Database connection normal",
+        "ko-KR": "데이터베이스 연결 정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(2752-2763)"
+        ],
+        "$id": 1240
+    },
+    "数据库连接异常": {
+        "zh-TW": "資料庫連接异常",
+        "en-US": "Database connection abnormal",
+        "ko-KR": "데이터베이스 연결 비정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(2767-2778)"
+        ],
+        "$id": 1241
+    },
+    "存储服务正常": {
+        "zh-TW": "存儲服務正常",
+        "en-US": "Storage service normal",
+        "ko-KR": "저장소 서비스 정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(2987-2997)"
+        ],
+        "$id": 1242
+    },
+    "存储服务异常": {
+        "zh-TW": "存儲服務异常",
+        "en-US": "Storage service abnormal",
+        "ko-KR": "저장소 서비스 비정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(3001-3011)"
+        ],
+        "$id": 1243
+    },
+    "无效的响应数据格式": {
+        "zh-TW": "無效的響應數據格式",
+        "en-US": "Invalid response data format",
+        "ko-KR": "잘못된 응답 데이터 형식",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(3117-3130)"
+        ],
+        "$id": 1244
+    },
+    "获取系统健康状态失败": {
+        "zh-TW": "獲取系統健康狀態失敗",
+        "en-US": "Failed to get system health status",
+        "ko-KR": "시스템 상태 정보를 가져오지 못했습니다",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(3180-3194)"
+        ],
+        "$id": 1245
+    },
+    "系统监控": {
+        "zh-TW": "系統監控",
+        "en-US": "System monitoring",
+        "ko-KR": "시스템 모니터링",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5068-5076)"
+        ],
+        "$id": 1246
+    },
+    "实时监控系统运行状态与性能指标": {
+        "zh-TW": "即時監控系統運行狀態與性能指標",
+        "en-US": "Real-time monitoring of system status and performance metrics",
+        "ko-KR": "시스템 상태 및 성능 지표 실시간 모니터링",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5103-5122)"
+        ],
+        "$id": 1247
+    },
+    "系统正常": {
+        "zh-TW": "系統正常",
+        "en-US": "System normal",
+        "ko-KR": "시스템 정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5486-5494)"
+        ],
+        "$id": 1248
+    },
+    "系统降级": {
+        "zh-TW": "系統降級",
+        "en-US": "System degraded",
+        "ko-KR": "시스템 성능 저하",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5529-5537)"
+        ],
+        "$id": 1249
+    },
+    "检测中": {
+        "zh-TW": "檢測中",
+        "en-US": "Checking",
+        "ko-KR": "확인 중",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5541-5548)"
+        ],
+        "$id": 1250
+    },
+    "刷新中...": {
+        "zh-TW": "重繪中. ..",
+        "en-US": "Refreshing...",
+        "ko-KR": "새로고침 중...",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5810-5820)"
+        ],
+        "$id": 1251
+    },
+    "立即刷新": {
+        "zh-TW": "立即重繪",
+        "en-US": "Refresh now",
+        "ko-KR": "지금 새로고침",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(5824-5832)"
+        ],
+        "$id": 1252
+    },
+    "重试": {
+        "zh-TW": "重試",
+        "en-US": "Retry",
+        "ko-KR": "재시도",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6109-6115)",
+            "src/components/modals/ShareDialog.tsx(9546-9552)",
+            "src/components/modals/ShareManageDialog.tsx(5218-5224)"
+        ],
+        "$id": 1253
+    },
+    "核心服务": {
+        "zh-TW": "覈心服務",
+        "en-US": "Core services",
+        "ko-KR": "핵심 서비스",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6339-6347)"
+        ],
+        "$id": 1254
+    },
+    "PostgreSQL 数据库": {
+        "zh-TW": "PostgreSQL資料庫",
+        "en-US": "PostgreSQL Database",
+        "ko-KR": "PostgreSQL 데이터베이스",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6502-6520)"
+        ],
+        "$id": 1255
+    },
+    "主数据库连接状态": {
+        "zh-TW": "主資料庫連接狀態",
+        "en-US": "Main database connection status",
+        "ko-KR": "주 데이터베이스 연결 상태",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6551-6563)"
+        ],
+        "$id": 1256
+    },
+    "检测中...": {
+        "zh-TW": "檢測中. ..",
+        "en-US": "Checking...",
+        "ko-KR": "확인 중...",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6729-6739)",
+            "src/pages/SystemMonitorPage.tsx(7141-7151)"
+        ],
+        "$id": 1257
+    },
+    "文件存储": {
+        "zh-TW": "檔存儲",
+        "en-US": "File storage",
+        "ko-KR": "파일 저장소",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6930-6938)"
+        ],
+        "$id": 1258
+    },
+    "本地文件系统": {
+        "zh-TW": "本地檔案系統",
+        "en-US": "Local file system",
+        "ko-KR": "로컬 파일 시스템",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(6969-6979)"
+        ],
+        "$id": 1259
+    },
+    "应用服务": {
+        "zh-TW": "應用服務",
+        "en-US": "Application services",
+        "ko-KR": "애플리케이션 서비스",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(7342-7350)"
+        ],
+        "$id": 1260
+    },
+    "NestJS 后端服务": {
+        "zh-TW": "NestJS後端服務",
+        "en-US": "NestJS Backend Service",
+        "ko-KR": "NestJS 백엔드 서비스",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(7381-7396)"
+        ],
+        "$id": 1261
+    },
+    "服务运行正常": {
+        "zh-TW": "服務運行正常",
+        "en-US": "Service running normally",
+        "ko-KR": "서비스 정상 작동 중",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(7479-7489)"
+        ],
+        "$id": 1262
+    },
+    "系统信息": {
+        "zh-TW": "系統資訊",
+        "en-US": "System information",
+        "ko-KR": "시스템 정보",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(7733-7741)"
+        ],
+        "$id": 1263
+    },
+    "系统名称": {
+        "zh-TW": "系統名稱",
+        "en-US": "System name",
+        "ko-KR": "시스템 이름",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(7986-7994)"
+        ],
+        "$id": 1264
+    },
+    "运行环境": {
+        "zh-TW": "運行環境",
+        "en-US": "Environment",
+        "ko-KR": "실행 환경",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(8307-8315)"
+        ],
+        "$id": 1265
+    },
+    "生产环境": {
+        "zh-TW": "生產環境",
+        "en-US": "Production",
+        "ko-KR": "프로덕션",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(8432-8440)"
+        ],
+        "$id": 1266
+    },
+    "开发环境": {
+        "zh-TW": "開發環境",
+        "en-US": "Development",
+        "ko-KR": "개발",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(8444-8452)"
+        ],
+        "$id": 1267
+    },
+    "刷新间隔": {
+        "zh-TW": "重繪間隔",
+        "en-US": "Refresh interval",
+        "ko-KR": "새로고침 간격",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(8705-8713)"
+        ],
+        "$id": 1268
+    },
+    "30 秒自动刷新": {
+        "zh-TW": "30秒自動刷新",
+        "en-US": "30s auto-refresh",
+        "ko-KR": "30초 자동 새로고침",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(8770-8782)"
+        ],
+        "$id": 1269
+    },
+    "正常": {
+        "zh-TW": "正常",
+        "en-US": "Normal",
+        "ko-KR": "정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(10217-10223)"
+        ],
+        "$id": 1270
+    },
+    "异常": {
+        "zh-TW": "异常",
+        "en-US": "Abnormal",
+        "ko-KR": "비정상",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(10227-10233)"
+        ],
+        "$id": 1271
+    },
+    "状态消息": {
+        "zh-TW": "狀態消息",
+        "en-US": "Status message",
+        "ko-KR": "상태 메시지",
+        "$files": [
+            "src/pages/SystemMonitorPage.tsx(10396-10404)"
+        ],
+        "$id": 1272
+    },
+    "无法撤销：当前项目与操作时的项目不一致": {
+        "zh-TW": "無法撤銷：當前項目與操作時的項目不一致",
+        "en-US": "Cannot undo: current project does not match the project at time of operation",
+        "ko-KR": "실행 취소 불가: 현재 프로젝트가 작업 시의 프로젝트와 일치하지 않습니다",
+        "$files": [
+            "src/stores/fileSystemUndoRedoStore.ts(785-808)"
+        ],
+        "$id": 1273
+    },
+    "刚刚": {
+        "zh-TW": "剛剛",
+        "en-US": "Just now",
+        "ko-KR": "방금",
+        "$files": [
+            "src/utils/dateUtils.ts(2309-2315)",
+            "src/utils/fileUtils.ts(2063-2069)"
+        ],
+        "$id": 1274
+    },
+    "请求失败，请检查网络或联系管理员": {
+        "zh-TW": "請求失敗,請檢查網絡或聯系管理員",
+        "en-US": "Request failed. Please check network or contact administrator",
+        "ko-KR": "요청 실패. 네트워크를 확인하거나 관리자에게 문의하세요",
+        "$files": [
+            "src/utils/errorHandler.ts(1523-1543)"
+        ],
+        "$id": 1275
+    },
+    "未知错误": {
+        "zh-TW": "未知錯誤",
+        "en-US": "Unknown error",
+        "ko-KR": "알 수 없는 오류",
+        "$files": [
+            "src/utils/errorHandler.ts(1603-1611)",
+            "src/utils/errorHandler.ts(1638-1646)"
+        ],
+        "$id": 1276
+    },
+    "分钟前": {
+        "zh-TW": "分鐘前",
+        "en-US": "minutes ago",
+        "ko-KR": "분 전",
+        "$files": [
+            "src/utils/fileUtils.ts(2127-2134)"
+        ],
+        "$id": 1277
+    },
+    "小时前": {
+        "zh-TW": "小時前",
+        "en-US": "hours ago",
+        "ko-KR": "시간 전",
+        "$files": [
+            "src/utils/fileUtils.ts(2196-2203)"
+        ],
+        "$id": 1278
+    },
+    "昨天": {
+        "zh-TW": "昨天",
+        "en-US": "Yesterday",
+        "ko-KR": "어제",
+        "$files": [
+            "src/utils/fileUtils.ts(2251-2257)"
+        ],
+        "$id": 1279
+    },
+    "天前": {
+        "zh-TW": "天前",
+        "en-US": "days ago",
+        "ko-KR": "일 전",
+        "$files": [
+            "src/utils/fileUtils.ts(2314-2320)"
+        ],
+        "$id": 1280
+    },
+    "周前": {
+        "zh-TW": "周前",
+        "en-US": "weeks ago",
+        "ko-KR": "주 전",
+        "$files": [
+            "src/utils/fileUtils.ts(2396-2402)"
+        ],
+        "$id": 1281
+    },
+    "个月前": {
+        "zh-TW": "個月前",
+        "en-US": "months ago",
+        "ko-KR": "개월 전",
+        "$files": [
+            "src/utils/fileUtils.ts(2480-2487)"
+        ],
+        "$id": 1282
+    },
+    "年前": {
+        "zh-TW": "年前",
+        "en-US": "years ago",
+        "ko-KR": "년 전",
+        "$files": [
+            "src/utils/fileUtils.ts(2547-2553)"
+        ],
+        "$id": 1283
+    },
+    "名称不能为空": {
+        "zh-TW": "名稱不能為空",
+        "en-US": "Name cannot be empty",
+        "ko-KR": "이름은 비울 수 없습니다",
+        "$files": [
+            "src/utils/fileUtils.ts(6384-6394)"
+        ],
+        "$id": 1284
+    },
+    "名称长度不能超过 255 个字符": {
+        "zh-TW": "名稱長度不能超過255個字元",
+        "en-US": "Name length cannot exceed 255 characters",
+        "ko-KR": "이름 길이는 255자를 초과할 수 없습니다",
+        "$files": [
+            "src/utils/fileUtils.ts(6476-6496)"
+        ],
+        "$id": 1285
+    },
+    "名称包含非法字符：< > : \" | ? * / \\\\": {
+        "zh-TW": "名稱包含非法字元：< >：“|？* / \\\\",
+        "en-US": "Name contains illegal characters: < > : \" | ? * / \\\\",
+        "ko-KR": "이름에 잘못된 문자가 포함되어 있습니다: < > : \" | ? * / \\\\",
+        "$files": [
+            "src/utils/fileUtils.ts(6624-6655)"
+        ],
+        "$id": 1286
+    },
+    "名称包含非法字符": {
+        "zh-TW": "名稱包含非法字元",
+        "en-US": "Name contains illegal characters",
+        "ko-KR": "이름에 잘못된 문자가 포함되어 있습니다",
+        "$files": [
+            "src/utils/fileUtils.ts(6797-6809)"
+        ],
+        "$id": 1287
+    },
+    "该名称为系统保留名称": {
+        "zh-TW": "該名稱為系統保留名稱",
+        "en-US": "This name is reserved by the system",
+        "ko-KR": "이 이름은 시스템 예약 이름입니다",
+        "$files": [
+            "src/utils/fileUtils.ts(6965-6979)"
+        ],
+        "$id": 1288
+    },
+    "名称不能以点开头或结尾": {
+        "zh-TW": "名稱不能以點開頭或結尾",
+        "en-US": "Name cannot start or end with a dot",
+        "ko-KR": "이름은 점으로 시작하거나 끝날 수 없습니다",
+        "$files": [
+            "src/utils/fileUtils.ts(7093-7108)"
+        ],
+        "$id": 1289
+    },
+    "正在上传": {
+        "zh-TW": "正在上傳",
+        "en-US": "Uploading",
+        "ko-KR": "업로드 중",
+        "$files": [
+            "src/utils/mxcadUtils.ts(1974-1982)"
+        ],
+        "$id": 1290
+    },
+    "正在处理": {
+        "zh-TW": "正在處理",
+        "en-US": "Processing",
+        "ko-KR": "처리 중",
+        "$files": [
+            "src/utils/mxcadUtils.ts(2002-2010)"
+        ],
+        "$id": 1291
+    },
+    "已完成": {
+        "zh-TW": "已完成",
+        "en-US": "Completed",
+        "ko-KR": "완료됨",
+        "$files": [
+            "src/utils/mxcadUtils.ts(2029-2036)",
+            "src/components/modals/ExternalReferenceModal.tsx(3410-3417)"
+        ],
+        "$id": 1292
+    },
+    "处理失败": {
+        "zh-TW": "處理失敗",
+        "en-US": "Processing failed",
+        "ko-KR": "처리 실패",
+        "$files": [
+            "src/utils/mxcadUtils.ts(2052-2060)"
+        ],
+        "$id": 1293
+    },
+    "已删除": {
+        "zh-TW": "已删除",
+        "en-US": "Deleted",
+        "ko-KR": "삭제됨",
+        "$files": [
+            "src/utils/mxcadUtils.ts(2077-2084)"
+        ],
+        "$id": 1294
+    },
+    "无效的节点路径格式": {
+        "zh-TW": "無效的節點路徑格式",
+        "en-US": "Invalid node path format",
+        "ko-KR": "잘못된 노드 경로 형식",
+        "$files": [
+            "src/utils/mxcadUtils.ts(3460-3473)"
+        ],
+        "$id": 1295
+    },
+    "邮箱不能为空": {
+        "zh-TW": "郵箱不能為空",
+        "en-US": "Email cannot be empty",
+        "ko-KR": "이메일은 비울 수 없습니다",
+        "$files": [
+            "src/utils/validation.ts(578-588)"
+        ],
+        "$id": 1296
+    },
+    "用户名不能为空": {
+        "zh-TW": "用戶名不能為空",
+        "en-US": "Username cannot be empty",
+        "ko-KR": "사용자명은 비울 수 없습니다",
+        "$files": [
+            "src/utils/validation.ts(644-655)"
+        ],
+        "$id": 1297
+    },
+    "用户名至少3个字符": {
+        "zh-TW": "用戶名至少3個字元",
+        "en-US": "Username must be at least 3 characters",
+        "ko-KR": "사용자명은 최소 3자 이상이어야 합니다",
+        "$files": [
+            "src/utils/validation.ts(669-682)"
+        ],
+        "$id": 1298
+    },
+    "用户名最多20个字符": {
+        "zh-TW": "用戶名最多20個字元",
+        "en-US": "Username can be at most 20 characters",
+        "ko-KR": "사용자명은 최대 20자까지 가능합니다",
+        "$files": [
+            "src/utils/validation.ts(696-710)"
+        ],
+        "$id": 1299
+    },
+    "用户名只能包含字母、数字和下划线": {
+        "zh-TW": "用戶名只能包含字母、數位和底線",
+        "en-US": "Username can only contain letters, numbers, and underscores",
+        "ko-KR": "사용자명은 문자, 숫자 및 밑줄만 포함할 수 있습니다",
+        "$files": [
+            "src/utils/validation.ts(722-742)"
+        ],
+        "$id": 1300
+    },
+    "密码不能为空": {
+        "zh-TW": "密碼不能為空",
+        "en-US": "Password cannot be empty",
+        "ko-KR": "비밀번호는 비울 수 없습니다",
+        "$files": [
+            "src/utils/validation.ts(772-782)"
+        ],
+        "$id": 1301
+    },
+    "密码至少8个字符": {
+        "zh-TW": "密碼至少8個字元",
+        "en-US": "Password must be at least 8 characters",
+        "ko-KR": "비밀번호는 최소 8자 이상이어야 합니다",
+        "$files": [
+            "src/utils/validation.ts(796-808)"
+        ],
+        "$id": 1302
+    },
+    "密码最多50个字符": {
+        "zh-TW": "密碼最多50個字元",
+        "en-US": "Password can be at most 50 characters",
+        "ko-KR": "비밀번호는 최대 50자까지 가능합니다",
+        "$files": [
+            "src/utils/validation.ts(822-835)"
+        ],
+        "$id": 1303
+    },
+    "昵称最多50个字符": {
+        "zh-TW": "昵稱最多50個字元",
+        "en-US": "Nickname can be at most 50 characters",
+        "ko-KR": "닉네임은 최대 50자까지 가능합니다",
+        "$files": [
+            "src/utils/validation.ts(866-879)"
+        ],
+        "$id": 1304
+    },
+    "不能为空": {
+        "zh-TW": "不能為空",
+        "en-US": "Cannot be empty",
+        "ko-KR": "비울 수 없습니다",
+        "$files": [
+            "src/utils/validation.ts(1184-1192)"
+        ],
+        "$id": 1305
+    },
+    "至少": {
+        "zh-TW": "至少",
+        "en-US": "At least",
+        "ko-KR": "최소",
+        "$files": [
+            "src/utils/validation.ts(1282-1288)"
+        ],
+        "$id": 1306
+    },
+    "个字符": {
+        "zh-TW": "個字元",
+        "en-US": " characters",
+        "ko-KR": "자",
+        "$files": [
+            "src/utils/validation.ts(1310-1317)",
+            "src/utils/validation.ts(1435-1442)"
+        ],
+        "$id": 1307
+    },
+    "最多": {
+        "zh-TW": "最多",
+        "en-US": "At most",
+        "ko-KR": "최대",
+        "$files": [
+            "src/utils/validation.ts(1407-1413)"
+        ],
+        "$id": 1308
+    },
+    "格式不正确": {
+        "zh-TW": "格式不正確",
+        "en-US": "Incorrect format",
+        "ko-KR": "형식이 올바르지 않습니다",
+        "$files": [
+            "src/utils/validation.ts(1524-1533)"
+        ],
+        "$id": 1309
+    },
+    "两次输入的密码不一致": {
+        "zh-TW": "兩次輸入的密碼不一致",
+        "en-US": "The two entered passwords do not match",
+        "ko-KR": "입력한 두 비밀번호가 일치하지 않습니다",
+        "$files": [
+            "src/utils/validation.ts(2182-2196)"
+        ],
+        "$id": 1310
+    },
+    "需要登录": {
+        "zh-TW": "需要登入",
+        "en-US": "Login required",
+        "ko-KR": "로그인 필요",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(1259-1267)"
+        ],
+        "$id": 1311
+    },
+    "稍后再说": {
+        "zh-TW": "稍後再說",
+        "en-US": "Later",
+        "ko-KR": "나중에",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(1370-1378)"
+        ],
+        "$id": 1312
+    },
+    "立即登录": {
+        "zh-TW": "立即登入",
+        "en-US": "Login Now",
+        "ko-KR": "지금 로그인",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(1522-1530)",
+            "src/pages/Login/components/AccountLoginForm.tsx(3797-3805)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(3487-3495)"
+        ],
+        "$id": 1313
+    },
+    "登录以继续操作": {
+        "zh-TW": "登入以繼續操作",
+        "en-US": "Log in to continue",
+        "ko-KR": "계속하려면 로그인하세요",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(2018-2029)"
+        ],
+        "$id": 1314
+    },
+    "「{action}」功能需要登录后才能使用": {
+        "zh-TW": "「{action}」功能需要登入後才能使用",
+        "en-US": "The \"{action}\" feature requires login",
+        "ko-KR": "\"{action}\" 기능은 로그인이 필요합니다",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(2139-2164)"
+        ],
+        "$id": 1315
+    },
+    "登录后可使用完整功能，包括保存文件、管理项目等": {
+        "zh-TW": "登入後可使用完整功能,包括保存檔案、管理項目等",
+        "en-US": "Full features including file saving and project management are available after login",
+        "ko-KR": "로그인 후 파일 저장, 프로젝트 관리 등 모든 기능을 사용할 수 있습니다",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(2293-2320)"
+        ],
+        "$id": 1316
+    },
+    "松开即可打开图纸": {
+        "zh-TW": "鬆開即可打開圖紙",
+        "en-US": "Release to open drawing",
+        "ko-KR": "놓으면 도면이 열립니다",
+        "$files": [
+            "src/components/drop-indicator/DropIndicator.tsx(1917-1929)"
+        ],
+        "$id": 1317
+    },
+    "确认撤销": {
+        "zh-TW": "確認撤銷",
+        "en-US": "Confirm revoke",
+        "ko-KR": "취소 확인",
+        "$files": [
+            "src/components/modals/ConfirmRevokeModal.tsx(435-443)",
+            "src/components/modals/ConfirmRevokeModal.tsx(1238-1246)"
+        ],
+        "$id": 1318
+    },
+    "确定要撤销此分享链接？链接失效后访问者将无法打开图纸。": {
+        "zh-TW": "確定要撤銷此分享連結？ 連結失效後訪問者將無法打開圖紙。",
+        "en-US": "Are you sure you want to revoke this share link? Visitors won't be able to open the drawing after it's revoked.",
+        "ko-KR": "이 공유 링크를 취소하시겠습니까? 취소 후 방문자는 도면을 열 수 없습니다.",
+        "$files": [
+            "src/components/modals/ConfirmRevokeModal.tsx(459-490)"
+        ],
+        "$id": 1319
+    },
+    "CAD 2000（默认）": {
+        "zh-TW": "CAD 2000(默認)",
+        "en-US": "CAD 2000 (Default)",
+        "ko-KR": "CAD 2000 (기본)",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(582-598)",
+            "src/components/modals/DwgExportModal.tsx(359-375)"
+        ],
+        "$id": 1320
+    },
+    "CAD 2004": {
+        "zh-TW": "CAD 2004",
+        "en-US": "CAD 2004",
+        "ko-KR": "CAD 2004",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(626-638)",
+            "src/components/modals/DwgExportModal.tsx(403-415)"
+        ],
+        "$id": 1321
+    },
+    "CAD 2007": {
+        "zh-TW": "CAD 2007",
+        "en-US": "CAD 2007",
+        "ko-KR": "CAD 2007",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(666-678)",
+            "src/components/modals/DwgExportModal.tsx(443-455)"
+        ],
+        "$id": 1322
+    },
+    "CAD 2010": {
+        "zh-TW": "CAD 2010",
+        "en-US": "CAD 2010",
+        "ko-KR": "CAD 2010",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(706-718)",
+            "src/components/modals/DwgExportModal.tsx(483-495)"
+        ],
+        "$id": 1323
+    },
+    "CAD 2018": {
+        "zh-TW": "CAD 2018",
+        "en-US": "CAD 2018",
+        "ko-KR": "CAD 2018",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(746-758)",
+            "src/components/modals/DwgExportModal.tsx(523-535)"
+        ],
+        "$id": 1324
+    },
+    "选择下载格式": {
+        "zh-TW": "選擇下載格式",
+        "en-US": "Select download format",
+        "ko-KR": "다운로드 형식 선택",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(2275-2285)"
+        ],
+        "$id": 1325
+    },
+    "文件：": {
+        "zh-TW": "文件",
+        "en-US": "File: ",
+        "ko-KR": "파일: ",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(2945-2952)",
+            "src/components/modals/DwgExportModal.tsx(2078-2085)",
+            "src/components/modals/PdfExportModal.tsx(2000-2007)"
+        ],
+        "$id": 1326
+    },
+    "选择下载格式 *": {
+        "zh-TW": "選擇下載格式*",
+        "en-US": "Select download format *",
+        "ko-KR": "다운로드 형식 선택 *",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(3305-3317)"
+        ],
+        "$id": 1327
+    },
+    "MXWEB 格式（默认）": {
+        "zh-TW": "MXWEB格式(默認)",
+        "en-US": "MXWEB Format (Default)",
+        "ko-KR": "MXWEB 형식 (기본)",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(3517-3533)"
+        ],
+        "$id": 1328
+    },
+    "DWG 格式": {
+        "zh-TW": "DWG格式",
+        "en-US": "DWG Format",
+        "ko-KR": "DWG 형식",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(3576-3586)"
+        ],
+        "$id": 1329
+    },
+    "DXF 格式": {
+        "zh-TW": "DXF格式",
+        "en-US": "DXF Format",
+        "ko-KR": "DXF 형식",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(3629-3639)"
+        ],
+        "$id": 1330
+    },
+    "PDF 格式": {
+        "zh-TW": "PDF格式",
+        "en-US": "PDF Format",
+        "ko-KR": "PDF 형식",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(3682-3692)"
+        ],
+        "$id": 1331
+    },
+    "PDF 导出参数": {
+        "zh-TW": "PDF匯出參數",
+        "en-US": "PDF export parameters",
+        "ko-KR": "PDF 내보내기 매개변수",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(4193-4205)",
+            "src/components/modals/PdfExportModal.tsx(2516-2528)"
+        ],
+        "$id": 1332
+    },
+    "宽度（像素）": {
+        "zh-TW": "寬度(點數)",
+        "en-US": "Width (pixels)",
+        "ko-KR": "너비(픽셀)",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(4483-4493)",
+            "src/components/modals/PdfExportModal.tsx(2814-2824)"
+        ],
+        "$id": 1333
+    },
+    "高度（像素）": {
+        "zh-TW": "高度(點數)",
+        "en-US": "Height (pixels)",
+        "ko-KR": "높이(픽셀)",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(5005-5015)",
+            "src/components/modals/PdfExportModal.tsx(3305-3315)"
+        ],
+        "$id": 1334
+    },
+    "颜色策略": {
+        "zh-TW": "顏色策略",
+        "en-US": "Color strategy",
+        "ko-KR": "색상 전략",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(5539-5547)",
+            "src/components/modals/PdfExportModal.tsx(3831-3839)"
+        ],
+        "$id": 1335
+    },
+    "黑白（单色）": {
+        "zh-TW": "黑白(單色)",
+        "en-US": "Black & White (monochrome)",
+        "ko-KR": "흑백(단색)",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(5923-5933)",
+            "src/components/modals/PdfExportModal.tsx(4195-4205)"
+        ],
+        "$id": 1336
+    },
+    "彩色": {
+        "zh-TW": "彩色",
+        "en-US": "Color",
+        "ko-KR": "컬러",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(5982-5988)",
+            "src/components/modals/PdfExportModal.tsx(4252-4258)"
+        ],
+        "$id": 1337
+    },
+    "图纸版本": {
+        "zh-TW": "圖紙版本",
+        "en-US": "Drawing version",
+        "ko-KR": "도면 버전",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(6832-6840)",
+            "src/components/modals/DwgExportModal.tsx(2823-2831)"
+        ],
+        "$id": 1338
+    },
+    "：CloudCAD 专用格式，可直接在线编辑": {
+        "zh-TW": "：CloudCAD專用格式,可直接線上編輯",
+        "en-US": ": CloudCAD native format, editable directly online",
+        "ko-KR": ": CloudCAD 전용 형식, 온라인에서 직접 편집 가능",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(7320-7346)"
+        ],
+        "$id": 1339
+    },
+    "：AutoCAD 原生格式，需要转换时间": {
+        "zh-TW": "：AutoCAD原生格式,需要轉換時間",
+        "en-US": ": AutoCAD native format, conversion time required",
+        "ko-KR": ": AutoCAD 기본 형식, 변환 시간 필요",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(7416-7440)"
+        ],
+        "$id": 1340
+    },
+    "：Drawing Exchange Format，需要转换时间": {
+        "zh-TW": "：Drawing Exchange Format, 需要轉換時間",
+        "en-US": ": Drawing Exchange Format, conversion time required",
+        "ko-KR": ": DXF 형식, 변환 시간 필요",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(7510-7545)"
+        ],
+        "$id": 1341
+    },
+    "：便携式文档格式，需要转换时间": {
+        "zh-TW": "：可擕式文檔格式,需要轉換時間",
+        "en-US": ": Portable Document Format, conversion time required",
+        "ko-KR": ": 휴대용 문서 형식, 변환 시간 필요",
+        "$files": [
+            "src/components/modals/DownloadFormatModal.tsx(7615-7634)"
+        ],
+        "$id": 1342
+    },
+    "导出": {
+        "zh-TW": "匯出",
+        "en-US": "Export",
+        "ko-KR": "내보내기",
+        "$files": [
+            "src/components/modals/DwgExportModal.tsx(1702-1708)",
+            "src/components/modals/PdfExportModal.tsx(1624-1630)"
+        ],
+        "$id": 1343
+    },
+    "修改有效期": {
+        "zh-TW": "修改有效期",
+        "en-US": "Modify expiry",
+        "ko-KR": "만료일 수정",
+        "$files": [
+            "src/components/modals/EditExpiryModal.tsx(1331-1340)",
+            "src/components/modals/ShareManageDialog.tsx(8108-8117)"
+        ],
+        "$id": 1344
+    },
+    "有效期": {
+        "zh-TW": "有效期",
+        "en-US": "Expiry",
+        "ko-KR": "만료일",
+        "$files": [
+            "src/components/modals/EditExpiryModal.tsx(1623-1630)",
+            "src/components/modals/ShareDialog.tsx(10275-10282)",
+            "src/components/modals/ShareDialog.tsx(12192-12199)",
+            "src/components/modals/ShareManageDialog.tsx(5899-5906)"
+        ],
+        "$id": 1345
+    },
+    "天后过期": {
+        "zh-TW": "天后過期",
+        "en-US": " days to expire",
+        "ko-KR": "일 후 만료",
+        "$files": [
+            "src/components/modals/EditExpiryModal.tsx(2859-2867)",
+            "src/components/modals/ShareDialog.tsx(13148-13156)"
+        ],
+        "$id": 1346
+    },
+    "上传中": {
+        "zh-TW": "上傳中",
+        "en-US": "Uploading",
+        "ko-KR": "업로드 중",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(3558-3565)"
+        ],
+        "$id": 1347
+    },
+    "已上传": {
+        "zh-TW": "已上傳",
+        "en-US": "Uploaded",
+        "ko-KR": "업로드됨",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(3639-3646)"
+        ],
+        "$id": 1348
+    },
+    "待上传": {
+        "zh-TW": "待上傳",
+        "en-US": "Pending",
+        "ko-KR": "대기 중",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(3683-3690)"
+        ],
+        "$id": 1349
+    },
+    "管理外部参照文件": {
+        "zh-TW": "管理外部參照檔案",
+        "en-US": "Manage external reference files",
+        "ko-KR": "외부 참조 파일 관리",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(3800-3812)"
+        ],
+        "$id": 1350
+    },
+    "选择并上传": {
+        "zh-TW": "選擇並上傳",
+        "en-US": "Select and upload",
+        "ko-KR": "선택 및 업로드",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(4569-4578)"
+        ],
+        "$id": 1351
+    },
+    "继续打开": {
+        "zh-TW": "繼續打開",
+        "en-US": "Continue opening",
+        "ko-KR": "계속 열기",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(5125-5133)"
+        ],
+        "$id": 1352
+    },
+    "状态": {
+        "zh-TW": "狀態",
+        "en-US": "Status",
+        "ko-KR": "상태",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(5756-5762)"
+        ],
+        "$id": 1353
+    },
+    "文件名": {
+        "zh-TW": "檔名",
+        "en-US": "File name",
+        "ko-KR": "파일 이름",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(5943-5950)",
+            "src/components/modals/SaveAsModal.tsx(5259-5266)"
+        ],
+        "$id": 1354
+    },
+    "类型": {
+        "zh-TW": "類型",
+        "en-US": "Type",
+        "ko-KR": "유형",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(6138-6144)"
+        ],
+        "$id": 1355
+    },
+    "进度": {
+        "zh-TW": "進度",
+        "en-US": "Progress",
+        "ko-KR": "진행률",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(6331-6337)"
+        ],
+        "$id": 1356
+    },
+    "图片": {
+        "zh-TW": "圖片",
+        "en-US": "Image",
+        "ko-KR": "이미지",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(8728-8734)"
+        ],
+        "$id": 1357
+    },
+    "失败": {
+        "zh-TW": "失敗",
+        "en-US": "Failed",
+        "ko-KR": "실패",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(10081-10087)"
+        ],
+        "$id": 1358
+    },
+    "可覆盖": {
+        "zh-TW": "可覆蓋",
+        "en-US": "Overwritable",
+        "ko-KR": "덮어쓰기 가능",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(10232-10239)"
+        ],
+        "$id": 1359
+    },
+    "暂无外部参照文件": {
+        "zh-TW": "暫無外部參照檔案",
+        "en-US": "No external reference files",
+        "ko-KR": "외부 참조 파일이 없습니다",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(10665-10677)"
+        ],
+        "$id": 1360
+    },
+    "正在上传...": {
+        "zh-TW": "正在上傳. ..",
+        "en-US": "Uploading...",
+        "ko-KR": "업로드 중...",
+        "$files": [
+            "src/components/modals/ExternalReferenceModal.tsx(10948-10959)"
+        ],
+        "$id": 1361
+    },
+    "导出 PDF": {
+        "zh-TW": "匯出PDF",
+        "en-US": "Export PDF",
+        "ko-KR": "PDF 내보내기",
+        "$files": [
+            "src/components/modals/PdfExportModal.tsx(1332-1342)"
+        ],
+        "$id": 1362
+    },
+    "请输入文件名": {
+        "zh-TW": "請輸入檔名",
+        "en-US": "Please enter file name",
+        "ko-KR": "파일 이름을 입력하세요",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(2371-2381)",
+            "src/components/modals/SaveAsModal.tsx(5440-5450)"
+        ],
+        "$id": 1363
+    },
+    "文件名不能包含以下字符: \\\\ / : * ? \" < > |": {
+        "zh-TW": "檔名不能包含以下字元：\\\\ /：*？ “< > |",
+        "en-US": "File name cannot contain: \\\\ / : * ? \" < > |",
+        "ko-KR": "파일 이름에 다음 문자를 포함할 수 없습니다: \\\\ / : * ? \" < > |",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(2541-2576)"
+        ],
+        "$id": 1364
+    },
+    "请先选择项目": {
+        "zh-TW": "請先選擇項目",
+        "en-US": "Please select a project first",
+        "ko-KR": "먼저 프로젝트를 선택하세요",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(3192-3202)"
+        ],
+        "$id": 1365
+    },
+    "请选择公开资源库中的保存位置": {
+        "zh-TW": "請選擇公開資源庫中的保存位置",
+        "en-US": "Please select a save location in the public repository",
+        "ko-KR": "공용 저장소에서 저장 위치를 선택하세요",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(3399-3417)"
+        ],
+        "$id": 1366
+    },
+    "请选择保存位置": {
+        "zh-TW": "請選擇保存位置",
+        "en-US": "Please select a save location",
+        "ko-KR": "저장 위치를 선택하세요",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(3503-3514)"
+        ],
+        "$id": 1367
+    },
+    "保存失败，请稍后重试": {
+        "zh-TW": "保存失敗,請稍後重試",
+        "en-US": "Save failed. Please try again later",
+        "ko-KR": "저장 실패. 나중에 다시 시도하세요",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(4262-4276)",
+            "src/services/mxcadManager/index.ts(41019-41033)",
+            "src/services/mxcadManager/index.ts(51417-51431)"
+        ],
+        "$id": 1368
+    },
+    "保存中...": {
+        "zh-TW": "保存中. ..",
+        "en-US": "Saving...",
+        "ko-KR": "저장 중...",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(4818-4828)"
+        ],
+        "$id": 1369
+    },
+    "保存到": {
+        "zh-TW": "保存到",
+        "en-US": "Save to",
+        "ko-KR": "다음에 저장",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(5713-5720)"
+        ],
+        "$id": 1370
+    },
+    "我的图纸": {
+        "zh-TW": "我的圖紙",
+        "en-US": "My drawings",
+        "ko-KR": "내 도면",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(6403-6411)",
+            "src/components/modals/SaveAsModal.tsx(9266-9274)"
+        ],
+        "$id": 1371
+    },
+    "项目文件夹": {
+        "zh-TW": "項目資料夾",
+        "en-US": "Project folder",
+        "ko-KR": "프로젝트 폴더",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(6460-6469)"
+        ],
+        "$id": 1372
+    },
+    "公开资源库": {
+        "zh-TW": "公開資源庫",
+        "en-US": "Public repository",
+        "ko-KR": "공용 저장소",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(6555-6564)",
+            "src/components/modals/SaveAsModal.tsx(9353-9362)"
+        ],
+        "$id": 1373
+    },
+    "选择项目": {
+        "zh-TW": "選擇項目",
+        "en-US": "Select project",
+        "ko-KR": "프로젝트 선택",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(6796-6804)"
+        ],
+        "$id": 1374
+    },
+    "请选择项目": {
+        "zh-TW": "請選擇項目",
+        "en-US": "Please select a project",
+        "ko-KR": "프로젝트를 선택하세요",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(7122-7131)"
+        ],
+        "$id": 1375
+    },
+    "选择资源库": {
+        "zh-TW": "選擇資源庫",
+        "en-US": "Select repository",
+        "ko-KR": "저장소 선택",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(7470-7479)"
+        ],
+        "$id": 1376
+    },
+    "保存位置": {
+        "zh-TW": "保存位置",
+        "en-US": "Save location",
+        "ko-KR": "저장 위치",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(8146-8154)"
+        ],
+        "$id": 1377
+    },
+    "选择文件夹": {
+        "zh-TW": "選擇資料夾",
+        "en-US": "Select folder",
+        "ko-KR": "폴더 선택",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(9449-9458)"
+        ],
+        "$id": 1378
+    },
+    "点击选择文件夹": {
+        "zh-TW": "點擊選擇資料夾",
+        "en-US": "Click to select folder",
+        "ko-KR": "클릭하여 폴더 선택",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(9483-9494)"
+        ],
+        "$id": 1379
+    },
+    "保存格式": {
+        "zh-TW": "保存格式",
+        "en-US": "Save format",
+        "ko-KR": "저장 형식",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(9780-9788)"
+        ],
+        "$id": 1380
+    },
+    "获取分享链接失败": {
+        "zh-TW": "獲取分享連結失敗",
+        "en-US": "Failed to get share link",
+        "ko-KR": "공유 링크를 가져오지 못했습니다",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(2846-2858)"
+        ],
+        "$id": 1381
+    },
+    "获取分享列表失败": {
+        "zh-TW": "獲取分享清單失敗",
+        "en-US": "Failed to get share list",
+        "ko-KR": "공유 목록을 가져오지 못했습니다",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(3196-3208)",
+            "src/components/modals/ShareDialog.tsx(3848-3860)"
+        ],
+        "$id": 1382
+    },
+    "请先打开图纸": {
+        "zh-TW": "請先打開圖紙",
+        "en-US": "Please open a drawing first",
+        "ko-KR": "먼저 도면을 열어주세요",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(4619-4629)"
+        ],
+        "$id": 1383
+    },
+    "创建分享链接失败": {
+        "zh-TW": "創建分享連結失敗",
+        "en-US": "Failed to create share link",
+        "ko-KR": "공유 링크 생성 실패",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(5409-5421)"
+        ],
+        "$id": 1384
+    },
+    "分享已撤销": {
+        "zh-TW": "分享已撤銷",
+        "en-US": "Share revoked",
+        "ko-KR": "공유가 취소되었습니다",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(6611-6620)",
+            "src/components/modals/ShareDialog.tsx(7996-8005)",
+            "src/components/modals/ShareManageDialog.tsx(2993-3002)"
+        ],
+        "$id": 1385
+    },
+    "链接已复制": {
+        "zh-TW": "連結已複製",
+        "en-US": "Link copied",
+        "ko-KR": "링크가 복사되었습니다",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(8525-8534)",
+            "src/components/modals/ShareManageDialog.tsx(3518-3527)"
+        ],
+        "$id": 1386
+    },
+    "复制失败": {
+        "zh-TW": "複製失敗",
+        "en-US": "Copy failed",
+        "ko-KR": "복사 실패",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(8581-8589)",
+            "src/components/modals/ShareManageDialog.tsx(3574-3582)"
+        ],
+        "$id": 1387
+    },
+    "新建分享": {
+        "zh-TW": "新建分享",
+        "en-US": "New share",
+        "ko-KR": "새 공유",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(9127-9135)",
+            "src/components/modals/ShareDialog.tsx(9992-10000)",
+            "src/components/modals/ShareManageDialog.tsx(4785-4793)",
+            "src/components/modals/ShareManageDialog.tsx(5597-5605)"
+        ],
+        "$id": 1388
+    },
+    "当前没有可复制的分享链接": {
+        "zh-TW": "當前沒有可複製的分享連結",
+        "en-US": "No share links available to copy",
+        "ko-KR": "복사할 수 있는 공유 링크가 없습니다",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(9737-9753)"
+        ],
+        "$id": 1389
+    },
+    "还没有分享过这个文件": {
+        "zh-TW": "還沒有分享過這個檔",
+        "en-US": "No shares for this file yet",
+        "ko-KR": "이 파일에 대한 공유가 아직 없습니다",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(9757-9771)",
+            "src/components/modals/ShareManageDialog.tsx(5418-5432)"
+        ],
+        "$id": 1390
+    },
+    "链接": {
+        "zh-TW": "鏈接",
+        "en-US": "Link",
+        "ko-KR": "링크",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(10239-10245)",
+            "src/components/modals/ShareManageDialog.tsx(5859-5865)"
+        ],
+        "$id": 1391
+    },
+    "操作": {
+        "zh-TW": "操作",
+        "en-US": "Actions",
+        "ko-KR": "작업",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(10312-10318)",
+            "src/components/modals/ShareManageDialog.tsx(5980-5986)"
+        ],
+        "$id": 1392
+    },
+    "复制链接": {
+        "zh-TW": "複製連結",
+        "en-US": "Copy link",
+        "ko-KR": "링크 복사",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(10941-10949)",
+            "src/components/modals/ShareManageDialog.tsx(6658-6666)"
+        ],
+        "$id": 1393
+    },
+    "撤销分享": {
+        "zh-TW": "撤銷分享",
+        "en-US": "Revoke share",
+        "ko-KR": "공유 취소",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(11692-11700)",
+            "src/components/modals/ShareDialog.tsx(14926-14934)",
+            "src/components/modals/ShareManageDialog.tsx(8425-8433)"
+        ],
+        "$id": 1394
+    },
+    "生成分享链接": {
+        "zh-TW": "生成分享連結",
+        "en-US": "Generate share link",
+        "ko-KR": "공유 링크 생성",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(13314-13324)"
+        ],
+        "$id": 1395
+    },
+    "返回分享列表": {
+        "zh-TW": "返回分享清單",
+        "en-US": "Back to share list",
+        "ko-KR": "공유 목록으로 돌아가기",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(13529-13539)"
+        ],
+        "$id": 1396
+    },
+    "有效期至: {date}": {
+        "zh-TW": "有效期至：{date}",
+        "en-US": "Expires on: {date}",
+        "ko-KR": "만료일: {date}",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(14542-14558)"
+        ],
+        "$id": 1397
+    },
+    "正在生成分享链接...": {
+        "zh-TW": "正在生成分享連結. ..",
+        "en-US": "Generating share link...",
+        "ko-KR": "공유 링크 생성 중...",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(15336-15351)"
+        ],
+        "$id": 1398
+    },
+    "复制分享链接": {
+        "zh-TW": "複製分享連結",
+        "en-US": "Copy share link",
+        "ko-KR": "공유 링크 복사",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(15467-15477)"
+        ],
+        "$id": 1399
+    },
+    "分享图纸": {
+        "zh-TW": "分享圖紙",
+        "en-US": "Share drawing",
+        "ko-KR": "도면 공유",
+        "$files": [
+            "src/components/modals/ShareDialog.tsx(15481-15489)"
+        ],
+        "$id": 1400
+    },
+    "有效期已更新": {
+        "zh-TW": "有效期已更新",
+        "en-US": "Expiry updated",
+        "ko-KR": "만료일이 업데이트되었습니다",
+        "$files": [
+            "src/components/modals/ShareManageDialog.tsx(4148-4158)"
+        ],
+        "$id": 1401
+    },
+    "\"${fileName}\" 的分享链接": {
+        "zh-TW": "“${fileName}”的分享連結",
+        "en-US": "Share link for \"${fileName}\"",
+        "ko-KR": "\"${fileName}\"의 공유 링크",
+        "$files": [
+            "src/components/modals/ShareManageDialog.tsx(4419-4442)"
+        ],
+        "$id": 1402
+    },
+    "次数": {
+        "zh-TW": "次數",
+        "en-US": "Count",
+        "ko-KR": "횟수",
+        "$files": [
+            "src/components/modals/ShareManageDialog.tsx(5940-5946)"
+        ],
+        "$id": 1403
+    },
+    "登录": {
+        "zh-TW": "登入",
+        "en-US": "Login",
+        "ko-KR": "로그인",
+        "$files": [
+            "src/pages/Login/index.tsx(1923-1929)"
+        ],
+        "$id": 1404
+    },
+    "微信登录失败": {
+        "zh-TW": "微信登入失敗",
+        "en-US": "WeChat login failed",
+        "ko-KR": "WeChat 로그인에 실패했습니다",
+        "$files": [
+            "src/pages/Login/index.tsx(3245-3255)",
+            "src/pages/Login/hooks/useLoginForm.ts(9879-9889)"
+        ],
+        "$id": 1405
+    },
+    "微信自动注册失败，请手动完成注册": {
+        "zh-TW": "微信自動注册失敗,請手動完成注册",
+        "en-US": "WeChat auto-registration failed. Please complete registration manually",
+        "ko-KR": "WeChat 자동 가입에 실패했습니다. 수동으로 가입을 완료하세요",
+        "$files": [
+            "src/pages/Login/index.tsx(3676-3696)"
+        ],
+        "$id": 1406
+    },
+    "账号登录": {
+        "zh-TW": "帳號登入",
+        "en-US": "Account Login",
+        "ko-KR": "계정 로그인",
+        "$files": [
+            "src/pages/Login/index.tsx(7346-7354)"
+        ],
+        "$id": 1407
+    },
+    "手机登录": {
+        "zh-TW": "手機登入",
+        "en-US": "Phone Login",
+        "ko-KR": "휴대폰 로그인",
+        "$files": [
+            "src/pages/Login/index.tsx(7613-7621)"
+        ],
+        "$id": 1408
+    },
+    "还没有账户？": {
+        "zh-TW": "還沒有帳戶？",
+        "en-US": "Don't have an account?",
+        "ko-KR": "계정이 없으신가요?",
+        "$files": [
+            "src/pages/Login/index.tsx(9862-9872)"
+        ],
+        "$id": 1409
+    },
+    "立即注册": {
+        "zh-TW": "立即注册",
+        "en-US": "Register Now",
+        "ko-KR": "지금 가입",
+        "$files": [
+            "src/pages/Login/index.tsx(9985-9993)"
+        ],
+        "$id": 1410
+    },
+    "[协同中]": {
+        "zh-TW": "[協同中]",
+        "en-US": "[In collaboration]",
+        "ko-KR": "[협업 중]",
+        "$files": [
+            "src/services/mxcadManager/index.ts(4493-4502)"
+        ],
+        "$id": 1411
+    },
+    "[未登录]": {
+        "zh-TW": "[未登錄]",
+        "en-US": "[Not logged in]",
+        "ko-KR": "[로그인되지 않음]",
+        "$files": [
+            "src/services/mxcadManager/index.ts(4540-4549)"
+        ],
+        "$id": 1412
+    },
+    "您有未保存的更改，确定要离开吗？": {
+        "zh-TW": "您有未保存的更改,確定要離開嗎？",
+        "en-US": "You have unsaved changes. Are you sure you want to leave?",
+        "ko-KR": "저장되지 않은 변경 사항이 있습니다. 정말 떠나시겠습니까?",
+        "$files": [
+            "src/services/mxcadManager/index.ts(5902-5922)"
+        ],
+        "$id": 1413
+    },
+    "未保存的更改": {
+        "zh-TW": "未保存的更改",
+        "en-US": "Unsaved changes",
+        "ko-KR": "저장되지 않은 변경 사항",
+        "$files": [
+            "src/services/mxcadManager/index.ts(7177-7187)"
+        ],
+        "$id": 1414
+    },
+    "当前图纸有未保存的更改，是否保存？": {
+        "zh-TW": "當前圖紙有未保存的更改,是否保存？",
+        "en-US": "The current drawing has unsaved changes. Do you want to save?",
+        "ko-KR": "현재 도면에 저장되지 않은 변경 사항이 있습니다. 저장하시겠습니까?",
+        "$files": [
+            "src/services/mxcadManager/index.ts(7204-7225)"
+        ],
+        "$id": 1415
+    },
+    "无法获取私人空间，请联系管理员": {
+        "zh-TW": "無法獲取私人空間,請聯系管理員",
+        "en-US": "Cannot get personal space. Please contact administrator",
+        "ko-KR": "개인 공간을 가져올 수 없습니다. 관리자에게 문의하세요",
+        "$files": [
+            "src/services/mxcadManager/index.ts(15063-15082)"
+        ],
+        "$id": 1416
+    },
+    "文件转换中，请稍候...": {
+        "zh-TW": "檔案轉換中,請稍候. ..",
+        "en-US": "File conversion in progress, please wait...",
+        "ko-KR": "파일 변환 중입니다. 잠시 기다려주세요...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(17181-17197)"
+        ],
+        "$id": 1417
+    },
+    "文件转换未完成，请稍后在文件列表中查看": {
+        "zh-TW": "檔案轉換未完成,請稍後在檔案清單中查看",
+        "en-US": "File conversion not complete. Please check the file list later",
+        "ko-KR": "파일 변환이 완료되지 않았습니다. 나중에 파일 목록에서 확인하세요",
+        "$files": [
+            "src/services/mxcadManager/index.ts(17768-17791)"
+        ],
+        "$id": 1418
+    },
+    "无法获取图纸库文件信息": {
+        "zh-TW": "無法獲取圖紙庫檔案資訊",
+        "en-US": "Cannot get drawing library file info",
+        "ko-KR": "도면 라이브러리 파일 정보를 가져올 수 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(19528-19543)"
+        ],
+        "$id": 1419
+    },
+    "无法获取文件路径": {
+        "zh-TW": "無法獲取檔案路徑",
+        "en-US": "Cannot get file path",
+        "ko-KR": "파일 경로를 가져올 수 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(19803-19815)",
+            "src/services/mxcadManager/index.ts(22223-22235)"
+        ],
+        "$id": 1420
+    },
+    "无法获取文件名": {
+        "zh-TW": "無法獲取檔名",
+        "en-US": "Cannot get file name",
+        "ko-KR": "파일 이름을 가져올 수 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(19906-19917)",
+            "src/services/mxcadManager/index.ts(22326-22337)"
+        ],
+        "$id": 1421
+    },
+    "无法获取图块库文件信息": {
+        "zh-TW": "無法獲取圖塊庫檔案資訊",
+        "en-US": "Cannot get block library file info",
+        "ko-KR": "블록 라이브러리 파일 정보를 가져올 수 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(21948-21963)"
+        ],
+        "$id": 1422
+    },
+    "正在计算文件哈希...": {
+        "zh-TW": "正在計算檔案雜湊. ..",
+        "en-US": "Calculating file hash...",
+        "ko-KR": "파일 해시 계산 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(24175-24190)",
+            "src/services/mxcadManager/index.ts(26595-26610)"
+        ],
+        "$id": 1423
+    },
+    "正在检查本地缓存...": {
+        "zh-TW": "正在檢查本地緩存. ..",
+        "en-US": "Checking local cache...",
+        "ko-KR": "로컬 캐시 확인 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(24488-24503)"
+        ],
+        "$id": 1424
+    },
+    "正在缓存文件...": {
+        "zh-TW": "正在緩存檔案. ..",
+        "en-US": "Caching file...",
+        "ko-KR": "파일 캐싱 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(25332-25345)"
+        ],
+        "$id": 1425
+    },
+    "正在打开文件...": {
+        "zh-TW": "正在打開文件. ..",
+        "en-US": "Opening file...",
+        "ko-KR": "파일 여는 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(26095-26108)",
+            "src/services/mxcadManager/index.ts(27353-27366)",
+            "src/services/mxcadManager/index.ts(29192-29205)"
+        ],
+        "$id": 1426
+    },
+    "正在检查缓存...": {
+        "zh-TW": "正在檢查緩存. ..",
+        "en-US": "Checking cache...",
+        "ko-KR": "캐시 확인 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(26745-26758)"
+        ],
+        "$id": 1427
+    },
+    "文件打开失败": {
+        "zh-TW": "檔案打開失敗",
+        "en-US": "File failed to open",
+        "ko-KR": "파일 열기 실패",
+        "$files": [
+            "src/services/mxcadManager/index.ts(28208-28218)",
+            "src/services/mxcadManager/index.ts(30071-30081)"
+        ],
+        "$id": 1428
+    },
+    "文件上传失败": {
+        "zh-TW": "文件上傳失敗",
+        "en-US": "File upload failed",
+        "ko-KR": "파일 업로드 실패",
+        "$files": [
+            "src/services/mxcadManager/index.ts(30334-30344)"
+        ],
+        "$id": 1429
+    },
+    "不支持的文件格式，请选择 .dwg、.dxf、.mxweb": {
+        "zh-TW": "不支持的檔案格式,請選擇.dwg、.dxf、.mxweb",
+        "en-US": "Unsupported file format. Please select .dwg, .dxf, or .mxweb",
+        "ko-KR": "지원되지 않는 파일 형식입니다. .dwg, .dxf, .mxweb 중에서 선택하세요",
+        "$files": [
+            "src/services/mxcadManager/index.ts(31151-31184)"
+        ],
+        "$id": 1430
+    },
+    "命令执行失败": {
+        "zh-TW": "命令執行失敗",
+        "en-US": "Command execution failed",
+        "ko-KR": "명령 실행 실패",
+        "$files": [
+            "src/services/mxcadManager/index.ts(31667-31677)"
+        ],
+        "$id": 1431
+    },
+    "已新建空白图纸": {
+        "zh-TW": "已新建空白圖紙",
+        "en-US": "New blank drawing created",
+        "ko-KR": "새 빈 도면이 생성되었습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(33837-33848)"
+        ],
+        "$id": 1432
+    },
+    "新建文件失败": {
+        "zh-TW": "新建檔案失敗",
+        "en-US": "Failed to create new file",
+        "ko-KR": "새 파일 만들기 실패",
+        "$files": [
+            "src/services/mxcadManager/index.ts(33982-33992)"
+        ],
+        "$id": 1433
+    },
+    "登录状态可能已过期，请保存到本地或重新登录": {
+        "zh-TW": "登入狀態可能已過期,請保存到本地或重新登入",
+        "en-US": "Login may have expired. Please save locally or log in again",
+        "ko-KR": "로그인이 만료되었을 수 있습니다. 로컬에 저장하거나 다시 로그인하세요",
+        "$files": [
+            "src/services/mxcadManager/index.ts(34598-34623)"
+        ],
+        "$id": 1434
+    },
+    "MXWEB 文件": {
+        "zh-TW": "MXWEB檔案",
+        "en-US": "MXWEB File",
+        "ko-KR": "MXWEB 파일",
+        "$files": [
+            "src/services/mxcadManager/index.ts(35260-35272)"
+        ],
+        "$id": 1435
+    },
+    "您没有保存图纸的权限": {
+        "zh-TW": "您沒有保存圖紙的許可權",
+        "en-US": "You do not have permission to save drawings",
+        "ko-KR": "도면을 저장할 권한이 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(41498-41512)"
+        ],
+        "$id": 1436
+    },
+    "权限检查失败，请稍后重试": {
+        "zh-TW": "許可權檢查失敗,請稍後重試",
+        "en-US": "Permission check failed. Please try again later",
+        "ko-KR": "권한 확인 실패. 나중에 다시 시도하세요",
+        "$files": [
+            "src/services/mxcadManager/index.ts(41676-41692)"
+        ],
+        "$id": 1437
+    },
+    "保存失败：文件信息丢失": {
+        "zh-TW": "保存失敗：檔案資訊遺失",
+        "en-US": "Save failed: File info lost",
+        "ko-KR": "저장 실패: 파일 정보가 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(41810-41825)",
+            "src/services/mxcadManager/index.ts(46490-46505)"
+        ],
+        "$id": 1438
+    },
+    "正在保存文件...": {
+        "zh-TW": "正在保存檔案. ..",
+        "en-US": "Saving file...",
+        "ko-KR": "파일 저장 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(42044-42057)",
+            "src/services/mxcadManager/index.ts(47521-47534)",
+            "src/services/mxcadManager/index.ts(52241-52254)"
+        ],
+        "$id": 1439
+    },
+    "正在上传到服务器...": {
+        "zh-TW": "正在上傳到服務器. ..",
+        "en-US": "Uploading to server...",
+        "ko-KR": "서버에 업로드 중...",
+        "$files": [
+            "src/services/mxcadManager/index.ts(43003-43018)",
+            "src/services/mxcadManager/index.ts(48504-48519)"
+        ],
+        "$id": 1440
+    },
+    "上传失败，请稍后重试": {
+        "zh-TW": "上傳失敗,請稍後重試",
+        "en-US": "Upload failed. Please try again later",
+        "ko-KR": "업로드 실패. 나중에 다시 시도하세요",
+        "$files": [
+            "src/services/mxcadManager/index.ts(43924-43938)",
+            "src/services/mxcadManager/index.ts(44013-44027)",
+            "src/services/mxcadManager/index.ts(44246-44260)"
+        ],
+        "$id": 1441
+    },
+    "文件保存成功": {
+        "zh-TW": "檔案保存成功",
+        "en-US": "File saved successfully",
+        "ko-KR": "파일 저장 성공",
+        "$files": [
+            "src/services/mxcadManager/index.ts(46315-46325)",
+            "src/services/mxcadManager/index.ts(51217-51227)"
+        ],
+        "$id": 1442
+    },
+    "保存失败：未知的资源库类型": {
+        "zh-TW": "保存失敗：未知的資源庫類型",
+        "en-US": "Save failed: Unknown repository type",
+        "ko-KR": "저장 실패: 알 수 없는 저장소 유형",
+        "$files": [
+            "src/services/mxcadManager/index.ts(46749-46766)"
+        ],
+        "$id": 1443
+    },
+    "保存失败：缺少文件路径信息": {
+        "zh-TW": "保存失敗：缺少檔案路徑資訊",
+        "en-US": "Save failed: Missing file path info",
+        "ko-KR": "저장 실패: 파일 경로 정보가 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(47450-47467)"
+        ],
+        "$id": 1444
+    },
+    "全局容器未创建": {
+        "zh-TW": "全域容器未創建",
+        "en-US": "Global container not created",
+        "ko-KR": "전역 컨테이너가 생성되지 않았습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(54899-54910)"
+        ],
+        "$id": 1445
+    },
+    "MxCADView 初始化失败，实例为空": {
+        "zh-TW": "MxCADView初始化失敗,實例為空",
+        "en-US": "MxCADView initialization failed, instance is empty",
+        "ko-KR": "MxCADView 초기화 실패, 인스턴스가 비어 있습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(56696-56720)",
+            "src/services/mxcadManager/index.ts(56945-56969)"
+        ],
+        "$id": 1446
+    },
+    "MxCADView 实例未初始化": {
+        "zh-TW": "MxCADView實例未初始化",
+        "en-US": "MxCADView instance not initialized",
+        "ko-KR": "MxCADView 인스턴스가 초기화되지 않았습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(65259-65279)"
+        ],
+        "$id": 1447
+    },
+    "mxcad 对象不可用": {
+        "zh-TW": "mxcad對象不可用",
+        "en-US": "mxcad object is not available",
+        "ko-KR": "mxcad 객체를 사용할 수 없습니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(65677-65692)"
+        ],
+        "$id": 1448
+    },
+    "文件打开超时": {
+        "zh-TW": "檔案打開超時",
+        "en-US": "File open timed out",
+        "ko-KR": "파일 열기 시간 초과",
+        "$files": [
+            "src/services/mxcadManager/index.ts(65895-65905)"
+        ],
+        "$id": 1449
+    },
+    "图片已插入，将在保存时自动上传": {
+        "zh-TW": "圖片已插入,將在保存時自動上傳",
+        "en-US": "Image inserted, will be uploaded automatically on save",
+        "ko-KR": "이미지가 삽입되었습니다. 저장 시 자동으로 업로드됩니다",
+        "$files": [
+            "src/services/mxcadManager/index.ts(74169-74188)"
+        ],
+        "$id": 1450
+    },
+    "下载图片失败: ": {
+        "zh-TW": "下載圖片失敗：",
+        "en-US": "Failed to download image: ",
+        "ko-KR": "이미지 다운로드 실패: ",
+        "$files": [
+            "src/services/mxcadManager/index.ts(75047-75059)"
+        ],
+        "$id": 1451
+    },
+    "密码": {
+        "zh-TW": "密碼",
+        "en-US": "Password",
+        "ko-KR": "비밀번호",
+        "$files": [
+            "src/pages/Login/components/AccountLoginForm.tsx(2319-2325)"
+        ],
+        "$id": 1452
+    },
+    "请输入密码": {
+        "zh-TW": "請輸入密碼",
+        "en-US": "Please enter your password",
+        "ko-KR": "비밀번호를 입력하세요",
+        "$files": [
+            "src/pages/Login/components/AccountLoginForm.tsx(2796-2805)",
+            "src/pages/Login/hooks/loginFormSchema.ts(505-514)"
+        ],
+        "$id": 1453
+    },
+    "隐藏密码": {
+        "zh-TW": "隱藏密碼",
+        "en-US": "Hide password",
+        "ko-KR": "비밀번호 숨기기",
+        "$files": [
+            "src/pages/Login/components/AccountLoginForm.tsx(3288-3296)"
+        ],
+        "$id": 1454
+    },
+    "显示密码": {
+        "zh-TW": "顯示密碼",
+        "en-US": "Show password",
+        "ko-KR": "비밀번호 표시",
+        "$files": [
+            "src/pages/Login/components/AccountLoginForm.tsx(3300-3308)"
+        ],
+        "$id": 1455
+    },
+    "忘记密码？": {
+        "zh-TW": "忘記密碼？",
+        "en-US": "Forgot password?",
+        "ko-KR": "비밀번호를 잊으셨나요?",
+        "$files": [
+            "src/pages/Login/components/AccountLoginForm.tsx(3538-3547)"
+        ],
+        "$id": 1456
+    },
+    "登录中...": {
+        "zh-TW": "登入中. ..",
+        "en-US": "Logging in...",
+        "ko-KR": "로그인 중...",
+        "$files": [
+            "src/pages/Login/components/AccountLoginForm.tsx(3722-3732)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(3412-3422)"
+        ],
+        "$id": 1457
+    },
+    "专业云端 CAD 图纸管理平台": {
+        "zh-TW": "專業雲端CAD圖紙管理平臺",
+        "en-US": "Professional Cloud CAD Drawing Management Platform",
+        "ko-KR": "전문 클라우드 CAD 도면 관리 플랫폼",
+        "$files": [
+            "src/pages/Login/components/LoginHeader.tsx(815-834)"
+        ],
+        "$id": 1458
+    },
+    "欢迎回来": {
+        "zh-TW": "歡迎回來",
+        "en-US": "Welcome back",
+        "ko-KR": "돌아오신 것을 환영합니다",
+        "$files": [
+            "src/pages/Login/components/LoginHeader.tsx(951-959)"
+        ],
+        "$id": 1459
+    },
+    "登录您的账户以继续": {
+        "zh-TW": "登入您的帳戶以繼續",
+        "en-US": "Log in to your account to continue",
+        "ko-KR": "계속하려면 계정에 로그인하세요",
+        "$files": [
+            "src/pages/Login/components/LoginHeader.tsx(1006-1019)"
+        ],
+        "$id": 1460
+    },
+    "手机号": {
+        "zh-TW": "手機號",
+        "en-US": "Phone Number",
+        "ko-KR": "휴대폰 번호",
+        "$files": [
+            "src/pages/Login/components/PhoneLoginForm.tsx(1255-1262)"
+        ],
+        "$id": 1461
+    },
+    "获取验证码": {
+        "zh-TW": "獲取驗證碼",
+        "en-US": "Get Code",
+        "ko-KR": "인증번호 받기",
+        "$files": [
+            "src/pages/Login/components/PhoneLoginForm.tsx(3153-3162)"
+        ],
+        "$id": 1462
+    },
+    "账号已被禁用": {
+        "zh-TW": "帳號已被禁用",
+        "en-US": "Account Disabled",
+        "ko-KR": "계정이 비활성화되었습니다",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(353-363)"
+        ],
+        "$id": 1463
+    },
+    "您的账号已被禁用，无法登录系统。": {
+        "zh-TW": "您的帳號已被禁用,無法登入系統。",
+        "en-US": "Your account has been disabled and cannot log in to the system.",
+        "ko-KR": "계정이 비활성화되어 시스템에 로그인할 수 없습니다.",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(470-490)"
+        ],
+        "$id": 1464
+    },
+    "如有疑问，请联系客服人员获取帮助。": {
+        "zh-TW": "如有疑問,請聯系客服人員獲取幫助。",
+        "en-US": "If you have any questions, please contact customer service for assistance.",
+        "ko-KR": "문의사항이 있으시면 고객센터로 연락해 주세요.",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(523-544)"
+        ],
+        "$id": 1465
+    },
+    "客服邮箱：": {
+        "zh-TW": "客服郵箱：",
+        "en-US": "Support Email:",
+        "ko-KR": "고객센터 이메일:",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(713-722)"
+        ],
+        "$id": 1466
+    },
+    "客服电话：": {
+        "zh-TW": "客服電話：",
+        "en-US": "Support Phone:",
+        "ko-KR": "고객센터 전화:",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(1039-1048)"
+        ],
+        "$id": 1467
+    },
+    "工作时间：": {
+        "zh-TW": "工作時間：",
+        "en-US": "Business Hours:",
+        "ko-KR": "업무 시간:",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(1346-1355)"
+        ],
+        "$id": 1468
+    },
+    "周一至周五 9:00-18:00": {
+        "zh-TW": "週一至週五9:00-18:00",
+        "en-US": "Monday - Friday, 9:00 AM - 6:00 PM",
+        "ko-KR": "월요일 ~ 금요일, 09:00 - 18:00",
+        "$files": [
+            "src/pages/Login/components/SupportModal.tsx(1428-1448)"
+        ],
+        "$id": 1469
+    },
+    "其他登录方式": {
+        "zh-TW": "其他登入管道",
+        "en-US": "Other login methods",
+        "ko-KR": "다른 로그인 방식",
+        "$files": [
+            "src/pages/Login/components/WechatLoginButton.tsx(392-402)"
+        ],
+        "$id": 1470
+    },
+    "微信登录": {
+        "zh-TW": "微信登入",
+        "en-US": "WeChat Login",
+        "ko-KR": "WeChat 로그인",
+        "$files": [
+            "src/pages/Login/components/WechatLoginButton.tsx(615-623)"
+        ],
+        "$id": 1471
+    },
+    "请输入账号": {
+        "zh-TW": "請輸入帳號",
+        "en-US": "Please enter your account",
+        "ko-KR": "계정을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/loginFormSchema.ts(449-458)"
+        ],
+        "$id": 1472
+    },
+    "手机号、邮箱或用户名": {
+        "zh-TW": "手機號、郵箱或用戶名",
+        "en-US": "Phone, email, or username",
+        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4576-4590)"
+        ],
+        "$id": 1473
+    },
+    "手机号或用户名": {
+        "zh-TW": "手機號或用戶名",
+        "en-US": "Phone number or username",
+        "ko-KR": "휴대폰 번호 또는 사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4621-4632)"
+        ],
+        "$id": 1474
+    },
+    "邮箱或用户名": {
+        "zh-TW": "郵箱或用戶名",
+        "en-US": "Email or username",
+        "ko-KR": "이메일 또는 사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4664-4674)"
+        ],
+        "$id": 1475
+    },
+    "用户名": {
+        "zh-TW": "用戶名",
+        "en-US": "Username",
+        "ko-KR": "사용자명",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4689-4696)"
+        ],
+        "$id": 1476
+    },
+    "请输入手机号、邮箱或用户名": {
+        "zh-TW": "請輸入手機號、郵箱或用戶名",
+        "en-US": "Please enter your phone, email, or username",
+        "ko-KR": "휴대폰 번호, 이메일 또는 사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4836-4853)"
+        ],
+        "$id": 1477
+    },
+    "请输入手机号或用户名": {
+        "zh-TW": "請輸入手機號或用戶名",
+        "en-US": "Please enter your phone number or username",
+        "ko-KR": "휴대폰 번호 또는 사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4884-4898)"
+        ],
+        "$id": 1478
+    },
+    "请输入邮箱或用户名": {
+        "zh-TW": "請輸入郵箱或用戶名",
+        "en-US": "Please enter your email or username",
+        "ko-KR": "이메일 또는 사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4930-4943)"
+        ],
+        "$id": 1479
+    },
+    "请输入用户名": {
+        "zh-TW": "請輸入用戶名",
+        "en-US": "Please enter your username",
+        "ko-KR": "사용자명을 입력하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(4958-4968)"
+        ],
+        "$id": 1480
+    },
+    "登录失败，请检查账号和密码": {
+        "zh-TW": "登入失敗,請檢查帳號和密碼",
+        "en-US": "Login failed. Please check your account and password",
+        "ko-KR": "로그인에 실패했습니다. 계정과 비밀번호를 확인하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(7024-7041)"
+        ],
+        "$id": 1481
+    },
+    "登录失败，请重试": {
+        "zh-TW": "登入失敗,請重試",
+        "en-US": "Login failed. Please try again",
+        "ko-KR": "로그인에 실패했습니다. 다시 시도하세요",
+        "$files": [
+            "src/pages/Login/hooks/useLoginForm.ts(8993-9005)"
+        ],
+        "$id": 1482
+    }
+}

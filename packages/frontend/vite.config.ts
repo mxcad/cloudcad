@@ -16,12 +16,12 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import { mxcadAssetsPlugin } from 'mxcad-app/vite';
 import tailwindcss from '@tailwindcss/vite';
-import Voerkai18nPlugin from '@voerkai18n/vite';
+import i18nPlugin from '@voerkai18n/plugins/vite'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
-  // 从 myServerConfig.json 读取移动端访问路径名（dev proxy 使用）
+  // 从 myServerConfig.json 读取移动端访问路径名（dev proxy 使用）    
   let mobileAccessPath = 'mxcad_mobile';
   try {
     const serverConfig = JSON.parse(
@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      Voerkai18nPlugin({}),
+      i18nPlugin({}),
       tailwindcss(),
       react(),
       mxcadAssetsPlugin({

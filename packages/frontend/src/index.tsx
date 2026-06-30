@@ -8,8 +8,8 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { fetchBrandConfig } from './constants/appConfig';
 import { STALE_TIME_DEFAULT, INIT_TIMEOUT } from './constants/timeouts';
 import { ErrorBoundary } from './components/ErrorBoundary';
-// import { VoerkaI18nProvider, useVoerkaI18n } from '@voerkai18n/react';
-// import { i18nScope } from './languages';
+import { VoerkaI18nProvider, useVoerkaI18n } from '@voerkai18n/react';
+import './languages';
 
 
 // MSW 浏览器 worker：仅在测试环境（VITE_MSW=true）下启动
@@ -45,12 +45,12 @@ if (!rootElement) {
 const AppInitializer: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  // const { activeLanguage } = useVoerkaI18n();
-  // const [_, forceUpdate] = useReducer(x => x + 1, 0);
+  const { activeLanguage } = useVoerkaI18n();
+  const [_, forceUpdate] = useReducer(x => x + 1, 0);
 
-  // useEffect(() => {
-  //   forceUpdate();
-  // }, [activeLanguage]);
+  useEffect(() => {
+    forceUpdate();
+  }, [activeLanguage]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -128,7 +128,7 @@ const AppInitializer: React.FC = () => {
 const root: ReactDOM.Root = ((window as unknown as Record<string, unknown>).__cloudCAD_root as ReactDOM.Root) ?? ReactDOM.createRoot(rootElement);
 (window as unknown as Record<string, unknown>).__cloudCAD_root = root;
 root.render(
-  // <VoerkaI18nProvider scope={i18nScope} fallback={null}>
+  <VoerkaI18nProvider fallback={null}>
     <AppInitializer />
-  // </VoerkaI18nProvider>
+  </VoerkaI18nProvider>
 );

@@ -124,11 +124,6 @@ export async function generateThumbnail(
 
     const w = Math.abs(minPt.x - maxPt.x);
     const h = Math.abs(minPt.y - maxPt.y);
-
-    if (w < minDrawingSize || h < minDrawingSize) {
-      return undefined;
-    }
-
     const scale = Math.min(targetSize / w, targetSize / h);
     const centerX = (minPt.x + maxPt.x) / 2;
     const centerY = (minPt.y + maxPt.y) / 2;

@@ -714,9 +714,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
 
             {/* 语言切换 */}
-            {/* <div className="p-0.5">
+            <div className="p-0.5">
               <LanguageSwitcher />
-            </div> */}
+            </div>
 
             {/* 主题切换 */}
             <div className="p-0.5">

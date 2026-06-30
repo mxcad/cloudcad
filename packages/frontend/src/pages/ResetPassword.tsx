@@ -105,7 +105,7 @@ export const ResetPassword: React.FC = () => {
         <InteractiveBackground />
 
         <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* <LanguageSwitcher /> */}
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
 

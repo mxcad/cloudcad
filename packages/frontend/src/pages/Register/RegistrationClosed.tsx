@@ -16,7 +16,7 @@ export const RegistrationClosed: React.FC = () => {
   return (
     <div className="register-page" data-theme={isDark ? 'dark' : 'light'}>
       <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* <LanguageSwitcher /> */}
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       <InteractiveBackground />

@@ -87,7 +87,7 @@ export const Register: React.FC = () => {
     >
       <InteractiveBackground />
       <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* <LanguageSwitcher /> */}
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       <div className="register-container">

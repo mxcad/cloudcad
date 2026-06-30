@@ -34,3 +34,7 @@ dist-ssr
 # Environment
 .env
 .env.local
+
+src/languages/api.json
+src/languages/translates/*/*.bak.*.json
+**/*.wrapped.*

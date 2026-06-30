@@ -184,7 +184,7 @@ export const PhoneVerification: React.FC = () => {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* <LanguageSwitcher /> */}
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
 

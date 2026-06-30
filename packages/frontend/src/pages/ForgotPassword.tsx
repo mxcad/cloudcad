@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,12 +32,12 @@ import { Tabs, Tab } from '@/components/ui';
 /**
  * 忘记密码页面 - CloudCAD
  *
- * 设计特色�?
+ * 设计特色
  * - 居中卡片布局
  * - 统一渐变网格背景
- * - 玻璃态效�?
- * - 多种状态页面（表单/成功/客服联系�?
- * - 支持邮箱/手机号两种方�?
+ * - 玻璃态效果
+ * - 多种状态页面（表单/成功/客服联系）
+ * - 支持邮箱/手机号两种方式
  * - 完美主题适配
  */
 export const ForgotPassword: React.FC = () => {
@@ -50,12 +50,12 @@ export const ForgotPassword: React.FC = () => {
   const appName = brandConfig?.title || 'CloudCAD';
   const appLogo = brandConfig?.logo || '/logo.png';
 
-  // 根据运行时配置判断可用渠�?
+  // 根据运行时配置判断可用渠道
   const mailAvailable = runtimeConfig.mailEnabled;
   const phoneAvailable = runtimeConfig.smsEnabled;
   const noChannelAvailable = !mailAvailable && !phoneAvailable;
 
-  // 初始�?contactType：优先邮箱，邮箱不可用则用手�?
+  // 初始化 contactType：优先邮箱，邮箱不可用则用手机
   const [contactType, setContactType] = useState<'email' | 'phone'>(
     mailAvailable ? 'email' : 'phone'
   );
@@ -119,7 +119,7 @@ export const ForgotPassword: React.FC = () => {
     setLocalError(null);
   };
 
-  // 两个渠道都未启用 - 直接显示客服联系页面（不�?API�?
+  // 两个渠道都未启用 - 直接显示客服联系页面（不用 API）
   if (noChannelAvailable) {
     const noChannelInfo = {
       supportEmail: runtimeConfig.supportEmail || undefined,
@@ -129,7 +129,7 @@ export const ForgotPassword: React.FC = () => {
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <InteractiveBackground />
         <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* <LanguageSwitcher /> */}
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
         <div className="auth-container">
@@ -147,7 +147,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
               <h2 className="support-title">找回密码</h2>
               <p className="support-subtitle">
-                邮件和短信服务均未启用，请联系客服重置密�?
+                邮件和短信服务均未启用，请联系客服重置密码
               </p>
               <div className="support-card">
                 <h3 className="support-card-title">客服联系方式</h3>
@@ -208,14 +208,14 @@ export const ForgotPassword: React.FC = () => {
     );
   }
 
-  // 邮件服务未启�?- 客服联系页面（API 返回�?
+  // 邮件服务未启用 - 客服联系页面（API 返回）
   if (supportInfo) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <InteractiveBackground />
 
         <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* <LanguageSwitcher /> */}
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
 
@@ -237,7 +237,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
               <h2 className="support-title">找回密码</h2>
               <p className="support-subtitle">
-                该找回方式暂不可用，请联系客服重置密�?
+                该找回方式暂不可用，请联系客服重置密码
               </p>
 
               <div className="support-card">
@@ -263,7 +263,7 @@ export const ForgotPassword: React.FC = () => {
                   )}
                   {!supportInfo.supportEmail && !supportInfo.supportPhone && (
                     <p className="support-empty">
-                      暂无客服联系方式，请联系系统管理�?
+                      暂无客服联系方式，请联系系统管理员
                     </p>
                   )}
                 </div>
@@ -308,14 +308,14 @@ export const ForgotPassword: React.FC = () => {
     );
   }
 
-  // 发送成功状�?
+  // 发送成功状态
   if (success) {
     return (
       <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
         <InteractiveBackground />
 
         <div className="theme-toggle-wrapper" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* <LanguageSwitcher /> */}
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
 
@@ -341,7 +341,7 @@ export const ForgotPassword: React.FC = () => {
                 <span className="success-email">
                   {successContact}
                 </span>{' '}
-                发送了验证�?
+                 发送了验证码
               </p>
 
               <div className="success-card">
@@ -379,7 +379,7 @@ export const ForgotPassword: React.FC = () => {
               </div>
             </div>
 
-            {/* 特性图�?*/}
+            {/* 特性图 */}
             <div className="features-bar">
               <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
                 <Cpu size={14} />
@@ -434,7 +434,7 @@ export const ForgotPassword: React.FC = () => {
     );
   }
 
-  // 默认表单状�?
+  // 默认表单状态
   return (
     <div className="auth-page" data-theme={isDark ? 'dark' : 'light'}>
       <InteractiveBackground />
@@ -570,7 +570,7 @@ export const ForgotPassword: React.FC = () => {
             </Button>
           </div>
 
-          {/* 特性图�?*/}
+          {/* 特性图 */}
           <div className="features-bar">
             <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
               <Cpu size={14} />
@@ -602,7 +602,7 @@ export const ForgotPassword: React.FC = () => {
             </div>
             <div className="support-modal-content">
               <p className="support-modal-message">
-                如需帮助，请联系客服人员获取支持�?
+                如需帮助，请联系客服人员获取支持。
               </p>
               <div className="support-contact-info">
                 <div className="support-contact-item">
