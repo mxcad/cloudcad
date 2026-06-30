@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { showLoadingToast, closeToast, showToast } from 'vant';
 import { useEditorStore } from '../stores/editor';
 import { getCooperate, encodeUserData, parseWorkData, exitGuardRef } from './useCooperate';
@@ -18,7 +19,7 @@ export function useCollabAutoJoin(user: Ref<UserInfo | null>) {
     let cancelled = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
 
-    const toast = showLoadingToast('正在打开协同文件...');
+    const toast = showLoadingToast(t('正在打开协同文件...'));
 
     const cleanup = () => {
       cancelled = true;
@@ -32,7 +33,7 @@ export function useCollabAutoJoin(user: Ref<UserInfo | null>) {
       if (!user.value) {
         cancelled = true;
         cleanup();
-        showToast('请先登录');
+        showToast(t('请先登录'));
         editorStore.setCollabShareState({ fromCollabShare: false, targetWorkId: null });
         return;
       }
@@ -81,14 +82,14 @@ export function useCollabAutoJoin(user: Ref<UserInfo | null>) {
                 }
               });
             })();
-            showToast(iRet === 0 ? '已加入协同' : '已恢复协同连接');
+            showToast(iRet === 0 ? t('已加入协同') : t('已恢复协同连接'));
           } else if (iRet < 0) {
             if (!cancelled && retryCount < MAX_RETRIES) {
               retryCount++;
               timers.push(setTimeout(tryJoin, 1000));
             } else {
               cleanup();
-              showToast('加入协同超时');
+              showToast(t('加入协同超时'));
               editorStore.setCollabShareState({ fromCollabShare: false, targetWorkId: null });
             }
           } else {

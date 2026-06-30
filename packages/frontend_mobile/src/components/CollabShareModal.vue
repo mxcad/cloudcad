@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { t } from '@/languages';
 import { showToast } from 'vant';
 import QRCode from 'qrcode';
 import FloatingPopup from './FloatingPopup.vue';
@@ -46,10 +47,10 @@ onMounted(async () => {
 function handleCopy() {
   navigator.clipboard.writeText(shareUrl.value).then(() => {
     copied.value = true;
-    showToast('链接已复制');
+    showToast(t('链接已复制'));
     setTimeout(() => { copied.value = false; }, 2000);
   }).catch(() => {
-    showToast('复制失败');
+    showToast(t('复制失败'));
   });
 }
 
@@ -62,7 +63,7 @@ function handleClose() {
 <template>
   <FloatingPopup
     v-model:show="show"
-    title="分享协同"
+    :title="t('分享协同')"
     @close="handleClose"
   >
     <div class="share-body">
@@ -86,14 +87,14 @@ function handleClose() {
         :icon="copied ? 'success' : 'link-o'"
         @click="handleCopy"
       >
-        {{ copied ? '已复制' : '复制链接' }}
+        {{ copied ? t('已复制') : t('复制链接') }}
       </van-button>
     </div>
 
     <template #footer>
       <div style="padding: 8px 16px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));">
         <van-button block plain @click="handleClose">
-          完成
+          {{ t('完成') }}
         </van-button>
       </div>
     </template>

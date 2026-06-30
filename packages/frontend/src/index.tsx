@@ -8,7 +8,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { fetchBrandConfig } from './constants/appConfig';
 import { STALE_TIME_DEFAULT, INIT_TIMEOUT } from './constants/timeouts';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { VoerkaI18nProvider, useVoerkaI18n } from '@voerkai18n/react';
+import { VoerkaI18nProvider } from '@voerkai18n/react';
 import './languages';
 
 
@@ -45,13 +45,6 @@ if (!rootElement) {
 const AppInitializer: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  const { activeLanguage } = useVoerkaI18n();
-  const [_, forceUpdate] = useReducer(x => x + 1, 0);
-
-  useEffect(() => {
-    forceUpdate();
-  }, [activeLanguage]);
-
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       console.warn('[CloudCAD] Brand Config 超时，继续渲染');

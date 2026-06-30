@@ -86,10 +86,10 @@ function mapWorkToDisplay(w: Work): WorkDisplay {
   const creator = data ? getWorkCreator(data) : {};
   const drawingName = data?.drawingId && fileNameCache.value[data.drawingId]
     ? fileNameCache.value[data.drawingId]
-    : (data && data.v === 3 ? data.drawingName : '') || '未知图纸';
+    : (data && data.v === 3 ? data.drawingName : '') || t('未知图纸');
   const projectName = data?.projectId
-    ? (projectNameCache.value[data.projectId] ?? '未知项目')
-    : '个人空间';
+    ? (projectNameCache.value[data.projectId] ?? t('未知项目'))
+    : t('个人空间');
 
   const participants: { name: string; avatar?: string }[] = [];
   for (const ud of w.link_user_data) {
@@ -145,10 +145,10 @@ async function checkUnsavedBeforeAction(): Promise<boolean> {
   if (editorStore.state.isModified) {
     try {
       await showConfirmDialog({
-        title: '未保存的更改',
-        message: '当前图纸有未保存的更改，确定要继续吗？',
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        title: t('未保存的更改'),
+        message: t('当前图纸有未保存的更改，确定要继续吗？'),
+        confirmButtonText: t('确定'),
+        cancelButtonText: t('取消'),
       });
     } catch {
       return false;
@@ -222,10 +222,10 @@ function mapUser() {
             <span class="session-name">{{ editorStore.state.fileName || t('当前图纸') }}</span>
           </div>
           <div class="session-row">
-            <span class="session-count">{{ activeWork.link_user_ids.length }}人在线</span>
+            <span class="session-count">{{ activeWork.link_user_ids.length }}{{ t('人在线') }}</span>
             <div class="session-actions">
-              <van-button size="small" plain round @click="handleShare(activeWork.work_id)">分享</van-button>
-              <van-button size="small" type="danger" plain round @click="handleExitWork">退出</van-button>
+              <van-button size="small" plain round @click="handleShare(activeWork.work_id)">{{ t('分享') }}</van-button>
+              <van-button size="small" type="danger" plain round @click="handleExitWork">{{ t('退出') }}</van-button>
             </div>
           </div>
         </div>
@@ -233,7 +233,7 @@ function mapUser() {
         <!-- 协同列表 -->
         <div class="list">
           <div v-if="currentFileWorks.length > 0 && currentWorkId === null" class="group">
-            <div class="group-title">当前图纸</div>
+            <div class="group-title">{{ t('当前图纸') }}</div>
             <WorkCard
               v-for="w in currentFileWorks"
               :key="w.work_id"
@@ -246,7 +246,7 @@ function mapUser() {
           </div>
 
           <div v-if="myWorks.length > 0" class="group">
-            <div class="group-title">我创建的</div>
+            <div class="group-title">{{ t('我创建的') }}</div>
             <WorkCard
               v-for="w in myWorks"
               :key="w.work.work_id"
@@ -259,7 +259,7 @@ function mapUser() {
           </div>
 
           <div v-if="projectWorks.length > 0" class="group">
-            <div class="group-title">项目协同</div>
+            <div class="group-title">{{ t('项目协同') }}</div>
             <WorkCard
               v-for="w in projectWorks"
               :key="w.work.work_id"

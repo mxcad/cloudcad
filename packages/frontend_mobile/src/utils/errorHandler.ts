@@ -1,3 +1,5 @@
+import { t } from '@/languages';
+
 export interface ClassifiedError {
   type: 'auth' | 'permission' | 'not-found' | 'server' | 'network' | 'abort' | 'unknown';
   message: string;
@@ -70,24 +72,24 @@ export function isAbortError(error: unknown): boolean {
 
 export function classifyApiError(error: unknown): ClassifiedError {
   if (isAbortError(error)) {
-    return { type: 'abort', message: '请求已取消' };
+    return { type: 'abort', message: t('请求已取消') };
   }
   if (isNetworkError(error)) {
-    return { type: 'network', message: '网络连接失败，请检查网络' };
+    return { type: 'network', message: t('网络连接失败，请检查网络') };
   }
   if (isAuthError(error)) {
-    return { type: 'auth', message: '请登录后访问此文件' };
+    return { type: 'auth', message: t('请登录后访问此文件') };
   }
   if (isPermissionError(error)) {
-    return { type: 'permission', message: '没有执行此操作的权限' };
+    return { type: 'permission', message: t('没有执行此操作的权限') };
   }
   if (isNotFoundError(error)) {
-    return { type: 'not-found', message: '文件不存在或已被删除' };
+    return { type: 'not-found', message: t('文件不存在或已被删除') };
   }
   if (isServerError(error)) {
-    return { type: 'server', message: '服务器错误，请稍后重试', status: (error as Record<string, unknown>).status as number };
+    return { type: 'server', message: t('服务器错误，请稍后重试'), status: (error as Record<string, unknown>).status as number };
   }
 
-  const msg = error instanceof Error ? error.message : '未知错误';
+  const msg = error instanceof Error ? error.message : t('未知错误');
   return { type: 'unknown', message: msg };
 }

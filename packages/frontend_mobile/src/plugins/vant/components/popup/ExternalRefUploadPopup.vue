@@ -141,15 +141,15 @@ async function uploadFiles() {
 <template>
   <FloatingPopup
     v-model:show="show"
-    title="上传外部参照"
+    :title="t('上传外部参照')"
     :closeable="false"
     @close="onClose('skip')"
   >
     <!-- Overall Progress -->
     <div v-if="isUploading || allUploaded" class="progress-bar">
       <div class="progress-info">
-        <span>总体进度</span>
-        <span>{{ successCount }}/{{ files.length }}{{ failCount > 0 ? `，${failCount} 个失败` : '' }}</span>
+        <span>{{ t('总体进度') }}</span>
+        <span>{{ successCount }}/{{ files.length }}{{ failCount > 0 ? t('，') + failCount + t(' 个失败') : '' }}</span>
       </div>
       <van-progress
         :percentage="overallProgress"

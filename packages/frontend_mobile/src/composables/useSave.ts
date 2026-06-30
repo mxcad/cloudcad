@@ -1,4 +1,5 @@
 import { ref, readonly } from 'vue';
+import { t } from '@/languages';
 import { useEditorState } from './useEditorState';
 import { useUser } from './useUser';
 import {
@@ -100,23 +101,23 @@ export function useSave() {
     const state = editorState.state;
 
     if (!isAuthenticated.value || isAccessTokenExpired()) {
-      return { success: false, needLogin: true, message: '请先登录' };
+      return { success: false, needLogin: true, message: t('请先登录') };
     }
 
     saving.value = true;
-    showLoadingToast({ message: '正在保存文件...', forbidClick: true, duration: 0 });
+    showLoadingToast({ message: t('正在保存文件...'), forbidClick: true, duration: 0 });
 
     try {
       if (state.isPublicFile) {
         saving.value = false;
         closeToast();
-        return { success: false, message: '公开文件不支持保存' };
+        return { success: false, message: t('公开文件不支持保存') };
       }
 
       if (!state.permissions.canSave && state.fileId) {
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: '没有保存权限，请另存为' };
+        return { success: false, needSaveAs: true, message: t('没有保存权限，请另存为') };
       }
 
       const blob = await getMxwebBlob();
@@ -124,7 +125,7 @@ export function useSave() {
       if (!state.fileId) {
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: '请另存为到云图' };
+        return { success: false, needSaveAs: true, message: t('请另存为到云图') };
       }
 
       let personalSpaceId: string | null = null;
@@ -150,7 +151,7 @@ export function useSave() {
         await updateCacheAndState(state.fileId, blob, editorState);
         await processPendingImages(state.fileId).catch(() => {});
         closeToast();
-        showToast('保存成功');
+        showToast(t('保存成功'));
         uploadThumbnailForNode(state.fileId).catch(() => {});
         saving.value = false;
         return { success: true };
@@ -167,14 +168,14 @@ export function useSave() {
           await updateCacheAndState(state.fileId, blob, editorState);
           await processPendingImages(state.fileId).catch(() => {});
           closeToast();
-          showToast('保存成功');
+          showToast(t('保存成功'));
           uploadThumbnailForNode(state.fileId).catch(() => {});
           saving.value = false;
           return { success: true };
         }
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: '无资源库管理权限，请另存为到其他位置' };
+        return { success: false, needSaveAs: true, message: t('无资源库管理权限，请另存为到其他位置') };
       }
 
       if (projectId && state.permissions.canSave) {
@@ -189,7 +190,7 @@ export function useSave() {
             await updateCacheAndState(state.fileId, blob, editorState);
             await processPendingImages(state.fileId).catch(() => {});
             closeToast();
-            showToast('保存成功');
+            showToast(t('保存成功'));
             uploadThumbnailForNode(state.fileId).catch(() => {});
             saving.value = false;
             return { success: true };
@@ -201,12 +202,12 @@ export function useSave() {
 
       saving.value = false;
       closeToast();
-      return { success: false, needSaveAs: true, message: '请另存为到云图' };
+      return { success: false, needSaveAs: true, message: t('请另存为到云图') };
     } catch (e: unknown) {
       closeToast();
-      handleApiError(e, '保存失败');
+      handleApiError(e, t('保存失败'));
       saving.value = false;
-      return { success: false, message: '保存失败' };
+      return { success: false, message: t('保存失败') };
     }
   }
 

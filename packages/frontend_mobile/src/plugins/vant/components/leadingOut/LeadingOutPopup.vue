@@ -2,7 +2,7 @@
 import { t } from "@/languages";
 import type { FromType } from "./showPopup"
 
-const { title = "导出", from } = defineProps<{
+const { title = t("导出"), from } = defineProps<{
     title: string,
     from: FromType
 }>()

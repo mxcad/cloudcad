@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/languages';
+
 withDefaults(defineProps<{
   participants: { name: string; avatar?: string }[];
   max?: number;
@@ -10,7 +12,7 @@ withDefaults(defineProps<{
 <template>
   <div class="card-avatars">
     <template v-if="participants.length === 0">
-      <span class="card-no-users">暂无参与者</span>
+      <span class="card-no-users">{{ t('暂无参与者') }}</span>
     </template>
     <div
       v-for="(p, i) in participants.slice(0, max)"

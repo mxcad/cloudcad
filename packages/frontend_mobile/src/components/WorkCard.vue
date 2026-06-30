@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/languages';
 import type { Work } from '../composables/useCooperate';
 
 export interface WorkDisplay {
@@ -40,12 +41,12 @@ const emit = defineEmits<{
         </span>
       </div>
       <span v-else class="card-name">{{ display.drawingName }}</span>
-      <span class="card-online">{{ display.onlineCount }}在线</span>
+      <span class="card-online">{{ display.onlineCount }}{{ t('在线') }}</span>
     </div>
     <div v-if="showFooter" class="card-footer">
       <div class="card-avatars">
         <template v-if="display.participants.length === 0">
-          <span class="card-no-users">暂无参与者</span>
+          <span class="card-no-users">{{ t('暂无参与者') }}</span>
         </template>
         <div
           v-for="(p, i) in display.participants.slice(0, 5)"
@@ -64,14 +65,14 @@ const emit = defineEmits<{
         </div>
       </div>
       <div class="card-actions">
-        <van-button size="small" plain round @click="emit('share', display.work.work_id)">分享</van-button>
+        <van-button size="small" plain round @click="emit('share', display.work.work_id)">{{ t('分享') }}</van-button>
         <van-button
           v-if="display.isJoined"
           size="small"
           type="danger"
           plain round
           @click="emit('exit')"
-        >退出</van-button>
+        >{{ t('退出') }}</van-button>
         <van-button
           v-else
           size="small"
@@ -80,11 +81,11 @@ const emit = defineEmits<{
           :loading="connecting"
           :disabled="connecting"
           @click="emit('join', display.work.work_id)"
-        >加入</van-button>
+        >{{ t('加入') }}</van-button>
       </div>
     </div>
     <div v-else class="card-actions">
-      <van-button size="small" plain round @click="emit('share', display.work.work_id)">分享</van-button>
+      <van-button size="small" plain round @click="emit('share', display.work.work_id)">{{ t('分享') }}</van-button>
       <van-button
         size="small"
         type="primary"
@@ -92,7 +93,7 @@ const emit = defineEmits<{
         :loading="connecting"
         :disabled="connecting"
         @click="emit('join', display.work.work_id)"
-      >加入</van-button>
+      >{{ t('加入') }}</van-button>
     </div>
   </div>
 </template>

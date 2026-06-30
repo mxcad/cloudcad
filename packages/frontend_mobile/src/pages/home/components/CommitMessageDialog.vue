@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { t } from '@/languages';
 import DialogBase from '../../../components/DialogBase.vue';
 
 const emit = defineEmits<{
@@ -24,9 +25,9 @@ function onCancel() {
 <template>
   <DialogBase
     :show="show"
-    title="保存文件"
+    :title="t('保存文件')"
     show-cancel-button
-    confirm-text="保存"
+    :confirm-text="t('保存')"
     @confirm="onConfirm"
     @cancel="onCancel"
   >
@@ -34,7 +35,7 @@ function onCancel() {
       v-model="commitMessage"
       type="textarea"
       rows="2"
-      placeholder="修改说明（可选）"
+      :placeholder="t('修改说明（可选）')"
       autosize
     />
   </DialogBase>

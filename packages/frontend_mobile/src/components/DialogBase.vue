@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/languages';
+
 defineProps<{
   show: boolean
   title?: string
@@ -45,10 +47,10 @@ function onConfirm() {
     <template v-if="!$slots.footer && showCancelButton">
       <div class="dialog-footer">
         <van-button plain block @click="onCancel">
-          {{ cancelText || '取消' }}
+          {{ cancelText || t('取消') }}
         </van-button>
         <van-button type="primary" block :loading="confirmLoading" @click="onConfirm">
-          {{ confirmText || '确认' }}
+          {{ confirmText || t('确认') }}
         </van-button>
       </div>
     </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { t } from '@/languages';
 import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } from '../../../composables/useSaveAs';
 import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
@@ -53,11 +54,11 @@ const hasLibraryPermission = computed(() => {
 
 const saveAsOptions = computed(() => {
   const options: Array<{ label: string; value: SaveTargetType }> = [
-    { label: '我的图纸', value: 'personal' },
-    { label: '项目文件夹', value: 'project' },
+    { label: t('我的图纸'), value: 'personal' },
+    { label: t('项目文件夹'), value: 'project' },
   ];
   if (hasLibraryPermission.value) {
-    options.push({ label: '公开资源库', value: 'library' });
+    options.push({ label: t('公开资源库'), value: 'library' });
   }
   return options;
 });
@@ -83,34 +84,34 @@ async function handleSave() {
     return;
   }
   if (!(saveAs.fileName.value || '').trim()) {
-    error.value = '请输入文件名';
+    error.value = t('请输入文件名');
     return;
   }
   if (invalidChars.test(saveAs.fileName.value)) {
-    error.value = '文件名不能包含以下字符: \\ / : * ? " < > |';
+    error.value = t('文件名不能包含以下字符: \\ / : * ? " < > |');
     return;
   }
   if (!saveAs.selectedParentId.value) {
     if (saveAs.targetType.value === 'personal') {
       saveAs.selectedParentId.value = saveAs.personalSpaceId.value || '';
       if (!saveAs.selectedParentId.value) {
-        error.value = '无法获取个人空间';
+        error.value = t('无法获取个人空间');
         return;
       }
     } else if (saveAs.targetType.value === 'project') {
       if (!saveAs.selectedProjectId.value) {
-        error.value = '请先选择项目';
+        error.value = t('请先选择项目');
         return;
       }
       saveAs.selectedParentId.value = saveAs.selectedProjectId.value;
     } else if (saveAs.targetType.value === 'library') {
-      error.value = '请先选择文件夹';
+      error.value = t('请先选择文件夹');
       return;
     }
   }
 
   if (saveAs.format.value === 'pdf') {
-    error.value = '云图保存不支持 PDF 格式，请选择其他格式或使用"另存为到本地"';
+    error.value = t('云图保存不支持 PDF 格式，请选择其他格式或使用"另存为到本地"');
     return;
   }
 
@@ -129,14 +130,14 @@ async function handleSave() {
     });
 
     if (result.success) {
-      showToast('保存成功');
+      showToast(t('保存成功'));
       emit('success', { nodeId: result.nodeId || '', fileName: saveAs.fileName.value });
       emit('close');
     } else {
-      error.value = result.message || '保存失败';
+      error.value = result.message || t('保存失败');
     }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : '保存失败，请稍后重试';
+    error.value = e instanceof Error ? e.message : t('保存失败，请稍后重试');
   }
 }
 
@@ -154,7 +155,7 @@ async function handleSaveLocal() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('已下载到本地');
+      showToast(t('已下载到本地'));
     } else if (fmt === 'pdf') {
       const { exportDrawing: exportAndDownload } = await import('../../../services/exportService');
       const { showPdfOptionsDialog: showPdfOpts } = await import('../../../services/exportService');
@@ -170,7 +171,7 @@ async function handleSaveLocal() {
     }
     emit('close');
   } catch {
-    showToast('下载失败');
+    showToast(t('下载失败'));
   }
 }
 
@@ -185,7 +186,7 @@ async function openFolderPicker() {
   } else if (saveAs.targetType.value === 'project') {
     rootId = saveAs.selectedProjectId.value;
     if (!rootId) {
-      showToast('请先选择项目');
+      showToast(t('请先选择项目'));
       step.value = 'form';
       return;
     }
@@ -248,7 +249,7 @@ function onClose() {
 <template>
   <FloatingPopup
     :show="show"
-    :title="step === 'form' ? '另存为' : '选择文件夹'"
+    :title="step === 'form' ? t('另存为') : t('选择文件夹')"
     @open="init"
     @close="onClose"
     @update:show="onClose"
@@ -256,7 +257,7 @@ function onClose() {
     <!-- Folder Picker View -->
     <template v-if="step === 'folder'">
       <div class="folder-breadcrumb">
-        <span class="folder-breadcrumb-item" @click="goUp">根目录</span>
+        <span class="folder-breadcrumb-item" @click="goUp">{{ t('根目录') }}</span>
         <template v-for="(p, i) in folderPath" :key="p.id">
           <span class="folder-breadcrumb-sep">/</span>
           <span class="folder-breadcrumb-item" @click="folderPath.splice(i + 1); enterFolder(p.id, p.name)">{{ p.name }}</span>
@@ -271,7 +272,7 @@ function onClose() {
           is-link
           @click="enterFolder(node.id, node.name)"
         />
-        <van-empty v-if="folderNodes.length === 0" description="无子文件夹" />
+        <van-empty v-if="folderNodes.length === 0" :description="t('无子文件夹')" />
         <van-button
           v-if="folderPath.length > 0"
           type="primary"
@@ -279,7 +280,7 @@ function onClose() {
           class="select-folder-btn"
           @click="selectFolder(folderPath[folderPath.length - 1].id)"
         >
-          选择当前文件夹
+          {{ t('选择当前文件夹') }}
         </van-button>
       </van-cell-group>
     </template>
@@ -290,17 +291,17 @@ function onClose() {
         <div v-if="error" class="sheet-error">{{ error }}</div>
 
         <div class="sheet-field">
-          <label class="sheet-label">文件名</label>
+          <label class="sheet-label">{{ t('文件名') }}</label>
           <van-field
             v-model="saveAs.fileName.value"
-            placeholder="请输入文件名"
+            :placeholder="t('请输入文件名')"
             :disabled="saveAs.saving.value"
             clearable
           />
         </div>
 
         <div class="sheet-field">
-          <label class="sheet-label">保存到</label>
+          <label class="sheet-label">{{ t('保存到') }}</label>
           <van-radio-group v-model="saveAs.targetType.value" direction="horizontal">
             <van-radio
               v-for="opt in saveAsOptions"
@@ -314,9 +315,9 @@ function onClose() {
         </div>
 
         <div v-if="saveAs.targetType.value === 'project'" class="sheet-field">
-          <label class="sheet-label">选择项目</label>
+          <label class="sheet-label">{{ t('选择项目') }}</label>
           <van-field
-            :model-value="selectedProjectName || '请选择项目'"
+            :model-value="selectedProjectName || t('请选择项目')"
             is-link
             readonly
             :disabled="saveAs.saving.value"
@@ -325,27 +326,27 @@ function onClose() {
         </div>
 
         <div v-if="saveAs.targetType.value === 'library'" class="sheet-field">
-          <label class="sheet-label">选择资源库</label>
+          <label class="sheet-label">{{ t('选择资源库') }}</label>
           <van-radio-group v-model="saveAs.libraryType.value" direction="horizontal">
-            <van-radio name="drawing" :disabled="saveAs.saving.value">图纸库</van-radio>
-            <van-radio name="block" :disabled="saveAs.saving.value">图块库</van-radio>
+            <van-radio name="drawing" :disabled="saveAs.saving.value">{{ t('图纸库') }}</van-radio>
+            <van-radio name="block" :disabled="saveAs.saving.value">{{ t('图块库') }}</van-radio>
           </van-radio-group>
         </div>
 
         <div class="sheet-field">
-          <label class="sheet-label">保存位置</label>
+          <label class="sheet-label">{{ t('保存位置') }}</label>
           <van-button
             size="small"
             type="default"
             @click="openFolderPicker"
             :disabled="saveAs.saving.value || (saveAs.targetType.value === 'project' && !saveAs.selectedProjectId.value)"
           >
-            {{ saveAs.selectedParentId.value ? '已选择文件夹' : '点击选择文件夹' }}
+            {{ saveAs.selectedParentId.value ? t('已选择文件夹') : t('点击选择文件夹') }}
           </van-button>
         </div>
 
         <div class="sheet-field">
-          <label class="sheet-label">保存格式</label>
+          <label class="sheet-label">{{ t('保存格式') }}</label>
           <van-radio-group v-model="saveAs.format.value" direction="horizontal">
             <van-radio name="dwg" :disabled="saveAs.saving.value">DWG</van-radio>
             <van-radio name="dxf" :disabled="saveAs.saving.value">DXF</van-radio>
@@ -364,7 +365,7 @@ function onClose() {
           :disabled="saveAs.saving.value"
           class="footer-btn"
         >
-          另存为到本地
+          {{ t('另存为到本地') }}
         </van-button>
         <van-button
           type="primary"
@@ -372,7 +373,7 @@ function onClose() {
           :loading="saveAs.saving.value"
           class="footer-btn"
         >
-          保存
+          {{ t('保存') }}
         </van-button>
       </template>
     </template>
@@ -381,7 +382,7 @@ function onClose() {
   <!-- Project Picker Popup -->
   <FloatingPopup
     v-model:show="showProjectPicker"
-    title="选择项目"
+    :title="t('选择项目')"
   >
     <van-picker
       :columns="projectColumns"

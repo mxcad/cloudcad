@@ -93,10 +93,10 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
     function goBack() {
         if (editorState.state.isModified) {
             showConfirmDialog({
-                title: '未保存的更改',
-                message: '当前图纸有未保存的更改，确定要返回吗？',
-                confirmButtonText: '确定返回',
-                cancelButtonText: '取消',
+                title: t('未保存的更改'),
+                message: t('当前图纸有未保存的更改，确定要返回吗？'),
+                confirmButtonText: t('确定返回'),
+                cancelButtonText: t('取消'),
             }).then(() => {
                 doGoBack()
             }).catch(() => { })
@@ -160,7 +160,7 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
     const editorState = useEditorState()
     const drawName = computed(() => {
       if (editorState.state.isInCollaboration) {
-        return `[协同中] ${editorState.state.fileName}`
+        return `${t('[协同中]')} ${editorState.state.fileName}`
       }
       return editorState.state.fileName
     })
@@ -182,11 +182,11 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
     watch(saveToCloudTrigger, () => {
         const state = editorState.state
         if (state.isPublicFile) {
-            showToast('公开文件不支持保存')
+            showToast(t('公开文件不支持保存'))
             return
         }
         if (!state.permissions.canSave) {
-            showToast('没有保存权限')
+            showToast(t('没有保存权限'))
             return
         }
         if (!isAuthenticated.value) {
@@ -241,15 +241,15 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
 
     function onShowVersionHistory() {
         if (isPublicFile.value) {
-            showToast('公开文件不支持版本历史')
+            showToast(t('公开文件不支持版本历史'))
             return
         }
         if (!editorState.state.fileId) {
-            showToast('本地图纸无版本历史')
+            showToast(t('本地图纸无版本历史'))
             return
         }
         if (!editorState.state.permissions.canSave) {
-            showToast('没有查看版本历史的权限')
+            showToast(t('没有查看版本历史的权限'))
             return
         }
         if (!isAuthenticated.value) {
@@ -310,10 +310,10 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
         if (editorState.state.isModified) {
             try {
                 await showConfirmDialog({
-                    title: '未保存的更改',
-                    message: '当前图纸有未保存的更改，是否保存？',
-                    confirmButtonText: '保存',
-                    cancelButtonText: '不保存',
+                    title: t('未保存的更改'),
+                    message: t('当前图纸有未保存的更改，是否保存？'),
+                    confirmButtonText: t('保存'),
+                    cancelButtonText: t('不保存'),
                 })
                 try {
                     const success = await saveAction()
@@ -333,7 +333,7 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
         const mxcad = MxCpp.App.getCurrentMxCAD()
         mxcad.newFile()
 
-        showToastOnce('已新建空白图纸')
+        showToastOnce(t('已新建空白图纸'))
     }
 
     const handleShowCollaborate = () => { showCooperate.value = true }
@@ -383,7 +383,7 @@ import { uploadThumbnailForNode } from '../../services/thumbnailService';
                 mxcad.on('databaseModify', () => { editorState.setIsModified(true) })
                 mxcad.on('openFileComplete', () => { editorState.setIsModified(false) })
                 initEditObjectToolbar(mxcad)
-                editorState.setFileName('协作图纸')
+                editorState.setFileName(t('协作图纸'))
                 const { startAutoJoin } = useCollabAutoJoin(user)
                 autoJoinCleanup = startAutoJoin(workId)
                 return

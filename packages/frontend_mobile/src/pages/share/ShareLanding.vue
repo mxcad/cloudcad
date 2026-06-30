@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { t } from '@/languages';
 import { shareControllerResolveShareNode } from '../../api-sdk';
 import { showToast } from 'vant';
 import { useUser } from '../../composables/useUser';
@@ -20,7 +21,7 @@ function extractToken(): string | null {
 onMounted(async () => {
   token.value = extractToken() || '';
   if (!token.value) {
-    error.value = '无效的分享链接';
+    error.value = t('无效的分享链接');
     loading.value = false;
     return;
   }
@@ -30,7 +31,7 @@ onMounted(async () => {
       path: { token: token.value },
     });
     if (result.error) {
-      error.value = '分享链接不存在或已失效';
+      error.value = t('分享链接不存在或已失效');
       loading.value = false;
       return;
     }
@@ -38,10 +39,10 @@ onMounted(async () => {
       name: string;
       id: string;
     };
-    fileName.value = data.name || '未知图纸';
+    fileName.value = data.name || t('未知图纸');
     fileId.value = data.id;
   } catch {
-    error.value = '加载分享信息失败';
+    error.value = t('加载分享信息失败');
   }
   loading.value = false;
 });
@@ -62,18 +63,18 @@ function handleLogin() {
   <div class="share-landing">
     <div v-if="loading" class="share-landing-body">
       <van-loading type="spinner" color="#1989fa" />
-      <p class="share-landing-text">正在加载分享信息...</p>
+      <p class="share-landing-text">{{ t('正在加载分享信息...') }}</p>
     </div>
 
     <div v-else-if="error" class="share-landing-body">
       <van-icon name="warning-o" size="64" color="#ff4444" />
-      <p class="share-landing-title">无法打开分享</p>
+      <p class="share-landing-title">{{ t('无法打开分享') }}</p>
       <p class="share-landing-text">{{ error }}</p>
     </div>
 
     <div v-else class="share-landing-body">
       <van-icon name="share-o" size="64" color="#1989fa" />
-      <p class="share-landing-title">图纸分享</p>
+      <p class="share-landing-title">{{ t('图纸分享') }}</p>
       <div class="share-file-info">
         <van-icon name="description-o" size="20" color="#666" />
         <span class="share-file-name">{{ fileName }}</span>
@@ -88,7 +89,7 @@ function handleLogin() {
           size="large"
           @click="handleOpen"
         >
-          打开图纸
+          {{ t('打开图纸') }}
         </van-button>
         <van-button
           v-else
@@ -98,7 +99,7 @@ function handleLogin() {
           size="large"
           @click="handleLogin"
         >
-          登录后查看
+          {{ t('登录后查看') }}
         </van-button>
       </div>
     </div>

@@ -9,8 +9,6 @@ import { transform, type TransformResultType } from "./transform"
 import settings from "./settings.json"
 import defaultMessages from "./messages/zh-CN"  
 
- 
-
 const messages = { 
     'zh-CN'    : defaultMessages,
     'en-US'    : ()=>import("./messages/en-US"),

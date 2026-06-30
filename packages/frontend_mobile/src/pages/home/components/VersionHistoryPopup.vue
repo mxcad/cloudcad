@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { t } from '@/languages';
 import { useVersionHistory, type VersionEntry } from '../../../composables/useVersionHistory';
 import FloatingPopup from "../../../components/FloatingPopup.vue"
 
@@ -44,7 +45,7 @@ function formatDate(dateStr: string): string {
 <template>
   <FloatingPopup
     v-model:show="show"
-    title="版本历史"
+    :title="t('版本历史')"
     @close="onClose"
   >
     <van-loading v-if="loading" class="loading-state" />
@@ -52,11 +53,11 @@ function formatDate(dateStr: string): string {
     <div v-else-if="error" class="error-state">
       <van-icon name="warning-o" color="var(--danger)" size="40" />
       <p>{{ error }}</p>
-      <van-button size="small" @click="loadHistory">重试</van-button>
+      <van-button size="small" @click="loadHistory">{{ t('重试') }}</van-button>
     </div>
 
     <template v-else-if="entries.length === 0">
-      <van-empty description="暂无版本历史" />
+      <van-empty :description="t('暂无版本历史')" />
     </template>
 
     <div v-else class="version-list">
@@ -68,9 +69,9 @@ function formatDate(dateStr: string): string {
       >
         <div class="version-revision">r{{ entry.revision }}</div>
         <div class="version-info">
-          <div class="version-message">{{ entry.message || '无说明' }}</div>
+          <div class="version-message">{{ entry.message || t('无说明') }}</div>
           <div class="version-meta">
-            <span class="version-author">{{ entry.author || entry.userName || '未知' }}</span>
+            <span class="version-author">{{ entry.author || entry.userName || t('未知') }}</span>
             <span class="version-date">{{ formatDate(entry.date) }}</span>
           </div>
         </div>

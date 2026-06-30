@@ -15,17 +15,17 @@ const emit = defineEmits<{
 const show = ref(true)
 
 const VERSIONS = [
-  { label: 'CAD 2000', value: 23 },
-  { label: 'CAD 2004', value: 25 },
-  { label: 'CAD 2007', value: 27 },
-  { label: 'CAD 2010', value: 29 },
-  { label: 'CAD 2018', value: 33 },
+  { label: t('CAD 2000'), value: 23 },
+  { label: t('CAD 2004'), value: 25 },
+  { label: t('CAD 2007'), value: 27 },
+  { label: t('CAD 2010'), value: 29 },
+  { label: t('CAD 2018'), value: 33 },
 ]
 
 const selectedVersion = ref(23)
 
 const title = computed(() =>
-  props.format === 'dwg' ? '导出 DWG' : '导出 DXF'
+  props.format === 'dwg' ? t('导出 DWG') : t('导出 DXF')
 )
 
 function onConfirm() {
@@ -42,7 +42,7 @@ function onConfirm() {
     :title="title"
     @close="emit('cancel')"
   >
-    <label class="input-label">AutoCAD 版本</label>
+    <label class="input-label">{{ t('AutoCAD 版本') }}</label>
     <div class="version-list">
       <button
         v-for="v in VERSIONS"

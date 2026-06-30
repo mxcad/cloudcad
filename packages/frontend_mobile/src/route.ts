@@ -1,3 +1,4 @@
+import { t } from "@/languages"
 import Home from "./pages/home/index.vue"
 
 interface RouteRecordRaw {
@@ -16,7 +17,7 @@ const routes: RouteRecordRaw[] = [
     path: '',
     name: "default",
     component: Home,
-    meta: { title: '首页', keepAlive: true }
+    meta: { title: t('首页'), keepAlive: true }
   },
 ]
 

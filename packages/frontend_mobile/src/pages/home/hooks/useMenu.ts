@@ -26,7 +26,7 @@ export const useMenu = () => {
     const isShowMenu = ref(false)
     const exportActions: PopoverAction[] = [
         {
-            text: '导出 PDF',
+            text: t('导出 PDF'),
             icon: 'pdf',
             call: async () => {
                 isShowMenu.value = false
@@ -38,7 +38,7 @@ export const useMenu = () => {
             }
         },
         {
-            text: '导出 DWG',
+            text: t('导出 DWG'),
             icon: 'Dwg',
             call: async () => {
                 isShowMenu.value = false
@@ -50,7 +50,7 @@ export const useMenu = () => {
             }
         },
         {
-            text: '导出 DXF',
+            text: t('导出 DXF'),
             icon: 'DXF',
             call: async () => {
                 isShowMenu.value = false

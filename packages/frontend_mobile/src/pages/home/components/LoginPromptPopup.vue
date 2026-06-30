@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { t } from '@/languages';
 import DialogBase from '../../../components/DialogBase.vue';
 
 const props = withDefaults(defineProps<{
@@ -28,31 +29,31 @@ function onClose() {
 <template>
   <DialogBase
     :show="show"
-    title="需要登录"
+    :title="t('需要登录')"
     closeable
     :close-on-click-overlay="!waiting"
     @close="onClose"
   >
     <div v-if="!waiting" class="login-prompt-body">
       <van-icon name="contact" size="48" color="var(--primary)" />
-      <p class="login-prompt-text">请先登录后再执行此操作</p>
+      <p class="login-prompt-text">{{ t('请先登录后再执行此操作') }}</p>
     </div>
     <div v-else class="login-prompt-body">
       <van-loading type="spinner" size="48" color="var(--primary)" />
-      <p class="login-prompt-text">请在打开的页面中完成登录...</p>
+      <p class="login-prompt-text">{{ t('请在打开的页面中完成登录...') }}</p>
     </div>
     <template #footer>
       <div v-if="!waiting" class="login-prompt-footer">
         <van-button type="primary" block @click="onLogin">
-          前往登录
+          {{ t('前往登录') }}
         </van-button>
         <van-button plain block @click="onClose">
-          取消
+          {{ t('取消') }}
         </van-button>
       </div>
       <div v-else class="login-prompt-footer">
         <van-button plain block @click="onClose">
-          取消等待
+          {{ t('取消等待') }}
         </van-button>
       </div>
     </template>

@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { client } from '../api-sdk/client.gen';
 import { authControllerRefreshToken } from '../api-sdk';
 import { classifyApiError, isAuthError, isPermissionError, isAbortError } from './errorHandler';
@@ -88,7 +89,7 @@ export function setupApiClient(): void {
         const typedData = data as Record<string, unknown>;
         const code = typedData.code;
         if (typeof code === 'number' && code !== 0) {
-          const message = String(typedData.message || '业务处理失败');
+          const message = String(typedData.message || t('业务处理失败'));
           const error: Error & { code?: number; data?: unknown } = Object.assign(
             new Error(message),
             { code, data: typedData },
