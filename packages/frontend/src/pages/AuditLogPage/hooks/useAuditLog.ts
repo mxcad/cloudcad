@@ -4,6 +4,7 @@ import {
   auditLogControllerGetStatistics,
 } from '@/api-sdk';
 import type { AuditLogControllerFindAllData } from '@/api-sdk';
+import { t } from '@/languages';
 
 type AuditLogQueryParams = NonNullable<
   AuditLogControllerFindAllData['query']
@@ -69,7 +70,7 @@ export function useAuditLogList(params: AuditLogQueryParams) {
     isLoading,
     loading: isLoading,
     isFetching,
-    error: error ? '加载审计日志失败' : null,
+    error: error ? t('加载审计日志失败') : null,
     refetch,
   };
 }
@@ -97,7 +98,7 @@ export function useAuditLogStats() {
     isLoading,
     loading: isLoading,
     isFetching,
-    error: error ? '加载统计信息失败' : null,
+    error: error ? t('加载统计信息失败') : null,
     refetch,
   };
 }

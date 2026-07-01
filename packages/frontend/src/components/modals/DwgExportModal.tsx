@@ -93,7 +93,7 @@ export const DwgExportModal: React.FC<DwgExportModalProps> = ({
             className="font-medium"
             style={{ color: 'var(--text-secondary)' }}
           >
-            {format === 'dwg' ? 'DWG' : 'DXF'} 导出参数
+            {t(`${format === 'dwg' ? 'DWG' : 'DXF'} 导出参数`)}
           </p>
 
           <div>

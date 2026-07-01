@@ -333,7 +333,7 @@ export const Dashboard: React.FC = () => {
               className="text-2xl sm:text-3xl font-bold mb-1"
               style={{ color: 'var(--text-primary)' }}
             >
-              {greeting}，{userName}
+              {greeting}{t('，')}{userName}
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
               {t(`欢迎使用 ${appName}，开始您的设计工作`)}

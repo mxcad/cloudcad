@@ -1,4 +1,5 @@
 import { useEditorStore } from '../stores/editor';
+import { t } from '@/languages';
 
 export async function useShareFileLoad(
   shareToken: string,
@@ -14,10 +15,10 @@ export async function useShareFileLoad(
     if (!raw) return false;
 
     const info = raw as Record<string, any>;
-    if (info.deletedAt) throw new Error('文件已被删除');
-    if (!info.fileHash) throw new Error('文件尚未转换完成');
-    if (!info.path) throw new Error('文件路径不存在');
-    if (!info.updatedAt) throw new Error('无法构造文件访问URL');
+    if (info.deletedAt) throw new Error(t('文件已被删除'));
+    if (!info.fileHash) throw new Error(t('文件尚未转换完成'));
+    if (!info.path) throw new Error(t('文件路径不存在'));
+    if (!info.updatedAt) throw new Error(t('无法构造文件访问URL'));
 
     editorStore.setFileId(fileId);
     editorStore.setFileInfo(info);

@@ -8,6 +8,7 @@ import {
 } from '@/api-sdk';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import { CategoryLevel, type CategoryItem } from '@/components/CategoryTabs';
+import { t } from '@/languages';
 
 // 分类 queryKey 定义在本地而非 queryKeys，避免 Vite HMR 级联刷新 useLibraryQuery 导致其 React Query 缓存丢失
 const drawingCategoriesKey = ['library', 'drawing', 'categories'] as const;
@@ -19,9 +20,9 @@ interface CategoriesData {
 }
 
 const PLACEHOLDER_CATEGORIES: CategoryLevel[] = [
-  { level: 0, items: [{ id: 'all', name: '全部' }] },
-  { level: 1, items: [{ id: 'all', name: '全部' }] },
-  { level: 2, items: [{ id: 'all', name: '全部' }] },
+  { level: 0, items: [{ id: 'all', name: t('全部') }] },
+  { level: 1, items: [{ id: 'all', name: t('全部') }] },
+  { level: 2, items: [{ id: 'all', name: t('全部') }] },
 ];
 
 function filterCategoriesBySelection(
@@ -60,14 +61,14 @@ async function fetchCategories(libraryType: LibraryType): Promise<CategoriesData
     const processed = catData.categories.map((level) => ({
       ...level,
       items: [
-        { id: 'all', name: '全部' },
+        { id: 'all', name: t('全部') },
         ...level.items,
       ],
     }));
     const padded = [...processed];
     while (padded.length < 3) {
       const nextLevel = padded.length;
-      padded.push({ level: nextLevel, items: [{ id: 'all', name: '全部' }] });
+      padded.push({ level: nextLevel, items: [{ id: 'all', name: t('全部') }] });
     }
     finalCategories = padded;
   }

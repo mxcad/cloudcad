@@ -31,7 +31,7 @@ export const FileItemExternalReferenceWarning: React.FC<FileItemExternalReferenc
     return (
       <span className="flex items-center gap-1 text-xs text-amber-600">
         <AlertTriangle size={10} />
-        缺失 {missingCount} 个外部参照
+        {t(`缺失 ${missingCount} 个外部参照`)}
       </span>
     );
   });

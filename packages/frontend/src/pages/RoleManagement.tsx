@@ -600,7 +600,7 @@ export const RoleManagement = () => {
                     className="w-full"
                     onClick={() => handleEditSystemRole(role)}
                   >
-                    配置权限
+                    {t('配置权限')}
                   </Button>
                 </div>
               </div>

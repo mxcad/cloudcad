@@ -1,6 +1,7 @@
 import { calculateFileHash } from '@/utils/hashUtils';
 import { uploadFile, MobileUploadResult } from '@/services/mobileUploadService';
 import { handleApiError } from '@/utils/apiConfig';
+import { t } from '@/languages';
 
 const PICKER_ID = 'mxcad-native-file-picker';
 
@@ -67,7 +68,7 @@ export function showFilePicker(callback: FilePickerCallback, noCache = false): v
       });
     } catch (err) {
       console.error('File upload failed:', err);
-      handleApiError(err, '文件上传失败');
+      handleApiError(err, t('文件上传失败'));
     }
   };
 

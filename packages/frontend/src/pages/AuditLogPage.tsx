@@ -52,34 +52,34 @@ type ResourceTypeType = (typeof ResourceType)[keyof typeof ResourceType];
 
 // 操作类型中文映射
 const ACTION_NAME_MAP: Record<string, string> = {
-  PERMISSION_GRANT: '授予权限',
-  PERMISSION_REVOKE: '撤销权限',
-  ROLE_CREATE: '创建角色',
-  ROLE_UPDATE: '更新角色',
-  ROLE_DELETE: '删除角色',
-  USER_LOGIN: '用户登录',
-  USER_LOGOUT: '用户登出',
-  PROJECT_CREATE: '创建项目',
-  PROJECT_DELETE: '删除项目',
-  FILE_UPLOAD: '上传文件',
-  FILE_DOWNLOAD: '下载文件',
-  FILE_DELETE: '删除文件',
-  FILE_SHARE: '分享文件',
-  ADD_MEMBER: '添加成员',
-  UPDATE_MEMBER: '更新成员',
-  REMOVE_MEMBER: '移除成员',
-  TRANSFER_OWNERSHIP: '转让所有权',
+  PERMISSION_GRANT: t('授予权限'),
+  PERMISSION_REVOKE: t('撤销权限'),
+  ROLE_CREATE: t('创建角色'),
+  ROLE_UPDATE: t('更新角色'),
+  ROLE_DELETE: t('删除角色'),
+  USER_LOGIN: t('用户登录'),
+  USER_LOGOUT: t('用户登出'),
+  PROJECT_CREATE: t('创建项目'),
+  PROJECT_DELETE: t('删除项目'),
+  FILE_UPLOAD: t('上传文件'),
+  FILE_DOWNLOAD: t('下载文件'),
+  FILE_DELETE: t('删除文件'),
+  FILE_SHARE: t('分享文件'),
+  ADD_MEMBER: t('添加成员'),
+  UPDATE_MEMBER: t('更新成员'),
+  REMOVE_MEMBER: t('移除成员'),
+  TRANSFER_OWNERSHIP: t('转让所有权'),
 };
 
 // 资源类型中文映射
 const RESOURCE_TYPE_MAP: Record<string, string> = {
-  SYSTEM: '系统',
-  USER: '用户',
-  ROLE: '角色',
-  PERMISSION: '权限',
-  PROJECT: '项目',
-  FILE: '文件',
-  FOLDER: '文件夹',
+  SYSTEM: t('系统'),
+  USER: t('用户'),
+  ROLE: t('角色'),
+  PERMISSION: t('权限'),
+  PROJECT: t('项目'),
+  FILE: t('文件'),
+  FOLDER: t('文件夹'),
 };
 
 export const AuditLogPage: React.FC = () => {

@@ -60,7 +60,7 @@ async function m_mx_copy() {
     if (!ptBase) return;
   
     //getPoint.setDynamicInputType(DynamicInputType.kXYCoordInput);
-    getPoint.setMessage("指定移动到点");
+    getPoint.setMessage(t("指定移动到点"));
     getPoint.setBasePt(ptBase);
     getPoint.setUseBasePt(true);
   

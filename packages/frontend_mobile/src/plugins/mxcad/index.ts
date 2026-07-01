@@ -3,6 +3,7 @@ import { McObject, MxCpp } from "mxcad";
 import { getParamsFromUrl } from "@/utils/paramsFromUrl";
 import { MxFun } from "mxdraw";
 import { openMxWeb } from "./openMxWeb";
+import { t } from "@/languages";
 /** 创建MxCad APP控件 **/
 /**Create MxCad APP Control
  
@@ -98,7 +99,7 @@ export async function openFileByNodeId(nodeId: string): Promise<boolean> {
     const { getNodeInfo, buildMxwebUrl } = await import('../../services/fileService');
     const nodeInfo = await getNodeInfo(nodeId);
     if (!nodeInfo.path) {
-      throw new Error('文件路径不存在');
+      throw new Error(t('文件路径不存在'));
     }
     const url = buildMxwebUrl(nodeInfo.path);
     return await openMxWeb(url);

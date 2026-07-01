@@ -109,7 +109,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       const { data } = await runtimeConfigControllerGetAllConfigs();
       setConfigs(data as RuntimeConfigResponseDto[]);
     } catch (error: unknown) {
-      handleError(error, '获取配置失败');
+      handleError(error, t('获取配置失败'));
       showToast(error instanceof Error ? error.message : t('获取配置失败'), 'error');
     } finally {
       setLoading(false);
@@ -159,7 +159,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       });
       await fetchConfigs();
     } catch (error: unknown) {
-      handleError(error, '保存配置失败');
+      handleError(error, t('保存配置失败'));
       showToast(error instanceof Error ? error.message : t('保存失败'), 'error');
     } finally {
       setSaving((prev) => {
@@ -192,7 +192,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       });
       await fetchConfigs();
     } catch (error: unknown) {
-      handleError(error, '重置配置失败');
+      handleError(error, t('重置配置失败'));
       showToast(error instanceof Error ? error.message : t('重置失败'), 'error');
     } finally {
       setSaving((prev) => {

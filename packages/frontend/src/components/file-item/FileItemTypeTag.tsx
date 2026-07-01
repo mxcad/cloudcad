@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { Tag } from '../ui/Tag';
 import type { TagVariant } from '../ui/Tag';
 import { FileSystemNode } from '../../types/filesystem';
+import { t } from '@/languages';
 
 interface FileItemTypeTagProps {
   node: FileSystemNode;
@@ -27,8 +28,8 @@ export const FileItemTypeTag: React.FC<FileItemTypeTagProps> = memo(
     }, [isRoot, node.isFolder, node.extension]);
 
     const tagText = useMemo(() => {
-      if (isRoot) return '项目';
-      if (node.isFolder) return '文件夹';
+      if (isRoot) return t('项目');
+      if (node.isFolder) return t('文件夹');
       return node.extension?.toUpperCase().replace('.', '') || '';
     }, [isRoot, node.isFolder, node.extension]);
 

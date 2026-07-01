@@ -2,6 +2,7 @@ import { ref, readonly } from 'vue';
 import { versionControlControllerGetFileHistory } from '../api-sdk';
 import { useEditorState } from './useEditorState';
 import { showToast } from 'vant';
+import { t } from '@/languages';
 
 export interface VersionEntry {
   revision: number;
@@ -26,7 +27,7 @@ export function useVersionHistory() {
     const filePath = (fileInfo?.path as string) || '';
 
     if (!projectId || !filePath) {
-      error.value = '缺少项目信息或文件路径';
+      error.value = t('缺少项目信息或文件路径');
       return;
     }
 
@@ -51,11 +52,11 @@ export function useVersionHistory() {
       if (data?.success) {
         entries.value = data.entries || [];
       } else {
-        error.value = data?.message || '加载版本历史失败';
+        error.value = data?.message || t('加载版本历史失败');
         entries.value = [];
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '加载版本历史失败';
+      const msg = e instanceof Error ? e.message : t('加载版本历史失败');
       error.value = msg;
       entries.value = [];
     } finally {
@@ -66,7 +67,7 @@ export function useVersionHistory() {
   function openHistoricalVersion(revision: number): void {
     const fileId = editorState.state.fileId;
     if (!fileId) {
-      showToast('无法打开历史版本：缺少文件ID');
+      showToast(t('无法打开历史版本：缺少文件ID'));
       return;
     }
 

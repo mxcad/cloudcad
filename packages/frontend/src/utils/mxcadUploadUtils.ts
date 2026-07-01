@@ -14,6 +14,7 @@ import { JsonValue } from './../api-sdk/core/queryKeySerializer.gen';
 import { mxCadControllerCheckFileExist, mxCadControllerCheckChunkExist, mxCadControllerUploadFile } from "@/api-sdk"
 import { calculateFileHash } from './hashUtils';
 import { sanitizeFileName } from './fileUtils';
+import { t } from '@/languages';
 
 /**
  * 当前上传最大文件大小（字节），可由外部动态更新
@@ -144,7 +145,7 @@ export async function uploadFile(
   // 验证文件类型
   if (!validateFileType(file)) {
     throw new MxCadUploadError(
-      `文件类型不支持: ${file.name} (支持 .dwg, .dxf, .mxweb)`,
+      t('文件类型不支持: ${file.name} (支持 .dwg, .dxf, .mxweb)').replace('${file.name}', file.name),
       file.name
     );
   }
@@ -152,7 +153,7 @@ export async function uploadFile(
   // 验证文件大小
   const fileMaxSize = maxSize ?? uploadMaxFileSize;
   if (!validateFileSize(file, fileMaxSize)) {
-    throw new MxCadUploadError(`文件过大: ${file.name} (最大${fileMaxSize / 1024 / 1024}MB)`, file.name);
+    throw new MxCadUploadError(t('文件过大: ${file.name} (最大${size}MB)').replace('${file.name}', file.name).replace('${size}', String(fileMaxSize / 1024 / 1024)), file.name);
   }
 
   // nodeId 可为空（公开上传场景）

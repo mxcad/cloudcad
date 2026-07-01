@@ -73,7 +73,7 @@ export function useVersionHistory({
           setVersionHistoryError(data?.message || t('加载版本历史失败'));
         }
       } catch (error: unknown) {
-        handleError(error, '版本历史加载失败');
+        handleError(error, t('版本历史加载失败'));
         setVersionHistoryError(
           error instanceof Error ? error.message : t('加载版本历史失败')
         );

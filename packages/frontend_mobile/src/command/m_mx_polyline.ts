@@ -46,7 +46,7 @@ export async function m_mx_polyline() {
     const getPoint: MxCADUiPrPoint = new MxCADUiPrPoint();
     getPoint.setOffsetInputPostion(true)
     getPoint.setInputToucheType(MxType.InputToucheType.kGetEnd)
-    getPoint.setMessage("\n指定起点:");
+    getPoint.setMessage("\n" + t("指定起点:"));
     let firstPoint = await getPoint.go();
     if (firstPoint === null) return;
     let vecData: any[] = [];

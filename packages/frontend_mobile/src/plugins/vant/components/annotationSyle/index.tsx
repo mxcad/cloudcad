@@ -68,7 +68,7 @@ export const useAnnotationStyleDialog = () => {
             precisionValue,
             {
               FieldProps: {
-                label: "当前标注精度:",
+                label: t("当前标注精度:"),
               },
             }
           )}

@@ -6,6 +6,7 @@ import {
   rolesControllerDeleteProjectRole,
 } from '@/api-sdk';
 import type { ProjectRoleDto, CreateProjectRoleDto, UpdateProjectRoleDto } from '@/api-sdk';
+import { t } from '@/languages';
 
 const PROJECT_ROLES_BY_PROJECT_KEY = ['projectRolesByProject'] as const;
 
@@ -107,13 +108,13 @@ export const useProjectRoleCRUD = (projectId: string) => {
   });
 
   const error = queryError
-    ? '加载项目角色失败'
+    ? t('加载项目角色失败')
     : createMutation.isError
-      ? '创建项目角色失败'
+      ? t('创建项目角色失败')
       : updateMutation.isError
-        ? '更新项目角色失败'
+        ? t('更新项目角色失败')
         : deleteMutation.isError
-          ? '删除项目角色失败'
+          ? t('删除项目角色失败')
           : null;
 
   return {

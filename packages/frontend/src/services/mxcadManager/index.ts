@@ -237,7 +237,7 @@ MxFun.addCommand('Mx_Save', async () => {
       // 未登录或 token 已过期，触发登录提示事件
       window.dispatchEvent(
         new CustomEvent('mxcad-save-required', {
-          detail: { action: '保存文件' },
+          detail: { action: t('保存文件') },
         })
       );
       return;
@@ -250,7 +250,7 @@ MxFun.addCommand('Mx_Save', async () => {
       if (!authCheck() || tokenExpiredCheck()) {
         window.dispatchEvent(
           new CustomEvent('mxcad-save-required', {
-            detail: { action: '保存文件' },
+            detail: { action: t('保存文件') },
           })
         );
         return;
@@ -2444,7 +2444,7 @@ class MxCADInstanceManager {
       const mxcad = view?.mxcad;
       if (!mxcad) {
         cleanup();
-        reject(new Error('mxcad 对象不可用'));
+        reject(new Error(t('mxcad 对象不可用')));
         return;
       }
 

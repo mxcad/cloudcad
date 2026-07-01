@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileSystemNode } from '../types/filesystem';
+import { t } from '@/languages';
 
 // ============ 基础 SVG 图标组件 ============
 
@@ -573,7 +574,7 @@ export const EmptyFolderIcon: React.FC<IconProps> = ({
     <circle cx="40" cy="42" r="6" fill="white" fillOpacity="0.6" />
     {/* 文字 */}
     <text x="32" y="56" fontSize="8" fill="#F59E0B" textAnchor="middle">
-      空
+      {t('空')}
     </text>
   </svg>
 );

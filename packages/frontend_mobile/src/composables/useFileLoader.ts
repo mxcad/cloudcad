@@ -28,6 +28,7 @@ import {
   shareControllerResolveShareNode,
 } from '../api-sdk';
 import type { FileSystemNodeDto } from '../api-sdk';
+import { t } from '@/languages';
 
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -113,7 +114,7 @@ export function useFileLoader() {
     version?: number,
     options?: FileOpenOptions,
   ): { url: string; cacheTimestamp: number | undefined } {
-    if (!file.path) throw new Error('文件路径不存在');
+    if (!file.path) throw new Error(t('文件路径不存在'));
 
     if (version !== undefined) {
       // 历史版本 — 使用 v 参数，不设缓存时间戳（PC：setCacheTimestamp(undefined)）
@@ -124,9 +125,9 @@ export function useFileLoader() {
     }
 
     // 当前版本 — 使用 updatedAt 时间戳作为缓存版本标识
-    if (!file.updatedAt) throw new Error('无法构造文件访问URL');
+    if (!file.updatedAt) throw new Error(t('无法构造文件访问URL'));
     const cacheTimestamp = new Date(file.updatedAt).getTime();
-    if (isNaN(cacheTimestamp)) throw new Error('文件更新时间无效');
+    if (isNaN(cacheTimestamp)) throw new Error(t('文件更新时间无效'));
 
     const url = options?.libraryKey
       ? `/api/v1/library/${options.libraryKey}/filesData/${file.path}?t=${cacheTimestamp}`
@@ -147,24 +148,24 @@ export function useFileLoader() {
   async function loadByNodeId(fileId: string, options?: FileOpenOptions): Promise<boolean> {
     loading.value = true;
     error.value = null;
-    progress.value = '正在获取文件信息...';
+    progress.value = t('正在获取文件信息...');
     editorState.setLoading(true);
 
     try {
       // 1. 获取文件信息（根据文件源选择 API）
-      progress.value = '正在获取文件信息...';
+      progress.value = t('正在获取文件信息...');
       const nodeInfo = await fetchFileNode(fileId, options);
 
       if (!nodeInfo) {
-        throw new Error('文件不存在');
+        throw new Error(t('文件不存在'));
       }
 
       // 2. 校验（与 PC L730-L745 对齐）
       if (nodeInfo.deletedAt) {
-        throw new Error('文件已被删除');
+        throw new Error(t('文件已被删除'));
       }
       if (!nodeInfo.fileHash) {
-        throw new Error('文件尚未转换完成');
+        throw new Error(t('文件尚未转换完成'));
       }
 
       // 3. 设置文件信息到 store
@@ -220,7 +221,7 @@ export function useFileLoader() {
         const cacheKey = buildCacheKey(nodeInfo.path || '', cacheTimestamp);
         const cachedData = await getCachedMxwebData(cacheKey);
         if (cachedData) {
-          progress.value = '正在从缓存加载图纸...';
+          progress.value = t('正在从缓存加载图纸...');
           const blob = new Blob([cachedData], { type: 'application/octet-stream' });
           const objectUrl = URL.createObjectURL(blob);
           const opened = await openMxWeb(objectUrl);
@@ -235,7 +236,7 @@ export function useFileLoader() {
       }
 
       // 8. 打开文件
-      progress.value = '正在打开图纸...';
+      progress.value = t('正在打开图纸...');
       const opened = await openMxWeb(mxwebUrl);
 
       if (opened) {
@@ -262,7 +263,7 @@ export function useFileLoader() {
         }
         return true;
       } else {
-        throw new Error('打开文件失败');
+        throw new Error(t('打开文件失败'));
       }
     } catch (e: unknown) {
       const classified = classifyApiError(e);
@@ -271,9 +272,9 @@ export function useFileLoader() {
       // 精确错误处理（与 PC L704-L716 对齐）
       const axiosError = e as { response?: { status?: number } };
       if (axiosError.response?.status === 401) {
-        message = '请登录后访问此文件';
+        message = t('请登录后访问此文件');
       } else if (axiosError.response?.status === 404) {
-        message = '文件不存在或已被删除';
+        message = t('文件不存在或已被删除');
       } else if (message.includes('文件已被删除') || message.includes('文件尚未转换完成')) {
         message = message; // 业务错误，保持原消息
       }
@@ -293,13 +294,13 @@ export function useFileLoader() {
   async function loadByHash(hash: string): Promise<boolean> {
     loading.value = true;
     error.value = null;
-    progress.value = '正在获取公开文件信息...';
+    progress.value = t('正在获取公开文件信息...');
 
     editorState.setFileId(hash);
     editorState.setLoading(true);
 
     try {
-      progress.value = '正在加载图纸...';
+      progress.value = t('正在加载图纸...');
       const preloadData = await getPublicPreloadingData(hash);
 
       editorState.setFileInfo(
@@ -314,7 +315,7 @@ export function useFileLoader() {
       });
 
       const mxwebUrl = buildPublicMxwebUrl(hash);
-      progress.value = '正在打开图纸...';
+      progress.value = t('正在打开图纸...');
 
       const opened = await openMxWeb(mxwebUrl);
 
@@ -324,7 +325,7 @@ export function useFileLoader() {
         loading.value = false;
         return true;
       } else {
-        throw new Error('打开文件失败');
+        throw new Error(t('打开文件失败'));
       }
     } catch (e: unknown) {
       const classified = classifyApiError(e);
@@ -393,13 +394,13 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
     const canManageExtRef = state.permissions.canManageExternalRef;
 
     showDialog({
-      title: '缺失外部参照文件',
+      title: t('缺失外部参照文件'),
       message: canManageExtRef
-        ? `以下文件需要上传:\n${fileList}`
-        : `以下外部参照文件缺失:\n${fileList}\n\n请联系管理员上传`,
+        ? t(`以下文件需要上传:\n${fileList}`)
+        : t(`以下外部参照文件缺失:\n${fileList}\n\n请联系管理员上传`),
       showCancelButton: true,
-      confirmButtonText: canManageExtRef ? '上传文件' : '知道了',
-      cancelButtonText: '跳过',
+      confirmButtonText: canManageExtRef ? t('上传文件') : t('知道了'),
+      cancelButtonText: t('跳过'),
     })
       .then(async () => {
         if (!canManageExtRef) return;

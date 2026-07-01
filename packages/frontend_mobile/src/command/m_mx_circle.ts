@@ -18,7 +18,7 @@ async function m_mx_circle() {
         pw.drawMcDbEntity(circle)
     })
     
-    getPoint.setMessage("指定半径")
+    getPoint.setMessage(t("指定半径"))
     const radiusPoint = await getPoint.go()
     if(radiusPoint) {
         const circle = new McDbCircle()

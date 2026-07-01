@@ -7,6 +7,7 @@ import { client } from '@/api-sdk/client.gen';
 import { getApiBaseUrl } from '@/config/apiConfig';
 import { getValidToken, getAccessToken, isValidToken, getRefreshToken, setAccessToken, setRefreshToken, removeAccessToken, removeRefreshToken } from '@/utils/tokenUtils';
 import { authControllerRefreshToken } from "@/api-sdk"
+import { t } from '@/languages';
 // 用于在非 React 上下文中显示 Toast（通过 NotificationContext 的全局事件）
 function showGlobalToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'warning') {
   window.dispatchEvent(
@@ -36,7 +37,7 @@ client.setConfig({
       const code = typedData.code;
       // 当 code 存在且不为 0 时，视为业务错误，抛出异常
       if (typeof code === 'number' && code !== 0) {
-        const message = String(typedData.message || '业务处理失败');
+        const message = String(typedData.message || t('业务处理失败'));
         const error: Error & { code?: number; data?: unknown } = Object.assign(new Error(message), { code, data: typedData });
         throw error;
       }
@@ -131,9 +132,9 @@ function getReturnUrl(): string {
 function handleTokenRefreshFailure() {
   if (isRedirecting) return;
 
-  // еҰӮжһңз”ЁжҲ·д»ҺжңӘзҷ»еҪ•пјҲжІЎжңүд»»дҪ• tokenпјүпјҢеҲҷдёҚи§ҰеҸ‘зҷ»еҪ•и·іиҪ¬
-  // иҝҷз§Қжғ…еҶөеҸ‘з”ҹеңЁе…¬ејҖиө„жәҗеә“и®ҝй—®зӯүеңәжҷҜпјҢ
-  // еҗҺеҸ° API зҡ„ 401 жҳҜеӣ дёәжІЎжңүи®ӨиҜҒеӨҙпјҢиҖҢйқһ token иҝҮжңҹ
+  // 如果用户从未登录（没有任何 token），则不触发登录跳转
+  // 这种情况发生在公开资源库访问等场景，
+  // 后台 API 的 401 是因为没有认证头，而非 token 过期
   const accessToken = getAccessToken();
   const refreshToken = getRefreshToken();
   if (!accessToken && !refreshToken) {
@@ -249,13 +250,13 @@ client.interceptors.response.use(async (response) => {
     } catch {
       // 非 JSON 响应或读取失败，使用默认错误消息
       if (response.status >= 500) {
-        showGlobalToast('服务器繁忙，请稍后重试', 'error');
+        showGlobalToast(t('服务器繁忙，请稍后重试'), 'error');
       } else if (response.status === 403) {
-        showGlobalToast('没有权限执行此操作', 'error');
+        showGlobalToast(t('没有权限执行此操作'), 'error');
       } else if (response.status === 404) {
-        showGlobalToast('请求的资源不存在', 'error');
+        showGlobalToast(t('请求的资源不存在'), 'error');
       } else if (response.status === 429) {
-        showGlobalToast('操作过于频繁，请稍后重试', 'error');
+        showGlobalToast(t('操作过于频繁，请稍后重试'), 'error');
       }
     }
   }

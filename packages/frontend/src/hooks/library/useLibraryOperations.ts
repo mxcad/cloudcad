@@ -197,7 +197,7 @@ export function useLibraryOperations({
           }
         },
         'danger',
-        '删除'
+        t('删除')
       );
     },
     [libraryType, showToast, refreshNodes, showConfirm, removeLocalNode]
