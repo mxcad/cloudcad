@@ -1082,8 +1082,25 @@ async function restoreDatabase(backupFile) {
     return false;
   }
 
-  // 构建命令参数
-  const args = [
+  // 步骤 1: 清空数据库（DROP SCHEMA public CASCADE; CREATE SCHEMA public;）
+  log('cyan', '步骤 1/3: 清空数据库...');
+  const dropSchemaCmd = `"${psqlPath}" -h "${dbHost}" -p "${dbPort}" -U "${dbUser}" -d "${dbName}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"`;
+  const dropResult = spawnSync(dropSchemaCmd, [], {
+    env,
+    shell: true,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  });
+
+  if (dropResult.status !== 0) {
+    log('red', `❌ 清空数据库失败: ${dropResult.stderr || dropResult.stdout}`);
+    return false;
+  }
+  log('green', '✓ 数据库已清空');
+
+  // 步骤 2: 恢复备份
+  log('cyan', '步骤 2/3: 恢复备份...');
+  const restoreArgs = [
     '-h',
     dbHost,
     '-p',
@@ -1096,11 +1113,10 @@ async function restoreDatabase(backupFile) {
     backupFile,
   ];
 
-  log('cyan', `执行: ${path.basename(psqlPath)} ${args.join(' ')}`);
+  log('cyan', `执行: ${path.basename(psqlPath)} ${restoreArgs.join(' ')}`);
   console.log('');
 
-  // 执行恢复
-  const result = spawnSync(psqlPath, args, {
+  const restoreResult = spawnSync(psqlPath, restoreArgs, {
     env,
     shell: IS_WINDOWS,
     stdio: 'inherit', // 显示实时进度
@@ -1109,13 +1125,38 @@ async function restoreDatabase(backupFile) {
 
   console.log('');
 
-  // 检查结果
-  if (result.status === 0) {
-    log('green', '✅ 数据库恢复成功');
-    return true;
-  } else {
+  if (restoreResult.status !== 0) {
     log('red', '❌ 数据库恢复失败');
     return false;
+  }
+  log('green', '✓ 备份恢复成功');
+
+  // 步骤 3: 同步 Prisma schema（让 Prisma 的 migration 表与当前代码一致）
+  log('cyan', '步骤 3/3: 同步 Prisma schema...');
+  
+  // 先执行 reconcileMigrations 处理迁移状态
+  await reconcileMigrations();
+  
+  // 然后运行 prisma migrate deploy
+  const prismaExec = PNPM_JS && fs.existsSync(PNPM_JS)
+    ? [PNPM_JS, '-F', 'backend', 'exec', 'prisma']
+    : ['-F', 'backend', 'exec', 'prisma'];
+  
+  const migrateResult = spawnSync(
+    PNPM_JS && fs.existsSync(PNPM_JS) ? NODE_EXE : 'pnpm',
+    [...prismaExec, 'migrate', 'deploy'],
+    { cwd: PROJECT_ROOT, encoding: 'utf8', shell: IS_WINDOWS, stdio: 'inherit', timeout: 60000 }
+  );
+  
+  console.log('');
+  
+  if (migrateResult.status === 0) {
+    log('green', '✅ 数据库恢复完成，Prisma schema 已同步');
+    return true;
+  } else {
+    log('yellow', '⚠️  数据库恢复成功，但 Prisma schema 同步失败');
+    log('cyan', '请手动运行: pnpm --filter backend prisma migrate deploy');
+    return true; // 恢复成功，但迁移同步失败
   }
 }
 

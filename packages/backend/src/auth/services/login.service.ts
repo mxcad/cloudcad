@@ -184,18 +184,18 @@ export class LoginService {
     const tokens =
       await this.authTokenService.generateTokens(userWithoutPassword);
 
+    const roleName = user.role?.name ?? 'UNKNOWN';
+
     if (req && req.session) {
       req.session.userId = user.id;
-      req.session.userRole = user.role.name;
+      req.session.userRole = roleName;
       req.session.userEmail = user.email ?? undefined;
       await req.session.save();
-      this.logger.log(
-        `Session 已设置: userId=${user.id}, role=${user.role.name}`
-      );
+      this.logger.log(`Session 已设置: userId=${user.id}, role=${roleName}`);
     }
 
     this.logger.log(
-      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${user.role.name})`
+      `用户登录成功: ${account} (ID: ${user.id}, 角色: ${roleName})`
     );
 
     return {
