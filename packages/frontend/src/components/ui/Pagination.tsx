@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { t } from '@/languages';
 
 export interface PaginationMeta {
   total: number;
@@ -156,12 +157,12 @@ export const Pagination: React.FC<PaginationProps> = ({
       <div ref={containerRef} className={`w-full flex items-center justify-center ${className}`} style={{ height: 24 }}>
         <div className="flex items-center gap-0.5">
           {showFirstLast && (
-            <Button variant="secondary" icon={ChevronsLeft} onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" tooltip="第一页" />
+            <Button variant="secondary" icon={ChevronsLeft} onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label={t("第一页")} tooltip={t("第一页")} />
           )}
-          <Button variant="secondary" icon={ChevronLeft} onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label="上一页" tooltip="上一页" />
-          <Button variant="secondary" icon={ChevronRight} onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label="下一页" tooltip="下一页" />
+          <Button variant="secondary" icon={ChevronLeft} onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label={t("上一页")} tooltip={t("上一页")} />
+          <Button variant="secondary" icon={ChevronRight} onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label={t("下一页")} tooltip={t("下一页")} />
           {showFirstLast && (
-            <Button variant="secondary" icon={ChevronsRight} onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label="最后一页" tooltip="最后一页" />
+            <Button variant="secondary" icon={ChevronsRight} onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label={t("最后一页")} tooltip={t("最后一页")} />
           )}
         </div>
       </div>
@@ -175,10 +176,10 @@ export const Pagination: React.FC<PaginationProps> = ({
     <div ref={containerRef} className={`w-full flex items-center ${className}`} style={{ height: 24 }}>
       <div className="flex-1 flex items-center justify-center gap-0.5 min-w-0">
         {showFirstLast && (
-          <Button variant="secondary" icon={ChevronsLeft} onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label="第一页" tooltip="第一页" />
+          <Button variant="secondary" icon={ChevronsLeft} onClick={() => onPageChange(1)} disabled={page <= 1 || loading} aria-label={t("第一页")} tooltip={t("第一页")} />
         )}
 
-        <Button variant="secondary" icon={ChevronLeft} onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label="上一页" tooltip="上一页" />
+        <Button variant="secondary" icon={ChevronLeft} onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} aria-label={t("上一页")} tooltip={t("上一页")} />
 
         {pageList.map((item, idx) =>
           typeof item === 'number' ? (
@@ -203,15 +204,15 @@ export const Pagination: React.FC<PaginationProps> = ({
           ),
         )}
 
-        <Button variant="secondary" icon={ChevronRight} onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label="下一页" tooltip="下一页" />
+        <Button variant="secondary" icon={ChevronRight} onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} aria-label={t("下一页")} tooltip={t("下一页")} />
 
         {showFirstLast && (
-          <Button variant="secondary" icon={ChevronsRight} onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label="最后一页" tooltip="最后一页" />
+          <Button variant="secondary" icon={ChevronsRight} onClick={() => onPageChange(totalPages)} disabled={page >= totalPages || loading} aria-label={t("最后一页")} tooltip={t("最后一页")} />
         )}
 
         {showJumper && (
           <div className="flex items-center gap-1 shrink-0 ml-0.5">
-            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>前往</span>
+            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{t("前往")}</span>
             <Input
               type="number"
               min={1}
@@ -224,7 +225,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               className="!w-[32px] text-center !px-0"
               wrapperClassName="!w-auto flex-none"
             />
-            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>页</span>
+            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{t("页")}</span>
           </div>
         )}
 

@@ -33,6 +33,7 @@ import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
 import NoPermissionPage from './components/ui/NoPermissionPage';
 import { isMobile } from './utils/isMobile';
 import { getMobileRedirectConfig, getMobileRedirectUrl } from './utils/mobileRedirect';
+import { t } from '@/languages';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -51,7 +52,7 @@ const PageLoader: React.FC = () => (
           borderTopColor: 'var(--primary-500)',
         }}
       />
-      <p style={{ color: 'var(--text-secondary)' }}>加载中...</p>
+      <p style={{ color: 'var(--text-secondary)' }}>{t("加载中...")}</p>
     </div>
   </div>
 );
@@ -205,7 +206,7 @@ function CADEditorRouteGuard() {
           }}
         />
         <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
-          正在加载 CAD 编辑器...
+          {t("正在加载 CAD 编辑器...")}
         </p>
       </div>
     );
@@ -228,7 +229,7 @@ function CADEditorRouteGuard() {
             }}
           />
           <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
-            正在加载 CAD 编辑器...
+            {t("正在加载 CAD 编辑器...")}
           </p>
         </div>
       }

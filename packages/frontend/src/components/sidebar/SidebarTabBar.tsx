@@ -12,6 +12,7 @@ import { SidebarTab } from '../../types/sidebar';
 import { Button, Tab, Tabs } from '../ui';
 import { Tooltip } from '../ui/Tooltip';
 import { returnToCloudMapManagement } from '@/services/mxcadManager';
+import { t } from '@/languages';
 import styles from './sidebar.module.css';
 
 interface SidebarTabBarProps {
@@ -22,9 +23,9 @@ interface SidebarTabBarProps {
 }
 
 const TABS: { id: SidebarTab; label: string; icon: React.ElementType; isAction?: boolean }[] = [
-  { id: 'drawings', label: '图纸', icon: FileText },
-  { id: 'collaborate', label: '实时协同', icon: Users },
-  { id: 'project-management', label: '项目管理', icon: LayoutDashboard, isAction: true },
+  { id: 'drawings', label: t('图纸'), icon: FileText },
+  { id: 'collaborate', label: t('实时协同'), icon: Users },
+  { id: 'project-management', label: t('项目管理'), icon: LayoutDashboard, isAction: true },
 ];
 
 /**
@@ -44,12 +45,12 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
 }) => {
   return (
     <div className={styles.tabBar}>
-      <Tooltip content={isExpanded ? "关闭侧边栏" : "展开侧边栏"} position="bottom" delay={100}>
+      <Tooltip content={isExpanded ? t("关闭侧边栏") : t("展开侧边栏")} position="bottom" delay={100}>
         <Button
           variant="secondary"
           size="sm"
           onClick={onCloseClick}
-          aria-label={isExpanded ? "关闭侧边栏" : "展开侧边栏"}
+          aria-label={isExpanded ? t("关闭侧边栏") : t("展开侧边栏")}
           className={styles.tabBarButton}
         >
           {isExpanded ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}

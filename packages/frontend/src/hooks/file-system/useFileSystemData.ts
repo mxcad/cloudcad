@@ -34,6 +34,7 @@ import { handleError } from '@/utils/errorHandler';
 import { queryKeys } from '@/lib/queryKeys';
 import type { ProjectFilterType } from '@/api-sdk';
 import type { SearchFilterValues } from '@/components/search/SearchFilters';
+import { t } from '@/languages';
 
 /** 从 API 响应包装中提取 data 属性类型 */
 type UnwrapApiResponse<T> = T extends { data: infer D } ? D : T;
@@ -348,7 +349,7 @@ export const useFileSystemData = ({
               });
               traversalNode = toFileSystemNode(parentResponse.data as FileSystemNodeDto);
             } catch (error: unknown) {
-              handleError(error, '获取父节点失败，停止构建面包屑');
+              handleError(error, t('获取父节点失败，停止构建面包屑'));
               break;
             }
           } else {
@@ -457,14 +458,14 @@ export const useFileSystemData = ({
     if (isTrash && isPersonalSpaceMode) {
       const nodeId = urlNodeId || urlProjectId || '';
       return [
-        { id: nodeId, name: '我的图纸', isRoot: true, isFolder: true },
-        { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
+        { id: nodeId, name: t('我的图纸'), isRoot: true, isFolder: true },
+        { id: 'trash', name: t('回收站'), isRoot: false, isFolder: true },
       ];
     }
 
     if (isTrash && !isPersonalSpaceMode && isProjectRootMode) {
       return [
-        { id: 'trash', name: '回收站', isRoot: true, isFolder: true },
+        { id: 'trash', name: t('回收站'), isRoot: true, isFolder: true },
       ];
     }
 
@@ -472,7 +473,7 @@ export const useFileSystemData = ({
       if (breadcrumbNodes && breadcrumbNodes.length >= 1) {
         return [
           ...breadcrumbNodes.map((n) => ({ ...n, isFolder: true })),
-          { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
+          { id: 'trash', name: t('回收站'), isRoot: false, isFolder: true },
         ];
       }
       const projectNode = nodeQuery.data;
@@ -484,7 +485,7 @@ export const useFileSystemData = ({
             isRoot: true,
             isFolder: true,
           },
-          { id: 'trash', name: '回收站', isRoot: false, isFolder: true },
+          { id: 'trash', name: t('回收站'), isRoot: false, isFolder: true },
         ];
       }
       return [];
@@ -552,7 +553,7 @@ export const useFileSystemData = ({
     breadcrumbs,
     loading,
     isFetching,
-    error: error ? (error instanceof Error ? error.message : '加载数据失败') : null,
+    error: error ? (error instanceof Error ? error.message : t('加载数据失败')) : null,
     paginationMeta,
     isTrashView,
     setIsTrashView,

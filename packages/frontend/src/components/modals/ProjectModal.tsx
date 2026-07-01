@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { FileSystemNode } from '../../types/filesystem';
+import { t } from '@/languages';
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -33,18 +34,18 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={editingProject ? '编辑项目' : '创建新项目'}
+      title={editingProject ? t('编辑项目') : t('创建新项目')}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            取消
+            {t("取消")}
           </Button>
           <Button
             onClick={onSubmit}
             disabled={loading || !(formData?.name || '').trim()}
             data-tour="project-create-submit"
           >
-            {loading ? '处理中...' : editingProject ? '保存' : '创建'}
+            {loading ? t('处理中...') : editingProject ? t('保存') : t('创建')}
           </Button>
         </>
       }
@@ -52,7 +53,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
-            名称 *
+             {t("名称 *")}
           </label>
           <Input
             required

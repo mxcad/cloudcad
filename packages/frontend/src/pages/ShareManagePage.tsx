@@ -8,6 +8,7 @@ import { Tag } from '@/components/ui/Tag';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useNotification } from '@/contexts/NotificationContext';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { t } from '@/languages';
 import {
   shareControllerListShares,
   shareControllerRevokeShare,
@@ -30,9 +31,9 @@ interface SortConfig {
 }
 
 const SORTABLE_COLUMNS: { field: SortField; label: string }[] = [
-  { field: 'createdAt', label: '创建时间' },
-  { field: 'expiresAt', label: '有效期' },
-  { field: 'usedCount', label: '次数' },
+  { field: 'createdAt', label: t('创建时间') },
+  { field: 'expiresAt', label: t('有效期') },
+  { field: 'usedCount', label: t('次数') },
 ];
 
 export const ShareManagePage: React.FC = () => {
@@ -155,7 +156,7 @@ export const ShareManagePage: React.FC = () => {
       }
       setItems((prev) => prev.filter((i) => i.token !== revokeTarget));
       setTotal((prev) => prev - 1);
-      showToast('分享已撤销', 'success');
+      showToast(t('分享已撤销'), 'success');
       setShowRevokeConfirm(false);
       setRevokeTarget(null);
     } catch (error) {
@@ -183,9 +184,9 @@ export const ShareManagePage: React.FC = () => {
       }
     }
     if (successCount > 0) {
-      showToast(`已撤销 ${successCount} 个分享${failCount > 0 ? `，${failCount} 个失败` : ''}`, 'success');
+      showToast(`${t('已撤销')} ${successCount} ${t('个分享')}${failCount > 0 ? `，${failCount} ${t('个失败')}` : ''}`, 'success');
     } else if (failCount > 0) {
-      showToast(`撤销失败 ${failCount} 个`, 'error');
+      showToast(`${t('撤销失败')} ${failCount} ${t('个')}`, 'error');
     }
     setShowBatchRevokeConfirm(false);
     setBatchRevoking(false);
@@ -198,7 +199,7 @@ export const ShareManagePage: React.FC = () => {
       await navigator.clipboard.writeText(fullUrl);
       setCopiedToken(token ?? linkUrl);
       setTimeout(() => setCopiedToken(null), 2000);
-      showToast('链接已复制', 'success');
+      showToast(t('链接已复制'), 'success');
     } catch (error) {
       showToast(getErrorMessage(error), 'error');
     }
@@ -220,7 +221,7 @@ export const ShareManagePage: React.FC = () => {
         showToast(getErrorMessage(result.error), 'error');
         return;
       }
-      showToast('有效期已更新', 'success');
+      showToast(t('有效期已更新'), 'success');
       setShowEditModal(false);
       setEditTarget(null);
       fetchShares(page, search, sort);
@@ -243,8 +244,8 @@ export const ShareManagePage: React.FC = () => {
   return (
     <div className="share-mgmt-page">
       <div className="share-mgmt-page-header">
-        <h1 className="share-mgmt-page-title">分享管理</h1>
-        <p className="share-mgmt-page-subtitle">查看和管理所有分享链接</p>
+        <h1 className="share-mgmt-page-title">{t("分享管理")}</h1>
+        <p className="share-mgmt-page-subtitle">{t("查看和管理所有分享链接")}</p>
       </div>
 
       <div className="share-mgmt-toolbar">
@@ -253,11 +254,11 @@ export const ShareManagePage: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => (e as unknown as React.KeyboardEvent<HTMLInputElement>).key === 'Enter' && handleSearch()}
-            placeholder="搜索文件名..."
+            placeholder={t("搜索文件名...")}
             leftIcon={Search}
             size="md"
           />
-          <Button variant="secondary" size="sm" onClick={handleSearch}>搜索</Button>
+          <Button variant="secondary" size="sm" onClick={handleSearch}>{t("搜索")}</Button>
         </div>
         <div className="share-mgmt-toolbar-actions">
           {selectedTokens.size > 0 && (
@@ -268,13 +269,13 @@ export const ShareManagePage: React.FC = () => {
               onClick={() => setShowBatchRevokeConfirm(true)}
               style={{ color: 'var(--error)' }}
             >
-              批量撤销 ({selectedTokens.size})
+               {t("批量撤销")} ({selectedTokens.size})
             </Button>
           )}
           {items.length > 0 && (
             <Button variant="primary" size="sm" onClick={() => setShowFileSelector(true)}>
               <Plus size={14} />
-              新建分享
+              {t("新建分享")}
             </Button>
           )}
         </div>
@@ -289,7 +290,7 @@ export const ShareManagePage: React.FC = () => {
           <div className="share-mgmt-table-empty">
             <p style={{ marginBottom: '8px' }}>{error}</p>
             <Button variant="secondary" size="sm" onClick={() => fetchShares(page, search, sort)}>
-              重试
+              {t("重试")}
             </Button>
           </div>
         </div>
@@ -297,19 +298,19 @@ export const ShareManagePage: React.FC = () => {
         <div className="share-mgmt-table-container">
           <div className="share-mgmt-table-empty">
             <p className="share-mgmt-empty-title">
-              {search ? '没有找到匹配的分享' : '还没有分享过图纸'}
+              {search ? t('没有找到匹配的分享') : t('还没有分享过图纸')}
             </p>
             <p className="share-mgmt-empty-desc">
-              {search ? '尝试其他搜索词' : '去文件管理器选择图纸，右键即可分享'}
+              {search ? t('尝试其他搜索词') : t('去文件管理器选择图纸，右键即可分享')}
             </p>
             {search && (
               <Button variant="secondary" size="sm" style={{ marginTop: '12px' }} onClick={handleClearSearch}>
-                清除搜索
+                {t("清除搜索")}
               </Button>
             )}
             {!search && (
               <Button variant="primary" size="sm" style={{ marginTop: '16px' }} onClick={() => setShowFileSelector(true)}>
-                新建分享
+                {t("新建分享")}
               </Button>
             )}
           </div>
@@ -327,9 +328,9 @@ export const ShareManagePage: React.FC = () => {
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th>文件</th>
-                  <th>链接</th>
-                  <th>状态</th>
+                  <th>{t("文件")}</th>
+                  <th>{t("链接")}</th>
+                  <th>{t("状态")}</th>
                   {SORTABLE_COLUMNS.map((col) => (
                     <th
                       key={col.field}
@@ -344,7 +345,7 @@ export const ShareManagePage: React.FC = () => {
                       </span>
                     </th>
                   ))}
-                  <th>操作</th>
+                  <th>{t("操作")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -368,7 +369,7 @@ export const ShareManagePage: React.FC = () => {
                           <button
                             onClick={() => handleCopy(item.url, item.token)}
                             className="share-mgmt-copy-btn"
-                            title="复制链接"
+                            title={t("复制链接")}
                           >
                             {copiedToken === item.token ? <Check size={12} /> : <Copy size={12} />}
                           </button>
@@ -380,7 +381,7 @@ export const ShareManagePage: React.FC = () => {
                           size="xs"
                           onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
                         >
-                          {expired ? '已过期' : '有效'}
+                          {expired ? t('已过期') : t('有效')}
                         </Tag>
                       </td>
                       <td className="share-mgmt-td-meta">
@@ -400,21 +401,21 @@ export const ShareManagePage: React.FC = () => {
                             size="xs"
                             icon={ExternalLink}
                             onClick={() => navigate(item.url)}
-                            tooltip="打开文件"
+                            tooltip={t("打开文件")}
                           />
                           <Button
                             variant="secondary"
                             size="xs"
                             icon={Edit3}
                             onClick={() => handleEditExpiry(item.token, item.expiresAt as string | null)}
-                            tooltip="修改有效期"
+                            tooltip={t("修改有效期")}
                           />
                           <Button
                             variant="secondary"
                             size="xs"
                             icon={Trash2}
                             onClick={() => confirmRevoke(item.token)}
-                            tooltip="撤销分享"
+                            tooltip={t("撤销分享")}
                             style={{ color: 'var(--error)' }}
                           />
                         </div>
@@ -479,8 +480,8 @@ export const ShareManagePage: React.FC = () => {
         isOpen={showBatchRevokeConfirm}
         onClose={() => setShowBatchRevokeConfirm(false)}
         onConfirm={handleBatchRevoke}
-        title="批量撤销分享"
-        message={`确定要撤销选中的 ${selectedTokens.size} 个分享链接？`}
+        title={t("批量撤销分享")}
+        message={t('确定要撤销选中的 {count} 个分享链接？').replace('{count}', String(selectedTokens.size))}
         loading={batchRevoking}
       />
     </div>

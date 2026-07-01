@@ -6,6 +6,7 @@ import { Tooltip } from './ui/Tooltip';
 import { Menu } from './ui/Menu';
 import { Input } from './ui/Input';
 import { ArrowLeft, Pencil, Check, X } from 'lucide-react';
+import { t } from '@/languages';
 
 interface BreadcrumbNavigationProps {
   breadcrumbs: BreadcrumbItem[];
@@ -156,7 +157,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
           wrapperClassName="flex-1"
           className="min-w-[200px]"
         />
-        <Tooltip content="确认">
+        <Tooltip content={t("确认")}>
           <button
             onClick={submitEditing}
             className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]"
@@ -165,7 +166,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
             <Check size={16} />
           </button>
         </Tooltip>
-        <Tooltip content="取消">
+        <Tooltip content={t("取消")}>
           <button
             onClick={cancelEditing}
             className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]"
@@ -240,17 +241,17 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
           <button
             onClick={onBack}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
-            title="返回上一级"
+            title={t("返回上一级")}
           >
             <ArrowLeft size={14} />
-            <span>返回</span>
+            <span>{t("返回")}</span>
           </button>
           <ChevronRightIcon size={12} className="text-slate-400 flex-shrink-0 mx-0.5" />
           <button
             onClick={onBackToProjects}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all whitespace-nowrap"
           >
-            项目列表
+            {t("项目列表")}
           </button>
           {breadcrumbs.length > 0 && (
             <ChevronRightIcon size={12} className="text-slate-400 flex-shrink-0 mx-0.5" />
@@ -297,7 +298,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
         <>
           {breadcrumbs.map((crumb, index) => renderCrumb(crumb, index, index === breadcrumbs.length - 1))}
           {editable && breadcrumbs.length > 0 && (
-            <Tooltip content="编辑路径">
+            <Tooltip content={t("编辑路径")}>
               <button
                 onClick={startEditing}
                 className="ml-1 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex-shrink-0"

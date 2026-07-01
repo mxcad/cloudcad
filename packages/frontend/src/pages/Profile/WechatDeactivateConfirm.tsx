@@ -3,6 +3,7 @@ import { useWechatAuth } from '../../hooks/useWechatAuth';
 import { useWechatBind } from './hooks/useWechatBind';
 import { MessageCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { t } from '@/languages';
 
 interface WechatDeactivateConfirmProps {
   onConfirm: () => void;
@@ -27,7 +28,7 @@ export function WechatDeactivateConfirm({
         sessionStorage.removeItem(DEACTIVATE_VERIFICATION_KEY);
         onConfirm();
       } catch {
-        setError('微信验证失败');
+        setError(t('微信验证失败'));
       } finally {
         setLoading(false);
       }
@@ -58,7 +59,7 @@ export function WechatDeactivateConfirm({
     return (
       <div className="wechat-warning success">
         <CheckCircle size={32} strokeWidth={2} />
-        <p>微信验证成功</p>
+        <p>{t("微信验证成功")}</p>
       </div>
     );
   }
@@ -66,14 +67,14 @@ export function WechatDeactivateConfirm({
   return (
     <div className="wechat-warning">
       <MessageCircle size={28} strokeWidth={1.5} />
-      <p>您是通过微信登录的账户，请使用微信扫码确认注销</p>
+      <p>{t("您是通过微信登录的账户，请使用微信扫码确认注销")}</p>
       <Button
         variant="primary"
         icon={MessageCircle}
         loading={loading}
         onClick={handleClick}
       >
-        {loading ? '等待授权...' : '微信扫码确认'}
+        {loading ? t('等待授权...') : t('微信扫码确认')}
       </Button>
       {error && <p className="error-text">{error}</p>}
     </div>

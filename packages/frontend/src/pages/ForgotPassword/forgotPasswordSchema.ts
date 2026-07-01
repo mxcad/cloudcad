@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { z } from 'zod/v4';
 
 export const forgotPasswordSchema = z
@@ -13,7 +14,7 @@ export const forgotPasswordSchema = z
       }
       return val.phone.length > 0 && /^1[3-9]\d{9}$/.test(val.phone);
     },
-    { message: '请输入有效的联系方式' }
+    { message: t('请输入有效的联系方式') }
   );
 
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;

@@ -3,6 +3,7 @@ import { Search, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Z_LAYERS } from '@/constants/layers';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
 
 export interface AutocompleteItem {
   key: string;
@@ -34,7 +35,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   loading = false,
   items,
   onSelectItem,
-  placeholder = '搜索...',
+  placeholder = t('搜索...'),
   renderItem,
   getItemKey,
   open,
@@ -80,7 +81,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
               />
             )}
             {showClear && !loading && (
-              <Tooltip content="清除">
+              <Tooltip content={t("清除")}>
                 <button
                   type="button"
                   onClick={handleClear}
@@ -111,7 +112,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
             </div>
           ) : items.length === 0 ? (
             <div className="text-xs py-2 text-center" style={{ color: 'var(--text-muted)' }}>
-              暂无数据
+              {t("暂无数据")}
             </div>
           ) : (
             items.map((item) => (

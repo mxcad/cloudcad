@@ -11,6 +11,7 @@ import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
 import type { ProjectFilterType } from '@/api-sdk';
 import { Tab, Tabs } from '@/components/ui';
 import styles from '@/components/sidebar/sidebar.module.css';
+import { t } from '@/languages';
 
 interface ProjectListViewProps {
   projects: FileSystemNode[];
@@ -55,13 +56,13 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       {/* 项目列表标题 */}
       <div className={styles.sectionTitle}>
         <FolderOpen size={16} />
-        <span>我的项目 ({projects.length})</span>
+        <span>{t(`我的项目 (${projects.length})`)}</span>
         {onCreateProject && (
           <button
             onClick={onCreateProject}
             className="ml-auto px-3 py-1 text-sm rounded-lg bg-[var(--primary-500)] text-white hover:bg-[var(--primary-600)] transition-colors"
           >
-            + 创建项目
+            {t("+ 创建项目")}
           </button>
         )}
       </div>
@@ -69,9 +70,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       {/* 项目过滤 Tab */}
       <Tabs>
         {[
-          { key: 'all', label: '全部' },
-          { key: 'owned', label: '我创建的' },
-          { key: 'joined', label: '我加入的' },
+          { key: 'all', label: t('全部') },
+          { key: 'owned', label: t('我创建的') },
+          { key: 'joined', label: t('我加入的') },
         ].map((tab) => (
           <Tab
             key={tab.key}
@@ -88,7 +89,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         {filteredProjects.length === 0 ? (
           <div className={styles.emptyState}>
             <FolderOpen size={48} className={styles.emptyIcon} />
-            <div className={styles.emptyText}>暂无项目，请先创建项目</div>
+            <div className={styles.emptyText}>{t("暂无项目，请先创建项目")}</div>
           </div>
         ) : (
           filteredProjects.map((project) => {

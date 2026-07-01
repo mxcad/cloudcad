@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { t } from '@/languages';
 
 interface PasswordForm {
   oldPassword: string;
@@ -39,11 +40,11 @@ export const usePasswordForm = () => {
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
     const levels = [
-      { label: '太弱', color: '#ef4444' },
-      { label: '较弱', color: '#f97316' },
-      { label: '一般', color: '#eab308' },
-      { label: '较强', color: '#22c55e' },
-      { label: '很强', color: '#10b981' },
+      { label: t('太弱'), color: '#ef4444' },
+      { label: t('较弱'), color: '#f97316' },
+      { label: t('一般'), color: '#eab308' },
+      { label: t('较强'), color: '#22c55e' },
+      { label: t('很强'), color: '#10b981' },
     ];
     return {
       strength: score,
@@ -58,15 +59,15 @@ export const usePasswordForm = () => {
     const errors: string[] = [];
     
     if (form.newPassword !== form.confirmPassword) {
-      errors.push('两次输入的新密码不一致');
+      errors.push(t('两次输入的新密码不一致'));
     }
     
     if (form.newPassword.length < 6) {
-      errors.push('新密码至少需要6个字符');
+      errors.push(t('新密码至少需要6个字符'));
     }
     
     if (userHasPassword !== false && !form.oldPassword) {
-      errors.push('请输入当前密码');
+      errors.push(t('请输入当前密码'));
     }
     
     return errors;

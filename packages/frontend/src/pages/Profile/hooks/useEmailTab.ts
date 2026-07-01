@@ -8,6 +8,7 @@ import {
   authControllerVerifyUnbindEmailCode,
   authControllerRebindEmail,
 } from '@/api-sdk';
+import { t } from '@/languages';
 
 export const useEmailTab = () => {
   const {
@@ -48,24 +49,24 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     if (!form.email) {
-      setError('请输入邮箱地址');
+      setError(t('请输入邮箱地址'));
       setLoading(false);
       return;
     }
     try {
       await authControllerSendBindEmailCode({ body: { email: form.email } });
       setStep('verify');
-      setSuccess('验证码已发送到您的邮箱');
+      setSuccess(t('验证码已发送到您的邮箱'));
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
         (err as Error).message ||
-        '发送验证码失败'
+        t('发送验证码失败')
       );
     } finally {
       setLoading(false);
     }
-  }, [form.email, setError, setLoading, setSuccess]);
+  }, [form.email, setError, setLoading, setSuccess, verification]);
 
   const handleVerifyBindEmail = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +74,7 @@ export const useEmailTab = () => {
     setError(null);
     try {
       await authControllerVerifyBindEmail({ body: { email: form.email, code: form.code } } );
-      setSuccess('邮箱绑定成功');
+      setSuccess(t('邮箱绑定成功'));
       setStep('input');
       setForm({ email: '', code: '' });
       await refreshUser();
@@ -81,7 +82,7 @@ export const useEmailTab = () => {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
         (err as Error).message ||
-        '验证失败'
+        t('验证失败')
       );
     } finally {
       setLoading(false);
@@ -94,16 +95,16 @@ export const useEmailTab = () => {
     try {
       const response = (await authControllerSendUnbindEmailCode()).data as { success?: boolean; message?: string };
       if (response?.success) {
-        setSuccess('验证码已发送到原邮箱');
+        setSuccess(t('验证码已发送到原邮箱'));
         verification.resetCountdown();
       } else {
-        setError(response?.message || '发送验证码失败');
+        setError(response?.message || t('发送验证码失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
         (err as Error).message ||
-        '发送验证码失败'
+        t('发送验证码失败')
       );
     } finally {
       setLoading(false);
@@ -115,7 +116,7 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     if (!form.code || !/^\d{6}$/.test(form.code)) {
-      setError('请输入 6 位数字验证码');
+      setError(t('请输入 6 位数字验证码'));
       setLoading(false);
       return;
     }
@@ -124,18 +125,18 @@ export const useEmailTab = () => {
         body: { code: form.code },
       })).data as { success?: boolean; message?: string; token?: string };
       if (response?.success) {
-        setSuccess('原邮箱验证通过');
+        setSuccess(t('原邮箱验证通过'));
         setVerifyToken(response.token || '');
         setStep('inputNew');
         setForm({ email: '', code: '' });
       } else {
-        setError(response?.message || '验证失败');
+        setError(response?.message || t('验证失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
         (err as Error).message ||
-        '验证失败'
+        t('验证失败')
       );
     } finally {
       setLoading(false);
@@ -144,21 +145,21 @@ export const useEmailTab = () => {
 
   const handleSendNewEmailCode = useCallback(async () => {
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError('请输入正确的邮箱地址');
+      setError(t('请输入正确的邮箱地址'));
       return;
     }
     setLoading(true);
     setError(null);
     try {
       await authControllerSendBindEmailCode({ body: { email: form.email, isRebind: true } });
-      setSuccess('验证码已发送');
+      setSuccess(t('验证码已发送'));
       verification.resetCountdown();
       setStep('verifyNew');
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
         (err as Error).message ||
-        '发送验证码失败'
+        t('发送验证码失败')
       );
     } finally {
       setLoading(false);
@@ -170,17 +171,17 @@ export const useEmailTab = () => {
     setLoading(true);
     setError(null);
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError('请输入正确的邮箱地址');
+      setError(t('请输入正确的邮箱地址'));
       setLoading(false);
       return;
     }
     if (!form.code || !/^\d{6}$/.test(form.code)) {
-      setError('请输入 6 位数字验证码');
+      setError(t('请输入 6 位数字验证码'));
       setLoading(false);
       return;
     }
     if (!verifyToken) {
-      setError('请先验证原邮箱');
+      setError(t('请先验证原邮箱'));
       setLoading(false);
       return;
     }
@@ -189,20 +190,20 @@ export const useEmailTab = () => {
         body: { email: form.email, code: form.code, token: verifyToken },
       })).data as { success?: boolean; message?: string };
       if (response?.success) {
-        setSuccess('邮箱换绑成功');
+        setSuccess(t('邮箱换绑成功'));
         setStep('input');
         setForm({ email: '', code: '' });
         setVerifyToken('');
         setIsEditing(false);
         await refreshUser();
       } else {
-        setError(response?.message || '换绑失败');
+        setError(response?.message || t('换绑失败'));
       }
     } catch (err) {
       setError(
         (err as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
         (err as Error).message ||
-        '换绑失败'
+        t('换绑失败')
       );
     } finally {
       setLoading(false);

@@ -6,6 +6,7 @@
 import React from 'react';
 import { Settings, Shield } from 'lucide-react';
 import type { ConfigStats } from './hooks/useRuntimeConfig';
+import { t } from '@/languages';
 
 interface PageHeaderProps {
   configStats: ConfigStats;
@@ -22,27 +23,27 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ configStats, canManageCo
             <Settings size={28} />
           </div>
           <div className="title-content">
-            <h1 className="page-title">运行时配置</h1>
-            <p className="page-subtitle">管理系统运行参数，修改后立即生效</p>
+            <h1 className="page-title">{t("运行时配置")}</h1>
+            <p className="page-subtitle">{t("管理系统运行参数，修改后立即生效")}</p>
           </div>
         </div>
         <div className="header-right">
           <div className="stats-bar">
             <div className="stat-item">
               <span className="stat-value">{configStats.total}</span>
-              <span className="stat-label">配置项</span>
+              <span className="stat-label">{t("配置项")}</span>
             </div>
             <div className="stat-divider" />
             <div className="stat-item">
               <span className="stat-value public">{configStats.public}</span>
-              <span className="stat-label">公开</span>
+              <span className="stat-label">{t("公开")}</span>
             </div>
             {configStats.modified > 0 && (
               <>
                 <div className="stat-divider" />
                 <div className="stat-item">
                   <span className="stat-value modified">{configStats.modified}</span>
-                  <span className="stat-label">待保存</span>
+                  <span className="stat-label">{t("待保存")}</span>
                 </div>
               </>
             )}
@@ -53,7 +54,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ configStats, canManageCo
       {!canManageConfig && (
         <div className="info-banner">
           <Shield size={18} />
-          <span>您当前处于只读模式，需要系统管理权限才能修改配置</span>
+          <span>{t("您当前处于只读模式，需要系统管理权限才能修改配置")}</span>
         </div>
       )}
     </>

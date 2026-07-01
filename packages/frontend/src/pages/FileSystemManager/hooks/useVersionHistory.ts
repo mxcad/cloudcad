@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { versionControlControllerGetFileHistory } from '@/api-sdk';
 import { ProjectPermission } from '@/constants/permissions';
+import { t } from '@/languages';
 import { handleError } from '@/utils/errorHandler';
 import type { FileSystemNode } from '@/types/filesystem';
 
@@ -43,7 +44,7 @@ export function useVersionHistory({
   const handleShowVersionHistory = useCallback(
     async (node: FileSystemNode) => {
       if (!projectPermissions[ProjectPermission.VERSION_READ]) {
-        showToast('您没有权限查看版本历史', 'warning');
+        showToast(t('您没有权限查看版本历史'), 'warning');
         return;
       }
 
@@ -69,12 +70,12 @@ export function useVersionHistory({
         if (data?.success) {
           setVersionHistoryEntries(data.entries || []);
         } else {
-          setVersionHistoryError(data?.message || '加载版本历史失败');
+          setVersionHistoryError(data?.message || t('加载版本历史失败'));
         }
       } catch (error: unknown) {
         handleError(error, '版本历史加载失败');
         setVersionHistoryError(
-          error instanceof Error ? error.message : '加载版本历史失败'
+          error instanceof Error ? error.message : t('加载版本历史失败')
         );
       } finally {
         setVersionHistoryLoading(false);

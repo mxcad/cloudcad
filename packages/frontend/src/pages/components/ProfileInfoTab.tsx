@@ -20,6 +20,7 @@ import { usePermission } from '../../hooks/usePermission';
 import { useProfileUpdate } from '../Profile/hooks/useProfileUpdate';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
+import { t } from '@/languages';
 
 interface ProfileInfoTabProps {
   user: {
@@ -81,7 +82,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
         username: formData.username,
         nickname: formData.nickname,
       });
-      setSuccess('个人信息更新成功');
+      setSuccess(t('个人信息更新成功'));
       await refreshUser();
       setIsEditing(false);
     } catch (err) {
@@ -89,7 +90,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '更新失败'
+          t('更新失败')
       );
     }
   };
@@ -112,9 +113,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
       {!isEditing ? (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-text-primary">个人信息</h2>
+            <h2 className="text-xl font-semibold text-text-primary">{t("个人信息")}</h2>
             <Button onClick={() => setIsEditing(true)} icon={Edit}>
-              <span>编辑</span>
+              <span>{t("编辑")}</span>
             </Button>
           </div>
 
@@ -124,7 +125,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <User size={20} />
               </div>
               <div className="info-content">
-                <label>用户名</label>
+                <label>{t("用户名")}</label>
                 <span>{user?.username || '-'}</span>
               </div>
             </div>
@@ -134,7 +135,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <User size={20} />
               </div>
               <div className="info-content">
-                <label>昵称</label>
+                <label>{t("昵称")}</label>
                 <span>{user?.nickname || '-'}</span>
               </div>
             </div>
@@ -144,9 +145,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <Mail size={20} />
               </div>
               <div className="info-content">
-                <label>邮箱地址</label>
+                <label>{t("邮箱地址")}</label>
                 <span className="with-status">
-                  {typeof user?.email === 'string' ? user.email : '未绑定'}
+                  {typeof user?.email === 'string' ? user.email : t('未绑定')}
                   {typeof user?.email === 'string' && (
                     <CheckCircle size={14} className="status-icon success" />
                   )}
@@ -159,9 +160,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <Phone size={20} />
               </div>
               <div className="info-content">
-                <label>手机号</label>
+                <label>{t("手机号")}</label>
                 <span className="with-status">
-                  {typeof user?.phone === 'string' ? user.phone : '未绑定'}
+                  {typeof user?.phone === 'string' ? user.phone : t('未绑定')}
                   {typeof user?.phone === 'string' && user?.phoneVerified && (
                     <CheckCircle size={14} className="status-icon success" />
                   )}
@@ -174,9 +175,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <MessageCircle size={20} />
               </div>
               <div className="info-content">
-                <label>微信</label>
+                <label>{t("微信")}</label>
                 <span className="with-status">
-                  {user?.wechatId ? '已绑定' : '未绑定'}
+                  {user?.wechatId ? t('已绑定') : t('未绑定')}
                   {user?.wechatId ? (
                     <CheckCircle size={14} className="status-icon success" />
                   ) : (
@@ -191,8 +192,8 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <Shield size={20} />
               </div>
               <div className="info-content">
-                <label>账户角色</label>
-                <Tag variant="primary">{isAdmin() ? '系统管理员' : '普通用户'}</Tag>
+                <label>{t("账户角色")}</label>
+                <Tag variant="primary">{isAdmin() ? t('系统管理员') : t('普通用户')}</Tag>
               </div>
             </div>
 
@@ -201,13 +202,13 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 <Activity size={20} />
               </div>
               <div className="info-content">
-                <label>账户状态</label>
+                <label>{t("账户状态")}</label>
                 <Tag variant={user?.status === 'ACTIVE' ? 'success' : user?.status === 'INACTIVE' ? 'warning' : 'error'}>
                   {user?.status === 'ACTIVE'
-                    ? '正常'
+                    ? t('正常')
                     : user?.status === 'INACTIVE'
-                      ? '未激活'
-                      : '已禁用'}
+                      ? t('未激活')
+                      : t('已禁用')}
                 </Tag>
               </div>
             </div>
@@ -218,7 +219,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                   <Calendar size={20} />
                 </div>
                 <div className="info-content">
-                  <label>创建时间</label>
+                  <label>{t("创建时间")}</label>
                   <span>{formatDate(user.createdAt)}</span>
                 </div>
               </div>
@@ -230,7 +231,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                   <Sparkles size={20} />
                 </div>
                 <div className="info-content">
-                  <label>最后登录</label>
+                  <label>{t("最后登录")}</label>
                   <span>{formatDate(user.lastLoginAt)}</span>
                 </div>
               </div>
@@ -240,7 +241,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
       ) : (
         <div className="edit-profile-form">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-text-primary">编辑个人信息</h2>
+            <h2 className="text-xl font-semibold text-text-primary">{t("编辑个人信息")}</h2>
             <Button
               variant="secondary"
               icon={X}
@@ -254,37 +255,37 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 setSuccess(null);
               }}
             >
-              <span>取消</span>
+              <span>{t("取消")}</span>
             </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="input-group">
-              <label className="input-label">用户名</label>
+              <label className="input-label">{t("用户名")}</label>
               <div className="input-wrapper">
                 <Input
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="请输入用户名"
+                  placeholder={t("请输入用户名")}
                   minLength={3}
                   maxLength={20}
                   required
                 />
               </div>
-              <p className="text-sm text-text-muted mt-1">用户名一月内最多修改3次</p>
+              <p className="text-sm text-text-muted mt-1">{t("用户名一月内最多修改3次")}</p>
             </div>
 
             <div className="input-group">
-              <label className="input-label">昵称</label>
+              <label className="input-label">{t("昵称")}</label>
               <div className="input-wrapper">
                 <Input
                   type="text"
                   name="nickname"
                   value={formData.nickname}
                   onChange={handleInputChange}
-                  placeholder="请输入昵称"
+                  placeholder={t("请输入昵称")}
                   maxLength={50}
                 />
               </div>
@@ -297,7 +298,7 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({ user }) => {
                 loading={loading}
                 icon={Save}
               >
-                {loading ? <span>保存中...</span> : <span>保存</span>}
+                {loading ? <span>{t("保存中...")}</span> : <span>{t("保存")}</span>}
               </Button>
             </div>
           </form>

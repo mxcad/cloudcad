@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/languages';
 import { getRoleDisplayName } from '@/constants/permissions';
 import { SearchInput } from '@/components/search/SearchInput';
 import { Select } from '@/components/ui/Select';
@@ -34,7 +35,7 @@ export function UserSearchBar({
   onSortOrderChange,
 }: UserSearchBarProps) {
   const roleOptions: SelectOption[] = [
-    { value: '', label: '所有角色' },
+    { value: '', label: t('所有角色') },
     ...roles.map((role) => ({
       value: role.id,
       label: getRoleDisplayName(role.name, role.isSystem),
@@ -42,19 +43,19 @@ export function UserSearchBar({
   ];
 
   const sortOptions: SelectOption[] = [
-    { value: 'createdAt-desc', label: '创建时间（降序）' },
-    { value: 'createdAt-asc', label: '创建时间（升序）' },
-    { value: 'username-asc', label: '用户名（升序）' },
-    { value: 'username-desc', label: '用户名（降序）' },
-    { value: 'email-asc', label: '邮箱（升序）' },
-    { value: 'email-desc', label: '邮箱（降序）' },
+    { value: 'createdAt-desc', label: t('创建时间（降序）') },
+    { value: 'createdAt-asc', label: t('创建时间（升序）') },
+    { value: 'username-asc', label: t('用户名（升序）') },
+    { value: 'username-desc', label: t('用户名（降序）') },
+    { value: 'email-asc', label: t('邮箱（升序）') },
+    { value: 'email-desc', label: t('邮箱（降序）') },
   ];
 
   return (
     <div className="filters-card">
       <div className="filters-grid">
         <SearchInput
-          placeholder="搜索用户（邮箱、用户名、昵称）"
+          placeholder={t("搜索用户（邮箱、用户名、昵称）")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -64,7 +65,7 @@ export function UserSearchBar({
             value={roleFilter}
             onChange={onRoleFilterChange}
             options={roleOptions}
-            placeholder="所有角色"
+            placeholder={t("所有角色")}
           />
         </div>
 
@@ -77,7 +78,7 @@ export function UserSearchBar({
               onSortOrderChange(order as 'asc' | 'desc');
             }}
             options={sortOptions}
-            placeholder="排序方式"
+            placeholder={t("排序方式")}
           />
         </div>
       </div>

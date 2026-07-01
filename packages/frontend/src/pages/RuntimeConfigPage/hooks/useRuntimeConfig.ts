@@ -12,6 +12,7 @@ import { SystemPermission } from '@/constants/permissions';
 import { handleError } from '@/utils/errorHandler';
 import { Mail, Globe, Users, FileText, Cpu, Settings, Smartphone, MessageCircle, HardDrive } from 'lucide-react';
 import type { ComponentType } from 'react';
+import { t } from '@/languages';
 
 // ── Types ──
 
@@ -31,14 +32,14 @@ export interface ConfigStats {
 // ── Constants ──
 
 export const CATEGORY_CONFIG: Record<string, { label: string; icon: ComponentType<{ size?: number; className?: string }> }> = {
-  mail: { label: '邮件配置', icon: Mail },
-  sms: { label: '短信配置', icon: Smartphone },
-  support: { label: '客服信息', icon: Globe },
-  file: { label: '文件配置', icon: FileText },
-  user: { label: '用户管理', icon: Users },
-  system: { label: '系统配置', icon: Cpu },
-  wechat: { label: '微信配置', icon: MessageCircle },
-  storage: { label: '存储配置', icon: HardDrive },
+  mail: { label: t('邮件配置'), icon: Mail },
+  sms: { label: t('短信配置'), icon: Smartphone },
+  support: { label: t('客服信息'), icon: Globe },
+  file: { label: t('文件配置'), icon: FileText },
+  user: { label: t('用户管理'), icon: Users },
+  system: { label: t('系统配置'), icon: Cpu },
+  wechat: { label: t('微信配置'), icon: MessageCircle },
+  storage: { label: t('存储配置'), icon: HardDrive },
 };
 
 // ── Utility functions ──
@@ -109,7 +110,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       setConfigs(data as RuntimeConfigResponseDto[]);
     } catch (error: unknown) {
       handleError(error, '获取配置失败');
-      showToast(error instanceof Error ? error.message : '获取配置失败', 'error');
+      showToast(error instanceof Error ? error.message : t('获取配置失败'), 'error');
     } finally {
       setLoading(false);
     }
@@ -150,7 +151,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     try {
       setSaving((prev) => new Set(prev).add(key));
       await runtimeConfigControllerUpdateConfig({ path: { key }, body: { val: value as never } });
-      showToast('配置已保存', 'success');
+      showToast(t('配置已保存'), 'success');
       setEditedValues((prev) => {
         const next = { ...prev };
         delete next[key];
@@ -159,7 +160,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       await fetchConfigs();
     } catch (error: unknown) {
       handleError(error, '保存配置失败');
-      showToast(error instanceof Error ? error.message : '保存失败', 'error');
+      showToast(error instanceof Error ? error.message : t('保存失败'), 'error');
     } finally {
       setSaving((prev) => {
         const next = new Set(prev);
@@ -171,10 +172,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
 
   const handleReset = useCallback(async (key: string) => {
     const confirmed = await showConfirm({
-      title: '确认重置',
-      message: '确定要将此配置重置为默认值吗？此操作不可撤销。',
-      confirmText: '确认重置',
-      cancelText: '取消',
+      title: t('确认重置'),
+      message: t('确定要将此配置重置为默认值吗？此操作不可撤销。'),
+      confirmText: t('确认重置'),
+      cancelText: t('取消'),
       type: 'warning',
     });
 
@@ -183,7 +184,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     try {
       setSaving((prev) => new Set(prev).add(key));
       await runtimeConfigControllerResetConfig({ path: { key } });
-      showToast('已重置为默认值', 'success');
+      showToast(t('已重置为默认值'), 'success');
       setEditedValues((prev) => {
         const next = { ...prev };
         delete next[key];
@@ -192,7 +193,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       await fetchConfigs();
     } catch (error: unknown) {
       handleError(error, '重置配置失败');
-      showToast(error instanceof Error ? error.message : '重置失败', 'error');
+      showToast(error instanceof Error ? error.message : t('重置失败'), 'error');
     } finally {
       setSaving((prev) => {
         const next = new Set(prev);

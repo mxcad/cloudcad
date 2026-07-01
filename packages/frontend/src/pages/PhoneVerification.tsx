@@ -145,7 +145,7 @@ export const PhoneVerification: React.FC = () => {
 
   const handleResendCode = useCallback(async () => {
     if (!phone) {
-      setError(bindMode ? '请先输入手机号' : '手机号缺失，请重新登录');
+      setError(bindMode ? t('请先输入手机号') : t('手机号缺失，请重新登录'));
       return;
     }
 
@@ -172,7 +172,7 @@ export const PhoneVerification: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
         (err as Error).message ||
-        '发送失败，请稍后重试';
+        t('发送失败，请稍后重试');
       setError(errorMessage);
     } finally {
       setResendLoading(false);
@@ -194,9 +194,9 @@ export const PhoneVerification: React.FC = () => {
               <div className="success-icon">
                 <CheckCircle size={32} />
               </div>
-              <h2 className="success-title">手机号验证成功！</h2>
+              <h2 className="success-title">{t("手机号验证成功！")}</h2>
               <p className="success-subtitle">
-                账号已激活，即将自动跳转...
+                {t("账号已激活，即将自动跳转...")}
               </p>
             </div>
           </div>
@@ -237,7 +237,7 @@ export const PhoneVerification: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">{bindMode ? '绑定您的手机号' : '验证您的手机号'}</p>
+            <p className="app-tagline">{bindMode ? t('绑定您的手机号') : t('验证您的手机号')}</p>
           </div>
 
           {/* 手机号提示 */}
@@ -246,14 +246,14 @@ export const PhoneVerification: React.FC = () => {
               <Phone size={24} />
             </div>
             {bindMode && !codeSent ? (
-              <p className="phone-text">您的账号需要绑定手机号才能继续使用</p>
+              <p className="phone-text">{t("您的账号需要绑定手机号才能继续使用")}</p>
             ) : phone ? (
               <p className="phone-text">
-                我们已向 <span className="phone-highlight">{phone}</span>{' '}
-                发送了验证码
+                {t("我们已向")} <span className="phone-highlight">{phone}</span>{' '}
+                {t("发送了验证码")}
               </p>
             ) : (
-              <p className="phone-text">请输入您收到的6位数字验证码</p>
+              <p className="phone-text">{t("请输入您收到的6位数字验证码")}</p>
             )}
           </div>
 
@@ -261,7 +261,7 @@ export const PhoneVerification: React.FC = () => {
           {bindMode && !codeSent && (
             <div className="code-section" style={{ marginBottom: '1.25rem' }}>
               <label htmlFor="phone" className="code-label">
-                手机号
+                {t("手机号")}
               </label>
               <input
                 id="phone"
@@ -273,7 +273,7 @@ export const PhoneVerification: React.FC = () => {
                   setPhone(value);
                   if (error) setError(null);
                 }}
-                placeholder="请输入手机号"
+                placeholder={t("请输入手机号")}
                 className="code-input"
                 style={{ fontSize: '1rem', fontWeight: 400, letterSpacing: 'normal', textAlign: 'left' }}
                 disabled={loading}
@@ -293,14 +293,14 @@ export const PhoneVerification: React.FC = () => {
           {resendSuccess && (
             <div className="alert alert-success">
               <CheckCircle size={18} className="alert-icon" />
-              <span>验证码已重新发送，请查收</span>
+              <span>{t("验证码已重新发送，请查收")}</span>
             </div>
           )}
 
           {/* 验证码输入 */}
           <div className="code-section">
             <label htmlFor="code" className="code-label">
-              验证码
+              {t("验证码")}
             </label>
             <input
               id="code"
@@ -312,11 +312,11 @@ export const PhoneVerification: React.FC = () => {
                 setVerificationCode(value);
                 if (error) setError(null);
               }}
-              placeholder="请输入6位数字验证码"
+              placeholder={t("请输入6位数字验证码")}
               className="code-input"
               disabled={loading}
             />
-            <p className="code-hint">验证码为6位数字，请查看手机短信</p>
+            <p className="code-hint">{t("验证码为6位数字，请查看手机短信")}</p>
           </div>
 
           {/* 验证按钮 */}
@@ -329,10 +329,10 @@ export const PhoneVerification: React.FC = () => {
             className="w-full mb-5"
           >
             {loading ? (
-              <span>验证中...</span>
+              <span>{t("验证中...")}</span>
             ) : (
               <>
-                <span>验证</span>
+                <span>{t("验证")}</span>
                 <CheckCircle size={18} />
               </>
             )}
@@ -340,11 +340,11 @@ export const PhoneVerification: React.FC = () => {
 
           {/* 帮助信息 */}
           <div className="help-section">
-            <h4 className="help-title">没有收到验证码？</h4>
+            <h4 className="help-title">{t("没有收到验证码？")}</h4>
             <ul className="help-list">
-              <li>&#8226; 检查手机号是否正确</li>
-              <li>&#8226; 检查短信是否被拦截</li>
-              <li>&#8226; 验证码15分钟内有效</li>
+              <li>&#8226; {t("检查手机号是否正确")}</li>
+              <li>&#8226; {t("检查短信是否被拦截")}</li>
+              <li>&#8226; {t("验证码15分钟内有效")}</li>
             </ul>
           </div>
 
@@ -361,31 +361,31 @@ export const PhoneVerification: React.FC = () => {
               {resendCooldown > 0 ? (
                 <>
                   <RefreshCw size={16} />
-                  <span>{resendCooldown}秒后可重新发送</span>
+                  <span>{t(`{cooldown}秒后可重新发送`).replace('{cooldown}', String(resendCooldown))}</span>
                 </>
               ) : (
                 <>
                   <RefreshCw size={16} />
-                  <span>{!codeSent && bindMode ? '发送验证码' : '重新发送验证码'}</span>
+                  <span>{!codeSent && bindMode ? t('发送验证码') : t('重新发送验证码')}</span>
                 </>
               )}
             </Button>
 
             <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>
               <ArrowLeft size={16} />
-              <span>返回登录</span>
+              <span>{t("返回登录")}</span>
             </Button>
           </div>
 
           {/* 特性图标 */}
           <div className="features-bar">
-            <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+            <div className="feature-dot" data-tooltip={t("高性能 CAD 在线预览")}>
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip={t("多用户实时协同编辑")}>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip={t("企业级数据安全保障")}>
               <ShieldCheck size={14} />
             </div>
           </div>

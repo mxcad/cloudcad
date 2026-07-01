@@ -23,24 +23,25 @@ import { Z_LAYERS } from '../../constants/layers';
 import { useUploadManager } from '../../hooks/useUploadManager';
 import type { UploadTask } from '../../utils/uploadManager';
 import { formatFileSize } from '../ui/FileSize';
+import { t } from '@/languages';
 import './UploadPanel.css';
 
 function getStatusLabel(task: UploadTask): string {
   switch (task.status) {
     case 'waiting':
-      return '等待中';
+      return t('等待中');
     case 'uploading':
-      return task.progress >= 100 ? '转换中' : `上传中 ${task.progress.toFixed(0)}%`;
+      return task.progress >= 100 ? t('转换中') : t('上传中 ' + task.progress.toFixed(0) + '%');
     case 'processing':
-      return '转换中';
+      return t('转换中');
     case 'done':
-      return '完成';
+      return t('完成');
     case 'failed':
-      return '失败';
+      return t('失败');
     case 'paused':
-      return '已暂停';
+      return t('已暂停');
     case 'cancelled':
-      return '已取消';
+      return t('已取消');
     default:
       return '';
   }
@@ -131,7 +132,7 @@ export function UploadPanel() {
           <div className="upload-panel-header">
             <span className="upload-panel-title">
               <Upload size={14} />
-              上传队列
+              {t("上传队列")}
               {activeCount > 0 && (
                 <span className="count-badge">{activeCount}</span>
               )}
@@ -139,7 +140,7 @@ export function UploadPanel() {
             <div className="upload-panel-actions">
               {hasActive && (
                 <button
-                  title="全部暂停"
+                  title={t("全部暂停")}
                   onClick={pauseAll}
                 >
                   <Pause size={14} />
@@ -147,14 +148,14 @@ export function UploadPanel() {
               )}
               {stats.paused > 0 && (
                 <button
-                  title="全部恢复"
+                  title={t("全部恢复")}
                   onClick={resumeAll}
                 >
                   <Play size={14} />
                 </button>
               )}
               <button
-                title="收起"
+                title={t("收起")}
                 onClick={() => setExpanded(false)}
               >
                 <ChevronDown size={14} />
@@ -180,11 +181,11 @@ export function UploadPanel() {
           {/* Footer */}
           <div className="upload-panel-footer">
             <span style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>
-              完成 {stats.done}/{stats.total}
-              {stats.failed > 0 && ` · 失败 ${stats.failed}`}
+               {t(`完成 ${stats.done}/${stats.total}`)}
+              {stats.failed > 0 && t(` · 失败 ${stats.failed}`)}
             </span>
             {(stats.done > 0 || stats.failed > 0) && (
-              <button onClick={clearCompleted}>清除已完成</button>
+              <button onClick={clearCompleted}>{t("清除已完成")}</button>
             )}
           </div>
         </div>
@@ -192,7 +193,7 @@ export function UploadPanel() {
         <div
           className="upload-panel-collapsed"
           onClick={() => setExpanded(true)}
-          title="展开上传队列"
+          title={t("展开上传队列")}
         >
           {hasActive ? (
             <Upload size={18} style={{ color: 'var(--info)' }} />
@@ -273,7 +274,7 @@ function TaskRow({ task, onPause, onResume, onRemove, onRetry }: TaskRowProps) {
         {task.status === 'waiting' && (
           <>
             <button
-              title="暂停"
+              title={t("暂停")}
               onClick={(e) => {
                 e.stopPropagation();
                 onPause(task.id);
@@ -283,30 +284,7 @@ function TaskRow({ task, onPause, onResume, onRemove, onRetry }: TaskRowProps) {
             </button>
             <button
               className="remove"
-              title="删除"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(task.id);
-              }}
-            >
-              <X size={12} />
-            </button>
-          </>
-        )}
-        {task.status === 'paused' && (
-          <>
-            <button
-              title="继续"
-              onClick={(e) => {
-                e.stopPropagation();
-                onResume(task.id);
-              }}
-            >
-              <Play size={12} />
-            </button>
-            <button
-              className="remove"
-              title="删除"
+              title={t("删除")}
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove(task.id);
@@ -319,7 +297,7 @@ function TaskRow({ task, onPause, onResume, onRemove, onRetry }: TaskRowProps) {
         {task.status === 'uploading' && (
           <button
             className="remove"
-            title="取消上传"
+            title={t("取消上传")}
             onClick={(e) => {
               e.stopPropagation();
               onRemove(task.id);
@@ -331,7 +309,7 @@ function TaskRow({ task, onPause, onResume, onRemove, onRetry }: TaskRowProps) {
         {(task.status === 'done' || task.status === 'failed') && (
           <button
             className="remove"
-            title="从列表移除"
+            title={t("从列表移除")}
             onClick={(e) => {
               e.stopPropagation();
               onRemove(task.id);
@@ -343,7 +321,7 @@ function TaskRow({ task, onPause, onResume, onRemove, onRetry }: TaskRowProps) {
         {task.status === 'failed' && (
           <button
             className="retry"
-            title="重试"
+            title={t("重试")}
             onClick={(e) => {
               e.stopPropagation();
               onRetry(task.id);

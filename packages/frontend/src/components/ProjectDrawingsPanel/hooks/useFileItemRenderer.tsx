@@ -13,6 +13,7 @@ import { SystemPermission } from '@/constants/permissions';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import type { ViewMode, ResourceItem } from '@/components/common';
 import { handleError } from '@/utils/errorHandler';
+import { t } from '@/languages';
 
 interface UseFileItemRendererOptions {
   nodes: FileSystemNode[];
@@ -67,7 +68,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
       const node = nodes.find((n) => n.id === item.id);
       if (!node) return null;
 
-      const doubleClickHint = libraryType === 'block' ? '请双击插入图块' : '请双击打开';
+      const doubleClickHint = libraryType === 'block' ? t('请双击插入图块') : t('请双击打开');
 
       const handleLibraryDownload = () => {
         if (node.isFolder) return;
@@ -88,7 +89,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           const { MxCpp } = await import('mxcad');
           const mxcad = MxCpp.getCurrentMxCAD();
           if (!mxcad) {
-            showToast('请先打开一张图纸，然后再插入图块', 'warning');
+            showToast(t('请先打开一张图纸，然后再插入图块'), 'warning');
             return;
           }
           let latestUpdatedAt = blockNode.updatedAt;
@@ -106,10 +107,10 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
             isBlockLibrary: true,
           };
           MxFun.sendStringToExecute('Mx_Insert', cmdParam);
-          showToast(`正在插入图块：${blockNode.name}`, 'success');
+          showToast(t(`正在插入图块：${blockNode.name}`), 'success');
         } catch (error: unknown) {
-          handleError(error, 'useFileItemRenderer: 插入图块失败');
-          showToast('插入图块失败，请确保已在 CAD 编辑器中打开图纸', 'error');
+          handleError(error, 'useFileItemRenderer: ' + t('插入图块失败'));
+          showToast(t('插入图块失败，请确保已在 CAD 编辑器中打开图纸'), 'error');
         }
       };
 

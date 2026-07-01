@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { z } from 'zod';
 
 /**
@@ -7,11 +8,11 @@ import { z } from 'zod';
 export const step1Schema = z.object({
   username: z
     .string()
-    .min(1, '请输入用户名')
-    .min(3, '用户名至少3个字符')
-    .max(20, '用户名最多20个字符')
-    .regex(/^[a-zA-Z0-9_]+$/, '用户名只能包含字母、数字和下划线'),
-  nickname: z.string().max(50, '昵称最多50个字符').optional().or(z.literal('')),
+    .min(1, t('请输入用户名'))
+    .min(3, t('用户名至少3个字符'))
+    .max(20, t('用户名最多20个字符'))
+    .regex(/^[a-zA-Z0-9_]+$/, t('用户名只能包含字母、数字和下划线')),
+  nickname: z.string().max(50, t('昵称最多50个字符')).optional().or(z.literal('')),
   email: z.string().optional().or(z.literal('')),
 });
 
@@ -22,13 +23,13 @@ export const step2Schema = z
   .object({
     password: z
       .string()
-      .min(1, '密码不能为空')
-      .min(8, '密码至少8个字符')
-      .max(50, '密码最多50个字符'),
-    confirmPassword: z.string().min(1, '请再次输入密码'),
+      .min(1, t('密码不能为空'))
+      .min(8, t('密码至少8个字符'))
+      .max(50, t('密码最多50个字符')),
+    confirmPassword: z.string().min(1, t('请再次输入密码')),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: '两次输入的密码不一致',
+    message: t('两次输入的密码不一致'),
     path: ['confirmPassword'],
   });
 
@@ -44,7 +45,7 @@ export const registerFormSchema = z
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: '两次输入的密码不一致',
+    message: t('两次输入的密码不一致'),
     path: ['confirmPassword'],
   });
 

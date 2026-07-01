@@ -10,6 +10,7 @@ import {
   fileSystemControllerGetChildren,
 } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
+import { t } from '@/languages';
 import { FileTree } from '../ui/FileTree';
 import type { FileTreeNode } from '../ui/FileTree';
 
@@ -99,7 +100,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
 
           roots.push({
             id: '__virtual__my_projects__',
-            name: '我的项目',
+            name: t('我的项目'),
             isFolder: true,
             expanded: false,
             loading: false,

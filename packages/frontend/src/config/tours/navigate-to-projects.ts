@@ -16,6 +16,7 @@
  * 作为其他项目管理相关引导的前置条件
  */
 
+import { t } from '@/languages';
 import type { TourGuide } from '../../types/tour';
 
 /**
@@ -41,14 +42,14 @@ function isInProjectManagement(): boolean {
 export const navigateToProjectsGuide: TourGuide = {
   isHide: true, // 先隐藏，作为其他引导的前置条件引导
   id: 'navigate-to-projects',
-  name: '进入项目管理',
-  description: '学习如何从侧边栏进入项目管理页面',
-  category: '项目管理',
-  estimatedTime: '30 秒',
+  name: t('进入项目管理'),
+  description: t('学习如何从侧边栏进入项目管理页面'),
+  category: t('项目管理'),
+  estimatedTime: t('30 秒'),
   startPage: 'current', // 保持当前页面
   preconditions: [
     {
-      description: '需要在非 CAD 编辑器页面',
+      description: t('需要在非 CAD 编辑器页面'),
       check: () => !isInCADEditor(),
       resolve: {
         // 如果在 CAD 编辑器，跳转到首页
@@ -61,24 +62,24 @@ export const navigateToProjectsGuide: TourGuide = {
   steps: [
     {
       target: 'sidebar-projects',
-      title: '进入项目管理',
-      content: '点击侧边栏的"项目管理"进入项目列表页面。',
+      title: t('进入项目管理'),
+      content: t('点击侧边栏的"项目管理"进入项目列表页面。'),
       placement: 'right',
       mode: 'interactive',
       actionType: 'click',
-      actionHint: '请点击侧边栏中的"项目管理"',
+      actionHint: t('请点击侧边栏中的"项目管理"'),
       highlight: true,
       waitForElement: 3000,
-      fallbackContent: '请点击左侧侧边栏中的"项目管理"入口进入项目列表。',
+      fallbackContent: t('请点击左侧侧边栏中的"项目管理"入口进入项目列表。'),
     },
     {
       target: 'create-project-btn',
-      title: '项目列表页面',
-      content: '这里显示您的所有项目。您可以点击"新建项目"创建新项目，或点击项目卡片进入项目。',
+      title: t('项目列表页面'),
+      content: t('这里显示您的所有项目。您可以点击"新建项目"创建新项目，或点击项目卡片进入项目。'),
       placement: 'bottom',
       mode: 'display',
       waitForElement: 3000,
-      fallbackContent: '项目列表页面显示您的所有项目，支持创建、编辑和管理项目。',
+      fallbackContent: t('项目列表页面显示您的所有项目，支持创建、编辑和管理项目。'),
     },
   ],
 };

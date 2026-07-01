@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { ChevronDown, X, Check, Loader2, Search } from 'lucide-react';
 import { Z_LAYERS } from '@/constants/layers';
+import { t } from '@/languages';
 
 export interface SelectOption {
   value: string | number;
@@ -50,7 +51,7 @@ const SimpleSelect: React.FC<SelectProps> = ({
   value,
   onChange,
   options,
-  placeholder = '请选择',
+  placeholder = t('请选择'),
   size = 'md',
   clearable,
   disabled,
@@ -135,7 +136,7 @@ const SimpleSelect: React.FC<SelectProps> = ({
               </div>
             ) : options.length === 0 ? (
               <div className="text-xs py-2 text-center" style={{ color: 'var(--text-muted)' }}>
-                暂无数据
+                {t("暂无数据")}
               </div>
             ) : (
               <SelectPrimitive.Viewport className="max-h-60">
@@ -175,7 +176,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
   value,
   onChange,
   options,
-  placeholder = '搜索...',
+  placeholder = t('搜索...'),
   size = 'md',
   clearable,
   disabled,

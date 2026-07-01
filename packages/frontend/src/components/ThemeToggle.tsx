@@ -8,12 +8,13 @@ import { Sun } from 'lucide-react';
 import { Moon } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
+import { t } from '@/languages';
 
 export const ThemeToggle: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
 
   return (
-    <Tooltip content={isDark ? '切换到亮色模式' : '切换到暗色模式'}>
+    <Tooltip content={isDark ? t('切换到亮色模式') : t('切换到暗色模式')}>
       <Button
         variant="secondary"
         onClick={toggleTheme}
@@ -21,7 +22,7 @@ export const ThemeToggle: React.FC = () => {
                    hover:scale-110 active:scale-95
                    hover:bg-[var(--bg-tertiary)]
                    group"
-        aria-label={isDark ? '切换到亮色模式' : '切换到暗色模式'}
+        aria-label={isDark ? t('切换到亮色模式') : t('切换到暗色模式')}
       >
       <div className="relative w-5 h-5">
         {/* 太阳图标 - 亮色模式显示 */}

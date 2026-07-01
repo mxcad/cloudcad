@@ -16,6 +16,7 @@
  * 提供外部参照图片上传、检查和 URL 解析功能。
  */
 
+import { t } from '@/languages';
 import { mxCadControllerUploadExtReferenceImage } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import { globalShowToast } from '@/contexts/NotificationContext';
@@ -47,7 +48,7 @@ export async function uploadExtReferenceImage(
   } catch (error) {
     handleError(error, 'mxcadExtRef: uploadExtReferenceImage');
     const errorMessage =
-      error instanceof Error ? error.message : '外部参照上传失败';
+      error instanceof Error ? error.message : t('外部参照上传失败');
     globalShowToast(errorMessage, 'error');
     return {
       success: false,

@@ -15,6 +15,7 @@ import { FileSystemNode } from '../../types/filesystem';
 
 import { handleError } from '../../utils/errorHandler';
 import { isTourModeActive } from '../../contexts/TourContext';
+import { t } from '@/languages';
 
 interface UseFileSystemNavigationProps {
   urlProjectId?: string;
@@ -176,11 +177,11 @@ export const useFileSystemNavigation = ({
         document.body.removeChild(a);
 
         showToast(
-          node.isFolder ? '目录压缩下载成功' : '文件下载成功',
+          node.isFolder ? t('目录压缩下载成功') : t('文件下载成功'),
           'success'
         );
       } catch (error) {
-        let errorMessage = '文件下载失败';
+        let errorMessage = t('文件下载失败');
 
         if (error instanceof Error) {
           if (
@@ -188,13 +189,13 @@ export const useFileSystemNavigation = ({
             error.message.includes('Network Error')
           ) {
             errorMessage =
-              '下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件';
+              t('下载失败：跨域请求被阻止，请检查浏览器插件或尝试禁用迅雷插件');
           } else {
             errorMessage = error.message;
           }
         }
 
-        handleError(error, '文件下载失败');
+        handleError(error, t('文件下载失败'));
         showToast(errorMessage, 'error');
       }
     },
@@ -240,23 +241,24 @@ export const useFileSystemNavigation = ({
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        showToast(`文件下载成功（${format.toUpperCase()} 格式）`, 'success');
+        showToast(t(`文件下载成功（${format.toUpperCase()} 格式）`), 'success');
 
         setShowDownloadFormatModal(false);
         setDownloadingNode(null);
       } catch (error) {
-        let errorMessage = '文件下载失败';
+        let errorMessage = t('文件下载失败');
 
         if (error instanceof Error) {
           errorMessage = error.message;
         }
 
-        handleError(error, '文件下载失败');
+        handleError(error, t('文件下载失败'));
         showToast(errorMessage, 'error');
       }
     },
     [downloadingNode, showToast]
   );
+
 
   return {
     handleGoBack,

@@ -9,6 +9,7 @@ import { fetchBrandConfig } from './constants/appConfig';
 import { STALE_TIME_DEFAULT, INIT_TIMEOUT } from './constants/timeouts';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { VoerkaI18nProvider } from '@voerkai18n/react';
+import { t } from '@/languages';
 import './languages';
 
 
@@ -91,10 +92,10 @@ const AppInitializer: React.FC = () => {
               margin: '0 auto 16px',
             }}
           />
-          <p>正在加载 CloudCAD...</p>
+          <p>{t("正在加载 CloudCAD...")}</p>
           {initError && (
             <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>
-              初始化错误: {initError}
+              {t("初始化错误:")} {initError}
             </p>
           )}
         </div>

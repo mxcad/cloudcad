@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { QRCodeSVG } from 'qrcode.react';
 import { billingControllerQueryOrder } from '@/api-sdk';
+import { t } from '@/languages';
 
 declare const WeixinJSBridge: {
   invoke: (
@@ -172,7 +173,7 @@ export default function WechatPayButton({
             onClick={handlePay}
             loading={payState === 'paying'}
           >
-            {payState === 'paying' ? '支付中...' : '确认支付'}
+            {payState === 'paying' ? t('支付中...') : t('确认支付')}
           </Button>
         </div>
       </div>

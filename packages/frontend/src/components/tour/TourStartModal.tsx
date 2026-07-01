@@ -16,6 +16,7 @@ import { Compass } from 'lucide-react';
 import { BookOpen } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
+import { t } from '@/languages';
 
 /** z-index 层级 */
 const START_MODAL_Z_INDEX = 10002;
@@ -34,20 +35,20 @@ const features = [
   {
     icon: BookOpen,
     testid: 'book-open',
-    title: '业务流程教程',
-    description: '学习文件上传、成员管理等核心功能',
+    title: t('业务流程教程'),
+    description: t('学习文件上传、成员管理等核心功能'),
   },
   {
     icon: Target,
     testid: 'target',
-    title: '交互式引导',
-    description: '高亮目标元素，一步步引导操作',
+    title: t('交互式引导'),
+    description: t('高亮目标元素，一步步引导操作'),
   },
   {
     icon: Compass,
     testid: 'compass',
-    title: '按需学习',
-    description: '随时从引导中心选择需要的教程',
+    title: t('按需学习'),
+    description: t('随时从引导中心选择需要的教程'),
   },
 ];
 

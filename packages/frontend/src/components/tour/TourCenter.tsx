@@ -13,6 +13,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Tabs, Tab } from '../ui';
 import { Card } from '../ui/Card';
+import { t } from '@/languages';
 import { Tag } from '../ui/Tag';
 import { useTour } from '../../contexts/TourContext';
 import type { TourGuide, TourCategory } from '../../types/tour';
@@ -137,7 +138,7 @@ const TourCard: React.FC<{
             onStart();
           }}
         >
-          {isCompleted ? '重新开始' : '开始引导'}
+          {isCompleted ? t('重新开始') : t('开始引导')}
         </Button>
       </div>
     </Card>
@@ -311,7 +312,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
         <div className="text-center py-12">
           <Search size={48} className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
           <p style={{ color: 'var(--text-muted)' }}>
-            {searchQuery ? '未找到匹配的引导流程' : '暂无引导流程'}
+            {searchQuery ? t('未找到匹配的引导流程') : t('暂无引导流程')}
           </p>
         </div>
       ) : (

@@ -5,6 +5,7 @@ import { parseWorkData } from '../types/collaboration';
 import { CollabWorkCard } from './CollabWorkCard';
 import type { WorkData } from './CollabWorkCard';
 import styles from './CollaborateSidebar.module.css';
+import { t } from '@/languages';
 
 interface WorkListItem {
   work: WorkData;
@@ -41,7 +42,7 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
       <div className={styles.workListPanel}>
         <div className={styles.loadingState}>
           <div className={styles.loadingSpinner} />
-          <span className={styles.loadingText}>加载中...</span>
+          <span className={styles.loadingText}>{t("加载中...")}</span>
         </div>
       </div>
     );
@@ -57,12 +58,12 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
           <div className={styles.emptyIcon}>
             <Users size={20} />
           </div>
-          <div className={styles.emptyTitle}>暂无活跃协同</div>
+          <div className={styles.emptyTitle}>{t("暂无活跃协同")}</div>
           <div className={styles.emptyDescription}>
-            当前没有可加入的协同会话
+            {t("当前没有可加入的协同会话")}
           </div>
           <Button variant="primary" size="sm" onClick={onRefresh} style={{ marginTop: '12px' }}>
-            刷新
+            {t("刷新")}
           </Button>
         </div>
       </div>
@@ -73,7 +74,7 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
     <div className={styles.workListPanel}>
       {hasMyWorks && (
         <div className={styles.workListGroup}>
-          <div className={styles.workListGroupLabel}>我创建的</div>
+          <div className={styles.workListGroupLabel}>{t("我创建的")}</div>
           <div className={styles.workListGroupBody}>
             {myWorks.map((item) => (
               <CollabWorkCard
@@ -94,7 +95,7 @@ export const WorkListPanel: React.FC<WorkListPanelProps> = ({
 
       {hasProjectWorks && (
         <div className={styles.workListGroup}>
-          <div className={styles.workListGroupLabel}>项目协同</div>
+          <div className={styles.workListGroupLabel}>{t("项目协同")}</div>
           <div className={styles.workListGroupBody}>
             {projectWorks.map((item) => (
               <CollabWorkCard

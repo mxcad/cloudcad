@@ -27,6 +27,7 @@ import {
   fileSystemControllerDeleteNode,
 } from '@/api-sdk';
 import { ResourceList, ResourceItem, ViewMode } from '@/components/common';
+import { t } from '@/languages';
 import { FileSystemNode, toFileSystemNode } from '@/types/filesystem';
 import { useProjectPermissions } from '@/hooks/useProjectPermissions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -335,7 +336,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       showToast('粘贴成功', 'success');
       refreshNodes();
     } catch (error) {
-      const appError = error instanceof Error ? error.message : '粘贴失败';
+      const appError = error instanceof Error ? error.message : t('粘贴失败');
       showToast(appError, 'error');
     }
   }, [clipboardItems, clipboardMode, nodes, breadcrumb, selectedProjectId, currentProjectId, clearClipboard, refreshNodes, showToast, pushAction]);
@@ -349,7 +350,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       showToast(`已撤销: ${action.description}`, 'info');
       refreshNodes();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : '撤销失败';
+      const msg = error instanceof Error ? error.message : t('撤销失败');
       showToast(msg, 'error');
     }
   }, [undoStack, undoStoreUndo, currentProjectId, refreshNodes, showToast]);
@@ -363,7 +364,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       showToast(`已重做: ${action.description}`, 'info');
       refreshNodes();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : '重做失败';
+      const msg = error instanceof Error ? error.message : t('重做失败');
       showToast(msg, 'error');
     }
   }, [redoStack, undoStoreRedo, currentProjectId, refreshNodes, showToast]);
@@ -708,7 +709,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       setMoveSourceNode(null);
       setCopySourceNode(null);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '操作失败，请重试';
+      const errorMessage = error instanceof Error ? error.message : t('操作失败，请重试');
       showToast(errorMessage, 'error');
     }
   }, [moveSourceNode, copySourceNode, refreshNodes, showToast]);
@@ -827,10 +828,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             const perms = nodePermissions.get(project.id);
             if (!perms?.canDelete) return;
             const confirmed = await showConfirmPromise({
-              title: '删除项目',
-              message: `确定要删除项目"${project.name}"吗？删除后将移至回收站。`,
+              title: t('删除项目'),
+              message: t(`确定要删除项目"${project.name}"吗？删除后将移至回收站。`),
               type: 'danger',
-              confirmText: '删除',
+              confirmText: t('删除'),
             });
             if (!confirmed) return;
             await handleDelete(project, false);
@@ -857,7 +858,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
             else { const lb = breadcrumb[breadcrumb.length - 1]; if (lb) loadNodes(lb.id, 1, query); }
           }}
           onItemClick={handleItemClick} doubleClickToOpen={doubleClickToOpen}
-          emptyText={searchQuery ? '未找到匹配的内容' : `当前没有${libraryType === 'drawing' ? '图纸' : libraryType === 'block' ? '图块' : '内容'}`}
+          emptyText={searchQuery ? t('未找到匹配的内容') : t(`当前没有${libraryType === 'drawing' ? t('图纸') : libraryType === 'block' ? t('图块') : t('内容')}`)}
           defaultViewMode="grid" total={total} totalPages={totalPages} currentPage={currentPage}
           onPageChange={handlePageChange} paginationEnabled={true}
           pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
@@ -883,7 +884,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           toolbarExtra={isLibraryMode ? undefined : (
             <div className="flex items-center gap-1">
               {clipboardItems.length > 0 && (
-                <Button variant="secondary" size="sm" onClick={sidebarHandlePaste} tooltip="粘贴" className="text-primary border border-primary-dim mr-1">
+                <Button variant="secondary" size="sm" onClick={sidebarHandlePaste} tooltip={t("粘贴")} className="text-primary border border-primary-dim mr-1">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
@@ -891,7 +892,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
                   </svg>
                 </Button>
               )}
-              <Button variant="secondary" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip="刷新" />
+              <Button variant="secondary" icon={RefreshCw} onClick={refreshNodes} loading={loading} tooltip={t("刷新")} />
             </div>
           )}
           loadDirection={nextLoadDirection} onLoadComplete={() => setNextLoadDirection(null)}
@@ -909,7 +910,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           projectId={selectedProjectId || undefined}
           onClose={() => { setShowSelectFolderModal(false); setMoveSourceNode(null); setCopySourceNode(null); }}
           onConfirm={handleConfirmMoveOrCopy}
-          confirmButtonText={moveSourceNode ? '移动到此' : '复制到此'}
+          confirmButtonText={moveSourceNode ? t('移动到此') : t('复制到此')}
         />
       </div>
     </div>

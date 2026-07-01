@@ -8,6 +8,7 @@ import { fileSystemControllerMoveNode, fileSystemControllerCopyNode, fileSystemC
 import { handleError } from '@/utils/errorHandler';
 import type { FileSystemNode } from '@/types/filesystem';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import { t } from '@/languages';
 
 interface UseMoveCopyOptions {
   urlProjectId: string;
@@ -81,8 +82,8 @@ export function useMoveCopy({
 
         if (isMove) {
           const desc = isBatch
-            ? `移动 ${movedNodeIds.length} 个项目`
-            : `移动 "${(moveSourceNode as FileSystemNode)?.name || ''}"`;
+            ? t(`移动 ${movedNodeIds.length} 个项目`)
+            : t(`移动 "${(moveSourceNode as FileSystemNode)?.name || ''}"`);
 
           const origParentIds = new Map(sourceParentIdsRef.current);
 
@@ -114,10 +115,10 @@ export function useMoveCopy({
           });
         }
 
-        showToast(isMove ? '移动成功' : '复制成功', 'success');
+        showToast(isMove ? t('移动成功') : t('复制成功'), 'success');
         closeMoveCopy();
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : '操作失败，请重试';
+        const errorMessage = error instanceof Error ? error.message : t('操作失败，请重试');
         showToast(errorMessage, 'error');
       }
     },

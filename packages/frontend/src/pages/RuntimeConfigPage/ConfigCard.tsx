@@ -9,6 +9,7 @@ import type { ConfigGroup } from './hooks/useRuntimeConfig';
 import { ConfigInput } from './ConfigInput';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
+import { t } from '@/languages';
 
 interface ConfigCardProps {
   group: ConfigGroup;
@@ -51,12 +52,12 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
           </div>
           <div className="card-title-content">
             <h2 className="card-title">{group.label}</h2>
-            <span className="card-count">{group.items.length} 项配置</span>
+            <span className="card-count">{group.items.length}{t(' 项配置')}</span>
           </div>
         </div>
         <div className="card-actions">
           {modifiedItems.length > 0 && (
-            <Tag variant="warning">{modifiedItems.length} 项修改</Tag>
+            <Tag variant="warning">{modifiedItems.length}{t(' 项修改')}</Tag>
           )}
         </div>
       </div>
@@ -79,10 +80,10 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                     <span className="config-key">{item.key}</span>
                     <div className="config-badges">
                       {item.isPublic && (
-                        <Tag variant="success" icon={Eye}>公开</Tag>
+                        <Tag variant="success" icon={Eye}>{t("公开")}</Tag>
                       )}
                       {hasChanges && (
-                        <Tag variant="warning" icon={Sparkles}>已修改</Tag>
+                        <Tag variant="warning" icon={Sparkles}>{t("已修改")}</Tag>
                       )}
                     </div>
                   </div>
@@ -114,7 +115,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                       disabled={!hasChanges || !canManageConfig}
                       loading={isSavingItem}
                       className={`action-btn save-btn ${hasChanges && !isSavingItem ? 'active' : ''}`}
-                      tooltip="保存"
+                      tooltip={t("保存")}
                     />
 
                     {item.type === 'boolean' && (
@@ -135,7 +136,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                       onClick={() => { void onReset(item.key); }}
                       disabled={isSavingItem || !canManageConfig}
                       className="action-btn reset-btn"
-                      tooltip="重置为默认值"
+                      tooltip={t("重置为默认值")}
                     />
                   </div>
                 </div>

@@ -3,6 +3,8 @@
  * Pure function — no dependencies, no side effects.
  */
 
+import { t } from '@/languages';
+
 export interface PasswordStrengthResult {
   strength: number;
   label: string;
@@ -10,11 +12,11 @@ export interface PasswordStrengthResult {
 }
 
 const LEVELS = [
-  { label: '太弱' as const, color: '#ef4444' },
-  { label: '较弱' as const, color: '#f97316' },
-  { label: '一般' as const, color: '#eab308' },
-  { label: '较强' as const, color: '#22c55e' },
-  { label: '很强' as const, color: '#10b981' },
+  { label: t('太弱'), color: '#ef4444' },
+  { label: t('较弱'), color: '#f97316' },
+  { label: t('一般'), color: '#eab308' },
+  { label: t('较强'), color: '#22c55e' },
+  { label: t('很强'), color: '#10b981' },
 ];
 
 export function getPasswordStrength(password: string): PasswordStrengthResult {

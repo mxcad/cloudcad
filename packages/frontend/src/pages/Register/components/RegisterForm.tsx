@@ -4,6 +4,7 @@ import { useRegisterForm } from '../hooks/useRegisterForm';
 import { usePhoneVerification } from '../hooks/usePhoneVerification';
 import { getPasswordStrength } from '../utils/passwordStrength';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
 
 import {
   User, Mail, Lock, Sparkles, ArrowRight, ArrowLeft,
@@ -87,22 +88,22 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <div className="step-number">
             {form.currentStep > 1 ? <CheckCircle size={16} /> : 1}
           </div>
-          <span className="step-label">基本信息</span>
+          <span className="step-label">{t("基本信息")}</span>
         </div>
         <div className="step-line" />
         <div className={`step ${form.currentStep >= 2 ? 'active' : ''}`}>
           <div className="step-number">2</div>
-          <span className="step-label">安全设置</span>
+          <span className="step-label">{t("安全设置")}</span>
         </div>
       </div>
 
       {/* Form header */}
       <div className="form-header">
         <h2 className="form-title">
-          {form.currentStep === 1 ? '创建账户' : '设置密码'}
+          {form.currentStep === 1 ? t('创建账户') : t('设置密码')}
         </h2>
         <p className="form-subtitle">
-          {form.currentStep === 1 ? '填写您的基本信息' : '设置安全密码以保护账户'}
+          {form.currentStep === 1 ? t('填写您的基本信息') : t('设置安全密码以保护账户')}
         </p>
       </div>
 
@@ -122,13 +123,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {/* Username */}
             <div className={`input-group ${form.focusedField === 'username' ? 'focused' : ''} ${form.fieldErrors.username ? 'error' : ''}`}>
               <label htmlFor="username" className="input-label">
-                用户名 <span className="required">*</span>
+                {t("用户名")} <span className="required">*</span>
               </label>
               <div className="input-wrapper">
                 <User size={18} className={`input-icon ${form.focusedField === 'username' ? 'active' : ''}`} />
                 <input
                   id="username" type="text" required
-                  className="input-field" placeholder="请输入用户名"
+                  className="input-field" placeholder={t("请输入用户名")}
                   {...fieldProps('username')}
                 />
                 <div className="input-glow" />
@@ -138,12 +139,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
             {/* Nickname */}
             <div className={`input-group ${form.focusedField === 'nickname' ? 'focused' : ''} ${form.fieldErrors.nickname ? 'error' : ''}`}>
-              <label htmlFor="nickname" className="input-label">昵称</label>
+              <label htmlFor="nickname" className="input-label">{t("昵称")}</label>
               <div className="input-wrapper">
                 <Sparkles size={18} className={`input-icon ${form.focusedField === 'nickname' ? 'active' : ''}`} />
                 <input
                   id="nickname" type="text"
-                  className="input-field" placeholder="请输入昵称（可选）"
+                  className="input-field" placeholder={t("请输入昵称（可选）")}
                   {...fieldProps('nickname')}
                 />
                 <div className="input-glow" />
@@ -155,14 +156,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {mailEnabled && requireEmailVerification && (
               <div className={`input-group ${form.focusedField === 'email' ? 'focused' : ''} ${form.fieldErrors.email ? 'error' : ''}`}>
                 <label htmlFor="email" className="input-label">
-                  邮箱地址 {requireEmailVerification && <span className="required">*</span>}
+                   {t("邮箱地址")} {requireEmailVerification && <span className="required">*</span>}
                 </label>
                 <div className="input-wrapper">
                   <Mail size={18} className={`input-icon ${form.focusedField === 'email' ? 'active' : ''}`} />
                   <input
                     id="email" type="email" autoComplete="email"
                     required={requireEmailVerification} className="input-field"
-                    placeholder="请输入邮箱地址"
+                    placeholder={t("请输入邮箱地址")}
                     {...fieldProps('email')}
                   />
                   <div className="input-glow" />
@@ -176,14 +177,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <>
                 <div className={`input-group ${form.focusedField === 'phone' ? 'focused' : ''} ${form.fieldErrors.phone ? 'error' : ''}`}>
                   <label htmlFor="phone" className="input-label">
-                    手机号 {requirePhoneVerification && <span className="required">*</span>}
+                    {t("手机号")} {requirePhoneVerification && <span className="required">*</span>}
                   </label>
                   <div className="input-wrapper">
                     <Phone size={18} className={`input-icon ${form.focusedField === 'phone' ? 'active' : ''}`} />
                     <input
                       id="phone" name="phone" type="tel" autoComplete="tel"
                       required={requirePhoneVerification} maxLength={11}
-                      className="input-field" placeholder="请输入手机号"
+                      className="input-field" placeholder={t("请输入手机号")}
                       value={phone.phoneForm.phone}
                       onChange={phone.handlePhoneChange}
                       onFocus={() => form.setFocusedField('phone')}
@@ -196,14 +197,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
                 <div className={`input-group ${form.focusedField === 'code' ? 'focused' : ''} ${form.fieldErrors.code ? 'error' : ''}`}>
                   <label htmlFor="code" className="input-label">
-                    验证码 {requirePhoneVerification && <span className="required">*</span>}
+                    {t("验证码")} {requirePhoneVerification && <span className="required">*</span>}
                   </label>
                   <div className="input-wrapper has-button">
                     <MessageSquare size={18} className={`input-icon ${form.focusedField === 'code' ? 'active' : ''}`} />
                     <input
                       id="code" name="code" type="text" autoComplete="one-time-code"
                       required={requirePhoneVerification} maxLength={6}
-                      className="input-field has-button" placeholder="请输入验证码"
+                      className="input-field has-button" placeholder={t("请输入验证码")}
                       value={phone.phoneForm.code}
                       onChange={phone.handlePhoneChange}
                       onFocus={() => form.setFocusedField('code')}
@@ -217,7 +218,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                       disabled={phone.countdown > 0 || phone.phoneForm.phone.length !== 11}
                       loading={phone.sendingCode}
                     >
-                      {phone.countdown > 0 ? `${phone.countdown}s` : '获取验证码'}
+                      {phone.countdown > 0 ? `${phone.countdown}s` : t('获取验证码')}
                     </Button>
                     <div className="input-glow" />
                   </div>
@@ -227,7 +228,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             )}
 
             <Button type="button" onClick={onNext} variant="primary" size="lg" data-testid="next-button">
-              <span>下一步</span>
+              <span>{t("下一步")}</span>
               <ArrowRight size={18} className="button-arrow" />
             </Button>
           </div>
@@ -239,7 +240,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {/* Password */}
             <div className={`input-group ${form.focusedField === 'password' ? 'focused' : ''} ${form.fieldErrors.password ? 'error' : ''}`}>
               <label htmlFor="password" className="input-label">
-                密码 <span className="required">*</span>
+                {t("密码")} <span className="required">*</span>
               </label>
               <div className="input-wrapper">
                 <Lock size={18} className={`input-icon ${form.focusedField === 'password' ? 'active' : ''}`} />
@@ -248,10 +249,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   type={form.showPassword ? 'text' : 'password'}
                   autoComplete="new-password" required
                   className="input-field has-toggle"
-                  placeholder="至少8位，包含大小写字母、数字和特殊字符"
+                  placeholder={t("至少8位，包含大小写字母、数字和特殊字符")}
                   {...fieldProps('password')}
                 />
-                <Tooltip content={form.showPassword ? '隐藏密码' : '显示密码'}>
+                <Tooltip content={form.showPassword ? t('隐藏密码') : t('显示密码')}>
                   <Button
                     type="button"
                     size="lg"
@@ -286,7 +287,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {/* Confirm password */}
             <div className={`input-group ${form.focusedField === 'confirmPassword' ? 'focused' : ''} ${form.fieldErrors.confirmPassword ? 'error' : ''}`}>
               <label htmlFor="confirmPassword" className="input-label">
-                确认密码 <span className="required">*</span>
+                {t("确认密码")} <span className="required">*</span>
               </label>
               <div className="input-wrapper">
                 <CheckCircle size={18} className={`input-icon ${form.focusedField === 'confirmPassword' ? 'active' : ''}`} />
@@ -295,10 +296,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   type={form.showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password" required
                   className="input-field has-toggle"
-                  placeholder="请再次输入密码"
+                  placeholder={t("请再次输入密码")}
                   {...fieldProps('confirmPassword')}
                 />
-                <Tooltip content={form.showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}>
+                <Tooltip content={form.showConfirmPassword ? t('隐藏确认密码') : t('显示确认密码')}>
                   <Button
                     type="button"
                     size="lg"
@@ -317,14 +318,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <div className="button-group">
               <Button type="button" onClick={form.handleBack} variant="secondary" size="lg" data-testid="back-button">
                 <ArrowLeft size={18} />
-                <span>返回</span>
+                <span>{t("返回")}</span>
               </Button>
               <Button type="submit" variant="primary" size="lg" loading={form.loading}>
                 {form.loading ? (
-                  <span>注册中...</span>
+                  <span>{t("注册中...")}</span>
                 ) : (
                   <>
-                    <span>立即注册</span>
+                    <span>{t("立即注册")}</span>
                     <ArrowRight size={18} className="button-arrow" />
                   </>
                 )}
@@ -337,22 +338,22 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Login link */}
       <div className="form-footer">
         <p className="login-text">
-          已有账户？
+          {t("已有账户？")}
           <Button onClick={() => navigate('/login')} variant="secondary" size="lg" className="login-link">
-             立即登录
+             {t("立即登录")}
            </Button>
         </p>
       </div>
 
       {/* Feature icons */}
       <div className="features-bar">
-        <div className="feature-dot" data-tooltip="高性能 CAD 在线预览">
+        <div className="feature-dot" data-tooltip={t("高性能 CAD 在线预览")}>
           <Cpu size={14} />
         </div>
-        <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+        <div className="feature-dot" data-tooltip={t("多用户实时协同编辑")}>
           <Boxes size={14} />
         </div>
-        <div className="feature-dot" data-tooltip="企业级数据安全保障">
+        <div className="feature-dot" data-tooltip={t("企业级数据安全保障")}>
           <ShieldCheck size={14} />
         </div>
       </div>

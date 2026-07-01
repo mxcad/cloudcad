@@ -24,6 +24,7 @@ import { ArrowRight } from 'lucide-react';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { Tooltip } from '../ui/Tooltip';
 import { returnToCloudMapManagement } from '@/services/mxcadManager';
+import { t } from '@/languages';
 import styles from './sidebar.module.css';
 
 interface SidebarTriggerProps {
@@ -51,7 +52,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     id: 'project-management',
     tab: 'project-management',
     icon: <LayoutDashboard size={18} />,
-    label: '项目管理',
+    label: t('项目管理'),
     color: '#10b981',
     dataTour: 'trigger-project-management',
     isAction: true,
@@ -61,7 +62,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     tab: 'drawings',
     subTab: 'my-project',
     icon: <FolderOpen size={18} />,
-    label: '我的项目',
+    label: t('我的项目'),
     color: '#009cff',
     dataTour: 'trigger-my-project',
   },
@@ -70,7 +71,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     tab: 'drawings',
     subTab: 'my-drawings',
     icon: <FileText size={18} />,
-    label: '我的图纸',
+    label: t('我的图纸'),
     color: '#06b6d4',
     dataTour: 'trigger-my-drawings',
   },
@@ -79,7 +80,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     tab: 'drawings',
     subTab: 'drawings-gallery',
     icon: <Box size={18} />,
-    label: '图纸库',
+    label: t('图纸库'),
     color: '#8b5cf6',
     dataTour: 'trigger-drawings-gallery',
   },
@@ -88,7 +89,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     tab: 'drawings',
     subTab: 'blocks-gallery',
     icon: <LayoutGrid size={18} />,
-    label: '图块库',
+    label: t('图块库'),
     color: '#ec4899',
     dataTour: 'trigger-blocks-gallery',
   },
@@ -96,7 +97,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     id: 'collaborate',
     tab: 'collaborate',
     icon: <Users size={18} />,
-    label: '实时协同',
+    label: t('实时协同'),
     color: '#f59e0b',
     dataTour: 'trigger-collaborate',
   },
@@ -125,18 +126,18 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   };
 
   return (
-    <div className={styles.narrowSidebar} role="toolbar" aria-label="侧边栏工具条" data-tour="cad-sidebar-trigger">
+    <div className={styles.narrowSidebar} role="toolbar" aria-label={t("侧边栏工具条")} data-tour="cad-sidebar-trigger">
       {/* 顶部装饰线 */}
       <div className={styles.sidebarAccentLine} />
 
       {/* 展开按钮 - 固定在顶部 */}
       <div className={styles.topToolWrapper}>
-        <Tooltip content="展开侧边栏" position="right" delay={100}>
+        <Tooltip content={t("展开侧边栏")} position="right" delay={100}>
           <div className={styles.toolWrapper}>
             <button
               className={styles.toolButton}
               onClick={onExpandClick}
-              aria-label="展开侧边栏"
+              aria-label={t("展开侧边栏")}
             >
               <div className={styles.buttonGlass} />
               <span className={styles.buttonIcon}><ArrowRight size={18} /></span>
@@ -172,7 +173,7 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
                 <button
                   className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
                   onClick={() => handleButtonClick(button)}
-                  aria-label={`打开${button.label}`}
+                  aria-label={t(`打开${button.label}`)}
                   aria-pressed={isActive}
                   data-tour={button.dataTour}
                 >

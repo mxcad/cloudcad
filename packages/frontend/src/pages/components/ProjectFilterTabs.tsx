@@ -2,6 +2,7 @@ import React from 'react';
 import { Tab, Tabs, Button } from '@/components/ui';
 import { RefreshIcon } from '../../components/FileIcons';
 import type { ProjectFilterType } from '@/api-sdk';
+import { t } from '@/languages';
 
 interface ProjectFilterTabsProps {
   isTrashView: boolean;
@@ -15,9 +16,9 @@ interface ProjectFilterTabsProps {
 }
 
 const projectFilterTabs: { key: ProjectFilterType; label: string }[] = [
-  { key: 'all', label: '全部' },
-  { key: 'owned', label: '我创建的' },
-  { key: 'joined', label: '我加入的' },
+  { key: 'all', label: t('全部') },
+  { key: 'owned', label: t('我创建的') },
+  { key: 'joined', label: t('我加入的') },
 ];
 
 export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
@@ -40,7 +41,7 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
           active={!isTrashView}
           onClick={() => {}}
         >
-          我的项目
+          {t("我的项目")}
         </Tab>
 
         {!isTrashView && isProjectRootMode && (
@@ -70,10 +71,10 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
             onClick={onRefresh}
             disabled={loading}
             style={{ color: 'var(--text-tertiary)' }}
-            title="刷新"
+            title={t("刷新")}
           >
             <RefreshIcon size={14} className={isFetching ? 'animate-spin mr-1' : 'mr-1'} />
-            刷新
+            {t("刷新")}
           </Button>
         </div>
       )}

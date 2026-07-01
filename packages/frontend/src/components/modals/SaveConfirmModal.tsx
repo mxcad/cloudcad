@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Textarea } from '../ui/Textarea';
+import { t } from '@/languages';
 
 interface SaveConfirmModalProps {
   isOpen: boolean;
@@ -49,15 +50,15 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="保存文件"
+      title={t("保存文件")}
       className="max-w-lg"
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            取消
+            {t("取消")}
           </Button>
           <Button onClick={handleConfirm} disabled={loading}>
-            {loading ? '保存中...' : '保存'}
+            {loading ? t('保存中...') : t('保存')}
           </Button>
         </>
       }
@@ -65,7 +66,7 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
       <div className="space-y-4">
         <div>
           <label className="block font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-            修改说明（可选）
+            {t("修改说明（可选）")}
           </label>
           <Textarea
             ref={textareaRef}
@@ -73,15 +74,15 @@ export const SaveConfirmModal: React.FC<SaveConfirmModalProps> = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             size="lg"
-            placeholder="请输入本次修改的内容说明..."
+            placeholder={t("请输入本次修改的内容说明...")}
             rows={4}
             disabled={loading}
           />
         </div>
         <p className="text-slate-500" style={{ color: 'var(--text-muted)' }}>
-          此说明将记录在版本历史中，方便后续查看修改内容。
+          {t("此说明将记录在版本历史中，方便后续查看修改内容。")}
           <br />
-          <span className="text-slate-400">提示：按 Ctrl+Enter 快速保存</span>
+          <span className="text-slate-400">{t("提示：按 Ctrl+Enter 快速保存")}</span>
         </p>
       </div>
     </Modal>

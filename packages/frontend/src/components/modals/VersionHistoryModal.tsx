@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import type { MxLogEntryDto } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 import { History } from 'lucide-react';
+import { t } from '@/languages';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;
@@ -34,13 +35,13 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       const hours = Math.floor(diff / (1000 * 60 * 60));
       if (hours === 0) {
         const minutes = Math.floor(diff / (1000 * 60));
-        return minutes <= 1 ? '刚刚' : `${minutes}分钟前`;
+        return minutes <= 1 ? t('刚刚') : t(`${minutes}分钟前`);
       }
-      return `${hours}小时前`;
+      return t(`${hours}小时前`);
     } else if (days === 1) {
-      return '昨天';
+      return t('昨天');
     } else if (days < 7) {
-      return `${days}天前`;
+      return t(`${days}天前`);
     }
 
     return d.toLocaleDateString('zh-CN', {
@@ -64,11 +65,11 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`版本历史 - ${node?.name || '文件'}`}
+      title={t(`版本历史 - ${node?.name || t('文件')}`)}
       className="max-w-md"
       footer={
         <Button variant="secondary" onClick={onClose}>
-          关闭
+          {t("关闭")}
         </Button>
       }
     >
@@ -76,7 +77,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         {loading && (
           <div className="flex items-center justify-center py-8 text-slate-500">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2" />
-            加载中...
+            {t("加载中...")}
           </div>
         )}
 
@@ -89,14 +90,14 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
         {!loading && !error && entries.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8" style={{ color: 'var(--text-muted)' }}>
             <History className="w-10 h-10 mb-2 opacity-50" />
-            <p>暂无版本历史</p>
+            <p>{t("暂无版本历史")}</p>
           </div>
         )}
 
         {!loading && !error && entries.length > 0 && (
           <div className="border rounded-lg max-h-72 overflow-y-auto" style={{ borderColor: 'var(--border-default)' }}>
             {entries.map((entry) => {
-              const displayName = entry.userName || entry.author || '系统';
+              const displayName = entry.userName || entry.author || t('系统');
               const userNote = extractUserNote(entry.message);
 
               return (
@@ -147,7 +148,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                     className="flex-shrink-0 ml-2"
                     style={{ color: 'var(--primary-600)' }}
                   >
-                    查看
+                    {t("查看")}
                   </Button>
                 </div>
               );

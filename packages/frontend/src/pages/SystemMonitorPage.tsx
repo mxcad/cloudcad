@@ -49,7 +49,7 @@ interface SystemHealth {
  * - 完美深浅主题适配
  */
 export const SystemMonitorPage: React.FC = () => {
-  useDocumentTitle('系统监控');
+  useDocumentTitle(t('系统监控'));
   const { hasPermission } = usePermission();
   const { isDark } = useTheme();
   
@@ -125,7 +125,7 @@ export const SystemMonitorPage: React.FC = () => {
       <div className="monitor-page" data-theme={isDark ? 'dark' : 'light'}>
         <div className="loading-state">
           <div className="loading-spinner" />
-          <p>加载中...</p>
+          <p>{t("加载中...")}</p>
         </div>
         <style>{baseStyles}</style>
       </div>
@@ -140,8 +140,8 @@ export const SystemMonitorPage: React.FC = () => {
           <div className="no-access-icon">
             <Shield size={48} />
           </div>
-          <h2>访问受限</h2>
-          <p>您需要系统监控权限才能访问此页面</p>
+          <h2>{t("访问受限")}</h2>
+          <p>{t("您需要系统监控权限才能访问此页面")}</p>
         </div>
         <style>{baseStyles}</style>
       </div>
@@ -279,7 +279,7 @@ export const SystemMonitorPage: React.FC = () => {
             <div className="info-card">
               <Activity size={18} />
               <div className="info-content">
-                <span className="info-label">版本</span>
+                <span className="info-label">{t("版本")}</span>
                 <span className="info-value">v1.0.0</span>
               </div>
             </div>

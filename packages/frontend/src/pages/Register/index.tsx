@@ -7,6 +7,7 @@ import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { RegistrationClosed } from './RegistrationClosed';
 import { RegisterForm } from './components/RegisterForm';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { t } from '@/languages';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { useBrandConfig } from '@/contexts/BrandContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +28,7 @@ import './Register.css';
  *   Register.css                 (all styles)
  */
 export const Register: React.FC = () => {
-  useDocumentTitle('注册');
+  useDocumentTitle(t('注册'));
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -99,7 +100,7 @@ export const Register: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">创建账户，开启云端 CAD 之旅</p>
+            <p className="app-tagline">{t("创建账户，开启云端 CAD 之旅")}</p>
           </div>
 
           <RegisterForm

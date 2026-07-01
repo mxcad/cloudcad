@@ -47,7 +47,7 @@ export const DwgExportModal: React.FC<DwgExportModalProps> = ({
 
   const nameWithoutExt = (fileName || '').replace(/\.[^.]+$/, '');
   const displayFileName = `${nameWithoutExt}.${format}`;
-  const title = format === 'dwg' ? '导出 DWG' : '导出 DXF';
+  const title = format === 'dwg' ? t('导出 DWG') : t('导出 DXF');
 
   return (
     <Modal

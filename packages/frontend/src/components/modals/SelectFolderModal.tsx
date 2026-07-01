@@ -6,6 +6,7 @@ import { useFolderChildren } from './hooks/useFolderChildren';
 import { FileSystemNode } from '../../types/filesystem';
 import { handleError } from '@/utils/errorHandler';
 import { FileTree } from '../ui/FileTree';
+import { t } from '@/languages';
 
 interface SelectFolderModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   projectId,
   onClose,
   onConfirm,
-  confirmButtonText = '确认',
+  confirmButtonText = t('确认'),
 }) => {
   const [folderTree, setFolderTree] = useState<FolderNode[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     const rootId = projectId;
 
     if (!rootId) {
-      setError('请先选择保存位置');
+      setError(t('请先选择保存位置'));
       setLoading(false);
       return;
     }
@@ -71,10 +72,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     try {
       const tree = await loadChildren(rootId, currentNodeId);
       setFolderTree(tree);
-      setProjectName('根目录');
+      setProjectName(t('根目录'));
     } catch (err) {
       handleError(err, 'loadFolderTree');
-      setError('加载文件夹列表失败');
+      setError(t('加载文件夹列表失败'));
     } finally {
       setLoading(false);
     }
@@ -179,11 +180,11 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="选择目标文件夹"
+      title={t("选择目标文件夹")}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            取消
+            {t("取消")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -199,7 +200,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 size={32} className="animate-spin mb-3" style={{ color: 'var(--primary-600)' }} />
-            <p style={{ color: 'var(--text-tertiary)' }}>加载文件夹列表...</p>
+            <p style={{ color: 'var(--text-tertiary)' }}>{t("加载文件夹列表...")}</p>
           </div>
         )}
 
@@ -214,7 +215,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {!loading && !error && folderTree.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12">
             <Folder size={48} className="mb-3" style={{ color: 'var(--text-muted)' }} />
-            <p style={{ color: 'var(--text-tertiary)' }}>暂无可用文件夹</p>
+            <p style={{ color: 'var(--text-tertiary)' }}>{t("暂无可用文件夹")}</p>
           </div>
         )}
 
@@ -222,7 +223,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
         {!loading && !error && folderTree.length > 0 && (
           <div className="border rounded-[3px]" style={{ borderColor: 'var(--border-default)', background: 'var(--bg-primary)' }}>
             <div className="px-2 pt-1.5 pb-0.5" style={{ color: 'var(--text-muted)' }}>
-              点击文件夹名称选择，点击箭头展开/折叠
+              {t("点击文件夹名称选择，点击箭头展开/折叠")}
             </div>
             {projectName && projectId && (
               <div

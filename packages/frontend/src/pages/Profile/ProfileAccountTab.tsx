@@ -10,6 +10,7 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Button, Select, Checkbox } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { t } from '@/languages';
 import { WechatVerifyModal } from '../../components/WechatVerifyModal';
 import {
   authControllerSendSmsCode,
@@ -70,10 +71,10 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
   const [showWechatModal, setShowWechatModal] = useState(false);
   const verificationOptions = useMemo<SelectOption[]>(() => {
     const opts: SelectOption[] = [];
-    if (user?.hasPassword) opts.push({ value: 'password', label: '密码验证' });
-    if (user?.phone && user.phoneVerified) opts.push({ value: 'phone', label: '手机验证码' });
-    if (user?.email) opts.push({ value: 'email', label: '邮箱验证码' });
-    if (user?.wechatId) opts.push({ value: 'wechat', label: '微信扫码验证' });
+    if (user?.hasPassword) opts.push({ value: 'password', label: t('密码验证') });
+    if (user?.phone && user.phoneVerified) opts.push({ value: 'phone', label: t('手机验证码') });
+    if (user?.email) opts.push({ value: 'email', label: t('邮箱验证码') });
+    if (user?.wechatId) opts.push({ value: 'wechat', label: t('微信扫码验证') });
     return opts;
   }, [user?.hasPassword, user?.phone, user?.phoneVerified, user?.email, user?.wechatId]);
   return (
@@ -82,28 +83,28 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
         <div className="warning-icon">
           <AlertTriangle size={48} />
         </div>
-        <h3>注销账户</h3>
+        <h3>{t("注销账户")}</h3>
         <p className="warning-text">
-          注销账户是一个不可逆的操作。注销后，您的所有数据将被永久删除，且无法恢复。
+          {t("注销账户是一个不可逆的操作。注销后，您的所有数据将被永久删除，且无法恢复。")}
         </p>
         <div className="warning-list">
           <div className="warning-item">
             <AlertTriangle size={14} />
-            <span>所有项目文件将被永久删除</span>
+            <span>{t("所有项目文件将被永久删除")}</span>
           </div>
           <div className="warning-item">
             <AlertTriangle size={14} />
-            <span>所有收藏和历史记录将被清除</span>
+            <span>{t("所有收藏和历史记录将被清除")}</span>
           </div>
           <div className="warning-item">
             <AlertTriangle size={14} />
-            <span>账户信息将无法再恢复</span>
+            <span>{t("账户信息将无法再恢复")}</span>
           </div>
         </div>
 
         <div className="deactivate-form">
           <div className="input-group">
-            <label className="input-label">选择验证方式</label>
+            <label className="input-label">{t("选择验证方式")}</label>
             <Select
               value={deactivateForm.verificationMethod}
               onChange={(val) =>
@@ -117,7 +118,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 }))
               }
               options={verificationOptions}
-              placeholder="请选择验证方式"
+              placeholder={t("请选择验证方式")}
             />
           </div>
 
@@ -125,7 +126,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
             <div className="input-group">
               <label className="input-label">
                 <Lock size={14} />
-                密码验证
+                {t("密码验证")}
               </label>
               <div className="input-wrapper">
                 <Input
@@ -137,7 +138,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                       password: e.target.value,
                     }))
                   }
-                  placeholder="请输入密码"
+                  placeholder={t("请输入密码")}
                   showPasswordToggle
                 />
                 <div className="input-glow" />
@@ -149,7 +150,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
             <div className="input-group">
               <label className="input-label">
                 <Phone size={14} />
-                手机验证码
+                {t("手机验证码")}
               </label>
               <div className="input-wrapper">
                 <Input
@@ -161,7 +162,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                       phoneCode: e.target.value,
                     }))
                   }
-                  placeholder="请输入手机验证码"
+                  placeholder={t("请输入手机验证码")}
                 />
                 <Button
                   variant="secondary"
@@ -191,7 +192,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 >
                   {deactivateCountdown > 0
                     ? `${deactivateCountdown}s`
-                    : '获取验证码'}
+                    : t('获取验证码')}
                 </Button>
                 <div className="input-glow" />
               </div>
@@ -202,7 +203,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
             <div className="input-group">
               <label className="input-label">
                 <Mail size={14} />
-                邮箱验证码
+                {t("邮箱验证码")}
               </label>
               <div className="input-wrapper">
                 <Input
@@ -214,7 +215,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                       emailCode: e.target.value,
                     }))
                   }
-                  placeholder="请输入邮箱验证码"
+                  placeholder={t("请输入邮箱验证码")}
                 />
                 <Button
                   variant="secondary"
@@ -244,7 +245,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                 >
                   {deactivateCountdown > 0
                     ? `${deactivateCountdown}s`
-                    : '获取验证码'}
+                    : t('获取验证码')}
                 </Button>
                 <div className="input-glow" />
               </div>
@@ -256,18 +257,18 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
               {deactivateForm.wechatConfirm ? (
                 <div className="wechat-warning success">
                   <CheckCircle size={32} strokeWidth={2} />
-                  <p>微信验证成功</p>
+                  <p>{t("微信验证成功")}</p>
                 </div>
               ) : (
                 <div className="wechat-warning">
                   <MessageCircle size={28} strokeWidth={1.5} />
-                  <p>您是通过微信登录的账户，请使用微信扫码确认注销</p>
+                  <p>{t("您是通过微信登录的账户，请使用微信扫码确认注销")}</p>
                   <Button
                     variant="primary"
                     icon={MessageCircle}
                     onClick={() => setShowWechatModal(true)}
                   >
-                    微信扫码确认
+                    {t("微信扫码确认")}
                   </Button>
                 </div>
               )}
@@ -284,7 +285,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
                   confirmed: e.target.checked,
                 }))
               }
-              label="我已了解注销的后果，并确认注销"
+              label={t("我已了解注销的后果，并确认注销")}
             />
           </div>
 
@@ -305,10 +306,10 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
             }
             onClick={async () => {
               const confirmed = await onShowConfirm({
-                title: '确认注销',
-                message: '确定要注销您的账户吗？此操作不可恢复！',
-                confirmText: '确定注销',
-                cancelText: '取消',
+                title: t('确认注销'),
+                message: t('确定要注销您的账户吗？此操作不可恢复！'),
+                confirmText: t('确定注销'),
+                cancelText: t('取消'),
                 type: 'danger',
               });
               if (!confirmed) {
@@ -334,7 +335,7 @@ export const ProfileAccountTab: React.FC<ProfileAccountTabProps> = ({
               }
             }}
           >
-            {deactivateLoading ? '注销中...' : '确认注销'}
+            {deactivateLoading ? t('注销中...') : t('确认注销')}
           </Button>
         </div>
         <WechatVerifyModal

@@ -3,6 +3,7 @@ import { Search, X } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/ui/Input';
 import type { InputProps } from '@/components/ui/Input';
+import { t } from '@/languages';
 
 export interface SearchInputProps extends Omit<InputProps, 'leftIcon' | 'rightIcon' | 'rightNode'> {
   onSearch?: (value: string) => void;
@@ -14,7 +15,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onChange,
   onSearch,
   onClear,
-  placeholder = '搜索...',
+  placeholder = t('搜索...'),
   ...props
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -43,7 +44,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       rightNode={showClear ? (
-        <Tooltip content="清除">
+        <Tooltip content={t("清除")}>
           <button
             type="button"
             onClick={handleClear}

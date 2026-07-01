@@ -1,4 +1,5 @@
 import { AlertCircle, UserPlus, CheckCircle2, XCircle, RefreshCw, Users, Sparkles, Loader2 } from 'lucide-react';
+import { t } from '@/languages';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Tab, Tabs, Tag } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
@@ -18,7 +19,7 @@ import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
 import { userManagementStyles } from './UserManagementStyles';
 
 export const UserManagement = () => {
-  useDocumentTitle('用户管理');
+  useDocumentTitle(t('用户管理'));
   const { hasPermission } = usePermission();
   const [canAccess, setCanAccess] = useState(false);
 
@@ -169,17 +170,17 @@ export const UserManagement = () => {
   const validateForm = (): boolean => {
     const errors = { username: '', email: '', password: '' };
     if (!formData.username) {
-      errors.username = '用户名不能为空';
+      errors.username = t('用户名不能为空');
     } else if (formData.username.length < 3) {
-      errors.username = '用户名至少3个字符';
+      errors.username = t('用户名至少3个字符');
     } else if (formData.username.length > 20) {
-      errors.username = '用户名最多20个字符';
+      errors.username = t('用户名最多20个字符');
     }
     if (mailEnabled && !formData.email) {
-      errors.email = '邮箱不能为空';
+      errors.email = t('邮箱不能为空');
     }
     if (!editingUser && !formData.password) {
-      errors.password = '密码不能为空';
+      errors.password = t('密码不能为空');
     }
     setFormErrors(errors);
     return !errors.username && !errors.email && !errors.password;
@@ -207,7 +208,7 @@ export const UserManagement = () => {
         if (formData.nickname) updateData.nickname = formData.nickname;
         if (formData.password) updateData.password = formData.password;
         await updateUser(editingUser.id, updateData as UpdateUserDto);
-        showSuccess('用户更新成功');
+        showSuccess(t('用户更新成功'));
       } else {
         const createData: Record<string, unknown> = {
           username: formData.username,
@@ -219,7 +220,7 @@ export const UserManagement = () => {
         if (formData.nickname) createData.nickname = formData.nickname;
         if (formData.phone) createData.phone = formData.phone;
         await createUser(createData as CreateUserDto);
-        showSuccess('用户创建成功');
+        showSuccess(t('用户创建成功'));
       }
       setIsModalOpen(false);
       await loadUsers();
@@ -237,7 +238,7 @@ export const UserManagement = () => {
     if (!userToDelete) return;
     try {
       await deleteUser(userToDelete, deleteImmediately);
-      showSuccess(deleteImmediately ? '用户立即注销成功' : '用户删除成功');
+      showSuccess(deleteImmediately ? t('用户立即注销成功') : t('用户删除成功'));
       await loadUsers();
     } catch (err) {
       // Error handled by hook
@@ -274,7 +275,7 @@ export const UserManagement = () => {
   const handleRestore = async (id: string) => {
     try {
       await restoreUser(id);
-      showSuccess('用户已恢复');
+      showSuccess(t('用户已恢复'));
       await loadUsers();
     } catch (err) {
       // Error handled by hook
@@ -291,8 +292,8 @@ export const UserManagement = () => {
           <div className="access-denied-icon">
             <AlertCircle size={48} />
           </div>
-          <h2 className="access-denied-title">访问被拒绝</h2>
-          <p className="access-denied-text">您没有权限访问此页面。</p>
+          <h2 className="access-denied-title">{t("访问被拒绝")}</h2>
+          <p className="access-denied-text">{t("您没有权限访问此页面。")}</p>
         </div>
       </div>
     );
@@ -306,16 +307,16 @@ export const UserManagement = () => {
           <div className="limited-access-icon">
             <AlertCircle size={48} />
           </div>
-          <h2 className="limited-access-title">无法查看用户列表</h2>
+          <h2 className="limited-access-title">{t("无法查看用户列表")}</h2>
           <div className="permission-badges">
             {hasPermission(SystemPermission.SYSTEM_USER_CREATE) && (
-              <Tag variant="success">创建用户</Tag>
+              <Tag variant="success">{t("创建用户")}</Tag>
             )}
             {hasPermission(SystemPermission.SYSTEM_USER_UPDATE) && (
-              <Tag variant="primary">更新用户</Tag>
+              <Tag variant="primary">{t("更新用户")}</Tag>
             )}
             {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
-              <Tag variant="error">删除用户</Tag>
+              <Tag variant="error">{t("删除用户")}</Tag>
             )}
           </div>
         </div>
@@ -338,7 +339,7 @@ export const UserManagement = () => {
           <XCircle size={18} />
           <span>{error}</span>
           <Button onClick={loadUsers} loading={loading} variant="secondary" icon={RefreshCw} className="error-retry-btn">
-            重试
+            {t("重试")}
           </Button>
         </div>
       )}
@@ -349,14 +350,14 @@ export const UserManagement = () => {
             <Users size={24} />
           </div>
           <div>
-            <h1 className="page-title">用户管理</h1>
-            <p className="page-subtitle">管理团队成员、分配角色及存储配额</p>
+            <h1 className="page-title">{t("用户管理")}</h1>
+            <p className="page-subtitle">{t("管理团队成员、分配角色及存储配额")}</p>
           </div>
         </div>
         {hasPermission(SystemPermission.SYSTEM_USER_CREATE) && (
           <Button onClick={handleOpenCreate} disabled={loading} className="add-user-btn">
             <UserPlus size={18} />
-            添加用户
+            {t("添加用户")}
           </Button>
         )}
         {hasPermission(SystemPermission.SYSTEM_USER_DELETE) && (
@@ -367,7 +368,7 @@ export const UserManagement = () => {
             className="cleanup-btn"
           >
             <Sparkles size={18} />
-            清理已注销用户
+            {t("清理已注销用户")}
           </Button>
         )}
       </div>
@@ -378,13 +379,13 @@ export const UserManagement = () => {
             active={userTab === 'active'}
             onClick={() => { setUserTab('active'); setCurrentPage(1); }}
           >
-            活跃用户
+            {t("活跃用户")}
           </Tab>
           <Tab
             active={userTab === 'deleted'}
             onClick={() => { setUserTab('deleted'); setCurrentPage(1); }}
           >
-            已注销
+            {t("已注销")}
           </Tab>
         </Tabs>
       )}
@@ -472,7 +473,7 @@ export const UserManagement = () => {
           setQuotaLoading(true);
           try {
             await updateStorageQuota(quotaNodeId, userQuota);
-            showSuccess('配额更新成功');
+            showSuccess(t('配额更新成功'));
             setQuotaModalOpen(false);
           } catch {
             // Error handled by hook
@@ -494,17 +495,17 @@ export const UserManagement = () => {
       <Modal
         isOpen={cleanupModalOpen}
         onClose={() => setCleanupModalOpen(false)}
-        title="确认清理"
+        title={t("确认清理")}
         className="max-w-sm"
         footer={
           <div className="modal-footer">
-            <Button variant="secondary" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>取消</Button>
+            <Button variant="secondary" onClick={() => setCleanupModalOpen(false)} disabled={cleanupLoading}>{t("取消")}</Button>
             <Button
               onClick={async () => {
                 setCleanupLoading(true);
                 try {
                   const result = await triggerCleanup(0);
-                  showSuccess(result?.message || '清理完成');
+                  showSuccess(result?.message || t('清理完成'));
                   setCleanupModalOpen(false);
                   await loadUsers();
                 } catch {
@@ -517,12 +518,12 @@ export const UserManagement = () => {
               variant="danger"
               className="submit-btn"
             >
-              {cleanupLoading ? <><Loader2 size={16} className="animate-spin" />清理中...</> : '确认清理'}
+              {cleanupLoading ? <><Loader2 size={16} className="animate-spin" />{t("清理中...")}</> : t('确认清理')}
             </Button>
           </div>
         }
       >
-        <p className="cleanup-confirm-text">确定要清理所有已注销的用户吗？此操作不可恢复。</p>
+        <p className="cleanup-confirm-text">{t("确定要清理所有已注销的用户吗？此操作不可恢复。")}</p>
       </Modal>
     </div>
   );

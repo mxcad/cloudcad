@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
 
 interface ImagePreviewModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   isOpen,
   onClose,
   src,
-  alt = '图片预览',
+  alt = t('图片预览'),
 }) => {
   const [scale, setScale] = React.useState(1);
   const [rotation, setRotation] = React.useState(0);
@@ -41,7 +42,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       zIndex={10001}
     >
       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-        <Tooltip content="放大">
+        <Tooltip content={t("放大")}>
           <button
             onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
@@ -49,7 +50,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             <ZoomIn size={20} className="text-white" />
           </button>
         </Tooltip>
-        <Tooltip content="缩小">
+        <Tooltip content={t("缩小")}>
           <button
             onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
@@ -57,7 +58,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             <ZoomOut size={20} className="text-white" />
           </button>
         </Tooltip>
-        <Tooltip content="旋转">
+        <Tooltip content={t("旋转")}>
           <button
             onClick={(e) => { e.stopPropagation(); handleRotate(); }}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
@@ -65,18 +66,18 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             <RotateCw size={20} className="text-white" />
           </button>
         </Tooltip>
-        <Tooltip content="重置">
+        <Tooltip content={t("重置")}>
           <button
             onClick={(e) => { e.stopPropagation(); handleReset(); }}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
           >
-            <span className="text-white text-sm font-medium">重置</span>
+            <span className="text-white text-sm font-medium">{t("重置")}</span>
           </button>
         </Tooltip>
       </div>
 
       <div className="absolute top-4 right-4 z-10">
-        <Tooltip content="关闭">
+        <Tooltip content={t("关闭")}>
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
@@ -102,7 +103,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
       </div>
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
-        点击图片放大，点击遮罩或按 ESC 关闭
+        {t("点击图片放大，点击遮罩或按 ESC 关闭")}
       </div>
     </Modal>
   );

@@ -7,10 +7,10 @@ import { Tooltip } from './ui/Tooltip';
 import { Menu } from './ui/Menu';
 
 const LANGUAGE_LABELS: Record<string, string> = {
-  'zh-CN': '简体中文',
+  'zh-CN': t('简体中文'),
   'en-US': 'English',
   'ko-KR': '한국어',
-  'zh-TW': '繁體中文',
+  'zh-TW': t('繁體中文'),
 };
 
 export const LanguageSwitcher: React.FC = () => {

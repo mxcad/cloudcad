@@ -8,6 +8,7 @@ import {
 import { UserDto } from '@/api-sdk';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui';
+import { t } from '@/languages';
 
 
 interface ProfilePasswordTabProps {
@@ -46,7 +47,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
           >
             <label className="input-label">
               <Lock size={14} />
-              当前密码
+              {t("当前密码")}
             </label>
             <div className="input-wrapper">
               <Input
@@ -56,7 +57,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
                 onChange={onPasswordChange}
                 onFocus={() => onFocusField('oldPassword')}
                 onBlur={() => onFocusField(null)}
-                placeholder="请输入当前密码"
+                placeholder={t("请输入当前密码")}
                 required={!user || user.hasPassword === true}
                 showPasswordToggle
               />
@@ -68,7 +69,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
                 size="xs"
                 onClick={() => onNavigate('/forgot-password')}
               >
-                忘记密码？
+                {t("忘记密码？")}
               </Button>
             </div>
           </div>
@@ -80,10 +81,9 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               <Key size={24} />
             </div>
             <div className="hint-content">
-              <h4>设置密码</h4>
+              <h4>{t("设置密码")}</h4>
               <p>
-                您的账户是通过手机号或微信自动创建的，尚未设置密码。
-                设置密码后可使用账号密码登录。
+                {t("您的账户是通过手机号或微信自动创建的，尚未设置密码。设置密码后可使用账号密码登录。")}
               </p>
             </div>
           </div>
@@ -94,7 +94,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
         >
           <label className="input-label">
             <Key size={14} />
-            新密码
+            {t("新密码")}
           </label>
           <div className="input-wrapper">
             <Input
@@ -104,7 +104,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               onChange={onPasswordChange}
               onFocus={() => onFocusField('newPassword')}
               onBlur={() => onFocusField(null)}
-              placeholder="至少8位，包含大小写字母和数字"
+              placeholder={t("至少8位，包含大小写字母和数字")}
               required
               showPasswordToggle
             />
@@ -136,7 +136,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
         >
           <label className="input-label">
             <CheckCircle size={14} />
-            确认新密码
+            {t("确认新密码")}
           </label>
           <div className="input-wrapper">
             <Input
@@ -146,7 +146,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               onChange={onPasswordChange}
               onFocus={() => onFocusField('confirmPassword')}
               onBlur={() => onFocusField(null)}
-              placeholder="再次输入新密码"
+              placeholder={t("再次输入新密码")}
               required
               showPasswordToggle
             />
@@ -155,19 +155,19 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
         </div>
 
         <Button type="submit" variant="primary" loading={loading} icon={CheckCircle} className="w-full">
-          {loading ? '提交中...' : (user?.hasPassword === false ? '设置密码' : '修改密码')}
+          {loading ? t('提交中...') : (user?.hasPassword === false ? t('设置密码') : t('修改密码'))}
         </Button>
 
         <div className="security-tips">
           <h4>
             <Shield size={16} />
-            安全建议
+            {t("安全建议")}
           </h4>
           <ul>
-            <li>密码长度至少 8 个字符</li>
-            <li>包含大小写字母和数字</li>
-            <li>避免使用常见的密码组合</li>
-            <li>不要在多个网站使用相同的密码</li>
+            <li>{t("密码长度至少 8 个字符")}</li>
+            <li>{t("包含大小写字母和数字")}</li>
+            <li>{t("避免使用常见的密码组合")}</li>
+            <li>{t("不要在多个网站使用相同的密码")}</li>
           </ul>
         </div>
       </form>

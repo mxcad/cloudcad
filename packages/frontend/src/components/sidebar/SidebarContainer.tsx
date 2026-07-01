@@ -35,6 +35,7 @@ import { FileSystemNode } from '../../types/filesystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginPrompt } from '../auth/LoginPrompt';
 import styles from './sidebar.module.css';
+import { t } from '@/languages';
 
 /** 插入文件的参数类型 */
 export interface InsertFileParams {
@@ -43,10 +44,10 @@ export interface InsertFileParams {
 }
 
 const SUB_TABS: { id: DrawingsSubTab; label: string; icon: React.ElementType }[] = [
-  { id: 'drawings-gallery', label: '图纸库', icon: LayoutTemplate },
-  { id: 'blocks-gallery', label: '图块库', icon: Layers },
-  { id: 'my-project', label: '我的项目', icon: FolderOpen },
-  { id: 'my-drawings', label: '我的图纸', icon: FileText },
+  { id: 'drawings-gallery', label: t('图纸库'), icon: LayoutTemplate },
+  { id: 'blocks-gallery', label: t('图块库'), icon: Layers },
+  { id: 'my-project', label: t('我的项目'), icon: FolderOpen },
+  { id: 'my-drawings', label: t('我的图纸'), icon: FileText },
 ];
 
 interface SidebarContainerProps {
@@ -391,12 +392,12 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                     <div className={styles.loginPromptIcon}>
                       <FolderOpen size={40} />
                     </div>
-                    <h3 className={styles.loginPromptTitle}>登录以访问我的项目</h3>
+                    <h3 className={styles.loginPromptTitle}>{t("登录以访问我的项目")}</h3>
                     <p className={styles.loginPromptDescription}>
-                      登录后可以查看和管理您的项目
+                      {t("登录后可以查看和管理您的项目")}
                     </p>
                     <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
-                      立即登录
+                      {t("立即登录")}
                     </Button>
                   </div>
                 </div>
@@ -420,12 +421,12 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                     <div className={styles.loginPromptIcon}>
                       <FileText size={40} />
                     </div>
-                    <h3 className={styles.loginPromptTitle}>登录以访问我的图纸</h3>
+                    <h3 className={styles.loginPromptTitle}>{t("登录以访问我的图纸")}</h3>
                     <p className={styles.loginPromptDescription}>
-                      登录后可以查看和管理您的私人图纸
+                      {t("登录后可以查看和管理您的私人图纸")}
                     </p>
                     <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
-                      立即登录
+                      {t("立即登录")}
                     </Button>
                   </div>
                 </div>
@@ -442,12 +443,12 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                 <div className={styles.loginPromptIcon}>
                   <FolderOpen size={40} />
                 </div>
-                <h3 className={styles.loginPromptTitle}>登录以使用完整功能</h3>
+                <h3 className={styles.loginPromptTitle}>{t("登录以使用完整功能")}</h3>
                 <p className={styles.loginPromptDescription}>
-                  登录后可以使用我的图纸、我的项目、协同等功能
+                  {t("登录后可以使用我的图纸、我的项目、协同等功能")}
                 </p>
                 <Button variant="primary" size="sm" onClick={handleLoginClick} className={styles.loginPromptButton}>
-                  立即登录
+                  {t("立即登录")}
                 </Button>
               </div>
             </div>

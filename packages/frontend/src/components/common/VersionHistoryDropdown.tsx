@@ -6,6 +6,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { History, Loader2, ExternalLink } from 'lucide-react';
 import { versionControlControllerGetFileHistory, MxLogEntryDto } from '@/api-sdk';
+import { t } from '@/languages';
 import { Tooltip } from '../ui/Tooltip';
 import { Menu } from '../ui/Menu';
 
@@ -31,13 +32,13 @@ function formatDate(date: string | Date): string {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     if (hours === 0) {
       const minutes = Math.floor(diff / (1000 * 60));
-      return minutes <= 1 ? '刚刚' : `${minutes}分钟前`;
+      return minutes <= 1 ? t('刚刚') : t(`${minutes}分钟前`);
     }
-    return `${hours}小时前`;
+    return t(`${hours}小时前`);
   } else if (days === 1) {
-    return '昨天';
+    return t('昨天');
   } else if (days < 7) {
-    return `${days}天前`;
+    return t(`${days}天前`);
   }
 
   return d.toLocaleDateString('zh-CN', {
@@ -88,7 +89,7 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
 
   const loadVersionHistory = useCallback(async () => {
     if (!projectId || !filePath) {
-      setError('缺少必要参数');
+      setError(t('缺少必要参数'));
       return;
     }
 
@@ -100,11 +101,11 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
       if (response.data && !response.error) {
         setEntries(response.data?.entries || []);
       } else {
-        setError(response.error ? String(response.error) : '加载版本历史失败');
+        setError(response.error ? String(response.error) : t('加载版本历史失败'));
       }
     } catch (err) {
-      setError('加载版本历史失败');
-      console.error('[VersionHistoryDropdown] 加载版本历史失败:', err);
+      setError(t('加载版本历史失败'));
+      console.error('[VersionHistoryDropdown]', t('加载版本历史失败'), err);
     } finally {
       setLoading(false);
     }
@@ -131,14 +132,14 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
           loadVersionHistory();
         }
       }}>
-        <Tooltip content="版本历史" position="bottom" delay={100} disabled={disabled}>
+        <Tooltip content={t("版本历史")} position="bottom" delay={100} disabled={disabled}>
           <Menu.Trigger>
             <button
               ref={buttonRef}
               disabled={disabled}
               onClick={(e) => e.stopPropagation()}
               className={`${styles.historyButton} ${isOpen ? styles.open : ''} ${disabled ? styles.disabled : ''}`}
-              aria-label="查看版本历史"
+              aria-label={t("查看版本历史")}
               aria-expanded={isOpen}
               aria-haspopup="menu"
             >
@@ -151,7 +152,7 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
           {loading && (
             <Menu.Loading>
               <Loader2 className={styles.loadingIcon} size={16} />
-              <span>加载中...</span>
+              <span>{t("加载中...")}</span>
             </Menu.Loading>
           )}
 
@@ -162,14 +163,14 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
           {!loading && !error && entries.length === 0 && (
             <Menu.Empty>
               <History size={20} className={styles.emptyIcon} />
-              <span>暂无版本历史</span>
+              <span>{t("暂无版本历史")}</span>
             </Menu.Empty>
           )}
 
           {!loading && !error && entries.length > 0 && (
             <div className={styles.versionList}>
               {entries.map((entry) => {
-                const displayName = entry.userName || entry.author || '系统';
+                const displayName = entry.userName || entry.author || t('系统');
                 const userNote = extractUserNote(entry.message);
 
                 return (
@@ -200,20 +201,20 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
                         }}
                       >
                         <div className={styles.tooltipHeader}>
-                          <span className={styles.tooltipTitle}>版本 r{hoveredEntry.revision}</span>
+                          <span className={styles.tooltipTitle}>{t(`版本 r${hoveredEntry.revision}`)}</span>
                         </div>
                         <div className={styles.tooltipContent}>
                           <div className={styles.tooltipRow}>
-                            <span className={styles.tooltipLabel}>操作人：</span>
-                            <span>{hoveredEntry.userName || hoveredEntry.author || '系统'}</span>
+                            <span className={styles.tooltipLabel}>{t("操作人：")}</span>
+                            <span>{hoveredEntry.userName || hoveredEntry.author || t('系统')}</span>
                           </div>
                           <div className={styles.tooltipRow}>
-                            <span className={styles.tooltipLabel}>时间：</span>
+                            <span className={styles.tooltipLabel}>{t("时间：")}</span>
                             <span>{formatFullDate(hoveredEntry.date)}</span>
                           </div>
                           {extractUserNote(hoveredEntry.message) && (
                             <div className={styles.tooltipRow}>
-                              <span className={styles.tooltipLabel}>备注：</span>
+                              <span className={styles.tooltipLabel}>{t("备注：")}</span>
                               <span className={styles.tooltipNote}>
                                 {extractUserNote(hoveredEntry.message)}
                               </span>
@@ -221,7 +222,7 @@ export const VersionHistoryDropdown: React.FC<VersionHistoryDropdownProps> = ({
                           )}
                         </div>
                         <div className={styles.tooltipFooter}>
-                          点击在新标签页打开此版本
+                          {t("点击在新标签页打开此版本")}
                         </div>
                       </div>
                     )}

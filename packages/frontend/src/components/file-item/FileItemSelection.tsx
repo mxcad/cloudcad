@@ -1,4 +1,5 @@
 import React, { memo, useCallback } from 'react';
+import { t } from '@/languages';
 
 interface FileItemSelectionProps {
   isSelected: boolean;
@@ -37,7 +38,7 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
         draggable={isDraggable}
         onClick={handleClick}
         onMouseDown={(e) => { e.stopPropagation(); }}
-        title={isSelected ? '单击取消选择' : isDraggable ? '点击选择，拖拽移动' : '单击选择'}
+        title={isSelected ? t('单击取消选择') : isDraggable ? t('点击选择，拖拽移动') : t('单击选择')}
       >
         {isSelected && (
           <svg

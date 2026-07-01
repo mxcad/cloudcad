@@ -115,8 +115,8 @@ export const ResetPassword: React.FC = () => {
               <div className="success-icon">
                 <CheckCircle size={32} />
               </div>
-              <h2 className="success-title">密码重置成功！</h2>
-              <p className="success-subtitle">即将自动跳转到登录页...</p>
+              <h2 className="success-title">{t("密码重置成功！")}</h2>
+              <p className="success-subtitle">{t("即将自动跳转到登录页...")}</p>
             </div>
           </div>
         </div>
@@ -156,13 +156,13 @@ export const ResetPassword: React.FC = () => {
               <img src={appLogo} alt={appName} className="logo-image" />
             </div>
             <h1 className="app-title">{appName}</h1>
-            <p className="app-tagline">重置您的账户密码</p>
+            <p className="app-tagline">{t("重置您的账户密码")}</p>
           </div>
 
           {/* 表单头部 */}
           <div className="form-header">
-            <h2 className="form-title">设置新密码</h2>
-            <p className="form-subtitle">请输入验证码和新密码</p>
+            <h2 className="form-title">{t("设置新密码")}</h2>
+            <p className="form-subtitle">{t("请输入验证码和新密码")}</p>
           </div>
 
           {/* 错误提示 */}
@@ -178,7 +178,7 @@ export const ResetPassword: React.FC = () => {
             {contactType === 'email' ? (
               <div className="input-group">
                 <label htmlFor="email" className="input-label">
-                  邮箱地址
+                  {t("邮箱地址")}
                 </label>
                 <div className="input-wrapper">
                   <Mail size={18} className="input-icon" />
@@ -197,7 +197,7 @@ export const ResetPassword: React.FC = () => {
             ) : (
               <div className="input-group">
                 <label htmlFor="phone" className="input-label">
-                  手机号码
+                  {t("手机号码")}
                 </label>
                 <div className="input-wrapper">
                   <Phone size={18} className="input-icon" />
@@ -217,7 +217,7 @@ export const ResetPassword: React.FC = () => {
 
             <div className="input-group">
               <label htmlFor="code" className="input-label">
-                验证码
+                {t("验证码")}
               </label>
               <div className="input-wrapper">
                 <KeyRound size={18} className="input-icon" />
@@ -235,7 +235,7 @@ export const ResetPassword: React.FC = () => {
 
             <div className="input-group">
               <label htmlFor="newPassword" className="input-label">
-                新密码
+                {t("新密码")}
               </label>
               <div className="input-wrapper">
                 <Lock size={18} className="input-icon" />
@@ -261,7 +261,7 @@ export const ResetPassword: React.FC = () => {
 
             <div className="input-group">
               <label htmlFor="confirmPassword" className="input-label">
-                确认新密码
+                {t("确认新密码")}
               </label>
               <div className="input-wrapper">
                 <Lock size={18} className="input-icon" />
@@ -286,14 +286,14 @@ export const ResetPassword: React.FC = () => {
             </div>
 
             <Button type="submit" variant="primary" size="lg" loading={resetPassword.loading} icon={ArrowRight}>
-              重置密码
+              {t("重置密码")}
             </Button>
           </form>
 
           {/* 返回登录 */}
           <div className="form-footer">
             <Button variant="secondary" size="lg" icon={ArrowLeft} onClick={() => navigate('/login')}>
-              返回登录
+              {t("返回登录")}
             </Button>
           </div>
 

@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { t } from '@/languages';
 
 export interface Plan {
   id: string;
@@ -24,10 +25,10 @@ interface PricingCardProps {
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  maxStorage: '存储空间',
-  maxProjects: '项目数量',
-  maxCollaborators: '协作者数量',
-  versionHistoryDays: '版本历史',
+  maxStorage: t('存储空间'),
+  maxProjects: t('项目数量'),
+  maxCollaborators: t('协作者数量'),
+  versionHistoryDays: t('版本历史'),
 };
 
 function formatFeatureValue(key: string, value: any): string {
@@ -48,7 +49,7 @@ export default function PricingCard({
   onPurchase,
 }: PricingCardProps) {
   const durationLabel =
-    plan.durationDays >= 365 ? '每年' : plan.durationDays >= 180 ? '每半年' : '每月';
+    plan.durationDays >= 365 ? t('每年') : plan.durationDays >= 180 ? t('每半年') : t('每月');
 
   return (
     <Card
@@ -65,7 +66,7 @@ export default function PricingCard({
           className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-medium"
           style={{ background: 'var(--accent-600)', color: '#fff' }}
         >
-          推荐
+          {t("推荐")}
         </div>
       )}
 
@@ -89,7 +90,7 @@ export default function PricingCard({
       <div className="flex-1 space-y-3 mb-8">
         <div className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <Check size={16} style={{ color: 'var(--success-500)' }} />
-          <span>{plan.tier === 'PRO' ? '专业版' : '企业版'}功能</span>
+          <span>{plan.tier === 'PRO' ? t('专业版') : t('企业版')}{t('功能')}</span>
         </div>
         {plan.features &&
           Object.entries(plan.features).map(([key, value]) => (
@@ -115,7 +116,7 @@ export default function PricingCard({
             border: '1px solid var(--accent-200)',
           }}
         >
-          当前方案
+          {t("当前方案")}
         </div>
       ) : (
         <Button
@@ -125,7 +126,7 @@ export default function PricingCard({
           onClick={() => onPurchase(plan.id)}
           loading={purchasing}
         >
-          {purchasing ? '处理中...' : isAuthenticated ? '立即开通' : '登录后开通'}
+          {purchasing ? t('处理中...') : isAuthenticated ? t('立即开通') : t('登录后开通')}
         </Button>
       )}
     </Card>

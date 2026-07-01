@@ -47,6 +47,7 @@ import {
 } from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { useFileSystemShortcuts } from '@/hooks/file-system/useFileSystemShortcuts';
+import { t } from '@/languages';
 
 import { FileSystemHeader } from './FileSystemHeader';
 import { FileSystemContent } from './FileSystemContent';
@@ -64,7 +65,7 @@ interface FileSystemManagerProps {
 export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   mode = 'project',
 }) => {
-  useDocumentTitle(mode === 'personal-space' ? '我的图纸' : '项目管理');
+  useDocumentTitle(mode === 'personal-space' ? t('我的图纸') : t('项目管理'));
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
@@ -235,16 +236,16 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
   const clipboardHandleCopy = useCallback(() => {
     if (selectedNodes.size === 0) {
-      showToast('请先选择要复制的文件', 'info');
+      showToast(t('请先选择要复制的文件'), 'info');
       return;
     }
     setClipboard(Array.from(selectedNodes), 'copy', projectId);
-    showToast(`已复制 ${selectedNodes.size} 个项目`, 'info');
+    showToast(t(`已复制 ${selectedNodes.size} 个项目`), 'info');
   }, [selectedNodes, setClipboard, projectId, showToast]);
 
   const clipboardHandleCut = useCallback(() => {
     if (selectedNodes.size === 0) {
-      showToast('请先选择要剪切的文件', 'info');
+      showToast(t('请先选择要剪切的文件'), 'info');
       return;
     }
     const nodeIds = Array.from(selectedNodes);
@@ -254,7 +255,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       if (node?.parentId) sourceParentIds[id] = node.parentId;
     }
     setClipboard(nodeIds, 'cut', projectId, sourceParentIds);
-    showToast(`已剪切 ${selectedNodes.size} 个项目`, 'info');
+    showToast(t(`已剪切 ${selectedNodes.size} 个项目`), 'info');
   }, [selectedNodes, nodes, setClipboard, projectId, showToast]);
 
   const clipboardHandlePaste = useCallback(async () => {
@@ -273,7 +274,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
     });
 
     if (items.length === 0) {
-      showToast('没有可粘贴的项目', 'info');
+      showToast(t('没有可粘贴的项目'), 'info');
       return;
     }
 
@@ -281,14 +282,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       const sourceProjectId =
         useFileSystemClipboardStore.getState().sourceProjectId;
       if (sourceProjectId && sourceProjectId !== projectId) {
-        showToast('不能跨项目粘贴', 'error');
+        showToast(t('不能跨项目粘贴'), 'error');
         return;
       }
     }
 
     const targetParentId = currentNode?.id || projectId;
     if (!targetParentId) {
-      showToast('无法确定粘贴位置', 'error');
+      showToast(t('无法确定粘贴位置'), 'error');
       return;
     }
 
@@ -304,10 +305,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           });
         }
         clearClipboard();
-        showToast('粘贴成功', 'success');
+        showToast(t('粘贴成功'), 'success');
         const action = {
           type: 'move' as const,
-          description: `移动 ${items.length} 个项目`,
+          description: t(`移动 ${items.length} 个项目`),
           projectId: urlProjectId || undefined,
           execute: async () => {
             for (const nodeId of items) {
@@ -345,11 +346,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             if (newId) createdIdsRef.current.push(newId);
           } catch (e) {}
         }
-        showToast('粘贴成功', 'success');
+        showToast(t('粘贴成功'), 'success');
         if (createdIdsRef.current.length > 0) {
           pushAction({
             type: 'paste-copy',
-            description: `复制 ${items.length} 个项目`,
+            description: t(`复制 ${items.length} 个项目`),
             projectId: urlProjectId || undefined,
             execute: async () => {
               const newIds: string[] = [];
@@ -392,7 +393,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       }
       handleRefresh();
     } catch (error) {
-      const appError = handleError(error, '粘贴', 'medium');
+      const appError = handleError(error, t('粘贴'), 'medium');
       showToast(appError.message, 'error');
     }
   }, [
@@ -435,10 +436,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       const action = undoStack[undoStack.length - 1];
       if (!action) return;
       await undoStoreUndo(projectId);
-      showToast(`已撤销: ${action.description}`, 'info');
+      showToast(t(`已撤销: ${action.description}`), 'info');
       handleRefresh();
     } catch (error) {
-      const appError = handleError(error, '撤销', 'medium');
+      const appError = handleError(error, t('撤销'), 'medium');
       showToast(appError.message, 'error');
     }
   }, [undoStack, undoStoreUndo, projectId, handleRefresh, showToast]);
@@ -449,10 +450,10 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       const action = redoStack[redoStack.length - 1];
       if (!action) return;
       await undoStoreRedo(projectId);
-      showToast(`已重做: ${action.description}`, 'info');
+      showToast(t(`已重做: ${action.description}`), 'info');
       handleRefresh();
     } catch (error) {
-      const appError = handleError(error, '重做', 'medium');
+      const appError = handleError(error, t('重做'), 'medium');
       showToast(appError.message, 'error');
     }
   }, [redoStack, undoStoreRedo, projectId, handleRefresh, showToast]);
@@ -674,7 +675,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           return newMap;
         });
       } catch (error) {
-        handleError(error, '加载权限信息失败');
+        handleError(error, t('加载权限信息失败'));
       } finally {
         setPermissionsLoading(false);
       }
@@ -818,7 +819,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           navigate(url);
         }
       } catch {
-        showToast('路径不存在或无法访问', 'error');
+        showToast(t('路径不存在或无法访问'), 'error');
       }
     },
     [mode, urlProjectId, navigate, buildNodeUrl, showToast]
@@ -871,7 +872,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         .setClipboard([node.id], 'copy', urlProjectId || '', {
           [node.id]: node.parentId || '',
         });
-      showToast('已复制', 'info');
+      showToast(t('已复制'), 'info');
     },
     [urlProjectId, showToast]
   );
@@ -883,7 +884,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         .setClipboard([node.id], 'cut', urlProjectId || '', {
           [node.id]: node.parentId || '',
         });
-      showToast('已剪切', 'info');
+      showToast(t('已剪切'), 'info');
     },
     [urlProjectId, showToast]
   );
@@ -902,9 +903,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
         : node.name;
       try {
         await navigator.clipboard.writeText(path);
-        showToast('路径已复制到剪贴板', 'success');
+        showToast(t('路径已复制到剪贴板'), 'success');
       } catch {
-        showToast('复制失败', 'error');
+        showToast(t('复制失败'), 'error');
       }
     },
     [showToast]
@@ -969,7 +970,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               className="text-sm font-semibold whitespace-nowrap"
               style={{ color: 'var(--text-primary)' }}
             >
-              已选中 {selectedNodes.size} 项
+               {t("已选中")} {selectedNodes.size} {t("项")}
             </span>
             <div
               className="w-px h-4"
@@ -983,7 +984,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 disabled={!canRestore}
                 className="text-emerald-400 hover:text-white"
               >
-                恢复
+                {t("恢复")}
               </Button>
             )}
 
@@ -995,7 +996,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   disabled={!canCut}
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  剪切
+                  {t("剪切")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -1003,7 +1004,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                   disabled={!canCopy}
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  复制
+                  {t("复制")}
                 </Button>
               </>
             )}
@@ -1015,7 +1016,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 disabled={!canDelete || !canRestore}
                 style={{ color: 'var(--error)' }}
               >
-                彻底删除
+                {t("彻底删除")}
               </Button>
             )}
 
@@ -1026,7 +1027,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 disabled={!canDelete}
                 style={{ color: 'var(--error)' }}
               >
-                删除
+                {t("删除")}
               </Button>
             )}
           </>
@@ -1051,7 +1052,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               }}
               className="relative px-3"
             >
-              粘贴
+              {t("粘贴")}
               {clipboardItems.length > 0 && (
                 <span
                   className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
@@ -1092,7 +1093,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           onClick={handleCancelBar}
           style={{ color: 'var(--text-muted)' }}
         >
-          取消
+          {t("取消")}
         </Button>
       </div>
     ) : undefined;
@@ -1221,7 +1222,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                       className="font-medium"
                       style={{ color: 'var(--text-primary)' }}
                     >
-                      释放文件以上传到当前目录
+                      {t("释放文件以上传到当前目录")}
                     </span>
                   </div>
                 </div>
@@ -1411,7 +1412,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       <Modal
         isOpen={deleteConfirmOpen}
         onClose={cancelDelete}
-        title="确认删除项目"
+        title={t("确认删除项目")}
         footer={
           <>
             <Button
@@ -1419,14 +1420,14 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               onClick={cancelDelete}
               disabled={projectLoading}
             >
-              取消
+              {t("取消")}
             </Button>
             <Button
               onClick={confirmDelete}
               disabled={projectLoading}
               className="bg-red-600 hover:bg-red-700"
             >
-              {projectLoading ? '删除中...' : '确认删除'}
+              {projectLoading ? t('删除中...') : t('确认删除')}
             </Button>
           </>
         }
@@ -1445,9 +1446,9 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               style={{ color: 'var(--warning)' }}
             />
             <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              <p className="font-semibold mb-1">重要提示</p>
+              <p className="font-semibold mb-1">{t("重要提示")}</p>
               <p style={{ color: 'var(--text-tertiary)' }}>
-                删除项目后，项目中的所有文件和数据可能无法恢复。
+                {t("删除项目后，项目中的所有文件和数据可能无法恢复。")}
               </p>
             </div>
           </div>
@@ -1457,7 +1458,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 className="text-sm font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                删除项目：
+                {t("删除项目：")}
               </p>
               <div
                 className="p-3 rounded-lg"
@@ -1481,7 +1482,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             </div>
           )}
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            确定要删除该项目吗？此操作不可恢复。
+            {t("确定要删除该项目吗？此操作不可恢复。")}
           </p>
         </div>
       </Modal>

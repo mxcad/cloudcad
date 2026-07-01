@@ -2,6 +2,8 @@ import type React from 'react';
 import { forwardRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
+import { t } from '@/languages';
+
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   variant?: 'default' | 'error';
   size?: 'xs' | 'sm' | 'md' | 'lg';
@@ -128,7 +130,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={`absolute ${cfg.rightOffset} top-1/2 -translate-y-1/2 flex items-center justify-center p-0.5 rounded`}
             style={{ color: 'var(--text-muted)' }}
             onClick={() => setPasswordVisible((v) => !v)}
-            aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
+            aria-label={passwordVisible ? t('隐藏密码') : t('显示密码')}
           >
             {passwordVisible ? <EyeOff size={cfg.btnSize} /> : <Eye size={cfg.btnSize} />}
           </button>

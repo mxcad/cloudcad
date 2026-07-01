@@ -8,6 +8,7 @@ import { versionControlControllerGetFileHistory, MxLogEntryDto } from '@/api-sdk
 import type { FileSystemNode } from '@/types/filesystem';
 
 import { handleError } from '@/utils/errorHandler';
+import { t } from '@/languages';
 
 export interface UseVersionHistoryReturn {
   showVersionHistoryModal: boolean;
@@ -48,12 +49,12 @@ export function useVersionHistory(selectedProjectId: string | null): UseVersionH
         if (response?.success) {
           setVersionHistoryEntries(response.entries || []);
         } else {
-          setVersionHistoryError(response?.message || '加载版本历史失败');
+          setVersionHistoryError(response?.message || t('加载版本历史失败'));
         }
       } catch (error: unknown) {
         handleError(error, 'useVersionHistory: 版本历史加载失败');
         setVersionHistoryError(
-          error instanceof Error ? error.message : '加载版本历史失败'
+          error instanceof Error ? error.message : t('加载版本历史失败')
         );
       } finally {
         setVersionHistoryLoading(false);

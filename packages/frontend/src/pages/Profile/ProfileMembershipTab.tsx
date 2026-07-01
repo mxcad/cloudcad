@@ -14,6 +14,7 @@ import {
   billingControllerGetOrders,
   billingControllerCreateOrder,
 } from '@/api-sdk';
+import { t } from '@/languages';
 
 interface Membership {
   tier: string;
@@ -29,10 +30,10 @@ const FREE_FEATURES: Record<string, number> = {
 };
 
 const FEATURE_LABELS: Record<string, string> = {
-  maxStorage: '存储空间',
-  maxProjects: '项目数量',
-  maxCollaborators: '协作者数量',
-  versionHistoryDays: '版本历史',
+  maxStorage: t('存储空间'),
+  maxProjects: t('项目数量'),
+  maxCollaborators: t('协作者数量'),
+  versionHistoryDays: t('版本历史'),
 };
 
 const FEATURE_FMT: Record<string, (v: number) => string> = {
@@ -40,14 +41,14 @@ const FEATURE_FMT: Record<string, (v: number) => string> = {
     const gb = (v as number) / 1073741824;
     return gb >= 1024 ? `${(gb / 1024).toFixed(1)}TB` : `${gb.toFixed(0)}GB`;
   },
-  maxProjects: (v) => `${v} 个`,
-  maxCollaborators: (v) => `${v} 人`,
-  versionHistoryDays: (v) => (v === 0 ? '无' : `${v} 天`),
+  maxProjects: (v) => `${v} ${t('个')}`,
+  maxCollaborators: (v) => `${v} ${t('人')}`,
+  versionHistoryDays: (v) => (v === 0 ? t('无') : `${v} ${t('天')}`),
 };
 
 const TIER_LABEL: Record<string, string> = {
-  FREE: '免费用户',
-  PRO: '专业版会员',
+  FREE: t('免费用户'),
+  PRO: t('专业版会员'),
 };
 
 export const ProfileMembershipTab: React.FC = () => {
@@ -111,8 +112,8 @@ export const ProfileMembershipTab: React.FC = () => {
         if (newRefunded.length > 0) {
           newRefunded.forEach((o) => prevRefundedIds.current.add(o.id));
           const desc = newRefunded.length === 1
-            ? `订单 ${newRefunded[0]!.orderNo.slice(-8)} 已退款`
-            : `${newRefunded.length} 个订单已退款`;
+            ? t('订单 {orderNo} 已退款').replace('{orderNo}', newRefunded[0]!.orderNo.slice(-8))
+            : t('{count} 个订单已退款').replace('{count}', String(newRefunded.length));
           window.dispatchEvent(
             new CustomEvent('cloudcad:toast', { detail: { message: desc, type: 'info' } }),
           );
@@ -168,14 +169,14 @@ export const ProfileMembershipTab: React.FC = () => {
     const orderData = res?.data as Record<string, unknown> | undefined;
     if (res?.error || !orderData) {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '创建订单失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t('创建订单失败'), type: 'error' } }),
       );
       return null;
     }
 
     if (orderData.status !== 'PENDING' || (!orderData.codeUrl && !orderData.payParams && !orderData.redirectUrl)) {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '获取支付信息失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t('获取支付信息失败'), type: 'error' } }),
       );
       return null;
     }
@@ -196,7 +197,7 @@ export const ProfileMembershipTab: React.FC = () => {
       if (payment) setPaymentOrder(payment);
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '创建订单失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t('创建订单失败'), type: 'error' } }),
       );
     } finally {
       setPurchasing(null);
@@ -207,7 +208,7 @@ export const ProfileMembershipTab: React.FC = () => {
     setPaymentOrder(null);
     window.dispatchEvent(
       new CustomEvent('cloudcad:toast', {
-        detail: { message: '支付成功！', type: 'success' },
+        detail: { message: t('支付成功！'), type: 'success' },
       }),
     );
     loadBillingData();
@@ -227,7 +228,7 @@ export const ProfileMembershipTab: React.FC = () => {
       if (payment) setPaymentOrder(payment);
     } catch {
       window.dispatchEvent(
-        new CustomEvent('cloudcad:toast', { detail: { message: '获取支付信息失败', type: 'error' } }),
+        new CustomEvent('cloudcad:toast', { detail: { message: t('获取支付信息失败'), type: 'error' } }),
       );
     }
   };
@@ -261,11 +262,11 @@ export const ProfileMembershipTab: React.FC = () => {
                   </p>
                   {membership && membership.tier !== 'FREE' && membership.expiresAt ? (
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      有效期至 {new Date(membership.expiresAt).toLocaleDateString('zh-CN')}
-                      {membership.daysRemaining > 0 && `（剩余 ${membership.daysRemaining} 天）`}
+                      {t('有效期至 {date}').replace('{date}', new Date(membership.expiresAt).toLocaleDateString('zh-CN'))}
+                      {membership.daysRemaining > 0 && t('（剩余 {days} 天）').replace('{days}', String(membership.daysRemaining))}
                     </p>
                   ) : (
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>开通会员解锁更多功能</p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t("开通会员解锁更多功能")}</p>
                   )}
                 </div>
               </div>
@@ -274,14 +275,14 @@ export const ProfileMembershipTab: React.FC = () => {
                 size="sm"
                 onClick={() => setShowPlanSelect(true)}
               >
-                {(!membership || membership.tier === 'FREE') ? '开通会员' : '续费'}
+                {(!membership || membership.tier === 'FREE') ? t('开通会员') : t('续费')}
               </Button>
             </div>
             {membership && membership.tier !== 'FREE' && membership.daysRemaining > 0 && membership.daysRemaining <= 7 && (
               <div className="flex items-center gap-2 p-3 rounded-lg mt-3" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }}>
                 <AlertTriangle size={16} className="text-yellow-500 shrink-0" />
-                <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>您的会员将在 <strong>{membership.daysRemaining}</strong> 天后到期，请及时续费</span>
-                <Button variant="outline" size="sm" onClick={() => setShowPlanSelect(true)}>立即续费</Button>
+                <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>{t('您的会员将在 {days} 天后到期，请及时续费').replace('{days}', String(membership.daysRemaining))}</span>
+                <Button variant="outline" size="sm" onClick={() => setShowPlanSelect(true)}>{t("立即续费")}</Button>
               </div>
             )}
           </div>
@@ -290,7 +291,7 @@ export const ProfileMembershipTab: React.FC = () => {
           {orders.some((o) => o.status === 'PENDING') && (
             <div className="flex items-center gap-2 px-4 py-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
               <AlertTriangle size={16} className="text-yellow-500 shrink-0" />
-              <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>您有待支付的订单，请尽快完成支付</span>
+              <span className="text-sm flex-1" style={{ color: 'var(--text-primary)' }}>{t("您有待支付的订单，请尽快完成支付")}</span>
             </div>
           )}
 
@@ -304,7 +305,7 @@ export const ProfileMembershipTab: React.FC = () => {
               }}
               onClick={() => setMemSubTab('compare')}
             >
-              功能对比
+              {t("功能对比")}
             </button>
             <button
               className="text-sm font-medium pb-1 transition-colors"
@@ -314,7 +315,7 @@ export const ProfileMembershipTab: React.FC = () => {
               }}
               onClick={() => setMemSubTab('orders')}
             >
-              购买记录
+              {t("购买记录")}
             </button>
           </div>
 
@@ -324,8 +325,8 @@ export const ProfileMembershipTab: React.FC = () => {
               <table className="w-full text-sm" style={{ color: 'var(--text-secondary)' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-tertiary)' }}>
-                    <th className="text-left px-4 py-3 font-semibold text-text-primary">功能</th>
-                    <th className="text-center px-4 py-3 font-semibold text-text-primary">免费</th>
+                    <th className="text-left px-4 py-3 font-semibold text-text-primary">{t("功能")}</th>
+                    <th className="text-center px-4 py-3 font-semibold text-text-primary">{t("免费")}</th>
                     {plans.map((p) => (
                       <th key={p.id} className="text-center px-4 py-3 font-semibold text-text-primary">
                         {p.name}
@@ -346,21 +347,21 @@ export const ProfileMembershipTab: React.FC = () => {
                     </tr>
                   ))}
                   <tr style={{ borderTop: '1px solid var(--border-default)' }}>
-                    <td className="px-4 py-3 text-text-primary">协作用户管理</td>
+                    <td className="px-4 py-3 text-text-primary">{t("协作用户管理")}</td>
                     <td className="text-center px-4 py-3"><XIcon size={16} className="inline" style={{ color: 'var(--error-500)' }} /></td>
                     {plans.map((p) => (
                       <td key={p.id} className="text-center px-4 py-3"><Check size={16} className="inline" style={{ color: 'var(--success-500)' }} /></td>
                     ))}
                   </tr>
                   <tr style={{ borderTop: '1px solid var(--border-default)' }}>
-                    <td className="px-4 py-3 text-text-primary">版本历史管理</td>
+                    <td className="px-4 py-3 text-text-primary">{t("版本历史管理")}</td>
                     <td className="text-center px-4 py-3"><XIcon size={16} className="inline" style={{ color: 'var(--error-500)' }} /></td>
                     {plans.map((p) => (
                       <td key={p.id} className="text-center px-4 py-3"><Check size={16} className="inline" style={{ color: 'var(--success-500)' }} /></td>
                     ))}
                   </tr>
                   <tr style={{ borderTop: '1px solid var(--border-default)' }}>
-                    <td className="px-4 py-3 text-text-primary">高级 API 调用</td>
+                    <td className="px-4 py-3 text-text-primary">{t("高级 API 调用")}</td>
                     <td className="text-center px-4 py-3"><XIcon size={16} className="inline" style={{ color: 'var(--error-500)' }} /></td>
                     {plans.map((p) => (
                       <td key={p.id} className="text-center px-4 py-3"><Check size={16} className="inline" style={{ color: 'var(--success-500)' }} /></td>
@@ -408,7 +409,7 @@ export const ProfileMembershipTab: React.FC = () => {
       <Modal
         isOpen={paymentOrder !== null}
         onClose={() => setPaymentOrder(null)}
-        title="微信支付"
+        title={t("微信支付")}
       >
         {paymentOrder && (
           <WechatPayButton

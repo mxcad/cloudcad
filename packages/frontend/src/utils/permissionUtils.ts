@@ -15,6 +15,7 @@
  * 统一权限检查逻辑
  */
 
+import { t } from '@/languages';
 import { handleError } from '@/utils/errorHandler';
 import { fileSystemControllerGetProjectMembers, fileSystemControllerCheckProjectPermission } from '@/api-sdk';
 
@@ -104,7 +105,7 @@ export const hasNodePermission = async (
     // 检查用户角色是否在所需角色列表中
     return userRole ? requiredRoles.includes(userRole) : false;
   } catch (error: unknown) {
-    handleError(error, '获取节点权限失败');
+    handleError(error, t('获取节点权限失败'));
     return false;
   }
 };
@@ -131,7 +132,7 @@ export const canEditNode = async (
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
-    handleError(error, '检查编辑权限失败');
+    handleError(error, t('检查编辑权限失败'));
     return false;
   }
 };
@@ -158,7 +159,7 @@ export const canDeleteNode = async (
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
-    handleError(error, '检查删除权限失败');
+    handleError(error, t('检查删除权限失败'));
     return false;
   }
 };
@@ -185,7 +186,7 @@ export const canManageNodeMembers = async (
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
-    handleError(error, '检查成员管理权限失败');
+    handleError(error, t('检查成员管理权限失败'));
     return false;
   }
 };
@@ -231,7 +232,7 @@ export const canManageNodeRoles = async (
 
     return response.data?.hasPermission || false;
   } catch (error: unknown) {
-    handleError(error, '检查角色管理权限失败');
+    handleError(error, t('检查角色管理权限失败'));
     return false;
   }
 };

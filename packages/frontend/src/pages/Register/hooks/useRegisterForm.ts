@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { authControllerCheckFieldUniqueness, authControllerRegisterByPhone } from '@/api-sdk';
 import type { RegisterDto } from '@/api-sdk';
+import { t } from '@/languages';
 import {
   step1Schema,
   step2Schema,
@@ -131,7 +132,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
     }
 
     if (mailEnabled && requireEmailVerification && !values.email) {
-      errors.email = '请输入邮箱';
+      errors.email = t('请输入邮箱');
     }
 
     if (values.username || values.email) {
@@ -147,8 +148,8 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
           emailExists?: boolean;
           phoneExists?: boolean;
         };
-        if (checkResult.usernameExists) errors.username = '用户名已被使用';
-        if (checkResult.emailExists) errors.email = '邮箱已被注册';
+        if (checkResult.usernameExists) errors.username = t('用户名已被使用');
+        if (checkResult.emailExists) errors.email = t('邮箱已被注册');
       } catch (err) {
         console.error('检查字段唯一性失败:', err);
       }
@@ -164,12 +165,12 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
       if (smsEnabled && requirePhoneVerification) {
         const phoneErrors: Record<string, string> = {};
         if (!phoneForm.phone) {
-          phoneErrors.phone = '请输入手机号';
+          phoneErrors.phone = t('请输入手机号');
         } else if (!/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-          phoneErrors.phone = '请输入正确的手机号';
+          phoneErrors.phone = t('请输入正确的手机号');
         }
         if (!phoneForm.code) {
-          phoneErrors.code = '请输入验证码';
+          phoneErrors.code = t('请输入验证码');
         }
         if (Object.keys(phoneErrors).length > 0) {
           setExternalErrors((prev) => ({ ...prev, ...phoneErrors }));
@@ -216,11 +217,11 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
         }
         setExternalErrors(step2Errors);
         const labels: Record<string, string> = {
-          password: '密码',
-          confirmPassword: '确认密码',
+          password: t('密码'),
+          confirmPassword: t('确认密码'),
         };
         const errorFields = Object.keys(step2Errors).map((k) => labels[k] || k);
-        setError(`请修正以下字段：${errorFields.join('、')}`);
+        setError(t(`请修正以下字段：${errorFields.join('、')}`));
         return;
       }
 
@@ -229,16 +230,16 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
       );
       if (allRelevantErrors.length > 0) {
         const labels: Record<string, string> = {
-          username: '用户名',
-          password: '密码',
-          confirmPassword: '确认密码',
-          nickname: '昵称',
-          email: '邮箱',
-          phone: '手机号',
-          code: '验证码',
+          username: t('用户名'),
+          password: t('密码'),
+          confirmPassword: t('确认密码'),
+          nickname: t('昵称'),
+          email: t('邮箱'),
+          phone: t('手机号'),
+          code: t('验证码'),
         };
         const errorFields = allRelevantErrors.map(([k]) => labels[k] || k);
-        setError(`请修正以下字段：${errorFields.join('、')}`);
+        setError(t(`请修正以下字段：${errorFields.join('、')}`));
         return;
       }
 
@@ -266,7 +267,7 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
                 username: values.username,
                 password: values.password,
                 nickname: values.nickname,
-                message: '请先验证邮箱，完成注册',
+                message: t('请先验证邮箱，完成注册'),
               },
             });
             return;
@@ -332,9 +333,9 @@ export function useRegisterForm(options: UseRegisterFormOptions): UseRegisterFor
         setError(
           axiosError.message ||
             (axiosError.response?.status === 409
-              ? '用户名或邮箱已被使用'
+              ? t('用户名或邮箱已被使用')
               : axiosError.response?.statusText) ||
-            '注册失败，请稍后重试',
+            t('注册失败，请稍后重试'),
         );
       } finally {
         setLoading(false);

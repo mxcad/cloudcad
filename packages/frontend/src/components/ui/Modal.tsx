@@ -6,6 +6,7 @@ import { Card } from './Card';
 import { Input } from '@/components/ui/Input';
 import { isTourModeActive } from '../../contexts/TourContext';
 import { Z_LAYERS } from '@/constants/layers';
+import { t } from '@/languages';
 
 interface ModalProps {
   isOpen: boolean;
@@ -359,13 +360,13 @@ export const PromptModal: React.FC<PromptModalProps> = ({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            取消
+            {t("取消")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!(value || '').trim() || loading}
           >
-            {loading ? '提交中...' : '确定'}
+            {loading ? t('提交中...') : t('确定')}
           </Button>
         </>
       }

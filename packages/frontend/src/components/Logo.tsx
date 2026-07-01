@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBrandConfig } from '../contexts/BrandContext';
+import { t } from '@/languages';
 import './Logo.css';
 
 interface LogoProps {
@@ -61,10 +62,10 @@ export const Logo: React.FC<LogoProps> = ({
       {/* Logo 文字 */}
       <div className="logo__text">
         <h1 className="logo__title">
-          <span className="logo__title--brand">梦想</span>
-          <span className="logo__title--product">网页</span>
+          <span className="logo__title--brand">{t("梦想")}</span>
+          <span className="logo__title--product">{t("网页")}</span>
         </h1>
-        {showSubtitle && <p className="logo__subtitle">CAD 协同平台</p>}
+        {showSubtitle && <p className="logo__subtitle">{t("CAD 协同平台")}</p>}
       </div>
     </div>
   );

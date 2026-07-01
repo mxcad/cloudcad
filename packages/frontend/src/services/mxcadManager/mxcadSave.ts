@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { handleError } from '@/utils/errorHandler';
 import { globalShowPrompt } from '@/contexts/NotificationContext';
 import { calculateFileHash } from '@/utils/hashUtils';
@@ -26,8 +27,8 @@ export async function saveMxwebToNode(params: SaveMxwebParams): Promise<void> {
       body: formData,
     });
     if (!response.ok) {
-      const errBody = await response.json().catch(() => ({ message: '保存失败' }));
-      throw new Error((errBody as { message?: string }).message || '保存失败');
+      const errBody = await response.json().catch(() => ({ message: t('保存失败') }));
+      throw new Error((errBody as { message?: string }).message || t('保存失败'));
     }
   } catch (error) {
     handleError(error, 'mxcadSave: saveMxwebToNode');
@@ -37,9 +38,9 @@ export async function saveMxwebToNode(params: SaveMxwebParams): Promise<void> {
 
 export function showSaveConfirmDialog(): Promise<string | null> {
   return globalShowPrompt({
-    title: '保存文件',
-    label: '修改说明（可选）',
-    confirmText: '保存',
+    title: t('保存文件'),
+    label: t('修改说明（可选）'),
+    confirmText: t('保存'),
     multiline: true,
   });
 }

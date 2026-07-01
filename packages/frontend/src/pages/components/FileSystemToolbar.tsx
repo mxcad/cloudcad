@@ -5,6 +5,7 @@ import { SearchInput } from '@/components/search/SearchInput';
 import { SearchFilters, type SearchFilterValues, getActiveFilterChips } from '@/components/search/SearchFilters';
 import { ViewToggle } from '@/components/common/ViewToggle';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
 
 interface FileSystemToolbarProps {
   searchTerm: string;
@@ -51,7 +52,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 flex-1">
           <SearchInput
-            placeholder={isTrashView ? '搜索已删除的项目...' : '搜索文件或项目...'}
+            placeholder={isTrashView ? t('搜索已删除的项目...') : t('搜索文件或项目...')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             onSearch={() => onSearchSubmit()}
@@ -74,7 +75,7 @@ export const FileSystemToolbar: React.FC<FileSystemToolbarProps> = ({
           />
 
           {isTrashView && onClearTrash && trashItemsCount > 0 && (
-            <Tooltip content="清空回收站">
+            <Tooltip content={t("清空回收站")}>
               <Button
                 variant="outline"
                 size="sm"

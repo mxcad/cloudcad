@@ -337,7 +337,7 @@ export const LibraryManager: React.FC = () => {
     if (selectedNodes.size === 0) return;
     const nodeIds = Array.from(selectedNodes);
     const count = nodeIds.length;
-    showConfirm('确认删除', `确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`, async () => {
+    showConfirm(t('确认删除'), t(`确定要永久删除这 ${count} 个项目吗？删除后无法恢复。`), async () => {
       try {
         const { libraryControllerBatchDeleteDrawingNodes, libraryControllerBatchDeleteBlockNodes } = await import('@/api-sdk');
         const fn = libraryType === 'drawing' ? libraryControllerBatchDeleteDrawingNodes : libraryControllerBatchDeleteBlockNodes;
@@ -348,9 +348,9 @@ export const LibraryManager: React.FC = () => {
         if (error) throw error;
         const result = data as unknown as { successCount: number; failedCount: number };
         if (result.failedCount > 0) {
-          showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+          showToast(t(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`), 'warning');
         } else {
-          showToast(`成功删除 ${count} 个项目`, 'success');
+          showToast(t(`成功删除 ${count} 个项目`), 'success');
         }
         clearSelection();
         await refresh();
@@ -380,7 +380,7 @@ export const LibraryManager: React.FC = () => {
       const action = redoStack[redoStack.length - 1];
       if (!action) return;
       await undoStoreRedo(libraryId || undefined);
-      showToast(`已重做: ${action.description}`, 'info');
+      showToast(t(`已重做: ${action.description}`), 'info');
       refresh();
     } catch (error) {
       showToast(t('重做失败'), 'error');
@@ -404,7 +404,7 @@ export const LibraryManager: React.FC = () => {
       try {
         const editorUrl = `/cad-editor/${node.id}?library=${libraryType}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`;
         window.open(editorUrl, '_blank');
-        showToast(`正在打开：${node.name}`, 'success');
+        showToast(t(`正在打开：${node.name}`), 'success');
       } catch (err) {
         console.error('打开文件失败:', err);
         showToast(getErrorMessage(err), 'error');
@@ -654,20 +654,20 @@ export const LibraryManager: React.FC = () => {
     <div className="flex items-center gap-4">
       {showSelectionBar && (
         <>
-          <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>已选中 {selectedNodes.size} 项</span>
+          <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{t("已选中")} {selectedNodes.size} {t("项")}</span>
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
           {canManage && (
             <>
-              <Button variant="secondary" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>剪切</Button>
-              <Button variant="secondary" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>复制</Button>
-              <Button variant="secondary" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>删除</Button>
+              <Button variant="secondary" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>{t("剪切")}</Button>
+              <Button variant="secondary" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>{t("复制")}</Button>
+              <Button variant="secondary" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>{t("删除")}</Button>
             </>
           )}
         </>
       )}
       <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-        <Button variant="secondary" onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
-          粘贴
+          <Button variant="secondary" onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
+            {t("粘贴")}
           {clipboardItems.length > 0 && (
             <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
               {clipboardItems.length}
@@ -683,7 +683,7 @@ export const LibraryManager: React.FC = () => {
         )}
       </div>
       <Button variant="secondary" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
-        取消
+        {t("取消")}
       </Button>
     </div>
   ) : undefined;
@@ -750,7 +750,7 @@ export const LibraryManager: React.FC = () => {
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          批量导入
+          {t("批量导入")}
         </Button>
       )}
     </>

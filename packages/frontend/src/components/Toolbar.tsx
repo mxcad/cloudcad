@@ -1,6 +1,7 @@
 import React from 'react';
 import { SearchInput } from '@/components/search/SearchInput';
 import { ViewToggle } from '@/components/common/ViewToggle';
+import { t } from '@/languages';
 
 interface ToolbarProps {
   searchQuery: string;
@@ -21,7 +22,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
       {/* 搜索框 */}
       <SearchInput
-        placeholder="搜索文件..."
+        placeholder={t("搜索文件...")}
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
         onSearch={() => onSearchSubmit?.()}
