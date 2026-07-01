@@ -11,7 +11,7 @@
 | `CLAUDE.md` | 架构决策、关键陷阱、后端/前端约定 |
 | `CONTEXT.md` | 领域术语、图纸归属、编码约束、反模式清单 |
 | `packages/backend/CLAUDE.md` | NestJS DI 细节、Prisma v7、Express v5、Façade 模式 |
-| `packages/frontend/AGENTS.md` | i18n (VoerkaI18n) 子库模式、library 约束 |
+| `packages/frontend/AGENTS.md` | i18n (VoerkaI18n) 详细配置 |
 | `LEAN-CTX.md` | lean-ctx MCP tools 使用规则 |
 
 ---
@@ -114,10 +114,9 @@ const fileInfo = store.currentFileInfo;
 - 字体: 使用 `--font-family-base` / `--font-family-mono` CSS 变量
 - 新增 UI 前先检查 `src/components/ui/`（26 个全局组件可用）
 
-**i18n: VoerkaI18n (子库模式)**:
-- CloudCAD 是 mxcad-app 的 VoerkaI18n 子库（`library: true`），语言切换由 mxcad-app 驱动
-- `@voerkai18n/vite` 插件必须在 `react()` 之前注册（vite.config.ts）
-- **每次运行 `pnpm i18n:compile` 后，必须手动检查 `src/languages/index.ts` 中 `library: true` 是否被覆盖**（compile 会重置为 `false`）
+**i18n: VoerkaI18n**:
+- 所有中文 UI 文本必须用 `t()` 函数包裹
+- 工作流程：提取（`pnpm i18n:extract`）→ 翻译 → 编译（`pnpm i18n:compile`）
 
 **Zustand stores**（`src/stores/`）:
 | Store | 用途 | 关键字段 |
@@ -138,7 +137,7 @@ const fileInfo = store.currentFileInfo;
 
 **移动端 (frontend_mobile) — 范围说明**:
 - Vue 3 + Vite 4 + TypeScript 4.9 + vant 组件库
-- `voerkai18n` 国际化，同样有 `library` 配置文件需检查
+- i18n 国际化（与 PC 一致）
 - 使用 `postcss-pxtorem` + `lib-flexible` 做移动端适配
 - 构建时自动编译 i18n → vite build
 - **该包仅实现 CAD 编辑器功能（对照 frontend 的编辑器功能），不包含计费/支付/会员/订单/退款等业务功能**。所有与计费相关的后端 API SDK 虽已自动生成（供 PC frontend 使用），但移动端不会实现任何计费 UI 或交互。修改涉及计费的 API 时无需考虑移动端兼容性。
