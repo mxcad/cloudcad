@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { t } from '@/languages';
 import {
   fileSystemControllerGetNode,
   fileSystemControllerGetRootNode,
@@ -55,7 +56,7 @@ export const useFileSystemNavigation = (isAuthenticated: boolean) => {
         let targetProjectId: string | null | undefined = file.parentId || null;
         if (!file.isRoot && file.parentId) {
           try {
-            if (!file.id) throw new Error('节点ID缺失');
+            if (!file.id) throw new Error(t('节点ID缺失'));
             const rootNode = await getRootNode(file.id);
             if (rootNode?.id) {
               targetProjectId = rootNode.id;

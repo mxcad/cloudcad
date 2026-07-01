@@ -147,7 +147,7 @@ function handleTokenRefreshFailure() {
   saveReturnUrl();
 
   // 使用 Toast 替代 alert，非阻塞提示
-  showGlobalToast('登录已过期，正在跳转到登录页...', 'warning');
+  showGlobalToast(t('登录已过期，正在跳转到登录页...'), 'warning');
 
   // 清除主动刷新定时器
   cancelProactiveRefresh();

@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useRef, useCallback } from 'react';
+import { t } from '@/languages';
 import { calculateFileHash } from '../utils/hashUtils';
 import {
   uploadMxCadFile,
@@ -149,7 +150,7 @@ export const useMxCadUploadNative = () => {
               : error instanceof Error
                 ? error.message
                 : String(error);
-          config.onError?.(`文件 ${file.name} 上传失败: ${errorMessage}`);
+          config.onError?.(t(`文件 ${file.name} 上传失败: ${errorMessage}`));
         }
       }
 

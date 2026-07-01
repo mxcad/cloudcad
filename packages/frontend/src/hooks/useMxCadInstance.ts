@@ -19,6 +19,7 @@ import {
   ValidationHelper,
 } from '../utils/mxcadUtils';
 import { globalShowToast } from '../contexts/NotificationContext';
+import { t } from '@/languages';
 
 /**
  * MxCAD 实例管理 Hook
@@ -102,19 +103,19 @@ export const useFileOpening = (isMxCADReady: boolean, urlFileId?: string) => {
           fileData.fileStatus || ''
         );
         console.error('文件尚未转换完成', { status: fileData.fileStatus });
-        globalShowToast(`文件状态: ${statusText}`, 'warning');
+        globalShowToast(t(`文件状态: ${statusText}`), 'warning');
         return;
       }
 
       if (!ValidationHelper.isValidFileHash(fileData.fileHash)) {
         console.error('文件哈希值不存在');
-        globalShowToast('文件哈希值不存在，无法打开文件', 'error');
+        globalShowToast(t('文件哈希值不存在，无法打开文件'), 'error');
         return;
       }
 
       if (!fileData.path) {
         console.error('文件路径不存在');
-        globalShowToast('文件路径不存在，无法打开文件', 'error');
+        globalShowToast(t('文件路径不存在，无法打开文件'), 'error');
         return;
       }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { handlePublicUpload } from '../services/mxcadManager';
 import { CSS_CLASSES } from '../services/mxcadManager/mxcadTypes';
 import { globalShowToast } from '../contexts/NotificationContext';
+import { t } from '@/languages';
 
 const ALLOWED_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
 
@@ -99,7 +100,7 @@ export function useFileDropToOpen() {
 
     const allowedFiles = filterAllowedFiles(files);
     if (allowedFiles.length === 0) {
-      globalShowToast('不支持的文件格式，仅支持 .dwg, .dxf, .mxweb', 'warning');
+      globalShowToast(t('不支持的文件格式，仅支持 .dwg, .dxf, .mxweb'), 'warning');
       return;
     }
 
