@@ -254,7 +254,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             <div className={`input-group ${focusedField === 'email' ? 'focused' : ''}`}>
               <label className="input-label">
                 <Mail size={14} />
-                邮箱地址
+                {t('邮箱地址')}
               </label>
               <div className="input-wrapper">
                 <Input
@@ -283,7 +283,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             <div className={`input-group ${focusedField === 'code' ? 'focused' : ''}`}>
               <label className="input-label">
                 <Shield size={14} />
-                验证码
+                {t('验证码')}
               </label>
               <div className="input-wrapper has-button">
                 <Input

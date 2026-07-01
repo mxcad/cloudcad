@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { authControllerResetPassword } from '@/api-sdk';
+import { t } from '@/languages';
 
 export function useResetPassword() {
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,7 @@ export function useResetPassword() {
         (err as Error & { response?: { data?: { message?: string } } })
           .response?.data?.message ||
           (err as Error).message ||
-          '重置密码失败，请检查验证码'
+          t('重置密码失败，请检查验证码')
       );
       return false;
     } finally {

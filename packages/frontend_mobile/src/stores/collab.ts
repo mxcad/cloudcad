@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { MxCpp } from 'mxcad';
 import { showToast } from 'vant';
+import { t } from '@/languages';
 import {
   getCooperate,
   encodeUserData,
@@ -80,7 +81,7 @@ export const useCollabStore = defineStore('collab', () => {
     const cooperate = getCooperate();
     if (!cooperate) {
       loading.value = false;
-      showToast('协同服务未就绪');
+      showToast(t('协同服务未就绪'));
       return;
     }
 
@@ -128,7 +129,7 @@ export const useCollabStore = defineStore('collab', () => {
             resolvedDrawings.push({ id, name: (result.data as { name: string }).name });
           }
         } catch {
-          resolvedDrawings.push({ id, name: `图纸 ${id.slice(0, 6)}...` });
+          resolvedDrawings.push({ id, name: t(`图纸 ${id.slice(0, 6)}...`) });
         }
       }),
       ...[...projectIds].map(async (id) => {
@@ -138,7 +139,7 @@ export const useCollabStore = defineStore('collab', () => {
             resolvedProjects.push({ id, name: (result.data as { name: string }).name });
           }
         } catch {
-          resolvedProjects.push({ id, name: `项目 ${id.slice(0, 6)}...` });
+          resolvedProjects.push({ id, name: t(`项目 ${id.slice(0, 6)}...`) });
         }
       }),
     ]);
@@ -179,7 +180,7 @@ export const useCollabStore = defineStore('collab', () => {
     const cooperate = getCooperate();
     if (!cooperate) {
       connecting.value = false;
-      showToast('协同服务未就绪');
+      showToast(t('协同服务未就绪'));
       return;
     }
 
@@ -189,17 +190,17 @@ export const useCollabStore = defineStore('collab', () => {
         currentWorkId.value = workid;
         const editorStore = useEditorStore();
         editorStore.setCollaborationState({ isInCollaboration: true, workId: workid });
-        showToast('协同已创建');
+        showToast(t('协同已创建'));
         fetchWorks();
       } else {
         const errorCode = -workid;
-        showToast(errorCode === 4 ? '已在协同中' : `创建协同失败，错误码: ${errorCode}`);
+        showToast(errorCode === 4 ? t('已在协同中') : t(`创建协同失败，错误码: ${errorCode}`));
       }
     };
 
     const editorStore = useEditorStore();
     const s = editorStore.state;
-    const drawingName = s.fileName || '未命名图纸';
+    const drawingName = s.fileName || t('未命名图纸');
     let sourceType: CollaborateWorkDataV3['sourceType'] = 'my';
     let libraryKey: 'drawing' | 'block' | undefined;
 
@@ -253,7 +254,7 @@ export const useCollabStore = defineStore('collab', () => {
     if (!cooperate) {
       connecting.value = false;
       joiningLockRef.current = false;
-      showToast('协同服务未就绪');
+      showToast(t('协同服务未就绪'));
       return;
     }
 
@@ -266,10 +267,10 @@ export const useCollabStore = defineStore('collab', () => {
           currentWorkId.value = workId;
           const editorStore = useEditorStore();
           editorStore.setCollaborationState({ isInCollaboration: true, workId });
-          showToast('已加入协同');
+          showToast(t('已加入协同'));
           fetchWorks();
         } else {
-          showToast(`加入协同失败，错误码: ${iRet}`);
+          showToast(t(`加入协同失败，错误码: ${iRet}`));
         }
       },
       userData?.id,
@@ -282,7 +283,7 @@ export const useCollabStore = defineStore('collab', () => {
     if (cooperate) {
       const ret = cooperate.exitWrok();
       if (ret !== 0) {
-        showToast(`退出协同失败，错误码: ${ret}`);
+        showToast(t(`退出协同失败，错误码: ${ret}`));
         return;
       }
     }
@@ -292,7 +293,7 @@ export const useCollabStore = defineStore('collab', () => {
     currentWorkId.value = null;
     const editorStore = useEditorStore();
     editorStore.setCollaborationState({ isInCollaboration: false, workId: null });
-    showToast('已退出协同');
+    showToast(t('已退出协同'));
     fetchWorks();
   }
 

@@ -32,6 +32,7 @@ import { Tooltip } from './ui/Tooltip';
 
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
+import { t } from '@/languages';
 
 function abbreviateSearchPath(path: string): string {
   const parts = path.split(' > ');
@@ -149,7 +150,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   forceCompactActions = false,
   hideSelectionCircle = true,
   doubleClickToOpen = false,
-  doubleClickHint = '请双击打开',
+  doubleClickHint = t('请双击打开'),
   isRubberBanding = false,
   rubberBandJustEndedRef,
   selectedCount = 0,
@@ -552,7 +553,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           radius={galleryMode ? 'sm' : undefined}
           data-tour="file-item"
           data-node-id={node.id}
-          title={doubleClickToOpen ? '双击打开' : undefined}
+          title={doubleClickToOpen ? t('双击打开') : undefined}
           className={`group relative transition-all duration-200 cursor-pointer pointer-events-auto select-none
           ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
           ${showSelectedStyle ? 'shadow-md' : ''}
@@ -760,7 +761,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         ref={listItemRef}
         data-tour="file-item"
         data-node-id={node.id}
-        title={doubleClickToOpen ? '双击打开' : undefined}
+        title={doubleClickToOpen ? t('双击打开') : undefined}
         className={`group relative flex items-center rounded-lg transition-all duration-200 cursor-pointer select-none
         ${galleryMode ? 'gap-2' : 'gap-4'}
         ${isSelected ? '' : 'hover:border-[var(--border-default)]'}

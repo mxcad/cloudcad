@@ -335,7 +335,7 @@ const SearchableSelect: React.FC<SelectProps> = ({
             </div>
           ) : filteredOptions.length === 0 ? (
             <div className="text-xs py-2 text-center" style={{ color: 'var(--text-muted)' }}>
-              暂无数据
+              {t('暂无数据')}
             </div>
           ) : (
             <div className="max-h-60 overflow-y-auto">

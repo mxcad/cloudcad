@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useLibraryFolders } from './hooks/useLibraryFolders';
 import { FileSystemNode } from '../../types/filesystem';
 import { FileTree } from '../ui/FileTree';
+import { t } from '@/languages';
 
 interface LibrarySelectFolderModalProps {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export const LibrarySelectFolderModal: React.FC<
         },
       ]);
     } catch (err) {
-      setError('加载文件夹失败');
+      setError(t('加载文件夹失败'));
       setFolderTree([]);
     } finally {
       setLoading(false);
@@ -150,7 +151,7 @@ export const LibrarySelectFolderModal: React.FC<
   }, [selectedFolderId, folderTree, onConfirm]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`选择目标文件夹`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={t('选择目标文件夹')}>
       <div className="space-y-4">
         {error && (
           <div className="p-3 rounded-lg" style={{ background: 'var(--bg-error)', border: '1px solid var(--border-error)', color: 'var(--error)' }}>
@@ -165,7 +166,7 @@ export const LibrarySelectFolderModal: React.FC<
             </div>
           ) : folderTree.length === 0 ? (
             <div className="p-4 text-center" style={{ color: 'var(--text-muted)' }}>
-              暂无文件夹
+              {t('暂无文件夹')}
             </div>
           ) : (
             <FileTree
@@ -179,14 +180,14 @@ export const LibrarySelectFolderModal: React.FC<
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>
-            取消
+            {t('取消')}
           </Button>
           <Button
             variant="primary"
             onClick={handleConfirm}
             disabled={!selectedFolderId}
           >
-            确认
+            {t('确认')}
           </Button>
         </div>
       </div>

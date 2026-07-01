@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { t } from '@/languages';
 
 interface PhoneVerificationOptions {
   /** Setter for field-level errors (from parent form hook) */
@@ -87,7 +88,7 @@ export function usePhoneVerification({ setFieldErrors }: PhoneVerificationOption
   const handleSendCode = useCallback(async () => {
     // 验证手机号格式
     if (!phoneForm.phone || !/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-      setFieldErrors((prev) => ({ ...prev, phone: '请输入正确的手机号' }));
+      setFieldErrors((prev) => ({ ...prev, phone: t('请输入正确的手机号') }));
       return;
     }
 
@@ -109,7 +110,7 @@ export function usePhoneVerification({ setFieldErrors }: PhoneVerificationOption
         },
       });
       if ((checkResult as { phoneExists?: boolean })?.phoneExists) {
-        setFieldErrors((prev) => ({ ...prev, phone: '该手机号已被注册' }));
+        setFieldErrors((prev) => ({ ...prev, phone: t('该手机号已被注册') }));
         return;
       }
 
@@ -124,7 +125,7 @@ export function usePhoneVerification({ setFieldErrors }: PhoneVerificationOption
       } else {
         setFieldErrors((prev) => ({
           ...prev,
-          phone: (response as { message?: string })?.message || '发送验证码失败',
+          phone: (response as { message?: string })?.message || t('发送验证码失败'),
         }));
       }
     } catch (err: unknown) {
@@ -134,7 +135,7 @@ export function usePhoneVerification({ setFieldErrors }: PhoneVerificationOption
           (err as Error & { response?: { data?: { message?: string } } })
             .response?.data?.message ||
           (err as Error).message ||
-          '发送验证码失败',
+          t('发送验证码失败'),
       }));
     } finally {
       setSendingCode(false);

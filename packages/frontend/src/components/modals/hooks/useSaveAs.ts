@@ -4,6 +4,7 @@ import { fileSystemControllerGetProjects } from '@/api-sdk';
 import type { FileSystemNodeDto } from '@/api-sdk';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
 import { calculateFileHash } from '@/utils/hashUtils';
+import { t } from '@/languages';
 
 interface ProjectWithPermission {
   id: string;
@@ -135,8 +136,8 @@ export const useSaveAs = ({
         body: formData,
       });
       if (!response.ok) {
-        const errBody = await response.json().catch(() => ({ message: '保存失败' }));
-        throw new Error((errBody as { message?: string }).message || '保存失败');
+        const errBody = await response.json().catch(() => ({ message: t('保存失败') }));
+        throw new Error((errBody as { message?: string }).message || t('保存失败'));
       }
       const wrapped = await response.json();
       const saveResult: SaveAsResult = wrapped.data || wrapped;

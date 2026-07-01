@@ -11,6 +11,7 @@ import {
   type ActionType,
 } from '@/components/file-item/fileActionConfig';
 import type { FileSystemNode } from '@/types/filesystem';
+import { t } from '@/languages';
 
 interface FileSystemContentProps {
   nodes: FileSystemNode[];
@@ -430,11 +431,11 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                 <Menu.Item
                   variant="danger"
                   onClick={() => {
-                    onBatchDelete();
-                    closeContextMenu();
-                  }}
-                >
-                  删除 {selectedNodes.size} 个选中项
+                   onBatchDelete();
+                     closeContextMenu();
+                   }}
+                 >
+                   {t('删除 {count} 个选中项', { count: selectedNodes.size })}
                 </Menu.Item>
               )}
               {!isAtRoot && !isTrashView && onBatchMove && canBatchMove && (
@@ -443,29 +444,29 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                     onBatchMove();
                     closeContextMenu();
                   }}
-                >
-                  剪切
-                </Menu.Item>
-              )}
-              {!isAtRoot && !isTrashView && onBatchCopy && canBatchCopy && (
+                   >
+                     {t('剪切')}
+                   </Menu.Item>
+                 )}
+                 {!isAtRoot && !isTrashView && onBatchCopy && canBatchCopy && (
                 <Menu.Item
                   onClick={() => {
                     onBatchCopy();
-                    closeContextMenu();
-                  }}
-                >
-                  复制
-                </Menu.Item>
-              )}
-              {onBatchRestore && canRestoreFile && (
+                     closeContextMenu();
+                   }}
+                 >
+                   {t('复制')}
+                 </Menu.Item>
+               )}
+               {onBatchRestore && canRestoreFile && (
                 <Menu.Item
                   variant="success"
                   onClick={() => {
-                    onBatchRestore();
-                    closeContextMenu();
-                  }}
-                >
-                  恢复 {selectedNodes.size} 个选中项
+                     onBatchRestore();
+                     closeContextMenu();
+                   }}
+                 >
+                   {t('恢复 {count} 个选中项', { count: selectedNodes.size })}
                 </Menu.Item>
               )}
             </>
@@ -657,38 +658,38 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   </svg>
                 }
                 onClick={() => {
-                  onClearTrash();
-                  closeContextMenu();
-                }}
-              >
-                清空回收站
+                   onClearTrash();
+                   closeContextMenu();
+                 }}
+               >
+                 {t('清空回收站')}
               </Menu.Item>
             )}
-            <Menu.Separator />
-            <Menu.Item
-              icon={
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-              }
-              onClick={() => {
-                onRefresh();
-                closeContextMenu();
-              }}
-            >
-              刷新
-            </Menu.Item>
-          </>
-        ) : isAtRoot ? (
+             <Menu.Separator />
+             <Menu.Item
+               icon={
+                 <svg
+                   width="16"
+                   height="16"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   strokeWidth="2"
+                 >
+                   <polyline points="23 4 23 10 17 10" />
+                   <polyline points="1 20 1 14 7 14" />
+                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                 </svg>
+               }
+               onClick={() => {
+                 onRefresh();
+                 closeContextMenu();
+               }}
+             >
+               {t('刷新')}
+             </Menu.Item>
+           </>
+         ) : isAtRoot ? (
           <>
             {selectedNodes.size > 0 && onBatchDelete && canBatchDelete && (
               <Menu.Item
@@ -706,63 +707,63 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   </svg>
                 }
-                onClick={() => {
-                  onBatchDelete();
-                  closeContextMenu();
-                }}
-              >
-                删除
-              </Menu.Item>
-            )}
-            {onCreateProject && (
-              <Menu.Item
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                }
-                onClick={() => {
-                  onCreateProject();
-                  closeContextMenu();
-                }}
-              >
-                新建项目
-              </Menu.Item>
+                 onClick={() => {
+                   onBatchDelete();
+                   closeContextMenu();
+                 }}
+               >
+                 {t('删除')}
+               </Menu.Item>
+             )}
+             {onCreateProject && (
+               <Menu.Item
+                 icon={
+                   <svg
+                     width="16"
+                     height="16"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     strokeWidth="2"
+                   >
+                     <path d="M12 5v14M5 12h14" />
+                   </svg>
+                 }
+                 onClick={() => {
+                   onCreateProject();
+                   closeContextMenu();
+                 }}
+               >
+                 {t('新建项目')}
+               </Menu.Item>
             )}
             <Menu.Separator />
-            <Menu.Item
-              icon={
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-              }
-              onClick={() => {
-                onRefresh();
-                closeContextMenu();
-              }}
-            >
-              刷新
-            </Menu.Item>
-          </>
-        ) : (
-          <>
-            {selectedNodes.size > 0 && (
+             <Menu.Item
+               icon={
+                 <svg
+                   width="16"
+                   height="16"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   strokeWidth="2"
+                 >
+                   <polyline points="23 4 23 10 17 10" />
+                   <polyline points="1 20 1 14 7 14" />
+                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                 </svg>
+               }
+               onClick={() => {
+                 onRefresh();
+                 closeContextMenu();
+               }}
+             >
+               {t('刷新')}
+             </Menu.Item>
+           </>
+         ) : (
+           <>
+             {selectedNodes.size > 0 && (
               <>
                 {onBatchCopy && canBatchCopy && (
                   <Menu.Item
@@ -790,11 +791,11 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                       onBatchCopy();
                       closeContextMenu();
                     }}
-                  >
-                    复制
-                  </Menu.Item>
-                )}
-                {onBatchMove && canBatchMove && (
+                   >
+                     {t('复制')}
+                   </Menu.Item>
+                 )}
+                 {onBatchMove && canBatchMove && (
                   <Menu.Item
                     icon={
                       <svg
@@ -814,11 +815,11 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                       onBatchMove();
                       closeContextMenu();
                     }}
-                  >
-                    剪切
-                  </Menu.Item>
-                )}
-                {onBatchDelete && canBatchDelete && (
+                   >
+                     {t('剪切')}
+                   </Menu.Item>
+                 )}
+                 {onBatchDelete && canBatchDelete && (
                   <Menu.Item
                     variant="danger"
                     icon={
@@ -838,14 +839,14 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                       onBatchDelete();
                       closeContextMenu();
                     }}
-                  >
-                    删除
-                  </Menu.Item>
-                )}
-                <Menu.Separator />
-              </>
-            )}
-            {!isAtRoot && onCreateDrawingInCurrentDir && canCreate && (
+                   >
+                     {t('删除')}
+                   </Menu.Item>
+                 )}
+                 <Menu.Separator />
+               </>
+             )}
+             {!isAtRoot && onCreateDrawingInCurrentDir && canCreate && (
               <Menu.Item
                 icon={
                   <svg
@@ -866,8 +867,8 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   onCreateDrawingInCurrentDir?.();
                   closeContextMenu();
                 }}
-              >
-                新建图纸
+               >
+                 {t('新建图纸')}
               </Menu.Item>
             )}
             {canCreate && (
@@ -890,8 +891,8 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   onCreateFolderInCurrentDir?.();
                   closeContextMenu();
                 }}
-              >
-                新建文件夹
+               >
+                 {t('新建文件夹')}
               </Menu.Item>
             )}
 
@@ -914,35 +915,35 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
                   onPasteInCurrentDir?.();
                   closeContextMenu();
                 }}
-              >
-                粘贴
+               >
+                 {t('粘贴')}
               </Menu.Item>
             )}
             <Menu.Separator />
-            <Menu.Item
-              icon={
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-              }
-              onClick={() => {
-                onRefresh();
-                closeContextMenu();
-              }}
-            >
-              刷新
-            </Menu.Item>
-          </>
-        )}
+             <Menu.Item
+               icon={
+                 <svg
+                   width="16"
+                   height="16"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   strokeWidth="2"
+                 >
+                   <polyline points="23 4 23 10 17 10" />
+                   <polyline points="1 20 1 14 7 14" />
+                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                 </svg>
+               }
+               onClick={() => {
+                 onRefresh();
+                 closeContextMenu();
+               }}
+             >
+               {t('刷新')}
+             </Menu.Item>
+           </>
+         )}
       </EmptyContextMenu>
     </>
   );

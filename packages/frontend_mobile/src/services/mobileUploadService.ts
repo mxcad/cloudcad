@@ -6,6 +6,7 @@ import {
 import { handleApiError } from '@/utils/apiConfig';
 import { calculateFileHash } from '@/utils/hashUtils';
 import { sanitizeFileName } from '@/utils/sanitizeFileName';
+import { t } from '@/languages';
 
 export interface MobileUploadOptions {
   file: File;
@@ -172,7 +173,7 @@ export async function uploadFile(
     isUseServerExistingFile: false,
   };
   } catch (e) {
-    handleApiError(e, `上传失败: ${file.name}`);
+    handleApiError(e, t(`上传失败: ${file.name}`));
     throw e;
   }
 }

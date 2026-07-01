@@ -8,6 +8,7 @@ import {
 } from './fileActionConfig';
 import { Tooltip } from '../ui/Tooltip';
 import { Menu } from '../ui/Menu';
+import { t } from '@/languages';
 
 interface FileItemMenuProps {
   actions: FileAction[];
@@ -47,7 +48,7 @@ export const FileItemMenu: React.FC<FileItemMenuProps> = ({
         }}
         modal={false}
       >
-        <Tooltip content="更多操作" position="top">
+        <Tooltip content={t("更多操作")} position="top">
           <Menu.Trigger>
             <button
               data-tour="file-item-menu-btn"

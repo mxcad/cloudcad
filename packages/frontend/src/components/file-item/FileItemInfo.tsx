@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { FileSystemNode } from '../../types/filesystem';
 import { formatDate, formatFileSize } from '../../utils/fileUtils';
 import { FileNameText, DescriptionText, TruncateText } from '../ui/TruncateText';
+import { t } from '@/languages';
 
 interface FileItemInfoProps {
   node: FileSystemNode;
@@ -35,12 +36,12 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
         if (isRoot) {
           const parts: string[] = [];
           if (node.description) parts.push(node.description);
-          if (node.childrenCount !== undefined) parts.push(`${node.childrenCount} 个文件`);
-          if (node.memberCount !== undefined) parts.push(`${node.memberCount} 个成员`);
-          return parts.join(' · ') || '暂无描述';
+          if (node.childrenCount !== undefined) parts.push(t(`${node.childrenCount} 个文件`));
+          if (node.memberCount !== undefined) parts.push(t(`${node.memberCount} 个成员`));
+          return parts.join(' · ') || t('暂无描述');
         }
         if (node.isFolder) {
-          return `${node.childrenCountTrash ?? node._count?.children ?? 0} 个项目`;
+          return t(`${node.childrenCountTrash ?? node._count?.children ?? 0} 个项目`);
         }
         if (galleryMode) {
           return formatDate(node.updatedAt);

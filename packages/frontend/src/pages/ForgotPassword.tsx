@@ -264,7 +264,7 @@ export const ForgotPassword: React.FC = () => {
                   )}
                   {!supportInfo.supportEmail && !supportInfo.supportPhone && (
                     <p className="support-empty">
-                      暂无客服联系方式，请联系系统管理员
+                      {t('暂无客服联系方式，请联系系统管理员')}
                     </p>
                   )}
                 </div>
@@ -576,10 +576,10 @@ export const ForgotPassword: React.FC = () => {
             <div className="feature-dot" data-tooltip={t("高性能 CAD 在线预览")}>
               <Cpu size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="多用户实时协同编辑">
+            <div className="feature-dot" data-tooltip={t("多用户实时协同编辑")}>
               <Boxes size={14} />
             </div>
-            <div className="feature-dot" data-tooltip="企业级数据安全保障">
+            <div className="feature-dot" data-tooltip={t("企业级数据安全保障")}>
               <ShieldCheck size={14} />
             </div>
           </div>

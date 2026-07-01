@@ -62,7 +62,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               onFormDataChange({ ...formData, name: e.target.value })
             }
             className="overflow-hidden text-ellipsis whitespace-nowrap"
-            placeholder="请输入名称"
+            placeholder={t('请输入名称')}
             autoFocus
             maxLength={100}
             data-tour="project-name-input"
@@ -73,7 +73,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         </div>
         <div>
           <label className="block font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
-            描述
+            {t('描述')}
           </label>
           <Textarea
             value={formData.description}
@@ -82,7 +82,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             }
             rows={3}
             resize="none"
-            placeholder="请输入描述（可选）"
+            placeholder={t('请输入描述（可选）')}
             maxLength={500}
             data-tour="project-desc-input"
           />

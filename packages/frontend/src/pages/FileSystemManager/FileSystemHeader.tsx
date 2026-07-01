@@ -10,6 +10,7 @@ import { RefreshIcon } from '@/components/FileIcons';
 import type { FileSystemNode } from '@/types/filesystem';
 import type { ProjectFilterType } from '@/api-sdk';
 import type { SearchFilterValues } from '@/components/search/SearchFilters';
+import { t } from '@/languages';
 
 interface BreadcrumbItem {
   id: string;
@@ -196,11 +197,11 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               content={
                 isPersonalSpaceMode
                   ? isAtRoot
-                    ? '返回我的图纸'
-                    : '返回上一级'
+                    ? t('返回我的图纸')
+                    : t('返回上一级')
                   : isAtRoot
-                    ? '返回项目列表'
-                    : '返回上一级'
+                    ? t('返回项目列表')
+                    : t('返回上一级')
               }
             >
               <button
@@ -248,7 +249,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Tooltip content="刷新">
+          <Tooltip content={t("刷新")}>
             <Button
               variant="secondary"
               size="sm"
@@ -270,7 +271,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                 !isPersonalSpaceMode &&
                 !isTrashView &&
                 projectFilter !== 'joined' && (
-                  <Tooltip content="新建项目">
+                  <Tooltip content={t("新建项目")}>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -289,7 +290,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               {!isTrashView && canCreate && (
                 <>
                   {onCreateDrawing && (
-                    <Tooltip content="新建图纸">
+                    <Tooltip content={t("新建图纸")}>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -303,7 +304,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
                     </Tooltip>
                   )}
                   {onCreateFolder && (
-                    <Tooltip content="新建文件夹">
+                    <Tooltip content={t("新建文件夹")}>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -344,7 +345,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               disabled={loading}
               className={isTrashView ? '' : 'hover:bg-[var(--bg-tertiary)]'}
               style={isTrashView ? {} : { color: 'var(--text-tertiary)' }}
-              title={isTrashView ? '返回文件列表' : '回收站'}
+              title={isTrashView ? t('返回文件列表') : t('回收站')}
             >
               <svg
                 width="16"
@@ -357,7 +358,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               >
                 <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
               </svg>
-              回收站
+              {t('回收站')}
             </Button>
           )}
         </div>

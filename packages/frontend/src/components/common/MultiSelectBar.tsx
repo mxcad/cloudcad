@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/languages';
 
 interface MultiSelectBarProps {
   selectedCount: number;
@@ -29,7 +30,7 @@ export const MultiSelectBar: React.FC<MultiSelectBarProps> = ({
           className="text-sm font-semibold whitespace-nowrap"
           style={{ color: 'var(--text-primary)' }}
         >
-          已选中 {selectedCount} 项
+          {t('已选中 {count} 项', { count: selectedCount })}
         </span>
         <div
           className="w-px h-4"
@@ -45,7 +46,7 @@ export const MultiSelectBar: React.FC<MultiSelectBarProps> = ({
           className="text-sm font-medium hover:opacity-70 transition-opacity"
           style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
         >
-          取消选择
+          {t('取消选择')}
         </button>
       </div>
     </div>

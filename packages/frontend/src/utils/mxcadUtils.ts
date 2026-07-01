@@ -152,7 +152,7 @@ export class RetryHelper {
     fn: () => Promise<T>,
     maxRetries: number = 3,
     delayMs: number = 1000,
-    context: string = '重试操作'
+    context: string = t('重试操作')
   ): Promise<T> {
     let lastError: Error | unknown;
 

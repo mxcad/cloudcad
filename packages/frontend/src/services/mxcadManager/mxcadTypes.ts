@@ -96,6 +96,8 @@ export interface FileReadyInfo {
   parentId: string;
 }
 
+import { t } from '@/languages';
+
 /** CSS 类名配置 */
 export const CSS_CLASSES = {
   GLOBAL_CONTAINER: 'mxcad-global-container',
@@ -106,10 +108,10 @@ export const CSS_CLASSES = {
 
 /** 默认消息文本 */
 export const DEFAULT_MESSAGES = {
-  LOADING: '正在加载...',
-  CALCULATING_HASH: '正在计算文件哈希...',
-  UPLOADING: '正在上传',
-  OPENING_FILE: '正在打开文件...',
+  LOADING: t('正在加载...'),
+  CALCULATING_HASH: t('正在计算文件哈希...'),
+  UPLOADING: t('正在上传'),
+  OPENING_FILE: t('正在打开文件...'),
 } as const;
 
 /** 文件上传配置 */

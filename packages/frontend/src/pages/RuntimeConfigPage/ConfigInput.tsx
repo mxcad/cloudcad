@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import type { RuntimeConfigResponseDto } from '@/api-sdk';
 import { isSensitiveKey, getConfigUnit, parseValue } from './hooks/useRuntimeConfig';
+import { t } from '@/languages';
 
 interface ConfigInputProps {
   item: RuntimeConfigResponseDto;
@@ -68,7 +69,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           value={value as string}
           onChange={(e) => onValueChange(item.key, e.target.value)}
           disabled={!canManageConfig}
-          placeholder="••••••••"
+          placeholder={t('••••••••')}
         />
         <Button
           variant="secondary"
@@ -77,7 +78,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
           onClick={() => onToggleVisibility(item.key)}
           className="visibility-toggle"
           tabIndex={-1}
-          tooltip={isHidden ? '显示值' : '隐藏值'}
+          tooltip={isHidden ? t('显示值') : t('隐藏值')}
         />
       </div>
     );
@@ -89,7 +90,7 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
       value={value as string}
       onChange={(e) => onValueChange(item.key, e.target.value)}
       disabled={!canManageConfig}
-      placeholder="请输入..."
+      placeholder={t('请输入...')}
     />
   );
 };

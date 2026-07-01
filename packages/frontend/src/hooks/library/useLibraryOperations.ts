@@ -31,6 +31,7 @@ import {
 } from '@/api-sdk';
 import { sanitizeFileName } from '../../utils/fileUtils';
 import { getErrorMessage } from '../../utils/errorHandler';
+import { t } from '@/languages';
 
 export type LibraryType = 'drawing' | 'block';
 
@@ -123,7 +124,7 @@ export function useLibraryOperations({
         link.remove();
         window.URL.revokeObjectURL(url);
 
-        showToast('下载已开始', 'success');
+        showToast(t('下载已开始'), 'success');
       } catch (error) {
         console.error('下载失败:', error);
         showToast(getErrorMessage(error), 'error');
@@ -162,7 +163,7 @@ export function useLibraryOperations({
         link.remove();
         window.URL.revokeObjectURL(url);
 
-        showToast(`已下载：${fileName}`, 'success');
+        showToast(t('已下载：{fileName}', { fileName }), 'success');
       } catch (error) {
         console.error('下载失败:', error);
         showToast(getErrorMessage(error), 'error');
@@ -175,8 +176,8 @@ export function useLibraryOperations({
   const handleDelete = useCallback(
     (node: LibraryNode) => {
       showConfirm(
-        '确认删除',
-        `确定要永久删除 "${node.name}" 吗？公共资源库中的文件删除后无法恢复。`,
+        t('确认删除'),
+        t('确定要永久删除 "{name}" 吗？公共资源库中的文件删除后无法恢复。', { name: node.name }),
         async () => {
           try {
             const apiMethod =
@@ -184,7 +185,7 @@ export function useLibraryOperations({
                 ? libraryControllerDeleteDrawingNode
                 : libraryControllerDeleteBlockNode;
             await apiMethod({ path: { nodeId: node.id }, query: { permanently: true }, throwOnError: true });
-            showToast('删除成功', 'success');
+            showToast(t('删除成功'), 'success');
             if (removeLocalNode) {
               removeLocalNode(node.id);
             } else {
@@ -211,7 +212,7 @@ export function useLibraryOperations({
             ? libraryControllerRenameDrawingNode
             : libraryControllerRenameBlockNode;
         await apiMethod({ path: { nodeId }, body: { name: newName }, throwOnError: true });
-        showToast('重命名成功', 'success');
+        showToast(t('重命名成功'), 'success');
         if (updateLocalNode) {
           updateLocalNode(nodeId, { name: newName });
         } else {
@@ -236,7 +237,7 @@ export function useLibraryOperations({
             ? libraryControllerMoveDrawingNode
             : libraryControllerMoveBlockNode;
         await apiMethod({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
-        showToast('移动成功', 'success');
+        showToast(t('移动成功'), 'success');
         refreshNodes();
       } catch (error) {
         console.error('移动失败:', error);
@@ -256,7 +257,7 @@ export function useLibraryOperations({
             ? libraryControllerCopyDrawingNode
             : libraryControllerCopyBlockNode;
         await apiMethod({ path: { nodeId }, body: { targetParentId }, throwOnError: true });
-        showToast('复制成功', 'success');
+        showToast(t('复制成功'), 'success');
         refreshNodes();
       } catch (error) {
         console.error('复制失败:', error);
@@ -286,9 +287,9 @@ export function useLibraryOperations({
         if (error) throw error;
         const result = data as unknown as { successCount: number; failedCount: number };
         if (result.failedCount > 0) {
-          showToast(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+          showToast(t(`成功删除 ${result.successCount} 项，${result.failedCount} 项失败`), 'warning');
         } else {
-          showToast(`成功删除 ${nodeIds.length} 个项目`, 'success');
+          showToast(t(`成功删除 ${nodeIds.length} 个项目`), 'success');
         }
         refreshNodes();
       } catch (error) {
@@ -319,9 +320,9 @@ export function useLibraryOperations({
         if (error) throw error;
         const result = data as unknown as { successCount: number; failedCount: number };
         if (result.failedCount > 0) {
-          showToast(`成功移动 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+          showToast(t(`成功移动 ${result.successCount} 项，${result.failedCount} 项失败`), 'warning');
         } else {
-          showToast(`成功移动 ${nodeIds.length} 个项目`, 'success');
+          showToast(t(`成功移动 ${nodeIds.length} 个项目`), 'success');
         }
         refreshNodes();
       } catch (error) {
@@ -352,9 +353,9 @@ export function useLibraryOperations({
         if (error) throw error;
         const result = data as unknown as { successCount: number; failedCount: number };
         if (result.failedCount > 0) {
-          showToast(`成功复制 ${result.successCount} 项，${result.failedCount} 项失败`, 'warning');
+          showToast(t(`成功复制 ${result.successCount} 项，${result.failedCount} 项失败`), 'warning');
         } else {
-          showToast(`成功复制 ${nodeIds.length} 个项目`, 'success');
+          showToast(t(`成功复制 ${nodeIds.length} 个项目`), 'success');
         }
         refreshNodes();
       } catch (error) {

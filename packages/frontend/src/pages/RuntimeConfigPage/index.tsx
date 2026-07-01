@@ -11,6 +11,7 @@ import { useRuntimeConfig } from './hooks/useRuntimeConfig';
 import { PageHeader } from './PageHeader';
 import { ConfigCard } from './ConfigCard';
 import { runtimeConfigStyles } from './styles';
+import { t } from '@/languages';
 
 /**
  * 运行时配置页面 - CloudCAD
@@ -23,7 +24,7 @@ import { runtimeConfigStyles } from './styles';
  * - 完美深浅主题适配
  */
 export const RuntimeConfigPage: React.FC = () => {
-  useDocumentTitle('运行时配置');
+  useDocumentTitle(t('运行时配置'));
   const { isDark } = useTheme();
 
   const {
@@ -46,7 +47,7 @@ export const RuntimeConfigPage: React.FC = () => {
       <div className="config-page" data-theme={isDark ? 'dark' : 'light'}>
         <div className="loading-state">
           <div className="loading-spinner" />
-          <p>正在加载配置...</p>
+          <p>{t('正在加载配置...')}</p>
         </div>
         <style>{runtimeConfigStyles}</style>
       </div>
@@ -87,8 +88,8 @@ export const RuntimeConfigPage: React.FC = () => {
           <div className="empty-icon">
             <Settings size={48} />
           </div>
-          <h3>暂无配置项</h3>
-          <p>系统尚未配置任何运行时参数</p>
+          <h3>{t('暂无配置项')}</h3>
+          <p>{t('系统尚未配置任何运行时参数')}</p>
         </div>
       )}
 

@@ -8,6 +8,7 @@ import { FolderPlus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyFolderIcon, RefreshIcon } from '@/components/FileIcons';
 import type { ProjectFilterType } from '@/api-sdk';
+import { t } from '@/languages';
 
 interface FileSystemStatesProps {
   loading: boolean;
@@ -54,7 +55,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
           className="mt-4 font-medium"
           style={{ color: 'var(--text-muted)' }}
         >
-          加载中...
+          {t('加载中...')}
         </p>
       </div>
     );
@@ -74,7 +75,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
         </p>
         <Button onClick={onRefresh} variant="outline">
           <RefreshIcon size={16} className="mr-2" />
-          重试
+          {t('重试')}
         </Button>
       </div>
     );
@@ -99,19 +100,19 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
           style={{ color: 'var(--text-primary)' }}
         >
           {isTrashView
-            ? '回收站是空的'
+            ? t('回收站是空的')
             : isProjectsEmpty
-              ? '暂无项目'
-              : '这个文件夹是空的'}
+              ? t('暂无项目')
+              : t('这个文件夹是空的')}
         </h3>
         <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
           {isTrashView
-            ? (isAtRoot ? '已删除的文件和项目会出现在这里' : '已删除的文件会出现在这里')
+            ? (isAtRoot ? t('已删除的文件和项目会出现在这里') : t('已删除的文件会出现在这里'))
             : searchTerm
-              ? '没有找到匹配的内容'
+              ? t('没有找到匹配的内容')
               : isProjectsEmpty
-                ? '开始创建您的第一个项目'
-                : '上传文件或创建文件夹来开始使用'}
+                ? t('开始创建您的第一个项目')
+                : t('上传文件或创建文件夹来开始使用')}
         </p>
         {isProjectsEmpty &&
           canCreateProject &&
@@ -124,7 +125,7 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
               className="hover:shadow-md transition-all"
             >
               <FolderPlus size={14} className="mr-2" />
-              创建项目
+              {t('创建项目')}
             </Button>
           )}
       </div>

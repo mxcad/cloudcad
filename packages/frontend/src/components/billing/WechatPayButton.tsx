@@ -53,8 +53,8 @@ export default function WechatPayButton({
             payParams,
             (res: { err_msg: string }) => {
               if (res.err_msg === 'get_brand_wcpay_request:ok') resolve();
-              else if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error('支付已取消'));
-              else reject(new Error(res.err_msg || '支付失败'));
+      else if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error(t('支付已取消')));
+      else reject(new Error(res.err_msg || t('支付失败')));
             },
           );
         };
@@ -62,7 +62,7 @@ export default function WechatPayButton({
         // 5 秒超时 — 若 WeixinJSBridge 仍未就绪则降级提示
         setTimeout(() => {
           document.removeEventListener('WeixinJSBridgeReady', onReady);
-          reject(new Error('微信支付组件加载超时，请刷新页面重试'));
+          reject(new Error(t('微信支付组件加载超时，请刷新页面重试')));
         }, 5000);
         return;
       }
@@ -71,8 +71,8 @@ export default function WechatPayButton({
         payParams,
         (res) => {
           if (res.err_msg === 'get_brand_wcpay_request:ok') resolve();
-          else if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error('支付已取消'));
-          else reject(new Error(res.err_msg || '支付失败'));
+          else           if (res.err_msg === 'get_brand_wcpay_request:cancel') reject(new Error(t('支付已取消')));
+          else reject(new Error(res.err_msg || t('支付失败')));
         },
       );
     });
@@ -87,7 +87,7 @@ export default function WechatPayButton({
       setPayState('success');
       onSuccess();
     } catch (err: any) {
-      const msg = err?.message || '支付失败';
+      const msg = err?.message || t('支付失败');
       setErrorMsg(msg);
       setPayState('error');
       onError(msg);
@@ -146,14 +146,14 @@ export default function WechatPayButton({
     return (
       <div className="text-center">
         <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-          订单金额:{' '}
+          {t('订单金额')}:{' '}
           <strong className="text-xl" style={{ color: 'var(--accent-600)' }}>
             ¥{(amount / 100).toFixed(2)}
           </strong>
         </p>
 
         <p className="mb-4 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-          支付方式: 微信支付
+          {t('支付方式')}: {t('微信支付')}
         </p>
 
         {payState === 'error' && (
@@ -164,7 +164,7 @@ export default function WechatPayButton({
 
         <div className="flex gap-3">
           <Button variant="outline" size="lg" className="flex-1" onClick={onClose}>
-            取消
+            {t('取消')}
           </Button>
           <Button
             variant="primary"
@@ -184,7 +184,7 @@ export default function WechatPayButton({
     return (
       <div className="text-center">
         <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>
-          请使用微信扫码支付
+          {t('请使用微信扫码支付')}
         </p>
         <div
           className="inline-block p-2 rounded-lg mb-3"
@@ -193,16 +193,16 @@ export default function WechatPayButton({
           <QRCodeSVG value={codeUrl} size={200} level="M" />
         </div>
         <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-          订单金额:{' '}
+          {t('订单金额')}:{' '}
           <strong style={{ color: 'var(--accent-600)' }}>
             ¥{(amount / 100).toFixed(2)}
           </strong>
         </p>
         <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
-          支付成功后返回页面查看会员状态
+          {t('支付成功后返回页面查看会员状态')}
         </p>
         <Button variant="primary" size="lg" className="w-full" onClick={onClose}>
-          已完成支付
+          {t('已完成支付')}
         </Button>
       </div>
     );
@@ -212,16 +212,16 @@ export default function WechatPayButton({
     return (
       <div className="text-center">
         <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-          请在微信浏览器中打开完成支付
+          {t('请在微信浏览器中打开完成支付')}
         </p>
         <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-          订单金额:{' '}
+          {t('订单金额')}:{' '}
           <strong style={{ color: 'var(--accent-600)' }}>
             ¥{(amount / 100).toFixed(2)}
           </strong>
         </p>
         <Button variant="primary" size="lg" className="w-full" onClick={onClose}>
-          关闭
+          {t('关闭')}
         </Button>
       </div>
     );
@@ -231,7 +231,7 @@ export default function WechatPayButton({
     return (
       <div className="text-center">
         <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-          订单金额:{' '}
+          {t('订单金额')}:{' '}
           <strong style={{ color: 'var(--accent-600)' }}>
             ¥{(amount / 100).toFixed(2)}
           </strong>
@@ -242,10 +242,10 @@ export default function WechatPayButton({
           className="w-full mb-3"
           onClick={() => { window.location.href = redirectUrl; }}
         >
-          前往微信支付
+          {t('前往微信支付')}
         </Button>
         <Button variant="outline" size="lg" className="w-full" onClick={onClose}>
-          取消
+          {t('取消')}
         </Button>
       </div>
     );

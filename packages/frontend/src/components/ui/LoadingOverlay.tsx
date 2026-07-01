@@ -14,6 +14,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Z_LAYERS } from '../../constants/layers';
+import { t } from '@/languages';
 
 export const LoadingOverlay = () => {
   const { globalLoading, loadingMessage, loadingProgress } = useUIStore();
@@ -68,7 +69,7 @@ export const LoadingOverlay = () => {
         <div className="flex items-center gap-4">
           {/* Loading 消息 */}
           <span className="text-white text-xs">
-            {loadingMessage || '加载中...'}
+            {loadingMessage || t('加载中...')}
           </span>
 
           {/* 进度百分比 - 100%时隐藏，只显示转换消息 */}

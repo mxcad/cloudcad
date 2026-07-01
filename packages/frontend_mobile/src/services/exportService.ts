@@ -3,6 +3,7 @@ import { uploadFileForConversion } from './uploadService';
 import { publicFileControllerConvertAndDownload } from '../api-sdk';
 import { handleApiError } from '../utils/apiConfig';
 import { showToast } from 'vant';
+import { t } from '@/languages';
 import { h, createApp } from 'vue';
 import { ActionSheet } from 'vant';
 
@@ -36,14 +37,14 @@ export async function exportDrawing(
 
   if (format === 'mxweb') {
     downloadBlob(blob, `${fileName}.mxweb`);
-    showToast('下载完成');
+    showToast(t('下载完成'));
     return;
   }
 
-  showToast('正在转换...');
+  showToast(t('正在转换...'));
   const hash = await uploadFileForConversion(blob, `${fileName}.mxweb`);
   if (!hash) {
-    showToast('上传文件失败');
+    showToast(t('上传文件失败'));
     return;
   }
 
@@ -64,20 +65,20 @@ export async function exportDrawing(
     });
 
     if (result.error) {
-      handleApiError(result.error, '转换失败');
+      handleApiError(result.error, t('转换失败'));
       return;
     }
 
     const convertedBlob = result?.data as Blob | undefined;
     if (!convertedBlob || convertedBlob.size === 0) {
-      showToast('转换失败：无返回数据');
+      showToast(t('转换失败：无返回数据'));
       return;
     }
 
     downloadBlob(convertedBlob, `${fileName}.${format}`);
-    showToast('下载完成');
+    showToast(t('下载完成'));
   } catch (e) {
-    handleApiError(e, '转换失败');
+    handleApiError(e, t('转换失败'));
   }
 }
 
@@ -161,8 +162,8 @@ export function showExportDialog() {
         show: true,
         actions,
         closeOnClickAction: true,
-        title: '选择导出格式',
-        cancelText: '取消',
+        title: t('选择导出格式'),
+        cancelText: t('取消'),
         onSelect: async (action: { name: string }) => {
           const format = formatMap[action.name];
           if (!format) return;
@@ -195,15 +196,15 @@ export function showExportDialog() {
 
 export function showExportMenu() {
   const actions = [
-    { name: '导出 PDF' },
-    { name: '导出 DWG' },
-    { name: '导出 DXF' },
+    { name: t('导出 PDF') },
+    { name: t('导出 DWG') },
+    { name: t('导出 DXF') },
   ];
 
   const formatMap: Record<string, ExportFormat> = {
-    '导出 PDF': 'pdf',
-    '导出 DWG': 'dwg',
-    '导出 DXF': 'dxf',
+    [t('导出 PDF')]: 'pdf',
+    [t('导出 DWG')]: 'dwg',
+    [t('导出 DXF')]: 'dxf',
   };
 
   const container = document.createElement('div');
@@ -215,8 +216,8 @@ export function showExportMenu() {
         show: true,
         actions,
         closeOnClickAction: true,
-        title: '导出',
-        cancelText: '取消',
+        title: t('导出'),
+        cancelText: t('取消'),
         onSelect: async (action: { name: string }) => {
           const format = formatMap[action.name];
           if (!format) return;

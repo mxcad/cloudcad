@@ -82,14 +82,14 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
           className="text-2xl font-bold mb-2"
           style={{ color: 'var(--text-primary)' }}
         >
-          欢迎使用 CloudCAD
+          {t('欢迎使用 CloudCAD')}
         </h2>
         
         <p
           className="text-sm mb-6"
           style={{ color: 'var(--text-secondary)' }}
         >
-          我们为您准备了新手引导，帮助您快速上手
+          {t('我们为您准备了新手引导，帮助您快速上手')}
         </p>
 
         {/* 功能特性 */}
@@ -131,13 +131,13 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
             variant="secondary"
             onClick={onDismiss}
           >
-            稍后再说
+            {t('稍后再说')}
           </Button>
           <Button
             variant="primary"
             onClick={onViewNow}
           >
-            立即查看引导
+            {t('立即查看引导')}
           </Button>
         </div>
 
@@ -146,7 +146,7 @@ export const TourStartModal: React.FC<TourStartModalProps> = ({
           className="mt-4 text-xs"
           style={{ color: 'var(--text-muted)' }}
         >
-          您可以随时从侧边栏的「帮助引导」入口访问引导中心
+          {t('您可以随时从侧边栏的「帮助引导」入口访问引导中心')}
         </p>
       </div>
     </Modal>

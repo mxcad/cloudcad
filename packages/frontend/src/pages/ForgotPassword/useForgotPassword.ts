@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { authControllerForgotPassword } from '@/api-sdk';
+import { t } from '@/languages';
 
 
 interface ForgotPasswordResult {
@@ -36,7 +37,7 @@ export function useForgotPassword() {
         (err as Error & { response?: { data?: { message?: string } } })
           .response?.data?.message ||
         (err as Error).message ||
-        '发送验证码失败，请稍后重试';
+        t('发送验证码失败，请稍后重试');
       setError(message);
       return null;
     } finally {

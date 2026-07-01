@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { ShieldAlert } from 'lucide-react';
+import { t } from '@/languages';
 
 const NoPermissionPage: React.FC = () => {
   return (
@@ -28,10 +29,10 @@ const NoPermissionPage: React.FC = () => {
 
       <div className="flex flex-col items-center gap-2 text-center">
         <h2 style={{ color: 'var(--text-primary)' }} className="text-xl font-semibold">
-          访问受限
+          {t('访问受限')}
         </h2>
         <p style={{ color: 'var(--text-secondary)' }} className="text-sm max-w-md">
-          您没有权限访问此页面，请联系管理员获取相应权限。
+          {t('您没有权限访问此页面，请联系管理员获取相应权限。')}
         </p>
       </div>
     </div>

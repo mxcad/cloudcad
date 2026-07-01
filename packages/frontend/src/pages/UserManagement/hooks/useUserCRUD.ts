@@ -13,6 +13,7 @@ import {
   fileSystemControllerUpdateStorageQuota,
 } from '@/api-sdk';
 import type { UpdateUserDto, CreateUserDto } from '@/api-sdk';
+import { t } from '@/languages';
 
 const USERS_KEY = ['users'] as const;
 const ROLES_KEY = ['roles'] as const;
@@ -91,15 +92,15 @@ export function useUserCRUD(params?: UserSearchParams) {
 
   const error =
     queryError
-      ? '加载用户列表失败'
+      ? t('加载用户列表失败')
       : createMutation.isError
-        ? '创建用户失败'
+        ? t('创建用户失败')
         : updateMutation.isError
-          ? '更新用户失败'
+          ? t('更新用户失败')
           : deleteMutation.isError
-            ? '删除用户失败'
+            ? t('删除用户失败')
             : restoreMutation.isError
-              ? '恢复用户失败'
+              ? t('恢复用户失败')
               : null;
 
   return {

@@ -7,6 +7,7 @@ import { MxCpp } from 'mxcad';
 import { calculateFileHash } from '../utils/hashUtils';
 import { uploadFile } from './mobileUploadService';
 import { getApiBaseUrl } from '../utils/apiConfig';
+import { t } from '@/languages';
 
 export function getMxwebBlob(): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -19,7 +20,7 @@ export function getMxwebBlob(): Promise<Blob> {
       const fileName = mxcad.getCurrentFileName() || 'drawing.mxweb';
       mxcad.saveFile(fileName, (data: { buffer: ArrayBuffer }) => {
         if (!data || !data.buffer) {
-          reject(new Error('获取文件数据失败'));
+          reject(new Error(t('获取文件数据失败')));
           return;
         }
         const blob = new Blob([data.buffer], { type: 'application/octet-stream' });
@@ -63,8 +64,8 @@ export async function saveToNode(
     body: formData,
   });
   if (!response.ok) {
-    const errBody = await response.json().catch(() => ({ message: '保存失败' }));
-    throw new Error((errBody as { message?: string }).message || '保存失败');
+    const errBody = await response.json().catch(() => ({ message: t('保存失败') }));
+    throw new Error((errBody as { message?: string }).message || t('保存失败'));
   }
   const result = await response.json() as { nodeId: string; path?: string };
   return { path: result.path };

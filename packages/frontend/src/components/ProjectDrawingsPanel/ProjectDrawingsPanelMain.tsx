@@ -242,7 +242,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   const sidebarHandleCopy = useCallback(() => {
     if (nodes.length === 0) return;
     setClipboard(nodes.map((n) => n.id), 'copy', currentProjectId);
-    showToast(`已复制 ${nodes.length} 个项目`, 'info');
+    showToast(t(`已复制 ${nodes.length} 个项目`), 'info');
   }, [nodes, currentProjectId, setClipboard, showToast]);
 
   const sidebarHandleCut = useCallback(() => {
@@ -253,7 +253,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       if (n.parentId) sourceParentIds[n.id] = n.parentId;
     }
     setClipboard(nodeIds, 'cut', currentProjectId, sourceParentIds);
-    showToast(`已剪切 ${nodes.length} 个项目`, 'info');
+    showToast(t(`已剪切 ${nodes.length} 个项目`), 'info');
   }, [nodes, currentProjectId, setClipboard, showToast]);
 
   const sidebarHandlePaste = useCallback(async () => {
@@ -270,7 +270,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     });
 
     if (items.length === 0) {
-      showToast('没有可粘贴的项目', 'info');
+      showToast(t('没有可粘贴的项目'), 'info');
       return;
     }
 
@@ -278,7 +278,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     if (!targetId) return;
     const srcProjectId = useFileSystemClipboardStore.getState().sourceProjectId;
     if (srcProjectId && srcProjectId !== currentProjectId) {
-      showToast('不能跨项目粘贴', 'error');
+      showToast(t('不能跨项目粘贴'), 'error');
       return;
     }
     try {
@@ -290,7 +290,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         clearClipboard();
         pushAction({
           type: 'move',
-          description: `移动 ${items.length} 个项目`,
+          description: t(`移动 ${items.length} 个项目`),
           projectId: currentProjectId,
           execute: async () => {
             for (const nodeId of items) {
@@ -318,7 +318,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         if (newIds.length > 0) {
           pushAction({
             type: 'delete',
-            description: `复制 ${items.length} 个项目`,
+            description: t(`复制 ${items.length} 个项目`),
             projectId: currentProjectId,
             execute: async () => {
               for (const nodeId of items) {
@@ -333,7 +333,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           });
         }
       }
-      showToast('粘贴成功', 'success');
+      showToast(t('粘贴成功'), 'success');
       refreshNodes();
     } catch (error) {
       const appError = error instanceof Error ? error.message : t('粘贴失败');
@@ -347,7 +347,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       const action = undoStack[undoStack.length - 1];
       if (!action) return;
       await undoStoreUndo(currentProjectId);
-      showToast(`已撤销: ${action.description}`, 'info');
+      showToast(t(`已撤销: ${action.description}`), 'info');
       refreshNodes();
     } catch (error) {
       const msg = error instanceof Error ? error.message : t('撤销失败');
@@ -361,7 +361,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       const action = redoStack[redoStack.length - 1];
       if (!action) return;
       await undoStoreRedo(currentProjectId);
-      showToast(`已重做: ${action.description}`, 'info');
+      showToast(t(`已重做: ${action.description}`), 'info');
       refreshNodes();
     } catch (error) {
       const msg = error instanceof Error ? error.message : t('重做失败');
@@ -584,7 +584,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
         id: node.id, name: node.name, type: 'file' as const,
         thumbnailUrl: getThumb(node.id), updatedAt: node.updatedAt, size: node.size,
         isActive: node.id === currentOpenFileId,
-        badge: node.id === currentOpenFileId && isModified ? (<span className={styles.modifiedIndicator} title="已修改">●</span>) : undefined,
+        badge: node.id === currentOpenFileId && isModified ? (<span className={styles.modifiedIndicator} title={t("已修改")}>●</span>) : undefined,
         filePath: undefined, parentId: node.parentId, projectId: libraryRootId ?? undefined, isCadFile: true, keyPrefix,
       }));
       const query = searchQuery.toLowerCase();
@@ -598,7 +598,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     const fileItems: ResourceItem[] = files.map((n) => ({
       id: n.id, name: n.name, type: 'file', thumbnailUrl: getThumb(n.id),
       updatedAt: n.updatedAt, size: n.size, isActive: n.id === currentOpenFileId,
-      badge: n.id === currentOpenFileId && isModified ? (<span className={styles.modifiedIndicator} title="已修改">●</span>) : undefined,
+      badge: n.id === currentOpenFileId && isModified ? (<span className={styles.modifiedIndicator} title={t("已修改")}>●</span>) : undefined,
       filePath: n.path, parentId: n.parentId, projectId: rootId, isCadFile: true, keyPrefix,
     }));
     const query = searchQuery.toLowerCase();
@@ -676,7 +676,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   // API 错误时显示 toast
   useEffect(() => {
     if (loadNodesError) {
-      showToast(`加载失败: ${loadNodesError}`, 'error');
+      showToast(t(`加载失败: ${loadNodesError}`), 'error');
     }
   }, [loadNodesError]);
 
@@ -763,7 +763,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
       }
       refreshNodes();
     } catch (error: unknown) {
-      handleError(error, '拖拽操作失败');
+      handleError(error, t('拖拽操作失败'));
       showToast(getErrorMessage(error), 'error');
     } finally { setDraggedNodes([]); }
   }, [draggedNodes, refreshNodes, showToast]);

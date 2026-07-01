@@ -6,6 +6,7 @@ import { FileItem } from '@/components/FileItem';
 import { FileSystemNode } from '@/types/filesystem';
 import { fileSystemControllerGetProjects } from '@/api-sdk';
 import { FolderOpen } from 'lucide-react';
+import { t } from '@/languages';
 
 interface ViewAllProjectsModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
   const loading = projectsQuery.isLoading;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="最近项目" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('最近项目')} size="lg">
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -79,7 +80,7 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
             className="mx-auto mb-2"
           />
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            暂无项目
+            {t('暂无项目')}
           </p>
         </div>
       )}

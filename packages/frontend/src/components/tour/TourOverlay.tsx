@@ -13,6 +13,7 @@
  */
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import type { TourStep, WaitForElementResult, StepMode, TourStepAlternative, UICondition } from '../../types/tour';
+import { t } from '@/languages';
 
 interface TourOverlayProps {
   /** 当前步骤 */
@@ -708,7 +709,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({
                 animation: 'tour-spin 1s linear infinite',
               }}
             />
-            正在定位目标元素...
+            {t('正在定位目标元素...')}
           </div>
         )}
 

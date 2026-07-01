@@ -76,7 +76,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
         if (psData?.id) {
           roots.push({
             id: psData.id,
-            name: psData.name || '我的图纸',
+            name: psData.name || t('我的图纸'),
             isFolder: true,
             expanded: false,
             loading: false,
@@ -91,7 +91,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             .filter((p) => p.id)
             .map((p) => ({
               id: p.id,
-              name: p.name || '未命名项目',
+              name: p.name || t('未命名项目'),
               isFolder: true,
               expanded: false,
               loading: false,
@@ -146,7 +146,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       setResults(
         nodes
           .filter((n): n is FileSystemNode & { id: string } => !!n.id && !n.isFolder)
-          .map((n) => ({ id: n.id, name: n.name || '未命名' })),
+          .map((n) => ({ id: n.id, name: n.name || t('未命名') })),
       );
     } catch {
       setResults([]);
@@ -201,7 +201,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                   .filter((c) => c.id)
                   .map((c) => ({
                     id: c.id,
-                    name: c.name || '未命名',
+                    name: c.name || t('未命名'),
                     isFolder: c.isFolder ?? false,
                     expanded: false,
                     loading: false,
@@ -264,14 +264,14 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="选择要分享的图纸"
+      title={t('选择要分享的图纸')}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
-            取消
+            {t('取消')}
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedId}>
-            选择此文件
+            {t('选择此文件')}
           </Button>
         </>
       }
@@ -282,7 +282,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
           value={keyword}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="搜索文件名或在下方浏览..."
+          placeholder={t('搜索文件名或在下方浏览...')}
           leftIcon={Search}
           size="md"
         />
@@ -297,7 +297,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
 
             {!searching && results.length === 0 && (
               <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
-                没有找到匹配的文件
+                {t('没有找到匹配的文件')}
               </div>
             )}
 
@@ -350,7 +350,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
 
             {!treeLoading && treeNodes.length === 0 && (
               <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
-                暂无可用文件
+                {t('暂无可用文件')}
               </div>
             )}
 
@@ -385,7 +385,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
               color: 'var(--primary-700)',
             }}
           >
-            已选：{selectedName}
+            {t('已选')}：{selectedName}
           </div>
         )}
       </div>

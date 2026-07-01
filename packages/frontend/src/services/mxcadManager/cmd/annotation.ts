@@ -1,5 +1,6 @@
 import { MxCpp } from "mxcad";
 import { MxDbAlignedDimension, MrxDbgUiPrPoint, McEdGetPointWorldDrawObject, MxType, MxFun, MxDb2LineAngularDimension, MxDbCoord, MrxDbgUiPrBaseReturn, MxDbArea, MxDbArrow, MxDbCloudLine, MxDbLeadComment, MxDbRectBoxLeadComment } from "mxdraw";
+import { t } from '@/languages';
 
 export class MyAlignedDimension extends MxDbAlignedDimension {
     constructor() {
@@ -23,7 +24,7 @@ export class MyAlignedDimension extends MxDbAlignedDimension {
 async function Mx_Linear() {
     // 让用户在图上点取第一点.
     const getPoint = new MrxDbgUiPrPoint();
-    getPoint.setMessage("指定第一点:");
+    getPoint.setMessage(t("指定第一点:"));
     getPoint.go((status) => {
         if (status != 0) {
             return;
@@ -49,7 +50,7 @@ async function Mx_Linear() {
 
         getPoint.setUseBasePt(true);
         getPoint.setUserDraw(worldDrawComment);
-        getPoint.setMessage("指定第二点:");
+        getPoint.setMessage(t("指定第二点:"));
 
         getPoint.setInputToucheType(MxType.InputToucheType.kGetEnd);
         getPoint.go((status) => {
@@ -68,7 +69,7 @@ async function Mx_Linear() {
             MxFun.getCurrentDraw().addMxEntity(dim);
 
             //计算长度.
-            alert("测试长度是：" + dim.getDimText());
+            alert(t("测试长度是：") + dim.getDimText());
         });
     });
 }
@@ -86,12 +87,12 @@ function BR_AngleMeasure() {
     // 开启连续点击
     const worldDraw = new McEdGetPointWorldDrawObject()
     worldDraw.setColor(MxCpp.getCurrentMxCAD().getCurrentDatabaseDrawColor());
-    point.setMessage("指定第一点:");
+    point.setMessage(t("指定第一点:"));
     point.go((status) => {
         if (status !== 0) {
             return
         }
-        point.setMessage("指定第二个角度点:");
+        point.setMessage(t("指定第二个角度点:"));
         angleDim.point1 = point.value()
         worldDraw.setDraw((currentPoint, pWorldDraw) => {
             angleDim.point2 = currentPoint
@@ -99,7 +100,7 @@ function BR_AngleMeasure() {
         })
         point.setUserDraw(worldDraw)
         point.go((status) => {
-            point.setMessage("指定最后一个点:");
+            point.setMessage(t("指定最后一个点:"));
             if (status !== 0) {
                 return
             }
@@ -121,7 +122,7 @@ function BR_AngleMeasure() {
 function BR_CoordMeasure() {
     // 让用户在图上点取第一点.
     const getPoint = new MrxDbgUiPrPoint();
-    getPoint.setMessage("指定坐标点:");
+    getPoint.setMessage(t("指定坐标点:"));
     getPoint.go((status) => {
         if (status != 0) {
             return;
@@ -142,7 +143,7 @@ function BR_CoordMeasure() {
             pWorldDraw.drawCustomEntity(mxCoord);
         });
 
-        getPoint.setMessage("指定标注点:");
+        getPoint.setMessage(t("指定标注点:"));
 
         getPoint.go((status) => {
             if (status != 0) {
@@ -157,7 +158,7 @@ function BR_CoordMeasure() {
 
 async function BR_Comment() {
     const getPoint = new MrxDbgUiPrPoint();
-    getPoint.setMessage("指定第一点:");
+    getPoint.setMessage(t("指定第一点:"));
     getPoint.go((status) => {
         if (status != 0) {
             return;
@@ -192,7 +193,7 @@ async function BR_Comment() {
         getPoint.setUseBasePt(true);
 
         getPoint.setUserDraw(worldDrawComment);
-        getPoint.setMessage(" 指定第二点:");
+        getPoint.setMessage(t(" 指定第二点:"));
 
         getPoint.go((status) => {
             if (status != 0) {
@@ -265,7 +266,7 @@ async function BR_CheckDraw() {
     mxCheckDraw.radius = MxFun.screenCoordLong2Doc(8);
     mxCheckDraw.setLineWidth(3);
     mxCheckDraw.setLineWidthByPixels(true);
-    point.setMessage(" 云线框起始点:");
+    point.setMessage(t(" 云线框起始点:"));
     point.go((status) => {
         if (status != MrxDbgUiPrBaseReturn.kOk) {
             return
@@ -278,7 +279,7 @@ async function BR_CheckDraw() {
         })
 
         point.setUserDraw(worldDrawComment)
-        point.setMessage(" 云线框结束点:");
+        point.setMessage(t(" 云线框结束点:"));
         point.go((status) => {
             if (status != MrxDbgUiPrBaseReturn.kOk) {
                 return
@@ -302,7 +303,7 @@ async function BR_CheckDraw() {
             }
 
 
-            point.setMessage(" 审图标注点:");
+            point.setMessage(t(" 审图标注点:"));
             point.go((status) => {
                 if (status != MrxDbgUiPrBaseReturn.kOk) {
                     return
@@ -354,7 +355,7 @@ export default function BR_CloudLine() {
     // 屏幕坐标半径
     const radius = MxFun.screenCoordLong2Doc(16);
 
-    point.setMessage(" 点击开启绘制云线:");
+    point.setMessage(t(" 点击开启绘制云线:"));
 
     point.go(() => {
         let pt = point.value()
@@ -374,7 +375,7 @@ export default function BR_CloudLine() {
             worldDrawComment.drawCustomEntity(mxCloudLine)
         })
         point.setUserDraw(worldDrawComment)
-        point.setMessage(" 再次点击结束绘制云线:");
+        point.setMessage(t(" 再次点击结束绘制云线:"));
         point.go(() => {
             mxDraw.addMxEntity(mxCloudLine)
         })
@@ -401,7 +402,7 @@ export async function BR_LoadAllMxEntity() {
 
 export function BR_Area() {
     const getPoint = new MrxDbgUiPrPoint()
-    getPoint.setMessage(' 指定第一点:')
+    getPoint.setMessage(t(' 指定第一点:'))
     getPoint.go(status => {
         if (status != 0) {
             return
@@ -417,7 +418,7 @@ export function BR_Area() {
             worldDrawComment.drawCustomEntity(tmp)
         })
         getPoint.setUserDraw(worldDrawComment)
-        getPoint.setMessage(' 指定下一点:')
+        getPoint.setMessage(t(' 指定下一点:'))
         getPoint.goWhile(
             status => {
                 if (status == 0) {

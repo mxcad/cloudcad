@@ -17,6 +17,7 @@ import { ChevronRight } from 'lucide-react';
 import { X } from 'lucide-react';
 import { MousePointerClick } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
 
 interface TourTooltipProps {
   /** 当前步骤配置 */
@@ -196,15 +197,15 @@ function getArrowStyle(
 function getActionHint(actionType: TourStep['actionType']): string {
   switch (actionType) {
     case 'click':
-      return '请点击此元素完成操作';
+      return t('请点击此元素完成操作');
     case 'right-click':
-      return '请右键点击此元素';
+      return t('请右键点击此元素');
     case 'input':
-      return '请在此输入内容';
+      return t('请在此输入内容');
     case 'select':
-      return '请选择一个选项';
+      return t('请选择一个选项');
     default:
-      return '请完成操作后继续';
+      return t('请完成操作后继续');
   }
 }
 
@@ -352,7 +353,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
             {displayContent.title}
           </h4>
         </div>
-        <Tooltip content="跳过引导">
+        <Tooltip content={t("跳过引导")}>
           <Button
             variant="secondary"
             size="xs"
@@ -435,7 +436,7 @@ export const TourTooltip: React.FC<TourTooltipProps> = ({
           size="sm"
           onClick={onSkip}
         >
-          跳过引导
+          {t('跳过引导')}
         </Button>
         <div style={{ display: 'flex', gap: 8 }}>
 

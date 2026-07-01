@@ -7,6 +7,7 @@ import { toFileSystemNode } from '@/types/filesystem';
 import { fileSystemControllerGetChildren } from '@/api-sdk';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { FileText } from 'lucide-react';
+import { t } from '@/languages';
 
 interface ViewAllFilesModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
   const loading = filesQuery.isLoading;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="最近文件" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('最近文件')} size="lg">
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -77,7 +78,7 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
             className="mx-auto mb-2"
           />
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            暂无文件
+            {t('暂无文件')}
           </p>
         </div>
       )}

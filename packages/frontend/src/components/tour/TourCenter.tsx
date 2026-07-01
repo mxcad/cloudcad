@@ -237,7 +237,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="引导中心"
+      title={t("引导中心")}
       className="max-w-4xl"
       zIndex={TOUR_CENTER_Z_INDEX}
     >
@@ -251,7 +251,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                学习进度
+                {t('学习进度')}
               </span>
               <span className="text-sm font-semibold" style={{ color: 'var(--primary-500)' }}>
                 {stats.completed} / {stats.total}
@@ -278,14 +278,14 @@ export const TourCenter: React.FC<TourCenterProps> = ({
               {stats.percentage}%
             </div>
             <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              已完成
+              {t('已完成')}
             </div>
           </div>
         </div>
 
         {/* 搜索框 */}
         <SearchInput
-          placeholder="搜索引导流程..."
+          placeholder={t('搜索引导流程...')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -293,7 +293,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
         {/* 分类筛选 */}
         <Tabs>
           <Tab active={selectedCategory === 'all'} onClick={() => setSelectedCategory('all')}>
-            全部
+            {t('全部')}
           </Tab>
           {categories.map(category => {
             const count = guidesByCategory[category]?.length || 0;
@@ -365,7 +365,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
           <div className="flex items-center gap-3">
             <PlayCircle size={20} style={{ color: 'var(--primary-500)' }} />
             <span className="text-sm" style={{ color: 'var(--primary-600)' }}>
-              当前有引导正在进行中
+              {t('当前有引导正在进行中')}
             </span>
           </div>
           <Button
@@ -373,7 +373,7 @@ export const TourCenter: React.FC<TourCenterProps> = ({
             size="sm"
             onClick={onClose}
           >
-            继续引导
+            {t('继续引导')}
           </Button>
         </div>
       )}

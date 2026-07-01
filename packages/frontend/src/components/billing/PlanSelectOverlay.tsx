@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import PricingCard, { type Plan } from './PricingCard';
 import { Z_LAYERS } from '@/constants/layers';
+import { t } from '@/languages';
 
 interface PlanSelectOverlayProps {
   open: boolean;
@@ -57,7 +58,7 @@ export default function PlanSelectOverlay({
           onClick={(e) => e.stopPropagation()}
         >
           <h2 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-            选择套餐
+            {t('选择套餐')}
           </h2>
           <button
             onClick={onClose}

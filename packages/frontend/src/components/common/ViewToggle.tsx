@@ -1,6 +1,7 @@
 import React from 'react';
 import { Grid3x3, List } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
 
 export type ViewMode = 'grid' | 'list';
 
@@ -28,7 +29,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
         border: '1px solid var(--border-default)',
       }}
     >
-      <Tooltip content="网格视图">
+      <Tooltip content={t('网格视图')}>
         <button
           type="button"
           onClick={() => onChange('grid')}
@@ -37,7 +38,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
             background: viewMode === 'grid' ? 'var(--primary-50)' : 'transparent',
             color: viewMode === 'grid' ? 'var(--primary-600)' : 'var(--text-tertiary)',
           }}
-          aria-label="网格视图"
+          aria-label={t('网格视图')}
           aria-pressed={viewMode === 'grid'}
         >
           <Grid3x3 size={iconSize} />
@@ -47,7 +48,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
         className="w-px h-4"
         style={{ background: 'var(--border-default)' }}
       />
-      <Tooltip content="列表视图">
+      <Tooltip content={t('列表视图')}>
         <button
           type="button"
           data-tour={dataTour}
@@ -57,7 +58,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
             background: viewMode === 'list' ? 'var(--primary-50)' : 'transparent',
             color: viewMode === 'list' ? 'var(--primary-600)' : 'var(--text-tertiary)',
           }}
-          aria-label="列表视图"
+          aria-label={t('列表视图')}
           aria-pressed={viewMode === 'list'}
         >
           <List size={iconSize} />

@@ -27,6 +27,7 @@ import React, {
 } from 'react';
 import { Select, Tag } from '@/components/ui';
 import styles from './CategoryTabs.module.css';
+import { t } from '@/languages';
 
 /** 分类项 */
 export interface CategoryItem {
@@ -231,7 +232,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {/* 一级分类 - 只有"全部"时不显示 */}
           {!isOnlyAll(0) && (
             <div className={styles.categorySelectRow}>
-              <span className={styles.categorySelectLabel}>一级分类</span>
+              <span className={styles.categorySelectLabel}>{t('一级分类')}</span>
               <Select
                 value={getSelectedId(0)}
                 onChange={(val) => handleSelectChange(0, val)}
@@ -248,7 +249,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {/* 二级分类 - 只有"全部"时不显示 */}
           {!isOnlyAll(1) && (
             <div className={styles.categorySelectRow}>
-              <span className={styles.categorySelectLabel}>二级分类</span>
+              <span className={styles.categorySelectLabel}>{t('二级分类')}</span>
               <Select
                 value={getSelectedId(1)}
                 onChange={(val) => handleSelectChange(1, val)}
@@ -265,7 +266,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           {/* 三级分类 - 只有"全部"时不显示 */}
           {!isOnlyAll(2) && (
             <div className={styles.categorySelectRow}>
-              <span className={styles.categorySelectLabel}>三级分类</span>
+              <span className={styles.categorySelectLabel}>{t('三级分类')}</span>
               <Select
                 value={getSelectedId(2)}
                 onChange={(val) => handleSelectChange(2, val)}

@@ -19,6 +19,7 @@ import {
 import { queryKeys } from '../../lib/queryKeys';
 import { handleApiError } from '../../utils/errorHandler';
 import type { LibraryType } from './useLibraryQuery';
+import { t } from '@/languages';
 
 interface UseLibraryMutationsOptions {
   libraryType: LibraryType;
@@ -89,7 +90,7 @@ export function useLibraryMutations({
       onSuccess?.();
     },
     onError: (error) => {
-      handleApiError(error, '创建文件夹失败');
+      handleApiError(error, t('创建文件夹失败'));
     },
   });
 
@@ -109,7 +110,7 @@ export function useLibraryMutations({
       onSuccess?.();
     },
     onError: (error) => {
-      handleApiError(error, '删除节点失败');
+      handleApiError(error, t('删除节点失败'));
     },
   });
 
@@ -129,7 +130,7 @@ export function useLibraryMutations({
       onSuccess?.();
     },
     onError: (error) => {
-      handleApiError(error, '重命名失败');
+      handleApiError(error, t('重命名失败'));
     },
   });
 
@@ -149,7 +150,7 @@ export function useLibraryMutations({
       onSuccess?.();
     },
     onError: (error) => {
-      handleApiError(error, '移动节点失败');
+      handleApiError(error, t('移动节点失败'));
     },
   });
 
@@ -169,7 +170,7 @@ export function useLibraryMutations({
       onSuccess?.();
     },
     onError: (error) => {
-      handleApiError(error, '复制节点失败');
+      handleApiError(error, t('复制节点失败'));
     },
   });
 
@@ -190,7 +191,7 @@ export function useLibraryMutations({
       onSuccess?.();
     },
     onError: (error) => {
-      handleApiError(error, '批量删除失败');
+      handleApiError(error, t('批量删除失败'));
     },
   });
 

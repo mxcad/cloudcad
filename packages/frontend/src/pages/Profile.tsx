@@ -320,7 +320,7 @@ export const Profile: React.FC = () => {
           }
           navigate('/login', {
             state: {
-              message: `密码已${user?.hasPassword === false ? '设置' : '修改'}成功，请使用新密码登录`,
+              message: `${t('密码已')}${user?.hasPassword === false ? t('设置') : t('修改')}${t('成功，请使用新密码登录')}`,
             },
           });
         }
@@ -333,7 +333,7 @@ export const Profile: React.FC = () => {
         }
         navigate('/login', {
           state: {
-            message: `密码已${user?.hasPassword === false ? '设置' : '修改'}成功，请使用新密码登录`,
+            message: t(`密码已${user?.hasPassword === false ? '设置' : '修改'}成功，请使用新密码登录`),
           },
         });
       }
@@ -770,7 +770,7 @@ export const Profile: React.FC = () => {
         (err as Error & { response?: { data?: { message?: string } } }).response
           ?.data?.message ||
           (err as Error).message ||
-          '绑定失败'
+          t('绑定失败')
       );
     } finally {
       setLoading(false);

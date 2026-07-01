@@ -10,6 +10,7 @@ import {
 } from '@/api-sdk';
 import { handleApiError } from '../../utils/errorHandler';
 import type { LibraryType } from './useLibraryQuery';
+import { t } from '@/languages';
 
 interface UseLibraryDownloadOptions {
   libraryType: LibraryType;
@@ -37,7 +38,7 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
         if (responseError) throw responseError;
 
         if (!blobData) {
-          handleApiError(new Error('服务器返回数据为空'), '下载文件失败');
+          handleApiError(new Error(t('服务器返回数据为空')), t('下载文件失败'));
           return;
         }
 
@@ -52,7 +53,7 @@ export function useLibraryDownload({ libraryType }: UseLibraryDownloadOptions) {
         link.remove();
         window.URL.revokeObjectURL(url);
       } catch (err) {
-        handleApiError(err, '下载文件失败');
+        handleApiError(err, t('下载文件失败'));
       }
     },
     [libraryType]

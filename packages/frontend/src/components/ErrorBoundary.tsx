@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui';
+import { t } from '@/languages';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -64,13 +65,13 @@ export class ErrorBoundary extends React.Component<
           }}
         >
           <h1 style={{ fontSize: 24, marginBottom: 16 }}>
-            应用发生错误
+            {t('应用发生错误')}
           </h1>
           <p style={{ color: '#94a3b8', marginBottom: 24, maxWidth: 480 }}>
-            {this.state.error?.message || '未知错误'}
+            {this.state.error?.message || t('未知错误')}
           </p>
           <Button variant="primary" size="sm" onClick={this.handleReset}>
-            重试
+            {t('重试')}
           </Button>
         </div>
       );

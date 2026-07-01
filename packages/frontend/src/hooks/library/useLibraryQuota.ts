@@ -12,6 +12,7 @@ import {
   StorageInfoDto
 } from '@/api-sdk';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { t } from '@/languages';
 
 interface UseLibraryQuotaOptions {
   /** 资源库 ID */
@@ -107,7 +108,7 @@ export function useLibraryQuota({
 
   const saveLibraryQuota = useCallback(async () => {
     if (!libraryId) {
-      showToast('无法获取库节点 ID', 'error');
+      showToast(t('无法获取库节点 ID'), 'error');
       return;
     }
 
@@ -118,7 +119,7 @@ export function useLibraryQuota({
         body: { nodeId: libraryId, quota: libraryQuota },
       });
 
-      showToast(`库配额已更新为 ${libraryQuota} GB`, 'success');
+      showToast(t(`库配额已更新为 ${libraryQuota} GB`), 'success');
       setQuotaModalOpen(false);
 
       // 刷新库配额信息

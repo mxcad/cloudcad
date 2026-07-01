@@ -22,6 +22,7 @@
  * @returns boolean 是否已登录
  */
 import { isValidToken, getValidToken } from './tokenUtils';
+import { t } from '@/languages';
 
 export function isAuthenticated(): boolean {
   try {
@@ -89,7 +90,7 @@ export function getAuthToken(): string | null {
  */
 export function checkAuth(
   onNotLoggedIn: () => void,
-  action: string = '此操作'
+  action: string = t('此操作')
 ): boolean {
   if (isAuthenticated()) {
     return true;
