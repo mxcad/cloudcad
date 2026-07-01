@@ -250,12 +250,13 @@ pnpm test:coverage                  # 覆盖率报告
 
 ## 关键 Skills
 
-Skills 在 `.agents/skills/`（27 个）和 `.opencode/skills/`（8 个）。重要技能及触发条件：
+Skills 在 `.agents/skills/`（30 个）和 `.opencode/skills/`（8 个）。重要技能及触发条件：
 
 | 技能 | 触发条件 |
 |------|----------|
 | `project-coding-standards` | 任何代码生成/新建/重构/提交前检查 |
 | `frontend-coding-standards` | React 组件、样式、API 调用 |
+| `frontend-mobile-coding-standards` | Vue 组件、移动端样式、`packages/frontend_mobile` 代码变更 |
 | `backend-coding-standards` | NestJS service/controller、Prisma、权限 |
 | `config-management` | 环境变量、运行时配置、`process.env` |
 | `permission-system` | 权限检查、角色管理、Guard/装饰器 |
@@ -265,6 +266,8 @@ Skills 在 `.agents/skills/`（27 个）和 `.opencode/skills/`（8 个）。重
 | `perfect-theme-system` | 主题、颜色、CSS 变量、深色/亮色模式 |
 | `vercel-react-best-practices` | React 性能优化 |
 | `diagnose` | 调试 bug、性能回归 |
+| `type-check-fix` | 类型检查→修复循环、TS 错误、编译错误 |
+| `git-commit` | Git 提交、commit 规范、批量提交 |
 
 ---
 
