@@ -28,7 +28,9 @@ function extractTokensFromUrl() {
   window.history.replaceState({}, '', url.toString());
   // 只有 popup 窗口（移动端登录流程）才关闭自身，
   // 直接重定向（PC→移动端）时不关闭
-  if (window.opener) {
+  // _redirect=1 由桌面端 getMobileRedirectUrl() 注入，标记为桌面→移动端重定向
+  const isRedirect = params.get('_redirect') === '1';
+  if (window.opener && !isRedirect) {
     window.close();
   }
 }

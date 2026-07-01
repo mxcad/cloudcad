@@ -50,6 +50,9 @@ export function getMobileRedirectUrl(
     }
   }
 
+  // 标记为桌面→移动端重定向，避免移动端误判为登录弹窗而关闭标签页（CLOUDCAD-XX）
+  searchParams.set('_redirect', '1');
+
   const queryString = searchParams.toString();
   return `${baseUrl}?${queryString}`;
 }
