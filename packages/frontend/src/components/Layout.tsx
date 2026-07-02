@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useAuth } from '../contexts/AuthContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { useRuntimeConfig } from '../contexts/RuntimeConfigContext';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
@@ -44,6 +45,7 @@ interface NavItemProps {
   active: boolean;
   badge?: number;
   dataTour?: string;
+  onNavigate?: () => void;
 }
 
 /**
@@ -56,6 +58,7 @@ const NavItem: React.FC<NavItemProps> = ({
   active,
   badge,
   dataTour,
+  onNavigate,
 }) => {
   const { isDark } = useTheme();
 
@@ -63,8 +66,9 @@ const NavItem: React.FC<NavItemProps> = ({
     <Link
       to={to}
       data-tour={dataTour}
+      onClick={onNavigate}
       className={`
-        group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ease-out
+        group flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-xl transition-all duration-300 ease-out
         relative overflow-hidden
         ${
           active
@@ -156,6 +160,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
   const { isActive: isTourActive, openTourCenter } = useTour();
+  const isMobile = useIsMobile();
 
   // UI 状态（必须在条件返回之前调用所有 Hooks）
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -377,7 +382,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       {/* 侧边栏 */}
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-all duration-300 ease-out
+          fixed lg:static inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] lg:w-72 transform transition-all duration-300 ease-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{
@@ -388,11 +393,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       >
         <div className="flex flex-col h-full">
           {/* Logo 区域 */}
-          <div className="p-4">
+          <div className="p-4 flex items-center justify-between">
             <Link
               to="/dashboard"
               className="flex items-center gap-3 group p-2 -m-2 rounded-xl transition-colors hover:bg-[var(--bg-tertiary)]"
               title={appName}
+              onClick={() => setSidebarOpen(false)}
             >
               {/* Logo 组件 - 仅图标模式 */}
               <Logo iconOnly={true} animated={false} />
@@ -417,13 +423,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </Link>
 
             {/* 移动端关闭按钮 */}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={X}
-              className="lg:hidden"
+            <button
+              className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
               onClick={() => setSidebarOpen(false)}
-            />
+              aria-label="关闭菜单"
+            >
+              <X size={20} style={{ color: 'var(--text-secondary)' }} />
+            </button>
           </div>
 
           {/* 导航菜单 */}
@@ -443,6 +449,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                     key={item.to}
                     {...item}
                     active={isActiveRoute(item.to)}
+                    onNavigate={() => setSidebarOpen(false)}
                   />
                 ))}
             </div>
@@ -466,6 +473,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                       key={item.to}
                       {...item}
                       active={isActiveRoute(item.to)}
+                      onNavigate={() => setSidebarOpen(false)}
                     />
                   ))}
               </div>
@@ -571,7 +579,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           {/* 用户信息区域 */}
           <div
             className="p-4 border-t"
-            style={{ borderColor: 'var(--border-default)' }}
+            style={{
+              borderColor: 'var(--border-default)',
+              paddingBottom: 'calc(var(--space-4) + env(safe-area-inset-bottom, 0px))',
+            }}
           >
             <div className="relative" ref={userMenuRef}>
               <Menu open={showUserMenu} onOpenChange={setShowUserMenu}>
@@ -675,13 +686,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 顶部导航栏 */}
         <header
-          className="h-16 flex items-center justify-between px-6 lg:px-8 relative z-30"
+          className="h-14 lg:h-16 flex items-center justify-between px-4 lg:px-8 relative z-30"
           style={{
             background: isDark
               ? 'rgba(26, 29, 33, 0.8)'
               : 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(12px)',
             borderBottom: '1px solid var(--border-default)',
+            paddingTop: 'env(safe-area-inset-top, 0px)',
           }}
         >
           {/* 左侧：菜单按钮 */}
@@ -697,7 +709,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           </div>
 
           {/* 右侧工具栏 */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* 时间显示 */}
             <div
               className="hidden md:flex flex-col items-end mr-4 px-3 py-1.5 rounded-lg"
@@ -778,7 +790,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         {/* 页面内容 */}
         <main
           className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden"
-          style={{ background: 'transparent' }}
+          style={{
+            background: 'transparent',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
         >
           <div className="flex-1 min-h-0 animate-fade-in">{children}</div>
         </main>

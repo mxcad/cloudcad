@@ -552,6 +552,11 @@
   .button-group { flex-direction: column; }
 }
 
+@media (max-width: 768px) {
+  .register-page { flex-direction: column; }
+  .register-card { max-width: 100%; }
+}
+
 /* 隐藏浏览器自带的密码显示按钮 */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {

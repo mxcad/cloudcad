@@ -842,3 +842,42 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 input[type="password"]::-webkit-textfield-decoration-container {
   display: none;
 }
+
+/* ============================================
+   移动端全局适配
+   ============================================ */
+@media (max-width: 768px) {
+  /* 输入框防 iOS 自动缩放 */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* 模态框在移动端全屏 */
+  [role="dialog"] {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* 表格容器横向滚动 */
+  .table-container-theme {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 隐藏桌面端特有的 hover 效果 */
+  .card-hover:hover,
+  .btn-hover-lift:hover,
+  .file-item-grid:hover {
+    transform: none !important;
+  }
+}

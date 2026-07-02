@@ -512,6 +512,11 @@ export const loginStyles = `
   .theme-toggle-wrapper { top: 1rem; right: 1rem; }
 }
 
+@media (max-width: 768px) {
+  .login-page { flex-direction: column; }
+  .login-card { max-width: 100%; }
+}
+
 /* ===== 隐藏浏览器自带的密码显示按钮 ===== */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {

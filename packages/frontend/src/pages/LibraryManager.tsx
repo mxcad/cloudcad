@@ -658,8 +658,8 @@ export const LibraryManager: React.FC = () => {
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
           {canManage && (
             <>
-              <Button variant="secondary" onClick={() => openBatchMoveModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>{t("剪切")}</Button>
-              <Button variant="secondary" onClick={() => openBatchCopyModal(selectedNodes.size)} style={{ color: 'var(--text-secondary)' }}>{t("复制")}</Button>
+              <Button variant="secondary" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>{t("剪切")}</Button>
+              <Button variant="secondary" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>{t("复制")}</Button>
               <Button variant="secondary" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>{t("删除")}</Button>
             </>
           )}
@@ -750,7 +750,7 @@ export const LibraryManager: React.FC = () => {
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          {t("批量导入")}
+          <span className="hidden sm:inline">{t("批量导入")}</span>
         </Button>
       )}
     </>

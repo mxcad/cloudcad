@@ -129,7 +129,7 @@ const QuickAction: React.FC<QuickActionProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left w-full hover:bg-[var(--bg-tertiary)] group"
+    className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left w-full hover:bg-[var(--bg-tertiary)] active:bg-[var(--bg-tertiary)] group"
   >
     <div
       className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
@@ -316,10 +316,10 @@ export const Dashboard: React.FC = () => {
   const recentFiles = useMemo(() => personalFiles.slice(0, 5), [personalFiles]);
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* 欢迎区域 */}
       <div
-        className="relative overflow-hidden rounded-2xl p-6 mb-6"
+        className="relative overflow-hidden rounded-2xl p-4 sm:p-6 mb-6"
         style={{
           background: isDark
             ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%)'
@@ -383,7 +383,7 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard
           title={t('我的项目')}
           value={stats.projects}
