@@ -19,7 +19,7 @@
 
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
-
+import type { McDbEntity } from 'mxcad';
 // ==================== 从子模块重新导出 ====================
 
 export {
@@ -2730,7 +2730,7 @@ export const mxcadManager = MxCADManager.getInstance();
 MxFun.addCommand('Mx_InsertImageWithUpload', () => {
 
   // 调用内置 _InsertImage 命令，并在回调中记录图片信息
-  MxFun.sendStringToExecute('_InsertImage', async (data: { url: string; fileName: string; entity: unknown }) => {
+  MxFun.sendStringToExecute('_InsertImage', async (data: { url: string; fileName: string; entity: McDbEntity }) => {
     if (!data) {
       return;
     }
@@ -2767,7 +2767,7 @@ export async function processPendingImages(): Promise<void> {
   const validImages = pendingImages.filter(img => {
     try {
       if (img.entity && typeof img.entity === 'object' && 'isErased' in img.entity) {
-        return !(img.entity as { isErased(): boolean }).isErased();
+        return !(img.entity)?.isErased();
       }
       return true;
     } catch {

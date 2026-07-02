@@ -6,6 +6,7 @@ import React, {
   useMemo,
 } from 'react';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { ExternalReferenceModal } from './modals/ExternalReferenceModal';
 
 import { FileNameText } from './ui/TruncateText';
@@ -196,8 +197,9 @@ export const FileItem: React.FC<FileItemProps> = ({
     return null;
   }
 
+  const isMobile = useIsMobile();
   const [showMenu, setShowMenu] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState(isMobile);
 
   const [useCompactActions, setUseCompactActions] = useState(false);
   const isRoot = node.isRoot;
@@ -481,9 +483,11 @@ export const FileItem: React.FC<FileItemProps> = ({
   }, [viewMode]);
 
   useEffect(() => {
-    setIsHovered(false);
+    if (!isMobile) {
+      setIsHovered(false);
+    }
     setShowMenu(false);
-  }, [viewMode]);
+  }, [viewMode, isMobile]);
 
   const displayAncestorPath = useMemo(() => {
     if (!node.ancestorPath) return null;
@@ -558,7 +562,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           ${galleryMode ? 'w-[120px] min-h-[150px]' : ''}
           ${showSelectedStyle ? 'shadow-md' : ''}
           ${isDropTarget ? 'shadow-md' : ''}
-          ${!showSelectedStyle && !isDropTarget && !galleryMode ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
+          ${!showSelectedStyle && !isDropTarget && !galleryMode && !isMobile ? 'hover:shadow-lg hover:-translate-y-0.5' : ''}
           ${!showSelectedStyle && !isDropTarget && galleryMode ? 'hover:shadow-lg' : ''}
         `}
           style={{
@@ -572,6 +576,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                 : undefined,
           }}
           onMouseEnter={(e) => {
+            if (isMobile) return;
             setIsHovered(true);
             if (!showSelectedStyle && !isDropTarget) {
               if (galleryMode) {
@@ -582,6 +587,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             }
           }}
           onMouseLeave={(e) => {
+            if (isMobile) return;
             setIsHovered(false);
             setShowMenu(false);
             onDragLeave?.();
@@ -643,7 +649,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             <div className="p-6 pb-4">
               <div
                 className="mx-auto mb-4 flex items-center justify-center transition-transform duration-200
-                ${isHovered && !showSelectedStyle ? 'scale-110' : ''}
+                ${isHovered && !showSelectedStyle && !isMobile ? 'scale-110' : ''}
                 ${showSelectedStyle ? 'scale-105' : ''}
               "
                 style={{ width: thumbnailSize, height: thumbnailSize }}
@@ -670,7 +676,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
           <div
             className={`absolute top-1 right-1 transition-opacity duration-200 z-20 pointer-events-auto ${
-              isHovered || showMenu ? 'opacity-100' : 'opacity-0'
+              isHovered || showMenu || isMobile ? 'opacity-100' : 'opacity-0'
             }`}
           >
             <FileItemMenu

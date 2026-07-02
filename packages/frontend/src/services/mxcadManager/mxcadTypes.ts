@@ -9,7 +9,8 @@
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
-
+import { t } from '@/languages';
+import type { McDbEntity } from 'mxcad';
 /**
  * MxCAD Manager — 类型定义
  * 集中的类型定义，供所有子模块使用
@@ -37,7 +38,7 @@ export interface CurrentFileInfo {
 export interface PendingImage {
   url: string;
   fileName: string;
-  entity: unknown;
+  entity: McDbEntity;
   file?: File;
 }
 
@@ -96,7 +97,7 @@ export interface FileReadyInfo {
   parentId: string;
 }
 
-import { t } from '@/languages';
+
 
 /** CSS 类名配置 */
 export const CSS_CLASSES = {

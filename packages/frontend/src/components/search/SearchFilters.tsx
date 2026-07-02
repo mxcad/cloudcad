@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Z_LAYERS } from '@/constants/layers';
 import { formatFileSize, toBytes, FileSizeInput, type SizeUnit } from '@/components/ui/FileSize';
 import { t, $t } from '@/languages';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export interface SearchFilterValues {
   extensions?: string[];
@@ -288,6 +289,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   const buttonRef = useRef<HTMLDivElement>(null);
   const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
   const [sizeUnit, setSizeUnit] = useState<SizeUnit>('MB');
+  const isMobile = useIsMobile();
 
   const closePanel = useCallback(() => {
     setOpen(false);
@@ -319,23 +321,232 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   }, [onChange]);
 
   const openPanel = useCallback(() => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const panelW = 300;
-      let left = rect.right - panelW;
-      const gap = 12;
-      if (left < gap) left = gap;
-      if (left + panelW > window.innerWidth - gap) {
-        left = window.innerWidth - panelW - gap;
+    if (isMobile) {
+      setPanelStyle({});
+    } else {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const panelW = 300;
+        let left = rect.right - panelW;
+        const gap = 12;
+        if (left < gap) left = gap;
+        if (left + panelW > window.innerWidth - gap) {
+          left = window.innerWidth - panelW - gap;
+        }
+        setPanelStyle({
+          position: 'fixed',
+          top: rect.bottom + 8,
+          left,
+        });
       }
-      setPanelStyle({
-        position: 'fixed',
-        top: rect.bottom + 8,
-        left,
-      });
     }
     setOpen(true);
-  }, []);
+  }, [isMobile]);
+
+  const panelContent = (
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+          {t("筛选排序")}
+        </span>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-xs hover:underline cursor-pointer"
+            style={{ color: 'var(--info)' }}
+          >
+            {t("重置")}
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <ArrowUpDown size={12} className="inline mr-1" />
+          {t("排序")}
+        </label>
+        <Select
+          options={scope === 'project' ? getProjectSortOptions() : getSortOptions()}
+          value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
+          onChange={(v) => {
+            const parsed = parseSortValue(v);
+            onChange(cleanFilters({ ...filters, ...parsed }));
+          }}
+          size="sm"
+        />
+      </div>
+
+      {scope === 'project_files' && (
+        <div className="space-y-1.5">
+          <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            <FileText size={12} className="inline mr-1" />
+            {t("文件格式（多选）")}
+          </label>
+          <CheckboxList
+            options={getExtOptions()}
+            selected={filters.extensions || []}
+            onChange={(v) => onChange(cleanFilters({ ...filters, extensions: v.length > 0 ? v : undefined }))}
+          />
+        </div>
+      )}
+
+      {scope === 'project_files' && (
+      <div className="space-y-1.5">
+        <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <Ruler size={12} className="inline mr-1" />
+            {t("文件大小")}
+          </label>
+        <Select
+          options={getSizePresets()}
+          value={
+            filters.sizeMin !== undefined || filters.sizeMax !== undefined
+              ? getSizePresets().find(
+                  (p) => p.min === filters.sizeMin && p.max === filters.sizeMax,
+                )?.value || ''
+              : ''
+          }
+          onChange={(v) => {
+            const preset = getSizePresets().find((p) => p.value === v);
+            if (preset) {
+              onChange(cleanFilters({ ...filters, sizeMin: preset.min, sizeMax: preset.max }));
+            }
+          }}
+          size="sm"
+        />
+        <div className="flex items-center gap-1">
+          <FileSizeInput
+            value={filters.sizeMin}
+            onChange={(v) => onChange(cleanFilters({ ...filters, sizeMin: v }))}
+            unit={sizeUnit}
+            onUnitChange={setSizeUnit}
+            placeholder={t("最小")}
+            min={0}
+          />
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
+          <FileSizeInput
+            value={filters.sizeMax}
+            onChange={(v) => onChange(cleanFilters({ ...filters, sizeMax: v }))}
+            unit={sizeUnit}
+            onUnitChange={setSizeUnit}
+            placeholder={t("最大")}
+            min={0}
+          />
+        </div>
+      </div>
+      )}
+
+      {scope === 'project_files' && (
+        <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
+      )}
+
+      {scope === 'project_files' && (
+      <div className="space-y-1.5">
+        <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <Calendar size={12} className="inline mr-1" />
+          {t("修改时间")}
+          </label>
+        <div className="flex items-center gap-1">
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("起")}</span>
+          <input
+            type="date"
+            value={filters.modifiedAtFrom ? filters.modifiedAtFrom.slice(0, 10) : ''}
+            onChange={(e) =>
+              onChange(cleanFilters({ ...filters, modifiedAtFrom: e.target.value || undefined, timeRange: undefined }))
+            }
+            className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
+            style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
+          <input
+            type="date"
+            value={filters.modifiedAtTo ? filters.modifiedAtTo.slice(0, 10) : ''}
+            onChange={(e) =>
+              onChange(cleanFilters({ ...filters, modifiedAtTo: e.target.value || undefined, timeRange: undefined }))
+            }
+            className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
+            style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("止")}</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {getTimePresets().slice(1).map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() =>
+                onChange(
+                  cleanFilters({
+                    ...filters,
+                    timeRange: filters.timeRange === p.value ? undefined : p.value,
+                    modifiedAtFrom: undefined,
+                    modifiedAtTo: undefined,
+                  }),
+                )
+              }
+              className="px-2 py-0.5 text-xs rounded-[3px] transition-all duration-150"
+              style={{
+                background: filters.timeRange === p.value ? 'var(--info)' : 'var(--bg-tertiary)',
+                color: filters.timeRange === p.value ? '#fff' : 'var(--text-tertiary)',
+                border: `1px solid ${filters.timeRange === p.value ? 'var(--info)' : 'var(--border-subtle)'}`,
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      )}
+
+      {scope === 'project_files' && (
+      <div className="space-y-1.5">
+        <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <CalendarPlus size={12} className="inline mr-1" />
+          {t("创建时间")}
+          </label>
+        <div className="flex items-center gap-1">
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("起")}</span>
+          <input
+            type="date"
+            value={filters.createdAtFrom ? filters.createdAtFrom.slice(0, 10) : ''}
+            onChange={(e) =>
+              onChange(cleanFilters({ ...filters, createdAtFrom: e.target.value || undefined }))
+            }
+            className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
+            style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
+          <input
+            type="date"
+            value={filters.createdAtTo ? filters.createdAtTo.slice(0, 10) : ''}
+            onChange={(e) =>
+              onChange(cleanFilters({ ...filters, createdAtTo: e.target.value || undefined }))
+            }
+            className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
+            style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("止")}</span>
+        </div>
+      </div>
+      )}
+    </>
+  );
 
   return (
     <div className="inline-flex">
@@ -374,217 +585,40 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             style={{ zIndex: Z_LAYERS.OVERLAY }}
             onClick={closePanel}
           />
-          <div
-            className="p-3 rounded-lg shadow-lg space-y-3 min-w-[300px] max-h-[80vh] overflow-y-auto"
-            style={{
-              ...panelStyle,
-              zIndex: Z_LAYERS.POPUP,
-              background: 'var(--bg-primary)',
-              border: '1px solid var(--border-default)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                {t("筛选排序")}
-              </span>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="text-xs hover:underline cursor-pointer"
-                  style={{ color: 'var(--info)' }}
-                >
-                  {t("重置")}
-                </button>
-              )}
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <ArrowUpDown size={12} className="inline mr-1" />
-                {t("排序")}
-              </label>
-              <Select
-                options={scope === 'project' ? getProjectSortOptions() : getSortOptions()}
-                value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
-                onChange={(v) => {
-                  const parsed = parseSortValue(v);
-                  onChange(cleanFilters({ ...filters, ...parsed }));
-                }}
-                size="sm"
-              />
-            </div>
-
-            {scope === 'project_files' && (
-              <div className="space-y-1.5">
-                <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  <FileText size={12} className="inline mr-1" />
-                  {t("文件格式（多选）")}
-                </label>
-                <CheckboxList
-                  options={getExtOptions()}
-                  selected={filters.extensions || []}
-                  onChange={(v) => onChange(cleanFilters({ ...filters, extensions: v.length > 0 ? v : undefined }))}
+          {isMobile ? (
+            <div
+              className="fixed bottom-0 left-0 right-0 rounded-t-2xl shadow-2xl overflow-y-auto"
+              style={{
+                zIndex: Z_LAYERS.POPUP,
+                background: 'var(--bg-elevated)',
+                maxHeight: '80vh',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              }}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div
+                  className="w-10 h-1 rounded-full"
+                  style={{ background: 'var(--border-subtle)' }}
                 />
               </div>
-            )}
-
-            {scope === 'project_files' && (
-            <div className="space-y-1.5">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <Ruler size={12} className="inline mr-1" />
-                  {t("文件大小")}
-                </label>
-              <Select
-                options={getSizePresets()}
-                value={
-                  filters.sizeMin !== undefined || filters.sizeMax !== undefined
-                    ? getSizePresets().find(
-                        (p) => p.min === filters.sizeMin && p.max === filters.sizeMax,
-                      )?.value || ''
-                    : ''
-                }
-                onChange={(v) => {
-                  const preset = getSizePresets().find((p) => p.value === v);
-                  if (preset) {
-                    onChange(cleanFilters({ ...filters, sizeMin: preset.min, sizeMax: preset.max }));
-                  }
-                }}
-                size="sm"
-              />
-              <div className="flex items-center gap-1">
-                <FileSizeInput
-                  value={filters.sizeMin}
-                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMin: v }))}
-                  unit={sizeUnit}
-                  onUnitChange={setSizeUnit}
-                  placeholder={t("最小")}
-                  min={0}
-                />
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
-                <FileSizeInput
-                  value={filters.sizeMax}
-                  onChange={(v) => onChange(cleanFilters({ ...filters, sizeMax: v }))}
-                  unit={sizeUnit}
-                  onUnitChange={setSizeUnit}
-                  placeholder={t("最大")}
-                  min={0}
-                />
+              <div className="p-4 space-y-4">
+                {panelContent}
               </div>
             </div>
-            )}
-
-            {scope === 'project_files' && (
-              <div className="border-t" style={{ borderColor: 'var(--border-subtle)' }} />
-            )}
-
-            {scope === 'project_files' && (
-            <div className="space-y-1.5">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <Calendar size={12} className="inline mr-1" />
-                {t("修改时间")}
-                </label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("起")}</span>
-                <input
-                  type="date"
-                  value={filters.modifiedAtFrom ? filters.modifiedAtFrom.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    onChange(cleanFilters({ ...filters, modifiedAtFrom: e.target.value || undefined, timeRange: undefined }))
-                  }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
-                <input
-                  type="date"
-                  value={filters.modifiedAtTo ? filters.modifiedAtTo.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    onChange(cleanFilters({ ...filters, modifiedAtTo: e.target.value || undefined, timeRange: undefined }))
-                  }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("止")}</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {getTimePresets().slice(1).map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() =>
-                      onChange(
-                        cleanFilters({
-                          ...filters,
-                          timeRange: filters.timeRange === p.value ? undefined : p.value,
-                          modifiedAtFrom: undefined,
-                          modifiedAtTo: undefined,
-                        }),
-                      )
-                    }
-                    className="px-2 py-0.5 text-xs rounded-[3px] transition-all duration-150"
-                    style={{
-                      background: filters.timeRange === p.value ? 'var(--info)' : 'var(--bg-tertiary)',
-                      color: filters.timeRange === p.value ? '#fff' : 'var(--text-tertiary)',
-                      border: `1px solid ${filters.timeRange === p.value ? 'var(--info)' : 'var(--border-subtle)'}`,
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+          ) : (
+            <div
+              className="p-3 rounded-lg shadow-lg space-y-3 min-w-[300px] max-h-[80vh] overflow-y-auto"
+              style={{
+                ...panelStyle,
+                zIndex: Z_LAYERS.POPUP,
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-default)',
+              }}
+            >
+              {panelContent}
             </div>
-            )}
-
-            {scope === 'project_files' && (
-            <div className="space-y-1.5">
-              <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                <CalendarPlus size={12} className="inline mr-1" />
-                {t("创建时间")}
-                </label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("起")}</span>
-                <input
-                  type="date"
-                  value={filters.createdAtFrom ? filters.createdAtFrom.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    onChange(cleanFilters({ ...filters, createdAtFrom: e.target.value || undefined }))
-                  }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
-                <input
-                  type="date"
-                  value={filters.createdAtTo ? filters.createdAtTo.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    onChange(cleanFilters({ ...filters, createdAtTo: e.target.value || undefined }))
-                  }
-                  className="flex-1 px-1.5 py-1 text-xs rounded-[3px] min-w-0"
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-default)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-                <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("止")}</span>
-              </div>
-            </div>
-            )}
-
-          </div>
+          )}
         </>,
         document.body,
       )}

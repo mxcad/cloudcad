@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { Input } from '@/components/ui/Input';
 import { isTourModeActive } from '../../contexts/TourContext';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
 
@@ -75,6 +76,7 @@ export const Modal: React.FC<ModalProps> = ({
   overlayClassName,
   closeOnOverlayClick = true,
 }) => {
+  const isMobile = useIsMobile();
   const defaultMaxWidth = 'max-w-md';
   const hasCustomWidth =
     maxWidth || size || (className && /max-w-/.test(className));
@@ -110,6 +112,7 @@ export const Modal: React.FC<ModalProps> = ({
   }, [isOpen]);
 
   const handleHeaderMouseDown = React.useCallback((e: React.MouseEvent) => {
+    if (isMobile) return;
     if (e.button !== 0) return;
     e.preventDefault();
 
@@ -136,7 +139,7 @@ export const Modal: React.FC<ModalProps> = ({
     dragOffset.current = { x: currentX, y: currentY };
     dragStart.current = { x: e.clientX, y: e.clientY };
     setIsDragging(true);
-  }, []);
+  }, [isMobile]);
 
   const parseTransform = (el: HTMLElement) => {
     const t = el.style.transform;
@@ -150,6 +153,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   React.useEffect(() => {
     if (!isDragging) return;
+    if (isMobile) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const el = cardRef.current;
@@ -207,13 +211,19 @@ export const Modal: React.FC<ModalProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, isMobile]);
 
   if (!isOpen) return null;
 
   const renderOverlay = () => (
     <div
       className={`absolute inset-0 transition-opacity duration-300${overlayClassName ? ` ${overlayClassName}` : ''}`}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        if (!closeOnOverlayClick) return;
+        if (isTourModeActive()) return;
+        onClose();
+      }}
       onClick={(e) => {
         e.stopPropagation();
         if (!closeOnOverlayClick) return;
@@ -227,7 +237,7 @@ export const Modal: React.FC<ModalProps> = ({
     <Card
       ref={cardRef}
       variant="elevated"
-      className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden flex flex-col modal-content${className ? ` ${className}` : ''}`}
+      className={`relative w-full ${effectiveMaxWidth} ${effectiveMaxHeight} overflow-hidden flex flex-col modal-content${isMobile ? ' mx-3 my-auto rounded-xl max-h-[85vh]' : ''}${className ? ` ${className}` : ''}`}
       style={{
         zIndex: zIndex + 1,
         background: 'var(--modal-bg)',
@@ -247,7 +257,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             data-tour="modal-close-btn"
             onClick={onClose}
-            className="p-1 rounded-lg transition-all duration-200 hover:scale-110"
+            className={`p-1 rounded-lg transition-all duration-200 hover:scale-110${isMobile ? ' p-3' : ''}`}
             style={{
               color: 'var(--text-muted)',
             }}
