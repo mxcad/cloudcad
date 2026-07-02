@@ -873,10 +873,12 @@ input[type="password"]::-webkit-textfield-decoration-container {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* 隐藏桌面端特有的 hover 效果 */
+  /* ===== 全局 hover 效果移动端禁用 ===== */
+  /* 卡片 hover */
   .card-hover:hover,
   .btn-hover-lift:hover,
-  .file-item-grid:hover {
+  .file-item-grid:hover,
+  .file-item-list:hover {
     transform: none !important;
   }
 
@@ -924,5 +926,41 @@ input[type="password"]::-webkit-textfield-decoration-container {
   /* 修复移动端输入框字体 */
   input, textarea, select {
     font-size: 16px !important;
+  }
+
+  /* ===== 全局 hover 效果移动端禁用 ===== */
+  /* 卡片 hover */
+  .card-hover:hover,
+  .btn-hover-lift:hover,
+  .file-item-grid:hover,
+  .file-item-list:hover {
+    transform: none !important;
+  }
+
+  /* Tailwind hover: 类名覆盖 - 无法直接用选择器的用 data-mobile 属性配合 */
+  [data-mobile] .hover\:bg-\[var\(--bg-tertiary\)\]:hover,
+  [data-mobile] .hover\:bg-slate-50:hover,
+  [data-mobile] .hover\:bg-slate-100:hover,
+  [data-mobile] .hover\:bg-amber-50:hover,
+  [data-mobile] .hover\:bg-red-50:hover,
+  [data-mobile] .hover\:bg-blue-50:hover,
+  [data-mobile] .hover\:bg-green-50:hover,
+  [data-mobile] .hover\:bg-cyan-50:hover,
+  [data-mobile] .hover\:bg-error-50:hover,
+  [data-mobile] .hover\:bg-error-700:hover,
+  [data-mobile] .hover\:bg-accent-50:hover,
+  [data-mobile] .hover\:bg-primary-50:hover,
+  [data-mobile] .hover\:shadow-lg:hover,
+  [data-mobile] .hover\:shadow-xl:hover,
+  [data-mobile] .hover\:scale-110:hover,
+  [data-mobile] .hover\:-translate-y-0\.5:hover,
+  [data-mobile] .hover\:text-error-600:hover,
+  [data-mobile] .hover\:text-\[var\(--text-secondary\)\]:hover,
+  [data-mobile] .hover\:text-\[var\(--primary-500\)\]:hover,
+  [data-mobile] .hover\:text-\[var\(--accent-500\)\]:hover {
+    background-color: initial !important;
+    transform: none !important;
+    box-shadow: none !important;
+    color: inherit !important;
   }
 }
