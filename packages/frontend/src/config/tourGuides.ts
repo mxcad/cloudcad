@@ -22,34 +22,30 @@ import type { TourGuide } from '../types/tour';
 // 导入所有拆分后的引导配置
 import {
   // 我的图纸
-  personalSpaceGuide,
+  getPersonalSpaceGuide,
   // 项目管理
-  navigateToProjectsGuide,
-  createProjectGuide,
-  projectManagementFullGuide,
+  getNavigateToProjectsGuide,
+  getCreateProjectGuide,
+  getProjectManagementFullGuide,
 } from './tours';
 
-/**
- * 所有引导流程配置
- * 按分类分组：
- * - 我的图纸: 个人图纸空间管理
- * - 项目管理: 导航、创建项目、完整流程
- */
-export const tourGuides: TourGuide[] = [
-  // ==================== 我的图纸 ====================
-  personalSpaceGuide,
+export function getTourGuides(): TourGuide[] {
+  return [
+    // ==================== 我的图纸 ====================
+    getPersonalSpaceGuide(),
 
-  // ==================== 项目管理 ====================
-  navigateToProjectsGuide,
-  createProjectGuide,
-  projectManagementFullGuide,
-];
+    // ==================== 项目管理 ====================
+    getNavigateToProjectsGuide(),
+    getCreateProjectGuide(),
+    getProjectManagementFullGuide(),
+  ];
+}
 
 /**
  * 根据 ID 获取引导流程
  */
 export function getTourGuideById(id: string): TourGuide | undefined {
-  return tourGuides.find((guide) => guide.id === id);
+  return getTourGuides().find((guide) => guide.id === id);
 }
 
-export default tourGuides;
+export default getTourGuides;

@@ -16,23 +16,9 @@ import { PermissionConfigModal } from '../permission/PermissionAssignment';
 import { useProjectRoleCRUD } from './hooks/useProjectRoleCRUD';
 import { useProjectPermission } from '../../hooks/useProjectPermission';
 import { useNotification } from '../../contexts/NotificationContext';
-import { ProjectPermission } from '../../constants/permissions';
+import { getProjectRoleNames, ProjectPermission } from '../../constants/permissions';
 import { t } from '@/languages';
 import type { ProjectRoleDto } from '@/api-sdk';
-
-// 角色名称中文映射
-const ROLE_NAME_MAP: Record<string, string> = {
-  PROJECT_OWNER: '项目所有者',
-  PROJECT_ADMIN: '项目管理员',
-  PROJECT_MEMBER: '项目成员',
-  PROJECT_EDITOR: '项目编辑者',
-  PROJECT_VIEWER: '项目查看者',
-};
-
-// 获取角色中文名称
-const getRoleDisplayName = (roleName: string): string => {
-  return t(ROLE_NAME_MAP[roleName] || roleName);
-};
 
 interface ProjectRolesModalProps {
   isOpen: boolean;
@@ -270,12 +256,12 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <h4 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                                {getRoleDisplayName(role.name)}
+                                {getProjectRoleNames()[role.name] || role.name}
                               </h4>
                               {role.description && (
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                                   <DescriptionText>
-                                    {role.description}
+                                    {t(role.description)}
                                   </DescriptionText>
                                 </p>
                               )}
@@ -334,7 +320,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <h4 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                                  {getRoleDisplayName(role.name)}
+                                  {getProjectRoleNames()[role.name] || role.name}
                                 </h4>
                                 <Tag variant="primary" className="flex-shrink-0">
                                   {t("系统")}
@@ -343,7 +329,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                               {role.description && (
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                                   <DescriptionText>
-                                    {role.description}
+                                    {t(role.description)}
                                   </DescriptionText>
                                 </p>
                               )}
@@ -436,7 +422,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
               <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>{t("删除角色：")}</p>
               <div className="p-3 rounded-lg" style={{ background: 'var(--bg-tertiary)' }}>
                 <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {getRoleDisplayName(roleToDelete.name)}
+                  {getProjectRoleNames()[roleToDelete.name] || roleToDelete.name}
                 </p>
                 {roleToDelete.description && (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>

@@ -34,6 +34,7 @@ import NoPermissionPage from './components/ui/NoPermissionPage';
 import { isMobile } from './utils/isMobile';
 import { getMobileRedirectConfig, getMobileRedirectUrl } from './utils/mobileRedirect';
 import { t } from '@/languages';
+import { useVoerkaI18n } from '@voerkai18n/react';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -571,13 +572,14 @@ function AppContent() {
 function App() {
   // 品牌配置已在 index.tsx 的 AppInitializer 中加载并缓存
   // BrandProvider 会使用缓存值，无需在此检查 loading 状态
+  const { activeLanguage } = useVoerkaI18n();
   return (
     <BrandProvider>
       <Router>
         <RuntimeConfigProvider>
           <RuntimeConfigSync />
           <TourProvider>
-            <AppContent />
+            <AppContent key={activeLanguage} />
             {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
             <GlobalTourRenderer />
           </TourProvider>

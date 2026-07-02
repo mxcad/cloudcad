@@ -47,61 +47,63 @@ interface ToolButtonConfig {
   isAction?: boolean;
 }
 
-const TOOL_BUTTONS: ToolButtonConfig[] = [
-  {
-    id: 'project-management',
-    tab: 'project-management',
-    icon: <LayoutDashboard size={18} />,
-    label: t('项目管理'),
-    color: '#10b981',
-    dataTour: 'trigger-project-management',
-    isAction: true,
-  },
-  {
-    id: 'my-project',
-    tab: 'drawings',
-    subTab: 'my-project',
-    icon: <FolderOpen size={18} />,
-    label: t('我的项目'),
-    color: '#009cff',
-    dataTour: 'trigger-my-project',
-  },
-  {
-    id: 'my-drawings',
-    tab: 'drawings',
-    subTab: 'my-drawings',
-    icon: <FileText size={18} />,
-    label: t('我的图纸'),
-    color: '#06b6d4',
-    dataTour: 'trigger-my-drawings',
-  },
-  {
-    id: 'drawings-gallery',
-    tab: 'drawings',
-    subTab: 'drawings-gallery',
-    icon: <Box size={18} />,
-    label: t('图纸库'),
-    color: '#8b5cf6',
-    dataTour: 'trigger-drawings-gallery',
-  },
-  {
-    id: 'blocks-gallery',
-    tab: 'drawings',
-    subTab: 'blocks-gallery',
-    icon: <LayoutGrid size={18} />,
-    label: t('图块库'),
-    color: '#ec4899',
-    dataTour: 'trigger-blocks-gallery',
-  },
-  {
-    id: 'collaborate',
-    tab: 'collaborate',
-    icon: <Users size={18} />,
-    label: t('实时协同'),
-    color: '#f59e0b',
-    dataTour: 'trigger-collaborate',
-  },
-];
+function getToolButtons(): ToolButtonConfig[] {
+  return [
+    {
+      id: 'project-management',
+      tab: 'project-management',
+      icon: <LayoutDashboard size={18} />,
+      label: t('项目管理'),
+      color: '#10b981',
+      dataTour: 'trigger-project-management',
+      isAction: true,
+    },
+    {
+      id: 'my-project',
+      tab: 'drawings',
+      subTab: 'my-project',
+      icon: <FolderOpen size={18} />,
+      label: t('我的项目'),
+      color: '#009cff',
+      dataTour: 'trigger-my-project',
+    },
+    {
+      id: 'my-drawings',
+      tab: 'drawings',
+      subTab: 'my-drawings',
+      icon: <FileText size={18} />,
+      label: t('我的图纸'),
+      color: '#06b6d4',
+      dataTour: 'trigger-my-drawings',
+    },
+    {
+      id: 'drawings-gallery',
+      tab: 'drawings',
+      subTab: 'drawings-gallery',
+      icon: <Box size={18} />,
+      label: t('图纸库'),
+      color: '#8b5cf6',
+      dataTour: 'trigger-drawings-gallery',
+    },
+    {
+      id: 'blocks-gallery',
+      tab: 'drawings',
+      subTab: 'blocks-gallery',
+      icon: <LayoutGrid size={18} />,
+      label: t('图块库'),
+      color: '#ec4899',
+      dataTour: 'trigger-blocks-gallery',
+    },
+    {
+      id: 'collaborate',
+      tab: 'collaborate',
+      icon: <Users size={18} />,
+      label: t('实时协同'),
+      color: '#f59e0b',
+      dataTour: 'trigger-collaborate',
+    },
+  ];
+}
 
 export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
   activeTab,
@@ -152,7 +154,7 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
 
       {/* 主工具区 */}
       <div className={styles.toolsContainer}>
-        {TOOL_BUTTONS.map((button) => {
+        {getToolButtons().map((button) => {
           const isActive = isButtonActive(button);
 
           return (
@@ -173,7 +175,7 @@ export const SidebarTrigger: React.FC<SidebarTriggerProps> = ({
                 <button
                   className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
                   onClick={() => handleButtonClick(button)}
-                  aria-label={t(`打开${button.label}`)}
+                  aria-label={t('打开{name}', { name: button.label })}
                   aria-pressed={isActive}
                   data-tour={button.dataTour}
                 >

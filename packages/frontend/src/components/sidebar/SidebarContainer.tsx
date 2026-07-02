@@ -43,12 +43,14 @@ export interface InsertFileParams {
   filename: string;
 }
 
-const SUB_TABS: { id: DrawingsSubTab; label: string; icon: React.ElementType }[] = [
-  { id: 'drawings-gallery', label: t('图纸库'), icon: LayoutTemplate },
-  { id: 'blocks-gallery', label: t('图块库'), icon: Layers },
-  { id: 'my-project', label: t('我的项目'), icon: FolderOpen },
-  { id: 'my-drawings', label: t('我的图纸'), icon: FileText },
-];
+function getSubTabs(): { id: DrawingsSubTab; label: string; icon: React.ElementType }[] {
+  return [
+    { id: 'drawings-gallery', label: t('图纸库'), icon: LayoutTemplate },
+    { id: 'blocks-gallery', label: t('图块库'), icon: Layers },
+    { id: 'my-project', label: t('我的项目'), icon: FolderOpen },
+    { id: 'my-drawings', label: t('我的图纸'), icon: FileText },
+  ];
+}
 
 interface SidebarContainerProps {
   /** 项目 ID */
@@ -335,7 +337,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
         >
           {/* 子 Tab 切换 */}
           <div className={`${styles.subTabBar} ${settings.width < 380 ? styles.compact : ''}`}>
-            {SUB_TABS.map((tab) => (
+            {getSubTabs().map((tab) => (
               <Tab
                 key={tab.id}
                 active={activeDrawingsSubTab === tab.id}

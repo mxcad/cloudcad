@@ -11,13 +11,15 @@ export interface PasswordStrengthResult {
   color: string;
 }
 
-const LEVELS = [
-  { label: t('太弱'), color: '#ef4444' },
-  { label: t('较弱'), color: '#f97316' },
-  { label: t('一般'), color: '#eab308' },
-  { label: t('较强'), color: '#22c55e' },
-  { label: t('很强'), color: '#10b981' },
-];
+function getLevels() {
+  return [
+    { label: t('太弱'), color: '#ef4444' },
+    { label: t('较弱'), color: '#f97316' },
+    { label: t('一般'), color: '#eab308' },
+    { label: t('较强'), color: '#22c55e' },
+    { label: t('很强'), color: '#10b981' },
+  ];
+}
 
 export function getPasswordStrength(password: string): PasswordStrengthResult {
   if (!password) return { strength: 0, label: '', color: '' };
@@ -28,6 +30,7 @@ export function getPasswordStrength(password: string): PasswordStrengthResult {
   if (/\d/.test(password)) score++;
   if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-  const level = LEVELS[score] ?? LEVELS[0]!;
+  const levels = getLevels();
+  const level = levels[score] ?? levels[0]!;
   return { strength: score, label: level.label, color: level.color };
 }

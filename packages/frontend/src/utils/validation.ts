@@ -25,17 +25,19 @@ export const ValidationRules = {
 
 import { t } from '@/languages';
 
-const ERROR_MESSAGES: Record<string, Record<string, string>> = {
-  email: { required: t('邮箱不能为空'), isEmail: t('请输入有效的邮箱地址') },
-  username: { required: t('用户名不能为空'), minLength: t('用户名至少3个字符'), maxLength: t('用户名最多20个字符'), pattern: t('用户名只能包含字母、数字和下划线') },
-  password: { required: t('密码不能为空'), minLength: t('密码至少8个字符'), maxLength: t('密码最多50个字符') },
-  nickname: { maxLength: t('昵称最多50个字符') },
-};
+function getErrorMessages(): Record<string, Record<string, string>> {
+  return {
+    email: { required: t('邮箱不能为空'), isEmail: t('请输入有效的邮箱地址') },
+    username: { required: t('用户名不能为空'), minLength: t('用户名至少3个字符'), maxLength: t('用户名最多20个字符'), pattern: t('用户名只能包含字母、数字和下划线') },
+    password: { required: t('密码不能为空'), minLength: t('密码至少8个字符'), maxLength: t('密码最多50个字符') },
+    nickname: { maxLength: t('昵称最多50个字符') },
+  };
+}
 
 export function validateField(field: keyof typeof ValidationRules, value: string): string | null {
   const rules = ValidationRules[field] as any;
   if (!rules) return null;
-  const messages = ERROR_MESSAGES[field] || {};
+  const messages = getErrorMessages()[field] || {};
   if (rules.required && !value) return messages.required || field + t("不能为空");
   if (rules.minLength && value.length < rules.minLength) return messages.minLength || t("至少") + rules.minLength + t("个字符");
   if (rules.maxLength && value.length > rules.maxLength) return messages.maxLength || t("最多") + rules.maxLength + t("个字符");

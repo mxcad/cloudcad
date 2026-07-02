@@ -129,111 +129,112 @@ export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
 /**
  * 权限分组定义
  */
-export const PERMISSION_GROUPS = {
-  system: [
-    {
-      label: t('用户权限'),
-      items: [
-        { key: 'SYSTEM_USER_READ', label: t('查看用户') },
-        { key: 'SYSTEM_USER_CREATE', label: t('创建用户') },
-        { key: 'SYSTEM_USER_UPDATE', label: t('编辑用户') },
-        { key: 'SYSTEM_USER_DELETE', label: t('删除用户') },
-      ],
-    },
-    {
-      label: t('角色权限管理'),
-      items: [
-        { key: 'SYSTEM_ROLE_READ', label: t('查看角色') },
-        { key: 'SYSTEM_ROLE_CREATE', label: t('创建角色') },
-        { key: 'SYSTEM_ROLE_UPDATE', label: t('编辑角色') },
-        { key: 'SYSTEM_ROLE_DELETE', label: t('删除角色') },
-        { key: 'SYSTEM_ROLE_PERMISSION_MANAGE', label: t('角色权限管理') },
-      ],
-    },
-    {
-      label: t('字体管理'),
-      items: [
-        { key: 'SYSTEM_FONT_READ', label: t('查看字体') },
-        { key: 'SYSTEM_FONT_UPLOAD', label: t('上传字体') },
-        { key: 'SYSTEM_FONT_DELETE', label: t('删除字体') },
-        { key: 'SYSTEM_FONT_DOWNLOAD', label: t('下载字体') },
-      ],
-    },
-    {
-      label: t('系统权限'),
-      items: [
-        { key: 'SYSTEM_ADMIN', label: t('系统管理') },
-        { key: 'SYSTEM_BILLING_READ', label: t('查看支付管理') },
-        { key: 'SYSTEM_BILLING_WRITE', label: t('管理支付') },
-        { key: 'SYSTEM_MONITOR', label: t('系统监控') },
-        { key: 'SYSTEM_CONFIG_READ', label: t('查看配置') },
-        { key: 'SYSTEM_CONFIG_WRITE', label: t('修改配置') },
-      ],
-    },
-    {
-      label: t('公共资源库'),
-      items: [
-        { key: 'LIBRARY_DRAWING_MANAGE', label: t('管理图纸库') },
-        { key: 'LIBRARY_BLOCK_MANAGE', label: t('管理图块库') },
-      ],
-    },
-    {
-      label: t('项目管理'),
-      items: [
-        { key: 'PROJECT_CREATE', label: t('创建项目') },
-      ],
-    },
-    {
-      label: t('存储管理'),
-      items: [
-        { key: 'STORAGE_QUOTA', label: t('存储配额管理') },
-      ],
-    },
-  ],
-  project: [
-    {
-      label: t('项目权限'),
-      items: [
-        { key: 'PROJECT_UPDATE', label: t('编辑项目') },
-        { key: 'PROJECT_DELETE', label: t('删除项目') },
-        { key: 'PROJECT_MEMBER_MANAGE', label: t('成员管理') },
-        { key: 'PROJECT_MEMBER_ASSIGN', label: t('成员分配') },
-        { key: 'PROJECT_TRANSFER', label: t('转让所有权') },
-        { key: 'PROJECT_ROLE_MANAGE', label: t('角色管理') },
-        { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: t('角色权限配置') },
-      ],
-    },
-    {
-      label: t('文件权限'),
-      items: [
-        { key: 'FILE_CREATE', label: t('创建文件') },
-        { key: 'FILE_UPLOAD', label: t('上传文件') },
-        { key: 'FILE_OPEN', label: t('查看文件') },
-        { key: 'FILE_EDIT', label: t('编辑文件') },
-        { key: 'FILE_DELETE', label: t('删除文件') },
-        { key: 'FILE_TRASH_MANAGE', label: t('回收站管理') },
-        { key: 'FILE_DOWNLOAD', label: t('下载文件') },
-        { key: 'FILE_SHARE', label: t('分享文件') },
-        { key: 'FILE_MOVE', label: t('移动文件') },
-        { key: 'FILE_COPY', label: t('复制文件') },
-      ],
-    },
-    {
-      label: t('CAD 图纸权限'),
-      items: [
-        { key: 'CAD_SAVE', label: t('保存图纸') },
-        { key: 'CAD_EXTERNAL_REFERENCE', label: t('管理外部参照') },
-      ],
-    },
-    {
-      label: t('版本管理'),
-      items: [
-        { key: 'VERSION_READ', label: t('查看版本') },
-      ],
-    },
-  ],
-
-} as const;
+export function getPermissionGroups() {
+  return {
+    system: [
+      {
+        label: t('用户权限'),
+        items: [
+          { key: 'SYSTEM_USER_READ', label: t('查看用户') },
+          { key: 'SYSTEM_USER_CREATE', label: t('创建用户') },
+          { key: 'SYSTEM_USER_UPDATE', label: t('编辑用户') },
+          { key: 'SYSTEM_USER_DELETE', label: t('删除用户') },
+        ],
+      },
+      {
+        label: t('角色权限管理'),
+        items: [
+          { key: 'SYSTEM_ROLE_READ', label: t('查看角色') },
+          { key: 'SYSTEM_ROLE_CREATE', label: t('创建角色') },
+          { key: 'SYSTEM_ROLE_UPDATE', label: t('编辑角色') },
+          { key: 'SYSTEM_ROLE_DELETE', label: t('删除角色') },
+          { key: 'SYSTEM_ROLE_PERMISSION_MANAGE', label: t('角色权限管理') },
+        ],
+      },
+      {
+        label: t('字体管理'),
+        items: [
+          { key: 'SYSTEM_FONT_READ', label: t('查看字体') },
+          { key: 'SYSTEM_FONT_UPLOAD', label: t('上传字体') },
+          { key: 'SYSTEM_FONT_DELETE', label: t('删除字体') },
+          { key: 'SYSTEM_FONT_DOWNLOAD', label: t('下载字体') },
+        ],
+      },
+      {
+        label: t('系统权限'),
+        items: [
+          { key: 'SYSTEM_ADMIN', label: t('系统管理') },
+          { key: 'SYSTEM_BILLING_READ', label: t('查看支付管理') },
+          { key: 'SYSTEM_BILLING_WRITE', label: t('管理支付') },
+          { key: 'SYSTEM_MONITOR', label: t('系统监控') },
+          { key: 'SYSTEM_CONFIG_READ', label: t('查看配置') },
+          { key: 'SYSTEM_CONFIG_WRITE', label: t('修改配置') },
+        ],
+      },
+      {
+        label: t('公共资源库'),
+        items: [
+          { key: 'LIBRARY_DRAWING_MANAGE', label: t('管理图纸库') },
+          { key: 'LIBRARY_BLOCK_MANAGE', label: t('管理图块库') },
+        ],
+      },
+      {
+        label: t('项目管理'),
+        items: [
+          { key: 'PROJECT_CREATE', label: t('创建项目') },
+        ],
+      },
+      {
+        label: t('存储管理'),
+        items: [
+          { key: 'STORAGE_QUOTA', label: t('存储配额管理') },
+        ],
+      },
+    ],
+    project: [
+      {
+        label: t('项目权限'),
+        items: [
+          { key: 'PROJECT_UPDATE', label: t('编辑项目') },
+          { key: 'PROJECT_DELETE', label: t('删除项目') },
+          { key: 'PROJECT_MEMBER_MANAGE', label: t('成员管理') },
+          { key: 'PROJECT_MEMBER_ASSIGN', label: t('成员分配') },
+          { key: 'PROJECT_TRANSFER', label: t('转让所有权') },
+          { key: 'PROJECT_ROLE_MANAGE', label: t('角色管理') },
+          { key: 'PROJECT_ROLE_PERMISSION_MANAGE', label: t('角色权限配置') },
+        ],
+      },
+      {
+        label: t('文件权限'),
+        items: [
+          { key: 'FILE_CREATE', label: t('创建文件') },
+          { key: 'FILE_UPLOAD', label: t('上传文件') },
+          { key: 'FILE_OPEN', label: t('查看文件') },
+          { key: 'FILE_EDIT', label: t('编辑文件') },
+          { key: 'FILE_DELETE', label: t('删除文件') },
+          { key: 'FILE_TRASH_MANAGE', label: t('回收站管理') },
+          { key: 'FILE_DOWNLOAD', label: t('下载文件') },
+          { key: 'FILE_SHARE', label: t('分享文件') },
+          { key: 'FILE_MOVE', label: t('移动文件') },
+          { key: 'FILE_COPY', label: t('复制文件') },
+        ],
+      },
+      {
+        label: t('CAD 图纸权限'),
+        items: [
+          { key: 'CAD_SAVE', label: t('保存图纸') },
+          { key: 'CAD_EXTERNAL_REFERENCE', label: t('管理外部参照') },
+        ],
+      },
+      {
+        label: t('版本管理'),
+        items: [
+          { key: 'VERSION_READ', label: t('查看版本') },
+        ],
+      },
+    ],
+  };
+}
 
 /**
  * 权限分组项类型
@@ -287,25 +288,29 @@ export const togglePermission = (
 };
 
 /**
- * 系统角色名称映射
+ * 获取系统角色名称映射
  */
-export const SYSTEM_ROLE_NAMES: Record<string, string> = {
-  ADMIN: t('系统管理员'),
-  USER_MANAGER: t('用户管理员'),
-  FONT_MANAGER: t('字体管理员'),
-  USER: t('普通用户'),
-};
+export function getSystemRoleNames(): Record<string, string> {
+  return {
+    ADMIN: t('系统管理员'),
+    USER_MANAGER: t('用户管理员'),
+    FONT_MANAGER: t('字体管理员'),
+    USER: t('普通用户'),
+  };
+}
 
 /**
- * 项目角色名称映射
+ * 获取项目角色名称映射
  */
-export const PROJECT_ROLE_NAMES: Record<string, string> = {
-  PROJECT_OWNER: t('项目所有者'),
-  PROJECT_ADMIN: t('项目管理员'),
-  PROJECT_EDITOR: t('项目编辑者'),
-  PROJECT_MEMBER: t('项目成员'),
-  PROJECT_VIEWER: t('项目查看者'),
-};
+export function getProjectRoleNames(): Record<string, string> {
+  return {
+    PROJECT_OWNER: t('项目所有者'),
+    PROJECT_ADMIN: t('项目管理员'),
+    PROJECT_EDITOR: t('项目编辑者'),
+    PROJECT_MEMBER: t('项目成员'),
+    PROJECT_VIEWER: t('项目查看者'),
+  };
+}
 
 /**
  * 获取角色显示名称
@@ -313,6 +318,6 @@ export const PROJECT_ROLE_NAMES: Record<string, string> = {
 export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): string => {
   // 根据角色名称前缀判断是否为项目角色
   const isProjectRole = roleName.startsWith('PROJECT_');
-  const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
+  const mapping = isProjectRole ? getProjectRoleNames() : getSystemRoleNames();
   return mapping[roleName] || roleName;
 };

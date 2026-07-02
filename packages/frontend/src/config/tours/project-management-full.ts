@@ -47,7 +47,8 @@ async function checkHasProject(): Promise<boolean> {
  * 项目管理完整流程引导
  * 整合所有项目管理相关操作，形成完整的用户引导体验 
  */
-export const projectManagementFullGuide: TourGuide = {
+export function getProjectManagementFullGuide(): TourGuide {
+  return {
   id: 'project-management-full',
   name: t('项目管理完整流程'),
   description: t('从项目设置到使用 CAD 编辑器的完整教程，涵盖角色管理、成员管理、文件管理等功能'),
@@ -395,6 +396,7 @@ export const projectManagementFullGuide: TourGuide = {
       fallbackContent: t('「加入协同」按钮显示在协同面板的当前图纸标签页中。'),
     },
   ],
-};
+  };
+}
 
-export default projectManagementFullGuide;
+export default getProjectManagementFullGuide;

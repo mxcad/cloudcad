@@ -385,7 +385,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
               color: 'var(--primary-700)',
             }}
           >
-            {t('已选')}：{selectedName}
+            {t('已选: {name}', { name: selectedName })}
           </div>
         )}
       </div>

@@ -29,29 +29,28 @@ const FREE_FEATURES: Record<string, number> = {
   versionHistoryDays: 0,
 };
 
-const FEATURE_LABELS: Record<string, string> = {
-  maxStorage: t('存储空间'),
-  maxProjects: t('项目数量'),
-  maxCollaborators: t('协作者数量'),
-  versionHistoryDays: t('版本历史'),
-};
-
-const FEATURE_FMT: Record<string, (v: number) => string> = {
-  maxStorage: (v) => {
-    const gb = (v as number) / 1073741824;
-    return gb >= 1024 ? `${(gb / 1024).toFixed(1)}TB` : `${gb.toFixed(0)}GB`;
-  },
-  maxProjects: (v) => `${v} ${t('个')}`,
-  maxCollaborators: (v) => `${v} ${t('人')}`,
-  versionHistoryDays: (v) => (v === 0 ? t('无') : `${v} ${t('天')}`),
-};
-
-const TIER_LABEL: Record<string, string> = {
-  FREE: t('免费用户'),
-  PRO: t('专业版会员'),
-};
-
 export const ProfileMembershipTab: React.FC = () => {
+  const FEATURE_LABELS: Record<string, string> = {
+    maxStorage: t('存储空间'),
+    maxProjects: t('项目数量'),
+    maxCollaborators: t('协作者数量'),
+    versionHistoryDays: t('版本历史'),
+  };
+
+  const FEATURE_FMT: Record<string, (v: number) => string> = {
+    maxStorage: (v) => {
+      const gb = (v as number) / 1073741824;
+      return gb >= 1024 ? `${(gb / 1024).toFixed(1)}TB` : `${gb.toFixed(0)}GB`;
+    },
+    maxProjects: (v) => `${v} ${t('个')}`,
+    maxCollaborators: (v) => `${v} ${t('人')}`,
+    versionHistoryDays: (v) => (v === 0 ? t('无') : `${v} ${t('天')}`),
+  };
+
+  const TIER_LABEL: Record<string, string> = {
+    FREE: t('免费用户'),
+    PRO: t('专业版会员'),
+  };
   const [plans, setPlans] = useState<Plan[]>([]);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { t } from '@/languages';
-import { ExpirationOption, EXPIRATION_LABELS, detectExpiration, computeExpiresAt } from '@/constants/share';
+import { ExpirationOption, getExpirationLabels, detectExpiration, computeExpiresAt } from '@/constants/share';
 
 interface EditExpiryModalProps {
   isOpen: boolean;
@@ -48,14 +48,14 @@ export const EditExpiryModal: React.FC<EditExpiryModalProps> = ({
             {t('有效期')}
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map((key) => (
+            {(Object.keys(getExpirationLabels()) as ExpirationOption[]).map((key) => (
               <Button
                 key={key}
                 variant={expiration === key ? 'primary' : 'outline'}
                 size="xs"
                 onClick={() => setExpiration(key)}
               >
-                {EXPIRATION_LABELS[key]}
+                {getExpirationLabels()[key]}
               </Button>
             ))}
           </div>

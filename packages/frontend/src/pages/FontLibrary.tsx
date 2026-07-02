@@ -43,16 +43,18 @@ import { t } from '@/languages';
 interface FontLibraryProps {}
 
 // 字体文件类型配置 - 使用颜色和 lucide 图标
-const FONT_TYPES = [
-  { value: '', label: t('全部格式'), color: '#6366f1', Icon: FolderOpen },
-  { value: '.ttf', label: 'TTF', color: '#22c55e', Icon: Type },
-  { value: '.otf', label: 'OTF', color: '#009cff', Icon: FileText },
-  { value: '.woff', label: 'WOFF', color: '#f59e0b', Icon: FileBox },
-  { value: '.woff2', label: 'WOFF2', color: '#f97316', Icon: FileBox },
-  { value: '.eot', label: 'EOT', color: '#6366f1', Icon: FileDigit },
-  { value: '.ttc', label: 'TTC', color: '#ec4899', Icon: Layers },
-  { value: '.shx', label: 'SHX', color: '#06b6d4', Icon: Shapes },
-];
+function getFontTypes() {
+  return [
+    { value: '', label: t('全部格式'), color: '#6366f1', Icon: FolderOpen },
+    { value: '.ttf', label: 'TTF', color: '#22c55e', Icon: Type },
+    { value: '.otf', label: 'OTF', color: '#009cff', Icon: FileText },
+    { value: '.woff', label: 'WOFF', color: '#f59e0b', Icon: FileBox },
+    { value: '.woff2', label: 'WOFF2', color: '#f97316', Icon: FileBox },
+    { value: '.eot', label: 'EOT', color: '#6366f1', Icon: FileDigit },
+    { value: '.ttc', label: 'TTC', color: '#ec4899', Icon: Layers },
+    { value: '.shx', label: 'SHX', color: '#06b6d4', Icon: Shapes },
+  ];
+}
 
 const fontTypeVariants: Record<string, TagVariant> = {
   '.ttf': 'success',
@@ -80,7 +82,7 @@ const getFontIcon = (
     style?: React.CSSProperties;
   }>;
 } => {
-  const type = FONT_TYPES.find((t) => t.value === extension.toLowerCase());
+  const type = getFontTypes().find((t) => t.value === extension.toLowerCase());
   if (type) {
     return { color: type.color, label: type.label, Icon: type.Icon };
   }
@@ -510,7 +512,7 @@ export default function FontLibrary(props: FontLibraryProps) {
               <Select
                 value={filters.extension}
                 onChange={(val) => handleFilterChange('extension', val)}
-                options={FONT_TYPES.map((t) => ({
+                options={getFontTypes().map((t) => ({
                   value: t.value,
                   label: t.label,
                 }))}

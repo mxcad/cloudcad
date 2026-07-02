@@ -2,16 +2,18 @@ import { t } from '@/languages';
 
 export type ExpirationOption = 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
 
-export const EXPIRATION_LABELS: Record<ExpirationOption, string> = {
-  never: t('永不过期'),
-  '2h': t('2 小时'),
-  '6h': t('6 小时'),
-  '12h': t('12 小时'),
-  '1d': t('1 天'),
-  '3d': t('3 天'),
-  '7d': t('7 天'),
-  custom: t('自定义'),
-};
+export function getExpirationLabels(): Record<ExpirationOption, string> {
+  return {
+    never: t('永不过期'),
+    '2h': t('2 小时'),
+    '6h': t('6 小时'),
+    '12h': t('12 小时'),
+    '1d': t('1 天'),
+    '3d': t('3 天'),
+    '7d': t('7 天'),
+    custom: t('自定义'),
+  };
+}
 
 export const EXPIRATION_VALUES: Record<Exclude<ExpirationOption, 'never' | 'custom'>, number> = {
   '2h': 7200,

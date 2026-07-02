@@ -39,7 +39,8 @@ function isInProjectManagement(): boolean {
  * 进入项目管理引导
  * 引导用户点击侧边栏的项目管理菜单项
  */
-export const navigateToProjectsGuide: TourGuide = {
+export function getNavigateToProjectsGuide(): TourGuide {
+  return {
   isHide: true, // 先隐藏，作为其他引导的前置条件引导
   id: 'navigate-to-projects',
   name: t('进入项目管理'),
@@ -82,6 +83,7 @@ export const navigateToProjectsGuide: TourGuide = {
       fallbackContent: t('项目列表页面显示您的所有项目，支持创建、编辑和管理项目。'),
     },
   ],
-};
+  };
+}
 
-export default navigateToProjectsGuide;
+export default getNavigateToProjectsGuide;

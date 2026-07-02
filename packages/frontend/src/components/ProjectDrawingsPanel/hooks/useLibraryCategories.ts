@@ -19,11 +19,13 @@ interface CategoriesData {
   categories: CategoryLevel[];
 }
 
-const PLACEHOLDER_CATEGORIES: CategoryLevel[] = [
-  { level: 0, items: [{ id: 'all', name: t('全部') }] },
-  { level: 1, items: [{ id: 'all', name: t('全部') }] },
-  { level: 2, items: [{ id: 'all', name: t('全部') }] },
-];
+function getPlaceholderCategories(): CategoryLevel[] {
+  return [
+    { level: 0, items: [{ id: 'all', name: t('全部') }] },
+    { level: 1, items: [{ id: 'all', name: t('全部') }] },
+    { level: 2, items: [{ id: 'all', name: t('全部') }] },
+  ];
+}
 
 function filterCategoriesBySelection(
   allCategories: CategoryLevel[],
@@ -56,7 +58,7 @@ async function fetchCategories(libraryType: LibraryType): Promise<CategoriesData
   const libraryNode = rootResponse.data as { id?: string } | undefined;
 
   const catData = categoriesResponse.data as { categories?: CategoryLevel[] } | undefined;
-  let finalCategories = PLACEHOLDER_CATEGORIES;
+  let finalCategories = getPlaceholderCategories();
   if (catData?.categories && catData.categories.length > 0) {
     const processed = catData.categories.map((level) => ({
       ...level,
@@ -120,7 +122,7 @@ export function useLibraryCategories(
 
   // 加载中或未就绪时用占位分类，命中缓存后用真实数据
   const categories = useMemo(() => {
-    if (!visible || !isLibraryMode || !data) return PLACEHOLDER_CATEGORIES;
+    if (!visible || !isLibraryMode || !data) return getPlaceholderCategories();
     return data.categories;
   }, [visible, isLibraryMode, data]);
 

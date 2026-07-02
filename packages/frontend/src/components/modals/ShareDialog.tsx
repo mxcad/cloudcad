@@ -16,7 +16,7 @@ import type { ShareListItemDto } from '@/api-sdk';
 import { ConfirmRevokeModal } from './ConfirmRevokeModal';
 import {
   ExpirationOption,
-  EXPIRATION_LABELS,
+  getExpirationLabels,
   EXPIRATION_VALUES,
   formatExpiryDate,
 } from '@/constants/share';
@@ -379,7 +379,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       <div className="share-dialog-create-section">
         <span className="share-dialog-create-label">{t('有效期')}</span>
         <div className="share-dialog-expiration-group">
-          {(Object.keys(EXPIRATION_LABELS) as ExpirationOption[]).map(
+          {(Object.keys(getExpirationLabels()) as ExpirationOption[]).map(
             (key) => (
               <Button
                 key={key}
@@ -387,7 +387,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                 size="xs"
                 onClick={() => setExpiration(key)}
               >
-                {EXPIRATION_LABELS[key]}
+                {getExpirationLabels()[key]}
               </Button>
             ),
           )}

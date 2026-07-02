@@ -24,7 +24,7 @@ import { rolesControllerCreate, rolesControllerFindAll, rolesControllerUpdate, r
 import { authControllerGetProfile } from '@/api-sdk';
 import { usePermission } from '../hooks/usePermission';
 import {
-  PERMISSION_GROUPS,
+  getPermissionGroups,
   getRoleDisplayName,
   SystemPermission,
 } from '../constants/permissions';
@@ -375,7 +375,7 @@ export const RoleManagement = () => {
 
   // 渲染权限标签
   const renderPermissionTags = (permissions: string[], type: 'system' | 'project') => {
-    const groups = PERMISSION_GROUPS[type] as unknown as { items: { key: string; label: string }[] }[];
+    const groups = getPermissionGroups()[type] as unknown as { items: { key: string; label: string }[] }[];
     const allPerms = groups.flatMap(g => g.items);
     
     return permissions.slice(0, 6).map((p) => {
@@ -489,7 +489,7 @@ export const RoleManagement = () => {
                       {getRoleDisplayName(role.name, role.isSystem)}
                       {role.isSystem && <Tag variant="primary" size="xs">{t('系统')}</Tag>}
                     </h3>
-                    <p className="role-description">{role.description || t('暂无描述')}</p>
+                    <p className="role-description">{role.description ? t(role.description) : t('暂无描述')}</p>
                     {!role.isSystem && (
                       <p className="role-members">
                         {t(`${role._count.members} 个成员`)}
@@ -568,7 +568,7 @@ export const RoleManagement = () => {
                       {getRoleDisplayName(role.name, role.isSystem)}
                       {role.isSystem && <Tag variant="primary" size="xs">{t('系统')}</Tag>}
                     </h3>
-                    <p className="role-description">{role.description || t('暂无描述')}</p>
+                    <p className="role-description">{role.description ? t(role.description) : t('暂无描述')}</p>
                   </div>
                   {!role.isSystem && canDeleteRoles && (
                     <Button

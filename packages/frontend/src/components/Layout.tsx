@@ -426,7 +426,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <button
               className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
               onClick={() => setSidebarOpen(false)}
-              aria-label="关闭菜单"
+              aria-label={t("关闭菜单")}
             >
               <X size={20} style={{ color: 'var(--text-secondary)' }} />
             </button>

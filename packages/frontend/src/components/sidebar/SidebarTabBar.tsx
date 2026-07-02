@@ -22,11 +22,13 @@ interface SidebarTabBarProps {
   isExpanded?: boolean;
 }
 
-const TABS: { id: SidebarTab; label: string; icon: React.ElementType; isAction?: boolean }[] = [
-  { id: 'drawings', label: t('图纸'), icon: FileText },
-  { id: 'collaborate', label: t('实时协同'), icon: Users },
-  { id: 'project-management', label: t('项目管理'), icon: LayoutDashboard, isAction: true },
-];
+function getTabs(): { id: SidebarTab; label: string; icon: React.ElementType; isAction?: boolean }[] {
+  return [
+    { id: 'drawings', label: t('图纸'), icon: FileText },
+    { id: 'collaborate', label: t('实时协同'), icon: Users },
+    { id: 'project-management', label: t('项目管理'), icon: LayoutDashboard, isAction: true },
+  ];
+}
 
 /**
  * 侧边栏 Tab 栏组件
@@ -57,7 +59,7 @@ export const SidebarTabBar: React.FC<SidebarTabBarProps> = ({
         </Button>
       </Tooltip>
       <Tabs>
-        {TABS.map((tab) => (
+        {getTabs().map((tab) => (
           <Tab
             key={tab.id}
             active={tab.isAction ? false : activeTab === tab.id}

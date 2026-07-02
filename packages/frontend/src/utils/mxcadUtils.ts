@@ -58,13 +58,15 @@ export class ErrorHandler {
  * 文件状态工具
  */
 export class FileStatusHelper {
-  private static statusTextMap = {
-    UPLOADING: t('正在上传'),
-    PROCESSING: t('正在处理'),
-    COMPLETED: t('已完成'),
-    FAILED: t('处理失败'),
-    DELETED: t('已删除'),
-  } as const;
+  private static get statusTextMap() {
+    return {
+      UPLOADING: t('正在上传'),
+      PROCESSING: t('正在处理'),
+      COMPLETED: t('已完成'),
+      FAILED: t('处理失败'),
+      DELETED: t('已删除'),
+    } as const;
+  }
 
   static getStatusText(status: string): string {
     return (
@@ -152,8 +154,9 @@ export class RetryHelper {
     fn: () => Promise<T>,
     maxRetries: number = 3,
     delayMs: number = 1000,
-    context: string = t('重试操作')
+    context?: string
   ): Promise<T> {
+    const ctx = context ?? t('重试操作');
     let lastError: Error | unknown;
 
     for (let i = 0; i <= maxRetries; i++) {

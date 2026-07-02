@@ -27,7 +27,8 @@ import { ProjectPermission } from '../../constants/permissions';
  * 2. 介绍上传文件功能
  * 3. 介绍新建文件夹功能
  */
-export const personalSpaceGuide: TourGuide = {
+export function getPersonalSpaceGuide(): TourGuide {
+  return {
   id: 'personal-space',
   name: t('我的图纸'),
   description: t('学习如何在个人空间中上传 CAD 文件、创建文件夹来管理您的图纸'),
@@ -76,6 +77,7 @@ export const personalSpaceGuide: TourGuide = {
         t('新建文件夹功能在工具栏中。点击可以创建文件夹来组织图纸文件。'),
     },
   ],
-};
+  };
+}
 
-export default personalSpaceGuide;
+export default getPersonalSpaceGuide;

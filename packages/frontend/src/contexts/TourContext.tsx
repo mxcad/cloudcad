@@ -19,7 +19,8 @@ import type {
   TourStep,
   UICondition,
 } from '../types/tour';
-import { tourGuides as defaultGuides } from '../config/tourGuides';
+import { getTourGuides } from '../config/tourGuides';
+import { useVoerkaI18n } from '@voerkai18n/react';
 import { useAuth } from './AuthContext';
 
 /** localStorage 存储键名 */
@@ -221,10 +222,13 @@ function filterVisibleGuides(guides: TourGuide[]): TourGuide[] {
 
 export const TourProvider: React.FC<TourProviderProps> = ({
   children,
-  guides = defaultGuides,
+  guides,
 }) => {
+  useVoerkaI18n();
+  const effectiveGuides = guides ?? getTourGuides();
+
   // 过滤掉隐藏的引导，仅显示在引导中心
-  const visibleGuides = useMemo(() => filterVisibleGuides(guides), [guides]);
+  const visibleGuides = useMemo(() => filterVisibleGuides(effectiveGuides), [effectiveGuides]);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -352,7 +356,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
       needsWait?: boolean;
       prerequisiteGuideId?: string;
     }> => {
-      const guide = guides.find((g) => g.id === guideId);
+      const guide = effectiveGuides.find((g) => g.id === guideId);
       if (!guide) {
         console.warn(`[Tour] Guide not found: ${guideId}`);
         return { canStart: false };
@@ -384,7 +388,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
             );
 
             // 获取前置引导
-            const prerequisiteGuide = guides.find(
+            const prerequisiteGuide = effectiveGuides.find(
               (g) => g.id === condition.resolve!.guideId
             );
             if (!prerequisiteGuide) {
@@ -479,7 +483,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   /** 开始引导 */
   const startTour = useCallback(
     async (guideId: string): Promise<void> => {
-      const guide = guides.find((g) => g.id === guideId);
+      const guide = effectiveGuides.find((g) => g.id === guideId);
       if (!guide || guide.steps.length === 0) {
         console.warn(`[Tour] Guide not found or empty: ${guideId}`);
         return;
@@ -490,7 +494,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
 
       if (result.needsWait && result.prerequisiteGuideId) {
         // 需要先完成前置引导
-        const prerequisiteGuide = guides.find(
+        const prerequisiteGuide = effectiveGuides.find(
           (g) => g.id === result.prerequisiteGuideId
         );
         if (prerequisiteGuide) {
@@ -514,7 +518,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   /** 恢复引导 */
   const resumeTour = useCallback(
     (guideId: string, stepIndex: number) => {
-      const guide = guides.find((g) => g.id === guideId);
+      const guide = effectiveGuides.find((g) => g.id === guideId);
       if (!guide) {
         console.warn(`[Tour] Guide not found: ${guideId}`);
         return;

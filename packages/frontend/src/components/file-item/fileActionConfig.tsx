@@ -336,7 +336,7 @@ const Icons = {
 /**
  * 所有操作项配置
  */
-export const FILE_ACTIONS: Record<ActionType, FileAction> = {
+export function getFileActions(): Record<ActionType, FileAction> { return {
   upload_external_reference: {
     type: 'upload_external_reference',
     label: t("外部参照管理"),
@@ -579,7 +579,7 @@ export const FILE_ACTIONS: Record<ActionType, FileAction> = {
     visibilityCheck: ({ isRoot, isTrash, isSearchResult, onCopyPath }) =>
       !!isSearchResult && !isRoot && !isTrash && !!onCopyPath,
   },
-};
+}; }
 
 /**
  * 获取节点的可用操作列表
@@ -589,7 +589,7 @@ export const getAvailableActions = (
 ): FileAction[] => {
   // 回收站视图中只显示恢复和彻底删除操作
   if (props.isTrash) {
-    return Object.values(FILE_ACTIONS).filter(
+    return Object.values(getFileActions()).filter(
       (action) =>
         (action.type === 'restore' || action.type === 'permanently_delete') &&
         action.visibilityCheck?.(props) !== false &&
@@ -597,7 +597,7 @@ export const getAvailableActions = (
     );
   }
 
-  return Object.values(FILE_ACTIONS).filter((action) => {
+  return Object.values(getFileActions()).filter((action) => {
     // 排除移动和复制操作（用于侧边栏）
     if (
       props.excludeMoveCopy &&
@@ -624,7 +624,7 @@ export const getAvailableActions = (
  * 获取操作项配置
  */
 export const getAction = (type: ActionType): FileAction => {
-  return FILE_ACTIONS[type];
+  return getFileActions()[type];
 };
 
 /**

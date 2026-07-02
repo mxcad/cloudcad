@@ -33,7 +33,8 @@ function isInProjectManagement(): boolean {
  * 创建项目引导
  * 引导用户完成项目的创建流程
  */
-export const createProjectGuide: TourGuide = {
+export function getCreateProjectGuide(): TourGuide {
+  return {
   isHide: true, // 先隐藏，作为其他项目管理相关引导的前置条件引导
   id: 'create-project',
   name: t('创建项目'),
@@ -110,6 +111,7 @@ export const createProjectGuide: TourGuide = {
       fallbackContent: t('项目创建成功后，可以在项目列表中看到新创建的项目。'),
     },
   ],
-};
+  };
+}
 
-export default createProjectGuide;
+export default getCreateProjectGuide;

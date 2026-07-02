@@ -15,11 +15,13 @@ interface ProjectFilterTabsProps {
   isFetching: boolean;
 }
 
-const projectFilterTabs: { key: ProjectFilterType; label: string }[] = [
-  { key: 'all', label: t('全部') },
-  { key: 'owned', label: t('我创建的') },
-  { key: 'joined', label: t('我加入的') },
-];
+function getProjectFilterTabs(): { key: ProjectFilterType; label: string }[] {
+  return [
+    { key: 'all', label: t('全部') },
+    { key: 'owned', label: t('我创建的') },
+    { key: 'joined', label: t('我加入的') },
+  ];
+}
 
 export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
   isTrashView,
@@ -50,7 +52,7 @@ export const ProjectFilterTabs: React.FC<ProjectFilterTabsProps> = ({
               className="mx-1 h-5 w-px"
               style={{ backgroundColor: 'var(--border-default)' }}
             />
-            {projectFilterTabs.map((tab) => (
+            {getProjectFilterTabs().map((tab) => (
               <Tab
                 key={tab.key}
                 active={projectFilter === tab.key}

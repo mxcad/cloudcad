@@ -18,14 +18,6 @@ export interface DwgOptions {
   dwgVersion: number;
 }
 
-const DWG_VERSION_OPTIONS = [
-  { value: 23, label: t('CAD 2000（默认）') },
-  { value: 25, label: t('CAD 2004') },
-  { value: 27, label: t('CAD 2007') },
-  { value: 29, label: t('CAD 2010') },
-  { value: 33, label: t('CAD 2018') },
-];
-
 interface DownloadFormatModalProps {
   isOpen: boolean;
   fileName: string;
@@ -33,6 +25,14 @@ interface DownloadFormatModalProps {
   onDownload: (format: DownloadFormat, pdfOptions?: PdfOptions, dwgOptions?: DwgOptions) => void;
   loading?: boolean;
 }
+
+const DWG_VERSION_OPTIONS = [
+  { value: 23, label: t('CAD 2000（默认）') },
+  { value: 25, label: t('CAD 2004') },
+  { value: 27, label: t('CAD 2007') },
+  { value: 29, label: t('CAD 2010') },
+  { value: 33, label: t('CAD 2018') },
+];
 
 export const DownloadFormatModal: React.FC<DownloadFormatModalProps> = ({
   isOpen,

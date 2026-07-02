@@ -18,7 +18,7 @@ import { Button } from '../ui/Button';
 import { Section } from '@/components/ui/Section';
 import { Input } from '@/components/ui/Input';
 import {
-  PERMISSION_GROUPS,
+  getPermissionGroups,
   isPermissionEnabled,
   getMissingDependencies,
   togglePermission,
@@ -58,7 +58,7 @@ export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
   disabled = false,
   className = '',
 }) => {
-  const groups = PERMISSION_GROUPS[permissionType] as unknown as readonly PermissionGroup[];
+  const groups = getPermissionGroups()[permissionType] as unknown as readonly PermissionGroup[];
 
   // 防御性检查：如果 groups 为 undefined，显示错误信息
   if (!groups) {

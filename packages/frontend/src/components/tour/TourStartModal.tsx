@@ -30,33 +30,31 @@ interface TourStartModalProps {
   onViewNow: () => void;
 }
 
-/** 功能特性列表 */
-const features = [
-  {
-    icon: BookOpen,
-    testid: 'book-open',
-    title: t('业务流程教程'),
-    description: t('学习文件上传、成员管理等核心功能'),
-  },
-  {
-    icon: Target,
-    testid: 'target',
-    title: t('交互式引导'),
-    description: t('高亮目标元素，一步步引导操作'),
-  },
-  {
-    icon: Compass,
-    testid: 'compass',
-    title: t('按需学习'),
-    description: t('随时从引导中心选择需要的教程'),
-  },
-];
-
 export const TourStartModal: React.FC<TourStartModalProps> = ({
   isOpen,
   onDismiss,
   onViewNow,
 }) => {
+  const features = [
+    {
+      icon: BookOpen,
+      testid: 'book-open',
+      title: t('业务流程教程'),
+      description: t('学习文件上传、成员管理等核心功能'),
+    },
+    {
+      icon: Target,
+      testid: 'target',
+      title: t('交互式引导'),
+      description: t('高亮目标元素，一步步引导操作'),
+    },
+    {
+      icon: Compass,
+      testid: 'compass',
+      title: t('按需学习'),
+      description: t('随时从引导中心选择需要的教程'),
+    },
+  ];
   return (
     <Modal
       isOpen={isOpen}

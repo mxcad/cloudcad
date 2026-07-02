@@ -35,11 +35,61 @@ function cleanFilters(f: SearchFilterValues): SearchFilterValues {
   return out;
 }
 
-const extOptions = [
-  { value: '.dwg', label: t("DWG 图纸") },
-  { value: '.dxf', label: t("DXF 图纸") },
-  { value: '.mxweb', label: t("MXWEB 文件") },
-];
+function getExtOptions() {
+  return [
+    { value: '.dwg', label: t("DWG 图纸") },
+    { value: '.dxf', label: t("DXF 图纸") },
+    { value: '.mxweb', label: t("MXWEB 文件") },
+  ];
+}
+
+function getSizePresets(): { value: string; label: string; min?: number; max?: number }[] {
+  return [
+    { value: '', label: t("全部大小") },
+    { value: 'lt1mb', label: '< 1 MB', max: toBytes(1, 'MB') },
+    { value: '1mb-10mb', label: '1 MB - 10 MB', min: toBytes(1, 'MB'), max: toBytes(10, 'MB') },
+    { value: '10mb-100mb', label: '10 MB - 100 MB', min: toBytes(10, 'MB'), max: toBytes(100, 'MB') },
+    { value: 'gt100mb', label: '> 100 MB', min: toBytes(100, 'MB') },
+  ];
+}
+
+function getTimePresets(): { value: string; label: string }[] {
+  return [
+    { value: '', label: t("不限") },
+    { value: '-1d', label: t("今天") },
+    { value: '-7d', label: t("最近 7 天") },
+    { value: '-30d', label: t("最近 30 天") },
+    { value: '-90d', label: t("最近 90 天") },
+  ];
+}
+
+function getSortOptions(): { value: string; label: string; sortBy: string; sortOrder: 'asc' | 'desc' }[] {
+  return [
+    { value: '',                  label: t("默认排序"),       sortBy: 'updatedAt', sortOrder: 'desc' },
+    { value: 'updatedAt|desc',    label: t("更新时间 ↑"),     sortBy: 'updatedAt', sortOrder: 'desc' },
+    { value: 'updatedAt|asc',     label: t("更新时间 ↓"),     sortBy: 'updatedAt', sortOrder: 'asc' },
+    { value: 'createdAt|desc',    label: t("创建时间 ↑"),     sortBy: 'createdAt', sortOrder: 'desc' },
+    { value: 'createdAt|asc',     label: t("创建时间 ↓"),     sortBy: 'createdAt', sortOrder: 'asc' },
+    { value: 'name|asc',          label: t("名称 A-Z"),       sortBy: 'name',      sortOrder: 'asc' },
+    { value: 'name|desc',         label: t("名称 Z-A"),       sortBy: 'name',      sortOrder: 'desc' },
+    { value: 'size|asc',          label: t("从小到大"),       sortBy: 'size',      sortOrder: 'asc' },
+    { value: 'size|desc',         label: t("从大到小"),       sortBy: 'size',      sortOrder: 'desc' },
+  ];
+}
+
+function getProjectSortOptions(): { value: string; label: string; sortBy: string; sortOrder: 'asc' | 'desc' }[] {
+  return [
+    { value: '',                  label: t("默认排序"),       sortBy: 'updatedAt', sortOrder: 'desc' },
+    { value: 'updatedAt|desc',    label: t("更新时间 ↑"),     sortBy: 'updatedAt', sortOrder: 'desc' },
+    { value: 'updatedAt|asc',     label: t("更新时间 ↓"),     sortBy: 'updatedAt', sortOrder: 'asc' },
+    { value: 'createdAt|desc',    label: t("创建时间 ↑"),     sortBy: 'createdAt', sortOrder: 'desc' },
+    { value: 'createdAt|asc',     label: t("创建时间 ↓"),     sortBy: 'createdAt', sortOrder: 'asc' },
+    { value: 'name|asc',          label: t("名称 A-Z"),       sortBy: 'name',      sortOrder: 'asc' },
+    { value: 'name|desc',         label: t("名称 Z-A"),       sortBy: 'name',      sortOrder: 'desc' },
+    { value: 'size|asc',          label: t("从小到大"),       sortBy: 'size',      sortOrder: 'asc' },
+    { value: 'size|desc',         label: t("从大到小"),       sortBy: 'size',      sortOrder: 'desc' },
+  ];
+}
 
 const SIZE_PRESETS: { value: string; label: string; min?: number; max?: number }[] = [
   { value: '', label: t("全部大小") },
@@ -128,7 +178,7 @@ export function getActiveFilterChips(
     }
 
     if (filters.timeRange) {
-      const opt = timePresets.find((o) => o.value === filters.timeRange);
+      const opt = getTimePresets().find((o) => o.value === filters.timeRange);
       chips.push({
         key: 'timeRange',
         label: $t("修改: {label}", { label: opt?.label || filters.timeRange }),
@@ -165,7 +215,7 @@ export function getActiveFilterChips(
   }
 
   if (filters.sortBy) {
-    const opts = scope === 'project' ? projectSortOptions : sortOptions;
+    const opts = scope === 'project' ? getProjectSortOptions() : getSortOptions();
     const sortOption = opts.find(
       (o) => o.sortBy === filters.sortBy && o.sortOrder === filters.sortOrder,
     );
@@ -355,7 +405,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 {t("排序")}
               </label>
               <Select
-                options={scope === 'project' ? projectSortOptions : sortOptions}
+                options={scope === 'project' ? getProjectSortOptions() : getSortOptions()}
                 value={getCurrentSortValue(filters.sortBy, filters.sortOrder)}
                 onChange={(v) => {
                   const parsed = parseSortValue(v);
@@ -372,7 +422,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                   {t("文件格式（多选）")}
                 </label>
                 <CheckboxList
-                  options={extOptions}
+                  options={getExtOptions()}
                   selected={filters.extensions || []}
                   onChange={(v) => onChange(cleanFilters({ ...filters, extensions: v.length > 0 ? v : undefined }))}
                 />
@@ -386,16 +436,16 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                   {t("文件大小")}
                 </label>
               <Select
-                options={SIZE_PRESETS}
+                options={getSizePresets()}
                 value={
                   filters.sizeMin !== undefined || filters.sizeMax !== undefined
-                    ? SIZE_PRESETS.find(
+                    ? getSizePresets().find(
                         (p) => p.min === filters.sizeMin && p.max === filters.sizeMax,
                       )?.value || ''
                     : ''
                 }
                 onChange={(v) => {
-                  const preset = SIZE_PRESETS.find((p) => p.value === v);
+                  const preset = getSizePresets().find((p) => p.value === v);
                   if (preset) {
                     onChange(cleanFilters({ ...filters, sizeMin: preset.min, sizeMax: preset.max }));
                   }
@@ -466,7 +516,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 <span className="text-xs shrink-0" style={{ color: 'var(--text-tertiary)' }}>{t("止")}</span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {timePresets.slice(1).map((p) => (
+                {getTimePresets().slice(1).map((p) => (
                   <button
                     key={p.value}
                     type="button"

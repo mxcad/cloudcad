@@ -35,14 +35,16 @@ interface OrderHistoryProps {
   onSearchChange?: (keyword: string, status: string) => void;
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string; icon?: React.ReactNode }> = {
-  PENDING: { label: t('待支付'), color: 'var(--warning-500)' },
-  SUCCEEDED: { label: t('已完成'), color: 'var(--success-500)', icon: <CheckCircle size={16} style={{ color: 'var(--success-500)' }} /> },
-  FAILED: { label: t('支付失败'), color: 'var(--error-500)', icon: <XCircle size={16} style={{ color: 'var(--error-500)' }} /> },
-  REFUNDED: { label: t('已退款'), color: 'var(--text-tertiary)' },
-  CLOSED: { label: t('已取消'), color: 'var(--text-tertiary)' },
-  TIMEOUT: { label: t('超时未支付'), color: 'var(--text-tertiary)', icon: <AlertCircle size={16} style={{ color: 'var(--text-tertiary)' }} /> },
-};
+function getStatusMap(): Record<string, { label: string; color: string; icon?: React.ReactNode }> {
+  return {
+    PENDING: { label: t('待支付'), color: 'var(--warning-500)' },
+    SUCCEEDED: { label: t('已完成'), color: 'var(--success-500)', icon: <CheckCircle size={16} style={{ color: 'var(--success-500)' }} /> },
+    FAILED: { label: t('支付失败'), color: 'var(--error-500)', icon: <XCircle size={16} style={{ color: 'var(--error-500)' }} /> },
+    REFUNDED: { label: t('已退款'), color: 'var(--text-tertiary)' },
+    CLOSED: { label: t('已取消'), color: 'var(--text-tertiary)' },
+    TIMEOUT: { label: t('超时未支付'), color: 'var(--text-tertiary)', icon: <AlertCircle size={16} style={{ color: 'var(--text-tertiary)' }} /> },
+  };
+}
 
 const RETRYABLE_STATUSES = ['FAILED', 'CLOSED', 'TIMEOUT'];
 
@@ -128,7 +130,7 @@ export default function OrderHistory({
       ) : (
         <div className="space-y-3">
           {orders.map((order) => {
-            const statusInfo = STATUS_MAP[order.status] || {
+            const statusInfo = getStatusMap()[order.status] || {
               label: order.status,
               color: 'var(--text-tertiary)',
             };

@@ -6,16 +6,16 @@ import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
 import { Menu } from './ui/Menu';
 
-const LANGUAGE_LABELS: Record<string, string> = {
-  'zh-CN': t('简体中文'),
-  'en-US': 'English',
-  'ko-KR': '한국어',
-  'zh-TW': t('繁體中文'),
-};
-
 export const LanguageSwitcher: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { activeLanguage, changeLanguage, languages } = useVoerkaI18n();
+
+  const languageLabels: Record<string, string> = {
+    'zh-CN': t('简体中文'),
+    'en-US': 'English',
+    'ko-KR': '한국어',
+    'zh-TW': t('繁體中文'),
+  };
 
   return (
     <Menu open={open} onOpenChange={setOpen}>
@@ -53,7 +53,7 @@ export const LanguageSwitcher: React.FC = () => {
             }}
           >
             <span className="flex items-center justify-between w-full">
-              <span>{LANGUAGE_LABELS[lang.name] || lang.title}</span>
+              <span>{languageLabels[lang.name] || lang.title}</span>
               {lang.name === activeLanguage && (
                 <Check size={14} className="text-[var(--accent-500)]" />
               )}

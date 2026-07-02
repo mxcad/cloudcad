@@ -16,9 +16,9 @@
  */
 
 // 我的图纸
-export { personalSpaceGuide } from './personal-space';
+export { getPersonalSpaceGuide } from './personal-space';
 
 // 项目管理
-export { navigateToProjectsGuide } from './navigate-to-projects';
-export { createProjectGuide } from './create-project';
-export { projectManagementFullGuide } from './project-management-full';
+export { getNavigateToProjectsGuide } from './navigate-to-projects';
+export { getCreateProjectGuide } from './create-project';
+export { getProjectManagementFullGuide } from './project-management-full';
