@@ -879,4 +879,50 @@ input[type="password"]::-webkit-textfield-decoration-container {
   .file-item-grid:hover {
     transform: none !important;
   }
+
+  /* 触摸设备禁用 hover 视觉反馈 */
+  @media (hover: none) and (pointer: coarse) {
+    .hover\:bg-\[var\(--bg-tertiary\)\]:hover {
+      background-color: initial !important;
+    }
+    .hover\:shadow-lg:hover,
+    .hover\:-translate-y-0\.5:hover,
+    .hover\:scale-110:hover {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  /* 触摸反馈 — 使用 active 替代 hover */
+  button:active,
+  [role="button"]:active,
+  a:active {
+    opacity: 0.8;
+  }
+
+  /* 列表项在移动端增加触摸高亮 */
+  .file-item-list:active,
+  [data-tour="file-item"]:active {
+    background-color: var(--bg-tertiary) !important;
+  }
+
+  /* 底部安全区域 */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 移动端所有可点击元素最小触摸区域 */
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  /* 修复移动端输入框字体 */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 }
