@@ -2,6 +2,7 @@ import type React from 'react';
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Z_LAYERS } from '@/constants/layers';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 export type TooltipTrigger = 'hover' | 'click' | 'focus';
@@ -56,6 +57,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
   maxWidth = 320,
   arrow = true,
 }) => {
+  const isMobile = useIsMobile();
+  const effectiveTrigger: TooltipTrigger = isMobile ? 'click' : trigger;
+
   const [isVisible, setIsVisible] = useState(false);
   const [actualPosition, setActualPosition] = useState<TooltipPosition>(position);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
@@ -154,18 +158,20 @@ export const Tooltip: React.FC<TooltipProps> = ({
     if (disabled) return;
     clearTimeouts();
     calculatePosition();
+    const effectiveDelay = isMobile ? 0 : delay;
     showTimeoutRef.current = setTimeout(() => {
       setIsVisible(true);
-    }, delay);
-  }, [disabled, delay, clearTimeouts, calculatePosition]);
+    }, effectiveDelay);
+  }, [disabled, delay, clearTimeouts, calculatePosition, isMobile]);
 
   // 隐藏 Tooltip
   const hideTooltip = useCallback(() => {
     clearTimeouts();
+    const effectiveHideDelay = isMobile ? 0 : hideDelay;
     hideTimeoutRef.current = setTimeout(() => {
       setIsVisible(false);
-    }, hideDelay);
-  }, [hideDelay, clearTimeouts]);
+    }, effectiveHideDelay);
+  }, [hideDelay, clearTimeouts, isMobile]);
 
   // 切换显示/隐藏（用于 click 触发）
   const toggleTooltip = useCallback(() => {
@@ -296,7 +302,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const getEventHandlers = () => {
     if (disabled) return {};
 
-    switch (trigger) {
+    switch (effectiveTrigger) {
       case 'hover':
         return {
           onMouseEnter: showTooltip,
@@ -332,6 +338,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         backdrop-blur-sm
         whitespace-nowrap
         animate-fade-in
+        ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}
         ${className}
       `}
       style={{

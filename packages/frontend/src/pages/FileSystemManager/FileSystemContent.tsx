@@ -168,6 +168,10 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     null
   );
   const highlightHandledRef = useRef(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isMobile] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768
+  );
 
   useEffect(() => {
     if (!highlightNodeId) {
@@ -231,9 +235,42 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     [isTrashView, nodes, selectedNodes, onNodeSelect]
   );
 
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    longPressTimer.current = setTimeout(() => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      const syntheticEvent = {
+        preventDefault: () => {},
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        target: e.target,
+      } as unknown as React.MouseEvent;
+      handleContextMenu(syntheticEvent);
+    }, 500);
+  }, [isMobile, handleContextMenu]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
   const closeContextMenu = useCallback(() => {
     setContextMenuPos(null);
     setContextMenuNode(null);
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   }, []);
 
   const getNodePermissionProps = (node: FileSystemNode) => {
@@ -337,6 +374,9 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
         onPageSizeChange={onPageSizeChange}
         onScrollPageChange={onScrollPageChange}
         onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
         renderItem={(
           node,
           _index,
