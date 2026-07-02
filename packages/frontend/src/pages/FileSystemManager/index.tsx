@@ -57,6 +57,7 @@ import { useMoveCopy } from './hooks/useMoveCopy';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { useFileDropUpload } from '@/hooks/useFileDropUpload';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface FileSystemManagerProps {
   mode?: 'project' | 'personal-space';
@@ -69,6 +70,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [projectFilter, setProjectFilter] = useState<ProjectFilterType>('all');
 
@@ -1356,7 +1358,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             </div>
           </div>
           {bottomBar && (
-            <div className="flex-shrink-0 flex justify-center">
+            <div className={`flex-shrink-0 flex justify-center${isMobile ? ' sticky bottom-0 pb-[env(safe-area-inset-bottom)] bg-[var(--bg-primary)]' : ''}`}>
               <div
                 className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl"
                 style={{
