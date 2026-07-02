@@ -48,12 +48,14 @@ export async function checkExternalReferences(
 }
 
 export async function uploadExtRefImage(params: {
+  nodeId: string;
   file: File;
   srcDwgfileHash: string;
   extRefFile: string;
 }): Promise<boolean> {
   try {
     const result = await mxCadControllerUploadExtReferenceImage({
+      path: { nodeId: params.nodeId },
       body: {
         file: params.file,
         hash: params.srcDwgfileHash,

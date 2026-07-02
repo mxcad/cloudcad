@@ -34,6 +34,7 @@ export async function uploadExtReferenceImage(
 ): Promise<ExtRefUploadResult> {
   try {
     await mxCadControllerUploadExtReferenceImage({
+      path: { nodeId: params.nodeId },
       body: {
         file: params.file instanceof File ? params.file : new File([params.file], params.fileName),
         nodeId: params.nodeId || '',

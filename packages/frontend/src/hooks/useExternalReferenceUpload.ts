@@ -456,6 +456,7 @@ export const useExternalReferenceUpload = (
           // 项目文件场景：使用节点 ID 上传
           if (fileInfo.type === 'img') {
             await mxCadControllerUploadExtReferenceImage({
+              path: { nodeId: id },
               body: {
                 file: extRefFile,
                 nodeId: id,

@@ -5,7 +5,7 @@ import { Z_LAYERS } from '@/constants/layers';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
-export type TooltipTrigger = 'hover' | 'click' | 'focus';
+export type TooltipTrigger = 'hover' | 'click' | 'focus' | 'longpress';
 
 export interface TooltipProps {
   /** 提示文本内容 */
@@ -58,9 +58,11 @@ export const Tooltip: React.FC<TooltipProps> = ({
   arrow = true,
 }) => {
   const isMobile = useIsMobile();
-  const effectiveTrigger: TooltipTrigger = isMobile ? 'click' : trigger;
+  const effectiveTrigger: TooltipTrigger = isMobile ? 'longpress' : trigger;
 
   const [isVisible, setIsVisible] = useState(false);
+  const isVisibleRef = useRef(isVisible);
+  isVisibleRef.current = isVisible;
   const [actualPosition, setActualPosition] = useState<TooltipPosition>(position);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -183,6 +185,34 @@ export const Tooltip: React.FC<TooltipProps> = ({
       showTooltip();
     }
   }, [disabled, isVisible, showTooltip, hideTooltip, calculatePosition]);
+
+  // 长按检测
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchStart = useCallback(() => {
+    clearLongPress();
+    longPressTimer.current = setTimeout(() => {
+      showTooltip();
+    }, 500);
+  }, [showTooltip, clearLongPress]);
+
+  const handleTouchEnd = useCallback(() => {
+    clearLongPress();
+  }, [clearLongPress]);
+
+  const handleTouchMove = useCallback(() => {
+    clearLongPress();
+    if (isVisibleRef.current) {
+      hideTooltip();
+    }
+  }, [clearLongPress, hideTooltip]);
 
   // Tooltip DOM 渲染后重新计算位置，确保使用实际元素尺寸
   // 解决首次显示时 tooltipRef.current 为 null 导致回退宽度 200px 的偏移问题
@@ -309,6 +339,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
           onMouseLeave: hideTooltip,
           onPointerDown: () => { clearTimeouts(); setIsVisible(false); },
         };
+      case 'longpress':
+        return {
+          onTouchStart: handleTouchStart,
+          onTouchEnd: handleTouchEnd,
+          onTouchMove: handleTouchMove,
+        };
       case 'click':
         return {
           onClick: toggleTooltip,
@@ -338,7 +374,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
         backdrop-blur-sm
         whitespace-nowrap
         animate-fade-in
-        ${isMobile ? 'min-w-[44px] min-h-[44px]' : ''}
         ${className}
       `}
       style={{

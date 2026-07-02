@@ -42,6 +42,9 @@ import { t } from '@/languages';
 import type { DownloadFormat } from '../components/modals/DownloadFormatModal';
 import type { PdfOptions } from '../components/modals/PdfExportModal';
 import type { DwgOptions } from '../components/modals/DwgExportModal';
+import { useVoerkaI18n } from '@voerkai18n/react';
+
+
 
 declare global {
   interface Window {
@@ -120,13 +123,13 @@ export const CADEditorDirect: React.FC = () => {
   // 编辑器区域显示 loading 遮罩，避免侧边栏先渲染但编辑器白屏
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 存储当前文件的 hash（用于未登录用户的外部参照上传）
   const [currentFileHash, setCurrentFileHash] = useState('');
-  
+
   // 存储文件打开回调函数
   const openFileCallbackRef = useRef<(() => Promise<void>) | null>(null);
-  
+
   // 存储外部参照上传 hook 的配置
   const externalReferenceConfig = useMemo(() => ({
     nodeId: fileId || undefined,
@@ -161,10 +164,10 @@ export const CADEditorDirect: React.FC = () => {
       }
     },
   }), [fileId, currentFileHash]);
-  
+
   // 外部参照上传 hook
   const externalReferenceUpload = useExternalReferenceUpload(externalReferenceConfig);
-  
+
   // 用 ref 包装避免 effect 依赖不稳定对象导致重复执行
   const externalReferenceUploadRef = useRef(externalReferenceUpload);
   externalReferenceUploadRef.current = externalReferenceUpload;
@@ -387,7 +390,6 @@ export const CADEditorDirect: React.FC = () => {
   // 跟踪当前的显示意图（解决 hideEditor 和 showMxCAD 之间的竞态条件）
   // true = 应该显示，false = 应该隐藏，null = 未设置
   const pendingShowActionRef = useRef<boolean | null>(null);
-
   /**
    * 初始化主题同步 - 监听 mxcad-app 的 Vuetify 主题变化
    * 当 mxcad-app 切换主题时，通过 CustomEvent 通知 React ThemeContext
@@ -941,7 +943,7 @@ export const CADEditorDirect: React.FC = () => {
       cancelled = true;
     };
   }, [fileId, isActive, versionParam, navigate, isAuthenticated, personalSpaceId]);
-  
+
   // 监听公开文件上传事件，上传完成后检查外部参照
   useEffect(() => {
     const handlePublicFileUploaded = async (event: CustomEvent<{
@@ -966,29 +968,29 @@ export const CADEditorDirect: React.FC = () => {
         return;
       }
 
-       try {
-          // shouldRetry = true，因为刚上传文件，需要等待生成 preloading.json
-          // forceOpen = false，如果没有外部参照不弹框
-          const hasMissingReferences = await externalReferenceUploadRef.current.checkMissingReferences(fileHash, true, false);
+      try {
+        // shouldRetry = true，因为刚上传文件，需要等待生成 preloading.json
+        // forceOpen = false，如果没有外部参照不弹框
+        const hasMissingReferences = await externalReferenceUploadRef.current.checkMissingReferences(fileHash, true, false);
 
-          if (!hasMissingReferences) {
-            // 如果没有外部参照，直接调用回调打开文件
-            if (openFileCallbackRef.current) {
-              await openFileCallbackRef.current();
-              openFileCallbackRef.current = null;
-            }
-          }
-          // 如果有外部参照，回调会在用户完成操作后通过 onSuccess 调用
-        } catch (error) {
-          console.error('外部参照检查失败:', error);
-          // 即使检查失败，也调用回调打开文件
+        if (!hasMissingReferences) {
+          // 如果没有外部参照，直接调用回调打开文件
           if (openFileCallbackRef.current) {
             await openFileCallbackRef.current();
             openFileCallbackRef.current = null;
           }
         }
+        // 如果有外部参照，回调会在用户完成操作后通过 onSuccess 调用
+      } catch (error) {
+        console.error('外部参照检查失败:', error);
+        // 即使检查失败，也调用回调打开文件
+        if (openFileCallbackRef.current) {
+          await openFileCallbackRef.current();
+          openFileCallbackRef.current = null;
+        }
+      }
     };
-    
+
     window.addEventListener('public-file-uploaded', handlePublicFileUploaded as unknown as EventListener);
 
     return () => {
@@ -1331,7 +1333,7 @@ export const CADEditorDirect: React.FC = () => {
     setShowSaveAsModal(false);
   }, [saveAsFileName]);
 
-// 监听文件打开事件，更新 URL（保留 mode 参数）
+  // 监听文件打开事件，更新 URL（保留 mode 参数）
   useEffect(() => {
     const handleFileOpened = (
       event: CustomEvent<{
@@ -1709,8 +1711,10 @@ export const CADEditorDirect: React.FC = () => {
       navigate('/projects');
     }
   };
-
+  
+    const { activeLanguage } = useVoerkaI18n();
   return (
+
     <div
       className="fixed inset-0"
       style={{
@@ -1720,27 +1724,31 @@ export const CADEditorDirect: React.FC = () => {
         background: 'transparent',
       }}
     >
-      {error && (
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="text-red-500 text-lg mb-4">{error}</div>
-          <Button
-            onClick={handleGoBack}
-            variant="primary"
-          >
-            {isHomeMode ? t('刷新页面') : t('返回项目列表')}
-          </Button>
-        </div>
-      )}
+ 
+        {error && (
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="text-red-500 text-lg mb-4">{error}</div>
+            <Button
+              onClick={handleGoBack}
+              variant="primary"
+            >
+              {isHomeMode ? t('刷新页面') : t('返回项目列表')}
+            </Button>
+          </div>
+        )}
+
 
       {!error && (
         <div className="flex w-full h-screen relative">
-          <SidebarContainer
-            projectId={
-              isHomeMode ? personalSpaceId || '' : currentProjectId || ''
-            }
-            onInsertFile={handleInsertFile}
-            loading={loading}
-          />
+ 
+            <SidebarContainer
+              key={activeLanguage}
+              projectId={
+                isHomeMode ? personalSpaceId || '' : currentProjectId || ''
+              }
+              onInsertFile={handleInsertFile}
+              loading={loading}
+            />
 
           {/* CAD编辑器内容区域 */}
           <div className="flex-1 relative" style={{ background: 'transparent' }}>
@@ -1780,6 +1788,7 @@ export const CADEditorDirect: React.FC = () => {
                 </div>
               </div>
             )}
+          
             {/* 下载格式选择弹窗 */}
             <DownloadFormatModal
               isOpen={showDownloadFormatModal}

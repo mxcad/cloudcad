@@ -8,6 +8,7 @@ import { component,type TranslateComponentType } from "./component"
 import { transform, type TransformResultType } from "./transform"
 import settings from "./settings.json"
 import defaultMessages from "./messages/zh-CN"  
+import { isCADRoute } from "@/utils/hasRoute"
 
 const messages = { 
     'zh-CN'    : defaultMessages,
@@ -27,7 +28,7 @@ export const i18nScope = new VoerkaI18nScope<TranslateComponentType,TransformRes
     loader,                                             // 语言包加载器
     transform,
     ...settings,
-    library: false
+    library: isCADRoute ? true : false
 }) 
 
 

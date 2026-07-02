@@ -703,6 +703,7 @@ export function useDirectoryImport() {
               });
             } else if (imgExts.includes(ext)) {
               await mxCadControllerUploadExtReferenceImage({
+                path: { nodeId },
                 body: { file: matchedFile, nodeId, ext_ref_file: xrefName, updatePreloading: true },
               });
             }

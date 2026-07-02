@@ -1,0 +1,1 @@
+export const isCADRoute = location.pathname === '/' || location.pathname.startsWith('/cad-editor');

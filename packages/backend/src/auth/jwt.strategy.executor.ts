@@ -88,7 +88,32 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
     }
 
     // 有 Token，继续正常的 JWT 验证
-    const result = await super.canActivate(context);
-    return result as boolean;
+    try {
+      const result = await super.canActivate(context);
+      return result as boolean;
+    } catch (error) {
+      // JWT 验证失败时，检查是否为可选认证端点
+      if (isOptionalAuth) {
+        // 尝试回退到 Session 认证
+        if (request.session?.userId) {
+          this.logger.debug(
+            `[JWT] JWT验证失败，回退到 Session 认证: ${request.session.userId}`
+          );
+          request.user = {
+            id: request.session.userId,
+            role: request.session.userRole,
+            email: request.session.userEmail,
+            phone: request.session.userPhone,
+          };
+          return true;
+        }
+        // 回退到匿名模式
+        this.logger.debug(
+          `[JWT] JWT验证失败，端点为可选认证，允许匿名访问`
+        );
+        return true;
+      }
+      throw error;
+    }
   }
 }

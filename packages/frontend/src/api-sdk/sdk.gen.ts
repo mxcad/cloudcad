@@ -1718,7 +1718,7 @@ export const mxCadControllerUploadExtReferenceDwg = <ThrowOnError extends boolea
 
 export const mxCadControllerUploadExtReferenceImage = <ThrowOnError extends boolean = false>(options: Options<MxCadControllerUploadExtReferenceImageData, ThrowOnError>) => (options.client ?? client).post<MxCadControllerUploadExtReferenceImageResponses, MxCadControllerUploadExtReferenceImageErrors, ThrowOnError>({
     ...formDataBodySerializer,
-    url: '/api/v1/mxcad/up_ext_reference_image',
+    url: '/api/v1/mxcad/up_ext_reference_image/{nodeId}',
     ...options,
     headers: {
         'Content-Type': null,

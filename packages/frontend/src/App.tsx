@@ -33,8 +33,9 @@ import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
 import NoPermissionPage from './components/ui/NoPermissionPage';
 import { isMobile } from './utils/isMobile';
 import { getMobileRedirectConfig, getMobileRedirectUrl } from './utils/mobileRedirect';
-import { t } from '@/languages';
+import { i18nScope, t } from '@/languages';
 import { useVoerkaI18n } from '@voerkai18n/react';
+import { isCADRoute } from './utils/hasRoute';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -156,9 +157,6 @@ const PermissionRoute: React.FC<{
 // 原因：CADEditorDirect 卸载会销毁 initThemeSync 的 Vue watch，
 // 导致 CAD 内部主题切换与项目侧栏主题切换无法双向同步。
 function CADEditorRouteGuard() {
-  const location = useLocation();
-  const isCADRoute =
-    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
 
   // 跟踪 CAD 是否已首次加载。加载后必须永久驻留 DOM。
   const everLoadedRef = useRef(false);
@@ -241,6 +239,7 @@ function CADEditorRouteGuard() {
 }
 
 function AppContent() {
+  const { activeLanguage } = useVoerkaI18n(i18nScope);
   return (
     <div className="layout-container">
       {/* 全局加载遮罩 - 覆盖所有内容 */}
@@ -314,7 +313,7 @@ function AppContent() {
           path="/*"
           element={
             <ProtectedRoute>
-              <Layout>
+              <Layout key={activeLanguage}>
                 <Routes>
                   <Route
                     path="/"
@@ -572,14 +571,13 @@ function AppContent() {
 function App() {
   // 品牌配置已在 index.tsx 的 AppInitializer 中加载并缓存
   // BrandProvider 会使用缓存值，无需在此检查 loading 状态
-  const { activeLanguage } = useVoerkaI18n();
   return (
     <BrandProvider>
       <Router>
         <RuntimeConfigProvider>
           <RuntimeConfigSync />
           <TourProvider>
-            <AppContent key={activeLanguage} />
+            <AppContent  />
             {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
             <GlobalTourRenderer />
           </TourProvider>

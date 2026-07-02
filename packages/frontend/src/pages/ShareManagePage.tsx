@@ -265,11 +265,19 @@ export const ShareManagePage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              icon={Trash2}
               onClick={() => setShowBatchRevokeConfirm(true)}
               style={{ color: 'var(--error)' }}
             >
-               <span className="hidden sm:inline">{t("批量撤销")}</span> ({selectedTokens.size})
+              <div className="relative">
+                <Trash2 size={14} />
+                <span
+                  className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-bold rounded-full"
+                  style={{ background: 'var(--error)', color: 'white' }}
+                >
+                  {selectedTokens.size > 99 ? '99+' : selectedTokens.size}
+                </span>
+              </div>
+              <span className="hidden sm:inline">{t("批量撤销")}</span>
             </Button>
           )}
           {items.length > 0 && (

@@ -2666,7 +2666,7 @@ export const handlers = [
     return HttpResponse.json(responseJson, init);
   }),
   http.post(
-    `${baseURL}/api/v1/mxcad/up_ext_reference_image`,
+    `${baseURL}/api/v1/mxcad/up_ext_reference_image/:nodeId`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
       let requestJson = null;
@@ -2690,7 +2690,7 @@ export const handlers = [
 
       const [body, init] =
         resultArray[
-          next(`post /api/v1/mxcad/up_ext_reference_image`) % resultArray.length
+          next(`post /api/v1/mxcad/up_ext_reference_image/:nodeId`) % resultArray.length
         ];
       const responseJson =
         requestJson && body && typeof body === "object" && !Array.isArray(body)

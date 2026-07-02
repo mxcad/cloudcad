@@ -7073,9 +7073,11 @@ export type MxCadControllerUploadExtReferenceDwgResponse = MxCadControllerUpload
 
 export type MxCadControllerUploadExtReferenceImageData = {
     body: UploadExtReferenceFileDto;
-    path?: never;
+    path: {
+        nodeId: string;
+    };
     query?: never;
-    url: '/api/v1/mxcad/up_ext_reference_image';
+    url: '/api/v1/mxcad/up_ext_reference_image/{nodeId}';
 };
 
 export type MxCadControllerUploadExtReferenceImageErrors = {

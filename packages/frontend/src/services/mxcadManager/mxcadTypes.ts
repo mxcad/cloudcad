@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 import { t } from '@/languages';
-import type { McDbEntity } from 'mxcad';
+import type { McDbRasterImage } from 'mxcad';
 /**
  * MxCAD Manager — 类型定义
  * 集中的类型定义，供所有子模块使用
@@ -38,7 +38,7 @@ export interface CurrentFileInfo {
 export interface PendingImage {
   url: string;
   fileName: string;
-  entity: McDbEntity;
+  entity: McDbRasterImage;
   file?: File;
 }
 

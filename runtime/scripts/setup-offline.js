@@ -1626,6 +1626,22 @@ function copyEnvExampleToEnv() {
 }
 
 /**
+ * 静默迁移 SVN 仓库目录（svn-repo → mx-repo）
+ * 旧版使用 data/svn-repo，新版改为 data/mx-repo。升级部署时自动重命名。
+ */
+function migrateSvnRepo() {
+  const oldDir = path.join(PROJECT_ROOT, 'data', 'svn-repo');
+  const newDir = path.join(PROJECT_ROOT, 'data', 'mx-repo');
+  if (!fs.existsSync(oldDir)) return;
+  if (fs.existsSync(newDir)) return;
+  const svnDbDir = path.join(oldDir, 'db');
+  if (!fs.existsSync(svnDbDir)) return;
+  try {
+    fs.renameSync(oldDir, newDir);
+  } catch (_) {}
+}
+
+/**
  * 设置所有包装脚本
  */
 function setupWrappers() {
@@ -1690,6 +1706,10 @@ function setup(options = {}) {
 
   // 0. 设置 runtime 目录执行权限（Linux 解压后可能丢失）
   setRuntimePermissions();
+
+  // 0.1 迁移 SVN 仓库目录（svn-repo → mx-repo）
+  // 旧版使用 data/svn-repo，新版使用 data/mx-repo
+  migrateSvnRepo();
 
   // 1. 运行 pnpm install --offline 重建依赖
   // deployBackendOnly 时只安装后端依赖
@@ -1767,14 +1787,15 @@ function main() {
     process.exit(1);
   }
 
-  log('完成！');
-  console.log('');
-  log('1. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
-  log('2. .env 配置文件已从 .env.example 自动创建');
-  log('3. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
-  log('4. 这些命令会使用离线 Node.js，不影响系统环境');
-  log('5. npm scripts 也会自动使用离线 Node.js');
-  log('6. Git Bash: 执行以下命令即可在项目子目录直接使用 pnpm:');
+    log('完成！');
+    console.log('');
+    log('1. SVN 仓库目录已迁移: data/svn-repo → data/mx-repo（如存在旧目录）');
+    log('2. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
+    log('3. .env 配置文件已从 .env.example 自动创建');
+    log('4. 在项目目录下可直接运行 pnpm/npm/node/npx 命令');
+    log('5. 这些命令会使用离线 Node.js，不影响系统环境');
+    log('6. npm scripts 也会自动使用离线 Node.js');
+    log('7. Git Bash: 执行以下命令即可在项目子目录直接使用 pnpm:');
   const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
   log('   source ' + projectRootUnix + '/project-env.sh');
   console.log('');

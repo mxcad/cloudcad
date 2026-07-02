@@ -12,17 +12,12 @@
 
 import { useUIStore } from '../../stores/uiStore';
 import { createPortal } from 'react-dom';
-import { useLocation } from 'react-router-dom';
 import { Z_LAYERS } from '../../constants/layers';
 import { t } from '@/languages';
+import { isCADRoute } from '@/utils/hasRoute';
 
 export const LoadingOverlay = () => {
   const { globalLoading, loadingMessage, loadingProgress } = useUIStore();
-  const location = useLocation();
-
-  const isCADRoute =
-    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
-
   if (!globalLoading || !isCADRoute) return null;
 
   return createPortal(

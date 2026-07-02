@@ -25,6 +25,7 @@ import {
   Layers,
   Palette,
   Shapes,
+  CheckSquare,
 } from 'lucide-react';
 import { Button, Input, Select, Tab, Tabs, Tag } from '@/components/ui';
 import { SearchInput } from '@/components/search/SearchInput';
@@ -595,7 +596,16 @@ export default function FontLibrary(props: FontLibraryProps) {
                 onChange={handleSelectAll}
                 className="w-4 h-4 rounded border-border-default text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm text-text-secondary">
+              <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0">
+                <CheckSquare size={20} className="sm:hidden" style={{ color: 'var(--primary-500)' }} />
+                <span
+                  className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full sm:hidden"
+                  style={{ background: 'var(--primary-500)', color: 'var(--text-inverse)' }}
+                >
+                  {selectedFonts.size > 99 ? '99+' : selectedFonts.size}
+                </span>
+              </div>
+              <span className="hidden sm:inline text-sm text-text-secondary">
                 {t("已选择")}{' '}
                 <span className="font-semibold text-text-primary">
                   {selectedFonts.size}

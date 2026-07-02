@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderPlus, HardDrive, Save, Scissors, Copy, Trash2, Clipboard, X } from 'lucide-react';
+import { FolderPlus, HardDrive, Save, Scissors, Copy, Trash2, Clipboard, X, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -651,11 +651,20 @@ export const LibraryManager: React.FC = () => {
   }, [clearSelection, clearClipboard]);
 
   const bottomBar = (showSelectionBar || showClipboardBar) ? (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-2 sm:gap-4">
       {showSelectionBar && (
         <>
-          <span className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{t("已选中")} {selectedNodes.size} {t("项")}</span>
-          <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
+          <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px]">
+            <CheckSquare size={20} style={{ color: 'var(--primary-500)' }} />
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full"
+              style={{ background: 'var(--primary-500)', color: 'var(--text-inverse)' }}
+            >
+              {selectedNodes.size > 99 ? '99+' : selectedNodes.size}
+            </span>
+          </div>
+          <span className="hidden sm:inline text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{t("已选中")} {selectedNodes.size} {t("项")}</span>
+          <div className="hidden sm:block w-px h-4" style={{ background: 'var(--border-default)' }} />
           {canManage && (
             <>
               <Button variant="secondary" icon={Scissors} onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}><span className="hidden sm:inline">{t("剪切")}</span></Button>
@@ -942,7 +951,7 @@ export const LibraryManager: React.FC = () => {
           </div>
           {bottomBar && (
             <div className="flex-shrink-0 flex justify-center">
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+              <div className="inline-flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 sm:py-3 rounded-full shadow-2xl" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
                 {bottomBar}
               </div>
             </div>

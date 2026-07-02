@@ -42,6 +42,9 @@ const OS_BASE_IMAGES = {
   rocky9: 'rockylinux:9',
 };
 
+// glibc >= 2.35 的系统需要 SystemLib 版本的 mxcad 二进制
+const NEEDS_SYSTEM_LIB = ['ubuntu22', 'ubuntu24'];
+
 // ==================== 二进制缓存配置 ====================
 
 const CACHE_DIR = path.join(PROJECT_ROOT, 'runtime', 'cache');
@@ -118,8 +121,17 @@ async function buildPackImage(os = 'centos7') {
     throw new Error(`找不到 Dockerfile: ${dockerfilePath}`);
   }
   
+  const useSystemLib = NEEDS_SYSTEM_LIB.includes(os);
+  
   log(`基础镜像: ${baseImage}`);
-  await runCommand(`docker build -t ${IMAGE_NAME} -f "${dockerfilePath}" --build-arg BASE_IMAGE=${baseImage} "${PROJECT_ROOT}"`);
+  log(`SystemLib 覆盖: ${useSystemLib ? '是 (glibc >= 2.35)' : '否'}`);
+  
+  const buildArgs = [
+    `--build-arg BASE_IMAGE=${baseImage}`,
+    useSystemLib ? '--build-arg USE_SYSTEM_LIB=true' : '',
+  ].filter(Boolean).join(' ');
+  
+  await runCommand(`docker build -t ${IMAGE_NAME} -f "${dockerfilePath}" ${buildArgs} "${PROJECT_ROOT}"`);
   
   log('✓ 打包镜像构建完成');
 }

@@ -19,7 +19,7 @@
 
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
-import type { McDbEntity } from 'mxcad';
+import { McDbRasterImage } from 'mxcad';
 // ==================== 从子模块重新导出 ====================
 
 export {
@@ -1449,125 +1449,16 @@ MxFun.addCommand('Mx_SaveToCloud', () => {
  * Mx_SaveAsToCloud 命令：另存为到云图（选择位置保存）
  */
 MxFun.addCommand('Mx_SaveAsToCloud', async () => {
-  if (!isAuthenticated() || isAccessTokenExpired()) {
+   if (!isAuthenticated() || isAccessTokenExpired()) {
     cancelLoginRedirect();
     window.dispatchEvent(
       new CustomEvent('mxcad-save-required', {
-        detail: { action: t('保存文件') },
+        detail: { action: '保存文件' },
       })
     );
     return;
   }
-
-  try {
-  if (!getFileInfo()) {
-      // 没有打开的文件（可能是空白画布新建的文件），弹出保存弹窗
-      const { isAuthenticated: authCheck } = await import('../../utils/authCheck');
-      const { isAccessTokenExpired: tokenExpiredCheck } = await import('../../utils/tokenUtils');
-      if (!authCheck() || tokenExpiredCheck()) {
-        window.dispatchEvent(
-          new CustomEvent('mxcad-save-required', {
-              detail: { action: t('保存文件') },
-          })
-        );
-        return;
-      }
-      let personalSpaceId: string | null = null;
-      try {
-        personalSpaceId = await getPersonalSpaceId();
-      } catch {
-        // 获取私人空间 ID 失败（如 token 过期），降级为 null
-      }
-      await showSaveAsDialog(personalSpaceId, 'untitled');
-      return;
-    }
-
-    let personalSpaceId: string | null = null;
-    try {
-      personalSpaceId = await getPersonalSpaceId();
-    } catch {
-      // 获取私人空间 ID 失败（如 token 过期），降级为 null
-    }
-
-    // 判断是否是我的图纸（个人空间中的图纸）
-    const isMyDrawing =
-      personalSpaceId && getFileInfo()!.parentId === personalSpaceId;
-
-    // 判断是否是公共资源库文件（通过 libraryKey 判断）
-    const isLibraryFile = !!getFileInfo()?.libraryKey;
-
-    // 如果是我的图纸，直接保存
-    if (isMyDrawing) {
-      await saveToCurrentFile(personalSpaceId);
-      return;
-    }
-
-    // 如果是公共资源库文件（需要判断用户是否有库管理权限）
-    if (isLibraryFile) {
-      // 检查用户是否有库管理权限
-      // 检查 localStorage 中的用户权限
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          const userPermissions = userData?.role?.permissions || [];
-          const permissionStrings = userPermissions.map(
-            (p: string | { permission: string }) => (typeof p === 'string' ? p : p.permission)
-          );
-
-          const hasLibraryPermission =
-            permissionStrings.includes('LIBRARY_DRAWING_MANAGE') ||
-            permissionStrings.includes('LIBRARY_BLOCK_MANAGE');
-
-          if (hasLibraryPermission) {
-            await saveLibraryFile();
-          } else {
-            const fileName = getFileInfo()?.name || 'untitled';
-            await showSaveAsDialog(personalSpaceId, fileName);
-          }
-        } catch (error) {
-          handleError(error, 'mxcadManager: Mx_Save library permission check');
-          const fileName = getFileInfo()?.name || 'untitled';
-          await showSaveAsDialog(personalSpaceId, fileName);
-        }
-      } else {
-        // 无用户数据，弹出另存为
-        const fileName = getFileInfo()?.name || 'untitled';
-        await showSaveAsDialog(personalSpaceId, fileName);
-      }
-      return;
-    }
-
-    // 如果是项目图纸，需要检查用户是否有保存权限
-    const fileInfoForSave = getFileInfo()!;
-    if (fileInfoForSave.projectId) {
-      try {
-        const response = await fileSystemControllerCheckProjectPermission({
-          path: { projectId: fileInfoForSave.projectId },
-          query: { permission: 'CAD_SAVE' },
-        });
-        if (response.data?.hasPermission) {
-          // 用户有该项目保存权限，直接保存
-          await saveToCurrentFile(personalSpaceId);
-          return;
-        }
-        // 没有权限，继续执行弹出另存为窗口
-      } catch (error) {
-        handleError(error, 'mxcadManager: Mx_Save project permission check');
-        // 权限检查失败，继续执行弹出另存为窗口
-      }
-    }
-
-    // 非我的图纸 或 没有项目保存权限，弹出另存为窗口
-    const fileName = getFileInfo()?.name || 'untitled';
-    await showSaveAsDialog(personalSpaceId, fileName);
-  } catch (error) {
-    handleError(error, 'mxcadManager: Mx_Save');
-    hideGlobalLoading();
-    const errorMessage =
-      error instanceof Error ? error.message : t('保存失败，请稍后重试');
-    globalShowToast(errorMessage, 'error');
-  }
+  await triggerSaveAs();
 });
 
 
@@ -2730,17 +2621,18 @@ export const mxcadManager = MxCADManager.getInstance();
 MxFun.addCommand('Mx_InsertImageWithUpload', () => {
 
   // 调用内置 _InsertImage 命令，并在回调中记录图片信息
-  MxFun.sendStringToExecute('_InsertImage', async (data: { url: string; fileName: string; entity: McDbEntity }) => {
+  MxFun.sendStringToExecute('_InsertImage', async (data: { url: string; fileName: string; entity: McDbRasterImage }) => {
     if (!data) {
       return;
-    }
+    }   
 
     const { url, fileName, entity } = data;
 
-    const isDuplicate = pendingImages.some(img => img.fileName === fileName);
+    const isDuplicate = pendingImages.some(img => img.entity.imageDefId().id === entity.imageDefId().id);
     if (isDuplicate) {
       return;
     }
+
 
     pendingImages.push({
       url,
@@ -2762,16 +2654,27 @@ export async function processPendingImages(): Promise<void> {
   if (!currentInfo?.fileId || pendingImages.length === 0) {
     return;
   }
+  const { MxCADSelectionSet, MxCADResbuf, DxfCode } = await import("mxcad")
+  const selectionSet = new MxCADSelectionSet()
 
+  // const resbuf = new MxCADResbuf()
+  // resbuf.AddMcDbEntityTypes("RASTERIMAGE")
+  // resbuf.AddString("RASTERIMAGE", 5020);
+  const imgIds = new Set<number>()
+  selectionSet.allSelect()
+  selectionSet.forEach((id)=> {
+    const entity = id.getMcDbEntity()
+    if(entity instanceof McDbRasterImage) {
+      imgIds.add(entity.imageDefId().id)
+    }
+  })
   // 过滤掉已删除的图片
   const validImages = pendingImages.filter(img => {
     try {
-      if (img.entity && typeof img.entity === 'object' && 'isErased' in img.entity) {
-        return !(img.entity)?.isErased();
-      }
-      return true;
+      if (imgIds.has(img.entity.imageDefId().id)) return true;
+      return false;
     } catch {
-      return true;
+      return false;
     }
   });
 
@@ -2794,10 +2697,12 @@ export async function processPendingImages(): Promise<void> {
 
       // 上传到外部参照目录（使用 SDK）
       await mxCadControllerUploadExtReferenceImage({
+        path: { nodeId: currentInfo.fileId },
         body: {
           file,
           nodeId: currentInfo.fileId,
           ext_ref_file: img.fileName,
+          updatePreloading: true,
         },
       });
     } catch (error) {

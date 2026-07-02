@@ -632,7 +632,7 @@ export class MxCadController {
    *
    * 图片不需要转换，直接拷贝到源图纸的 hash 目录。
    */
-  @Post('up_ext_reference_image')
+  @Post('up_ext_reference_image/:nodeId')
   @UseGuards(JwtAuthGuard, RequireProjectPermissionGuard)
   @RequireProjectPermission(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   @UseInterceptors(FileInterceptor('file'))
@@ -663,19 +663,23 @@ export class MxCadController {
     description: '无效的外部参照文件',
   })
   async uploadExtReferenceImage(
+    @Param('nodeId') nodeId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: UploadExtReferenceFileDto,
     @Req() request: MxCadRequest,
     @Res() res: Response
   ) {
+    body.nodeId = nodeId;
     this.logger.log(`[uploadExtReferenceImage] 开始处理: ${body.ext_ref_file}`);
 
-    // 验证上传请求
+    // 验证上传请求（图片不限制扩展名，跳过预加载文件名匹配，仅检查 MIME 是否为 image/）
     const validationResult = await this.validateExtReferenceUpload(
       file,
       body,
       'uploadExtReferenceImage',
-      ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']
+      null,
+      true,
+      'image/'
     );
 
     if (!validationResult.success) {
@@ -766,6 +770,10 @@ export class MxCadController {
         try {
           await this.mxCadService.updateExternalReferenceAfterUpload(
             body.nodeId
+          );
+          await this.mxCadService.addImageToPreloadingData(
+            body.nodeId,
+            body.ext_ref_file
           );
           this.logger.log(
             `[uploadExtReferenceImage] 外部参照信息已更新: nodeId=${body.nodeId}`
@@ -2189,14 +2197,18 @@ export class MxCadController {
    * @param file 上传的文件
    * @param body 请求体
    * @param methodPrefix 方法前缀（用于日志）
-   * @param allowedExtensions 允许的文件扩展名列表
+   * @param allowedExtensions 允许的文件扩展名列表（null 时不检查扩展名）
+   * @param skipPreloadingCheck 是否跳过预加载数据检查
+   * @param allowedMimePrefix 允许的 MIME 类型前缀（如 'image/'），null 时不检查
    * @returns 验证结果
    */
   private async validateExtReferenceUpload(
     file: Express.Multer.File | null,
     body: UploadExtReferenceFileDto,
     methodPrefix: string,
-    allowedExtensions: string[]
+    allowedExtensions: string[] | null,
+    skipPreloadingCheck = false,
+    allowedMimePrefix: string | null = null
   ): Promise<{
     success: boolean;
     error?: { code: number; message: string };
@@ -2225,19 +2237,21 @@ export class MxCadController {
       return { success: false, error: { code: -1, message: '图纸文件不存在' } };
     }
 
-    // 4. 验证外部参照文件是否在预加载数据列表中
-    const isValidReference =
-      preloadingData.externalReference.includes(body.ext_ref_file) ||
-      preloadingData.images.includes(body.ext_ref_file);
+    // 4. 验证外部参照文件是否在预加载数据列表中（图片跳过此检查，兼容 .jfif 等扩展名变体）
+    if (!skipPreloadingCheck) {
+      const isValidReference =
+        preloadingData.externalReference.includes(body.ext_ref_file) ||
+        preloadingData.images.includes(body.ext_ref_file);
 
-    if (!isValidReference) {
-      this.logger.warn(
-        `[${methodPrefix}] 无效的外部参照文件: ${body.ext_ref_file}`
-      );
-      return {
-        success: false,
-        error: { code: -1, message: '无效的外部参照文件' },
-      };
+      if (!isValidReference) {
+        this.logger.warn(
+          `[${methodPrefix}] 无效的外部参照文件: ${body.ext_ref_file}`
+        );
+        return {
+          success: false,
+          error: { code: -1, message: '无效的外部参照文件' },
+        };
+      }
     }
 
     // 5. 验证文件名安全性（防止路径遍历攻击）
@@ -2263,7 +2277,7 @@ export class MxCadController {
     }
 
     // 7. 验证文件类型
-    if (!this.validateFileType(body.ext_ref_file, allowedExtensions)) {
+    if (allowedExtensions && !this.validateFileType(body.ext_ref_file, allowedExtensions)) {
       this.logger.warn(
         `[${methodPrefix}] 不支持的文件类型: ${body.ext_ref_file}`
       );
@@ -2271,6 +2285,17 @@ export class MxCadController {
       return {
         success: false,
         error: { code: -1, message: `仅支持 ${allowedTypes} 文件` },
+      };
+    }
+
+    // 8. 验证 MIME 类型
+    if (allowedMimePrefix && !file.mimetype.startsWith(allowedMimePrefix)) {
+      this.logger.warn(
+        `[${methodPrefix}] 不支持的 MIME 类型: ${file.mimetype}`
+      );
+      return {
+        success: false,
+        error: { code: -1, message: `仅支持 ${allowedMimePrefix} 类型的文件` },
       };
     }
 

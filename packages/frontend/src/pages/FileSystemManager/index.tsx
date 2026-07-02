@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Scissors, Copy, Trash2, Clipboard, RotateCcw, X } from 'lucide-react';
+import { AlertCircle, Scissors, Copy, Trash2, Clipboard, RotateCcw, X, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -968,14 +968,23 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
       <div className="flex items-center gap-4">
         {showSelectionBar && (
           <>
+            <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px] multi-select-badge-wrap">
+              <CheckSquare size={20} style={{ color: 'var(--primary-500)' }} />
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full multi-select-badge"
+                style={{ background: 'var(--primary-500)', color: 'var(--text-inverse)' }}
+              >
+                {selectedNodes.size > 99 ? '99+' : selectedNodes.size}
+              </span>
+            </div>
             <span
-              className="text-sm font-semibold whitespace-nowrap"
+              className="hidden sm:inline text-sm font-semibold whitespace-nowrap"
               style={{ color: 'var(--text-primary)' }}
             >
                {t("已选中")} {selectedNodes.size} {t("项")}
             </span>
             <div
-              className="w-px h-4"
+              className="hidden sm:block w-px h-4"
               style={{ background: 'var(--border-default)' }}
             />
 
@@ -1050,7 +1059,6 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           >
             <Button
               variant="secondary"
-              icon={Clipboard}
               onClick={clipboardHandlePaste}
               disabled={clipboardItems.length === 0 || !canPaste}
               style={{
@@ -1058,17 +1066,22 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
                 border: 'none',
                 borderRadius: 0,
               }}
-              className="relative px-3"
+              className={`relative pl-3 ${clipboardItems.length > 0 ? 'pr-0' : 'pr-3'}`}
             >
-              <span className="hidden sm:inline">{t("粘贴")}</span>
-              {clipboardItems.length > 0 && (
-                <span
-                  className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
-                  style={{ background: 'var(--primary-500)', color: '#fff' }}
-                >
-                  {clipboardItems.length}
+              <div className="flex items-center gap-1.5">
+                <span className="relative inline-flex">
+                  <Clipboard size={16} />
+                  {clipboardItems.length > 0 && (
+                    <span
+                      className="absolute -top-1 -right-2 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 rounded-full text-[9px] font-bold leading-none"
+                      style={{ background: 'var(--primary-500)', color: '#fff' }}
+                    >
+                      {clipboardItems.length}
+                    </span>
+                  )}
                 </span>
-              )}
+                <span className="hidden sm:inline">{t("粘贴")}</span>
+              </div>
             </Button>
             {clipboardItems.length > 0 && (
               <Button
@@ -1360,7 +1373,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           {bottomBar && (
             <div className={`flex-shrink-0 flex justify-center${isMobile ? ' sticky bottom-0 pb-[env(safe-area-inset-bottom)] bg-[var(--bg-primary)]' : ''}`}>
               <div
-                className="inline-flex items-center gap-4 px-6 py-3 rounded-full shadow-2xl"
+                className="inline-flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 sm:py-3 rounded-full shadow-2xl multi-select-bar-pill"
                 style={{
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--border-default)',

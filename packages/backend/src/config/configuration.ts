@@ -269,7 +269,7 @@ export default (): AppConfig => {
 
 	// 存储路径配置（默认在 data/ 目录下）
 	filesDataPath: resolvePath(process.env.FILES_DATA_PATH || "data/files"),
-	mxRepoPath: resolvePath(process.env.MX_REPO_PATH || "data/svn-repo"),
+	mxRepoPath: resolvePath(process.env.MX_REPO_PATH || "data/mx-repo"),
 	mxcadUploadPath: resolvePath(process.env.MXCAD_UPLOAD_PATH || "data/uploads"),
 	mxcadTempPath: resolvePath(process.env.MXCAD_TEMP_PATH || "data/temp"),
 

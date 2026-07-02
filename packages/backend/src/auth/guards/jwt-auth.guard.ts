@@ -108,8 +108,26 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       }
       return result;
     } catch (error) {
-      const err = error as Error;
+      // JWT 验证失败时，检查是否为可选认证端点
+      if (isOptionalAuth) {
+        // 尝试回退到 Session 认证
+        if (request.session?.userId) {
+          this.logger.debug(
+            `JWT验证失败，回退到 Session 认证: ${request.session.userId}`
+          );
+          request.user = {
+            id: request.session.userId,
+            role: request.session.userRole,
+            email: request.session.userEmail,
+          };
+          return true;
+        }
+        // 回退到匿名模式
+        this.logger.debug('JWT验证失败，端点为可选认证，允许匿名访问');
+        return true;
+      }
 
+      const err = error as Error;
       if (error instanceof UnauthorizedException) {
         throw error;
       }

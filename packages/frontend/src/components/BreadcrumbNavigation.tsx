@@ -179,12 +179,12 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
     );
   }
 
-  const separator = (idx: number, isLast: boolean) =>
-    isLast || idx === 0 ? null : <span className="text-slate-400 mx-1 select-none">/</span>;
+  const separator = (idx: number) =>
+    idx === 0 ? null : <span className="text-slate-400 mx-1 select-none">/</span>;
 
   const renderCrumb = (crumb: BreadcrumbItem, index: number, isLast: boolean) => (
     <React.Fragment key={crumb.id}>
-      {separator(index, isLast)}
+      {separator(index)}
       <button
         ref={(el) => { itemRefs.current[index] = el; }}
         data-breadcrumb-item
@@ -262,7 +262,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
       {variant === 'panel' && needsCollapse && collapsedBreadcrumb.visible[0] ? (
         <>
           {renderCrumb(collapsedBreadcrumb.visible[0], 0, false)}
-          {separator(1, false)}
+          {separator(1)}
           {collapsedBreadcrumb.collapsed.length > 0 && (
             <Menu>
               <Menu.Trigger>
@@ -285,7 +285,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
               </Menu.Content>
             </Menu>
           )}
-          {separator(1, false)}
+          {separator(1)}
           {collapsedBreadcrumb.visible.slice(1).map((item, idx) => {
             if (!item) return null;
             const isLast = idx === collapsedBreadcrumb.visible.length - 2;

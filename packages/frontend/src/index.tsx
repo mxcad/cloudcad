@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
@@ -9,9 +9,8 @@ import { fetchBrandConfig } from './constants/appConfig';
 import { STALE_TIME_DEFAULT, INIT_TIMEOUT } from './constants/timeouts';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { VoerkaI18nProvider } from '@voerkai18n/react';
-import { t } from '@/languages';
-import './languages';
 
+import './languages';
 
 // MSW 浏览器 worker：仅在测试环境（VITE_MSW=true）下启动
 if (import.meta.env.VITE_MSW === 'true') {
@@ -28,6 +27,8 @@ import './styles/app.css';
 import './styles/icon.js';
 import './components/drop-indicator/DropIndicator.css';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { isCADRoute } from './utils/hasRoute';
+import { i18nScope } from './languages';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,92 +38,97 @@ const queryClient = new QueryClient({
     },
   },
 });
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Could not find root element to mount to');
 }
 
-// 应用启动器：先等待 API Client 和 Brand Config 初始化完成，再渲染应用
-const AppInitializer: React.FC = () => {
-  const [isReady, setIsReady] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      console.warn('[CloudCAD] Brand Config 超时，继续渲染');
-      setIsReady(true);
-    }, INIT_TIMEOUT);
-
-    fetchBrandConfig()
-      .then((brandConfig) => {
-        clearTimeout(timeoutId);
-        setIsReady(true);
-      })
-      .catch((err) => {
-        console.error('[CloudCAD] 初始化失败:', err);
-        clearTimeout(timeoutId);
-        setInitError(err instanceof Error ? err.message : String(err));
-        // 即使失败也继续渲染，让应用使用默认配置
-        setIsReady(true);
-      });
-  }, []);
-
-  if (!isReady) {
-    // 显示一个可见的 loading 状态
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          background: '#1e293b',
-          color: 'white',
-          fontFamily: 'system-ui, sans-serif',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              border: '3px solid rgba(255,255,255,0.2)',
-              borderTopColor: '#6366f1',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-              margin: '0 auto 16px',
-            }}
-          />
-          <p>{t("正在加载 CloudCAD...")}</p>
-          {initError && (
-            <p style={{ color: '#f87171', fontSize: 12, marginTop: 8 }}>
-              {t("初始化错误:")} {initError}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
+// 1. 修复：Load 组件原本缺少 return 语句，这里补全
+const Load: React.FC<{ initError: string | null }> = ({ initError }) => {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <NotificationProvider>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </NotificationProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>  
+    <div
+      className="fixed inset-0 flex flex-col items-center justify-center"
+      style={{ background: 'var(--bg-primary)' }}
+    >
+      <div
+        className="animate-spin rounded-full h-8 w-8"
+        style={{
+          border: '2px solid var(--border-strong)',
+          borderTopColor: 'var(--accent-600)',
+        }}
+      />
+      <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
+       loading...
+      </p>
+    </div>
   );
 };
 
+// 2. 核心修改：将 CAD 加载逻辑移入 AppInitializer 内部
+const AppInitializer: React.FC = () => {
+  const [isReady, setIsReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initApp = async () => {
+      // 1. 初始化 Brand Config
+      const timeoutId = setTimeout(() => {
+        console.warn('[CloudCAD] Brand Config 超时，继续渲染');
+      }, INIT_TIMEOUT);
+
+      try {
+        await fetchBrandConfig();
+        clearTimeout(timeoutId);
+      } catch (err) {
+        console.error('[CloudCAD] 初始化失败:', err);
+        clearTimeout(timeoutId);
+        setInitError(err instanceof Error ? err.message : String(err));
+      }
+
+      // 2. 如果是 CAD 路由，必须等待 CAD 模块加载完毕
+      if (isCADRoute) {
+        try {
+          await import('mxcad-app');
+        } catch (err) {
+          console.error('[CloudCAD] CAD 模块加载失败:', err);
+          setInitError('CAD 模块加载失败');
+        }
+      }
+
+      // 3. 只有当配置加载完，且 CAD 模块（如果需要）也加载完后，才放行
+      setIsReady(true);
+    };
+
+    initApp();
+  }, []);
+
+  // 4. 在 isReady 之前，拦截所有渲染，包括 VoerkaI18nProvider
+  if (!isReady) {
+    return <Load initError={initError} />;
+  }
+
+  // 5. 只有 isReady 为 true 时，才会渲染 VoerkaI18nProvider
+  return (
+    <VoerkaI18nProvider fallback={null}>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <NotificationProvider>
+              <AuthProvider>
+                <App />
+              </AuthProvider>
+            </NotificationProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </VoerkaI18nProvider>
+  );
+};
 // 避免 HMR 时重复 createRoot
 const root: ReactDOM.Root = ((window as unknown as Record<string, unknown>).__cloudCAD_root as ReactDOM.Root) ?? ReactDOM.createRoot(rootElement);
 (window as unknown as Record<string, unknown>).__cloudCAD_root = root;
+
 root.render(
-  <VoerkaI18nProvider fallback={null}>
-    <AppInitializer />
-  </VoerkaI18nProvider>
+  <AppInitializer />
 );

@@ -32,7 +32,7 @@ export const FileItemSelection: React.FC<FileItemSelectionProps> = memo(
               : 'opacity-0 group-hover:opacity-100'
         } ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
         style={{
-          background: isSelected ? 'var(--primary-500)' : isGrid ? 'var(--bg-secondary)' : 'transparent',
+          background: isSelected ? 'var(--primary-500)' : 'var(--bg-secondary)',
           borderColor: isSelected ? 'var(--primary-500)' : 'var(--border-default)',
         }}
         draggable={isDraggable}

@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useVoerkaI18n } from '@voerkai18n/react';
 import { Languages, Check } from 'lucide-react';
-import { t } from '@/languages';
+import { i18nScope, t } from '@/languages';
 import { Button } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
 import { Menu } from './ui/Menu';
 
 export const LanguageSwitcher: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const { activeLanguage, changeLanguage, languages } = useVoerkaI18n();
-
+  const { activeLanguage, changeLanguage, languages } = useVoerkaI18n(i18nScope);
+  const changeLanguageHandler = async (lang: string) => {
+    const { mxcadApp } = await import("mxcad-app")
+    changeLanguage(lang)
+    mxcadApp.i18nScope.change(lang)
+  }
   const languageLabels: Record<string, string> = {
     'zh-CN': t('简体中文'),
     'en-US': 'English',
@@ -45,7 +49,7 @@ export const LanguageSwitcher: React.FC = () => {
             key={lang.name}
             onClick={async () => {
               try {
-                await changeLanguage(lang.name);
+                await changeLanguageHandler(lang.name);
               } catch (err) {
                 console.error('[i18n] switch failed:', err);
               }

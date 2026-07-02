@@ -22,6 +22,7 @@ import type {
 import { getTourGuides } from '../config/tourGuides';
 import { useVoerkaI18n } from '@voerkai18n/react';
 import { useAuth } from './AuthContext';
+import { i18nScope } from '@/languages';
 
 /** localStorage 存储键名 */
 const TOUR_DISMISSED_KEY = 'cloudcad_tour_dismissed';
@@ -224,7 +225,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
   children,
   guides,
 }) => {
-  useVoerkaI18n();
+  useVoerkaI18n(i18nScope);
   const effectiveGuides = guides ?? getTourGuides();
 
   // 过滤掉隐藏的引导，仅显示在引导中心

@@ -851,7 +851,6 @@ input[type="password"]::-webkit-textfield-decoration-container {
   input[type="text"],
   input[type="email"],
   input[type="password"],
-  input[type="number"],
   input[type="tel"],
   input[type="url"],
   input[type="search"],
@@ -873,8 +872,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* ===== 全局 hover 效果移动端禁用 ===== */
-  /* 卡片 hover */
+  /* 隐藏桌面端特有的 hover 效果 */
   .card-hover:hover,
   .btn-hover-lift:hover,
   .file-item-grid:hover,
@@ -884,9 +882,6 @@ input[type="password"]::-webkit-textfield-decoration-container {
 
   /* 触摸设备禁用 hover 视觉反馈 */
   @media (hover: none) and (pointer: coarse) {
-    .hover\:bg-\[var\(--bg-tertiary\)\]:hover {
-      background-color: initial !important;
-    }
     .hover\:shadow-lg:hover,
     .hover\:-translate-y-0\.5:hover,
     .hover\:scale-110:hover {
@@ -895,72 +890,30 @@ input[type="password"]::-webkit-textfield-decoration-container {
     }
   }
 
-  /* 触摸反馈 — 使用 active 替代 hover */
-  button:active,
-  [role="button"]:active,
-  a:active {
-    opacity: 0.8;
-  }
-
-  /* 列表项在移动端增加触摸高亮 */
-  .file-item-list:active,
-  [data-tour="file-item"]:active {
-    background-color: var(--bg-tertiary) !important;
-  }
-
   /* 底部安全区域 */
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* 移动端所有可点击元素最小触摸区域 */
-  button,
-  [role="button"],
-  a,
-  input,
-  select,
-  textarea {
-    min-height: 44px;
+  /* 移动端多选复选框常显 */
+  .group [data-drag-handle] {
+    opacity: 1 !important;
   }
+}
 
-  /* 修复移动端输入框字体 */
-  input, textarea, select {
-    font-size: 16px !important;
-  }
-
-  /* ===== 全局 hover 效果移动端禁用 ===== */
-  /* 卡片 hover */
-  .card-hover:hover,
-  .btn-hover-lift:hover,
-  .file-item-grid:hover,
-  .file-item-list:hover {
-    transform: none !important;
-  }
-
-  /* Tailwind hover: 类名覆盖 - 无法直接用选择器的用 data-mobile 属性配合 */
-  [data-mobile] .hover\:bg-\[var\(--bg-tertiary\)\]:hover,
-  [data-mobile] .hover\:bg-slate-50:hover,
-  [data-mobile] .hover\:bg-slate-100:hover,
-  [data-mobile] .hover\:bg-amber-50:hover,
-  [data-mobile] .hover\:bg-red-50:hover,
-  [data-mobile] .hover\:bg-blue-50:hover,
-  [data-mobile] .hover\:bg-green-50:hover,
-  [data-mobile] .hover\:bg-cyan-50:hover,
-  [data-mobile] .hover\:bg-error-50:hover,
-  [data-mobile] .hover\:bg-error-700:hover,
-  [data-mobile] .hover\:bg-accent-50:hover,
-  [data-mobile] .hover\:bg-primary-50:hover,
-  [data-mobile] .hover\:shadow-lg:hover,
-  [data-mobile] .hover\:shadow-xl:hover,
-  [data-mobile] .hover\:scale-110:hover,
-  [data-mobile] .hover\:-translate-y-0\.5:hover,
-  [data-mobile] .hover\:text-error-600:hover,
-  [data-mobile] .hover\:text-\[var\(--text-secondary\)\]:hover,
-  [data-mobile] .hover\:text-\[var\(--primary-500\)\]:hover,
-  [data-mobile] .hover\:text-\[var\(--accent-500\)\]:hover {
-    background-color: initial !important;
-    transform: none !important;
-    box-shadow: none !important;
-    color: inherit !important;
-  }
+/* 多选操作栏紧凑适配（全局） */
+.multi-select-bar-pill {
+  gap: 0.375rem;
+  padding-left: 0.625rem;
+  padding-right: 0.625rem;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+.multi-select-badge-wrap {
+  min-width: 32px;
+  min-height: 32px;
+}
+.multi-select-badge {
+  top: -0.125rem;
+  right: -0.125rem;
 }

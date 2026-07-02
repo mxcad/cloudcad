@@ -30,6 +30,9 @@ interface FileListGridProps {
     direction: 'prev' | 'next'
   ) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
   renderItem: (
     node: FileSystemNode,
     index: number,
@@ -51,6 +54,9 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
   onPageSizeChange,
   onScrollPageChange,
   onContextMenu,
+  onTouchStart,
+  onTouchEnd,
+  onTouchMove,
   renderItem,
 }) => {
   const {
@@ -126,12 +132,19 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
       <div
         ref={scrollContainerRef}
         className="flex-1 min-h-0 overflow-y-auto"
+        style={{
+          userSelect: 'none',
+          WebkitTouchCallout: 'none',
+        }}
         onScroll={onScrollPageChange ? handleScroll : undefined}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onContextMenu={onContextMenu}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        onTouchMove={onTouchMove}
       >
         <div className="relative">
           {loading && loadingView ? (

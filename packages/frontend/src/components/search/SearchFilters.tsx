@@ -349,16 +349,28 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
           {t("筛选排序")}
         </span>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-xs hover:underline cursor-pointer"
-            style={{ color: 'var(--info)' }}
-          >
-            {t("重置")}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="text-xs hover:underline cursor-pointer"
+              style={{ color: 'var(--info)' }}
+            >
+              {t("重置")}
+            </button>
+          )}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={closePanel}
+              className="p-0.5 rounded hover:bg-[var(--bg-tertiary)]"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-1.5">
@@ -416,6 +428,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         />
         <div className="flex items-center gap-1">
           <FileSizeInput
+            className="flex-1 min-w-0"
             value={filters.sizeMin}
             onChange={(v) => onChange(cleanFilters({ ...filters, sizeMin: v }))}
             unit={sizeUnit}
@@ -425,6 +438,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           />
           <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>~</span>
           <FileSizeInput
+            className="flex-1 min-w-0"
             value={filters.sizeMax}
             onChange={(v) => onChange(cleanFilters({ ...filters, sizeMax: v }))}
             unit={sizeUnit}
@@ -588,7 +602,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
           {isMobile ? (
             <div
-              className="fixed bottom-0 left-0 right-0 rounded-t-2xl shadow-2xl overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 rounded-t-2xl shadow-2xl overflow-y-auto mobile-filter-panel"
               style={{
                 zIndex: Z_LAYERS.POPUP,
                 background: 'var(--bg-elevated)',
@@ -596,12 +610,6 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
               }}
             >
-              <div className="flex justify-center pt-3 pb-1">
-                <div
-                  className="w-10 h-1 rounded-full"
-                  style={{ background: 'var(--border-subtle)' }}
-                />
-              </div>
               <div className="p-4 space-y-4">
                 {panelContent}
               </div>

@@ -344,6 +344,19 @@ export class MxCadService {
   }
 
   /**
+   * 上传图片后更新预加载 JSON
+   */
+  async addImageToPreloadingData(
+    nodeId: string,
+    imageFileName: string
+  ): Promise<void> {
+    return this.externalReferenceUpdateService.addImageToPreloadingData(
+      nodeId,
+      imageFileName
+    );
+  }
+
+  /**
    * 处理外部参照图片上传（公开方法）
    */
   async handleExternalReferenceImage(

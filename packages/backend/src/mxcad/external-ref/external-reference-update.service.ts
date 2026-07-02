@@ -377,4 +377,49 @@ export class ExternalReferenceUpdateService {
   private isValidFileHash(fileHash: string): boolean {
     return /^[a-f0-9]{32}$/i.test(fileHash);
   }
+
+  /**
+   * 上传图片后更新预加载 JSON，将图片文件名加入 images 数组
+   * @param nodeId 文件节点 ID
+   * @param imageFileName 上传的图片文件名
+   */
+  async addImageToPreloadingData(
+    nodeId: string,
+    imageFileName: string
+  ): Promise<void> {
+    try {
+      const storageRootPath = await this.getStorageRootPath(nodeId);
+      const preloadingFileName = `${nodeId}.dwg.mxweb_preloading.json`;
+      const preloadingFilePath = path.join(storageRootPath, preloadingFileName);
+
+      let data: PreloadingDataDto;
+      try {
+        const content = await fsPromises.readFile(preloadingFilePath, 'utf-8');
+        data = JSON.parse(content) as PreloadingDataDto;
+      } catch {
+        return;
+      }
+
+      if (!data.images) {
+        data.images = [];
+      }
+
+      if (!data.images.includes(imageFileName)) {
+        data.images.push(imageFileName);
+        await fsPromises.writeFile(
+          preloadingFilePath,
+          JSON.stringify(data, null, 2),
+          'utf-8'
+        );
+        this.logger.log(
+          `[addImageToPreloadingData] 已添加图片到预加载数据: nodeId=${nodeId}, image=${imageFileName}`
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `[addImageToPreloadingData] 更新失败: ${error.message}`,
+        error.stack
+      );
+    }
+  }
 }

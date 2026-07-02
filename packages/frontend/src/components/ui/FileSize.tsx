@@ -97,7 +97,7 @@ export const FileSizeInput: React.FC<FileSizeInputProps> = ({
   );
 
   return (
-    <div className={`flex items-center gap-0 ${className}`}>
+    <div className={`flex items-center gap-0 ${className ?? ''}`}>
       <input
         type="number"
         value={displayValue}

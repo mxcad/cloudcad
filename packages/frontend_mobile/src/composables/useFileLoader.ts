@@ -409,6 +409,7 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
           if (file) {
             if (ref.type === 'img') {
               await uploadExtRefImage({
+                nodeId,
                 file,
                 srcDwgfileHash: preloadData.hash,
                 extRefFile: ref.name,

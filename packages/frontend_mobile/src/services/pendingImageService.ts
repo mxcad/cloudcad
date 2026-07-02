@@ -55,6 +55,7 @@ export async function processPendingImages(nodeId: string): Promise<void> {
       });
 
       await mxCadControllerUploadExtReferenceImage({
+        path: { nodeId },
         body: {
           file,
           hash: nodeId,
