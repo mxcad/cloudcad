@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Scissors, Copy, Trash2, Clipboard, RotateCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -980,11 +980,12 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             {isTrashView && (
               <Button
                 variant="secondary"
+                icon={RotateCcw}
                 onClick={handleBatchRestore}
                 disabled={!canRestore}
                 className="text-emerald-400 hover:text-white"
               >
-                {t("恢复")}
+                <span className="hidden sm:inline">{t("恢复")}</span>
               </Button>
             )}
 
@@ -992,19 +993,21 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               <>
                 <Button
                   variant="secondary"
+                  icon={Scissors}
                   onClick={clipboardHandleCut}
                   disabled={!canCut}
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  {t("剪切")}
+                  <span className="hidden sm:inline">{t("剪切")}</span>
                 </Button>
                 <Button
                   variant="secondary"
+                  icon={Copy}
                   onClick={clipboardHandleCopy}
                   disabled={!canCopy}
                   style={{ color: 'var(--text-secondary)' }}
                 >
-                  {t("复制")}
+                  <span className="hidden sm:inline">{t("复制")}</span>
                 </Button>
               </>
             )}
@@ -1012,22 +1015,24 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
             {isTrashView && (
               <Button
                 variant="secondary"
+                icon={Trash2}
                 onClick={() => handleBatchDelete(true)}
                 disabled={!canDelete || !canRestore}
                 style={{ color: 'var(--error)' }}
               >
-                {t("彻底删除")}
+                <span className="hidden sm:inline">{t("彻底删除")}</span>
               </Button>
             )}
 
             {!isTrashView && (
               <Button
                 variant="secondary"
+                icon={Trash2}
                 onClick={() => handleBatchDelete(false)}
                 disabled={!canDelete}
                 style={{ color: 'var(--error)' }}
               >
-                {t("删除")}
+                <span className="hidden sm:inline">{t("删除")}</span>
               </Button>
             )}
           </>
@@ -1043,6 +1048,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
           >
             <Button
               variant="secondary"
+              icon={Clipboard}
               onClick={clipboardHandlePaste}
               disabled={clipboardItems.length === 0 || !canPaste}
               style={{
@@ -1052,7 +1058,7 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
               }}
               className="relative px-3"
             >
-              {t("粘贴")}
+              <span className="hidden sm:inline">{t("粘贴")}</span>
               {clipboardItems.length > 0 && (
                 <span
                   className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
@@ -1090,10 +1096,11 @@ export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
 
         <Button
           variant="secondary"
+          icon={X}
           onClick={handleCancelBar}
           style={{ color: 'var(--text-muted)' }}
         >
-          {t("取消")}
+          <span className="hidden sm:inline">{t("取消")}</span>
         </Button>
       </div>
     ) : undefined;

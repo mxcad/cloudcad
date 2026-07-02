@@ -607,9 +607,10 @@ export default function FontLibrary(props: FontLibraryProps) {
               <Button
                 variant="secondary"
                 size="xs"
+                icon={X}
                 onClick={() => setSelectedFonts(new Set())}
               >
-                {t("取消选择")}
+                <span className="hidden sm:inline">{t("取消选择")}</span>
               </Button>
               {canDeleteFonts && (
                 <Button
@@ -617,7 +618,7 @@ export default function FontLibrary(props: FontLibraryProps) {
                   icon={Trash2}
                   onClick={handleBatchDelete}
                 >
-                  {t("批量删除")}
+                  <span className="hidden sm:inline">{t("批量删除")}</span>
                 </Button>
               )}
             </div>

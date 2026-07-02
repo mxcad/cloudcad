@@ -269,7 +269,7 @@ export const ShareManagePage: React.FC = () => {
               onClick={() => setShowBatchRevokeConfirm(true)}
               style={{ color: 'var(--error)' }}
             >
-               {t("批量撤销")} ({selectedTokens.size})
+               <span className="hidden sm:inline">{t("批量撤销")}</span> ({selectedTokens.size})
             </Button>
           )}
           {items.length > 0 && (

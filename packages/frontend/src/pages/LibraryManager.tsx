@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderPlus, HardDrive, Save } from 'lucide-react';
+import { FolderPlus, HardDrive, Save, Scissors, Copy, Trash2, Clipboard, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -658,16 +658,16 @@ export const LibraryManager: React.FC = () => {
           <div className="w-px h-4" style={{ background: 'var(--border-default)' }} />
           {canManage && (
             <>
-              <Button variant="secondary" onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}>{t("剪切")}</Button>
-              <Button variant="secondary" onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}>{t("复制")}</Button>
-              <Button variant="secondary" onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}>{t("删除")}</Button>
+              <Button variant="secondary" icon={Scissors} onClick={clipboardHandleCut} style={{ color: 'var(--text-secondary)' }}><span className="hidden sm:inline">{t("剪切")}</span></Button>
+              <Button variant="secondary" icon={Copy} onClick={clipboardHandleCopy} style={{ color: 'var(--text-secondary)' }}><span className="hidden sm:inline">{t("复制")}</span></Button>
+              <Button variant="secondary" icon={Trash2} onClick={handleDeleteSelected} style={{ color: 'var(--error)' }}><span className="hidden sm:inline">{t("删除")}</span></Button>
             </>
           )}
         </>
       )}
       <div className="flex items-center gap-0 rounded-lg" style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-          <Button variant="secondary" onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
-            {t("粘贴")}
+          <Button variant="secondary" icon={Clipboard} onClick={clipboardHandlePaste} disabled={clipboardItems.length === 0} style={{ color: 'var(--text-secondary)', border: 'none', borderRadius: 0 }} className="relative px-3">
+            <span className="hidden sm:inline">{t("粘贴")}</span>
           {clipboardItems.length > 0 && (
             <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none" style={{ background: 'var(--primary-500)', color: '#fff' }}>
               {clipboardItems.length}
@@ -682,8 +682,8 @@ export const LibraryManager: React.FC = () => {
           </Button>
         )}
       </div>
-      <Button variant="secondary" onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
-        {t("取消")}
+      <Button variant="secondary" icon={X} onClick={handleCancelBar} style={{ color: 'var(--text-muted)' }}>
+        <span className="hidden sm:inline">{t("取消")}</span>
       </Button>
     </div>
   ) : undefined;
