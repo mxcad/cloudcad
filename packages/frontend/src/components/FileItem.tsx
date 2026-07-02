@@ -779,12 +779,14 @@ export const FileItem: React.FC<FileItemProps> = ({
             : '1px solid transparent',
         }}
         onMouseEnter={(e) => {
+          if (isMobile) return;
           setIsHovered(true);
           if (!isSelected) {
             e.currentTarget.style.background = 'var(--bg-tertiary)';
           }
         }}
         onMouseLeave={(e) => {
+          if (isMobile) return;
           setIsHovered(false);
           setShowMenu(false);
           onDragLeave?.();
@@ -850,7 +852,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         >
           {forceCompactActions || useCompactActions ? (
             <div
-              className={`transition-opacity duration-200 ${isHovered || showMenu ? 'opacity-100' : 'opacity-0'}`}
+              className={`transition-opacity duration-200 ${isHovered || showMenu || isMobile ? 'opacity-100' : 'opacity-0'}`}
             >
               <FileItemMenu
                 actions={availableActions}
