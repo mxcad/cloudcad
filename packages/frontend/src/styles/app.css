@@ -855,8 +855,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
   input[type="tel"],
   input[type="url"],
   input[type="search"],
-  textarea,
-  select {
+  textarea {
     font-size: 16px !important;
   }
 
