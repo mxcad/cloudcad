@@ -26,6 +26,7 @@ const {
   getMobileAccessPath,
 } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
+const { getAdminLoginPath } = require('../lib/admin-login');
 const {
   runPm2,
   getPm2AppStatus,
@@ -146,6 +147,7 @@ async function waitForServicesForeground(backendProcess, backendOutput) {
   log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/' + map + '/  ║');
   log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
   log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
+  log('green', '║  管理员: http://localhost:' + PORTS.frontend + getAdminLoginPath() + '  ║');
   log('green', '╠══════════════════════════════════════════════════════════╣');
   log('green', '║  停止:  Ctrl+C                                          ║');
   log('green', '╚══════════════════════════════════════════════════════════╝');
@@ -396,6 +398,7 @@ async function startAppServices(mode, onReady) {
     log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/' + map + '/  ║');
     log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
     log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
+    log('green', '║  管理员: http://localhost:' + PORTS.frontend + getAdminLoginPath() + '  ║');
     log(
       'green',
       '║  配置:  http://localhost:' + PORTS.configService + '           ║'

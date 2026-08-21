@@ -870,6 +870,48 @@ function renameFrontendConfigFiles(tempDir) {
 }
 
 /**
+ * 读取前端构建时的 VITE_ADMIN_LOGIN_PATH（打包机上的 packages/frontend/.env.local / .env）
+ * 该值在打包时确定（Vite 构建时编译进 bundle），部署时需展示给用户作为管理员登录入口。
+ * @returns {string} 管理员登录路径（以 / 开头），未配置回退 /admin-login
+ */
+function getAdminLoginPathFromEnv() {
+  const candidates = [
+    path.join(PROJECT_ROOT, 'packages', 'frontend', '.env.local'),
+    path.join(PROJECT_ROOT, 'packages', 'frontend', '.env'),
+  ];
+  for (const envFile of candidates) {
+    if (!fs.existsSync(envFile)) continue;
+    const content = fs.readFileSync(envFile, 'utf-8');
+    const match = content.match(/^\s*VITE_ADMIN_LOGIN_PATH\s*=\s*(.+?)\s*$/m);
+    if (match && match[1]) {
+      const value = match[1].trim().replace(/['"]/g, '');
+      if (value.startsWith('/')) {
+        return value.length > 1 ? value.replace(/\/+$/, '') : '/';
+      }
+    }
+  }
+  return '/admin-login';
+}
+
+/**
+ * 写入部署元信息（runtime/scripts/config/deploy-meta.json）
+ * CLI 首次部署时读取管理员登录路径展示给用户。该值在打包时确定。
+ * @param {string} tempDir 部署包临时目录
+ */
+function writeDeployMeta(tempDir) {
+  const deployMeta = {
+    adminLoginPath: getAdminLoginPathFromEnv(),
+  };
+  const metaDir = path.join(tempDir, 'runtime', 'scripts', 'config');
+  ensureDir(metaDir);
+  fs.writeFileSync(
+    path.join(metaDir, 'deploy-meta.json'),
+    JSON.stringify(deployMeta, null, 2)
+  );
+  log(`写入部署元信息: runtime/scripts/config/deploy-meta.json (adminLoginPath=${deployMeta.adminLoginPath})`);
+}
+
+/**
  * 部署包：复制文件到临时目录
  */
 function prepareDeployDir(platform, variant = 'oss') {
@@ -912,6 +954,9 @@ function prepareDeployDir(platform, variant = 'oss') {
 
   // 重命名前端 JSON 配置文件为 .example（避免覆盖用户自定义配置）
   renameFrontendConfigFiles(tempDir);
+
+  // 写入部署元信息（含管理员登录路径，打包时确定，CLI 首次部署展示用）
+  writeDeployMeta(tempDir);
 
   // 创建 .npmrc 文件，指向部署包专用的 pnpm store
   fs.writeFileSync(

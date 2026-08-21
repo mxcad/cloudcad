@@ -98,7 +98,8 @@ export class AdminAuthService {
         account,
         clientIp,
         req,
-        'account_unavailable'
+        'account_unavailable',
+        user.id
       );
       throw genericReject();
     }
@@ -106,14 +107,26 @@ export class AdminAuthService {
     // 仅系统管理员角色可通过此入口；非管理员与密码错误同文案（防枚举）
     if (user.role?.name !== 'ADMIN') {
       this.logger.warn(`管理员登录失败 - 非管理员账号: ${account}`);
-      await this.auditAdminLoginFailure(account, clientIp, req, 'not_admin');
+      await this.auditAdminLoginFailure(
+        account,
+        clientIp,
+        req,
+        'not_admin',
+        user.id
+      );
       throw genericReject();
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       this.logger.warn(`管理员登录失败 - 密码错误: ${account}`);
-      await this.auditAdminLoginFailure(account, clientIp, req, 'bad_password');
+      await this.auditAdminLoginFailure(
+        account,
+        clientIp,
+        req,
+        'bad_password',
+        user.id
+      );
       throw genericReject();
     }
 
@@ -180,19 +193,28 @@ export class AdminAuthService {
     };
   }
 
-  /** 管理员入口登录失败审计（含失败原因，供安全回溯；userId 未知时记 unknown） */
+  /**
+   * 管理员入口登录失败审计（含失败原因，供安全回溯）。
+   *
+   * 注意：AuditLog.userId 为必填**外键**，必须指向真实用户。
+   * 认证前（IP 拦截、账号不存在）拿不到 userId，无法写审计——此时跳过
+   * （登录失败已由本服务 WARN 日志留痕），避免以 'unknown' 占位导致外键 ERROR 噪音。
+   * 已查到用户（账号不可用/非管理员/密码错误）则传入真实 userId 写审计。
+   */
   private async auditAdminLoginFailure(
     account: string,
     clientIp: string,
     req: AdminLoginRequest | undefined,
-    reason: string
+    reason: string,
+    userId?: string
   ): Promise<void> {
+    if (!userId) return; // 未认证成功，无合法外键用户，跳过（避免 audit_logs_userId_fkey 冲突）
     try {
       await this.auditLogService.log(
         AuditAction.ADMIN_LOGIN,
         ResourceType.USER,
-        undefined,
-        'unknown',
+        userId,
+        userId,
         false,
         `admin login failed: ${reason}`,
         undefined,

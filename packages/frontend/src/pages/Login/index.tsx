@@ -376,15 +376,6 @@ export const Login: React.FC = () => {
                 {t('立即注册')}
               </Button>
             </p>
-            <p className={styles.registerText} style={{ marginTop: '0.5rem' }}>
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => navigate('/admin-login')}
-              >
-                {t('管理员登录')}
-              </Button>
-            </p>
           </div>
 
           {/* 微信登录按钮 */}

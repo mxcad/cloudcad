@@ -14,6 +14,7 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const readline = require('readline');
 const crypto = require('crypto');
 
@@ -21,6 +22,7 @@ const { PORTS, BACKEND_ENV_PATH } = require('../lib/context');
 const { PRODUCT_NAME } = require('../lib/branding');
 const { colors, log, brandBox } = require('../lib/logger');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
+const { getAdminLoginPath } = require('../lib/admin-login');
 const {
   promptPassword,
   promptPasswordWithConfirm,
@@ -332,6 +334,7 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}Redis:${colors.reset}      ${envConfig.REDIS_HOST || 'localhost'}:${envConfig.REDIS_PORT || '6379'}`);
   console.log(`  ${colors.bright}管理员:${colors.reset}     ${envConfig.INITIAL_ADMIN_USERNAME || 'admin'}`);
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
+  console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
   console.log(`${colors.yellow}  已自动生成以下安全密码：${colors.reset}`);
   console.log('');
@@ -400,6 +403,7 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}管理员账号:${colors.reset} ${envConfig.INITIAL_ADMIN_USERNAME || 'admin'}`);
   console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${updates.INITIAL_ADMIN_PASSWORD}`);
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
+  console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
   console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
   console.log(`${colors.red}  ⚠ 安全提醒：登录后请立即修改管理员密码！${colors.reset}`);
@@ -454,6 +458,9 @@ function showCurrentPasswords() {
   const redisPassword = envConfig.REDIS_PASSWORD;
   const adminPassword = envConfig.INITIAL_ADMIN_PASSWORD;
   const adminUsername = envConfig.INITIAL_ADMIN_USERNAME || 'admin';
+  // 管理员登录入口路径 + 前端端口（拼出完整登录 URL，供用户直接访问）
+  const adminLoginPath = getAdminLoginPath();
+  const frontendPort = envConfig.FRONTEND_PORT || PORTS.frontend;
 
   if (dbPassword || adminPassword) {
     console.log('');
@@ -468,6 +475,7 @@ function showCurrentPasswords() {
     console.log(`  ${colors.bright}管理员账号:${colors.reset} ${adminUsername}`);
     console.log(`  ${colors.bright}管理员密码:${colors.reset} ${adminPassword || '(未设置)'}`);
     console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
+    console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${frontendPort}${adminLoginPath}`);
     console.log('');
     console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
     console.log(`${colors.red}  ⚠ 安全提醒：登录后请立即修改管理员密码！${colors.reset}`);

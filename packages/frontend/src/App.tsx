@@ -29,6 +29,7 @@ import { GlobalTourRenderer } from './components/tour';
 import PlanSelectOverlay from './components/billing/PlanSelectOverlay';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
+import { ADMIN_LOGIN_PATH } from './constants/adminLoginConfig';
 import { BrandProvider } from './contexts/BrandContext';
 import { useRuntimeConfig } from './contexts/RuntimeConfigContext';
 import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
@@ -234,9 +235,9 @@ function AppContent() {
             </Suspense>
           }
         />
-        {/* 管理员独立登录入口（IP 白名单 + 仅 ADMIN 角色，见后端 /admin/auth/login） */}
+        {/* 管理员独立登录入口（IP 白名单 + 仅 ADMIN 角色；路径由 VITE_ADMIN_LOGIN_PATH 配置，见后端 /admin/auth/login） */}
         <Route
-          path="/admin-login"
+          path={ADMIN_LOGIN_PATH}
           element={
             <Suspense fallback={<PageLoader />}>
               <AdminLogin />

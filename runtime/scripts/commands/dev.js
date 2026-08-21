@@ -15,6 +15,7 @@ const { PORTS } = require('../lib/context');
 const { PRODUCT_NAME } = require('../lib/branding');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { runInNewWindow } = require('../lib/proc');
+const { getAdminLoginPath } = require('../lib/admin-login');
 const { waitForPort, waitAndOpenBrowsers } = require('../lib/health');
 const { startInfrastructure } = require('./infra');
 const { stopAppServices } = require('./stop');
@@ -65,6 +66,7 @@ async function devMode() {
   log('green', '║  移动端: http://localhost:' + PORTS.frontend + '/mxcad_mobile/  ║');
   log('green', '║  API:   http://localhost:' + PORTS.backend + '/api       ║');
   log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
+  log('green', '║  管理员: http://localhost:' + PORTS.frontend + getAdminLoginPath() + '  ║');
   log(
     'green',
     '║  配置:  http://localhost:' + PORTS.configService + '           ║'

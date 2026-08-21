@@ -5,6 +5,7 @@
 
 import { authControllerRefreshToken } from '@/api-sdk';
 import { isCADRoute } from '@/utils/hasRoute';
+import { ADMIN_LOGIN_PATH } from '@/constants/adminLoginConfig';
 import {
   getAccessToken,
   getRefreshToken,
@@ -133,7 +134,11 @@ export function setSpaNavigate(fn: (path: string) => void): void {
 function getCurrentReturnUrl(): string {
   const path =
     window.location.pathname + window.location.search + window.location.hash;
-  if (!path.startsWith('/login') && !path.startsWith('/register')) {
+  if (
+    !path.startsWith('/login') &&
+    !path.startsWith('/register') &&
+    !path.startsWith(ADMIN_LOGIN_PATH)
+  ) {
     return path;
   }
   return '/';
@@ -183,6 +188,7 @@ export function handleTokenRefreshFailure() {
   const currentPath = window.location.pathname;
   const PUBLIC_PATHS = [
     '/login',
+    ADMIN_LOGIN_PATH,
     '/register',
     '/logo',
     '/forgot-password',
