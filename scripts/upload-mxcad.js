@@ -105,8 +105,8 @@ function runGh(args) {
   return stdout.trim();
 }
 
-function ghApi(path, method = 'GET', body = null) {
-  const flags = ['api', path, '--method', method];
+function ghApi(urlPath, method = 'GET', body = null) {
+  const flags = ['api', urlPath, '--method', method];
   if (body) {
     const tmp = path.join(PROJECT_ROOT, 'mxcad-dist', '.gh-body.json');
     fs.mkdirSync(path.dirname(tmp), { recursive: true });
@@ -139,19 +139,22 @@ function ensureRelease(opts) {
   }
 }
 
-/** 列出 mxcad Release 所有资产的文件名 */
+/**
+ * 列出 mxcad Release 所有资产的文件名。
+ * 注意：GitHub 的 tag-name 版 assets 端点（/releases/tags/{tag}/assets）并非合法端点，
+ * 需通过 release 对象（/releases/tags/{tag}）返回的 assets 字段读取。
+ */
 function listAssetNames(opts) {
-  const out = ghApi(
-    `/repos/${opts.repo}/releases/tags/${opts.tag}/assets`
-  );
-  let assets;
   try {
-    assets = JSON.parse(out);
+    const out = ghApi(`/repos/${opts.repo}/releases/tags/${opts.tag}`);
+    const release = JSON.parse(out);
+    if (release && Array.isArray(release.assets)) {
+      return release.assets.map((a) => a.name);
+    }
+    return [];
   } catch (e) {
     return [];
   }
-  if (!Array.isArray(assets)) return [];
-  return assets.map((a) => a.name);
 }
 
 /**
@@ -204,9 +207,10 @@ async function main() {
 
     // 目录内每个非隐藏文件作为一个组件产物：
     // 文件名 <component>.<ext>（如 mxcad.tar.gz、mxversion.zip）
+    // 组件名 = 第一个点之前；扩展名 = 第一个点及之后（完整保留，如 .tar.gz）
     for (const file of files) {
       const baseName = file.name;
-      const dot = baseName.lastIndexOf('.');
+      const dot = baseName.indexOf('.');
       const component = dot > 0 ? baseName.slice(0, dot) : baseName;
       const filePath = path.join(t.dir, baseName);
       const hash = sha256File(filePath);
