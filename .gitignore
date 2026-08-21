@@ -27,6 +27,8 @@ data
 release
 # 本地 mxcad 暂存目录（仅用于上传到 Release，不入库）
 mxcad-dist/
+# 例外：manifest.json（哈希映射，不含二进制）入库，供 release.yml 下载 mxcad 使用
+!mxcad-dist/manifest.json
 # 仓库根目录 project-env.sh（Git Bash 本地环境文件，由 setup-offline 生成）；
 # 仅忽略根目录，scripts/pack-lib/templates/project-env.sh 作为模板入库
 /project-env.sh
