@@ -18,7 +18,7 @@
     "typescript": "~5.9.3"
   },
   "scripts": {
-    "preinstall": "node scripts/ensure-runtime.js",
+    "preinstall": "node scripts/preinstall-runtime.js",
     "build": "pnpm -r build",
     "postbuild": "pnpm generate:api-types",
     "predev": "pnpm --filter @cloudcad/db build",
