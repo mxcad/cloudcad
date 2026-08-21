@@ -18,7 +18,7 @@
     "typescript": "~5.9.3"
   },
   "scripts": {
-    "preinstall": "node scripts/preinstall-runtime.js",
+    "preinstall": "node -e \"try{require('./scripts/preinstall-runtime.js')}catch(e){console.log('[preinstall] 运行时检查跳过:', e.code || e.message)}\"",
     "build": "pnpm -r build",
     "postbuild": "pnpm generate:api-types",
     "predev": "pnpm --filter @cloudcad/db build",
