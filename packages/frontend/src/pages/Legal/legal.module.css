@@ -1,0 +1,126 @@
+/* Legal pages (用户协议 / 隐私政策) — ADR-0032 CSS Modules */
+
+.legalPage {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: var(--bg-primary);
+  font-family: var(--font-family-base);
+}
+
+.legalCard {
+  width: 100%;
+  max-width: 860px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  padding: 2.5rem 3rem;
+  align-self: flex-start;
+  animation: legal-card-appear 0.4s ease-out;
+}
+
+@keyframes legal-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.legalHeader {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.legalTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.legalBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.legalBack:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--primary-500);
+}
+
+.legalTitle {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.legalMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.legalUpdated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+}
+
+/* Sections */
+.legalContent {
+  white-space: pre-line;
+  font-size: var(--text-md);
+  line-height: 2;
+  color: var(--text-secondary);
+}
+
+/* Footer */
+.legalFooter {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .legalPage {
+    padding: 1rem 0.75rem;
+  }
+  .legalCard {
+    padding: 1.5rem 1.25rem;
+    border-radius: var(--radius-xl);
+  }
+  .legalTitle {
+    font-size: var(--text-2xl);
+  }
+}

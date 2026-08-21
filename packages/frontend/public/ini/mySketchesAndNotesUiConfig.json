@@ -1,0 +1,2003 @@
+{
+  "isShowMenuBar": false,
+  "mMenuData": [
+    {
+      "tab": "默认",
+      "list": [
+        {
+          "tab": "绘图(D)",
+          "icon": "zhixian",
+          "sameWidth": true,
+          "list": [
+            {
+              "tab": "直线(L)",
+              "icon": "zhixian",
+              "cmd": "Mx_Line",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "60px"
+                }
+              }
+            },
+            {
+              "tab": "多线段(P)",
+              "icon": "duoxianduan",
+              "cmd": "Mx_Pline",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "圆弧(A)",
+              "icon": "yuanhu",
+              "size": "large",
+              "cmd": "Mx_Arc",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "三点(P)",
+                  "icon": "a-tubiao_sandianfuben3",
+                  "cmd": "Mx_Arc"
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "tab": "起点、圆心、端点(S)",
+                  "icon": "a-tubiao_qidianyuanxinduandianfuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["", "C"]
+                },
+                {
+                  "tab": "起点、圆心、角度(T)",
+                  "icon": "a-tubiao_qidianyuanxinjiaodufuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["", "C", "A"]
+                },
+                {
+                  "tab": "起点、圆心、长度(A)",
+                  "icon": "a-tubiao_qidianyuanxinchangdufuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["", "C", "L"]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "tab": "起点、端点、角度(N)",
+                  "icon": "a-tubiao_qidianduandianjiaodufuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["", "E", "A"]
+                },
+                {
+                  "tab": "起点、端点、方向(D)",
+                  "icon": "a-tubiao_qidianduandianfangxiangfuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["", "E", "A"]
+                },
+                {
+                  "tab": "起点、端点、半径(R)",
+                  "icon": "a-tubiao_qidianduandianbanjingfuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["", "E", "A"]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "tab": "圆心、起点、端点(C)",
+                  "icon": "a-tubiao_yuandianqidianduandianfuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["C"]
+                },
+                {
+                  "tab": "圆心、起点、角度(E)",
+                  "icon": "a-tubiao_yuandianqidianjiaodufuben2",
+                  "cmd": "Mx_Arc",
+                  "commandOptions": ["C", "", "A"]
+                },
+                {
+                  "tab": "圆心、起点、长度(L)",
+                  "cmd": "Mx_Arc",
+                  "icon": "a-tubiao_yuandianqidianchangdufuben2",
+                  "commandOptions": ["C", "", "L"]
+                }
+              ]
+            },
+            {
+              "tab": "圆(C)",
+              "icon": "yuan",
+              "size": "large",
+              "cmd": "Mx_Circle",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "圆心、半径(R)",
+                  "icon": "a-tubiao_yuanxinbanjingfuben2",
+                  "cmd": "Mx_Circle"
+                },
+                {
+                  "tab": "圆心、直径(D)",
+                  "cmd": "Mx_Circle",
+                  "icon": "a-tubiao_yuanxinzhijingfuben2",
+                  "commandOptions": ["", "D"]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "tab": "两点(2)",
+                  "cmd": "Mx_Circle",
+                  "commandOptions": ["2P"],
+                  "icon": "a-tubiao_liangdianfuben2"
+                },
+                {
+                  "tab": "三点(3)",
+                  "cmd": "Mx_Circle",
+                  "icon": "a-tubiao_sandianfuben4",
+                  "commandOptions": ["3P"]
+                }
+              ]
+            },
+            {
+              "tab": "矩形(G)",
+              "icon": "juxing",
+              "cmd": "Mx_Rectang",
+              "isSeparateMenuArrowIcon": true,
+              "isShowToMainPanelRight": true,
+              "list": [
+                {
+                  "tab": "正多边形(Y)",
+                  "icon": "zhengduobianxing",
+                  "cmd": "Mx_Polygon"
+                },
+                {
+                  "tab": "矩形(G)",
+                  "icon": "juxing",
+                  "cmd": "Mx_Rectang"
+                }
+              ]
+            },
+            {
+              "tab": "椭圆弧",
+              "cmd": "Mx_EllipseArc",
+              "icon": "tuoyuanhu",
+              "commandOptions": ["C"],
+              "isSeparateMenuArrowIcon": true,
+              "isShowToMainPanelRight": true,
+              "list": [
+                {
+                  "tab": "圆心",
+                  "cmd": "Mx_Ellipse",
+                  "icon": "a-tubiao_yuanxinfuben2",
+                  "commandOptions": ["C"]
+                },
+                {
+                  "tab": "轴、端点",
+                  "icon": "a-tubiao_zhouduandianfuben2",
+                  "cmd": "Mx_Ellipse"
+                },
+                {
+                  "tab": "椭圆弧(O)",
+                  "icon": "tuoyuanhu",
+                  "cmd": "Mx_EllipseArc"
+                }
+              ]
+            },
+            {
+              "tab": "填充(H)",
+              "icon": "tianchong",
+              "cmd": "Mx_Hatch",
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "样条线(S)",
+              "cmd": "Mx_Spline",
+              "icon": "yangtiaoxian"
+            },
+            {
+              "tab": "点(N)",
+              "icon": "dian",
+              "cmd": "Mx_Point"
+            },
+            {
+              "tab": "插入图块",
+              "icon": "charukuai1",
+              "cmd": "Mx_Insert"
+            },
+            {
+              "tab": "文字(T)",
+              "icon": "danhangwenzi",
+              "cmd": "_DrawText"
+            },
+            {
+              "tab": "图片(E)",
+              "icon": "tupian",
+              "cmd": "_InsertImage"
+            },
+            {
+              "tab": "铅笔命令",
+              "icon": "a-5-15qianbi",
+              "cmd": "MxET_Pencil"
+            },
+            {
+              "tab": "矩形",
+              "icon": "yunxianpizhu",
+              "cmd": "_Revcloud",
+              "isSeparateMenuArrowIcon": true,
+              "commandOptions": ["R"],
+              "list": [
+                {
+                  "tab": "矩形",
+                  "icon": "yunxianpizhu",
+                  "cmd": "_Revcloud",
+                  "commandOptions": ["R"]
+                },
+                {
+                  "tab": "多边形",
+                  "icon": "yunxianpizhu",
+                  "cmd": "_Revcloud",
+                  "commandOptions": ["P"]
+                },
+                {
+                  "tab": "徒手画",
+                  "icon": "yunxianpizhu",
+                  "cmd": "_Revcloud"
+                }
+              ]
+            },
+            {
+              "tab": "圆环",
+              "icon": "dashujukeshihuaico-",
+              "cmd": "_donut"
+            },
+            {
+              "tab": "多线",
+              "icon": "duoxian",
+              "cmd": "MLine"
+            },
+            {
+              "icon": "a-14shexian",
+              "tab": "射线",
+              "cmd": "Mx_Ray"
+            },
+            {
+              "icon": "a-13gouzaoxian",
+              "tab": "构造线",
+              "cmd": "Mx_Xline"
+            },
+            {
+              "tab": "面域",
+              "icon": "a-18mianyu",
+              "cmd": "Mx_Region"
+            }
+          ]
+        },
+        {
+          "tab": "修改(M)",
+          "icon": "yidong",
+          "list": [
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "yidong",
+                  "cmd": "Mx_Move",
+                  "tab": "移动",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "复制(C)",
+                  "cmd": "Mx_Copy",
+                  "icon": "fuzhi",
+                  "isShowLabel": true
+                },
+                {
+                  "icon": "lashenshezhi",
+                  "cmd": "_stretch",
+                  "tab": "拉伸",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "xuanzhuan",
+                  "cmd": "Mx_Rotate",
+                  "tab": "旋转",
+                  "isShowLabel": true
+                },
+                {
+                  "icon": "jingxiang",
+                  "cmd": "Mx_Mirror",
+                  "tab": "镜像",
+                  "isShowLabel": true,
+                  "isShowToMainPanel": true
+                },
+                {
+                  "icon": "suofang",
+                  "cmd": "Mx_Scale",
+                  "tab": "缩放",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "jianqie",
+                  "cmd": "Mx_Trim",
+                  "tab": "剪切",
+                  "isSeparateMenuArrowIcon": true,
+                  "isShowLabel": true,
+                  "list": [
+                    {
+                      "icon": "jianqie",
+                      "cmd": "Mx_Trim",
+                      "tab": "剪切"
+                    },
+                    {
+                      "icon": "yanshen",
+                      "cmd": "Mx_Extend",
+                      "tab": "延伸"
+                    }
+                  ]
+                },
+                {
+                  "icon": "yuanjiao",
+                  "cmd": "Mx_Fillet",
+                  "tab": "圆角",
+                  "isShowLabel": true,
+                  "isShowToMainPanel": true,
+                  "isSeparateMenuArrowIcon": true,
+                  "list": [
+                    {
+                      "icon": "yuanjiao",
+                      "cmd": "Mx_Fillet",
+                      "tab": "圆角"
+                    },
+                    {
+                      "icon": "daojiao",
+                      "cmd": "Mx_Chamfer",
+                      "tab": "倒角"
+                    }
+                  ]
+                },
+                {
+                  "icon": "zhenlie",
+                  "cmd": "Mx_Array",
+                  "tab": "阵列",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "tab": "删除(A)",
+              "icon": "shanchu",
+              "cmd": "Mx_Erase",
+              "isShowToMainPanelRight": true
+            },
+            {
+              "icon": "fenjie",
+              "cmd": "Mx_Explode",
+              "tab": "分解",
+              "isShowToMainPanelRight": true
+            },
+            {
+              "icon": "pianyi",
+              "cmd": "Mx_Offset",
+              "tab": "偏移",
+              "isShowToMainPanelRight": true
+            },
+            {
+              "icon": "daduan",
+              "cmd": "Mx_Break",
+              "tab": "打断命令"
+            },
+            {
+              "icon": "hebing",
+              "cmd": "Mx_Join",
+              "tab": "合并命令"
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "tab": "前置(F)",
+              "icon": "qianzhi",
+              "cmd": "Mx_DrawOrderTopmost"
+            },
+            {
+              "tab": "后置",
+              "icon": "houzhi",
+              "cmd": "Mx_DrawOrderButtomost"
+            },
+            {
+              "tab": "置于对象之上",
+              "icon": "zhiyuduixiangzhishang",
+              "cmd": "Mx_DrawOrderTop"
+            },
+            {
+              "tab": "置于对象之下",
+              "icon": "zhiyuduixiangzhixia",
+              "cmd": "Mx_DrawOrderButtom"
+            }
+          ]
+        },
+        {
+          "tab": "注释",
+          "icon": "danhangwenzi",
+          "list": [
+            {
+              "tab": "文字",
+              "icon": "danhangwenzi",
+              "cmd": "_DrawText",
+              "size": "large",
+              "labelWithArrowLayout": true,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              },
+              "list": [
+                {
+                  "icon": "duohangwenben",
+                  "cmd": "MxPE_DrawMText",
+                  "tab": "多行文字"
+                },
+                {
+                  "tab": "单行文字",
+                  "icon": "danhangwenzi",
+                  "cmd": "_DrawText"
+                }
+              ]
+            },
+            {
+              "tab": "标注",
+              "icon": "a-17xianxingfuben",
+              "cmd": "_DrawRotatedDimension",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "线性",
+              "icon": "a-17xianxingfuben",
+              "cmd": "_DrawRotatedDimension",
+              "isSeparateMenuArrowIcon": true,
+              "isShowToMainPanelRight": true,
+              "list": [
+                {
+                  "icon": "a-17xianxingfuben",
+                  "cmd": "_DrawRotatedDimension",
+                  "tab": "线性标注"
+                },
+                {
+                  "icon": "duiqibiaozhu",
+                  "cmd": "_DrawAlignedDimension",
+                  "tab": "对齐标注"
+                },
+                {
+                  "icon": "jiaodubiaozhu",
+                  "cmd": "_dimangular",
+                  "tab": "角度标注"
+                },
+                {
+                  "icon": "banjingbiaozhu",
+                  "cmd": "_DrawRadialDimension",
+                  "tab": "半径标注"
+                },
+                {
+                  "icon": "zhijingbiaozhu",
+                  "cmd": "_DrawDiametricDimension",
+                  "tab": "直径标注"
+                }
+              ]
+            },
+            {
+              "tab": "批注",
+              "icon": "yinxianbiaozhu",
+              "cmd": "BR_Comment",
+              "isSeparateMenuArrowIcon": true,
+              "isShowToMainPanelRight": true,
+              "list": [
+                {
+                  "tab": "面积标注",
+                  "icon": "celiangmianji",
+                  "cmd": "BR_Area"
+                },
+                {
+                  "tab": "角度标注",
+                  "icon": "celiangjiaodu",
+                  "cmd": "BR_AngleMeasure"
+                },
+                {
+                  "tab": "坐标标注",
+                  "icon": "zuobiaoceliang",
+                  "cmd": "BR_CoordMeasure"
+                },
+                {
+                  "tab": "引线标注",
+                  "icon": "yinxianbiaozhu",
+                  "cmd": "BR_Comment"
+                },
+                {
+                  "tab": "审图标注",
+                  "icon": "shentubiaozhu",
+                  "cmd": "BR_CheckDraw"
+                },
+                {
+                  "tab": "箭头标注",
+                  "icon": "jiantoubiaozhu",
+                  "cmd": "BR_Arrow"
+                },
+                {
+                  "tab": "云线批注",
+                  "icon": "yunxianpizhu",
+                  "cmd": "BR_CloudLine"
+                },
+                {
+                  "tab": "保存批注",
+                  "icon": "baocunpizhu",
+                  "cmd": "BR_SaveAllMxEntity"
+                },
+                {
+                  "tab": "恢复批注",
+                  "icon": "huifupizhu",
+                  "cmd": "BR_LoadAllMxEntity"
+                }
+              ]
+            },
+            {
+              "icon": "a-17biaogefuben",
+              "cmd": "Mx_InsertTable",
+              "tab": "表格",
+              "isShowToMainPanelRight": true
+            }
+          ]
+        },
+        {
+          "tab": "图层",
+          "icon": "tuceng",
+          "list": [
+            {
+              "tab": "图层特性",
+              "icon": "tuceng",
+              "cmd": "MxLayerManager",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              }
+            },
+            {
+              "type": "component",
+              "name": "MxLayerSelect",
+              "props": {
+                "class": "ml-0 w-100"
+              },
+              "isShowToMainPanelRight": true
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex"
+              },
+              "isShowToMainPanelRight": true,
+              "list": [
+                {
+                  "tab": "选择关闭图层(X)",
+                  "icon": "xuanzeguanbituceng",
+                  "cmd": "_SelOffLayer"
+                },
+                {
+                  "tab": "图层漫游(W)",
+                  "icon": "tuceng",
+                  "cmd": "showWalkThroughLayers"
+                },
+                {
+                  "tab": "对象修改设置为当前层",
+                  "icon": "dangqiantucengpipei",
+                  "cmd": "_layer_setEntToCurrentLayer"
+                },
+                {
+                  "tab": "对象复制到新图层",
+                  "icon": "fuzhi",
+                  "cmd": "_layer_CopyObjectsToNewLayer"
+                },
+                {
+                  "tab": "图层合并(E)",
+                  "icon": "hebing",
+                  "cmd": "_layer_combined"
+                },
+                {
+                  "tab": "置为当前",
+                  "icon": "qianzhi",
+                  "cmd": "_layer_putCurrent",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex"
+              },
+              "isShowToMainPanelRight": true,
+              "list": [
+                {
+                  "tab": "打开所有图层(A)",
+                  "icon": "dakaiquanbutuceng",
+                  "cmd": "_OpenAllLayer"
+                },
+                {
+                  "tab": "图层锁定(K)",
+                  "icon": "suo",
+                  "cmd": "_layer_lock"
+                },
+                {
+                  "tab": "图层解锁(P)",
+                  "icon": "jiesuo1",
+                  "cmd": "_layer_unlock"
+                },
+                {
+                  "tab": "图层删除(D)",
+                  "icon": "shanchu",
+                  "cmd": "_layer_remove"
+                },
+                {
+                  "tab": "恢复上一个图层状态(Z)",
+                  "icon": "houtui",
+                  "cmd": "_layer_recovery"
+                },
+                {
+                  "tab": "匹配图层",
+                  "icon": "tucengpipei",
+                  "cmd": "_layer_matching",
+                  "isShowLabel": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "块",
+          "icon": "charukuai1",
+          "list": [
+            {
+              "tab": "插入",
+              "icon": "charukuai1",
+              "cmd": "Mx_Insert",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "创建",
+              "icon": "chuangjiankuai1",
+              "cmd": "Mx_Block",
+              "isShowLabel": true,
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "编辑属性",
+              "icon": "bianjizu",
+              "cmd": "_eattedit",
+              "isShowLabel": true,
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "定义属性",
+              "icon": "zuguanli",
+              "cmd": "attdef",
+              "isShowLabel": true,
+              "isShowToMainPanelRight": true
+            }
+          ]
+        },
+        {
+          "tab": "特性",
+          "icon": "a-4-8duixiangtexing",
+          "list": [
+            {
+              "icon": "a-4-8duixiangtexing",
+              "tab": "对象特性",
+              "cmd": "Mx_Properties",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "100px"
+                }
+              }
+            },
+            {
+              "type": "component",
+              "name": "MxColorSelectBox",
+              "props": {
+                "class": "ml-1"
+              },
+              "isShowToMainPanelRight": true
+            },
+            {
+              "type": "component",
+              "name": "MxLineTypeSelect",
+              "props": {
+                "class": "ml-1 mt-1"
+              },
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "线型(N)",
+              "icon": "a-3-5xianxing",
+              "cmd": "Mx_Linetype"
+            },
+            {
+              "tab": "多线样式",
+              "icon": "a-1biaogeyangshi",
+              "cmd": "MxMLStyleManager"
+            },
+            {
+              "tab": "颜色(C)",
+              "icon": "yanse",
+              "cmd": "Mx_Color",
+              "isNoDataTransfer": true
+            },
+            {
+              "icon": "texingpipei",
+              "tab": "特性匹配",
+              "cmd": "Mx_MatchProperties"
+            }
+          ]
+        },
+        {
+          "tab": "组",
+          "icon": "chuangjianzu",
+          "list": [
+            {
+              "tab": "创建组",
+              "icon": "chuangjianzu",
+              "cmd": "Mx_Group",
+              "size": "large",
+              "labelWithArrowLayout": true,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              }
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "jiezu",
+                  "cmd": "Mx_Ungroup",
+                  "tab": "解除编组",
+                  "isShowLabel": true
+                },
+                {
+                  "icon": "bianjizu",
+                  "cmd": "Mx_EditGroup",
+                  "tab": "编辑组",
+                  "isShowLabel": true,
+                  "isShowToMainPanel": true
+                },
+                {
+                  "icon": "zuguanli",
+                  "cmd": "Mx_Classicgroup",
+                  "tab": "编组管理器",
+                  "isShowLabel": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "剪切板",
+          "icon": "niantie",
+          "list": [
+            {
+              "tab": "粘贴",
+              "icon": "niantie",
+              "cmd": "Mx_PasteClipboard",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "复制",
+              "icon": "fuzhi",
+              "cmd": "Mx_CopyClipboard",
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "剪切",
+              "icon": "jianqie",
+              "cmd": "Mx_CutClipboard",
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "粘贴为块(L)",
+              "icon": "niantie",
+              "cmd": "Mx_PasteBlock",
+              "isShowToMainPanelRight": true
+            }
+          ]
+        },
+        {
+          "tab": "实用工具",
+          "icon": "a-tubiao_chaxunfuben2",
+          "list": [
+            {
+              "tab": "测量",
+              "icon": "a-tubiao_chaxunfuben2",
+              "cmd": "_MEASUREGEOM",
+              "size": "large",
+              "labelWithArrowLayout": true,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              },
+              "list": [
+                {
+                  "tab": "距离(D)",
+                  "icon": "class: iconfont juli",
+                  "cmd": "_MEASUREGEOM",
+                  "commandOptions": ["D"]
+                },
+                {
+                  "tab": "半径(R)",
+                  "icon": "banjingbiaozhu",
+                  "cmd": "_MEASUREGEOM",
+                  "commandOptions": ["R"]
+                },
+                {
+                  "tab": "角度(G)",
+                  "icon": "celiangjiaodu",
+                  "cmd": "_MEASUREGEOM",
+                  "commandOptions": ["A"]
+                },
+                {
+                  "tab": "面积(A)",
+                  "icon": "celiangmianji",
+                  "cmd": "_MEASUREGEOM",
+                  "commandOptions": ["AR"]
+                },
+                {
+                  "tab": "点坐标(I)",
+                  "icon": "zuobiaoceliang",
+                  "cmd": "ID"
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "快速选择",
+                  "icon": "a-4-7kuaisuxuanze",
+                  "cmd": "Mx_QuickSelect"
+                },
+                {
+                  "tab": "查找替换文字",
+                  "icon": "a-4-6chazhaotihuanwenzi",
+                  "cmd": "Mx_FindText"
+                },
+                {
+                  "tab": "全部选择(A)",
+                  "icon": "quanbuxuanze",
+                  "cmd": "Mx_select_all"
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "编辑文字",
+                  "icon": "bianjiwenzi",
+                  "cmd": "Mx_EditText"
+                }
+              ]
+            },
+            {
+              "tab": "打印",
+              "icon": "dayin1",
+              "cmd": "Mx_PrintDialog"
+            },
+            {
+              "tab": "点样式",
+              "icon": "dianyangshi",
+              "cmd": "Mx_ddptype"
+            },
+            {
+              "icon": "houtui",
+              "prompt": "回退",
+              "cmd": "Mx_Undo"
+            },
+            {
+              "icon": "qianjin",
+              "prompt": "重做",
+              "cmd": "Mx_Redo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "插入",
+      "list": [
+        {
+          "tab": "块",
+          "icon": "charukuai1",
+          "list": [
+            {
+              "tab": "插入",
+              "icon": "charukuai1",
+              "cmd": "Mx_Insert",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "编辑属性",
+              "icon": "bianjizu",
+              "cmd": "_eattedit",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            }
+          ]
+        },
+        {
+          "tab": "块定义",
+          "icon": "chuangjiankuai1",
+          "list": [
+            {
+              "tab": "创建块",
+              "icon": "chuangjiankuai1",
+              "cmd": "Mx_Block",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "定义属性",
+              "icon": "zuguanli",
+              "cmd": "attdef",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            }
+          ]
+        },
+        {
+          "tab": "图片/表格",
+          "icon": "chuangjiankuai1",
+          "list": [
+            {
+              "tab": "插入图片",
+              "icon": "tupian",
+              "cmd": "Mx_InsertImageWithUpload",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "插入表格",
+              "icon": "a-17biaogefuben",
+              "cmd": "Mx_InsertTable",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "注释",
+      "list": [
+        {
+          "tab": "文字",
+          "icon": "danhangwenzi",
+          "list": [
+            {
+              "icon": "duohangwenben",
+              "cmd": "MxPE_DrawMText",
+              "tab": "多行文字",
+              "size": "large",
+              "labelWithArrowLayout": true,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              },
+              "list": [
+                {
+                  "icon": "duohangwenben",
+                  "cmd": "MxPE_DrawMText",
+                  "tab": "多行文字"
+                },
+                {
+                  "tab": "单行文字",
+                  "icon": "danhangwenzi",
+                  "cmd": "_DrawText"
+                }
+              ]
+            },
+            {
+              "tab": "文字样式(S)",
+              "icon": "wenziyangshi",
+              "cmd": "Mx_Style"
+            }
+          ]
+        },
+        {
+          "tab": "标注",
+          "icon": "a-17xianxingfuben",
+          "list": [
+            {
+              "tab": "标注",
+              "icon": "a-17xianxingfuben",
+              "cmd": "_DrawRotatedDimension",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "a-17xianxingfuben",
+                  "cmd": "_DrawRotatedDimension",
+                  "tab": "线性标注"
+                },
+                {
+                  "icon": "duiqibiaozhu",
+                  "cmd": "_DrawAlignedDimension",
+                  "tab": "对齐标注"
+                },
+                {
+                  "icon": "jiaodubiaozhu",
+                  "cmd": "_dimangular",
+                  "tab": "角度标注"
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "banjingbiaozhu",
+                  "cmd": "_DrawRadialDimension",
+                  "tab": "半径标注"
+                },
+                {
+                  "icon": "zhijingbiaozhu",
+                  "cmd": "_DrawDiametricDimension",
+                  "tab": "直径标注"
+                }
+              ]
+            },
+            {
+              "tab": "标注样式(P)",
+              "icon": "shentubiaozhu",
+              "cmd": "Mx_Dimstyle"
+            }
+          ]
+        },
+        {
+          "tab": "引线",
+          "icon": "yinxian",
+          "list": [
+            {
+              "tab": "多重引线",
+              "icon": "yinxian",
+              "cmd": "MxDrawMultiLeader",
+              "size": "large",
+              "labelWithArrowLayout": true,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "tianjiayinxian",
+                  "cmd": "addMultiLeader",
+                  "tab": "添加引线",
+                  "isShowLabel": true
+                },
+                {
+                  "icon": "shanchuyinxian",
+                  "cmd": "removeMultiLeader",
+                  "tab": "删除引线",
+                  "isShowLabel": true
+                },
+                {
+                  "icon": "duozhongyinxianyangshi",
+                  "cmd": "editMultiLeader",
+                  "tab": "多重引线格式",
+                  "isShowLabel": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "表格",
+          "icon": "a-17biaogefuben",
+          "list": [
+            {
+              "tab": "表格",
+              "icon": "a-17biaogefuben",
+              "cmd": "Mx_InsertTable",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "表格样式",
+              "icon": "a-2duoxianyangshi",
+              "cmd": "Mx_TableStyleManager"
+            }
+          ]
+        },
+        {
+          "tab": "标记",
+          "icon": "quyu",
+          "list": [
+            {
+              "tab": "区域覆盖",
+              "icon": "quyu",
+              "cmd": "Mx_Test_AreaOverlay",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "修订云线",
+              "icon": "yunxianpizhu",
+              "cmd": "_Revcloud",
+              "size": "large",
+              "labelWithArrowLayout": true,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "矩形",
+                  "icon": "yunxianpizhu",
+                  "cmd": "_Revcloud",
+                  "commandOptions": ["R"]
+                },
+                {
+                  "tab": "多边形",
+                  "icon": "yunxianpizhu",
+                  "cmd": "_Revcloud",
+                  "commandOptions": ["P"]
+                },
+                {
+                  "tab": "徒手画",
+                  "icon": "yunxianpizhu",
+                  "cmd": "_Revcloud"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "批注",
+          "icon": "celiangmianji",
+          "list": [
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "面积标注",
+                  "icon": "celiangmianji",
+                  "cmd": "BR_Area",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "角度标注",
+                  "icon": "celiangjiaodu",
+                  "cmd": "BR_AngleMeasure",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "坐标标注",
+                  "icon": "zuobiaoceliang",
+                  "cmd": "BR_CoordMeasure",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "引线标注",
+                  "icon": "yinxianbiaozhu",
+                  "cmd": "BR_Comment",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "审图标注",
+                  "icon": "shentubiaozhu",
+                  "cmd": "BR_CheckDraw",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "箭头标注",
+                  "icon": "jiantoubiaozhu",
+                  "cmd": "BR_Arrow",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "云线批注",
+                  "icon": "yunxianpizhu",
+                  "cmd": "BR_CloudLine",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "tab": "保存批注",
+              "icon": "baocunpizhu",
+              "cmd": "BR_SaveAllMxEntity"
+            },
+            {
+              "tab": "恢复批注",
+              "icon": "huifupizhu",
+              "cmd": "BR_LoadAllMxEntity"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "视图",
+      "list": [
+        {
+          "tab": "视图操作",
+          "icon": "zhonghua",
+          "list": [
+            {
+              "tab": "重画(R)",
+              "icon": "zhonghua",
+              "cmd": "Mx_Regen",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "窗口缩放(W)",
+              "icon": "chuangkousuofang",
+              "cmd": "Mx_WindowZoom",
+              "labelWithArrowLayout": true,
+              "size": "large",
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "上一个(U)",
+                  "icon": "a-tubiao_shangyigefuben2",
+                  "cmd": "Mx_WindowZoom",
+                  "commandOptions": ["P"]
+                },
+                {
+                  "tab": "全部(A)",
+                  "cmd": "Mx_WindowZoom",
+                  "icon": "a-tubiao_quanbufuben2",
+                  "commandOptions": ["A"]
+                },
+                {
+                  "tab": "范围(E)",
+                  "icon": "fanweisuofang",
+                  "cmd": "Mx_WindowZoom",
+                  "commandOptions": ["E"]
+                },
+                {
+                  "tab": "对象(O)",
+                  "icon": "a-tubiao_duixiangfuben2",
+                  "cmd": "Mx_WindowZoom",
+                  "commandOptions": ["O"]
+                }
+              ]
+            },
+            {
+              "tab": "全屏显示",
+              "cmd": "MxFullScreen",
+              "icon": "quanpingxianshi",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "视区平移(P)",
+                  "icon": "a-5pingyi",
+                  "cmd": "Mx_Pan"
+                },
+                {
+                  "tab": "视区旋转(L)",
+                  "icon": "a-2-5shiquxuanzhuan",
+                  "cmd": "Mx_Plan90CW",
+                  "isSeparateMenuArrowIcon": true,
+                  "isShowToMainPanelRight": true,
+                  "list": [
+                    {
+                      "tab": "顺时针旋转90度",
+                      "icon": "a-2-5-1shunshizhen",
+                      "cmd": "Mx_Plan90CW"
+                    },
+                    {
+                      "tab": "逆时针旋转90度",
+                      "icon": "a-2-5-2nishizhen",
+                      "cmd": "Mx_Plan90CCW"
+                    },
+                    {
+                      "tab": "自定义旋转角度(L)",
+                      "icon": "a-2-5-3zidingyi",
+                      "cmd": "Mx_Plan"
+                    }
+                  ]
+                },
+                {
+                  "tab": "视区背景色",
+                  "icon": "shiqubeijingse",
+                  "cmd": "_ViewColor"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "视口工具",
+          "icon": "UCSzuobiao",
+          "list": [
+            {
+              "tab": "UCS命令",
+              "icon": "UCSzuobiao",
+              "cmd": "Mx_Ucs",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "isShowLabel": true,
+              "isShowToMainPanelRight": true
+            },
+            {
+              "tab": "PLAN命令",
+              "icon": "plan",
+              "cmd": "Mx_Plan",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "isShowLabel": true,
+              "isShowToMainPanelRight": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "输出",
+      "list": [
+        {
+          "tab": "云图",
+          "icon": "yuntu",
+          "list": [
+             {
+              "tab": "保存到云图",
+              "icon": "baocun",
+              "cmd": "Mx_SaveToCloud",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowToMainPanel": true,
+              "size": "large",
+              "isShowLabel": true
+            },
+            {
+              "tab": "另存为到云图",
+              "icon": "lingcunweiDWG",
+              "cmd": "Mx_SaveAsToCloud",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowToMainPanel": true,
+              "size": "large",
+              "isShowLabel": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "扩展工具",
+      "list": [
+        {
+          "tab": "比较",
+          "icon": "bidui",
+          "list": [
+            {
+              "tab": "DWG比较",
+              "icon": "bidui",
+              "cmd": "Mx_CompareDWG",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            }
+          ]
+        },
+        {
+          "tab": "自定义设置",
+          "icon": "a-tubiao_cadkuaijiejianshezhifuben2",
+          "list": [
+            {
+              "tab": "CAD快捷键",
+              "icon": "a-tubiao_cadkuaijiejianshezhifuben2",
+              "cmd": "MxCAD_CommandAlias",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "键盘快捷键",
+              "icon": "a-tubiao_jianpankuaijiejianshezhifuben2",
+              "cmd": "MxCAD_Shortcut",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            }
+          ]
+        },
+        {
+          "tab": "图形识别",
+          "icon": "a-tubiao_tuxingshibiefuben2",
+          "list": [
+            {
+              "tab": "图形识别",
+              "icon": "class: iconfont tuxingshibie",
+              "cmd": "Mx_PatternRec",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "size": "large",
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "查看已识别图形列表",
+              "icon": "class: iconfont tuxingliebiao",
+              "cmd": "Mx_PatternList"
+            }
+          ]
+        },
+        {
+          "tab": "符号标注",
+          "icon": "a-tubiao_fuhaobiaozhufuben2",
+          "list": [
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "箭头引注",
+                  "icon": "jiantouyinzhu",
+                  "cmd": "JTYZ",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "引出标注",
+                  "icon": "yinchu",
+                  "cmd": "YCBZ",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "做法标注",
+                  "icon": "zuofabiaozhu",
+                  "cmd": "ZFBZ",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "索引符号",
+                  "icon": "suoyin",
+                  "cmd": "SYFH",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "加折断线",
+                  "icon": "zheduanxian",
+                  "cmd": "JZDX",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "画对称轴",
+                  "icon": "duicheng",
+                  "cmd": "HDCZ",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "画指北针",
+                  "icon": "zhibeizhen",
+                  "cmd": "HZBZ",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "索引图名",
+                  "icon": "suoyintuming",
+                  "cmd": "SYTM",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "剖切符号",
+                  "icon": "pouqie",
+                  "cmd": "PQFH",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "标高标注",
+                  "icon": "biaogao",
+                  "cmd": "BGBZ"
+                },
+                {
+                  "tab": "图名标注",
+                  "icon": "tumingbiaozhu",
+                  "cmd": "TMBZ"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "家装设计",
+          "icon": "a-tubiao_jiazhuangshejifuben2",
+          "list": [
+            {
+              "tab": "示例户型图",
+              "icon": "huxingtu",
+              "cmd": "Mx_PlanView",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "size": "large",
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              }
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "绘制房间",
+                  "icon": "fangjian",
+                  "cmd": "HZFJ",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "绘制轴线",
+                  "icon": "zhouxian",
+                  "cmd": "HZZX",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "绘制墙体",
+                  "icon": "qiangti",
+                  "cmd": "HZQ",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "挖墙洞",
+                  "icon": "wadong",
+                  "cmd": "WQD",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "打断墙体",
+                  "icon": "daduanqiang",
+                  "cmd": "DDQT",
+                  "isShowLabel": true
+                },
+                {
+                  "tab": "单开门",
+                  "icon": "dankai",
+                  "cmd": "DKM",
+                  "isShowLabel": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "标准窗",
+                  "icon": "chuang",
+                  "cmd": "BZC",
+                  "isShowLabel": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tab": "测量",
+          "icon": "celiang",
+          "list": [
+            {
+              "tab": "连续测量",
+              "icon": "lianxubiaozhu",
+              "cmd": "Mx_MeasureContinueMeasurement",
+              "size": "large",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              }
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "对齐",
+                  "icon": "duiqibiaozhu",
+                  "cmd": "Mx_MeasureAlignComment"
+                },
+                {
+                  "tab": "线性",
+                  "icon": "xianxingbiaozhu",
+                  "cmd": "Mx_MeasureLinearComment"
+                },
+                {
+                  "tab": "面积",
+                  "icon": "cemianji",
+                  "cmd": "Mx_MeasureArea"
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "矩形面积",
+                  "icon": "mianjibiaozhu",
+                  "cmd": "Mx_MeasureReactArea"
+                },
+                {
+                  "tab": "坐标标注",
+                  "icon": "Szuobiaobiaozhu",
+                  "cmd": "Mx_MeasureCoordAnnotation"
+                },
+                {
+                  "tab": "弧长",
+                  "icon": "cehuchang",
+                  "cmd": "Mx_MeasureArcLength"
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "点到直线的距离",
+                  "icon": "dianxianjuli",
+                  "cmd": "Mx_MeasureDistFromPointToLine"
+                },
+                {
+                  "tab": "面积(含弧线)",
+                  "icon": "mianjihuxian",
+                  "cmd": "Mx_MeasureAreaArc"
+                },
+                {
+                  "tab": "测量填充面积",
+                  "icon": "cetianchong",
+                  "cmd": "Mx_MeasureAreaHatch"
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "tab": "测量圆",
+                  "icon": "celiang-yuanxingmianji",
+                  "cmd": "Mx_MeasureMeasuringCircle"
+                },
+                {
+                  "tab": "半径标注",
+                  "icon": "ceyuan",
+                  "cmd": "Mx_MeasureRadiusComment"
+                },
+                {
+                  "tab": "测量角度",
+                  "icon": "celiangjiaodu",
+                  "cmd": "Mx_MeasureAngleComment"
+                }
+              ]
+            },
+            {
+              "tab": "设置标注比例",
+              "icon": "a-scale-to-original",
+              "cmd": "Mx_SetDimScale"
+            },
+            {
+              "tab": "显隐标注",
+              "icon": "xianyin",
+              "cmd": "Mx_ShowHideAnnotation"
+            },
+            {
+              "tab": "清除标注",
+              "icon": "qingchu",
+              "cmd": "Mx_ClearAnnotation"
+            },
+            {
+              "tab": "标注分类管理",
+              "icon": "fenleiguanli",
+              "cmd": "Mx_CategoryManage"
+            },
+            {
+              "tab": "测量统计",
+              "icon": "bar",
+              "cmd": "Mx_MeasurementStatistics"
+            },
+            {
+              "tab": "标注设置",
+              "icon": "biaozhushezhi",
+              "cmd": "Mx_AnnotationSetting"
+            }
+          ]
+        },
+        {
+          "tab": "绘图工具",
+          "icon": "dengfen",
+          "list": [
+            {
+              "tab": "等分",
+              "cmd": "Mx_Extool_Bisection",
+              "icon": "dengfen",
+              "col": true,
+              "size": "large",
+              "isShowLabel": true,
+              "isShowToMainPanel": true,
+              "props": {
+                "style": {
+                  "width": "68px"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "其他",
+      "list": [
+        {
+          "tab": "帮助",
+          "icon": "",
+          "list": [
+            {
+              "tab": "设置",
+              "icon": "shezhi",
+              "cmd": "Mx_SetAppDialog",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "size": "large",
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            },
+            {
+              "tab": "关于(A)",
+              "icon": "guanyu",
+              "cmd": "MxCAD_About",
+              "labelWithArrowLayout": false,
+              "col": true,
+              "size": "large",
+              "isShowLabel": true,
+              "isShowToMainPanel": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

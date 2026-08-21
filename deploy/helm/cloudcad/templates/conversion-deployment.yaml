@@ -1,0 +1,48 @@
+{{- if eq .Values.mode "standalone" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcad-conversion
+  labels: { app: cloudcad, component: conversion }
+spec:
+  replicas: {{ .Values.conversionService.replicas }}
+  selector:
+    matchLabels: { app: cloudcad, component: conversion }
+  template:
+    metadata:
+      labels: { app: cloudcad, component: conversion }
+    spec:
+      containers:
+        - name: conversion
+          image: "{{ .Values.images.conversionService }}:{{ .Values.global.imageTag }}"
+          ports:
+            - containerPort: {{ .Values.conversionService.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.conversionService.port }}
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.conversionService.port }}
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          env:
+            - name: CONVERSION_SERVICE_PORT
+              value: "{{ .Values.conversionService.port }}"
+          resources: {{ toYaml .Values.conversionService.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudcad-conversion
+spec:
+  ports:
+    - port: {{ .Values.conversionService.port }}
+      targetPort: {{ .Values.conversionService.port }}
+  selector: { app: cloudcad, component: conversion }
+{{- end }}

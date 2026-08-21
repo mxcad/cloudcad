@@ -1,0 +1,810 @@
+/* 协同侧边栏样式 - CloudCAD 主题系统 2.0 */
+
+/* ============================================
+   1. 容器 - 与 CAD 编辑器融合
+   ============================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--sidebar-bg, var(--bg-secondary));
+  color: var(--text-primary);
+  overflow: hidden;
+  position: relative;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--accent-500) 30%,
+    var(--primary-500) 70%,
+    transparent 100%
+  );
+  opacity: 0.4;
+}
+
+[data-theme='dark'] .container::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--accent-500) 30%,
+    var(--info) 70%,
+    transparent 100%
+  );
+  box-shadow: 0 0 6px rgba(0, 156, 255, 0.3);
+}
+
+/* ============================================
+   2. 子 Tab 栏
+   ============================================ */
+
+.subTabBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .subTabBar {
+  border-bottom-color: var(--sidebar-border, #3a4352);
+}
+
+.panelContent {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ============================================
+   3. 刷新按钮
+   ============================================ */
+
+.toolbarRefreshBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toolbarRefreshBtn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+[data-theme='dark'] .toolbarRefreshBtn {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme='dark'] .toolbarRefreshBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.toolbarRefreshBtn:active {
+  transform: scale(0.95);
+}
+
+.toolbarRefreshBtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================
+   4. 协同卡片 (CollabWorkCard)
+   ============================================ */
+
+.workCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+  position: relative;
+}
+
+.workCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-strong);
+}
+
+[data-theme='dark'] .workCard {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .workCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.workCardActive {
+  border-color: var(--accent-500);
+  border-left: 2px solid var(--accent-500);
+  padding-left: 11px;
+  background: linear-gradient(
+    90deg,
+    var(--accent-50) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+}
+
+[data-theme='dark'] .workCardActive {
+  background: linear-gradient(
+    90deg,
+    rgba(6, 182, 212, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border-color: var(--accent-500);
+}
+
+.workCardMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.workCardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workCardTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .workCardTitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 本地图纸标识 */
+.workCardLocalTag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--info);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .workCardLocalTag {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.workCardMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .workCardMetaRow {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.workCardMeta + .workCardMeta::before {
+  content: '·';
+  margin-right: 4px;
+  opacity: 0.5;
+}
+
+.workCardBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+[data-theme='dark'] .workCardBadge {
+  color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.workCardActive .workCardBadge {
+  color: var(--accent-500);
+  border-color: var(--accent-400);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+[data-theme='dark'] .workCardActive .workCardBadge {
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.workCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ============================================
+   5. 头像
+   ============================================ */
+
+.workCardAvatars {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.workCardNoUsers {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+[data-theme='dark'] .workCardNoUsers {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--sidebar-bg, var(--bg-secondary));
+  margin-right: -6px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition:
+    transform 0.15s ease,
+    z-index 0s;
+}
+
+.avatar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-500);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+[data-theme='dark'] .avatarFallback {
+  background: var(--info);
+}
+
+.avatarMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  border: 2px solid var(--sidebar-bg, var(--bg-secondary));
+}
+
+[data-theme='dark'] .avatarMore {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.workCardActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   6. 当前图纸面板 (CurrentFilePanel)
+   ============================================ */
+
+.currentFilePanel {
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+.currentFilePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 0 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: 10px;
+}
+
+.currentFilePanelHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+[data-theme='dark'] .currentFilePanelHeader {
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom-color: var(--sidebar-border, #3a4352);
+}
+
+.statusCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+[data-theme='dark'] .statusCard {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme='dark'] .statusHeader {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.statusFileName {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .statusFileName {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.statusBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 12px;
+}
+
+.statusIcon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+}
+
+.statusIcon svg {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+[data-theme='dark'] .statusIcon {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] .statusIcon svg {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.statusTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+[data-theme='dark'] .statusTitle {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.statusDesc {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+  max-width: 180px;
+  line-height: 1.5;
+}
+
+[data-theme='dark'] .statusDesc {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* "协同中" 闪烁徽章 */
+.statusLiveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-dim);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .statusLiveBadge {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: statusPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+[data-theme='dark'] .statusDot {
+  background: #22c55e;
+}
+
+@keyframes statusPing {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.otherWorksSection {
+  margin-top: 6px;
+}
+
+.createNewRow {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-default);
+}
+
+[data-theme='dark'] .createNewRow {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================
+   7. 协同列表面板 (WorkListPanel)
+   ============================================ */
+
+.workListPanel {
+  padding: 8px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.workListGroup {
+  margin-bottom: 12px;
+}
+
+.workListGroupLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 8px 6px;
+}
+
+[data-theme='dark'] .workListGroupLabel {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.workListGroupBody {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   7.1 按图纸聚合分组
+   ============================================ */
+
+.drawingGroup {
+  margin-bottom: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+[data-theme='dark'] .drawingGroup {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.drawingGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-default);
+}
+
+[data-theme='dark'] .drawingGroupHeader {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.drawingGroupTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .drawingGroupTitle {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.drawingGroupCount {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+[data-theme='dark'] .drawingGroupCount {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.drawingGroupBody {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 6px;
+}
+
+.drawingGroupBody .workCard {
+  margin-bottom: 0;
+  animation: none;
+}
+
+/* ============================================
+   8. 空状态
+   ============================================ */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 50%;
+  margin-bottom: 14px;
+}
+
+.emptyIcon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+[data-theme='dark'] .emptyIcon {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme='dark'] .emptyIcon svg {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.emptyTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+[data-theme='dark'] .emptyTitle {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.emptyDescription {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  max-width: 180px;
+  line-height: 1.5;
+}
+
+[data-theme='dark'] .emptyDescription {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   9. 加载状态
+   ============================================ */
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.loadingSpinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 10px;
+}
+
+[data-theme='dark'] .loadingSpinner {
+  border-color: rgba(255, 255, 255, 0.08);
+  border-top-color: var(--info);
+}
+
+.loadingText {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+[data-theme='dark'] .loadingText {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   10. 动画
+   ============================================ */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.workCard {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+.workCard:nth-child(1) {
+  animation-delay: 0s;
+}
+.workCard:nth-child(2) {
+  animation-delay: 0.03s;
+}
+.workCard:nth-child(3) {
+  animation-delay: 0.06s;
+}
+.workCard:nth-child(4) {
+  animation-delay: 0.09s;
+}
+.workCard:nth-child(5) {
+  animation-delay: 0.12s;
+}
+
+/* ============================================
+   11. 响应式
+   ============================================ */
+
+@media (max-width: 480px) {
+  .currentFilePanel {
+    padding: 8px;
+  }
+  .workCard {
+    padding: 8px 10px;
+  }
+  .workListPanel {
+    padding: 6px;
+  }
+}

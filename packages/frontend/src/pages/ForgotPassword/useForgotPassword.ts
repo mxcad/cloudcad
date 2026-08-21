@@ -1,0 +1,53 @@
+import { useState, useCallback } from 'react';
+import { authControllerForgotPassword } from '@/api-sdk';
+import { t } from '@/languages';
+
+interface ForgotPasswordResult {
+  mailEnabled: boolean;
+  smsEnabled: boolean;
+  supportEmail?: string | null;
+  supportPhone?: string | null;
+}
+
+export function useForgotPassword() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useCallback(
+    async (params: {
+      email?: string;
+      phone?: string;
+    }): Promise<ForgotPasswordResult | null> => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await authControllerForgotPassword({
+          body: {
+            email: params.email,
+            phone: params.phone,
+            validateContact: '',
+          },
+        });
+        // SDK 默认不抛错：错误在 result.error，必须显式抛出否则失败时无任何反馈
+        if (result.error) throw result.error;
+        const apiResponse = result.data!;
+        if (!apiResponse) return null;
+        return apiResponse;
+      } catch (err) {
+        const message =
+          (err as Error & { response?: { data?: { message?: string } } })
+            .response?.data?.message ||
+          (err as Error).message ||
+          t('发送验证码失败，请稍后重试');
+        setError(message);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  return { submit, loading, error, setError };
+}

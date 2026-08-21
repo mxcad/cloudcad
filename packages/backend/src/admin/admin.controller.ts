@@ -1,0 +1,230 @@
+﻿///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
+// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { IPERMISSION_SERVICE, IPermissionService } from '../permission/interfaces/permission-service.interface';
+import { PermissionCacheService } from '../permission/services/permission-cache.service';
+import { StorageCleanupService } from '../storage-management/services/storage-cleanup.service';
+import { SystemPermission } from '../common/enums/permissions.enum';
+import {
+  AdminStatsResponseDto,
+  CacheStatsResponseDto,
+  CacheCleanupResponseDto,
+  UserCacheClearResponseDto,
+} from './dto/admin-response.dto';
+
+@ApiTags('管理员')
+@ApiBearerAuth()
+@Controller('admin')
+@UseGuards(RolesGuard, PermissionsGuard)
+@RequirePermissions([SystemPermission.SYSTEM_ADMIN])
+export class AdminController {
+  constructor(
+    @Inject(IPERMISSION_SERVICE) private readonly permissionService: IPermissionService,
+    private readonly cacheService: PermissionCacheService,
+    private readonly storageCleanupService: StorageCleanupService
+  ) {}
+
+  @Get('stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取管理员统计信息' })
+  @ApiResponse({
+    status: 200,
+    description: '获取管理员统计信息成功',
+    type: AdminStatsResponseDto,
+  })
+  async getAdminStats() {
+    return {
+      message: '管理员统计信息',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('permissions/cache')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取权限缓存统计' })
+  @ApiResponse({
+    status: 200,
+    description: '获取权限缓存统计成功',
+    type: CacheStatsResponseDto,
+  })
+  async getCacheStats() {
+    const stats = await this.cacheService.getStats();
+    return {
+      message: '权限缓存统计',
+      data: stats,
+    };
+  }
+
+  @Post('permissions/cache/cleanup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '清理权限缓存' })
+  @ApiResponse({
+    status: 200,
+    description: '缓存清理完成',
+    type: CacheCleanupResponseDto,
+  })
+  async cleanupCache() {
+    const cleaned = await this.cacheService.cleanup();
+    return {
+      message: '缓存清理完成',
+      data: { cleanedEntries: cleaned },
+    };
+  }
+
+  @Delete('permissions/cache/user/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '清除用户权限缓存' })
+  @ApiResponse({
+    status: 200,
+    description: '用户权限缓存已清除',
+    type: UserCacheClearResponseDto,
+  })
+  async clearUserCache(@Param('userId') userId: string) {
+    await this.cacheService.clearUserCache(userId);
+    return {
+      message: `用户 ${userId} 的权限缓存已清除`,
+    };
+  }
+
+  @Post('storage/cleanup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '手动触发存储清理' })
+  @ApiResponse({
+    status: 200,
+    description: '存储清理完成',
+  })
+  @ApiQuery({
+    name: 'delayDays',
+    required: false,
+    type: Number,
+    description: '清理延迟天数（覆盖默认值）',
+  })
+  async cleanupStorage(@Query('delayDays') delayDays?: number) {
+    const result = await this.storageCleanupService.manualCleanup(delayDays);
+    return {
+      message: '存储清理完成',
+      data: {
+        deletedNodes: result.deletedNodes,
+        deletedDirectories: result.deletedDirectories,
+        freedSpace: result.freedSpace,
+        errors: result.errors,
+      },
+    };
+  }
+
+  @Get('storage/cleanup/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取待清理存储统计' })
+  @ApiResponse({
+    status: 200,
+    description: '获取待清理存储统计成功',
+  })
+  async getCleanupStats() {
+    const stats = await this.storageCleanupService.getPendingCleanupStats();
+    return {
+      message: '待清理存储统计',
+      data: stats,
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 孤儿文件检测与清理
+  // ────────────────────────────────────────────────────────────
+
+  @Get('storage/orphans/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取孤儿文件统计（本地孤立+DB孤立）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取孤儿文件统计成功',
+  })
+  async getOrphanStats() {
+    const stats = await this.storageCleanupService.getOrphanStats();
+    return {
+      message: '孤儿文件统计',
+      data: {
+        localOrphanCount: stats.localOrphanCount,
+        localOrphanTotalSize: stats.localOrphanTotalSize,
+        dbOrphanCount: stats.dbOrphanCount,
+        localOrphans: stats.localOrphans.map((o) => ({
+          nodeId: o.nodeId,
+          directory: o.directory,
+          sizeBytes: o.sizeBytes,
+        })),
+        dbOrphans: stats.dbOrphans.map((o) => ({
+          nodeId: o.nodeId,
+          name: o.name,
+          projectId: o.projectId,
+        })),
+      },
+    };
+  }
+
+  @Post('storage/orphans/cleanup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '手动触发孤儿文件清理' })
+  @ApiResponse({
+    status: 200,
+    description: '孤儿文件清理完成',
+  })
+  async cleanupOrphans() {
+    const result = await this.storageCleanupService.cleanupOrphans();
+    return {
+      message: '孤儿文件清理完成',
+      data: {
+        deletedNodes: result.deletedNodes,
+        deletedDirectories: result.deletedDirectories,
+        freedSpace: result.freedSpace,
+        errors: result.errors,
+      },
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // 标记删除文件统计
+  // ────────────────────────────────────────────────────────────
+
+  @Get('storage/deleted-files/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取标记删除文件统计（回收站+待清理+已删项目+孤儿）' })
+  @ApiResponse({
+    status: 200,
+    description: '获取标记删除文件统计成功',
+  })
+  async getDeletedFileStats() {
+    const stats = await this.storageCleanupService.getDeletedFileStats();
+    return {
+      message: '标记删除文件统计',
+      data: stats,
+    };
+  }
+}

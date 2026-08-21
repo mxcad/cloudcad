@@ -1,0 +1,15 @@
+export const CAD_EVENTS = {
+  EXPORT_FILE: 'mxcad-export-file',
+  EXPORT_PDF: 'mxcad-export-pdf',
+  EXPORT_DWG: 'mxcad-export-dwg',
+  EXPORT_DXF: 'mxcad-export-dxf',
+  SAVE_AS: 'mxcad-save-as',
+  SAVE_REQUIRED: 'mxcad-save-required',
+  SAVE_AS_REQUIRED: 'mxcad-saveas-required',
+  FILE_OPENED: 'mxcad-file-opened',
+  OPEN_COMPLETE: 'mxcad-file-open-complete',
+  DATABASE_MODIFIED: 'mxcad-database-modified',
+  NEW_FILE: 'mxcad-new-file',
+  UPLOAD_COMPLETED: 'mxcad-upload-completed',
+  PUBLIC_FILE_UPLOADED: 'public-file-uploaded',
+} as const;

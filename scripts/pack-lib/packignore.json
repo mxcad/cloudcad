@@ -1,0 +1,19 @@
+{
+  "comment": "打包排除配置。修改后无需任何构建，下次打包即生效。",
+  "exclude": {
+    "comment": "完全排除：该目录及其下所有内容不打包（目录也不会创建）",
+    "dirs": [
+      "runtime/windows/mxcad/tool",
+      "runtime/linux/mxcad/tool"
+    ],
+    "files": []
+  },
+  "keepEmpty": {
+    "comment": "保留空目录：目录会创建，但其内部文件不打包（用于 mxcad/files，内含保密图纸 mxweb）",
+    "dirs": [
+      "runtime/windows/mxcad/files",
+      "runtime/linux/mxcad/files"
+    ],
+    "files": []
+  }
+}

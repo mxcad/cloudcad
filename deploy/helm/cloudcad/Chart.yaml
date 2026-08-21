@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cloudcad
+description: 梦想网页CAD实时协同平台 Helm Chart — 弹性三模式部署
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

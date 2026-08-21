@@ -1,0 +1,155 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfig, DatabaseConfig } from '../config/app.config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@cloudcad/db';
+import { I18nContext } from 'nestjs-i18n';
+import type { IDatabaseService } from '@cloudcad/contracts';
+
+@Injectable()
+export class DatabaseService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy, IDatabaseService
+{
+  private readonly logger = new Logger(DatabaseService.name);
+  private readonly slowQueryThresholdMs: number;
+
+  constructor(private readonly configService: ConfigService<AppConfig>) {
+    const dbConfig = configService.get<DatabaseConfig>('database');
+    if (!dbConfig) {
+      throw new Error('无法获取数据库配置，请检查 .env 文件或环境变量');
+    }
+
+    // 优先使用 DATABASE_URL 环境变量，否则根据各配置项拼接
+    let databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      const encodedPassword = encodeURIComponent(dbConfig.password);
+      databaseUrl = `postgresql://${dbConfig.username}:${encodedPassword}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
+    }
+
+    const adapter = new PrismaPg({
+      connectionString: databaseUrl,
+      max: dbConfig.maxConnections,
+      idleTimeoutMillis: dbConfig.idleTimeoutMillis,
+      connectionTimeoutMillis: dbConfig.connectionTimeoutMillis,
+    });
+
+    const isDev = process.env.NODE_ENV !== 'production';
+
+    super({
+      log: isDev
+        ? [
+            // 开发环境：query 事件用于慢查询检测，不通过 stdout 打印全量 SQL
+            { emit: 'event', level: 'query' },
+            { emit: 'stdout', level: 'error' },
+            { emit: 'stdout', level: 'warn' },
+            { emit: 'stdout', level: 'info' },
+          ]
+        : [
+            // 生产环境：只保留 error + warn
+            { emit: 'stdout', level: 'error' },
+            { emit: 'stdout', level: 'warn' },
+          ],
+      adapter,
+    });
+
+    // 慢查询阈值（毫秒），可通过 LOG_SLOW_QUERY_THRESHOLD_MS 环境变量覆盖
+    this.slowQueryThresholdMs = parseInt(
+      process.env.LOG_SLOW_QUERY_THRESHOLD_MS || '500',
+      10,
+    ) || 500;
+
+    // 慢查询监听：仅开发环境，超过阈值的 SQL 才打印
+    if (isDev) {
+      this.$on('query', (event) => {
+        if (event.duration >= this.slowQueryThresholdMs) {
+          this.logger.warn(
+            `🐢 慢查询 (${event.duration}ms): ${event.query?.substring(0, 200) || 'N/A'}`,
+          );
+        }
+      });
+    }
+
+    if (isDev) {
+      this.logger.log(
+        `数据库连接URL: ${databaseUrl.replace(/:[^:@]*@/, ':***@')}`
+      );
+    }
+  }
+
+  async onModuleInit() {
+    const startTime = Date.now();
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (isDev) this.logger.log('正在连接数据库...');
+
+    try {
+      const connectPromise = this.$connect();
+      const timeout = this.configService.get('database', {
+        infer: true,
+      })!.connectionTimeoutMillis;
+      // 超时 Promise：仅用于 Promise.race 超时控制，永远只 reject 不 resolve
+      const timeoutPromise = new Promise<void>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`数据库连接超时 (${timeout}ms)`)),
+          timeout
+        )
+      );
+
+      await Promise.race([connectPromise, timeoutPromise]);
+
+      const duration = Date.now() - startTime;
+      if (isDev) {
+        this.logger.log(`✅ 数据库连接成功，耗时 ${duration}ms`);
+      } else {
+        this.logger.log(`数据库连接成功 (${duration}ms)`);
+      }
+    } catch (error) {
+      this.logger.error('数据库连接失败:', error);
+      throw error;
+    }
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log('数据库连接已断开');
+    }
+  }
+
+  async healthCheck() {
+    try {
+      // 加超时保护：健康检查风暴/连接池打满时，避免 $queryRaw 长时间排队等待连接，
+      // 导致 liveness 请求挂起 → 探测方超时重试 → 更多请求 → 连接池更紧张（恶性循环）
+      await Promise.race([
+        this.$queryRaw`SELECT 1`,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('health check timeout')), 3000)
+        ),
+      ]);
+      return { status: 'healthy', message: I18nContext.current()?.t('success.health_db_connected') ?? '数据库连接正常' };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        message: I18nContext.current()?.t('error.database_extra.connection_failed') ?? '数据库连接失败',
+        error: error.message,
+      };
+    }
+  }
+}

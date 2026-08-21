@@ -1,0 +1,85 @@
+# 梦想网页CAD实时协同平台 Promtail 配置模板（ADR-0055 §3）
+# 部署到每台业务机，采集 data/logs/<服务>/app-*.log 与 access-*.log，
+# 标签 service / host / env / log_type(app|access)，推送至监控栈 Loki。
+#
+# 使用方法：
+#   1. 安装 promtail 二进制（离线部署包见 #314），放到 /usr/local/bin/promtail
+#   2. 复制本文件为 /etc/promtail/promtail.yml 并替换占位符
+#   3. systemd unit 启动（模板见本目录 promtail.service，或 docker 方式运行）
+#
+# 占位符需替换：
+#   {{ LOKI_URL }}   - 监控栈 Loki 地址（内网 HTTP，如 http://10.0.0.5:3100/loki/api/v1/push）
+#   {{ NODE_NAME }}  - 本机节点标识
+#   {{ ENV }}        - 环境（prod/staging/dev）
+#   {{ LOG_ROOT }}   - 日志根目录（默认 data/logs）
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  # 上报位置记录，幂等续传
+  positions:
+    filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: {{ LOKI_URL }}
+    # 若监控栈 Loki 需认证，解除下面注释
+    # basic_auth:
+    #   username: promtail
+    #   password: <PASSWORD>
+
+scrape_configs:
+  # 各服务应用日志（app-*.log，log_type=app）
+  - job_name: cloudcad-app-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: cloudcad
+          host: '{{ NODE_NAME }}'
+          env: '{{ ENV }}'
+          log_type: app
+          __path__: '{{ LOG_ROOT }}/*/app-*.log'
+    pipeline_stages:
+      - regex:
+          source: filename
+          expression: '/app-.*\.log$'
+      - regex:
+          # 从路径提取 service 名（data/logs/<service>/app-*.log）
+          source: filename
+          expression: '{{ LOG_ROOT }}/(?P<service>[^/]+)/app-[^/]*\.log$'
+      - labels:
+          service:
+      - multiline:
+          firstline: '^\{"level":'
+          max_wait_time: 3s
+      - json:
+          expressions:
+            level: level
+            msg: msg
+      - labels:
+          level:
+
+  # 各服务访问日志（access-*.log，log_type=access）
+  - job_name: cloudcad-access-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: cloudcad
+          host: '{{ NODE_NAME }}'
+          env: '{{ ENV }}'
+          log_type: access
+          __path__: '{{ LOG_ROOT }}/*/access-*.log'
+    pipeline_stages:
+      - regex:
+          source: filename
+          expression: '{{ LOG_ROOT }}/(?P<service>[^/]+)/access-[^/]*\.log$'
+      - labels:
+          service:
+      - json:
+          expressions:
+            status: status
+            method: method
+            duration_ms: duration
+      - labels:
+          status:

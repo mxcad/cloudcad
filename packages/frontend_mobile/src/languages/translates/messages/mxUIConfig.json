@@ -1,0 +1,501 @@
+{
+    "批注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "批註",
+        "en-US": "Annotation",
+        "ko-KR": "주석",
+        "$id": 1040
+    },
+    "手绘线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "手繪線",
+        "en-US": "Hand drawn lines",
+        "ko-KR": "손으로 그린 선",
+        "$id": 1041
+    },
+    "箭头": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "箭頭",
+        "en-US": "arrow",
+        "ko-KR": "화살표",
+        "$id": 1042
+    },
+    "引线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "引線",
+        "en-US": "Lead wire",
+        "ko-KR": "도선",
+        "$id": 1043
+    },
+    "云线": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "雲線",
+        "en-US": "Cloud Line",
+        "ko-KR": "구름선",
+        "$id": 1044
+    },
+    "音频": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "音訊",
+        "en-US": "audio frequency",
+        "ko-KR": "오디오",
+        "$id": 1045
+    },
+    "图片": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圖片",
+        "en-US": "picture",
+        "ko-KR": "사진",
+        "$id": 1046
+    },
+    "绘制": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "繪製",
+        "en-US": "draw",
+        "ko-KR": "그리기",
+        "$id": 1047
+    },
+    "圆形": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圓形",
+        "en-US": "rotundity",
+        "ko-KR": "원형",
+        "$id": 1048
+    },
+    "椭圆": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "橢圓",
+        "en-US": "ellipse",
+        "ko-KR": "타원",
+        "$id": 1049
+    },
+    "多线段": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "多線段",
+        "en-US": "pline ",
+        "ko-KR": "폴리선 세그먼트",
+        "$id": 1050
+    },
+    "点": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "點",
+        "en-US": "spot",
+        "ko-KR": "점",
+        "$id": 1051
+    },
+    "编辑": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "編輯",
+        "en-US": "edit",
+        "ko-KR": "편집",
+        "$id": 1052
+    },
+    "剪切": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "剪切",
+        "en-US": "shear",
+        "ko-KR": "자르기",
+        "$id": 1053
+    },
+    "偏移": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "偏移",
+        "en-US": "deviation",
+        "ko-KR": "오프셋",
+        "$id": 1054
+    },
+    "圆角": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圓角",
+        "en-US": "fillet",
+        "ko-KR": "필렛",
+        "$id": 1055
+    },
+    "倒角": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "倒角",
+        "en-US": "Chamfering",
+        "ko-KR": "모따기",
+        "$id": 1056
+    },
+    "图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圖層",
+        "en-US": "layer ",
+        "ko-KR": "레이어",
+        "$id": 1057
+    },
+    "图层列表": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圖層清單",
+        "en-US": "layer list ",
+        "ko-KR": "도면층 목록",
+        "$id": 1058
+    },
+    "关闭图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "關閉圖層",
+        "en-US": "Close Layer",
+        "ko-KR": "도면층 닫기",
+        "$id": 1059
+    },
+    "关闭其他": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "關閉其他",
+        "en-US": "Close Other",
+        "ko-KR": "기타 닫기",
+        "$id": 1060
+    },
+    "图层全开": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圖層全開",
+        "en-US": "Layer fully open",
+        "ko-KR": "도면층 전체 켜기",
+        "$id": 1061
+    },
+    "图层全关": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "圖層全關",
+        "en-US": "Layer Full Off",
+        "ko-KR": "도면층 전체 끄기",
+        "$id": 1062
+    },
+    "置为当前": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "置為當前",
+        "en-US": "Set as current",
+        "ko-KR": "현재로 설정",
+        "$id": 1063
+    },
+    "上一图层": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "上一圖層",
+        "en-US": "Previous layer",
+        "ko-KR": "이전 도면층",
+        "$id": 1064
+    },
+    "测量": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "量測",
+        "en-US": "measure",
+        "ko-KR": "측정",
+        "$id": 1065
+    },
+    "测长度": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "測長度",
+        "en-US": "Measure length",
+        "ko-KR": "길이 측정",
+        "$id": 1066
+    },
+    "连续测": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "連續測",
+        "en-US": "Continuous testing",
+        "ko-KR": "연속 측정",
+        "$id": 1067
+    },
+    "测面积": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "測面積",
+        "en-US": "Measure area",
+        "ko-KR": "면적 측정",
+        "$id": 1068
+    },
+    "侧面积": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "側面積",
+        "en-US": "Side area",
+        "ko-KR": "측면 면적",
+        "$id": 1069
+    },
+    "测坐标": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "測座標",
+        "en-US": "Coordinate measurement",
+        "ko-KR": "좌표 측정",
+        "$id": 1070
+    },
+    "测弧长": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "測弧長",
+        "en-US": "Measure arc length",
+        "ko-KR": "호 길이 측정",
+        "$id": 1071
+    },
+    "测角度": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "測角度",
+        "en-US": "Measure angle",
+        "ko-KR": "각도 측정",
+        "$id": 1072
+    },
+    "标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "標注",
+        "en-US": "tagging",
+        "ko-KR": "마크업",
+        "$id": 1073
+    },
+    "对齐标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "對齊標注",
+        "en-US": "Align annotations",
+        "ko-KR": "치수 정렬",
+        "$id": 1074
+    },
+    "线性标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "線性標注",
+        "en-US": "Linear annotation",
+        "ko-KR": "선형 치수",
+        "$id": 1075
+    },
+    "角度标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "角度標注",
+        "en-US": "Angle annotation",
+        "ko-KR": "각도 치수",
+        "$id": 1076
+    },
+    "直径标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "直徑標注",
+        "en-US": "Diameter annotation",
+        "ko-KR": "지름 치수",
+        "$id": 1077
+    },
+    "半径标注": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "半徑標注",
+        "en-US": "Radius annotation",
+        "ko-KR": "반지름 치수",
+        "$id": 1078
+    },
+    "查找文字": {
+        "$files": [
+            "public\\mxUIConfig.json",
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "zh-TW": "查找文字",
+        "en-US": "Find Text",
+        "ko-KR": "텍스트 찾기",
+        "$id": 1079
+    },
+    "语言": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "language",
+        "zh-TW": "語言",
+        "ko-KR": "언어",
+        "$id": 1080
+    },
+    "打开": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "open",
+        "zh-TW": "打開",
+        "ko-KR": "열다",
+        "$id": 1081
+    },
+    "无缓存打开": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "Open without cache",
+        "zh-TW": "無緩存打開",
+        "ko-KR": "캐시 없이 열기",
+        "$id": 1082
+    },
+    "设置": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "set up",
+        "zh-TW": "設定",
+        "ko-KR": "설정",
+        "$id": 1083
+    },
+    "重绘": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "Repaint ",
+        "zh-TW": "重繪",
+        "ko-KR": "다시 그리기",
+        "$id": 1084
+    },
+    "显示全部": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "Show all",
+        "zh-TW": "顯示全部",
+        "ko-KR": "모두 표시",
+        "$id": 1085
+    },
+    "布局": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "layout",
+        "zh-TW": "佈局",
+        "ko-KR": "레이아웃",
+        "$id": 1086
+    },
+    "保存DWG": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "Save DWG",
+        "zh-TW": "保存DWG",
+        "ko-KR": "DWG 저장",
+        "$id": 1087
+    },
+    "导出PDF": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "Export PDF",
+        "zh-TW": "匯出PDF",
+        "ko-KR": "PDF 내보내기",
+        "$id": 1088
+    },
+    "新建图纸": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "New drawing",
+        "zh-TW": "新建圖紙",
+        "ko-KR": "새 시트",
+        "$id": 1089
+    },
+    "另存为到云图": {
+        "$files": [
+            "..\\..\\public\\mxUIConfig.json"
+        ],
+        "en-US": "Save as to Cloud Map",
+        "zh-TW": "另存為到雲圖",
+        "ko-KR": "클라우드로 저장",
+        "$id": 1090
+    }
+}

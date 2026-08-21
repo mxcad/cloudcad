@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudCAD 架构深化报告 — 2026-07-23</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  .card { @apply bg-white rounded-xl shadow-lg border border-gray-100 p-6 mb-6; }
+  .badge-strong { @apply inline-block px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700; }
+  .badge-worth { @apply inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700; }
+  .badge-speculative { @apply inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700; }
+  .comparison { @apply flex gap-4 mt-4; }
+  .comparison > div { @apply flex-1 rounded-lg p-4; }
+  .before-box { @apply bg-red-50 border border-red-200; }
+  .after-box { @apply bg-green-50 border border-green-200; }
+  .module { @apply inline-block px-2 py-1 rounded text-xs font-mono; }
+  .file-tag { @apply inline-block px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600 font-mono; }
+  .seam-line { @apply border-t-2 border-dashed my-2; }
+  .callout { @apply bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-sm my-2; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+<div class="max-w-6xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="mb-10">
+    <h1 class="text-3xl font-bold text-gray-900">🧱 CloudCAD 架构深化报告</h1>
+    <p class="text-gray-500 mt-1">2026-07-23 · 基于 `/codebase-design` 词汇体系的摩擦点扫描</p>
+    <p class="text-sm text-gray-400 mt-2">
+      最近 30 天提交量密集（140+ commits），大量重构已完成：<br>
+      <span class="file-tag">mxcadManager</span> Command 模式提取（ADR-0005）、
+      <span class="file-tag">FileSystemController</span> 拆分为 5 个控制器（ADR-0002）、
+      <span class="file-tag">CommonModule</span> 拆分为 4 个领域模块、
+      <span class="file-tag">BatchDownloadService</span> 提取 SseManager
+    </p>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 1: FileSystemService 纯委托门面                     -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">① FileSystemService：33 个方法的纯委托门面</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 文件系统模块</p>
+      </div>
+      <span class="badge-strong">Strong</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">packages/backend/src/file-system/services/file-system.service.ts</span>
+        <span class="file-tag">packages/backend/src/file-system/controllers/*.ts</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      <span class="module bg-red-100 text-red-700">FileSystemService</span> 有 7 个构造器依赖、33 个公开方法、184 行——<strong>每个方法都是单行委托</strong>。它不添加任何业务逻辑、验证、转换或横切关注点。ADR-0002 已经移除了控制器对其的依赖，但外部消费者（<span class="module bg-gray-100">library/</span>、<span class="module bg-gray-100">mxcad/</span>、<span class="module bg-gray-100">version-control/</span>）仍然通过它调用底层服务。
+    </p>
+
+    <div class="comparison">
+      <div class="before-box">
+        <h4 class="font-bold text-red-800 text-sm mb-2">现状：浅层门面</h4>
+        <div class="text-xs font-mono space-y-1 text-red-900">
+          <div>FileSystemController ──→ FileSystemService</div>
+          <div>library/ ──→ FileSystemService</div>
+          <div>mxcad/ ──→ FileSystemService</div>
+          <div>version-control/ ──→ FileSystemService</div>
+          <div class="seam-line border-red-300"></div>
+          <div class="text-red-600">│  FileSystemService（33 个委托方法）</div>
+          <div class="text-red-600">│  ├── .createProject() → projectCrudService.createProject()</div>
+          <div class="text-red-600">│  ├── .getChildren()  → fileTreeService.getChildren()</div>
+          <div class="text-red-600">│  ├── .search()      → searchService.search()</div>
+          <div class="text-red-600">│  └── ...30 more</div>
+          <div class="seam-line border-red-300"></div>
+          <div>ProjectCrudService  FileTreeService  SearchService ...</div>
+        </div>
+      </div>
+      <div class="after-box">
+        <h4 class="font-bold text-green-800 text-sm mb-2">深化后：删除门面</h4>
+        <div class="text-xs font-mono space-y-1 text-green-900">
+          <div>FileSystemController ──→ ProjectCrudService</div>
+          <div>library/ ──→ FileTreeService 等直接注入</div>
+          <div>mxcad/ ──→ 或通过 <strong>FileSystemFacade</strong>（仅保留跨子服务方法）</div>
+          <div>version-control/ ──→ 直接注入所需服务</div>
+          <div class="seam-line border-green-300"></div>
+          <div class="text-green-700">│  ProjectCrudService  FileTreeService  SearchService</div>
+          <div class="text-green-700">│  NodeCopyMoveService  StorageInfoService ...</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      执行<a class="text-blue-600 underline">删除测试</a>：如果删除 <span class="module bg-red-100 text-red-700">FileSystemService</span>，复杂性不会消失——它已经在底层服务中。复杂性不会"重新分布到调用方"因为<strong>调用方已经在直接调用底层服务</strong>（控制器端已在 ADR-0002 中完成）。剩下的唯一原因是外部模块（library/、mxcad/）依赖它。
+    </p>
+    <p class="text-sm text-gray-700">
+      方案：将外部模块的注入改为直接注入底层服务。如果某些外部模块需要跨多个子服务的调用，创建一个小型 <span class="module bg-green-100 text-green-700">FileSystemFacade</span>——但只保留确实需要聚合的方法（2-3 个），而不是 33 个。
+    </p>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Leverage</strong>：测试直接调用子服务，不再需要 mock 一层无逻辑的中间层</li>
+      <li><strong>Locality</strong>：子服务签名变更时只需修改直接使用者，不再需要同步更新门面</li>
+      <li><strong>Depth</strong>：调用方学到的是子服务的真实接口，而不是 33 个转发方法的浅层</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 2: 跨模块权限接口缺失                                -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">② 三个权限服务均无接口隔离</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 权限 / 文件系统 / 角色模块</p>
+      </div>
+      <span class="badge-strong">Strong</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">permission/services/permission.service.ts</span>
+        <span class="file-tag">roles/project-permission.service.ts</span>
+        <span class="file-tag">file-system/file-permission/file-system-permission.service.ts</span>
+        <span class="file-tag">common/interfaces/permission-store.interface.ts</span>
+        <span class="file-tag">share/share.service.ts</span>
+        <span class="file-tag">file-operations/node-trash.service.ts</span>
+        <span class="file-tag">batch-download/batch-download.service.ts</span>
+        <span class="file-tag">library/library.service.ts</span>
+        <span class="file-tag">common/guards/permissions.guard.ts</span>
+        <span class="file-tag">common/guards/require-project-permission.guard.ts</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      三个权限服务——<span class="module bg-red-100 text-red-700">PermissionService</span>、<span class="module bg-red-100 text-red-700">ProjectPermissionService</span>、<span class="module bg-red-100 text-red-700">FileSystemPermissionService</span>——被 15+ 个文件、8+ 个模块作为<strong>具体类直接 import</strong>，没有接口解耦。<span class="module bg-gray-100">share/</span>、<span class="module bg-gray-100">node-trash/</span>、<span class="module bg-gray-100">batch-download/</span>、<span class="module bg-gray-100">mxcad/</span> 等多个 Layer 2/3 模块直接耦合到彼此的 import 图。
+    </p>
+    <p class="text-sm text-gray-700 mb-4">
+      讽刺的是，<span class="file-tag">common/interfaces/permission-store.interface.ts</span> 已经定义了 <span class="module bg-green-100 text-green-700">IPermissionStore</span> 接口（7 个方法），并通过 <span class="module bg-green-100 text-green-700">IPERMISSION_STORE</span> 令牌导出——但它仅在 <span class="module bg-gray-100">roles/</span> 内部使用。这套模式已经验证可行，却没有推广。
+    </p>
+
+    <div class="mermaid mb-4">
+graph TB
+    subgraph 现状["现状：具体类直接导入"]
+        PS[PermissionService<br/>具体类]
+        PPS[ProjectPermissionService<br/>具体类]
+        FSPS[FileSystemPermissionService<br/>具体类]
+        SHARE[share.service.ts]
+        TRASH[node-trash.service.ts]
+        BATCH[batch-download.service.ts]
+        GUARD[permissions.guard.ts]
+        LIBRARY[library.service.ts]
+        SHARE --> PS
+        SHARE --> PPS
+        TRASH --> PS
+        TRASH --> PPS
+        BATCH --> PS
+        GUARD --> PPS
+        LIBRARY --> FSPS
+    end
+    subgraph 目标["目标：接口隔离"]
+        IPS[IPermissionService<br/>接口+DI Token]
+        IPPS[IProjectPermissionService<br/>接口+DI Token]
+        IFSPS[IFileSystemPermissionService<br/>接口+DI Token]
+        IPS_IMPL[PermissionService<br/>适配器实现]
+        IPPS_IMPL[ProjectPermissionService<br/>适配器实现]
+        IFSPS_IMPL[FileSystemPermissionService<br/>适配器实现]
+        SHARE2[share.service.ts]
+        TRASH2[node-trash.service.ts]
+        SHARE2 -.->|IPERMISSION_SERVICE| IPS
+        SHARE2 -.->|IPROJECT_PERMISSION| IPPS
+        TRASH2 -.->|IPERMISSION_SERVICE| IPS
+        TRASH2 -.->|IPROJECT_PERMISSION| IPPS
+        IPS_IMPL --> IPS
+        IPPS_IMPL --> IPPS
+        IFSPS_IMPL --> IFSPS
+    end
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-2 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      遵循现有的 OSS/Pro/TOB 可替换模块模式（IAuthProvider 模式已验证），为三个权限服务分别定义接口 + DI 令牌：
+    </p>
+    <div class="text-xs font-mono bg-gray-50 p-3 rounded mb-3">
+      // 参考：IAuthProvider 接口 + AUTH_PROVIDER 令牌模式<br>
+      export const IPERMISSION_SERVICE = 'IPermissionService';<br>
+      export interface IPermissionService { ... }<br><br>
+      // PermissionModule 中注册<br>
+      { provide: IPERMISSION_SERVICE, useClass: PermissionService }
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Seam</strong>：创建一个真正的适配器 seam——TOB 客户可以通过自定义 PermissionService 替换 OSS 实现，而不影响调用方</li>
+      <li><strong>Locality</strong>：权限逻辑变更只影响适配器实现，不影响 15+ 个消费者</li>
+      <li><strong>Testability</strong>：测试通过 mock 接口而非具体类，测试设置从模块级 mock 降为单行 stub</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 3: BatchDownloadOrchestrator.processJob              -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">③ BatchDownloadOrchestrator.processJob：171 行上帝方法</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 批量下载模块</p>
+      </div>
+      <span class="badge-strong">Strong</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">batch-download/batch-download-orchestrator.ts（237 行）</span>
+        <span class="file-tag">batch-download/batch-download.service.ts（8 个依赖）</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      <span class="module bg-red-100 text-red-700">processJob</span>（第 43-214 行）是一个 171 行的单一方法，没有提取辅助函数。它混合了<strong>文件遍历、格式转换调度、计数器更新、ZIP 构建、错误跟踪、目录结构维护</strong>六个职责。所有状态通过可变局部变量（<code>completedCount</code>、<code>errorCount</code>、<code>errors</code>、<code>convertedFiles</code>、<code>archiveEntries</code>）手动传递，难以独立测试。SseManager 虽已提取（好！），但核心编排仍是一块巨石。
+    </p>
+
+    <div class="comparison">
+      <div class="before-box">
+        <h4 class="font-bold text-red-800 text-sm mb-2">现状</h4>
+        <div class="text-xs font-mono text-red-900 space-y-0.5">
+          <div>processJob() {</div>
+          <div>  // 1. 状态更新（5行）</div>
+          <div>  // 2. 展开文件夹（8行）</div>
+          <div>  // 3. 遍历文件（80行）</div>
+          <div>  //    ├── 检查中止</div>
+          <div>  //    ├── 查询节点</div>
+          <div>  //    ├── 4种格式处理</div>
+          <div>  //    ├── 转换调度</div>
+          <div>  //    ├── 计数器更新</div>
+          <div>  //    └── 错误追踪</div>
+          <div>  // 4. 空目录（10行）</div>
+          <div>  // 5. error.json（5行）</div>
+          <div>  // 6. 创建ZIP（15行）</div>
+          <div>  // 7. 状态完成（10行）</div>
+          <div>}</div>
+        </div>
+      </div>
+      <div class="after-box">
+        <h4 class="font-bold text-green-800 text-sm mb-2">深化后</h4>
+        <div class="text-xs font-mono text-green-900 space-y-0.5">
+          <div>processJob() {</div>
+          <div>  const ctx = new JobContext(jobId, controller);</div>
+          <div>  if (!ctx.load()) return;</div>
+          <div>  ctx.expandFolders();</div>
+          <div>  for (const item of ctx.items) {</div>
+          <div>    processItem(item, ctx);  // 可单独测试</div>
+          <div>  }</div>
+          <div>  finalizeArchive(ctx);       // 可单独测试</div>
+          <div>}</div>
+          <div class="mt-2 text-green-700">// 每个子步骤有明确的输入/输出</div>
+          <div>processItem(item, ctx) {</div>
+          <div>  const formats = getFormats(item);</div>
+          <div>  for (const fmt of formats) {</div>
+          <div>    const result = tryConvert(item, fmt);</div>
+          <div>    ctx.record(result);</div>
+          <div>  }</div>
+          <div>}</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      引入 <span class="module bg-green-100 text-green-700">JobContext</span> 作为显式编排上下文，封装计数器、中止信号和错误集合。将 <code>processJob</code> 的六个步骤提取为独立方法（<code>expandFolder</code>、<code>processItem</code>、<code>tryConvert</code>、<code>addEmptyDirs</code>、<code>finalizeArchive</code>），各方法通过 <code>JobContext</code> 通信。
+    </p>
+    <div class="callout">
+      <strong>ADR 兼容性：</strong>不冲突。BatchDownloadModule 是 Layer 3（业务编排），其内部深化不受 ADR-0007 限制。
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Locality</strong>：格式转换、文件遍历、错误处理分别集中在一个可单独修改的方法</li>
+      <li><strong>Testability</strong>：<code>tryConvert</code> 返回 <code>ConversionResult</code>，测试只需构造 JobContext 并验证结果</li>
+      <li><strong>Depth</strong>：调用方（BatchDownloadService）只需调用 <code>orchestrator.processJob(id, ctrl)</code>，内部复杂性消失</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 4: FileConversionUploadService + FileMergeService    -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">④ 两个上传服务共享 14+ 重复依赖签名</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · mxcad/upload 模块</p>
+      </div>
+      <span class="badge-strong">Strong</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">mxcad/upload/file-conversion-upload.service.ts（14 依赖）</span>
+        <span class="file-tag">mxcad/upload/file-merge.service.ts（14 依赖）</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      两个服务具有<strong>几乎相同的构造器签名</strong>，各注入 14+ 个依赖。依赖集合几乎完全重叠：ConfigService、MxFileSystemService、FileTreeService、NodeTrashService、FileSystemNodeService、CacheManagerService、StorageManager、IVersionControl、FileConversionService、ExternalRefService、UploadUtilityService、ThumbnailGenerationService、IStorageService。这是"依赖重复"的典型案例——应提取共享上下文门面。
+    </p>
+
+    <div class="mermaid mb-4">
+graph LR
+    subgraph 现状
+        UPLOAD[FileConversionUploadService<br/>14 deps]
+        MERGE[FileMergeService<br/>14 deps]
+        UPLOAD --> FS1[FileTreeService]
+        UPLOAD --> ST1[StorageManager]
+        UPLOAD --> TC1[ThumbnailService]
+        MERGE --> FS2[FileTreeService]
+        MERGE --> ST2[StorageManager]
+        MERGE --> TC2[ThumbnailService]
+    end
+    subgraph 深化后
+        CTX[UploadContext<br/>聚合门面]
+        UPLOAD2[FileConversionUploadService]
+        MERGE2[FileMergeService]
+        UPLOAD2 --> CTX
+        MERGE2 --> CTX
+        CTX --> FS[FileTreeService]
+        CTX --> ST[StorageManager]
+        CTX --> TC[ThumbnailService]
+    end
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      提取 <span class="module bg-green-100 text-green-700">UploadContext</span>（或 <span class="module bg-green-100 text-green-700">MxcadUploadFacade</span>），将 14 个依赖收窄为 5-6 个高层方法。两个服务各注入 <code>UploadContext</code> + 各自独有的 2-3 个依赖。
+    </p>
+    <div class="text-xs font-mono bg-gray-50 p-3 rounded mb-3">
+      @Injectable()<br>
+      export class MxcadUploadFacade {<br>
+        constructor(/* 14 deps hidden here */) {}<br>
+        getNodeTree(nodeId) { ... }<br>
+        validateAndSave(hash, buffer) { ... }<br>
+        generateThumbnail(nodeId) { ... }<br>
+        createVersion(nodeId, blob) { ... }<br>
+      }
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Leverage</strong>：新增上传流程只需学习 UploadContext 的接口，而非注入 14 个服务</li>
+      <li><strong>Locality</strong>：底层服务变更时只需修改 UploadContext 一处适配</li>
+      <li><strong>Depth</strong>：大量文件系统/存储/缩略图行为隐藏在 5-6 个方法之后</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 5: AuthFacadeService 无接口门面                      -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">⑤ AuthFacadeService：29 方法的门面无接口</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 认证模块</p>
+      </div>
+      <span class="badge-worth">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">auth/auth-facade.service.ts（525 行）</span>
+        <span class="file-tag">auth/auth.controller.ts</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      <span class="module bg-red-100 text-red-700">AuthFacadeService</span> 有 525 行、29 个公开方法，覆盖注册、登录、密码管理、邮箱/手机/微信绑定、Token 管理、资料检索。<strong>没有 IAuthFacade 接口</strong>，虽然其内部代理的 <span class="module bg-green-100 text-green-700">IAuthProvider</span> 有接口定义。AuthFacadeService 本身是一个通过 <code>authProvider</code> 聚合多个子服务（RegistrationService、PasswordService、AccountBindingService、AuthTokenService、EmailVerificationService、SmsVerificationService、MembershipService）的门面。
+    </p>
+
+    <div class="mb-4 text-xs font-mono bg-red-50 p-3 rounded">
+      <div class="font-bold text-red-700 mb-1">删除测试：</div>
+      <div>如果删除 AuthFacadeService，其 29 个方法的逻辑不会消失——它们已经在各子服务中。AuthController 会直接注入 7 个子服务。接口不会简化，只是增加控制器的构造参数。这不是"删除后复杂性消失"的浅层门面——但缺少接口意味着测试需要 mock 具体类。</div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      为 AuthFacadeService 提取 <span class="module bg-green-100 text-green-700">IAuthFacade</span> 接口，遵循已建立的 <code>IAuthProvider</code> 模式。这不会改变 29 个方法的数量，但会创建一个清晰的 seam：
+    </p>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1 mb-3">
+      <li>TOB 客户可以替换整个 AuthFacade（如果需要自定义编排逻辑）</li>
+      <li>测试通过 IAuthFacade 接口 mock，避免加载整个 AuthModule</li>
+      <li>接口作为文档——29 个方法的契约一目了然</li>
+    </ul>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Seam</strong>：与 IAuthProvider 一致的 OSS/Pro/TOB 替换模式</li>
+      <li><strong>Testability</strong>：AuthController 测试通过 mock IAuthFacade，无需加载 AuthModule</li>
+    </ul>
+
+    <div class="callout">
+      <strong>注意：</strong>29 个方法是 Auth 模块的合约大小——如果大多数方法都被控制器调用，这不是浅层问题。但缺少接口是<strong>未充分利用已有的模式</strong>（IAuthProvider、IPermissionStore）。
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 6: CacheWarmupService 战略模式但具体注入             -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">⑥ CacheWarmupService：声明的策略模式被具体类注入破坏</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 缓存架构模块</p>
+      </div>
+      <span class="badge-worth">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">cache-architecture/services/cache-warmup.service.ts</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      <span class="module bg-red-100 text-red-700">CacheWarmupService</span> 的注释（第 58-67 行）声明"使用策略模式管理多种预热策略"，但构造函数注入的是具体类 <span class="module bg-gray-100">HotDataStrategy</span>、<span class="module bg-gray-100">PermissionStrategy</span>、<span class="module bg-gray-100">RoleStrategy</span>，而不是通过 <span class="module bg-green-100 text-green-700">IWarmupStrategy</span> 接口令牌。注释与代码之间的差距意味着：
+    </p>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1 mb-3">
+      <li>无法在运行时或通过 DI 配置切换策略实现</li>
+      <li>新增策略需要修改 CacheWarmupService 的构造函数（违反开闭原则）</li>
+      <li>测试无法替换特定策略——必须 mock 整个服务</li>
+    </ul>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <div class="text-xs font-mono bg-gray-50 p-3 rounded mb-3">
+      // 提取 IWarmupStrategy 接口<br>
+      export const IWARMUP_STRATEGY = 'IWarmupStrategy';<br>
+      export interface IWarmupStrategy {<br>
+        readonly name: string;<br>
+        warmup(): Promise&lt;void&gt;;<br>
+      }<br><br>
+      // 在 CacheArchitectureModule 中注册<br>
+      { provide: IWARMUP_STRATEGY, useClass: HotDataStrategy, multi: true },<br>
+      { provide: IWARMUP_STRATEGY, useClass: PermissionStrategy, multi: true },<br>
+      { provide: IWARMUP_STRATEGY, useClass: RoleStrategy, multi: true },<br><br>
+      // CacheWarmupService 通过 @Inject(IWARMUP_STRATEGY) 接收策略列表
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Leverage</strong>：新增策略只需在模块注册 + 创建新类，零改动到 CacheWarmupService</li>
+      <li><strong>Seam</strong>：DI 容器成了策略注册点，符合 NestJS 最佳实践</li>
+      <li><strong>Locality</strong>：预热逻辑变更只影响单一策略类</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 7: LibraryController 13 依赖                         -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">⑦ LibraryController：13 个依赖的控制器过度注入</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 资源库模块</p>
+      </div>
+      <span class="badge-worth">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">library/library.controller.ts（13 依赖）</span>
+        <span class="file-tag">library/library.service.ts</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      <span class="module bg-red-100 text-red-700">LibraryController</span> 注入 13 个构造器依赖（第 103-120 行），包括 5 个来自 <span class="module bg-gray-100">file-operations/</span> 的原始服务（NodeTrashService、NodeCopyMoveService、NodeUpdateService、ProjectCrudService）和 3 个来自 <span class="module bg-gray-100">file-system/</span> 的服务。按照 NestJS 模式，控制器应很薄（只做路由委托），但 LibraryController 执行了大量的底层文件系统操作，暗示 <span class="module bg-gray-100">LibraryService</span> 未能提供足够深的接口封装这些操作。
+    </p>
+
+    <div class="mermaid mb-4">
+graph LR
+    subgraph 现状
+        LC[LibraryController<br/>13 deps] --> FS1[FileTreeService]
+        LC --> NT1[NodeTrashService]
+        LC --> CM1[NodeCopyMoveService]
+        LC --> PC1[ProjectCrudService]
+        LC --> FDE1[FileDownloadExportService]
+        LC --> MFS1[MxcadFileHandlerService]
+    end
+    subgraph 深化后
+        LC2[LibraryController<br/>2-3 deps] --> LS[LibraryService<br/>深层封装]
+        LS --> FS2[FileTreeService]
+        LS --> NT2[NodeTrashService]
+        LS --> CM2[NodeCopyMoveService]
+        LS --> FDE2[FileDownloadExportService]
+    end
+    </div>
+
+    <h3 class="semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      将底层文件系统操作下沉到 <span class="module bg-green-100 text-green-700">LibraryService</span>，使其对 LibraryController 暴露更高层的接口（如 <code>addDrawingToLibrary(userId, nodeId): NodeResult</code>，而非 <code>checkFileAccess + getNode + trashNode + ...</code> 的序列）。
+    </p>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li><strong>Depth</strong>：LibraryController 只需了解 LibraryService 的高层方法，而非 7 个底层服务</li>
+      <li><strong>Locality</strong>：文件系统操作变更只影响 LibraryService，不影响控制器</li>
+      <li><strong>Testability</strong>：LibraryController 测试只需 mock 1 个 service</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Candidate 8: IPermissionStore 接口未充分利用                  -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <h2 class="text-xl font-bold">⑧ IPermissionStore：好接口仅限模块内使用</h2>
+        <p class="text-sm text-gray-500 mt-1">后端 · 通用基础设施</p>
+      </div>
+      <span class="badge-worth">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">涉及文件：</p>
+      <div class="flex flex-wrap gap-1">
+        <span class="file-tag">common/interfaces/permission-store.interface.ts</span>
+        <span class="file-tag">roles/providers/prisma-permission-store.ts</span>
+        <span class="file-tag">roles/roles.module.ts</span>
+      </div>
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Problem</h3>
+    <p class="text-sm text-gray-700 mb-4">
+      <span class="module bg-green-100 text-green-700">IPermissionStore</span> 接口定义在 <span class="file-tag">common/interfaces/</span> 中，通过 <span class="module bg-green-100 text-green-700">IPERMISSION_STORE</span> DI 令牌导出（第 15 行），<span class="module bg-gray-100">PrismaPermissionStore</span> 是其实现。但所有外部消费者都直接导入 <span class="module bg-red-100 text-red-700">PermissionService</span>（具体类），而 <span class="module bg-gray-100">PermissionService</span> 内部可能应该通过 <span class="module bg-green-100 text-green-700">IPermissionStore</span> 委托——或者消费者直接使用该接口。
+    </p>
+
+    <div class="text-xs font-mono bg-gray-50 p-3 rounded mb-3">
+      已定义的接口方法（7个）：<br>
+      getPermissionByNames / getPermissionsByRole / getRoleWithPermissions /<br>
+      getUserRoles / getRolesByUserIds / getUserSystemProjectRoles / assignSystemRole
+    </div>
+
+    <h3 class="font-semibold text-gray-800 mt-4 mb-2">Solution</h3>
+    <p class="text-sm text-gray-700 mb-2">
+      有两种可能的深化方向（需进一步讨论决定）：
+    </p>
+    <ol class="text-sm text-gray-700 list-decimal list-inside space-y-1 mb-3">
+      <li><strong>PermissionService 实现 IPermissionStore</strong>：将 PrismaPermissionStore 合并到 PermissionService 中，对外暴露 IPermissionStore 接口</li>
+      <li><strong>注入 IPermissionStore 到 PermissionService</strong>：PermissionService 成为注入 IPermissionStore 的门面，继承策略模式</li>
+    </ol>
+
+    <h3 class="font-semibold text-gray-800 mb-2">Benefits</h3>
+    <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+      <li>利用已经存在的 seam，不需要创建新接口</li>
+      <li>消费者通过接口解耦，与 IAuthProvider 模式对齐</li>
+    </ul>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Top Recommendation                                             -->
+  <!-- ============================================================ -->
+  <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-8 text-white mb-6">
+    <h2 class="text-2xl font-bold mb-4">🏆 优先推荐</h2>
+
+    <div class="flex items-start gap-4 mb-6">
+      <div class="bg-white/20 rounded-full px-4 py-2 text-2xl font-bold">#1</div>
+      <div>
+        <h3 class="text-xl font-bold">② 跨模块权限接口提取</h3>
+        <p class="text-white/80 mt-1">
+          PermissionService + ProjectPermissionService + FileSystemPermissionService 接口化
+        </p>
+      </div>
+    </div>
+
+    <p class="text-white/90 mb-4">
+      为什么优先选它？三个理由：
+    </p>
+
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="bg-white/10 rounded-lg p-4">
+        <div class="font-bold text-lg mb-1">📐 模式就绪</div>
+        <p class="text-sm text-white/80">
+          <span class="module bg-white/20">IAuthProvider</span>、<span class="module bg-white/20">IPermissionStore</span> 模式已存在且通过验证。不是发明新东西，是<strong>补齐</strong>。
+        </p>
+      </div>
+      <div class="bg-white/10 rounded-lg p-4">
+        <div class="font-bold text-lg mb-1">🔗 影响面最广</div>
+        <p class="text-sm text-white/80">
+          影响 15+ 文件、8+ 模块——一个 deepen 操作优化整个代码库的 <strong>locality</strong>
+        </p>
+      </div>
+      <div class="bg-white/10 rounded-lg p-4">
+        <div class="font-bold text-lg mb-1">🔄 战略价值高</div>
+        <p class="text-sm text-white/80">
+          TOB 客户需要自定义权限提供者——接口是<strong>可替换模块</strong>的基石（参考 AGENTS.md 中列出的 replaceable-module）
+        </p>
+      </div>
+    </div>
+
+    <p class="text-white/80 text-sm">
+      其次：③ BatchDownloadOrchestrator 提取（高回报低风险，因是 Layer 3 模块隔离性好）→
+      ① FileSystemService 删除（前提：先确认外部消费者可以直接注入底层服务）
+    </p>
+  </div>
+
+  <!-- Summary Grid -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <h2 class="text-lg font-bold mb-4">📋 所有候选汇总</h2>
+    <div class="grid grid-cols-2 gap-3 text-sm">
+      <div><span class="badge-strong">Strong</span> ① FileSystemService 纯委托门面</div>
+      <div><span class="badge-strong">Strong</span> ② 三个权限服务无接口隔离</div>
+      <div><span class="badge-strong">Strong</span> ③ BatchDownloadOrchestrator 上帝方法</div>
+      <div><span class="badge-strong">Strong</span> ④ Upload 服务重复依赖签名</div>
+      <div><span class="badge-worth">Worth exploring</span> ⑤ AuthFacadeService 无接口</div>
+      <div><span class="badge-worth">Worth exploring</span> ⑥ CacheWarmupService 具体注入破环策略模式</div>
+      <div><span class="badge-worth">Worth exploring</span> ⑦ LibraryController 13 依赖</div>
+      <div><span class="badge-worth">Worth exploring</span> ⑧ IPermissionStore 未充分利用</div>
+    </div>
+    <p class="text-xs text-gray-400 mt-4">
+      报告生成时间：2026-07-23 16:18 · 扫描范围：packages/backend 全部 32 个模块 · 分析方法：git log 热点追踪 + 文件级依赖分析 + 删除测试
+    </p>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>

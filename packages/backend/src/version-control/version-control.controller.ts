@@ -1,0 +1,211 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+  UseGuards,
+  Inject,
+  Logger,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
+import { RequireProjectPermissionGuard } from '../common/guards/require-project-permission.guard';
+import { ProjectPermission } from '../common/enums/permissions.enum';
+import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
+import { FileUtils } from '../common/utils/file-utils';
+import {
+  IVersionControl,
+  VERSION_CONTROL_TOKEN,
+} from './interfaces/version-control.interface';
+import { MxLogResponseDto, FileContentResponseDto } from './dto';
+
+@ApiTags('version-control')
+@Controller('version-control')
+@UseGuards(RequireProjectPermissionGuard)
+export class VersionControlController {
+  private readonly logger = new Logger(VersionControlController.name);
+
+  constructor(
+    @Inject(VERSION_CONTROL_TOKEN)
+    private readonly versionControlService: IVersionControl
+  ) {}
+
+  /**
+   * 获取节点的 MX 提交历史（自动提取目录路径）
+   * 传入文件路径时，会自动提取所在目录的历史记录
+   * 这样可以看到节点目录下所有文件的变更记录
+   */
+  @Get('history')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取节点的 MX 提交历史' })
+  @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
+  @ApiQuery({
+    name: 'filePath',
+    required: true,
+    description: '节点路径（文件或目录路径，后端自动提取目录）',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '限制返回的记录数量',
+    type: Number,
+  })
+  @ApiOkResponse({
+    description: '获取成功',
+    type: MxLogResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @ApiResponse({ status: 403, description: '无权限' })
+  @RequireProjectPermission(ProjectPermission.VERSION_READ)
+  async getFileHistory(
+    @Query('projectId') projectId: string,
+    @Query('filePath') filePath: string,
+    @Query('limit') limit?: number
+  ): Promise<MxLogResponseDto> {
+    const result = await this.versionControlService.getFileHistory(
+      filePath,
+      limit
+    );
+    return {
+      success: result.success,
+      message: result.message,
+      entries: result.entries.map((entry) => ({
+        revision:
+          typeof entry.revision === 'string'
+            ? parseInt(entry.revision, 10)
+            : entry.revision,
+        author: entry.author,
+        date: entry.date,
+        message: entry.message,
+        userName: entry.userName,
+        paths: entry.paths,
+      })),
+      totalCount: result.totalCount,
+    };
+  }
+
+  /**
+   * 获取指定版本的文件内容
+   */
+  @Get('file/:revision')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取指定版本的文件内容' })
+  @ApiParam({
+    name: 'revision',
+    required: true,
+    description: '修订版本号',
+    type: Number,
+  })
+  @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
+  @ApiQuery({ name: 'filePath', required: true, description: '文件路径' })
+  @ApiOkResponse({
+    description: '获取成功',
+    type: FileContentResponseDto,
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @ApiResponse({ status: 403, description: '无权限' })
+  @RequireProjectPermission(ProjectPermission.VERSION_READ)
+  async getFileContentAtRevision(
+    @Param('revision', ParseIntPipe) revision: number,
+    @Query('projectId') projectId: string,
+    @Query('filePath') filePath: string
+  ): Promise<FileContentResponseDto> {
+    const storagePath = this.toStorageRelativePath(filePath);
+    try {
+      const result =
+        await this.versionControlService.getFileContentAtRevision(
+          storagePath,
+          revision
+        );
+      if (!result.success || !result.content || result.content.length === 0) {
+        this.logger.error(
+          `获取文件内容失败: ${filePath} @ r${revision}, ${result.message || '内容为空'}`
+        );
+        return {
+          success: false,
+          message: result.message || '获取失败: 文件内容为空',
+        };
+      }
+      return {
+        success: true,
+        message: '获取成功',
+        content: result.content.toString('utf-8'),
+      };
+    } catch (error) {
+      this.logger.error(
+        `获取文件内容失败: ${filePath} @ r${revision}, 错误: ${error.message}`
+      );
+      return {
+        success: false,
+        message: `获取失败: ${error.message}`,
+      };
+    }
+  }
+
+  private toStorageRelativePath(filePath: string): string {
+    return FileUtils.stripStoragePrefix(filePath);
+  }
+
+  /**
+   * 列出指定版本目录下的文件列表
+   */
+  @Get('list/:revision')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '列出指定版本目录下的文件列表' })
+  @ApiParam({
+    name: 'revision',
+    required: true,
+    description: '修订版本号',
+    type: Number,
+  })
+  @ApiQuery({ name: 'projectId', required: true, description: '项目ID' })
+  @ApiQuery({ name: 'directoryPath', required: true, description: '目录路径' })
+  @ApiOkResponse({
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        files: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 401, description: '未授权' })
+  @ApiResponse({ status: 403, description: '无权限' })
+  @RequireProjectPermission(ProjectPermission.VERSION_READ)
+  async listDirectoryAtRevision(
+    @Param('revision', ParseIntPipe) revision: number,
+    @Query('projectId') projectId: string,
+    @Query('directoryPath') directoryPath: string
+  ): Promise<{ success: boolean; message: string; files?: string[] }> {
+    return this.versionControlService.listDirectoryAtRevision(
+      directoryPath,
+      revision
+    );
+  }
+}

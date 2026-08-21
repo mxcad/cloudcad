@@ -1,0 +1,530 @@
+﻿///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service';
+import { CreateRoleDto } from './dto/create-role.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
+import { Prisma } from '@cloudcad/db';
+import { RoleDto } from './dto/role.dto';
+import { RoleCategory } from '../common/enums/permissions.enum';
+import { isValidPermission } from '../common/utils/permission.utils';
+import { Permission as PrismaPermission } from '@cloudcad/db';
+import { PermissionCacheService } from '../permission/services/permission-cache.service';
+import { AuditLogService } from '../audit/audit-log.service';
+import { AuditAction, ResourceType } from '../common/enums/audit.enum';
+import { completePermissionDependencies } from '../common/constants/permission-dependencies.constants';
+
+import { I18nContext } from 'nestjs-i18n';
+/**
+ * 角色管理服务
+ *
+ * 功能：
+ * 1. 角色的增删改查
+ * 2. 支持自定义角色
+ * 3. 权限分配和移除
+ * 4. 角色类别和级别管理
+ */
+@Injectable()
+export class RolesService {
+  private readonly logger = new Logger(RolesService.name);
+  /** 角色列表内存缓存 */
+  private rolesCache: RoleDto[] | null = null;
+
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly cacheService: PermissionCacheService,
+    private readonly auditLogService: AuditLogService
+  ) {}
+
+  /**
+   * 清除角色列表内存缓存
+   */
+  private clearRolesCache(): void {
+    this.rolesCache = null;
+  }
+
+  /**
+   * 获取所有角色（带内存缓存）
+   */
+  async findAll(): Promise<RoleDto[]> {
+    if (this.rolesCache) {
+      return this.rolesCache;
+    }
+
+    const roles = await this.prisma.role.findMany({
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+      orderBy: [{ category: 'asc' }, { level: 'desc' }, { createdAt: 'asc' }],
+    });
+
+    this.rolesCache = roles.map((role) => this.mapToRoleDto(role));
+    return this.rolesCache;
+  }
+
+  /**
+   * 根据类别获取角色
+   */
+  async findByCategory(category: RoleCategory): Promise<RoleDto[]> {
+    const roles = await this.prisma.role.findMany({
+      where: { category },
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+      orderBy: [{ level: 'desc' }, { createdAt: 'asc' }],
+    });
+
+    return roles.map((role) => this.mapToRoleDto(role));
+  }
+
+  /**
+   * 根据 ID 获取角色
+   */
+  async findOne(id: string): Promise<RoleDto> {
+    const role = await this.prisma.role.findUnique({
+      where: { id },
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    if (!role) {
+      throw new NotFoundException(I18nContext.current()?.t('error.role_extra.not_found_by_id', { args: { id } }) ?? `角色 ID ${id} 不存在`);
+    }
+
+    return this.mapToRoleDto(role);
+  }
+
+  /**
+   * 创建角色
+   */
+  async create(createRoleDto: CreateRoleDto, userId?: string): Promise<RoleDto> {
+    // 验证权限是否有效（自动补全缺失的前置权限，避免"能创建但看不到"的无效组合）
+    const permissions = completePermissionDependencies(
+      createRoleDto.permissions
+    );
+    this.validatePermissions(permissions);
+
+    // 创建角色和权限
+    const role = await this.prisma.role.create({
+      data: {
+        name: createRoleDto.name,
+        description: createRoleDto.description,
+        category: createRoleDto.category || RoleCategory.CUSTOM,
+        level: createRoleDto.level || 0,
+        isSystem: false, // 新创建的角色都不是系统角色
+        permissions: {
+          create: permissions.map((permission) => ({
+            permission: permission as PrismaPermission,
+          })),
+        },
+      },
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    this.logger.log(`创建角色成功: ${role.name} (${role.id})`);
+
+    // 清除内存缓存，确保下次 findAll() 重新查询
+    this.clearRolesCache();
+    // 清理所有用户的角色缓存（因为新角色可能影响权限检查）
+    this.cacheService.cleanup();
+
+    if (userId) {
+      await this.auditLogService.log(
+        AuditAction.ROLE_CREATE,
+        ResourceType.ROLE,
+        role.id,
+        userId,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        role.name,
+        { roleName: role.name }
+      );
+    }
+
+    return this.mapToRoleDto(role);
+  }
+
+  /**
+   * 更新角色
+   */
+  async update(id: string, updateRoleDto: UpdateRoleDto, userId?: string): Promise<RoleDto> {
+    // 检查角色是否存在
+    const role = await this.prisma.role.findUnique({
+      where: { id },
+    });
+
+    if (!role) {
+      throw new NotFoundException(I18nContext.current()?.t('error.role_extra.not_found_by_id', { args: { id } }) ?? `角色 ID ${id} 不存在`);
+    }
+
+    // 系统角色不允许修改名称、描述、类别和级别（仅当值真正改变时才阻止）
+    if (role.isSystem) {
+      if (
+        (updateRoleDto.name !== undefined &&
+          updateRoleDto.name !== role.name) ||
+        (updateRoleDto.description !== undefined &&
+          updateRoleDto.description !== role.description) ||
+        (updateRoleDto.category !== undefined &&
+          updateRoleDto.category !== role.category) ||
+        (updateRoleDto.level !== undefined &&
+          updateRoleDto.level !== role.level)
+      ) {
+        throw new BadRequestException(
+          '系统角色不允许修改名称、描述、类别和级别'
+        );
+      }
+    }
+
+    // 验证权限是否有效
+    if (updateRoleDto.permissions) {
+      // 自动补全缺失的前置权限（与 create/addPermissions 策略一致）
+      updateRoleDto.permissions = completePermissionDependencies(
+        updateRoleDto.permissions
+      );
+      this.validatePermissions(updateRoleDto.permissions);
+    }
+
+    // 更新角色
+    const updatedRole = await this.prisma.role.update({
+      where: { id },
+      data: {
+        ...(updateRoleDto.name && { name: updateRoleDto.name }),
+        ...(updateRoleDto.description !== undefined && {
+          description: updateRoleDto.description,
+        }),
+        ...(updateRoleDto.category && { category: updateRoleDto.category }),
+        ...(updateRoleDto.level !== undefined && {
+          level: updateRoleDto.level,
+        }),
+        ...(updateRoleDto.permissions && {
+          permissions: {
+            deleteMany: {}, // 删除所有旧权限
+            create: updateRoleDto.permissions.map((permission) => ({
+              permission: permission as PrismaPermission,
+            })), // 创建新权限
+          },
+        }),
+      },
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    this.logger.log(`更新角色成功: ${updatedRole.name} (${updatedRole.id})`);
+
+    // 清除内存缓存，确保下次 findAll() 重新查询
+    this.clearRolesCache();
+    // 如果修改了权限，立即清除该角色的所有用户缓存
+    if (updateRoleDto.permissions) {
+      await this.cacheService.clearRoleCache(role.name);
+      this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
+    }
+
+    if (userId) {
+      await this.auditLogService.log(
+        AuditAction.ROLE_UPDATE,
+        ResourceType.ROLE,
+        role.id,
+        userId,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        updatedRole.name,
+        {
+          roleName: updatedRole.name,
+          changedFields: Object.keys(updateRoleDto),
+        }
+      );
+    }
+
+    return this.mapToRoleDto(updatedRole);
+  }
+
+  /**
+   * 删除角色
+   */
+  async remove(id: string, userId?: string): Promise<void> {
+    // 检查角色是否存在
+    const role = await this.prisma.role.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            users: true,
+          },
+        },
+      },
+    });
+
+    if (!role) {
+      throw new NotFoundException(I18nContext.current()?.t('error.role_extra.not_found_by_id', { args: { id } }) ?? `角色 ID ${id} 不存在`);
+    }
+
+    // 系统角色不允许删除
+    if (role.isSystem) {
+      throw new BadRequestException(I18nContext.current()?.t('error.role.system_cannot_delete') ?? '系统角色不允许删除');
+    }
+
+    // 检查是否有用户正在使用该角色
+    const userCount = role._count.users;
+
+    if (userCount > 0) {
+      throw new BadRequestException(
+        `该角色正在被 ${userCount} 个用户使用，无法删除。请先将这些用户分配到其他角色。`
+      );
+    }
+
+    // 删除角色（级联删除角色权限）
+    await this.prisma.role.delete({
+      where: { id },
+    });
+
+    this.logger.log(`删除角色成功: ${role.name} (${role.id})`);
+
+    // 清除内存缓存，确保下次 findAll() 重新查询
+    this.clearRolesCache();
+    // 清理所有用户的角色缓存
+    this.cacheService.cleanup();
+
+    if (userId) {
+      await this.auditLogService.log(
+        AuditAction.ROLE_DELETE,
+        ResourceType.ROLE,
+        role.id,
+        userId,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        role.name,
+        { roleName: role.name }
+      );
+    }
+  }
+
+  /**
+   * 为角色分配权限
+   */
+  async addPermissions(
+    roleId: string,
+    permissions: string[],
+    userId?: string
+  ): Promise<RoleDto> {
+    // 检查角色是否存在
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!role) {
+      throw new NotFoundException(I18nContext.current()?.t('error.role_extra.not_found_by_id', { args: { id: roleId } }) ?? `角色 ID ${roleId} 不存在`);
+    }
+
+    // 验证权限是否有效（自动补全缺失的前置权限）
+    permissions = completePermissionDependencies(permissions);
+    this.validatePermissions(permissions);
+
+    // 添加权限
+    await this.prisma.role.update({
+      where: { id: roleId },
+      data: {
+        permissions: {
+          createMany: {
+            data: permissions.map((permission) => ({
+              permission: permission as PrismaPermission,
+            })),
+            skipDuplicates: true, // 跳过已存在的权限
+          },
+        },
+      },
+    });
+
+    this.logger.log(
+      `为角色添加权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
+    );
+
+    // 清除内存缓存
+    this.clearRolesCache();
+    // 立即清除该角色的所有用户缓存
+    await this.cacheService.clearRoleCache(role.name);
+    this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
+
+    if (userId) {
+      await this.auditLogService.log(
+        AuditAction.PERMISSION_GRANT,
+        ResourceType.ROLE,
+        roleId,
+        userId,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        role.name,
+        {
+          roleName: role.name,
+          permissionName: permissions.join(', '),
+          permissionCount: permissions.length,
+        }
+      );
+    }
+
+    return this.findOne(roleId);
+  }
+
+  /**
+   * 从角色移除权限
+   */
+  async removePermissions(
+    roleId: string,
+    permissions: string[],
+    userId?: string
+  ): Promise<RoleDto> {
+    // 检查角色是否存在
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!role) {
+      throw new NotFoundException(I18nContext.current()?.t('error.role_extra.not_found_by_id', { args: { id: roleId } }) ?? `角色 ID ${roleId} 不存在`);
+    }
+
+    // 移除权限
+    await this.prisma.role.update({
+      where: { id: roleId },
+      data: {
+        permissions: {
+          deleteMany: {
+            permission: {
+              in: permissions as PrismaPermission[],
+            },
+          },
+        },
+      },
+    });
+
+    this.logger.log(
+      `从角色移除权限成功: ${role.name} (${roleId}), 权限数: ${permissions.length}`
+    );
+
+    // 清除内存缓存
+    this.clearRolesCache();
+    // 立即清除该角色的所有用户缓存
+    await this.cacheService.clearRoleCache(role.name);
+    this.logger.log(`已清除角色 ${role.name} 的权限缓存`);
+
+    if (userId) {
+      await this.auditLogService.log(
+        AuditAction.PERMISSION_REVOKE,
+        ResourceType.ROLE,
+        roleId,
+        userId,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        role.name,
+        {
+          roleName: role.name,
+          permissionName: permissions.join(', '),
+          permissionCount: permissions.length,
+        }
+      );
+    }
+
+    return this.findOne(roleId);
+  }
+
+  /**
+   * 获取角色的所有权限（返回数据库存储的原始值：大写格式）
+   */
+  async getRolePermissions(roleId: string): Promise<string[]> {
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      include: {
+        permissions: {
+          select: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    if (!role) {
+      throw new NotFoundException(I18nContext.current()?.t('error.role_extra.not_found_by_id', { args: { id: roleId } }) ?? `角色 ID ${roleId} 不存在`);
+    }
+
+    return role.permissions.map((p) => p.permission);
+  }
+
+  /**
+   * 验证权限是否有效（支持大写和小写格式）
+   */
+  private validatePermissions(permissions: string[]): void {
+    const invalidPermissions = permissions.filter(
+      (perm) => !isValidPermission(perm)
+    );
+
+    if (invalidPermissions.length > 0) {
+      throw new BadRequestException(
+        `无效的权限: ${invalidPermissions.join(', ')}`
+      );
+    }
+  }
+
+  /**
+   * 将 Prisma Role 对象映射到 RoleDto
+   * 返回数据库存储的原始权限值（大写格式）
+   */
+  private mapToRoleDto(
+    role: Prisma.RoleGetPayload<{
+      include: { permissions: { select: { permission: true } } };
+    }>
+  ): RoleDto {
+    return {
+      id: role.id,
+      name: role.name,
+      description: role.description ?? undefined,
+      category: RoleCategory[role.category as keyof typeof RoleCategory],
+      level: role.level,
+      isSystem: role.isSystem,
+      permissions: role.permissions.map((p) => p.permission), // 直接返回数据库存储的原始值（大写）
+      createdAt: role.createdAt,
+      updatedAt: role.updatedAt,
+    };
+  }
+}

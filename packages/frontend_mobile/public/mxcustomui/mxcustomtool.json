@@ -1,0 +1,116 @@
+{
+  "customuitype": "2",
+  "bkcolor1": [ "41", "41", "41", "255" ],
+  "bkcolor2": [ "41", "41", "41", "255" ],
+  "bklinecolor": [ "41", "41", "41", "255" ],
+  "bktabcolor": [ "41", "41", "41", "255" ],
+  "bktabcolor": [ "41", "41", "41", "255" ],
+  "textcolor": [ "255", "255", "255", "255" ],
+  "textselcolor": [ "255", "255", "255", "255" ],
+  "tabheight": "110",
+  "tabbutwidth": "110",
+  "butheight": "120",
+  "butwidth": "130",
+  "tabbkpng": "tabbk.png",
+  "tabbkselpng": "tabbksel.png",
+  "tabbkcurpng": "tabbkcur.png",
+  "tabbkcurselpng": "tabbkcursel.png",
+  "butbkpng": "butbk.png",
+  "butbkselpng": "butbksel.png",
+  "tabarrowpng": "tabarrowpng.png",
+  "toolbarbkpng": "toolbarbk.png",
+  
+
+  "but1": [ "批注", "1", "comment/comment.png" ],
+  "but1": [ "绘制", "2", "draw/draw_draw.png" ],
+  "but1": [ "编辑", "3", "edit/edit.png" ],
+  "but1": [ "图层", "4", "layer/layermanager.png"],
+  "but1": [ "测量", "5", "mxcustomui/clia.png" ],
+  "but1": [ "户型绘制", "7", "room/room.png" ],
+  "but1": [ "标注", "6", "dim/dim.png" ],
+  "but1": [ "工具", "8", "tool/tool.png" ],
+
+  "but2": [ "1", "手绘线", "Mx_DrawFree", "comment/freedraw.png" ],
+  "but2": [ "1", "文字", "Mx_Text", "comment/tmptext.png" ],
+  "but2": [ "1", "箭头", "Mx_DrawArrow", "comment/tmparraw.png" ],
+  "but2": [ "1", "引线", "Mx_DrawLeaderDimension", "comment/LeaderDimension.png" ],
+  "but2": [ "1", "云线", "Mx_DrawRevcloud", "comment/revcloud.png" ],
+  "but2": [ "1", "音频", "Mx_Audio", "comment/audio.png" ],
+  "but2": [ "1", "图片", "Mx_Photo", "comment/photo.png" ],
+  "but2": [ "1", "矩形", "Mx_DrawCommentRect", "comment/DrawCommentRect.png" ],
+  "but2": [ "1", "直线", "Mx_DrawCommentLine", "comment/DrawCommentLine.png" ],
+  "but2": [ "1", "圆", "Mx_DrawCommentCircle", "comment/DrawCommentCircle.png" ],
+
+  "but2": [ "2", "直线", "Mx_DrawLine", "draw/draw_line.png" ],
+  "but2": [ "2", "圆形", "Mx_DrawCircle", "draw/draw_circle.png" ],
+  "but2": [ "2", "圆弧", "Mx_DrawArc", "draw/draw_arc.png" ],
+  "but2": [ "2", "矩形框", "Mx_DrawRectangle", "draw/draw_rect.png" ],
+  "but2": [ "2", "椭圆", "Mx_DrawElliptic", "draw/draw_ellipse.png" ],
+  "but2": [ "2", "多线段", "Mx_NewPolyLine", "draw/draw_polyline.png" ],
+  "but2": [ "2", "点", "Mx_Point", "draw/draw_point.png" ],
+  
+  "but2": [ "3", "剪切", "Mx_Trim", "edit/Trim.png" ],
+  "but2": [ "3", "延伸", "Mx_Extend", "edit/Extend.png" ],
+  "but2": [ "3", "偏移", "Mx_Offset", "edit/offset.png" ],
+  "but2": [ "3", "圆角", "Mx_Fillet", "edit/Fillet.png" ],
+  "but2": [ "3", "倒角", "Mx_Chamfer", "edit/Chamfer.png" ],
+  
+  
+ 
+  "but2": [ "5", "测长度", "Mx_MeasureDis", "mxcustomui/MeasureLength.png" ],
+  "but2": [ "5", "连续测", "Mx_MeasureCoiledDis", "mxcustomui/MeasureCoiledDis.png" ],
+  "but2": [ "5", "测面积", "Mx_MeasureArea", "mxcustomui/MeasureArea.png" ],
+  "but2": [ "5", "侧面积", "Mx_MeasureSideArea", "mxcustomui/MeasureSideArea.png" ],
+  "but2": [ "5", "测坐标", "Mx_MeasureCoordinate", "mxcustomui/MeasureCoordinate.png" ],
+  "but2": [ "5", "测弧长", "Mx_MeasureArc", "mxcustomui/MeasureArc.png" ],
+  "but2": [ "5", "测实体", "Mx_MeasureEntity", "mxcustomui/MeasureEntity.png" ],
+  "but2": [ "5", "测角度", "Mx_MeasureAngle", "mxcustomui/MeasureAngle.png" ],
+  "but2": [ "5", "设比例", "Mx_MeasureRatio", "mxcustomui/MeasureRatio.png" ],
+  "but2": [ "5", "测量结果", "Mx_MeasureOutCome", "mxcustomui/MeasureOutCome.png" ],
+  "but2": [ "5", "结果统计", "Mx_MeasureOutcomeStats", "mxcustomui/MeasureOutcomeStats.png" ],
+  "but2": [ "5", "精度", "Mx_MeasurePrecision", "mxcustomui/MeasurePrecision.png" ],
+
+  "but2": [ "6", "对齐标注", "Mx_MarkingAlign", "dim/AlignedDimension.png" ],
+  "but2": [ "6", "线性标注", "Mx_MarkingLinear", "dim/RotatedDimension.png" ],
+  "but2": [ "6", "角度标注", "Mx_MarkingAngle", "dim/AngleDimension.png" ],
+  "but2": [ "6", "直径标注", "Mx_MarkingDiameter", "dim/DrawDiametricDimension.png" ],
+  "but2": [ "6", "半径标注", "Mx_MarkingRadius", "dim/DrawRadialDimension.png" ],
+  "but2": [ "6", "弧长标注", "Mx_MarkingArc", "dim/ArcLengthDimension.png" ],
+  
+  
+
+  "but2": [ "7", "绘墙", "Mx_DimLine", "room/dimline.png" ],
+  "but2": [ "7", "绘矩形墙", "Mx_DimRect", "room/dimrect.png" ],
+  "but2": [ "7", "家具图块", "Mx_Module", "room/icon_zine.png" ],
+
+  "but2": [ "8", "查找文字", "Mx_FindText", "tool/findtext.png" ],
+  
+  "but2": [ "4", "新建图层", "MxLayerManager_NewLayer", "layer/tc_ic_xjtc.png" ],
+  "but2": [ "4", "图层列表", "MxLayerManager_LayerList", "layer/tc_ic_tclb.png" ],
+  "but2": [ "4", "关闭图层", "MxLayerManager_CloseLayer", "layer/tc_ic_gbtc.png" ],
+  "but2": [ "4", "关闭其他", "MxLayerManager_CloseOtherLayer", "layer/tc_ic_gbqt.png" ],
+  "but2": [ "4", "图层全开", "MxLayerManager_OpenAllLayer", "layer/tc_ic_tcqk.png" ],
+  "but2": [ "4", "图层全关", "MxLayerManager_CloseAllLayer", "layer/tc_ic_tcqg.png" ],
+  "but2": [ "4", "置为当前", "MxLayerManager_ButtonCurrentLayer", "layer/tc_ic_zwdq.png" ],
+  "but2": [ "4", "上一图层", "MxLayerManager_PreviousLayer", "layer/tc_ic_sytc.png" ],
+  
+  
+  
+  "topbkpng":"tbbk.png",
+  "showTextTitle":"1",
+  "topbut":["0","Menu","Mx_Menu","cadmenu.png"],
+  "topbut":["0","Color","Mx_Color","cadcoloframe.png"],
+  "topbut":["0","Undo","Mx_Undo","undo.png"],
+  "topbut":["0","zoomall","ZoomE","zoomall.png"],
+  "topbut":["0","save","110","dwg.png"],
+	
+  "rightbkpng":"tbbk.png",
+  "history_closepng":"history_close.png",
+  "history_openpng":"history_open.png",
+  "history_btnbkpng":"history_btnbk.png",
+  "history_btnbkselpng":"history_btnbksel.png",
+   "toolBarTextSize":"20"
+	
+}
+
+	

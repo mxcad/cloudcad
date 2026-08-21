@@ -1,0 +1,16 @@
+{
+    "deepseek":{
+        "key":"sk-a27804xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "url":"https://api.deepseek.com/chat/completions",
+        "model":"deepseek-chat"
+    },
+    "qwen":{
+        "key":"sk-1af489985dbd4b3ebe54bdd4322399ee",
+        "url":"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "model":"qwen-max-latest"
+    },
+    "baidu":{
+        "key":"UeUQKzvpZgp_wkyh5dyi",
+        "id":"20230922001825895"
+    }
+}

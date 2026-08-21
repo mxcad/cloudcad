@@ -1,0 +1,24 @@
+{
+  "name": "@cloudcad/api-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CloudCAD API SDK — 由后端 Swagger/OpenAPI 规范自动生成的 HTTP 客户端与 DTO 类型",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite-plugin": "./scripts/vite-plugin.js",
+    "./client.gen": "./src/client.gen.ts",
+    "./sdk.gen": "./src/sdk.gen.ts",
+    "./types.gen": "./src/types.gen.ts",
+    "./client": "./src/client/index.ts",
+    "./client/*": "./src/client/*.ts",
+    "./core/*": "./src/core/*.ts"
+  },
+  "scripts": {
+    "generate:sdk": "node scripts/generate-sdk.cjs"
+  },
+  "devDependencies": {
+    "@hey-api/client-fetch": "^0.13.1",
+    "@hey-api/openapi-ts": "^0.97.1"
+  }
+}

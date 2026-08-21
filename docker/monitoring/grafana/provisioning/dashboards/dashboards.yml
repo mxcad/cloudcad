@@ -1,0 +1,17 @@
+# 梦想网页CAD实时协同平台 Grafana 看板预置（ADR-0055 §3）
+# 看板 JSON 由 ticket #317 提供（访问日志/应用日志/指标/清理趋势），此处预留目录挂载。
+# 将看板 JSON 放入 docker/monitoring/grafana/dashboards/ 后重启 grafana 即可自动加载。
+
+apiVersion: 1
+
+providers:
+  - name: 'cloudcad'
+    orgId: 1
+    folder: '梦想网页CAD实时协同平台'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

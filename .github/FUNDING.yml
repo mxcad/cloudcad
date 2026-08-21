@@ -1,0 +1,19 @@
+# These sponsors support CloudCAD development
+
+# 如果有 GitHub Sponsors 或爱发电等赞助渠道，在此配置
+
+github:
+  - your-github-sponsor-link
+
+patreon:
+  # - patreon用户名
+
+open_collective:
+  # - open-collective用户名
+
+ko_fi:
+  # - ko-fi用户名
+
+custom:
+  # - name: 赞助方式名称
+  #   url: 链接地址

@@ -1,0 +1,39 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@nestjs-modules/mailer/adapters/*": ["./node_modules/@nestjs-modules/mailer/dist/adapters/*"],
+      "@backend/*": ["./src/*"]
+    },
+    "isolatedModules": false,
+    "skipLibCheck": true,
+    "rootDir": null,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "strictNullChecks": false,
+    "noImplicitReturns": false,
+    "noImplicitAny": false,
+    "composite": false,
+    "incremental": true,
+    "forceConsistentCasingInFileNames": false
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.e2e-spec.ts",
+    "test/**/*",
+    "scripts/**/*",
+    "jest.config.ts",
+    "prisma.config.ts",
+    "prisma/seed.ts"
+  ]
+}

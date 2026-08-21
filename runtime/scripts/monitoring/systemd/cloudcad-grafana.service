@@ -1,0 +1,37 @@
+# 梦想网页CAD实时协同平台 Grafana systemd unit 模板（ADR-0055 §3）
+# 占位符由 install-monitoring.sh 渲染替换：__USER__ / __VENDOR__ / __CONFIG_DIR__ / __DATA_DIR__
+#   __USER__      - 运行用户（默认 cloudcad）
+#   __VENDOR__    - 二进制目录（runtime/vendor/monitoring/<arch>/grafana，含 bin/grafana-server）
+#   __CONFIG_DIR__- 配置目录（/etc/cloudcad/monitoring/grafana）
+#   __DATA_DIR__  - 数据目录（data/monitoring/grafana）
+# 登录认证：单管理员（GF_SECURITY_ADMIN_USER/PASSWORD 由 install 脚本写入 grafana.ini）
+
+[Unit]
+Description=梦想网页CAD实时协同平台 Grafana (visualization)
+Documentation=https://github.com/mxcad/cloudcad
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+ExecStart=__VENDOR__/bin/grafana-server \
+  --homepath=__VENDOR__ \
+  --config=__CONFIG_DIR__/grafana.ini \
+  cfg:default.paths.data=__DATA_DIR__/grafana \
+  cfg:default.paths.logs=__DATA_DIR__/grafana/logs \
+  cfg:default.paths.plugins=__VENDOR__/plugins \
+  cfg:default.paths.provisioning=__CONFIG_DIR__/grafana/provisioning
+Restart=on-failure
+RestartSec=5s
+# 目录 0750 / 文件 0640
+UMask=027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__/grafana
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

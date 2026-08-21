@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudCAD 架构深化回顾</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { background: #0f172a; color: #e2e8f0; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; transition: all 0.2s; }
+  .card:hover { border-color: #475569; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .badge-strong { background: #05966920; color: #34d399; border: 1px solid #059669; }
+  .badge-worth { background: #d9770620; color: #fbbf24; border: 1px solid #d97706; }
+  .badge-speculative { background: #6366f120; color: #a5b4fc; border: 1px solid #6366f1; }
+  .badge { @apply px-3 py-1 rounded-full text-xs font-semibold; }
+  .before-box { background: #1e293b; border: 1px solid #7f1d1d; border-radius: 8px; }
+  .after-box { background: #1e293b; border: 1px solid #065f46; border-radius: 8px; }
+  .diagram-container { background: #0f172a; border-radius: 8px; padding: 16px; overflow-x: auto; }
+  .seam-line { border-top: 2px dashed #475569; margin: 8px 0; }
+  .adr-warning { background: #7c2d1220; border-left: 3px solid #dc2626; padding: 8px 12px; border-radius: 4px; font-size: 0.85rem; }
+  h2 { color: #f1f5f9; font-weight: 700; font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
+  h3 { color: #e2e8f0; font-weight: 600; font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  strong { color: #f1f5f9; }
+  code { background: #0f172a; padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
+  pre { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; overflow-x: auto; }
+  .file-list { list-style: none; padding: 0; }
+  .file-list li { padding: 2px 0; font-size: 0.85rem; color: #94a3b8; }
+  .file-list li::before { content: "📄 "; }
+  .arrow { color: #475569; font-size: 2rem; line-height: 1; }
+</style>
+</head>
+<body class="p-6 max-w-6xl mx-auto">
+
+<h1 class="text-3xl font-bold mb-2">🧱 CloudCAD 架构深化回顾</h1>
+<p class="text-slate-400 mb-8">
+  基于 <code>/codebase-design</code> 词汇表的架构摩擦分析。每个候选项代表一个<strong>深化机会</strong>——将浅层模块重塑为深层模块，以提升可测试性和 AI 可导航性。
+</p>
+
+<!-- Top Recommendation -->
+<div class="bg-gradient-to-r from-emerald-900/30 to-emerald-800/10 border border-emerald-700 rounded-xl p-6 mb-8">
+  <h2 class="text-emerald-400 border-0 mt-0 mb-2">🏆 首要推荐</h2>
+  <p class="text-lg mb-3">
+    <strong>候选 #1 — 清理三个浅层委托服务</strong>
+  </p>
+  <p class="text-slate-300">
+    <code>MxcadUploadService</code>、<code>MxcadConversionService</code>、<code>MxcadExternalRefService</code> 三个服务 17 个方法中有 15 个是纯委托。每个委托测试覆盖的都是"委托被调用"而非"行为正确"。按<strong>删除测试</strong>：删除这些层会让复杂度<em>集中</em>到真正的实现中，而非分散。修复耗时最短、影响最大，是后续重构的基础。
+  </p>
+</div>
+
+<!-- Candidate 1 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-strong mr-3">Strong</span>
+      <h3 class="inline text-xl font-semibold">#1 — 清理三个浅层委托服务 + 死代码 MxcadService</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/mxcad/core/mxcad.service.ts</code> — 空壳，11 行，无方法</li>
+        <li><code>packages/backend/src/mxcad/upload/mxcad-upload.service.ts</code> — 5/5 委托 (154 行)</li>
+        <li><code>packages/backend/src/mxcad/conversion/mxcad-conversion.service.ts</code> — 2/3 委托 (101 行)</li>
+        <li><code>packages/backend/src/mxcad/external-ref/mxcad-external-ref.service.ts</code> — 7/7 委托 (95 行)</li>
+        <li><code>packages/backend/src/mxcad/interfaces/mxcad-upload.interface.ts</code></li>
+        <li><code>packages/backend/src/mxcad/interfaces/mxcad-conversion.interface.ts</code></li>
+        <li><code>packages/backend/src/mxcad/interfaces/mxcad-external-ref.interface.ts</code></li>
+        <li><code>packages/backend/src/mxcad/core/mxcad-core.module.ts</code> — 注册了 4 个 useExisting 令牌</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• 三个服务共 15/17 个方法是纯委托，无任何业务逻辑</li>
+        <li>• 每个委托引入一个 NestJS DI 间接层，但无对应价值</li>
+        <li>• 测试验证的是"委托被调用"而非"行为正确"</li>
+        <li>• <code>MxcadService</code> 已完全无使用，属死代码</li>
+        <li>• <code>MxcadConversionService.checkTzStatus()</code> 是返回 <code>{ code: 0 }</code> 的存根</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">删除三个委托服务和空壳服务。控制器直接注入具体实现服务（<code>FileConversionUploadService</code>、<code>FileConversionService</code>、<code>ExternalReferenceUpdateService</code> 等）。移除对应的接口和令牌注册。测试改为针对具体实现。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🔴 当前 — 浅层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-slate-400 bg-transparent border-0 p-0" style="line-height:1.5">
+MxCadController
+  └── @Inject(MXCAD_UPLOAD_SERVICE)
+       └── MxcadUploadService          ← 5 个委托
+            ├── FileConversionUploadService  ← 真实逻辑
+            └── ChunkUploadManagerService    ← 真实逻辑
+
+MxCadController
+  └── @Inject(MXCAD_CONVERSION_SERVICE)
+       └── MxcadConversionService      ← 3 个委托 + 1 个存根
+            └── FileConversionService      ← 真实逻辑
+
+MxCadController
+  └── @Inject(MXCAD_EXTERNAL_REF_SERVICE)
+       └── MxcadExternalRefService     ← 7 个委托
+            ├── ExternalRefService           ← 真实逻辑
+            └── ExternalReferenceUpdateService  ← 真实逻辑
+        </pre>
+      </div>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🟢 深化后 — 深层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-emerald-300 bg-transparent border-0 p-0" style="line-height:1.5">
+MxCadController
+  └── @Inject(...) // 直接注入
+       ├── FileConversionUploadService     ← 真实逻辑
+       ├── ChunkUploadManagerService       ← 真实逻辑
+       ├── FileConversionService           ← 真实逻辑
+       ├── ExternalRefService              ← 真实逻辑
+       └── ExternalReferenceUpdateService  ← 真实逻辑
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <strong>Locality</strong>：控制器直接调用实现，消除中间层</li>
+        <li>• <strong>Leverage</strong>：测试直接针对真实实现，而非委托</li>
+        <li>• 删除 3 个服务 + 1 个空壳 + 3 个接口 + 4 个令牌注册</li>
+        <li>• 移除了 <code>checkTzStatus()</code> 存根（可能隐藏 bug）</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <code>FileConversionUploadService</code> 的直接单元测试</li>
+        <li>• <code>ExternalReferenceUpdateService</code> 的直接单元测试</li>
+        <li>• 集成测试通过控制器注入真实服务</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 2 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-strong mr-3">Strong</span>
+      <h3 class="inline text-xl font-semibold">#2 — 拆分 MxCadController 中的版本历史逻辑</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/mxcad/core/mxcad.controller.ts</code> — 2369 行</li>
+        <li><code>packages/backend/src/mxcad/core/mxcad-request-context-builder.ts</code> — 202 行</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• MxCadController 有 ~400 行内联版本历史逻辑（bin→mxweb 转换、MX 提交、临时文件管理、缓存）</li>
+        <li>• 控制器有 <strong>3 套不同的上下文构建逻辑</strong>：自身的 <code>buildContextFromRequest()</code> + <code>validateTokenAndGetUserId()</code> + <code>checkFileAccessPermission()</code>，均与 <code>MxCadRequestContextBuilder</code> 重复</li>
+        <li>• 控制器内联缓存管理（<code>preloadingDataCache</code> Map + <code>cleanExpiredCache()</code>）</li>
+        <li>• 14 个直接注入的依赖使测试难以隔离</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">提取 VersionHistoryService（封装 bin→mxweb 转换、MX 提交、临时文件清理）。控制器改用 <code>MxCadRequestContextBuilder</code>，删除重复方法。将缓存移至 <code>CacheManagerService</code> 或 <code>@nestjs/cache-manager</code>。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🔴 当前 — 浅层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-slate-400 bg-transparent border-0 p-0" style="line-height:1.5">
+MxCadController (2369 行, 14 个 DI)
+├── 版本历史处理 (400 行内联)
+│   ├── bin→mxweb 转换
+│   ├── MX 提交
+│   ├── 临时文件管理
+│   └── caching
+├── buildContextFromRequest()     ← 重复
+├── validateTokenAndGetUserId()   ← 重复
+├── checkFileAccessPermission()   ← 重复
+├── preloadingDataCache Map       ← 内联
+└── cleanExpiredCache()           ← 内联
+
+MxCadRequestContextBuilder
+├── buildContextFromRequest()     ← 相同逻辑
+├── validateTokenAndGetUserId()   ← 相同逻辑
+└── checkFileAccessPermission()   ← 相同逻辑
+        </pre>
+      </div>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🟢 深化后 — 深层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-emerald-300 bg-transparent border-0 p-0" style="line-height:1.5">
+MxCadController (瘦身后)
+├── 委托 MxCadRequestContextBuilder
+└── 委托 VersionHistoryService
+    ├── bin→mxweb 转换
+    ├── MX 提交
+    ├── 临时文件管理
+    └── 缓存 (通过 CacheManager)
+
+MxCadRequestContextBuilder
+└── 单一上下文构建来源
+
+VersionHistoryService  ← 新深层模块
+└── 所有版本逻辑在此
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <strong>Locality</strong>：版本历史逻辑集中在一个模块中</li>
+        <li>• <strong>Leverage</strong>：VersionHistoryService 的接口很小（2-3 个方法）</li>
+        <li>• 控制器行数减半，关注点清晰</li>
+        <li>• 消除与 MxCadRequestContextBuilder 的重复</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• VersionHistoryService 的独立单元测试（mock 文件系统和转换）</li>
+        <li>• 控制器的逻辑简化后更易测试</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 3 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-strong mr-3">Strong</span>
+      <h3 class="inline text-xl font-semibold">#3 — 按操作域拆分 FileOperationsService</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/file-operations/file-operations.service.ts</code> — 1761 行</li>
+        <li><code>packages/backend/src/file-operations/project-crud.service.ts</code> — 554 行</li>
+        <li><code>packages/backend/src/file-system/file-tree/file-tree.service.ts</code> — 1240 行</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• FileOperationsService 处理 8 种不同操作域：删除、移动、复制、重命名、回收站、批量操作、存储清理、MX 集成</li>
+        <li>• 永久删除逻辑在 4 个方法中重复（<code>deleteNode</code>、<code>permanentlyDeleteProject</code>、<code>permanentlyDeleteNode</code>、<code>permanentlyDeleteTrashItems</code>）</li>
+        <li>• 树遍历模式重复：<code>collectFilesToDelete</code>（N+1 查询）、<code>collectChildNodes</code>（N+1）、<code>getAllProjectNodeIds</code>（CTE 单查询）</li>
+        <li>• 审计日志样板在 8 个方法中重复（手动 try/catch）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">提取 <code>NodeDeletionService</code>、<code>NodeMoveService</code>、<code>NodeCopyService</code>、<code>TrashService</code> 四个领域服务。共享 <code>TreeTraversalService</code>（使用 CTE 单查询替代 N+1）。使用装饰器或 AOP 处理审计日志样板。每个新服务接口 2-3 个方法，深度显著增加。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🔴 当前 — 浅层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-slate-400 bg-transparent border-0 p-0" style="line-height:1.5">
+FileOperationsService (1761 行)
+├── deleteNode / deleteProject
+│   ├── collectFilesToDelete (N+1)     ← 重复模式
+│   ├── 审计日志样板                   ← 重复
+│   └── 缓存失效                       ← 重复
+├── moveNode / batchMoveNodes
+│   ├── collectChildNodes (N+1)        ← 重复模式
+│   ├── 审计日志样板                   ← 重复
+│   └── 缓存失效                       ← 重复
+├── copyNode / batchCopyNodes
+│   ├── 审计日志样板                   ← 重复
+│   └── 缓存失效                       ← 重复
+├── restoreNode / restoreTrashItems
+│   ├── 审计日志样板                   ← 重复
+│   └── 缓存失效                       ← 重复
+├── clearTrash / clearProjectTrash
+│   ├── 永久删除逻辑重复               ← 重复 4 次
+│   └── 存储清理重复
+└── permanentlyDeleteTrashItems
+    └── 三步模式：收集→事务→清理      ← 重复 4 次
+        </pre>
+      </div>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🟢 深化后 — 深层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-emerald-300 bg-transparent border-0 p-0" style="line-height:1.5">
+TreeTraversalService         ← 共享深层模块
+└── getNodeSubtree (CTE 单查询)
+    ├── NodeDeletionService    ← 2 个方法
+    │   └── 硬删除 / 软删除
+    ├── NodeMoveService        ← 2 个方法
+    │   └── 单节点 / 批量
+    ├── NodeCopyService        ← 2 个方法
+    │   └── 单节点 / 批量
+    └── TrashService           ← 3 个方法
+        └── 清空 / 恢复 / 永久删除
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <strong>Locality</strong>：每个操作域都有独立服务，修改不影响其他域</li>
+        <li>• <strong>Leverage</strong>：TreeTraversalService 替代 3 个重复遍历模式</li>
+        <li>• 路由级审计日志可通过 Guard/Interceptor 实现，而非手动</li>
+        <li>• 消除 ~200 行重复的永久删除逻辑</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• TreeTraversalService 可独立测试遍历逻辑</li>
+        <li>• 每个领域服务可独立测试，mock 树遍历结果</li>
+        <li>• 集成测试验证完整操作链</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 4 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-strong mr-3">Strong</span>
+      <h3 class="inline text-xl font-semibold">#4 — 创建共享协同包消除 PC/移动端重复</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/frontend/src/types/collaboration.ts</code> — 140 行</li>
+        <li><code>packages/frontend_mobile/src/composables/useCooperate.ts</code> (L8-153) — 146 行</li>
+        <li><code>packages/frontend/src/services/collaborationService.ts</code> — 36 行</li>
+        <li><code>packages/frontend_mobile/src/composables/useCooperate.ts</code> (L155-186) — 32 行</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• 协同数据合约（V1/V2/V3 接口）在两个前端逐字重复</li>
+        <li>• 编解码函数（<code>utf8ToBase64</code>、<code>parseWorkData</code>、<code>encodeV3WorkData</code>）完全重复</li>
+        <li>• SDK 包装器（<code>getCooperate()</code>、<code>exitCollaborationIfNeeded</code>）80% 重复</li>
+        <li>• 名称解析逻辑 88% 重复</li>
+        <li>• 超时/轮询常量分散在多个文件中</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">创建共享包（如 <code>packages/shared-collab/</code>），包含：协同数据合约（V1/V2/V3）、编解码函数、去重逻辑、SDK 包装器、超时/轮询常量。PC 和移动端 monorepo 包均依赖此包。如需避免 monorepo 配置开销，可先复制为源码文件并用 CI 检查同步性。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🔴 当前 — 浅层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-slate-400 bg-transparent border-0 p-0" style="line-height:1.5">
+packages/frontend/                       packages/frontend_mobile/
+├── types/collaboration.ts               ├── composables/useCooperate.ts
+│   ├── CollaborateWorkDataV3            │   ├── CollaborateWorkDataV3     ← 逐字重复
+│   ├── utf8ToBase64()                   │   ├── utf8ToBase64()            ← 逐字重复
+│   ├── parseWorkData()                  │   ├── parseWorkData()           ← 逐字重复
+│   ├── deduplicateWorkUsers()           │   ├── deduplicateWorkUsers()    ← 逐字重复
+│   └── encodeV3WorkData()               │   └── encodeV3WorkData()        ← 逐字重复
+│                                        │
+├── services/collaborationService.ts      │  (内联在 useCooperate.ts 中)
+│   └── getCooperate()  ← 每次 init     │   └── getCooperate()  ← 有 guard
+        </pre>
+      </div>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-2">🟢 深化后 — 深层</p>
+      <div class="diagram-container">
+        <pre class="text-xs text-emerald-300 bg-transparent border-0 p-0" style="line-height:1.5">
+packages/shared-collab/                  ← 新深层模块
+├── types/collaboration.ts               ← 单次定义
+├── encode.ts                            ← 单次实现
+├── decode.ts                            ← 单次实现
+└── constants.ts                         ← 单次定义
+
+packages/frontend/                       packages/frontend_mobile/
+└── import { parseWorkData }             └── import { parseWorkData }
+    from 'shared-collab'                     from 'shared-collab'
+        </pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <strong>Locality</strong>：修复编解码 bug 无需修改两个代码库</li>
+        <li>• <strong>Leverage</strong>：一个共享包服务两个前端</li>
+        <li>• 消除约 250 行逐字重复代码</li>
+        <li>• 共享常量确保超时/重试行为一致</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 编解码函数的集中单元测试</li>
+        <li>• 类型解析的边缘情况测试</li>
+        <li>• SDK 包装器可用 mock 测试</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 5 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-worth mr-3">Worth exploring</span>
+      <h3 class="inline text-xl font-semibold">#5 — 从 CollaborateSidebar 提取协同逻辑到自定义 Hook</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/frontend/src/components/CollaborateSidebar.tsx</code> — 947 行</li>
+        <li><code>packages/frontend_mobile/src/stores/collab.ts</code> — 423 行（参考架构）</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• 创建、加入、退出、获取协同列表的所有 CRUD 逻辑嵌入在 React 组件内</li>
+        <li>• <code>handleJoinWorkRef</code> 回调 ref 模式是反模式（需要 ref 将回调传给子组件）</li>
+        <li>• 无法不渲染组件就进行单元测试协同操作</li>
+        <li>• 对比移动端：逻辑在 Pinia store 中，组件仅为 UI</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">提取 <code>useCollaboration</code> 自定义 Hook（返回 <code>{ works, createWork, joinWork, exitWork, fetchWorks, isJoining, error }</code>）。Collab 组件降级为纯 UI，接收 Hook 返回的状态和回调。逻辑可通过 Hook 进行单元测试，无需渲染组件。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <strong>Locality</strong>：协同逻辑集中在 Hook，UI 在组件</li>
+        <li>• <strong>Leverage</strong>：组件作为纯表现层，可替换（类比移动端的架构分化）</li>
+        <li>• 无需渲染组件即可测试协同逻辑</li>
+        <li>• 消除回调 ref 反模式</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <code>useCollaboration</code> 使用 <code>renderHook</code> 测试</li>
+        <li>• mock mxcad-app SDK 测试创建/加入/退出流程</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 6 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-worth mr-3">Worth exploring</span>
+      <h3 class="inline text-xl font-semibold">#6 — 统一树遍历模式（CTE 替代 N+1）</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/file-operations/file-operations.service.ts</code> — <code>collectFilesToDelete</code>、<code>collectChildNodes</code></li>
+        <li><code>packages/backend/src/file-system/file-tree/file-tree.service.ts</code> — <code>getAllProjectNodeIds</code>（CTE）、<code>getAllFilesUnderNode</code>（N+1）</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• 树遍历在 3 个方法中实现，其中 2 个使用 N+1 查询（逐级 <code>findMany</code>）</li>
+        <li>• <code>FileTreeService.getAllProjectNodeIds()</code> 使用递归 CTE（单查询高效），但未被其他方法复用</li>
+        <li>• 每次添加新的树操作时，重复模式容易引入 bug</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">提取 <code>TreeTraversalService</code>，提供 <code>getSubtreeIds(rootId)</code>（CTE 单查询）、<code>getSubtreeFiles(rootId)</code>（仅文件节点）、<code>getSubtreeFolders(rootId)</code>（仅文件夹）。所有需要遍历操作的服务注入此服务。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• <strong>Leverage</strong>：一个接口替代 3 个重复模式</li>
+        <li>• 消除 N+1 查询，全部改用 CTE 单查询</li>
+        <li>• 性能提升：O(n) 查询 vs O(log n) 查询</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• TreeTraversalService 独立测试（mock Prisma）</li>
+        <li>• 集成测试验证树结构查询正确性</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 7 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-speculative mr-3">Speculative</span>
+      <h3 class="inline text-xl font-semibold">#7 — 将 mxcadManager 的事件总线类型化</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/frontend/src/services/mxcadManager/index.ts</code> — 2938 行</li>
+        <li><code>packages/frontend/src/pages/CADEditorDirect.tsx</code> — 1886 行</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• CustomEvent 名称（如 <code>mxcad-file-opened</code>）分散在 3 个文件中，无注册表</li>
+        <li>• 所有 <code>addEventListener</code> 使用 <code>as unknown as EventListener</code>，无类型安全</li>
+        <li>• 事件风暴：至少 12 个不同的事件名称</li>
+        <li>• 没有文档说明事件的触发者和监听者</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">定义 <code>MxCADEventMap</code> 类型化的事件注册表，将所有事件名称和 payload 类型集中在一处。创建类型安全的 <code>emitMxCADEvent</code> / <code>onMxCADEvent</code> 包装函数，消除类型转换。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 类型安全的事件分发/监听</li>
+        <li>• 单一事件注册表便于理解和调试</li>
+        <li>• 编译器检查事件名称拼写错误</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 事件调度器的单元测试</li>
+        <li>• 集成测试验证事件→副作用链路</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 8 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-speculative mr-3">Speculative</span>
+      <h3 class="inline text-xl font-semibold">#8 — RoleInheritanceService 启动预热可延迟化</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/common/services/role-inheritance.service.ts</code> — 631 行</li>
+        <li><code>packages/backend/src/common/services/permission-cache.service.ts</code> — 548 行</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• <code>warmupCacheAsync()</code> 在启动时查询 <strong>所有活跃用户</strong>（<code>findMany({ where: { status: 'ACTIVE' }, select: { id: true } })</code>）</li>
+        <li>• 对万级用户的生产环境，生成 22（权限数）× 用户数的缓存键</li>
+        <li>• 测试通过 mock <code>onModuleInit</code> 绕过（代码异味）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">将预热改为惰性加载（用户首次访问时为其预热），或加环境变量开关（仅在需要时预热）。或限制预热范围，仅预热管理员角色。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 启动时间从 O(n) 变为 O(1)</li>
+        <li>• 消除测试中的 mock 绕过</li>
+        <li>• 惰性预热在冷启动时更友好</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 现在可测的测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 惰性预热逻辑的单元测试</li>
+        <li>• 预热开关的配置测试</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 9 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-speculative mr-3">Speculative</span>
+      <h3 class="inline text-xl font-semibold">#9 — 令牌注入接口采用不一致</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/file-system/services/index.ts</code> — 桶文件</li>
+        <li><code>packages/backend/src/file-system/interfaces/file-tree.interface.ts</code></li>
+        <li><code>packages/backend/src/file-system/interfaces/search.interface.ts</code></li>
+        <li><code>packages/backend/src/file-system/interfaces/storage-quota.interface.ts</code></li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <ul class="text-sm space-y-1 text-slate-300">
+        <li>• <code>IFILE_TREE_SERVICE</code> 等接口令牌已定义，但采用不一致</li>
+        <li>• <code>FileOperationsService</code> 和 <code>ProjectCrudService</code> 通过令牌注入 <code>FileTreeService</code></li>
+        <li>• <code>NodeController</code>、<code>TrashController</code> 等直接注入具体 <code>FileTreeService</code></li>
+        <li>• 一半用令牌，一半用具体类，无统一模式</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">统一采用一种注入模式。由于当前只有一个适配器（Prisma），按 <strong>一个适配器意味着假设的接缝</strong> 原则，要么全部用具体类注入，要么确认第二个适配器需求后再引入令牌。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 代码风格一致，降低认知负担</li>
+        <li>• 移除未使用的接口和桶导出</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 测试影响</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 所有消费者使用相同注入模式，测试设置统一</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Candidate 10 -->
+<div class="card p-6 mb-6">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <span class="badge badge-speculative mr-3">Speculative</span>
+      <h3 class="inline text-xl font-semibold">#10 — 合并重复的 MIME 类型映射</h3>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📁 涉及文件</p>
+      <ul class="file-list">
+        <li><code>packages/backend/src/file-system/controllers/download.controller.ts</code> (L372)</li>
+        <li><code>packages/backend/src/file-system/file-download/file-download-export.service.ts</code> (L691)</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">⚠️ 问题</p>
+      <p class="text-sm text-slate-300">两个文件维护完全相同的 MIME 类型映射。添加新的 MIME 类型需要修改两处。</p>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <p class="text-sm text-slate-400 mb-1">💡 解决方案</p>
+    <p class="text-sm text-slate-300">提取 <code>MimeTypeMapper</code> 服务（或常量文件），两处引用同一来源。</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <p class="text-sm text-slate-400 mb-1">📈 收益</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• 单一数据源</li>
+        <li>• 集中测试</li>
+        <li>• 消除约 30 行重复代码</li>
+      </ul>
+    </div>
+    <div>
+      <p class="text-sm text-slate-400 mb-1">🔬 测试</p>
+      <ul class="text-sm text-slate-300 space-y-1">
+        <li>• MimeTypeMapper 的集中单元测试</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Summary table -->
+<div class="card p-6 mt-6">
+  <h2 class="border-0 mt-0">候选优先级矩阵</h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-slate-400 border-b border-slate-700">
+          <th class="text-left py-2">#</th>
+          <th class="text-left py-2">候选</th>
+          <th class="text-left py-2">推荐强度</th>
+          <th class="text-left py-2">消除重复</th>
+          <th class="text-left py-2">测试增益</th>
+          <th class="text-left py-2">风险</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-700">
+        <tr><td class="py-2">1</td><td>清理三个浅层委托 + 死代码</td><td><span class="badge badge-strong">Strong</span></td><td>~7 文件删除</td><td>测试真实现，而非委托</td><td class="text-emerald-400">低</td></tr>
+        <tr><td class="py-2">2</td><td>MxCadController 版本历史提取</td><td><span class="badge badge-strong">Strong</span></td><td>~200 行</td><td>新增可测试的服务</td><td class="text-yellow-400">中</td></tr>
+        <tr><td class="py-2">3</td><td>拆分 FileOperationsService</td><td><span class="badge badge-strong">Strong</span></td><td>~200 行</td><td>每个域独立可测</td><td class="text-yellow-400">中</td></tr>
+        <tr><td class="py-2">4</td><td>创建共享协同包</td><td><span class="badge badge-strong">Strong</span></td><td>~250 行</td><td>集中编解码测试</td><td class="text-emerald-400">低</td></tr>
+        <tr><td class="py-2">5</td><td>CollaborateSidebar 逻辑提取</td><td><span class="badge badge-worth">Worth</span></td><td>—</td><td>Hook 可 renderHook 测试</td><td class="text-emerald-400">低</td></tr>
+        <tr><td class="py-2">6</td><td>统一树遍历 (CTE)</td><td><span class="badge badge-worth">Worth</span></td><td>~60 行</td><td>集中遍历测试</td><td class="text-emerald-400">低</td></tr>
+        <tr><td class="py-2">7</td><td>mxcadManager 事件类型化</td><td><span class="badge badge-speculative">Spec</span></td><td>—</td><td>编译器检查</td><td class="text-emerald-400">低</td></tr>
+        <tr><td class="py-2">8</td><td>启动预热惰性化</td><td><span class="badge badge-speculative">Spec</span></td><td>—</td><td>消除测试绕过</td><td class="text-yellow-400">中</td></tr>
+        <tr><td class="py-2">9</td><td>令牌注入统一</td><td><span class="badge badge-speculative">Spec</span></td><td>—</td><td>不直接改善</td><td class="text-emerald-400">低</td></tr>
+        <tr><td class="py-2">10</td><td>MIME 类型合并</td><td><span class="badge badge-speculative">Spec</span></td><td>~30 行</td><td>微小</td><td class="text-emerald-400">非常低</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADR note -->
+<div class="adr-warning mt-6">
+  <strong>ADR 冲突说明</strong>：本次回顾未发现与现有 ADR 直接冲突的候选。提交 <code>4a7ebb5d</code>（"remove FileSystemService pure-facade"）已经完成过一次"删除浅层门面"的深化——候选 #1 遵循相同的模式。候选 #3 拆分 FileOperationsService 也不违反任何 ADR，因为该服务是之前重构后剩余的超大体量单体。
+</div>
+
+<div class="text-center text-slate-500 text-xs mt-8 pb-4">
+  CloudCAD 架构回顾 · 基于 /codebase-design 词汇表 · <span id="timestamp"></span>
+</div>
+
+<script>
+  document.getElementById('timestamp').textContent = new Date().toISOString();
+</script>
+
+</body>
+</html>

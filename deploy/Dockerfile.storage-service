@@ -1,0 +1,13 @@
+FROM node:20.19.5-alpine
+
+WORKDIR /app
+
+COPY packages/storage-service/package.json ./
+COPY packages/storage-service/server.js ./
+COPY packages/storage-service/lib/ ./lib/
+COPY packages/storage-service/routes/ ./routes/
+COPY packages/storage-service/services/ ./services/
+
+EXPOSE 3200
+
+CMD ["node", "server.js"]

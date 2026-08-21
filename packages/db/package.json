@@ -1,0 +1,33 @@
+{
+  "name": "@cloudcad/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "共享 Prisma Client — schema 单一源 + generated client 导出（PrismaClient + 模型/枚举类型）",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "prisma/schema.prisma"
+  ],
+  "scripts": {
+    "db:generate": "prisma generate",
+    "build": "pnpm db:generate && pnpm clean && tsc",
+    "type-check": "tsc --noEmit",
+    "clean": "node -e \"const fs=require('node:fs');const {execSync}=require('node:child_process');for(let i=0;i<5;i++){try{fs.rmSync('dist',{recursive:true,force:true});break}catch(e){if(i===4)throw e;execSync(process.platform==='win32'?'timeout /t 1 /nobreak >nul':'sleep 1',{stdio:'ignore'})}}\""
+  },
+  "dependencies": {
+    "@prisma/client": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.1.0",
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,0 +1,268 @@
+/*
+ * Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+ * All rights reserved.
+ */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-family-base);
+}
+.theme-toggle-wrapper {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: var(--z-sidebar); /* 全局浮层：fixed 定位，对应 Z_LAYERS.SIDEBAR */
+}
+.auth-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  z-index: var(--z-content); /* 局部层叠上下文：居中容器，不参与全局浮层 */
+  min-height: 100vh;
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: card-appear 0.6s ease-out;
+}
+@keyframes card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.logo-section {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.logo-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+}
+.logo-glow {
+  position: absolute;
+  inset: -8px;
+  background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+  border-radius: 50%;
+  opacity: 0.3;
+  filter: blur(20px);
+  animation: logo-glow-pulse 3s ease-in-out infinite;
+}
+@keyframes logo-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}
+.logo-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 16px;
+  z-index: 1;
+  animation: logo-float 3s ease-in-out infinite;
+}
+@keyframes logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.app-title {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+.app-tagline {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+}
+.support-content,
+.success-content,
+.device-content {
+  text-align: center;
+}
+.support-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin: 0 auto 1.5rem;
+}
+.support-icon-bg {
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+.success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin: 0 auto 1.5rem;
+}
+.success-icon-bg {
+  background: linear-gradient(135deg, var(--success), var(--success));
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+}
+.error-icon-bg {
+  background: linear-gradient(135deg, var(--error), var(--error));
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+.support-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.support-subtitle {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin-bottom: 1.5rem;
+}
+.device-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.device-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.device-subtitle {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin-bottom: 1.5rem;
+}
+.success-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.success-subtitle {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin-bottom: 1.5rem;
+}
+.code-display {
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border-strong);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.code-text {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--primary-500);
+  font-family: var(--font-family-mono, 'SF Mono', 'Fira Code', monospace);
+}
+.countdown-bar {
+  margin-bottom: 1.5rem;
+}
+.countdown-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.countdown-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+.countdown-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.device-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.copyright {
+  margin-top: 2rem;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+[data-theme='dark'] .auth-card {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 1rem;
+  }
+  .auth-card {
+    padding: 1.75rem;
+    border-radius: 20px;
+  }
+}

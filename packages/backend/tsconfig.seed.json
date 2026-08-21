@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist/prisma",
+    "rootDir": "./prisma",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "removeComments": true,
+    "strict": false,
+    "composite": false,
+    "incremental": false,
+    "noEmitOnError": false
+  },
+  "include": ["prisma/seed.ts"],
+  "exclude": ["node_modules", "dist", "src", "test", "scripts"]
+}

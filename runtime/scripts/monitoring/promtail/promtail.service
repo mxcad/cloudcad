@@ -1,0 +1,28 @@
+# 梦想网页CAD实时协同平台 Promtail systemd unit（ADR-0055 §3，业务机侧日志采集）
+# 部署：将本文件放到 /etc/systemd/system/promtail.service，替换路径后：
+#   systemctl daemon-reload && systemctl enable --now promtail
+
+[Unit]
+Description=梦想网页CAD实时协同平台 Promtail (log shipper to Loki)
+Documentation=https://github.com/mxcad/cloudcad
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cloudcad
+Group=cloudcad
+ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail/promtail.yml
+Restart=on-failure
+RestartSec=5s
+# 日志根目录（与业务进程 umask 027 一致，目录 0750 / 文件 0640）
+UMask=027
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/promtail
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,73 @@
+# 依赖目录
+node_modules
+**/node_modules
+
+# 构建产物
+dist
+**/dist
+build
+.next
+out
+
+# Prisma 生成物（db 包内构建时重新生成）
+packages/db/src/generated
+
+# 缓存目录
+.cache
+.parcel-cache
+.vite
+.turbo
+
+# 日志文件
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+
+# IDE 配置
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker 相关
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# 测试相关
+coverage
+.nyc_output
+**/*.test.ts
+**/*.spec.ts
+**/test
+**/__tests__
+
+# 临时文件
+temp
+tmp
+*.tmp
+*.temp
+
+# 数据目录 (用户数据，不包含在镜像中)
+data/
+
+# 文档 (可选)
+docs
+*.md
+!README.md
+
+# 其他
+.DS_Store
+Thumbs.db
+*.bak
+*.backup

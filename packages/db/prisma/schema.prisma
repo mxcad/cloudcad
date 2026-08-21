@@ -1,0 +1,782 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/client"
+  moduleFormat    = "cjs"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pg_trgm]
+}
+
+model User {
+  id                   String           @id @default(cuid())
+  email                String?          @unique
+  username             String           @unique
+  password             String?
+  nickname             String?
+  avatar               String?
+  roleId               String
+  status               UserStatus       @default(INACTIVE)
+  emailVerified        Boolean          @default(false)
+  emailVerifiedAt      DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  phone                String?          @unique
+  phoneVerified        Boolean          @default(false)
+  phoneVerifiedAt      DateTime?
+  wechatId             String?          @unique
+  provider             String           @default("LOCAL")
+  oldSiteUserId        String?          @unique
+  deletedAt            DateTime?
+  /// 注销来源：'SELF'=用户自助注销（冷静期内登录可自动恢复），'ADMIN'=管理员软删（不自动恢复）；null=存量数据/未注销
+  deactivatedBy        String?
+  lastUsernameChangeAt DateTime?
+  usernameChangeCount  Int              @default(0)
+  auditLogs            AuditLog[]
+  ownedNodes           FileSystemNode[] @relation("NodeOwner")
+  projectMembers       ProjectMember[]
+  role                 Role             @relation(fields: [roleId], references: [id])
+  refreshTokens        RefreshToken[]
+  fileShares           FileShare[]
+  membership           UserMembership?
+  paymentOrders        PaymentOrder[]
+  refundApplications   RefundApplication[]
+  refundReviews        RefundApplication[] @relation("RefundReviewer")
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  category    RoleCategory     @default(SYSTEM)
+  level       Int              @default(0)
+  isSystem    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  parent      Role?            @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Role[]           @relation("RoleHierarchy")
+  users       User[]
+
+  @@index([parentId])
+  @@index([category])
+  @@index([level])
+  @@unique([name])
+  @@map("roles")
+}
+
+model RolePermission {
+  id         String     @id @default(cuid())
+  roleId     String
+  permission Permission
+  createdAt  DateTime   @default(now())
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
+}
+
+enum NodeType {
+  FILE
+  FOLDER
+  PROJECT
+  PERSONAL_SPACE
+  LIBRARY_DRAWING
+  LIBRARY_BLOCK
+}
+
+// Note: This model has 3 extra GIN indexes that are NOT declared in schema.prisma
+// because Prisma does not support them (GIN with tsvector / gin_trgm_ops).
+// They are created by migration 20260729060604_restore_search_indexes and
+// will show as drift in `prisma migrate diff` — ignore or preserve them.
+//   - idx_file_system_nodes_search_vector       (GIN on "searchVector")
+//   - idx_file_system_nodes_name_trgm            (GIN on name gin_trgm_ops)
+//   - idx_file_system_nodes_description_trgm     (GIN on description gin_trgm_ops)
+model FileSystemNode {
+  id                             String           @id @default(cuid())
+  name                           String
+  nodeType                       NodeType
+  parentId                       String?
+  originalName                   String?
+  path                           String?
+  size                           Int?
+  mimeType                       String?
+  extension                      String?
+  fileStatus                     FileStatus?  @default(COMPLETED)
+  fileHash                       String?
+  taskId                         String?
+  description                    String?
+  projectStatus                  ProjectStatus?
+  /// 出向策略：本项目文件 → 其他项目（仅 PROJECT 根）
+  transferOutToProject           CrossProjectTransferMode? @default(ALL)
+  /// 出向策略：本项目文件 → 个人空间（防图纸私有化，默认禁止）
+  transferOutToPersonalSpace     CrossProjectTransferMode? @default(NONE)
+  /// 出向策略：本项目文件 → 公共资源库（发布，默认仅复制）
+  transferOutToLibrary           CrossProjectTransferMode? @default(COPY_ONLY)
+  /// 入向策略：其他项目文件 → 本项目
+  transferInFromProject          CrossProjectTransferMode? @default(ALL)
+  /// 入向策略：个人空间文件 → 本项目
+  transferInFromPersonalSpace    CrossProjectTransferMode? @default(ALL)
+  /// 入向策略：公共资源库文件 → 本项目
+  transferInFromLibrary          CrossProjectTransferMode? @default(ALL)
+  ownerId                        String
+  createdAt                      DateTime         @default(now())
+  updatedAt                      DateTime         @updatedAt
+  deletedAt                      DateTime?
+  deletedByCascade               Boolean          @default(false)
+  deletedFromStorage             DateTime?
+  projectId                      String?
+  totalSize                      Float?           @default(0)
+  searchVector                   Unsupported("tsvector")?
+  owner                          User             @relation("NodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  parent                         FileSystemNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children                       FileSystemNode[] @relation("NodeHierarchy")
+  project                        FileSystemNode?  @relation("NodeProject", fields: [projectId], references: [id], onDelete: Cascade)
+  files                          FileSystemNode[] @relation("NodeProject")
+  projectMembers                 ProjectMember[]
+  projectRoles                   ProjectRole[]
+
+  @@index([parentId])
+  @@index([ownerId])
+  @@index([nodeType])
+  @@index([deletedAt])
+  @@index([projectId])
+  @@index([projectId, deletedAt, nodeType, updatedAt], name: "idx_project_search")
+  @@index([nodeType, deletedAt, updatedAt], name: "idx_library_search")
+  @@map("file_system_nodes")
+}
+
+model ProjectRole {
+  id          String                  @id @default(cuid())
+  projectId   String?
+  name        String
+  description String?
+  isSystem    Boolean                 @default(false)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  members     ProjectMember[]
+  permissions ProjectRolePermission[]
+  project     FileSystemNode?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("project_roles")
+}
+
+model ProjectRolePermission {
+  id            String            @id @default(cuid())
+  projectRoleId String
+  permission    ProjectPermission
+  createdAt     DateTime          @default(now())
+  projectRole   ProjectRole       @relation(fields: [projectRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([projectRoleId, permission])
+  @@map("project_role_permissions")
+}
+
+model ProjectMember {
+  id            String         @id @default(cuid())
+  projectId     String
+  userId        String
+  projectRoleId String
+  createdAt     DateTime       @default(now())
+  project       FileSystemNode @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectRole   ProjectRole    @relation(fields: [projectRoleId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectRoleId])
+  @@index([projectId])
+  @@map("project_members")
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  path        String
+  thumbnail   String?
+  size        Int
+  mimeType    String
+  status      AssetStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("assets")
+}
+
+model Font {
+  id        String     @id @default(cuid())
+  name      String
+  family    String
+  path      String
+  size      Int
+  status    FontStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("fonts")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  clientId  String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id           String       @id @default(cuid())
+  action       AuditAction
+  resourceType ResourceType
+  resourceId   String?
+  // 项目维度（系统级操作可空），#207 阶段 1（ADR-0045）
+  projectId    String?
+  // 名称快照：记录时存当时的文件/项目/用户名称，资源删除后记录依然可读
+  resourceName String?
+  // 结构化参数 JSON（替代 details blob），如 { targetUserId, fromRole, toRole }
+  params       Json?
+  userId       String
+  ipAddress    String?
+  userAgent    String?
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model UploadSession {
+  id            String   @id @default(cuid())
+  uploadId      String   @unique
+  storageKey    String
+  fileName      String
+  fileSize      Int
+  fileId        String?
+  projectId     String?
+  parentId      String?
+  ownerId       String
+  status        String   @default("INITIATED")
+  totalParts    Int?
+  uploadedParts Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("upload_sessions")
+}
+
+model PermissionPolicy {
+  id          String             @id @default(cuid())
+  type        PolicyType
+  name        String
+  description String?
+  config      Json
+  enabled     Boolean            @default(true)
+  priority    Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  permissions PolicyPermission[]
+
+  @@index([type])
+  @@index([enabled])
+  @@index([priority])
+  @@map("permission_policies")
+}
+
+model PolicyPermission {
+  id         String           @id @default(cuid())
+  policyId   String
+  permission Permission
+  createdAt  DateTime         @default(now())
+  policy     PermissionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, permission])
+  @@index([permission])
+  @@map("policy_permissions")
+}
+
+model RuntimeConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String
+  category    String
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("runtime_configs")
+}
+
+model RuntimeConfigLog {
+  id         String   @id @default(cuid())
+  key        String
+  oldValue   String?
+  newValue   String
+  operatorId String?
+  operatorIp String?
+  createdAt  DateTime @default(now())
+
+  @@index([key])
+  @@index([createdAt])
+  @@map("runtime_config_logs")
+}
+
+enum BlacklistSource {
+  MANUAL
+  AUTO
+}
+
+model IpBlacklistEntry {
+  id        String          @id @default(cuid())
+  ip        String
+  source    BlacklistSource
+  reason    String
+  createdBy String
+  createdAt DateTime        @default(now())
+  expiresAt DateTime?
+
+  @@index([ip])
+  @@index([expiresAt])
+  @@map("ip_blacklist_entries")
+}
+
+/// 管理员登录 IP 白名单（DB 配置通道；与服务器本地文件白名单取并集生效）
+model IpWhitelistEntry {
+  id        String          @id @default(cuid())
+  ip        String
+  source    BlacklistSource
+  reason    String
+  createdBy String
+  createdAt DateTime        @default(now())
+  expiresAt DateTime?
+
+  @@index([ip])
+  @@index([expiresAt])
+  @@map("ip_whitelist_entries")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Permission {
+  SYSTEM_USER_READ
+  SYSTEM_USER_CREATE
+  SYSTEM_USER_UPDATE
+  SYSTEM_USER_DELETE
+  SYSTEM_USER_MEMBERSHIP_MANAGE
+  SYSTEM_ROLE_READ
+  SYSTEM_ROLE_CREATE
+  SYSTEM_ROLE_UPDATE
+  SYSTEM_ROLE_DELETE
+  SYSTEM_ROLE_PERMISSION_MANAGE
+  SYSTEM_FONT_READ
+  SYSTEM_FONT_UPLOAD
+  SYSTEM_FONT_DELETE
+  SYSTEM_FONT_DOWNLOAD
+  SYSTEM_ADMIN
+  SYSTEM_BILLING_READ
+  SYSTEM_BILLING_WRITE
+  SYSTEM_MONITOR
+  SYSTEM_CONFIG_READ
+  SYSTEM_CONFIG_WRITE
+  SYSTEM_IP_BLACKLIST_MANAGE
+  SYSTEM_IP_WHITELIST_MANAGE
+  LIBRARY_DRAWING_MANAGE
+  LIBRARY_BLOCK_MANAGE
+  PROJECT_CREATE
+}
+
+enum ProjectPermission {
+  PROJECT_UPDATE
+  PROJECT_DELETE
+  PROJECT_MEMBER_MANAGE
+  PROJECT_MEMBER_ASSIGN
+  PROJECT_TRANSFER
+  PROJECT_TRANSFER_MANAGE
+  PROJECT_ROLE_MANAGE
+  PROJECT_ROLE_PERMISSION_MANAGE
+  FILE_CREATE
+  FILE_UPLOAD
+  FILE_OPEN
+  FILE_EDIT
+  FILE_DELETE
+  FILE_TRASH_MANAGE
+  FILE_DOWNLOAD
+  FILE_SHARE
+  FILE_MOVE
+  FILE_COPY
+  CAD_SAVE
+  CAD_EXTERNAL_REFERENCE
+  VERSION_READ
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+/// 跨项目转移模式（项目根节点的出向/入向策略；仅 PROJECT 根使用）
+enum CrossProjectTransferMode {
+  NONE
+  COPY_ONLY
+  MOVE_ONLY
+  ALL
+}
+
+enum FileStatus {
+  UPLOADING
+  PROCESSING
+  COMPLETED
+  FAILED
+  DELETED
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum FontStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum AuditAction {
+  PERMISSION_GRANT
+  PERMISSION_REVOKE
+  ROLE_CREATE
+  ROLE_UPDATE
+  ROLE_DELETE
+  USER_LOGIN
+  USER_LOGOUT
+  USER_REGISTER
+  USER_VERIFY_EMAIL
+  USER_BIND_EMAIL
+  USER_UNBIND_EMAIL
+  USER_BIND_PHONE
+  USER_UNBIND_PHONE
+  USER_REBIND_EMAIL
+  USER_REBIND_PHONE
+  USER_BIND_WECHAT
+  USER_UNBIND_WECHAT
+  USER_CHANGE_PASSWORD
+  USER_DEACTIVATE
+  PROJECT_CREATE
+  PROJECT_DELETE
+  PROJECT_UPDATE
+  PROJECT_TRANSFER
+  FILE_UPLOAD
+  FILE_DOWNLOAD
+  FILE_DELETE
+  FILE_SHARE
+  ADD_MEMBER
+  UPDATE_MEMBER
+  REMOVE_MEMBER
+  TRANSFER_OWNERSHIP
+  IP_BLACKLIST_ADD
+  IP_BLACKLIST_REMOVE
+  IP_WHITELIST_ADD
+  IP_WHITELIST_REMOVE
+  ADMIN_LOGIN
+  ALERT_RESOLVE
+  AUDIT_EXPORT
+  FILE_CREATE
+  FILE_UPDATE
+  FOLDER_CREATE
+  NODE_RENAME
+  NODE_MOVE
+  NODE_COPY
+  NODE_RESTORE
+  REFUND_APPLY
+  REFUND_APPROVE
+  REFUND_REJECT
+}
+
+enum ResourceType {
+  SYSTEM
+  USER
+  ROLE
+  PERMISSION
+  PROJECT
+  FILE
+  FOLDER
+  ALERT
+  IpBlacklistEntry
+  IpWhitelistEntry
+}
+
+enum RoleCategory {
+  SYSTEM
+  PROJECT
+  CUSTOM
+}
+
+model FileShare {
+  id        String    @id @default(cuid())
+  fileId    String
+  token     String    @unique @default(nanoid(16))
+  createdBy String
+  expiresAt DateTime?
+  usedCount Int       @default(0)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@index([fileId])
+  @@index([token])
+  @@index([createdBy])
+  @@map("file_shares")
+}
+
+enum OrderStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CLOSED
+  TIMEOUT
+}
+
+model PaymentOrder {
+  id              String        @id @default(cuid())
+  orderNo         String        @unique
+  userId          String
+  vipTierId       String?
+  months          Int?
+  amount          Int
+  status          OrderStatus   @default(PENDING)
+  gateway         String        @default("wechat_pay")
+  gatewayOrderId  String?
+  tradeType       String?
+  gatewayPaidId   String?
+  description     String?
+  paidAt          DateTime?
+  failedAt        DateTime?
+  closedAt        DateTime?
+  refundedAt      DateTime?
+  refundReason    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user               User                 @relation(fields: [userId], references: [id])
+  vipTier            VipTier?             @relation(fields: [vipTierId], references: [id])
+  refundApplications RefundApplication[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
+  @@map("payment_orders")
+}
+
+enum RefundApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model RefundApplication {
+  id         String                  @id @default(cuid())
+  orderId    String
+  userId     String
+  amount     Int
+  reason     String
+  status     RefundApplicationStatus @default(PENDING)
+  reviewerId String?
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  order PaymentOrder @relation(fields: [orderId], references: [id])
+  user  User         @relation(fields: [userId], references: [id])
+  reviewer User?     @relation("RefundReviewer", fields: [reviewerId], references: [id])
+
+  @@index([orderId, status])
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
+  // 与手写 migration 20260814_refund_audit_actions 的 refund_applications_reviewerId_idx 对应，避免 migrate dev 漂移
+  @@index([reviewerId])
+  // 部分唯一索引（手写 migration 20260814000000_add_refund_pending_unique）：
+  // 同一订单最多一条 PENDING 申请，防并发重复申请
+  // CREATE UNIQUE INDEX "refund_applications_orderId_pending_idx" ON "refund_applications"("order_id") WHERE "status" = 'PENDING';
+  @@map("refund_applications")
+}
+
+model UserMembership {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  tierLevel Int      @default(0)
+  expiresAt DateTime?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  @@map("user_memberships")
+}
+
+enum PolicyType {
+  TIME
+  IP
+  DEVICE
+}
+
+enum BatchJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model BatchDownloadJob {
+  id             String         @id @default(cuid())
+  userId         String
+  projectId      String?
+  status         BatchJobStatus @default(PENDING)
+  fileList       Json
+  totalCount     Int
+  completedCount Int            @default(0)
+  errorCount     Int            @default(0)
+  zipPath        String?
+  zipSize        Int?
+  errors         Json?
+  createdAt      DateTime       @default(now())
+  completedAt    DateTime?
+  expiresAt      DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("batch_download_jobs")
+}
+
+model VipTier {
+  id               String        @id @default(cuid())
+  level            Int           @unique
+  name             String
+  baseMonthlyPrice Int
+  isActive         Boolean       @default(true)
+  configs          Json          @default("{}")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  orders           PaymentOrder[]
+
+  @@map("vip_tiers")
+}
+
+model DurationPricing {
+  id            String   @id @default(cuid())
+  months        Int      @unique
+  multiplierBps Int
+  label         String
+  isActive      Boolean  @default(true)
+  sortOrder     Int
+  createdAt     DateTime @default(now())
+
+  @@map("duration_pricings")
+}
+
+model ConfigKeyRegistry {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  type         String
+  label        String
+  defaultValue Json?
+  description  String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("config_key_registry")
+}
+
+enum AlertLevel {
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  RESOLVED
+}
+
+model AlertRecord {
+  id         String      @id @default(cuid())
+  source     String
+  messageKey String
+  level      AlertLevel
+  message    String
+  detail     Json?
+  status     AlertStatus @default(OPEN)
+  resolvedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([source, messageKey, status])
+  @@index([status, level])
+  @@index([createdAt])
+  @@map("alert_records")
+}
+
+enum TaskRunStatus {
+  SUCCESS
+  FAILED
+}
+
+enum TaskRunTrigger {
+  SCHEDULED
+  MANUAL
+}
+
+model TaskRun {
+  id           String         @id @default(cuid())
+  taskName     String
+  status       TaskRunStatus
+  startedAt    DateTime       @default(now())
+  finishedAt   DateTime?
+  durationMs   Int?
+  errorSummary String?
+  trigger      TaskRunTrigger @default(SCHEDULED)
+  triggeredBy  String?
+  createdAt    DateTime       @default(now())
+
+  @@index([taskName, startedAt])
+  @@index([status, startedAt])
+  @@index([startedAt])
+  @@map("task_runs")
+}

@@ -1,0 +1,7 @@
+# CloudCAD pnpm workspace — 所有 packages/* 子目录均为工作空间包
+# 当前包含：frontend, backend, frontend_mobile, config-service, mxVersionTool
+# tests/runtime-unit 为独立测试基建（部署运行时纯函数单测，不随包分发），
+# 不在 workspace 内：它只依赖 jest，用 npm 独立安装（cd tests/runtime-unit && npm install），
+# 避免打包（prepareDeployStore 的 --prod install）清理掉 dev 依赖 / lockfile 不一致。
+packages:
+  - 'packages/*'

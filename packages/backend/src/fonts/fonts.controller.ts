@@ -1,0 +1,210 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Post,
+  Query,
+  Req,
+  StreamableFile,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
+import type { Request } from 'express';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { SystemPermission } from '../common/enums/permissions.enum';
+import { FontsService } from './fonts.service';
+import { UploadFontDto, DeleteFontDto, FontUploadTarget, BatchDeleteFontDto } from './dto/font.dto';
+import { BatchOperationResponseDto } from '../file-system/dto/file-system-response.dto';
+
+import { I18nContext } from 'nestjs-i18n';
+/**
+ * 字体管理控制器
+ */
+@ApiTags('字体管理')
+@ApiBearerAuth()
+@Controller('font-management')
+@UseGuards(PermissionsGuard)
+export class FontsController {
+  private readonly logger = new Logger(FontsController.name);
+
+  constructor(private readonly fontsService: FontsService) {}
+
+  /**
+   * 获取字体列表（返回所有数据，由前端处理分页、筛选、排序）
+   */
+  @Get()
+  @ApiOperation({
+    summary: '获取字体列表',
+    description: '获取所有字体文件，前端负责分页、筛选和排序',
+  })
+  @ApiQuery({
+    name: 'location',
+    enum: ['backend', 'frontend'],
+    required: false,
+    description: '字体位置：backend 或 frontend，不指定则返回全部',
+  })
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_READ])
+  async getFonts(@Query('location') location?: 'backend' | 'frontend') {
+    try {
+      const result = await this.fontsService.getFonts(location);
+      return result;
+    } catch (error) {
+      this.logger.error(`获取字体列表失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 上传字体文件（支持多文件）
+   */
+  @Post('upload')
+  @ApiOperation({
+    summary: '上传字体文件',
+    description: '上传字体文件到指定目录，支持一次上传多个文件',
+  })
+  @ApiConsumes('multipart/form-data')
+  // defParamCharset: 'utf8' — busboy 默认用 latin1 解码 multipart 头中的文件名，
+  // 会导致中文文件名（UTF-8 字节）被解析成「å¾®è½¯…」乱码并落盘
+  @UseInterceptors(FilesInterceptor('files', 50, { defParamCharset: 'utf8' }))
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_UPLOAD])
+  async uploadFont(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() uploadFontDto: UploadFontDto
+  ) {
+    try {
+      this.logger.log(`[uploadFont] 收到上传请求`);
+      this.logger.log(`[uploadFont] 文件数量: ${files?.length ?? 0}`);
+      this.logger.log(`[uploadFont] target: ${uploadFontDto?.target}`);
+
+      if (!files || files.length === 0) {
+        throw new BadRequestException(I18nContext.current()?.t('error.font.no_file') ?? '未提供文件');
+      }
+
+      const target = uploadFontDto.target || FontUploadTarget.BOTH;
+
+      const results = await this.fontsService.uploadFonts(files, target);
+      return { message: I18nContext.current()?.t('success.font_upload_results', { args: { count: results.length } }) ?? `成功上传 ${results.length} 个字体文件`, fonts: results };
+    } catch (error) {
+      this.logger.error(`上传字体失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 删除字体文件
+   */
+  @Delete(':fileName')
+  @ApiOperation({
+    summary: '删除字体文件',
+    description: '从指定目录删除字体文件',
+  })
+  @ApiQuery({
+    name: 'target',
+    enum: Object.values(FontUploadTarget),
+    enumName: 'FontUploadTarget',
+    required: false,
+    description: '删除目标',
+  })
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_DELETE])
+  async deleteFont(
+    @Req() req: Request,
+    @Param('fileName') fileName: string,
+    @Query() deleteFontDto: DeleteFontDto
+  ) {
+    try {
+      const target = deleteFontDto.target || FontUploadTarget.BOTH;
+
+      const result = await this.fontsService.deleteFont(fileName, target);
+      return { message: result.message };
+    } catch (error) {
+      this.logger.error(`删除字体失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 批量删除字体文件
+   */
+  @Post('batch-delete')
+  @ApiOperation({
+    summary: '批量删除字体文件',
+    description: '批量删除多个字体文件',
+  })
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '批量删除成功',
+    type: BatchOperationResponseDto,
+  })
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_DELETE])
+  async batchDeleteFonts(@Body() dto: BatchDeleteFontDto) {
+    try {
+      const target = dto.target || FontUploadTarget.BOTH;
+      return await this.fontsService.batchDeleteFonts(dto.fileNames, target);
+    } catch (error) {
+      this.logger.error(`批量删除字体失败: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * 下载字体文件
+   */
+  @Get('download/:fileName')
+  @ApiOperation({
+    summary: '下载字体文件',
+    description: '下载指定位置的字体文件',
+  })
+  @ApiQuery({
+    name: 'location',
+    enum: ['backend', 'frontend'],
+    required: true,
+    description: '下载位置',
+  })
+  @Header('Content-Type', 'application/octet-stream')
+  @Header('Cache-Control', 'public, max-age=31536000, immutable')
+  @RequirePermissions([SystemPermission.SYSTEM_FONT_DOWNLOAD])
+  async downloadFont(
+    @Req() req: Request,
+    @Param('fileName') fileName: string,
+    @Query('location') location: 'backend' | 'frontend'
+  ) {
+    const result = await this.fontsService.downloadFont(fileName, location);
+
+    // 设置 Content-Disposition 响应头
+    return new StreamableFile(result.stream, {
+      type: 'application/octet-stream',
+      disposition: `attachment; filename="${encodeURIComponent(result.fileName)}"`,
+    });
+  }
+}

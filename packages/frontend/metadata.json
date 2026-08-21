@@ -1,0 +1,5 @@
+{
+  "name": "CloudCAD Manager",
+  "description": "Professional engineering drawing management platform with cloud storage, RBAC, and asset libraries.",
+  "requestFramePermissions": []
+}

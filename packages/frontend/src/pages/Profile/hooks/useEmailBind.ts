@@ -1,0 +1,106 @@
+import { useMutation } from '@tanstack/react-query';
+import {
+  authControllerSendBindEmailCode,
+  authControllerVerifyBindEmail,
+  authControllerSendUnbindEmailCode,
+  authControllerVerifyUnbindEmailCode,
+  authControllerRebindEmail,
+  authControllerUnbindEmail,
+} from '@/api-sdk';
+import type {
+  BindEmailDto,
+  VerifyUnbindCodeDto,
+  RebindEmailDto,
+} from '@/api-sdk';
+
+export const useEmailBind = () => {
+  const sendBindCode = useMutation({
+    mutationFn: async (params: { email: string; isRebind?: boolean }) => {
+      const result = await authControllerSendBindEmailCode({
+        body: {
+          email: params.email,
+          isRebind: params.isRebind,
+        } satisfies BindEmailDto,
+      });
+      if (result.error) throw result.error;
+      return result;
+    },
+  });
+
+  const verifyBindEmail = useMutation({
+    mutationFn: async (params: { email: string; code: string }) => {
+      const result = await authControllerVerifyBindEmail({
+        body: { email: params.email, code: params.code },
+      });
+      if (result.error) throw result.error;
+      return result;
+    },
+  });
+
+  const sendUnbindCode = useMutation({
+    mutationFn: async () => {
+      const result = await authControllerSendUnbindEmailCode();
+      if (result.error) throw result.error;
+      return result.data as { success?: boolean; message?: string };
+    },
+  });
+
+  const verifyUnbindEmail = useMutation({
+    mutationFn: async (params: { code: string }) => {
+      const result = await authControllerVerifyUnbindEmailCode({
+        body: { code: params.code } satisfies VerifyUnbindCodeDto,
+      });
+      if (result.error) throw result.error;
+      return result.data as {
+        success?: boolean;
+        message?: string;
+        token?: string;
+      };
+    },
+  });
+
+  const rebindEmail = useMutation({
+    mutationFn: async (params: {
+      email: string;
+      code: string;
+      token: string;
+    }) => {
+      const result = await authControllerRebindEmail({
+        body: {
+          email: params.email,
+          code: params.code,
+          token: params.token,
+        } satisfies RebindEmailDto,
+      });
+      if (result.error) throw result.error;
+      return result.data as { success?: boolean; message?: string };
+    },
+  });
+
+  const unbindEmail = useMutation({
+    // 解绑邮箱需验证原邮箱验证码（后端 unbind-email 必填 code）
+    mutationFn: async (params: { code: string }) => {
+      const result = await authControllerUnbindEmail({
+        body: { code: params.code } satisfies VerifyUnbindCodeDto,
+      });
+      if (result.error) throw result.error;
+      return result.data as { success?: boolean; message?: string };
+    },
+  });
+
+  return {
+    sendBindCode: sendBindCode.mutateAsync,
+    verifyBindEmail: verifyBindEmail.mutateAsync,
+    sendUnbindCode: sendUnbindCode.mutateAsync,
+    verifyUnbindEmail: verifyUnbindEmail.mutateAsync,
+    rebindEmail: rebindEmail.mutateAsync,
+    unbindEmail: unbindEmail.mutateAsync,
+    loading:
+      sendBindCode.isPending ||
+      verifyBindEmail.isPending ||
+      sendUnbindCode.isPending ||
+      verifyUnbindEmail.isPending ||
+      rebindEmail.isPending ||
+      unbindEmail.isPending,
+  };
+};

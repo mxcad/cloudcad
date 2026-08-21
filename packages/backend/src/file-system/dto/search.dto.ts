@@ -1,0 +1,193 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+
+export enum SearchScope {
+  PROJECT = 'project',
+  PROJECT_FILES = 'project_files',
+  ALL_PROJECTS = 'all_projects',
+  LIBRARY = 'library',
+  GLOBAL = 'global',
+  PERSONAL_SPACE = 'personal_space',
+}
+
+export enum SearchType {
+  ALL = 'all',
+  FILE = 'file',
+  FOLDER = 'folder',
+}
+
+export enum SearchEntity {
+  FILE = 'file',
+}
+
+export class SearchDto {
+  @ApiProperty({ description: '搜索关键词', required: true })
+  @IsString()
+  @MaxLength(200, { message: '搜索关键词最长200个字符' })
+  keyword: string;
+
+  @ApiProperty({
+    description: '搜索实体类型（预留扩展，当前仅支持 file）',
+    enum: Object.values(SearchEntity),
+    enumName: 'SearchEntity',
+    required: false,
+    default: SearchEntity.FILE,
+  })
+  @IsOptional()
+  @IsEnum(SearchEntity)
+  entity?: SearchEntity = SearchEntity.FILE;
+
+  @ApiProperty({
+    description: '搜索范围',
+    enum: Object.values(SearchScope),
+    enumName: 'SearchScope',
+    required: false,
+    default: SearchScope.PROJECT_FILES,
+  })
+  @IsOptional()
+  @IsEnum(SearchScope)
+  scope?: SearchScope = SearchScope.PROJECT_FILES;
+
+  @ApiProperty({
+    description: '搜索类型',
+    enum: Object.values(SearchType),
+    enumName: 'SearchType',
+    required: false,
+    default: SearchType.ALL,
+  })
+  @IsOptional()
+  @IsEnum(SearchType)
+  type?: SearchType = SearchType.ALL;
+
+  @ApiProperty({
+    description: '项目过滤类型（scope=project 时使用）',
+    enum: ['all', 'owned', 'joined'],
+    enumName: 'ProjectFilter',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  filter?: 'all' | 'owned' | 'joined';
+
+  @ApiProperty({
+    description: '目标项目 ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @ApiProperty({
+    description: '资源库类型（scope=library 时使用）',
+    enum: ['drawing', 'block'],
+    enumName: 'LibraryType',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  libraryKey?: string;
+
+  @ApiProperty({
+    description: '文件扩展名过滤',
+    required: false,
+    example: '.dwg',
+  })
+  @IsOptional()
+  @IsString()
+  extension?: string;
+
+  @ApiProperty({
+    description: '文件状态（支持逗号分隔多选）',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  fileStatus?: string;
+
+  @ApiProperty({ description: '修改时间起始（ISO 日期）', required: false })
+  @IsOptional()
+  @IsString()
+  modifiedAtFrom?: string;
+
+  @ApiProperty({ description: '修改时间结束（ISO 日期）', required: false })
+  @IsOptional()
+  @IsString()
+  modifiedAtTo?: string;
+
+  @ApiProperty({ description: '创建时间起始（ISO 日期）', required: false })
+  @IsOptional()
+  @IsString()
+  createdAtFrom?: string;
+
+  @ApiProperty({ description: '创建时间结束（ISO 日期）', required: false })
+  @IsOptional()
+  @IsString()
+  createdAtTo?: string;
+
+  @ApiProperty({ description: '文件大小下限（字节）', required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sizeMin?: number;
+
+  @ApiProperty({ description: '文件大小上限（字节）', required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sizeMax?: number;
+
+  @ApiProperty({ description: '页码', required: false, minimum: 1, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({
+    description: '每页数量',
+    required: false,
+    minimum: 10,
+    maximum: 100,
+    default: 50,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(10)
+  @Max(100)
+  limit?: number = 50;
+
+  @ApiProperty({
+    description: '排序字段',
+    required: false,
+    default: 'updatedAt',
+  })
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'updatedAt';
+
+  @ApiProperty({
+    description: '排序方向',
+    required: false,
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc' = 'desc';
+}

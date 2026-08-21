@@ -1,0 +1,137 @@
+# 梦想网页CAD实时协同平台 监控栈（Log Monitor Ops / ADR-0055 §3）docker-compose 变体
+# 独立监控栈节点：Prometheus + Grafana + Loki + Alertmanager
+#
+# 使用方法（单机 docker，监控栈与业务栈同机）:
+#   1. 先启动业务栈（创建 cloudcad-network）: docker network create cloudcad-network
+#   2. 复制 docker/.env.example 为 docker/.env.monitoring 并设置 SCRAPE_TOKEN / SMTP 等
+#   3. 运行: docker compose -f docker/docker-compose.monitoring.yml --env-file docker/.env.monitoring up -d
+#
+# 说明:
+#   - Prometheus 通过业务 bridge 网络 cloudcad-network 抓取后端 /api/metrics（Bearer Token，见 #315）
+#   - Loki 单二进制 + 文件存储，单机目标 ~512MB；访问日志 180 天 / 应用日志 90 天
+#   - Grafana 登录认证（单管理员），数据源 Loki + Prometheus（看板见 #317）
+#   - Alertmanager SMTP 接收人 + routes（规则见 #316）
+#   - 监控栈与业务解耦：停业务容器不影响监控栈运行
+#   - 数据落盘到 ./data/monitoring/<组件>/ 便于备份
+
+name: cloudcad-monitoring
+
+services:
+  # ---------- Prometheus 指标采集 ----------
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: cloudcad-monitor-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROM_RETENTION:-30d}'
+      - '--web.listen-address=:9090'
+    environment:
+      # 后端 /api/metrics 抓取 host:port（业务 bridge 网络上的 app 容器，nginx 80 端口）
+      SCRAPE_TARGET_HOST: ${SCRAPE_TARGET_HOST:-cloudcad-app:80}
+      # /metrics 抓取 Bearer Token（与后端 SCRAPE_TOKEN 一致，见 #315）
+      SCRAPE_TOKEN: ${SCRAPE_TOKEN:?SCRAPE_TOKEN is required}
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ./data/monitoring/prometheus:/prometheus
+    ports:
+      - '${PROM_PORT:-9090}:9090'
+    networks:
+      - monitoring-network
+      - cloudcad-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ---------- Loki 日志存储 ----------
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: cloudcad-monitor-loki
+    restart: unless-stopped
+    command:
+      - '-config.file=/etc/loki/local-config.yaml'
+    volumes:
+      - ./monitoring/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - ./data/monitoring/loki:/loki
+    ports:
+      - '${LOKI_PORT:-3100}:3100'
+    networks:
+      - monitoring-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ---------- Grafana 可视化 ----------
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: cloudcad-monitor-grafana
+    restart: unless-stopped
+    environment:
+      # 单管理员登录认证（不匿名，ADR-0055 §3）
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3005/}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+    volumes:
+      # 数据源预置（Loki + Prometheus），看板见 #317
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./data/monitoring/grafana:/var/lib/grafana
+    ports:
+      - '${GRAFANA_PORT:-3005}:3000'
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - monitoring-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ---------- Alertmanager 告警外发 ----------
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: cloudcad-monitor-alertmanager
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.listen-address=:9093'
+    environment:
+      # SMTP 收件人（逗号分隔，复用业务栈 SMTP 配置）
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-梦想网页CAD实时协同平台 Alert <noreply@cloudcad.com>}
+      SMTP_SMARTHOST: ${SMTP_HOST}:${SMTP_PORT:-587}
+      SMTP_AUTH_USERNAME: ${SMTP_AUTH_USERNAME:-}
+      SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:?ALERT_EMAIL_TO is required}
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./data/monitoring/alertmanager:/alertmanager
+    ports:
+      - '${ALERTMANAGER_PORT:-9093}:9093'
+    networks:
+      - monitoring-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+networks:
+  # 监控栈内部网络
+  monitoring-network:
+    driver: bridge
+  # 业务网络（由业务 docker-compose.yml 创建；Prometheus 经此抓取后端）
+  cloudcad-network:
+    external: true
+    name: cloudcad-network

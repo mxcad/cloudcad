@@ -1,0 +1,94 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+///////////////////////////////////////////////////////////////////////////////
+
+import React from 'react';
+import * as Sentry from '@sentry/react';
+import { Button } from '@/components/ui';
+import { t } from '@/languages';
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+/**
+ * Global error boundary that catches render errors anywhere in the
+ * component tree. Prevents a single component crash from taking down
+ * the entire application by showing a fallback UI instead.
+ */
+export class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Caught render error:', error, errorInfo);
+    if (import.meta.env.VITE_SENTRY_DSN) {
+      Sentry.captureException(error, {
+        extra: { componentStack: errorInfo.componentStack },
+      });
+    }
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '100vh',
+            background: 'var(--bg-primary)',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-family-base)',
+            padding: 24,
+            textAlign: 'center',
+          }}
+        >
+          <h1 style={{ fontSize: 24, marginBottom: 16 }}>
+            {t('应用发生错误')}
+          </h1>
+          <p
+            style={{
+              color: 'var(--text-muted)',
+              marginBottom: 24,
+              maxWidth: 480,
+            }}
+          >
+            {this.state.error?.message || t('未知错误')}
+          </p>
+          <Button variant="primary" size="sm" onClick={this.handleReset}>
+            {t('重试')}
+          </Button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "?toolbarData": "底部工具栏",
+  "toolbarData": [
+    {
+      "name": "批注",
+      "icon": "pizhu",
+      "isIconDefault": true,
+      "cmd": "",
+      "list": [
+        { "name": "手绘线", "icon": "qingsongshouhui", "cmd": "m_mx_et_pencil" },
+        { "name": "文字", "icon": "danhangwenzi", "cmd": "m_mx_text"},
+        { "name": "箭头", "icon": "jiantoubiaozhu", "cmd": "m_mx_arrow" },
+        { "name": "引线", "icon": "yinxianbiaoji", "cmd": "m_mx_lead_comment" },
+        { "name": "云线", "icon": "yunxianpizhu", "cmd": "m_mx_revcloud" },
+        { "name": "音频", "icon": "yinpin" },
+        { "name": "图片", "icon": "charutupian", "cmd": "m_mx_img" }
+      ]
+    },
+    {
+      "name": "绘制",
+      "icon": "huitu",
+      "isIconDefault": true,
+      "list": [
+        { "name": "直线", "icon": "zhixian", "cmd": "m_mx_line" },
+        { "name": "圆形", "icon": "yuan", "cmd": "m_mx_circle" },
+        { "name": "圆弧", "icon": "yuanhu", "cmd": "m_mx_arc" },
+        { "name": "矩形", "icon": "juxing", "cmd": "m_mx_rect" },
+        { "name": "椭圆", "icon": "tuoyuan", "cmd": "m_mx_elliptical" },
+        { "name": "多线段", "icon": "duoxianduan", "cmd": "m_mx_polyline"  },
+        { "name": "点", "icon": "dian", "cmd": "m_mx_point" }
+      ]
+    },
+    {
+      "name": "编辑",
+      "icon": "xiugai",
+      "isIconDefault": true,
+      "list": [
+        { "name": "剪切", "icon": "xiujian", "cmd": "m_mx_trim" },
+        { "name": "延伸", "icon": "yanshen", "cmd": "m_mx_extend" },
+        { "name": "偏移", "icon": "pianyi", "cmd": "m_mx_offset" },
+        { "name": "圆角", "icon": "yuanjiao", "cmd": "m_mx_fillet" },
+        { "name": "倒角", "icon": "daojiao", "cmd": "m_mx_chamfer" }
+      ]
+    },
+    {
+      "name": "图层",
+      "icon": "tuceng",
+      "list": [
+        {
+          "name": "新建图层",
+          "icon": "xinjiantuceng",
+          "cmd": "new_layer"
+        },
+        {
+          "name": "图层列表",
+          "icon": "tucengliebiao",
+          "cmd": "layer_list"
+        },
+        {
+          "name": "关闭图层",
+          "icon": "guanbituceng",
+          "cmd": "close_the_layer"
+        },
+        {
+          "name": "关闭其他",
+          "icon": "fanxuan",
+          "cmd": "turn_off_other_layers"
+        },
+        {
+          "name": "图层全开",
+          "icon": "quanbudakai",
+          "cmd": "fully_open_layers"
+        },
+        {
+          "name": "图层全关",
+          "icon": "quanbuguanbi",
+          "cmd": "layer_fully_closed"
+        },
+        {
+          "name": "置为当前",
+          "icon": "tuceng",
+          "cmd": "set_current"
+        },
+        {
+          "name": "上一图层",
+          "icon": "fanxuan",
+          "cmd": "restores_the_previous_layer_current"
+        }
+      ]
+    },
+    {
+      "name": "测量",
+      "icon": "celiang",
+      "isIconDefault": true,
+      "list": [
+        { "name": "测长度", "icon": "xianxingceliang", "cmd": "m_mx_measuring_length" },
+        { "name": "连续测", "icon": "lianxuceliang", "cmd": "m_mx_measuring_length_continuous" },
+        { "name": "测面积", "icon": "mianjiceliang", "cmd": "m_mx_measuring_area" },
+        { "name": "侧面积", "icon": "ceju", "cmd": "m_mx_measuring_area_line" },
+        { "name": "测坐标", "icon": "jiaoduceliang", "cmd": "m_mx_measuring_coordinate" },
+        { "name": "测弧长", "icon": "huchangceliang", "cmd": "m_mx_measuring_arc" },
+        { "name": "测角度", "icon": "jiaodubiaozhu", "cmd": "m_mx_measuring_angle" }
+      ]
+    },
+    {
+      "name": "标注",
+      "icon": "biaozhu",
+      "list": [
+        { "name": "对齐标注", "icon": "duiqibiaozhu", "cmd": "m_mx_aligned_marked" },
+        { "name": "线性标注", "icon": "xianxingbiaozhu", "cmd": "m_mx_linear_marked" },
+        { "name": "角度标注", "icon": "jiaodubiaozhu", "cmd": "m_mx_dimangular" },
+        { "name": "直径标注", "icon": "zhijingbiaozhu", "cmd": "m_mx_diametric_dimension" },
+        { "name": "半径标注", "icon": "banjingbiaozhu", "cmd": "m_mx_radial_dimension" }
+
+      ]
+    },
+    {
+      "name": "工具",
+      "icon": "gongju",
+      "isIconDefault": true,
+      "list": [
+        { "name": "查找文字", "icon": "wenzichazhao", "cmd": "m_mx_find_text" }
+      ]
+    }
+  ]
+}

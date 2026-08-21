@@ -1,0 +1,13 @@
+{
+  "name": "runtime-unit-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CloudCAD 部署运行时纯函数单元测试（L1 基线，锁定拆分前行为）",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

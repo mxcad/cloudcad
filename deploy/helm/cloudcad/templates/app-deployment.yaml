@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcad-app
+  labels: { app: cloudcad, component: app }
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels: { app: cloudcad, component: app }
+  template:
+    metadata:
+      labels: { app: cloudcad, component: app }
+    spec:
+      containers:
+        - name: app
+          image: "{{ .Values.images.app }}:{{ .Values.global.imageTag }}"
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          # 探针与 Docker HEALTHCHECK（docker/Dockerfile:187-188）保持同源语义：
+          # startup/liveness 用 /api/health/live，readiness 用 /api/health/public（含 DB+storage 依赖检查）
+          startupProbe:
+            httpGet:
+              path: /api/health/live
+              port: {{ .Values.app.port }}
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 9
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: {{ .Values.app.port }}
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/health/public
+              port: {{ .Values.app.port }}
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloudcad-secret
+                  key: jwt-secret
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@cloudcad-postgres:5432/{{ .Values.postgresql.auth.database }}"
+            {{- if eq .Values.mode "standalone" }}
+            - name: STORAGE_MODE
+              value: "standalone"
+            - name: STORAGE_SERVICE_URL
+              value: "http://cloudcad-storage:{{ .Values.storageService.port }}"
+            - name: FUNCTION_EXECUTOR
+              value: "conversion-service"
+            - name: CONVERSION_SERVICE_URL
+              value: "http://cloudcad-conversion:{{ .Values.conversionService.port }}"
+            {{- end }}
+          resources: {{ toYaml .Values.app.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: cloudcad-app-pvc

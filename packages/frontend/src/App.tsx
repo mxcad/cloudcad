@@ -1,0 +1,698 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
+import { Layout } from './components/Layout';
+import { LoadingOverlay } from './components/LoadingOverlay';
+import { UploadPanel } from './components/upload-panel/UploadPanel';
+import { useAuth } from './contexts/AuthContext';
+import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
+import { TourProvider } from './contexts/TourContext';
+import { GlobalTourRenderer } from './components/tour';
+import PlanSelectOverlay from './components/billing/PlanSelectOverlay';
+import { usePermission } from './hooks/usePermission';
+import { SystemPermission } from './constants/permissions';
+import { BrandProvider } from './contexts/BrandContext';
+import { useRuntimeConfig } from './contexts/RuntimeConfigContext';
+import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
+import NoPermissionPage from './components/ui/NoPermissionPage';
+import { i18nScope, t } from '@/languages';
+import { useVoerkaI18n } from '@voerkai18n/react';
+import { setSpaNavigate } from './config/clientSetup';
+import { isMobile } from './utils/isMobile';
+import {
+  getMobileRedirectConfig,
+  getMobileRedirectUrl,
+} from './utils/mobileRedirect';
+
+// ============================================================================
+// 页面懒加载 - 使用 React.lazy 实现代码分割
+// ============================================================================
+
+const PageLoader: React.FC = () => (
+  <div
+    className="flex items-center justify-center min-h-screen"
+    style={{ background: 'var(--bg-primary)' }}
+  >
+    <div className="flex flex-col items-center gap-4">
+      <div
+        className="w-10 h-10 rounded-full animate-spin"
+        style={{
+          border: '3px solid var(--border-default)',
+          borderTopColor: 'var(--primary-500)',
+        }}
+      />
+      <p style={{ color: 'var(--text-secondary)' }}>{t('加载中...')}</p>
+    </div>
+  </div>
+);
+
+// 公开页面（认证相关）
+const Login = lazy(() => import('./pages/Login'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const Register = lazy(() => import('./pages/Register'));
+const EmailVerification = lazy(() => import('./pages/EmailVerification'));
+const PhoneVerification = lazy(() => import('./pages/PhoneVerification'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+
+// 设备授权页面（桌面端 EXE OAuth）
+const DeviceAuthorize = lazy(() => import('./pages/DeviceAuthorize'));
+const PrivacyPolicyPage = lazy(() => import('./pages/Legal/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(
+  () => import('./pages/Legal/TermsOfServicePage')
+);
+
+// CAD 编辑器（高频使用，单独分包）
+const CADEditorDirect = lazy(() => import('./pages/CADEditorDirect'));
+
+// 分享管理页
+const ShareManagePage = lazy(() => import('./pages/ShareManagePage'));
+
+// 主要功能页面
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const FileSystemManager = lazy(() => import('./pages/FileSystemManager'));
+const Profile = lazy(() => import('./pages/Profile'));
+const MemberCenter = lazy(() => import('./pages/MemberCenter'));
+
+// 管理页面（低频使用，按需加载）
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const RoleManagement = lazy(() => import('./pages/RoleManagement'));
+const FontLibrary = lazy(() => import('./pages/FontLibrary'));
+const LibraryManager = lazy(() => import('./pages/LibraryManager'));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
+const SystemMonitorPage = lazy(() => import('./pages/SystemMonitorPage'));
+const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
+const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
+const IpBlacklistPage = lazy(() => import('./pages/IpBlacklistPage'));
+const IpWhitelistPage = lazy(() => import('./pages/IpWhitelistPage'));
+
+// ============================================================================
+// 路由保护组件
+// ============================================================================
+
+// 受保护的路由组件（认证检查）
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
+  ({ children }) => {
+    const { isAuthenticated, loading } = useAuth();
+    const location = useLocation();
+
+    // Wait for token validation before deciding — prevents flash-redirect on reload
+    if (loading) {
+      return (
+        <div
+          className="flex items-center justify-center min-h-screen"
+          style={{ background: 'var(--bg-primary)' }}
+        >
+          <div
+            className="w-10 h-10 rounded-full animate-spin"
+            style={{
+              border: '3px solid var(--border-default)',
+              borderTopColor: 'var(--primary-500)',
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (!isAuthenticated) {
+      const currentUrl = location.pathname + location.search;
+      return (
+        <Navigate
+          to={`/login?redirect=${encodeURIComponent(currentUrl)}`}
+          replace
+        />
+      );
+    }
+
+    return <>{children}</>;
+  }
+);
+
+// 权限保护路由组件
+const PermissionRoute: React.FC<{
+  children: React.ReactNode;
+  permission: SystemPermission | SystemPermission[];
+}> = React.memo(({ children, permission }) => {
+  const { hasAnyPermission, hasPermission } = usePermission();
+
+  const hasAccess = Array.isArray(permission)
+    ? hasAnyPermission(permission)
+    : hasPermission(permission);
+
+  if (!hasAccess) {
+    return <NoPermissionPage />;
+  }
+
+  return <>{children}</>;
+});
+
+// ============================================================================
+// 应用内容组件
+// ============================================================================
+
+// CAD 编辑器路由守卫 — 首次仅在 / 或 /cad-editor 路由下挂载（懒加载优化），
+// 一旦加载即永久驻留以保护 WebGL 上下文和主题双向同步（Vue watch）。
+// 原因：CADEditorDirect 卸载会销毁 initThemeSync 的 Vue watch，
+// 导致 CAD 内部主题切换与项目侧栏主题切换无法双向同步。
+function CADEditorRouteGuard() {
+  const location = useLocation();
+  const currentIsCADRoute =
+    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
+
+  // 跟踪 CAD 是否已首次加载。加载后必须永久驻留 DOM。
+  const everLoadedRef = useRef(false);
+
+  if (currentIsCADRoute) {
+    everLoadedRef.current = true;
+  }
+
+  if (!currentIsCADRoute && !everLoadedRef.current) return null;
+
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="fixed inset-0 flex flex-col items-center justify-center"
+          style={{ background: 'var(--bg-primary)' }}
+        >
+          <div
+            className="animate-spin rounded-full h-8 w-8"
+            style={{
+              border: '2px solid var(--border-strong)',
+              borderTopColor: 'var(--accent-600)',
+            }}
+          />
+          <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
+            {t('正在加载 CAD 编辑器...')}
+          </p>
+        </div>
+      }
+    >
+      <CADEditorDirect />
+    </Suspense>
+  );
+}
+
+function AppContent() {
+  const { activeLanguage } = useVoerkaI18n(i18nScope);
+  return (
+    <div className="layout-container">
+      <SetupSpaNavigate />
+      <MobileRouteGuard />
+      {/* 全局加载遮罩 - 覆盖所有内容 */}
+      <LoadingOverlay />
+      {/* 全局上传面板 - 多文件上传管理 */}
+      <UploadPanel />
+      {/* 全局 CAD 编辑器覆盖层 — 仅 CAD 路由挂载，保护 WebGL 上下文 */}
+      <CADEditorRouteGuard />
+
+      <Routes>
+        {/* 公开路由 - 不需要 Layout */}
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Login />
+            </Suspense>
+          }
+        />
+        {/* 管理员独立登录入口（IP 白名单 + 仅 ADMIN 角色，见后端 /admin/auth/login） */}
+        <Route
+          path="/admin-login"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminLogin />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Register />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <EmailVerification />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/verify-phone"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PhoneVerification />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <ForgotPassword />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <ResetPassword />
+            </Suspense>
+          }
+        />
+
+        {/* 桌面端 EXE OAuth 登录入口 - 复用 Login 组件处理 redirect_uri/state 回调 */}
+        <Route
+          path="/logo"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Login />
+            </Suspense>
+          }
+        />
+
+        {/* 桌面端 EXE 设备授权页面 */}
+        <Route
+          path="/device"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <DeviceAuthorize />
+            </Suspense>
+          }
+        />
+
+        {/* 隐私政策 / 用户协议（C 端合规页面，公开路由） */}
+        <Route
+          path="/privacy"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PrivacyPolicyPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <TermsOfServicePage />
+            </Suspense>
+          }
+        />
+
+        {/* 首页重定向到 CAD 编辑器 - 公开访问 */}
+        <Route path="/" element={<Navigate to="/cad-editor" replace />} />
+
+        {/* CAD 编辑器路由 - 公开访问，无需登录 */}
+        {/* CADEditorDirect 全局覆盖层已在上方渲染，会根据 URL 自动显示/隐藏 */}
+        <Route path="/cad-editor" element={<></>} />
+        <Route path="/cad-editor/:fileId" element={<></>} />
+
+        {/* 受保护的路由 - 需要 Layout */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout key={activeLanguage}>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={<Navigate to="/cad-editor" replace />}
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <Dashboard />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/recent"
+                    element={<Navigate to="/projects" replace />}
+                  />
+                  <Route
+                    path="/favorites"
+                    element={<Navigate to="/projects" replace />}
+                  />
+
+                  {/* 项目管理和我的图纸 - 使用 FileSystemManager */}
+                  <Route
+                    path="/projects"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <FileSystemManager />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/projects/:projectId/files"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <FileSystemManager />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/projects/:projectId/files/:nodeId"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <FileSystemManager />
+                      </Suspense>
+                    }
+                  />
+
+                  {/* 私人空间 */}
+                  <Route
+                    path="/personal-space"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <FileSystemManager mode="personal-space" />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/personal-space/:nodeId"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <FileSystemManager mode="personal-space" />
+                      </Suspense>
+                    }
+                  />
+
+                  <Route
+                    path="/files"
+                    element={<Navigate to="/projects" replace />}
+                  />
+
+                  {/* 用户管理 - 需要 SYSTEM_USER_READ 权限 */}
+                  <Route
+                    path="/users"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_USER_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <UserManagement />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 角色管理 - 需要 SYSTEM_ROLE_READ 权限 */}
+                  <Route
+                    path="/roles"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_ROLE_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <RoleManagement />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/profile"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <Profile />
+                      </Suspense>
+                    }
+                  />
+
+                  {/* 字体库 - 需要 SYSTEM_FONT_READ 权限 */}
+                  <Route
+                    path="/font-library"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_FONT_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <FontLibrary />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 公共资源库 - 需要 LIBRARY_DRAWING_MANAGE 或 LIBRARY_BLOCK_MANAGE 权限 */}
+                  <Route
+                    path="/library"
+                    element={
+                      <PermissionRoute
+                        permission={[
+                          SystemPermission.LIBRARY_DRAWING_MANAGE,
+                          SystemPermission.LIBRARY_BLOCK_MANAGE,
+                        ]}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <LibraryManager />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="/library/:libraryType"
+                    element={
+                      <PermissionRoute
+                        permission={[
+                          SystemPermission.LIBRARY_DRAWING_MANAGE,
+                          SystemPermission.LIBRARY_BLOCK_MANAGE,
+                        ]}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <LibraryManager />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="/library/:libraryType/:nodeId"
+                    element={
+                      <PermissionRoute
+                        permission={[
+                          SystemPermission.LIBRARY_DRAWING_MANAGE,
+                          SystemPermission.LIBRARY_BLOCK_MANAGE,
+                        ]}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <LibraryManager />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 分享管理 */}
+                  <Route
+                    path="/shares"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <ShareManagePage />
+                      </Suspense>
+                    }
+                  />
+
+                  {/* 审计日志 - 需要 SYSTEM_ADMIN 权限 */}
+                  <Route
+                    path="/audit-logs"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_ADMIN}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <AuditLogPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 系统监控 - 需要 SYSTEM_MONITOR 权限 */}
+                  <Route
+                    path="/system-monitor"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_MONITOR}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <SystemMonitorPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 会员中心 */}
+                  <Route
+                    path="/member-center"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <MemberCenter />
+                      </Suspense>
+                    }
+                  />
+
+                  {/* 会员中心 - 旧路由重定向到会员中心 */}
+                  <Route
+                    path="/billing"
+                    element={<Navigate to="/member-center" replace />}
+                  />
+
+                  {/* 支付管理 - 需要 SYSTEM_BILLING_READ 权限 */}
+                  <Route
+                    path="/admin/billing"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_BILLING_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <AdminBillingPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 运行时配置 - 需要 SYSTEM_CONFIG_READ 权限 */}
+                  <Route
+                    path="/runtime-config"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <RuntimeConfigPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* IP 黑名单 - 需要 SYSTEM_IP_BLACKLIST_MANAGE 权限 */}
+                  <Route
+                    path="/admin/ip-blacklist"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <IpBlacklistPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 管理员 IP 白名单 - 需要 SYSTEM_IP_WHITELIST_MANAGE 权限 */}
+                  <Route
+                    path="/admin/ip-whitelist"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_IP_WHITELIST_MANAGE}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <IpWhitelistPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </div>
+  );
+}
+
+// ============================================================================
+// 主应用组件
+// ============================================================================
+
+function App() {
+  // 品牌配置已在 index.tsx 的 AppInitializer 中加载并缓存
+  // BrandProvider 会使用缓存值，无需在此检查 loading 状态
+  return (
+    <BrandProvider>
+      <Router>
+        <RuntimeConfigProvider>
+          <RuntimeConfigSync />
+          <TourProvider>
+            <AppContent />
+            {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
+            <GlobalTourRenderer />
+            <PlanSelectOverlay />
+          </TourProvider>
+        </RuntimeConfigProvider>
+      </Router>
+    </BrandProvider>
+  );
+}
+
+export default App;
+
+/**
+ * 将 RuntimeConfig 中的 maxFileSize 同步到 mxcadUploadUtils
+ */
+function RuntimeConfigSync(): null {
+  const { config } = useRuntimeConfig();
+  React.useEffect(() => {
+    setUploadMaxFileSize(config.maxFileSize);
+  }, [config.maxFileSize]);
+  return null;
+}
+
+/**
+ * 移动端路由守卫 — 检测客户端导航到 CAD 编辑器路由时，自动跳转到移动端 H5 编辑器。
+ * 处理 React Router 客户端导航场景（index.tsx 的初始加载检查无法覆盖）。
+ */
+function MobileRouteGuard() {
+  const location = useLocation();
+  const isCadRoute =
+    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
+
+  useEffect(() => {
+    if (!isCadRoute) return;
+    if (!isMobile()) return;
+
+    getMobileRedirectConfig().then((config) => {
+      const redirectUrl = getMobileRedirectUrl(config);
+      if (redirectUrl) {
+        window.location.replace(redirectUrl);
+      }
+    });
+  }, [isCadRoute]);
+
+  return null;
+}
+
+/**
+ * 将 react-router 的 navigate 注入 clientSetup.ts，
+ * 使 token 刷新失败时能用 SPA 导航跳转登录页（不刷新页面）。
+ */
+function SetupSpaNavigate() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    setSpaNavigate(navigate);
+  }, [navigate]);
+  return null;
+}

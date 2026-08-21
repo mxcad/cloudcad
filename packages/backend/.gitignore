@@ -1,0 +1,24 @@
+# 排除上传的文件
+uploads/
+temp/
+filesData/
+svn-repo/
+
+# 排除日志文件
+*.log
+logs/
+
+# 排除测试覆盖率报告
+coverage/
+*.txt
+
+# 排除测试产生的运行时存储目录
+test-storage/
+
+# 排除构建产物
+dist/
+*.tsbuildinfo
+
+# 排除环境文件
+.env
+.env.local

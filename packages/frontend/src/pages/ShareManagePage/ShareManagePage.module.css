@@ -1,0 +1,251 @@
+.page {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: var(--space-6);
+  /* 页面恒撑一屏：标题/工具栏固定，表格 flex-1 撑满剩余空间内部滚动；
+     多选操作栏在列表滚动容器内（mt-auto sticky 吸底），页面布局不含操作栏空间 */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.pageHeader {
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.pageSubtitle {
+  color: var(--text-tertiary);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  max-width: 400px;
+}
+
+.tableContainer {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  /* 表格撑满页面剩余空间（页面恒一屏，列表内部滚动）；SelectableTable 内部 flex 撑满 */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 页面 flex 布局：除表格/空态外其余区块（标题/工具栏）防压缩 */
+.page > :not(.tableContainer) {
+  flex-shrink: 0;
+}
+
+.tableScroll {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: auto;
+  /* 行多时容器内滚动：框选边缘自动滚动生效，小数据量视觉不变 */
+  max-height: calc(100vh - 240px);
+  /* 框选拖拽时不选中表格文字 */
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  /* 局部层叠上下文内（.tableScroll）的 sticky 表头层级，不影响页面全局 z-index */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-tertiary);
+}
+
+.table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tableEmpty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.linkCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 180px;
+}
+
+.linkText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.copyBtn {
+  flex-shrink: 0;
+}
+
+.actionCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.thCheckbox {
+  width: 36px;
+  padding: var(--space-3) var(--space-2) !important;
+}
+
+.tdCheckbox {
+  width: 36px;
+  padding: var(--space-3) var(--space-2) !important;
+}
+
+.thSortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.thSortable:hover {
+  color: var(--text-primary);
+}
+
+.thContent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sortIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary-500);
+}
+
+.rowSelected td {
+  background: var(--primary-100) !important;
+}
+
+.tdFilename {
+  font-weight: 500;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tdMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.tdClickable {
+  cursor: pointer;
+}
+
+.tdClickable:hover {
+  color: var(--primary-500);
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-4);
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search {
+    max-width: none;
+  }
+  .toolbarActions {
+    justify-content: flex-start;
+  }
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-16);
+  /* 撑满剩余空间居中（页面恒一屏） */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.emptyTitle {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.emptyDesc {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.pagination {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-default);
+}

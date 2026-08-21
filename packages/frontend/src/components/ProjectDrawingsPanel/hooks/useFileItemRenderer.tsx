@@ -1,0 +1,281 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+///////////////////////////////////////////////////////////////////////////////
+
+import { useCallback, useRef } from 'react';
+import { MxFun } from 'mxdraw';
+import { libraryControllerGetBlockNode } from '@/api-sdk';
+import type { FileSystemNode } from '@/types/filesystem';
+import { FileItem } from '@/components/FileItem';
+import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
+import { SystemPermission } from '@/constants/permissions';
+import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
+import type { ViewMode, ResourceItem } from '@/components/common';
+import { handleError } from '@/utils/errorHandler';
+import { CAD_EXTENSIONS } from '@/utils/fileUtils';
+import { t } from '@/languages';
+
+interface UseFileItemRendererOptions {
+  nodes: FileSystemNode[];
+  isLibraryMode: boolean;
+  libraryType?: LibraryType;
+  canManageLibrary: boolean;
+  doubleClickToOpen: boolean;
+  forceCompactActions?: boolean;
+  projectPermissions: ReturnType<
+    typeof import('@/hooks/useProjectPermissions').useProjectPermissions
+  >['permissions'];
+  onDrawingOpen: (node: FileSystemNode, libraryType?: LibraryType) => void;
+  handleEnterFolder: (folder: FileSystemNode) => void;
+  handleDownload: (node: FileSystemNode) => void;
+  handleDelete: (node: FileSystemNode) => void;
+  handleOpenRename: (node: FileSystemNode) => void;
+  handleLibraryOpenRename: (node: FileSystemNode) => void;
+  handleShowVersionHistory: (node: FileSystemNode) => Promise<void>;
+  handleMove?: (node: FileSystemNode) => void;
+  handleCopy?: (node: FileSystemNode) => void;
+  handleDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
+  handleDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
+  handleDragLeave?: () => void;
+  handleDrop?: (e: React.DragEvent, node: FileSystemNode) => void;
+  dropTargetId?: string | null;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'info'
+  ) => void;
+  user: { id: string } | null;
+  hasPermission: (permission: SystemPermission) => boolean;
+  setDownloadingNode: (node: FileSystemNode | null) => void;
+  setShowDownloadFormatModal: (show: boolean) => void;
+  libraryOperations: {
+    handleDelete: (node: FileSystemNode) => void;
+  };
+  selectedNodes?: Set<string>;
+  onNodeSelect?: (
+    nodeId: string,
+    isMultiSelect: boolean,
+    isShift: boolean
+  ) => void;
+}
+
+export function useFileItemRenderer(options: UseFileItemRendererOptions) {
+  const lastEnterTimeRef = useRef(0);
+  const ENTER_THROTTLE_MS = 500;
+
+  const {
+    nodes,
+    isLibraryMode,
+    libraryType,
+    canManageLibrary,
+    doubleClickToOpen,
+    forceCompactActions,
+    projectPermissions,
+    onDrawingOpen,
+    handleEnterFolder,
+    handleDownload,
+    handleDelete,
+    handleOpenRename,
+    handleLibraryOpenRename,
+    handleShowVersionHistory,
+    handleMove,
+    handleCopy,
+    handleDragStart,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    dropTargetId,
+    showToast,
+    user,
+    hasPermission,
+    setDownloadingNode,
+    setShowDownloadFormatModal,
+    libraryOperations,
+    selectedNodes,
+    onNodeSelect,
+  } = options;
+
+  const showSelection = isLibraryMode && canManageLibrary;
+
+  const renderFileItem = useCallback(
+    (item: ResourceItem, viewMode: ViewMode) => {
+      const node = nodes.find((n) => n.id === item.id);
+      if (!node) return null;
+
+      const doubleClickHint =
+        libraryType === 'block' ? t('请单击插入图块') : t('请单击打开');
+
+      const handleLibraryDownload = () => {
+        if (node.isFolder) return;
+        setDownloadingNode(node);
+        setShowDownloadFormatModal(true);
+      };
+
+      const handleLibraryDelete = () => {
+        libraryOperations.handleDelete(node);
+      };
+
+      const handleBlockInsert = async (blockNode: FileSystemNode) => {
+        if (blockNode.isFolder) {
+          handleEnterFolder(blockNode);
+          return;
+        }
+        try {
+          const { MxCpp } = await import('mxcad');
+          const mxcad = MxCpp.getCurrentMxCAD();
+          if (!mxcad) {
+            showToast(t('请先打开一张图纸，然后再插入图块'), 'warning');
+            return;
+          }
+          let latestUpdatedAt = blockNode.updatedAt;
+          try {
+            const response = await libraryControllerGetBlockNode({
+              path: { nodeId: blockNode.id },
+            });
+            if (response.data?.updatedAt) {
+              latestUpdatedAt = response.data.updatedAt;
+            }
+          } catch {
+            /* ignore */
+          }
+          const filesPath = `/api/v1/library/block/filesData/${blockNode.path}`;
+          const timestamp = latestUpdatedAt
+            ? new Date(latestUpdatedAt).getTime()
+            : Date.now();
+          const cmdParam = {
+            filePath: `${filesPath}?t=${timestamp}`,
+            name: blockNode.name,
+            isBlockLibrary: true,
+          };
+          MxFun.sendStringToExecute('Mx_Insert', cmdParam);
+          showToast(t(`正在插入图块：${blockNode.name}`), 'success');
+        } catch (error: unknown) {
+          handleError(error, 'useFileItemRenderer: ' + t('插入图块失败'));
+          showToast(
+            t('插入图块失败，请确保已在 CAD 编辑器中打开图纸'),
+            'error'
+          );
+        }
+      };
+
+      const handleEnter = (n: FileSystemNode) => {
+        const now = Date.now();
+        if (now - lastEnterTimeRef.current < ENTER_THROTTLE_MS) return;
+        lastEnterTimeRef.current = now;
+
+        if (n.isFolder) {
+          handleEnterFolder(n);
+        } else if (isLibraryMode && libraryType === 'block') {
+          handleBlockInsert(n);
+        } else if (isLibraryMode && libraryType === 'drawing') {
+          const isLoggedIn = user !== null;
+          const hasSystemPermission =
+            isLoggedIn &&
+            hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE);
+          if (hasSystemPermission) {
+            onDrawingOpen(n, libraryType);
+          } else {
+            import('@/services/mxcadManager').then(({ openLibraryDrawing }) => {
+              openLibraryDrawing(n.id, n.name, n.path || '', n.updatedAt).catch(
+                (error: unknown) => {
+                  handleError(error, 'useFileItemRenderer: 打开图纸库文件失败');
+                }
+              );
+            });
+          }
+        } else {
+          onDrawingOpen(n);
+        }
+      };
+
+      return (
+        <FileItem
+          node={node}
+          thumbnailUrl={item.thumbnailUrl}
+          isSelected={
+            showSelection ? (selectedNodes?.has(node.id) ?? false) : false
+          }
+          isActive={item.isActive}
+          viewMode={viewMode}
+          galleryMode={isLibraryMode}
+          isTrash={false}
+          forceCompactActions={forceCompactActions}
+          doubleClickToOpen={showSelection ? true : doubleClickToOpen}
+          doubleClickHint={doubleClickHint}
+          hideSelectionCircle={!showSelection}
+          {...(isLibraryMode
+            ? {
+                canDownload: canManageLibrary,
+                canEdit: canManageLibrary,
+                canDelete: canManageLibrary,
+                canUpload: canManageLibrary,
+                canCopy: canManageLibrary,
+                canMove: canManageLibrary,
+                canViewVersionHistory: false,
+              }
+            : getFileItemPermissionProps(node, { projectPermissions }))}
+          onSelect={
+            showSelection && onNodeSelect
+              ? (nodeId: string, isMulti?: boolean, _isRange?: boolean) =>
+                  onNodeSelect?.(nodeId, isMulti ?? false, _isRange ?? false)
+              : () => {}
+          }
+          onEnter={handleEnter}
+          onDownload={isLibraryMode ? handleLibraryDownload : handleDownload}
+          onDelete={isLibraryMode ? handleLibraryDelete : handleDelete}
+          onRename={isLibraryMode ? handleLibraryOpenRename : handleOpenRename}
+          onShowVersionHistory={
+            isLibraryMode
+              ? undefined
+              : !node.isFolder &&
+                  !node.isRoot &&
+                  CAD_EXTENSIONS.includes(node.extension || '')
+                ? handleShowVersionHistory
+                : undefined
+          }
+          onMove={!isLibraryMode && !node.isRoot ? handleMove : undefined}
+          onCopy={!isLibraryMode && !node.isRoot ? handleCopy : undefined}
+          onDragStart={!isLibraryMode ? handleDragStart : undefined}
+          onDragOver={!isLibraryMode ? handleDragOver : undefined}
+          onDragLeave={!isLibraryMode ? handleDragLeave : undefined}
+          onDrop={!isLibraryMode ? handleDrop : undefined}
+          isDropTarget={!isLibraryMode ? dropTargetId === node.id : false}
+        />
+      );
+    },
+    [
+      nodes,
+      isLibraryMode,
+      libraryType,
+      canManageLibrary,
+      doubleClickToOpen,
+      forceCompactActions,
+      projectPermissions,
+      onDrawingOpen,
+      handleEnterFolder,
+      handleDownload,
+      handleDelete,
+      handleOpenRename,
+      handleLibraryOpenRename,
+      handleShowVersionHistory,
+      handleMove,
+      handleCopy,
+      handleDragStart,
+      handleDragOver,
+      handleDragLeave,
+      handleDrop,
+      dropTargetId,
+      showToast,
+      user,
+      hasPermission,
+      setDownloadingNode,
+      setShowDownloadFormatModal,
+      libraryOperations,
+      showSelection,
+      selectedNodes,
+      onNodeSelect,
+    ]
+  );
+
+  return { renderFileItem };
+}

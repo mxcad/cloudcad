@@ -1,0 +1,13 @@
+{
+  "name": "@cloudcad/conversion-service",
+  "version": "1.0.0",
+  "description": "CloudCAD 转换服务 — CAD 转换任务队列执行",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "test": "node --test test/"
+  },
+  "keywords": ["cloudcad", "conversion", "conversion-service"],
+  "license": "MIT"
+}

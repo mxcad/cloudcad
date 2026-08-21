@@ -1,0 +1,76 @@
+:root {
+  // 基础
+  --bg-color: #292929;
+  --active-color: rgba(255, 255, 255, 0.1);
+  --icon-size: 24px;
+  // --- Shared (theme-independent) ---
+  --primary: #1989fa;
+  --accent: #00a99e;
+  --accent-secondary: #51B3D8;
+  --primary-light: #ecf5ff;
+  --success: #07c160;
+  --warning: #ff976a;
+  --danger: #ff4444;
+
+  // --- Spacing / Radius / Font (theme-independent) ---
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --popup-header-height: 56px;
+  --popup-footer-height: 68px;
+  --popup-card-radius: 10px;
+  --popup-footer-padding: 12px 16px;
+  --popup-footer-gap: 12px;
+  --font-size-caption: 10px;
+  --font-size-sm: 12px;
+  --font-size-body: 14px;
+  --font-size-body-lg: 15px;
+  --font-size-title: 16px;
+  --font-size-title-lg: 18px;
+  --font-size-page-title: 20px;
+
+  // --- DARK theme (default) ---
+  --bg-primary: #000000;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #262626;
+  --bg-elevated: #333;
+  --bg-overlay: rgba(0,0,0,.6);
+  --text-primary: #fff;
+  --text-secondary: #ccc;
+  --text-tertiary: #999;
+  --text-muted: #666;
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.06);
+  --border-color: var(--border-default);
+  --popup-card-bg: color-mix(in srgb, var(--bg-primary) 94%, #fff 6%);
+  --popup-card-border: 1px solid rgba(255, 255, 255, 0.06);
+  
+  // FloatingPopup 自定义组件变量（非标准 vant 组件变量）
+  --van-floating-popup-background: var(--bg-secondary);
+  --van-floating-popup-border-radius: 16px;
+  --van-floating-popup-header-height: 56px;
+  --van-floating-popup-header-font-size: var(--font-size-title);
+  --van-floating-popup-header-text-font-size: var(--font-size-title);
+  --van-floating-popup-header-close-icon-size: 16px;
+  --van-floating-popup-header-close-icon-color: var(--text-secondary);
+  --van-floating-popup-header-action-padding: 0 var(--van-padding-md);
+  --van-floating-popup-header-color: var(--text-primary);
+  --van-floating-popup-bar-width: 20px;
+  --van-floating-popup-bar-height: 3px;
+  --van-floating-popup-bar-color: var(--van-gray-5);
+  --van-floating-popup-header-left-font-size: 14px;
+  --van-floating-popup-header-left-color: #1989fa;
+
+  // --- Vant 组件变量 ---
+  --van-popover-action-height: 44px;
+
+  --van-popover-dark-background: #292929;
+  --van-popover-light-background: #292929;
+}
+

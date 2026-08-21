@@ -1,0 +1,76 @@
+# 依赖目录
+node_modules
+**/node_modules
+
+# 构建产物 (后端在容器内构建，前端在本地预构建后 COPY 入容器)
+packages/backend/dist
+
+# 缓存目录
+.cache
+.parcel-cache
+.vite
+.turbo
+# Linux 打包平台物料提取缓存（postgres/redis 二进制等，Dockerfile 不 COPY，进 context 只会拖慢构建且易触发 Windows 文件占用报错）。
+# 但保留 Dockerfile.linux-deploy:75 显式 COPY 的 Node.js 安装包。
+runtime/cache/*
+!runtime/cache/node-v20.19.5-linux-x64-glibc-217.tar.xz
+
+# 日志文件
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 环境配置
+.env
+**/.env
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+docker/.env
+
+# IDE 配置
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker 相关 (保留 Dockerfile 和 docker-compose)
+docker/.env*
+**/.env.bak
+
+# 测试相关
+coverage
+.nyc_output
+**/*.test.ts
+**/*.spec.ts
+
+# 临时文件
+temp
+tmp
+*.tmp
+*.temp
+
+# 数据目录 (用户数据，不包含在镜像中)
+data
+# 本地打包产物 / 根级构建产物（仅排除根目录的 release/dist；切勿写成无 / 的 release/dist，
+# 否则会误伤 packages/frontend/dist 等子包构建产物，导致 Dockerfile 的
+# `COPY packages/frontend/dist` 失败）。子包的 dist 是必须进镜像的预构建产物。
+/release
+/dist
+
+# 文档
+*.md
+!README.md
+
+# 其他
+.DS_Store
+Thumbs.db
+*.bak
+*.backup
+.iflow

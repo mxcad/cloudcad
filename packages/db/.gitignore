@@ -1,0 +1,6 @@
+node_modules
+dist
+src/generated
+
+# 本地数据库备份（大体积二进制，禁止入库）
+db.7z

@@ -1,0 +1,62 @@
+# 梦想网页CAD实时协同平台 Alertmanager 配置（ADR-0055 §4）
+# SMTP 接收人 + 按 severity 分组路由；指标告警直接邮件（与业务 AlertService 两套独立）。
+# SMTP 连接串由 docker-compose.monitoring.yml 注入环境变量生成（SMTP_SMARTHOST）。
+
+route:
+  receiver: 'email-default'
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  # 按 severity 分级（P0 立即 / P1 15min 聚合 / P2 日报，见 #316 细化）
+  routes:
+    - matchers:
+        - severity =~ "P0|critical"
+      receiver: 'email-p0'
+      repeat_interval: 15m
+    - matchers:
+        - severity =~ "P1|warning"
+      receiver: 'email-p1'
+      group_interval: 15m
+    - matchers:
+        - severity =~ "P2|info"
+      receiver: 'email-p2'
+      group_wait: 8h   # P2 日报风格
+
+receivers:
+  - name: 'email-default'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        from: '${SMTP_FROM}'
+        smarthost: '${SMTP_SMARTHOST}'
+        auth_username: '${SMTP_AUTH_USERNAME}'
+        auth_password: '${SMTP_AUTH_PASSWORD}'
+        require_tls: true
+        send_resolved: true
+  - name: 'email-p0'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        from: '${SMTP_FROM}'
+        smarthost: '${SMTP_SMARTHOST}'
+        auth_username: '${SMTP_AUTH_USERNAME}'
+        auth_password: '${SMTP_AUTH_PASSWORD}'
+        require_tls: true
+        send_resolved: true
+  - name: 'email-p1'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        from: '${SMTP_FROM}'
+        smarthost: '${SMTP_SMARTHOST}'
+        auth_username: '${SMTP_AUTH_USERNAME}'
+        auth_password: '${SMTP_AUTH_PASSWORD}'
+        require_tls: true
+        send_resolved: true
+  - name: 'email-p2'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        from: '${SMTP_FROM}'
+        smarthost: '${SMTP_SMARTHOST}'
+        auth_username: '${SMTP_AUTH_USERNAME}'
+        auth_password: '${SMTP_AUTH_PASSWORD}'
+        require_tls: true
+        send_resolved: true

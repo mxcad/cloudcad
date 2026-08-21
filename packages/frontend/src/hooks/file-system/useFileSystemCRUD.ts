@@ -1,0 +1,777 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  projectControllerCreateProject,
+  nodeControllerCreateFolder,
+  nodeControllerCreateDrawing,
+  nodeControllerUpdateNode,
+  nodeControllerDeleteNode,
+  nodeControllerRestoreNode,
+  trashControllerRestoreTrashItems,
+  memberControllerGetUserProjectPermissions,
+} from '@/api-sdk';
+import { nodeControllerBatchDeleteNodes } from '@/api-sdk';
+import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import { useCADEditorStore } from '@/stores/useCADEditorStore';
+
+import { t } from '@/languages';
+import { queryKeys } from '@/lib/queryKeys';
+import { FileSystemNode } from '@/types/filesystem';
+import { handleError, getErrorMessage } from '@/utils/errorHandler';
+import { ProjectPermission } from '@/constants/permissions';
+
+interface UseFileSystemCRUDProps {
+  urlProjectId?: string;
+  currentNode: FileSystemNode | null;
+  loadData: () => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
+  showConfirm: (
+    title: string,
+    message: string,
+    onConfirm: () => void | Promise<void>,
+    type?: 'danger' | 'warning' | 'info',
+    confirmText?: string
+  ) => void;
+  selectedNodes: Set<string>;
+  nodes: FileSystemNode[];
+  clearSelection: () => void;
+  mode: 'project' | 'personal-space';
+  /** 乐观删除：直接从列表移除节点，替代 reloadData()  */
+  removeLocalNode?: (nodeId: string) => void;
+  /** 乐观更新：直接修改列表中节点名称 */
+  updateLocalNode?: (
+    nodeId: string,
+    updates: Partial<Pick<FileSystemNode, 'name'>>
+  ) => void;
+}
+
+const validateFolderName = (
+  name: string
+): { valid: boolean; error?: string } => {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return { valid: false, error: t('名称不能为空') };
+  }
+
+  if (trimmedName.length > 255) {
+    return { valid: false, error: t('名称长度不能超过 255 个字符') };
+  }
+
+  const illegalChars = /[<>:"|?*/\\]/;
+  if (illegalChars.test(trimmedName)) {
+    return { valid: false, error: t('名称包含非法字符：< > : " | ? * / \\') };
+  }
+
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
+    return { valid: false, error: t('名称包含非法字符') };
+  }
+
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedNames.test(trimmedName)) {
+    return { valid: false, error: t('该名称为系统保留名称') };
+  }
+
+  if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
+    return { valid: false, error: t('名称不能以点开头或结尾') };
+  }
+
+  return { valid: true };
+};
+
+export const useFileSystemCRUD = ({
+  urlProjectId,
+  currentNode,
+  loadData,
+  showToast,
+  showConfirm,
+  selectedNodes,
+  nodes,
+  clearSelection,
+  mode = 'project',
+  removeLocalNode,
+  updateLocalNode,
+}: UseFileSystemCRUDProps) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
+  const removeActions = useFileSystemUndoRedoStore((s) => s.removeActions);
+
+  const selectedNodesRef = useRef(selectedNodes);
+  selectedNodesRef.current = selectedNodes;
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [showCreateDrawingModal, setShowCreateDrawingModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [editingNode, setEditingNode] = useState<FileSystemNode | null>(null);
+  const [folderName, setFolderName] = useState('');
+  const [drawingName, setDrawingName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleCreateFolder = useCallback(async () => {
+    if (!urlProjectId) {
+      showToast(t('项目 ID 不能为空'), 'error');
+      return null;
+    }
+
+    const validation = validateFolderName(folderName);
+    if (!validation.valid) {
+      showToast(validation.error || t('文件夹名称无效'), 'error');
+      return null;
+    }
+
+    const parentNodeId = currentNode?.id || urlProjectId;
+
+    try {
+      const newFolder = await nodeControllerCreateFolder({
+        path: { parentId: parentNodeId },
+        body: { name: folderName.trim() },
+        throwOnError: true,
+      });
+      showToast(t('文件夹创建成功'), 'success');
+      setFolderName('');
+      setShowCreateFolderModal(false);
+      const createdId = (newFolder as unknown as { id?: string })?.id || '';
+      if (createdId) {
+        const folderNameTrimmed = folderName.trim();
+        const createdIdHolder = { current: createdId };
+        pushAction({
+          type: 'createFolder',
+          description: t('创建文件夹 ') + `"${folderNameTrimmed}"`,
+          projectId: urlProjectId || undefined,
+          execute: async () => {
+            const result = await nodeControllerCreateFolder({
+              path: { parentId: parentNodeId },
+              body: { name: folderNameTrimmed },
+              throwOnError: true,
+            });
+            const newId = (result as unknown as { id?: string })?.id || '';
+            if (newId) createdIdHolder.current = newId;
+          },
+          rollback: async () => {
+            if (createdIdHolder.current) {
+              await nodeControllerDeleteNode({
+                path: { nodeId: createdIdHolder.current },
+                query: { permanently: true },
+                throwOnError: true,
+              });
+            }
+          },
+        });
+      }
+      loadData();
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileSystem.storageQuota,
+      });
+      return null;
+    } catch (error) {
+      const appError = handleError(error, t('创建文件夹'), 'medium');
+      showToast(appError.message, 'error');
+      return null;
+    }
+  }, [folderName, urlProjectId, currentNode, loadData, showToast, queryClient]);
+
+  const handleCreateDrawing = useCallback(async () => {
+    if (!urlProjectId) {
+      showToast(t('无法确定创建位置'), 'error');
+      return null;
+    }
+
+    const parentNodeId = currentNode?.id || urlProjectId;
+    const drawingNameTrimmed = drawingName.trim();
+
+    try {
+      const result = await nodeControllerCreateDrawing({
+        body: {
+          parentId: parentNodeId,
+          name: drawingNameTrimmed || undefined,
+        },
+        throwOnError: true,
+      });
+      showToast(t('图纸创建成功'), 'success');
+      setDrawingName('');
+      setShowCreateDrawingModal(false);
+      const createdId = (result as unknown as { id?: string })?.id || '';
+      if (createdId) {
+        const createdIdHolder = { current: createdId };
+        pushAction({
+          type: 'createDrawing',
+          description:
+            t('创建图纸 ') + '"' + (drawingNameTrimmed || t('未命名')) + '"',
+          projectId: urlProjectId || undefined,
+          execute: async () => {
+            const r = await nodeControllerCreateDrawing({
+              body: {
+                parentId: parentNodeId,
+                name: drawingNameTrimmed || undefined,
+              },
+              throwOnError: true,
+            });
+            const newId = (r as unknown as { id?: string })?.id || '';
+            if (newId) createdIdHolder.current = newId;
+          },
+          rollback: async () => {
+            if (createdIdHolder.current) {
+              await nodeControllerDeleteNode({
+                path: { nodeId: createdIdHolder.current },
+                query: { permanently: true },
+                throwOnError: true,
+              });
+            }
+          },
+        });
+      }
+      loadData();
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileSystem.storageQuota,
+      });
+      return null;
+    } catch (error) {
+      const appError = handleError(error, t('创建图纸'), 'medium');
+      showToast(appError.message, 'error');
+      return null;
+    }
+  }, [
+    drawingName,
+    urlProjectId,
+    currentNode,
+    loadData,
+    showToast,
+    pushAction,
+    queryClient,
+  ]);
+
+  const handleRename = useCallback(async () => {
+    if (!editingNode || !urlProjectId) {
+      showToast(t('参数错误'), 'error');
+      return;
+    }
+
+    const validation = validateFolderName(folderName);
+    if (!validation.valid) {
+      showToast(validation.error || t('名称无效'), 'error');
+      return;
+    }
+
+    try {
+      let finalName = folderName.trim();
+
+      if (!editingNode.isFolder && editingNode.name) {
+        const lastDotIndex = editingNode.name.lastIndexOf('.');
+        if (lastDotIndex !== -1) {
+          const originalExtension = editingNode.name.substring(lastDotIndex);
+          finalName = `${finalName}${originalExtension}`;
+        }
+      }
+
+      // TODO: Replace with SDK when backend adds renameNode endpoint
+      const nodeId = editingNode.id;
+      const oldName = editingNode.name;
+      await nodeControllerUpdateNode({
+        path: { nodeId },
+        body: { name: finalName },
+        throwOnError: true,
+      });
+      showToast(t('重命名成功'), 'success');
+      setFolderName('');
+      setShowRenameModal(false);
+      setEditingNode(null);
+      pushAction({
+        type: 'rename',
+        description:
+          t('重命名 ') + '"' + oldName + '" ' + t('→ ') + '"' + finalName + '"',
+        projectId: urlProjectId || undefined,
+        execute: async () => {
+          await nodeControllerUpdateNode({
+            path: { nodeId },
+            body: { name: finalName },
+            throwOnError: true,
+          });
+        },
+        rollback: async () => {
+          await nodeControllerUpdateNode({
+            path: { nodeId },
+            body: { name: oldName },
+            throwOnError: true,
+          });
+        },
+      });
+      if (updateLocalNode) {
+        updateLocalNode(nodeId, { name: finalName });
+      } else {
+        loadData();
+      }
+    } catch (error) {
+      const appError = handleError(error, t('重命名'), 'medium');
+      showToast(appError.message, 'error');
+    }
+  }, [
+    folderName,
+    editingNode,
+    urlProjectId,
+    loadData,
+    showToast,
+    pushAction,
+    updateLocalNode,
+  ]);
+
+  const handleDelete = useCallback(
+    async (node: FileSystemNode, permanently: boolean = false) => {
+      if (isDeleting) {
+        return;
+      }
+
+      if (node.isRoot) {
+        try {
+          const permissions = await memberControllerGetUserProjectPermissions({
+            path: { projectId: node.id },
+          });
+          // SDK 默认不抛错：失败时错误在 result.error。不检查会把接口
+          // 失败误判为"没有权限删除项目"，掩盖真实原因
+          if (permissions.error) throw permissions.error;
+          if (
+            !permissions.data?.permissions?.includes(
+              ProjectPermission.PROJECT_DELETE
+            )
+          ) {
+            showToast(t('没有权限删除项目'), 'error');
+            return;
+          }
+        } catch (error) {
+          showToast(
+            getErrorMessage(error) || t('权限检查失败，无法删除'),
+            'error'
+          );
+          return;
+        }
+      }
+
+      let deleteMessage: string;
+
+      if (permanently) {
+        if (node.isRoot) {
+          deleteMessage =
+            t('确定要彻底删除项目') +
+            '"' +
+            node.name +
+            '"' +
+            t('吗？此操作将同时删除项目内的所有内容，且不可恢复。');
+        } else if (node.isFolder) {
+          deleteMessage =
+            t('确定要彻底删除文件夹') +
+            '"' +
+            node.name +
+            '"' +
+            t('吗？此操作将同时删除文件夹内的所有内容，且不可恢复。');
+        } else {
+          deleteMessage =
+            t('确定要彻底删除文件') +
+            '"' +
+            node.name +
+            '"' +
+            t('吗？此操作不可恢复。');
+        }
+      } else {
+        if (node.isRoot) {
+          deleteMessage =
+            t('确定要将项目') +
+            '"' +
+            node.name +
+            '"' +
+            t('移到回收站吗？可以在回收站中恢复。');
+        } else if (node.isFolder) {
+          deleteMessage =
+            t('确定要将文件夹') +
+            '"' +
+            node.name +
+            '"' +
+            t('移到回收站吗？可以在回收站中恢复。');
+        } else {
+          deleteMessage =
+            t('确定要将文件') +
+            '"' +
+            node.name +
+            '"' +
+            t('移到回收站吗？可以在回收站中恢复。');
+        }
+      }
+
+      showConfirm(
+        permanently ? t('确认彻底删除') : t('确认删除'),
+        deleteMessage,
+        async () => {
+          try {
+            setIsDeleting(true);
+
+            // TODO: Replace with SDK when backend adds deleteProject / deleteNode with permanently param
+            if (permanently) {
+              if (node.isRoot) {
+                await nodeControllerDeleteNode({
+                  path: { nodeId: node.id },
+                  query: { permanently: true },
+                  throwOnError: true,
+                });
+              } else {
+                await nodeControllerDeleteNode({
+                  path: { nodeId: node.id },
+                  query: { permanently: true },
+                  throwOnError: true,
+                });
+              }
+            } else {
+              if (node.isRoot) {
+                await nodeControllerDeleteNode({
+                  path: { nodeId: node.id },
+                  query: { permanently: false },
+                  throwOnError: true,
+                });
+              } else {
+                await nodeControllerDeleteNode({
+                  path: { nodeId: node.id },
+                  query: { permanently: false },
+                  throwOnError: true,
+                });
+              }
+            }
+
+            showToast(
+              permanently ? t('已彻底删除') : t('已移到回收站'),
+              'success'
+            );
+
+            // 如果删除的是当前 CAD 编辑器中打开的文件，标记为已删除
+            const { currentFileId } = useCADEditorStore.getState();
+            if (currentFileId && currentFileId === node.id) {
+              useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+            }
+
+            if (!permanently) {
+              const deletedNodeId = node.id;
+              const deletedNodeName = node.name;
+              const deletedIsRoot = node.isRoot;
+              pushAction({
+                type: 'delete',
+                description: t('删除 ') + '"' + deletedNodeName + '"',
+                projectId: urlProjectId || undefined,
+                nodeIds: [deletedNodeId],
+                execute: async () => {
+                  await nodeControllerDeleteNode({
+                    path: { nodeId: deletedNodeId },
+                    query: { permanently: false },
+                    throwOnError: true,
+                  });
+                  // 重做删除，若当前文件被重删则标记
+                  const { currentFileId } = useCADEditorStore.getState();
+                  if (currentFileId && currentFileId === deletedNodeId) {
+                    useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+                  }
+                },
+                rollback: async () => {
+                  if (deletedIsRoot) {
+                    await trashControllerRestoreTrashItems({
+                      body: { itemIds: [deletedNodeId] },
+                      throwOnError: true,
+                    } as unknown as Parameters<
+                      typeof trashControllerRestoreTrashItems
+                    >[0]);
+                  } else {
+                    await nodeControllerRestoreNode({
+                      path: { nodeId: deletedNodeId },
+                      throwOnError: true,
+                    });
+                  }
+                  // 撤销删除后节点已恢复，若当前文件被恢复则清除标记
+                  const { currentFileId } = useCADEditorStore.getState();
+                  if (currentFileId && currentFileId === deletedNodeId) {
+                    useCADEditorStore.getState().setIsCurrentFileDeleted(false);
+                  }
+                },
+              });
+            } else {
+              removeActions((a) => a.nodeIds?.includes(node.id) ?? false);
+            }
+
+            if (permanently && node.isRoot) {
+              navigate(
+                mode === 'personal-space' ? '/personal-space' : '/projects'
+              );
+            } else {
+              if (removeLocalNode) {
+                removeLocalNode(node.id);
+              } else {
+                loadData();
+              }
+            }
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.fileSystem.storageQuota,
+            });
+          } catch (error) {
+            const appError = handleError(error, t('删除'), 'medium');
+            showToast(appError.message, 'error');
+          } finally {
+            setIsDeleting(false);
+          }
+        },
+        permanently ? 'danger' : 'warning',
+        permanently ? t('彻底删除') : t('删除')
+      );
+    },
+    [showConfirm, loadData, showToast, isDeleting, navigate, removeLocalNode]
+  );
+
+  const handleBatchDelete = useCallback(
+    (permanently: boolean = false) => {
+      const currentSelected = selectedNodesRef.current;
+      if (currentSelected.size === 0) {
+        return;
+      }
+
+      const message = permanently
+        ? t('确定要彻底删除选中的 ') +
+          currentSelected.size +
+          t(' 个项目吗？此操作不可恢复。')
+        : t('确定要将选中的 ') +
+          currentSelected.size +
+          t(' 个项目移到回收站吗？');
+
+      showConfirm(
+        permanently ? t('确认彻底删除') : t('批量删除'),
+        message,
+        async () => {
+          try {
+            const nodeIds = Array.from(currentSelected);
+            const { data, error } = await nodeControllerBatchDeleteNodes({
+              body: { nodeIds, permanently },
+              throwOnError: false,
+            });
+
+            if (error) {
+              throw error;
+            }
+
+            const result = data as unknown as {
+              successCount: number;
+              failedCount: number;
+            };
+
+            if (result.failedCount > 0) {
+              showToast(
+                t('成功删除 ') +
+                  result.successCount +
+                  t(' 项，') +
+                  result.failedCount +
+                  t(' 项失败'),
+                'warning'
+              );
+            } else {
+              showToast(
+                permanently ? t('已彻底删除') : t('已移到回收站'),
+                'success'
+              );
+            }
+
+            // 如果批量删除中包含当前 CAD 编辑器中打开的文件，标记为已删除
+            const { currentFileId: curId } = useCADEditorStore.getState();
+            if (curId && nodeIds.includes(curId)) {
+              useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+            }
+
+            if (!permanently) {
+              pushAction({
+                type: 'delete',
+                description: t('批量删除 ') + nodeIds.length + t(' 个项目'),
+                projectId: urlProjectId || undefined,
+                nodeIds,
+                execute: async () => {
+                  await nodeControllerBatchDeleteNodes({
+                    body: { nodeIds, permanently: false },
+                    throwOnError: true,
+                  });
+                },
+                rollback: async () => {
+                  await trashControllerRestoreTrashItems({
+                    body: { itemIds: nodeIds },
+                    throwOnError: true,
+                  } as unknown as Parameters<
+                    typeof trashControllerRestoreTrashItems
+                  >[0]);
+                },
+              });
+            } else {
+              removeActions(
+                (a) => a.nodeIds?.some((id) => nodeIds.includes(id)) ?? false
+              );
+            }
+
+            clearSelection();
+            loadData();
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.fileSystem.storageQuota,
+            });
+          } catch (error) {
+            const appError = handleError(error, t('批量删除'), 'medium');
+            showToast(appError.message, 'error');
+          }
+        },
+        permanently ? 'danger' : 'warning',
+        permanently ? t('彻底删除') : t('删除')
+      );
+    },
+    [
+      showConfirm,
+      loadData,
+      showToast,
+      clearSelection,
+      pushAction,
+      urlProjectId,
+      queryClient,
+    ]
+  );
+
+  const handleOpenRename = useCallback((node: FileSystemNode) => {
+    setEditingNode(node);
+
+    if (!node.isFolder && node.name) {
+      const lastDotIndex = node.name.lastIndexOf('.');
+      const nameWithoutExtension =
+        lastDotIndex !== -1 ? node.name.substring(0, lastDotIndex) : node.name;
+      setFolderName(nameWithoutExtension);
+    } else {
+      setFolderName(node.name);
+    }
+
+    setShowRenameModal(true);
+  }, []);
+
+  // 项目相关操作
+  const handleCreateProject = useCallback(
+    async (name: string, description?: string) => {
+      try {
+        await projectControllerCreateProject({
+          body: { name: name.trim(), description: description?.trim() },
+          throwOnError: true,
+        });
+        showToast(t('项目创建成功'), 'success');
+        loadData();
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.fileSystem.storageQuota,
+        });
+      } catch (error) {
+        const appError = handleError(error, t('创建项目'), 'medium');
+        showToast(appError.message, 'error');
+        throw error;
+      }
+    },
+    [loadData, showToast, queryClient]
+  );
+
+  const handleUpdateProject = useCallback(
+    async (id: string, data: { name?: string; description?: string }) => {
+      try {
+        // TODO: Replace with SDK when backend adds updateProject endpoint
+        await nodeControllerUpdateNode({
+          path: { nodeId: id },
+          body: data,
+          throwOnError: true,
+        });
+        showToast(t('项目更新成功'), 'success');
+        loadData();
+      } catch (error) {
+        const appError = handleError(error, t('更新项目'), 'medium');
+        showToast(appError.message, 'error');
+        throw error;
+      }
+    },
+    [loadData, showToast]
+  );
+
+  const handleDeleteProject = useCallback(
+    async (id: string, name: string) => {
+      const node: FileSystemNode = {
+        id,
+        name,
+        nodeType: 'PROJECT',
+        isRoot: true,
+        isFolder: true,
+        parentId: void 0,
+        ownerId: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await handleDelete(node, false);
+    },
+    [handleDelete]
+  );
+
+  const handlePermanentlyDeleteProject = useCallback(
+    async (id: string, name: string) => {
+      const node: FileSystemNode = {
+        id,
+        name,
+        nodeType: 'PROJECT',
+        isRoot: true,
+        isFolder: true,
+        parentId: void 0,
+        ownerId: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await handleDelete(node, true);
+    },
+    [handleDelete]
+  );
+
+  const handlePermanentlyDelete = useCallback(
+    async (node: FileSystemNode) => {
+      await handleDelete(node, true);
+    },
+    [handleDelete]
+  );
+
+  return {
+    showCreateFolderModal,
+    setShowCreateFolderModal,
+    showCreateDrawingModal,
+    setShowCreateDrawingModal,
+    showRenameModal,
+    setShowRenameModal,
+    editingNode,
+    setEditingNode,
+    folderName,
+    setFolderName,
+    drawingName,
+    setDrawingName,
+    handleCreateFolder,
+    handleCreateDrawing,
+    handleRename,
+    handleDelete,
+    handlePermanentlyDelete,
+    handleBatchDelete,
+    handleOpenRename,
+    handleCreateProject,
+    handleUpdateProject,
+    handleDeleteProject,
+    handlePermanentlyDeleteProject,
+  };
+};
+
+export type UseFileSystemCrudReturn = ReturnType<typeof useFileSystemCRUD>;

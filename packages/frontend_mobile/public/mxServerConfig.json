@@ -1,0 +1,14 @@
+{
+  "wasmConfig": {
+    "?url": ":通过指定网络路径加载mxcad库中提供的wasm相关文件, 例如:https://unpkg.com/mxcad/dist/wasm/2d-st/ 程序会自动加载2d-st目录下与wasm相关的文件",
+    "url": "",
+    "?type": "如果没有设置url, 我们可以通过该项目本地存放的assets目录下wasm相关的文件， 目前可选项有: 2d和2d-st 2d是多线程加载，可能需要一些额外的服务器配置， 而2d-st是单线程的，你可以很方便的使用它,也可以通过访问地址参数调置http://xxxx/mxcad/?wasmtype=st",
+    "type": "2d"
+  },
+  "aiConfig": {
+    "?aiUrl": "ai服务地址",
+    "aiUrl": "http://localhost:7900"
+  },
+  "isAutomaticJumpToDesktopPage": true,
+  "desktopPageUrl": "/cad-editor"
+}

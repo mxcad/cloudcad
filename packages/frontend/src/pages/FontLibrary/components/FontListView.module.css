@@ -1,0 +1,61 @@
+/* ----------------------------------------
+   字体库列表视图（表格形态）样式
+   参照 AuditLog / ShareTable 的表格容器约定：
+   圆角容器 + 表头底色 + hover 行 + 选中行压过 hover
+   ---------------------------------------- */
+.tableContainer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  /* separate + spacing 0 与 collapse 视觉等价，但支持 sticky 表头背景绘制 */
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead {
+  background: var(--bg-tertiary);
+}
+
+.table thead th {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  letter-spacing: 0.03em;
+}
+
+.table tbody td {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 选中行：!important 压过 hover 行背景 */
+.rowSelected td {
+  background: var(--primary-100) !important;
+}
+
+/* 字体文件单元格：名称列允许截断，不强制 nowrap */
+.cellFilename {
+  white-space: normal;
+  max-width: 320px;
+}

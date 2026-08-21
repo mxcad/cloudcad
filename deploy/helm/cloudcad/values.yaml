@@ -1,0 +1,70 @@
+# 梦想网页CAD实时协同平台 Helm 配置
+# 可通过 helm install -f values.yaml 或 --set key=value 覆盖
+
+global:
+  imageRegistry: ""
+  imageTag: "latest"
+
+mode: embedded  # embedded | standalone
+
+# 镜像
+images:
+  app: cloudcad-app
+  storageService: cloudcad-storage
+  conversionService: cloudcad-conversion
+
+# 数据库
+postgresql:
+  enabled: true
+  auth:
+    database: cloudcad
+    username: postgres
+    password: ""
+  persistence:
+    size: 10Gi
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  persistence:
+    size: 5Gi
+
+# 应用配置
+app:
+  replicas: 1
+  port: 3001
+  jwtSecret: ""
+  resources:
+    requests: { cpu: "1", memory: "2Gi" }
+    limits: { cpu: "4", memory: "4Gi" }
+  persistence:
+    size: 50Gi
+
+# 存储服务（standalone 模式）
+storageService:
+  replicas: 1
+  port: 3200
+  cache:
+    maxSize: 200
+    maxFileSize: 10485760
+    ttlMs: 300000
+  resources:
+    requests: { cpu: "0.5", memory: "512Mi" }
+    limits: { cpu: "2", memory: "2Gi" }
+  persistence:
+    size: 100Gi
+
+# 转换服务（standalone 模式）
+conversionService:
+  replicas: 1
+  port: 3100
+  resources:
+    requests: { cpu: "1", memory: "1Gi" }
+    limits: { cpu: "4", memory: "4Gi" }
+
+# 入口
+ingress:
+  enabled: true
+  host: cloudcad.example.com
+  tls: {}

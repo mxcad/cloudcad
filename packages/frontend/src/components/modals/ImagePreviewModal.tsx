@@ -1,0 +1,133 @@
+import React, { useEffect } from 'react';
+import { X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { t } from '@/languages';
+
+interface ImagePreviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  src: string;
+  alt?: string;
+}
+
+export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
+  isOpen,
+  onClose,
+  src,
+  alt = t('图片预览'),
+}) => {
+  const [scale, setScale] = React.useState(1);
+  const [rotation, setRotation] = React.useState(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      setScale(1);
+      setRotation(0);
+    }
+  }, [isOpen]);
+
+  const handleZoomIn = () => setScale((s) => Math.min(s + 0.5, 3));
+  const handleZoomOut = () => setScale((s) => Math.max(s - 0.5, 0.5));
+  const handleRotate = () => setRotation((r) => (r + 90) % 360);
+  const handleReset = () => {
+    setScale(1);
+    setRotation(0);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      hideCard
+      hideHeader
+      overlayClassName="bg-black/90 cursor-zoom-out"
+      zIndex={10001}
+    >
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+        <Tooltip content={t('放大')}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleZoomIn();
+            }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <ZoomIn size={20} className="text-white" />
+          </button>
+        </Tooltip>
+        <Tooltip content={t('缩小')}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleZoomOut();
+            }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <ZoomOut size={20} className="text-white" />
+          </button>
+        </Tooltip>
+        <Tooltip content={t('旋转')}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRotate();
+            }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <RotateCw size={20} className="text-white" />
+          </button>
+        </Tooltip>
+        <Tooltip content={t('重置')}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReset();
+            }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <span className="text-white text-sm font-medium">{t('重置')}</span>
+          </button>
+        </Tooltip>
+      </div>
+
+      <div className="absolute top-4 right-4 z-10">
+        <Tooltip content={t('关闭')}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <X size={24} className="text-white" />
+          </button>
+        </Tooltip>
+      </div>
+
+      <div className="relative max-w-[90vw] max-h-[85vh]">
+        <img
+          src={src}
+          alt={alt}
+          style={{
+            transform: `scale(${scale}) rotate(${rotation}deg)`,
+            transition: 'transform 0.2s ease-out',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+          }}
+          className="object-contain cursor-zoom-in"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleZoomIn();
+          }}
+        />
+      </div>
+
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
+        {t('点击图片放大，点击遮罩或按 ESC 关闭')}
+      </div>
+    </Modal>
+  );
+};
+
+export default ImagePreviewModal;

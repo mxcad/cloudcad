@@ -1,0 +1,282 @@
+/* ============================================
+   AuditLogPage Styles - 审计日志页面样式
+   使用 theme.css 中的 CSS 变量，支持亮色/深色主题
+   ============================================ */
+
+/* ----------------------------------------
+   1. 页面容器
+   ---------------------------------------- */
+.page {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: var(--space-6);
+  /* 页面恒撑一屏：头部/统计/筛选固定，表格 flex-1 撑满剩余空间内部滚动；
+     多选操作栏在列表滚动容器内（mt-auto sticky 吸底），页面布局不含操作栏空间 */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.pageHeader {
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.pageSubtitle {
+  color: var(--text-tertiary);
+}
+
+/* ----------------------------------------
+   2. 无权限提示
+   ---------------------------------------- */
+.permissionDenied {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.permissionDenied p {
+  color: var(--text-tertiary);
+}
+
+/* ----------------------------------------
+   3. 统计卡片
+   ---------------------------------------- */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .statGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.statLabel {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.statValue {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.statValueSuccess {
+  color: var(--success);
+}
+
+.statValueError {
+  color: var(--error);
+}
+
+.statValueInfo {
+  color: var(--info);
+}
+
+/* ----------------------------------------
+   4. 筛选区域
+   ---------------------------------------- */
+.filterSection {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.filterTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.filterTitle h2 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.filterTitle svg {
+  color: var(--text-tertiary);
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .filterGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .filterGrid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ----------------------------------------
+   5. 表单控件
+   ---------------------------------------- */
+.label {
+  display: block;
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+/* ----------------------------------------
+   6. 表格
+   ---------------------------------------- */
+.tableContainer {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  /* 表格撑满页面剩余空间（页面恒一屏，列表内部滚动）；SelectableTable 内部 flex 撑满 */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 页面 flex 布局：除表格外其余区块（标题/统计/筛选）防压缩 */
+.page > :not(.tableContainer) {
+  flex-shrink: 0;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 100%;
+  /* separate + spacing 0 与 collapse 视觉等价，但支持 sticky 表头背景绘制 */
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead {
+  background: var(--bg-tertiary);
+}
+
+.table th {
+  padding: var(--space-3) var(--space-6);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+/* 备注列允许换行 */
+.table td:last-child {
+  white-space: normal;
+  min-width: 160px;
+}
+
+.table tbody tr:hover td {
+  background: var(--bg-tertiary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tableEmpty {
+  padding: var(--space-4) var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+/* ----------------------------------------
+   7. 用户信息单元格
+   ---------------------------------------- */
+.userCell {
+  line-height: 1.4;
+}
+
+.userName {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.userEmail {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* ----------------------------------------
+   8. 错误消息
+   ---------------------------------------- */
+.errorMsg {
+  color: var(--error);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+/* ----------------------------------------
+   9. 加载/空状态
+   ---------------------------------------- */
+.loadingText {
+  color: var(--text-muted);
+}
+
+/* ----------------------------------------
+   10. 响应式
+   ---------------------------------------- */
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-4);
+  }
+}

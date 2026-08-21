@@ -1,0 +1,3992 @@
+{
+  "首页": {
+    "zh-TW": "首頁",
+    "en-US": "home page",
+    "ko-KR": "홈페이지",
+    "$files": [
+      "src/route.ts(384-390)"
+    ],
+    "$id": 668
+  },
+  "指定圆弧起点": {
+    "zh-TW": "指定圓弧起點",
+    "en-US": "Specify the starting point of the arc",
+    "ko-KR": "호 시작점 지정",
+    "$files": [
+      "src/command/m_mx_arc.ts(409-419)",
+      "src/command/measurement/m_mx_measuring_arc.ts(537-547)"
+    ],
+    "$id": 669
+  },
+  "指定圆弧端点": {
+    "zh-TW": "指定圓弧端點",
+    "en-US": "Specify the endpoint of the arc",
+    "ko-KR": "호 끝점 지정하기",
+    "$files": [
+      "src/command/m_mx_arc.ts(621-631)",
+      "src/command/measurement/m_mx_measuring_arc.ts(773-783)"
+    ],
+    "$id": 670
+  },
+  "指定圆弧中间点": {
+    "zh-TW": "指定圓弧中間點",
+    "en-US": "Specify the midpoint of the arc",
+    "ko-KR": "호 중간점 지정하기",
+    "$files": [
+      "src/command/m_mx_arc.ts(921-932)",
+      "src/command/measurement/m_mx_measuring_arc.ts(1191-1202)"
+    ],
+    "$id": 671
+  },
+  "修剪": {
+    "zh-TW": "修剪",
+    "en-US": "trim",
+    "ko-KR": "다듬다",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1146-1152)",
+      "src/command/m_mx_chamfer.ts(5649-5664)",
+      "src/command/m_mx_chamfer.ts(12335-12341)",
+      "src/command/m_mx_chamfer.ts(12395-12401)",
+      "src/command/m_mx_fillet.ts(29259-29265)",
+      "src/command/m_mx_fillet.ts(30222-30228)",
+      "src/command/m_mx_fillet.ts(34656-34662)",
+      "src/command/m_mx_fillet.ts(34710-34716)"
+    ],
+    "$id": 672
+  },
+  "不修剪": {
+    "zh-TW": "不修剪",
+    "en-US": "Do not trim",
+    "ko-KR": "자르지 않음",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1156-1163)",
+      "src/command/m_mx_chamfer.ts(12345-12352)",
+      "src/command/m_mx_chamfer.ts(12409-12416)",
+      "src/command/m_mx_fillet.ts(29269-29276)",
+      "src/command/m_mx_fillet.ts(34666-34673)",
+      "src/command/m_mx_fillet.ts(34724-34731)"
+    ],
+    "$id": 673
+  },
+  "模式": {
+    "zh-TW": "模式",
+    "en-US": "pattern",
+    "ko-KR": "패턴",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1167-1173)",
+      "src/command/m_mx_fillet.ts(29234-29240)"
+    ],
+    "$id": 674
+  },
+  "当前": {
+    "zh-TW": "當前",
+    "en-US": "current",
+    "ko-KR": "현재",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1179-1185)",
+      "src/command/m_mx_offset.ts(5908-5914)"
+    ],
+    "$id": 675
+  },
+  "倒角长度": {
+    "zh-TW": "倒角長度",
+    "en-US": "Chamfering length",
+    "ko-KR": "모따기 길이",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1221-1229)"
+    ],
+    "$id": 676
+  },
+  "角度": {
+    "zh-TW": "角度",
+    "en-US": "angle",
+    "ko-KR": "각도",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1312-1318)",
+      "src/command/m_mx_chamfer.ts(5635-5641)",
+      "src/command/m_mx_chamfer.ts(6159-6165)",
+      "src/command/m_mx_chamfer.ts(13018-13024)",
+      "src/command/m_mx_chamfer.ts(13091-13097)",
+      "src/command/m_mx_chamfer.ts(35664-35670)",
+      "src/command/m_mx_polyline.ts(10000-10006)",
+      "src/command/m_mx_polyline.ts(10225-10231)",
+      "src/command/m_mx_polyline.ts(10431-10437)",
+      "src/command/m_mx_polyline.ts(10683-10689)",
+      "src/command/m_mx_polyline.ts(23879-23885)",
+      "src/command/m_mx_polyline.ts(34114-34120)",
+      "src/command/marked/m_mx_aligned_marked.tsx(3801-3807)",
+      "src/command/marked/m_mx_dimangular.tsx(8337-8343)",
+      "src/command/marked/m_mx_linear_marked.tsx(4591-4597)",
+      "src/command/measurement/m_mx_measuring_length.ts(6436-6442)",
+      "src/pages/home/components/InsertBlockPopup.vue(3864-3870)"
+    ],
+    "$id": 677
+  },
+  "倒角距离": {
+    "zh-TW": "倒角距離",
+    "en-US": "Chamfering distance",
+    "ko-KR": "모따기 거리",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1402-1410)"
+    ],
+    "$id": 678
+  },
+  "距离": {
+    "zh-TW": "距離",
+    "en-US": "distance",
+    "ko-KR": "거리",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1509-1515)",
+      "src/command/m_mx_chamfer.ts(5621-5627)",
+      "src/command/m_mx_chamfer.ts(6145-6151)",
+      "src/command/m_mx_chamfer.ts(13028-13034)",
+      "src/command/m_mx_chamfer.ts(13077-13083)",
+      "src/command/m_mx_chamfer.ts(35650-35656)"
+    ],
+    "$id": 679
+  },
+  "指定第一个倒角距离": {
+    "zh-TW": "指定第一個倒角距離",
+    "en-US": "Specify the first chamfer distance",
+    "ko-KR": "첫 번째 모따기 거리 지정하기",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(1916-1929)"
+    ],
+    "$id": 680
+  },
+  "指定第二个倒角距离": {
+    "zh-TW": "指定第二個倒角距離",
+    "en-US": "Specify second chamfer distance ",
+    "ko-KR": "두 번째 모따기 거리 지정하기",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(2129-2142)"
+    ],
+    "$id": 681
+  },
+  "指定第一条直线的倒角长度": {
+    "zh-TW": "指定第一條直線的倒角長度",
+    "en-US": "Specify the chamfer length of the first straight line",
+    "ko-KR": "첫 번째 선의 모따기 길이 지정하기",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(2749-2765)"
+    ],
+    "$id": 682
+  },
+  "指定第一条直线的倒角角度": {
+    "zh-TW": "指定第一條直線的倒角角度",
+    "en-US": "Specify the chamfer angle of the first straight line",
+    "ko-KR": "첫 번째 선의 모따기 각도 지정하기",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(3057-3073)"
+    ],
+    "$id": 683
+  },
+  "选择一条直线": {
+    "zh-TW": "選擇一條直線",
+    "en-US": "Select a straight line",
+    "ko-KR": "선 선택",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(5544-5554)"
+    ],
+    "$id": 684
+  },
+  "放弃": {
+    "zh-TW": "放弃",
+    "en-US": "give up",
+    "ko-KR": "포기",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(5592-5598)",
+      "src/command/m_mx_extend.ts(1911-1917)",
+      "src/command/m_mx_fillet.ts(30179-30185)",
+      "src/command/m_mx_offset.ts(1554-1560)",
+      "src/command/m_mx_offset.ts(2525-2531)",
+      "src/command/m_mx_offset.ts(2573-2579)",
+      "src/command/m_mx_revcloud.ts(12225-12231)",
+      "src/command/m_mx_trim.ts(793-799)",
+      "src/command/m_mx_trim.ts(3082-3088)"
+    ],
+    "$id": 685
+  },
+  "多段线": {
+    "zh-TW": "多段線",
+    "en-US": "Polyline",
+    "ko-KR": "폴리선",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(5606-5613)",
+      "src/command/m_mx_fillet.ts(30193-30200)"
+    ],
+    "$id": 686
+  },
+  "方式": {
+    "zh-TW": "方式",
+    "en-US": "mode",
+    "ko-KR": "방식",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(5679-5685)"
+    ],
+    "$id": 687
+  },
+  "多个": {
+    "zh-TW": "多個",
+    "en-US": "Multiple",
+    "ko-KR": "다중",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(5693-5699)",
+      "src/command/m_mx_fillet.ts(30236-30242)",
+      "src/command/m_mx_offset.ts(2559-2565)"
+    ],
+    "$id": 688
+  },
+  "选择二维多段线": {
+    "zh-TW": "選擇二維多段線",
+    "en-US": "Select 2D polylines",
+    "ko-KR": "2D 폴리선 선택",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(6099-6110)",
+      "src/command/m_mx_fillet.ts(30525-30536)"
+    ],
+    "$id": 689
+  },
+  "方法": {
+    "zh-TW": "方法",
+    "en-US": "method",
+    "ko-KR": "방법",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(6173-6179)",
+      "src/command/m_mx_chamfer.ts(35678-35684)"
+    ],
+    "$id": 690
+  },
+  "没有线可以形成倒角": {
+    "zh-TW": "沒有線可以形成倒角",
+    "en-US": "No line can form a chamfer",
+    "ko-KR": "모따기를 만들 선이 없습니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(6449-6462)"
+    ],
+    "$id": 691
+  },
+  "n倒角角度无效": {
+    "zh-TW": "n倒角角度無效",
+    "en-US": "The chamfer angle is invalid",
+    "ko-KR": "n모따기 각도가 잘못되었습니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(7085-7096)",
+      "src/command/m_mx_chamfer.ts(37341-37352)"
+    ],
+    "$id": 692
+  },
+  "输入修剪模式选项": {
+    "zh-TW": "輸入修剪模式選項",
+    "en-US": "Enter pruning mode options",
+    "ko-KR": "트림 모드 옵션 가져오기",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(12306-12318)"
+    ],
+    "$id": 693
+  },
+  "输入剪切方法": {
+    "zh-TW": "輸入剪切方法",
+    "en-US": "Input cutting method",
+    "ko-KR": "잘라내기 방법 입력",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(12986-12996)"
+    ],
+    "$id": 694
+  },
+  "图元无法用自身倒角": {
+    "zh-TW": "圖元無法用自身倒角",
+    "en-US": "The graphic element cannot be chamfered by itself",
+    "ko-KR": "엔티티는 자체 모따기를 사용할 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(17101-17114)",
+      "src/command/m_mx_fillet.ts(38778-38791)"
+    ],
+    "$id": 695
+  },
+  "两直线平行": {
+    "zh-TW": "兩直線平行",
+    "en-US": "Two parallel lines",
+    "ko-KR": "두 직선이 평행하다",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(18454-18463)",
+      "src/command/m_mx_fillet.ts(32560-32569)",
+      "src/command/m_mx_fillet.ts(39955-39964)"
+    ],
+    "$id": 696
+  },
+  "倒角距离太大": {
+    "zh-TW": "倒角距離太大",
+    "en-US": "The chamfer distance is too large",
+    "ko-KR": "모따기 거리가 너무 큽니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(19975-19985)",
+      "src/command/m_mx_fillet.ts(41183-41193)"
+    ],
+    "$id": 697
+  },
+  "同一条直线无法倒角": {
+    "zh-TW": "同一條直線無法倒角",
+    "en-US": "The same straight line cannot be chamfered",
+    "ko-KR": "같은 선은 모따기할 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(23579-23592)",
+      "src/command/m_mx_fillet.ts(44339-44352)"
+    ],
+    "$id": 698
+  },
+  "多段线中的直线必须是连续的或被一条线段断开": {
+    "zh-TW": "多段線中的直線必須是連續的或被一條線段斷開",
+    "en-US": "The straight lines in a polyline must be continuous or broken by a line segment",
+    "ko-KR": "폴리선의 선은 연속적이거나 세그먼트에 의해 분리되어야 합니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(29983-30008)",
+      "src/command/m_mx_fillet.ts(50499-50524)"
+    ],
+    "$id": 699
+  },
+  "选择第二条直线": {
+    "zh-TW": "選擇第二條直線",
+    "en-US": "Select the second straight line",
+    "ko-KR": "두 번째 선 선택",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(35606-35617)",
+      "src/command/m_mx_fillet.ts(55907-55918)",
+      "src/command/marked/m_mx_dimangular.tsx(5776-5787)"
+    ],
+    "$id": 700
+  },
+  "共线直线不能为倒角": {
+    "zh-TW": "共線直線不能為倒角",
+    "en-US": "Collinear lines cannot be chamfered",
+    "ko-KR": "일직선은 모따기일 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_chamfer.ts(37918-37931)"
+    ],
+    "$id": 701
+  },
+  "指定圆心": {
+    "zh-TW": "指定圓心",
+    "en-US": "Specify the center of the circle",
+    "ko-KR": "중심 지정",
+    "$files": [
+      "src/command/m_mx_circle.ts(331-339)"
+    ],
+    "$id": 702
+  },
+  "指定半径": {
+    "zh-TW": "指定半徑",
+    "en-US": "Specify radius",
+    "ko-KR": "반지름 지정",
+    "$files": [
+      "src/command/m_mx_circle.ts(740-748)"
+    ],
+    "$id": 703
+  },
+  "指定基点": {
+    "zh-TW": "指定基點",
+    "en-US": "Specify the base point",
+    "ko-KR": "기준점 지정",
+    "$files": [
+      "src/command/m_mx_copy.ts(1767-1775)",
+      "src/command/m_mx_mirror.ts(836-844)",
+      "src/command/m_mx_move.ts(793-801)",
+      "src/command/m_mx_rotate.ts(899-907)"
+    ],
+    "$id": 704
+  },
+  "指定移动到点": {
+    "zh-TW": "指定移動到點",
+    "en-US": "Specify move to point",
+    "ko-KR": "점으로 이동 지정",
+    "$files": [
+      "src/command/m_mx_copy.ts(1937-1947)",
+      "src/command/m_mx_move.ts(931-941)"
+    ],
+    "$id": 705
+  },
+  "指定椭圆的轴端点": {
+    "zh-TW": "指定橢圓的軸端點",
+    "en-US": "Specify the axis endpoints of the ellipse",
+    "ko-KR": "타원의 축 끝점 지정하기",
+    "$files": [
+      "src/command/m_mx_elliptical.ts(419-431)"
+    ],
+    "$id": 706
+  },
+  "指定轴的另一个端点": {
+    "zh-TW": "指定軸的另一個端點",
+    "en-US": "Specify the other endpoint of the axis",
+    "ko-KR": "축의 다른 끝점 지정하기",
+    "$files": [
+      "src/command/m_mx_elliptical.ts(520-533)"
+    ],
+    "$id": 707
+  },
+  "指定长度": {
+    "zh-TW": "指定長度",
+    "en-US": "Specify length",
+    "ko-KR": "길이 지정",
+    "$files": [
+      "src/command/m_mx_elliptical.ts(653-661)"
+    ],
+    "$id": 708
+  },
+  "选择对象": {
+    "zh-TW": "選擇對象",
+    "en-US": "Select object",
+    "ko-KR": "객체 선택",
+    "$files": [
+      "src/command/m_mx_extend.ts(763-771)",
+      "src/command/m_mx_revcloud.ts(7006-7014)",
+      "src/command/m_mx_trim.ts(2020-2028)",
+      "src/command/marked/m_mx_aligned_marked.tsx(933-941)",
+      "src/command/marked/m_mx_linear_marked.tsx(1669-1677)",
+      "src/command/measurement/m_mx_measuring_length.ts(3522-3530)"
+    ],
+    "$id": 709
+  },
+  "或": {
+    "zh-TW": "或",
+    "en-US": "or",
+    "ko-KR": "또는",
+    "$files": [
+      "src/command/m_mx_extend.ts(775-780)",
+      "src/command/m_mx_trim.ts(2032-2037)"
+    ],
+    "$id": 710
+  },
+  "全部选择": {
+    "zh-TW": "全部選擇",
+    "en-US": "Select All",
+    "ko-KR": "모두 선택",
+    "$files": [
+      "src/command/m_mx_extend.ts(790-798)",
+      "src/command/m_mx_trim.ts(2042-2050)"
+    ],
+    "$id": 711
+  },
+  "选择要延伸的对象": {
+    "zh-TW": "選擇要延伸的對象",
+    "en-US": "Select the object to extend",
+    "ko-KR": "확장할 객체 선택",
+    "$files": [
+      "src/command/m_mx_extend.ts(1741-1753)"
+    ],
+    "$id": 712
+  },
+  "栏选": {
+    "zh-TW": "欄選",
+    "en-US": "Column selection",
+    "ko-KR": "열 선택",
+    "$files": [
+      "src/command/m_mx_extend.ts(1843-1849)",
+      "src/command/m_mx_trim.ts(3002-3008)"
+    ],
+    "$id": 713
+  },
+  "窗交": {
+    "zh-TW": "窗交",
+    "en-US": "Window intersection",
+    "ko-KR": "창문 교차",
+    "$files": [
+      "src/command/m_mx_extend.ts(1857-1863)",
+      "src/command/m_mx_trim.ts(3016-3022)"
+    ],
+    "$id": 714
+  },
+  "边": {
+    "zh-TW": "邊",
+    "en-US": "edge",
+    "ko-KR": "변",
+    "$files": [
+      "src/command/m_mx_extend.ts(1871-1876)",
+      "src/command/m_mx_trim.ts(3030-3035)"
+    ],
+    "$id": 715
+  },
+  "指定隐含边延伸模式": {
+    "zh-TW": "指定隱含邊延伸模式",
+    "en-US": "Specify hidden edge extension mode",
+    "ko-KR": "억제된 모서리 확장 모드 지정",
+    "$files": [
+      "src/command/m_mx_extend.ts(2990-3003)",
+      "src/command/m_mx_trim.ts(4170-4183)"
+    ],
+    "$id": 716
+  },
+  "延伸": {
+    "zh-TW": "延伸",
+    "en-US": "extend",
+    "ko-KR": "연장",
+    "$files": [
+      "src/command/m_mx_extend.ts(3019-3025)",
+      "src/command/m_mx_extend.ts(3073-3079)",
+      "src/command/m_mx_trim.ts(4199-4205)",
+      "src/command/m_mx_trim.ts(4253-4259)"
+    ],
+    "$id": 717
+  },
+  "不延伸": {
+    "zh-TW": "不延伸",
+    "en-US": "Not extending",
+    "ko-KR": "확장 안 함",
+    "$files": [
+      "src/command/m_mx_extend.ts(3029-3036)",
+      "src/command/m_mx_extend.ts(3087-3094)",
+      "src/command/m_mx_trim.ts(4209-4216)",
+      "src/command/m_mx_trim.ts(4267-4274)"
+    ],
+    "$id": 718
+  },
+  "当前设置": {
+    "zh-TW": "當前設定",
+    "en-US": "Current settings",
+    "ko-KR": "현재 설정",
+    "$files": [
+      "src/command/m_mx_fillet.ts(29220-29228)"
+    ],
+    "$id": 719
+  },
+  "半径": {
+    "zh-TW": "半徑",
+    "en-US": "radius",
+    "ko-KR": "반지름",
+    "$files": [
+      "src/command/m_mx_fillet.ts(29282-29288)",
+      "src/command/m_mx_fillet.ts(30208-30214)",
+      "src/command/m_mx_fillet.ts(30572-30578)",
+      "src/command/m_mx_fillet.ts(55957-55963)",
+      "src/command/m_mx_polyline.ts(10073-10079)",
+      "src/command/m_mx_polyline.ts(10312-10318)",
+      "src/command/m_mx_polyline.ts(10518-10524)",
+      "src/command/m_mx_polyline.ts(10770-10776)",
+      "src/command/m_mx_polyline.ts(14877-14883)"
+    ],
+    "$id": 720
+  },
+  "指定圆角半径": {
+    "zh-TW": "指定圓角半徑",
+    "en-US": "Specify fillet radius ",
+    "ko-KR": "필렛 반지름 지정",
+    "$files": [
+      "src/command/m_mx_fillet.ts(29490-29500)"
+    ],
+    "$id": 721
+  },
+  "选择第一个对象": {
+    "zh-TW": "選擇第一個對象",
+    "en-US": "Select the first object",
+    "ko-KR": "첫 번째 객체 선택",
+    "$files": [
+      "src/command/m_mx_fillet.ts(30136-30147)"
+    ],
+    "$id": 722
+  },
+  "输入剪切模式选项": {
+    "zh-TW": "輸入剪切模式選項",
+    "en-US": "Enter cutting mode options",
+    "ko-KR": "잘라내기 모드 옵션 입력",
+    "$files": [
+      "src/command/m_mx_fillet.ts(34627-34639)"
+    ],
+    "$id": 723
+  },
+  "直线平行": {
+    "zh-TW": "直線平行",
+    "en-US": "Parallel lines",
+    "ko-KR": "직선 평행",
+    "$files": [
+      "src/command/m_mx_fillet.ts(42184-42192)",
+      "src/command/m_mx_fillet.ts(44830-44838)",
+      "src/command/m_mx_fillet.ts(47580-47588)"
+    ],
+    "$id": 724
+  },
+  "共线直线不能为倒圆角角": {
+    "zh-TW": "共線直線不能為倒圓角角",
+    "en-US": "Collinear lines cannot have rounded corners",
+    "ko-KR": "일직선은 라운드가 될 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_fillet.ts(56666-56681)"
+    ],
+    "$id": 725
+  },
+  "请输入要查找的文字": {
+    "zh-TW": "請輸入要查找的文字",
+    "en-US": "Please enter the text you want to search for",
+    "ko-KR": "찾으려는 텍스트를 입력하십시오.",
+    "$files": [
+      "src/command/m_mx_find_text.tsx(3334-3347)"
+    ],
+    "$id": 726
+  },
+  "内容": {
+    "zh-TW": "內容",
+    "en-US": "content",
+    "ko-KR": "콘텐츠",
+    "$files": [
+      "src/command/m_mx_find_text.tsx(3452-3458)",
+      "src/command/m_mx_text.tsx(451-457)",
+      "src/command/annotation/m_mx_lead_comment.tsx(859-865)",
+      "src/command/marked/m_mx_aligned_marked.tsx(4656-4662)",
+      "src/command/marked/m_mx_dimangular.tsx(9206-9212)",
+      "src/command/marked/m_mx_linear_marked.tsx(6600-6606)"
+    ],
+    "$id": 727
+  },
+  "请输入搜索的文字": {
+    "zh-TW": "請輸入蒐索的文字",
+    "en-US": "Please enter the search text",
+    "ko-KR": "검색할 텍스트를 입력하십시오.",
+    "$files": [
+      "src/command/m_mx_find_text.tsx(3484-3496)"
+    ],
+    "$id": 728
+  },
+  "内容不能为空": {
+    "zh-TW": "內容不能為空",
+    "en-US": "The content cannot be empty",
+    "ko-KR": "컨텐츠는 비워둘 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_find_text.tsx(3699-3709)",
+      "src/command/m_mx_text.tsx(615-625)",
+      "src/command/annotation/m_mx_lead_comment.tsx(1023-1033)",
+      "src/command/marked/m_mx_aligned_marked.tsx(4821-4831)",
+      "src/command/marked/m_mx_dimangular.tsx(9389-9399)",
+      "src/command/marked/m_mx_linear_marked.tsx(6765-6775)"
+    ],
+    "$id": 729
+  },
+  "未找到匹配的文字": {
+    "zh-TW": "未找到匹配的文字",
+    "en-US": "No matching text found",
+    "ko-KR": "일치하는 텍스트를 찾을 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_find_text.tsx(5335-5347)"
+    ],
+    "$id": 730
+  },
+  "加载图片失败": {
+    "zh-TW": "加載圖片失敗",
+    "en-US": "Failed to load image",
+    "ko-KR": "그림 로드 실패",
+    "$files": [
+      "src/command/m_mx_img.ts(1049-1059)",
+      "src/command/m_mx_img.ts(3185-3195)"
+    ],
+    "$id": 731
+  },
+  "指定插入点": {
+    "zh-TW": "指定插入點",
+    "en-US": "Specify insertion point",
+    "ko-KR": "삽입점 지정",
+    "$files": [
+      "src/command/m_mx_img.ts(1437-1446)"
+    ],
+    "$id": 732
+  },
+  "指定旋转角度": {
+    "zh-TW": "指定旋轉角度",
+    "en-US": "Specify rotation angle",
+    "ko-KR": "회전 각도 지정",
+    "$files": [
+      "src/command/m_mx_img.ts(2428-2438)",
+      "src/command/m_mx_rotate.ts(1267-1277)"
+    ],
+    "$id": 733
+  },
+  "图片已插入，将在保存时自动上传": {
+    "zh-TW": "圖片已插入，將在保存時自動上傳",
+    "en-US": "The image has been inserted and will be automatically uploaded upon saving",
+    "ko-KR": "그림이 삽입되어 저장할 때 자동으로 업로드됩니다",
+    "$files": [
+      "src/command/m_mx_img.ts(3615-3634)"
+    ],
+    "$id": 734
+  },
+  "指定第一个点": {
+    "zh-TW": "指定第一個點",
+    "en-US": "Specify the first point",
+    "ko-KR": "첫 번째 점 지정",
+    "$files": [
+      "src/command/m_mx_line.ts(327-337)",
+      "src/command/m_mx_rect.ts(344-354)"
+    ],
+    "$id": 735
+  },
+  "指定第二个点": {
+    "zh-TW": "指定第二個點",
+    "en-US": "Specify the second point",
+    "ko-KR": "두 번째 점 지정",
+    "$files": [
+      "src/command/m_mx_line.ts(714-724)",
+      "src/command/m_mx_rect.ts(543-553)"
+    ],
+    "$id": 736
+  },
+  "指定镜向点": {
+    "zh-TW": "指定鏡向點",
+    "en-US": "Specify the mirror point",
+    "ko-KR": "거울 방향 점 지정",
+    "$files": [
+      "src/command/m_mx_mirror.ts(945-954)"
+    ],
+    "$id": 737
+  },
+  "要删除源对象吗": {
+    "zh-TW": "要删除源對象嗎",
+    "en-US": "Do you want to delete the source object",
+    "ko-KR": "소스 객체를 삭제하시겠습니까?",
+    "$files": [
+      "src/command/m_mx_mirror.ts(2531-2542)"
+    ],
+    "$id": 738
+  },
+  "是": {
+    "zh-TW": "是",
+    "en-US": "yes",
+    "ko-KR": "예",
+    "$files": [
+      "src/command/m_mx_mirror.ts(2578-2583)",
+      "src/command/m_mx_offset.ts(5285-5290)",
+      "src/command/m_mx_revcloud.ts(5593-5598)"
+    ],
+    "$id": 739
+  },
+  "否": {
+    "zh-TW": "否",
+    "en-US": "no",
+    "ko-KR": "아니요",
+    "$files": [
+      "src/command/m_mx_mirror.ts(2591-2596)",
+      "src/command/m_mx_offset.ts(5294-5299)",
+      "src/command/m_mx_revcloud.ts(5606-5611)"
+    ],
+    "$id": 740
+  },
+  "选择偏移对象": {
+    "zh-TW": "選擇偏移對象",
+    "en-US": "Select offset object",
+    "ko-KR": "오프셋 객체 선택",
+    "$files": [
+      "src/command/m_mx_offset.ts(1461-1471)"
+    ],
+    "$id": 741
+  },
+  "退出": {
+    "zh-TW": "退出",
+    "en-US": "sign out",
+    "ko-KR": "나가기",
+    "$files": [
+      "src/command/m_mx_offset.ts(1540-1546)",
+      "src/command/m_mx_offset.ts(2511-2517)",
+      "src/command/m_mx_offset.ts(2545-2551)"
+    ],
+    "$id": 742
+  },
+  "指定通过点": {
+    "zh-TW": "指定通過點",
+    "en-US": "Specify the passing point",
+    "ko-KR": "통과 점 지정",
+    "$files": [
+      "src/command/m_mx_offset.ts(2324-2333)"
+    ],
+    "$id": 743
+  },
+  "下一个对象": {
+    "zh-TW": "下一個對象",
+    "en-US": "Next object",
+    "ko-KR": "다음 객체",
+    "$files": [
+      "src/command/m_mx_offset.ts(2358-2367)"
+    ],
+    "$id": 744
+  },
+  "指定要偏移那一侧上的点": {
+    "zh-TW": "指定要偏移那一側上的點",
+    "en-US": "Specify the point on which side to offset",
+    "ko-KR": "오프셋할 면의 점 지정하기",
+    "$files": [
+      "src/command/m_mx_offset.ts(2436-2451)"
+    ],
+    "$id": 745
+  },
+  "指定偏移距离": {
+    "zh-TW": "指定偏移距離",
+    "en-US": "Specify offset distance",
+    "ko-KR": "오프셋 거리 지정",
+    "$files": [
+      "src/command/m_mx_offset.ts(4861-4871)"
+    ],
+    "$id": 746
+  },
+  "通过点": {
+    "zh-TW": "通過點",
+    "en-US": "By clicking",
+    "ko-KR": "통과 점",
+    "$files": [
+      "src/command/m_mx_offset.ts(4932-4939)"
+    ],
+    "$id": 747
+  },
+  "要在偏移后删除源对象吗": {
+    "zh-TW": "要在偏移後删除源對象嗎",
+    "en-US": "Do you want to delete the source object after offsetting",
+    "ko-KR": "오프셋 후에 원본 객체를 삭제하시겠습니까?",
+    "$files": [
+      "src/command/m_mx_offset.ts(5256-5271)"
+    ],
+    "$id": 748
+  },
+  "输入偏移对象的图层选项": {
+    "zh-TW": "輸入偏移對象的圖層選項",
+    "en-US": "Enter layer options for offset objects",
+    "ko-KR": "오프셋 객체에 대한 도면층 옵션 가져오기",
+    "$files": [
+      "src/command/m_mx_offset.ts(5863-5878)"
+    ],
+    "$id": 749
+  },
+  "源": {
+    "zh-TW": "源",
+    "en-US": "source",
+    "ko-KR": "소스",
+    "$files": [
+      "src/command/m_mx_offset.ts(5899-5904)"
+    ],
+    "$id": 750
+  },
+  "指定起点:": {
+    "zh-TW": "指定起點：",
+    "en-US": "Specify starting point:",
+    "ko-KR": "시작 점 지정:",
+    "$files": [
+      "src/command/m_mx_polyline.ts(2021-2030)"
+    ],
+    "$id": 751
+  },
+  "当前线宽为": {
+    "zh-TW": "當前線寬為",
+    "en-US": "The current line width is",
+    "ko-KR": "현재 선가중치는 입니다.",
+    "$files": [
+      "src/command/m_mx_polyline.ts(2577-2586)"
+    ],
+    "$id": 752
+  },
+  "指定下一个点": {
+    "zh-TW": "指定下一個點",
+    "en-US": "Specify the next point",
+    "ko-KR": "다음 점 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3016-3026)"
+    ],
+    "$id": 753
+  },
+  "圆弧": {
+    "zh-TW": "圓弧",
+    "en-US": "arc",
+    "ko-KR": "호",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3067-3073)",
+      "src/command/m_mx_polyline.ts(3247-3253)",
+      "src/command/m_mx_polyline.ts(3394-3400)",
+      "src/command/m_mx_polyline.ts(3586-3592)"
+    ],
+    "$id": 754
+  },
+  "宽度": {
+    "zh-TW": "寬度",
+    "en-US": "width",
+    "ko-KR": "너비",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3081-3087)",
+      "src/command/m_mx_polyline.ts(3261-3267)",
+      "src/command/m_mx_polyline.ts(3408-3414)",
+      "src/command/m_mx_polyline.ts(3600-3606)",
+      "src/command/m_mx_polyline.ts(10087-10093)",
+      "src/command/m_mx_polyline.ts(10326-10332)",
+      "src/command/m_mx_polyline.ts(10532-10538)",
+      "src/command/m_mx_polyline.ts(10784-10790)"
+    ],
+    "$id": 755
+  },
+  "长度": {
+    "zh-TW": "長度",
+    "en-US": "length",
+    "ko-KR": "길이",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3095-3101)",
+      "src/command/m_mx_polyline.ts(3275-3281)",
+      "src/command/m_mx_polyline.ts(3422-3428)",
+      "src/command/m_mx_polyline.ts(3628-3634)",
+      "src/command/m_mx_polyline.ts(23893-23899)"
+    ],
+    "$id": 756
+  },
+  "半宽": {
+    "zh-TW": "半寬",
+    "en-US": "Half width",
+    "ko-KR": "반폭",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3109-3115)",
+      "src/command/m_mx_polyline.ts(3289-3295)",
+      "src/command/m_mx_polyline.ts(3436-3442)",
+      "src/command/m_mx_polyline.ts(3614-3620)",
+      "src/command/m_mx_polyline.ts(10101-10107)",
+      "src/command/m_mx_polyline.ts(10340-10346)",
+      "src/command/m_mx_polyline.ts(10546-10552)",
+      "src/command/m_mx_polyline.ts(10798-10804)"
+    ],
+    "$id": 757
+  },
+  "回退": {
+    "zh-TW": "回退",
+    "en-US": "Fallback",
+    "ko-KR": "폴백",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3233-3239)",
+      "src/command/m_mx_polyline.ts(3380-3386)",
+      "src/command/m_mx_polyline.ts(3572-3578)",
+      "src/command/m_mx_polyline.ts(10284-10290)",
+      "src/command/m_mx_polyline.ts(10490-10496)",
+      "src/command/m_mx_polyline.ts(10742-10748)"
+    ],
+    "$id": 758
+  },
+  "闭合": {
+    "zh-TW": "閉合",
+    "en-US": "close",
+    "ko-KR": "닫기",
+    "$files": [
+      "src/command/m_mx_polyline.ts(3450-3456)",
+      "src/command/m_mx_polyline.ts(10560-10566)"
+    ],
+    "$id": 759
+  },
+  "指定起点宽度": {
+    "zh-TW": "指定起點寬度",
+    "en-US": "Specify the starting width",
+    "ko-KR": "시작 폭 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(5823-5833)",
+      "src/command/m_mx_polyline.ts(47606-47616)"
+    ],
+    "$id": 760
+  },
+  "指定端点宽度": {
+    "zh-TW": "指定端點寬度",
+    "en-US": "Specify ending width ",
+    "ko-KR": "끝점 너비 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(6069-6079)",
+      "src/command/m_mx_polyline.ts(47852-47862)"
+    ],
+    "$id": 761
+  },
+  "指定起点半宽": {
+    "zh-TW": "指定起點半寬",
+    "en-US": "Specify the starting point half width",
+    "ko-KR": "시작점의 절반 너비 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(6813-6823)",
+      "src/command/m_mx_polyline.ts(40984-40994)"
+    ],
+    "$id": 762
+  },
+  "指定端点半宽": {
+    "zh-TW": "指定端點半寬",
+    "en-US": "Specify endpoint half width",
+    "ko-KR": "끝 반폭 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(7063-7073)",
+      "src/command/m_mx_polyline.ts(41234-41244)"
+    ],
+    "$id": 763
+  },
+  "指定直线长度": {
+    "zh-TW": "指定直線長度",
+    "en-US": "Specify the length of the straight line",
+    "ko-KR": "선 길이 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(8352-8362)"
+    ],
+    "$id": 764
+  },
+  "指定圆弧的端点": {
+    "zh-TW": "指定圓弧的端點",
+    "en-US": "Specify the endpoint of the arc",
+    "ko-KR": "호의 끝점 지정하기",
+    "$files": [
+      "src/command/m_mx_polyline.ts(9913-9924)",
+      "src/command/m_mx_polyline.ts(14758-14769)",
+      "src/command/m_mx_polyline.ts(23775-23786)",
+      "src/command/m_mx_polyline.ts(34010-34021)",
+      "src/command/m_mx_polyline.ts(39229-39240)",
+      "src/command/m_mx_polyline.ts(42438-42449)",
+      "src/command/m_mx_polyline.ts(45385-45396)"
+    ],
+    "$id": 765
+  },
+  "按住": {
+    "zh-TW": "按住",
+    "en-US": "Press and hold",
+    "ko-KR": "누르다",
+    "$files": [
+      "src/command/m_mx_polyline.ts(9929-9935)",
+      "src/command/m_mx_polyline.ts(14774-14780)",
+      "src/command/m_mx_polyline.ts(20277-20283)",
+      "src/command/m_mx_polyline.ts(23791-23797)",
+      "src/command/m_mx_polyline.ts(25540-25546)",
+      "src/command/m_mx_polyline.ts(28620-28626)",
+      "src/command/m_mx_polyline.ts(34026-34032)",
+      "src/command/m_mx_polyline.ts(35979-35985)",
+      "src/command/m_mx_polyline.ts(42454-42460)",
+      "src/command/m_mx_polyline.ts(45401-45407)"
+    ],
+    "$id": 766
+  },
+  "键": {
+    "zh-TW": "鍵",
+    "en-US": "key",
+    "ko-KR": "키",
+    "$files": [
+      "src/command/m_mx_polyline.ts(9945-9950)",
+      "src/command/m_mx_polyline.ts(14790-14795)",
+      "src/command/m_mx_polyline.ts(20291-20296)",
+      "src/command/m_mx_polyline.ts(23807-23812)",
+      "src/command/m_mx_polyline.ts(25556-25561)",
+      "src/command/m_mx_polyline.ts(28636-28641)",
+      "src/command/m_mx_polyline.ts(34042-34047)",
+      "src/command/m_mx_polyline.ts(35995-36000)",
+      "src/command/m_mx_polyline.ts(42470-42475)",
+      "src/command/m_mx_polyline.ts(45417-45422)"
+    ],
+    "$id": 767
+  },
+  "切换方向": {
+    "zh-TW": "切換方向",
+    "en-US": "Switch direction",
+    "ko-KR": "방향 전환",
+    "$files": [
+      "src/command/m_mx_polyline.ts(9954-9962)",
+      "src/command/m_mx_polyline.ts(14799-14807)",
+      "src/command/m_mx_polyline.ts(20300-20308)",
+      "src/command/m_mx_polyline.ts(23816-23824)",
+      "src/command/m_mx_polyline.ts(25565-25573)",
+      "src/command/m_mx_polyline.ts(28645-28653)",
+      "src/command/m_mx_polyline.ts(34051-34059)",
+      "src/command/m_mx_polyline.ts(36004-36012)",
+      "src/command/m_mx_polyline.ts(42479-42487)",
+      "src/command/m_mx_polyline.ts(45426-45434)"
+    ],
+    "$id": 768
+  },
+  "第二个点": {
+    "zh-TW": "第二個點",
+    "en-US": "The second point",
+    "ko-KR": "두 번째 점",
+    "$files": [
+      "src/command/m_mx_polyline.ts(10014-10022)",
+      "src/command/m_mx_polyline.ts(10239-10247)",
+      "src/command/m_mx_polyline.ts(10445-10453)",
+      "src/command/m_mx_polyline.ts(10697-10705)"
+    ],
+    "$id": 769
+  },
+  "圆心": {
+    "zh-TW": "圓心",
+    "en-US": "center of a circle",
+    "ko-KR": "중심",
+    "$files": [
+      "src/command/m_mx_polyline.ts(10030-10036)",
+      "src/command/m_mx_polyline.ts(10255-10261)",
+      "src/command/m_mx_polyline.ts(10461-10467)",
+      "src/command/m_mx_polyline.ts(10713-10719)",
+      "src/command/m_mx_polyline.ts(14862-14868)"
+    ],
+    "$id": 770
+  },
+  "方向": {
+    "zh-TW": "方向",
+    "en-US": "direction",
+    "ko-KR": "방향",
+    "$files": [
+      "src/command/m_mx_polyline.ts(10045-10051)",
+      "src/command/m_mx_polyline.ts(10270-10276)",
+      "src/command/m_mx_polyline.ts(10476-10482)",
+      "src/command/m_mx_polyline.ts(10728-10734)"
+    ],
+    "$id": 771
+  },
+  "直线": {
+    "zh-TW": "直線",
+    "en-US": "straight line",
+    "ko-KR": "직선",
+    "$files": [
+      "src/command/m_mx_polyline.ts(10059-10065)",
+      "src/command/m_mx_polyline.ts(10298-10304)",
+      "src/command/m_mx_polyline.ts(10504-10510)",
+      "src/command/m_mx_polyline.ts(10756-10762)"
+    ],
+    "$id": 772
+  },
+  "指定夹角": {
+    "zh-TW": "指定夾角",
+    "en-US": "Specify the angle",
+    "ko-KR": "각도 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(14598-14606)",
+      "src/command/m_mx_polyline.ts(25527-25535)",
+      "src/command/m_mx_polyline.ts(35547-35555)"
+    ],
+    "$id": 773
+  },
+  "指定圆弧的圆心": {
+    "zh-TW": "指定圓弧的圓心",
+    "en-US": "Specify the center of the arc",
+    "ko-KR": "호의 중심점 지정하기",
+    "$files": [
+      "src/command/m_mx_polyline.ts(17165-17176)",
+      "src/command/m_mx_polyline.ts(23321-23332)"
+    ],
+    "$id": 774
+  },
+  "指定圆弧半径": {
+    "zh-TW": "指定圓弧半徑",
+    "en-US": "Specify the radius of the arc",
+    "ko-KR": "호 반지름 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(19795-19805)"
+    ],
+    "$id": 775
+  },
+  "指定圆弧的弦方向": {
+    "zh-TW": "指定圓弧的弦方向",
+    "en-US": "Specify the chord direction of the arc",
+    "ko-KR": "호의 현 방향 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(20260-20272)",
+      "src/command/m_mx_polyline.ts(35962-35974)"
+    ],
+    "$id": 776
+  },
+  "指定弦长": {
+    "zh-TW": "指定弦長",
+    "en-US": "Specify chord length",
+    "ko-KR": "스트링 길이 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(28607-28615)"
+    ],
+    "$id": 777
+  },
+  "弦长不能大于直径": {
+    "zh-TW": "弦長不能大於直徑",
+    "en-US": "Chord length cannot exceed diameter",
+    "ko-KR": "코드 길이는 지름보다 클 수 없습니다.",
+    "$files": [
+      "src/command/m_mx_polyline.ts(30040-30052)"
+    ],
+    "$id": 778
+  },
+  "无效": {
+    "zh-TW": "無效",
+    "en-US": "invalid",
+    "ko-KR": "유효하지 않음",
+    "$files": [
+      "src/command/m_mx_polyline.ts(30057-30063)",
+      "src/command/m_mx_polyline.ts(39246-39252)",
+      "src/command/m_mx_polyline.ts(47113-47119)"
+    ],
+    "$id": 779
+  },
+  "指定圆弧的半径": {
+    "zh-TW": "指定圓弧的半徑",
+    "en-US": "Specify radius of arc ",
+    "ko-KR": "호의 반지름 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(33677-33688)"
+    ],
+    "$id": 780
+  },
+  "指定圆弧起点切向": {
+    "zh-TW": "指定圓弧起點切向",
+    "en-US": "Specify the tangent direction of the starting point of the arc",
+    "ko-KR": "호 시작점 탄젠트 방향 지정",
+    "$files": [
+      "src/command/m_mx_polyline.ts(41782-41794)"
+    ],
+    "$id": 781
+  },
+  "指定圆弧的第二个点": {
+    "zh-TW": "指定圓弧的第二個點",
+    "en-US": "Specify the second point of the arc",
+    "ko-KR": "호의 두 번째 점 지정하기",
+    "$files": [
+      "src/command/m_mx_polyline.ts(44868-44881)"
+    ],
+    "$id": 782
+  },
+  "端点": {
+    "zh-TW": "端點",
+    "en-US": "Endpoint",
+    "ko-KR": "끝점",
+    "$files": [
+      "src/command/m_mx_polyline.ts(47101-47107)"
+    ],
+    "$id": 783
+  },
+  "第一点": {
+    "zh-TW": "第一點",
+    "en-US": "The first point",
+    "ko-KR": "첫 번째 점",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5140-5147)"
+    ],
+    "$id": 784
+  },
+  "指定第一个角点": {
+    "zh-TW": "指定第一個角點",
+    "en-US": "Specify the first corner point",
+    "ko-KR": "첫 번째 구석 지정",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5171-5182)"
+    ],
+    "$id": 785
+  },
+  "指定起点": {
+    "zh-TW": "指定起點",
+    "en-US": "Specify starting point",
+    "ko-KR": "시작점 지정",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5210-5218)"
+    ],
+    "$id": 786
+  },
+  "弧长": {
+    "zh-TW": "弧長",
+    "en-US": "arc length",
+    "ko-KR": "호 길이",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5278-5284)",
+      "src/command/measurement/m_mx_measuring_arc.ts(1088-1094)"
+    ],
+    "$id": 787
+  },
+  "对象": {
+    "zh-TW": "對象",
+    "en-US": "object",
+    "ko-KR": "객체",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5292-5298)"
+    ],
+    "$id": 788
+  },
+  "矩形": {
+    "zh-TW": "矩形",
+    "en-US": "rectangle",
+    "ko-KR": "사각형",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5306-5312)"
+    ],
+    "$id": 789
+  },
+  "多边形": {
+    "zh-TW": "多邊形",
+    "en-US": "polygon",
+    "ko-KR": "다각형",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5320-5327)"
+    ],
+    "$id": 790
+  },
+  "徒手画": {
+    "zh-TW": "徒手畫",
+    "en-US": "Freehand drawing",
+    "ko-KR": "맨손으로 그리다",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5335-5342)"
+    ],
+    "$id": 791
+  },
+  "样式": {
+    "zh-TW": "樣式",
+    "en-US": "style",
+    "ko-KR": "스타일",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5350-5356)"
+    ],
+    "$id": 792
+  },
+  "反转方向": {
+    "zh-TW": "反轉方向",
+    "en-US": "reverse direction ",
+    "ko-KR": "방향 반전",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(5551-5559)"
+    ],
+    "$id": 793
+  },
+  "请输入最小弧长": {
+    "zh-TW": "請輸入最小弧長",
+    "en-US": "Please enter the minimum arc length",
+    "ko-KR": "최소 호 길이를 입력하십시오.",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(6149-6160)"
+    ],
+    "$id": 794
+  },
+  "指定最大弧长": {
+    "zh-TW": "指定最大弧長",
+    "en-US": "Specify maximum arc length",
+    "ko-KR": "최대 호 길이 지정",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(6437-6447)"
+    ],
+    "$id": 795
+  },
+  "选择圆弧样式": {
+    "zh-TW": "選擇圓弧樣式",
+    "en-US": "Select arc style",
+    "ko-KR": "호 스타일 선택",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(9555-9565)"
+    ],
+    "$id": 796
+  },
+  "普通": {
+    "zh-TW": "普通",
+    "en-US": "ordinary",
+    "ko-KR": "보통",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(9599-9605)"
+    ],
+    "$id": 797
+  },
+  "手绘": {
+    "zh-TW": "手繪",
+    "en-US": "Hand drawn",
+    "ko-KR": "손으로 그린 그림",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(9613-9619)"
+    ],
+    "$id": 798
+  },
+  "指定对角点": {
+    "zh-TW": "指定對角點",
+    "en-US": "Specify opposite corner ",
+    "ko-KR": "대각점 지정",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(10195-10204)",
+      "src/command/marked/m_mx_diametric_dimension.ts(1166-1175)"
+    ],
+    "$id": 799
+  },
+  "指定下一点": {
+    "zh-TW": "指定下一點",
+    "en-US": "Specify the next point",
+    "ko-KR": "다음 점 지정",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(12155-12164)",
+      "src/command/measurement/m_mx_measuring_area.ts(1049-1058)",
+      "src/command/measurement/m_mx_measuring_area.ts(2280-2289)"
+    ],
+    "$id": 800
+  },
+  "沿云线路径引导十字光标": {
+    "zh-TW": "沿雲線路徑引導十字游標",
+    "en-US": "Guide the crosshair along the cloud path",
+    "ko-KR": "구름선 경로를 따라 십자선 커서 부팅",
+    "$files": [
+      "src/command/m_mx_revcloud.ts(13140-13155)"
+    ],
+    "$id": 801
+  },
+  "复制": {
+    "zh-TW": "複製",
+    "en-US": "copy",
+    "ko-KR": "복사",
+    "$files": [
+      "src/command/m_mx_rotate.ts(1310-1316)"
+    ],
+    "$id": 802
+  },
+  "参照": {
+    "zh-TW": "參照",
+    "en-US": "reference",
+    "ko-KR": "참조",
+    "$files": [
+      "src/command/m_mx_rotate.ts(1324-1330)"
+    ],
+    "$id": 803
+  },
+  "指定参照角": {
+    "zh-TW": "指定參照角",
+    "en-US": "Specify reference angle",
+    "ko-KR": "참조 각도 지정",
+    "$files": [
+      "src/command/m_mx_rotate.ts(3507-3516)"
+    ],
+    "$id": 804
+  },
+  "文件已保存到本地": {
+    "zh-TW": "檔案已保存到本地",
+    "en-US": "The file has been saved locally",
+    "ko-KR": "파일이 로컬에 저장됨",
+    "$files": [
+      "src/command/m_mx_saveAsMxWeb.ts(670-682)"
+    ],
+    "$id": 805
+  },
+  "保存失败": {
+    "zh-TW": "保存失敗",
+    "en-US": "Save failed",
+    "ko-KR": "저장 실패",
+    "$files": [
+      "src/command/m_mx_saveAsMxWeb.ts(716-724)",
+      "src/composables/useSave.ts(7392-7400)",
+      "src/composables/useSave.ts(7472-7480)",
+      "src/composables/useSaveAs.ts(4427-4435)",
+      "src/services/saveService.ts(1982-1990)",
+      "src/pages/home/components/SaveAsSheet.vue(5224-5232)"
+    ],
+    "$id": 806
+  },
+  "插入文字": {
+    "zh-TW": "插入文字",
+    "en-US": "Insert Text",
+    "ko-KR": "문자 삽입",
+    "$files": [
+      "src/command/m_mx_text.tsx(380-388)",
+      "src/command/annotation/m_mx_lead_comment.tsx(788-796)"
+    ],
+    "$id": 807
+  },
+  "请输入文字": {
+    "zh-TW": "請輸入文字",
+    "en-US": "Please enter text",
+    "ko-KR": "문자를 입력하십시오.",
+    "$files": [
+      "src/command/m_mx_text.tsx(473-482)",
+      "src/command/annotation/m_mx_lead_comment.tsx(881-890)",
+      "src/command/marked/m_mx_aligned_marked.tsx(4678-4687)",
+      "src/command/marked/m_mx_dimangular.tsx(9228-9237)",
+      "src/command/marked/m_mx_linear_marked.tsx(6622-6631)"
+    ],
+    "$id": 808
+  },
+  "请选择文字插入点": {
+    "zh-TW": "請選擇文字插入點",
+    "en-US": "Please select a text insertion point",
+    "ko-KR": "텍스트 삽입점을 선택하십시오.",
+    "$files": [
+      "src/command/m_mx_text.tsx(799-811)"
+    ],
+    "$id": 809
+  },
+  "指定第一个栏选点": {
+    "zh-TW": "指定第一個欄選點",
+    "en-US": "Specify the first column selection point",
+    "ko-KR": "첫 번째 열 선택점 지정",
+    "$files": [
+      "src/command/m_mx_trim.ts(704-716)"
+    ],
+    "$id": 810
+  },
+  "指定下一个栏选点": {
+    "zh-TW": "指定下一個欄選點",
+    "en-US": "Specify the next column selection point",
+    "ko-KR": "다음 열 선택점 지정",
+    "$files": [
+      "src/command/m_mx_trim.ts(720-732)"
+    ],
+    "$id": 811
+  },
+  "选择要修剪的对象": {
+    "zh-TW": "選擇要修剪的對象",
+    "en-US": "Select the object to trim",
+    "ko-KR": "트림할 객체 선택",
+    "$files": [
+      "src/command/m_mx_trim.ts(2900-2912)"
+    ],
+    "$id": 812
+  },
+  "删除": {
+    "zh-TW": "删除",
+    "en-US": "delete",
+    "ko-KR": "삭제",
+    "$files": [
+      "src/command/m_mx_trim.ts(3043-3049)"
+    ],
+    "$id": 813
+  },
+  "选择要删除的对象": {
+    "zh-TW": "選擇要删除的對象",
+    "en-US": "Select the object to delete",
+    "ko-KR": "삭제할 객체 선택",
+    "$files": [
+      "src/command/m_mx_trim.ts(4859-4871)"
+    ],
+    "$id": 814
+  },
+  "暂无参与者": {
+    "zh-TW": "暫無參與者",
+    "en-US": "No participants at the moment",
+    "ko-KR": "참가자 없음",
+    "$files": [
+      "src/components/AvatarGroup.vue(312-321)"
+    ],
+    "$id": 815
+  },
+  "取消": {
+    "zh-TW": "取消",
+    "en-US": "Cancel",
+    "ko-KR": "취소",
+    "$files": [
+      "src/components/DialogBase.vue(1002-1008)",
+      "src/composables/useInsertBlock.ts(6423-6429)",
+      "src/services/exportService.ts(4451-4457)",
+      "src/services/exportService.ts(5875-5881)",
+      "src/pages/home/index.vue(4263-4269)",
+      "src/pages/home/index.vue(4606-4612)",
+      "src/pages/home/components/CooperatePopup.vue(5242-5248)",
+      "src/pages/home/components/CooperatePopup.vue(5846-5852)"
+    ],
+    "$id": 819
+  },
+  "确认": {
+    "zh-TW": "確認",
+    "en-US": "confirm",
+    "ko-KR": "확인",
+    "$files": [
+      "src/components/DialogBase.vue(1150-1156)",
+      "src/pages/home/components/DwgOptionsPopup.vue(1495-1501)",
+      "src/pages/home/components/PdfOptionsPopup.vue(1818-1824)"
+    ],
+    "$id": 820
+  },
+  "分享链接已复制": {
+    "zh-TW": "分享連結已複製",
+    "en-US": "The sharing link has been copied",
+    "ko-KR": "공유 링크가 복사됨",
+    "$files": [
+      "src/components/WorkCard.vue(754-765)"
+    ],
+    "$id": 1515
+  },
+  "复制失败": {
+    "zh-TW": "複製失敗",
+    "en-US": "Copy failed",
+    "ko-KR": "복제 실패",
+    "$files": [
+      "src/components/WorkCard.vue(802-810)"
+    ],
+    "$id": 817
+  },
+  "正在打开协同文件...": {
+    "zh-TW": "正在打開協同檔案. ..",
+    "en-US": "Opening collaborative files ..",
+    "ko-KR": "협동 파일을 여는 중입니다...",
+    "$files": [
+      "src/composables/useCollabAutoJoin.ts(850-865)"
+    ],
+    "$id": 821
+  },
+  "加入协同超时": {
+    "zh-TW": "加入協同超時",
+    "en-US": "Join collaboration timeout",
+    "ko-KR": "협동 가입 시간 초과",
+    "$files": [
+      "src/composables/useCollabAutoJoin.ts(1261-1271)",
+      "src/composables/useCollabAutoJoin.ts(3926-3936)",
+      "src/stores/collab.ts(10432-10442)"
+    ],
+    "$id": 822
+  },
+  "请先登录": {
+    "zh-TW": "請先登錄",
+    "en-US": "Please log in first",
+    "ko-KR": "먼저 로그인하십시오.",
+    "$files": [
+      "src/composables/useCollabAutoJoin.ts(1602-1610)",
+      "src/composables/useSave.ts(3182-3190)"
+    ],
+    "$id": 823
+  },
+  "已加入协同": {
+    "zh-TW": "已加入協同",
+    "en-US": "Joined collaboration",
+    "ko-KR": "협동 이미 가입",
+    "$files": [
+      "src/composables/useCollabAutoJoin.ts(3559-3568)",
+      "src/stores/collab.ts(11669-11678)"
+    ],
+    "$id": 824
+  },
+  "已恢复协同连接": {
+    "zh-TW": "已恢復協同連接",
+    "en-US": "Collaborative connection restored",
+    "ko-KR": "협동 연결 복원됨",
+    "$files": [
+      "src/composables/useCollabAutoJoin.ts(3572-3583)",
+      "src/stores/collab.ts(11682-11693)"
+    ],
+    "$id": 825
+  },
+  "该协同已关闭，链接已失效": {
+    "zh-TW": "該協同已關閉，連結已失效",
+    "en-US": "This collaboration has been closed and the link is no longer valid",
+    "ko-KR": "이 협동이 닫혔습니다. 링크가 실패했습니다.",
+    "$files": [
+      "src/composables/useCollabAutoJoin.ts(4162-4178)"
+    ],
+    "$id": 826
+  },
+  "文件路径不存在": {
+    "zh-TW": "檔案路徑不存在",
+    "en-US": "The file path does not exist",
+    "ko-KR": "파일 경로가 없습니다.",
+    "$files": [
+      "src/composables/useFileLoader.ts(3889-3900)",
+      "src/composables/useShareFileLoad.ts(1004-1015)",
+      "src/plugins/mxcad/index.ts(2885-2896)"
+    ],
+    "$id": 827
+  },
+  "无法构造文件访问URL": {
+    "zh-TW": "無法構造檔案訪問URL",
+    "en-US": "Unable to construct file access URL",
+    "ko-KR": "파일을 구성하여 URL에 액세스할 수 없음",
+    "$files": [
+      "src/composables/useFileLoader.ts(4391-4406)",
+      "src/composables/useShareFileLoad.ts(1060-1075)"
+    ],
+    "$id": 828
+  },
+  "文件更新时间无效": {
+    "zh-TW": "檔案更新時間無效",
+    "en-US": "Invalid file update time",
+    "ko-KR": "잘못된 파일 업데이트 시간",
+    "$files": [
+      "src/composables/useFileLoader.ts(4520-4532)"
+    ],
+    "$id": 829
+  },
+  "正在获取文件信息...": {
+    "zh-TW": "正在獲取檔案資訊. ..",
+    "en-US": "Getting file information ..",
+    "ko-KR": "파일 정보를 가져오는 중입니다...",
+    "$files": [
+      "src/composables/useFileLoader.ts(5218-5233)",
+      "src/composables/useFileLoader.ts(5387-5402)",
+      "src/pages/home/index.vue(6455-6470)"
+    ],
+    "$id": 830
+  },
+  "文件不存在": {
+    "zh-TW": "檔案不存在",
+    "en-US": "File does not exist",
+    "ko-KR": "파일이 없습니다.",
+    "$files": [
+      "src/composables/useFileLoader.ts(5567-5576)"
+    ],
+    "$id": 831
+  },
+  "文件已被删除": {
+    "zh-TW": "檔案已被删除",
+    "en-US": "file has been deleted",
+    "ko-KR": "파일이 삭제됨",
+    "$files": [
+      "src/composables/useFileLoader.ts(5679-5689)",
+      "src/composables/useShareFileLoad.ts(898-908)"
+    ],
+    "$id": 832
+  },
+  "文件尚未转换完成": {
+    "zh-TW": "檔案尚未轉換完成",
+    "en-US": "The file has not been converted yet",
+    "ko-KR": "파일이 아직 변환되지 않았습니다.",
+    "$files": [
+      "src/composables/useFileLoader.ts(5757-5769)",
+      "src/composables/useShareFileLoad.ts(952-964)"
+    ],
+    "$id": 833
+  },
+  "正在从缓存加载图纸...": {
+    "zh-TW": "正在從緩存加載圖紙. ..",
+    "en-US": "Loading drawings from cache ..",
+    "ko-KR": "시트가 캐시에서 로드되고 있습니다...",
+    "$files": [
+      "src/composables/useFileLoader.ts(8527-8543)",
+      "src/pages/home/index.vue(6506-6522)"
+    ],
+    "$id": 834
+  },
+  "正在打开图纸...": {
+    "zh-TW": "正在打開圖紙. ..",
+    "en-US": "Opening drawing ..",
+    "ko-KR": "시트를 여는 중입니다...",
+    "$files": [
+      "src/composables/useFileLoader.ts(9102-9115)",
+      "src/composables/useFileLoader.ts(12294-12307)",
+      "src/pages/home/index.vue(6406-6419)"
+    ],
+    "$id": 835
+  },
+  "打开文件失败": {
+    "zh-TW": "打開文件失敗",
+    "en-US": "fail to open file",
+    "ko-KR": "파일 열기 실패",
+    "$files": [
+      "src/composables/useFileLoader.ts(10365-10375)",
+      "src/composables/useFileLoader.ts(12596-12606)"
+    ],
+    "$id": 836
+  },
+  "请登录后访问此文件": {
+    "zh-TW": "請登入後訪問此檔案",
+    "en-US": "Please log in and access this file",
+    "ko-KR": "로그인한 후 이 파일을 방문하십시오.",
+    "$files": [
+      "src/composables/useFileLoader.ts(10708-10721)",
+      "src/composables/useFileLoader.ts(12904-12917)",
+      "src/composables/useShareFileLoad.ts(2163-2176)",
+      "src/utils/errorHandler.ts(2690-2703)"
+    ],
+    "$id": 837
+  },
+  "文件不存在或已被删除": {
+    "zh-TW": "檔案不存在或已被删除",
+    "en-US": "The file does not exist or has been deleted",
+    "ko-KR": "파일이 없거나 삭제됨",
+    "$files": [
+      "src/composables/useFileLoader.ts(10826-10840)",
+      "src/composables/useFileLoader.ts(13022-13036)",
+      "src/utils/errorHandler.ts(2884-2898)"
+    ],
+    "$id": 838
+  },
+  "正在获取公开文件信息...": {
+    "zh-TW": "正在獲取公開檔案資訊. ..",
+    "en-US": "Obtaining public file information ..",
+    "ko-KR": "공개 파일 정보를 가져오는 중입니다...",
+    "$files": [
+      "src/composables/useFileLoader.ts(11587-11604)"
+    ],
+    "$id": 839
+  },
+  "正在加载图纸...": {
+    "zh-TW": "正在加載圖紙. ..",
+    "en-US": "Loading drawings ..",
+    "ko-KR": "시트를 로드하는 중입니다...",
+    "$files": [
+      "src/composables/useFileLoader.ts(11760-11773)"
+    ],
+    "$id": 840
+  },
+  "缺失外部参照文件": {
+    "zh-TW": "缺失外部參照檔案",
+    "en-US": "Missing external reference file",
+    "ko-KR": "외부 참조 파일 누락",
+    "$files": [
+      "src/composables/useFileLoader.ts(15027-15039)"
+    ],
+    "$id": 841
+  },
+  "上传文件": {
+    "zh-TW": "上傳文件",
+    "en-US": "Upload file",
+    "ko-KR": "파일 업로드",
+    "$files": [
+      "src/composables/useFileLoader.ts(15237-15245)",
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(5903-5911)"
+    ],
+    "$id": 842
+  },
+  "知道了": {
+    "zh-TW": "知道了",
+    "en-US": "Understood.",
+    "ko-KR": "알았어",
+    "$files": [
+      "src/composables/useFileLoader.ts(15249-15256)"
+    ],
+    "$id": 843
+  },
+  "跳过": {
+    "zh-TW": "跳過",
+    "en-US": "skip",
+    "ko-KR": "건너뛰기",
+    "$files": [
+      "src/composables/useFileLoader.ts(15283-15289)",
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6264-6270)"
+    ],
+    "$id": 844
+  },
+  "图块名称不能为空": {
+    "zh-TW": "圖塊名稱不能為空",
+    "en-US": "Block name cannot be empty",
+    "ko-KR": "블록 이름은 비워둘 수 없습니다.",
+    "$files": [
+      "src/composables/useInsertBlock.ts(5165-5177)"
+    ],
+    "$id": 1572
+  },
+  "请选择正确的图块": {
+    "zh-TW": "請選擇正確的圖塊",
+    "en-US": "Please select the correct tile",
+    "ko-KR": "올바른 도면을 선택하십시오.",
+    "$files": [
+      "src/composables/useInsertBlock.ts(5298-5310)",
+      "src/composables/useInsertBlock.ts(6107-6119)"
+    ],
+    "$id": 1573
+  },
+  "图块加载中": {
+    "zh-TW": "圖塊加載中",
+    "en-US": "Block loading in progress",
+    "ko-KR": "그림 블록 로드 중",
+    "$files": [
+      "src/composables/useInsertBlock.ts(5556-5565)"
+    ],
+    "$id": 1574
+  },
+  "图块加载失败": {
+    "zh-TW": "圖塊加載失敗",
+    "en-US": "Block loading failed",
+    "ko-KR": "그림 블록 로드 실패",
+    "$files": [
+      "src/composables/useInsertBlock.ts(5885-5895)"
+    ],
+    "$id": 1575
+  },
+  "图块已存在": {
+    "zh-TW": "圖塊已存在",
+    "en-US": "Block already exists",
+    "ko-KR": "그림 블록이 이미 있습니다.",
+    "$files": [
+      "src/composables/useInsertBlock.ts(6307-6316)"
+    ],
+    "$id": 1576
+  },
+  "是否更新图块": {
+    "zh-TW": "是否更新圖塊",
+    "en-US": "Do you want to update the block",
+    "ko-KR": "블록 업데이트 여부",
+    "$files": [
+      "src/composables/useInsertBlock.ts(6340-6350)"
+    ],
+    "$id": 1577
+  },
+  "更新": {
+    "zh-TW": "更新",
+    "en-US": "Update",
+    "ko-KR": "업데이트",
+    "$files": [
+      "src/composables/useInsertBlock.ts(6384-6390)"
+    ],
+    "$id": 1578
+  },
+  "指定插入基点": {
+    "zh-TW": "指定插入基點",
+    "en-US": "Specify insertion base point",
+    "ko-KR": "삽입 기준점 지정",
+    "$files": [
+      "src/composables/useInsertBlock.ts(8445-8455)"
+    ],
+    "$id": 1579
+  },
+  "输入比例因子": {
+    "zh-TW": "輸入比例因數",
+    "en-US": "Input scale factor",
+    "ko-KR": "축척 비율 입력",
+    "$files": [
+      "src/composables/useInsertBlock.ts(9192-9202)"
+    ],
+    "$id": 1580
+  },
+  "插入图块成功": {
+    "zh-TW": "插入圖塊成功",
+    "en-US": "Insert block successfully",
+    "ko-KR": "블록 삽입 성공",
+    "$files": [
+      "src/composables/useInsertBlock.ts(11814-11824)"
+    ],
+    "$id": 1581
+  },
+  "全部": {
+    "zh-TW": "全部",
+    "en-US": "all",
+    "ko-KR": "전부",
+    "$files": [
+      "src/composables/useLibrary.ts(3698-3704)",
+      "src/composables/useLibrary.ts(4091-4097)"
+    ],
+    "$id": 1582
+  },
+  "加载失败": {
+    "zh-TW": "加載失敗",
+    "en-US": "Failed to load",
+    "ko-KR": "로드 실패",
+    "$files": [
+      "src/composables/useLibrary.ts(4393-4401)",
+      "src/composables/useLibrary.ts(5550-5558)"
+    ],
+    "$id": 1583
+  },
+  "文件上传失败": {
+    "zh-TW": "文件上傳失敗",
+    "en-US": "File upload failed",
+    "ko-KR": "파일 업로드 실패",
+    "$files": [
+      "src/composables/useNativeFilePicker.ts(2304-2314)"
+    ],
+    "$id": 845
+  },
+  "当前图纸已被删除，请另存为新文件": {
+    "zh-TW": "當前圖紙已被删除,請另存為新檔案",
+    "en-US": "The current drawing has been deleted. Please save it as a new file",
+    "ko-KR": "현재 시트가 삭제되었으므로 새 파일로 저장하십시오.",
+    "$files": [
+      "src/composables/useSave.ts(3318-3338)",
+      "src/composables/useSave.ts(4452-4472)",
+      "src/composables/useSave.ts(4692-4712)"
+    ],
+    "$id": 1584
+  },
+  "正在保存文件...": {
+    "zh-TW": "正在保存檔案. ..",
+    "en-US": "Saving file ..",
+    "ko-KR": "파일을 저장하는 중입니다...",
+    "$files": [
+      "src/composables/useSave.ts(3407-3420)"
+    ],
+    "$id": 846
+  },
+  "公开文件不支持保存": {
+    "zh-TW": "公開檔案不支持保存",
+    "en-US": "Public files do not support saving",
+    "ko-KR": "공개 파일은 저장을 지원하지 않습니다.",
+    "$files": [
+      "src/composables/useSave.ts(3595-3608)",
+      "src/pages/home/index.vue(7924-7937)"
+    ],
+    "$id": 847
+  },
+  "没有保存权限，请另存为": {
+    "zh-TW": "沒有保存許可權，請另存為",
+    "en-US": "No save permission, please save as",
+    "ko-KR": "저장 권한이 없습니다. 다른 이름으로 저장하십시오.",
+    "$files": [
+      "src/composables/useSave.ts(3790-3805)"
+    ],
+    "$id": 848
+  },
+  "请另存为到云图": {
+    "zh-TW": "請另存為到雲圖",
+    "en-US": "Please save as to cloud map",
+    "ko-KR": "클라우드로 저장",
+    "$files": [
+      "src/composables/useSave.ts(4000-4011)",
+      "src/composables/useSave.ts(7305-7316)"
+    ],
+    "$id": 849
+  },
+  "保存成功": {
+    "zh-TW": "保存成功",
+    "en-US": "Saved successfully",
+    "ko-KR": "저장 성공",
+    "$files": [
+      "src/composables/useSave.ts(5719-5727)",
+      "src/composables/useSave.ts(6326-6334)",
+      "src/composables/useSave.ts(6993-7001)",
+      "src/pages/home/components/SaveAsSheet.vue(5051-5059)"
+    ],
+    "$id": 850
+  },
+  "无资源库管理权限，请另存为到其他位置": {
+    "zh-TW": "無資源庫管理許可權，請另存為到其他位置",
+    "en-US": "No resource library management permission, please save as to another location",
+    "ko-KR": "저장소 관리 권한이 없습니다. 다른 위치로 저장하십시오.",
+    "$files": [
+      "src/composables/useSave.ts(6592-6614)"
+    ],
+    "$id": 851
+  },
+  "分享链接不存在或已失效": {
+    "zh-TW": "分享連結不存在或已失效",
+    "en-US": "The sharing link does not exist or has expired",
+    "ko-KR": "공유 링크가 없거나 유효하지 않음",
+    "$files": [
+      "src/composables/useShareFileLoad.ts(685-700)",
+      "src/composables/useShareFileLoad.ts(2275-2290)"
+    ],
+    "$id": 852
+  },
+  "缺少项目信息或文件路径": {
+    "zh-TW": "缺少項目資訊或檔案路徑",
+    "en-US": "Missing project information or file path",
+    "ko-KR": "프로젝트 정보 또는 파일 경로 누락",
+    "$files": [
+      "src/composables/useVersionHistory.ts(916-931)"
+    ],
+    "$id": 853
+  },
+  "加载版本历史失败": {
+    "zh-TW": "加載版本歷史失敗",
+    "en-US": "Failed to load version history",
+    "ko-KR": "버전 기록 로드 실패",
+    "$files": [
+      "src/composables/useVersionHistory.ts(1580-1592)",
+      "src/composables/useVersionHistory.ts(1739-1751)"
+    ],
+    "$id": 854
+  },
+  "无法打开历史版本：缺少文件ID": {
+    "zh-TW": "無法打開歷史版本：缺少檔案ID",
+    "en-US": "Unable to open historical versions: missing file ID",
+    "ko-KR": "히스토리 버전을 열 수 없음: 파일 ID 누락",
+    "$files": [
+      "src/composables/useVersionHistory.ts(2028-2047)"
+    ],
+    "$id": 855
+  },
+  "下载完成": {
+    "zh-TW": "下載完成",
+    "en-US": "Download completed",
+    "ko-KR": "다운로드 완료",
+    "$files": [
+      "src/services/exportService.ts(1158-1166)",
+      "src/services/exportService.ts(2103-2111)"
+    ],
+    "$id": 863
+  },
+  "正在转换...": {
+    "zh-TW": "正在轉換. ..",
+    "en-US": "Converting in progress ..",
+    "ko-KR": "변환 중입니다...",
+    "$files": [
+      "src/services/exportService.ts(1199-1210)",
+      "src/pages/home/index.vue(6365-6376)"
+    ],
+    "$id": 864
+  },
+  "上传文件失败": {
+    "zh-TW": "上傳文件失敗",
+    "en-US": "Upload file failed",
+    "ko-KR": "파일 업로드 실패",
+    "$files": [
+      "src/services/exportService.ts(1316-1326)"
+    ],
+    "$id": 865
+  },
+  "转换失败": {
+    "zh-TW": "轉換失敗",
+    "en-US": "Conversion failed",
+    "ko-KR": "변환 실패",
+    "$files": [
+      "src/services/exportService.ts(1829-1837)",
+      "src/services/exportService.ts(2153-2161)"
+    ],
+    "$id": 866
+  },
+  "转换失败：无返回数据": {
+    "zh-TW": "轉換失敗：無返回數據",
+    "en-US": "Conversion failed: No data returned",
+    "ko-KR": "변환 실패: 반환된 데이터가 없습니다.",
+    "$files": [
+      "src/services/exportService.ts(1992-2006)"
+    ],
+    "$id": 867
+  },
+  "选择导出格式": {
+    "zh-TW": "選擇匯出格式",
+    "en-US": "Select export format",
+    "ko-KR": "내보내기 형식 선택",
+    "$files": [
+      "src/services/exportService.ts(4418-4428)"
+    ],
+    "$id": 868
+  },
+  "导出 PDF": {
+    "zh-TW": "匯出PDF",
+    "en-US": "Export PDF",
+    "ko-KR": "PDF 내보내기",
+    "$files": [
+      "src/services/exportService.ts(5386-5396)",
+      "src/services/exportService.ts(5518-5528)",
+      "src/pages/home/components/PdfOptionsPopup.vue(669-679)"
+    ],
+    "$id": 869
+  },
+  "导出 DWG": {
+    "zh-TW": "匯出DWG",
+    "en-US": "Export DWG",
+    "ko-KR": "DWG 내보내기",
+    "$files": [
+      "src/services/exportService.ts(5413-5423)",
+      "src/services/exportService.ts(5544-5554)",
+      "src/pages/home/components/DwgOptionsPopup.vue(625-635)"
+    ],
+    "$id": 870
+  },
+  "导出 DXF": {
+    "zh-TW": "匯出DXF",
+    "en-US": "Export DXF",
+    "ko-KR": "DXF 내보내기",
+    "$files": [
+      "src/services/exportService.ts(5440-5450)",
+      "src/services/exportService.ts(5570-5580)",
+      "src/pages/home/components/DwgOptionsPopup.vue(639-649)"
+    ],
+    "$id": 871
+  },
+  "导出": {
+    "zh-TW": "匯出",
+    "en-US": "export",
+    "ko-KR": "내보내기",
+    "$files": [
+      "src/services/exportService.ts(5846-5852)",
+      "src/plugins/vant/components/leadingOut/LeadingOutPopup.vue(118-124)"
+    ],
+    "$id": 872
+  },
+  "获取文件数据失败": {
+    "zh-TW": "獲取檔案數據失敗",
+    "en-US": "Failed to retrieve file data",
+    "ko-KR": "파일 데이터 가져오기 실패",
+    "$files": [
+      "src/services/saveService.ts(809-821)"
+    ],
+    "$id": 873
+  },
+  "协同服务未就绪": {
+    "zh-TW": "協同服務未就緒",
+    "en-US": "Collaboration service not ready",
+    "ko-KR": "공동 작업 지원 안 함",
+    "$files": [
+      "src/stores/collab.ts(2512-2523)",
+      "src/stores/collab.ts(7708-7719)",
+      "src/stores/collab.ts(10092-10103)"
+    ],
+    "$id": 856
+  },
+  "获取协同列表超时": {
+    "zh-TW": "獲取協同清單超時",
+    "en-US": "Getting collaborative list timeout",
+    "ko-KR": "협동 목록 가져오기 시간 초과",
+    "$files": [
+      "src/stores/collab.ts(2712-2724)"
+    ],
+    "$id": 857
+  },
+  "协同已创建": {
+    "zh-TW": "協同已創建",
+    "en-US": "Collaboration has been created",
+    "ko-KR": "협동이 생성됨",
+    "$files": [
+      "src/stores/collab.ts(8063-8072)"
+    ],
+    "$id": 858
+  },
+  "已在协同中": {
+    "zh-TW": "已在協同中",
+    "en-US": "Already in collaboration",
+    "ko-KR": "이미 협동 중",
+    "$files": [
+      "src/stores/collab.ts(8227-8236)"
+    ],
+    "$id": 859
+  },
+  "未命名图纸": {
+    "zh-TW": "未命名圖紙",
+    "en-US": "Unnamed drawing",
+    "ko-KR": "명명되지 않은 시트",
+    "$files": [
+      "src/stores/collab.ts(8401-8410)"
+    ],
+    "$id": 860
+  },
+  "该协同已关闭": {
+    "zh-TW": "該協同已關閉",
+    "en-US": "This collaboration has been closed",
+    "ko-KR": "이 협동이 닫혔습니다",
+    "$files": [
+      "src/stores/collab.ts(11774-11784)"
+    ],
+    "$id": 861
+  },
+  "已退出协同": {
+    "zh-TW": "已退出協同",
+    "en-US": "Already exited collaboration",
+    "ko-KR": "협동 종료",
+    "$files": [
+      "src/stores/collab.ts(12574-12583)"
+    ],
+    "$id": 862
+  },
+  "业务处理失败": {
+    "zh-TW": "業務處理失敗",
+    "en-US": "Business processing failed",
+    "ko-KR": "업무 처리 실패",
+    "$files": [
+      "src/utils/apiConfig.ts(2518-2528)"
+    ],
+    "$id": 874
+  },
+  "请求已取消": {
+    "zh-TW": "請求已取消",
+    "en-US": "Request cancelled",
+    "ko-KR": "요청이 취소됨",
+    "$files": [
+      "src/utils/errorHandler.ts(2513-2522)"
+    ],
+    "$id": 875
+  },
+  "网络连接失败，请检查网络": {
+    "zh-TW": "網絡連接失敗，請檢查網絡",
+    "en-US": "Network connection failed, please check the network",
+    "ko-KR": "네트워크 연결이 실패했습니다. 네트워크를 확인하십시오.",
+    "$files": [
+      "src/utils/errorHandler.ts(2601-2617)"
+    ],
+    "$id": 876
+  },
+  "没有执行此操作的权限": {
+    "zh-TW": "沒有執行此操作的許可權",
+    "en-US": "Do not have permission to perform this operation",
+    "ko-KR": "이 작업을 수행할 권한이 없습니다.",
+    "$files": [
+      "src/utils/errorHandler.ts(2788-2802)"
+    ],
+    "$id": 877
+  },
+  "服务器错误，请稍后重试": {
+    "zh-TW": "服務器錯誤，請稍後重試",
+    "en-US": "Server error, please try again later",
+    "ko-KR": "서버 오류, 나중에 다시 시도하십시오.",
+    "$files": [
+      "src/utils/errorHandler.ts(2975-2990)"
+    ],
+    "$id": 878
+  },
+  "未知错误": {
+    "zh-TW": "未知錯誤",
+    "en-US": "Unknown error",
+    "ko-KR": "알 수 없는 오류",
+    "$files": [
+      "src/utils/errorHandler.ts(3116-3124)"
+    ],
+    "$id": 879
+  },
+  "指定第一点": {
+    "zh-TW": "指定第一點",
+    "en-US": "Specify the first point",
+    "ko-KR": "첫 번째 점 지정",
+    "$files": [
+      "src/command/annotation/m_mx_lead_comment.tsx(548-557)",
+      "src/command/measurement/m_mx_measuring_angle.ts(929-938)",
+      "src/command/measurement/m_mx_measuring_area.ts(424-433)",
+      "src/command/measurement/m_mx_measuring_area.ts(1687-1696)"
+    ],
+    "$id": 880
+  },
+  "指定第二点": {
+    "zh-TW": "指定第二點",
+    "en-US": "Specify the second point",
+    "ko-KR": "두 번째 점 지정",
+    "$files": [
+      "src/command/annotation/m_mx_lead_comment.tsx(1597-1606)"
+    ],
+    "$id": 881
+  },
+  "点击选择对象": {
+    "zh-TW": "點擊選擇對象",
+    "en-US": "Click to select object",
+    "ko-KR": "클릭하여 객체 선택",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(404-414)",
+      "src/command/layer/set_current.tsx(460-470)",
+      "src/command/layer/turn_off_other_layers.tsx(448-458)"
+    ],
+    "$id": 882
+  },
+  "未选中对象, 无法关闭图层": {
+    "zh-TW": "未選中對象,無法關閉圖層",
+    "en-US": "No object selected, unable to close layer",
+    "ko-KR": "객체가 선택되지 않아 도면층을 닫을 수 없습니다.",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(578-595)"
+    ],
+    "$id": 883
+  },
+  "获取该对象图层失败": {
+    "zh-TW": "獲取該對象圖層失敗",
+    "en-US": "Failed to retrieve the object layer",
+    "ko-KR": "객체 레이어를 가져오지 못했습니다.",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(1308-1321)"
+    ],
+    "$id": 884
+  },
+  "成功关闭该对象所在图层": {
+    "zh-TW": "成功關閉該對象所在圖層",
+    "en-US": "Successfully closed the layer where the object is located",
+    "ko-KR": "객체가 있는 도면층을 성공적으로 닫았습니다.",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(1598-1613)"
+    ],
+    "$id": 885
+  },
+  "所选图层为当前图层": {
+    "zh-TW": "所選圖層為當前圖層",
+    "en-US": "The selected layer is the current layer",
+    "ko-KR": "선택한 도면층이 현재 도면층입니다.",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(1790-1803)"
+    ],
+    "$id": 886
+  },
+  "是否关闭": {
+    "zh-TW": "是否關閉",
+    "en-US": "Whether to close",
+    "ko-KR": "종료 여부",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(1814-1822)"
+    ],
+    "$id": 887
+  },
+  "是否关闭该对象所在图层": {
+    "zh-TW": "是否關閉該對象所在圖層",
+    "en-US": "Do you want to close the layer where the object is located",
+    "ko-KR": "객체가 있는 도면층을 닫을지 여부",
+    "$files": [
+      "src/command/layer/close_the_layer.tsx(2046-2061)"
+    ],
+    "$id": 888
+  },
+  "所有图层均已打开": {
+    "zh-TW": "所有圖層均已打開",
+    "en-US": "All layers have been opened",
+    "ko-KR": "모든 도면층이 열려 있습니다.",
+    "$files": [
+      "src/command/layer/fully_open_layers.tsx(595-607)"
+    ],
+    "$id": 889
+  },
+  "新建图层": {
+    "zh-TW": "新建圖層",
+    "en-US": "New Layer ",
+    "ko-KR": "새 도면층",
+    "$files": [
+      "src/command/layer/new_layer.tsx(312-320)"
+    ],
+    "$id": 890
+  },
+  "图层名": {
+    "zh-TW": "圖層名",
+    "en-US": "Layer Name",
+    "ko-KR": "도면층 이름",
+    "$files": [
+      "src/command/layer/new_layer.tsx(383-390)"
+    ],
+    "$id": 891
+  },
+  "请输入新建的图层名称": {
+    "zh-TW": "請輸入新建的圖層名稱",
+    "en-US": "Please enter the name of the newly created layer",
+    "ko-KR": "새 도면층 이름을 입력하십시오.",
+    "$files": [
+      "src/command/layer/new_layer.tsx(406-420)"
+    ],
+    "$id": 892
+  },
+  "图层创建失败": {
+    "zh-TW": "圖層創建失敗",
+    "en-US": "Layer creation failed",
+    "ko-KR": "도면층 작성 실패",
+    "$files": [
+      "src/command/layer/new_layer.tsx(756-766)"
+    ],
+    "$id": 893
+  },
+  "图层创建成功": {
+    "zh-TW": "圖層創建成功",
+    "en-US": "Layer creation successful",
+    "ko-KR": "도면층이 성공적으로 작성되었습니다.",
+    "$files": [
+      "src/command/layer/new_layer.tsx(920-930)"
+    ],
+    "$id": 894
+  },
+  "没有上一置顶图层状态": {
+    "zh-TW": "沒有上一置頂圖層狀態",
+    "en-US": "No previous top layer status",
+    "ko-KR": "마지막으로 설정된 도면층 상태가 없습니다.",
+    "$files": [
+      "src/command/layer/restores_the_previous_layer_current.tsx(372-386)"
+    ],
+    "$id": 895
+  },
+  "已恢复上一置顶图层": {
+    "zh-TW": "已恢復上一置頂圖層",
+    "en-US": "The previous pinned layer has been restored",
+    "ko-KR": "마지막으로 설정된 도면층이 복원됨",
+    "$files": [
+      "src/command/layer/restores_the_previous_layer_current.tsx(569-582)"
+    ],
+    "$id": 896
+  },
+  "未选中对象, 置为当前图层失败": {
+    "zh-TW": "未選中對象,置為當前圖層失敗",
+    "en-US": "Object not selected, failed to set as current layer",
+    "ko-KR": "선택되지 않은 객체, 현재 도면층으로 설정 실패",
+    "$files": [
+      "src/command/layer/set_current.tsx(634-653)"
+    ],
+    "$id": 897
+  },
+  "是否将图层": {
+    "zh-TW": "是否將圖層",
+    "en-US": "Do you want to add layers",
+    "ko-KR": "도면층을",
+    "$files": [
+      "src/command/layer/set_current.tsx(1138-1147)"
+    ],
+    "$id": 898
+  },
+  "置为": {
+    "zh-TW": "置為",
+    "en-US": "set as",
+    "ko-KR": "설정",
+    "$files": [
+      "src/command/layer/set_current.tsx(1166-1172)"
+    ],
+    "$id": 899
+  },
+  "当前图层": {
+    "zh-TW": "當前圖層",
+    "en-US": "Current Layer ",
+    "ko-KR": "현재 도면층",
+    "$files": [
+      "src/command/layer/set_current.tsx(1176-1184)"
+    ],
+    "$id": 900
+  },
+  "置为当前图层成功": {
+    "zh-TW": "置為當前圖層成功",
+    "en-US": "Set as current layer successfully",
+    "ko-KR": "현재 도면층으로 설정 성공",
+    "$files": [
+      "src/command/layer/set_current.tsx(1623-1635)"
+    ],
+    "$id": 901
+  },
+  "未选中对象": {
+    "zh-TW": "未選中對象",
+    "en-US": "No object selected",
+    "ko-KR": "선택되지 않은 객체",
+    "$files": [
+      "src/command/layer/turn_off_other_layers.tsx(622-631)"
+    ],
+    "$id": 902
+  },
+  "无法确定需要关闭的图层": {
+    "zh-TW": "無法確定需要關閉的圖層",
+    "en-US": "Unable to determine which layer needs to be closed",
+    "ko-KR": "닫아야 할 도면층을 확인할 수 없습니다.",
+    "$files": [
+      "src/command/layer/turn_off_other_layers.tsx(641-656)"
+    ],
+    "$id": 903
+  },
+  "是否关闭除该对象所在图层": {
+    "zh-TW": "是否關閉除該對象所在圖層",
+    "en-US": "Do you want to turn off layers other than the one where the object is located",
+    "ko-KR": "객체를 제외한 도면층을 닫을지 여부",
+    "$files": [
+      "src/command/layer/turn_off_other_layers.tsx(1141-1157)"
+    ],
+    "$id": 904
+  },
+  "以外的": {
+    "zh-TW": "以外的",
+    "en-US": "other than",
+    "ko-KR": "이외의",
+    "$files": [
+      "src/command/layer/turn_off_other_layers.tsx(1175-1182)"
+    ],
+    "$id": 905
+  },
+  "所有图层": {
+    "zh-TW": "所有圖層",
+    "en-US": "All Layers ",
+    "ko-KR": "모든 도면층",
+    "$files": [
+      "src/command/layer/turn_off_other_layers.tsx(1186-1194)"
+    ],
+    "$id": 906
+  },
+  "成功关闭除该对象所在图层以外的所有图层": {
+    "zh-TW": "成功關閉除該對象所在圖層以外的所有圖層",
+    "en-US": "Successfully closed all layers except for the layer where the object is located",
+    "ko-KR": "객체가 있는 도면층을 제외한 모든 도면층을 성공적으로 닫았습니다.",
+    "$files": [
+      "src/command/layer/turn_off_other_layers.tsx(1928-1951)"
+    ],
+    "$id": 907
+  },
+  "指定第一条尺寸界线原点": {
+    "zh-TW": "指定第一條尺寸界線原點",
+    "en-US": "Specify the origin of the first dimension boundary line",
+    "ko-KR": "첫 번째 치수보조선 원점 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(886-901)",
+      "src/command/marked/m_mx_linear_marked.tsx(1622-1637)",
+      "src/command/measurement/m_mx_measuring_length.ts(3497-3512)"
+    ],
+    "$id": 908
+  },
+  "选择标注对象": {
+    "zh-TW": "選擇標注對象",
+    "en-US": "Select annotation object",
+    "ko-KR": "치수 객체 선택",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(1777-1787)",
+      "src/command/marked/m_mx_linear_marked.tsx(2511-2521)",
+      "src/command/measurement/m_mx_measuring_length.ts(4412-4422)"
+    ],
+    "$id": 909
+  },
+  "所选对象不是直线、圆弧或圆。": {
+    "zh-TW": "所選對象不是直線、圓弧或圓。",
+    "en-US": "The selected object is not a line, arc, or circle.",
+    "ko-KR": "선택한 객체는 선, 호 또는 원이 아닙니다.",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(3320-3338)",
+      "src/command/marked/m_mx_linear_marked.tsx(4037-4055)",
+      "src/command/measurement/m_mx_measuring_length.ts(5955-5973)"
+    ],
+    "$id": 910
+  },
+  "指定第二条尺寸界线原点": {
+    "zh-TW": "指定第二條尺寸界線原點",
+    "en-US": "Specify the origin of the second dimension boundary line",
+    "ko-KR": "두 번째 치수보조선 원점 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(3434-3449)",
+      "src/command/marked/m_mx_linear_marked.tsx(4151-4166)",
+      "src/command/measurement/m_mx_measuring_length.ts(6069-6084)"
+    ],
+    "$id": 911
+  },
+  "指定尺寸线位置": {
+    "zh-TW": "指定尺寸線位置",
+    "en-US": "Specify the position of the dimension line",
+    "ko-KR": "치수 선 위치 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(3744-3755)",
+      "src/command/marked/m_mx_linear_marked.tsx(4533-4544)",
+      "src/command/measurement/m_mx_measuring_length.ts(6379-6390)"
+    ],
+    "$id": 912
+  },
+  "文本": {
+    "zh-TW": "文字",
+    "en-US": "text",
+    "ko-KR": "텍스트",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(3787-3793)",
+      "src/command/marked/m_mx_linear_marked.tsx(4577-4583)",
+      "src/command/measurement/m_mx_measuring_length.ts(6422-6428)"
+    ],
+    "$id": 913
+  },
+  "请输入标注文字": {
+    "zh-TW": "請輸入標注文字",
+    "en-US": "Please enter the annotation text",
+    "ko-KR": "치수 문자를 입력하십시오.",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(4581-4592)",
+      "src/command/marked/m_mx_dimangular.tsx(9125-9136)",
+      "src/command/marked/m_mx_linear_marked.tsx(6525-6536)"
+    ],
+    "$id": 914
+  },
+  "指定标注文字的角度": {
+    "zh-TW": "指定標注文字的角度",
+    "en-US": "Specify the angle of the annotation text",
+    "ko-KR": "치수 문자의 각도 지정",
+    "$files": [
+      "src/command/marked/m_mx_aligned_marked.tsx(5180-5193)",
+      "src/command/marked/m_mx_dimangular.tsx(9785-9798)",
+      "src/command/marked/m_mx_linear_marked.tsx(7124-7137)",
+      "src/command/measurement/m_mx_measuring_length.ts(7723-7736)"
+    ],
+    "$id": 915
+  },
+  "选择圆弧或者圆": {
+    "zh-TW": "選擇圓弧或者圓",
+    "en-US": "Select arc or circle",
+    "ko-KR": "호 또는 원 선택",
+    "$files": [
+      "src/command/marked/m_mx_diametric_dimension.ts(701-712)",
+      "src/command/marked/m_mx_radial_dimension.ts(688-699)"
+    ],
+    "$id": 916
+  },
+  "所选对象不是圆弧或圆": {
+    "zh-TW": "所選對象不是圓弧或圓",
+    "en-US": "The selected object is not an arc or circle",
+    "ko-KR": "선택한 객체가 호 또는 원이 아닙니다.",
+    "$files": [
+      "src/command/marked/m_mx_diametric_dimension.ts(1810-1824)",
+      "src/command/marked/m_mx_radial_dimension.ts(1490-1504)"
+    ],
+    "$id": 917
+  },
+  "选择圆弧、圆、直线": {
+    "zh-TW": "選擇圓弧、圓、直線",
+    "en-US": "Select arcs, circles, and lines",
+    "ko-KR": "호, 원, 선 선택",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(1791-1804)"
+    ],
+    "$id": 918
+  },
+  "指定顶点": {
+    "zh-TW": "指定頂點",
+    "en-US": "Specify vertex",
+    "ko-KR": "정점 지정",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(1840-1848)"
+    ],
+    "$id": 919
+  },
+  "指定角顶点": {
+    "zh-TW": "指定角頂點",
+    "en-US": "Specify corner vertices",
+    "ko-KR": "각도 정점 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(2464-2473)"
+    ],
+    "$id": 920
+  },
+  "指定角的第一个端点": {
+    "zh-TW": "指定角的第一個端點",
+    "en-US": "Specify first angle endpoint ",
+    "ko-KR": "각도의 첫 번째 끝점 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(2614-2627)"
+    ],
+    "$id": 921
+  },
+  "指定角的第二个端点": {
+    "zh-TW": "指定角的第二個端點",
+    "en-US": "Specify the second endpoint of the corner",
+    "ko-KR": "각도의 두 번째 끝점 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(2735-2748)",
+      "src/command/marked/m_mx_dimangular.tsx(3985-3998)"
+    ],
+    "$id": 922
+  },
+  "所选对象不是直线": {
+    "zh-TW": "所選對象不是直線",
+    "en-US": "The selected object is not a straight line",
+    "ko-KR": "선택한 객체가 선이 아닙니다.",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(6913-6925)"
+    ],
+    "$id": 923
+  },
+  "指定标注弧线位置": {
+    "zh-TW": "指定標注弧線位置",
+    "en-US": "Specify the position of the annotation arc",
+    "ko-KR": "치수 호 위치 지정",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(8275-8287)"
+    ],
+    "$id": 924
+  },
+  "文字": {
+    "zh-TW": "文字",
+    "en-US": "text",
+    "ko-KR": "글자",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(8323-8329)"
+    ],
+    "$id": 925
+  },
+  "象限点": {
+    "zh-TW": "象限點",
+    "en-US": "Quadrant point",
+    "ko-KR": "사분점",
+    "$files": [
+      "src/command/marked/m_mx_dimangular.tsx(8351-8358)"
+    ],
+    "$id": 926
+  },
+  "水平": {
+    "zh-TW": "水准",
+    "en-US": "level",
+    "ko-KR": "수평",
+    "$files": [
+      "src/command/marked/m_mx_linear_marked.tsx(4646-4652)"
+    ],
+    "$id": 927
+  },
+  "垂直": {
+    "zh-TW": "垂直",
+    "en-US": "vertical",
+    "ko-KR": "수직",
+    "$files": [
+      "src/command/marked/m_mx_linear_marked.tsx(4665-4671)"
+    ],
+    "$id": 928
+  },
+  "旋转": {
+    "zh-TW": "旋轉",
+    "en-US": "rotate",
+    "ko-KR": "회전",
+    "$files": [
+      "src/command/marked/m_mx_linear_marked.tsx(4690-4696)",
+      "src/pages/home/components/InsertBlockPopup.vue(3624-3630)"
+    ],
+    "$id": 929
+  },
+  "指定尺寸线的角度": {
+    "zh-TW": "指定尺寸線的角度",
+    "en-US": "Specify the angle of the dimension line",
+    "ko-KR": "치수 선의 각도 지정하기",
+    "$files": [
+      "src/command/marked/m_mx_linear_marked.tsx(7767-7779)"
+    ],
+    "$id": 930
+  },
+  "指定第二个角度点": {
+    "zh-TW": "指定第二個角度點",
+    "en-US": "Specify the second angle point",
+    "ko-KR": "두 번째 각도 점 지정하기",
+    "$files": [
+      "src/command/measurement/m_mx_measuring_angle.ts(1054-1066)"
+    ],
+    "$id": 931
+  },
+  "指定最后一个点": {
+    "zh-TW": "指定最後一個點",
+    "en-US": "Specify the last point",
+    "ko-KR": "마지막 점 지정",
+    "$files": [
+      "src/command/measurement/m_mx_measuring_angle.ts(1373-1384)"
+    ],
+    "$id": 932
+  },
+  "指定坐标点": {
+    "zh-TW": "指定座標點",
+    "en-US": "Specify coordinate points",
+    "ko-KR": "좌표점 지정",
+    "$files": [
+      "src/command/measurement/m_mx_measuring_coordinate.ts(486-495)"
+    ],
+    "$id": 933
+  },
+  "指定标注点": {
+    "zh-TW": "指定標注點",
+    "en-US": "Specify annotation points",
+    "ko-KR": "치수 점 지정",
+    "$files": [
+      "src/command/measurement/m_mx_measuring_coordinate.ts(1062-1071)"
+    ],
+    "$id": 934
+  },
+  "输入标注文字": {
+    "zh-TW": "輸入標注文字",
+    "en-US": "Enter annotation text",
+    "ko-KR": "치수 문자 입력",
+    "$files": [
+      "src/command/measurement/m_mx_measuring_length.ts(7194-7204)"
+    ],
+    "$id": 935
+  },
+  "打开图纸失败": {
+    "zh-TW": "打開圖紙失敗",
+    "en-US": "Failed to open drawing",
+    "ko-KR": "시트 열기 실패",
+    "$files": [
+      "src/command/open/index.ts(1189-1199)",
+      "src/command/open/index.ts(2655-2665)",
+      "src/pages/home/components/LibraryPanel.vue(8366-8376)"
+    ],
+    "$id": 936
+  },
+  "更新显示": {
+    "zh-TW": "更新顯示",
+    "en-US": "update display",
+    "ko-KR": "디스플레이 업데이트",
+    "$files": [
+      "src/command/open/index.ts(2535-2543)"
+    ],
+    "$id": 939
+  },
+  "工具": {
+    "zh-TW": "工具",
+    "en-US": "tool",
+    "ko-KR": "도구",
+    "$files": [
+      "src/pages/home/hooks.tsx(717-723)"
+    ],
+    "$id": 940
+  },
+  "未保存的更改": {
+    "zh-TW": "未保存的更改",
+    "en-US": "Unsaved changes",
+    "ko-KR": "저장되지 않은 변경 내용",
+    "$files": [
+      "src/pages/home/index.vue(4143-4153)",
+      "src/pages/home/index.vue(11862-11872)",
+      "src/pages/home/components/CooperatePopup.vue(5124-5134)"
+    ],
+    "$id": 941
+  },
+  "当前图纸有未保存的更改，确定要返回吗？": {
+    "zh-TW": "當前圖紙有未保存的更改，確定要返回嗎？",
+    "en-US": "There are unsaved changes in the current drawing. Are you sure you want to return them?",
+    "ko-KR": "현재 시트에 저장되지 않은 변경 사항이 있습니다. 되돌리시겠습니까?",
+    "$files": [
+      "src/pages/home/index.vue(4173-4196)"
+    ],
+    "$id": 942
+  },
+  "确定返回": {
+    "zh-TW": "確定返回",
+    "en-US": "Confirm return",
+    "ko-KR": "반환 확인",
+    "$files": [
+      "src/pages/home/index.vue(4226-4234)"
+    ],
+    "$id": 943
+  },
+  "退出协同": {
+    "zh-TW": "退出協同",
+    "en-US": "Exit Collaboration",
+    "ko-KR": "협동 종료",
+    "$files": [
+      "src/pages/home/index.vue(4488-4496)",
+      "src/pages/home/components/CooperatePopup.vue(5744-5752)",
+      "src/pages/home/components/CooperatePopup.vue(8949-8957)"
+    ],
+    "$id": 1516
+  },
+  "当前正在协同编辑中，离开页面将退出当前协同，是否继续？": {
+    "zh-TW": "當前正在協同編輯中,離開頁面將退出當前協同,是否繼續？",
+    "en-US": "Currently in collaborative editing, leaving the page will exit the current collaboration. Do you want to continue?",
+    "ko-KR": "현재 협동 편집 중입니다. 페이지를 나가면 현재 협동을 종료합니다. 계속하시겠습니까?",
+    "$files": [
+      "src/pages/home/index.vue(4514-4545)"
+    ],
+    "$id": 1517
+  },
+  "继续": {
+    "zh-TW": "繼續",
+    "en-US": "Continue",
+    "ko-KR": "계속",
+    "$files": [
+      "src/pages/home/index.vue(4573-4579)"
+    ],
+    "$id": 1518
+  },
+  "[协同中]": {
+    "zh-TW": "[協同中]",
+    "en-US": "[Collaborative]",
+    "ko-KR": "[협동 중]",
+    "$files": [
+      "src/pages/home/index.vue(5873-5882)"
+    ],
+    "$id": 944
+  },
+  "上传中...": {
+    "zh-TW": "上傳中...",
+    "en-US": "Uploading...",
+    "ko-KR": "업로드 중...",
+    "$files": [
+      "src/pages/home/index.vue(6322-6332)"
+    ],
+    "$id": 1524
+  },
+  "加载中...": {
+    "zh-TW": "加載中. ..",
+    "en-US": "Loading in progress ..",
+    "ko-KR": "로드 중...",
+    "$files": [
+      "src/pages/home/index.vue(6567-6577)",
+      "src/pages/home/components/CooperatePopup.vue(6921-6931)",
+      "src/pages/home/components/LibraryPanel.vue(1875-1885)"
+    ],
+    "$id": 972
+  },
+  "没有保存权限": {
+    "zh-TW": "沒有保存許可權",
+    "en-US": "No save permission",
+    "ko-KR": "저장 권한 없음",
+    "$files": [
+      "src/pages/home/index.vue(8007-8017)"
+    ],
+    "$id": 945
+  },
+  "公开文件不支持版本历史": {
+    "zh-TW": "公開檔案不支持版本歷史",
+    "en-US": "Public files do not support version history",
+    "ko-KR": "공개 파일은 버전 기록을 지원하지 않습니다.",
+    "$files": [
+      "src/pages/home/index.vue(9941-9956)"
+    ],
+    "$id": 946
+  },
+  "本地图纸无版本历史": {
+    "zh-TW": "本地圖紙無版本歷史",
+    "en-US": "Local drawings have no version history",
+    "ko-KR": "로컬 시트에 버전 기록 없음",
+    "$files": [
+      "src/pages/home/index.vue(10025-10038)"
+    ],
+    "$id": 947
+  },
+  "没有查看版本历史的权限": {
+    "zh-TW": "沒有查看版本歷史的許可權",
+    "en-US": "No permission to view version history",
+    "ko-KR": "버전 기록 보기 권한이 없습니다.",
+    "$files": [
+      "src/pages/home/index.vue(10120-10135)"
+    ],
+    "$id": 948
+  },
+  "当前图纸有未保存的更改，是否保存？": {
+    "zh-TW": "當前圖紙有未保存的更改，是否保存？",
+    "en-US": "There are unsaved changes in the current drawing. Do you want to save them?",
+    "ko-KR": "현재 시트에 저장되지 않은 변경 사항이 있습니다. 저장하시겠습니까?",
+    "$files": [
+      "src/pages/home/index.vue(11892-11913)"
+    ],
+    "$id": 949
+  },
+  "保存": {
+    "zh-TW": "保存",
+    "en-US": "save",
+    "ko-KR": "저장",
+    "$files": [
+      "src/pages/home/index.vue(11943-11949)",
+      "src/pages/home/components/CommitMessageDialog.vue(570-576)"
+    ],
+    "$id": 950
+  },
+  "不保存": {
+    "zh-TW": "不保存",
+    "en-US": "Do not save",
+    "ko-KR": "저장하지 않음",
+    "$files": [
+      "src/pages/home/index.vue(11978-11985)"
+    ],
+    "$id": 951
+  },
+  "已新建空白图纸": {
+    "zh-TW": "已新建空白圖紙",
+    "en-US": "New blank drawing created",
+    "ko-KR": "새 빈 시트",
+    "$files": [
+      "src/pages/home/index.vue(12334-12345)"
+    ],
+    "$id": 952
+  },
+  "协作图纸": {
+    "zh-TW": "合作圖紙",
+    "en-US": "Collaborative drawings",
+    "ko-KR": "공동 작업 시트",
+    "$files": [
+      "src/pages/home/index.vue(15637-15645)"
+    ],
+    "$id": 953
+  },
+  "提示": {
+    "zh-TW": "提示",
+    "en-US": "Prompt",
+    "ko-KR": "힌트",
+    "$files": [
+      "src/pages/home/index.vue(23244-23250)"
+    ],
+    "$id": 1585
+  },
+  "实时协同只支持私有化部署，请点击": {
+    "zh-TW": "實时協同只支持私有化部署,請點擊",
+    "en-US": "Real time collaboration only supports private deployment, please click",
+    "ko-KR": "실시간 공동 작업은 프라이빗 배포만 지원합니다.",
+    "$files": [
+      "src/pages/home/index.vue(23414-23434)"
+    ],
+    "$id": 1586
+  },
+  "查看文档": {
+    "zh-TW": "查看檔案",
+    "en-US": "View the document",
+    "ko-KR": "문서 보기",
+    "$files": [
+      "src/pages/home/index.vue(23642-23650)"
+    ],
+    "$id": 1587
+  },
+  "或者联系客服": {
+    "zh-TW": "或者聯系客服",
+    "en-US": "Or contact customer service",
+    "ko-KR": "아니면 고객센터에 연락하세요.",
+    "$files": [
+      "src/pages/home/index.vue(23676-23686)"
+    ],
+    "$id": 1588
+  },
+  "打开图纸成功": {
+    "zh-TW": "打開圖紙成功",
+    "en-US": "Successfully opened the drawing",
+    "ko-KR": "시트 열기 성공",
+    "$files": [
+      "src/plugins/mxcad/openMxWeb.ts(1190-1200)"
+    ],
+    "$id": 962
+  },
+  "保存文件": {
+    "zh-TW": "保存檔案",
+    "en-US": "Save file",
+    "ko-KR": "파일 저장",
+    "$files": [
+      "src/pages/home/components/CommitMessageDialog.vue(517-525)"
+    ],
+    "$id": 963
+  },
+  "修改说明（可选）": {
+    "zh-TW": "修改說明（可選）",
+    "en-US": "Modification instructions (optional)",
+    "ko-KR": "설명 수정 (선택 사항)",
+    "$files": [
+      "src/pages/home/components/CommitMessageDialog.vue(733-745)"
+    ],
+    "$id": 964
+  },
+  "未知图纸": {
+    "zh-TW": "未知圖紙",
+    "en-US": "Unknown blueprint",
+    "ko-KR": "알 수 없는 시트",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(2762-2770)"
+    ],
+    "$id": 955
+  },
+  "未知项目": {
+    "zh-TW": "未知項目",
+    "en-US": "Unknown project",
+    "ko-KR": "알 수 없는 항목",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(2860-2868)"
+    ],
+    "$id": 965
+  },
+  "个人空间": {
+    "zh-TW": "個人空間",
+    "en-US": "personal space",
+    "ko-KR": "개인 공간",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(2877-2885)"
+    ],
+    "$id": 966
+  },
+  "当前图纸有未保存的更改，确定要继续吗？": {
+    "zh-TW": "當前圖紙有未保存的更改，確定要繼續嗎？",
+    "en-US": "There are unsaved changes to the current drawing. Are you sure you want to continue?",
+    "ko-KR": "현재 시트에 저장되지 않은 변경 사항이 있습니다. 계속하시겠습니까?",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(5154-5177)"
+    ],
+    "$id": 967
+  },
+  "确定": {
+    "zh-TW": "確定",
+    "en-US": "Determine",
+    "ko-KR": "확정",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(5207-5213)",
+      "src/pages/home/components/CooperatePopup.vue(5813-5819)",
+      "src/pages/home/components/InsertBlockPopup.vue(4854-4860)"
+    ],
+    "$id": 968
+  },
+  "确定要退出当前协同吗？": {
+    "zh-TW": "確定要退出當前協同嗎？",
+    "en-US": "Are you sure you want to exit the current collaboration?",
+    "ko-KR": "현재 협동을 종료하시겠습니까?",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(5770-5785)"
+    ],
+    "$id": 1519
+  },
+  "实时协同": {
+    "zh-TW": "實时協同",
+    "en-US": "Real time collaboration",
+    "ko-KR": "실시간 협동",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(6275-6283)"
+    ],
+    "$id": 969
+  },
+  "协同中": {
+    "zh-TW": "協同中",
+    "en-US": "Collaboration in progress",
+    "ko-KR": "협동 중",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(6538-6545)"
+    ],
+    "$id": 970
+  },
+  "个活跃协同": {
+    "zh-TW": "個活躍協同",
+    "en-US": "Active Collaboration",
+    "ko-KR": "개 활성 협동",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(6570-6579)"
+    ],
+    "$id": 971
+  },
+  "暂无活跃协同": {
+    "zh-TW": "暫無活躍協同",
+    "en-US": "No active collaboration currently available",
+    "ko-KR": "아직 활발한 협동이 없다",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(7106-7116)"
+    ],
+    "$id": 973
+  },
+  "创建协同以开始实时协作": {
+    "zh-TW": "創建協同以開始實时合作",
+    "en-US": "Create collaboration to start real-time collaboration",
+    "ko-KR": "실시간 공동 작업을 위한 공동 작업 생성",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(7156-7171)"
+    ],
+    "$id": 974
+  },
+  "当前图纸": {
+    "zh-TW": "當前圖紙",
+    "en-US": "current drawing",
+    "ko-KR": "현재 시트",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(7387-7395)"
+    ],
+    "$id": 975
+  },
+  "我创建的": {
+    "zh-TW": "我創建的",
+    "en-US": "I created",
+    "ko-KR": "내가 만들었어",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(7781-7789)"
+    ],
+    "$id": 976
+  },
+  "项目协同": {
+    "zh-TW": "項目協同",
+    "en-US": "Project Collaboration",
+    "ko-KR": "프로젝트 협동",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(8165-8173)"
+    ],
+    "$id": 977
+  },
+  "创建协同": {
+    "zh-TW": "創建協同",
+    "en-US": "Create Collaboration",
+    "ko-KR": "공동 작업 생성",
+    "$files": [
+      "src/pages/home/components/CooperatePopup.vue(8777-8785)"
+    ],
+    "$id": 1520
+  },
+  "CAD 2000": {
+    "zh-TW": "CAD 2000",
+    "en-US": "CAD 2000",
+    "ko-KR": "CAD 2000",
+    "$files": [
+      "src/pages/home/components/DwgOptionsPopup.vue(349-361)"
+    ],
+    "$id": 978
+  },
+  "CAD 2004": {
+    "zh-TW": "CAD 2004",
+    "en-US": "CAD 2004",
+    "ko-KR": "CAD 2004",
+    "$files": [
+      "src/pages/home/components/DwgOptionsPopup.vue(388-400)"
+    ],
+    "$id": 979
+  },
+  "CAD 2007": {
+    "zh-TW": "CAD 2007",
+    "en-US": "CAD 2007",
+    "ko-KR": "CAD 2007",
+    "$files": [
+      "src/pages/home/components/DwgOptionsPopup.vue(427-439)"
+    ],
+    "$id": 980
+  },
+  "CAD 2010": {
+    "zh-TW": "CAD 2010",
+    "en-US": "CAD 2010",
+    "ko-KR": "CAD 2010",
+    "$files": [
+      "src/pages/home/components/DwgOptionsPopup.vue(466-478)"
+    ],
+    "$id": 981
+  },
+  "CAD 2018": {
+    "zh-TW": "CAD 2018",
+    "en-US": "CAD 2018",
+    "ko-KR": "CAD 2018",
+    "$files": [
+      "src/pages/home/components/DwgOptionsPopup.vue(505-517)"
+    ],
+    "$id": 982
+  },
+  "AutoCAD 版本": {
+    "zh-TW": "AutoCAD版本",
+    "en-US": "AutoCAD version",
+    "ko-KR": "AutoCAD 버전",
+    "$files": [
+      "src/pages/home/components/DwgOptionsPopup.vue(921-935)"
+    ],
+    "$id": 983
+  },
+  "名称": {
+    "zh-TW": "名稱",
+    "en-US": "name",
+    "ko-KR": "이름",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(453-459)"
+    ],
+    "$id": 1589
+  },
+  "请选择图块": {
+    "zh-TW": "請選擇圖塊",
+    "en-US": "Please select a block",
+    "ko-KR": "블록을 선택하십시오.",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(488-497)",
+      "src/pages/home/components/InsertBlockPopup.vue(9275-9284)"
+    ],
+    "$id": 1590
+  },
+  "浏览": {
+    "zh-TW": "瀏覽",
+    "en-US": "browse",
+    "ko-KR": "둘러보다",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(870-876)"
+    ],
+    "$id": 1591
+  },
+  "路径": {
+    "zh-TW": "路徑",
+    "en-US": "path",
+    "ko-KR": "경로",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(975-981)"
+    ],
+    "$id": 1592
+  },
+  "插入点": {
+    "zh-TW": "插入點",
+    "en-US": "insertion point",
+    "ko-KR": "삽입점",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(1162-1169)"
+    ],
+    "$id": 1593
+  },
+  "在屏幕上指定": {
+    "zh-TW": "在荧幕上指定",
+    "en-US": "Specify on the screen",
+    "ko-KR": "화면에 지정",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(1235-1245)",
+      "src/pages/home/components/InsertBlockPopup.vue(2368-2378)",
+      "src/pages/home/components/InsertBlockPopup.vue(3696-3706)"
+    ],
+    "$id": 1594
+  },
+  "比例": {
+    "zh-TW": "比例",
+    "en-US": "proportion",
+    "ko-KR": "비율",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(2296-2302)"
+    ],
+    "$id": 1595
+  },
+  "统一比例": {
+    "zh-TW": "統一比例",
+    "en-US": "Unified ratio",
+    "ko-KR": "균일 비율",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(3402-3410)"
+    ],
+    "$id": 1596
+  },
+  "分解": {
+    "zh-TW": "分解",
+    "en-US": "Decompose",
+    "ko-KR": "분해",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(4228-4234)"
+    ],
+    "$id": 1597
+  },
+  "插入图纸中的唯一块": {
+    "zh-TW": "插入圖紙中的唯一塊",
+    "en-US": "Insert the only block in the drawing",
+    "ko-KR": "시트의 고유 블록 삽입하기",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(4381-4394)"
+    ],
+    "$id": 1598
+  },
+  "自动计算原点": {
+    "zh-TW": "自動計算原點",
+    "en-US": "Automatically calculate the origin point",
+    "ko-KR": "원점 자동 계산",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(4533-4543)"
+    ],
+    "$id": 1599
+  },
+  "选择图块": {
+    "zh-TW": "選擇圖塊",
+    "en-US": "Select block",
+    "ko-KR": "블록 선택",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(5186-5194)"
+    ],
+    "$id": 1600
+  },
+  "搜索图块名称": {
+    "zh-TW": "蒐索圖塊名稱",
+    "en-US": "Search for block names",
+    "ko-KR": "블록 이름 검색",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(5365-5375)"
+    ],
+    "$id": 1601
+  },
+  "无匹配图块": {
+    "zh-TW": "無匹配圖塊",
+    "en-US": "No matching block",
+    "ko-KR": "일치하는 블록 없음",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(5978-5987)"
+    ],
+    "$id": 1602
+  },
+  "暂无图块": {
+    "zh-TW": "暫無圖塊",
+    "en-US": "There are currently no image blocks available",
+    "ko-KR": "그림 블록 없음",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(5991-5999)"
+    ],
+    "$id": 1603
+  },
+  "插入块": {
+    "zh-TW": "插入塊",
+    "en-US": "Insert block",
+    "ko-KR": "블록 삽입",
+    "$files": [
+      "src/pages/home/components/InsertBlockPopup.vue(9545-9552)"
+    ],
+    "$id": 1604
+  },
+  "搜索": {
+    "zh-TW": "搜尋",
+    "en-US": "search",
+    "ko-KR": "검색",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(756-762)"
+    ],
+    "$id": 1605
+  },
+  "重试": {
+    "zh-TW": "重試",
+    "en-US": "Retry",
+    "ko-KR": "다시 시도",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(2120-2126)",
+      "src/pages/home/components/VersionHistoryPopup.vue(1572-1578)"
+    ],
+    "$id": 1025
+  },
+  "暂无内容": {
+    "zh-TW": "暫無內容",
+    "en-US": "No content",
+    "ko-KR": "컨텐트 없음",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(2280-2288)"
+    ],
+    "$id": 1606
+  },
+  "没有更多了": {
+    "zh-TW": "沒有更多了",
+    "en-US": "No more",
+    "ko-KR": "더 이상 없어요.",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(3603-3612)"
+    ],
+    "$id": 1607
+  },
+  "选择分类": {
+    "zh-TW": "選擇分類",
+    "en-US": "Select Category",
+    "ko-KR": "분류 선택",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(3946-3954)"
+    ],
+    "$id": 1608
+  },
+  "图纸库": {
+    "zh-TW": "圖紙庫",
+    "en-US": "Drawing Library",
+    "ko-KR": "시트 라이브러리",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(10295-10302)",
+      "src/pages/home/components/SaveAsSheet.vue(2909-2916)",
+      "src/pages/home/components/SaveAsSheet.vue(10700-10707)",
+      "src/pages/home/components/SaveAsSheet.vue(17454-17461)"
+    ],
+    "$id": 1001
+  },
+  "图块库": {
+    "zh-TW": "圖塊庫",
+    "en-US": "Block Library",
+    "ko-KR": "그림 블록 라이브러리",
+    "$files": [
+      "src/pages/home/components/LibraryPanel.vue(10306-10313)",
+      "src/pages/home/components/SaveAsSheet.vue(2920-2927)",
+      "src/pages/home/components/SaveAsSheet.vue(10711-10718)",
+      "src/pages/home/components/SaveAsSheet.vue(17825-17832)"
+    ],
+    "$id": 1002
+  },
+  "需要登录": {
+    "zh-TW": "需要登入",
+    "en-US": "Login required",
+    "ko-KR": "로그인 필요",
+    "$files": [
+      "src/pages/home/components/LoginPromptPopup.vue(449-457)",
+      "src/pages/home/components/LoginPromptPopup.vue(818-826)"
+    ],
+    "$id": 984
+  },
+  "请先登录后再执行此操作": {
+    "zh-TW": "請先登錄後再執行此操作",
+    "en-US": "Please log in first before performing this operation",
+    "ko-KR": "이 작업을 수행하려면 먼저 로그인하십시오.",
+    "$files": [
+      "src/pages/home/components/LoginPromptPopup.vue(873-888)"
+    ],
+    "$id": 985
+  },
+  "正在跳转登录...": {
+    "zh-TW": "正在跳轉登入. ..",
+    "en-US": "Jumping to login ..",
+    "ko-KR": "로그인을 건너뛰는 중입니다...",
+    "$files": [
+      "src/pages/home/components/LoginPromptPopup.vue(1060-1073)"
+    ],
+    "$id": 1521
+  },
+  "请在打开的页面中完成登录": {
+    "zh-TW": "請在打開的頁面中完成登入",
+    "en-US": "Please complete the login process on the opened page",
+    "ko-KR": "열린 페이지에서 로그인을 완료하십시오.",
+    "$files": [
+      "src/pages/home/components/LoginPromptPopup.vue(1120-1136)"
+    ],
+    "$id": 1522
+  },
+  "前往登录": {
+    "zh-TW": "前往登入",
+    "en-US": "Go to login",
+    "ko-KR": "로그인으로 이동",
+    "$files": [
+      "src/pages/home/components/LoginPromptPopup.vue(1337-1345)"
+    ],
+    "$id": 987
+  },
+  "取消等待": {
+    "zh-TW": "取消等待",
+    "en-US": "Cancel waiting",
+    "ko-KR": "대기 취소",
+    "$files": [
+      "src/pages/home/components/LoginPromptPopup.vue(1510-1518)"
+    ],
+    "$id": 988
+  },
+  "宽度（像素）": {
+    "zh-TW": "寬度(點數)",
+    "en-US": "Width (pixels)",
+    "ko-KR": "너비 (픽셀)",
+    "$files": [
+      "src/pages/home/components/PdfOptionsPopup.vue(840-850)"
+    ],
+    "$id": 989
+  },
+  "高度（像素）": {
+    "zh-TW": "高度(點數)",
+    "en-US": "Height (pixels)",
+    "ko-KR": "높이 (픽셀)",
+    "$files": [
+      "src/pages/home/components/PdfOptionsPopup.vue(1046-1056)"
+    ],
+    "$id": 990
+  },
+  "颜色策略": {
+    "zh-TW": "顏色策略",
+    "en-US": "Color Strategy",
+    "ko-KR": "색상 정책",
+    "$files": [
+      "src/pages/home/components/PdfOptionsPopup.vue(1263-1271)"
+    ],
+    "$id": 991
+  },
+  "黑白": {
+    "zh-TW": "黑白",
+    "en-US": "black and white",
+    "ko-KR": "흑백",
+    "$files": [
+      "src/pages/home/components/PdfOptionsPopup.vue(1467-1473)"
+    ],
+    "$id": 992
+  },
+  "彩色": {
+    "zh-TW": "彩色",
+    "en-US": "colorful",
+    "ko-KR": "컬러",
+    "$files": [
+      "src/pages/home/components/PdfOptionsPopup.vue(1650-1656)"
+    ],
+    "$id": 993
+  },
+  "我的图纸": {
+    "zh-TW": "我的圖紙",
+    "en-US": "My blueprint",
+    "ko-KR": "내 시트",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(1838-1846)",
+      "src/pages/home/components/SaveAsSheet.vue(2795-2803)",
+      "src/pages/home/components/SaveAsSheet.vue(10413-10421)"
+    ],
+    "$id": 994
+  },
+  "项目文件夹": {
+    "zh-TW": "項目資料夾",
+    "en-US": "project folder",
+    "ko-KR": "프로젝트 폴더",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(1899-1908)"
+    ],
+    "$id": 995
+  },
+  "公开资源库": {
+    "zh-TW": "公開資源庫",
+    "en-US": "Public Resource Library",
+    "ko-KR": "공개 리소스 라이브러리",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(2016-2025)"
+    ],
+    "$id": 996
+  },
+  "标准图纸格式": {
+    "zh-TW": "標準圖紙格式",
+    "en-US": "Standard drawing format",
+    "ko-KR": "표준 용지 형식",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(2250-2260)"
+    ],
+    "$id": 997
+  },
+  "通用交换格式": {
+    "zh-TW": "通用交換格式",
+    "en-US": "Universal Interchange Format",
+    "ko-KR": "일반 스왑 형식",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(2305-2315)"
+    ],
+    "$id": 998
+  },
+  "原生格式": {
+    "zh-TW": "原生格式",
+    "en-US": "Native format",
+    "ko-KR": "기본 형식",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(2364-2372)"
+    ],
+    "$id": 999
+  },
+  "点击选择文件夹": {
+    "zh-TW": "點擊選擇資料夾",
+    "en-US": "Click to select folder",
+    "ko-KR": "클릭하여 폴더 선택",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(2623-2634)"
+    ],
+    "$id": 1000
+  },
+  "根目录": {
+    "zh-TW": "根目錄",
+    "en-US": "root directory",
+    "ko-KR": "루트 디렉토리",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(3041-3048)"
+    ],
+    "$id": 1003
+  },
+  "请输入文件名": {
+    "zh-TW": "請輸入檔名",
+    "en-US": "Please enter the file name",
+    "ko-KR": "파일 이름을 입력하십시오.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(3727-3737)",
+      "src/pages/home/components/SaveAsSheet.vue(15469-15479)"
+    ],
+    "$id": 1004
+  },
+  "文件名不能包含以下字符: \\\\ / : * ? \" < > |": {
+    "zh-TW": "檔名不能包含以下字元：\\\\ /：*？ “< > |",
+    "en-US": "The file name cannot contain the following characters: \\ \\/: *?  \" < > |",
+    "ko-KR": "파일 이름에는 다음 문자를 사용할 수 없습니다. \\ /: *? \" < > |",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(3824-3859)"
+    ],
+    "$id": 1005
+  },
+  "无法获取个人空间": {
+    "zh-TW": "無法獲取個人空間",
+    "en-US": "Unable to access personal space",
+    "ko-KR": "개인 공간을 가져올 수 없습니다.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(4108-4120)"
+    ],
+    "$id": 1006
+  },
+  "请先选择项目": {
+    "zh-TW": "請先選擇項目",
+    "en-US": "Please select the project first",
+    "ko-KR": "먼저 항목을 선택하십시오.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(4270-4280)",
+      "src/pages/home/components/SaveAsSheet.vue(5683-5693)"
+    ],
+    "$id": 1007
+  },
+  "请先选择文件夹": {
+    "zh-TW": "請先選擇資料夾",
+    "en-US": "Please select a folder first",
+    "ko-KR": "먼저 폴더를 선택하십시오.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(4453-4464)"
+    ],
+    "$id": 1008
+  },
+  "保存失败，请稍后重试": {
+    "zh-TW": "保存失敗,請稍後重試",
+    "en-US": "Save failed, please try again later",
+    "ko-KR": "저장에 실패했습니다. 나중에 다시 시도하십시오.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(5317-5331)"
+    ],
+    "$id": 1009
+  },
+  "无法加载资源库": {
+    "zh-TW": "無法加載資源庫",
+    "en-US": "Unable to load resource library",
+    "ko-KR": "자원 라이브러리를 로드할 수 없습니다.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(6051-6062)"
+    ],
+    "$id": 1010
+  },
+  "另存为": {
+    "zh-TW": "另存為",
+    "en-US": "Save As",
+    "ko-KR": "다른 이름으로 저장",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(12123-12130)"
+    ],
+    "$id": 1011
+  },
+  "选择文件夹": {
+    "zh-TW": "選擇資料夾",
+    "en-US": "Select Folder",
+    "ko-KR": "폴더 선택",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(12134-12143)"
+    ],
+    "$id": 1012
+  },
+  "无子文件夹": {
+    "zh-TW": "無子資料夾",
+    "en-US": "No subfolders",
+    "ko-KR": "하위 폴더 없음",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(14531-14540)"
+    ],
+    "$id": 1013
+  },
+  "当前为资源库根目录，请选择子文件夹": {
+    "zh-TW": "當前為資源庫根目錄,請選擇子資料夾",
+    "en-US": "The current directory is the root directory of the resource library. Please select a subfolders",
+    "ko-KR": "현재 저장소 루트입니다. 하위 폴더를 선택하십시오.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(14816-14837)"
+    ],
+    "$id": 1523
+  },
+  "文件名": {
+    "zh-TW": "檔名",
+    "en-US": "file name",
+    "ko-KR": "파일 이름",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(15308-15315)",
+      "src/plugins/vant/components/leadingOut/LeadingOutPopup.vue(358-365)"
+    ],
+    "$id": 1016
+  },
+  "保存到": {
+    "zh-TW": "保存到",
+    "en-US": "Save to",
+    "ko-KR": "저장 대상",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(15742-15749)"
+    ],
+    "$id": 1017
+  },
+  "选择项目": {
+    "zh-TW": "選擇項目",
+    "en-US": "Select project",
+    "ko-KR": "항목 선택",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(16485-16493)"
+    ],
+    "$id": 1018
+  },
+  "请选择项目": {
+    "zh-TW": "請選擇項目",
+    "en-US": "Please select the project",
+    "ko-KR": "항목을 선택하십시오.",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(16692-16701)"
+    ],
+    "$id": 1019
+  },
+  "选择资源库": {
+    "zh-TW": "選擇資源庫",
+    "en-US": "Select Resource Library",
+    "ko-KR": "리소스 라이브러리 선택",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(17056-17065)"
+    ],
+    "$id": 1020
+  },
+  "保存位置": {
+    "zh-TW": "保存位置",
+    "en-US": "Save location",
+    "ko-KR": "저장 위치",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(18032-18040)"
+    ],
+    "$id": 1021
+  },
+  "保存格式": {
+    "zh-TW": "保存格式",
+    "en-US": "Save Format",
+    "ko-KR": "형식 저장",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(18863-18871)"
+    ],
+    "$id": 1022
+  },
+  "保存到云图": {
+    "zh-TW": "保存到雲圖",
+    "en-US": "Save to Cloud Map",
+    "ko-KR": "클라우드에 저장",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(19693-19702)"
+    ],
+    "$id": 1023
+  },
+  "保存到根目录": {
+    "zh-TW": "保存到根目錄",
+    "en-US": "Save to root directory",
+    "ko-KR": "루트 디렉토리에 저장",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(20044-20054)"
+    ],
+    "$id": 1014
+  },
+  "保存到当前文件夹": {
+    "zh-TW": "保存到當前資料夾",
+    "en-US": "Save to current folder",
+    "ko-KR": "현재 폴더에 저장",
+    "$files": [
+      "src/pages/home/components/SaveAsSheet.vue(20327-20339)"
+    ],
+    "$id": 1015
+  },
+  "版本历史": {
+    "zh-TW": "版本歷史",
+    "en-US": "Version History",
+    "ko-KR": "버전 기록",
+    "$files": [
+      "src/pages/home/components/VersionHistoryPopup.vue(1282-1290)"
+    ],
+    "$id": 1024
+  },
+  "暂无版本历史": {
+    "zh-TW": "暫無版本歷史",
+    "en-US": "No version history available at the moment",
+    "ko-KR": "버전 기록 없음",
+    "$files": [
+      "src/pages/home/components/VersionHistoryPopup.vue(1687-1697)"
+    ],
+    "$id": 1026
+  },
+  "无说明": {
+    "zh-TW": "無說明",
+    "en-US": "No explanation provided",
+    "ko-KR": "설명 없음",
+    "$files": [
+      "src/pages/home/components/VersionHistoryPopup.vue(2092-2099)"
+    ],
+    "$id": 1027
+  },
+  "未知": {
+    "zh-TW": "未知",
+    "en-US": "unknown",
+    "ko-KR": "알 수 없음",
+    "$files": [
+      "src/pages/home/components/VersionHistoryPopup.vue(2225-2231)"
+    ],
+    "$id": 1028
+  },
+  "导出下载为会员专属功能，开通 VIP 后即可使用": {
+    "zh-TW": "匯出下載為會員專屬功能，開通 VIP 後即可使用",
+    "en-US": "Export/download is a VIP-exclusive feature. Upgrade to VIP to use it",
+    "ko-KR": "내보내기/다운로드는 VIP 전용 기능입니다. VIP를 개통하면 사용할 수 있습니다",
+    "$files": [
+      "src/pages/home/hooks/useMenu.ts(1647-1675)"
+    ],
+    "$id": 1643
+  },
+  "命令": {
+    "zh-TW": "命令",
+    "en-US": "command",
+    "ko-KR": "명령",
+    "$files": [
+      "src/pages/home/hooks/useRunCmdOperationBtnList.ts(1439-1445)",
+      "src/pages/home/hooks/useRunCmdOperationBtnList.ts(1549-1555)"
+    ],
+    "$id": 1029
+  },
+  "标注样式": {
+    "zh-TW": "標注樣式",
+    "en-US": "Annotation Style",
+    "ko-KR": "치수 스타일",
+    "$files": [
+      "src/plugins/vant/components/annotationSyle/index.tsx(1359-1367)"
+    ],
+    "$id": 1030
+  },
+  "当前标注精度:": {
+    "zh-TW": "當前標注精度：",
+    "en-US": "Current annotation accuracy:",
+    "ko-KR": "현재 치수 정밀도:",
+    "$files": [
+      "src/plugins/vant/components/annotationSyle/index.tsx(1573-1584)"
+    ],
+    "$id": 1031
+  },
+  "当前标注比例": {
+    "zh-TW": "當前標注比例",
+    "en-US": "Current annotation scale",
+    "ko-KR": "현재 치수 축척",
+    "$files": [
+      "src/plugins/vant/components/annotationSyle/index.tsx(1735-1745)"
+    ],
+    "$id": 1032
+  },
+  "标注颜色": {
+    "zh-TW": "標注顏色",
+    "en-US": "Label color",
+    "ko-KR": "치수 색상",
+    "$files": [
+      "src/plugins/vant/components/annotationSyle/index.tsx(1807-1815)"
+    ],
+    "$id": 1033
+  },
+  "文字颜色": {
+    "zh-TW": "文字顏色",
+    "en-US": "text color",
+    "ko-KR": "텍스트 색상",
+    "$files": [
+      "src/plugins/vant/components/annotationSyle/index.tsx(1864-1872)"
+    ],
+    "$id": 1034
+  },
+  "上传外部参照": {
+    "zh-TW": "上傳外部參照",
+    "en-US": "Upload external reference",
+    "ko-KR": "외부 참조 업로드",
+    "$files": [
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(4290-4300)"
+    ],
+    "$id": 1035
+  },
+  "总体进度": {
+    "zh-TW": "總體進度",
+    "en-US": "Overall Progress",
+    "ko-KR": "전체 진행",
+    "$files": [
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(4505-4513)"
+    ],
+    "$id": 1036
+  },
+  "，": {
+    "zh-TW": ",",
+    "en-US": ",",
+    "ko-KR": ",",
+    "$files": [
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(4595-4600)"
+    ],
+    "$id": 1037
+  },
+  " 个失败": {
+    "zh-TW": "個失敗",
+    "en-US": "A failure",
+    "ko-KR": "개 실패",
+    "$files": [
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(4616-4624)"
+    ],
+    "$id": 1038
+  },
+  "完成": {
+    "zh-TW": "完成",
+    "en-US": "complete",
+    "ko-KR": "완료",
+    "$files": [
+      "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6088-6094)"
+    ],
+    "$id": 1039
+  }
+}

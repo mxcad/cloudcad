@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cloudcad-app-pvc
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.app.persistence.size }}
+---
+{{- if eq .Values.mode "standalone" }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cloudcad-storage-pvc
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.storageService.persistence.size }}
+{{- end }}

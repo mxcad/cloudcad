@@ -1,0 +1,169 @@
+# CloudCAD Linux 部署包打包镜像
+# 支持多种 Linux 发行版，通过 BASE_IMAGE 参数选择
+#
+# 使用方式：
+#   方式 1: 使用入口脚本（推荐）
+#     node scripts/pack-linux-deploy.js                    # 默认 CentOS 7
+#     node scripts/pack-linux-deploy.js --os ubuntu22      # Ubuntu 22.04
+#
+#   方式 2: 直接使用 Docker
+#     docker build -f runtime/docker/Dockerfile.linux-deploy -t cloudcad-pack-linux .
+#     docker run --rm -v ${PWD}/release:/app/release cloudcad-pack-linux
+#
+# 支持的 BASE_IMAGE：
+#   - centos:7 (默认，glibc 2.17，兼容性最广)
+#   - ubuntu:22.04 (glibc 2.35)
+#   - ubuntu:24.04 (glibc 2.39)
+#   - rockylinux:8 (glibc 2.28)
+#   - rockylinux:9 (glibc 2.34)
+#
+# 输出：
+#   release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
+#   例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
+#   OS: centos7/ubuntu22/ubuntu24/rocky8/rocky9/debian
+#   ARCH: x86_64/aarch64/armv7l
+
+ARG BASE_IMAGE=centos:7
+FROM ${BASE_IMAGE}
+
+# 是否使用 SystemLib 版本的 mxcad 二进制（新系统 glibc >= 2.35 需要）
+# 通过 --use-system-lib 参数控制，不影响源码目录，仅容器内操作
+ARG USE_SYSTEM_LIB=false
+
+# 避免 Ubuntu/Debian 交互式提示
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 根据不同系统安装基本工具和数据库
+RUN if command -v apt-get &> /dev/null; then \
+      # Debian/Ubuntu - 使用阿里云镜像加速 \
+      sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+      sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+      apt-get update && \
+      apt-get install -y curl wget git gnupg2 lsb-release ca-certificates gcc && \
+      # PostgreSQL 15 - 使用阿里云镜像 \
+      curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
+      echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] https://mirrors.aliyun.com/postgresql/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+      apt-get update && \
+      apt-get install -y postgresql-15 redis-server subversion && \
+      rm -rf /var/lib/apt/lists/*; \
+    elif command -v dnf &> /dev/null; then \
+      # Rocky/RHEL 8/9 \
+      dnf install -y curl wget git gcc && \
+      # PostgreSQL 15 \
+      dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %rhel)-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
+      dnf install -y postgresql15-server postgresql15 redis subversion && \
+      dnf clean all; \
+    elif command -v yum &> /dev/null; then \
+      # CentOS 7 \
+      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
+      sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* && \
+      yum install -y epel-release && \
+      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel* && \
+      sed -i 's|#baseurl=https://download.fedoraproject.org/pub|baseurl=https://archive.fedoraproject.org/pub|g' /etc/yum.repos.d/epel* && \
+      yum install -y curl wget git which gcc && \
+      # PostgreSQL 15 \
+      echo "[pgdg15]" > /etc/yum.repos.d/pgdg-15.repo && \
+      echo "name=PostgreSQL 15 for RHEL/CentOS 7 - x86_64" >> /etc/yum.repos.d/pgdg-15.repo && \
+      echo "baseurl=https://mirrors.aliyun.com/postgresql/repos/yum/15/redhat/rhel-7-x86_64/" >> /etc/yum.repos.d/pgdg-15.repo && \
+      echo "enabled=1" >> /etc/yum.repos.d/pgdg-15.repo && \
+      echo "gpgcheck=0" >> /etc/yum.repos.d/pgdg-15.repo && \
+      yum install -y postgresql15-server postgresql15 redis subversion && \
+      yum clean all; \
+    fi
+
+# 复制 Node.js 缓存文件（仅 CentOS/RHEL 需要，Ubuntu 通过 NodeSource 安装）
+COPY runtime/cache/node-v20.19.5-linux-x64-glibc-217.tar.xz /tmp/node.tar.xz
+
+# 安装 Node.js 20.19.5
+# Ubuntu/Debian 使用 NodeSource，CentOS/RHEL 使用本地缓存（glibc-217 版本）
+RUN if command -v apt-get &> /dev/null; then \
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+      apt-get install -y nodejs && \
+      rm -rf /var/lib/apt/lists/*; \
+    else \
+      mkdir -p /usr/local && \
+      tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
+      rm -f /tmp/node.tar.xz; \
+    fi && \
+    node --version
+
+# 安装 pnpm 9.15.9 和 pm2（项目要求 pnpm >= 9.15.9）
+RUN npm install -g pnpm@9.15.9 pm2
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 npmrc 和 package 文件（用于缓存依赖层）
+COPY .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/db/package.json ./packages/db/
+COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/frontend_mobile/package.json ./packages/frontend_mobile/
+COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
+COPY packages/config-service/package.json ./packages/config-service/
+
+# 如果通过 --build-arg NPM_CONFIG_REGISTRY 传入了自定义 registry，覆盖 .npmrc
+ARG NPM_CONFIG_REGISTRY
+RUN if [ -n "${NPM_CONFIG_REGISTRY}" ]; then \
+      pnpm config set registry "${NPM_CONFIG_REGISTRY}" --location project; \
+    fi
+
+# ===== 主依赖层（稳定缓存）=====
+# 不包含 impl-mx：私有实现包源码在下方独立层 COPY 后单独安装，
+# 避免 impl-mx 代码变更导致主依赖层缓存失效（触发全量重装）
+# 注意：install 必须用 --store-dir 直接写入 .pnpm-store-deploy ——
+# pnpm 在 node_modules 已完整时会跳过写 store，单独"store 缓存层"实际不会产生任何内容
+# （曾因此导致容器内升级流程每次全量下载依赖）
+# 安装依赖（仅后端运行时包；前端 dist 已在本地预构建，无需 node_modules）
+RUN pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --store-dir /app/.pnpm-store-deploy
+
+# ===== 私有实现包层（源码层：impl-mx 变更仅重建此层及以下）=====
+ARG VARIANT=oss
+# 私有实现包（命名上下文：private 构建传 packages/impl-mx，oss 构建传空目录占位）
+COPY --from=implmx . ./packages/impl-mx
+# impl-mx 依赖独立安装（全量含 devDeps，供容器内 buildImplMx 使用），写入同一 store
+RUN if [ "${VARIANT}" = "private" ]; then \
+      pnpm install --frozen-lockfile --filter @cloudcad/impl-mx --store-dir /app/.pnpm-store-deploy; \
+    fi
+
+# 复制后端源码（需在容器内原生编译）
+COPY packages/backend ./packages/backend
+# 复制其他包
+COPY packages/db ./packages/db
+COPY packages/contracts ./packages/contracts
+COPY packages/mxVersionTool ./packages/mxVersionTool
+COPY packages/config-service ./packages/config-service
+# 复制前端的预构建产物（本地已构建好）
+COPY packages/frontend/dist ./packages/frontend/dist
+COPY packages/frontend_mobile/dist ./packages/frontend_mobile/dist
+COPY scripts ./scripts
+COPY runtime ./runtime
+COPY tsconfig.json ./
+
+# 复制启动/停止脚本
+COPY start.sh stop.sh ./
+
+# ===== mxcad 二进制处理 =====
+# mxcad（mxcadassembly + 字体 + SystemLib 覆盖版）是源码静态资产，不属于
+# extract-linux-runtime.js 的提取范围（它只提取 node/pg/redis/svn）。运行时
+# docker run 会把本地平台物料缓存挂载为 /app/runtime/linux（-v cacheDir:/app/runtime/linux），
+# 这会整目录遮蔽镜像内 `COPY runtime ./runtime` 带入的 runtime/linux/mxcad，
+# 导致 pack-offline.js 拷不到 mxcadassembly，部署包缺失该二进制。
+# 因此这里把 mxcad 单独放到 /opt/mxcad-runtime（不被挂载遮蔽），并按 USE_SYSTEM_LIB
+# 在构建期做 SystemLib 覆盖 + 清理 SystemLib 目录；CMD 运行时再把它合并进挂载后的
+# runtime/linux/mxcad。这样 mxcad 永远来自镜像本身、不依赖缓存，符合其静态资产定位。
+COPY runtime/linux/mxcad /opt/mxcad-runtime
+RUN if [ "${USE_SYSTEM_LIB}" = "true" ]; then \
+      echo ">> 使用 SystemLib 覆盖 mxcad 二进制..."; \
+      cp -r -f /opt/mxcad-runtime/SystemLib/. /opt/mxcad-runtime/; \
+    else \
+      echo ">> 保留默认 mxcad 二进制"; \
+    fi && \
+    rm -rf /opt/mxcad-runtime/SystemLib
+
+# 默认命令：提取运行时 + 打包（部署包模式）
+# 升级包模式（PACK_MODE=upgrade）：跳过运行时提取（升级包不含 runtime 二进制），
+# 直接使用镜像层缓存的 .pnpm-store-deploy 做增量提取
+CMD ["sh", "-c", "if [ \"${PACK_MODE}\" = \"upgrade\" ]; then node scripts/pack-offline.js --upgrade --linux --variant ${VARIANT:-oss}; else node scripts/extract-linux-runtime.js --output runtime/linux && mkdir -p runtime/linux/mxcad && cp -r -f /opt/mxcad-runtime/. runtime/linux/mxcad/ && node scripts/pack-offline.js --deploy --linux --variant ${VARIANT:-oss}; fi"]

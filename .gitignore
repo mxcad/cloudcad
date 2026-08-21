@@ -1,0 +1,216 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-store-deploy/
+
+# Runtime binaries (scripts are kept for version control)
+# 运行时二进制不再入库：由 GitHub Actions 在打包时构建/下载（见 docs/git-workflow.md）。
+# 仅保留 runtime/scripts（源码脚本）与顶层配置文件入库，其余产物全部忽略。
+runtime/windows/
+runtime/linux/
+runtime/cache/
+!runtime/scripts/
+!runtime/ecosystem.config.js
+!runtime/README.md
+# runtime/docker 保留：内含 Dockerfile 源码（构建镜像所需），仅忽略其运行产物
+runtime/docker/*.tar.gz
+runtime/docker/*.log
+runtime/docker/tmp/
+# 例外：runtime/windows/node 的依赖清单（package.json + package-lock.json）入库，
+# 作为 reinstall-node-tools.js 重建 pnpm/pm2 的唯一事实源（CI Windows 打包必需）。
+# 其余 node 产物（node.exe / node_modules 等）仍忽略，不入库。
+!runtime/windows/node/
+!runtime/windows/node/package.json
+!runtime/windows/node/package-lock.json
+
+data
+release
+# 本地 mxcad 暂存目录（仅用于上传到 Release，不入库）
+mxcad-dist/
+# 仓库根目录 project-env.sh（Git Bash 本地环境文件，由 setup-offline 生成）；
+# 仅忽略根目录，scripts/pack-lib/templates/project-env.sh 作为模板入库
+/project-env.sh
+# 历史遗留：setup-offline 已不再生成 node/npm/npx/pnpm/pm2 包装脚本（2026-08 废弃），
+# 相关 .gitignore 条目已移除；部署/运维命令统一走 cli.js 内部 PATH 注入。
+# 若发现根目录或 packages/*/ 下仍有 node.cmd/npm.cmd/pnpm.cmd/pm2.cmd 等残留文件，
+# 属旧部署包遗留，可直接删除（不影响任何逻辑）。
+
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment
+# 排除所有环境文件（含子目录），但保留 .env.example 模板
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Deploy lock hash (记录已安装的依赖版本，不应提�?
+.deploy-lock-hash
+
+# Generated files
+**/swagger_json.json
+
+# Data directory (all user data)
+data/
+
+# 保留外置配置目录结构 (用户配置文件不提�?
+!data/configs/.gitkeep
+!data/configs/frontend/.gitkeep
+!data/configs/frontend/ini/.gitkeep
+!data/configs/frontend/brand/.gitkeep
+
+# Temporary/debug files
+*.bak
+*.bak[0-9]
+*.stackdump
+*-errors.txt
+*-warnings.txt
+docker-build-*.txt
+config-service-login.jpg
+
+
+# Test files
+test-sidebar.html
+
+# Test artifacts
+test_result*.txt
+test_results*.txt
+test-output*.txt
+tsc_output*.txt
+tsc_full*.txt
+test-results*/
+test-results.json/
+debug.txt
+vite.config.ts.timestamp-*
+
+# AI tool generated -> symlinked from .agents/
+.claude/skills/
+.claude/hooks/
+.claude/commands/
+.claude/worktrees/
+# CodeBuddy 本地数据（plans/settings 等，保留文件夹但不入库）
+.codebuddy/
+.qwen/
+runtime/cache/
+
+# Git worktrees
+.worktrees/
+temp.claude/worktrees/
+.gitnexus
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# SVN
+.svn/
+
+# Temporary deploy artifacts
+temp/
+
+# User uploaded files (prevent accidental tracking)
+uploads/
+
+# MXCAD assembly binaries
+packages/mxcadassembly/
+
+# Local Claude settings (user-specific secrets, not team config)
+.claude/settings.local.json
+
+# ============================================
+# Security �?敏感信息防护（文件名级拦截）
+# ============================================
+
+# 测试凭据
+**/test-login-data.*
+**/test-credentials*
+**/e2e/.auth/
+
+# 运行时产物（含本地绝对路径）
+**/upload-progress.json
+**/thumbnail-progress.json
+**/upload-failed.log
+**/upload-failed.*.log
+
+# i18n 备份文件
+*.bak.*.json
+
+# 文件同步产物
+file-sync/
+
+# CAD 图纸 / 二进制（红线：严禁入库）
+# 注释：不全局排除 *.dwg/*.mxweb，因为仓库内含 E2E 测试样例
+# （packages/frontend/e2e/test-files/xref-sample.dwg）与空模板
+# （packages/*/public/empty.mxweb、blank.mxweb），这些是仓库源码资源必须保留。
+# 真正的保密图纸都在 data/、file-sync/received-files/、mxcad-dist/ 等
+# 已按目录排除，此处不再全局拦截。
+*.dxf
+*.bin
+
+# 私有实现包 不开源
+packages/impl-mx/
+
+# AI 工具本地运行时产物（一次性计划/信任标记/备份，不应入库）
+.mimocode/
+.trae/
+.deepseek/
+.agents/backup/
+.zcode/
+
+# Mimosa 安全扫描运行时产物（finding-ledger/history/hook-state/reports）
+.mimosa/
+
+# Playwright 无障碍树快照（测试产物）
+/forgot-password.yml
+/login-page.yml
+/cad-editor-initial.yml
+test-*.yml
+
+# impeccable-ignore-start
+# Ephemeral output, runtime state, and per-dev overrides.
+# Unanchored: .impeccable may sit at the repo root or under a nested
+# workspace (apps/web/.impeccable/...); anchored patterns would miss it.
+# Shared artifacts stay tracked: config.json, live/config.json,
+# design.json, critique/*.md.
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/*.png
+.impeccable/live/server.json
+.impeccable/live/sessions/
+.impeccable/live/previews/
+.impeccable/live/annotations/
+.impeccable/live/cache/
+.impeccable/live/manual-edit-apply-transaction.json
+.impeccable/live/manual-edit-events.jsonl
+.impeccable/live/manual-edit-evidence/
+.impeccable/live/pending-manual-edits.json
+.impeccable/live/deferred-svelte-component-accepts.json
+.impeccable/live/*.png
+# impeccable-ignore-end
+# 临时产物（一次性会话输出，不入库）
+.scratch/
+playwright-report/

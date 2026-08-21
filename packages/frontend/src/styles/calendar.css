@@ -1,0 +1,45 @@
+@import 'react-day-picker/style.css';
+
+/* ==========================================================================
+ * react-day-picker v9 主题适配（shadcn/ui Calendar 拉取改造）
+ *
+ * style.css 是非 layer 规则，优先级高于 Tailwind utilities layer，
+ * 因此主题定制走 rdp 官方 CSS 变量 API，视觉默认值（非变量部分）在此覆盖。
+ * ========================================================================== */
+
+.rdp-root {
+  /* 品牌色 / 语义色映射到项目 token */
+  --rdp-accent-color: var(--primary-500);
+  --rdp-accent-background-color: var(--primary-100);
+  --rdp-today-color: var(--primary-500);
+  --rdp-selected-border: 1px solid var(--primary-500);
+
+  /* 格子尺寸：2rem 与项目 Input 尺寸体系一致 */
+  --rdp-day-height: 2rem;
+  --rdp-day-width: 2rem;
+  --rdp-day_button-border-radius: var(--radius-md);
+  --rdp-day_button-width: 2rem;
+  --rdp-day_button-height: 2rem;
+
+  /* 导航按钮 */
+  --rdp-nav_button-width: 2rem;
+  --rdp-nav_button-height: 2rem;
+  --rdp-nav-height: 2rem;
+
+  --rdp-weekday-padding: 0.25rem 0;
+}
+
+/* style.css 的视觉默认值与项目字号体系不一致，显式覆盖（同非 layer，后加载生效） */
+.rdp-selected {
+  font-weight: 500;
+  font-size: inherit;
+}
+
+.rdp-month_caption {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.rdp-weekday {
+  font-size: 0.8rem;
+}

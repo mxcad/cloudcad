@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudCAD 架构深化报告</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            deep: '#1e293b',
+            shallow: '#f59e0b',
+            seam: '#3b82f6',
+            adapter: '#10b981',
+            hot: '#ef4444',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .diagram-box { background: #0f172a; border-radius: 12px; padding: 1.5rem; color: #e2e8f0; }
+    .module-card { transition: all 0.2s; }
+    .module-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.12); transform: translateY(-2px); }
+    .section-divider { height: 4px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); border-radius: 2px; margin: 3rem 0; }
+    .badge-strong { background: #ef4444; color: white; }
+    .badge-worth { background: #f59e0b; color: #1e293b; }
+    .badge-speculative { background: #6b7280; color: white; }
+    .callout { border-left: 4px solid #f59e0b; background: #fef3c7; padding: 1rem; border-radius: 0 8px 8px 0; }
+    .callout-adr { border-left-color: #3b82f6; background: #dbeafe; }
+    .file-path { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #64748b; }
+    .stat { font-variant-numeric: tabular-nums; }
+    .mermaid-container { display: flex; justify-content: center; padding: 1rem 0; }
+    /* Custom diagram styles */
+    .mass-box { text-align: center; padding: 0.75rem; border-radius: 8px; font-weight: 600; }
+    .mass-god { background: #fecaca; border: 2px solid #ef4444; color: #991b1b; }
+    .mass-split { background: #d1fae5; border: 2px solid #10b981; color: #065f46; }
+    .arrow-down { text-align: center; font-size: 1.5rem; color: #64748b; margin: 0.25rem 0; }
+    .seam-line { border-left: 3px dashed #3b82f6; padding-left: 1rem; margin: 0.5rem 0; }
+    .module-block { padding: 0.75rem; border-radius: 6px; margin: 0.25rem 0; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div class="max-w-5xl mx-auto px-6 py-8">
+
+    <!-- Header -->
+    <header class="mb-10">
+      <h1 class="text-4xl font-bold text-slate-900 mb-2">CloudCAD 架构深化报告</h1>
+      <p class="text-slate-500 text-lg">2026-07-21 · 基于最近 60 次提交的热点分析 · 共 5 个候选</p>
+      <div class="flex gap-2 mt-3">
+        <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">5 个候选</span>
+        <span class="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">2 个强推荐</span>
+        <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">词汇: 模块 · 接口 · 深度 ·  seam · 适配器</span>
+      </div>
+    </header>
+
+    <!-- Summary -->
+    <section class="mb-10">
+      <h2 class="text-2xl font-bold text-slate-800 mb-4">概览</h2>
+      <p class="text-slate-600 leading-relaxed">
+        本次审查基于<strong>深度模块</strong>原则：一个模块的<strong>接口</strong>应该比其<strong>实现</strong>小得多，为调用者提供<strong>杠杆</strong>，为维护者提供<strong>局部性</strong>。
+        以下候选模块违反了这一原则——它们要么是<strong>浅层</strong>的（接口几乎和实现一样复杂），要么是上帝模块（职责过多，没 seam）。
+        每个候选都通过了<strong>删除测试</strong>：删除它会将复杂性分散到各处，而非真正消除它。
+      </p>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Candidate 1: mxcadManager God Module -->
+    <section class="mb-12 module-card bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <span class="badge-strong px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">强推荐</span>
+          <h2 class="text-2xl font-bold text-slate-900 mt-2">1. mxcadManager 上帝模块</h2>
+        </div>
+        <div class="text-right text-sm text-slate-400">
+          <div class="stat">2,612 行</div>
+          <div class="stat">88 个 import</div>
+          <div class="stat">10+ 职责</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">📁 涉及文件</h3>
+          <ul class="space-y-1 text-sm">
+            <li class="file-path">packages/frontend/src/services/mxcadManager/index.ts</li>
+            <li class="file-path">packages/frontend/src/services/mxcadManager/mxcadManagerCore.ts</li>
+            <li class="file-path">packages/frontend/src/services/mxcadManager/mxcadCollaboration.ts</li>
+            <li class="file-path">packages/frontend/src/pages/CADEditorDirect.tsx</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">⚠️ 问题</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• 命令注册（Mx_Save, Mx_NewFile, openFile, exportFile 等）混在同一个文件中</li>
+            <li>• 模块级可变状态（pendingImages, projectPermsCache, navigateFunction 等 6+ 个）</li>
+            <li>• 模块级副作用（setupBeforeUnloadHandler 在引用时立即执行）</li>
+            <li>• 重复逻辑：handleNewFileCommand 同时存在于 index.ts 和 mxcadManagerCore.ts</li>
+            <li>• <strong>删除测试</strong>：删除此文件意味着将命令注册、文件打开、保存、导出、导航逻辑散落到各处</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-green-700 mb-2">✅ 解决方案</h3>
+          <p class="text-sm text-slate-600">
+            将每个命令（Save, NewFile, OpenFile, ExportPDF, ExportDWG, ExportDXF, SaveAs, SaveToCloud）
+            提取为独立的<strong>命令对象</strong>，每个实现一个 <code>Command</code> 接口：
+            <code class="block bg-slate-100 p-2 rounded mt-2 text-xs">interface Command { execute(context: CommandContext): Promise&lt;Result&gt; }</code>
+            <code>mxcadManager/index.ts</code> 只保留<strong>注册表</strong>（CommandRegistry），
+            将调用者与具体命令解耦。命令的<strong> seam </strong>在 CommandRegistry 的接口处——测试可以注册 mock 命令。
+          </p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-blue-700 mb-2">📈 收益</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• <strong>杠杆</strong>：调用者只需了解 CommandRegistry 的 2-3 个方法，而非 2000 行的实现</li>
+            <li>• <strong>局部性</strong>：每个命令的变更隔离在自己的文件中，不影响其他命令</li>
+            <li>• <strong>测试</strong>：每个命令可以独立单元测试；整个注册表可以通过 mock 命令测试</li>
+            <li>• <strong>无模块级状态</strong>：命令上下文通过参数传递，而非模块级变量</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="diagram-box">
+        <h3 class="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">Before / After</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Before -->
+          <div>
+            <div class="text-center text-red-400 text-xs font-semibold mb-2">现状 — 浅层上帝模块</div>
+            <div class="mass-box mass-god mb-2">mxcadManager/index.ts<br><span class="text-xs">2,612 行 · 88 imports</span></div>
+            <div class="text-xs text-slate-400 space-y-1 pl-2">
+              <div>├─ Mx_Save</div>
+              <div>├─ Mx_NewFile</div>
+              <div>├─ openFile</div>
+              <div>├─ exportFile (PDF/DWG/DXF)</div>
+              <div>├─ Mx_SaveAs</div>
+              <div>├─ Mx_SaveToCloud</div>
+              <div>├─ Navigation (返回上一页)</div>
+              <div>├─ Collaboration (协同退出)</div>
+              <div>├─ beforeunload handler</div>
+              <div>├─ module-level state (6 vars)</div>
+              <div>└─ duplicate code in mxcadManagerCore.ts</div>
+            </div>
+          </div>
+          <!-- After -->
+          <div>
+            <div class="text-center text-green-400 text-xs font-semibold mb-2">深化后 — 命令模式 + 注册表</div>
+            <div class="space-y-1">
+              <div class="mass-box mass-split text-sm">CommandRegistry<br><span class="text-xs">~80 行 · 注册/执行/撤销</span></div>
+              <div class="text-xs text-slate-400 space-y-1 pl-2">
+                <div>Seam：register(name, command) / execute(name, ctx)</div>
+              </div>
+              <div class="mt-2 grid grid-cols-3 gap-1 text-xs text-center">
+                <div class="module-block bg-slate-700">SaveCommand</div>
+                <div class="module-block bg-slate-700">NewFileCommand</div>
+                <div class="module-block bg-slate-700">OpenFileCommand</div>
+                <div class="module-block bg-slate-700">ExportPDFCommand</div>
+                <div class="module-block bg-slate-700">ExportDWGCommand</div>
+                <div class="module-block bg-slate-700">ExportDXFCommand</div>
+                <div class="module-block bg-slate-700">SaveAsCommand</div>
+                <div class="module-block bg-slate-700">SaveToCloudCommand</div>
+                <div class="module-block bg-slate-700">CollabExitCommand</div>
+              </div>
+              <div class="mt-2 text-xs text-slate-500">
+                每个命令 ~100-300 行 · 可独立测试 · 可 mock 注册
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Candidate 2: BatchDownloadService God -->
+    <section class="mb-12 module-card bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <span class="badge-strong px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">强推荐</span>
+          <h2 class="text-2xl font-bold text-slate-900 mt-2">2. BatchDownloadService 上帝服务</h2>
+        </div>
+        <div class="text-right text-sm text-slate-400">
+          <div class="stat">556 行</div>
+          <div class="stat">10 个 DI 依赖</div>
+          <div class="stat">5+ 职责</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">📁 涉及文件</h3>
+          <ul class="space-y-1 text-sm">
+            <li class="file-path">packages/backend/src/batch-download/batch-download.service.ts</li>
+            <li class="file-path">packages/backend/src/batch-download/batch-download.controller.ts</li>
+            <li class="file-path">packages/backend/src/batch-download/conversion-runner.ts</li>
+            <li class="file-path">packages/backend/src/batch-download/archive-writer.ts</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">⚠️ 问题</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• 10 个 DI 依赖意味着严重违反单一职责——它做了太多事</li>
+            <li>• 同一服务中混合了：任务创建、权限检查、文件夹展开、进度追踪、SSE 流</li>
+            <li>• <strong>删除测试</strong>：删除 BatchDownloadService 意味着将依赖分散到 controller、新的 folder-expander、progress-tracker、sse-manager 中</li>
+            <li>• ArchiveWriter 和 ConversionRunner 是好的深度模块——但它们没有被 BatchDownloadService 通过 seam 使用</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-green-700 mb-2">✅ 解决方案</h3>
+          <p class="text-sm text-slate-600">
+            将 <code>BatchDownloadService</code> 拆分为 4 个独立的模块，每个通过接口协作：
+          </p>
+          <ul class="text-sm text-slate-600 mt-2 space-y-1">
+            <li>• <strong>FolderExpander</strong> — 文件夹展开 + 节点收集</li>
+            <li>• <strong>ProgressTracker</strong> — 进度追踪 + 状态持久化</li>
+            <li>• <strong>SseManager</strong> — SSE 事件流管理</li>
+            <li>• <strong>BatchDownloadOrchestrator</strong> — 编排器，协调上述三者的流程</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-blue-700 mb-2">📈 收益</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• <strong>杠杆</strong>：编排器接口很小（~3 方法），调用者无需了解内部 4 个模块</li>
+            <li>• <strong>局部性</strong>：文件夹展开逻辑的 bug 只需修改 FolderExpander</li>
+            <li>• <strong>测试</strong>：每个模块可以独立测试；SSE 部分可以用虚拟 EventEmitter 测试</li>
+            <li>• <strong>依赖注入减少</strong>：编排器只需要 3 个注入而非 10 个</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="diagram-box">
+        <h3 class="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">Before / After</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Before -->
+          <div>
+            <div class="text-center text-red-400 text-xs font-semibold mb-2">现状 — 10 个注入的上帝模块</div>
+            <div class="mass-box mass-god text-sm">BatchDownloadService<br><span class="text-xs">556 行 · 10 DI dep</span></div>
+            <div class="text-xs text-slate-400 mt-1 space-y-1 pl-2">
+              <div>DI dep 包括：Prisma, ConfigService, ...</div>
+              <div>职责包括：任务创建、权限、文件夹展开、</div>
+              <div>进度追踪、SSE、ZIP 编排</div>
+            </div>
+          </div>
+          <!-- After -->
+          <div>
+            <div class="text-center text-green-400 text-xs font-semibold mb-2">深化后 — 编排器 + 3 个深度模块</div>
+            <div class="space-y-2">
+              <div class="mass-box mass-split text-sm">BatchDownloadOrchestrator<br><span class="text-xs">~120 行 · 3 DI dep</span></div>
+              <div class="grid grid-cols-3 gap-2 text-xs text-center mt-2">
+                <div class="module-block bg-slate-700">FolderExpander<br><span class="text-xs">~150 行</span></div>
+                <div class="module-block bg-slate-700">ProgressTracker<br><span class="text-xs">~120 行</span></div>
+                <div class="module-block bg-slate-700">SseManager<br><span class="text-xs">~80 行</span></div>
+              </div>
+              <div class="text-xs text-slate-500 mt-1">
+                每个模块通过接口协作 · 接口 1-3 个方法
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Candidate 3: External Reference cross-controller -->
+    <section class="mb-12 module-card bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <span class="badge-worth px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">值得探讨</span>
+          <h2 class="text-2xl font-bold text-slate-900 mt-2">3. 外部参照逻辑分散在两个控制器之间</h2>
+        </div>
+        <div class="text-right text-sm text-slate-400">
+          <div class="stat">跨模块边界</div>
+          <div class="stat">2 个控制器</div>
+          <div class="stat">重复的 preloading 逻辑</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">📁 涉及文件</h3>
+          <ul class="space-y-1 text-sm">
+            <li class="file-path">packages/backend/src/mxcad/external-ref/external-ref.controller.ts</li>
+            <li class="file-path">packages/backend/src/mxcad/external-ref/external-reference-update.service.ts (623 行)</li>
+            <li class="file-path">packages/backend/src/mxcad/infra/mxcad-file-access.controller.ts</li>
+            <li class="file-path">packages/backend/src/mxcad/external-ref/external-reference-handler.service.ts</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">⚠️ 问题</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• 外部参照的文件访问在 <code>mxcad/infra/</code> 控制器中处理，但上传/管理在 <code>mxcad/external-ref/</code> 控制器中</li>
+            <li>• <strong>相同的 seam 被两个模块切割</strong>：preloading JSON 的读取逻辑（checkExists, getExtRefDirName, getPreloadingFileName 等模式）在多个服务中重复</li>
+            <li>• <strong>删除测试</strong>：删除 infra controller 中的 ext-ref 代码后，它们会在 external-ref controller 中重现</li>
+            <li>• 控制器内联了过多的业务逻辑（token 解析、文件验证、大小检查）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout mb-4">
+        <strong>⚠️ ADR 参考</strong>：ADR-0002 要求 <strong>FileSystemController</strong> 直接注入子服务而非通过 Facade。类似地，外部参照控制器也应将业务逻辑提取到深层服务中。这并不矛盾——而是在遵循相同的模式。
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-green-700 mb-2">✅ 解决方案</h3>
+          <ul class="text-sm text-slate-600 space-y-2">
+            <li>• 将两个控制器中的 ext-ref 相关逻辑合并到一个 <strong>ExternalRefModule</strong>（已有，但需要调整 seam）</li>
+            <li>• 提取 <strong>PreloadingFileService</strong>：专门处理 preloading JSON 的读写、存在性检查、路径解析</li>
+            <li>• 将 <code>external-ref.controller.ts</code> 中的验证逻辑提取到 <strong>ExtRefValidatorService</strong></li>
+            <li>• <code>MxcadFileAccessController</code> 中的 ext-ref 端点委托给 ExtRefModule</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-blue-700 mb-2">📈 收益</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• <strong>局部性</strong>：所有外部参照逻辑在一个模块内，不再跨 infra/ 和 external-ref/ 分散</li>
+            <li>• <strong>杠杆</strong>：PreloadingFileService 的小接口（readPreloading, writePreloading, checkExists）替换了 3 个服务中的重复代码</li>
+            <li>• <strong>测试</strong>：PreloadingFileService 可以用 mock 文件系统测试；控制器变薄后更容易测试</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="diagram-box">
+        <h3 class="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">Before / After</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Before -->
+          <div>
+            <div class="text-center text-red-400 text-xs font-semibold mb-2">现状 — seam 被两个模块切割</div>
+            <div class="text-xs space-y-1">
+              <div class="p-2 rounded bg-slate-800 border-l-4 border-red-500">
+                <strong class="text-red-400">mxcad/infra/</strong>
+                <div class="text-slate-400 text-xs">MxcadFileAccessController</div>
+                <div class="text-slate-500">├─ ext-ref file stream</div>
+                <div class="text-slate-500">├─ preloading data access</div>
+              </div>
+              <div class="p-2 rounded bg-slate-800 border-l-4 border-red-500 mt-2">
+                <strong class="text-red-400">mxcad/external-ref/</strong>
+                <div class="text-slate-400 text-xs">ExternalRefController</div>
+                <div class="text-slate-500">├─ ext-ref upload</div>
+                <div class="text-slate-500">├─ ext-ref management</div>
+                <div class="text-slate-500">├─ preloading update</div>
+              </div>
+              <div class="mt-2 p-2 rounded bg-slate-800 border border-amber-500">
+                <span class="text-amber-400 text-xs font-semibold">重复模式：</span>
+                <span class="text-slate-400 text-xs">checkExists, getPreloadingFileName, getExtRefDirName — 在 2+ 服务中重复</span>
+              </div>
+            </div>
+          </div>
+          <!-- After -->
+          <div>
+            <div class="text-center text-green-400 text-xs font-semibold mb-2">深化后 — 统一的 seam</div>
+            <div class="text-xs space-y-1">
+              <div class="p-2 rounded bg-slate-800 border-l-4 border-blue-500">
+                <strong class="text-blue-400">PreloadingFileService</strong>
+                <div class="text-slate-400">readPreloading(writeNodeId, srcFileMd5)</div>
+                <div class="text-slate-400">writePreloading(data)</div>
+                <div class="text-slate-400">checkExists(writeNodeId, srcFileMd5)</div>
+                <div class="text-slate-400 text-amber-300 text-xs mt-1">← 3 个服务复用此接口</div>
+              </div>
+              <div class="p-2 rounded bg-slate-800 border-l-4 border-green-500 mt-2">
+                <strong class="text-green-400">ExtRefValidatorService</strong>
+                <div class="text-slate-400">validateUpload(file, user, node)</div>
+                <div class="text-slate-400">checkFileSize(size)</div>
+              </div>
+              <div class="p-2 rounded bg-slate-700 mt-2">
+                <span class="text-slate-300">MxcadFileAccessController → 委托给 ExternalRefModule</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Candidate 4: CADEditorDirect Giant Component -->
+    <section class="mb-12 module-card bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <span class="badge-worth px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">值得探讨</span>
+          <h2 class="text-2xl font-bold text-slate-900 mt-2">4. CADEditorDirect 巨型组件</h2>
+        </div>
+        <div class="text-right text-sm text-slate-400">
+          <div class="stat">1,575 行</div>
+          <div class="stat">37 个 import</div>
+          <div class="stat">8+ 职责</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">📁 涉及文件</h3>
+          <ul class="space-y-1 text-sm">
+            <li class="file-path">packages/frontend/src/pages/CADEditorDirect.tsx</li>
+            <li class="file-path">packages/frontend/src/pages/cad-editor/helpers.ts</li>
+            <li class="file-path">packages/frontend/src/pages/cad-editor/initMxCAD.ts</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">⚠️ 问题</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• 一个组件处理了：路由守卫、文件加载、下载导出 (PDF/DWG/DXF)、外部参照上传、协同分享、拖放打开、主题同步、i18n 同步</li>
+            <li>• <strong>没有 seam</strong>：所有逻辑直接嵌入 JSX 或 useEffect 中，无法独立测试</li>
+            <li>• <strong>删除测试</strong>：删除此组件意味着将路由逻辑移到 App.tsx，下载逻辑移到新组件，外部参照逻辑移到 modals/</li>
+            <li>• 已提取 helpers.ts 和 initMxCAD.ts，但它们太薄——辅助函数没有深度</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-green-700 mb-2">✅ 解决方案</h3>
+          <ul class="text-sm text-slate-600 space-y-2">
+            <li>• 将导出逻辑提取到 <strong>useExportDrawing</strong> hook</li>
+            <li>• 将路由守卫/文件打开逻辑提取到 <strong>useFileOpenGuard</strong> hook</li>
+            <li>• 将拖放打开逻辑提取到 <strong>useDropOpen</strong> hook</li>
+            <li>• 将外部参照上传提取到现有 <strong>useExternalReferenceUpload</strong> hook</li>
+            <li>• CADEditorDirect 本身只做编排：调用 4-5 个 hooks，保持 JSX 薄</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-blue-700 mb-2">📈 收益</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• <strong>杠杆</strong>：每个 hook 可以被其他组件复用（例如导出按钮可以在工具栏复用）</li>
+            <li>• <strong>局部性</strong>：导出逻辑的 bug 不会干扰文件打开逻辑</li>
+            <li>• <strong>测试</strong>：每个 hook 可以单独测试；CADEditorDirect 作为薄编排层只需集成测试</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="diagram-box">
+        <h3 class="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">Before / After</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Before -->
+          <div>
+            <div class="text-center text-red-400 text-xs font-semibold mb-2">现状 — 1,575 行单体组件</div>
+            <div class="mass-box mass-god text-sm">CADEditorDirect.tsx</div>
+            <div class="text-xs text-slate-400 mt-1 space-y-1 pl-2">
+              <div>┌─ route guard</div>
+              <div>├─ file loading</div>
+              <div>├─ export PDF</div>
+              <div>├─ export DWG</div>
+              <div>├─ export DXF</div>
+              <div>├─ ext-ref handling</div>
+              <div>├─ collab share</div>
+              <div>├─ drag-drop open</div>
+              <div>├─ theme sync</div>
+              <div>└─ i18n sync</div>
+            </div>
+          </div>
+          <!-- After -->
+          <div>
+            <div class="text-center text-green-400 text-xs font-semibold mb-2">深化后 — 编排器 + 4 个 hooks</div>
+            <div class="space-y-2">
+              <div class="mass-box mass-split text-sm">CADEditorDirect<br><span class="text-xs">~200 行（编排）</span></div>
+              <div class="grid grid-cols-2 gap-2 text-xs text-center mt-2">
+                <div class="module-block bg-slate-700">useExportDrawing</div>
+                <div class="module-block bg-slate-700">useFileOpenGuard</div>
+                <div class="module-block bg-slate-700">useDropOpen</div>
+                <div class="module-block bg-slate-700">useExtRefUpload</div>
+              </div>
+              <div class="text-xs text-slate-500">
+                每个 hook 可独立测试 · 可独立复用
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Candidate 5: CommonModule residual services -->
+    <section class="mb-12 module-card bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <span class="badge-worth px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">值得探讨</span>
+          <h2 class="text-2xl font-bold text-slate-900 mt-2">5. CommonModule 残留服务</h2>
+        </div>
+        <div class="text-right text-sm text-slate-400">
+          <div class="stat">21 个服务残留</div>
+          <div class="stat">4 个已拆出</div>
+          <div class="stat">无域归属</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">📁 涉及文件</h3>
+          <ul class="space-y-1 text-sm">
+            <li class="file-path">packages/backend/src/common/services/ (21 个服务)</li>
+            <li class="file-path">packages/backend/src/permission/ (已拆出，但 PermissionService 仍在 common 中)</li>
+            <li class="file-path">packages/backend/src/roles/ (RoleInheritanceService 仍在 common 中)</li>
+            <li class="file-path">packages/backend/src/storage-management/ (已拆出)</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-700 mb-2">⚠️ 问题</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• <strong>浅层模块</strong>：common/services/ 是一个"杂物间"——21 个服务没有域归属</li>
+            <li>• <strong>违反局部性</strong>：PermissionService 的变更需要同时在 common/ 和 permission/ 中查找</li>
+            <li>• <strong>删除测试</strong>：删除 common/services/ 不会丢失功能——只是强制将它们分配到正确的域模块</li>
+            <li>• 大服务仍留在 common：PermissionService (507 行), RoleInheritanceService (547 行)</li>
+            <li>• 虽然 NestJS 运行时不受影响，但对"这个服务属于哪个域"的认知负荷增加了</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout mb-4">
+        <strong>⚠️ ADR 参考</strong>：ADR-0002 已确立了"将逻辑放在域模块中"的模式。此候选只是 ADR-0002 未完成的工作——不是推翻它，而是完成它。ADR-0002 的约束条件（Controller 直接注入子服务）继续适用。
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-green-700 mb-2">✅ 解决方案</h3>
+          <ul class="text-sm text-slate-600 space-y-2">
+            <li>• <strong>PermissionService</strong> → 移动到 <code>src/permission/services/</code></li>
+            <li>• <strong>RoleInheritanceService</strong> → 移动到 <code>src/roles/services/</code></li>
+            <li>• <strong>StorageCleanupService</strong> → 移动到 <code>src/storage-management/services/</code></li>
+            <li>• <strong>其他服务</strong> → 归入 cache-architecture / conversion / etc.</li>
+            <li>• 纯基础设施（ConcurrencyManager, TreeTraversalService）可保留在 common 中</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-blue-700 mb-2">📈 收益</h3>
+          <ul class="text-sm text-slate-600 space-y-1">
+            <li>• <strong>局部性</strong>：每个域模块拥有自己的服务，变更时不需要跨目录跳转</li>
+            <li>• <strong>杠杆</strong>：新开发者只需看域模块的目录即可理解该域</li>
+            <li>• <strong>测试友好</strong>：域模块自包含后，mock 和测试设置更局部化</li>
+            <li>• <strong>低风险</strong>：纯粹的移动操作，不改变接口或行为</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="diagram-box">
+        <h3 class="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">Before / After</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Before -->
+          <div>
+            <div class="text-center text-red-400 text-xs font-semibold mb-2">现状 — 杂物间模式</div>
+            <div class="p-2 rounded bg-slate-800 text-xs space-y-1">
+              <div><span class="text-amber-400">src/common/services/</span></div>
+              <div class="text-slate-400">├─ permission.service.ts (507 行)</div>
+              <div class="text-slate-400">├─ role-inheritance.service.ts (547 行)</div>
+              <div class="text-slate-400">├─ storage-cleanup.service.ts (596 行)</div>
+              <div class="text-slate-400">├─ initialization.service.ts (729 行)</div>
+              <div class="text-slate-400">├─ ... 还有 17 个</div>
+              <div class="text-slate-500 mt-1">❌ 找不到"这个服务到底属于谁"</div>
+            </div>
+          </div>
+          <!-- After -->
+          <div>
+            <div class="text-center text-green-400 text-xs font-semibold mb-2">深化后 — 归属清晰的域模块</div>
+            <div class="text-xs space-y-1">
+              <div class="p-2 rounded bg-slate-800">
+                <span class="text-blue-400">src/permission/services/</span>
+                <div class="text-slate-400">└─ permission.service.ts</div>
+              </div>
+              <div class="p-2 rounded bg-slate-800">
+                <span class="text-blue-400">src/roles/services/</span>
+                <div class="text-slate-400">└─ role-inheritance.service.ts</div>
+              </div>
+              <div class="p-2 rounded bg-slate-800">
+                <span class="text-blue-400">src/storage-management/services/</span>
+                <div class="text-slate-400">└─ storage-cleanup.service.ts</div>
+              </div>
+              <div class="p-2 rounded bg-slate-800">
+                <span class="text-blue-400">src/common/services/</span>
+                <div class="text-slate-400">└─ 真正共用的基础设施（~5 个）</div>
+              </div>
+              <div class="text-slate-500 mt-1">✅ import 路径变长，但归属变清晰</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Top Recommendation -->
+    <section class="mb-12 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-8 text-white">
+      <h2 class="text-2xl font-bold mb-4">🏆 首选推荐</h2>
+      
+      <div class="bg-white/10 rounded-lg p-6 mb-4">
+        <h3 class="text-xl font-bold text-amber-400 mb-3">#1: mxcadManager 上帝模块 → 命令模式</h3>
+        <div class="space-y-3 text-slate-300">
+          <p><strong>为什么是首选：</strong></p>
+          <ul class="list-disc pl-5 space-y-1.5 text-sm">
+            <li><strong>规模最大</strong>：2,612 行是 repo 中最大的手写文件，88 个 import 意味着最高的耦合度</li>
+            <li><strong>最阻碍测试</strong>：模块级副作用和可变状态使得任何自动测试都无法进行——当前 0 测试</li>
+            <li><strong>热点区域</strong>：CAD 编辑器是产品的核心价值所在，变更频繁</li>
+            <li><strong>明确的 seam</strong>：命令模式是经过时间验证的深化策略——CommandRegistry 接口小，测试收益大</li>
+            <li><strong>低风险递增路径</strong>：可以先提取一个命令（如 ExportPDF）作为试验，验证模式后再推广</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white/10 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-blue-300 mb-1">执行步骤</h4>
+          <ul class="text-xs text-slate-300 space-y-1">
+            <li>1. 定义 Command 接口 + CommandContext 类型</li>
+            <li>2. 提取 ExportPDF 命令作为试点</li>
+            <li>3. 提取 CommandRegistry 并注册试点命令</li>
+            <li>4. 逐一迁移其他命令（Save, NewFile, OpenFile...）</li>
+            <li>5. 删除模块级可变状态，改用 Context 参数</li>
+            <li>6. 删除 mxcadManagerCore.ts 中的重复代码</li>
+          </ul>
+        </div>
+        <div class="bg-white/10 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-blue-300 mb-1">预期收益</h4>
+          <ul class="text-xs text-slate-300 space-y-1">
+            <li>• 2,612 行 → 9 个文件 × ~200-300 行</li>
+            <li>• 88 imports → 每个命令约 5-15 imports</li>
+            <li>• 0 测试 → 每个命令可单元测试</li>
+            <li>• 模块级状态 → 零模块级可变状态</li>
+            <li>• 新命令只需 addCommand(name, new MyCommand())</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-4 text-sm text-slate-400">
+        次选推荐：<strong>BatchDownloadService</strong>（#2）—— 10 个 DI 依赖是强烈的"听诊器信号"，且拆分后 SSE 流可以独立演进。
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-slate-400 text-xs py-8 border-t border-slate-200">
+      CloudCAD Architecture Review · Generated 2026-07-21 · 词汇：模块 · 接口 · 深度 · seam · 适配器 · 杠杆 · 局部性
+    </footer>
+
+  </div>
+</body>
+</html>

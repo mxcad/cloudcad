@@ -1,0 +1,22 @@
+# 梦想网页CAD实时协同平台 Grafana 数据源预置（ADR-0055 §3）
+# Prometheus（指标）+ Loki（日志）；看板清单见 #317
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 15s
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000

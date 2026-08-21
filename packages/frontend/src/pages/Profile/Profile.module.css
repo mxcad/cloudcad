@@ -1,0 +1,842 @@
+/* Profile page styles (ADR-0032 CSS Modules)
+   Uses theme.css CSS variables; supports light/dark theme */
+
+/* ============================================
+   1. 页面布局
+   ============================================ */
+
+.profilePage {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-family-base);
+  background: transparent;
+  padding: var(--space-8);
+}
+
+.profileContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  animation: fade-in var(--transition-slow) ease-out;
+}
+
+.profileCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   2. 头像区域
+   ============================================ */
+
+.profileHeader {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  background: linear-gradient(
+    135deg,
+    var(--bg-tertiary) 0%,
+    var(--bg-secondary) 100%
+  );
+  border-bottom: 1px solid var(--border-default);
+}
+
+.avatarSection {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.avatarWrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.avatarGlow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-400), var(--accent-400));
+  opacity: 0.4;
+  filter: blur(8px);
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.avatarImage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+.userInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1);
+}
+
+.userRole {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* ============================================
+   4. 提示消息 (Alert)
+   ============================================ */
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  margin: var(--space-4) var(--space-6);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-md);
+  animation: fade-in var(--transition-base) ease-out;
+}
+
+.alertSuccess {
+  background: var(--success-light);
+  border: 1px solid var(--success-dim);
+  color: var(--success);
+}
+
+.alertError {
+  background: var(--error-light);
+  border: 1px solid var(--error-dim);
+  color: var(--error);
+}
+
+.alertIcon {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   6. 内容区域
+   ============================================ */
+
+.contentArea {
+  padding: var(--space-6) var(--space-8) var(--space-8);
+}
+
+.tabContent {
+  animation: fade-in var(--transition-slow) ease-out;
+}
+
+.passwordForm,
+.phoneForm {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ============================================
+   7. 表单输入
+   ============================================ */
+
+.inputGroup {
+  margin-bottom: var(--space-5);
+}
+
+.inputLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inputWrapperHasButton {
+  flex-wrap: nowrap;
+}
+
+.inputGroupFocused .inputLabel {
+  color: var(--primary-500);
+}
+
+.inputGroupFocused .inputGlow {
+  opacity: 1;
+}
+
+.inputGlow {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--primary-400), var(--accent-400));
+  opacity: 0;
+  z-index: -1; /* input glow: local stacking */
+  transition: opacity var(--transition-base);
+  pointer-events: none;
+}
+
+.fieldHint {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-1);
+}
+
+/* ============================================
+   8. 按钮
+   ============================================ */
+
+.buttonGroup {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* ============================================
+   9. 密码强度
+   ============================================ */
+
+.passwordStrength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.strengthFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition:
+    width var(--transition-base),
+    background var(--transition-base);
+}
+
+.strengthLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ============================================
+   10. 安全提示
+   ============================================ */
+
+.noPasswordHint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--info-light);
+  border: 1px solid var(--info-dim);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.noPasswordHint .hintIcon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  background: var(--info);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.noPasswordHint .hintContent {
+  flex: 1;
+}
+
+.noPasswordHint .hintContent h4 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1);
+}
+
+.noPasswordHint .hintContent p {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.securityTips {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+}
+
+.securityTips h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3);
+}
+
+.securityTips ul {
+  margin: 0;
+  padding-left: var(--space-6);
+  list-style: none;
+}
+
+.securityTips li {
+  position: relative;
+  font-size: var(--text-base);
+  color: var(--text-tertiary);
+  line-height: 1.8;
+}
+
+.securityTips li::before {
+  content: '•';
+  position: absolute;
+  left: -1rem;
+  color: var(--primary-500);
+  font-weight: bold;
+}
+
+/* ============================================
+   11. 绑定状态（邮箱/手机/微信已绑定）
+   ============================================ */
+
+.emailBound,
+.phoneBound,
+.wechatBound {
+  text-align: center;
+  padding: var(--space-8) 0;
+}
+
+.successIcon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-4);
+  background: var(--success-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--success);
+  box-shadow: var(--shadow-md);
+}
+
+.emailBound h3,
+.phoneBound h3,
+.wechatBound h3 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.boundEmail,
+.boundPhone,
+.boundInfo {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-6);
+}
+
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 360px;
+  margin: 0 auto var(--space-6);
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-xl);
+}
+
+.benefitItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
+.benefitItem svg {
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   12. 邮箱/手机绑定表单
+   ============================================ */
+
+.emailForm {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.emailPreview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.emailPreview svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.emailPreview span {
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.infoText {
+  text-align: center;
+  padding: var(--space-3);
+  background: var(--info-light);
+  border: 1px solid var(--info-dim);
+  border-radius: var(--radius-lg);
+  color: var(--info);
+  font-size: var(--text-md);
+  font-weight: 500;
+  margin-bottom: var(--space-5);
+}
+
+.verifyNotice,
+.verifySuccess {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-md);
+  font-weight: 500;
+  margin-bottom: var(--space-5);
+}
+
+.verifyNotice {
+  background: var(--info-light);
+  border: 1px solid var(--info-dim);
+  color: var(--info);
+}
+
+.verifySuccess {
+  background: var(--success-light);
+  border: 1px solid var(--success-dim);
+  color: var(--success);
+}
+
+/* ============================================
+   13. 微信绑定
+   ============================================ */
+
+.wechatBindContent {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.wechatUnbound {
+  text-align: center;
+  padding: var(--space-8) 0;
+}
+
+.unboundIcon {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto var(--space-4);
+  background: linear-gradient(135deg, var(--success), var(--success));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+}
+
+.wechatUnbound h3 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.unboundDesc {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-6);
+}
+
+/* ============================================
+   14. 注销账户
+   ============================================ */
+
+.deactivateContent {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.warningIcon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-4);
+  background: var(--error-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--error);
+  box-shadow: var(--shadow-md);
+}
+
+.deactivateContent h3 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.warningText {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-5);
+  line-height: 1.6;
+}
+
+.warningList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  text-align: left;
+}
+
+.warningItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+
+.warningItem svg {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.deactivateForm {
+  text-align: left;
+}
+
+.confirmCheckbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+}
+
+.wechatWarning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+
+.wechatWarning svg {
+  color: var(--text-tertiary);
+}
+
+.wechatWarning p {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.wechatWarningSuccess {
+  border-color: var(--success-dim);
+  background: var(--success-light);
+}
+
+.wechatWarningSuccess svg {
+  color: var(--success);
+}
+
+.wechatWarningSuccess p {
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ============================================
+   15. 个人信息展示卡片
+   ============================================ */
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.infoCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-base);
+}
+
+.infoCard:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.infoCardClickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.cardChevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition:
+    transform var(--transition-base),
+    color var(--transition-base);
+}
+
+.infoCardClickable:hover .cardChevron {
+  color: var(--primary-600);
+  transform: translateX(2px);
+}
+
+.infoIconWrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infoIconWrapperPrimary {
+  background: var(--primary-100);
+  color: var(--primary-600);
+}
+
+.infoIconWrapperAccent {
+  background: var(--accent-100);
+  color: var(--accent-600);
+}
+
+.infoIconWrapperInfo {
+  background: var(--info-dim);
+  color: var(--info);
+}
+
+.infoIconWrapperSuccess {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
+.infoIconWrapperPurple {
+  background: var(--info-dim);
+  color: var(--info);
+}
+
+.infoIconWrapperWarning {
+  background: var(--warning-dim);
+  color: var(--warning);
+}
+
+.infoContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.infoContent label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+.infoContent span {
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.withStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.statusIcon {
+  flex-shrink: 0;
+}
+
+.statusIconSuccess {
+  color: var(--success);
+}
+
+.statusIconWarning {
+  color: var(--warning);
+}
+
+.statusIconMuted {
+  color: var(--text-muted);
+}
+
+/* ============================================
+   16. 编辑个人信息表单
+   ============================================ */
+
+.editProfileForm {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+}
+
+.editProfileForm .inputGroup {
+  margin-bottom: var(--space-5);
+}
+
+.editProfileForm .inputLabel {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.textTextPrimary {
+  color: var(--text-primary);
+}
+
+.textTextMuted {
+  color: var(--text-muted);
+}
+
+/* ============================================
+   17. 深色主题覆盖
+   ============================================ */
+
+:global([data-theme='dark']) .profileCard {
+  box-shadow: var(--shadow-xl);
+}
+
+:global([data-theme='dark']) .infoIconWrapperPrimary {
+  background: var(--primary-100);
+  color: var(--primary-500);
+}
+
+:global([data-theme='dark']) .infoIconWrapperAccent {
+  background: var(--accent-100);
+  color: var(--accent-400);
+}
+
+:global([data-theme='dark']) .infoIconWrapperPurple {
+  background: var(--info-dim);
+  color: var(--info);
+}
+
+:global([data-theme='dark']) .inputGlow {
+  opacity: 0;
+}
+
+:global([data-theme='dark']) .inputGroupFocused .inputGlow {
+  opacity: 0.3;
+}
+
+/* ============================================
+   18. 响应式
+   ============================================ */
+
+@media (max-width: 768px) {
+  .profilePage {
+    padding: var(--space-4);
+  }
+
+  .profileHeader {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .avatarSection {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .contentArea {
+    padding: var(--space-4);
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .editProfileForm {
+    padding: var(--space-4);
+  }
+
+  .deactivateContent {
+    padding: 0;
+  }
+}

@@ -1,0 +1,772 @@
+///////////////////////////////////////////////////////////////////////////////
+// 版权所有（C）2002-2022，成都梦想凯德科技有限公司。
+// Copyright (C) 2002-2022, Chengdu Dream Kaide Technology Co., Ltd.
+// 本软件代码及其文档和相关资料归成都梦想凯德科技有限公司,应用包含本软件的程序必须包括以下版权声明
+// The code, documentation, and related materials of this software belong to Chengdu Dream Kaide Technology Co., Ltd. Applications that include this software must include the following copyright statement
+// 此应用程序应与成都梦想凯德科技有限公司达成协议，使用本软件、其文档或相关材料
+// This application should reach an agreement with Chengdu Dream Kaide Technology Co., Ltd. to use this software, its documentation, or related materials
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import React from 'react';
+import { Check } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+import { Section } from '@/components/ui/Section';
+import { Input } from '@/components/ui/Input';
+import { useNotification } from '@/contexts/NotificationContext';
+import {
+  PERMISSION_GROUPS,
+  isPermissionEnabled,
+  getMissingDependencies,
+  getDependentPermissions,
+  togglePermission,
+} from '../../constants/permissions';
+import { t } from '@/languages';
+
+/**
+ * 权限配置组件属性
+ */
+export interface PermissionAssignmentProps {
+  /** 当前选中的权限列表 */
+  permissions: string[];
+  /** 权限变更回调 */
+  onPermissionsChange: (perms: string[]) => void;
+  /** 权限类型：system 或 project */
+  permissionType: 'system' | 'project';
+  /** 是否禁用权限选择 */
+  disabled?: boolean;
+  /** 自定义类名 */
+  className?: string;
+}
+
+/**
+ * 权限分配组件 - CloudCAD
+ *
+ * 设计特色：
+ * - 使用 CSS 变量适配深色/亮色主题
+ * - 分组折叠面板设计
+ * - 权限依赖可视化提示
+ * - 流畅的交互动画
+ */
+export const PermissionAssignment: React.FC<PermissionAssignmentProps> = ({
+  permissions,
+  onPermissionsChange,
+  permissionType,
+  disabled = false,
+  className = '',
+}) => {
+  const groups = PERMISSION_GROUPS[permissionType];
+  const { showConfirm } = useNotification();
+
+  // 防御性检查：如果 groups 为 undefined，显示错误信息
+  if (!groups) {
+    return (
+      <div className="permission-error-state">
+        <AlertCircle size={20} />
+        <span>
+          {t('权限类型错误')}: {permissionType}
+          {t('。请检查配置。')}
+        </span>
+        <style>{`
+          .permission-error-state {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-4);
+            background: var(--error-dim);
+            border: 1px solid var(--error);
+            border-radius: var(--radius-lg);
+            color: var(--error);
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  const allPermissions = groups.flatMap((group) => group.items);
+
+  /**
+   * 勾选：自动补全前置权限（如勾"创建角色"自动带出"查看角色"）
+   * 取消：若存在已勾选的下游权限（直接/传递依赖本权限），弹确认后级联取消，
+   * 从机制上杜绝"能创建但看不到角色"这类无效权限组合
+   */
+  const handleToggle = async (permKey: string) => {
+    if (permissions.includes(permKey)) {
+      const dependents = getDependentPermissions(permKey, permissions);
+      if (dependents.length > 0) {
+        // 分隔符直接用顿号字面量：t('、') 仅 zh-CN 有该键，其他语言会回退显示字面"、"（i18n 键不应承载标点）
+        const dependentLabels = dependents
+          .map(
+            (dep) =>
+              allPermissions.find((item) => item.key === dep)?.label ?? dep
+          )
+          .join('、');
+        const confirmed = await showConfirm({
+          title: t('取消权限'),
+          message: t('取消 {perm} 将同时取消：{deps}。确定继续吗？', {
+            perm:
+              allPermissions.find((item) => item.key === permKey)?.label ??
+              permKey,
+            deps: dependentLabels,
+          }),
+          confirmText: t('确认取消'),
+          cancelText: t('返回'),
+          type: 'warning',
+        });
+        if (!confirmed) return;
+        onPermissionsChange(
+          permissions.filter(
+            (p) => p !== permKey && !dependents.includes(p)
+          )
+        );
+      } else {
+        onPermissionsChange(permissions.filter((p) => p !== permKey));
+      }
+    } else {
+      togglePermission(permKey, permissions, onPermissionsChange);
+    }
+  };
+
+  return (
+    <div className={`permission-assignment-container ${className}`}>
+      {groups.map((group, groupIndex) => (
+        <Section
+          key={group.label}
+          title={<span className="group-label">{group.label}</span>}
+          actions={
+            <span className="group-count">
+              {
+                group.items.filter((item) => permissions.includes(item.key))
+                  .length
+              }{' '}
+              / {group.items.length}
+            </span>
+          }
+          className="permission-group"
+        >
+          <div className="group-items">
+            {group.items.map((perm) => {
+              // 自动补全模式下所有权限都可点选：勾选时自动带上前置权限，
+              // 取消时若存在下游权限则弹确认级联取消；missingDeps 仅作提示兜底
+              // （针对历史遗留的无效权限组合，如只勾了"创建角色"没勾"查看角色"）
+              const isEnabled = !disabled;
+              const missingDeps = getMissingDependencies(perm.key, permissions);
+              const hasPermission = permissions.includes(perm.key);
+
+              return (
+                <label
+                  key={perm.key}
+                  className={`permission-item ${hasPermission ? 'checked' : ''} ${!isEnabled ? 'disabled' : ''}`}
+                  title={
+                    !isEnabled && missingDeps.length > 0
+                      ? t('此权限需要先勾选：{deps}', {
+                          deps: missingDeps
+                            .map((dep) => {
+                              const depItem = allPermissions.find(
+                                (i) => i.key === dep
+                              );
+                              return depItem ? depItem.label : dep;
+                            })
+                            .join(t('、')),
+                        })
+                      : perm.label
+                  }
+                >
+                  <div className={`checkbox ${hasPermission ? 'checked' : ''}`}>
+                    {hasPermission && <Check size={12} />}
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="hidden-checkbox"
+                    checked={hasPermission}
+                    onChange={() =>
+                      isEnabled && handleToggle(perm.key)
+                    }
+                    disabled={!isEnabled}
+                  />
+                  <span className="permission-label">{perm.label}</span>
+                  {!isEnabled && missingDeps.length > 0 && (
+                    <Info size={14} className="dependency-hint" />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </Section>
+      ))}
+
+      <style>{permissionStyles}</style>
+    </div>
+  );
+};
+
+/**
+ * 权限配置弹窗组件属性
+ */
+export interface PermissionConfigModalProps {
+  /** 是否显示弹窗 */
+  isOpen: boolean;
+  /** 关闭弹窗回调 */
+  onClose: () => void;
+  /** 弹窗标题 */
+  title: string;
+  /** 角色名称 */
+  roleName: string;
+  /** 角色描述 */
+  roleDesc: string;
+  /** 角色名称变更回调 */
+  onNameChange: (value: string) => void;
+  /** 角色描述变更回调 */
+  onDescChange: (value: string) => void;
+  /** 当前选中的权限列表 */
+  permissions: string[];
+  /** 权限变更回调 */
+  onPermissionsChange: (perms: string[]) => void;
+  /** 保存回调 */
+  onSave: () => void;
+  /** 是否为系统角色 */
+  isSystemRole: boolean;
+  /** 是否正在编辑系统角色 */
+  isEditingSystemRole: boolean;
+  /** 权限类型：system 或 project */
+  permissionType: 'system' | 'project';
+  /** 是否正在保存 */
+  loading?: boolean;
+  /**
+   * 系统角色编辑时是否锁定描述输入（默认 true）。
+   * 项目角色模板场景传 false：名称固定不可改，但描述可编辑（ADR-00XX）
+   */
+  lockDescription?: boolean;
+}
+
+/**
+ * 权限配置弹窗组件 - CloudCAD
+ *
+ * 设计特色：
+ * - 大尺寸模态框，方便权限配置
+ * - 分区域展示基本信息和权限设置
+ * - 使用 CSS 变量适配主题
+ */
+export const PermissionConfigModal: React.FC<PermissionConfigModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  roleName,
+  roleDesc,
+  onNameChange,
+  onDescChange,
+  permissions,
+  onPermissionsChange,
+  onSave,
+  isSystemRole,
+  isEditingSystemRole,
+  permissionType,
+  loading = false,
+  lockDescription = true,
+}) => {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      maxWidth="max-w-6xl"
+      contentClassName="config-modal-scroll"
+      footer={
+        <div className="config-modal-footer">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            {t('取消')}
+          </Button>
+          <Button onClick={onSave} disabled={loading} data-tour="role-save-btn">
+            {loading ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                {t('保存中...')}
+              </>
+            ) : (
+              t('保存配置')
+            )}
+          </Button>
+        </div>
+      }
+    >
+      <div className="config-modal-content">
+        {/* 基本信息区域 */}
+        <div className="basic-info-section">
+          <h4 className="section-label">{t('基本信息')}</h4>
+          <div className="form-grid">
+            <div className="form-field">
+              <label className="field-label">{t('角色名称')}</label>
+              <Input
+                data-tour="role-name-input"
+                placeholder={t('请输入角色名称')}
+                value={roleName}
+                onChange={(e) => onNameChange(e.target.value)}
+                disabled={isSystemRole && isEditingSystemRole}
+              />
+            </div>
+            <div className="form-field">
+              <label className="field-label">{t('角色描述')}</label>
+              <Input
+                placeholder={t('请输入角色描述（可选）')}
+                value={roleDesc}
+                onChange={(e) => onDescChange(e.target.value)}
+                disabled={isSystemRole && isEditingSystemRole && lockDescription}
+              />
+            </div>
+          </div>
+          {isSystemRole && isEditingSystemRole && lockDescription && (
+            <div className="system-role-hint">
+              <AlertCircle size={16} />
+              <span>{t('系统角色不允许修改名称和描述，但可以修改权限')}</span>
+            </div>
+          )}
+          {isSystemRole && isEditingSystemRole && !lockDescription && (
+            <div className="system-role-hint">
+              <AlertCircle size={16} />
+              <span>{t('模板名称不可修改，可编辑描述与权限')}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 权限分配区域 */}
+        <div className="permissions-section" data-tour="role-permissions">
+          <div className="permissions-header">
+            <h4 className="section-label">{t('权限分配')}</h4>
+            <span className="permissions-count">
+              {t('已选择 {count} 项权限', { count: permissions.length })}
+            </span>
+          </div>
+          <PermissionAssignment
+            permissions={permissions}
+            onPermissionsChange={onPermissionsChange}
+            permissionType={permissionType}
+          />
+        </div>
+      </div>
+
+      <style>{configModalStyles}</style>
+    </Modal>
+  );
+};
+
+// 权限分配组件样式
+const permissionStyles = `
+  .permission-assignment-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  /* 权限分组 */
+  .permission-group {
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    overflow: visible;
+    animation: groupFadeIn 0.4s ease-out backwards;
+    transition: all 0.3s ease;
+    background: var(--bg-secondary);
+    margin-bottom: var(--space-2);
+  }
+
+  .permission-group:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+  }
+
+  @keyframes groupFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    border-bottom: 1px solid var(--border-default);
+    position: sticky;
+    top: 0;
+    z-index: 1; /* sticky header */
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .group-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .group-count {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--primary-600);
+    padding: 0.25rem 0.75rem;
+    background: var(--primary-100);
+    border-radius: var(--radius-full);
+    transition: all 0.2s ease;
+  }
+
+  [data-theme="dark"] .group-count {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--primary-400);
+  }
+
+  .group-items {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-4);
+    min-height: fit-content;
+  }
+
+  /* 权限项 */
+  .permission-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--border-default);
+    background: var(--bg-primary);
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .permission-item:not(.disabled):hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .permission-item.checked:not(.disabled) {
+    background: linear-gradient(135deg, var(--primary-100), rgba(99, 102, 241, 0.08));
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 1px var(--primary-200);
+  }
+
+  [data-theme="dark"] .permission-item.checked:not(.disabled) {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.08));
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+  }
+
+  .permission-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--bg-tertiary);
+  }
+
+  /* 复选框 */
+  .checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-default);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    background: var(--bg-secondary);
+  }
+
+  .permission-item:hover .checkbox:not(.checked) {
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+
+  .checkbox.checked {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    border-color: var(--primary-500);
+    color: white;
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+  }
+
+  [data-theme="dark"] .checkbox.checked {
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  }
+
+  .hidden-checkbox {
+    display: none;
+  }
+
+  /* 权限标签 */
+  .permission-label {
+    font-size: var(--text-md);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s ease;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .permission-item.checked .permission-label {
+    color: var(--primary-600);
+    font-weight: 500;
+  }
+
+  [data-theme="dark"] .permission-item.checked .permission-label {
+    color: var(--primary-400);
+  }
+
+  /* 依赖提示 */
+  .dependency-hint {
+    color: var(--warning);
+    flex-shrink: 0;
+    margin-left: auto;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  @media (max-width: 900px) {
+    .group-items {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .group-items {
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+      padding: var(--space-3);
+    }
+
+    .permission-item {
+      padding: var(--space-3);
+      min-height: 44px;
+    }
+
+    .group-header {
+      padding: var(--space-2) var(--space-3);
+    }
+
+    .group-label {
+      font-size: var(--text-base);
+    }
+  }
+`;
+
+// 配置弹窗样式
+const configModalStyles = `
+  .config-modal-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .config-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* 第一个子元素补偿上方 padding，使 sticky 头能正确贴顶 */
+  .config-modal-content > :first-child {
+    margin-top: var(--space-6);
+  }
+
+  .config-modal-content > :last-child {
+    margin-bottom: var(--space-6);
+  }
+
+  .config-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+
+  /* 基本信息区域 */
+  .basic-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-default);
+    flex-shrink: 0;
+  }
+
+  .section-label {
+    font-size: var(--text-md);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .field-label {
+    font-size: var(--text-base);
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .field-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-size: var(--text-md);
+    transition: all 0.25s ease;
+    outline: none;
+  }
+
+  .field-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .field-input:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    background: var(--bg-primary);
+  }
+
+  .field-input:focus {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100), var(--shadow-sm);
+  }
+
+  [data-theme="dark"] .field-input:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), var(--shadow-sm);
+  }
+
+  .field-input:disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .system-role-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: linear-gradient(135deg, var(--warning-dim), rgba(245, 158, 11, 0.05));
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-lg);
+    color: var(--warning);
+    font-size: var(--text-base);
+    font-weight: 500;
+  }
+
+  /* 权限区域 */
+  .permissions-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+  }
+
+  .permissions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .permissions-count {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--primary-600);
+    padding: 0.375rem 1rem;
+    background: var(--primary-100);
+    border-radius: var(--radius-full);
+    transition: all 0.2s ease;
+  }
+
+  [data-theme="dark"] .permissions-count {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--primary-400);
+  }
+
+  /* 动画 */
+  .animate-spin {
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* 移动端适配 */
+  @media (max-width: 768px) {
+    .config-modal-content {
+      max-height: calc(100vh - 120px);
+      gap: var(--space-4);
+    }
+
+    .config-modal-content > :first-child {
+      margin-top: var(--space-4);
+    }
+
+    .config-modal-content > :last-child {
+      margin-bottom: var(--space-4);
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .basic-info-section,
+    .permissions-section {
+      padding: var(--space-3);
+    }
+
+    .config-modal-footer {
+      flex-direction: column-reverse;
+      gap: var(--space-2);
+    }
+
+    .config-modal-footer button {
+      width: 100%;
+    }
+  }
+`;
+
+export default PermissionAssignment;

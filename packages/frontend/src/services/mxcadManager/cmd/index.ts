@@ -1,0 +1,26 @@
+import './annotation';
+import { ExportPDFCommand } from './exportPDF';
+import { ExportDWGCommand } from './exportDWG';
+import { ExportDXFCommand } from './exportDXF';
+import { SaveAsMxWebCommand } from './saveAsMxWeb';
+import { ExportFileCommand } from './exportFileCmd';
+import { SaveAsToCloudCommand } from './saveAsToCloud';
+import { SaveCommand } from './saveCommand';
+import { NewFileCommand } from './newFileCommand';
+import { OpenFileCommand, OpenFileNoCacheCommand } from './openFileCommand';
+import { SaveToCloudCommand } from './saveToCloud';
+import { InsertImageCommand } from './insertImageCommand';
+import { CommandRegistry } from './types';
+
+CommandRegistry.register(new ExportPDFCommand());
+CommandRegistry.register(new ExportDWGCommand());
+CommandRegistry.register(new ExportDXFCommand());
+CommandRegistry.register(new SaveAsMxWebCommand());
+CommandRegistry.register(new ExportFileCommand());
+CommandRegistry.register(new SaveAsToCloudCommand());
+CommandRegistry.register(new SaveCommand());
+CommandRegistry.register(new NewFileCommand());
+CommandRegistry.register(new OpenFileCommand());
+CommandRegistry.register(new OpenFileNoCacheCommand());
+CommandRegistry.register(new SaveToCloudCommand());
+CommandRegistry.register(new InsertImageCommand());

@@ -1,0 +1,629 @@
+@import 'tailwindcss';
+
+/* Tailwind 字体大小映射 - 与 theme.css 中的 CSS 变量值保持一致 */
+@theme {
+  --text-xs: 0.6875rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.75rem;
+  --text-lg: 0.875rem;
+  --text-xl: 1rem;
+  --text-2xl: 1.125rem;
+  --text-3xl: 1.25rem;
+}
+
+/* CloudCAD 主题设计 - 工程蓝专业风格 */
+@layer base {
+  :root {
+    /* 间距 */
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-5: 1.25rem;
+    --spacing-6: 1.5rem;
+    --spacing-8: 2rem;
+    --spacing-10: 2.5rem;
+    --spacing-12: 3rem;
+
+    /* Tailwind 阴影（与 theme.css 的阴影独立，供 shadow-* utility 使用） */
+    --shadow-primary: 0 4px 14px 0 rgb(99 102 241 / 0.39);
+    --shadow-accent: 0 4px 14px 0 rgb(6 182 212 / 0.39);
+  }
+
+  body {
+    font-size: var(--text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-full);
+    transition: background var(--transition-base);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+
+  /* 文件系统动画 */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* 应用动画�?*/
+  .animate-fade-in {
+    animation: fade-in var(--transition-slow) ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in var(--transition-base) ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up var(--transition-base) ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right var(--transition-base) ease-out;
+  }
+
+  .animate-slide-in-top {
+    animation: slide-in-top var(--transition-base) ease-out;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* 文件项悬停效�?*/
+  .file-item-grid {
+    transition: all var(--transition-base);
+    border: 1px solid var(--border-default);
+  }
+
+  .file-item-grid:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-300);
+  }
+
+  .file-item-grid.selected {
+    border-color: var(--primary-500);
+    box-shadow:
+      0 0 0 2px var(--primary-200),
+      var(--shadow-md);
+    background: var(--primary-50);
+  }
+
+  /* 列表项悬停效�?*/
+  .file-item-list {
+    transition: all var(--transition-fast);
+    border-left: 3px solid transparent;
+  }
+
+  .file-item-list:hover {
+    background-color: var(--bg-tertiary);
+  }
+
+  .file-item-list.selected {
+    background-color: var(--primary-50);
+    border-left-color: var(--primary-500);
+  }
+
+  /* 按钮悬停效果 */
+  .btn-hover-lift {
+    transition: all var(--transition-base);
+  }
+
+  .btn-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-hover-lift:active {
+    transform: translateY(0);
+  }
+
+  /* 卡片悬停效果 */
+  .card-hover {
+    transition: all var(--transition-slow);
+  }
+
+  .card-hover:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
+  }
+
+  /* 骨架屏动�?*/
+  .skeleton-pulse {
+    background: linear-gradient(
+      90deg,
+      var(--bg-tertiary) 0%,
+      var(--border-default) 50%,
+      var(--bg-tertiary) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* 选中状态指示器动画 */
+  .selection-indicator {
+    transition: all var(--transition-base);
+  }
+
+  .selection-indicator.checked {
+    background-color: var(--primary-600);
+    border-color: var(--primary-600);
+  }
+
+  /* 图标容器悬浮效果 */
+  .icon-container {
+    transition: all var(--transition-base);
+  }
+
+  .icon-container:hover {
+    transform: scale(1.1);
+  }
+
+  /* 拖拽效果 */
+  .drag-over {
+    background-color: var(--primary-50) !important;
+    border-color: var(--primary-500) !important;
+    box-shadow: var(--shadow-primary) !important;
+  }
+
+  /* 阴影层次 */
+  .shadow-sm-custom {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-md-custom {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-lg-custom {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .shadow-primary-custom {
+    box-shadow: var(--shadow-primary);
+  }
+
+  .shadow-accent-custom {
+    box-shadow: var(--shadow-accent);
+  }
+
+  /* 玻璃态效�?*/
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+  }
+
+  /* 渐变背景 */
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, var(--accent-600), var(--accent-500));
+  }
+
+  .gradient-hero {
+    background: linear-gradient(
+      135deg,
+      var(--primary-50) 0%,
+      var(--accent-50) 100%
+    );
+  }
+
+  /* 文本渐变 */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, var(--primary-600), var(--accent-600));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* 语义文本色（全局工具类，跨页共享；原定义于 Profile.css） */
+  .text-text-primary {
+    color: var(--text-primary);
+  }
+
+  .text-text-secondary {
+    color: var(--text-secondary);
+  }
+
+  .text-text-tertiary {
+    color: var(--text-tertiary);
+  }
+
+  .text-text-muted {
+    color: var(--text-muted);
+  }
+
+  /* 装饰性边�?*/
+  .border-gradient {
+    position: relative;
+  }
+
+  .border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* 加载动画 */
+  .loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-default);
+    border-top-color: var(--primary-600);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* 点加载动�?*/
+  .dots-loader {
+    display: flex;
+    gap: 4px;
+  }
+
+  .dots-loader span {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-600);
+    border-radius: 50%;
+    animation: bounce 1.4s ease-in-out infinite both;
+  }
+
+  .dots-loader span:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+
+  .dots-loader span:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+}
+
+/* ============================================
+   深色主题覆盖 - 兼容现有 Tailwind 类名
+   ============================================ */
+
+/* ============================================
+   深色主题覆盖 - 兼容现有 Tailwind 类名
+   ============================================ */
+
+/* 主题背景设置 - body 透明，Canvas 背景在底�?*/
+body {
+  background-color: transparent;
+  position: relative;
+}
+
+[data-theme='dark'] body {
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+
+/* #root 背景透明，让 Canvas 背景显示 */
+#root {
+  background-color: transparent;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme='dark'] .bg-white,
+[data-theme='dark'] .bg-slate-50 {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme='dark'] .bg-slate-100 {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme='dark'] .bg-slate-200 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* 深色主题下的边框覆盖 */
+[data-theme='dark'] .border-slate-200 {
+  border-color: var(--border-default) !important;
+}
+
+[data-theme='dark'] .border-slate-100 {
+  border-color: var(--border-subtle) !important;
+}
+
+/* 深色主题下的文字覆盖 */
+[data-theme='dark'] .text-slate-900 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .text-slate-700,
+[data-theme='dark'] .text-slate-600 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme='dark'] .text-slate-500,
+[data-theme='dark'] .text-slate-400 {
+  color: var(--text-tertiary) !important;
+}
+
+/* 深色主题下的侧边�?*/
+[data-theme='dark'] aside {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-default) !important;
+}
+
+/* 深色主题下的悬停效果 */
+[data-theme='dark'] .hover\:bg-slate-100:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme='dark'] .hover\:bg-slate-50:hover {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* 输入框占位文字：浅色主题原依赖浏览器 UA 默认色（各浏览器深浅不一），
+   统一使用辅助文字色，深浅主题一致可见 */
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* 深色主题下的输入�?*/
+[data-theme='dark'] input,
+[data-theme='dark'] textarea,
+[data-theme='dark'] select {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Date 输入框日历图标主题适配 */
+input[type='date']::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+  cursor: pointer;
+}
+
+[data-theme='dark'] input[type='date']::-webkit-calendar-picker-indicator {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+}
+
+/* 深色主题下的模态框 - 排除 mxcad-app 内部的对话框 */
+[data-theme='dark']
+  [role='dialog']:not(#mxcad-global-container [role='dialog']) {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+}
+
+/* 深色主题下的下拉菜单 */
+[data-theme='dark'] .absolute.w-48,
+[data-theme='dark'] .absolute.w-56 {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-default);
+}
+
+/* 深色主题下的卡片 */
+[data-theme='dark'] .rounded-2xl.bg-white,
+[data-theme='dark'] .rounded-xl.bg-white {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-default);
+}
+
+/* 深色主题下的警告横幅 */
+[data-theme='dark'] .bg-amber-50 {
+  background-color: var(--warning-dim) !important;
+}
+
+[data-theme='dark'] .border-amber-200 {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+[data-theme='dark'] .text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+[data-theme='dark'] .text-amber-600 {
+  color: #f59e0b !important;
+}
+
+/* 深色主题下的错误/成功状�?*/
+[data-theme='dark'] .bg-error-50 {
+  background-color: var(--error-dim) !important;
+}
+
+[data-theme='dark'] .bg-success-50 {
+  background-color: var(--success-dim) !important;
+}
+
+/* 深色主题下的滚动�?*/
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 深色主题下的 glass 效果 */
+[data-theme='dark'] .backdrop-blur-xl {
+  background: var(--glass-bg) !important;
+}
+
+/* ============================================
+   菜单宽度自适应覆盖 - 确保不受 Radix 内部动态样式干扰
+   ============================================ */
+[data-radix-dropdown-menu-content],
+[data-menu-content] {
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+/* ============================================
+   搜索高亮闪烁动画 - 用于「打开所在位置」
+   ============================================ */
+@keyframes highlight-fade {
+  0% {
+    background-color: var(--primary-100);
+    box-shadow: 0 0 0 2px var(--primary-500);
+  }
+  70% {
+    background-color: var(--primary-100);
+    box-shadow: 0 0 0 2px var(--primary-500);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.file-item-highlight {
+  animation: highlight-fade 3s ease-out forwards;
+  border-radius: var(--radius-md, 6px);
+}
+
+/* 隐藏浏览器默认密码显示/清除按钮 */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
+
+input[type='password']::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+
+input[type='password']::-webkit-textfield-decoration-container {
+  display: none;
+}
+
+/* ============================================
+   移动端全局适配
+   ============================================ */
+@media (max-width: 768px) {
+  /* iOS 输入框防自动缩放（仅 iOS Safari 需要） */
+  @supports (-webkit-touch-callout: none) {
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='tel'],
+    input[type='url'],
+    input[type='search'],
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* 模态框在移动端全屏 */
+  [role='dialog'] {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* 表格容器横向滚动 */
+  .table-container-theme {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 隐藏桌面端特有的 hover 效果 */
+  .card-hover:hover,
+  .btn-hover-lift:hover,
+  .file-item-grid:hover,
+  .file-item-list:hover {
+    transform: none !important;
+  }
+
+  /* 触摸设备禁用 hover 视觉反馈 */
+  @media (hover: none) and (pointer: coarse) {
+    .hover\:shadow-lg:hover,
+    .hover\:-translate-y-0\.5:hover,
+    .hover\:scale-110:hover {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  /* 底部安全区域 */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 移动端多选复选框常显 */
+  .group [data-drag-handle] {
+    opacity: 1 !important;
+  }
+}

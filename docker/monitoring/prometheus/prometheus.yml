@@ -1,0 +1,36 @@
+# 梦想网页CAD实时协同平台 Prometheus 配置（ADR-0055 §3/§4）
+# 抓取后端 /api/metrics（Bearer Token，见 #315）；告警规则与 Alertmanager 路由见 #316。
+# 目标 host:port 由 docker-compose.monitoring.yml 的 SCRAPE_TARGET_HOST 注入（默认 cloudcad-app:80）
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# 告警规则（8 条基础规则由 #316 填充，此处默认挂载空规则文件）
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
+scrape_configs:
+  # 后端应用指标（/api/metrics，Prometheus RED + 业务指标）
+  - job_name: cloudcad-backend
+    metrics_path: /api/metrics
+    # /metrics 抓取 Bearer Token（与后端 SCRAPE_TOKEN 一致，见 #315）
+    bearer_token: ${SCRAPE_TOKEN}
+    static_configs:
+      - targets:
+          - ${SCRAPE_TARGET_HOST:-cloudcad-app:80}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: backend
+
+  # Prometheus 自身
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'

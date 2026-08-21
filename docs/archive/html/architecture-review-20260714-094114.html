@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CloudCAD 架构深化机会报告</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        background: '#ffffff',
+        primaryColor: '#3b82f6',
+        secondaryColor: '#f59e0b',
+        tertiaryColor: '#10b981',
+        primaryTextColor: '#1e293b',
+        secondaryTextColor: '#64748b',
+        lineColor: '#94a3b8',
+        fontFamily: 'ui-monospace, monospace',
+        fontSize: '13px',
+      }
+    });
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .card-gradient { background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); }
+    .badge-strong { background: #ef4444; color: white; }
+    .badge-explore { background: #f59e0b; color: white; }
+    .badge-speculative { background: #6366f1; color: white; }
+    .badge-adr-warning { background: #ec4899; color: white; }
+    .depth-shallow { border-left: 4px solid #ef4444; }
+    .depth-deep { border-left: 4px solid #10b981; }
+    .comparison-card { transition: all 0.2s ease; }
+    .comparison-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .module-box {
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      position: relative;
+      background: white;
+    }
+    .module-box.interface {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    .module-box.implementation {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+    .arrow-line {
+      position: relative;
+      height: 2px;
+      background: #94a3b8;
+      margin: 12px 0;
+    }
+    .arrow-line::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: -6px;
+      width: 0;
+      height: 0;
+      border-left: 10px solid #94a3b8;
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+    }
+    .seam-marker {
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      background: #f59e0b;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900">CloudCAD 架构深化机会</h1>
+          <p class="mt-2 text-slate-500 text-sm">
+            基于 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">codebase-design</code> 词汇表 &middot;
+            <span class="font-medium">模块 · 接口 · 深度 · 接缝 · 适配器 · 杠杆 · 局部性</span>
+          </p>
+        </div>
+        <div class="text-right text-xs text-slate-400">
+          <div>2026-07-14</div>
+          <div class="mt-1">CloudCAD monorepo</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-10">
+
+    <!-- Executive Summary -->
+    <section>
+      <h2 class="text-xl font-semibold text-slate-900 mb-4">概览</h2>
+      <p class="text-slate-600 leading-relaxed">
+        基于 100 条近期提交和全仓库扫描，识别出 <strong>6 个深化候选</strong>。
+        这些候选的共同主题是：<strong>间接层堆积</strong>（直通型 Façade）、
+        <strong>接缝渗漏</strong>（大控制器注入过多依赖）、
+        <strong>横切关注点纠缠</strong>（审计日志耦合在业务逻辑中）、
+        <strong>复制蔓延</strong>（5 处相同 SQL 模式、PC/Mobile 手动同步）。
+        每个候选都附有<strong>删除测试</strong>分析——如果删除该模块，复杂度是消失还是转移到调用方？
+      </p>
+    </section>
+
+    <!-- Candidate 1: FileSystemService Façade -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">1. FileSystemService Façade — 纯直通层</h3>
+            <span class="badge-strong inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1">Strong</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">📁 涉及文件</h4>
+            <ul class="list-disc list-inside text-slate-600 space-y-0.5">
+              <li><code>packages/backend/src/file-system/file-system.service.ts</code> (176 行)</li>
+              <li><code>packages/backend/src/file-system/__tests__/file-system.service.spec.ts</code> (190 行)</li>
+              <li>消费者: <code>library/</code>, <code>mxcad/</code>, <code>file-download/</code></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">🔍 删除测试</h4>
+            <p class="text-slate-600">删除此服务后，复杂度<strong>不会消失</strong>——只是转移到调用方（他们需要直接注入 <code>FileTreeService</code>、<code>FileOperationsService</code> 和 <code>ProjectCrudService</code>）。该模块是纯中间人，<strong>零增值</strong>。</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-red-50 rounded-lg depth-shallow">
+            <h4 class="font-semibold text-red-700 mb-2">⚠️ 问题</h4>
+            <p class="text-red-800">25+ 个方法，每个都是纯委托。没有编排，没有转换，没有增值逻辑。接口与实现一样复杂——<strong>浅模块</strong>的典型案例。测试也全部是"验证委托给子服务"的模式。</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-lg depth-deep">
+            <h4 class="font-semibold text-emerald-700 mb-2">✅ 解决方案</h4>
+            <p class="text-emerald-800"><strong>删除 FileSystemService</strong>。让消费者直接注入它们需要的子服务。如果将来需要在"文件系统"接缝处放置适配器（例如，用于测试的假文件树），直接在子服务接口处注入即可，不需要此中间层。</p>
+          </div>
+        </div>
+
+        <!-- Before/After Diagram -->
+        <div class="mt-6">
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">📐 前后对比</h4>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Before -->
+            <div class="module-box p-4 relative">
+              <div class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">现状</div>
+              <div class="flex flex-col items-center">
+                <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 text-center w-full">
+                  <div class="text-sm font-bold text-red-700">Controller / 外部消费者</div>
+                  <div class="text-xs text-red-500 mt-1">library / mxcad / file-download</div>
+                </div>
+                <div class="my-2 flex items-center">
+                  <div class="h-0.5 w-12 bg-red-300"></div>
+                  <div class="text-red-400 text-xs mx-1">委托</div>
+                  <div class="h-0.5 w-12 bg-red-300"></div>
+                </div>
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-center w-full">
+                  <div class="text-sm font-bold text-amber-700">FileSystemService</div>
+                  <div class="text-xs text-amber-500 mt-1">25+ 个直通方法 • 零业务逻辑</div>
+                </div>
+                <div class="my-2 flex items-center">
+                  <div class="h-0.5 w-12 bg-amber-300"></div>
+                  <div class="text-amber-400 text-xs mx-1">委托</div>
+                  <div class="h-0.5 w-12 bg-amber-300"></div>
+                </div>
+                <div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3 text-center w-full">
+                  <div class="grid grid-cols-3 gap-1 text-xs">
+                    <div class="bg-emerald-100 rounded p-1.5 font-medium text-emerald-800">FileTree<br/>Service</div>
+                    <div class="bg-emerald-100 rounded p-1.5 font-medium text-emerald-800">FileOps<br/>Service</div>
+                    <div class="bg-emerald-100 rounded p-1.5 font-medium text-emerald-800">Project<br/>Crud Service</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-red-600 text-center font-medium">
+                接口 = 实现 • 浅模块 • 删除测试失败
+              </div>
+            </div>
+
+            <!-- After -->
+            <div class="module-box p-4 relative">
+              <div class="text-xs font-semibold text-emerald-500 mb-2 uppercase tracking-wider">深化后</div>
+              <div class="flex flex-col items-center">
+                <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 text-center w-full">
+                  <div class="text-sm font-bold text-red-700">Controller / 外部消费者</div>
+                  <div class="text-xs text-red-500 mt-1">直接注入所需子服务</div>
+                </div>
+                <div class="flex justify-center gap-4 my-3">
+                  <div class="h-0.5 w-8 bg-emerald-300 self-center"></div>
+                  <div class="h-0.5 w-8 bg-emerald-300 self-center"></div>
+                  <div class="h-0.5 w-8 bg-emerald-300 self-center"></div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 w-full">
+                  <div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2 text-center">
+                    <div class="text-xs font-medium text-emerald-800">FileTree<br/>Service</div>
+                    <div class="text-[10px] text-emerald-600 mt-0.5">~1330 行</div>
+                  </div>
+                  <div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2 text-center">
+                    <div class="text-xs font-medium text-emerald-800">FileOps<br/>Service</div>
+                    <div class="text-[10px] text-emerald-600 mt-0.5">~1526 行</div>
+                  </div>
+                  <div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2 text-center">
+                    <div class="text-xs font-medium text-emerald-800">Project<br/>Crud Service</div>
+                    <div class="text-[10px] text-emerald-600 mt-0.5">~400 行</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-emerald-600 text-center font-medium">
+                -1 模块 • -176 行 • -190 行测试 • 调用方差零
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">杠杆</h4>
+            <p class="text-blue-800 text-xs">删除后，调用方直接获得子服务的完整能力。不为无增值间接层付费。</p>
+          </div>
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">局部性</h4>
+            <p class="text-blue-800 text-xs">修改文件树行为时，只需修改 <code>FileTreeService</code> 一处，不用检查 Façade 是否也需要更新。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Candidate 2: FileSystemController -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">2. FileSystemController — 全能控制器</h3>
+            <span class="badge-strong inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1">Strong</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">📁 涉及文件</h4>
+            <ul class="list-disc list-inside text-slate-600 space-y-0.5">
+              <li><code>packages/backend/src/file-system/file-system.controller.ts</code> (1381 行)</li>
+              <li><code>packages/backend/src/file-system/dto/</code> (21 个 DTO 文件)</li>
+              <li><code>file-system.module.ts</code> (导入 15 个模块)</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">🔍 删除测试</h4>
+            <p class="text-slate-600">如果删除此控制器，其 10+ 个职责<strong>会均匀分散</strong>到路由层。复杂度不消失，只是换个地方——它本就应该从一开始就分开。</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-red-50 rounded-lg depth-shallow">
+            <h4 class="font-semibold text-red-700 mb-2">⚠️ 问题</h4>
+            <p class="text-red-800">单个控制器注入 <strong>11 个服务</strong>，处理<strong>10+ 个职责域</strong>（项目 CRUD、回收站、配额、成员、缩略图、下载、权限、搜索、路径解析）。<code>downloadNodeWithFormat</code> 方法独占 ~140 行。这个接口（URL 加参数）看似简单，但实现中耦合了大量不相关逻辑。</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-lg depth-deep">
+            <h4 class="font-semibold text-emerald-700 mb-2">✅ 解决方案</h4>
+            <p class="text-emerald-800">按职责拆分为 4-5 个专用控制器：<code>ProjectController</code>、<code>NodeController</code>、<code>TrashController</code>、<code>DownloadController</code>、<code>MemberController</code>。每个控制器只注入相关服务，方法数从 ~35 缩到 ~8。</p>
+          </div>
+        </div>
+
+        <!-- Before/After Diagram -->
+        <div class="mt-6">
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">📐 前后对比</h4>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Before: one huge controller -->
+            <div class="module-box p-4">
+              <div class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">现状</div>
+              <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 text-center w-full min-h-[200px] flex flex-col items-center justify-center">
+                <div class="text-base font-bold text-red-700 mb-2">FileSystemController</div>
+                <div class="text-xs text-red-500 mb-3">11 个注入依赖</div>
+                <div class="grid grid-cols-2 gap-1.5 w-full max-w-[280px]">
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">项目 CRUD</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">回收站管理</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">节点操作</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">配额管理</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">成员 CRUD</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">缩略图</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">文件下载</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">权限查询</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">搜索</div>
+                  <div class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded">路径解析</div>
+                </div>
+                <div class="mt-3 text-xs px-3 py-1 bg-red-200 rounded-full font-medium text-red-800">1381 行 • 1 个文件</div>
+              </div>
+            </div>
+            <!-- After: split controllers -->
+            <div class="module-box p-4">
+              <div class="text-xs font-semibold text-emerald-500 mb-2 uppercase tracking-wider">深化后</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-center">
+                  <div class="text-sm font-bold text-emerald-800">Project<br/>Controller</div>
+                  <div class="text-[10px] text-emerald-600">项目 CRUD</div>
+                  <div class="text-xs text-emerald-500 mt-1">~200 行</div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-center">
+                  <div class="text-sm font-bold text-emerald-800">Node<br/>Controller</div>
+                  <div class="text-[10px] text-emerald-600">节点操作+搜索</div>
+                  <div class="text-xs text-emerald-500 mt-1">~300 行</div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-center">
+                  <div class="text-sm font-bold text-emerald-800">Trash<br/>Controller</div>
+                  <div class="text-[10px] text-emerald-600">回收站管理</div>
+                  <div class="text-xs text-emerald-500 mt-1">~150 行</div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-center">
+                  <div class="text-sm font-bold text-emerald-800">Download<br/>Controller</div>
+                  <div class="text-[10px] text-emerald-600">下载+ETag</div>
+                  <div class="text-xs text-emerald-500 mt-1">~200 行</div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-center col-span-2">
+                  <div class="text-sm font-bold text-emerald-800">MemberController</div>
+                  <div class="text-[10px] text-emerald-600">项目成员 CRUD</div>
+                  <div class="text-xs text-emerald-500 mt-1">~200 行</div>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-emerald-600 text-center font-medium">
+                每个控制器最多 2-3 个依赖 • 高内聚 • 易测试
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">杠杆</h4>
+            <p class="text-blue-800 text-xs">每个小控制器的接口（路由 + DTO）只对应一个子域。测试只需 mock 相关服务，不必启动整个文件系统。</p>
+          </div>
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">局部性</h4>
+            <p class="text-blue-800 text-xs">修改下载逻辑（ETag、流传输）不会影响项目 CRUD 或回收站。一个变更集中在 1 个文件中。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Candidate 3: Circular Dependencies (forwardRef) -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">3. 模块循环依赖 — 4 处 forwardRef</h3>
+            <span class="badge-strong inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1">Strong</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">📁 涉及文件</h4>
+            <ul class="list-disc list-inside text-slate-600 space-y-0.5">
+              <li><code>packages/backend/src/app.module.ts</code></li>
+              <li><code>packages/backend/src/auth/auth.module.ts</code></li>
+              <li><code>packages/backend/src/mxcad/mxcad.module.ts</code> (named provider workaround)</li>
+              <li><code>packages/backend/src/file-system/file-system.module.ts</code></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">🔍 循环依赖链</h4>
+            <ul class="list-disc list-inside text-slate-600 text-xs space-y-1">
+              <li><code>AuthModule</code> ↔ <code>CommonModule</code> (forwardRef)</li>
+              <li><code>AuthModule</code> ↔ <code>UsersModule</code> (forwardRef)</li>
+              <li><code>MxCadModule</code> ↔ <code>FileSystemModule</code> (forwardRef)</li>
+              <li><code>MxCadModule</code> ↔ <code>StorageModule</code> (forwardRef)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-red-50 rounded-lg depth-shallow">
+            <h4 class="font-semibold text-red-700 mb-2">⚠️ 问题</h4>
+            <p class="text-red-800"><code>forwardRef</code> 是 NestJS 解决循环依赖的逃逸阀，不是模块间关系的好设计。`MxCadModule` 中甚至出现了 Named Provider (<code>'FileSystemServiceMain'</code>) 来绕过循环——这是典型的"用工具掩盖设计缺陷"。</p>
+            <p class="text-red-700 mt-2 text-xs">注意：<code>AuthModule</code> 方向依赖已清理为单向，但前向引用仍在。</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-lg depth-deep">
+            <h4 class="font-semibold text-emerald-700 mb-2">✅ 解决方案</h4>
+            <p class="text-emerald-800">提取共享内核模块：</p>
+            <ul class="list-disc list-inside text-emerald-700 text-xs space-y-1 mt-1">
+              <li>将 <code>CommonModule</code> 拆出 <code>AuthCommonModule</code>（仅含 Auth 需要的公共 Guard/Decorator）</li>
+              <li>将 <code>MxCadModule</code> ↔ <code>FileSystemModule</code> 的交叉引用通过事件或共享接口解耦</li>
+              <li>消除 <code>'FileSystemServiceMain'</code> named provider</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Before/After Mermaid Diagram -->
+        <div class="mt-6">
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">📐 前后对比</h4>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">现状 — 循环图</div>
+              <pre class="mermaid text-xs">
+graph LR
+    A[AuthModule] -- forwardRef --> B[CommonModule]
+    B -- forwardRef --> A
+    A -- forwardRef --> C[UsersModule]
+    C -- forwardRef --> A
+    D[MxCadModule] -- forwardRef --> E[FileSystemModule]
+    E -- forwardRef --> D
+    D -- forwardRef --> F[StorageModule]
+    F -- forwardRef --> D
+    style A fill:#fee2e2,stroke:#ef4444
+    style B fill:#fee2e2,stroke:#ef4444
+    style C fill:#fee2e2,stroke:#ef4444
+    style D fill:#fef3c7,stroke:#f59e0b
+    style E fill:#fef3c7,stroke:#f59e0b
+    style F fill:#fef3c7,stroke:#f59e0b
+              </pre>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div class="text-xs font-semibold text-emerald-500 mb-2 uppercase tracking-wider">深化后 — 无环图</div>
+              <pre class="mermaid text-xs">
+graph LR
+    A[AuthModule] --> B[AuthCommonModule]
+    A --> C[UsersModule]
+    D[MxCadModule] --> E[SharedTypesModule]
+    D --> F[StorageModule]
+    D -.-> |事件| G[FileSystemModule]
+    E --> G
+    style A fill:#dcfce7,stroke:#10b981
+    style B fill:#dcfce7,stroke:#10b981
+    style C fill:#dcfce7,stroke:#10b981
+    style D fill:#dcfce7,stroke:#10b981
+    style E fill:#e0f2fe,stroke:#3b82f6
+    style F fill:#dcfce7,stroke:#10b981
+    style G fill:#dcfce7,stroke:#10b981
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">杠杆</h4>
+            <p class="text-blue-800 text-xs">消除 forwardRef 后，模块可以独立加载、测试、mock。测试 Auth 不需要拉起 MxCad 的上下文。</p>
+          </div>
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">局部性</h4>
+            <p class="text-blue-800 text-xs">模块依赖变成单向 DAG。修改 FileSystemModule 不会因循环引用导致 MxCadModule 意外变更。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Candidate 4: AuthFacadeService Audit Coupling -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">4. AuthFacadeService — 审计日志与业务逻辑耦合</h3>
+            <span class="badge-explore inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1">Worth exploring</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">📁 涉及文件</h4>
+            <ul class="list-disc list-inside text-slate-600 space-y-0.5">
+              <li><code>packages/backend/src/auth/auth-facade.service.ts</code> (492 行)</li>
+              <li><code>packages/backend/src/auth/auth.module.ts</code></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">🔍 删除测试</h4>
+            <p class="text-slate-600">删除审计日志后，每个方法仍保留业务逻辑——审计是横切关注点，不是核心价值。但 <code>AuthFacadeService</code> 本身不是纯直通，它做了有价值的编排。</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-red-50 rounded-lg depth-shallow">
+            <h4 class="font-semibold text-red-700 mb-2">⚠️ 问题</h4>
+            <p class="text-red-800">30+ 个方法的模式完全相同：调用子服务 → <code>auditLogger.audit()</code>。审计日志是横切关注点，混合编排层意味着测试编排时必须同时 mock 审计日志。</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-lg depth-deep">
+            <h4 class="font-semibold text-emerald-700 mb-2">✅ 解决方案</h4>
+            <p class="text-emerald-800">使用 NestJS 自定义 <strong>装饰器</strong> 或 <strong>Interceptor</strong> 处理审计日志。<code>@AuditLog('auth.register')</code> 放在 Controller 方法上，将审计从编排层解耦。</p>
+          </div>
+        </div>
+
+        <!-- Before/After Diagram -->
+        <div class="mt-6">
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">📐 前后对比</h4>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="module-box p-4">
+              <div class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">现状</div>
+              <pre class="bg-slate-50 p-3 rounded text-[10px] leading-relaxed overflow-x-auto"><code>// 每个方法都需要mock审计
+async register(dto, req) {
+  const result = await this.provider.register(dto, req);
+  await this.auditLogger.audit({...}); // ← 横切关注点
+  return result;
+}
+
+async login(dto, req) {
+  const result = await this.provider.login(dto, req);
+  await this.auditLogger.audit({...}); // ← 重复
+  return result;
+}
+// … 30+ 次相同模式</code></pre>
+            </div>
+            <div class="module-box p-4">
+              <div class="text-xs font-semibold text-emerald-500 mb-2 uppercase tracking-wider">深化后</div>
+              <pre class="bg-slate-50 p-3 rounded text-[10px] leading-relaxed overflow-x-auto"><code>// Controller 层
+@Post('register')
+@AuditLog('auth.register') // ← 声明式
+async register(...) { ... }
+
+// Interceptor 自动处理
+@Injectable()
+class AuditInterceptor {
+  intercept(context, next) {
+    return next.handle().pipe(
+      tap(() => this.auditLogger.audit({...}))
+    );
+  }
+}
+
+// 编排层不再 import AuditLogger
+async register(dto, req) {
+  return this.provider.register(dto, req);
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">杠杆</h4>
+            <p class="text-blue-800 text-xs">测试编排层不再需要 mock AuditLogger。新增操作自动获得审计能力，无需修改编排代码。审计策略可全局替换。</p>
+          </div>
+          <div class="p-3 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-700 text-xs mb-1">局部性</h4>
+            <p class="text-blue-800 text-xs">审计逻辑集中在 Interceptor 中一处修改。编排层只关注编排。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Candidate 5: FTS + Tree Traversal Duplication -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">5. 全文搜索 + 树遍历重复模式</h3>
+            <span class="badge-explore inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1">Worth exploring</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">📁 涉及文件</h4>
+            <ul class="list-disc list-inside text-slate-600 space-y-0.5">
+              <li><code>file-tree/file-tree.service.ts</code> (FTS in 3 methods)</li>
+              <li><code>file-operations/project-crud.service.ts</code> (FTS in 2 methods)</li>
+              <li><code>file-tree/file-tree.service.ts</code> (<code>getAllProjectNodeIds</code>)</li>
+              <li><code>file-operations/file-operations.service.ts</code> (<code>getAllProjectNodeIds</code>)</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">🔍 删除测试</h4>
+            <p class="text-slate-600">如果抽取一个 <code>SearchQueryBuilder</code> 模块，FTS 不会消失，但会集中在一处。修改 FTS 行为（例如，切换到不同分词器）只需改 1 个文件而不是 5 个。</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-red-50 rounded-lg depth-shallow">
+            <h4 class="font-semibold text-red-700 mb-2">⚠️ 问题</h4>
+            <p class="text-red-800">5 处完全相同的 <code>plainto_tsquery('simple', ...)</code> + <code>降级到 ILIKE</code> SQL 模式。<code>getAllProjectNodeIds</code> 的递归 CTE 在 2 个 service 中重复实现。修改搜索逻辑需要同步修改 5 个文件。</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-lg depth-deep">
+            <h4 class="font-semibold text-emerald-700 mb-2">✅ 解决方案</h4>
+            <p class="text-emerald-800">提取 <code>src/common/utils/search-query.builder.ts</code>，封装 FTS 查询构建。将 <code>getAllProjectNodeIds</code> 归一到 <code>FileTreeService</code>，其他服务依赖它。</p>
+          </div>
+        </div>
+
+        <!-- Before/After Mermaid -->
+        <div class="mt-6">
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">📐 前后对比</h4>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">现状 — 5 份拷贝</div>
+              <pre class="mermaid text-xs">
+graph TD
+    subgraph "FileTreeService"
+        F1[getChildren: FTS]
+        F2[getAllFilesUnderNode: FTS]
+        F3[getTrashItems: FTS]
+        F4[getAllProjectNodeIds]
+    end
+    subgraph "FileOperationsService"
+        O1[deleteNode: getAllProjectNodeIds]
+    end
+    subgraph "ProjectCrudService"
+        P1[getUserProjects: FTS]
+        P2[getUserDeletedProjects: FTS]
+    end
+    style F1 fill:#fef3c7,stroke:#f59e0b
+    style F2 fill:#fef3c7,stroke:#f59e0b
+    style F3 fill:#fef3c7,stroke:#f59e0b
+    style P1 fill:#fef3c7,stroke:#f59e0b
+    style P2 fill:#fef3c7,stroke:#f59e0b
+    style F4 fill:#e0f2fe,stroke:#3b82f6
+    style O1 fill:#e0f2fe,stroke:#3b82f6
+              </pre>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div class="text-xs font-semibold text-emerald-500 mb-2 uppercase tracking-wider">深化后 — 1 个源头</div>
+              <pre class="mermaid text-xs">
+graph TD
+    subgraph "SearchQueryBuilder"
+        S[buildFtsQuery<br/>buildFtsOrderBy]
+    end
+    subgraph "FileTreeService"
+        F1[getChildren] --> S
+        F2[getAllFilesUnderNode] --> S
+        F3[getTrashItems] --> S
+        F4[getAllProjectNodeIds]
+    end
+    subgraph "FileOperationsService"
+        O1[deleteNode] --> F4
+    end
+    subgraph "ProjectCrudService"
+        P1[getUserProjects] --> S
+        P2[getUserDeletedProjects] --> S
+    end
+    style S fill:#10b981,stroke:#047857,color:#fff
+    style F4 fill:#10b981,stroke:#047857,color:#fff
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Candidate 6: PC/Mobile Collaboration Drift -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-6 space-y-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">6. PC/Mobile 协同逻辑重复</h3>
+            <span class="badge-speculative inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mt-1">Speculative</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">📁 涉及文件</h4>
+            <ul class="list-disc list-inside text-slate-600 space-y-0.5">
+              <li><code>frontend_mobile/src/composables/useCooperate.ts</code> (186 行)</li>
+              <li><code>frontend/src/types/collaboration.ts</code></li>
+              <li><code>frontend_mobile/src/composables/useEditorState.ts</code> (30 行)</li>
+              <li><code>frontend/src/stores/useCADEditorStore.ts</code> (80 行)</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-700 mb-1">⚠️ 注意</h4>
+            <p class="text-slate-600 text-xs">PC（React + Zustand）与 Mobile（Vue + Pinia）是不同的框架，共享代码不直接。但<strong>编码逻辑</strong> (utf8ToBase64 / encodeV3WorkData) 是纯函数，完全可以提取到共享包。</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-red-50 rounded-lg depth-shallow">
+            <h4 class="font-semibold text-red-700 mb-2">⚠️ 问题</h4>
+            <p class="text-red-800"><code>utf8ToBase64</code>、<code>base64ToUtf8</code>、<code>encodeV3WorkData</code>、<code>parseWorkData</code> 等纯编码函数在 PC 和 Mobile 各实现一份。注释写着 "aligned with PC" 但两者可能 drift。</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-lg depth-deep">
+            <h4 class="font-semibold text-emerald-700 mb-2">✅ 解决方案</h4>
+            <p class="text-emerald-800">将共享编码逻辑提取到 monorepo 的 <code>packages/shared/</code>（纯 TypeScript，零依赖）。PC 和 Mobile 都依赖此包。测试也只需一份。</p>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h4 class="font-semibold text-sm text-slate-700 mb-3">📐 前后对比</h4>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="module-box p-4">
+              <div class="text-xs font-semibold text-red-500 mb-2 uppercase tracking-wider">现状</div>
+              <div class="flex justify-around items-center">
+                <div class="text-center">
+                  <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 inline-block">
+                    <div class="text-xs font-bold text-red-700">PC Frontend</div>
+                    <div class="text-[10px] text-red-500 mt-1">React + Zustand</div>
+                    <div class="border-t border-red-200 mt-2 pt-2 text-[10px] text-red-700">utf8ToBase64</div>
+                    <div class="text-[10px] text-red-700">encodeV3WorkData</div>
+                    <div class="text-[10px] text-red-700">parseWorkData</div>
+                  </div>
+                </div>
+                <div class="text-red-300 text-2xl">↔</div>
+                <div class="text-center">
+                  <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 inline-block">
+                    <div class="text-xs font-bold text-red-700">Mobile Frontend</div>
+                    <div class="text-[10px] text-red-500 mt-1">Vue + Pinia</div>
+                    <div class="border-t border-red-200 mt-2 pt-2 text-[10px] text-red-700">utf8ToBase64</div>
+                    <div class="text-[10px] text-red-700">encodeV3WorkData</div>
+                    <div class="text-[10px] text-red-700">parseWorkData</div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-xs text-red-600 text-center mt-3">同一逻辑，两处实现，可能 drift</div>
+            </div>
+            <div class="module-box p-4">
+              <div class="text-xs font-semibold text-emerald-500 mb-2 uppercase tracking-wider">深化后</div>
+              <div class="flex justify-around items-center">
+                <div class="text-center">
+                  <div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2 inline-block">
+                    <div class="text-xs font-bold text-emerald-700">PC</div>
+                    <div class="text-[10px] text-emerald-500">Zustand</div>
+                  </div>
+                </div>
+                <div class="flex flex-col items-center mx-2">
+                  <div class="bg-amber-50 border-2 border-amber-300 rounded-lg p-2">
+                    <div class="text-xs font-bold text-amber-700">packages/shared</div>
+                    <div class="text-[10px] text-amber-600">utf8ToBase64 • encodeV3WorkData<br/>parseWorkData • parseUserData</div>
+                    <div class="text-[9px] text-amber-500 mt-0.5">纯 TS，零依赖，一份测试</div>
+                  </div>
+                  <div class="h-6 w-0.5 bg-amber-300"></div>
+                </div>
+                <div class="text-center">
+                  <div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2 inline-block">
+                    <div class="text-xs font-bold text-emerald-700">Mobile</div>
+                    <div class="text-[10px] text-emerald-500">Vue + Pinia</div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-xs text-emerald-600 text-center mt-3">纯函数提取到共享包，框架相关代码各自保留</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top Recommendation -->
+    <section class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-8 text-white">
+      <h2 class="text-2xl font-bold mb-4">🏆 首要推荐</h2>
+      <div class="space-y-3">
+        <p class="text-blue-100 leading-relaxed">
+          <strong class="text-white">从候选 #1 开始：删除 FileSystemService Façade。</strong>
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-300 font-bold mt-0.5">→</span>
+            <span><strong>最低风险</strong>：纯删除操作，不涉及逻辑变更。每个方法都是纯委托，删除后消费者行为不变。</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-300 font-bold mt-0.5">→</span>
+            <span><strong>立即收益</strong>：减少 1 个模块、176 行代码、190 行"假"测试。调用方更透明地了解其依赖。</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-300 font-bold mt-0.5">→</span>
+            <span><strong>解锁后续</strong>：移除 Façade 后，<code>FileSystemController</code> 的拆分会更自然——每个小控制器直接注入其需要的子服务，不再经过中间层。</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-300 font-bold mt-0.5">→</span>
+            <span><strong>ADR 兼容</strong>：<code>ADR-0002</code> 要求 Controller 面向子服务而非 Façade——删除 Façade 实际上更符合 ADR 的原意。</span>
+          </li>
+        </ul>
+        <div class="mt-6 p-4 bg-white/10 rounded-lg">
+          <p class="text-sm text-blue-100">
+            <strong>删除测试结论</strong>：此 Façade 被删除后，复杂度不会消失——它均匀分布到调用方，但调用方本来就需要直接与其子服务交互。不存在"因集中管理而失去某能力"的风险。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary Table -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">候选汇总</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-200">
+              <th class="text-left py-2 px-3 font-semibold text-slate-700">#</th>
+              <th class="text-left py-2 px-3 font-semibold text-slate-700">候选</th>
+              <th class="text-center py-2 px-3 font-semibold text-slate-700">推荐强度</th>
+              <th class="text-center py-2 px-3 font-semibold text-slate-700">风险</th>
+              <th class="text-center py-2 px-3 font-semibold text-slate-700">收益</th>
+              <th class="text-center py-2 px-3 font-semibold text-slate-700">ADR 冲突</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr>
+              <td class="py-2 px-3 font-mono text-xs">1</td>
+              <td class="py-2 px-3">删除 FileSystemService Façade</td>
+              <td class="text-center py-2 px-3"><span class="badge-strong text-xs px-2 py-0.5 rounded-full">Strong</span></td>
+              <td class="text-center py-2 px-3 text-emerald-600">低</td>
+              <td class="text-center py-2 px-3 text-emerald-600">高</td>
+              <td class="text-center py-2 px-3 text-slate-400">无</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono text-xs">2</td>
+              <td class="py-2 px-3">拆分 FileSystemController</td>
+              <td class="text-center py-2 px-3"><span class="badge-strong text-xs px-2 py-0.5 rounded-full">Strong</span></td>
+              <td class="text-center py-2 px-3 text-amber-600">中</td>
+              <td class="text-center py-2 px-3 text-emerald-600">高</td>
+              <td class="text-center py-2 px-3 text-slate-400">无</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono text-xs">3</td>
+              <td class="py-2 px-3">消除循环依赖</td>
+              <td class="text-center py-2 px-3"><span class="badge-strong text-xs px-2 py-0.5 rounded-full">Strong</span></td>
+              <td class="text-center py-2 px-3 text-amber-600">中</td>
+              <td class="text-center py-2 px-3 text-emerald-600">高</td>
+              <td class="text-center py-2 px-3 text-slate-400">无</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono text-xs">4</td>
+              <td class="py-2 px-3">审计日志解耦</td>
+              <td class="text-center py-2 px-3"><span class="badge-explore text-xs px-2 py-0.5 rounded-full">Explore</span></td>
+              <td class="text-center py-2 px-3 text-amber-600">中</td>
+              <td class="text-center py-2 px-3 text-amber-600">中</td>
+              <td class="text-center py-2 px-3 text-slate-400">无</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono text-xs">5</td>
+              <td class="py-2 px-3">FTS / 树遍历去重</td>
+              <td class="text-center py-2 px-3"><span class="badge-explore text-xs px-2 py-0.5 rounded-full">Explore</span></td>
+              <td class="text-center py-2 px-3 text-emerald-600">低</td>
+              <td class="text-center py-2 px-3 text-amber-600">中</td>
+              <td class="text-center py-2 px-3 text-slate-400">无</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono text-xs">6</td>
+              <td class="py-2 px-3">PC/Mobile 协同编码共享</td>
+              <td class="text-center py-2 px-3"><span class="badge-speculative text-xs px-2 py-0.5 rounded-full">Spec</span></td>
+              <td class="text-center py-2 px-3 text-emerald-600">低</td>
+              <td class="text-center py-2 px-3 text-amber-600">中</td>
+              <td class="text-center py-2 px-3 text-slate-400">无</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-200 mt-12 py-6 text-center text-xs text-slate-400">
+    基于 codebase-design 词汇表：模块 · 接口 · 深度 · 接缝 · 适配器 · 杠杆 · 局部性
+  </footer>
+
+</body>
+</html>

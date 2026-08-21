@@ -1,0 +1,30 @@
+export default `
+1. The information we collect
+To provide online CAD services, we may collect the following types of information: (1) Account information: the username, phone number, email, password hash, and third-party login identifiers such as WeChat (including the WeChat OpenID and authorized information such as nickname and avatar) that you provided when registering; (2) Content information: the drawing files and their metadata (file name, size, version, access records, etc.) that you upload and edit; (3) Device and log information: device model, operating system, browser type, IP address, access time, and operation logs; (4) Payment information: order information and payment results generated when you purchase membership services. Sensitive payment credentials such as payment account numbers are processed directly by the payment service provider, and we do not store your complete payment credentials; (5) Device authorization information: authorization codes and authorization records generated when you authorize login through desktop applications.
+We only collect information necessary for providing the services and will not collect personal information unrelated to the services. You may choose whether to provide non-essential information, but not providing it may affect the use of some features.
+2. Use of information
+We use the collected information for: (1) providing drawing storage, conversion, preview, editing, sharing, and collaboration services; (2) account registration, authentication, and security protection (such as anti-fraud and risk identification); (3) improving product experience, troubleshooting, and conducting statistical analysis; (4) sending you service notifications, product updates, and marketing information with your consent.
+We will not sell your personal information to any third party, nor will we use it for purposes unrelated to providing the services.
+3. Cookies and local storage
+To maintain login status, record preference settings, and conduct basic statistics, we use cookies and browser local storage on your device. You may clear or reject such storage, but it may affect the normal use of some features.
+4. Storage and protection of information
+Your drawing files and personal information are currently stored on servers located within the territory of the People's Republic of China, and access is controlled by the account identity and permission system; unauthorized access is not allowed. If the information needs to be transferred abroad for storage or processing due to business needs in the future, we will inform you separately in accordance with the law and obtain your consent.
+We take industry-standard security measures to protect your information, including but not limited to transmission encryption (HTTPS), storage encryption, access control, the principle of least privilege, and security audits. In the event of an information security incident, we will notify you in a timely manner in accordance with the law and take remedial measures.
+Your drawing files may contain sensitive commercial or technical content. Please assess and properly manage the sensitive information contained therein before uploading; you are solely responsible for the confidentiality of the drawing content itself.
+Your files will be continuously saved during your use of the services. After account cancellation, your account enters a 30-day cooling-off period, during which you may restore your account; after the cooling-off period expires, your personal data will be automatically cleaned up. For services terminated due to violation of the service agreement, the relevant data will be deleted within a reasonable period.
+5. Sharing and disclosure of information
+We will not disclose your personal information to third parties except in the following circumstances: (1) with your explicit consent; (2) as required by laws, regulations, or judicial or administrative authorities in accordance with the law; (3) as necessary to protect the legitimate rights and interests of us or others, such as life and property; (4) to service providers necessary for providing cloud services, including but not limited to: WeChat (third-party login service), payment service providers (payment processing), cloud computing infrastructure providers (server hosting and storage), etc. Such service providers are bound by confidentiality obligations and may only process your information within the necessary scope.
+6. Your rights
+You have the right to query, copy, correct, and delete your personal information, to withdraw your authorization and consent to the use of information, and to cancel your account.
+You may log in to your personal space to directly manage and delete your files and account information; if you need further assistance, you may contact us through the contact information at the end of this policy, and we will respond to your request within a reasonable period.
+7. Protection of minors
+This service is provided to adults; minors under the age of 18 may not register for or use this service. If we discover that the information of minors has been collected, we will delete the relevant data in accordance with the law.
+8. Policy updates
+We may revise this policy from time to time based on changes in laws and regulations or business adjustments. The revised policy will be published on the page with its effective date indicated. Significant changes will be notified to you in a prominent manner (such as page announcements or in-site messages).
+By continuing to use this service after the policy revision takes effect, you are deemed to have read and accepted the revised policy.
+9. Contact us and the personal information protection officer
+If you have any questions, opinions, or complaints about this privacy policy or personal information processing, you may contact us through the following means:
+Customer Service Phone: 17381962637
+Customer Service Email: 710714273@qq.com
+The contact information of our personal information protection officer is: 710714273@qq.com. We will process your feedback and requests in a timely manner.
+`

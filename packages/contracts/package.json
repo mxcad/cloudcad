@@ -1,0 +1,21 @@
+{
+  "name": "@cloudcad/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "跨包共享的 DI token + TypeScript 接口契约，用于解耦 backend 与 impl-mx 等实现包",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm clean && tsc",
+    "clean": "node -e \"const fs=require('node:fs');const {execSync}=require('node:child_process');for(let i=0;i<5;i++){try{fs.rmSync('dist',{recursive:true,force:true});break}catch(e){if(i===4)throw e;execSync(process.platform==='win32'?'timeout /t 1 /nobreak >nul':'sleep 1',{stdio:'ignore'})}}\""
+  },
+  "dependencies": {
+    "@cloudcad/db": "workspace:*"
+  }
+}

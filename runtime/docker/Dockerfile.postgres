@@ -1,0 +1,86 @@
+# PostgreSQL 15 glibc 版本提取
+# 基于 CentOS 7 (glibc 2.17)，实现最大兼容性
+# 兼容：CentOS 7+, Rocky 8/9, RHEL 7/8/9, Ubuntu 18.04+, Debian 10+
+#
+# 重要：不打包 glibc 核心库（libc.so.6, ld-linux-x86-64.so.2 等）
+# 这些库必须使用目标系统的版本，否则会导致兼容性问题
+#
+# 构建命令：
+#   docker build -o ../linux/postgresql -f Dockerfile.postgres .
+
+FROM centos:7 AS builder
+
+# CentOS 7 已 EOL，配置 vault 源
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo && \
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Base.repo
+
+# 安装 PostgreSQL 15 官方仓库和依赖
+RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
+    yum install -y postgresql15-server postgresql15 binutils && \
+    yum clean all
+
+# 创建提取目录
+WORKDIR /extract
+
+# 收集所有依赖库（排除 glibc 核心库）
+# 系统核心库（不打包，使用目标系统版本）
+ENV SYSTEM_LIBS="libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2"
+
+# 创建目录结构并复制文件
+# 注意：share 目录必须包含版本号子目录，initdb 会查找 share/postgresql/15/postgres.bki
+RUN mkdir -p bin lib share/postgresql/15 && \
+    # 复制 PostgreSQL 二进制文件 (CentOS 7 路径)
+    cp /usr/pgsql-15/bin/postgres bin/ && \
+    cp /usr/pgsql-15/bin/pg_ctl bin/ && \
+    cp /usr/pgsql-15/bin/pg_dump bin/ && \
+    cp /usr/pgsql-15/bin/pg_restore bin/ && \
+    cp /usr/pgsql-15/bin/pg_isready bin/ && \
+    cp /usr/pgsql-15/bin/psql bin/ && \
+    cp /usr/pgsql-15/bin/createdb bin/ && \
+    cp /usr/pgsql-15/bin/dropdb bin/ && \
+    cp /usr/pgsql-15/bin/initdb bin/ && \
+    cp /usr/pgsql-15/bin/pg_basebackup bin/ && \
+    # 复制 PostgreSQL 库文件
+    # 注意：PostgreSQL 的 $libdir 解析为 bin/ 的兄弟目录 lib/
+    # 所以扩展库必须直接放在 lib/ 目录下
+    cp /usr/pgsql-15/lib/*.so lib/ && \
+    cp -r /usr/pgsql-15/lib/bitcode lib/ 2>/dev/null || true && \
+    cp -r /usr/pgsql-15/lib/pgxs lib/ 2>/dev/null || true && \
+    # 复制 libpq（可能在系统目录）
+    cp /usr/lib64/libpq.so* lib/ 2>/dev/null || true && \
+    # 复制 PostgreSQL share 目录（initdb 需要模板文件）
+    # CentOS 7: /usr/pgsql-15/share/ -> share/postgresql/15/
+    cp -r /usr/pgsql-15/share/* share/postgresql/15/ && \
+    # 使用 ldd 收集所有依赖库（排除系统核心库）
+    for binfile in bin/*; do \
+        if [ -f "$binfile" ] && [ -x "$binfile" ]; then \
+            ldd "$binfile" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read lib; do \
+                libname=$(basename "$lib"); \
+                skip=0; \
+                for syslib in libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2; do \
+                    [ "$libname" = "$syslib" ] && skip=1 && break; \
+                done; \
+                [ $skip -eq 0 ] && [ -f "$lib" ] && cp -L "$lib" lib/ 2>/dev/null || true; \
+            done; \
+        fi; \
+    done && \
+    # 收集 PostgreSQL 库的依赖（排除系统核心库）
+    for libfile in lib/*.so*; do \
+        if [ -f "$libfile" ]; then \
+            ldd "$libfile" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read dep; do \
+                depname=$(basename "$dep"); \
+                skip=0; \
+                for syslib in libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 librt.so.1 ld-linux-x86-64.so.2; do \
+                    [ "$depname" = "$syslib" ] && skip=1 && break; \
+                done; \
+                [ $skip -eq 0 ] && [ -f "$dep" ] && cp -L "$dep" lib/ 2>/dev/null || true; \
+            done; \
+        fi; \
+    done && \
+    # 设置权限
+    chmod -R 755 bin lib share
+
+# 输出阶段 - 使用 alpine 以便容器可以运行
+FROM alpine:latest AS output
+COPY --from=builder /extract/ /output/
+CMD ["cp", "-r", "/output/.", "/dest/"]

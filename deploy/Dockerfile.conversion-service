@@ -1,0 +1,16 @@
+FROM node:20.19.5-alpine
+
+RUN apk add --no-cache subversion
+
+WORKDIR /app
+
+COPY packages/conversion-service/package.json ./
+COPY packages/conversion-service/server.js ./
+COPY packages/conversion-service/lib/ ./lib/
+COPY packages/conversion-service/routes/ ./routes/
+COPY packages/conversion-service/services/ ./services/
+COPY packages/conversion-service/mxcad/ ./mxcad/
+
+EXPOSE 3100
+
+CMD ["node", "server.js"]

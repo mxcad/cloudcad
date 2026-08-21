@@ -1,0 +1,211 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+///////////////////////////////////////////////////////////////////////////////
+
+import { Test } from '@nestjs/testing';
+import { ProcessPoolExecutor } from './process-pool.executor';
+import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
+import type {
+  ConversionTask,
+  ConversionResult,
+} from './function-executor.interface';
+
+function makeTask(overrides: Partial<ConversionTask> = {}): ConversionTask {
+  return {
+    id: 'task_1',
+    type: 'convertFile',
+    params: {},
+    priority: 1,
+    createdAt: new Date(),
+    ...overrides,
+  };
+}
+
+describe('ProcessPoolExecutor', () => {
+  let executor: ProcessPoolExecutor;
+  const mockConversionService = {
+    convertFile: jest.fn(),
+    convertBinToMxweb: jest.fn(),
+    generateBinFiles: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module = await Test.createTestingModule({
+      providers: [
+        ProcessPoolExecutor,
+        { provide: MXCAD_CONVERSION_SERVICE, useValue: mockConversionService },
+      ],
+    }).compile();
+    executor = module.get(ProcessPoolExecutor);
+  });
+
+  describe('when invoking a convertFile task', () => {
+    it('should return COMPLETED with outputPath on success', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { newpath: '/out/result.mxweb', code: 0 },
+        error: undefined,
+      });
+
+      const result = await executor.invoke(makeTask());
+
+      expect(result.status).toBe('COMPLETED');
+      expect(result.outputPath).toBe('/out/result.mxweb');
+      expect(mockConversionService.convertFile).toHaveBeenCalled();
+    });
+
+    it('should return FAILED when conversion reports isOk=false', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: false,
+        ret: { code: 12 },
+        error: 'conversion failed',
+      });
+
+      const result = await executor.invoke(makeTask());
+
+      expect(result.status).toBe('FAILED');
+      expect(result.error).toBe('conversion failed');
+    });
+
+    it('should return FAILED when the service throws', async () => {
+      mockConversionService.convertFile.mockRejectedValue(
+        new Error('boom'),
+      );
+
+      const result = await executor.invoke(makeTask());
+
+      expect(result.status).toBe('FAILED');
+      expect(result.error).toBe('boom');
+    });
+  });
+
+  describe('when invoking a convertBinToMxweb task', () => {
+    it('should return COMPLETED with outputPath on success', async () => {
+      mockConversionService.convertBinToMxweb.mockResolvedValue({
+        success: true,
+        outputPath: '/out/result.mxweb',
+        error: undefined,
+      });
+
+      const result = await executor.invoke(
+        makeTask({
+          type: 'convertBinToMxweb',
+          params: { binPath: '/in/a.bin', outputPath: '/out', outName: 'a' },
+        }),
+      );
+
+      expect(result.status).toBe('COMPLETED');
+      expect(result.outputPath).toBe('/out/result.mxweb');
+      expect(mockConversionService.convertBinToMxweb).toHaveBeenCalledWith(
+        '/in/a.bin',
+        '/out',
+        'a',
+      );
+    });
+
+    it('should return FAILED when conversion fails', async () => {
+      mockConversionService.convertBinToMxweb.mockResolvedValue({
+        success: false,
+        outputPath: undefined,
+        error: 'bin conversion failed',
+      });
+
+      const result = await executor.invoke(
+        makeTask({ type: 'convertBinToMxweb', params: {} }),
+      );
+
+      expect(result.status).toBe('FAILED');
+      expect(result.error).toBe('bin conversion failed');
+    });
+  });
+
+  describe('when invoking a generateBinFiles task', () => {
+    it('should return COMPLETED on success', async () => {
+      mockConversionService.generateBinFiles.mockResolvedValue(undefined);
+
+      const result = await executor.invoke(
+        makeTask({
+          type: 'generateBinFiles',
+          params: { mxwebPath: '/in/a.mxweb', nodeName: 'node1' },
+        }),
+      );
+
+      expect(result.status).toBe('COMPLETED');
+      expect(mockConversionService.generateBinFiles).toHaveBeenCalledWith(
+        '/in/a.mxweb',
+        'node1',
+      );
+    });
+  });
+
+  describe('when invoking a task with unknown type', () => {
+    it('should return FAILED with unknown type error', async () => {
+      const result = await executor.invoke(
+        makeTask({ type: 'unknownTask' as never }),
+      );
+
+      expect(result.status).toBe('FAILED');
+      expect(result.error).toContain('Unknown task type');
+    });
+  });
+
+  describe('when querying task status', () => {
+    it('should return the stored status after completion', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { newpath: '/out/r.mxweb' },
+        error: undefined,
+      });
+
+      await executor.invoke(makeTask({ id: 'task_status' }));
+
+      const status = await executor.getTaskStatus('task_status');
+      expect(status.status).toBe('COMPLETED');
+      expect(status.taskId).toBe('task_status');
+      expect(status.result?.status).toBe('COMPLETED');
+    });
+
+    it('should return FAILED status for a failed task', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: false,
+        ret: {},
+        error: 'bad',
+      });
+
+      await executor.invoke(makeTask({ id: 'task_failed' }));
+
+      const status = await executor.getTaskStatus('task_failed');
+      expect(status.status).toBe('FAILED');
+      expect(status.error).toBe('bad');
+    });
+
+    it('should throw for an unknown task id', async () => {
+      await expect(executor.getTaskStatus('missing')).rejects.toThrow(
+        'Task not found',
+      );
+    });
+  });
+
+  describe('when a conversion fails', () => {
+    it('should not block subsequent tasks', async () => {
+      mockConversionService.convertFile
+        .mockRejectedValueOnce(new Error('first fails'))
+        .mockResolvedValueOnce({ isOk: true, ret: { newpath: '/out/r.mxweb' } });
+
+      const first = await executor.invoke(makeTask({ id: 't1' }));
+      const second = await executor.invoke(makeTask({ id: 't2' }));
+
+      expect(first.status).toBe('FAILED');
+      expect(second.status).toBe('COMPLETED');
+    });
+  });
+
+  describe('queue stats helpers', () => {
+    it('should expose queue stats and clear queue', () => {
+      expect(executor.getQueueStats()).toHaveProperty('maxConcurrent', 4);
+      expect(typeof executor.clearQueue()).toBe('number');
+    });
+  });
+});

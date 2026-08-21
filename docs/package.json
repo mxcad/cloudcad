@@ -1,0 +1,15 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "description": "`docs/` 只保留权威文档；历史一次性产物（审计、评审、计划、PRD、handoff、HTML 报告）统一归档于 [`docs/archive/`](archive/README.md)。分类与维护规则见 [ADR-0048](adr/0048-documentation-governance.md)。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docx": "^9.7.1"
+  }
+}

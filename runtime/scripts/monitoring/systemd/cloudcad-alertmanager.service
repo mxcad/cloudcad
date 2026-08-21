@@ -1,0 +1,33 @@
+# 梦想网页CAD实时协同平台 Alertmanager systemd unit 模板（ADR-0055 §3/§4）
+# 占位符由 install-monitoring.sh 渲染替换：__USER__ / __VENDOR__ / __CONFIG_DIR__ / __DATA_DIR__
+#   __USER__      - 运行用户（默认 cloudcad）
+#   __VENDOR__    - 二进制目录（runtime/vendor/monitoring/<arch>/alertmanager）
+#   __CONFIG_DIR__- 配置目录（/etc/cloudcad/monitoring）
+#   __DATA_DIR__  - 数据目录（data/monitoring/alertmanager）
+
+[Unit]
+Description=梦想网页CAD实时协同平台 Alertmanager (alert routing)
+Documentation=https://github.com/mxcad/cloudcad
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+ExecStart=__VENDOR__/alertmanager \
+  --config.file=__CONFIG_DIR__/alertmanager/alertmanager.yml \
+  --storage.path=__DATA_DIR__/alertmanager \
+  --web.listen-address=:9093
+Restart=on-failure
+RestartSec=5s
+# 目录 0750 / 文件 0640
+UMask=027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__/alertmanager
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

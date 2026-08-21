@@ -1,0 +1,55 @@
+# 梦想网页CAD实时协同平台 Loki 单二进制配置（ADR-0055 §3）
+# 文件存储（单机 ~512MB 目标）；访问日志（log_type=access）保留 180 天 / 应用日志（log_type=app）保留 90 天
+# 注：Loki 3.x 通过 compactor.retention_enabled + limits_config.retention_stream 按 stream（log_type 标签）分级保留
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+# 保留策略：应用日志 90 天 / 访问日志 180 天（按 log_type 标签）
+compactor:
+  working_directory: /loki/compactor
+  compactor_ring:
+    kvstore:
+      store: inmemory
+  retention_enabled: true
+  retention_delete_delay: 2h
+  deletion_mode: filter-and-delete
+
+limits_config:
+  retention_stream:
+    - selector: '{log_type="app"}'
+      priority: 1
+      period: 2160h   # 90 天
+    - selector: '{log_type="access"}'
+      priority: 2
+      period: 4320h   # 180 天
+  reject_old_samples: true
+  reject_old_samples_max_age: 240h
+
+# Promtail 需先创建 tsdb 索引对应的保留表；上述 retention_stream 依赖 labels（service/host/env/log_type）
+query_scheduler:
+  max_outstanding_requests_per_tenant: 1024

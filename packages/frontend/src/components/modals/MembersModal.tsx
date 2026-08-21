@@ -1,0 +1,922 @@
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import {
+  RefreshCw,
+  X,
+  UserPlus,
+  AlertCircle,
+  Loader2,
+  ArrowUpRight,
+} from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
+import { Modal } from '@/components/ui/Modal';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Autocomplete } from '@/components/ui/Autocomplete';
+import { TruncateText } from '@/components/ui/TruncateText';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import {
+  memberControllerGetProjectMembers,
+  memberControllerAddProjectMember,
+  memberControllerRemoveProjectMember,
+  memberControllerUpdateProjectMember,
+  memberControllerTransferProject,
+} from '@/api-sdk';
+import { usersControllerSearchUsers } from '@/api-sdk';
+import { rolesControllerGetProjectRolesByProject } from '@/api-sdk';
+import type { ProjectRoleDto } from '@/api-sdk';
+import { useProjectPermission } from '@/hooks/useProjectPermission';
+import { ProjectPermission, getRoleDisplayName } from '@/constants/permissions';
+import { t, $t } from '@/languages';
+import { getErrorMessage } from '@/utils/errorHandler';
+import type { ProjectMemberDto, UserResponseDto } from '@/api-sdk';
+
+interface Member extends ProjectMemberDto {
+  // 添加 userId 作为 id 的别名以保持兼容性
+  userId: string;
+}
+
+interface UserSearchResult extends UserResponseDto {
+  // 使用 API 返回的用户类型
+}
+
+interface MembersModalProps {
+  isOpen: boolean;
+  projectId: string;
+  onClose: () => void;
+}
+
+export const MembersModal: React.FC<MembersModalProps> = ({
+  isOpen,
+  projectId,
+  onClose,
+}) => {
+  const [members, setMembers] = useState<Member[]>([]);
+  // ProjectRoleDto：含 isOwnerRole（项目所有者使用的角色标记，数据驱动）
+  const [projectRoles, setProjectRoles] = useState<ProjectRoleDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newRoleId, setNewRoleId] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [filterRoleId, setFilterRoleId] = useState<string>('');
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<Member | null>(null);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
+    null
+  );
+  const [canManageMembers, setCanManageMembers] = useState(false);
+  const [canAssignRoles, setCanAssignRoles] = useState(false);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isInitializedRef = useRef(false);
+  const { checkPermission, refreshProjectPermissions } = useProjectPermission();
+
+  const loadMembers = useCallback(async () => {
+    setErrorMessage('');
+    try {
+      const response = await memberControllerGetProjectMembers({
+        path: { projectId },
+      });
+      // SDK 默认不抛错：错误在 result.error，必须显式抛出否则 catch 是死代码
+      if (response.error) throw response.error;
+      // 映射 id 为 userId 以保持兼容性
+      const membersWithUserId = (response.data ?? []).map((m) => ({
+        ...m,
+        userId: m.id,
+      }));
+      setMembers(membersWithUserId as Member[]);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error) || t('加载成员列表失败'));
+    }
+  }, [projectId]);
+
+  const loadProjectRoles = useCallback(async () => {
+    try {
+      const response = await rolesControllerGetProjectRolesByProject({
+        path: { projectId },
+      });
+      if (response.error) throw response.error;
+      const allRoles = response.data ?? [];
+
+      // 添加成员时可用的角色（排除项目所有者使用的角色——数据驱动 isOwnerRole，
+      // 项目内角色改名后仍可靠，ADR-00XX）
+      const addMemberRoles = allRoles.filter((role) => !role.isOwnerRole);
+
+      setProjectRoles(allRoles);
+
+      // 设置默认角色为 PROJECT_MEMBER（项目内改名后回退到任一可用角色）
+      const defaultRole =
+        addMemberRoles.find((r) => r.name === 'PROJECT_MEMBER') ||
+        addMemberRoles[0];
+      if (defaultRole) {
+        setNewRoleId((prev) => prev || defaultRole.id);
+      }
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error) || t('加载项目角色失败'));
+    }
+  }, [projectId]);
+
+  // 根据角色筛选成员
+  const filteredMembers = filterRoleId
+    ? members.filter((member) => member.projectRoleId === filterRoleId)
+    : members;
+
+  // 搜索用户
+  const searchUsers = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearching(true);
+      try {
+        const response = await usersControllerSearchUsers({
+          query: { search: query, limit: 10 },
+        });
+        if (response.error) throw response.error;
+        // response.data 是 UserListResponseDto，包含 users 数组
+        const users = response.data?.users ?? [];
+
+        // 过滤掉已经是成员的用户
+        const memberUserIds = members.map((m) => m.id);
+        const availableUsers = users.filter(
+          (u) => !memberUserIds.includes(u.id)
+        );
+
+        setSearchResults(availableUsers);
+      } catch (error) {
+        setSearchResults([]);
+        setErrorMessage(getErrorMessage(error) || t('搜索用户失败'));
+      } finally {
+        setSearching(false);
+      }
+    },
+    [members]
+  );
+
+  // 防抖搜索
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (showAddForm && !selectedUser) {
+        searchUsers(newEmail);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [newEmail, showAddForm, selectedUser, searchUsers]);
+
+  useEffect(() => {
+    if (isOpen && !isInitializedRef.current) {
+      isInitializedRef.current = true;
+
+      // 重置状态
+      setNewEmail('');
+      setNewRoleId('');
+      setShowAddForm(false);
+      setErrorMessage('');
+      setSearchResults([]);
+      setSelectedUser(null);
+      setCanManageMembers(false);
+      setCanAssignRoles(false);
+
+      // 开始加载
+      setLoading(true);
+      setLoadingPermissions(true);
+
+      // 清除权限缓存，确保每次打开弹框都重新请求最新权限
+      refreshProjectPermissions(projectId);
+
+      // 并行加载数据和权限
+      Promise.all([
+        loadMembers(),
+        loadProjectRoles(),
+        checkPermission(projectId, ProjectPermission.PROJECT_MEMBER_MANAGE),
+        checkPermission(projectId, ProjectPermission.PROJECT_MEMBER_ASSIGN),
+      ])
+        .then((results) => {
+          setCanManageMembers(results[2]);
+          setCanAssignRoles(results[3]);
+        })
+        .catch((error) => {
+          setErrorMessage(t('加载数据失败'));
+        })
+        .finally(() => {
+          setLoading(false);
+          setLoadingPermissions(false);
+        });
+    }
+    if (!isOpen) {
+      isInitializedRef.current = false;
+    }
+  }, [isOpen, projectId, checkPermission]);
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !newRoleId) return;
+
+    setAdding(true);
+    setErrorMessage('');
+    try {
+      // 添加成员
+      const result = await memberControllerAddProjectMember({
+        path: { projectId },
+        body: {
+          userId: selectedUser.id,
+          projectRoleId: newRoleId,
+        },
+      });
+      if (result.error) throw result.error;
+
+      // 重新获取完整成员列表（addProjectMember 返回的是 Prisma 嵌套结构，
+      // 而成员列表需要扁平化的 ProjectMemberDto）
+      await loadMembers();
+      refreshProjectPermissions(projectId);
+
+      // 重置表单
+      setNewEmail('');
+      setNewRoleId('');
+      setShowAddForm(false);
+      setSearchResults([]);
+      setSelectedUser(null);
+    } catch (error) {
+      // SDK error 是后端 body 对象（含 code 字段，无 response.status），
+      // 403/400 判断用 code 字段（FORBIDDEN/BAD_REQUEST）
+      if ((error as { code?: string }).code === 'FORBIDDEN') {
+        setErrorMessage(t('没有权限添加成员'));
+      } else {
+        setErrorMessage(getErrorMessage(error) || t('添加成员失败，请重试'));
+      }
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    setErrorMessage('');
+    try {
+      const result = await memberControllerRemoveProjectMember({
+        path: { projectId, userId },
+      });
+      if (result.error) throw result.error;
+      setMembers((prev) => prev.filter((m) => m.userId !== userId));
+      refreshProjectPermissions(projectId);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'FORBIDDEN') {
+        setErrorMessage(t('没有权限移除成员'));
+      } else {
+        setErrorMessage(getErrorMessage(error) || t('移除成员失败，请重试'));
+      }
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, projectRoleId: string) => {
+    setErrorMessage('');
+    try {
+      const result = await memberControllerUpdateProjectMember({
+        path: { projectId, userId },
+        body: { projectRoleId },
+      });
+      if (result.error) throw result.error;
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
+      );
+      refreshProjectPermissions(projectId);
+      // 重新检查当前用户权限（可能是修改了自己的角色）
+      const newCanManage = await checkPermission(
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_MANAGE
+      );
+      const newCanAssign = await checkPermission(
+        projectId,
+        ProjectPermission.PROJECT_MEMBER_ASSIGN
+      );
+      setCanManageMembers(newCanManage);
+      setCanAssignRoles(newCanAssign);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'FORBIDDEN') {
+        setErrorMessage(t('没有权限更新成员角色'));
+      } else if ((error as { code?: string }).code === 'BAD_REQUEST') {
+        setErrorMessage(t('不能修改项目所有者的角色'));
+      } else {
+        setErrorMessage(getErrorMessage(error) || t('更新角色失败，请重试'));
+      }
+    }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!transferTarget) return;
+
+    setTransferring(true);
+    setErrorMessage('');
+    try {
+      const result = await memberControllerTransferProject({
+        path: { projectId },
+        body: { newOwnerId: transferTarget.userId },
+      });
+      if (result.error) throw result.error;
+
+      // 刷新成员列表
+      await loadMembers();
+      refreshProjectPermissions(projectId);
+
+      setShowTransferModal(false);
+      setTransferTarget(null);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'FORBIDDEN') {
+        setErrorMessage(t('没有权限转让项目'));
+      } else {
+        setErrorMessage(getErrorMessage(error) || t('转让项目失败，请重试'));
+      }
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t('项目成员')}
+        footer={
+          <Button variant="secondary" onClick={onClose}>
+            {t('关闭')}
+          </Button>
+        }
+      >
+        <div className="space-y-4" ref={contentRef}>
+          {/* 错误提示 */}
+          {errorMessage && (
+            <div
+              className="flex items-center gap-2 p-3 rounded-lg text-sm"
+              style={{
+                background: 'var(--error-light)',
+                color: 'var(--error)',
+              }}
+            >
+              <AlertCircle size={16} />
+              {errorMessage}
+            </div>
+          )}
+
+          {/* 添加成员按钮/表单 */}
+          {!showAddForm ? (
+            loadingPermissions ? (
+              <div
+                className="w-full py-2 px-4 border-2 border-dashed rounded-lg flex items-center justify-center gap-2"
+                style={{
+                  borderColor: 'var(--border-default)',
+                }}
+              >
+                <Loader2
+                  size={18}
+                  className="animate-spin"
+                  style={{ color: 'var(--text-muted)' }}
+                />
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {t('检查权限中...')}
+                </span>
+              </div>
+            ) : (
+              <Tooltip
+                content={canManageMembers ? undefined : t('需要成员管理权限')}
+              >
+                <button
+                  data-tour="invite-member-btn"
+                  onClick={() => canManageMembers && setShowAddForm(true)}
+                  disabled={!canManageMembers}
+                  className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                    !canManageMembers ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  style={{
+                    background: canManageMembers
+                      ? 'var(--primary-500)'
+                      : 'var(--bg-disabled)',
+                    color: 'var(--text-inverse)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!canManageMembers) return;
+                    e.currentTarget.style.background = 'var(--primary-600)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!canManageMembers) return;
+                    e.currentTarget.style.background = 'var(--primary-500)';
+                  }}
+                >
+                  <UserPlus size={18} />
+                  {t('添加成员')}
+                </button>
+              </Tooltip>
+            )
+          ) : (
+            <form
+              onSubmit={handleAddMember}
+              className="p-4 rounded-lg relative"
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-default)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <UserPlus size={18} style={{ color: 'var(--text-tertiary)' }} />
+                <span
+                  className="font-medium"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  {t('添加新成员')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewEmail('');
+                    setErrorMessage('');
+                    setSearchResults([]);
+                    setSelectedUser(null);
+                  }}
+                  className="ml-auto p-1 rounded"
+                  style={{ color: 'var(--text-tertiary)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-elevated)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                {/* 用户搜索输入框 */}
+                <Autocomplete
+                  dataTour="member-search-input"
+                  value={newEmail}
+                  onChange={(value) => {
+                    setNewEmail(value);
+                    setSelectedUser(null);
+                  }}
+                  onSearch={(value) => searchUsers(value)}
+                  loading={searching}
+                  items={searchResults.map((u) => ({
+                    key: u.id,
+                    label: u.email || u.username || '',
+                    ...u,
+                  }))}
+                  onSelectItem={(item) => {
+                    const user = item as unknown as UserSearchResult;
+                    setSelectedUser(user);
+                    setNewEmail(user.email ?? '');
+                    setSearchResults([]);
+                  }}
+                  placeholder={t('搜索用户（邮箱或用户名）')}
+                  open={searchResults.length > 0 && !selectedUser}
+                  renderItem={(item) => {
+                    const user = item as unknown as UserSearchResult;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center font-medium flex-shrink-0"
+                          style={{
+                            background: 'var(--primary-500)',
+                            color: 'var(--text-inverse)',
+                            fontSize: '0.75rem',
+                          }}
+                        >
+                          {(user?.nickname ||
+                            user?.username ||
+                            user?.email)?.[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="font-medium"
+                            style={{ color: 'var(--text-primary)' }}
+                          >
+                            <TruncateText>
+                              {user.nickname || user.username}
+                            </TruncateText>
+                          </p>
+                          <p
+                            style={{
+                              color: 'var(--text-tertiary)',
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            <TruncateText>{user.email}</TruncateText>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+
+                {/* 已选用户显示 */}
+                {selectedUser && (
+                  <div
+                    className="flex items-center gap-2 p-2 rounded-lg flex-shrink-0"
+                    style={{
+                      background: 'var(--primary-50)',
+                      border: '1px solid var(--primary-200)',
+                    }}
+                  >
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                      style={{
+                        background: 'var(--primary-500)',
+                        color: 'var(--text-inverse)',
+                      }}
+                    >
+                      {(
+                        (selectedUser.nickname ||
+                          selectedUser.username ||
+                          selectedUser.email ||
+                          '?')[0] ?? '?'
+                      ).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="font-medium"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        <TruncateText>
+                          {selectedUser.nickname || selectedUser.username}
+                        </TruncateText>
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
+                        <TruncateText>{selectedUser.email}</TruncateText>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUser(null);
+                        setNewEmail('');
+                      }}
+                      className="p-1 rounded flex-shrink-0"
+                      style={{
+                        color: 'var(--text-tertiary)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--primary-200)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* 角色选择和添加按钮 */}
+                <div className="flex gap-2">
+                  <select
+                    data-tour="member-role-select"
+                    value={newRoleId}
+                    onChange={(e) => setNewRoleId(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg text-sm input-theme"
+                    disabled={loading}
+                    style={{ maxWidth: '200px' }}
+                  >
+                    <option value="">{t('请选择角色')}</option>
+                    {projectRoles
+                      .filter((role) => role.name !== 'PROJECT_OWNER')
+                      .map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {getRoleDisplayName(role.name, false)}
+                        </option>
+                      ))}
+                  </select>
+                  <Button
+                    data-tour="member-add-btn"
+                    type="submit"
+                    size="sm"
+                    disabled={adding || !selectedUser || !newRoleId}
+                  >
+                    {adding ? t('添加中...') : t('添加')}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* 筛选条 */}
+          {members.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span
+                className="text-sm"
+                style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}
+              >
+                {$t('共 {n} 人', { n: filteredMembers.length })}
+              </span>
+              <select
+                value={filterRoleId}
+                onChange={(e) => setFilterRoleId(e.target.value)}
+                className="px-3 py-1.5 rounded text-sm input-theme"
+                style={{
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <option value="">{t('所有角色')}</option>
+                {projectRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {getRoleDisplayName(role.name, false)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 成员列表 */}
+          <div className="space-y-2">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw
+                  size={20}
+                  className="animate-spin"
+                  style={{ color: 'var(--text-muted)' }}
+                />
+                <span
+                  className="ml-2"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  {t('加载中...')}
+                </span>
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div
+                className="text-center py-8"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                {filterRoleId ? t('没有符合条件的成员') : t('暂无成员')}
+              </div>
+            ) : (
+              filteredMembers.map((member) => {
+                // 数据驱动判断项目所有者（项目内角色可改名，不能按角色名判断）
+                const isOwner =
+                  member.projectRoleId ===
+                  projectRoles.find((r) => r.isOwnerRole)?.id;
+
+                const displayName =
+                  member.nickname ||
+                  member.username ||
+                  member.email ||
+                  t('未知用户');
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ background: 'var(--bg-tertiary)' }}
+                  >
+                    <UserAvatar
+                      avatar={member.avatar}
+                      name={displayName}
+                      size={32}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="font-medium"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        <TruncateText>{displayName}</TruncateText>
+                      </p>
+                      <p
+                        style={{
+                          color: 'var(--text-tertiary)',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        <TruncateText>
+                          {member.email || t('无邮箱')}
+                        </TruncateText>
+                      </p>
+                    </div>
+                    {isOwner ? (
+                      <Tag
+                        variant="primary"
+                        size="sm"
+                        className="flex-shrink-0"
+                      >
+                        {t('项目所有者')}
+                      </Tag>
+                    ) : (
+                      <select
+                        value={member.projectRoleId}
+                        onChange={(e) =>
+                          handleUpdateRole(member.id, e.target.value)
+                        }
+                        disabled={!canAssignRoles}
+                        className={`px-2 py-1 text-xs rounded flex-shrink-0 input-theme ${
+                          !canAssignRoles ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        style={{ maxWidth: '100px' }}
+                      >
+                        {projectRoles
+                          .filter((role) => !role.isOwnerRole)
+                          .map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {getRoleDisplayName(role.name, false)}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                    {!isOwner && (
+                      <Tooltip
+                        content={
+                          canManageMembers
+                            ? t('转让项目所有权')
+                            : t('需要成员管理权限')
+                        }
+                      >
+                        <button
+                          onClick={() => {
+                            if (!canManageMembers) return;
+                            setTransferTarget(member);
+                            setShowTransferModal(true);
+                          }}
+                          disabled={!canManageMembers}
+                          className={`p-1.5 rounded flex-shrink-0 ${
+                            !canManageMembers
+                              ? 'opacity-50 cursor-not-allowed'
+                              : ''
+                          }`}
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => {
+                            if (!canManageMembers) return;
+                            e.currentTarget.style.color = 'var(--primary-600)';
+                            e.currentTarget.style.background =
+                              'var(--primary-50)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!canManageMembers) return;
+                            e.currentTarget.style.color = 'var(--text-muted)';
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <ArrowUpRight size={16} />
+                        </button>
+                      </Tooltip>
+                    )}
+                    {!isOwner && (
+                      <Tooltip
+                        content={
+                          canManageMembers
+                            ? t('移除成员')
+                            : t('需要成员管理权限')
+                        }
+                      >
+                        <button
+                          onClick={() =>
+                            canManageMembers && handleRemoveMember(member.id)
+                          }
+                          disabled={!canManageMembers}
+                          className={`p-1.5 rounded flex-shrink-0 ${
+                            !canManageMembers
+                              ? 'opacity-50 cursor-not-allowed'
+                              : ''
+                          }`}
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => {
+                            if (!canManageMembers) return;
+                            e.currentTarget.style.color = 'var(--error)';
+                            e.currentTarget.style.background =
+                              'var(--error-light)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!canManageMembers) return;
+                            e.currentTarget.style.color = 'var(--text-muted)';
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </Tooltip>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* 转让确认弹窗 */}
+      {showTransferModal && transferTarget && (
+        <Modal
+          isOpen={showTransferModal}
+          onClose={() => {
+            setShowTransferModal(false);
+            setTransferTarget(null);
+          }}
+          title={t('转让项目所有权')}
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setTransferTarget(null);
+                }}
+              >
+                {t('取消')}
+              </Button>
+              <Button
+                onClick={handleTransferOwnership}
+                disabled={transferring}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                {transferring ? t('转让中...') : t('确认转让')}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div
+              className="flex items-start gap-3 p-4 rounded-lg"
+              style={{
+                background: 'var(--warning-light)',
+                border: '1px solid var(--warning-dim)',
+              }}
+            >
+              <AlertCircle
+                size={20}
+                className="flex-shrink-0 mt-0.5"
+                style={{ color: 'var(--warning)' }}
+              />
+              <div style={{ color: 'var(--text-primary)' }}>
+                <p className="font-semibold mb-1">{t('重要提示')}</p>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  {t(
+                    '转让项目所有权后，您将失去项目所有者权限，并自动降级为项目管理员。此操作不可撤销。'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p
+                className="font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                {t('转让给：')}
+              </p>
+              <div
+                className="flex items-center gap-3 p-3 rounded-lg"
+                style={{ background: 'var(--bg-tertiary)' }}
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-medium flex-shrink-0"
+                  style={{
+                    background: 'var(--primary-500)',
+                    color: 'var(--text-inverse)',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {(
+                    (transferTarget.nickname ||
+                      transferTarget.username ||
+                      transferTarget.email)?.[0] ?? '?'
+                  ).toUpperCase()}
+                </div>
+                <div>
+                  <p
+                    className="font-medium"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    {transferTarget.nickname || transferTarget.username}
+                  </p>
+                  <p
+                    style={{
+                      color: 'var(--text-tertiary)',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {transferTarget.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
+              <p>{t('• 新所有者将获得项目的完全控制权')}</p>
+              <p>{t('• 您将成为该项目的管理员')}</p>
+              <p>{t('• 确认转让后，新所有者可以管理项目成员和权限')}</p>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+};
+
+export default MembersModal;

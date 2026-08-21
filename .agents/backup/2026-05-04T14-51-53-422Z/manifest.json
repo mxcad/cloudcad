@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "createdAt": "2026-05-04T14:51:55.597Z",
+  "scope": "project",
+  "operation": "change-to-agents",
+  "entries": [
+    {
+      "originalPath": "D:\\project\\cloudcad\\.opencode\\commands",
+      "kind": "symlink",
+      "action": "create"
+    },
+    {
+      "originalPath": "D:\\project\\cloudcad\\.agents\\hooks",
+      "kind": "dir",
+      "action": "create"
+    },
+    {
+      "originalPath": "D:\\project\\cloudcad\\.claude\\hooks",
+      "backupPath": "D:\\project\\cloudcad\\.agents\\backup\\2026-05-04T14-51-53-422Z\\project\\cloudcad\\.claude\\hooks",
+      "kind": "dir",
+      "action": "backup"
+    },
+    {
+      "originalPath": "D:\\project\\cloudcad\\.opencode\\skills",
+      "backupPath": "D:\\project\\cloudcad\\.agents\\backup\\2026-05-04T14-51-53-422Z\\project\\cloudcad\\.opencode\\skills",
+      "kind": "dir",
+      "action": "backup"
+    }
+  ]
+}

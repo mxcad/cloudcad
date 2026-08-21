@@ -1,0 +1,240 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { FileSystemNode } from '../types/filesystem';
+import { API_BASE_URL } from '../config/apiConfig';
+import { t } from '@/languages';
+import { formatFileSize as _formatFileSize } from '../components/ui/FileSize';
+
+export const formatFileSize = _formatFileSize;
+
+export const getFileIcon = (node: FileSystemNode) => {
+  if (node.isFolder) {
+    return '📁';
+  }
+
+  const extension = node.extension?.toLowerCase() || '';
+
+  switch (extension) {
+    case '.dwg':
+      return '📐';
+    case '.dxf':
+      return '📏';
+    case '.pdf':
+      return '📄';
+    case '.png':
+    case '.jpg':
+    case '.jpeg':
+      return '🖼️';
+    default:
+      return '📄';
+  }
+};
+
+export const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+/**
+ * 格式化相对时间（如"2小时前"、"昨天"）
+ */
+export const formatRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) {
+    return t('刚刚');
+  } else if (diffMin < 60) {
+    return `${diffMin}${t('分钟前')}`;
+  } else if (diffHour < 24) {
+    return `${diffHour}${t('小时前')}`;
+  } else if (diffDay === 1) {
+    return t('昨天');
+  } else if (diffDay < 7) {
+    return `${diffDay}${t('天前')}`;
+  } else if (diffDay < 30) {
+    return `${Math.floor(diffDay / 7)}${t('周前')}`;
+  } else if (diffDay < 365) {
+    return `${Math.floor(diffDay / 30)}${t('个月前')}`;
+  } else {
+    return `${Math.floor(diffDay / 365)}${t('年前')}`;
+  }
+};
+
+export const isCadFile = (extension: string | null | undefined): boolean => {
+  if (!extension) return false;
+  return CAD_EXTENSIONS.includes(extension.toLowerCase());
+};
+
+export const isImageFile = (extension: string | null | undefined): boolean => {
+  if (!extension) return false;
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+  return imageExtensions.includes(extension.toLowerCase());
+};
+
+export const isPdfFile = (extension: string | null | undefined): boolean => {
+  if (!extension) return false;
+  return extension.toLowerCase() === '.pdf';
+};
+
+/**
+ * 获取图片文件的缩略图URL
+ * 使用后端缩略图接口（@OptionalAuth）：登录后后端设置 auth_token httpOnly Cookie，
+ * 浏览器 <img> 请求自动携带，无需手动添加 Authorization 请求头
+ */
+export const getThumbnailUrl = (node: FileSystemNode): string => {
+  if (!node.id) return '';
+
+  // 判断是否是图片文件
+  const extension = node.extension?.toLowerCase() || '';
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+  if (!imageExtensions.includes(extension)) {
+    return '';
+  }
+
+  // 通过 auth_token Cookie 认证访问
+  return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
+};
+
+/**
+ * 获取 CAD 文件的缩略图 URL
+ * 使用 nodeId 访问缩略图接口：/api/file-system/nodes/{nodeId}/thumbnail
+ * 注意：此接口返回图片流，支持所有类型文件（CAD 和图片），认证走 auth_token Cookie
+ */
+export const getCadThumbnailUrl = (node: FileSystemNode): string => {
+  if (!node.id) return '';
+
+  const extension = node.extension?.toLowerCase() || '';
+  if (!CAD_EXTENSIONS.includes(extension)) {
+    return '';
+  }
+
+  return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
+};
+
+/**
+ * 获取公共资源库（图纸库/图块库）文件缩略图 URL
+ * 使用公开接口（@Public），未登录用户与普通用户均可访问
+ */
+export const getLibraryThumbnailUrl = (
+  nodeId: string,
+  libraryType: 'drawing' | 'block'
+): string => {
+  if (!nodeId) return '';
+  return `${API_BASE_URL}/v1/library/${libraryType}/nodes/${nodeId}/thumbnail`;
+};
+
+/**
+ * 获取原图/预览 URL
+ * CAD 文件返回缩略图路径（用于预览）
+ * 图片文件返回原图下载链接
+ */
+export const getOriginalFileUrl = (node: FileSystemNode): string => {
+  if (!node.id) return '';
+
+  // CAD 文件使用缩略图路径预览
+  const extension = node.extension?.toLowerCase() || '';
+  if (CAD_EXTENSIONS.includes(extension)) {
+    return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/thumbnail`;
+  }
+
+  // 图片文件返回原图下载链接
+  return `${API_BASE_URL}/v1/file-system/nodes/${node.id}/download`;
+};
+
+// ========== 文件类型检查 ==========
+
+/** CAD 可编辑文件扩展名（不含模板 .dwt） */
+export const CAD_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
+
+/** 图纸文件扩展名 */
+export const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt'];
+
+/** 图块文件扩展名 */
+export const BLOCK_EXTENSIONS = ['.dwg', '.dxf', '.dwt', '.blk'];
+
+/**
+ * 检查是否为图纸文件
+ * @param fileName 文件名
+ * @returns 是否为图纸文件
+ */
+export function isDrawingFile(fileName: string): boolean {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return false;
+  const ext = fileName.toLowerCase().slice(lastDot);
+  return DRAWING_EXTENSIONS.includes(ext);
+}
+
+// ========== 文件名处理 ==========
+
+/**
+ * 清理文件名，移除不安全字符
+ * @param name 原始文件名
+ * @returns 清理后的文件名
+ */
+export function sanitizeFileName(name: string): string {
+  // eslint-disable-next-line no-control-regex -- 有意匹配并移除控制字符
+  return name.replace(/[\x00-\x1F\x7F<>:"/\\|?*]/g, '');
+}
+
+/**
+ * 验证文件夹名称是否合法
+ * @param name 文件夹名称
+ * @returns 验证结果
+ */
+export function validateFolderName(name: string): {
+  valid: boolean;
+  error?: string;
+} {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return { valid: false, error: t('名称不能为空') };
+  }
+
+  if (trimmedName.length > 255) {
+    return { valid: false, error: t('名称长度不能超过 255 个字符') };
+  }
+
+  const illegalChars = /[<>:"|?*/\\]/;
+  if (illegalChars.test(trimmedName)) {
+    return { valid: false, error: t('名称包含非法字符：< > : " | ? * / \\') };
+  }
+
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
+    return { valid: false, error: t('名称包含非法字符') };
+  }
+
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedNames.test(trimmedName)) {
+    return { valid: false, error: t('该名称为系统保留名称') };
+  }
+
+  if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
+    return { valid: false, error: t('名称不能以点开头或结尾') };
+  }
+
+  return { valid: true };
+}

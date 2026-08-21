@@ -1,0 +1,380 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Copy, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Tag } from '@/components/ui/Tag';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useFileBrowserSelection } from '@/hooks/file-browser';
+import { useSelectionShortcuts } from '@/hooks/common/useSelectionShortcuts';
+import { useAccumulatedPagination } from '@/hooks/common/useAccumulatedPagination';
+import { SelectableTable } from '@/components/common/SelectableTable';
+import { BatchActionBar } from '@/components/common/BatchActionBar';
+import { t } from '@/languages';
+import { globalShowToast } from '@/utils/notificationEvents';
+import { ipBlacklistControllerRemove } from '@/api-sdk';
+import { AddEntryModal } from './components/AddEntryModal';
+import { RemoveEntryModal } from './components/RemoveEntryModal';
+import { IP_BLACKLIST_PAGE_SIZE, IP_BLACKLIST_SOURCE_META } from './constants';
+import { useAddIpBlacklistEntry, useIpBlacklistList } from './hooks/useIpBlacklist';
+import type { IpBlacklistEntry, IpBlacklistEntryForm } from './types';
+
+/** 复制文本到剪贴板 */
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    globalShowToast(t('复制成功'), 'success');
+  } catch {
+    globalShowToast(t('复制失败'), 'error');
+  }
+}
+
+function formatTime(value: string): string {
+  return new Date(value).toLocaleString();
+}
+
+export default function IpBlacklistPage() {
+  useDocumentTitle(t('IP 黑名单'));
+
+  const [page, setPage] = useState(1);
+  const [addOpen, setAddOpen] = useState(false);
+  const [removeTargets, setRemoveTargets] = useState<IpBlacklistEntry[] | null>(
+    null
+  );
+  const [removing, setRemoving] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [keyword, setKeyword] = useState('');
+
+  // 输入防抖 500ms 后生效
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setKeyword(searchInput.trim());
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const { items, total, loading, refetch } = useIpBlacklistList(page, keyword);
+  const addMutation = useAddIpBlacklistEntry(() => setAddOpen(false));
+
+  // 不 max(…,1)：totalPages 未同步（total=0）时为 0，防首屏误报「已经是最后一页」
+  const totalPages = Math.ceil(total / IP_BLACKLIST_PAGE_SIZE);
+
+  // 滚动分页数据合并（追加/前插/替换 + 竞态防护；搜索词变化时整体替换）
+  const {
+    viewNodes: viewItems,
+    handleScrollPageChange,
+    minLoadedPage,
+  } = useAccumulatedPagination({
+    displayNodes: items,
+    currentPage: page,
+    handlePageChange: setPage,
+    resetKey: keyword,
+  });
+
+  // ── 多选（ADR-0052 统一机制：选择内核 + 快捷键 + 滚动分页合并）──
+  // 内核 nodes 与渲染 rows（viewItems 累积列表）保持一致：
+  // 跨页滚动后表头全选/Ctrl+A 作用于全部已加载页，勾选状态与行为不脱节
+  const selectableItems = useMemo(
+    () => viewItems.map((i) => ({ id: i.id })),
+    [viewItems]
+  );
+  const {
+    selectedNodes,
+    handleNodeSelect,
+    handleSelectAll,
+    clearSelection,
+    selectMany,
+  } = useFileBrowserSelection({ nodes: selectableItems, multiple: 'always' });
+  const selectedCount = selectedNodes.size;
+
+  // 搜索词变化清空选择（查询身份变更，历史选择不再指向当前列表）
+  useEffect(() => {
+    clearSelection();
+  }, [keyword, clearSelection]);
+
+  const openRemoveConfirm = useCallback(
+    (entries: IpBlacklistEntry[]) => {
+      if (entries.length === 0) return;
+      setRemoveTargets(entries);
+    },
+    []
+  );
+
+  const openBatchRemove = useCallback(() => {
+    const targets = viewItems.filter((i) => selectedNodes.has(i.id));
+    openRemoveConfirm(targets);
+  }, [viewItems, selectedNodes, openRemoveConfirm]);
+
+  // 移除（单条/批量）：循环调用现有单条接口，统计成功/失败计数汇总
+  // （同分享管理批量撤销模式，不新增后端批量接口）
+  const handleConfirmRemove = async () => {
+    if (!removeTargets || removeTargets.length === 0) return;
+    const targets = removeTargets;
+    setRemoving(true);
+    let successCount = 0;
+    let failCount = 0;
+    for (const entry of targets) {
+      try {
+        const result = await ipBlacklistControllerRemove({
+          path: { id: entry.id },
+        });
+        if (!result.error) successCount++;
+        else failCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    if (successCount > 0) {
+      globalShowToast(
+        successCount > 1
+          ? t('已移除 {count} 条记录', { count: String(successCount) })
+          : t('已移除'),
+        'success'
+      );
+    }
+    if (failCount > 0) {
+      globalShowToast(
+        t('{count} 条移除失败', { count: String(failCount) }),
+        'error'
+      );
+    }
+    setRemoving(false);
+    setRemoveTargets(null);
+    clearSelection();
+    void refetch();
+  };
+
+  const handleSubmitAdd = (form: IpBlacklistEntryForm) => {
+    addMutation.mutate(form);
+  };
+
+  // 多选快捷键：ESC 清空 / Ctrl+A 全选 / Delete 批量移除
+  useSelectionShortcuts({
+    enabled: !loading,
+    onClearSelection: clearSelection,
+    onSelectAll: handleSelectAll,
+    onDeleteSelected: openBatchRemove,
+    canDelete: selectedCount > 0,
+  });
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden p-6 text-text-secondary">
+      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
+        <div className="flex-shrink-0 flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-text-primary">
+            {t('IP 黑名单')}
+          </h1>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text-tertiary)' }}
+              />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t('搜索 IP/原因/操作人')}
+                className="pl-9 pr-8 w-64"
+                size="md"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  aria-label={t('清空搜索')}
+                  title={t('清空搜索')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
+                  style={{ color: 'var(--text-tertiary)' }}
+                  onClick={() => setSearchInput('')}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              onClick={() => void refetch()}
+            />
+            <Button size="sm" icon={Plus} onClick={() => setAddOpen(true)}>
+              {t('添加')}
+            </Button>
+          </div>
+        </div>
+
+        {/* 表格卡撑满剩余空间（页面恒一屏，列表内部滚动） */}
+        <Card variant="outlined" padding="none" radius="xl" className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <SelectableTable<IpBlacklistEntry>
+              rows={viewItems}
+              selectedIds={selectedNodes}
+              loading={loading}
+              loadingView={
+                <div className="flex justify-center py-16">
+                  <div
+                    className="w-8 h-8 rounded-full animate-spin"
+                    style={{
+                      border: '3px solid var(--border-default)',
+                      borderTopColor: 'var(--primary-500)',
+                    }}
+                  />
+                </div>
+              }
+              emptyView={
+                <div
+                  className="text-center py-8 text-sm"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
+                  {t('暂无黑名单条目')}
+                </div>
+              }
+              paginationMeta={{
+                total,
+                page,
+                limit: IP_BLACKLIST_PAGE_SIZE,
+                totalPages,
+              }}
+              onToggleSelect={handleNodeSelect}
+              onToggleSelectAll={handleSelectAll}
+              onRubberBandSelect={selectMany}
+              onPageChange={(next) => {
+                clearSelection();
+                setPage(next);
+              }}
+              paginationSimple
+              onScrollPageChange={handleScrollPageChange}
+              minLoadedPage={minLoadedPage}
+              // 底部悬浮操作栏：列表滚动容器内 sticky 吸底（列表撑满一屏，不遮分页栏）
+              bottomBar={
+                selectedCount > 0 ? (
+                  <BatchActionBar
+                    count={selectedCount}
+                    onClear={clearSelection}
+                    actions={[
+                      {
+                        key: 'remove',
+                        label: t('批量移除'),
+                        variant: 'danger',
+                        loading: removing,
+                        onClick: openBatchRemove,
+                      },
+                    ]}
+                  />
+                ) : undefined
+              }
+              renderHeader={() => (
+                <>
+                  <th className="text-left">{t('IP/CIDR')}</th>
+                  <th className="text-left">{t('原因')}</th>
+                  <th className="text-center">{t('来源')}</th>
+                  <th className="text-left">{t('操作人')}</th>
+                  <th className="text-left">{t('创建时间')}</th>
+                  <th className="text-left">{t('过期时间')}</th>
+                  <th className="text-center">{t('操作')}</th>
+                </>
+              )}
+              renderRow={(entry) => {
+                const sourceMeta = IP_BLACKLIST_SOURCE_META[entry.source];
+                return (
+                  <>
+                    <td
+                      className="font-mono text-xs"
+                      style={{ minWidth: 180 }}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="break-all">{entry.ip}</span>
+                        <button
+                          type="button"
+                          aria-label={t('复制 IP')}
+                          title={t('复制 IP')}
+                          className="shrink-0 cursor-pointer"
+                          style={{ color: 'var(--text-tertiary)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void copyToClipboard(entry.ip);
+                          }}
+                        >
+                          <Copy size={13} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="max-w-[280px] truncate">{entry.reason}</td>
+                    <td className="text-center">
+                      <Tag variant="neutral" size="xs">
+                        {sourceMeta?.label ?? entry.source}
+                      </Tag>
+                    </td>
+                    <td className="font-mono text-xs" style={{ minWidth: 180 }}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="break-all">{entry.createdBy}</span>
+                        <button
+                          type="button"
+                          aria-label={t('复制操作人 ID')}
+                          title={t('复制操作人 ID')}
+                          className="shrink-0 cursor-pointer"
+                          style={{ color: 'var(--text-tertiary)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void copyToClipboard(entry.createdBy);
+                          }}
+                        >
+                          <Copy size={13} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="text-xs">{formatTime(entry.createdAt)}</td>
+                    <td className="text-xs">
+                      {entry.expiresAt ? (
+                        formatTime(entry.expiresAt)
+                      ) : (
+                        <Tag variant="success" size="xs">
+                          {t('永久')}
+                        </Tag>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRemoveConfirm([entry]);
+                        }}
+                      >
+                        {t('移除')}
+                      </Button>
+                    </td>
+                  </>
+                );
+              }}
+            />
+          </div>
+        </Card>
+      </div>
+
+      <AddEntryModal
+        isOpen={addOpen}
+        saving={addMutation.isPending}
+        onClose={() => setAddOpen(false)}
+        onSubmit={handleSubmitAdd}
+      />
+
+      <RemoveEntryModal
+        entries={removeTargets}
+        removing={removing}
+        onClose={() => {
+          if (!removing) setRemoveTargets(null);
+        }}
+        onConfirm={() => void handleConfirmRemove()}
+      />
+    </div>
+  );
+}

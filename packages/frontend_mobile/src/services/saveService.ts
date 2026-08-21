@@ -1,0 +1,136 @@
+import {
+  saveControllerSaveMxwebToNode,
+  saveControllerSaveMxwebAs,
+  libraryControllerSaveDrawingNode,
+  libraryControllerSaveBlockNode,
+} from '../api-sdk';
+import { MxCpp } from 'mxcad';
+import { calculateFileHash } from '../utils/hashUtils';
+import { uploadFile } from './mobileUploadService';
+import { t } from '@/languages';
+
+export function getMxwebBlob(): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    try {
+      const mxcad = MxCpp.App.getCurrentMxCAD();
+      if (!mxcad) {
+        reject(new Error('CAD engine not initialized'));
+        return;
+      }
+      const fileName = mxcad.getCurrentFileName() || 'drawing.mxweb';
+      mxcad.saveFile(
+        fileName,
+        (data: { buffer: ArrayBuffer }) => {
+          if (!data || !data.buffer) {
+            reject(new Error(t('获取文件数据失败')));
+            return;
+          }
+          const blob = new Blob([data.buffer], {
+            type: 'application/octet-stream',
+          });
+          resolve(blob);
+        },
+        false,
+        false
+      );
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+/**
+ * 保存到现有节点（hash + 分片上传模式）
+ * 参考 PC 端 mxcadSave.ts saveMxwebToNode 逻辑
+ */
+export async function saveToNode(
+  nodeId: string,
+  blob: Blob,
+  commitMessage?: string,
+  expectedTimestamp?: string | null
+): Promise<{ path?: string }> {
+  const filename = 'drawing.mxweb';
+  const file = new File([blob], filename, {
+    type: blob.type || 'application/octet-stream',
+  });
+  const hash = await calculateFileHash(file);
+
+  await uploadFile({ file, hash, nodeId, skipDb: true });
+
+  // 传普通对象（SDK formDataBodySerializer 负责序列化），勿传原生 FormData
+  const result = await saveControllerSaveMxwebToNode({
+    path: { nodeId },
+    body: {
+      hash,
+      ...(commitMessage ? { commitMessage } : {}),
+      ...(expectedTimestamp ? { expectedTimestamp } : {}),
+    } as never,
+  });
+  if (result.error) {
+    const errBody = result.error as { message?: string };
+    throw new Error(errBody.message || t('保存失败'));
+  }
+  return { path: result.data?.path };
+}
+
+export async function saveAs(params: {
+  blob: Blob;
+  targetType: 'personal' | 'project' | 'library';
+  targetParentId: string;
+  fileName?: string;
+  commitMessage?: string;
+  projectId?: string;
+  libraryType?: 'drawing' | 'block';
+  format?: 'dwg' | 'dxf' | 'mxweb';
+}): Promise<{ nodeId: string }> {
+  const { blob, format, ...rest } = params;
+  const file = new File([blob], 'drawing.mxweb', {
+    type: blob.type || 'application/octet-stream',
+  });
+  const hash = await calculateFileHash(file);
+  await uploadFile({ file, hash, nodeId: '', forceUpload: true, skipDb: true });
+
+  const result = await saveControllerSaveMxwebAs({
+    body: {
+      hash,
+      targetType: rest.targetType,
+      targetParentId: rest.targetParentId,
+      format: format || 'mxweb',
+      ...(rest.fileName ? { fileName: rest.fileName } : {}),
+      ...(rest.commitMessage ? { commitMessage: rest.commitMessage } : {}),
+      ...(rest.projectId ? { projectId: rest.projectId } : {}),
+      ...(rest.libraryType ? { libraryType: rest.libraryType } : {}),
+    } as never,
+  });
+  if (result.error) throw result.error;
+  const responseData = result.data as unknown as { nodeId: string };
+  return responseData;
+}
+
+export async function saveLibraryDrawing(
+  nodeId: string,
+  blob: Blob
+): Promise<{ updatedAt?: string }> {
+  const file = new File([blob], 'drawing.mxweb', { type: blob.type });
+  const result = await libraryControllerSaveDrawingNode({
+    path: { nodeId },
+    body: { file },
+  });
+  if (result.error) throw result.error;
+  const data = result.data as unknown as { updatedAt?: string } | undefined;
+  return data || {};
+}
+
+export async function saveLibraryBlock(
+  nodeId: string,
+  blob: Blob
+): Promise<{ updatedAt?: string }> {
+  const file = new File([blob], 'block.mxweb', { type: blob.type });
+  const result = await libraryControllerSaveBlockNode({
+    path: { nodeId },
+    body: { file },
+  });
+  if (result.error) throw result.error;
+  const data = result.data as unknown as { updatedAt?: string } | undefined;
+  return data || {};
+}

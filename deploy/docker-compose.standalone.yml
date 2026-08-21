@@ -1,0 +1,127 @@
+# 梦想网页CAD实时协同平台 独立服务模式部署
+# 三个服务各自独立容器，可独立扩缩
+#
+# 使用方法:
+#   docker compose -f deploy/docker-compose.standalone.yml up -d
+#
+# 模式切换:
+#   STORAGE_MODE=standalone
+#   FUNCTION_EXECUTOR=conversion-service
+
+name: cloudcad-standalone
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloudcad-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-cloudcad}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [cloudcad-net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: cloudcad-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [cloudcad-net]
+
+  # -------- 核心应用（前端 + 后端 API）--------
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    container_name: cloudcad-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:?required}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?required}
+      DB_DATABASE: ${DB_DATABASE:-cloudcad}
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_DATABASE:-cloudcad}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FILES_DATA_PATH: /app/data/files
+      MX_REPO_PATH: /app/data/svn-repo
+      STORAGE_MODE: standalone
+      STORAGE_SERVICE_URL: http://storage-service:3200
+      FUNCTION_EXECUTOR: conversion-service
+      CONVERSION_SERVICE_URL: http://conversion-service:3100
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${API_PORT:-3001}:3001'
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [cloudcad-net]
+
+  # -------- 文件存储服务 --------
+  storage-service:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.storage-service
+    container_name: cloudcad-storage
+    restart: unless-stopped
+    environment:
+      STORAGE_SERVICE_PORT: 3200
+      FILES_DATA_PATH: /data/files
+      STORAGE_CACHE_MAX_SIZE: "200"
+      STORAGE_CACHE_MAX_FILE_SIZE: "10485760"
+      STORAGE_CACHE_TTL_MS: "300000"
+      BACKEND_JWT_SECRET: ${JWT_SECRET:?required}
+    ports:
+      - '3200:3200'
+    volumes:
+      - storage_data:/data
+    networks: [cloudcad-net]
+
+  # -------- 转换服务 --------
+  conversion-service:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.conversion-service
+    container_name: cloudcad-conversion
+    restart: unless-stopped
+    environment:
+      CONVERSION_SERVICE_PORT: 3100
+      QUEUE_DRIVER: local
+    ports:
+      - '3100:3100'
+    volumes:
+      - ../runtime:/app/runtime:ro
+    networks: [cloudcad-net]
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_data:
+  storage_data:
+
+networks:
+  cloudcad-net:
+    driver: bridge

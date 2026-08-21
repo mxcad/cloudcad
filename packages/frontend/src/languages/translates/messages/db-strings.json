@@ -1,0 +1,302 @@
+{
+    "公共图纸库": {
+        "zh-TW": "公共圖紙庫",
+        "en-US": "Public Drawing Library",
+        "ko-KR": "공용 도면 라이브러리",
+        "$id": 1000002
+    },
+    "公共图块库": {
+        "zh-TW": "公共圖塊庫",
+        "en-US": "Public Block Library",
+        "ko-KR": "공용 블록 라이브러리",
+        "$id": 1000003
+    },
+    "系统管理员": {
+        "zh-TW": "系統管理員",
+        "en-US": "System Administrator",
+        "ko-KR": "시스템 관리자",
+        "$id": 1000004
+    },
+    "月度会员": {
+        "zh-TW": "月度會員",
+        "en-US": "Monthly Membership",
+        "ko-KR": "월간 멤버십",
+        "$id": 1000005
+    },
+    "半年会员": {
+        "zh-TW": "半年會員",
+        "en-US": "Half-year Membership",
+        "ko-KR": "반년 멤버십",
+        "$id": 1000006
+    },
+    "年度会员": {
+        "zh-TW": "年度會員",
+        "en-US": "Yearly Membership",
+        "ko-KR": "연간 멤버십",
+        "$id": 1000007
+    },
+    "项目所有者，拥有项目的完整管理权限": {
+        "zh-TW": "項目所有者，擁有項目的完整管理權限",
+        "en-US": "Project Owner, has full management permissions",
+        "ko-KR": "프로젝트 소유자, 프로젝트의 전체 관리 권한 보유",
+        "$id": 1000008
+    },
+    "项目管理员，管理项目和团队成员": {
+        "zh-TW": "項目管理員，管理項目和團隊成員",
+        "en-US": "Project Admin, manages project and team members",
+        "ko-KR": "프로젝트 관리자, 프로젝트 및 팀 구성원 관리",
+        "$id": 1000009
+    },
+    "项目成员，可以查看和编辑项目内容": {
+        "zh-TW": "項目成員，可以查看和編輯項目內容",
+        "en-US": "Project Member, can view and edit project content",
+        "ko-KR": "프로젝트 구성원, 프로젝트 내용을 보고 편집할 수 있음",
+        "$id": 1000010
+    },
+    "项目编辑者，可以编辑项目文件": {
+        "zh-TW": "項目編輯者，可以編輯項目檔案",
+        "en-US": "Project Editor, can edit project files",
+        "ko-KR": "프로젝트 편집자, 프로젝트 파일을 편집할 수 있음",
+        "$id": 1000011
+    },
+    "项目查看者，仅能查看项目内容": {
+        "zh-TW": "項目查看者，僅能查看項目內容",
+        "en-US": "Project Viewer, can only view project content",
+        "ko-KR": "프로젝트 뷰어, 프로젝트 내용을 볼 수만 있음",
+        "$id": 1000012
+    },
+    "系统管理员，拥有所有权限": {
+        "zh-TW": "系統管理員，擁有所有權限",
+        "en-US": "System Administrator, has all permissions",
+        "ko-KR": "시스템 관리자, 모든 권한 보유",
+        "$id": 1000013
+    },
+    "用户管理员，管理系统用户和角色": {
+        "zh-TW": "用戶管理員，管理系統用戶和角色",
+        "en-US": "User Manager, manages system users and roles",
+        "ko-KR": "사용자 관리자, 시스템 사용자 및 역할 관리",
+        "$id": 1000014
+    },
+    "字体管理员，管理系统字体库": {
+        "zh-TW": "字型管理員，管理系統字型庫",
+        "en-US": "Font Manager, manages system font library",
+        "ko-KR": "글꼴 관리자, 시스템 글꼴 라이브러리 관리",
+        "$id": 1000015
+    },
+    "普通用户，基本访问权限": {
+        "zh-TW": "普通用戶，基本存取權限",
+        "en-US": "Regular User, basic access permissions",
+        "ko-KR": "일반 사용자, 기본 접근 권한",
+        "$id": 1000016
+    },
+    "公共 CAD 图纸资源": {
+        "zh-TW": "公共 CAD 圖紙資源",
+        "en-US": "Public CAD Drawing Resources",
+        "ko-KR": "공용 CAD 도면 리소스",
+        "$id": 1000017
+    },
+    "公共 CAD 图块资源": {
+        "zh-TW": "公共 CAD 圖塊資源",
+        "en-US": "Public CAD Block Resources",
+        "ko-KR": "공용 CAD 블록 리소스",
+        "$id": 1000018
+    },
+    "数据库连接正常": {
+        "zh-TW": "資料庫連線正常",
+        "en-US": "Database connection normal",
+        "ko-KR": "데이터베이스 연결 정상",
+        "$id": 1000019
+    },
+    "存储服务正常": {
+        "zh-TW": "儲存服務正常",
+        "en-US": "Storage service normal",
+        "ko-KR": "스토리지 서비스 정상",
+        "$id": 1000020
+    },
+    "邮件服务开关": {
+        "zh-TW": "郵件服務開關",
+        "en-US": "Email service toggle",
+        "ko-KR": "이메일 서비스 스위치",
+        "$id": 1000021
+    },
+    "强制邮箱验证": {
+        "zh-TW": "強制信箱驗證",
+        "en-US": "Require email verification",
+        "ko-KR": "이메일 인증 필수",
+        "$id": 1000022
+    },
+    "短信服务开关": {
+        "zh-TW": "簡訊服務開關",
+        "en-US": "SMS service toggle",
+        "ko-KR": "SMS 서비스 스위치",
+        "$id": 1000023
+    },
+    "强制手机号验证": {
+        "zh-TW": "強制手機號驗證",
+        "en-US": "Require phone verification",
+        "ko-KR": "휴대폰 인증 필수",
+        "$id": 1000024
+    },
+    "客服邮箱": {
+        "zh-TW": "客服信箱",
+        "en-US": "Support email",
+        "ko-KR": "고객지원 이메일",
+        "$id": 1000025
+    },
+    "客服电话": {
+        "zh-TW": "客服電話",
+        "en-US": "Support phone",
+        "ko-KR": "고객지원 전화",
+        "$id": 1000026
+    },
+    "文件上传大小限制 (MB)": {
+        "zh-TW": "檔案上傳大小限制 (MB)",
+        "en-US": "Max file upload size (MB)",
+        "ko-KR": "파일 업로드 크기 제한 (MB)",
+        "$id": 1000027
+    },
+    "字体上传大小限制 (MB)": {
+        "zh-TW": "字型上傳大小限制 (MB)",
+        "en-US": "Max font upload size (MB)",
+        "ko-KR": "글꼴 업로드 크기 제한 (MB)",
+        "$id": 1000028
+    },
+    "外部参照上传大小限制 (MB)": {
+        "zh-TW": "外部參照上傳大小限制 (MB)",
+        "en-US": "Max external reference upload size (MB)",
+        "ko-KR": "외부 참조 업로드 크기 제한 (MB)",
+        "$id": 1000029
+    },
+    "用户注册开关": {
+        "zh-TW": "用戶註冊開關",
+        "en-US": "User registration toggle",
+        "ko-KR": "사용자 등록 스위치",
+        "$id": 1000030
+    },
+    "手机验证码登录时自动注册": {
+        "zh-TW": "手機驗證碼登入時自動註冊",
+        "en-US": "Auto-register on phone code login",
+        "ko-KR": "휴대폰 코드 로그인 시 자동 등록",
+        "$id": 1000031
+    },
+    "微信登录开关": {
+        "zh-TW": "微信登入開關",
+        "en-US": "WeChat login toggle",
+        "ko-KR": "WeChat 로그인 스위치",
+        "$id": 1000032
+    },
+    "微信登录自动创建账号（开启后无需填写用户名密码，类似手机验证码登录）": {
+        "zh-TW": "微信登入自動建立帳號（開啟後無需填寫用戶名密碼，類似手機驗證碼登入）",
+        "en-US": "Auto-create account on WeChat login (no username/password needed)",
+        "ko-KR": "WeChat 로그인 시 자동 계정 생성 (사용자 이름/비밀번호 불필요)",
+        "$id": 1000033
+    },
+    "个人空间存储配额 (GB)": {
+        "zh-TW": "個人空間儲存配額 (GB)",
+        "en-US": "Personal space storage quota (GB)",
+        "ko-KR": "개인 공간 저장 할당량 (GB)",
+        "$id": 1000034
+    },
+    "项目存储配额 (GB)": {
+        "zh-TW": "專案儲存配額 (GB)",
+        "en-US": "Project storage quota (GB)",
+        "ko-KR": "프로젝트 저장 할당량 (GB)",
+        "$id": 1000035
+    },
+    "公共资源库存储配额 (GB)": {
+        "zh-TW": "公共資源庫儲存配額 (GB)",
+        "en-US": "Public library storage quota (GB)",
+        "ko-KR": "공용 라이브러리 저장 할당량 (GB)",
+        "$id": 1000036
+    },
+    "是否强制实施存储配额检查（开启后超配额无法上传）": {
+        "zh-TW": "是否強制實施儲存配額檢查（開啟後超配額無法上傳）",
+        "en-US": "Enforce storage quota check (blocks upload when exceeded)",
+        "ko-KR": "저장 할당량 검사 강제 실행 (초과 시 업로드 차단)",
+        "$id": 1000037
+    },
+    "过期存储文件清理延迟天数": {
+        "zh-TW": "過期儲存檔案清理延遲天數",
+        "en-US": "Expired storage file cleanup delay (days)",
+        "ko-KR": "만료된 저장 파일 정리 지연 (일)",
+        "$id": 1000038
+    },
+    "是否启用过期存储文件自动清理": {
+        "zh-TW": "是否啟用過期儲存檔案自動清理",
+        "en-US": "Enable automatic cleanup of expired storage files",
+        "ko-KR": "만료된 저장 파일 자동 정리 활성화",
+        "$id": 1000039
+    },
+    "回收站文件清理延迟天数": {
+        "zh-TW": "回收站檔案清理延遲天數",
+        "en-US": "Recycle bin cleanup delay (days)",
+        "ko-KR": "휴지통 정리 지연 (일)",
+        "$id": 1000040
+    },
+    "是否启用回收站文件自动清理": {
+        "zh-TW": "是否啟用回收站檔案自動清理",
+        "en-US": "Enable automatic cleanup of recycle bin",
+        "ko-KR": "휴지통 자동 정리 활성화",
+        "$id": 1000041
+    },
+    "孤儿文件清理延迟天数（标记后多少天可清理）": {
+        "zh-TW": "孤兒檔案清理延遲天數（標記後多少天可清理）",
+        "en-US": "Orphan file cleanup delay (days after marking)",
+        "ko-KR": "고아 파일 정리 지연 (표시 후 며칠)",
+        "$id": 1000042
+    },
+    "是否启用孤儿文件自动清理": {
+        "zh-TW": "是否啟用孤兒檔案自動清理",
+        "en-US": "Enable automatic cleanup of orphan files",
+        "ko-KR": "고아 파일 자동 정리 활성화",
+        "$id": 1000043
+    },
+    "支付功能开关": {
+        "zh-TW": "支付功能開關",
+        "en-US": "Payment feature toggle",
+        "ko-KR": "결제 기능 스위치",
+        "$id": 1000044
+    },
+    "系统公告": {
+        "zh-TW": "系統公告",
+        "en-US": "System notice",
+        "ko-KR": "시스템 공지",
+        "$id": 1000045
+    },
+    "CADView": {
+        "zh-TW": "CADView",
+        "en-US": "CADView",
+        "ko-KR": "CADView",
+        "$id": 1000046
+    },
+    "专业云端 CAD 图纸查看器": {
+        "zh-TW": "專業雲端 CAD 圖紙查看器",
+        "en-US": "Professional Cloud CAD Drawing Viewer",
+        "ko-KR": "전문 클라우드 CAD 도면 뷰어",
+        "$id": 1000047
+    },
+    "CAD编辑器": {
+        "zh-TW": "CAD編輯器",
+        "en-US": "CAD Editor",
+        "ko-KR": "CAD 편집기",
+        "$id": 1000048
+    },
+    "专业云端 CAD 图纸编辑器": {
+        "zh-TW": "專業雲端 CAD 圖紙編輯器",
+        "en-US": "Professional Cloud CAD Drawing Editor",
+        "ko-KR": "전문 클라우드 CAD 도면 편집기",
+        "$id": 1000049
+    },
+    "我的图纸存储": {
+        "zh-TW": "我的圖紙存儲",
+        "en-US": "My Drawing Storage",
+        "ko-KR": "내 도면 저장소",
+        "$id": 1000052
+    },
+    "上传上限": {
+        "zh-TW": "上傳上限",
+        "en-US": "Upload Limit",
+        "ko-KR": "업로드 제한",
+        "$id": 1000051
+    }
+}

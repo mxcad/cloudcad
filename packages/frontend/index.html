@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>梦想网页CAD实时协同平台</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <!-- 首屏 loading：SPA 资源加载期间（index.html → JS bundles → React 挂载）页面为空白，
+         此处内联纯 CSS 动画兜底；React createRoot 挂载时会清空 #root 子节点，自动替换为应用内容。
+         注意：此处无法使用主题 CSS 变量（JS 未加载），颜色为固定值。 -->
+    <style>
+      #app-boot-loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: #f6f7f9;
+        font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+          'Microsoft YaHei', sans-serif;
+      }
+      #app-boot-loading .app-boot-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e3e6ea;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: app-boot-spin 0.9s linear infinite;
+      }
+      #app-boot-loading .app-boot-text {
+        color: #6b7280;
+        font-size: 14px;
+        margin: 0;
+      }
+      @keyframes app-boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="app-boot-loading">
+        <div class="app-boot-spinner"></div>
+        <p class="app-boot-text">正在加载...</p>
+      </div>
+    </div>
+    <div id="modal-root"></div>
+    <div id="toast-root"></div>
+    <script type="module" src="./src/index.tsx"></script>
+  </body>
+</html>

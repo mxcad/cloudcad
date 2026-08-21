@@ -1,0 +1,113 @@
+﻿///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * mxcadExtRef — 外部参照模块
+ *
+ * 提供外部参照图片上传、检查和 URL 解析功能。
+ */
+
+import { t } from '@/languages';
+import { mxcadExternalRefControllerUploadExtReferenceImage } from '@/api-sdk';
+import { handleError, getErrorMessage } from '@/utils/errorHandler';
+import { globalShowToast } from '@/utils/notificationEvents';
+import type { ExtRefUploadParams, ExtRefUploadResult } from './mxcadTypes';
+
+export type { ExtRefUploadParams, ExtRefUploadResult } from './mxcadTypes';
+
+/**
+ * 上传外部参照图片到指定节点
+ * @param params 上传参数
+ * @returns 上传结果
+ */
+export async function uploadExtReferenceImage(
+  params: ExtRefUploadParams
+): Promise<ExtRefUploadResult> {
+  try {
+    const result = await mxcadExternalRefControllerUploadExtReferenceImage({
+      path: { nodeId: params.nodeId },
+      body: {
+        file:
+          params.file instanceof File
+            ? params.file
+            : new File([params.file], params.fileName),
+        nodeId: params.nodeId || '',
+        ext_ref_file: params.fileName,
+        updatePreloading: true,
+      },
+    });
+    // SDK 默认不抛错：失败时错误在 result.error。不检查会返回 success:true，
+    // 上传失败被当作成功，外部参照静默缺失（历史 bug）
+    if (result.error) throw result.error;
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    handleError(error, 'mxcadExtRef: uploadExtReferenceImage');
+    const errorMessage = getErrorMessage(error) || t('外部参照上传失败');
+    globalShowToast(errorMessage, 'error');
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * 从缺失参照路径列表中提取文件名
+ * @param missingRefs 缺失的参照路径列表
+ * @returns 去重后的文件名列表
+ */
+export function checkExtReferenceImages(missingRefs: string[]): string[] {
+  const fileNames: string[] = [];
+
+  for (const ref of missingRefs) {
+    if (!ref || !ref.trim()) {
+      continue;
+    }
+
+    // 提取路径中的文件名（支持 Windows 和 Unix 路径）
+    const parts = ref.replace(/\\/g, '/').split('/');
+    const fileName = parts[parts.length - 1];
+
+    if (fileName && !fileNames.includes(fileName)) {
+      fileNames.push(fileName);
+    }
+  }
+
+  return fileNames;
+}
+
+/**
+ * 解析外部参照文件的访问 URL
+ * @param openFileUrl 当前打开的文件 URL
+ * @param fileName 外部参照文件名（可选，默认返回原始 URL）
+ * @returns 解析后的 URL
+ */
+export function resolveExtReferenceUrl(
+  openFileUrl: string,
+  fileName?: string
+): string {
+  // 从当前打开的文件 URL 中提取 hash
+  if (openFileUrl.includes('/public-file/access/')) {
+    const parts = openFileUrl.split('/');
+    const hashIndex = parts.indexOf('access') + 1;
+    if (hashIndex < parts.length && fileName) {
+      const hash = parts[hashIndex];
+      return `/api/v1/public-file/access/${hash}/${fileName}`;
+    }
+  }
+
+  // 如果无法解析，返回原始值
+  return fileName || openFileUrl;
+}

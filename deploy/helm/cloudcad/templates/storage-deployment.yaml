@@ -1,0 +1,61 @@
+{{- if eq .Values.mode "standalone" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcad-storage
+  labels: { app: cloudcad, component: storage }
+spec:
+  replicas: {{ .Values.storageService.replicas }}
+  selector:
+    matchLabels: { app: cloudcad, component: storage }
+  template:
+    metadata:
+      labels: { app: cloudcad, component: storage }
+    spec:
+      containers:
+        - name: storage
+          image: "{{ .Values.images.storageService }}:{{ .Values.global.imageTag }}"
+          ports:
+            - containerPort: {{ .Values.storageService.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.storageService.port }}
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.storageService.port }}
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          env:
+            - name: STORAGE_SERVICE_PORT
+              value: "{{ .Values.storageService.port }}"
+            - name: STORAGE_CACHE_MAX_SIZE
+              value: "{{ .Values.storageService.cache.maxSize }}"
+            - name: STORAGE_CACHE_MAX_FILE_SIZE
+              value: "{{ .Values.storageService.cache.maxFileSize }}"
+            - name: STORAGE_CACHE_TTL_MS
+              value: "{{ .Values.storageService.cache.ttlMs }}"
+          resources: {{ toYaml .Values.storageService.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data/files
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: cloudcad-storage-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudcad-storage
+spec:
+  ports:
+    - port: {{ .Values.storageService.port }}
+      targetPort: {{ .Values.storageService.port }}
+  selector: { app: cloudcad, component: storage }
+{{- end }}

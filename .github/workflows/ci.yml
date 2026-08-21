@@ -1,0 +1,304 @@
+name: 持续集成
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
+
+    strategy:
+      matrix:
+        node-version: [20.19.5]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: cloudcad
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 密钥泄漏扫描（gitleaks）
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'true'
+          GITLEAKS_ENABLE_SUMMARY: 'true'
+
+      - name: 设置 Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      - name: 获取 pnpm 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 设置测试环境变量
+        run: |
+          cat > packages/backend/.env << EOF
+          NODE_ENV=test
+          PORT=3001
+          JWT_SECRET=test-jwt-secret-key
+          JWT_EXPIRES_IN=1h
+          JWT_REFRESH_EXPIRES_IN=7d
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USERNAME=postgres
+          DB_PASSWORD=password
+          DB_DATABASE=cloudcad
+          DB_SSL=false
+          DB_MAX_CONNECTIONS=20
+          DB_CONNECTION_TIMEOUT=30000
+          DB_IDLE_TIMEOUT=30000
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          REDIS_DB=0
+          REDIS_MAX_RETRIES=3
+          REDIS_RETRY_DELAY=100
+          MINIO_ENDPOINT=localhost
+          MINIO_PORT=9000
+          MINIO_USE_SSL=false
+          MINIO_ACCESS_KEY=minioadmin
+          MINIO_SECRET_KEY=minioadmin
+          MINIO_REGION=us-east-1
+          MINIO_BUCKET=cloudcad
+          UPLOAD_MAX_SIZE=104857600
+          UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
+          EOF
+
+      - name: 等待数据库就绪
+        run: |
+          timeout 60 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done'
+
+      - name: 等待 Redis 就绪
+        run: |
+          timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
+
+      - name: 生成 Prisma 客户端
+        run: |
+          cd packages/backend
+          pnpm db:generate
+
+      - name: 构建 workspace 基础包（db/contracts，type-check 前需 dist）
+        run: |
+          pnpm --filter @cloudcad/db build
+          pnpm --filter @cloudcad/contracts build
+
+      - name: 推送数据库模式
+        run: |
+          cd packages/backend
+          pnpm db:push
+
+      - name: 运行代码质量检查
+        run: |
+          pnpm lint
+          pnpm format:check
+          pnpm type-check
+
+      - name: 构建项目
+        run: |
+          pnpm build
+
+      - name: 运行后端单元测试
+        run: |
+          cd packages/backend
+          pnpm test:ci
+
+      - name: 运行集成测试（真实 PG+Redis，maxWorkers=1 串行防数据互踩）
+        run: |
+          cd packages/backend
+          pnpm test:integration
+
+      - name: 运行权限测试套件
+        run: |
+          cd packages/backend
+          pnpm test:permission
+
+      - name: 运行权限场景测试
+        run: |
+          cd packages/backend
+          pnpm test:permission:scenarios
+
+      - name: 契约门禁：生成物无未提交 diff + 前端 type-check（三层一致性铁律）
+        run: |
+          pnpm generate:api-types
+          cd packages/frontend
+          pnpm generate:msw
+          pnpm depcruise
+          cd ../..
+          node scripts/check-generated-clean.js
+          pnpm --filter frontend type-check
+
+      - name: 运行前端单元测试
+        run: |
+          cd packages/frontend
+          pnpm test
+
+      - name: 安装 Playwright 浏览器
+        run: |
+          cd packages/frontend
+          pnpm exec playwright install chromium
+
+      - name: 运行前端 E2E 测试
+        run: |
+          cd packages/frontend
+          xvfb-run --auto-servernum pnpm test:e2e
+        env:
+          VITE_MSW: 'true'
+
+      - name: 上传测试覆盖率报告
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./packages/backend/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  # ============================================================
+  # PR 门禁 1：提交信息/PR 标题符合 Conventional Commits
+  # ============================================================
+  check-commit-convention:
+    name: 提交规范校验
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 校验 PR 标题符合 Conventional Commits
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            refactor
+            docs
+            test
+            ci
+            perf
+            style
+          requireScope: false
+          subjectPattern: '^(?![A-Z].*)[a-zA-Z0-9\u4e00-\u9fa5_\-\.\/ ]+$'
+          subjectPatternError: |
+            PR 标题的描述部分不能以大写字母开头，请使用小写（如 feat(auth): 增加登录）。
+
+  # ============================================================
+  # PR 门禁 2：敏感文件 / 大文件 / 禁止入库内容拦截
+  # ============================================================
+  check-ignored-files:
+    name: 红线文件拦截
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 检查 PR 变更中是否含禁止入库文件
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 获取 PR 变更的文件列表
+          base_ref="${{ github.event.pull_request.base.ref }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          git fetch origin "${base_ref}" --depth=1
+          changed=$(git diff --name-only "origin/${base_ref}"... "${head_sha}" || true)
+
+          # 违规规则（正则匹配路径）
+          BANNED_PATTERNS=(
+            '(^|/)data/'
+            '(^|/)release/'
+            '(^|/)dist/'
+            '(^|/)build/'
+            '(^|/)file-sync/'
+            '(^|/)mxcad-dist/'
+            '(^|/)runtime/(windows|linux|cache|docker)/'
+            '(^|/)packages/impl-mx/'
+            '(^|/)(\.env|\.env\..*)'
+            '\.dwg$'
+            '\.dxf$'
+            '\.mxweb$'
+            '\.bin$'
+            '\.tar\.gz$'
+            '\.7z$'
+            '\.zip$'
+            '\.(log|pdb)$'
+            '(^|/)node_modules/'
+          )
+
+          violations=0
+          for f in $changed; do
+            for pat in "${BANNED_PATTERNS[@]}"; do
+              if [[ "$f" =~ $pat ]]; then
+                echo "::error::红线违规文件: $f  (匹配: $pat)"
+                violations=$((violations+1))
+              fi
+            done
+          done
+
+          if [ "$violations" -gt 0 ]; then
+            echo "::error::检测到 $violations 个禁止入库的文件，请从 PR 中移除。"
+            exit 1
+          fi
+          echo "✓ 未检测到红线违规文件"

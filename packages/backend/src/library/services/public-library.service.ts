@@ -1,0 +1,126 @@
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
+// All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
+///////////////////////////////////////////////////////////////////////////////
+
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { NodeType } from '@cloudcad/db';
+import { DatabaseService } from '../../database/database.service';
+import { NodeTrashService } from '../../file-operations/node-trash.service';
+import { ProjectCrudService } from '../../file-operations/project-crud.service';
+import { LibraryType } from '../library.service';
+import { CreateFolderDto } from '../../file-system/dto/create-folder.dto';
+import {
+  IPublicLibraryProvider,
+  PUBLIC_LIBRARY_PROVIDER_DRAWING,
+  PUBLIC_LIBRARY_PROVIDER_BLOCK,
+} from '../interfaces/public-library-provider.interface';
+
+@Injectable()
+export class PublicLibraryService implements IPublicLibraryProvider {
+  private readonly logger = new Logger(PublicLibraryService.name);
+
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly projectCrudService: ProjectCrudService,
+    private readonly nodeTrashService: NodeTrashService,
+    private readonly libraryType: LibraryType
+  ) {}
+
+  async getLibraryId(): Promise<string> {
+    const library = await this.prisma.fileSystemNode.findFirst({
+      where: {
+        nodeType: this.libraryType === 'drawing' ? NodeType.LIBRARY_DRAWING : NodeType.LIBRARY_BLOCK,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!library) {
+      throw new NotFoundException(
+        `公共资源库 (${this.libraryType}) 不存在，请先初始化`
+      );
+    }
+
+    return library.id;
+  }
+
+  /**
+   * 获取公共资源库根节点（含直接子节点列表）
+   * @returns FileSystemNode 节点对象（含 children 数组），未找到时返回 null
+   */
+  async getRootNode() {
+    const libraryId = await this.getLibraryId();
+
+    return this.prisma.fileSystemNode.findUnique({
+      where: { id: libraryId },
+      include: {
+        children: {
+          where: {
+            deletedAt: null,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+  }
+
+  /**
+   * 在公共资源库中创建文件夹
+   * @returns 新创建的 FileSystemNode 文件夹节点
+   */
+  async createFolder(dto: CreateFolderDto): Promise<unknown> {
+    const libraryId = await this.getLibraryId();
+    const parentId = dto.parentId || libraryId;
+
+    return this.projectCrudService.createFolder('system', parentId, dto);
+  }
+
+  /**
+   * 删除公共资源库中的节点（永久删除）
+   * @returns 删除操作的执行结果
+   */
+  async deleteNode(nodeId: string): Promise<unknown> {
+    return this.nodeTrashService.deleteNode(nodeId, true);
+  }
+}
+
+export function createDrawingLibraryProvider(
+  prisma: DatabaseService,
+  projectCrudService: ProjectCrudService,
+  nodeTrashService: NodeTrashService
+): IPublicLibraryProvider {
+  const service = new PublicLibraryService(prisma, projectCrudService, nodeTrashService, 'drawing');
+  return {
+    getLibraryId: () => service.getLibraryId(),
+    getRootNode: () => service.getRootNode(),
+    createFolder: (dto) => service.createFolder(dto),
+    deleteNode: (nodeId) => service.deleteNode(nodeId),
+  };
+}
+
+export function createBlockLibraryProvider(
+  prisma: DatabaseService,
+  projectCrudService: ProjectCrudService,
+  nodeTrashService: NodeTrashService
+): IPublicLibraryProvider {
+  const service = new PublicLibraryService(prisma, projectCrudService, nodeTrashService, 'block');
+  return {
+    getLibraryId: () => service.getLibraryId(),
+    getRootNode: () => service.getRootNode(),
+    createFolder: (dto) => service.createFolder(dto),
+    deleteNode: (nodeId) => service.deleteNode(nodeId),
+  };
+}
+
+export {
+  PUBLIC_LIBRARY_PROVIDER_DRAWING,
+  PUBLIC_LIBRARY_PROVIDER_BLOCK,
+};

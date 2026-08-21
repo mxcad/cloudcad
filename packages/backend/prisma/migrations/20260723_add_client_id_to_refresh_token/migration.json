@@ -1,0 +1,4 @@
+{
+  "version": "Prisma2",
+  "name": "20260723_add_client_id_to_refresh_token"
+}

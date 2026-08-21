@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudCAD 架构深度审查报告 — 2026-07-15</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#3b82f6',primaryTextColor:'#fff',primaryBorderColor:'#2563eb',lineColor:'#94a3b8',secondaryColor:'#f1f5f9',tertiaryColor:'#e2e8f0'}})</script>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+.card { border-radius: 12px; transition: box-shadow .2s; }
+.card:hover { box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.diagram-container { display: flex; gap: 1.5rem; align-items: stretch; }
+.diagram-panel { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; background: #fafafa; }
+.diagram-panel h4 { text-align: center; font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
+.vs-divider { display: flex; align-items: center; font-size: 1.5rem; font-weight: 700; color: #94a3b8; }
+.problem-list li::before { content: "⚠ "; }
+.benefit-list li::before { content: "✓ "; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+<!-- Header -->
+<div class="mb-10">
+  <h1 class="text-3xl font-bold text-slate-900">CloudCAD 架构深度审查</h1>
+  <p class="text-slate-500 mt-1">2026-07-15 · 基于 <code class="bg-slate-200 px-1.5 py-0.5 rounded text-sm">CONTEXT.md</code> 领域语言 + codebase-design 词汇体系</p>
+</div>
+
+<!-- ===================================================================== -->
+<!-- Candidate 1 -->
+<!-- ===================================================================== -->
+<div class="card bg-white border border-slate-200 p-6 mb-8">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900">1. MxCadService 薄门面</h2>
+      <p class="text-sm text-slate-500 mt-1">文件: <code>packages/backend/src/mxcad/core/mxcad.service.ts</code></p>
+    </div>
+    <span class="badge bg-amber-100 text-amber-800 border border-amber-300">Worth exploring</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">问题</h3>
+      <ul class="problem-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>32 个公开方法</strong> — 接口几乎和实现一样复杂。浅模块的典型信号。</li>
+        <li>大部分方法直接委托给子模块服务，自身不做知识浓缩。</li>
+        <li><strong>8 个 Prisma 直查方法</strong>（<code>findNodeById</code>, <code>findUserById</code> 等）重复了 <strong>DatabaseService</strong> 的能力，违反了"一个概念只在一个地方"原则。</li>
+        <li>无 <strong>interface</strong> / seam — 所有消费者直接耦合到 <code>@Injectable()</code> 类，测试时必须导入整个模块。</li>
+        <li>删除测试：删除 MxCadService 不会消除复杂度——复杂度会分散到各个调用方。但仍表明接口过大。</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">解决方案</h3>
+      <ul class="benefit-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>提取 Prisma 查询</strong>：将 8 个 <code>find*</code> 方法下沉到 <strong>FileSystemNodeService</strong> 或 <strong>DatabaseService</strong>，消除重复。</li>
+        <li><strong>引入 IMxCadService interface</strong>：定义真正的 seam，让子模块适配器驻留在 seam 之后。</li>
+        <li><strong>按聚合拆分</strong>：将"转换"、"保存"、"外部参照"、"上传"四个职责拆分为 4 个独立的深层模块，每个 5-8 个方法。</li>
+        <li>门面只保留编排逻辑（例如 saveMxwebFile 中的乐观锁），其余透传由子模块直接暴露。</li>
+      </ul>
+      <p class="text-xs text-slate-400 mt-3 italic">杠杆效应：1 个 seam 清洗 → N 个测试 + M 个调用方获得稳定性</p>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-panel">
+      <h4 style="color:#dc2626">Before — 浅门面</h4>
+      <div class="mermaid">
+graph TB
+    subgraph Callers["调用方 (6+ 模块)"]
+        C1[library/]
+        C2[public-file/]
+        C3[file-download/]
+    end
+    subgraph MxCadService["MxCadService (32 方法 · 1057 行)"]
+        S1[convertServerFile]
+        S2[saveMxwebFile]
+        S3[checkThumbnailExists]
+        S4[findNodeById]
+        S5[findUserById]
+        S6[... 27 更多]
+    end
+    subgraph Internal["内部子模块"]
+        I1[FileConversionService]
+        I2[ExternalRefService]
+        I3[ChunkUploadManager]
+        I4[FileSystemNodeService]
+    end
+    C1 --> S1
+    C2 --> S2
+    C3 --> S3
+    S1 -.->|delegate| I1
+    S2 -.->|delegate| I2
+    S3 -.->|delegate| I3
+    S4 -.->|duplicate| I4
+    S5 -.->|duplicate| DB[(Prisma)]
+    style MxCadService fill:#fecaca,stroke:#dc2626
+    style S4 fill:#fecaca,stroke:#dc2626
+    style S5 fill:#fecaca,stroke:#dc2626
+      </div>
+    </div>
+    <div class="vs-divider">→</div>
+    <div class="diagram-panel">
+      <h4 style="color:#16a34a">After — 3 个深层模块</h4>
+      <div class="mermaid">
+graph TB
+    subgraph Callers["调用方"]
+        C1[library/]
+        C2[public-file/]
+    end
+    subgraph Conversion["IConversionModule (6 方法)"]
+        A1[toMxweb]
+        A2[toDwg]
+        A3[generateThumbnail]
+    end
+    subgraph Save["ISaveModule (5 方法)"]
+        B1[saveMxweb]
+        B2[saveAs]
+        B3[generateBin]
+    end
+    subgraph ExtRef["IExternalRefModule (5 方法)"]
+        D1[handleRef]
+        D2[checkExists]
+        D3[getStats]
+    end
+    C1 --> A1
+    C2 --> B2
+    C1 --> D1
+    subgraph Seam["<b>Seam: Interface + DI Token</b>"]
+        IA[IConversionService]
+        IB[ISaveService]
+        ID[IExternalRefService]
+    end
+    style A1 fill:#bbf7d0,stroke:#16a34a
+    style B1 fill:#bbf7d0,stroke:#16a34a
+    style D1 fill:#bbf7d0,stroke:#16a34a
+    style IA fill:#fef9c3,stroke:#ca8a04
+    style IB fill:#fef9c3,stroke:#ca8a04
+    style ID fill:#fef9c3,stroke:#ca8a04
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- Candidate 2 -->
+<!-- ===================================================================== -->
+<div class="card bg-white border border-slate-200 p-6 mb-8">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900">2. mxcadManager 模块级状态</h2>
+      <p class="text-sm text-slate-500 mt-1">文件: <code>packages/frontend/src/services/mxcadManager/index.ts</code> (~2943 行)</p>
+    </div>
+    <span class="badge bg-amber-100 text-amber-800 border border-amber-300">Worth exploring</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">问题</h3>
+      <ul class="problem-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>2943 行单体文件</strong> — 同时包含：类定义（MxCADManager）、命令注册副作用、模块级状态变量、工具函数导出、类型导出。</li>
+        <li>违反 AGENTS.md Zustand <strong>单一数据源规则</strong>：<code>documentModified</code>、<code>pendingImages</code>、<code>currentMxwebUrl</code>、<code>cachedPersonalSpaceId</code> 是模块级变量而非 store 字段。</li>
+        <li>命令注册（<code>Mx_Save</code>、<code>exportFile</code> 等）在<strong>模块评估时</strong>执行副作用——任何 import 行为都会触发，导致测试和 SSR 困难。</li>
+        <li>删除测试：删除此模块时，其职责会扩散到 CADEditorDirect 和各个 hooks 中——模块确实在做有价值的事，但接口太乱。</li>
+        <li><strong>界面过于复杂</strong>：~20 个导出函数 + 类 + 类型 + 常量混在一个 barrel 中。</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">解决方案</h3>
+      <ul class="benefit-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>状态 → Zustand store</strong>：将 <code>documentModified</code> 合并到 useCADEditorStore，<code>pendingImages</code> 建立独立 <code>usePendingImagesStore</code>。</li>
+        <li><strong>命令注册后期化</strong>：将命令注册从模块评估时移到显式的 <code>registerCommands()</code> 调用，由 CADEditorDirect 在挂载时调用。</li>
+        <li><strong>MxCADManager 类瘦身</strong>：将文件操作委托给子模块（已部分完成），只保留 CAD 引擎生命周期管理。</li>
+        <li><strong>按职责拆 barrel</strong>：类型 → <code>mxcadTypes.ts</code>，命令 → <code>cmd/</code>，引擎 → <code>MxCADManager.ts</code>。</li>
+      </ul>
+      <p class="text-xs text-slate-400 mt-3 italic">杠杆效应：消除 5 个模块级变量 → 5 个测试可独立断言 + store selector 精确订阅</p>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-panel">
+      <h4 style="color:#dc2626">Before — 杂合单体</h4>
+      <div class="mermaid">
+graph LR
+    subgraph mxcadManager["mxcadManager/index.ts (2943 行)"]
+        direction TB
+        A[Class: MxCADManager]
+        B[Module vars: documentModified, pendingImages, currentMxwebUrl, cachedPersonalSpaceId]
+        C[Command registration side effects: Mx_Save, exportFile, ...]
+        D[Exported util fns: saveMxwebToNode, checkThumbnail, ...]
+        E[Exported types & config]
+    end
+    F[CADEditorDirect.tsx] -->|import| mxcadManager
+    G[CollaborateSidebar] -->|import| mxcadManager
+    H[WorkListPanel] -->|import| mxcadManager
+    style mxcadManager fill:#fecaca,stroke:#dc2626
+    style B fill:#fca5a5,stroke:#dc2626
+      </div>
+    </div>
+    <div class="vs-divider">→</div>
+    <div class="diagram-panel">
+      <h4 style="color:#16a34a">After — 3 个正交模块</h4>
+      <div class="mermaid">
+graph LR
+    subgraph State["Zustand Store"]
+        SA[useCADEditorStore.isDirty]
+        SB[usePendingImagesStore]
+        SC[useFileSystemStore.personalSpaceId]
+    end
+    subgraph Manager["MxCADManager.ts (class only)"]
+        MA[MxCADManager: init, destroy, openFile]
+    end
+    subgraph Commands["cmd/registerCommands.ts"]
+        CA[registerCommands()]
+        CB[called from useEffect in CADEditorDirect]
+    end
+    subgraph Utils["utils/*.ts"]
+        UA[saveMxwebToNode]
+        UB[checkThumbnail]
+    end
+    CADEditorDirect -->|import| Manager
+    CADEditorDirect -->|call| CA
+    CADEditorDirect -->|subscribe| SA
+    State --> SA
+    style SA fill:#bbf7d0,stroke:#16a34a
+    style SB fill:#bbf7d0,stroke:#16a34a
+    style CA fill:#bbf7d0,stroke:#16a34a
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- Candidate 3 -->
+<!-- ===================================================================== -->
+<div class="card bg-white border border-slate-200 p-6 mb-8">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900">3. Storage 模块双接口债务</h2>
+      <p class="text-sm text-slate-500 mt-1">文件: <code>packages/backend/src/storage/{storage.interface.ts, interfaces/storage-provider.interface.ts}</code></p>
+    </div>
+    <span class="badge bg-red-100 text-red-800 border border-red-300">Strong</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">问题</h3>
+      <ul class="problem-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>两个接口共存</strong>：<code>storage.interface.ts</code>（旧，5 方法）和 <code>interfaces/storage-provider.interface.ts</code>（新，13 方法），表明迁移未完成。</li>
+        <li>StorageService 虽然用新接口，但 <strong>getProvider()</strong> 暴露了底层 provider，打破了封装——调用方可以直接绕过抽象。</li>
+        <li>被 <strong>6+ 模块</strong> 依赖，是耦合最广的基础模块。任何接口变化都会波及大量代码。</li>
+        <li>无 barrel 导出——每个文件独立 import，调用方需要知道内部路径。</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">解决方案</h3>
+      <ul class="benefit-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>完成接口合并</strong>：删除旧接口，统一为新 13 方法接口。</li>
+        <li><strong>消除 getProvider()</strong>：所有 provider 级别操作（如 copyFromFs）提升到 StorageService 接口中，彻底隐藏 Provider 实现。</li>
+        <li><strong>添加 barrel</strong>：所有调用方统一从 <code>@/storage</code> 导入。</li>
+        <li><strong>清理命名</strong>：统一为 <code>IStorageService</code>，与 conversion 模块对齐。</li>
+      </ul>
+      <p class="text-xs text-slate-400 mt-3 italic">杠杆效应：1 个 seam 清理 → 6+ 模块的依赖路径统一 → 测试 mock 成本降低</p>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-panel">
+      <h4 style="color:#dc2626">Before — 两个接口 + 泄漏抽象</h4>
+      <div class="mermaid">
+graph TB
+    subgraph StorageModule["StorageModule"]
+        direction TB
+        I1[storage.interface.ts<br/>5 methods]
+        I2[interfaces/storage-provider.interface.ts<br/>13 methods]
+        S[StorageService]
+        P[LocalStorageProvider]
+        P2[FlydriveStorageProvider]
+        G[getProvider()]
+    end
+    M1[mxcad/] -->|import| S
+    M2[file-download/] -->|import| S
+    M3[file-tree/] -->|import| G
+    M4[file-operations/] -->|import| S
+    M5[health/] -->|import| S
+    M6[common/] -->|import| S
+    style I1 fill:#fecaca,stroke:#dc2626
+    style I2 fill:#fef9c3,stroke:#ca8a04
+    style G fill:#fca5a5,stroke:#dc2626
+      </div>
+    </div>
+    <div class="vs-divider">→</div>
+    <div class="diagram-panel">
+      <h4 style="color:#16a34a">After — 统一接口 + 密封实现</h4>
+      <div class="mermaid">
+graph TB
+    subgraph StorageModule["StorageModule"]
+        direction TB
+        IS[IStorageService<br/>13 methods]
+        S[StorageService implements IStorageService]
+        P[LocalStorageProvider]
+        P2[FlydriveStorageProvider]
+    end
+    M1[mxcad/] -->|import IStorageService| IS
+    M2[file-download/] -->|import IStorageService| IS
+    M3[file-tree/] -->|import IStorageService| IS
+    M4[file-operations/] -->|import IStorageService| IS
+    M5[health/] -->|IStorageService| IS
+    M6[common/] -->|IStorageService| IS
+    style IS fill:#bbf7d0,stroke:#16a34a
+    style S fill:#bbf7d0,stroke:#16a34a
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- Candidate 4 -->
+<!-- ===================================================================== -->
+<div class="card bg-white border border-slate-200 p-6 mb-8">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900">4. File-System 模块无 Seam</h2>
+      <p class="text-sm text-slate-500 mt-1">文件: <code>packages/backend/src/file-system/</code> (60 文件, 9 子模块)</p>
+    </div>
+    <span class="badge bg-red-100 text-red-800 border border-red-300">Strong</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">问题</h3>
+      <ul class="problem-list space-y-1.5 text-sm text-slate-600">
+        <li>被 <strong>6 个外部模块</strong> 直接依赖，但所有服务都是 <code>@Injectable()</code> 类——<strong>零 interface</strong>。</li>
+        <li>改变 FileTreeService 或 StorageQuotaService 的内部逻辑会传播到所有调用方，无法通过 seam 隔离变更。</li>
+        <li>有 barrel 但只导出 8 个服务——没有任何契约定义。</li>
+        <li>与 mxcad 模块形成<strong>循环依赖历史</strong>（之前已经解耦过一轮）。</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">解决方案</h3>
+      <ul class="benefit-list space-y-1.5 text-sm text-slate-600">
+        <li>为最依赖的 3 个服务引入接口：<strong>IFileTreeService</strong>、<strong>IStorageQuotaService</strong>、<strong>ISearchService</strong>。</li>
+        <li>接口放置在 <code>file-system/interfaces/</code>，按 <strong>conversion 模块</strong> 的先例（每个接口 5-8 方法）。</li>
+        <li>调用方改为 import interface token 而非直接 import 类。</li>
+        <li>为集成测试提供 MemoryFileTreeAdapter。</li>
+      </ul>
+      <p class="text-xs text-slate-400 mt-3 italic">杠杆效应：3 个 seam → 6 个依赖模块的解耦 + 集成测试可 mock 真实 seam</p>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-panel">
+      <h4 style="color:#dc2626">Before — 无 seam 的稠耦合</h4>
+      <div class="mermaid">
+graph TB
+    subgraph FS["file-system/ (9 子模块)"]
+        FTS[FileTreeService<br/>@Injectable]
+        SQS[StorageQuotaService<br/>@Injectable]
+        SS[SearchService<br/>@Injectable]
+        FPS[FileSystemPermissionService<br/>@Injectable]
+    end
+    M1[mxcad/] -->|import class| FTS
+    M2[library/] -->|import class| FTS
+    M3[file-operations/] -->|import class| FTS
+    M4[roles/] -->|import class| FPS
+    M5[version-control/] -->|import class| FTS
+    M6[common/] -->|import class| SQS
+    style FTS fill:#fecaca,stroke:#dc2626
+    style SQS fill:#fecaca,stroke:#dc2626
+    style SS fill:#fecaca,stroke:#dc2626
+      </div>
+    </div>
+    <div class="vs-divider">→</div>
+    <div class="diagram-panel">
+      <h4 style="color:#16a34a">After — 3 个 seam</h4>
+      <div class="mermaid">
+graph TB
+    subgraph FS["file-system/"]
+        I1[IFileTreeService<br/>← token]
+        I2[IStorageQuotaService<br/>← token]
+        I3[ISearchService<br/>← token]
+        FTS[FileTreeService<br/>implements IFileTreeService]
+        SQS[StorageQuotaService<br/>implements IStorageQuotaService]
+        SS[SearchService<br/>implements ISearchService]
+    end
+    M1[mxcad/] -->|IFileTreeService| I1
+    M2[library/] -->|IFileTreeService| I1
+    M3[file-operations/] -->|IFileTreeService| I1
+    M4[roles/] -->|IFileSystemPermissionService| FPS
+    M5[version-control/] -->|IFileTreeService| I1
+    M6[common/] -->|IStorageQuotaService| I2
+    Test[Tests] -->|MemoryFileTreeAdapter| I1
+    style I1 fill:#bbf7d0,stroke:#16a34a
+    style I2 fill:#bbf7d0,stroke:#16a34a
+    style I3 fill:#bbf7d0,stroke:#16a34a
+    style Test fill:#fef9c3,stroke:#ca8a04
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- Candidate 5 -->
+<!-- ===================================================================== -->
+<div class="card bg-white border border-slate-200 p-6 mb-8">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900">5. 前端测试基础设施未利用</h2>
+      <p class="text-sm text-slate-500 mt-1">文件: <code>packages/frontend/src/test/</code> + <code>packages/frontend/src/hooks/</code> + <code>packages/frontend/src/stores/</code></p>
+    </div>
+    <span class="badge bg-blue-100 text-blue-800 border border-blue-300">Speculative</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">问题</h3>
+      <ul class="problem-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>80+ 组件 + 36 hooks + 6 stores，仅 7 个测试套件</strong>。测试覆盖率极低。</li>
+        <li><strong>MSW 基础设施</strong> 已经生成（自动从 Swagger 生成 handler），但只在 Playwright E2E 中使用，未用于 <strong>vitest 组件/hook 测试</strong>。</li>
+        <li><strong>Store 测试为零</strong>——6 个 Zustand store 是纯逻辑（通过 getState/setState 可预测），极易测试但没测。</li>
+        <li><strong>Hooks 测试为零</strong>——36 个 hooks 中的绝大多数可用 <code>renderHook</code> + MSW。
+        <li>CI 中根本不跑 vitest（只有 type-check）。</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">解决方案</h3>
+      <ul class="benefit-list space-y-1.5 text-sm text-slate-600">
+        <li><strong>Store 测试先上</strong>：6 个 Zustand store 不需要 DOM、不需要 MSW——纯函数式断言。无借口不测试。</li>
+        <li><strong>Hooks 测试利用 MSW</strong>：<code>renderHook</code> + <code>wrapper</code> + MSW handler 覆盖 <code>useFileSystemData</code>、<code>useLibrary</code> 等核心 hooks。</li>
+        <li><strong>关键组件快照</strong>：对 <code>components/ui/</code> 的 26 个设计系统组件启动 Storybook 或 vitest 快照。</li>
+        <li><strong>CI 开启 vitest</strong>：在 CI workflow 中添加 <code>pnpm test</code> 步骤。</li>
+      </ul>
+      <p class="text-xs text-slate-400 mt-3 italic">杠杆效应：MSW 基础设施已就位（零成本）→ 测试 hooks 和 stores 可立即开始</p>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="diagram-panel">
+      <h4 style="color:#dc2626">Before — 测试荒漠</h4>
+      <div class="mermaid">
+graph LR
+    subgraph App["Frontend App"]
+        Comp[80+ Components]
+        Hooks[36 Hooks]
+        Stores[6 Zustand Stores]
+    end
+    subgraph Tests["测试"]
+        E2E[8 Playwright E2E]
+        Unit[7 Unit Tests]
+        MSW[MSW Handlers<br/>already generated]
+    end
+    Stores -.->|0 tests| Unit
+    Hooks -.->|0 tests| Unit
+    Comp -.->|7 hits| Unit
+    MSW -.->|unused| Unit
+    E2E -->|uses| MSW
+    style Stores fill:#fecaca,stroke:#dc2626
+    style Hooks fill:#fecaca,stroke:#dc2626
+    style MSW fill:#fef9c3,stroke:#ca8a04
+      </div>
+    </div>
+    <div class="vs-divider">→</div>
+    <div class="diagram-panel">
+      <h4 style="color:#16a34a">After — 三层测试</h4>
+      <div class="mermaid">
+graph LR
+    subgraph Tests["测试金字塔"]
+        L1[Store Tests<br/>6 suites / 0 deps]
+        L2[Hook Tests<br/>18 suites / MSW]
+        L3[Component Tests<br/>20 suites / MSW]
+        L4[E2E Tests<br/>8 suites / Playwright]
+    end
+    MSW[MSW Handlers] --> L2
+    MSW --> L3
+    L1 --> StoresT[Stores Verified]
+    style L1 fill:#bbf7d0,stroke:#16a34a
+    style L2 fill:#86efac,stroke:#16a34a
+    style MSW fill:#bbf7d0,stroke:#16a34a
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- Top Recommendation -->
+<!-- ===================================================================== -->
+<div class="card bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 p-6">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="text-2xl">🏆</span>
+    <h2 class="text-xl font-bold text-indigo-900">首要推荐</h2>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <p class="font-semibold text-indigo-800">先从 <strong>Storage 模块双接口合并</strong>（候选 3）开始。</p>
+      <ul class="text-sm text-slate-600 mt-2 space-y-1.5">
+        <li><strong>风险最低</strong>：已有清晰 seam（两个接口），只需选择其一、删除另一个。纯删除操作，不引入新抽象。</li>
+        <li><strong>回报最大</strong>：清理后 6+ 模块的依赖路径统一，消除 getProvider() 泄漏后集成测试可 mock seam 而非 mock 具体 provider。</li>
+        <li><strong>followed by</strong> File-system seam 引入（候选 4），因为 6 个依赖模块中有 3 个同时依赖 storage 和 file-system，前者 seam 准备好了后者才能跟上。</li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-indigo-800">阶段路线</p>
+      <div class="mermaid">
+graph LR
+    P1[Phase 1<br/>Storage 合并] --> P2[Phase 2<br/>File-System Seam]
+    P2 --> P3[Phase 3<br/>MxCadService 拆分]
+    P1 -.-> P1b[Parallel:<br/>mxcadManager 状态迁移]
+    P3 --> P4[Phase 4<br/>前端测试基建]
+    style P1 fill:#c7d2fe,stroke:#6366f1
+    style P1b fill:#e9d5ff,stroke:#a855f7
+    style P2 fill:#c7d2fe,stroke:#6366f1
+    style P3 fill:#c7d2fe,stroke:#6366f1
+    style P4 fill:#c7d2fe,stroke:#6366f1
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="mt-10 text-center text-xs text-slate-400 border-t border-slate-200 pt-6">
+  CloudCAD Architecture Review · Generated 2026-07-15 · Vocabulary: codebase-design (module, interface, depth, seam, adapter, leverage, locality)
+</div>
+
+</div>
+</body>
+</html>
