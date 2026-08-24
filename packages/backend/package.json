@@ -50,7 +50,7 @@
     "@cloudcad/contracts": "workspace:*",
     "@cloudcad/db": "workspace:*",
     "@cloudcad/mx-version-tool": "workspace:*",
-    "@nestjs-modules/ioredis": "^2.0.2",
+    "@nestjs-modules/ioredis": "^2.2.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/cache-manager": "^3.1.2",
     "@nestjs/common": "^11.0.1",
