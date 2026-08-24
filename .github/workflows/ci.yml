@@ -121,11 +121,11 @@ jobs:
 
       - name: 等待数据库就绪
         run: |
-          timeout 60 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done'
+          timeout 60 bash -c 'until (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1; do sleep 1; done'
 
       - name: 等待 Redis 就绪
         run: |
-          timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
+          timeout 60 bash -c 'until (echo > /dev/tcp/localhost/6379) >/dev/null 2>&1; do sleep 1; done'
 
       - name: 生成 Prisma 客户端
         run: |
