@@ -204,6 +204,11 @@ jobs:
       - name: 构建 Windows 标准组件
         run: node scripts/build-windows-runtime.js
 
+      # 生成生产依赖离线 store（Windows 不走 Docker，须本机构建 .pnpm-store-deploy，
+      # 否则 pack-offline.js 的 prepareDeployStore 会因 store 缺失报 "Docker store 缺失"）
+      - name: 生成生产依赖 store
+        run: pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts install --frozen-lockfile --prod --store-dir .pnpm-store-deploy
+
       # 打包 Windows 部署包
       - name: 打包 Windows 部署包
         shell: bash
