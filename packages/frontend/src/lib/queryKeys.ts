@@ -86,6 +86,13 @@ export const queryKeys = {
       ['ipWhitelist', 'list', params] as const,
   },
 
+  // ─── 高危访问尝试（管理员登录被拒记录）────────────────────────────
+  securityAttempt: {
+    all: ['securityAttempt'] as const,
+    list: (params: Record<string, unknown>) =>
+      ['securityAttempt', 'list', params] as const,
+  },
+
   // ─── Current User ─────────────────────────────────────────────────
   currentUser: ['currentUser'] as const,
 

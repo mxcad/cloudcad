@@ -99,6 +99,8 @@ pnpm start
 | `STORAGE_ROUTING_TABLE` | `config/storage-routing.json` | 多节点路由表路径 |
 | `MX_VERSION_TOOL_PATH` | `packages/mxVersionTool/mxcmd.js` | MX 版本控制 CLI 路径 |
 | `BACKEND_JWT_SECRET` | — | 上传令牌共享密钥（与后端一致） |
+| `LOG_DIR` | `data/logs` | 日志根目录（相对路径基于包根解析，日志落盘 `data/logs/storage-service/app-YYYY-MM-DD.log`） |
+| `LOG_RETENTION_DAYS` | `180` | 日志保留天数（按天轮转，过期自动清理） |
 
 ## 许可证
 

@@ -71,7 +71,15 @@ export function Audit(
         : resultUser.user?.id;
       const userId = options.userId
         ? options.userId(result, args)
-        : (resultUser.user?.id ?? 'unknown');
+        : resultUser.user?.id;
+
+      // AuditLog.userId 为强外键，未认证/结果结构异常时拿不到合法 userId：
+      // 以 'unknown' 占位写入会触发 audit_logs_userId_fkey 约束错误（线上 ERROR 噪音）。
+      // 此时跳过审计（登录失败等安全事件已由各自服务独立留痕），而非硬写占位。
+      if (!userId || userId === 'unknown') {
+        return result;
+      }
+
       const success = options.success ? options.success(result, args) : true;
       const details = options.details ? options.details(result, args) : {};
 

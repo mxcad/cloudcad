@@ -1641,6 +1641,138 @@ export type CreateIpWhitelistEntryDto = {
     expiresAt?: string;
 };
 
+export type IpBlacklistEntryResponseDto = {
+    /**
+     * 条目 ID
+     */
+    id: string;
+    /**
+     * 精确 IP 或 CIDR
+     */
+    ip: string;
+    /**
+     * 来源：manual（管理员手动）| auto（自动检测，预留）
+     */
+    source: string;
+    /**
+     * 封禁原因
+     */
+    reason: string;
+    /**
+     * 操作人用户 ID
+     */
+    createdBy: string;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 到期时间；null = 永久封禁
+     */
+    expiresAt?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type IpBlacklistListResponseDto = {
+    items: Array<IpBlacklistEntryResponseDto>;
+    /**
+     * 总条数
+     */
+    total: number;
+    /**
+     * 当前页码
+     */
+    page: number;
+    /**
+     * 每页条数
+     */
+    pageSize: number;
+};
+
+export type CreateIpBlacklistEntryDto = {
+    /**
+     * 精确 IP 或 CIDR（含 IPv6），如 203.0.113.7 或 203.0.113.0/24
+     */
+    ip: string;
+    /**
+     * 封禁原因
+     */
+    reason: string;
+    /**
+     * 到期时间（ISO 8601）；不传 = 永久封禁
+     */
+    expiresAt?: string;
+};
+
+export type SecurityAccessAttemptAggregateDto = {
+    /**
+     * IP 地址（归一化后）
+     */
+    ip: string;
+    /**
+     * 首次尝试时间
+     */
+    firstSeen: string;
+    /**
+     * 最近尝试时间
+     */
+    lastSeen: string;
+    /**
+     * 尝试总次数
+     */
+    count: number;
+    /**
+     * 各拒绝原因分布（reason -> 次数）
+     */
+    reasons: {
+        [key: string]: unknown;
+    };
+    /**
+     * 最近一次尝试使用的账号（可能为扫描器瞎填）
+     */
+    account?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 最近一次尝试的 User-Agent
+     */
+    userAgent?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 当前是否已在管理员 IP 白名单中
+     */
+    inWhitelist: boolean;
+    /**
+     * 当前是否已在 IP 黑名单中
+     */
+    inBlacklist: boolean;
+};
+
+export type SecurityAccessAttemptListResponseDto = {
+    items: Array<SecurityAccessAttemptAggregateDto>;
+    /**
+     * 总 IP 数（去重后）
+     */
+    total: number;
+    /**
+     * 当前页码
+     */
+    page: number;
+    /**
+     * 每页条数
+     */
+    pageSize: number;
+};
+
+export type SecurityIpActionDto = {
+    /**
+     * 精确 IP 或 CIDR（含 IPv6），如 203.0.113.7 或 203.0.113.0/24
+     */
+    ip: string;
+};
+
 export type CreateUploadTokenDto = {
     /**
      * storage-service 内相对路径，例如 202607/node1/a.dwg（对应 filesDataPath 下的相对路径）
@@ -1738,70 +1870,6 @@ export type UserCleanupTriggerResponseDto = {
      * 错误列表
      */
     errors: Array<string>;
-};
-
-export type IpBlacklistEntryResponseDto = {
-    /**
-     * 条目 ID
-     */
-    id: string;
-    /**
-     * 精确 IP 或 CIDR
-     */
-    ip: string;
-    /**
-     * 来源：manual（管理员手动）| auto（自动检测，预留）
-     */
-    source: string;
-    /**
-     * 封禁原因
-     */
-    reason: string;
-    /**
-     * 操作人用户 ID
-     */
-    createdBy: string;
-    /**
-     * 创建时间
-     */
-    createdAt: string;
-    /**
-     * 到期时间；null = 永久封禁
-     */
-    expiresAt?: {
-        [key: string]: unknown;
-    } | null;
-};
-
-export type IpBlacklistListResponseDto = {
-    items: Array<IpBlacklistEntryResponseDto>;
-    /**
-     * 总条数
-     */
-    total: number;
-    /**
-     * 当前页码
-     */
-    page: number;
-    /**
-     * 每页条数
-     */
-    pageSize: number;
-};
-
-export type CreateIpBlacklistEntryDto = {
-    /**
-     * 精确 IP 或 CIDR（含 IPv6），如 203.0.113.7 或 203.0.113.0/24
-     */
-    ip: string;
-    /**
-     * 封禁原因
-     */
-    reason: string;
-    /**
-     * 到期时间（ISO 8601）；不传 = 永久封禁
-     */
-    expiresAt?: string;
 };
 
 /**
@@ -6387,65 +6455,6 @@ export type IpWhitelistControllerRemoveResponses = {
     200: unknown;
 };
 
-export type UploadTokenControllerCreateUploadTokenData = {
-    body: CreateUploadTokenDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/files/upload-token';
-};
-
-export type UploadTokenControllerCreateUploadTokenErrors = {
-    /**
-     * path 非法
-     */
-    400: unknown;
-    /**
-     * 未登录或 BACKEND_JWT_SECRET 未配置
-     */
-    401: unknown;
-};
-
-export type UploadTokenControllerCreateUploadTokenResponses = {
-    /**
-     * 签发成功，返回预签名 JWT
-     */
-    200: UploadTokenResponseDto;
-};
-
-export type UploadTokenControllerCreateUploadTokenResponse = UploadTokenControllerCreateUploadTokenResponses[keyof UploadTokenControllerCreateUploadTokenResponses];
-
-export type UserCleanupControllerGetStatsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/user-cleanup/stats';
-};
-
-export type UserCleanupControllerGetStatsResponses = {
-    /**
-     * 成功获取待清理用户统计
-     */
-    200: UserCleanupStatsResponseDto;
-};
-
-export type UserCleanupControllerGetStatsResponse = UserCleanupControllerGetStatsResponses[keyof UserCleanupControllerGetStatsResponses];
-
-export type UserCleanupControllerTriggerCleanupData = {
-    body: UserCleanupTriggerDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/user-cleanup/trigger';
-};
-
-export type UserCleanupControllerTriggerCleanupResponses = {
-    /**
-     * 成功触发用户数据清理
-     */
-    200: UserCleanupTriggerResponseDto;
-};
-
-export type UserCleanupControllerTriggerCleanupResponse = UserCleanupControllerTriggerCleanupResponses[keyof UserCleanupControllerTriggerCleanupResponses];
-
 export type IpBlacklistControllerListData = {
     body?: never;
     path?: never;
@@ -6524,6 +6533,144 @@ export type IpBlacklistControllerRemoveResponses = {
      */
     200: unknown;
 };
+
+export type SecurityAccessAttemptControllerListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 页码，从 1 开始
+         */
+        page?: number;
+        /**
+         * 每页条数
+         */
+        pageSize?: number;
+        /**
+         * 搜索关键词：模糊匹配 IP / 账号
+         */
+        keyword?: string;
+    };
+    url: '/api/v1/admin/security-attempts';
+};
+
+export type SecurityAccessAttemptControllerListResponses = {
+    /**
+     * 查询成功
+     */
+    200: SecurityAccessAttemptListResponseDto;
+};
+
+export type SecurityAccessAttemptControllerListResponse = SecurityAccessAttemptControllerListResponses[keyof SecurityAccessAttemptControllerListResponses];
+
+export type SecurityAccessAttemptControllerWhitelistData = {
+    body: SecurityIpActionDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/security-attempts/whitelist';
+};
+
+export type SecurityAccessAttemptControllerWhitelistErrors = {
+    /**
+     * IP 格式非法
+     */
+    400: unknown;
+    /**
+     * 该 IP 已在白名单中
+     */
+    409: unknown;
+};
+
+export type SecurityAccessAttemptControllerWhitelistResponses = {
+    /**
+     * 已加入白名单
+     */
+    200: unknown;
+};
+
+export type SecurityAccessAttemptControllerBlacklistData = {
+    body: SecurityIpActionDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/security-attempts/blacklist';
+};
+
+export type SecurityAccessAttemptControllerBlacklistErrors = {
+    /**
+     * IP 格式非法
+     */
+    400: unknown;
+    /**
+     * 该 IP 已在黑名单中
+     */
+    409: unknown;
+};
+
+export type SecurityAccessAttemptControllerBlacklistResponses = {
+    /**
+     * 已加入黑名单
+     */
+    200: unknown;
+};
+
+export type UploadTokenControllerCreateUploadTokenData = {
+    body: CreateUploadTokenDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/files/upload-token';
+};
+
+export type UploadTokenControllerCreateUploadTokenErrors = {
+    /**
+     * path 非法
+     */
+    400: unknown;
+    /**
+     * 未登录或 BACKEND_JWT_SECRET 未配置
+     */
+    401: unknown;
+};
+
+export type UploadTokenControllerCreateUploadTokenResponses = {
+    /**
+     * 签发成功，返回预签名 JWT
+     */
+    200: UploadTokenResponseDto;
+};
+
+export type UploadTokenControllerCreateUploadTokenResponse = UploadTokenControllerCreateUploadTokenResponses[keyof UploadTokenControllerCreateUploadTokenResponses];
+
+export type UserCleanupControllerGetStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/user-cleanup/stats';
+};
+
+export type UserCleanupControllerGetStatsResponses = {
+    /**
+     * 成功获取待清理用户统计
+     */
+    200: UserCleanupStatsResponseDto;
+};
+
+export type UserCleanupControllerGetStatsResponse = UserCleanupControllerGetStatsResponses[keyof UserCleanupControllerGetStatsResponses];
+
+export type UserCleanupControllerTriggerCleanupData = {
+    body: UserCleanupTriggerDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/user-cleanup/trigger';
+};
+
+export type UserCleanupControllerTriggerCleanupResponses = {
+    /**
+     * 成功触发用户数据清理
+     */
+    200: UserCleanupTriggerResponseDto;
+};
+
+export type UserCleanupControllerTriggerCleanupResponse = UserCleanupControllerTriggerCleanupResponses[keyof UserCleanupControllerTriggerCleanupResponses];
 
 export type RolesControllerFindAllData = {
     body?: never;

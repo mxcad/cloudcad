@@ -120,6 +120,19 @@ function buildCommand(type, variant, channel, osArg) {
   return [...args, ...variantArgs];
 }
 
+/**
+ * 拼装升级包命令（平台无关，免 Docker 本机直打）
+ * 升级包只含业务产物（dist/migrations/scripts），不含生产依赖 store 与 engine 二进制
+ * （线上 engine 不动），因此不区分 Windows/Linux 通道，统一走 pack-linux-deploy.js --upgrade
+ * （其内部已实现免 Docker 本机直打）。
+ * @param {string} variant oss / private
+ * @returns {string[]} node 命令参数数组
+ */
+function buildUpgradeCommand(variant) {
+  const variantArgs = variant === 'private' ? ['--variant', 'private'] : [];
+  return ['scripts/pack-linux-deploy.js', '--upgrade', ...variantArgs];
+}
+
 function run(cmdArgs) {
   return new Promise((resolve, reject) => {
     log(`执行: node ${cmdArgs.join(' ')}`);
@@ -161,41 +174,56 @@ async function main() {
   // 3. 平台通道
   const isUpgrade = type.id === 'upgrade';
   const label = isUpgrade ? '升级包' : '全量部署包';
-  const channelOptions = [];
-  if (IS_WINDOWS) {
-    channelOptions.push({ key: '1', id: 'win', label: `Windows ${label}（本机直打）` });
-    channelOptions.push({ key: '2', id: 'docker', label: `Linux ${label}（Docker 容器内打包，原生依赖为 Linux 二进制）` });
-  } else {
-    channelOptions.push({ key: '1', id: 'linux', label: `Linux ${label}（本机直打，原生依赖为本机 Linux 二进制）` });
-    channelOptions.push({ key: '2', id: 'docker', label: `Linux ${label}（Docker 容器内打包，可指定发行版）` });
-  }
-  const channel = await pick(channelOptions, '请选择平台通道');
-
-  // 4. Linux 容器通道：选择 OS 变体
+  let channel;
   let osArg = null;
-  if (channel.id === 'docker') {
-    osArg = (
-      await pick(
-        OS_OPTIONS.map((o, i) => ({ key: String(i + 1), id: o, label: o })),
-        '请选择目标 Linux 发行版',
-        '1'
-      )
-    ).id;
+  let cmdArgs;
+  let channelLabel;
+
+  if (isUpgrade) {
+    // 升级包：免 Docker 本机直打，内容为业务产物（dist/scripts），不含生产依赖 store 与
+    // engine 二进制（线上 engine 不动），因此平台无关，无需区分 Windows/Linux 通道。
+    // 统一走 pack-linux-deploy.js --upgrade（其内部已实现免 Docker 本机直打）。
+    log('');
+    log('升级包为平台无关的业务产物增量包（免 Docker 本机直打，线上 engine 不动）');
+    cmdArgs = buildUpgradeCommand(variant.id);
+    channelLabel = '平台无关（免 Docker 本机直打）';
+  } else {
+    // 全量部署包：需区分平台通道（store/运行时二进制与平台强相关）
+    const channelOptions = [];
+    if (IS_WINDOWS) {
+      channelOptions.push({ key: '1', id: 'win', label: `Windows ${label}（本机直打）` });
+      channelOptions.push({ key: '2', id: 'docker', label: `Linux ${label}（Docker 容器内打包，原生依赖为 Linux 二进制）` });
+    } else {
+      channelOptions.push({ key: '1', id: 'linux', label: `Linux ${label}（本机直打，原生依赖为本机 Linux 二进制）` });
+      channelOptions.push({ key: '2', id: 'docker', label: `Linux ${label}（Docker 容器内打包，可指定发行版）` });
+    }
+    channel = await pick(channelOptions, '请选择平台通道');
+
+    // 4. Linux 容器通道：选择 OS 变体
+    if (channel.id === 'docker') {
+      osArg = (
+        await pick(
+          OS_OPTIONS.map((o, i) => ({ key: String(i + 1), id: o, label: o })),
+          '请选择目标 Linux 发行版',
+          '1'
+        )
+      ).id;
+    }
+    cmdArgs = buildCommand(type.id, variant.id, channel.id, osArg);
+    const osLabel = osArg ? ` / ${osArg}` : '';
+    channelLabel =
+      channel.id === 'docker' ? 'Linux 容器' : channel.id === 'all' ? '全部平台' : channel.id === 'win' ? 'Windows' : 'Linux';
+    if (osLabel) channelLabel += osLabel;
   }
 
   // 5. 汇总确认
-  const cmdArgs = buildCommand(type.id, variant.id, channel.id, osArg);
-  const osLabel = osArg ? ` / ${osArg}` : '';
-  const channelLabel =
-    channel.id === 'docker' ? 'Linux 容器' : channel.id === 'all' ? '全部平台' : channel.id === 'win' ? 'Windows' : 'Linux';
-
   console.log('');
   log('============================================');
   log(' 打包配置确认');
   log('============================================');
   log(`  类型   : ${typeLabel}`);
   log(`  variant: ${variant.label}`);
-  log(`  平台   : ${channelLabel}${osLabel}`);
+  log(`  平台   : ${channelLabel}`);
   log(`  命令   : node ${cmdArgs.join(' ')}`);
   log('============================================');
   console.log('');

@@ -79,11 +79,19 @@ pnpm start
 
 认证：使用 `INITIAL_ADMIN_PASSWORD` 环境变量设置管理员密码。
 
+## 日志
+
+零依赖 JSON 单行日志（ADR-0055 §1 对齐）：stdout + 文件落盘 `data/logs/config-service/app-YYYY-MM-DD.log`，按天轮转，请求级 `X-Request-Id` 透传。
+
+| 环境变量 | 默认值 | 说明 |
+|---------|--------|------|
+| `LOG_DIR` | `data/logs` | 日志根目录（相对路径基于包根解析） |
+| `LOG_RETENTION_DAYS` | `180` | 日志保留天数（过期自动清理） |
+
 ## 注意事项
 
 - **非 NestJS 服务** — 不使用 DI、Controller、Guard 等概念
 - **内存会话** — 服务器重启后会话丢失
-- **无日志轮转** — 使用 `console.log` 输出
 - **Cache-Control: no-store** — 所有静态文件，生产环境需优化
 
 ## 许可证

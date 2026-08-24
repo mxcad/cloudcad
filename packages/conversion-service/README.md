@@ -89,6 +89,8 @@ pnpm start
 | `QUEUE_DRIVER` | `local` | 任务队列后端：`local` / `redis` |
 | `REDIS_URL` | `redis://127.0.0.1:6379/0` | Redis 地址（`QUEUE_DRIVER=redis` 时使用） |
 | `WORKER_POOL_AUTO_SCALE` | `true` | 工作池按积压自动扩容 |
+| `LOG_DIR` | `data/logs` | 日志根目录（相对路径基于包根解析，日志落盘 `data/logs/conversion-service/app-YYYY-MM-DD.log`） |
+| `LOG_RETENTION_DAYS` | `180` | 日志保留天数（按天轮转，过期自动清理） |
 
 ## 许可证
 

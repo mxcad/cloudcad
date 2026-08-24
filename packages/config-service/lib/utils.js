@@ -3,10 +3,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-function log(level, message) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
-}
+// 统一 JSON 日志（零依赖），实现见 ./logger
+const { log, resolveRequestId, runWithRequest } = require('./logger');
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -98,6 +96,8 @@ function generateToken() {
 
 module.exports = {
   log,
+  resolveRequestId,
+  runWithRequest,
   parseBody,
   parseMultipart,
   sendJson,

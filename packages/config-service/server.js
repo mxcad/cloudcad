@@ -10,7 +10,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const { log, sendJson } = require('./lib/utils');
+const { log, resolveRequestId, runWithRequest, sendJson } = require('./lib/utils');
 const { PUBLIC_DIR, FRONTEND_DIST_DIR, PORT } = require('./lib/constants');
 
 const routes = [
@@ -23,7 +23,7 @@ const routes = [
   require('./routes/service'),
 ];
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
   const method = req.method;
@@ -34,7 +34,11 @@ const server = http.createServer(async (req, res) => {
     'Access-Control-Allow-Methods',
     'GET, POST, PUT, DELETE, OPTIONS'
   );
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Request-Id'
+  );
+  res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
 
   if (method === 'OPTIONS') {
     res.writeHead(204);
@@ -119,6 +123,22 @@ const server = http.createServer(async (req, res) => {
       'Cache-Control': 'no-store',
     });
     res.end(content);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  // X-Request-Id 透传（ticket #308/#309）：入站缺失/非法时自生成，并回传响应头
+  const requestId = resolveRequestId(req, res);
+  return runWithRequest(requestId, () => {
+    // 轻量访问日志（排除健康检查与 OPTIONS 预检）
+    if (req.method !== 'OPTIONS' && req.url.split('?')[0] !== '/health') {
+      const pathname = req.url.split('?')[0];
+      const start = Date.now();
+      res.on('finish', () => {
+        log('info', `[http] ${req.method} ${pathname} ${res.statusCode} ${Date.now() - start}ms`);
+      });
+    }
+    return handleRequest(req, res);
   });
 });
 

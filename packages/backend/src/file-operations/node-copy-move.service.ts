@@ -91,6 +91,16 @@ export class NodeCopyMoveService {
             '不能将节点移动到自身'
         );
       }
+      // 环检测：文件夹不可移入自身子树（否则祖先链遍历死循环）
+      if (
+        node.nodeType === NodeType.FOLDER &&
+        (await this.treeWalker.isDescendantOf(targetParentId, nodeId))
+      ) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.file.cannot_move_to_descendant') ??
+            '不能将文件夹移动到其自身内部'
+        );
+      }
       if (node.parentId === targetParentId) {
         return node;
       }
@@ -127,36 +137,46 @@ export class NodeCopyMoveService {
         );
       }
 
-      const movedNode = await this.prisma.fileSystemNode.update({
-        where: { id: nodeId },
-        data: {
-          parentId: targetParentId,
-          projectId: newProjectId,
-          name: uniqueName,
-        },
-        include: {
-          owner: { select: { id: true, username: true, nickname: true } },
-        },
+      // 主节点更新与子树 projectId 级联在同一事务内完成，
+      // 避免双写中途失败留下"主节点已迁移、子树归属陈旧"的中间态
+      const movedNode = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.fileSystemNode.update({
+          where: { id: nodeId },
+          data: {
+            parentId: targetParentId,
+            projectId: newProjectId,
+            name: uniqueName,
+          },
+          include: {
+            owner: { select: { id: true, username: true, nickname: true } },
+          },
+        });
+
+        // 跨项目移动后级联更新子树 projectId（冗余字段保持与根一致，
+        // 避免 trash 恢复等直读 projectId 字段的路径取到陈旧值；查询路径由 TreeWalker 兜底）
+        if (sourceProjectId !== newProjectId) {
+          const subtreeIds = await this.treeWalker.getSubtreeIds(nodeId, {
+            includeRoot: true,
+            includeDeleted: false,
+          });
+          if (subtreeIds.length > 0) {
+            await tx.fileSystemNode.updateMany({
+              where: { id: { in: subtreeIds } },
+              data: { projectId: newProjectId },
+            });
+          }
+        }
+        return updated;
       });
 
-      // 跨项目移动后级联更新子树 projectId（冗余字段保持与根一致，
-      // 避免 trash 恢复等直读 projectId 字段的路径取到陈旧值；查询路径由 TreeWalker 兜底）
-      if (sourceProjectId !== newProjectId) {
-        const subtreeIds = await this.treeWalker.getSubtreeIds(nodeId, {
-          includeRoot: true,
-          includeDeleted: false,
-        });
-        if (subtreeIds.length > 0) {
-          await this.prisma.fileSystemNode.updateMany({
-            where: { id: { in: subtreeIds } },
-            data: { projectId: newProjectId },
-          });
-        }
-      }
-
       if (node.ownerId) {
-        await this.nodeMutationGuard.invalidateQuotaAfterMutation(
-          node.ownerId,
+        await this.invalidateQuotaCaches(
+          [
+            userId,
+            node.ownerId,
+            await this.resolveRootOwnerId(newProjectId),
+            await this.resolveRootOwnerId(sourceProjectId),
+          ],
           node,
           newProjectId
         );
@@ -253,6 +273,16 @@ export class NodeCopyMoveService {
             '不能将节点拷贝到自身'
         );
       }
+      // 环检测：文件夹不可复制进自身子树（副本会包含目标祖先，形成自嵌套）
+      if (
+        node.nodeType === NodeType.FOLDER &&
+        (await this.treeWalker.isDescendantOf(targetParentId, nodeId))
+      ) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.file.cannot_copy_to_descendant') ??
+            '不能将文件夹复制到其自身内部'
+        );
+      }
 
       const uniqueName = await this.nodeNameService.generateUniqueName(
         targetParentId,
@@ -281,20 +311,23 @@ export class NodeCopyMoveService {
         );
       }
 
+      // 副本 ownerId = 当前操作用户（匿名内部调用回退源 owner）；
+      // 修复跨根副本沿用源 owner 导致的归属语义错位
+      const ownerIdForCopy = userId ?? node.ownerId;
       const copiedNode = await this.copyNodeRecursive(
         nodeId,
         targetParentId,
         uniqueName,
-        node.ownerId
+        ownerIdForCopy,
+        projectId
       );
 
-      if (node.ownerId) {
-        await this.nodeMutationGuard.invalidateQuotaAfterMutation(
-          node.ownerId,
-          node,
-          projectId
-        );
-      }
+      // 配额缓存失效对象修正：复制只改变目标归属的用量 → 操作者 + 目标根 owner
+      await this.invalidateQuotaCaches(
+        [userId, await this.resolveRootOwnerId(projectId)],
+        node,
+        projectId
+      );
 
       this.logger.log(`节点拷贝成功: ${nodeId} -> ${copiedNode.id}`);
       // 复制审计（NODE_COPY）：resourceId 用新节点（归属目标项目）；无操作者（匿名）不记

@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable } from '@nestjs/common';
-import { NodeType, Prisma } from '@cloudcad/db';
+import { FileStatus, NodeType, Prisma } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
 
 export interface SubtreeFileInfo {
@@ -15,6 +15,22 @@ export interface SubtreeFileInfo {
   path: string | null;
   fileHash: string | null;
 }
+
+/** 子树节点行（getSubtreeRows 返回，复制计划等批量场景用） */
+export type SubtreeRowInfo = {
+  id: string;
+  parentId: string | null;
+  name: string;
+  originalName: string | null;
+  nodeType: NodeType;
+  path: string | null;
+  size: number | null;
+  mimeType: string | null;
+  extension: string | null;
+  fileStatus: FileStatus | null;
+  fileHash: string | null;
+  description: string | null;
+};
 
 export interface GetSubtreeIdsOptions {
   includeRoot?: boolean;
@@ -113,11 +129,11 @@ export class TreeWalker {
     const { includeRoot = false, includeDeleted = true } = options;
     const result = await this.prisma.$queryRaw<{ id: string }[]>`
       WITH RECURSIVE tree AS (
-        SELECT id, "deletedAt" FROM file_system_nodes WHERE id = ${rootId}
+        SELECT id, "deletedAt", 0 AS depth FROM file_system_nodes WHERE id = ${rootId}
         UNION ALL
-        SELECT n.id, n."deletedAt" FROM file_system_nodes n
+        SELECT n.id, n."deletedAt", t.depth + 1 FROM file_system_nodes n
         INNER JOIN tree t ON n."parentId" = t.id
-        WHERE ${includeDeleted} OR n."deletedAt" IS NULL
+        WHERE t.depth < 50 AND (${includeDeleted} OR n."deletedAt" IS NULL)
       )
       SELECT id FROM tree
       WHERE ${includeRoot} OR id != ${rootId}
@@ -129,10 +145,11 @@ export class TreeWalker {
   async getSubtreeFiles(rootId: string): Promise<SubtreeFileInfo[]> {
     const result = await this.prisma.$queryRaw<SubtreeFileInfo[]>`
       WITH RECURSIVE tree AS (
-        SELECT id FROM file_system_nodes WHERE id = ${rootId}
+        SELECT id, 0 AS depth FROM file_system_nodes WHERE id = ${rootId}
         UNION ALL
-        SELECT n.id FROM file_system_nodes n
+        SELECT n.id, t.depth + 1 FROM file_system_nodes n
         INNER JOIN tree t ON n."parentId" = t.id
+        WHERE t.depth < 50
       )
       SELECT n.id, n.path, n."fileHash"
       FROM file_system_nodes n
@@ -146,16 +163,77 @@ export class TreeWalker {
   async getSubtreeFolderIds(rootId: string): Promise<string[]> {
     const result = await this.prisma.$queryRaw<{ id: string }[]>`
       WITH RECURSIVE tree AS (
-        SELECT id FROM file_system_nodes WHERE id = ${rootId}
+        SELECT id, 0 AS depth FROM file_system_nodes WHERE id = ${rootId}
         UNION ALL
-        SELECT n.id FROM file_system_nodes n
+        SELECT n.id, t.depth + 1 FROM file_system_nodes n
         INNER JOIN tree t ON n."parentId" = t.id
+        WHERE t.depth < 50
       )
       SELECT n.id FROM file_system_nodes n
       INNER JOIN tree t ON n.id = t.id
       WHERE n."nodeType" = ${NodeType.FOLDER} AND n.id != ${rootId}
     `;
     return result.map((row) => row.id);
+  }
+
+  /**
+   * 判断 candidateDescendantId 是否位于 ancestorId 的子树中
+   * （即把前者移动/复制到后者下方会形成父子环）。
+   * 沿 candidate 的祖先链上溯查找 ancestor，深度保护 depth < 50。
+   */
+  async isDescendantOf(
+    candidateDescendantId: string,
+    ancestorId: string
+  ): Promise<boolean> {
+    const result = await this.prisma.$queryRaw<{ id: string }[]>`
+      WITH RECURSIVE ancestors AS (
+        SELECT id, "parentId", 0 AS depth FROM file_system_nodes WHERE id = ${candidateDescendantId}
+        UNION ALL
+        SELECT n.id, n."parentId", a.depth + 1
+        FROM file_system_nodes n
+        INNER JOIN ancestors a ON n.id = a."parentId"
+        WHERE a.depth < 50
+      )
+      SELECT id FROM ancestors WHERE id = ${ancestorId} LIMIT 1
+    `;
+    return result.length > 0;
+  }
+
+  /**
+   * 返回 rootId 子树的全部节点行（不含 rootId 自身，排除已删除），
+   * 供复制计划等批量场景使用。深度保护 depth < 50（对齐 getSubtreeFileIds 先例）。
+   */
+  async getSubtreeRows(rootId: string): Promise<SubtreeRowInfo[]> {
+    return this.prisma.$queryRaw<
+      {
+        id: string;
+        parentId: string | null;
+        name: string;
+        originalName: string | null;
+        nodeType: NodeType;
+        path: string | null;
+        size: number | null;
+        mimeType: string | null;
+        extension: string | null;
+        fileStatus: FileStatus | null;
+        fileHash: string | null;
+        description: string | null;
+      }[]
+    >`
+      WITH RECURSIVE tree AS (
+        SELECT id, 0 AS depth FROM file_system_nodes WHERE id = ${rootId}
+        UNION ALL
+        SELECT n.id, t.depth + 1 FROM file_system_nodes n
+        INNER JOIN tree t ON n."parentId" = t.id
+        WHERE t.depth < 50
+      )
+      SELECT n.id, n."parentId", n.name, n."originalName", n."nodeType", n.path,
+             n.size, n."mimeType", n.extension, n."fileStatus"::text AS "fileStatus",
+             n."fileHash", n.description
+      FROM file_system_nodes n
+      INNER JOIN tree t ON n.id = t.id
+      WHERE n."deletedAt" IS NULL AND n.id != ${rootId}
+    `;
   }
 
   /**

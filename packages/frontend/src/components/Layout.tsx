@@ -49,6 +49,7 @@ import {
   User,
   DollarSign,
   ShieldBan,
+  ShieldAlert,
   Home,
 } from 'lucide-react';
 import { Menu } from './ui/Menu';
@@ -324,6 +325,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         to: '/admin/ip-whitelist',
         icon: ShieldCheck,
         label: t('管理员 IP 白名单'),
+        visible: hasPermission(SystemPermission.SYSTEM_IP_WHITELIST_MANAGE),
+      },
+      {
+        to: '/admin/security-attempts',
+        icon: ShieldAlert,
+        label: t('高危访问尝试'),
         visible: hasPermission(SystemPermission.SYSTEM_IP_WHITELIST_MANAGE),
       },
       {

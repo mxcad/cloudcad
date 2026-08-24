@@ -9,11 +9,14 @@ import * as bcrypt from 'bcryptjs';
 import { I18nContext } from 'nestjs-i18n';
 import type { IUserRepository, UserRecord } from '@cloudcad/contracts';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
+import type { SecurityAttemptReason } from '@cloudcad/db';
 import type { LoginDto, AuthResponseDto } from '../../dto/auth.dto';
 import type { SessionRequest } from '../../interfaces/jwt-payload.interface';
 import { AuditLogService } from '../../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../../common/enums/audit.enum';
 import { IpWhitelistService } from '../../../ip-whitelist/ip-whitelist.service';
+import { IpBlacklistService } from '../../../ip-blacklist/ip-blacklist.service';
+import { SecurityAccessAttemptService } from '../../../security/security-access-attempt.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 
@@ -40,7 +43,9 @@ export class AdminAuthService {
     private readonly authTokenService: AuthTokenService,
     private readonly accountRateLimitService: AccountRateLimitService,
     private readonly auditLogService: AuditLogService,
-    private readonly ipWhitelistService: IpWhitelistService
+    private readonly ipWhitelistService: IpWhitelistService,
+    private readonly ipBlacklistService: IpBlacklistService,
+    private readonly securityAccessAttemptService: SecurityAccessAttemptService
   ) {}
 
   async login(
@@ -49,6 +54,24 @@ export class AdminAuthService {
     clientIp: string
   ): Promise<AuthResponseDto> {
     const { account, password } = loginDto;
+
+    // 0. IP 黑名单拦截（比白名单更前置：被拉黑的 IP 直接拒绝并记录，即使尚未在白名单）
+    const blocked = await this.ipBlacklistService.isBlocked(clientIp);
+    if (blocked) {
+      this.logger.warn(
+        `管理员登录拒绝 - IP 在黑名单: ${account} (IP: ${clientIp})`
+      );
+      await this.recordSecurityAttempt(
+        account,
+        clientIp,
+        req,
+        'blacklisted'
+      );
+      throw new ForbiddenException(
+        I18nContext.current()?.t('error.admin_auth.ip_blocked') ??
+          '当前 IP 已被禁止登录'
+      );
+    }
 
     // 1. IP 白名单校验（最前置：白名单外不消耗任何账号信息与限流计数）
     const allowed = await this.ipWhitelistService.isAllowed(clientIp);
@@ -194,12 +217,13 @@ export class AdminAuthService {
   }
 
   /**
-   * 管理员入口登录失败审计（含失败原因，供安全回溯）。
+   * 管理员入口登录失败：统一留痕。
    *
-   * 注意：AuditLog.userId 为必填**外键**，必须指向真实用户。
-   * 认证前（IP 拦截、账号不存在）拿不到 userId，无法写审计——此时跳过
-   * （登录失败已由本服务 WARN 日志留痕），避免以 'unknown' 占位导致外键 ERROR 噪音。
-   * 已查到用户（账号不可用/非管理员/密码错误）则传入真实 userId 写审计。
+   * 双通道：
+   * 1. SecurityAccessAttempt（独立表，无 userId 外键）——认证前（IP 拦截/账号不存在）
+   *    也能写入，用于安全回溯 + 页面聚合展示 + 一键拉白拉黑（本需求核心）；
+   * 2. AuditLog（userId 强外键）——仅当已查到真实 userId 时写入，避免 'unknown'
+   *    占位导致 audit_logs_userId_fkey 冲突（ADMIN_LOGIN 失败审计）。
    */
   private async auditAdminLoginFailure(
     account: string,
@@ -208,7 +232,10 @@ export class AdminAuthService {
     reason: string,
     userId?: string
   ): Promise<void> {
-    if (!userId) return; // 未认证成功，无合法外键用户，跳过（避免 audit_logs_userId_fkey 冲突）
+    await this.recordSecurityAttempt(account, clientIp, req, reason);
+
+    // 未认证成功（IP 拦截/账号不存在）无合法 userId，跳过 AuditLog（已由上述通道留痕）
+    if (!userId) return;
     try {
       await this.auditLogService.log(
         AuditAction.ADMIN_LOGIN,
@@ -227,5 +254,25 @@ export class AdminAuthService {
     } catch {
       // 审计写库失败不影响登录拒绝流程
     }
+  }
+
+  /**
+   * 记录一条高危访问尝试（写 security_access_attempts，独立于 AuditLog，
+   * 不依赖 userId 外键）。reason 由内部调用方传入，均为已知枚举值。
+   * 写库失败由 SecurityAccessAttemptService 内部捕获，不抛出。
+   */
+  private async recordSecurityAttempt(
+    account: string,
+    clientIp: string,
+    req: AdminLoginRequest | undefined,
+    reason: string
+  ): Promise<void> {
+    await this.securityAccessAttemptService.record({
+      ip: clientIp,
+      endpoint: '/api/v1/admin/auth/login',
+      reason: reason as SecurityAttemptReason,
+      account,
+      userAgent: req?.headers?.['user-agent'] as string | undefined,
+    });
   }
 }

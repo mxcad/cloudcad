@@ -379,6 +379,36 @@ model IpWhitelistEntry {
   @@map("ip_whitelist_entries")
 }
 
+/// 高危接口访问尝试记录（如管理员登录被拒）：认证前无合法 userId，故不关联 User，
+/// 独立存储供安全回溯 / 页面聚合展示 / 一键拉白拉黑。写库失败不阻塞登录流程。
+model SecurityAccessAttempt {
+  id         String                 @id @default(cuid())
+  /// 归一化后的客户端 IP（normalizeStoredIp 结果）
+  ip         String
+  /// 被访问的高危接口（如 /api/v1/admin/auth/login）
+  endpoint   String
+  /// 拒绝原因（ip_not_allowed / user_not_found / account_unavailable / not_admin / bad_password / blacklisted）
+  reason     SecurityAttemptReason
+  /// 尝试使用的账号（可能为扫描器瞎填，可为空）
+  account    String?
+  userAgent  String?
+  createdAt  DateTime               @default(now())
+
+  @@index([ip])
+  @@index([createdAt])
+  @@index([endpoint])
+  @@map("security_access_attempts")
+}
+
+enum SecurityAttemptReason {
+  ip_not_allowed
+  user_not_found
+  account_unavailable
+  not_admin
+  bad_password
+  blacklisted
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE

@@ -28,6 +28,8 @@ import { AdminAuthController } from './admin-auth.controller';
 import { AuthFacadeService } from './auth-facade.service';
 import { AdminAuthService } from './impl/services/admin-auth.service';
 import { IpWhitelistModule } from '../ip-whitelist/ip-whitelist.module';
+import { IpBlacklistModule } from '../ip-blacklist/ip-blacklist.module';
+import { SecurityAccessAttemptModule } from '../security/security-access-attempt.module';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { InitializationService } from './services/initialization.service';
 import { AccountRateLimitService } from './services/account-rate-limit.service';
@@ -110,6 +112,8 @@ export class AuthModule {
         PermissionModule,
         DeviceAuthModule,
         IpWhitelistModule,
+        IpBlacklistModule,
+        SecurityAccessAttemptModule,
         JwtModule.registerAsync({
           imports: [ConfigModule],
           useFactory: (configService: ConfigService<AppConfig>) => ({

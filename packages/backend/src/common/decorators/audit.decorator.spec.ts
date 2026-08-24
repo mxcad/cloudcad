@@ -99,15 +99,10 @@ describe("@Audit decorator", () => {
   });
 
   describe("默认提取器（result.user?.id）", () => {
-    it("result 无 user 时 userId 回退为 'unknown'", async () => {
+    it("result 无 user 时（拿不到合法 userId）跳过审计，避免 'unknown' 占位导致外键 ERROR", async () => {
       await service.loginWithoutUser();
 
-      expect(mockAudit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resourceId: undefined,
-          userId: "unknown",
-        }),
-      );
+      expect(mockAudit).not.toHaveBeenCalled();
     });
   });
 
@@ -135,18 +130,11 @@ describe("@Audit decorator", () => {
   });
 
   describe("undefined result 容错", () => {
-    it("原方法返回 undefined 时不抛错，userId 回退 'unknown'", async () => {
+    it("原方法返回 undefined 时不抛错，因拿不到 userId 跳过审计", async () => {
       const result = await service.returnsUndefined();
 
       expect(result).toBeUndefined();
-      expect(mockAudit).toHaveBeenCalledTimes(1);
-      expect(mockAudit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resourceId: undefined,
-          userId: "unknown",
-          success: true,
-        }),
-      );
+      expect(mockAudit).not.toHaveBeenCalled();
     });
   });
 

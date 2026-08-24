@@ -1152,6 +1152,28 @@ function getUpgradeIncludeList(platform, variant = 'oss') {
 }
 
 /**
+ * 在本地构建前端（纯静态，三端通用；移动端 dist 打包时合并进 frontend/dist/<mobileAccessPath>）
+ * 升级包/部署包均需先构建前端，保证产物为最新源码。
+ */
+function buildFrontendLocally() {
+  log('构建前端 (本地)...');
+  try {
+    execSync('pnpm build', {
+      cwd: path.join(PROJECT_ROOT, 'packages/frontend'),
+      stdio: 'inherit',
+    });
+    execSync('pnpm build', {
+      cwd: path.join(PROJECT_ROOT, 'packages/frontend_mobile'),
+      stdio: 'inherit',
+    });
+    log('✓ 前端构建完成');
+  } catch (err) {
+    error(`前端构建失败: ${err.message.split('\n')[0]}`);
+    process.exit(1);
+  }
+}
+
+/**
  * 升级包打包（路线 B：不带 store，只推业务产物全集）
  * - 固定业务产物全集：backend/db/contracts/frontend dist + prisma migrations +
  *   runtime/scripts + ecosystem + 根启动脚本 + pnpm-lock.yaml
@@ -1170,38 +1192,18 @@ async function packUpgrade(platform, variant = 'oss') {
   log(`Variant: ${variant}`);
   log('');
 
-  // 0. 检查构建产物
-  // 后端链路（backend/db/contracts，private 含 impl-mx）缺失时自动构建
-  // （db:generate + backend build）：容器内为 Linux 原生 prisma engine，
-  // 本机为当前平台原生 —— 与打包环境平台一致
-  const backendDirs = [
-    'packages/backend/dist',
-    'packages/db/dist',
-    'packages/contracts/dist',
-    ...(variant === 'private' ? ['packages/impl-mx/dist'] : []),
-  ];
-  const missing = backendDirs.filter((dir) => {
-    const p = path.join(PROJECT_ROOT, dir);
-    return !fs.existsSync(p) || fs.readdirSync(p).length === 0;
-  });
-  if (missing.length > 0) {
-    log(`构建产物缺失（${missing.join('、')}），自动构建后端链路（db:generate + backend build）...`);
-    if (!(await buildProject(variant))) {
-      process.exit(1);
-    }
-  }
-  // 前端为纯静态产物，需外部预构建（Dockerfile 已 COPY 入容器 / 本地构建）
-  const frontendDist = path.join(PROJECT_ROOT, 'packages', 'frontend', 'dist');
-  if (!fs.existsSync(frontendDist) || fs.readdirSync(frontendDist).length === 0) {
-    error('packages/frontend/dist 不存在（前端需本地预构建），请先运行前端构建或全量部署包打包');
+  // 0. 构建产物（始终重新构建，保证升级包是最新源码产物）
+  // 后端链路（backend/db/contracts，private 含 impl-mx）：始终强制重build
+  // （db:generate + backend build），确保改动的 TS 源码编译进 dist，而非复用旧产物。
+  // 注意：db:generate 按打包机平台生成 prisma engine，但升级包只复制 dist 等 JS 产物、
+  // 不带 engine 二进制（engine 在目标机 node_modules，线上 engine 不动），因此跨平台直打安全。
+  log('构建后端链路（db:generate + backend build）...');
+  if (!(await buildProject(variant))) {
     process.exit(1);
   }
-  // 移动端构建产物：与部署包一致合并进 frontend/dist/<mobileAccessPath>
-  const mobileDist = path.join(PROJECT_ROOT, 'packages', 'frontend_mobile', 'dist');
-  if (!fs.existsSync(mobileDist) || fs.readdirSync(mobileDist).length === 0) {
-    error('packages/frontend_mobile/dist 不存在（移动端需本地预构建），请先构建移动端或全量部署包打包');
-    process.exit(1);
-  }
+
+  // 前端为纯静态产物：始终强制重build（PC + 移动端），保证最新源码
+  buildFrontendLocally();
 
   // 路线 B：升级包不带 store，复用目标机已有部署包 store 离线补装依赖
   // （首次部署必须用部署包打底；依赖变更由目标机 shouldReinstallDependencies 判定）
@@ -1432,10 +1434,19 @@ async function main() {
       }
       const hostIsWindows = os.platform() === 'win32';
       const hostIsLinux = os.platform() === 'linux';
-      if ((platform === 'win' && !hostIsWindows) || (platform === 'linux' && !hostIsLinux)) {
+      // 平台强校验：升级包本质是"构建产物增量覆盖包"，只复制 dist 等 JS 产物，
+      // 不含 engine 二进制（engine 在目标机 node_modules，线上 engine 不动）。
+      // 因此在目标平台直打升级包是安全的（仅前端/纯 JS 增量的常见升级场景）。
+      // 若要强制跨平台直打（例如 Windows 打包机直出 Linux 升级包），设置
+      // SKIP_PLATFORM_GUARD=1 可放行；deploy 全量包仍受本校验保护（store 为平台二进制）。
+      const skipPlatformGuard = process.env.SKIP_PLATFORM_GUARD === '1';
+      if (
+        !skipPlatformGuard &&
+        ((platform === 'win' && !hostIsWindows) || (platform === 'linux' && !hostIsLinux))
+      ) {
         error('store 原生依赖与打包环境平台强相关，升级包必须在目标平台环境打包');
         if (platform === 'linux') {
-          error('请使用 Linux 容器通道: pnpm pack:linux-upgrade');
+          error('请使用 Linux 容器通道: pnpm pack:linux-upgrade，或设置 SKIP_PLATFORM_GUARD=1 在本机直打（仅纯 JS/dist 增量升级）');
         } else {
           error('Linux 环境无法产出 Windows 升级包，请使用 Windows 打包机');
         }

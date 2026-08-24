@@ -45,5 +45,5 @@ packages/config-service/
 
 - **非 NestJS 服务** — 不使用 DI、Controller、Guard 等 NestJS 概念
 - **服务器重启后会话丢失** — 内存会话未持久化
-- **无日志轮转** — 使用 `console.log` 输出
+- **日志** — 零依赖 JSON 单行（`lib/logger.js`）：stdout + 落盘 `data/logs/config-service/app-YYYY-MM-DD.log`，按天轮转保留 180 天（`LOG_DIR`/`LOG_RETENTION_DAYS` 可配），请求级 `X-Request-Id` 透传
 - **所有静态文件 Cache-Control: no-store** — 开发便利，生产环境需优化

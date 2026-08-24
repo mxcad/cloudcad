@@ -1000,6 +1000,31 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(`${baseURL}/api/v1/admin/auth/login`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getAdminAuthControllerLogin200Response(), { status: 200 }],
+      [undefined, { status: 401 }],
+      [undefined, { status: 403 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`post /api/v1/admin/auth/login`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(
     `${baseURL}/api/v1/admin/billing/manual-complete`,
     async ({ request }) => {
@@ -1057,6 +1082,68 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(
+    `${baseURL}/api/v1/admin/security-attempts/blacklist`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [undefined, { status: 200 }],
+        [undefined, { status: 400 }],
+        [undefined, { status: 409 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/security-attempts/blacklist`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/admin/security-attempts/whitelist`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [undefined, { status: 200 }],
+        [undefined, { status: 400 }],
+        [undefined, { status: 409 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/security-attempts/whitelist`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(`${baseURL}/api/v1/admin/storage/cleanup`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -1880,6 +1967,57 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(`${baseURL}/api/v1/admin/ip-whitelist`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getIpWhitelistControllerList200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/admin/ip-whitelist`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/admin/security-attempts`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getSecurityAccessAttemptControllerList200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/admin/security-attempts`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/admin/stats`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -2672,6 +2810,31 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`post /api/v1/admin/ip-blacklist`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.post(`${baseURL}/api/v1/admin/ip-whitelist`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getIpWhitelistControllerCreate201Response(), { status: 201 }],
+      [undefined, { status: 400 }],
+      [undefined, { status: 409 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`post /api/v1/admin/ip-whitelist`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -6758,6 +6921,39 @@ export const handlers = [
     }
   ),
   http.delete(
+    `${baseURL}/api/v1/admin/ip-whitelist/:id`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (
+        shouldEchoRequestBody &&
+        ['post', 'put', 'patch'].includes('delete')
+      ) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [undefined, { status: 200 }],
+        [undefined, { status: 400 }],
+        [undefined, { status: 404 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`delete /api/v1/admin/ip-whitelist/:id`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.delete(
     `${baseURL}/api/v1/file-system/nodes/:nodeId`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -9413,6 +9609,49 @@ export function getAuthControllerUnbindPhone200Response() {
   return { success: true, message: '手机号解绑成功' };
 }
 
+export function getAdminAuthControllerLogin200Response() {
+  return {
+    accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    user: {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      email: 'user@example.com',
+      username: 'username',
+      nickname: '用户昵称',
+      avatar: 'https://example.com/avatar.jpg',
+      role: {
+        id: 'clxxxxxxx',
+        name: 'USER',
+        description: '普通用户，基础权限',
+        isSystem: true,
+        permissions: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            permission: faker.lorem.words(),
+          }));
+        })(),
+      },
+      status: 'ACTIVE',
+      phone: '13800138000',
+      phoneVerified: faker.datatype.boolean(),
+      wechatId: 'oXYZ123...',
+      provider: 'LOCAL',
+      hasPassword: true,
+      membershipTierLevel: faker.number.int(),
+      membershipExpiresAt: faker.lorem.words(),
+      membershipTier: 'VIP0',
+      isVip: faker.datatype.boolean(),
+    },
+    restored: faker.datatype.boolean(),
+  };
+}
+
 export function getUsersControllerCreate201Response() {
   return {
     id: faker.string.uuid(),
@@ -9885,37 +10124,39 @@ export function getDeviceAuthControllerPollForToken200Response() {
   };
 }
 
-export function getUploadTokenControllerCreateUploadToken200Response() {
+export function getIpWhitelistControllerList200Response() {
   return {
-    token: faker.lorem.words(),
-    path: faker.lorem.words(),
-    operation: faker.helpers.arrayElement(['upload']),
-    expiresAt: faker.date.anytime().toISOString(),
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        ip: '203.0.113.0/24',
+        source: 'manual',
+        reason: faker.lorem.words(),
+        createdBy: faker.lorem.words(),
+        createdAt: faker.date.anytime().toISOString(),
+        expiresAt: {},
+      }));
+    })(),
+    total: faker.number.int(),
+    page: faker.number.int(),
+    pageSize: faker.number.int(),
   };
 }
 
-export function getUserCleanupControllerGetStats200Response() {
+export function getIpWhitelistControllerCreate201Response() {
   return {
-    pendingCleanup: 15,
-    expiryDate: '2026-03-11T00:00:00.000Z',
-    delayDays: 30,
-  };
-}
-
-export function getUserCleanupControllerTriggerCleanup200Response() {
-  return {
-    message: '清理完成: 处理 0 个用户',
-    success: true,
-    processedUsers: faker.number.int(),
-    deletedMembers: faker.number.int(),
-    deletedProjects: faker.number.int(),
-    deletedAuditLogs: faker.number.int(),
-    deletedPaymentOrders: faker.number.int(),
-    deletedMemberships: faker.number.int(),
-    deletedFileShares: faker.number.int(),
-    deletedBatchJobs: faker.number.int(),
-    markedForStorageCleanup: faker.number.int(),
-    errors: [],
+    id: faker.string.uuid(),
+    ip: '203.0.113.0/24',
+    source: 'manual',
+    reason: faker.lorem.words(),
+    createdBy: faker.lorem.words(),
+    createdAt: faker.date.anytime().toISOString(),
+    expiresAt: {},
   };
 }
 
@@ -9952,6 +10193,66 @@ export function getIpBlacklistControllerCreate201Response() {
     createdBy: faker.lorem.words(),
     createdAt: faker.date.anytime().toISOString(),
     expiresAt: {},
+  };
+}
+
+export function getSecurityAccessAttemptControllerList200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        ip: '203.0.113.7',
+        firstSeen: faker.date.anytime().toISOString(),
+        lastSeen: faker.date.anytime().toISOString(),
+        count: faker.number.int(),
+        reasons: { ip_not_allowed: 3 },
+        account: {},
+        userAgent: {},
+        inWhitelist: faker.datatype.boolean(),
+        inBlacklist: faker.datatype.boolean(),
+      }));
+    })(),
+    total: faker.number.int(),
+    page: faker.number.int(),
+    pageSize: faker.number.int(),
+  };
+}
+
+export function getUploadTokenControllerCreateUploadToken200Response() {
+  return {
+    token: faker.lorem.words(),
+    path: faker.lorem.words(),
+    operation: faker.helpers.arrayElement(['upload']),
+    expiresAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getUserCleanupControllerGetStats200Response() {
+  return {
+    pendingCleanup: 15,
+    expiryDate: '2026-03-11T00:00:00.000Z',
+    delayDays: 30,
+  };
+}
+
+export function getUserCleanupControllerTriggerCleanup200Response() {
+  return {
+    message: '清理完成: 处理 0 个用户',
+    success: true,
+    processedUsers: faker.number.int(),
+    deletedMembers: faker.number.int(),
+    deletedProjects: faker.number.int(),
+    deletedAuditLogs: faker.number.int(),
+    deletedPaymentOrders: faker.number.int(),
+    deletedMemberships: faker.number.int(),
+    deletedFileShares: faker.number.int(),
+    deletedBatchJobs: faker.number.int(),
+    markedForStorageCleanup: faker.number.int(),
+    errors: [],
   };
 }
 
@@ -12202,6 +12503,7 @@ export function getPolicyConfigControllerCreatePolicy201Response() {
           'SYSTEM_CONFIG_READ',
           'SYSTEM_CONFIG_WRITE',
           'SYSTEM_IP_BLACKLIST_MANAGE',
+          'SYSTEM_IP_WHITELIST_MANAGE',
           'LIBRARY_DRAWING_MANAGE',
           'LIBRARY_BLOCK_MANAGE',
           'PROJECT_CREATE',
@@ -12259,6 +12561,7 @@ export function getPolicyConfigControllerGetAllPolicies200Response() {
             'SYSTEM_CONFIG_READ',
             'SYSTEM_CONFIG_WRITE',
             'SYSTEM_IP_BLACKLIST_MANAGE',
+            'SYSTEM_IP_WHITELIST_MANAGE',
             'LIBRARY_DRAWING_MANAGE',
             'LIBRARY_BLOCK_MANAGE',
             'PROJECT_CREATE',
@@ -12309,6 +12612,7 @@ export function getPolicyConfigControllerUpdatePolicy200Response() {
           'SYSTEM_CONFIG_READ',
           'SYSTEM_CONFIG_WRITE',
           'SYSTEM_IP_BLACKLIST_MANAGE',
+          'SYSTEM_IP_WHITELIST_MANAGE',
           'LIBRARY_DRAWING_MANAGE',
           'LIBRARY_BLOCK_MANAGE',
           'PROJECT_CREATE',
@@ -12358,6 +12662,7 @@ export function getPolicyConfigControllerGetPolicy200Response() {
           'SYSTEM_CONFIG_READ',
           'SYSTEM_CONFIG_WRITE',
           'SYSTEM_IP_BLACKLIST_MANAGE',
+          'SYSTEM_IP_WHITELIST_MANAGE',
           'LIBRARY_DRAWING_MANAGE',
           'LIBRARY_BLOCK_MANAGE',
           'PROJECT_CREATE',
@@ -12407,6 +12712,7 @@ export function getPolicyConfigControllerEnablePolicy200Response() {
           'SYSTEM_CONFIG_READ',
           'SYSTEM_CONFIG_WRITE',
           'SYSTEM_IP_BLACKLIST_MANAGE',
+          'SYSTEM_IP_WHITELIST_MANAGE',
           'LIBRARY_DRAWING_MANAGE',
           'LIBRARY_BLOCK_MANAGE',
           'PROJECT_CREATE',
@@ -12456,6 +12762,7 @@ export function getPolicyConfigControllerDisablePolicy200Response() {
           'SYSTEM_CONFIG_READ',
           'SYSTEM_CONFIG_WRITE',
           'SYSTEM_IP_BLACKLIST_MANAGE',
+          'SYSTEM_IP_WHITELIST_MANAGE',
           'LIBRARY_DRAWING_MANAGE',
           'LIBRARY_BLOCK_MANAGE',
           'PROJECT_CREATE',

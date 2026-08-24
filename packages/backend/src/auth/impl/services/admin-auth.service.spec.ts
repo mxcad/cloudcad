@@ -11,6 +11,8 @@ import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { AuditLogService } from '../../../audit/audit-log.service';
 import { IpWhitelistService } from '../../../ip-whitelist/ip-whitelist.service';
+import { IpBlacklistService } from '../../../ip-blacklist/ip-blacklist.service';
+import { SecurityAccessAttemptService } from '../../../security/security-access-attempt.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 
 beforeEach(() => {
@@ -38,6 +40,12 @@ describe('AdminAuthService（管理员专用登录）', () => {
   const mockIpWhitelistService = {
     isAllowed: jest.fn().mockResolvedValue(true),
   };
+  const mockIpBlacklistService = {
+    isBlocked: jest.fn().mockResolvedValue(false),
+  };
+  const mockSecurityAccessAttemptService = {
+    record: jest.fn().mockResolvedValue(undefined),
+  };
 
   let adminUser: Record<string, unknown>;
 
@@ -51,6 +59,8 @@ describe('AdminAuthService（管理员专用登录）', () => {
     mockAccountRateLimitService.checkLimit.mockResolvedValue(undefined);
     mockAccountRateLimitService.reset.mockResolvedValue(undefined);
     mockIpWhitelistService.isAllowed.mockResolvedValue(true);
+    mockIpBlacklistService.isBlocked.mockResolvedValue(false);
+    mockSecurityAccessAttemptService.record.mockResolvedValue(undefined);
 
     adminUser = {
       id: 'admin-1',
@@ -75,6 +85,11 @@ describe('AdminAuthService（管理员专用登录）', () => {
         { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: IpWhitelistService, useValue: mockIpWhitelistService },
+        { provide: IpBlacklistService, useValue: mockIpBlacklistService },
+        {
+          provide: SecurityAccessAttemptService,
+          useValue: mockSecurityAccessAttemptService,
+        },
       ],
     }).compile();
 
@@ -92,6 +107,54 @@ describe('AdminAuthService（管理员专用登录）', () => {
       expect(mockUserRepo.findLoginUserIncludingDeleted).not.toHaveBeenCalled();
       expect(mockAccountRateLimitService.checkLimit).not.toHaveBeenCalled();
     });
+
+    it('白名单拒绝时应记录高危访问尝试（写 SecurityAccessAttempt），且不写 audit_logs 占位', async () => {
+      mockIpWhitelistService.isAllowed.mockResolvedValue(false);
+      await expect(
+        service.login(dto, undefined, '203.0.113.7')
+      ).rejects.toThrow(ForbiddenException);
+
+      // 核心回归：认证前无合法 userId，必须记入独立安全尝试表
+      expect(mockSecurityAccessAttemptService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ip: '203.0.113.7',
+          endpoint: '/api/v1/admin/auth/login',
+          reason: 'ip_not_allowed',
+          account: 'admin',
+        })
+      );
+      // 未认证成功，不应以 'unknown' 占位写 audit_logs（避免 audit_logs_userId_fkey 外键噪音）
+      expect(mockAuditLogService.log).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('IP 黑名单拦截（前置）', () => {
+    it('被拉黑的 IP 直接 403 并记录黑名单原因，即使白名单已放行', async () => {
+      mockIpBlacklistService.isBlocked.mockResolvedValue(true);
+      mockIpWhitelistService.isAllowed.mockResolvedValue(true);
+      await expect(
+        service.login(dto, undefined, '203.0.113.9')
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockSecurityAccessAttemptService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ip: '203.0.113.9',
+          reason: 'blacklisted',
+          account: 'admin',
+        })
+      );
+      // 黑名单拦截发生在账号查询之前
+      expect(mockUserRepo.findLoginUserIncludingDeleted).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).not.toHaveBeenCalled();
+    });
+
+    it('IP 未被拉黑时不触发黑名单记录', async () => {
+      mockIpBlacklistService.isBlocked.mockResolvedValue(false);
+      mockIpWhitelistService.isAllowed.mockResolvedValue(true);
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(adminUser);
+      await service.login(dto, undefined, '127.0.0.1');
+      expect(mockSecurityAccessAttemptService.record).not.toHaveBeenCalled();
+    });
   });
 
   describe('ADMIN 角色校验', () => {
@@ -107,11 +170,16 @@ describe('AdminAuthService（管理员专用登录）', () => {
       expect(bcrypt.compare).not.toHaveBeenCalled();
     });
 
-    it('用户不存在同样返回统一 Unauthorized', async () => {
+    it('用户不存在同样返回统一 Unauthorized，并记录高危访问尝试（user_not_found）', async () => {
       mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(null);
       await expect(
         service.login(dto, undefined, '127.0.0.1')
       ).rejects.toThrow(UnauthorizedException);
+      expect(mockSecurityAccessAttemptService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'user_not_found' })
+      );
+      // 用户不存在同样无合法 userId，不应写 audit_logs 占位
+      expect(mockAuditLogService.log).not.toHaveBeenCalled();
     });
 
     it('账号不可用（非 ACTIVE/已删除）返回统一 Unauthorized', async () => {

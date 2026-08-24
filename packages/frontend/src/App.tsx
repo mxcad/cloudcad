@@ -104,6 +104,9 @@ const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
 const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
 const IpBlacklistPage = lazy(() => import('./pages/IpBlacklistPage'));
 const IpWhitelistPage = lazy(() => import('./pages/IpWhitelistPage'));
+const SecurityAccessAttemptPage = lazy(
+  () => import('./pages/SecurityAccessAttemptPage')
+);
 
 // ============================================================================
 // 路由保护组件
@@ -611,6 +614,20 @@ function AppContent() {
                       >
                         <Suspense fallback={<PageLoader />}>
                           <IpWhitelistPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 高危访问尝试 - 复用 SYSTEM_IP_WHITELIST_MANAGE 权限（IP 安全治理） */}
+                  <Route
+                    path="/admin/security-attempts"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_IP_WHITELIST_MANAGE}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <SecurityAccessAttemptPage />
                         </Suspense>
                       </PermissionRoute>
                     }

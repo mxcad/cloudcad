@@ -1,6 +1,6 @@
 const http = require('http');
 const { PORT, QUEUE_DRIVER, REDIS_URL } = require('./lib/constants');
-const { log, sendJson } = require('./lib/utils');
+const { log, resolveRequestId, runWithRequest, sendJson } = require('./lib/utils');
 const TaskStore = require('./services/task-store');
 const WorkerPool = require('./services/worker-pool');
 const CallbackEngine = require('./services/callback');
@@ -17,11 +17,7 @@ async function bootstrap() {
 
   const functionRoutes = require('./routes/conversions').create(workerPool, taskStore, callbackEngine);
 
-  const server = http.createServer(async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Conversion-Service-Secret');
-
+  async function handleRequest(req, res) {
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       return res.end();
@@ -57,6 +53,30 @@ async function bootstrap() {
       log(`[Error] ${err.message}`);
       sendJson(res, 500, { error: 'Internal server error', message: err.message });
     }
+  }
+
+  const server = http.createServer(async (req, res) => {
+    // X-Request-Id 透传（ticket #308/#309）：入站缺失/非法时自生成，并回传响应头
+    const requestId = resolveRequestId(req, res);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, X-Conversion-Service-Secret, X-Request-Id'
+    );
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
+
+    return runWithRequest(requestId, () => {
+      // 轻量访问日志（排除健康检查与 OPTIONS 预检）
+      if (req.method !== 'OPTIONS' && req.url.split('?')[0] !== '/health') {
+        const pathname = req.url.split('?')[0];
+        const start = Date.now();
+        res.on('finish', () => {
+          log(`[http] ${req.method} ${pathname} ${res.statusCode} ${Date.now() - start}ms`);
+        });
+      }
+      return handleRequest(req, res);
+    });
   });
 
   server.listen(PORT, () => {

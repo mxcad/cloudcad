@@ -1,9 +1,8 @@
 const crypto = require('crypto');
 const { JWT_SECRET } = require('./constants');
 
-function log(...args) {
-  console.log(`[${new Date().toISOString()}]`, ...args);
-}
+// 统一 JSON 日志（零依赖），实现见 ./logger
+const { log, resolveRequestId, runWithRequest } = require('./logger');
 
 function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data);
@@ -54,4 +53,4 @@ function verifyToken(token) {
   }
 }
 
-module.exports = { log, sendJson, parseBody, verifyToken };
+module.exports = { log, resolveRequestId, runWithRequest, sendJson, parseBody, verifyToken };

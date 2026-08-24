@@ -35,6 +35,7 @@ import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { IpBlacklistModule } from './ip-blacklist/ip-blacklist.module';
 import { IpBlacklistGuard } from './ip-blacklist/ip-blacklist.guard';
 import { IpWhitelistModule } from './ip-whitelist/ip-whitelist.module';
+import { SecurityAccessAttemptModule } from './security/security-access-attempt.module';
 import { SchedulerModule } from './common/schedulers/scheduler.module';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
@@ -190,6 +191,7 @@ const logRetentionDays =
     CommonModule,
     IpBlacklistModule,
     IpWhitelistModule,
+    SecurityAccessAttemptModule,
     UsersModule,
     RolesModule,
     FileSystemModule,

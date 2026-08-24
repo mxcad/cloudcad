@@ -1,7 +1,5 @@
-function log(...args) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}]`, ...args);
-}
+// 统一 JSON 日志（零依赖），实现见 ./logger
+const { log, resolveRequestId, runWithRequest } = require('./logger');
 
 function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data);
@@ -31,4 +29,4 @@ function generateId() {
   return `fw_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 8)}`;
 }
 
-module.exports = { log, sendJson, parseBody, generateId };
+module.exports = { log, resolveRequestId, runWithRequest, sendJson, parseBody, generateId };

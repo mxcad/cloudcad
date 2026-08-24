@@ -316,7 +316,7 @@ ${PRODUCT_NAME} Linux 部署包打包入口
   node scripts/pack-linux-deploy.js --os ubuntu22          打包 Ubuntu 22.04
   node scripts/pack-linux-deploy.js --os rocky9            打包 Rocky Linux 9
   node scripts/pack-linux-deploy.js --variant private      打包私有版本 (含 impl-mx)
-  node scripts/pack-linux-deploy.js --upgrade              打包增量升级包（复用镜像层 store 缓存，跳过运行时提取）
+  node scripts/pack-linux-deploy.js --upgrade              打包增量升级包（免 Docker 本机直打，仅业务产物不含 store/engine）
   node scripts/pack-linux-deploy.js --upgrade --os ubuntu22 --variant private
   node scripts/pack-linux-deploy.js --help                 显示帮助
   node scripts/pack-linux-deploy.js --npm-registry https://registry.npmmirror.com  自定义 npm registry
@@ -330,15 +330,17 @@ ${PRODUCT_NAME} Linux 部署包打包入口
   debian    - Debian 11 (glibc 2.31)
 
 流程说明：
-  0. 本地构建前端（三端通用静态文件）
-  1. 构建 Docker 打包镜像 (Dockerfile.linux-deploy)
-  2. 在容器内执行:
-     - 部署包: node scripts/extract-linux-runtime.js && node scripts/pack-offline.js --deploy --linux
-     - 升级包: node scripts/pack-offline.js --upgrade --linux（跳过运行时提取，复用镜像层 .pnpm-store-deploy）
-  3. 输出:
-     - 部署包: release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
-     - 升级包: release/cloudcad-upgrade-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
-     例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
+  --upgrade（免 Docker 本机直打）:
+    0. 本地构建前端（三端通用静态文件）
+    1. 本机执行 node scripts/pack-offline.js --upgrade --linux（构建后端 dist + 打包 tar.gz）
+    2. 升级包仅含业务产物（dist/migrations/scripts），不含生产依赖 store 与 engine 二进制
+    3. 输出: release/cloudcad-upgrade-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
+  --deploy（Docker 容器打包）:
+    0. 本地构建前端（三端通用静态文件）
+    1. 构建 Docker 打包镜像 (Dockerfile.linux-deploy)
+    2. 在容器内执行: node scripts/extract-linux-runtime.js && node scripts/pack-offline.js --deploy --linux
+    3. 输出: release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
+    例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
 
 验证部署包（独立脚本）：
   node scripts/verify-linux-deploy.js            验证最新包
@@ -572,19 +574,44 @@ async function main() {
   log(`版本: ${VERSION}`);
   log(`目标 OS: ${targetOs} (${OS_BASE_IMAGES[targetOs]})`);
   log(`Variant: ${variant}`);
-  log(`模式: ${mode === 'upgrade' ? 'upgrade（增量升级包，复用镜像层 store 缓存）' : 'deploy（全量部署包）'}`);
+  log(`模式: ${mode === 'upgrade' ? 'upgrade（增量升级包，免 Docker 本机直打，仅业务产物不含 store/engine）' : 'deploy（全量部署包，Docker 容器构建）'}`);
   log('');
+
+  // 升级包模式：免 Docker 本机直打。
+  // 升级包是"构建产物增量覆盖包"，只复制 dist 等 JS 产物、不含生产依赖 store 与
+  // engine 二进制（线上 engine 不动），因此无需 Docker 容器，也不受平台强校验限制。
+  // 直接委托本机 pack-offline.js --upgrade --linux 完成构建 + 打包。
+  // 注意：若本机为 Windows，后端 dist 重建出的 Prisma engine 为 Windows 二进制，
+  // 但升级包内容为纯 JS/dist 增量（engine 在目标机 node_modules），不影响线上 Linux。
+  if (mode === 'upgrade') {
+    log('升级包模式：跳过 Docker，本机直打...');
+    const upgradeArgs = [
+      'scripts/pack-offline.js',
+      '--upgrade',
+      '--linux',
+      '--os',
+      targetOs,
+      ...(variant === 'private' ? ['--variant', 'private'] : []),
+    ];
+    const env = { ...process.env, SKIP_PLATFORM_GUARD: '1' };
+    try {
+      await runCommand(`node ${upgradeArgs.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`, { env });
+      log('✓ 升级包打包完成（免 Docker 本机直打）');
+    } catch (err) {
+      error(`升级包打包失败: ${err.message}`);
+      process.exit(1);
+    }
+    return;
+  }
   
-  // 检查 Docker（未就绪则自动启动并等待）
+  // 部署包模式：检查 Docker（未就绪则自动启动并等待）
   if (!(await checkDocker())) {
     process.exit(1);
   }
   
-  // 确保二进制缓存存在（部署包模式需要；升级包模式不需要 runtime，跳过以加快速度）
-  if (mode === 'deploy') {
-    log('[0/2] 检查二进制缓存...');
-    ensureBinaryCache();
-  }
+  // 确保二进制缓存存在（部署包模式需要；升级包模式不需要 runtime，已在上方早退）
+  log('[0/2] 检查二进制缓存...');
+  ensureBinaryCache();
   
   // 确保输出目录存在
   ensureDir(OUTPUT_DIR);
