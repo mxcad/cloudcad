@@ -4,18 +4,18 @@
   "description": "CloudCAD monorepo",
   "private": true,
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "dependency-cruiser": "^16.10.4",
-    "effect": "^3.19.19",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
+    "dependency-cruiser": "^18.2.0",
+    "effect": "^3.22.1",
+    "eslint": "^10.9.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unused-imports": "^4.3.0",
-    "prettier": "^3.2.0",
-    "tsx": "^4.21.0",
-    "typescript": "~5.9.3"
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
+    "typescript": "~7.0.2"
   },
   "scripts": {
     "preinstall": "node -e \"try{require('./scripts/preinstall-runtime.js')}catch(e){console.log('[preinstall] 运行时检查跳过:', e.code || e.message)}\"",
