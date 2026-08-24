@@ -96,16 +96,17 @@ function getDirSize(dir) {
  * @returns {'yum' | 'apt-get' | null}
  */
 function detectPackageManager() {
+  // 用 shell 内建 command -v 探测，避免依赖 which 包（Rocky/Debian 精简容器未必装 which）
   try {
-    execSync('which yum', { stdio: 'pipe' });
+    execSync('command -v yum', { stdio: 'pipe' });
     return 'yum';
   } catch (e) { /* ignore */ }
-  
+
   try {
-    execSync('which apt-get', { stdio: 'pipe' });
+    execSync('command -v apt-get', { stdio: 'pipe' });
     return 'apt-get';
   } catch (e) { /* ignore */ }
-  
+
   return null;
 }
 
