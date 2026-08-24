@@ -53,7 +53,9 @@ RUN if command -v apt-get &> /dev/null; then \
       dnf install -y curl wget git gcc dnf-plugins-core && \
       dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %rhel)-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
       dnf -q module disable -y postgresql || true && \
-      sed -i 's/^enabled=0/enabled=1/' /etc/yum.repos.d/pgdg-redhat-all.repo && \
+      # 仅启用稳定的 pgdg15，切勿 sed 全量启用（会把 pgdg-common-testing 等测试 repo 也打开，
+      # 其镜像 404 导致元数据下载失败）
+      dnf -q config-manager --set-enabled pgdg15 && \
       dnf install -y postgresql15-server postgresql15 redis subversion && \
       dnf clean all; \
     elif command -v yum &> /dev/null; then \
