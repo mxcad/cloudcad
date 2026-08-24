@@ -49,8 +49,10 @@ RUN if command -v apt-get &> /dev/null; then \
     elif command -v dnf &> /dev/null; then \
       # Rocky/RHEL 8/9 \
       dnf install -y curl wget git gcc && \
-      # PostgreSQL 15 \
+      # PostgreSQL 15（PGDG repo 默认 enabled=0，需显式启用 pgdg15 否则找不到 postgresql15-*）
       dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %rhel)-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
+      dnf -q module disable -y postgresql || true && \
+      dnf -q config-manager --set-enabled pgdg15 && \
       dnf install -y postgresql15-server postgresql15 redis subversion && \
       dnf clean all; \
     elif command -v yum &> /dev/null; then \

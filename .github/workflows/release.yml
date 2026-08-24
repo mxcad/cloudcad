@@ -108,6 +108,18 @@ jobs:
               *.7z)  7z x -y "/tmp/dl/$asset" -o"runtime/linux/$comp" ;;
               *)     tar -xzf "/tmp/dl/$asset" -C "runtime/linux/$comp" ;;
             esac
+            # 部分 mxcad tar.gz 顶层是 .tmp-<name>/ 嵌套目录（本地 upload-mxcad.js 上传时的打包结构），
+            # 需把该嵌套层的内容提升到 runtime/linux/<comp>/ 根，否则 SystemLib 等落在子目录，
+            # 后续 Dockerfile 的 COPY + SystemLib 覆盖会因路径不对而失败（ubuntu22/24 已复现）。
+            # 若无 .tmp-* 嵌套（如多文件散包）则不动。
+            tmp_dirs=$(find "runtime/linux/$comp" -maxdepth 1 -mindepth 1 -type d -name '.tmp-*' | head -1)
+            if [ -n "$tmp_dirs" ]; then
+              echo "检测到嵌套目录 $tmp_dirs，提升到 runtime/linux/$comp/ ..."
+              shopt -s dotglob
+              mv "$tmp_dirs"/* "runtime/linux/$comp/" 2>/dev/null || true
+              shopt -u dotglob
+              rmdir "$tmp_dirs" 2>/dev/null || true
+            fi
           done
 
       # 用 Docker 打包 Linux 部署包（QEMU/多架构见上方注释）
@@ -172,10 +184,19 @@ jobs:
             gh release download "$MXCAD_TAG" --repo "$MXCAD_REPO" --pattern "$asset" --dir /tmp/dl --clobber
             mkdir -p "runtime/windows/$comp"
             case "$asset" in
-              *.zip) unzip -o "/tmp/dl/$asset" -d "runtime/windows/$comp" ;;
+              *.zip)
+                # mxcad.zip 内部路径用反斜杠，unzip 会报 "backslashes as path separators"
+                # warning 并返回非零退出码，bash -e 下会误判失败。容忍退出码但用下方校验兜底。
+                unzip -o "/tmp/dl/$asset" -d "runtime/windows/$comp" || true
+                ;;
               *.7z)  7z x -y "/tmp/dl/$asset" -o"runtime/windows/$comp" ;;
               *)     tar -xzf "/tmp/dl/$asset" -C "runtime/windows/$comp" ;;
             esac
+            # 校验解压产物非空，防止 unzip warning 掩盖真实解压失败
+            if [ "$(find "runtime/windows/$comp" -type f | wc -l)" -eq 0 ]; then
+              echo "::error::解压后 $comp 目录为空，下载/解压失败: $asset"
+              exit 1
+            fi
           done
           echo "产品二进制已就绪"
 
