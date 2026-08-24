@@ -63,7 +63,7 @@
     "@voerkai18n/formatters": "^3.0.22",
     "@voerkai18n/react": "^3.0.12",
     "@voerkai18n/runtime": "^3.0.12",
-    "axios": "^1.13.2",
+    "axios": "^1.19.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
