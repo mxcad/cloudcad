@@ -49,8 +49,8 @@ RUN if command -v apt-get &> /dev/null; then \
     elif command -v dnf &> /dev/null; then \
       # Rocky/RHEL 8/9 \
       # PostgreSQL 15（PGDG repo 默认 enabled=0，需显式启用 pgdg15 否则找不到 postgresql15-*）
-      # 注意：基础镜像未必含 dnf-plugins-core（config-manager），故直接用 sed 改 repo 文件启用，不依赖插件
-      dnf install -y curl wget git gcc dnf-plugins-core && \
+      # xz 用于下方解压 node-v20...tar.xz（Rocky 精简镜像未必自带）
+      dnf install -y curl wget git gcc dnf-plugins-core xz && \
       dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %rhel)-x86_64/pgdg-redhat-repo-latest.noarch.rpm && \
       dnf -q module disable -y postgresql || true && \
       # 仅启用稳定的 pgdg15，切勿 sed 全量启用（会把 pgdg-common-testing 等测试 repo 也打开，
