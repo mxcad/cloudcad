@@ -239,6 +239,10 @@ export interface BatchDownloadConfig {
   workflowPollIntervalMs: number;
   /** workflow 任务轮询超时（毫秒） */
   workflowTimeoutMs: number;
+  /** 多格式下载转换产物缓存目录（空 = 未配置） */
+  conversionCacheDir: string;
+  /** 转换产物缓存 TTL（小时），0 = 不启用缓存 */
+  conversionCacheTtlHours: number;
 }
 
 export interface AuthRateLimitConfig {
@@ -264,6 +268,20 @@ export interface AuditConfig {
 export interface TaskRunConfig {
   /** 后台任务执行记录保留天数（默认 30，#271 无界增长治理） */
   retentionDays: number;
+}
+
+/** 告警邮件通知配置（#311） */
+export interface AlertEmailConfig {
+  /** 总开关（默认关闭；ALERT_EMAIL_ENABLED=true 开启） */
+  enabled: boolean;
+  /** 收件人列表（ALERT_EMAIL_TO，逗号分隔） */
+  to: string[];
+  /** 连续发送失败多少次后升级为 P0 alert-email 告警（默认 5） */
+  failEscalate: number;
+  /** P1 按 source 聚合窗口分钟数（默认 15，#312；多实例部署存在跨实例重复发送风险，可接受） */
+  p1WindowMinutes: number;
+  /** P2 每日报表发送小时 0-23（默认 9，#312；无前日告警时不发送） */
+  p2DailyHour: number;
 }
 
 export interface MxcadConfig {
@@ -327,6 +345,8 @@ export interface AppConfig {
   authRateLimit: AuthRateLimitConfig;
   audit: AuditConfig;
   taskRun: TaskRunConfig;
+  /** 告警邮件通知（#311：P0 实时邮件 + 恢复通知 + 失败升级） */
+  alertEmail: AlertEmailConfig;
   /** /metrics 抓取令牌认证（#315） */
   metrics: MetricsScrapeConfig;
   /** 管理员登录 IP 白名单（本地文件兜底通道） */
