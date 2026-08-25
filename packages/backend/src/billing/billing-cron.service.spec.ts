@@ -1,4 +1,4 @@
-import { Test, type TestingModule } from '@nestjs/testing';
+﻿import { Test, type TestingModule } from '@nestjs/testing';
 import { BillingCron } from './billing-cron.service';
 import { BillingService } from './billing.service';
 import { DatabaseService } from '../database/database.service';
@@ -110,7 +110,7 @@ describe('BillingCron', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:billing',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('billing error'),
 				detail: {
 					task: 'downgradeExpiredMemberships',

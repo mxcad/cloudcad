@@ -40,7 +40,7 @@ describe('CacheCleanupScheduler', () => {
 
 	const warningItem = {
 		key: CACHE_ALERT_KEYS.L1_CAPACITY,
-		level: AlertLevel.WARNING,
+		level: AlertLevel.P1,
 		message: 'L1 缓存容量使用率超过 90% (950/1000)',
 		detail: { size: 950, maxCapacity: 1000 },
 	};
@@ -79,7 +79,7 @@ describe('CacheCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'cache-monitor',
 				messageKey: CACHE_ALERT_KEYS.L1_CAPACITY,
-				level: AlertLevel.WARNING,
+				level: AlertLevel.P1,
 				message: 'L1 缓存容量使用率超过 90% (950/1000)',
 				detail: { size: 950, maxCapacity: 1000 },
 			});
@@ -100,11 +100,11 @@ describe('CacheCleanupScheduler', () => {
 			);
 		});
 
-		it('should raise CRITICAL for L2 disconnected item', async () => {
+		it('should raise P0 for L2 disconnected item', async () => {
 			mockCacheMonitorService.checkWarningItems.mockResolvedValue([
 				{
 					key: CACHE_ALERT_KEYS.L2_DISCONNECTED,
-					level: AlertLevel.CRITICAL,
+					level: AlertLevel.P0,
 					message: 'L2 缓存（Redis）连接断开',
 					detail: { isConnected: false },
 				},
@@ -115,7 +115,7 @@ describe('CacheCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'cache-monitor',
 				messageKey: CACHE_ALERT_KEYS.L2_DISCONNECTED,
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P0,
 				message: 'L2 缓存（Redis）连接断开',
 				detail: { isConnected: false },
 			});
@@ -152,7 +152,7 @@ describe('CacheCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:cache-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('stats unavailable'),
 				detail: {
 					task: 'handleCacheCleanup',
@@ -169,7 +169,7 @@ describe('CacheCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:cache-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('cache error'),
 				detail: {
 					task: 'logCacheStats',
@@ -188,7 +188,7 @@ describe('CacheCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:cache-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('health error'),
 				detail: {
 					task: 'logHealthStatus',

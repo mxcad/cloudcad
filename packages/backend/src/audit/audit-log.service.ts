@@ -151,7 +151,8 @@ export class AuditLogService {
         await this.alertService.raise({
           source: 'audit-log',
           messageKey: 'audit.write.failed',
-          level: AlertLevel.WARNING,
+          // P0：审计日志写入失败 = 合规数据丢失（#207 fail-open 不阻塞业务）
+          level: AlertLevel.P0,
           message: `审计日志写入失败: ${err.message}`,
           detail: {
             action,

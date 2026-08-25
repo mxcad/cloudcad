@@ -1,11 +1,18 @@
-import { Test, type TestingModule } from '@nestjs/testing';
+﻿import { Test, type TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { AlertService } from './alert.service';
+import {
+  ALERT_RAISED_EVENT,
+  ALERT_RESOLVED_EVENT,
+} from './alert.events';
 import { AlertLevel, AlertStatus } from './enums/alert.enum';
 
 describe('AlertService', () => {
   let service: AlertService;
+
+  const mockEventEmitter = { emit: jest.fn() };
 
   const mockPrisma = {
     alertRecord: {
@@ -23,7 +30,7 @@ describe('AlertService', () => {
   const baseInput = {
     source: 'disk-monitor',
     messageKey: 'disk_space_low',
-    level: AlertLevel.WARNING,
+    level: AlertLevel.P1,
     message: '磁盘剩余空间不足',
     detail: { free: '12.3GB', total: '100GB', path: 'D:' },
   };
@@ -32,7 +39,7 @@ describe('AlertService', () => {
     id: 'alert-1',
     source: 'disk-monitor',
     messageKey: 'disk_space_low',
-    level: AlertLevel.WARNING,
+    level: AlertLevel.P1,
     message: '磁盘剩余空间不足',
     detail: { free: '15GB', total: '100GB', path: 'D:' },
     status: AlertStatus.OPEN,
@@ -52,6 +59,7 @@ describe('AlertService', () => {
       providers: [
         AlertService,
         { provide: DatabaseService, useValue: mockPrisma },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 
@@ -77,11 +85,15 @@ describe('AlertService', () => {
         data: {
           source: 'disk-monitor',
           messageKey: 'disk_space_low',
-          level: AlertLevel.WARNING,
+          level: AlertLevel.P1,
           message: '磁盘剩余空间不足',
           detail: { free: '12.3GB', total: '100GB', path: 'D:' },
         },
       });
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        ALERT_RAISED_EVENT,
+        openRecord
+      );
       expect(result).toEqual(openRecord);
     });
 
@@ -95,7 +107,7 @@ describe('AlertService', () => {
       expect(mockPrisma.alertRecord.update).toHaveBeenCalledWith({
         where: { id: 'alert-1' },
         data: {
-          level: AlertLevel.WARNING,
+          level: AlertLevel.P1,
           message: '磁盘剩余空间不足',
           detail: { free: '12.3GB', total: '100GB', path: 'D:' },
         },
@@ -133,7 +145,11 @@ describe('AlertService', () => {
 
   // ==================== resolveBySourceKey ====================
   describe('resolveBySourceKey', () => {
+    const openA = { ...openRecord, id: 'alert-a' };
+    const openB = { ...openRecord, id: 'alert-b' };
+
     it('should resolve all OPEN alerts for source+messageKey', async () => {
+      mockPrisma.alertRecord.findMany.mockResolvedValue([openA, openB]);
       mockPrisma.alertRecord.updateMany.mockResolvedValue({ count: 2 });
 
       const result = await service.resolveBySourceKey(
@@ -155,14 +171,34 @@ describe('AlertService', () => {
       expect(result).toBe(2);
     });
 
+    it('should emit alert.resolved for each resolved record (#311)', async () => {
+      mockPrisma.alertRecord.findMany.mockResolvedValue([openA, openB]);
+      mockPrisma.alertRecord.updateMany.mockResolvedValue({ count: 2 });
+
+      await service.resolveBySourceKey('disk-monitor', 'disk_space_low');
+
+      expect(mockEventEmitter.emit).toHaveBeenCalledTimes(2);
+      for (const record of [openA, openB]) {
+        expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+          ALERT_RESOLVED_EVENT,
+          expect.objectContaining({
+            id: record.id,
+            status: AlertStatus.RESOLVED,
+            resolvedAt: expect.any(Date),
+          })
+        );
+      }
+    });
+
     it('should return 0 when nothing to resolve', async () => {
-      mockPrisma.alertRecord.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.alertRecord.findMany.mockResolvedValue([]);
 
       const result = await service.resolveBySourceKey(
         'disk-monitor',
         'disk_space_low'
       );
       expect(result).toBe(0);
+      expect(mockPrisma.alertRecord.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -230,7 +266,7 @@ describe('AlertService', () => {
 
       await service.findAll(
         {
-          level: AlertLevel.CRITICAL,
+          level: AlertLevel.P0,
           status: AlertStatus.OPEN,
           source: 'disk-monitor',
         },
@@ -239,7 +275,7 @@ describe('AlertService', () => {
 
       expect(mockPrisma.alertRecord.findMany).toHaveBeenCalledWith({
         where: {
-          level: AlertLevel.CRITICAL,
+          level: AlertLevel.P0,
           status: AlertStatus.OPEN,
           source: 'disk-monitor',
         },

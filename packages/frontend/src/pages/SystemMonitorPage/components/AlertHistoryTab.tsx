@@ -115,10 +115,12 @@ const AlertRow: React.FC<{ alert: AlertRecordDto }> = ({ alert }) => {
     >
       <td>{formatDateTimeWithSeconds(alert.createdAt)}</td>
       <td>
-        {alert.level === 'CRITICAL' ? (
+        {alert.level === 'P0' ? (
           <Tag variant="error">{t('严重')}</Tag>
-        ) : (
+        ) : alert.level === 'P1' ? (
           <Tag variant="warning">{t('警告')}</Tag>
+        ) : (
+          <Tag variant="neutral">{t('提示')}</Tag>
         )}
       </td>
       <td>
@@ -129,7 +131,7 @@ const AlertRow: React.FC<{ alert: AlertRecordDto }> = ({ alert }) => {
       </td>
       <td>
         {isOpen ? (
-          <Tag variant={alert.level === 'CRITICAL' ? 'error' : 'warning'} dot>
+          <Tag variant={alert.level === 'P0' ? 'error' : 'warning'} dot>
             {t('未解决')}
           </Tag>
         ) : (

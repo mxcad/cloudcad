@@ -152,7 +152,8 @@ export class BillingCron {
       await this.alertService.raise({
         source: 'scheduler:billing',
         messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+        // P1：单任务失败（下一轮 cron 重试；订单超时/降级非即时资损）
+        level: AlertLevel.P1,
         message: `定时任务 billing 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,

@@ -244,7 +244,8 @@ export class StorageCleanupScheduler {
         await this.alertService.raise({
           source: 'disk-monitor',
           messageKey: DISK_ALERT_KEYS.CRITICAL,
-          level: AlertLevel.CRITICAL,
+          // P0：磁盘空间临界（写入即将不可用）
+          level: AlertLevel.P0,
           message: status.message,
           detail,
         });
@@ -260,7 +261,8 @@ export class StorageCleanupScheduler {
         await this.alertService.raise({
           source: 'disk-monitor',
           messageKey: DISK_ALERT_KEYS.LOW,
-          level: AlertLevel.WARNING,
+          // P1：磁盘空间告警（聚合）
+          level: AlertLevel.P1,
           message: status.message,
           detail,
         });
@@ -334,7 +336,8 @@ export class StorageCleanupScheduler {
       await this.alertService.raise({
         source: 'scheduler:storage-cleanup',
         messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+        // P2：低频清理失败（静默记录，人工排查）
+        level: AlertLevel.P2,
         message: `定时任务 storage-cleanup 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,

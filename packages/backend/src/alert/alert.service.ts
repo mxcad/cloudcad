@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AlertRecord } from '@cloudcad/db';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { AlertLevel, AlertStatus } from './enums/alert.enum';
+import {
+  ALERT_RAISED_EVENT,
+  ALERT_RESOLVED_EVENT,
+} from './alert.events';
 
 export interface RaiseAlertInput {
   source: string;
@@ -18,6 +23,7 @@ export interface RaiseAlertInput {
  * 职责：
  * 1. 去重上报：同 source+messageKey 的 OPEN 告警存在则刷新 detail/message，否则新建
  * 2. 两态流转：OPEN ↔ RESOLVED（自动恢复 resolveBySourceKey / 手动兜底 resolveById）
+ * 3. 事件发布：raise/resolve 后 emit alert.raised / alert.resolved（#311，供通知服务订阅）
  *
  * 去重实现：应用层查询 + P2002 并发竞态兜底（#242 决议），DB 侧仅普通非唯一索引加速
  */
@@ -25,7 +31,10 @@ export interface RaiseAlertInput {
 export class AlertService {
   private readonly logger = new Logger(AlertService.name);
 
-  constructor(private readonly prisma: DatabaseService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly eventEmitter: EventEmitter2
+  ) {}
 
   /**
    * 上报或更新告警：同 source+messageKey 的 OPEN 告警存在则刷新，否则新建。
@@ -36,7 +45,7 @@ export class AlertService {
     const data = { level, message, detail: detail ?? undefined };
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const record = await this.prisma.$transaction(async (tx) => {
         const existing = await tx.alertRecord.findFirst({
           where: { source, messageKey, status: AlertStatus.OPEN },
         });
@@ -50,6 +59,8 @@ export class AlertService {
           data: { source, messageKey, ...data },
         });
       });
+      this.eventEmitter.emit(ALERT_RAISED_EVENT, record);
+      return record;
     } catch (e) {
       if (
         e instanceof PrismaRuntime.PrismaClientKnownRequestError &&
@@ -59,10 +70,12 @@ export class AlertService {
           where: { source, messageKey, status: AlertStatus.OPEN },
         });
         if (existing) {
-          return this.prisma.alertRecord.update({
+          const record = await this.prisma.alertRecord.update({
             where: { id: existing.id },
             data,
           });
+          this.eventEmitter.emit(ALERT_RAISED_EVENT, record);
+          return record;
         }
       }
       throw e;
@@ -77,10 +90,24 @@ export class AlertService {
     source: string,
     messageKey: string
   ): Promise<number> {
+    const openRecords = await this.prisma.alertRecord.findMany({
+      where: { source, messageKey, status: AlertStatus.OPEN },
+    });
+    if (openRecords.length === 0) return 0;
+
+    const resolvedAt = new Date();
     const result = await this.prisma.alertRecord.updateMany({
       where: { source, messageKey, status: AlertStatus.OPEN },
-      data: { status: AlertStatus.RESOLVED, resolvedAt: new Date() },
+      data: { status: AlertStatus.RESOLVED, resolvedAt },
     });
+
+    for (const record of openRecords) {
+      this.eventEmitter.emit(ALERT_RESOLVED_EVENT, {
+        ...record,
+        status: AlertStatus.RESOLVED,
+        resolvedAt,
+      });
+    }
     return result.count;
   }
 
@@ -94,7 +121,11 @@ export class AlertService {
       where: { id, status: AlertStatus.OPEN },
       data: { status: AlertStatus.RESOLVED, resolvedAt: new Date() },
     });
-    return this.prisma.alertRecord.findUnique({ where: { id } });
+    const record = await this.prisma.alertRecord.findUnique({ where: { id } });
+    if (record && record.status === AlertStatus.RESOLVED) {
+      this.eventEmitter.emit(ALERT_RESOLVED_EVENT, record);
+    }
+    return record;
   }
 
   /**

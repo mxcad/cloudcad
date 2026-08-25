@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
+﻿///////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ describe("CacheMonitorService", () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: "cache-monitor",
 				messageKey: "task_run_failed",
-				level: "CRITICAL",
+				level: "P1",
 				message: expect.stringContaining("cleanup boom"),
 				detail: expect.objectContaining({
 					task: "cleanOldPerformanceData",
@@ -267,18 +267,18 @@ describe("CacheMonitorService", () => {
 			]);
 
 			const l1Item = items.find((item) => item.key === "cache_l1_capacity");
-			expect(l1Item?.level).toBe("WARNING");
+			expect(l1Item?.level).toBe("P1");
 			expect(l1Item?.detail).toEqual({ size: 950, maxCapacity: 1000 });
 
 			const l2Item = items.find((item) => item.key === "cache_l2_disconnected");
-			expect(l2Item?.level).toBe("CRITICAL");
+			expect(l2Item?.level).toBe("P0");
 			expect(l2Item?.detail).toEqual({ isConnected: false });
 
 			const hitRateItem = items.find((item) => item.key === "cache_hit_rate");
-			expect(hitRateItem?.level).toBe("WARNING");
+			expect(hitRateItem?.level).toBe("P1");
 
 			const memoryItem = items.find((item) => item.key === "cache_memory_high");
-			expect(memoryItem?.level).toBe("WARNING");
+			expect(memoryItem?.level).toBe("P1");
 			expect(memoryItem?.detail?.memoryUsageMB).toBe(600);
 		});
 

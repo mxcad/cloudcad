@@ -203,7 +203,7 @@ function makeAlert(overrides: Record<string, unknown> = {}) {
     id: 'alert-1',
     source: 'disk-monitor',
     messageKey: 'disk.usage.high',
-    level: 'WARNING',
+    level: 'P1',
     message: '磁盘使用率超过 85%',
     status: 'OPEN',
     createdAt: '2026-08-01T00:00:00.000Z',
@@ -301,12 +301,12 @@ describe('SystemMonitorPage', () => {
         makeAlert({ id: 'a1', message: '磁盘使用率超过 85%' }),
         makeAlert({
           id: 'a2',
-          level: 'CRITICAL',
+          level: 'P0',
           message: 'Redis 连接失败',
         }),
         makeAlert({
           id: 'a3',
-          level: 'WARNING',
+          level: 'P2',
           message: '磁盘使用率持续升高',
           status: 'RESOLVED',
         }),
@@ -324,6 +324,7 @@ describe('SystemMonitorPage', () => {
     expect(screen.getByText('磁盘使用率持续升高')).toBeInTheDocument();
     expect(screen.getAllByText('警告').length).toBeGreaterThan(0);
     expect(screen.getByText('严重')).toBeInTheDocument();
+    expect(screen.getByText('提示')).toBeInTheDocument();
     expect(screen.getAllByText('未解决').length).toBe(2);
     expect(screen.getByText('已解决')).toBeInTheDocument();
     expect(screen.getAllByText('disk-monitor').length).toBe(3);

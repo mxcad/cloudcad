@@ -176,10 +176,11 @@ export class AuditCleanupScheduler {
    */
   private async raiseTaskFailed(error: unknown): Promise<void> {
     try {
-      await this.alertService.raise({
-        source: 'scheduler:audit-cleanup',
-        messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+    await this.alertService.raise({
+      source: 'scheduler:audit-cleanup',
+      messageKey: 'task_run_failed',
+      // P2：低频清理失败（静默记录，人工排查）
+      level: AlertLevel.P2,
         message: `定时任务 audit-cleanup 失败（cleanupOldAuditLogs）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task: 'cleanupOldAuditLogs',

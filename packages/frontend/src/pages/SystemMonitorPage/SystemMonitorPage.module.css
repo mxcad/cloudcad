@@ -990,12 +990,12 @@
   gap: 0.5rem;
 }
 
-/* open 状态告警高亮：warning 黄 / critical 红 */
+/* open 状态告警高亮：P1/P2 黄 / P0 红 */
 .alertRowOpen {
   background: var(--warning-light);
 }
 
-.alertRowOpen[data-level='CRITICAL'] {
+.alertRowOpen[data-level='P0'] {
   background: var(--error-dim);
 }
 
@@ -1003,7 +1003,7 @@
   box-shadow: inset 3px 0 0 var(--warning);
 }
 
-.alertRowOpen[data-level='CRITICAL'] td:first-child {
+.alertRowOpen[data-level='P0'] td:first-child {
   box-shadow: inset 3px 0 0 var(--error);
 }
 
@@ -1028,7 +1028,7 @@
   background: var(--warning-dim);
 }
 
-:global([data-theme='dark']) .alertRowOpen[data-level='CRITICAL'] {
+:global([data-theme='dark']) .alertRowOpen[data-level='P0'] {
   background: var(--error-dim);
 }
 

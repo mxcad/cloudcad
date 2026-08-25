@@ -38,7 +38,7 @@ const mockAlert = {
   id: 'alert-1',
   source: 'disk-monitor',
   messageKey: 'disk.usage.high',
-  level: 'WARNING',
+  level: 'P1',
   message: '磁盘使用率超过 85%',
   status: 'OPEN',
   createdAt: '2026-08-01T00:00:00.000Z',
@@ -92,7 +92,7 @@ describe('useAlertHistory', () => {
       query: { page: 1, limit: 20 },
     });
     expect(result.current.data?.items).toHaveLength(1);
-    expect(result.current.data?.items[0].level).toBe('WARNING');
+    expect(result.current.data?.items[0].level).toBe('P1');
     expect(result.current.data?.pagination).toEqual({
       page: 1,
       limit: 20,

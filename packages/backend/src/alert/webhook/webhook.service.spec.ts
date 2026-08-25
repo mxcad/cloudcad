@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { ClsService } from 'nestjs-cls';
 import { AlertLevel } from '../enums/alert.enum';
 import { WebhookService } from './webhook.service';
 
@@ -8,7 +9,7 @@ describe('WebhookService', () => {
 
   const baseInput = {
     message: '磁盘剩余空间不足',
-    level: AlertLevel.WARNING,
+    level: AlertLevel.P1,
     source: 'disk-monitor',
     timestamp: new Date('2026-08-11T10:00:00.000Z'),
     detail: { free: '12.3GB', total: '100GB', path: 'D:' },
@@ -16,7 +17,10 @@ describe('WebhookService', () => {
 
   const createService = async (): Promise<WebhookService> => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [WebhookService],
+      providers: [
+        WebhookService,
+        { provide: ClsService, useValue: { get: jest.fn() } },
+      ],
     }).compile();
     return module.get<WebhookService>(WebhookService);
   };
@@ -75,12 +79,17 @@ describe('WebhookService', () => {
         'https://example.com/hook',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            // #309 出站追踪头：无 CLS 上下文时也应注入自生成的 X-Request-Id
+            'X-Request-Id': expect.any(String),
+            'X-Trace-Id': expect.any(String),
+          }),
         })
       );
       const body = (global.fetch as jest.Mock).mock.calls[0][1].body;
       expect(body).toContain('磁盘剩余空间不足');
-      expect(body).toContain('WARNING');
+      expect(body).toContain('P1');
       expect(body).toContain('disk-monitor');
     });
 
@@ -117,7 +126,7 @@ describe('WebhookService', () => {
 
       const rendered = service.render(baseInput);
 
-      expect(rendered).toContain('"content":"[WARNING] disk-monitor 2026-08-11T10:00:00.000Z');
+      expect(rendered).toContain('"content":"[P1] disk-monitor 2026-08-11T10:00:00.000Z');
       expect(rendered).toContain('磁盘剩余空间不足');
       expect(rendered).toContain(
         '{\\"free\\":\\"12.3GB\\",\\"total\\":\\"100GB\\",\\"path\\":\\"D:\\"}'
@@ -175,7 +184,7 @@ describe('WebhookService', () => {
       const rendered = service.render(baseInput);
 
       expect(rendered).toBe(
-        '{"text":"disk-monitor:WARNING 磁盘剩余空间不足"}'
+        '{"text":"disk-monitor:P1 磁盘剩余空间不足"}'
       );
     });
 

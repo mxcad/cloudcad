@@ -5,8 +5,12 @@
  */
 
 export enum AlertLevel {
-  WARNING = 'WARNING',
-  CRITICAL = 'CRITICAL',
+  /** 即时告警：服务不可用 / 数据丢失 / 磁盘临界 */
+  P0 = 'P0',
+  /** 聚合告警：单任务失败 / 磁盘告警 / 缓存容量与命中率 */
+  P1 = 'P1',
+  /** 静默记录：低频清理失败 */
+  P2 = 'P2',
 }
 
 export enum AlertStatus {

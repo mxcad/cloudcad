@@ -100,7 +100,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'disk-monitor',
 				messageKey: 'disk_space_critical',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P0,
 				message: 'Disk space critically low!',
 				detail: {
 					free: baseStats.free,
@@ -129,7 +129,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'disk-monitor',
 				messageKey: 'disk_space_low',
-				level: AlertLevel.WARNING,
+				level: AlertLevel.P1,
 				message: 'Disk space low!',
 				detail: {
 					free: baseStats.free,
@@ -185,7 +185,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('cleanup error'),
 				detail: {
 					task: 'handleCleanup',
@@ -204,7 +204,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('trash error'),
 				detail: {
 					task: 'handleTrashCleanup',
@@ -223,7 +223,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('lock error'),
 				detail: {
 					task: 'handleLockCleanup',
@@ -242,7 +242,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('orphan error'),
 				detail: {
 					task: 'handleOrphanCleanup',
@@ -261,7 +261,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('disk query error'),
 				detail: {
 					task: 'handleDiskMonitor',

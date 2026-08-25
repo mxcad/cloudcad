@@ -121,7 +121,7 @@ describe('AuditCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:audit-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('audit cleanup error'),
 				detail: {
 					task: 'cleanupOldAuditLogs',

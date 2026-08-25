@@ -40,7 +40,7 @@ export class QueryAlertDto {
   limit?: number = 20;
 
   @ApiPropertyOptional({
-    description: '按告警级别过滤：WARNING | CRITICAL',
+    description: '按告警级别过滤：P0 | P1 | P2',
     enum: AlertLevel,
   })
   @IsOptional()

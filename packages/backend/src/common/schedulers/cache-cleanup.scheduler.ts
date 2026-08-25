@@ -198,7 +198,8 @@ export class CacheCleanupScheduler {
       await this.alertService.raise({
         source: 'scheduler:cache-cleanup',
         messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+        // P1：单任务失败（下一轮定时重试）
+        level: AlertLevel.P1,
         message: `定时任务 cache-cleanup 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,

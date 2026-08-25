@@ -116,7 +116,8 @@ export class CacheMonitorService {
       await this.alertService.raise({
         source: 'cache-monitor',
         messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+        // P1：单任务失败（下一轮定时重试）
+        level: AlertLevel.P1,
         message: `定时任务 cache-monitor 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,
@@ -366,7 +367,8 @@ export class CacheMonitorService {
     if (l1Stats.size > l1Stats.maxCapacity * 0.9) {
       warnings.push({
         key: CACHE_ALERT_KEYS.L1_CAPACITY,
-        level: AlertLevel.WARNING,
+        // P1：聚合告警（容量水位）
+        level: AlertLevel.P1,
         message: `L1 缓存容量使用率超过 90% (${l1Stats.size}/${l1Stats.maxCapacity})`,
         detail: { size: l1Stats.size, maxCapacity: l1Stats.maxCapacity },
       });
@@ -376,7 +378,8 @@ export class CacheMonitorService {
     if (stats.summary.overallHitRate < 70) {
       warnings.push({
         key: CACHE_ALERT_KEYS.HIT_RATE,
-        level: AlertLevel.WARNING,
+        // P1：聚合告警（命中率劣化）
+        level: AlertLevel.P1,
         message: `整体缓存命中率低于 70% (${stats.summary.overallHitRate.toFixed(2)}%)`,
         detail: { overallHitRate: stats.summary.overallHitRate },
       });
@@ -387,7 +390,8 @@ export class CacheMonitorService {
     if (!l2Stats.isConnected) {
       warnings.push({
         key: CACHE_ALERT_KEYS.L2_DISCONNECTED,
-        level: AlertLevel.CRITICAL,
+        // P0：Redis（L2）不可用
+        level: AlertLevel.P0,
         message: 'L2 缓存（Redis）连接断开',
         detail: { isConnected: false },
       });
@@ -398,7 +402,8 @@ export class CacheMonitorService {
     if (memoryUsageMB > 500) {
       warnings.push({
         key: CACHE_ALERT_KEYS.MEMORY_HIGH,
-        level: AlertLevel.WARNING,
+        // P1：聚合告警（内存水位）
+        level: AlertLevel.P1,
         message: `缓存内存使用超过 500MB (${memoryUsageMB.toFixed(2)}MB)`,
         detail: { memoryUsageMB: Number(memoryUsageMB.toFixed(2)) },
       });

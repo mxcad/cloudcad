@@ -32,7 +32,7 @@ describe('AlertController', () => {
     id: 'alert-1',
     source: 'disk-monitor',
     messageKey: 'disk_space_low',
-    level: AlertLevel.WARNING,
+    level: AlertLevel.P1,
     message: '磁盘剩余空间不足',
     detail: { free: '12.3GB' },
     status: AlertStatus.OPEN,
@@ -81,14 +81,14 @@ describe('AlertController', () => {
       const response = await controller.list({
         page: 2,
         limit: 10,
-        level: AlertLevel.CRITICAL,
+        level: AlertLevel.P0,
         status: AlertStatus.OPEN,
         source: 'disk-monitor',
       });
 
       expect(mockAlertService.findAll).toHaveBeenCalledWith(
         {
-          level: AlertLevel.CRITICAL,
+          level: AlertLevel.P0,
           status: AlertStatus.OPEN,
           source: 'disk-monitor',
         },

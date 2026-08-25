@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
+import { ClsService } from 'nestjs-cls';
+import { buildOutboundTraceHeaders } from '../../common/utils/outbound-trace';
 import { AlertLevel } from '../enums/alert.enum';
 
 export interface WebhookAlertInput {
@@ -33,7 +35,7 @@ export class WebhookService {
   private readonly url: string | undefined;
   private readonly template: string;
 
-  constructor() {
+  constructor(private readonly cls: ClsService) {
     this.url = process.env.ALERT_WEBHOOK_URL;
     this.template = process.env.ALERT_WEBHOOK_TEMPLATE ?? DEFAULT_TEMPLATE;
   }
@@ -52,7 +54,17 @@ export class WebhookService {
     try {
       const response = await fetch(this.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // X-Request-Id/X-Trace-Id 透传（#309）：定时任务无 CLS 时自动生成新 id
+          ...buildOutboundTraceHeaders(
+            {
+              requestId: this.cls?.get<string>('requestId'),
+              traceId: this.cls?.get<string>('traceId'),
+            },
+            'alert-webhook',
+          ),
+        },
         body,
       });
       if (!response.ok) {
