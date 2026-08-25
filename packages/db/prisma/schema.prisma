@@ -704,6 +704,10 @@ model BatchDownloadJob {
   zipPath        String?
   zipSize        Int?
   errors         Json?
+  /// 下载模式：zip=打包 ZIP（默认）；individual=逐个下载（产物单文件直出，itemsManifest 记录清单）
+  mode           String         @default("zip")
+  /// individual 模式产物清单：Array<{ index, name, sourcePath, temp }>
+  itemsManifest  Json?
   createdAt      DateTime       @default(now())
   completedAt    DateTime?
   expiresAt      DateTime?
@@ -756,8 +760,9 @@ model ConfigKeyRegistry {
 }
 
 enum AlertLevel {
-  WARNING
-  CRITICAL
+  P0
+  P1
+  P2
 }
 
 enum AlertStatus {
