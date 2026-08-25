@@ -950,15 +950,35 @@
   gap: var(--space-3);
 }
 
-.adjust-direction {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.adjust-input {
+.adjust-stepper {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.adjust-step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.adjust-step-btn:hover:not(:disabled) {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.adjust-step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .adjust-days-input {
@@ -1000,15 +1020,4 @@
 .adjust-preview-new {
   font-weight: 600;
   color: var(--primary-600);
-}
-
-.adjust-preview-error {
-  font-weight: 600;
-  color: var(--error);
-}
-
-.adjust-preview-warning {
-  margin-top: var(--space-1);
-  color: var(--error);
-  font-weight: 500;
 }

@@ -105,8 +105,9 @@ export async function saveCurrentFile(
         t('当前图纸没有保存权限，已为您打开另存为窗口'),
         'warning'
       );
-    } catch {
-      // fallback to save as
+    } catch (error) {
+      handleError(error, 'mxcadManager: Mx_Save project permission check');
+      globalShowToast(t('权限检查失败，已为您打开另存为窗口'), 'warning');
     }
   }
 

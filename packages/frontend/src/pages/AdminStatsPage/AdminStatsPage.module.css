@@ -50,15 +50,6 @@
   color: #ffffff;
 }
 
-.dateInput {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  font-size: 13px;
-}
-
 .customDivider {
   width: 1px;
   height: 22px;

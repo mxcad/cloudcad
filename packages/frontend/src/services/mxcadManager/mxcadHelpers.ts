@@ -1,4 +1,5 @@
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
+import { useFileSystemStore } from '../../stores/fileSystemStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { cancelLoginRedirect } from '../../config/clientSetup';
@@ -106,15 +107,25 @@ export async function saveCurrentDrawingToBlob(fileName: string): Promise<{
 }
 
 export async function getPersonalSpaceId(): Promise<string | null> {
+  const cached = () => useFileSystemStore.getState().personalSpaceId;
   try {
     const response = await projectControllerGetPersonalSpace();
     // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
     if (response.error) throw response.error;
     const personalSpaceId = response.data?.id || null;
-    return personalSpaceId;
+    if (personalSpaceId) {
+      // 成功结果同步进本地缓存，供后续请求偶发失败时回退
+      if (cached() !== personalSpaceId) {
+        useFileSystemStore.getState().setPersonalSpaceId(personalSpaceId);
+      }
+      return personalSpaceId;
+    }
+    return cached();
   } catch (error) {
     handleError(error, 'mxcadManager: getPersonalSpaceId');
-    return null;
+    // 网络抖动/瞬时故障时回退本地缓存，避免保存链路把"我的图纸"
+    // 误判为未知归属而静默弹出另存为（历史偶发 bug）
+    return cached();
   }
 }
 

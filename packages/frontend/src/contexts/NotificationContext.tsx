@@ -106,6 +106,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     confirmText: t('确定'),
     cancelText: t('取消'),
     multiline: false,
+    required: true,
   });
   const [promptInputValue, setPromptInputValue] = useState('');
 
@@ -177,7 +178,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       if (isCadActive && routeToCadMessage(message, type)) return;
       const id =
         Date.now().toString() + Math.random().toString(36).substr(2, 9);
-      setToasts((prev) => [...prev, { id, type, message }]);
+      // 同文案去重：相同 message+type 的 toast 已在展示中时不重复追加，
+      // 避免连续失败（如批量下载逐个 524）时同款错误提示堆叠"叉不完"。
+      // 去重时定时器仍会走一次（过滤不存在的 id 是无害空操作）。
+      setToasts((prev) => {
+        if (
+          prev.some((toast) => toast.message === message && toast.type === type)
+        ) {
+          return prev;
+        }
+        return [...prev, { id, type, message }];
+      });
 
       const timerId = setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -222,6 +233,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           confirmText: options.confirmText || t('确定'),
           cancelText: options.cancelText || t('取消'),
           multiline: options.multiline || false,
+          required: options.required !== false,
         });
         setPromptInputValue(defaultValue);
       });

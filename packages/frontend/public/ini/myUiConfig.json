@@ -1439,6 +1439,7 @@
   "isMobileCommandLineMode": true,
   "footerRightBtnSwitchData": [
     "栅格",
+    "栅格捕捉",
     "正交",
     "极轴",
     "对象捕捉",
@@ -1523,7 +1524,7 @@
       "type": "divider"
     },
     {
-      "tab": "打印",
+      "tab": "打印输出到PDF",
       "icon": "dayin1",
       "cmd": "Mx_PrintDialog"
     }

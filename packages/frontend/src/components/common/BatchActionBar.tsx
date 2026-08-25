@@ -51,7 +51,13 @@ export interface BatchActionBarProps {
  * 全站统一的多选操作栏：胶囊形态（rounded-full + shadow），
  * CheckSquare + 数字角标 + 计数文字 + 分割线 + 批量动作按钮组 + 取消选择。
  * 批量动作一律循环调用现有 SDK 单条接口（统计成功/失败计数 Toast 汇总），
- * 本组件不关心动作实现。移动端（sm 以下）只显示图标，文字隐藏。
+ * 本组件不关心动作实现。
+ *
+ * 响应式基于容器查询（@container + @md = 448px）而非视口断点：
+ * 侧边栏等窄容器内自动退化为 icon-only 模式（数字角标 + tooltip），
+ * 宽容器/整页正常显示文字。调用方须保证 bottomBar 包裹层带 `@container`
+ * （ResourceList/FileListGrid/SelectableTable 已内置）；无容器祖先时
+ * 按规范回退到小视口宽度评估。
  */
 export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   count,
@@ -64,7 +70,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   className = '',
 }) => (
   <div
-    className={`inline-flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 sm:py-3 rounded-full shadow-2xl ${className}`}
+    className={`inline-flex items-center gap-2 @md:gap-4 px-3 @md:px-6 py-2 @md:py-3 rounded-full shadow-2xl ${className}`}
     style={{
       background: 'var(--bg-elevated)',
       border: '1px solid var(--border-default)',
@@ -76,14 +82,14 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
 
     {count > 0 && (
       <>
-        <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0">
+        <div className="relative flex items-center justify-center min-w-[44px] min-h-[44px] @md:min-w-0 @md:min-h-0">
           <CheckSquare
             size={20}
-            className="sm:hidden"
+            className="@md:hidden"
             style={{ color: 'var(--primary-500)' }}
           />
           <span
-            className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full sm:hidden"
+            className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full @md:hidden"
             style={{
               background: 'var(--primary-500)',
               color: 'var(--text-inverse)',
@@ -93,19 +99,21 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           </span>
         </div>
         <span
-          className="hidden sm:inline text-sm font-semibold whitespace-nowrap"
+          className="hidden @md:inline text-sm font-semibold whitespace-nowrap"
           style={{ color: 'var(--text-primary)' }}
         >
-          {label ? label(count) : t('已选 {count} 项', { count: String(count) })}
+          {label
+            ? label(count)
+            : t('已选 {count} 项', { count: String(count) })}
         </span>
         <div
-          className="hidden sm:block w-px h-4"
+          className="hidden @md:block w-px h-4"
           style={{ background: 'var(--border-default)' }}
         />
       </>
     )}
 
-    <div className="flex items-center gap-2 sm:gap-3">
+    <div className="flex items-center gap-2 @md:gap-3">
       {/* 动作按钮仅在有选中项时显示（剪贴板模式 count=0：无选中项，剪切/复制/删除无意义） */}
       {count > 0 &&
         actions.map((action) => (
@@ -120,7 +128,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
             onClick={action.onClick}
           >
             {action.label !== undefined && (
-              <span className="hidden sm:inline">{action.label}</span>
+              <span className="hidden @md:inline">{action.label}</span>
             )}
           </Button>
         ))}
@@ -141,35 +149,37 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
                 : undefined
             }
           >
-          <Button
-            variant="secondary"
-            icon={Clipboard}
-            onClick={clipboard.onPaste}
-            disabled={clipboard.items.length === 0 || !clipboard.canPaste}
-            style={{
-              color: 'var(--text-secondary)',
-              border: 'none',
-              borderRadius: 0,
-            }}
-            className="relative pl-3 pr-2"
-          >
-            <span className="hidden sm:inline">{t('粘贴')}</span>
-            {clipboard.items.length > 0 && (
-              <span
-                className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
-                style={{
-                  background: 'var(--primary-500)',
-                  color: 'var(--text-inverse)',
-                }}
-              >
-                {clipboard.items.length}
-              </span>
-            )}
-          </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Clipboard}
+              onClick={clipboard.onPaste}
+              disabled={clipboard.items.length === 0 || !clipboard.canPaste}
+              style={{
+                color: 'var(--text-secondary)',
+                border: 'none',
+                borderRadius: 0,
+              }}
+              className="relative pl-3 pr-2"
+            >
+              <span className="hidden @md:inline">{t('粘贴')}</span>
+              {clipboard.items.length > 0 && (
+                <span
+                  className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold leading-none"
+                  style={{
+                    background: 'var(--primary-500)',
+                    color: 'var(--text-inverse)',
+                  }}
+                >
+                  {clipboard.items.length}
+                </span>
+              )}
+            </Button>
           </span>
           {clipboard.items.length > 0 && (
             <Button
               variant="secondary"
+              size="sm"
               onClick={clipboard.onClear}
               style={{
                 color: 'var(--text-muted)',
@@ -200,8 +210,10 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
       icon={X}
       onClick={onClear}
       style={{ color: 'var(--text-muted)' }}
+      title={t('取消选择')}
+      aria-label={t('取消选择')}
     >
-      <span className="hidden sm:inline">{t('取消选择')}</span>
+      <span className="hidden @md:inline">{t('取消选择')}</span>
     </Button>
   </div>
 );

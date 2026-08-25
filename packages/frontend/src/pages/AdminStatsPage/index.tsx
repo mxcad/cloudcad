@@ -9,6 +9,8 @@ import {
 import { RegistrationsSection } from './components/RegistrationsSection';
 import { PurchasesSection } from './components/PurchasesSection';
 import type { AdminStatsRangeParams } from './hooks/useAdminStats';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { dateOnlyToIso, isoToDateOnly } from '@/utils/dateUtils';
 import styles from './AdminStatsPage.module.css';
 
 /** 统计切日与后端一致：东八区（UTC+8）自然日 */
@@ -84,24 +86,20 @@ export default function AdminStatsPage() {
           </button>
         ))}
         <div className={styles.customDivider} />
-        <input
-          type="date"
-          className={styles.dateInput}
-          value={customStart}
-          max={cstDateString(0)}
-          onChange={(e) => {
-            setCustomStart(e.target.value);
+        <DatePicker
+          value={dateOnlyToIso(customStart)}
+          maxDate={dateOnlyToIso(cstDateString(0))}
+          onChange={(v) => {
+            setCustomStart(isoToDateOnly(v));
             setPreset('custom');
           }}
         />
         <span>~</span>
-        <input
-          type="date"
-          className={styles.dateInput}
-          value={customEnd}
-          max={cstDateString(0)}
-          onChange={(e) => {
-            setCustomEnd(e.target.value);
+        <DatePicker
+          value={dateOnlyToIso(customEnd)}
+          maxDate={dateOnlyToIso(cstDateString(0))}
+          onChange={(v) => {
+            setCustomEnd(isoToDateOnly(v));
             setPreset('custom');
           }}
         />

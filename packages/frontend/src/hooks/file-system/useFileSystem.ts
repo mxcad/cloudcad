@@ -91,8 +91,8 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     setSearchTerm: setStoreSearchTerm,
   } = useFileSystemStore();
 
-  // UI Hook (Toast)
-  const { toasts, showToast, removeToast } = useFileSystemUI();
+  // UI Hook (Toast) — 委托全局 ToastStack（见 useFileSystemUI 说明）
+  const { showToast } = useFileSystemUI();
 
   // Confirm Dialog - adapt Promise-based API to callback-style
   const { showConfirm: showConfirmPromise } = useConfirmDialog();
@@ -257,7 +257,10 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   const prevNavContextRef = useRef('');
   React.useEffect(() => {
     const navContext = `${urlProjectId ?? ''}|${urlNodeId ?? ''}`;
-    if (prevNavContextRef.current !== '' && prevNavContextRef.current !== navContext) {
+    if (
+      prevNavContextRef.current !== '' &&
+      prevNavContextRef.current !== navContext
+    ) {
       clearSelection();
     }
     prevNavContextRef.current = navContext;
@@ -348,7 +351,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     viewMode,
     setViewMode,
     selectedNodes,
-    toasts,
     showCreateFolderModal,
     showCreateDrawingModal,
     showRenameModal,
@@ -374,7 +376,6 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     setEditingNode,
     setDownloadingNode,
     showToast,
-    removeToast,
     handleRefresh,
     handleGoBack,
     handleNodeSelect,

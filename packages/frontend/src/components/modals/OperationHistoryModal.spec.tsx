@@ -162,17 +162,20 @@ describe('OperationHistoryModal（项目操作历史）', () => {
   });
 
   it('渲染记录并按时间分组（今天/更早）', async () => {
+    // 动态生成时间戳：固定日期会随真实日期漂移导致"今天"分组失败
+    const nowIso = (offsetHours: number) =>
+      new Date(Date.now() - offsetHours * 3600_000).toISOString();
     (projectAuditLogControllerFindByProject as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: {
         total: 2,
         logs: [
-          mockLog({ createdAt: '2026-08-14T10:00:00.000Z' }), // 今天
+          mockLog({ createdAt: nowIso(1) }), // 今天（1 小时前）
           mockLog({
             id: 'log-2',
             action: 'FOLDER_CREATE',
             resourceName: '设计图纸',
             params: { fileName: '设计图纸' },
-            createdAt: '2026-08-10T10:00:00.000Z', // 更早
+            createdAt: nowIso(4 * 24), // 更早（4 天前）
           }),
         ],
       },

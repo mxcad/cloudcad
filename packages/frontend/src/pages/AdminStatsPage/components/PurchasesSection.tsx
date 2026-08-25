@@ -124,7 +124,16 @@ export const PurchasesSection: React.FC<PurchasesSectionProps> = ({
                     : [String(value), name]
                 }
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              {/* 图例文字统一用文本 token：默认会继承系列色，
+                  「支付金额」的 primary-100 柱体填充过浅导致文字不可读 */}
+              <Legend
+                wrapperStyle={{ fontSize: 12 }}
+                formatter={(value) => (
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {value}
+                  </span>
+                )}
+              />
               <Bar
                 yAxisId="amount"
                 dataKey="amount"

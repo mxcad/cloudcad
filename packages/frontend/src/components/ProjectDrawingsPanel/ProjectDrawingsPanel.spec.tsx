@@ -94,8 +94,6 @@ const confirmDialogMock = vi.hoisted(() => ({
 }));
 const notificationMock = vi.hoisted(() => ({
   showToast: vi.fn(),
-  toasts: [],
-  removeToast: vi.fn(),
 }));
 const projectControllerGetProjectsMock = vi.hoisted(() =>
   vi.fn(() => Promise.resolve({ data: { nodes: [] } }))
@@ -112,9 +110,7 @@ const nodeControllerCopyNodeMock = vi.hoisted(() =>
 );
 const nodeControllerDeleteNodeMock = vi.hoisted(() => vi.fn());
 const fileSystemUIMock = vi.hoisted(() => ({
-  toasts: [],
   showToast: vi.fn(),
-  removeToast: vi.fn(),
 }));
 const crudMock = vi.hoisted(() => ({
   showRenameModal: false,

@@ -41,9 +41,7 @@ vi.mock('./useFileSystemRouting', () => ({
 
 vi.mock('./useFileSystemUI', () => ({
   useFileSystemUI: () => ({
-    toasts: [],
     showToast: vi.fn(),
-    removeToast: vi.fn(),
   }),
 }));
 

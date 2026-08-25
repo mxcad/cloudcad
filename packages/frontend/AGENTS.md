@@ -68,7 +68,7 @@ pnpm i18n:compile   # 编译语言包
 - **样式（ADR-0032）**: 颜色用变量 token（`--bg-*` `--text-*` `--primary-*` 等），组件复杂样式用 CSS Modules，Tailwind 仅布局，内联 style 仅动态值；禁止 JS 模板字符串 CSS、禁止新增 `--color-*` 变量
 - **文件规模（ADR-0033）**: 源码文件 ≤400 行（硬门禁）/ 300 行（软目标）；页面目录化 `<Name>/index.tsx` + `hooks/` + `components/`
 - **CAD 引擎**: `mxcadManager` 单例，`CADEditorDirect.tsx` 通过 visibility+z-index 保持 WebGL 上下文（详见 `cad-engine-integration` skill）
-- **UI 组件复用**: 优先复用 `src/components/ui/` 下的组件。新输入/展示需求先确认已有组件是否满足，样式风格必须与 `Input` 组件保持一致（padding/font-size/border-radius/背景色/焦点态）。**成熟组件（日历/选择器/弹层等）从 shadcn/ui 拉取再改造，禁止手写轮子**：`pnpm dlx shadcn@latest add <name>`（拒绝覆盖已有文件；Windows 下 CLI 崩溃时先手动 `pnpm add` 依赖）；拉取后必须逐项适配：z-index 换 `Z_LAYERS.*`、shadcn token 换项目 CSS 变量、全局样式依赖（如 react-day-picker 的 `style.css`）走 `src/styles/calendar.css` 的 rdp 变量覆盖、移除 tailwindcss-animate 类。完整清单见 `frontend-coding-standards` skill 第 3 节
+- **UI 组件复用**: **在使用或实现任何组件前（含原生 HTML 控件），必须先确认 `src/components/ui/` 是否已有全局组件**——直接写 `<input type="date">`、`<select>`、自绘下拉等等同于自己实现组件，必须优先复用 `DatePicker`、`Select` 等；不满足需求时扩展其 props 而非另写一套。新输入/展示需求先确认已有组件是否满足，样式风格必须与 `Input` 组件保持一致（padding/font-size/border-radius/背景色/焦点态）。**成熟组件（日历/选择器/弹层等）从 shadcn/ui 拉取再改造，禁止手写轮子**：`pnpm dlx shadcn@latest add <name>`（拒绝覆盖已有文件；Windows 下 CLI 崩溃时先手动 `pnpm add` 依赖）；拉取后必须逐项适配：z-index 换 `Z_LAYERS.*`、shadcn token 换项目 CSS 变量、全局样式依赖（如 react-day-picker 的 `style.css`）走 `src/styles/calendar.css` 的 rdp 变量覆盖、移除 tailwindcss-animate 类。完整清单见 `frontend-coding-standards` skill 第 3 节
 
 ## i18n (VoerkaI18n)
 

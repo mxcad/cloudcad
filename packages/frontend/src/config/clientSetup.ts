@@ -136,6 +136,12 @@ client.setConfig({
 // ── 4. Global error logging ───────────────────────────────────
 // 4xx 业务错误仅记录到控制台，不自动弹 Toast，各调用方根据需要自行决定是否显示错误提示；
 // 5xx 服务器错误（如 500）由用户明确要求必须可见，这里统一分发全局 Toast，避免静默失败。
+// 例外：下载/批量任务类端点（路径含 /download，sdk.gen.ts 中全部 14 个均已核对）的
+// 调用方契约是「失败抛错、由调用方提示具体原因」（src/utils/download.ts、useBatchDownload、
+// useFileSystemNavigation、useFontLibrary 均在 catch 中自行 toast），拦截器不再重复弹，
+// 避免一次失败出现两个错误提示（实例：批量逐个下载 524 时双 toast 轰炸且叉不完）。
+const isCallerToastedDownload = (path: string) => path.includes('/download');
+
 client.interceptors.response.use(async (response) => {
   if (!response.ok) {
     const url = typeof response.url === 'string' ? response.url : '';
@@ -162,7 +168,8 @@ client.interceptors.response.use(async (response) => {
 
     // 未登录（无有效 accessToken 或 token 已过期）时的 401 是预期行为，
     // 不打印 [API Error] 噪音（如首页游客模式下全局组件的鉴权数据请求）。
-    const isUnauthenticated401 = response.status === 401 && isAccessTokenExpired();
+    const isUnauthenticated401 =
+      response.status === 401 && isAccessTokenExpired();
     if (!isUnauthenticated401) {
       console.warn(
         `[API Error] ${response.status} ${path}:`,
@@ -170,7 +177,7 @@ client.interceptors.response.use(async (response) => {
       );
     }
 
-    if (response.status >= 500) {
+    if (response.status >= 500 && !isCallerToastedDownload(path)) {
       globalShowToast(
         message || fallback || t('服务器繁忙，请稍后重试'),
         'error'

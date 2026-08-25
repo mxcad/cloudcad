@@ -1,6 +1,4 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { ToastContainer } from '@/components/ui/Toast';
 import { BatchActionBar } from '@/components/common/BatchActionBar';
 import { t } from '@/languages';
 
@@ -12,8 +10,6 @@ import type { FileSystemManagerViewProps } from './types';
 
 export const FileSystemManagerView: React.FC<FileSystemManagerViewProps> = ({
   containerRef,
-  toasts,
-  removeToast,
   canUpload,
   fileDropHandlers,
   headerProps,
@@ -24,11 +20,6 @@ export const FileSystemManagerView: React.FC<FileSystemManagerViewProps> = ({
 }) => {
   return (
     <>
-      {createPortal(
-        <ToastContainer toasts={toasts} onRemove={removeToast} />,
-        document.body
-      )}
-
       <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
         <div className="flex-shrink-0 max-w-7xl mx-auto w-full space-y-6 relative">
           <FileSystemHeader {...headerProps} />

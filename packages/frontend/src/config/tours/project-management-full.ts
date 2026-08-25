@@ -181,12 +181,14 @@ export function getProjectManagementFullGuide(): TourGuide {
       {
         target: 'project-role-hint',
         title: t('项目角色自治'),
-        content: t('项目角色属于本项目，可自由编辑；删除角色时成员自动降级为项目成员。'),
+        content: t(
+          '项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色。'
+        ),
         placement: 'left',
         mode: 'display',
         waitForElement: 2000,
         fallbackContent: t(
-          '项目角色属于本项目，可自由编辑；删除角色时成员自动降级为项目成员。'
+          '项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色。'
         ),
       },
       {
@@ -245,9 +247,7 @@ export function getProjectManagementFullGuide(): TourGuide {
         actionHint: t('请点击菜单中的"成员"选项'),
         highlight: true,
         waitForElement: 3000,
-        fallbackContent: t(
-          '请在操作菜单中选择"成员"，打开项目成员管理弹窗。'
-        ),
+        fallbackContent: t('请在操作菜单中选择"成员"，打开项目成员管理弹窗。'),
       },
       {
         target: 'invite-member-btn',

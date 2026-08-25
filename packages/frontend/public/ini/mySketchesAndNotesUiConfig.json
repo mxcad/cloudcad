@@ -1976,6 +1976,29 @@
           "icon": "",
           "list": [
             {
+              "type": "group",
+              "props": {
+                "class": "d-flex flex-column"
+              },
+              "isShowToMainPanel": true,
+              "list": [
+                {
+                  "icon": "class: iconfont  icon_shujuzhongtai",
+                  "tab": "数据库",
+                  "cmd": "Mx_DatabaseDisplay",
+                  "isShowLabel": true,
+                  "isShowToMainPanel": true
+                },
+                {
+                  "icon": "class: iconfont daimabianji",
+                  "tab": "代码编辑",
+                  "cmd": "Mx_CodeEditor",
+                  "isShowLabel": true,
+                  "isShowToMainPanel": true
+                }
+              ]
+            },
+            {
               "tab": "设置",
               "icon": "shezhi",
               "cmd": "Mx_SetAppDialog",

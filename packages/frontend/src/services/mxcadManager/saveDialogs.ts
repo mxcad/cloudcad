@@ -8,5 +8,6 @@ export function showSaveConfirmDialog(): Promise<string | null> {
     label: t('修改说明（可选）'),
     confirmText: t('保存'),
     multiline: true,
+    required: false,
   });
 }

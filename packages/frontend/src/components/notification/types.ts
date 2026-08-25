@@ -35,4 +35,5 @@ export interface PromptDialogState {
   confirmText: string;
   cancelText: string;
   multiline: boolean;
+  required: boolean;
 }

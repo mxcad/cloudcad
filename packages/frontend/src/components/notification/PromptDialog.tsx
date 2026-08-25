@@ -32,7 +32,10 @@ export function PromptDialog({
           <Button variant="secondary" onClick={onCancel}>
             {state.cancelText}
           </Button>
-          <Button onClick={onConfirm} disabled={!value.trim()}>
+          <Button
+            onClick={onConfirm}
+            disabled={state.required && !value.trim()}
+          >
             {state.confirmText}
           </Button>
         </>
@@ -60,7 +63,7 @@ export function PromptDialog({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && value.trim()) {
+            if (e.key === 'Enter' && (!state.required || value.trim())) {
               onConfirm();
             }
           }}

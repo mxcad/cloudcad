@@ -40,6 +40,8 @@ export interface PromptOptions {
   confirmText?: string;
   cancelText?: string;
   multiline?: boolean;
+  /** 是否必填，默认 true。为 false 时允许空内容提交。 */
+  required?: boolean;
 }
 
 /**

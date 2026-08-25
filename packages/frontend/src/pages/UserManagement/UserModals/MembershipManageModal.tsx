@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { dateOnlyToIso, isoToDateOnly, todayStartIso } from '@/utils/dateUtils';
-import { Loader2, Crown } from 'lucide-react';
+import { Loader2, Crown, Minus, Plus } from 'lucide-react';
 import { vipControllerGetActiveTiers } from '@/api-sdk';
 import type { SelectOption } from '@/components/ui/Select';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -22,6 +22,7 @@ const PRESET_DURATIONS = [
 
 const ADJUST_QUICK_DAYS = [7, 30, 90, 180, 365];
 const DAY_MS = 86400000;
+const MAX_ADJUST_DAYS = 3650;
 
 /** GET /api/v1/vip/tiers 返回的上架等级（SDK 该端点类型为 unknown，此处本地描述） */
 interface VipTierDto {
@@ -59,8 +60,11 @@ export function MembershipManageModal({
   );
   const [presetDays, setPresetDays] = useState(30);
   const [customDate, setCustomDate] = useState('');
-  const [adjustDays, setAdjustDays] = useState(30);
-  const [adjustDirection, setAdjustDirection] = useState<'add' | 'subtract'>('add');
+  // 计数器模型：signedDays 是「调整量」（有符号天数）的唯一事实源，
+  // +/− 按钮、快捷天数、输入框全部读写它，每次点击立即生效
+  const [signedDays, setSignedDays] = useState(30);
+  // 输入框草稿（string）：允许中间态输入（如 "-"、"清空"），blur 时规范化回钳制值
+  const [daysDraft, setDaysDraft] = useState('30');
   const [tierOptions, setTierOptions] = useState<SelectOption[]>([
     { value: '0', label: t('免费用户') },
   ]);
@@ -79,8 +83,8 @@ export function MembershipManageModal({
         setPresetDays(30);
         setCustomDate('');
       }
-      setAdjustDays(30);
-      setAdjustDirection('add');
+      setSignedDays(30);
+      setDaysDraft('30');
     }
   }, [isOpen, currentMembership]);
 
@@ -138,44 +142,60 @@ export function MembershipManageModal({
     };
   }, [isOpen, currentMembership?.tierLevel]);
 
-  // 调整时长预览：计算新到期时间
-  const adjustPreview = useMemo(() => {
-    if (durationMode !== 'adjust' || Number(tierLevel) === 0) return null;
-    const signedDays = adjustDirection === 'add' ? adjustDays : -adjustDays;
-    if (signedDays === 0) return null;
+  // 调整基准：当前到期时间晚于此刻则从到期时间起算，否则从此刻起算（与后端 user-crud 一致）
+  const adjustBase = useMemo(() => {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const currentExpiry = currentMembership?.expiresAt
       ? new Date(currentMembership.expiresAt)
       : null;
-    const base = currentExpiry && currentExpiry > now ? currentExpiry : now;
-    const newDate = new Date(base.getTime() + signedDays * DAY_MS);
+    return currentExpiry && currentExpiry > now ? currentExpiry : now;
+  }, [currentMembership?.expiresAt]);
+
+  // 下限：调整后的到期时间不得早于此刻。base + minSigned*天 ≥ 此刻的最小整数。
+  // base=此刻时为 0（只能延长）；base 为未来到期时间时为负数（可回拨到不早于现在）
+  const minSignedDays = useMemo(
+    () => Math.ceil((Date.now() - adjustBase.getTime()) / DAY_MS),
+    [adjustBase]
+  );
+
+  const clampSignedDays = (v: number) =>
+    Math.max(minSignedDays, Math.min(MAX_ADJUST_DAYS, v));
+
+  // 调整时长预览：状态被钳制恒合法，新到期时间永不早于此刻
+  const adjustPreview = useMemo(() => {
+    if (durationMode !== 'adjust' || Number(tierLevel) === 0) return null;
+    if (signedDays === 0) return null;
+    const now = new Date();
+    const currentExpiry = currentMembership?.expiresAt
+      ? new Date(currentMembership.expiresAt)
+      : null;
+    const hasExpiry = currentExpiry !== null && currentExpiry > now;
+    const newDate = new Date(adjustBase.getTime() + signedDays * DAY_MS);
     return {
-      currentExpiry: currentExpiry && currentExpiry > now ? currentExpiry : null,
+      currentExpiry: hasExpiry ? currentExpiry : null,
       newDate,
       signedDays,
-      // 截止日期不能比当天更早：减少后的新到期时间早于今天零点则视为无效
-      isPast: newDate < todayStart,
     };
-  }, [durationMode, tierLevel, adjustDays, adjustDirection, currentMembership?.expiresAt]);
+  }, [durationMode, tierLevel, signedDays, adjustBase, currentMembership?.expiresAt]);
 
-  // 计数器式调整：点击「增加/减少」每次立即生效。
-  // 首次点击负责切换方向（保留当前天数），再次点击则按 ±1 天递增/递减，
-  // 与快捷天数/自定义天数共用同一份 adjustDays 值。
-  const handleAdjustAdd = () => {
-    if (adjustDirection === 'subtract') {
-      setAdjustDirection('add');
-      return;
-    }
-    setAdjustDays((d) => Math.min(3650, d + 1));
+  // 计数器式调整：每次点击立即 ±1 天，方向由所点按钮决定，无隐式切换
+  const handleAdjustStep = (delta: number) => {
+    const next = clampSignedDays(signedDays + delta);
+    setSignedDays(next);
+    setDaysDraft(String(next));
   };
 
-  const handleAdjustSubtract = () => {
-    if (adjustDirection === 'add') {
-      setAdjustDirection('subtract');
-      return;
+  const handleDaysDraftChange = (text: string) => {
+    setDaysDraft(text);
+    const v = parseInt(text, 10);
+    if (!isNaN(v)) setSignedDays(clampSignedDays(v));
+  };
+
+  const normalizeDaysDraft = () => {
+    const v = parseInt(daysDraft, 10);
+    if (isNaN(v) || String(clampSignedDays(v)) !== daysDraft) {
+      setDaysDraft(String(signedDays));
     }
-    setAdjustDays((d) => Math.max(1, d - 1));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,10 +208,8 @@ export function MembershipManageModal({
     }
 
     if (durationMode === 'adjust') {
-      const signedDays = adjustDirection === 'add' ? adjustDays : -adjustDays;
+      // 防御：signedDays 已被钳制在 [minSignedDays, MAX] 内（新到期不早于此刻），0 天无意义
       if (signedDays === 0) return;
-      // 防御：调整后的到期时间不能早于今天（UI 已禁用保存，此处兜底）
-      if (adjustPreview?.isPast) return;
       await onSubmit({ tierLevel: level, adjustDays: signedDays });
       return;
     }
@@ -231,9 +249,7 @@ export function MembershipManageModal({
             onClick={handleSubmit}
             disabled={
               loading ||
-              (durationMode === 'adjust' &&
-                Number(tierLevel) > 0 &&
-                (adjustDays === 0 || adjustPreview?.isPast === true))
+              (durationMode === 'adjust' && Number(tierLevel) > 0 && signedDays === 0)
             }
             className={styles.submitBtn}
           >
@@ -331,56 +347,53 @@ export function MembershipManageModal({
 
             {durationMode === 'adjust' && (
               <div className={styles.adjustDurationSection}>
-                {/* 方向切换 */}
-                <div className={styles.adjustDirection}>
-                  <Button
-                    variant={adjustDirection === 'add' ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={handleAdjustAdd}
+                {/* 计数器：±1 天每次点击立即生效，到底/到顶自动禁用对应按钮 */}
+                <div className={styles.adjustStepper}>
+                  <button
                     type="button"
+                    className={styles.adjustStepBtn}
+                    onClick={() => handleAdjustStep(-1)}
+                    disabled={signedDays <= minSignedDays}
+                    aria-label={t('减少一天')}
                   >
-                    + {t('增加')}
-                  </Button>
-                  <Button
-                    variant={adjustDirection === 'subtract' ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={handleAdjustSubtract}
+                    <Minus size={16} />
+                  </button>
+                  <input
+                    type="number"
+                    value={daysDraft}
+                    onChange={(e) => handleDaysDraftChange(e.target.value)}
+                    onBlur={normalizeDaysDraft}
+                    className={styles.adjustDaysInput}
+                    aria-label={t('调整天数')}
+                  />
+                  <span className={styles.adjustDaysUnit}>{t('天')}</span>
+                  <button
                     type="button"
+                    className={styles.adjustStepBtn}
+                    onClick={() => handleAdjustStep(1)}
+                    disabled={signedDays >= MAX_ADJUST_DAYS}
+                    aria-label={t('增加一天')}
                   >
-                    - {t('减少')}
-                  </Button>
+                    <Plus size={16} />
+                  </button>
                 </div>
 
-                {/* 快捷天数按钮 */}
+                {/* 快捷天数：绝对赋值调整量，服务最常见的延长场景 */}
                 <div className={styles.presetDurations}>
                   {ADJUST_QUICK_DAYS.map((days) => (
                     <Button
                       key={days}
-                      variant={adjustDays === days ? 'primary' : 'secondary'}
+                      variant={signedDays === days ? 'primary' : 'secondary'}
                       size="sm"
-                      onClick={() => setAdjustDays(days)}
+                      onClick={() => {
+                        setSignedDays(days);
+                        setDaysDraft(String(days));
+                      }}
                       type="button"
                     >
                       {days} {t('天')}
                     </Button>
                   ))}
-                </div>
-
-                {/* 手动输入天数 */}
-                <div className={styles.adjustInput}>
-                  <label className={styles.formLabel}>{t('自定义天数')}</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={3650}
-                    value={adjustDays}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10);
-                      if (!isNaN(v) && v > 0) setAdjustDays(v);
-                    }}
-                    className={styles.adjustDaysInput}
-                  />
-                  <span className={styles.adjustDaysUnit}>{t('天')}</span>
                 </div>
 
                 {/* 预览新到期时间 */}
@@ -398,22 +411,11 @@ export function MembershipManageModal({
                         {t('当前无到期时间，从今天起算')}
                       </div>
                     )}
-                    <div
-                      className={
-                        adjustPreview.isPast
-                          ? styles.adjustPreviewError
-                          : styles.adjustPreviewNew
-                      }
-                    >
+                    <div className={styles.adjustPreviewNew}>
                       {t('新到期时间：{date}', {
                         date: adjustPreview.newDate.toLocaleDateString(),
                       })}
                     </div>
-                    {adjustPreview.isPast && (
-                      <div className={styles.adjustPreviewWarning}>
-                        {t('调整后的到期时间不能早于今天')}
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

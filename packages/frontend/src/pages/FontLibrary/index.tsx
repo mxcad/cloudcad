@@ -171,9 +171,10 @@ export default function FontLibrary() {
                 {rubberBandOverlay}
               </div>
               {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=页面底部），
-                  内容超出时 sticky 吸底（不占布局空间） */}
+                  内容超出时 sticky 吸底（不占布局空间）。
+                  @container：BatchActionBar 按容器宽度（非视口）切换 icon-only/文字模式 */}
               {batchBar && (
-                <div className="mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
+                <div className="@container mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
                   <div className="pointer-events-auto">{batchBar}</div>
                 </div>
               )}

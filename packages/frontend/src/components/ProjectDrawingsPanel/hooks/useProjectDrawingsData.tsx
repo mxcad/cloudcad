@@ -111,8 +111,8 @@ export function useProjectDrawingsData({
     []
   );
 
-  // UI hook
-  const { toasts, showToast, removeToast } = useFileSystemUI();
+  // UI hook — toast 委托全局 ToastStack（见 useFileSystemUI 说明）
+  const { showToast } = useFileSystemUI();
 
   const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
   const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
@@ -301,9 +301,7 @@ export function useProjectDrawingsData({
     user,
     hasPermission,
     config,
-    toasts,
     showToast,
-    removeToast,
     // 数据（loader 透传）
     nodes: loader.nodes,
     loading: loader.loading,

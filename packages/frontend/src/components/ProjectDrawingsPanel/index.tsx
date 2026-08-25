@@ -20,8 +20,6 @@
  */
 
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { ToastContainer } from '@/components/ui/Toast';
 import { t } from '@/languages';
 
 import type { ProjectDrawingsPanelProps } from './types';
@@ -106,8 +104,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     refreshNodes,
     multiSelectedNodes,
     undoStack,
-    toasts,
-    removeToast,
     showToast,
     clipboardItems,
     config,
@@ -214,11 +210,6 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
 
   return (
     <div ref={panelRef} className={styles.projectDrawingsPanel}>
-      {createPortal(
-        <ToastContainer toasts={toasts} onRemove={removeToast} />,
-        document.body
-      )}
-
       {/* 项目列表视图 — 我的项目 tab 初始状态 */}
       <div
         className={`${styles.subTabPanel} ${showProjectList ? styles.active : ''}`}
@@ -291,46 +282,46 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
                 count={multiSelectedNodes.size}
                 onClear={handleCancelBatchBar}
                 actions={[
-                {
-                  key: 'move',
-                  icon: FolderInput,
-                  tooltip: t('移动到分类'),
-                  onClick: handleBatchMoveClick,
-                },
-                {
-                  key: 'copy',
-                  icon: Copy,
-                  tooltip: t('复制到分类'),
-                  onClick: handleBatchCopyClick,
-                },
-                {
-                  key: 'delete',
-                  icon: Trash2,
-                  variant: 'danger',
-                  tooltip: t('删除'),
-                  onClick: handleBatchDeleteClick,
-                },
-                ...(config.batchDownloadEnabled
-                  ? [
-                      {
-                        key: 'download',
-                        icon: Download,
-                        tooltip: t('批量下载'),
-                        onClick: handleBatchDownloadClick,
-                      },
-                    ]
-                  : []),
-                ...(undoStack.length > 0
-                  ? [
-                      {
-                        key: 'undo',
-                        icon: Undo2,
-                        tooltip: t('撤销'),
-                        onClick: sidebarHandleUndo,
-                      },
-                    ]
-                  : []),
-              ]}
+                  {
+                    key: 'move',
+                    icon: FolderInput,
+                    tooltip: t('移动到分类'),
+                    onClick: handleBatchMoveClick,
+                  },
+                  {
+                    key: 'copy',
+                    icon: Copy,
+                    tooltip: t('复制到分类'),
+                    onClick: handleBatchCopyClick,
+                  },
+                  {
+                    key: 'delete',
+                    icon: Trash2,
+                    variant: 'danger',
+                    tooltip: t('删除'),
+                    onClick: handleBatchDeleteClick,
+                  },
+                  ...(config.batchDownloadEnabled
+                    ? [
+                        {
+                          key: 'download',
+                          icon: Download,
+                          tooltip: t('批量下载'),
+                          onClick: handleBatchDownloadClick,
+                        },
+                      ]
+                    : []),
+                  ...(undoStack.length > 0
+                    ? [
+                        {
+                          key: 'undo',
+                          icon: Undo2,
+                          tooltip: t('撤销'),
+                          onClick: sidebarHandleUndo,
+                        },
+                      ]
+                    : []),
+                ]}
               />
             ) : undefined
           }

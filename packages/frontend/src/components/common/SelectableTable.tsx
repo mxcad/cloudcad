@@ -60,10 +60,7 @@ interface SelectableTableProps<T> {
   /** 业务表头（首列全选 Checkbox 由容器插入） */
   renderHeader: () => React.ReactNode;
   /** 业务行单元格（首列行 Checkbox 由容器插入） */
-  renderRow: (
-    row: T,
-    context: SelectableTableRenderContext
-  ) => React.ReactNode;
+  renderRow: (row: T, context: SelectableTableRenderContext) => React.ReactNode;
   /** 选中行样式类（默认半透明主题色背景） */
   selectedRowClassName?: string;
   /** 行额外样式类（按行定制） */
@@ -175,8 +172,7 @@ export function SelectableTable<T>({
     rubberBandJustEndedRef,
   };
 
-  const thClassName =
-    'px-4 py-3 font-medium text-left whitespace-nowrap';
+  const thClassName = 'px-4 py-3 font-medium text-left whitespace-nowrap';
   const tdClassName = 'px-4 py-3';
   const checkboxCellClassName = 'px-3 py-3 w-10 text-center align-middle';
 
@@ -248,18 +244,16 @@ export function SelectableTable<T>({
                         isSelected ? selectedRowClassName : '',
                         rowClassName?.(row) ?? '',
                       ].join(' ')}
-                      style={{ borderBottom: '1px solid var(--border-default)' }}
+                      style={{
+                        borderBottom: '1px solid var(--border-default)',
+                      }}
                       onClick={(e) => {
                         // 框选刚结束时的 click 误触发会清掉框选结果，直接跳过
                         if (rubberBandJustEndedRef.current) {
                           rubberBandJustEndedRef.current = false;
                           return;
                         }
-                        onToggleSelect(
-                          id,
-                          e.ctrlKey || e.metaKey,
-                          e.shiftKey
-                        );
+                        onToggleSelect(id, e.ctrlKey || e.metaKey, e.shiftKey);
                       }}
                     >
                       <td
@@ -311,9 +305,10 @@ export function SelectableTable<T>({
             </div>
           ) : null}
           {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=页面底部），
-              内容超出时 sticky 吸底；始终位于内容末尾下方，不遮挡内容；分页栏在滚动容器外 */}
+              内容超出时 sticky 吸底；始终位于内容末尾下方，不遮挡内容；分页栏在滚动容器外。
+              @container：BatchActionBar 按容器宽度（非视口）切换 icon-only/文字模式（侧边栏窄容器适配） */}
           {bottomBar && (
-            <div className="mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
+            <div className="@container mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
               <div className="pointer-events-auto">{bottomBar}</div>
             </div>
           )}
