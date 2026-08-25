@@ -53,6 +53,11 @@ export class FileDownloadExportService {
     maxRecursionDepth: number;
   };
 
+  /** 转换产物缓存目录（空字符串表示未启用缓存） */
+  private readonly conversionCacheDir: string;
+  /** 缓存 TTL（毫秒），0 = 未启用 */
+  private readonly conversionCacheTtlMs: number;
+
   constructor(
     private readonly prisma: DatabaseService,
     @Inject(IStorageService) private readonly storageService: IStorageService,
@@ -74,6 +79,69 @@ export class FileDownloadExportService {
       maxFilenameLength: limits.maxFilenameLength,
       maxRecursionDepth: limits.maxRecursionDepth,
     };
+    const batchConfig = this.configService.get('batchDownload', { infer: true });
+    this.conversionCacheDir = batchConfig?.conversionCacheDir || '';
+    this.conversionCacheTtlMs = (batchConfig?.conversionCacheTtlHours || 0) * 60 * 60 * 1000;
+  }
+
+  /**
+   * 构造转换产物缓存 key：`{nodeId}-{updatedAtMs}-{格式参数}`。
+   * - ⚠️ 不能用 fileHash：编辑器保存（saveMxwebFile）覆盖 node.path 文件时只更新
+   *   updatedAt/size，fileHash 保持上传时源文件的 md5 不变——用它做 key 会脏读旧缓存；
+   * - updatedAt 由 Prisma @updatedAt 自动维护，任何节点更新（编辑器保存/重命名/新版本上传）
+   *   都会刷新 → key 变化 → 旧缓存自然失效；
+   * - pdf 尺寸/颜色、dwg/dxf 版本等参数参与 key，不同参数互不污染。
+   * 返回 null 表示不启用缓存（未启用或节点缺 updatedAt）。
+   */
+  private buildConversionCacheKey(
+    node: PrismaFileSystemNode,
+    format: CadDownloadFormat,
+    pdfParams?: { width?: string; height?: string; colorPolicy?: string; dwgVersion?: number }
+  ): string | null {
+    if (!this.conversionCacheDir || !this.conversionCacheTtlMs) return null;
+    if (!node.updatedAt) return null;
+    const safe = (v: string | undefined) => (v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    let paramKey: string;
+    if (format === CadDownloadFormat.PDF) {
+      paramKey = `pdf-${safe(pdfParams?.width) || '2000'}x${safe(pdfParams?.height) || '2000'}-${safe(pdfParams?.colorPolicy) || 'mono'}`;
+    } else if (format === CadDownloadFormat.DWG) {
+      paramKey = pdfParams?.dwgVersion ? `dwg-v${pdfParams.dwgVersion}` : 'dwg';
+    } else {
+      paramKey = pdfParams?.dwgVersion ? `dxf-v${pdfParams.dwgVersion}` : 'dxf';
+    }
+    return `${node.id}-${node.updatedAt.getTime()}-${paramKey}`;
+  }
+
+  /** 缓存命中且未过 TTL（mtime 惰性检查）；过期文件顺带删除 */
+  private isConversionCacheFresh(cachePath: string): boolean {
+    try {
+      if (!fs.existsSync(cachePath)) return false;
+      if (!this.conversionCacheTtlMs) return false;
+      const stat = fs.statSync(cachePath);
+      if (Date.now() - stat.mtimeMs > this.conversionCacheTtlMs) {
+        // 同步删除：异步 unlink 与紧随其后的重转换 rename 存在竞态，可能误删新缓存
+        try {
+          fs.unlinkSync(cachePath);
+        } catch {
+          // 忽略：文件被并发请求抢先删除/替换均无害
+        }
+        this.logger.log(`转换缓存已过期，删除: ${cachePath}`);
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** 旧路径降级清理：删除转换临时文件（失败仅告警） */
+  private async cleanupConvertedTempFile(filePath: string): Promise<void> {
+    try {
+      await fsPromises.unlink(filePath);
+      this.logger.log(`临时转换文件已删除: ${filePath}`);
+    } catch (error) {
+      this.logger.warn(`删除临时文件失败: ${filePath}, error: ${(error as Error).message}`);
+    }
   }
 
   private async getMxCadConversionService(): Promise<IMxcadConversionService> {
@@ -206,6 +274,8 @@ export class FileDownloadExportService {
     stream: NodeJS.ReadableStream;
     filename: string;
     mimeType: string;
+    /** 转换产物缓存 key（含格式参数），Controller 用于构造 ETag；非转换格式为 undefined */
+    cacheKey?: string;
   }> {
     try {
       const node = await this.prisma.fileSystemNode.findUnique({
@@ -291,11 +361,6 @@ export class FileDownloadExportService {
         case CadDownloadFormat.DWG:
         case CadDownloadFormat.DXF:
         case CadDownloadFormat.PDF: {
-          // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行
-          if (userId) {
-            await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-          }
-
           let targetExt: string;
           if (format === CadDownloadFormat.DWG) {
             targetExt = '.dwg';
@@ -305,6 +370,42 @@ export class FileDownloadExportService {
             targetExt = '.pdf';
           }
           const targetFilename = `${path.basename(originalFilename, ext).replace(/[<>:"|?*]/g, '_').replace(/\.\./g, '_').replace(/~/g, '_')}${targetExt}`;
+
+          // ── 转换产物缓存：同文件同格式同参数直接复用，避免每次下载重新转换 ──
+          // 历史行为是转换完立即删除临时文件，重复下载永远慢（超过反向代理超时即 524）。
+          // 缓存 key 含 fileHash（内容变更自动失效）与格式参数（pdf 尺寸/颜色、dwg 版本）。
+          // 注意：命中检查必须先于转换配额占位——缓存命中不发生真实转换，不应扣次数。
+          const cacheKey = this.buildConversionCacheKey(node, format, pdfParams);
+          const cachePath = cacheKey
+            ? path.join(this.conversionCacheDir, `${cacheKey}${targetExt}`)
+            : null;
+          if (cachePath && this.isConversionCacheFresh(cachePath)) {
+            const cachedStream = fs.createReadStream(cachePath);
+            this.logger.log(
+              `转换缓存命中: ${originalFilename} -> ${targetFilename} (cache: ${path.basename(cachePath)})`
+            );
+
+            await this.auditLogger.audit({
+              action: AuditAction.FILE_DOWNLOAD,
+              resourceType: ResourceType.FILE,
+              resourceId: nodeId,
+              userId,
+              success: true,
+              details: { filename: originalFilename, format: format.toLowerCase(), cacheHit: true },
+            });
+
+            return {
+              stream: cachedStream,
+              filename: targetFilename,
+              mimeType: NodeUtils.getMimeType(targetFilename),
+              cacheKey,
+            };
+          }
+
+          // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行
+          if (userId) {
+            await this.restrictionEngine.reserveConversionCountOrThrow(userId);
+          }
 
           const conversionOptions: ConvertServerFileParam = {
             srcPath: this.storageManager.getFullPath(mxwebPath).replace(/\\/g, '/'),
@@ -352,29 +453,45 @@ export class FileDownloadExportService {
             throw new BadRequestException(I18nContext.current()?.t('error.file_extra.conversion_failed_detail', { args: { error: errMsg } }) ?? `文件转换失败: ${errMsg}`);
           }
 
+          // 转换产物移入缓存目录复用（不再用完即删；TTL 由 isConversionCacheFresh 惰性管理）
           const mxwebDir = path.dirname(node.path);
           const targetRelativePath = `${mxwebDir}/${targetFilename}`;
           const targetFullPath = this.storageManager.getFullPath(targetRelativePath);
 
-          let convertedStream: fs.ReadStream;
-          try {
-            convertedStream = fs.createReadStream(targetFullPath);
-          } catch (streamErr) {
+          if (!fs.existsSync(targetFullPath)) {
             throw new NotFoundException(I18nContext.current()?.t('error.file_extra.converted_file_not_exist', { args: { path: targetFilename } }) ?? `转换后的文件不存在: ${targetFilename}`);
           }
 
-          const convertedMimeType = NodeUtils.getMimeType(targetFilename);
-
-          convertedStream.on('end', async () => {
+          let convertedStream: fs.ReadStream;
+          if (cachePath) {
             try {
-              await fsPromises.unlink(targetFullPath);
-              this.logger.log(`临时转换文件已删除: ${targetFullPath}`);
-            } catch (error) {
-              this.logger.warn(
-                `删除临时文件失败: ${targetFullPath}, error: ${error.message}`
-              );
+              fs.mkdirSync(this.conversionCacheDir, { recursive: true });
+              // 同 key 并发转换时后者覆盖前者，产物内容等价，无一致性问题
+              fs.renameSync(targetFullPath, cachePath);
+              convertedStream = fs.createReadStream(cachePath);
+            } catch (moveErr) {
+              // 缓存目录不可写时降级为旧行为：直接回传并删除临时文件
+              this.logger.warn(`转换缓存写入失败，降级直传: ${(moveErr as Error).message}`);
+              convertedStream = fs.createReadStream(targetFullPath);
+              convertedStream.on('end', async () => {
+                await this.cleanupConvertedTempFile(targetFullPath);
+              });
+              convertedStream.on('error', async () => {
+                await this.cleanupConvertedTempFile(targetFullPath);
+              });
             }
-          });
+          } else {
+            // 缓存未启用（TTL=0）：保持旧行为
+            convertedStream = fs.createReadStream(targetFullPath);
+            convertedStream.on('end', async () => {
+              await this.cleanupConvertedTempFile(targetFullPath);
+            });
+            convertedStream.on('error', async () => {
+              await this.cleanupConvertedTempFile(targetFullPath);
+            });
+          }
+
+          const convertedMimeType = NodeUtils.getMimeType(targetFilename);
 
           convertedStream.on('error', async () => {
             try {
@@ -404,6 +521,7 @@ export class FileDownloadExportService {
             stream: convertedStream,
             filename: targetFilename,
             mimeType: convertedMimeType,
+            cacheKey: cacheKey ?? undefined,
           };
         }
 

@@ -317,7 +317,7 @@ export class DownloadController {
             ? { dwgVersion: query.dwgVersion }
             : undefined;
 
-      const { stream, filename, mimeType } =
+      const { stream, filename, mimeType, cacheKey } =
         await this.fileDownloadExportService.downloadNodeWithFormat(
           nodeId,
           userId,
@@ -354,7 +354,10 @@ export class DownloadController {
         node.nodeType === NodeType.FILE &&
         (node.fileHash || node.id)
       ) {
-        const etag = `"${node.fileHash || node.id}_${format}"`;
+        // ETag 基于节点更新时间（fileHash 在编辑器保存时不变化，会导致 304 脏读）+
+        // 格式参数（cacheKey 已编码 pdf 尺寸/颜色、dwg 版本），节点更新后 ETag 必然变化
+        const updatedAtMs = node.updatedAt ? node.updatedAt.getTime() : 0;
+        const etag = `"${node.id}_${updatedAtMs}_${cacheKey ?? format}"`;
         res.setHeader('ETag', etag);
 
         if (req.headers['if-none-match'] === etag) {
