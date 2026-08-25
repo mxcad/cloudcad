@@ -64,6 +64,19 @@ const batchOk = (nodeIds: string[]) => ({
   data: { successIds: [...nodeIds], failedIds: [], failedCount: 0 },
 });
 
+/**
+ * 批量复制成功响应（后端真实契约）：
+ * successIds 回显源节点 id，createdIds 为复制产出的新副本 id（≠ 源 id）
+ */
+const batchCopyOk = (nodeIds: string[]) => ({
+  data: {
+    successIds: [...nodeIds],
+    failedIds: [],
+    failedCount: 0,
+    createdIds: nodeIds.map((id) => `copy-${id}`),
+  },
+});
+
 function dragEvent(ctrl = false): React.DragEvent {
   return {
     preventDefault: vi.fn(),
@@ -97,7 +110,7 @@ describe('useMoveCopyOrchestrator — move 编排', () => {
       Promise.resolve(batchOk(body?.nodeIds ?? []))
     );
     copyMock.mockImplementation(({ body }: any) =>
-      Promise.resolve(batchOk(body?.nodeIds ?? []))
+      Promise.resolve(batchCopyOk(body?.nodeIds ?? []))
     );
     pushSpy = vi
       .spyOn(useFileSystemUndoRedoStore.getState(), 'pushAction')
@@ -273,7 +286,7 @@ describe('useMoveCopyOrchestrator — copy 编排', () => {
       Promise.resolve(batchOk(body?.nodeIds ?? []))
     );
     copyMock.mockImplementation(({ body }: any) =>
-      Promise.resolve(batchOk(body?.nodeIds ?? []))
+      Promise.resolve(batchCopyOk(body?.nodeIds ?? []))
     );
     pushSpy = vi
       .spyOn(useFileSystemUndoRedoStore.getState(), 'pushAction')
@@ -281,13 +294,21 @@ describe('useMoveCopyOrchestrator — copy 编排', () => {
   });
 
   it('clipboard 模式：单次批量复制 + 粘贴成功 toast + 注册 paste-copy undo（含 initialCreatedIds）', async () => {
+    // 后端契约：successIds 回显源节点 id，createdIds 才是新副本 id
     copyMock.mockResolvedValue({
-      data: { successIds: ['new-a', 'new-b'], failedIds: [], failedCount: 0 },
+      data: {
+        successIds: ['a', 'b'],
+        failedIds: [],
+        failedCount: 0,
+        createdIds: ['copy-a', 'copy-b'],
+      },
     });
     const { result, props } = renderOrchestrator();
 
     await act(async () => {
-      await result.current.copy(['a', 'b'], 'target-1', 'clipboard');
+      const created = await result.current.copy(['a', 'b'], 'target-1', 'clipboard');
+      // 返回值必须是新副本 id（undo rollback 按它删除），而非源节点 id
+      expect(created).toEqual(['copy-a', 'copy-b']);
     });
 
     expect(copyMock).toHaveBeenCalledTimes(1);
@@ -335,17 +356,18 @@ describe('useMoveCopyOrchestrator — copy 编排', () => {
   it('部分失败：成功粘贴汇总 warning toast + undo 只含成功产物', async () => {
     copyMock.mockResolvedValue({
       data: {
-        successIds: ['new-b'],
+        successIds: ['b'],
         failedIds: ['a'],
         failedCount: 1,
         errors: ['节点 a: quota exceeded'],
+        createdIds: ['copy-b'],
       },
     });
     const { result, props } = renderOrchestrator();
 
     await act(async () => {
       const created = await result.current.copy(['a', 'b'], 'target-1', 'clipboard');
-      expect(created).toEqual(['new-b']);
+      expect(created).toEqual(['copy-b']);
     });
 
     expect(props.showToast).toHaveBeenCalledWith(
@@ -391,7 +413,7 @@ describe('useMoveCopyOrchestrator — 拖拽手势', () => {
       Promise.resolve(batchOk(body?.nodeIds ?? []))
     );
     copyMock.mockImplementation(({ body }: any) =>
-      Promise.resolve(batchOk(body?.nodeIds ?? []))
+      Promise.resolve(batchCopyOk(body?.nodeIds ?? []))
     );
     pushSpy = vi
       .spyOn(useFileSystemUndoRedoStore.getState(), 'pushAction')

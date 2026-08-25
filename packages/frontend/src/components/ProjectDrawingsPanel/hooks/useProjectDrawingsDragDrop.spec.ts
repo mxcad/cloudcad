@@ -44,6 +44,16 @@ const batchOk = (nodeIds: string[]) => ({
   data: { successIds: [...nodeIds], failedIds: [], failedCount: 0 },
 });
 
+/** 批量复制成功响应：createdIds 为新副本 id（后端契约，≠ successIds 的源 id） */
+const batchCopyOk = (nodeIds: string[]) => ({
+  data: {
+    successIds: [...nodeIds],
+    failedIds: [],
+    failedCount: 0,
+    createdIds: nodeIds.map((id) => `copy-${id}`),
+  },
+});
+
 const draggedNode = { id: 'f1', name: 'a.dwg', isFolder: false, parentId: 'p1' };
 const targetFolder = { id: 'folder-2', name: 'dir2', isFolder: true, parentId: 'p1' };
 
@@ -89,7 +99,7 @@ describe('useMoveCopyOrchestrator 拖拽 — 对齐行为契约', () => {
       Promise.resolve(batchOk(body?.nodeIds ?? []))
     );
     copyMock.mockImplementation(({ body }: any) =>
-      Promise.resolve(batchOk(body?.nodeIds ?? []))
+      Promise.resolve(batchCopyOk(body?.nodeIds ?? []))
     );
     pushSpy = vi
       .spyOn(useFileSystemUndoRedoStore.getState(), 'pushAction')

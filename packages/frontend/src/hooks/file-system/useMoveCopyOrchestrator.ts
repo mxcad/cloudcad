@@ -28,12 +28,14 @@ function extractBatchResult(payload: unknown): {
   successIds: string[];
   failedCount: number;
   errors?: string[];
+  createdIds?: string[];
 } {
   const r = (payload ?? {}) as {
     successIds?: string[];
     failedIds?: string[];
     failedCount?: number;
     errors?: string[];
+    createdIds?: string[];
   };
   return {
     successIds: Array.isArray(r.successIds) ? r.successIds : [],
@@ -44,6 +46,7 @@ function extractBatchResult(payload: unknown): {
           ? r.failedIds.length
           : 0,
     errors: r.errors,
+    createdIds: Array.isArray(r.createdIds) ? r.createdIds : undefined,
   };
 }
 
@@ -206,7 +209,7 @@ export function useMoveCopyOrchestrator({
           throwOnError: true,
         });
         const result = extractBatchResult(res.data);
-        createdIds = result.successIds;
+        createdIds = result.createdIds ?? [];
         failedCount = result.failedCount;
         if (failedCount > 0) {
           lastError = new Error(result.errors?.[0] || t('部分项目复制失败'));

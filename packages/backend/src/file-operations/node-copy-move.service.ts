@@ -724,13 +724,15 @@ export class NodeCopyMoveService {
       };
     }
     const successIds: string[] = [];
+    const createdIds: string[] = [];
     const failedIds: string[] = [];
     const errors: string[] = [];
     for (const nodeId of dedupedIds) {
       try {
         // 配额校验在 copyNode 内统一执行（NodeMutationGuard）
-        await this.copyNode(nodeId, targetParentId, userId);
+        const copiedNode = await this.copyNode(nodeId, targetParentId, userId);
         successIds.push(nodeId);
+        createdIds.push(copiedNode.id);
       } catch (error) {
         failedIds.push(nodeId);
         errors.push(`节点 ${nodeId}: ${error.message}`);
@@ -742,6 +744,8 @@ export class NodeCopyMoveService {
       failedCount: failedIds.length,
       successIds,
       failedIds,
+      // 新副本 id（≠ successIds 的源节点 id）：前端 undo 需按副本 id 回滚删除
+      createdIds,
       errors: errors.length > 0 ? errors : undefined,
     };
   }

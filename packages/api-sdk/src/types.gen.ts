@@ -2603,6 +2603,10 @@ export type BatchOperationResponseDto = {
      */
     failedIds: Array<string>;
     /**
+     * 新建副本 ID 列表（仅批量复制返回，与 successIds 一一对应）
+     */
+    createdIds?: Array<string>;
+    /**
      * 错误信息
      */
     errors?: Array<string>;

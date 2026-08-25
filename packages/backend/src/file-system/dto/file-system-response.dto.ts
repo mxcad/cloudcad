@@ -355,6 +355,12 @@ export class BatchOperationResponseDto {
   @ApiProperty({ description: '失败 ID 列表' })
   failedIds: string[];
 
+  @ApiProperty({
+    description: '新建副本 ID 列表（仅批量复制返回，与 successIds 一一对应）',
+    required: false,
+  })
+  createdIds?: string[];
+
   @ApiProperty({ description: '错误信息', required: false })
   errors?: string[];
 }

@@ -11771,6 +11771,14 @@ export function getNodeControllerBatchDeleteNodes200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -11802,6 +11810,14 @@ export function getNodeControllerBatchMoveNodes200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -11826,6 +11842,14 @@ export function getNodeControllerBatchCopyNodes201Response() {
       ].map((_) => faker.lorem.words());
     })(),
     failedIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    createdIds: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
       const safeMin = Math.min(arrayMin, arrayMax);
@@ -12040,6 +12064,14 @@ export function getTrashControllerRestoreTrashItems200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -12064,6 +12096,14 @@ export function getTrashControllerPermanentlyDeleteTrashItems200Response() {
       ].map((_) => faker.lorem.words());
     })(),
     failedIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    createdIds: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
       const safeMin = Math.min(arrayMin, arrayMax);
@@ -12287,6 +12327,14 @@ export function getFontsControllerBatchDeleteFonts200Response() {
       ].map((_) => faker.lorem.words());
     })(),
     failedIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    createdIds: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
       const safeMin = Math.min(arrayMin, arrayMax);
@@ -13426,6 +13474,14 @@ export function getLibraryControllerBatchDeleteDrawingNodes200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -13457,6 +13513,14 @@ export function getLibraryControllerBatchMoveDrawingNodes200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -13481,6 +13545,14 @@ export function getLibraryControllerBatchCopyDrawingNodes201Response() {
       ].map((_) => faker.lorem.words());
     })(),
     failedIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    createdIds: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
       const safeMin = Math.min(arrayMin, arrayMax);
@@ -13935,6 +14007,14 @@ export function getLibraryControllerBatchDeleteBlockNodes200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -13966,6 +14046,14 @@ export function getLibraryControllerBatchMoveBlockNodes200Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+    createdIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
     errors: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
@@ -13990,6 +14078,14 @@ export function getLibraryControllerBatchCopyBlockNodes201Response() {
       ].map((_) => faker.lorem.words());
     })(),
     failedIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    createdIds: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
       const safeMin = Math.min(arrayMin, arrayMax);

@@ -50,6 +50,7 @@ vi.mock('@/utils/errorHandler', () => ({
 import {
   nodeControllerBatchMoveNodes,
   nodeControllerBatchCopyNodes,
+  nodeControllerDeleteNode,
 } from '@/api-sdk';
 
 const moveMock = nodeControllerBatchMoveNodes as unknown as ReturnType<
@@ -58,6 +59,8 @@ const moveMock = nodeControllerBatchMoveNodes as unknown as ReturnType<
 const copyMock = nodeControllerBatchCopyNodes as unknown as ReturnType<
   typeof vi.fn
 >;
+const deleteMock =
+  nodeControllerDeleteNode as unknown as ReturnType<typeof vi.fn>;
 
 const nodeA = { id: 'a', name: 'a.dwg', isFolder: false, parentId: 'p1' };
 const nodeB = { id: 'b', name: 'b.dwg', isFolder: false, parentId: 'p1' };
@@ -249,8 +252,14 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
 
     it('copy 粘贴：单次批量复制 + paste-copy 动作', async () => {
       setupClipboardStore(['a', 'b'], 'copy', 'proj-1');
+      // 后端契约：successIds 回显源节点 id，createdIds 才是新副本 id
       copyMock.mockResolvedValue({
-        data: { successIds: ['new-a', 'new-b'], failedIds: [], failedCount: 0 },
+        data: {
+          successIds: ['a', 'b'],
+          failedIds: [],
+          failedCount: 0,
+          createdIds: ['copy-a', 'copy-b'],
+        },
       });
       const { result, options } = renderActions();
 
@@ -264,6 +273,40 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
       // copy 粘贴不清空剪贴板，但刷新数据
       expect(useFileSystemClipboardStore.getState().items).toEqual(['a', 'b']);
       expect(options.refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('回归 #跨项目粘贴撤销：undo 只删除复制产出的新副本，绝不删除源节点', async () => {
+      setupClipboardStore(['a'], 'copy', 'other-proj');
+      copyMock.mockResolvedValue({
+        data: {
+          successIds: ['a'],
+          failedIds: [],
+          failedCount: 0,
+          createdIds: ['copy-a'],
+        },
+      });
+      deleteMock.mockResolvedValue(undefined);
+      const { result } = renderActions();
+
+      await act(async () => {
+        await result.current.clipboard.paste();
+      });
+      const action = pushSpy.mock.calls[0][0];
+
+      // 撤销：永久删除的是目标项目里的副本 copy-a
+      await act(async () => {
+        await action.rollback();
+      });
+      expect(deleteMock).toHaveBeenCalledTimes(1);
+      expect(deleteMock).toHaveBeenCalledWith({
+        path: { nodeId: 'copy-a' },
+        query: { permanently: true },
+        throwOnError: true,
+      });
+      // 源节点 a（other-proj）绝不能被删除
+      expect(deleteMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({ path: { nodeId: 'a' } })
+      );
     });
 
     it('无移动权限：不调 API + 提示（对齐主页面文案）', async () => {
