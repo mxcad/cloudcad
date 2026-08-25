@@ -23,6 +23,6 @@
       "nativeTitle": "한국어 (대한민국)"
     }
   ],
-  "library": true,
+  "library": false,
   "debug": false
 }

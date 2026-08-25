@@ -15,9 +15,11 @@ import { CommonModule } from '../common/common.module';
 import { PermissionModule } from '../permission/permission.module';
 import { StorageManagementModule } from '../storage-management/storage-management.module';
 import { AdminController } from './admin.controller';
+import { AdminStatsService } from './admin-stats.service';
 
 @Module({
   imports: [CommonModule, PermissionModule, StorageManagementModule],
   controllers: [AdminController],
+  providers: [AdminStatsService],
 })
 export class AdminModule {}

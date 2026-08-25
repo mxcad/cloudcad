@@ -51,6 +51,7 @@ import {
   ShieldBan,
   ShieldAlert,
   Home,
+  BarChart3,
 } from 'lucide-react';
 import { Menu } from './ui/Menu';
 
@@ -314,6 +315,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         // 与路由守卫一致：菜单显隐用 SYSTEM_BILLING_READ（曾误用 SYSTEM_CONFIG_READ，
         // 导致有"查看配置"无"查看支付"的用户看到菜单但 403，反之看不到菜单）
         visible: hasPermission(SystemPermission.SYSTEM_BILLING_READ),
+      },
+      {
+        to: '/admin/stats',
+        icon: BarChart3,
+        label: t('运营统计'),
+        // 与路由守卫一致：任一权限即可进页，页内区块按权限各自显隐
+        visible:
+          hasPermission(SystemPermission.SYSTEM_USER_READ) ||
+          hasPermission(SystemPermission.SYSTEM_BILLING_READ),
       },
       {
         to: '/admin/ip-blacklist',

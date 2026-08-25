@@ -102,6 +102,7 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const SystemMonitorPage = lazy(() => import('./pages/SystemMonitorPage'));
 const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
 const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
+const AdminStatsPage = lazy(() => import('./pages/AdminStatsPage'));
 const IpBlacklistPage = lazy(() => import('./pages/IpBlacklistPage'));
 const IpWhitelistPage = lazy(() => import('./pages/IpWhitelistPage'));
 const SecurityAccessAttemptPage = lazy(
@@ -572,6 +573,23 @@ function AppContent() {
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminBillingPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 运营统计 - 需要 SYSTEM_USER_READ 或 SYSTEM_BILLING_READ 任一，页内区块按权限各自显隐 */}
+                  <Route
+                    path="/admin/stats"
+                    element={
+                      <PermissionRoute
+                        permission={[
+                          SystemPermission.SYSTEM_USER_READ,
+                          SystemPermission.SYSTEM_BILLING_READ,
+                        ]}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <AdminStatsPage />
                         </Suspense>
                       </PermissionRoute>
                     }

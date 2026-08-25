@@ -1,0 +1,164 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.rangeBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rangeButton {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.rangeButton:hover {
+  background: var(--hover-bg);
+}
+
+.rangeButtonActive {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+  color: #ffffff;
+}
+
+.dateInput {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.customDivider {
+  width: 1px;
+  height: 22px;
+  background: var(--border-default);
+  margin: 0 4px;
+}
+
+.section {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sectionIcon {
+  color: var(--primary-500);
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.sectionHeader p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.kpiValue {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chartBody {
+  min-height: 260px;
+}
+
+.chartEmpty {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.tierTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tierTable th,
+.tierTable td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.tierTable th {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.tierTable tr:last-child td {
+  border-bottom: none;
+}

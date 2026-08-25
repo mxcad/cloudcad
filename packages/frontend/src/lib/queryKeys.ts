@@ -93,6 +93,15 @@ export const queryKeys = {
       ['securityAttempt', 'list', params] as const,
   },
 
+  // ─── 运营统计（每日新增用户 / 每日会员购买）────────────────────────
+  adminStats: {
+    all: ['adminStats'] as const,
+    registrations: (params: Record<string, unknown>) =>
+      ['adminStats', 'registrations', params] as const,
+    purchases: (params: Record<string, unknown>) =>
+      ['adminStats', 'purchases', params] as const,
+  },
+
   // ─── Current User ─────────────────────────────────────────────────
   currentUser: ['currentUser'] as const,
 

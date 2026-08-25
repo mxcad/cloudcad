@@ -11,17 +11,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * 管理员统计响应 DTO
- */
-export class AdminStatsResponseDto {
-  @ApiProperty({ description: '提示消息' })
-  message: string;
-
-  @ApiProperty({ description: '时间戳' })
-  timestamp: string;
-}
-
-/**
  * 缓存统计 DTO（管理后台视图）
  */
 export class AdminCacheStatsDto {

@@ -3460,15 +3460,122 @@ export type UpdateShareDto = {
     } | null;
 };
 
-export type AdminStatsResponseDto = {
+export type DailyRegistrationsPointDto = {
     /**
-     * 提示消息
+     * 日期（YYYY-MM-DD，UTC+8 自然日）
      */
-    message: string;
+    date: string;
     /**
-     * 时间戳
+     * 当日新增用户数（已排除软删/注销账号）
      */
-    timestamp: string;
+    count: number;
+};
+
+export type DailyRegistrationsStatsDto = {
+    /**
+     * 开始日期（含，YYYY-MM-DD）
+     */
+    startDate: string;
+    /**
+     * 结束日期（含，YYYY-MM-DD）
+     */
+    endDate: string;
+    /**
+     * 零填充日序列
+     */
+    series: Array<DailyRegistrationsPointDto>;
+    /**
+     * 区间新增用户总数
+     */
+    total: number;
+};
+
+export type DailyPurchasesPointDto = {
+    /**
+     * 日期（YYYY-MM-DD，UTC+8 自然日）
+     */
+    date: string;
+    /**
+     * 当日成功支付订单笔数
+     */
+    orderCount: number;
+    /**
+     * 当日去重付费用户数
+     */
+    userCount: number;
+    /**
+     * 当日支付金额合计（单位：分）
+     */
+    amount: number;
+};
+
+export type PurchasesTotalsDto = {
+    /**
+     * 区间成功支付订单总笔数
+     */
+    orderCount: number;
+    /**
+     * 区间去重付费用户总数
+     */
+    userCount: number;
+    /**
+     * 区间金额合计（单位：分）
+     */
+    amount: number;
+    /**
+     * 区间内成功支付且当前状态为 REFUNDED 的退款单数（单列，不从购买数扣减）
+     */
+    refundedCount: number;
+};
+
+export type PurchasesTierBreakdownDto = {
+    /**
+     * 档位 ID（历史订单可能无档位，为 null）
+     */
+    tierId: string | null;
+    /**
+     * 档位等级（无法关联时为 -1）
+     */
+    tierLevel: number;
+    /**
+     * 档位名称（无法关联时为 null）
+     */
+    tierName: string | null;
+    /**
+     * 订单笔数
+     */
+    orderCount: number;
+    /**
+     * 去重付费用户数
+     */
+    userCount: number;
+    /**
+     * 金额合计（单位：分）
+     */
+    amount: number;
+};
+
+export type DailyPurchasesStatsDto = {
+    /**
+     * 开始日期（含，YYYY-MM-DD）
+     */
+    startDate: string;
+    /**
+     * 结束日期（含，YYYY-MM-DD）
+     */
+    endDate: string;
+    /**
+     * 零填充日序列
+     */
+    series: Array<DailyPurchasesPointDto>;
+    /**
+     * 区间汇总
+     */
+    totals: PurchasesTotalsDto;
+    /**
+     * 按会员档位细分
+     */
+    byTier: Array<PurchasesTierBreakdownDto>;
 };
 
 export type AdminCacheStatsDto = {
@@ -9404,21 +9511,63 @@ export type ShareControllerGetFileSharesResponses = {
 
 export type ShareControllerGetFileSharesResponse = ShareControllerGetFileSharesResponses[keyof ShareControllerGetFileSharesResponses];
 
-export type AdminControllerGetAdminStatsData = {
+export type AdminControllerGetRegistrationStatsData = {
     body?: never;
     path?: never;
-    query?: never;
-    url: '/api/v1/admin/stats';
+    query?: {
+        /**
+         * 开始日期（含，YYYY-MM-DD），缺省为 endDate 前 29 天
+         */
+        startDate?: string;
+        /**
+         * 结束日期（含，YYYY-MM-DD），缺省为今天
+         */
+        endDate?: string;
+        /**
+         * 注册来源过滤（如 LOCAL）
+         */
+        provider?: string;
+    };
+    url: '/api/v1/admin/stats/registrations';
 };
 
-export type AdminControllerGetAdminStatsResponses = {
+export type AdminControllerGetRegistrationStatsResponses = {
     /**
-     * 获取管理员统计信息成功
+     * 每日新增用户统计成功（UTC+8 自然日，排除软删账号）
      */
-    200: AdminStatsResponseDto;
+    200: DailyRegistrationsStatsDto;
 };
 
-export type AdminControllerGetAdminStatsResponse = AdminControllerGetAdminStatsResponses[keyof AdminControllerGetAdminStatsResponses];
+export type AdminControllerGetRegistrationStatsResponse = AdminControllerGetRegistrationStatsResponses[keyof AdminControllerGetRegistrationStatsResponses];
+
+export type AdminControllerGetPurchaseStatsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 开始日期（含，YYYY-MM-DD），缺省为 endDate 前 29 天
+         */
+        startDate?: string;
+        /**
+         * 结束日期（含，YYYY-MM-DD），缺省为今天
+         */
+        endDate?: string;
+        /**
+         * 会员档位过滤（作用于序列与汇总）
+         */
+        tierId?: string;
+    };
+    url: '/api/v1/admin/stats/purchases';
+};
+
+export type AdminControllerGetPurchaseStatsResponses = {
+    /**
+     * 每日会员购买统计成功（仅成功支付订单，按支付完成时间归日；金额单位为分；退款单单列）
+     */
+    200: DailyPurchasesStatsDto;
+};
+
+export type AdminControllerGetPurchaseStatsResponse = AdminControllerGetPurchaseStatsResponses[keyof AdminControllerGetPurchaseStatsResponses];
 
 export type AdminControllerGetCacheStatsData = {
     body?: never;

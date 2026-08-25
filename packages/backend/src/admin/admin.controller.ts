@@ -30,16 +30,23 @@ import {
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import { IPERMISSION_SERVICE, IPermissionService } from '../permission/interfaces/permission-service.interface';
+import {
+  IPERMISSION_SERVICE,
+  IPermissionService,
+} from '../permission/interfaces/permission-service.interface';
 import { PermissionCacheService } from '../permission/services/permission-cache.service';
 import { StorageCleanupService } from '../storage-management/services/storage-cleanup.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import {
-  AdminStatsResponseDto,
   CacheStatsResponseDto,
   CacheCleanupResponseDto,
   UserCacheClearResponseDto,
 } from './dto/admin-response.dto';
+import { AdminStatsService } from './admin-stats.service';
+import {
+  DailyPurchasesStatsDto,
+  DailyRegistrationsStatsDto,
+} from './dto/admin-stats.dto';
 
 @ApiTags('管理员')
 @ApiBearerAuth()
@@ -48,24 +55,86 @@ import {
 @RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AdminController {
   constructor(
-    @Inject(IPERMISSION_SERVICE) private readonly permissionService: IPermissionService,
+    @Inject(IPERMISSION_SERVICE)
+    private readonly permissionService: IPermissionService,
     private readonly cacheService: PermissionCacheService,
-    private readonly storageCleanupService: StorageCleanupService
+    private readonly storageCleanupService: StorageCleanupService,
+    private readonly adminStatsService: AdminStatsService
   ) {}
 
-  @Get('stats')
+  // ────────────────────────────────────────────────────────────
+  // 运营统计（每日新增用户 / 每日会员购买）
+  // ────────────────────────────────────────────────────────────
+
+  @Get('stats/registrations')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '获取管理员统计信息' })
+  @ApiOperation({ summary: '每日新增用户统计' })
   @ApiResponse({
     status: 200,
-    description: '获取管理员统计信息成功',
-    type: AdminStatsResponseDto,
+    description: '每日新增用户统计成功（UTC+8 自然日，排除软删账号）',
+    type: DailyRegistrationsStatsDto,
   })
-  async getAdminStats() {
-    return {
-      message: '管理员统计信息',
-      timestamp: new Date().toISOString(),
-    };
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: '开始日期（含，YYYY-MM-DD），缺省为 endDate 前 29 天',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: '结束日期（含，YYYY-MM-DD），缺省为今天',
+  })
+  @ApiQuery({
+    name: 'provider',
+    required: false,
+    description: '注册来源过滤（如 LOCAL）',
+  })
+  async getRegistrationStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('provider') provider?: string
+  ) {
+    return this.adminStatsService.getDailyRegistrations({
+      startDate,
+      endDate,
+      provider,
+    });
+  }
+
+  @Get('stats/purchases')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '每日会员购买统计' })
+  @ApiResponse({
+    status: 200,
+    description:
+      '每日会员购买统计成功（仅成功支付订单，按支付完成时间归日；金额单位为分；退款单单列）',
+    type: DailyPurchasesStatsDto,
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: '开始日期（含，YYYY-MM-DD），缺省为 endDate 前 29 天',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: '结束日期（含，YYYY-MM-DD），缺省为今天',
+  })
+  @ApiQuery({
+    name: 'tierId',
+    required: false,
+    description: '会员档位过滤（作用于序列与汇总）',
+  })
+  async getPurchaseStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('tierId') tierId?: string
+  ) {
+    return this.adminStatsService.getDailyPurchases({
+      startDate,
+      endDate,
+      tierId,
+    });
   }
 
   @Get('permissions/cache')
@@ -215,7 +284,9 @@ export class AdminController {
 
   @Get('storage/deleted-files/stats')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '获取标记删除文件统计（回收站+待清理+已删项目+孤儿）' })
+  @ApiOperation({
+    summary: '获取标记删除文件统计（回收站+待清理+已删项目+孤儿）',
+  })
   @ApiResponse({
     status: 200,
     description: '获取标记删除文件统计成功',
