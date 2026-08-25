@@ -96,7 +96,8 @@ export class UserCleanupScheduler {
       await this.alertService.raise({
         source: 'scheduler:user-cleanup',
         messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+        // P2：低频清理失败（静默记录，人工排查）
+        level: AlertLevel.P2,
         message: `定时任务 user-cleanup 失败（handleCleanup）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task: 'handleCleanup',

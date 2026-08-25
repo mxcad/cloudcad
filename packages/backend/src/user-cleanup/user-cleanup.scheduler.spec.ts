@@ -95,7 +95,7 @@ describe('UserCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:user-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('user cleanup error'),
 				detail: {
 					task: 'handleCleanup',
