@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -9,7 +9,6 @@ import {
   BatchFileItem,
 } from '@/stores/useBatchDownloadStore';
 import { useBatchDownload } from '@/hooks/file-system';
-import { downloadNodeFile, type DownloadNodeQuery } from '@/utils/download';
 import {
   canExportDownload,
   handleVipFeatureRequiredError,
@@ -17,7 +16,6 @@ import {
 import { useMembership } from '@/hooks/useMembership';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { t } from '@/languages';
-import { getErrorMessage } from '@/utils/errorHandler';
 import { Z_LAYERS } from '@/constants/layers';
 import { DOWNLOAD_FORMATS, FORMAT_LABELS } from './downloadFormats';
 type Format = (typeof DOWNLOAD_FORMATS)[number];
@@ -66,7 +64,8 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
     'mono'
   );
   const [loading, setLoading] = useState(false);
-  const { createZipTask } = useBatchDownload(showToast);
+  const { createZipTask, createIndividualTask, downloadAllItems, pollTaskUntilDone } =
+    useBatchDownload(showToast);
   const isFolder = dialogMode === 'folder';
   const membership = useMembership();
   const { config } = useRuntimeConfig();
@@ -146,18 +145,6 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
   const hasSelection = Object.values(selectedFormats).some((f) => f.length > 0);
 
-  const buildFormatParams = (format: Format): DownloadNodeQuery => {
-    const query: DownloadNodeQuery = { format };
-    if ((format === 'dwg' || format === 'dxf') && dwgVersion)
-      query.dwgVersion = String(dwgVersion);
-    if (format === 'pdf') {
-      query.width = pdfWidth;
-      query.height = pdfHeight;
-      query.colorPolicy = pdfColorPolicy;
-    }
-    return query;
-  };
-
   const resolveAndSubmit = async () => {
     if (!hasSelection) {
       showToast?.(t('请至少选择一个文件格式'), 'warning');
@@ -195,8 +182,20 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
     }
   };
 
+  /** individual 任务轮询取消标志：用户关闭 dialog 时置位（任务后台继续，可从下载管理重下） */
+  const pollCancelRef = useRef(false);
+  const [individualProgress, setIndividualProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
+
+  const handleClose = () => {
+    pollCancelRef.current = true;
+    onClose();
+  };
+
   const handleSubmitIndividual = async () => {
-    if (!hasSelection) return;
+    if (!hasSelection || individualProgress) return;
     // 导出下载方向（dwg/dxf/pdf）会员预检：非 VIP 且开关未开放时弹购买引导，不发请求
     if (
       hasExportFormat &&
@@ -205,7 +204,6 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
       await handleVipFeatureRequiredError();
       return;
     }
-    onClose();
 
     const fileItems: FileEntry[] = [];
     const folderItems: FileEntry[] = [];
@@ -220,28 +218,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
       }
     }
 
-    for (const entry of fileItems) {
-      const formats = selectedFormats[entry.nodeId] || [];
-      for (const format of formats) {
-        try {
-          const nameWithoutExt = entry.fileName.replace(/\.[^.]+$/, '');
-          const ok = await downloadNodeFile(
-            entry.nodeId,
-            `${nameWithoutExt}.${format}`,
-            buildFormatParams(format)
-          );
-          // downloadNodeFile 失败会抛错（进入 catch），成功即已触发下载
-        } catch (err) {
-          // downloadNodeFile 失败会抛出后端 message，展示真实原因
-          // （格式不支持/无权限等），不再只显示固定"下载失败"
-          showToast?.(
-            `${entry.fileName} ${getErrorMessage(err) || t('下载失败')}`,
-            'error'
-          );
-        }
-      }
-    }
-
+    // 文件夹仍走异步 ZIP 打包（立即返回，进度见下载管理）
     if (folderItems.length > 0) {
       const folderBatchItems: BatchFileItem[] = folderItems.map((f) => ({
         nodeId: f.nodeId,
@@ -255,9 +232,58 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
       await createZipTask(folderBatchItems, projectId, libraryType);
     }
 
+    // 文件走 individual 任务：服务端并行转换（不再阻塞单个 HTTP 请求，规避反向代理 524 超时），
+    // 完成后按 index 顺序逐个触发浏览器下载，保持"一个一个下载"的体验
     if (fileItems.length > 0) {
-      showToast?.(t('逐个下载完成'), 'success');
+      const batchItems: BatchFileItem[] = [];
+      for (const entry of fileItems) {
+        const formats = selectedFormats[entry.nodeId] || [];
+        for (const format of formats) {
+          batchItems.push({
+            nodeId: entry.nodeId,
+            fileName: entry.fileName,
+            formats: [format],
+            dwgVersion,
+            width: pdfWidth,
+            height: pdfHeight,
+            colorPolicy: pdfColorPolicy,
+          });
+        }
+      }
+
+      const created = await createIndividualTask(
+        batchItems,
+        projectId,
+        libraryType
+      );
+      if (created) {
+        pollCancelRef.current = false;
+        setIndividualProgress({ completed: 0, total: batchItems.length });
+        const done = await pollTaskUntilDone(
+          created.taskId,
+          (completed, total) => setIndividualProgress({ completed, total }),
+          () => pollCancelRef.current
+        );
+        setIndividualProgress(null);
+        if (!done) return; // 用户中途关闭：任务后台继续，可从下载管理手动重下
+        if (done.status === 'COMPLETED') {
+          await downloadAllItems({
+            taskId: created.taskId,
+            status: 'COMPLETED',
+            mode: 'individual',
+            itemNames: created.itemNames,
+            totalCount: batchItems.length,
+            completedCount: batchItems.length,
+            errorCount: 0,
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          showToast?.(t('逐个下载失败，请稍后重试'), 'error');
+        }
+      }
     }
+
+    handleClose();
   };
 
   const title = isFolder ? (
@@ -272,7 +298,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={title}
       size="lg"
       zIndex={Z_LAYERS.MODAL}
@@ -281,7 +307,7 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
           <Button
             variant="secondary"
             size="sm"
-            onClick={onClose}
+            onClick={handleClose}
             className="w-full sm:w-auto"
           >
             {t('取消')}
@@ -290,12 +316,15 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
             <Button
               size="sm"
               onClick={handleSubmitIndividual}
-              disabled={!hasSelection || loading}
+              disabled={!hasSelection || loading || !!individualProgress}
+              loading={!!individualProgress}
               variant="secondary"
               className="w-full sm:w-auto"
             >
               <Download className="w-4 h-4 mr-1" />
-              {t('逐个下载')}
+              {individualProgress
+                ? `${t('转换中')} ${individualProgress.completed}/${individualProgress.total}`
+                : t('逐个下载')}
             </Button>
           )}
           <Button

@@ -57,6 +57,8 @@ export class BatchDownloadService {
     dto: CreateBatchDownloadDto
   ): Promise<{ taskId: string }> {
     const { fileList, projectId, libraryType } = dto;
+    // DTO 历史上就声明了 'zip' | 'individual'，individual 现已实现：单文件直出（不打包 ZIP）
+    const mode = dto.mode === 'individual' ? 'individual' : 'zip';
 
     if (!fileList || fileList.length === 0) {
       throw new BadRequestException('File list is empty');
@@ -129,6 +131,7 @@ export class BatchDownloadService {
         projectId: effectiveProjectId,
         status: BatchJobStatus.PENDING,
         fileList: fileList as any,
+        mode,
         totalCount: totalFormatCount,
         completedCount: 0,
         errorCount: 0,
@@ -161,6 +164,7 @@ export class BatchDownloadService {
     return {
       taskId: job.id,
       status: job.status,
+      mode: job.mode === 'individual' ? 'individual' : 'zip',
       totalCount: job.totalCount,
       completedCount: job.completedCount,
       errorCount: job.errorCount,
@@ -203,6 +207,37 @@ export class BatchDownloadService {
     return fullPath;
   }
 
+  /**
+   * individual 模式：按 index 解析单文件产物。
+   * 失败项（转换失败未进 manifest）与已过期删除的产物返回 null，调用方转为 404，
+   * 前端据此跳过失败项继续下载其余文件。
+   */
+  async getItemDownload(
+    taskId: string,
+    userId: string,
+    itemIndex: number
+  ): Promise<{ fullPath: string; name: string; temp: boolean } | null> {
+    const job = await this.prisma.batchDownloadJob.findUnique({
+      where: { id: taskId },
+    });
+    if (!job) throw new NotFoundException('Task not found');
+    if (job.userId !== userId) throw new ForbiddenException('Access denied');
+    if (job.status !== BatchJobStatus.COMPLETED)
+      throw new ConflictException('Task not completed yet');
+    if (job.mode !== 'individual')
+      throw new BadRequestException('Task is not an individual download');
+
+    const manifest = (job.itemsManifest as any[]) || [];
+    const item = manifest.find((m) => m.index === itemIndex);
+    if (!item || !item.sourcePath) return null;
+    if (!fs.existsSync(item.sourcePath)) return null;
+    return {
+      fullPath: item.sourcePath,
+      name: item.name,
+      temp: !!item.temp,
+    };
+  }
+
   async getFolderFilesRecursive(
     nodeId: string,
     userId: string
@@ -225,6 +260,7 @@ export class BatchDownloadService {
       return {
         taskId: job.id,
         status: job.status,
+        mode: job.mode === 'individual' ? 'individual' : 'zip',
         totalCount: job.totalCount,
         completedCount: job.completedCount,
         errorCount: job.errorCount,

@@ -10,7 +10,11 @@ import {
 } from '@/api-sdk';
 import { getApiBaseUrl } from '@/config/apiConfig';
 import { getValidToken } from '@/utils/tokenUtils';
-import { downloadBatchZip } from '@/utils/download';
+import {
+  downloadBatchZip,
+  downloadBatchItem,
+  getBatchTaskProgress,
+} from '@/utils/download';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 
@@ -120,6 +124,102 @@ export function useBatchDownload(
     [updateTask, showToast]
   );
 
+  const createIndividualTask = useCallback(
+    async (
+      fileList: BatchFileItem[],
+      projectId?: string,
+      libraryType?: string
+    ): Promise<{ taskId: string; itemNames: string[] } | null> => {
+      try {
+        // 每项单格式，index 与 itemNames 顺序严格对齐（下载端点按 index 取产物）
+        const itemNames: string[] = [];
+        const singleFormatItems = fileList.map((item) => {
+          const nameWithoutExt = item.fileName.replace(/\.[^.]+$/, '');
+          const format = item.formats[0] || 'mxweb';
+          itemNames.push(`${nameWithoutExt}.${format}`);
+          return { ...item, formats: [format] };
+        });
+
+        const result = await batchDownloadControllerCreateTask({
+          body: {
+            fileList: singleFormatItems,
+            projectId,
+            mode: 'individual',
+            libraryType,
+          },
+        });
+        if (result.error) throw result.error;
+        const taskId = (result.data as { taskId: string }).taskId;
+
+        const task: BatchTask = {
+          taskId,
+          status: 'PENDING',
+          mode: 'individual',
+          itemNames,
+          totalCount: singleFormatItems.length,
+          completedCount: 0,
+          errorCount: 0,
+          createdAt: new Date().toISOString(),
+        };
+        addTask(task);
+
+        showToast?.(t('逐个下载任务已创建'), 'success');
+        return { taskId, itemNames };
+      } catch (err) {
+        showToast?.(getErrorMessage(err) || t('创建任务失败'), 'error');
+        return null;
+      }
+    },
+    [addTask, showToast]
+  );
+
+  /**
+   * individual 任务逐个下载：按 index 顺序触发浏览器下载（404 = 该项失败，跳过）。
+   * 供 dialog 转换完成后与下载管理器手动重下共用。
+   */
+  const downloadAllItems = useCallback(
+    async (task: BatchTask): Promise<void> => {
+      const names = task.itemNames || [];
+      let failed = 0;
+      for (let i = 0; i < Math.max(names.length, task.totalCount); i++) {
+        const res = await downloadBatchItem(task.taskId, i, names[i] || '');
+        if (!res.ok) failed++;
+      }
+      if (failed > 0) {
+        showToast?.(
+          t('{count} 个文件下载失败，其余已下载', {
+            count: String(failed),
+          }),
+          'warning'
+        );
+      } else {
+        showToast?.(t('逐个下载完成'), 'success');
+      }
+    },
+    [showToast]
+  );
+
+  /** 轮询任务直到终态（individual 模式 dialog 内等待转换完成用） */
+  const pollTaskUntilDone = useCallback(
+    async (
+      taskId: string,
+      onProgress?: (completed: number, total: number) => void,
+      isCancelled?: () => boolean
+    ): Promise<{ status: string } | null> => {
+      for (;;) {
+        if (isCancelled?.()) return null;
+        const p = await getBatchTaskProgress(taskId);
+        if (!p.ok) return null;
+        if (p.status === 'COMPLETED' || p.status === 'FAILED' || p.status === 'CANCELLED') {
+          return { status: p.status };
+        }
+        onProgress?.(p.completedCount ?? 0, p.totalCount ?? 0);
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    },
+    []
+  );
+
   const cancelTask = useCallback(
     async (taskId: string) => {
       try {
@@ -177,6 +277,9 @@ export function useBatchDownload(
   return {
     tasks,
     createZipTask,
+    createIndividualTask,
+    downloadAllItems,
+    pollTaskUntilDone,
     cancelTask,
     downloadZip,
     subscribeToProgressSSE,

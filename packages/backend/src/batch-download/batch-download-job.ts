@@ -108,6 +108,12 @@ export class BatchDownloadJob {
       }
       if (payload.zipPath !== undefined) data.zipPath = payload.zipPath;
       if (payload.zipSize !== undefined) data.zipSize = payload.zipSize;
+      if (payload.itemsManifest !== undefined) {
+        data.itemsManifest =
+          payload.itemsManifest.length > 0
+            ? (payload.itemsManifest as never)
+            : null;
+      }
       if (payload.completedAt !== undefined)
         data.completedAt = payload.completedAt;
       if (payload.expiresAt !== undefined) data.expiresAt = payload.expiresAt;
@@ -151,6 +157,16 @@ export class BatchDownloadJob {
 
       if (this.isTerminated(jobId)) {
         await ctx.handleAbort();
+        return;
+      }
+
+      // individual 模式：不打包 ZIP，产物清单落库由单文件下载端点直出；
+      // 转换产物延迟到下载完成后清理（finalizeIndividual 内只清理全失败场景）
+      if (ctx.mode === 'individual') {
+        await ctx.finalizeIndividual();
+        this.logger.log(
+          `Individual download job finished: ${jobId} (${ctx.completedCount} items, ${ctx.errorCount} errors)`
+        );
         return;
       }
 

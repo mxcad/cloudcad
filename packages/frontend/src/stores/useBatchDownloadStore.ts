@@ -4,6 +4,10 @@ import { persist } from 'zustand/middleware';
 export interface BatchTask {
   taskId: string;
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  /** 下载模式：zip=打包（默认）；individual=逐个下载（单文件直出） */
+  mode?: 'zip' | 'individual';
+  /** individual 模式：index → 下载文件名（与提交时 file×format 顺序一致） */
+  itemNames?: string[];
   totalCount: number;
   completedCount: number;
   errorCount: number;

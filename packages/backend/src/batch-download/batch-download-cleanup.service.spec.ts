@@ -1,4 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { BatchDownloadCleanupService } from './batch-download-cleanup.service';
 import { DatabaseService } from '../database/database.service';
 import { ConfigService } from '@nestjs/config';
@@ -106,7 +109,7 @@ describe('BatchDownloadCleanupService', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:batch-download',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('zip query error'),
 				detail: {
 					task: 'cleanupExpiredZips',
@@ -118,6 +121,7 @@ describe('BatchDownloadCleanupService', () => {
 
 	describe('cleanupExpiredDbRecords', () => {
 		it('should delete expired db records', async () => {
+			mockPrisma.batchDownloadJob.findMany.mockResolvedValue([]);
 			mockPrisma.batchDownloadJob.deleteMany.mockResolvedValue({
 				count: 3,
 			});
@@ -133,7 +137,37 @@ describe('BatchDownloadCleanupService', () => {
 			expect(where.createdAt.lte).toBeInstanceOf(Date);
 		});
 
+		it('should clean up individual temp files before deleting expired records', async () => {
+			const tempPath = path.join(
+				os.tmpdir(),
+				`bd-cleanup-test-${Date.now()}.dwg`
+			);
+			fs.writeFileSync(tempPath, 'temp');
+			mockPrisma.batchDownloadJob.findMany.mockResolvedValue([
+				{
+					id: 'job-ind-1',
+					itemsManifest: [
+						{ index: 0, name: 'a.dwg', sourcePath: tempPath, temp: true },
+						{
+							index: 1,
+							name: 'src.mxweb',
+							sourcePath: '/never-delete/source.mxweb',
+							temp: false,
+						},
+					],
+				},
+			]);
+			mockPrisma.batchDownloadJob.deleteMany.mockResolvedValue({ count: 1 });
+
+			await service.cleanupExpiredDbRecords();
+
+			// temp=true 的转换产物被删除；temp=false 的源文件绝不删除
+			expect(fs.existsSync(tempPath)).toBe(false);
+			expect(mockPrisma.batchDownloadJob.deleteMany).toHaveBeenCalled();
+		});
+
 		it('should raise task_run_failed when delete throws', async () => {
+			mockPrisma.batchDownloadJob.findMany.mockResolvedValue([]);
 			mockPrisma.batchDownloadJob.deleteMany.mockRejectedValue(
 				new Error('db delete error')
 			);
@@ -143,7 +177,7 @@ describe('BatchDownloadCleanupService', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:batch-download',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.CRITICAL,
+				level: AlertLevel.P2,
 				message: expect.stringContaining('db delete error'),
 				detail: {
 					task: 'cleanupExpiredDbRecords',

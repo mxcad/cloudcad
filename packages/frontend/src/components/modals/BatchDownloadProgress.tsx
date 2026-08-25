@@ -24,7 +24,8 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
   task,
   showToast,
 }) => {
-  const { cancelTask, downloadZip } = useBatchDownload(showToast);
+  const { cancelTask, downloadZip, downloadAllItems } =
+    useBatchDownload(showToast);
 
   const progress = useMemo(() => {
     if (task.totalCount === 0) return 0;
@@ -88,10 +89,17 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
               {t('取消')}
             </Button>
           ) : task.status === 'COMPLETED' ? (
-            <Button onClick={() => downloadZip(task)}>
-              <Download className="w-4 h-4 mr-1" />
-              {t('下载 ZIP')}
-            </Button>
+            task.mode === 'individual' ? (
+              <Button onClick={() => void downloadAllItems(task)}>
+                <Download className="w-4 h-4 mr-1" />
+                {t('逐个下载')}
+              </Button>
+            ) : (
+              <Button onClick={() => downloadZip(task)}>
+                <Download className="w-4 h-4 mr-1" />
+                {t('下载 ZIP')}
+              </Button>
+            )
           ) : null}
           <Button variant="secondary" onClick={onClose}>
             {t('关闭')}

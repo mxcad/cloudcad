@@ -1,4 +1,4 @@
-# 批量下载模块（batch-download）
+﻿# 批量下载模块（batch-download）
 
 ## 概述
 
@@ -120,7 +120,7 @@ archiver 打 ZIP：写入 `${archiveName}.zip.tmp`，`close` 后原子 `rename` 
 
 - 开关：运行时配置 `TASK_ENABLED_KEYS.BATCH_DOWNLOAD`（默认 true）。
 - 两个裸执行方法注册到 `TaskRunService`（#210 手动触发）。
-- 失败时经 `AlertService` 上报 `task_run_failed` 告警（`source=scheduler:batch-download`，CRITICAL）。
+- 失败时经 `AlertService` 上报 `task_run_failed` 告警（`source=scheduler:batch-download`，P2）。
 
 ## 数据模型
 

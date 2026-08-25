@@ -128,6 +128,8 @@ export class BatchDownloadOrchestrator {
           ctx.archiveEntries.push({
             name: sanitized,
             stream: fs.createReadStream(result.filePath),
+            sourcePath: result.filePath,
+            temp: true,
           });
           ctx.convertedFiles.push(result.filePath);
         } else {
@@ -232,6 +234,9 @@ export class BatchDownloadOrchestrator {
       ctx.archiveEntries.push({
         name: sanitized,
         stream: fs.createReadStream(fullPath),
+        // 与转换产物（result.filePath）统一为绝对路径，单文件下载端点直接 fs 读取
+        sourcePath: fullPath,
+        temp: false,
       });
     } catch (err) {
       ctx.errorCount++;
@@ -275,6 +280,8 @@ export class BatchDownloadOrchestrator {
       ctx.archiveEntries.push({
         name: sanitized,
         stream: fs.createReadStream(result.filePath),
+        sourcePath: result.filePath,
+        temp: true,
       });
       ctx.convertedFiles.push(result.filePath);
     } else {

@@ -41,7 +41,8 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
   const { tasks, removeTask } = useBatchDownloadStore();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<BatchTask | null>(null);
-  const { cancelTask, downloadZip } = useBatchDownload(showToast);
+  const { cancelTask, downloadZip, downloadAllItems } =
+    useBatchDownload(showToast);
 
   const activeTasks = tasks.filter(
     (t) => t.status === 'PENDING' || t.status === 'PROCESSING'
@@ -159,18 +160,31 @@ export const DownloadManager: React.FC<DownloadManagerProps> = ({
                           )}
                         </div>
                       </div>
-                      {task.status === 'COMPLETED' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadZip(task);
-                          }}
-                          className="flex-shrink-0 p-1 rounded hover:opacity-70"
-                          style={{ color: 'var(--primary-500)' }}
-                        >
-                          <Download size={16} />
-                        </button>
-                      )}
+                      {task.status === 'COMPLETED' &&
+                        (task.mode === 'individual' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void downloadAllItems(task);
+                            }}
+                            className="flex-shrink-0 p-1 rounded hover:opacity-70"
+                            style={{ color: 'var(--primary-500)' }}
+                            title={t('逐个下载')}
+                          >
+                            <Download size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadZip(task);
+                            }}
+                            className="flex-shrink-0 p-1 rounded hover:opacity-70"
+                            style={{ color: 'var(--primary-500)' }}
+                          >
+                            <Download size={16} />
+                          </button>
+                        ))}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

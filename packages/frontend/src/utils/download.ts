@@ -1,5 +1,7 @@
 import {
   batchDownloadControllerDownloadZip,
+  batchDownloadControllerDownloadItem,
+  batchDownloadControllerGetProgress,
   downloadControllerDownloadNodeWithFormat,
   mxcadFileAccessControllerGetFileDownloadExternalRef,
   mxcadFileAccessControllerViewExternalRef,
@@ -88,6 +90,70 @@ export async function downloadBatchZip(
     return { ok: true };
   } catch {
     return { ok: false, status: undefined };
+  }
+}
+
+/**
+ * 下载 individual 任务的单个产物（index 对应提交时的 file×format 顺序）。
+ * 404 = 该项转换失败或产物已清理，调用方跳过并提示，不影响其余项。
+ */
+export async function downloadBatchItem(
+  taskId: string,
+  itemIndex: number,
+  fallbackName: string
+): Promise<DownloadBatchZipResult> {
+  try {
+    const result = await batchDownloadControllerDownloadItem({
+      path: { taskId, itemIndex: String(itemIndex) },
+    });
+    if (result.error || !result.response?.ok) {
+      return { ok: false, status: result.response?.status };
+    }
+    const filename =
+      parseContentDispositionFilename(
+        result.response.headers.get('Content-Disposition')
+      ) ?? fallbackName;
+    triggerBlobDownload(result.data as Blob, filename);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: undefined };
+  }
+}
+
+export interface BatchTaskProgress {
+  ok: boolean;
+  status?: string;
+  completedCount?: number;
+  totalCount?: number;
+  errorCount?: number;
+}
+
+/** 查询批量任务进度（JSON 轮询用；individual 模式 dialog 内等待转换完成） */
+export async function getBatchTaskProgress(
+  taskId: string
+): Promise<BatchTaskProgress> {
+  try {
+    const result = await batchDownloadControllerGetProgress({
+      path: { taskId },
+    });
+    if (result.error || !result.response?.ok) {
+      return { ok: false };
+    }
+    const data = result.data as {
+      status?: string;
+      completedCount?: number;
+      totalCount?: number;
+      errorCount?: number;
+    };
+    return {
+      ok: true,
+      status: data.status,
+      completedCount: data.completedCount,
+      totalCount: data.totalCount,
+      errorCount: data.errorCount,
+    };
+  } catch {
+    return { ok: false };
   }
 }
 

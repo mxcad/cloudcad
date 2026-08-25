@@ -18,8 +18,20 @@ export interface JobTransitionPayload {
   errors?: Array<{ nodeId: string; fileName: string; error: string }>;
   zipPath?: string;
   zipSize?: number;
+  /** individual 模式产物清单（单文件直出下载端点依据） */
+  itemsManifest?: IndividualItemManifest[];
   completedAt?: Date;
   expiresAt?: Date;
+}
+
+/** individual 模式产物清单项：temp=true 为转换产物（下载后可删），false 为源文件（绝不删除） */
+export interface IndividualItemManifest {
+  index: number;
+  /** 下载文件名（与 zip 内条目同名规则） */
+  name: string;
+  /** 产物在存储区的相对路径 */
+  sourcePath: string;
+  temp: boolean;
 }
 
 export type JobTransitionFn = (
@@ -43,6 +55,10 @@ export class JobContext {
   readonly archiveEntries: Array<{
     name: string;
     stream: NodeJS.ReadableStream;
+    /** 产物在存储区的相对路径（individual 模式单文件直出依据；zip 模式忽略） */
+    sourcePath?: string;
+    /** 是否转换临时产物（true=下载后可删；false=源文件，绝不删除） */
+    temp?: boolean;
   }> = [];
   readonly convertedFiles: string[] = [];
   readonly dirSet = new Set<string>();
@@ -52,6 +68,8 @@ export class JobContext {
   realTotalCount = 0;
   exportDir = '';
   expandedItems: Array<BatchFileItem & { relativePath?: string }> = [];
+  /** 下载模式：zip=打包（默认）；individual=单文件直出 */
+  mode: 'zip' | 'individual' = 'zip';
   /** 任务发起用户（批量下载转换频率限制按 userId 计数，ADR-0043） */
   userId: string | null = null;
 
@@ -70,6 +88,7 @@ export class JobContext {
       return false;
     }
     this.userId = job.userId ?? null;
+    this.mode = job.mode === 'individual' ? 'individual' : 'zip';
 
     const fileList = job.fileList as unknown as BatchFileItem[];
     this.expandedItems = await this.deps.folderExpander.expandFolderItems(
@@ -206,8 +225,7 @@ export class JobContext {
     return { zipPath: path.basename(zipPath), zipSize: zipStat.size };
   }
 
-  async finalizeCompleted(zipPath: string, zipSize: number): Promise<boolean> {
-    const accepted = await this.transitionFn('COMPLETED', {
+  async finalizeCompleted(zipPath: string, zipSize: number): Promise<boolean> {    const accepted = await this.transitionFn('COMPLETED', {
       completedCount: this.completedCount,
       errorCount: this.errorCount,
       totalCount: this.realTotalCount,
@@ -229,6 +247,44 @@ export class JobContext {
       }
     }
     return accepted;
+  }
+
+  /**
+   * individual 模式收尾：不打包 ZIP，产物清单（含存储相对路径）落库到 itemsManifest，
+   * 由单文件下载端点按 index 取用。转换产物（temp=true）延迟到下载完成后清理；
+   * 全部失败 → FAILED 并清理转换产物。
+   */
+  async finalizeIndividual(): Promise<void> {
+    if (this.errorCount > 0 && this.completedCount === this.errorCount) {
+      await this.cleanupConvertedFiles();
+      await this.transitionFn('FAILED', {
+        completedCount: this.completedCount,
+        errorCount: this.errorCount,
+        totalCount: this.realTotalCount,
+        errors: this.errors,
+        completedAt: new Date(),
+      });
+      return;
+    }
+
+    const manifest: IndividualItemManifest[] = this.archiveEntries
+      .filter((e) => e.sourcePath)
+      .map((e, index) => ({
+        index,
+        name: e.name,
+        sourcePath: e.sourcePath as string,
+        temp: !!e.temp,
+      }));
+
+    await this.transitionFn('COMPLETED', {
+      completedCount: this.completedCount,
+      errorCount: this.errorCount,
+      totalCount: this.realTotalCount,
+      errors: this.errors,
+      itemsManifest: manifest,
+      completedAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
   }
 
   async finalizeFailed(): Promise<void> {

@@ -74,6 +74,42 @@ export class BatchDownloadController {
     });
   }
 
+  @Get(':taskId/items/:itemIndex/download')
+  @ApiOperation({ summary: '下载 individual 任务的单个产物文件' })
+  async downloadItem(
+    @Param('taskId') taskId: string,
+    @Param('itemIndex') itemIndex: string,
+    @Request() req: ExpressRequest,
+    @Res() res: Response,
+  ) {
+    const userId = this.getUserId(req);
+    const index = Number.parseInt(itemIndex, 10);
+    if (!Number.isInteger(index) || index < 0) {
+      return res.status(400).json({ message: 'Invalid item index' });
+    }
+    const item = await this.batchDownloadService.getItemDownload(taskId, userId, index);
+    // 失败项 / 已清理产物 → 404，前端据此跳过继续下载其余文件
+    if (!item) {
+      return res.status(404).json({ message: 'Item not available' });
+    }
+    const stat = fs.statSync(item.fullPath);
+    const encodedFilename = encodeURIComponent(item.name);
+    const fallbackFilename = item.name.replace(/[^\x20-\x7E]/g, '_');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`);
+    res.setHeader('Content-Length', stat.size.toString());
+    const stream = fs.createReadStream(item.fullPath);
+    stream.pipe(res);
+    stream.on('error', () => {
+      if (!res.headersSent) res.status(500).json({ message: 'File read failed' });
+    });
+    // 转换临时产物下载完成后即清理；源文件（temp=false）绝不删除
+    stream.on('close', () => {
+      if (!item.temp) return;
+      fs.promises.unlink(item.fullPath).catch(() => undefined);
+    });
+  }
+
   @Post(':taskId/cancel')
   @HttpCode(200)
   @ApiOperation({ summary: '取消批量下载任务' })
