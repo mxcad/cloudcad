@@ -61,7 +61,7 @@
 - **0048** — 文档治理（docs 三分类 + archive 规范 + ADR 状态模型）
 - **0049** — 外部参照操作权限（写=CAD_EXTERNAL_REFERENCE、读=FILE_OPEN、移动端范围）
 - **0050** — 前端滚动分页统一控制器（useScrollPagination + mergeNodesByMode）
-- **0051** — 项目角色模板化与项目自治（创建时复制模板；私人空间/公开资源库零角色；OWNER 数据驱动保护；删除降级 MEMBER）
+- **0051** — 项目角色模板化与项目自治（创建时复制模板；私人空间/公开资源库零角色；OWNER 数据驱动保护；删除降级 + 删光自愈自动重建默认成员角色）
 - **0052** — 前端列表交互机制统一架构（单一选择内核 useFileBrowserSelection / 单一快捷键 useSelectionShortcuts 超集 / 框选 preventDefault 协议 / SelectableTable 表格唯一入口 / BatchActionBar；新列表页禁止手写接线）
 - **0053** — VIP0 系统固有等级治理（不可创建/下架/删除，仅权益配置可编辑；后端守卫 + 前端 UI 保护；`GET /vip/tiers` 恒含 level 0）
 - **0054** — 跨项目转移 6 域模式矩阵（出向/入向×项目/个人空间/库四态 + PROJECT_TRANSFER_MANAGE 专属权限；库 API 透传 userId 方案 B；目标归属校验 + 配额修正）

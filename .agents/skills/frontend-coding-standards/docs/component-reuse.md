@@ -2,17 +2,34 @@
 
 新增任何 UI 元素前，必须先检查是否已有可复用组件。这是最高优先级的前端规则。
 
+## 铁律：使用或实现任何组件前，先查全局组件
+
+**在使用或实现一个组件之前，必须优先确认 `src/components/ui/`（及 `src/components/common/`）下是否已有适合的全局组件。**
+
+- 该规则同样覆盖**原生 HTML 控件**：直接写 `<input type="date">`、`<select>`、自绘下拉等，等同于"实现了一个日期选择器/选择器组件"，必须先对照全局的 `DatePicker`、`Select` 等
+- 全局组件承载了主题 token、i18n、Z_LAYERS、无障碍等项目级约定，绕开它们会导致风格割裂与重复维护
+- 全局组件不满足需求时：**扩展其 props**，而非在业务代码里另写一套
+
 ## 共享组件清单
 
-在 `src/components/ui/` 和 `src/components/common/` 下已有以下可复用组件：
+在 `src/components/ui/` 下已有以下可复用组件（以目录实际文件为准，此处列出常用项）：
 
 | 组件 | 位置 | 用途 |
 |------|------|------|
 | **Button** | `components/ui/Button.tsx` | 通用按钮 |
+| **Input / Textarea / Checkbox** | `components/ui/` | 表单输入类 |
+| **Select** | `components/ui/Select.tsx` | 下拉选择器 |
+| **DatePicker** | `components/ui/DatePicker.tsx` | 日期选择器（Popover + Calendar，支持 minDate/maxDate/i18n） |
+| **Calendar** | `components/ui/calendar.tsx` | 日历面板（shadcn 改造） |
+| **Modal** | `components/ui/Modal.tsx` | 弹窗 |
 | **ConfirmDialog** | `components/ui/ConfirmDialog.tsx` | 确认弹窗 |
+| **Popover** | `components/ui/popover.tsx` | 浮层 |
+| **Tabs / Tab / TabButton** | `components/ui/` | 标签页 |
+| **Toast / Tooltip / Tag / Card / Section / Box** | `components/ui/` | 展示类 |
 | **Pagination** | `components/ui/Pagination.tsx` | 分页组件 |
-| **TruncateText** | `components/ui/TruncateText.example.tsx` | 文字截断 |
-| **Tooltip** | `components/ui/Tooltip.example.tsx` | 提示框 |
+| **Autocomplete** | `components/ui/Autocomplete.tsx` | 自动补全输入 |
+| **UserAvatar / FileSize / TruncateText / FileTree / FileNameInput** | `components/ui/` | 文件相关展示 |
+| **NoPermissionPage** | `components/ui/NoPermissionPage.tsx` | 无权限占位页 |
 | **通用导出** | `components/ui/index.ts` | UI 组件统一导出 |
 | **通用导出** | `components/common/index.ts` | 通用组件统一导出 |
 
@@ -46,6 +63,33 @@
 5. **确实无复用时** → 按照 `file-organization.md` 约定放入正确目录
 
 ## 示例
+
+### ❌ 错误 — 原生控件绕过全局组件（真实实例）
+
+```tsx
+// Bad: AdminStatsPage 曾直接使用原生 <input type="date">
+// 而项目已有 components/ui/DatePicker.tsx（含主题/i18n/min-max 约束）
+<input
+  type="date"
+  className={styles.dateInput}
+  value={customStart}
+  onChange={(e) => setCustomStart(e.target.value)}
+/>
+```
+
+问题：原生 date input 无法统一主题样式、不支持多语言日历、与其他页面的 DatePicker 视觉/交互割裂。
+
+### ✅ 正确 — 复用全局 DatePicker
+
+```tsx
+import { DatePicker } from '@/components/ui';
+
+<DatePicker
+  value={customStart}
+  maxDate={todayIso}
+  onChange={(v) => setCustomStart(v)}
+/>
+```
 
 ### ❌ 错误 — 重复造轮子
 

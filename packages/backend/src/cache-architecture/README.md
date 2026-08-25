@@ -91,10 +91,10 @@ L1 与 L2 均实现 `ICacheManager` 接口（`get/set/delete/deleteMany/clear/ha
 
 | 告警键 | 级别 | 触发条件 |
 |--------|------|----------|
-| `cache_l1_capacity` | WARNING | L1 容量使用率 > 90% |
-| `cache_hit_rate` | WARNING | 整体命中率 < 70% |
-| `cache_l2_disconnected` | CRITICAL | L2（Redis）连接断开 |
-| `cache_memory_high` | WARNING | 两级内存总量 > 500MB |
+| `cache_l1_capacity` | P1 | L1 容量使用率 > 90% |
+| `cache_hit_rate` | P1 | 整体命中率 < 70% |
+| `cache_l2_disconnected` | P0 | L2（Redis）连接断开 |
+| `cache_memory_high` | P1 | 两级内存总量 > 500MB |
 
 `checkWarnings()` 返回纯文本数组，保持旧 API 契约。
 

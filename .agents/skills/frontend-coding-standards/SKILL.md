@@ -70,13 +70,15 @@ style={{ zIndex: 9999 }}
 
 ### 3. 共享组件复用（`src/components/ui/`）
 
-新增 UI 组件前，必须先搜索 `src/components/ui/` 是否已有可复用组件：
+**在使用或实现任何组件前，必须先确认 `src/components/ui/` 下是否已有适合的全局组件。** 该规则同样覆盖原生 HTML 控件：直接写 `<input type="date">`、`<select>`、自绘下拉等，等同于自己实现了一个选择器组件，必须优先复用全局对应组件（如 `DatePicker`、`Select`）。全局组件不满足需求时扩展其 props，而非另写一套。
+
+必须先搜索是否已有可复用组件：
 
 - Button, ConfirmDialog, Modal, Table, Form, Input
-- Pagination, TruncateText, Tooltip, DatePicker, Popover, Calendar
+- Pagination, TruncateText, Tooltip, DatePicker, Select, Autocomplete, Popover, Calendar
 - 以及 `src/components/common/` 下的通用组件
 
-已有组件不完美时，优先复用并改进，而非重写一套。
+已有组件不完美时，优先复用并改进，而非重写一套。详见 `docs/component-reuse.md`。
 
 #### shadcn/ui 组件拉取流程（禁止手写成熟组件轮子）
 
@@ -145,6 +147,7 @@ pnpm dlx shadcn@latest add <component>
 | 手写 fetch+缓存布尔（server 状态塞 Zustand/Context） | react-query（`queryKeys` 工厂）（ADR-0030） |
 | 模块级可变变量 | Zustand store / react-query / 局部 state |
 | 自己写一套 Modal/Table/Button | 复用 `src/components/ui/` 已有组件 |
+| 直接用原生 `<input type="date">`/`<select>` 绕过全局 DatePicker/Select（实例：AdminStatsPage） | 先查 `components/ui/` 全局组件，不满足则扩展 props，见 `docs/component-reuse.md` |
 | 在组件文件中定义 TypeScript 类型 | 提取到独立 types 文件 |
 | 前端本地定义 API 类型 | 使用 `@hey-api/openapi-ts` 自动生成的类型 |
 | 组件内定义组件（导致 re-mounting） | 组件顶层定义 |

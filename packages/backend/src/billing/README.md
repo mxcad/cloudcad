@@ -1,4 +1,4 @@
-# CloudCAD 计费模块（Billing）
+﻿# CloudCAD 计费模块（Billing）
 
 ## 概述
 
@@ -127,7 +127,7 @@ interface PaymentGateway {
 | `0 2 * * *` | `downgradeExpiredMemberships` | 每日 02:00（服务器时区，建议 UTC+8）：`expiresAt <= now` 的会员置 `tierLevel: 0, expiresAt: null`，并失效配额缓存 |
 | `0 */2 * * *` | `timeoutPendingOrders` | 每 2 小时：PENDING 且创建超 2h 的订单置 `TIMEOUT + closedAt` |
 
-两个任务均：受运行时配置 `TASK_ENABLED_KEYS.BILLING`（默认 true）控制；注册到 `TaskRunService`（`BILLING.DOWNGRADE_MEMBERSHIPS` / `BILLING.TIMEOUT_ORDERS`）支持手动触发；失败时经 `AlertService` 上报 CRITICAL 告警（source `scheduler:billing`，messageKey `task_run_failed`）。
+两个任务均：受运行时配置 `TASK_ENABLED_KEYS.BILLING`（默认 true）控制；注册到 `TaskRunService`（`BILLING.DOWNGRADE_MEMBERSHIPS` / `BILLING.TIMEOUT_ORDERS`）支持手动触发；失败时经 `AlertService` 上报 P1 告警（source `scheduler:billing`，messageKey `task_run_failed`）。
 
 ## API 端点
 
