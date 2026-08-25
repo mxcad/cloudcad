@@ -15,6 +15,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserMembershipDto } from './dto/update-user-membership.dto';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ClsService } from 'nestjs-cls';
+import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -25,6 +27,7 @@ export class UsersService implements IUserService {
     private readonly statusService: UserStatusService,
     private readonly passwordService: UserPasswordService,
     private readonly configService: ConfigService,
+    private readonly cls: ClsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
@@ -149,6 +152,14 @@ export class UsersService implements IUserService {
       response = await fetch(wechatAvatarUrl, {
         signal: AbortSignal.timeout(3_000),
         redirect: 'error',
+        // X-Request-Id/X-Trace-Id 透传（#309）：微信 CDN 侧网关日志可关联
+        headers: buildOutboundTraceHeaders(
+          {
+            requestId: this.cls?.get<string>('requestId'),
+            traceId: this.cls?.get<string>('traceId'),
+          },
+          'wechat-avatar',
+        ),
       });
     } catch (error) {
       this.logger.warn(

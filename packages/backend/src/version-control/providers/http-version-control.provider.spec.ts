@@ -8,6 +8,7 @@ import { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { NotImplementedException } from '@nestjs/common';
+import { ClsService } from 'nestjs-cls';
 import { HttpVersionControlProvider } from './http-version-control.provider';
 
 describe('HttpVersionControlProvider', () => {
@@ -42,6 +43,7 @@ describe('HttpVersionControlProvider', () => {
             ),
           },
         },
+        { provide: ClsService, useValue: { get: jest.fn() } },
       ],
     }).compile();
     return module.get(HttpVersionControlProvider);
@@ -177,6 +179,7 @@ describe('HttpVersionControlProvider', () => {
               }),
             },
           },
+          { provide: ClsService, useValue: { get: jest.fn() } },
         ],
       }).compile();
       provider = module.get(HttpVersionControlProvider);

@@ -5,7 +5,12 @@ import client from 'prom-client';
 export class MetricsService implements OnModuleInit {
   private readonly httpRequestsTotal: client.Counter<string>;
   private readonly httpRequestDurationSeconds: client.Histogram<string>;
-  readonly excludedPaths = ['/health', '/metrics', '/api/health', '/api/metrics'];
+  readonly excludedPaths = [
+    '/health',
+    '/metrics',
+    '/api/health',
+    '/api/metrics',
+  ];
 
   constructor() {
     this.httpRequestsTotal = new client.Counter({
@@ -36,16 +41,27 @@ export class MetricsService implements OnModuleInit {
 
   private normalizePath(path: string): string {
     return path
-      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+      .replace(
+        /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        '/:id'
+      )
       .replace(/\/\d+/g, '/:id');
   }
 
   recordRequest(method: string, path: string, statusCode: number): void {
     const pattern = this.normalizePath(path);
-    this.httpRequestsTotal.inc({ method, path: pattern, status: statusCode.toString() });
+    this.httpRequestsTotal.inc({
+      method,
+      path: pattern,
+      status: statusCode.toString(),
+    });
   }
 
-  startDurationTimer(): (method: string, path: string, statusCode: number) => void {
+  startDurationTimer(): (
+    method: string,
+    path: string,
+    statusCode: number
+  ) => void {
     const end = this.httpRequestDurationSeconds.startTimer();
     return (method: string, path: string, statusCode: number) => {
       const pattern = this.normalizePath(path);

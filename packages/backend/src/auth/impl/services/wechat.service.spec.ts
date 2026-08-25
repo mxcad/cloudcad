@@ -1,6 +1,7 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { ClsService } from 'nestjs-cls';
 import { WechatService } from './wechat.service';
 
 const originalFetch = global.fetch;
@@ -40,6 +41,7 @@ describe('WechatService', () => {
           useValue: mockRedis,
         },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: ClsService, useValue: { get: jest.fn() } },
       ],
     }).compile();
 

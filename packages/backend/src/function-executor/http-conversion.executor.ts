@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ClsService } from 'nestjs-cls';
 import * as http from 'http';
 import * as https from 'https';
+import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
 import type {
   IFunctionExecutor,
   ConversionTask,
@@ -17,7 +19,10 @@ export class HttpConversionExecutor implements IFunctionExecutor {
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly cls: ClsService,
+  ) {
     this.baseUrl = this.configService.get<string>('CONVERSION_SERVICE_URL')
       || 'http://localhost:3100';
     this.useHttps = this.baseUrl.startsWith('https');
@@ -125,6 +130,14 @@ export class HttpConversionExecutor implements IFunctionExecutor {
         method,
         headers: {
           'Content-Type': 'application/json',
+          // X-Request-Id/X-Trace-Id 透传（#309）：conversion-service 侧日志据此串联
+          ...buildOutboundTraceHeaders(
+            {
+              requestId: this.cls?.get<string>('requestId'),
+              traceId: this.cls?.get<string>('traceId'),
+            },
+            'http-conversion',
+          ),
         },
         timeout: 300000,
       };

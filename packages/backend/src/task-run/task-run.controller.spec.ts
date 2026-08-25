@@ -198,7 +198,7 @@ describe('TaskRunController', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'task-run:manual',
 				messageKey: 'task_run_failed',
-				level: 'CRITICAL',
+				level: 'P1',
 				message: expect.stringContaining('test:task'),
 				detail: expect.objectContaining({
 					task: 'test:task',

@@ -9,6 +9,8 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import * as crypto from 'crypto';
 import { I18nContext } from 'nestjs-i18n';
+import { ClsService } from 'nestjs-cls';
+import { buildOutboundTraceHeaders } from '../../../common/utils/outbound-trace';
 
 export interface WechatUserInfo {
   openid: string;
@@ -49,7 +51,8 @@ export class WechatService {
 
   constructor(
     private readonly configService: ConfigService,
-    @InjectRedis() private readonly redis: Redis
+    @InjectRedis() private readonly redis: Redis,
+    private readonly cls: ClsService
   ) {}
 
   private get appId(): string {
@@ -208,6 +211,17 @@ export class WechatService {
     }
   }
 
+  /** 出站微信 API 请求头：注入 X-Request-Id/X-Trace-Id（#309，便于与网关日志关联） */
+  private outboundHeaders(): Record<string, string> {
+    return buildOutboundTraceHeaders(
+      {
+        requestId: this.cls?.get<string>('requestId'),
+        traceId: this.cls?.get<string>('traceId'),
+      },
+      'wechat-api',
+    );
+  }
+
   private async requestAccessToken(code: string): Promise<WechatTokenResponse> {
     const url =
       `https://api.weixin.qq.com/sns/oauth2/access_token?` +
@@ -218,7 +232,7 @@ export class WechatService {
 
     let data: WechatTokenResponse;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: this.outboundHeaders() });
       data = await response.json();
     } catch (error) {
       this.logger.error('获取微信 access_token 异常', error.stack);
@@ -256,7 +270,7 @@ export class WechatService {
 
     let data: WechatUserInfo;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: this.outboundHeaders() });
       data = await response.json();
     } catch (error) {
       this.logger.error('获取微信用户信息异常', error.stack);
@@ -286,7 +300,7 @@ export class WechatService {
 
     let data: WechatTokenResponse;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: this.outboundHeaders() });
       data = await response.json();
     } catch (error) {
       this.logger.error('刷新微信 access_token 异常', error.stack);

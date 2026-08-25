@@ -34,6 +34,7 @@ export const TASK_NAMES = {
   BATCH_DOWNLOAD: {
     ZIP_CLEANUP: 'batch-download:zip-cleanup',
     DB_CLEANUP: 'batch-download:db-cleanup',
+    CONVERSION_CACHE_CLEANUP: 'batch-download:conversion-cache-cleanup',
   },
   BILLING: {
     DOWNGRADE_MEMBERSHIPS: 'billing:downgrade-memberships',

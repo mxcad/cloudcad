@@ -12,6 +12,7 @@ import { Readable } from 'stream';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { NotImplementedException } from '@nestjs/common';
+import { ClsService } from 'nestjs-cls';
 import { HttpStorageProvider } from './http-storage.provider';
 
 function collect(stream: Readable): Promise<Buffer> {
@@ -51,6 +52,7 @@ describe('HttpStorageProvider', () => {
             ),
           },
         },
+        { provide: ClsService, useValue: { get: jest.fn() } },
       ],
     }).compile();
     return module.get(HttpStorageProvider);

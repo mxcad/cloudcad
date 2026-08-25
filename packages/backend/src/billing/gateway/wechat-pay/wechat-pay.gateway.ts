@@ -2,10 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import { ClsService } from 'nestjs-cls';
 import * as https from 'https';
 import * as tls from 'tls';
 import * as fs from 'fs';
 import { buildXML, parseXML, generateNonceStr, sign, parseTimeEnd } from './wechat-pay.util';
+import { buildOutboundTraceHeaders } from '../../../common/utils/outbound-trace';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
 
 const REFUND_PREFIX = 'wx:refund:';
@@ -37,6 +39,7 @@ export class WechatPayGateway implements PaymentGateway {
   constructor(
     private configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
+    private readonly cls: ClsService,
   ) {
     this.appId = this.configService.get<string>('wechatPay.appId', '');
     this.mchId = this.configService.get<string>('wechatPay.mchId', '');
@@ -341,6 +344,14 @@ export class WechatPayGateway implements PaymentGateway {
         headers: {
           'Content-Type': 'application/xml',
           'Content-Length': Buffer.byteLength(body),
+          // X-Request-Id/X-Trace-Id 透传（#309）：微信支付侧网关日志可关联
+          ...buildOutboundTraceHeaders(
+            {
+              requestId: this.cls?.get<string>('requestId'),
+              traceId: this.cls?.get<string>('traceId'),
+            },
+            'wechat-pay',
+          ),
         },
         timeout: 10000,
         agent,

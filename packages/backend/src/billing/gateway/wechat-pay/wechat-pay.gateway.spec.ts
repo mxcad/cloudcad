@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
+import { ClsService } from 'nestjs-cls';
 import { WechatPayGateway } from './wechat-pay.gateway';
 import { buildXML, sign } from './wechat-pay.util';
 
@@ -53,6 +54,7 @@ describe('WechatPayGateway', () => {
           provide: getRedisConnectionToken(),
           useValue: { set: jest.fn(), del: jest.fn() },
         },
+        { provide: ClsService, useValue: { get: jest.fn() } },
       ],
     }).compile();
 

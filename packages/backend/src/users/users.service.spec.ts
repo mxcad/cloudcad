@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ClsService } from 'nestjs-cls';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -31,6 +32,7 @@ describe('UsersService.syncWechatAvatar', () => {
         { provide: UserStatusService, useValue: {} },
         { provide: UserPasswordService, useValue: {} },
         { provide: ConfigService, useValue: configService },
+        { provide: ClsService, useValue: { get: jest.fn() } },
       ],
     }).compile();
 

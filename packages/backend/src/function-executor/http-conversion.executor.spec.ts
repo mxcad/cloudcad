@@ -7,6 +7,7 @@ import * as http from 'http';
 import { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ClsService } from 'nestjs-cls';
 import { HttpConversionExecutor } from './http-conversion.executor';
 import type { ConversionTask } from './function-executor.interface';
 
@@ -61,6 +62,7 @@ describe('HttpConversionExecutor', () => {
       providers: [
         HttpConversionExecutor,
         { provide: ConfigService, useValue: makeConfigService(port) },
+        { provide: ClsService, useValue: { get: jest.fn() } },
       ],
     }).compile();
     return module.get(HttpConversionExecutor);
@@ -226,6 +228,7 @@ describe('HttpConversionExecutor', () => {
               get: jest.fn(() => 'http://127.0.0.1:1'),
             },
           },
+          { provide: ClsService, useValue: { get: jest.fn() } },
         ],
       }).compile();
       executor = module.get(HttpConversionExecutor);

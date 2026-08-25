@@ -12,10 +12,12 @@
 
 import { Injectable, Logger, NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ClsService } from 'nestjs-cls';
 import * as http from 'http';
 import * as https from 'https';
 import * as path from 'path';
 import { FileUtils } from '../../common/utils/file-utils';
+import { buildOutboundTraceHeaders } from '../../common/utils/outbound-trace';
 import {
   IVersionControl,
   CommitResult,
@@ -42,7 +44,10 @@ export class HttpVersionControlProvider implements IVersionControl {
   private readonly useHttps: boolean;
   private readonly filesDataPath?: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly cls: ClsService,
+  ) {
     this.baseUrl =
       this.configService.get<string>('STORAGE_SERVICE_URL') ||
       'http://localhost:3200';
@@ -283,7 +288,17 @@ export class HttpVersionControlProvider implements IVersionControl {
         port: url.port || (this.useHttps ? 443 : 80),
         path: url.pathname + url.search,
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // X-Request-Id/X-Trace-Id 透传（#309）：storage-service 侧日志据此串联
+          ...buildOutboundTraceHeaders(
+            {
+              requestId: this.cls?.get<string>('requestId'),
+              traceId: this.cls?.get<string>('traceId'),
+            },
+            'http-version-control',
+          ),
+        },
         timeout: 60000,
       };
       if (body) options.headers!['Content-Length'] = Buffer.byteLength(body);
@@ -324,7 +339,16 @@ export class HttpVersionControlProvider implements IVersionControl {
         port: url.port || (this.useHttps ? 443 : 80),
         path: url.pathname + url.search,
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildOutboundTraceHeaders(
+            {
+              requestId: this.cls?.get<string>('requestId'),
+              traceId: this.cls?.get<string>('traceId'),
+            },
+            'http-version-control',
+          ),
+        },
         timeout: 60000,
       };
       const req = mod.request(options, (res) => {

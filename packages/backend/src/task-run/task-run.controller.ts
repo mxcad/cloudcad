@@ -153,7 +153,8 @@ export class TaskRunController {
       await this.alertService.raise({
         source: 'task-run:manual',
         messageKey: 'task_run_failed',
-        level: AlertLevel.CRITICAL,
+        // P1：单任务失败（可再次手动触发）
+        level: AlertLevel.P1,
         message: `手动触发任务 ${taskName} 失败: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task: taskName,
