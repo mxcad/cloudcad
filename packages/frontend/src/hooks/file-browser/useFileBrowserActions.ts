@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useCallback, useEffect, useState } from 'react';
+import { nodeControllerLookupNodes } from '@/api-sdk';
 import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { useFileSystemCRUD } from '@/hooks/file-system';
@@ -13,10 +14,12 @@ import { t } from '@/languages';
 import {
   evaluateCrossProjectTransfer,
   fetchProjectTransferSettings,
+  resolveRootKindFromMode,
 } from '@/lib/crossProjectPaste';
 import type {
   CrossProjectTransferVerdict,
   ProjectTransferSettings,
+  TransferRootKind,
 } from '@/lib/crossProjectPaste';
 import type { FileSystemNode } from '@/types/filesystem';
 import type {
@@ -24,6 +27,7 @@ import type {
   ShowConfirmFn,
   ShowToastFn,
 } from './fileBrowserTypes';
+import type { FileSystemBreadcrumbItem } from './fileBrowserTypes';
 import type { UseFileBrowserDataReturn } from './useFileBrowserData';
 import type { UseFileBrowserSelectionReturn } from './useFileBrowserSelection';
 import type { MoveCopyMode, MoveCopyCallOptions } from '@/hooks/file-system';
@@ -55,6 +59,11 @@ export interface UseFileBrowserActionsOptions {
     | 'removeLocalNode'
     | 'updateLocalNode'
   >;
+  /**
+   * 当前目录面包屑链（粘贴环防护：剪贴板项命中祖先链时剔除该项）；
+   * 缺省不过滤（侧栏等未注入面包屑的外壳由后端兜底）
+   */
+  breadcrumbs?: FileSystemBreadcrumbItem[];
   selection: UseFileBrowserSelectionReturn;
   /** 项目级权限位 */
   permissions: FileBrowserPermissions;
@@ -213,8 +222,10 @@ export const useFileBrowserActions = ({
   trash,
   refresh,
   crud,
+  breadcrumbs: breadcrumbsProp,
 }: UseFileBrowserActionsOptions): UseFileBrowserActionsReturn => {
   const { nodes, currentNode, urlProjectId, refresh: dataRefresh } = data;
+  const breadcrumbs = breadcrumbsProp ?? [];
   const { selectedNodes, clearSelection } = selection;
   const loadData = refresh ?? dataRefresh;
 
@@ -267,32 +278,41 @@ export const useFileBrowserActions = ({
   const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
 
   // ── 跨项目转移策略（UI 门控 + 执行校验） ──────────────────────────
-  // 源项目出向策略（transferOutToProject）在复制/剪切时快照进剪贴板
-  // （复制时位于源项目页面，必可查询）；目标项目入向策略在粘贴时按当前
-  // 项目查询。任何一侧查询失败 → 保守视为不支持跨项目转移。
+  // 源项目 6 域策略在复制/剪切时快照进剪贴板（源为项目时才查询；个人空间/库
+  // 源无出向字段恒允许）；目标项目入向策略在粘贴时按当前域判定——仅目标为
+  // 项目根才需要查询。任何一侧查询失败 → 保守视为不支持跨项目转移。
   const getProjectTransferSettings =
     optionsGetProjectTransferSettings ?? fetchProjectTransferSettings;
 
-  // 复制/剪切时快照源项目出向策略（供后续跨项目粘贴判断；快照失败则后端兜底）
-  const snapshotSourceTransfer = useCallback(
-    async (pid: string) => {
-      const project = await getProjectTransferSettings(pid);
-      useFileSystemClipboardStore.setState({
-        sourceTransferOutToProject: project?.transferOutToProject ?? null,
-      });
-    },
-    [getProjectTransferSettings]
-  );
+  /** 当前视图归属根类型（粘贴目标域） */
+  const targetRootKind: TransferRootKind = resolveRootKindFromMode(mode);
+
+  // 复制/剪切时快照剪贴板源域与源项目出向策略（快照失败则后端兜底）
+  const snapshotSourceTransfer = useCallback(async () => {
+    const sourceRootKind = resolveRootKindFromMode(mode);
+    const settings =
+      sourceRootKind === 'project'
+        ? await getProjectTransferSettings(projectId)
+        : null;
+    useFileSystemClipboardStore.setState({
+      sourceRootKind,
+      sourceTransferSettings: settings,
+    });
+  }, [mode, projectId, getProjectTransferSettings]);
 
   const clipboardSourceProjectId = useFileSystemClipboardStore(
     (s) => s.sourceProjectId
   );
-  const clipboardSourceTransferOut = useFileSystemClipboardStore(
-    (s) => s.sourceTransferOutToProject
+  const clipboardSourceRootKind = useFileSystemClipboardStore(
+    (s) => s.sourceRootKind
+  );
+  const clipboardSourceTransferSettings = useFileSystemClipboardStore(
+    (s) => s.sourceTransferSettings
   );
 
-  // 剪贴板源为其他项目时评估跨项目策略。乐观允许：verdict 未就绪不拦截，
-  // 查询完成后若禁止则收紧 canPaste 并禁用粘贴按钮（快照异步更新会重新触发评估）。
+  // 剪贴板源与当前目录归属根不同时评估跨项目策略。乐观允许：verdict 未就绪
+  // 不拦截，查询完成后若禁止则收紧 canPaste 并禁用粘贴按钮。
+  // 域语义对齐后端 6 域矩阵：非项目根一侧无配置字段 → 跳过该侧检查。
   const [pasteVerdict, setPasteVerdict] =
     useState<CrossProjectTransferVerdict | null>(null);
   useEffect(() => {
@@ -306,7 +326,11 @@ export const useFileBrowserActions = ({
       setPasteVerdict(null);
       return;
     }
-    getProjectTransferSettings(projectId).then((targetSettings) => {
+    // 目标为非项目根（个人空间）时无入向策略字段，无需查询目标设置
+    const needsTargetSettings = targetRootKind === 'project';
+    Promise.resolve(
+      needsTargetSettings ? getProjectTransferSettings(projectId) : undefined
+    ).then((targetSettings) => {
       if (cancelled) return;
       setPasteVerdict(
         evaluateCrossProjectTransfer({
@@ -314,12 +338,16 @@ export const useFileBrowserActions = ({
           operation: clipboardMode === 'cut' ? 'move' : 'copy',
           sourceProjectId: clipboardSourceProjectId,
           targetProjectId: projectId,
-          // 源为项目 → 出向只读 transferOutToProject（目标恒为项目）
+          sourceRootKind: clipboardSourceRootKind,
+          targetRootKind,
           sourceSettings:
-            clipboardSourceTransferOut == null
-              ? null
-              : { transferOutToProject: clipboardSourceTransferOut },
-          targetSettings: targetSettings ?? null,
+            clipboardSourceRootKind === 'project'
+              ? (clipboardSourceTransferSettings ?? null)
+              : undefined,
+          targetSettings:
+            needsTargetSettings && targetSettings != null
+              ? targetSettings
+              : null,
         })
       );
     });
@@ -330,8 +358,10 @@ export const useFileBrowserActions = ({
     clipboardItems,
     clipboardMode,
     clipboardSourceProjectId,
-    clipboardSourceTransferOut,
+    clipboardSourceRootKind,
+    clipboardSourceTransferSettings,
     projectId,
+    targetRootKind,
     getProjectTransferSettings,
   ]);
 
@@ -360,7 +390,7 @@ export const useFileBrowserActions = ({
       return;
     }
     setClipboard(Array.from(selectedNodes), 'copy', projectId);
-    snapshotSourceTransfer(projectId);
+    snapshotSourceTransfer();
     showToast(t(`已复制 ${selectedNodes.size} 个项目`), 'info');
   }, [
     enableClipboard,
@@ -383,13 +413,38 @@ export const useFileBrowserActions = ({
       return;
     }
     const nodeIds = Array.from(selectedNodes);
+    // 源父目录快照：当前视图可见项直接取；跨页/搜索选中的缺失项经
+    // nodes/lookup 补全（undo rollback 需要完整源位置）
     const sourceParentIds: Record<string, string> = {};
+    const missingIds: string[] = [];
     for (const id of nodeIds) {
       const node = nodes.find((n) => n.id === id);
       if (node?.parentId) sourceParentIds[id] = node.parentId;
+      else missingIds.push(id);
     }
-    setClipboard(nodeIds, 'cut', projectId, sourceParentIds);
-    snapshotSourceTransfer(projectId);
+    const snapshotMissing = async () => {
+      if (missingIds.length === 0) return;
+      try {
+        const res = await nodeControllerLookupNodes({
+          body: { ids: missingIds },
+          throwOnError: true,
+        });
+        // responseTransformer 已解包信封：res.data 即 NodeLookupItemDto[]
+        const rows = (res.data ?? []) as Array<{
+          id: string;
+          parentId: string | null;
+        }>;
+        for (const row of rows) {
+          if (row.parentId) sourceParentIds[row.id] = row.parentId;
+        }
+      } catch {
+        // 快照失败不阻断剪切：undo 时缺源位置的项会被跳过
+      }
+    };
+    snapshotMissing().then(() => {
+      setClipboard(nodeIds, 'cut', projectId, { sourceParentIds });
+    });
+    snapshotSourceTransfer();
     showToast(t(`已剪切 ${selectedNodes.size} 个项目`), 'info');
   }, [
     enableClipboard,
@@ -408,12 +463,18 @@ export const useFileBrowserActions = ({
   const doPaste = useCallback(async () => {
     if (clipboardItems.length === 0 || !clipboardMode) return;
 
+    // 环防护（D2）：粘贴目标（当前目录）位于某剪贴板项的子树内时剔除该项——
+    // 目标目录的面包屑链上任一节点即为其祖先
+    const ancestorIds = new Set(breadcrumbs.map((b) => b.id));
+    if (currentNode?.id) ancestorIds.add(currentNode.id);
+
     // 去重：剪贴板同时包含父目录与子节点时只保留父目录
     const parentMap = new Map<string, string | null>();
     for (const n of nodes) {
       parentMap.set(n.id, n.parentId ?? null);
     }
     const items = clipboardItems.filter((id) => {
+      if (ancestorIds.has(id)) return false;
       const parentId = parentMap.get(id);
       return !(parentId && clipboardItems.includes(parentId));
     });
@@ -452,6 +513,8 @@ export const useFileBrowserActions = ({
     clipboardMode,
     targetParentId,
     nodes,
+    breadcrumbs,
+    currentNode,
     clearClipboard,
     orchestrator,
     showToast,

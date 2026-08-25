@@ -111,7 +111,7 @@ function stubShareApi(overrides: { items?: ShareListItemDto[] } = {}) {
     }),
     // SelectFileModal 依赖
     http.get('/api/v1/file-system/personal-space', () =>
-      HttpResponse.json({ code: 0, data: { id: 'ps-1', name: '我的图纸' } })
+      HttpResponse.json({ code: 0, data: { id: 'ps-1', name: '个人空间' } })
     ),
     http.get('/api/v1/file-system/projects', () =>
       HttpResponse.json({ code: 0, data: { nodes: [] } })
@@ -251,7 +251,7 @@ describe('ShareManagePage', () => {
       await screen.findByText(t('选择要分享的图纸'))
     ).toBeInTheDocument();
     // 文件选择器加载了个人空间树
-    expect(await screen.findByText(t('我的图纸'))).toBeInTheDocument();
+    expect(await screen.findByText(t('个人空间'))).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: t('取消') }));
     await waitFor(() => {

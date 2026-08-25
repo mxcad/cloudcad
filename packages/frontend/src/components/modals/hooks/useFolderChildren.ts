@@ -13,7 +13,11 @@ interface FolderNode extends FileSystemNode {
 
 export const useFolderChildren = () => {
   const loadChildren = useCallback(
-    async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
+    async (
+      nodeId: string,
+      /** 需要从列表剔除的节点（被移动/复制源；支持批量多选集合）——其后代因父链断开而不可达 */
+      excludeNodeIds?: string | string[] | null
+    ): Promise<FolderNode[]> => {
       try {
         const childrenResponse = await nodeControllerGetChildren({
           path: { nodeId },
@@ -27,10 +31,18 @@ export const useFolderChildren = () => {
           children = (childrenResponse.data.nodes || []) as FileSystemNode[];
         }
 
+        const excluded = new Set(
+          Array.isArray(excludeNodeIds)
+            ? excludeNodeIds
+            : excludeNodeIds
+              ? [excludeNodeIds]
+              : []
+        );
+
         const folders: FolderNode[] = children
           .filter((child) => {
             const isFolder = child.isFolder === true;
-            const isExcluded = child.id === excludeNodeId;
+            const isExcluded = excluded.has(child.id);
             return isFolder && !isExcluded && child.id;
           })
           .map((folder) => ({

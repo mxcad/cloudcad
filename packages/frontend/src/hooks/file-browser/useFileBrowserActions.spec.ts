@@ -19,6 +19,9 @@ import type { FileSystemNode } from '@/types/filesystem';
 vi.mock('@/api-sdk', () => ({
   nodeControllerMoveNode: vi.fn(),
   nodeControllerCopyNode: vi.fn(),
+  nodeControllerBatchMoveNodes: vi.fn(),
+  nodeControllerBatchCopyNodes: vi.fn(),
+  nodeControllerLookupNodes: vi.fn(),
   nodeControllerCreateFolder: vi.fn(),
   nodeControllerCreateDrawing: vi.fn(),
   nodeControllerUpdateNode: vi.fn(),
@@ -45,12 +48,16 @@ vi.mock('@/utils/errorHandler', () => ({
 }));
 
 import {
-  nodeControllerMoveNode,
-  nodeControllerCopyNode,
+  nodeControllerBatchMoveNodes,
+  nodeControllerBatchCopyNodes,
 } from '@/api-sdk';
 
-const moveMock = nodeControllerMoveNode as unknown as ReturnType<typeof vi.fn>;
-const copyMock = nodeControllerCopyNode as unknown as ReturnType<typeof vi.fn>;
+const moveMock = nodeControllerBatchMoveNodes as unknown as ReturnType<
+  typeof vi.fn
+>;
+const copyMock = nodeControllerBatchCopyNodes as unknown as ReturnType<
+  typeof vi.fn
+>;
 
 const nodeA = { id: 'a', name: 'a.dwg', isFolder: false, parentId: 'p1' };
 const nodeB = { id: 'b', name: 'b.dwg', isFolder: false, parentId: 'p1' };
@@ -63,6 +70,7 @@ function buildData(overrides: Record<string, unknown> = {}) {
     refresh: vi.fn(),
     removeLocalNode: vi.fn(),
     updateLocalNode: vi.fn(),
+    breadcrumbs: [],
     ...overrides,
   } as unknown as UseFileBrowserDataReturn;
 }
@@ -130,8 +138,12 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
 
   beforeEach(() => {
     vi.clearAllMocks();
-    moveMock.mockResolvedValue(undefined);
-    copyMock.mockResolvedValue({ data: { id: 'created-1' } });
+    moveMock.mockResolvedValue({
+      data: { successIds: [], failedIds: [], failedCount: 0 },
+    });
+    copyMock.mockResolvedValue({
+      data: { successIds: [], failedIds: [], failedCount: 0 },
+    });
     pushSpy = vi
       .spyOn(useFileSystemUndoRedoStore.getState(), 'pushAction')
       .mockImplementation(() => {});
@@ -145,7 +157,8 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
       items: [],
       mode: null,
       sourceProjectId: '',
-      sourceTransferOutToProject: null,
+      sourceRootKind: 'project',
+      sourceTransferSettings: null,
       sourceParentIds: {},
     });
   });
@@ -207,8 +220,11 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
   });
 
   describe('clipboard.paste（粘贴收敛契约，对齐 useProjectDrawingsClipboard）', () => {
-    it('cut 粘贴：逐项移动 + pushAction move 动作 + 清空剪贴板 + 刷新', async () => {
+    it('cut 粘贴：单次批量移动 + pushAction move 动作 + 清空剪贴板 + 刷新', async () => {
       setupClipboardStore(['a', 'b'], 'cut', 'proj-1', { a: 'p1', b: 'p1' });
+      moveMock.mockResolvedValue({
+        data: { successIds: ['a', 'b'], failedIds: [], failedCount: 0 },
+      });
       const data = buildData();
       const selection = buildSelection();
       const { result, options } = renderActions({ data, selection });
@@ -217,10 +233,9 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
         await result.current.clipboard.paste();
       });
 
-      expect(moveMock).toHaveBeenCalledTimes(2);
+      expect(moveMock).toHaveBeenCalledTimes(1);
       expect(moveMock).toHaveBeenCalledWith({
-        path: { nodeId: 'a' },
-        body: { targetParentId: 'proj-1' },
+        body: { nodeIds: ['a', 'b'], targetParentId: 'proj-1' },
         throwOnError: true,
       });
       expect(pushSpy).toHaveBeenCalledTimes(1);
@@ -232,17 +247,18 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
       expect(options.refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('copy 粘贴：逐项复制 + paste-copy 动作', async () => {
+    it('copy 粘贴：单次批量复制 + paste-copy 动作', async () => {
       setupClipboardStore(['a', 'b'], 'copy', 'proj-1');
-      copyMock.mockResolvedValueOnce({ data: { id: 'new-a' } });
-      copyMock.mockResolvedValueOnce({ data: { id: 'new-b' } });
+      copyMock.mockResolvedValue({
+        data: { successIds: ['new-a', 'new-b'], failedIds: [], failedCount: 0 },
+      });
       const { result, options } = renderActions();
 
       await act(async () => {
         await result.current.clipboard.paste();
       });
 
-      expect(copyMock).toHaveBeenCalledTimes(2);
+      expect(copyMock).toHaveBeenCalledTimes(1);
       expect(pushSpy).toHaveBeenCalledTimes(1);
       expect(pushSpy.mock.calls[0][0].type).toBe('paste-copy');
       // copy 粘贴不清空剪贴板，但刷新数据
@@ -286,6 +302,9 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
 
     it('跨项目 cut 粘贴：先弹确认框，确认后执行移动', async () => {
       setupClipboardStore(['a'], 'cut', 'other-proj', { a: 'p1' });
+      moveMock.mockResolvedValue({
+        data: { successIds: ['a'], failedIds: [], failedCount: 0 },
+      });
       const showConfirm = vi.fn();
       const { result } = renderActions({ showConfirm });
 
@@ -317,16 +336,21 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
 
       expect(copyMock).toHaveBeenCalledTimes(1);
       expect(copyMock).toHaveBeenCalledWith({
-        path: { nodeId: 'a' },
-        body: { targetParentId: 'proj-1' },
+        body: { nodeIds: ['a'], targetParentId: 'proj-1' },
         throwOnError: true,
       });
     });
 
     it('部分失败：成功项注册 undo，失败计数提示', async () => {
       setupClipboardStore(['a', 'b'], 'cut', 'proj-1', { a: 'p1', b: 'p1' });
-      moveMock.mockRejectedValueOnce(new Error('quota exceeded'));
-      moveMock.mockResolvedValueOnce(undefined);
+      moveMock.mockResolvedValue({
+        data: {
+          successIds: ['a'],
+          failedIds: ['b'],
+          failedCount: 1,
+          errors: ['节点 b: quota exceeded'],
+        },
+      });
       const showToast = vi.fn();
       const { result } = renderActions({ showToast });
 
@@ -371,8 +395,35 @@ describe('useFileBrowserActions — 剪贴板 cut/copy/paste 权限矩阵 + CRUD
 
       expect(moveMock).toHaveBeenCalledTimes(1);
       expect(moveMock).toHaveBeenCalledWith({
-        path: { nodeId: 'p1' },
-        body: { targetParentId: 'proj-1' },
+        body: { nodeIds: ['p1'], targetParentId: 'proj-1' },
+        throwOnError: true,
+      });
+    });
+
+    it('环防护：剪贴板项是当前目录祖先（面包屑命中）时不粘贴该项', async () => {
+      // 剪贴板含 a（普通项）与 anc（当前目录 cur 的祖先）→ 仅粘贴 a
+      setupClipboardStore(['a', 'anc'], 'cut', 'proj-1', { a: 'p1' });
+      moveMock.mockResolvedValue({
+        data: { successIds: ['a'], failedIds: [], failedCount: 0 },
+      });
+      const data = buildData({
+        currentNode: { id: 'cur', name: 'cur', isFolder: true },
+      });
+      const { result } = renderActions({
+        data,
+        breadcrumbs: [
+          { id: 'proj-1', name: 'P' } as never,
+          { id: 'anc', name: 'ANC' } as never,
+        ],
+      });
+
+      await act(async () => {
+        await result.current.clipboard.paste();
+      });
+
+      expect(moveMock).toHaveBeenCalledTimes(1);
+      expect(moveMock).toHaveBeenCalledWith({
+        body: { nodeIds: ['a'], targetParentId: 'proj-1' },
         throwOnError: true,
       });
     });

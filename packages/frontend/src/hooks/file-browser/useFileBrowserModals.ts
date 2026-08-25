@@ -43,6 +43,8 @@ export interface UseFileBrowserModalsReturn {
   closeSelectFolder: () => void;
   /** SelectFolderModal 渲染便利 */
   selectFolderNodeId: string;
+  /** SelectFolderModal 渲染便利：需从目标树剔除的全部源节点 id（批量=选中集合） */
+  selectFolderExcludeNodeIds: string[];
   selectFolderConfirmText: string;
   // ── 通用弹窗状态机（枚举身份 + payload + 表单值） ──
   state: FileBrowserModalState;
@@ -166,6 +168,19 @@ export const useFileBrowserModals = ({
       ? ''
       : moveSourceNode?.id || copySourceNode?.id || '';
 
+  // 批量时剔除全部选中节点（防把任一源文件夹的后代选为目标）；
+  // 单选时与 selectFolderNodeId 一致
+  const singleSourceId =
+    moveSourceNode?.id === 'batch' || copySourceNode?.id === 'batch'
+      ? ''
+      : moveSourceNode?.id || copySourceNode?.id || '';
+  const selectFolderExcludeNodeIds =
+    moveSourceNode?.id === 'batch' || copySourceNode?.id === 'batch'
+      ? Array.from(selectedNodes)
+      : singleSourceId
+        ? [singleSourceId]
+        : [];
+
   const selectFolderConfirmText = moveSourceNode
     ? t('移动到此')
     : t('复制到此');
@@ -216,6 +231,7 @@ export const useFileBrowserModals = ({
     handleConfirmMoveOrCopy,
     closeSelectFolder,
     selectFolderNodeId,
+    selectFolderExcludeNodeIds,
     selectFolderConfirmText,
     state,
     open,

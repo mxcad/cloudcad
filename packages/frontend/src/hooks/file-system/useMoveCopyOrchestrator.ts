@@ -5,12 +5,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useCallback } from 'react';
-import { nodeControllerCopyNode, nodeControllerMoveNode } from '@/api-sdk';
 import {
-  buildMoveAction,
-  buildCopyAction,
-  getCreatedNodeId,
-} from './moveCopyActions';
+  nodeControllerBatchCopyNodes,
+  nodeControllerBatchMoveNodes,
+} from '@/api-sdk';
+import { buildMoveAction, buildCopyAction } from './moveCopyActions';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { handleError } from '@/utils/errorHandler';
 import { t } from '@/languages';
@@ -20,6 +19,33 @@ type ToastType = 'info' | 'success' | 'error' | 'warning';
 
 /** 移动/复制触发模式：剪贴板粘贴 / 选择文件夹模态 / 拖拽 */
 export type MoveCopyMode = 'clipboard' | 'modal' | 'drag';
+
+/**
+ * 批量操作响应取值：clientSetup 的 responseTransformer 已解包信封，
+ * res.data 即 BatchOperationResponseDto（类型由 SDK 生成保证）
+ */
+function extractBatchResult(payload: unknown): {
+  successIds: string[];
+  failedCount: number;
+  errors?: string[];
+} {
+  const r = (payload ?? {}) as {
+    successIds?: string[];
+    failedIds?: string[];
+    failedCount?: number;
+    errors?: string[];
+  };
+  return {
+    successIds: Array.isArray(r.successIds) ? r.successIds : [],
+    failedCount:
+      typeof r.failedCount === 'number'
+        ? r.failedCount
+        : Array.isArray(r.failedIds)
+          ? r.failedIds.length
+          : 0,
+    errors: r.errors,
+  };
+}
 
 export interface MoveCopyCallOptions {
   /** 各源节点的原父目录（undo rollback 用） */
@@ -86,22 +112,24 @@ export function useMoveCopyOrchestrator({
         failureLabel,
         onSuccess,
       } = options;
-      const movedIds: string[] = [];
+      // 单次批量请求替代逐节点循环（部分成功语义由后端 batch 端点保证）
+      let movedIds: string[] = [];
       let failedCount = 0;
       let lastError: unknown = null;
-      for (const nodeId of sourceNodeIds) {
-        try {
-          await nodeControllerMoveNode({
-            path: { nodeId },
-            body: { targetParentId },
-            throwOnError: true,
-          });
-          movedIds.push(nodeId);
-        } catch (error) {
-          // 单个移动失败不影响其他节点，但必须计入失败数并如实反馈（配额超限等错误不可静默吞掉）
-          failedCount += 1;
-          lastError = error;
+      try {
+        const res = await nodeControllerBatchMoveNodes({
+          body: { nodeIds: sourceNodeIds, targetParentId },
+          throwOnError: true,
+        });
+        const result = extractBatchResult(res.data);
+        movedIds = result.successIds;
+        failedCount = result.failedCount;
+        if (failedCount > 0) {
+          lastError = new Error(result.errors?.[0] || t('部分项目移动失败'));
         }
+      } catch (error) {
+        failedCount += 1;
+        lastError = error;
       }
       if (movedIds.length === 0) {
         const appError = lastError
@@ -168,23 +196,24 @@ export function useMoveCopyOrchestrator({
         failureLabel,
         onSuccess,
       } = options;
-      const createdIds: string[] = [];
+      // 单次批量请求替代逐节点循环（部分成功语义由后端 batch 端点保证）
+      let createdIds: string[] = [];
       let failedCount = 0;
       let lastError: unknown = null;
-      for (const nodeId of sourceNodeIds) {
-        try {
-          const result = await nodeControllerCopyNode({
-            path: { nodeId },
-            body: { targetParentId },
-            throwOnError: true,
-          });
-          const newId = getCreatedNodeId(result);
-          if (newId) createdIds.push(newId);
-        } catch (error) {
-          // 单个复制失败不影响其他节点，但必须计入失败数并如实反馈（配额超限等错误不可静默吞掉）
-          failedCount += 1;
-          lastError = error;
+      try {
+        const res = await nodeControllerBatchCopyNodes({
+          body: { nodeIds: sourceNodeIds, targetParentId },
+          throwOnError: true,
+        });
+        const result = extractBatchResult(res.data);
+        createdIds = result.successIds;
+        failedCount = result.failedCount;
+        if (failedCount > 0) {
+          lastError = new Error(result.errors?.[0] || t('部分项目复制失败'));
         }
+      } catch (error) {
+        failedCount += 1;
+        lastError = error;
       }
       if (createdIds.length === 0) {
         const appError = lastError
@@ -278,7 +307,18 @@ export function useMoveCopyOrchestrator({
       if (!targetNode.isFolder || draggedNodes.length === 0) return;
 
       const isCopy = e.ctrlKey || e.metaKey;
-      const nodesToProcess = draggedNodes.filter((n) => n.id !== targetNode.id);
+      // 环防护（D2）：目标位于任一被拖文件夹的已加载子树内时跳过该源
+      // （未加载部分由后端 isDescendantOf 兜底拦截）
+      const subtreeContains = (
+        node: FileSystemNode,
+        targetId: string
+      ): boolean =>
+        (node.children ?? []).some(
+          (c) => c.id === targetId || subtreeContains(c, targetId)
+        );
+      const nodesToProcess = draggedNodes.filter(
+        (n) => n.id !== targetNode.id && !subtreeContains(n, targetNode.id)
+      );
       if (nodesToProcess.length === 0) {
         setDraggedNodes([]);
         return;

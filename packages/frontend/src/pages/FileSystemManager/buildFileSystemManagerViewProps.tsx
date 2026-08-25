@@ -402,6 +402,7 @@ function buildModalsProps(a: Actions): FileSystemModalsProps {
     showSelectFolderModal: moveCopy.showSelectFolderModal,
     moveSourceNode: moveCopy.moveSourceNode,
     copySourceNode: moveCopy.copySourceNode,
+    selectFolderExcludeNodeIds: moveCopy.selectFolderExcludeNodeIds,
     setShowSelectFolderModal: moveCopy.setShowSelectFolderModal,
     setMoveSourceNode: moveCopy.setMoveSourceNode,
     setCopySourceNode: moveCopy.setCopySourceNode,
@@ -440,8 +441,6 @@ export function buildFileSystemManagerViewProps(
   return {
     containerRef: a.containerRef,
     isMobile: a.isMobile,
-    toasts: a.fs.toasts,
-    removeToast: a.fs.removeToast,
     canUpload: a.canUpload,
     fileDropHandlers: a.effects.fileDropHandlers,
     headerProps: buildHeaderProps(a),

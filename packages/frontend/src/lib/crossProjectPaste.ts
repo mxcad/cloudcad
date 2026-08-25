@@ -18,6 +18,16 @@ export type TransferOperation = 'move' | 'copy';
 /** 归属根类型（对齐后端 OwnershipNode root type；仅 PROJECT 根有 6 域 transfer 字段） */
 export type TransferRootKind = 'project' | 'personal-space' | 'library';
 
+/**
+ * 视图模式 → 归属根类型（useFileBrowserActions / useFileSystemUrlEffects 等共用，
+ * 消除 `mode === 'personal-space' ? ... : 'project'` 的散落推导）
+ */
+export function resolveRootKindFromMode(
+  mode: 'project' | 'personal-space'
+): TransferRootKind {
+  return mode === 'personal-space' ? 'personal-space' : 'project';
+}
+
 /** 项目 6 域 transfer 设置（与 ProjectDto / TransferSettings 对齐） */
 export interface ProjectTransferSettings {
   transferOutToProject?: TransferMode | null;

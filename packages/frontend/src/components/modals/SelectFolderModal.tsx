@@ -23,6 +23,8 @@ export interface TransferTargetRoot {
 interface SelectFolderModalProps {
   isOpen: boolean;
   currentNodeId: string; // 当前节点 ID（排除自身及其子节点）
+  /** 批量移动/复制：全部源节点 id 集合（从目标树剔除，防选入任一源的子树） */
+  excludeNodeIds?: string[];
   projectId?: string; // 当前项目 ID
   /** 可选：跨项目根切换器（传入多个根时顶部显示切换；缺省仅 projectId 单根） */
   roots?: TransferTargetRoot[];
@@ -59,6 +61,7 @@ interface BreadcrumbItem {
 export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   isOpen,
   currentNodeId,
+  excludeNodeIds,
   projectId,
   roots,
   sourceProjectId,
@@ -79,7 +82,8 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const { loadChildren } = useFolderChildren();
 
   /** 项目 transfer 设置查询（缺省走 SDK；测试可注入） */
-  const fetchTransfer = getProjectTransferSettings ?? fetchProjectTransferSettings;
+  const fetchTransfer =
+    getProjectTransferSettings ?? fetchProjectTransferSettings;
 
   /** 当前目标根（roots 缺省时按当前项目根处理） */
   const activeRoot = roots?.find((r) => r.id === activeRootId) ?? null;
@@ -115,7 +119,10 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     setError(null);
 
     try {
-      const tree = await loadChildren(rootId, currentNodeId);
+      const tree = await loadChildren(rootId, [
+        ...(currentNodeId ? [currentNodeId] : []),
+        ...(excludeNodeIds ?? []),
+      ]);
       setFolderTree(tree);
     } catch (err) {
       handleError(err, 'loadFolderTree');
@@ -123,7 +130,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [activeRootId, currentNodeId, isOpen, loadChildren]);
+  }, [activeRootId, currentNodeId, excludeNodeIds, isOpen, loadChildren]);
 
   useEffect(() => {
     if (isOpen) {
@@ -141,8 +148,11 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   // 引用变化而失效（否则每次展开都会整树重渲染导致闪烁）
   const folderTreeRef = useRef<FolderNode[]>(folderTree);
   folderTreeRef.current = folderTree;
-  const currentNodeIdRef = useRef(currentNodeId);
-  currentNodeIdRef.current = currentNodeId;
+  /** 排除集合（源节点 id + 显式批量集合），懒加载子级时持续剔除 */
+  const excludedIdsRef = useRef<Set<string>>(new Set());
+  excludedIdsRef.current = new Set(
+    excludeNodeIds ?? (currentNodeId ? [currentNodeId] : [])
+  );
 
   // 切换文件夹展开/折叠（懒加载）
   const toggleExpand = useCallback(
@@ -163,7 +173,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
               // 一次性 await 后展开，配合 FileTree 的 grid 展开动画平滑出现
               const children = await loadChildren(
                 nodeId,
-                currentNodeIdRef.current
+                Array.from(excludedIdsRef.current)
               );
               result[i] = {
                 ...node,
@@ -370,7 +380,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                       onClick={() => switchRoot(root.id)}
                     >
                       {root.kind === 'personal-space'
-                        ? t('我的个人空间')
+                        ? t('个人空间')
                         : root.name}
                     </button>
                   );

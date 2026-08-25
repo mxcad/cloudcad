@@ -98,6 +98,8 @@ export function useFileSystemManagerActions({
       removeLocalNode: undefined,
       updateLocalNode: undefined,
     },
+    // 粘贴环防护：剪贴板项命中当前目录祖先链时剔除
+    breadcrumbs: fs.breadcrumbs,
     selection: {
       selectedNodes: fs.selectedNodes,
       clearSelection: fs.clearSelection,
@@ -166,7 +168,8 @@ export function useFileSystemManagerActions({
     clearClipboard: fileBrowserActions.clipboard.clear,
     canPaste: fileBrowserActions.clipboard.canPaste,
     // 跨项目粘贴被拒原因（已插值文案；粘贴按钮 tooltip/提示用）
-    clipboardPasteDisabledReason: fileBrowserActions.clipboard.pasteDisabledReason,
+    clipboardPasteDisabledReason:
+      fileBrowserActions.clipboard.pasteDisabledReason,
   };
 
   // 快捷键注册（原 useClipboardActions 内，现收口到动作层）
@@ -222,6 +225,7 @@ export function useFileSystemManagerActions({
     showSelectFolderModal: modals.showSelectFolderModal,
     moveSourceNode: modals.moveSourceNode,
     copySourceNode: modals.copySourceNode,
+    selectFolderExcludeNodeIds: modals.selectFolderExcludeNodeIds,
     setShowSelectFolderModal: modals.setShowSelectFolderModal,
     setMoveSourceNode: modals.setMoveSourceNode,
     setCopySourceNode: modals.setCopySourceNode,
@@ -230,14 +234,12 @@ export function useFileSystemManagerActions({
     handleCopy: modals.handleCopy,
   };
 
-  const {
-    nodePermissions,
-    permissionsLoading: nodePermissionsLoading,
-  } = useNodePermissions({
-    isAtRoot,
-    urlProjectId,
-    displayNodes,
-  });
+  const { nodePermissions, permissionsLoading: nodePermissionsLoading } =
+    useNodePermissions({
+      isAtRoot,
+      urlProjectId,
+      displayNodes,
+    });
 
   const effects = useFileSystemManagerEffects({
     isAtRoot,

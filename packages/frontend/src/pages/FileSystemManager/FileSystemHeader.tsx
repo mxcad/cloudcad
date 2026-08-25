@@ -213,7 +213,7 @@ export const FileSystemHeader: React.FC<FileSystemHeaderProps> = ({
               content={
                 isPersonalSpaceMode
                   ? isAtRoot
-                    ? t('返回我的图纸')
+                    ? t('返回个人空间')
                     : t('返回上一级')
                   : isAtRoot
                     ? t('返回项目列表')

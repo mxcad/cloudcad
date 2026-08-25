@@ -79,7 +79,9 @@ export function useLibraryClipboardActions({
       showToast(t('请先选择要复制的文件'), 'info');
       return;
     }
-    setClipboard(Array.from(selectedNodes), 'copy', libraryId || '');
+    setClipboard(Array.from(selectedNodes), 'copy', libraryId || '', {
+      sourceRootKind: 'library',
+    });
     showToast(
       t('已复制 {count} 个项目', { count: String(selectedNodes.size) }),
       'info'
@@ -97,7 +99,10 @@ export function useLibraryClipboardActions({
       const node = nodes.find((n) => n.id === id);
       if (node?.parentId) sourceParentIds[id] = node.parentId;
     }
-    setClipboard(nodeIds, 'cut', libraryId || '', sourceParentIds);
+    setClipboard(nodeIds, 'cut', libraryId || '', {
+      sourceParentIds,
+      sourceRootKind: 'library',
+    });
     showToast(
       t('已剪切 {count} 个项目', { count: String(selectedNodes.size) }),
       'info'
@@ -109,7 +114,8 @@ export function useLibraryClipboardActions({
       useFileSystemClipboardStore
         .getState()
         .setClipboard([node.id], 'copy', libraryId || '', {
-          [node.id]: node.parentId || '',
+          sourceParentIds: { [node.id]: node.parentId || '' },
+          sourceRootKind: 'library',
         });
       showToast(t('已复制'), 'info');
     },
@@ -121,7 +127,8 @@ export function useLibraryClipboardActions({
       useFileSystemClipboardStore
         .getState()
         .setClipboard([node.id], 'cut', libraryId || '', {
-          [node.id]: node.parentId || '',
+          sourceParentIds: { [node.id]: node.parentId || '' },
+          sourceRootKind: 'library',
         });
       showToast(t('已剪切'), 'info');
     },

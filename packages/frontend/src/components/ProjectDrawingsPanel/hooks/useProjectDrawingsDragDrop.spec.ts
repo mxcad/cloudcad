@@ -7,8 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 vi.mock('@/api-sdk', () => ({
-  nodeControllerMoveNode: vi.fn(),
-  nodeControllerCopyNode: vi.fn(),
+  nodeControllerBatchMoveNodes: vi.fn(),
+  nodeControllerBatchCopyNodes: vi.fn(),
 }));
 
 vi.mock('@/languages', () => ({
@@ -28,12 +28,21 @@ vi.mock('@/utils/errorHandler', () => ({
 import { useMoveCopyOrchestrator } from '@/hooks/file-system';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import {
-  nodeControllerMoveNode,
-  nodeControllerCopyNode,
+  nodeControllerBatchMoveNodes,
+  nodeControllerBatchCopyNodes,
 } from '@/api-sdk';
 
-const moveMock = nodeControllerMoveNode as unknown as ReturnType<typeof vi.fn>;
-const copyMock = nodeControllerCopyNode as unknown as ReturnType<typeof vi.fn>;
+const moveMock = nodeControllerBatchMoveNodes as unknown as ReturnType<
+  typeof vi.fn
+>;
+const copyMock = nodeControllerBatchCopyNodes as unknown as ReturnType<
+  typeof vi.fn
+>;
+
+/** 默认批量成功响应：successIds 回显请求的 nodeIds */
+const batchOk = (nodeIds: string[]) => ({
+  data: { successIds: [...nodeIds], failedIds: [], failedCount: 0 },
+});
 
 const draggedNode = { id: 'f1', name: 'a.dwg', isFolder: false, parentId: 'p1' };
 const targetFolder = { id: 'folder-2', name: 'dir2', isFolder: true, parentId: 'p1' };
@@ -76,8 +85,12 @@ describe('useMoveCopyOrchestrator 拖拽 — 对齐行为契约', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    moveMock.mockResolvedValue(undefined);
-    copyMock.mockResolvedValue({ data: { id: 'created-1' } });
+    moveMock.mockImplementation(({ body }: any) =>
+      Promise.resolve(batchOk(body?.nodeIds ?? []))
+    );
+    copyMock.mockImplementation(({ body }: any) =>
+      Promise.resolve(batchOk(body?.nodeIds ?? []))
+    );
     pushSpy = vi
       .spyOn(useFileSystemUndoRedoStore.getState(), 'pushAction')
       .mockImplementation(() => {});
@@ -92,8 +105,7 @@ describe('useMoveCopyOrchestrator 拖拽 — 对齐行为契约', () => {
 
     expect(moveMock).toHaveBeenCalledTimes(1);
     expect(moveMock).toHaveBeenCalledWith({
-      path: { nodeId: 'f1' },
-      body: { targetParentId: 'folder-2' },
+      body: { nodeIds: ['f1'], targetParentId: 'folder-2' },
       throwOnError: true,
     });
     expect(pushSpy).toHaveBeenCalledTimes(1);
@@ -106,7 +118,6 @@ describe('useMoveCopyOrchestrator 拖拽 — 对齐行为契约', () => {
   });
 
   it('copy 拖拽（ctrlKey）：复制节点 + pushAction 收到 buildCopyAction 构造的 paste-copy 动作', async () => {
-    copyMock.mockResolvedValueOnce({ data: { id: 'new-f1' } });
     const { result, props } = renderOrchestrator();
 
     await act(async () => {
@@ -115,8 +126,7 @@ describe('useMoveCopyOrchestrator 拖拽 — 对齐行为契约', () => {
 
     expect(copyMock).toHaveBeenCalledTimes(1);
     expect(copyMock).toHaveBeenCalledWith({
-      path: { nodeId: 'f1' },
-      body: { targetParentId: 'folder-2' },
+      body: { nodeIds: ['f1'], targetParentId: 'folder-2' },
       throwOnError: true,
     });
     expect(pushSpy).toHaveBeenCalledTimes(1);

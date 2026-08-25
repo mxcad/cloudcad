@@ -73,7 +73,7 @@ const mockFns = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(mockFns.projectControllerGetPersonalSpace).mockResolvedValue({
-    data: { id: 'ps-1', name: '我的图纸' },
+    data: { id: 'ps-1', name: '个人空间' },
   } as never);
   vi.mocked(mockFns.projectControllerGetProjects).mockResolvedValue({
     data: { nodes: [{ id: 'proj-1', name: '项目A' }] },
@@ -84,10 +84,10 @@ describe('SelectFileModal', () => {
   const hiddenContainerOf = (el: Element): HTMLElement | null =>
     el.closest('[aria-hidden]') as HTMLElement | null;
 
-  it('加载根节点：我的图纸 / 我的项目（子节点折叠时视觉隐藏）', async () => {
+  it('加载根节点：个人空间 / 我的项目（子节点折叠时视觉隐藏）', async () => {
     render(<SelectFileModal isOpen onClose={vi.fn()} onConfirm={vi.fn()} />);
 
-    expect(await screen.findByText('我的图纸')).toBeInTheDocument();
+    expect(await screen.findByText('个人空间')).toBeInTheDocument();
     expect(screen.getByText('我的项目')).toBeInTheDocument();
     // 我的项目未展开：项目列表保留在 DOM 但容器 aria-hidden（展开动画需要）
     const projectRow = screen.getByText('项目A');
@@ -111,7 +111,7 @@ describe('SelectFileModal', () => {
     expect(mockFns.nodeControllerGetChildren).not.toHaveBeenCalled();
   });
 
-  it('点击我的图纸名称展开：懒加载走 children API', async () => {
+  it('点击个人空间名称展开：懒加载走 children API', async () => {
     vi.mocked(mockFns.nodeControllerGetChildren).mockResolvedValue({
       data: {
         nodes: [{ id: 'folder-1', name: '施工图', isFolder: true }],
@@ -119,7 +119,7 @@ describe('SelectFileModal', () => {
     } as never);
 
     render(<SelectFileModal isOpen onClose={vi.fn()} onConfirm={vi.fn()} />);
-    fireEvent.click(await screen.findByText('我的图纸'));
+    fireEvent.click(await screen.findByText('个人空间'));
 
     await waitFor(() =>
       expect(mockFns.nodeControllerGetChildren).toHaveBeenCalledWith({
@@ -138,7 +138,7 @@ describe('SelectFileModal', () => {
     const onConfirm = vi.fn();
 
     render(<SelectFileModal isOpen onClose={vi.fn()} onConfirm={onConfirm} />);
-    fireEvent.click(await screen.findByText('我的图纸'));
+    fireEvent.click(await screen.findByText('个人空间'));
     const fileNode = await screen.findByText('示例图纸.dwg');
     fireEvent.click(fileNode);
 

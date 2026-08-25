@@ -14,7 +14,7 @@ interface FileSystemManagerProps {
 export const FileSystemManager: React.FC<FileSystemManagerProps> = ({
   mode = 'project',
 }) => {
-  useDocumentTitle(mode === 'personal-space' ? t('我的图纸') : t('项目管理'));
+  useDocumentTitle(mode === 'personal-space' ? t('个人空间') : t('项目管理'));
 
   const data = useFileSystemManagerData({ mode });
   const actions = useFileSystemManagerActions({ data });

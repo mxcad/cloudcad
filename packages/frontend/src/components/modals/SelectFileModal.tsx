@@ -98,7 +98,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
         if (psData?.id) {
           roots.push({
             id: psData.id,
-            name: psData.name || t('我的图纸'),
+            name: t('个人空间'),
             isFolder: true,
             expanded: false,
             loading: false,

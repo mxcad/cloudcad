@@ -8,6 +8,7 @@ import {
 } from '@/api-sdk';
 import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
+import { resolveRootKindFromMode } from '@/lib/crossProjectPaste';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import type { FileSystemNode } from '@/types/filesystem';
@@ -186,11 +187,12 @@ export function useFileSystemUrlEffects({
       useFileSystemClipboardStore
         .getState()
         .setClipboard([node.id], 'copy', urlProjectId || '', {
-          [node.id]: node.parentId || '',
+          sourceParentIds: { [node.id]: node.parentId || '' },
+          sourceRootKind: resolveRootKindFromMode(mode),
         });
       showToast(t('已复制'), 'info');
     },
-    [urlProjectId, showToast]
+    [urlProjectId, mode, showToast]
   );
 
   const handleCut = useCallback(
@@ -198,11 +200,12 @@ export function useFileSystemUrlEffects({
       useFileSystemClipboardStore
         .getState()
         .setClipboard([node.id], 'cut', urlProjectId || '', {
-          [node.id]: node.parentId || '',
+          sourceParentIds: { [node.id]: node.parentId || '' },
+          sourceRootKind: resolveRootKindFromMode(mode),
         });
       showToast(t('已剪切'), 'info');
     },
-    [urlProjectId, showToast]
+    [urlProjectId, mode, showToast]
   );
 
   const handleFolderDownload = useCallback((node: FileSystemNode) => {

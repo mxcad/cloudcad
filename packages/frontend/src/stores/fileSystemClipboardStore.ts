@@ -1,46 +1,62 @@
 import { create } from 'zustand';
-import type { TransferMode } from '@/types/filesystem';
+import type {
+  ProjectTransferSettings,
+  TransferRootKind,
+} from '@/lib/crossProjectPaste';
 
 export type ClipboardMode = 'copy' | 'cut';
+
+export interface SetClipboardOptions {
+  /** cut 时记录各节点源父目录（undo rollback 用） */
+  sourceParentIds?: Record<string, string>;
+  /** 剪贴板归属根类型（默认 'project'） */
+  sourceRootKind?: TransferRootKind;
+  /** 源项目 6 域 transfer 设置快照（源为项目时复制/剪切时记录；非项目根/查询失败为 null；后端仍做最终校验） */
+  sourceTransferSettings?: ProjectTransferSettings | null;
+}
 
 export interface FileSystemClipboardState {
   items: string[];
   mode: ClipboardMode | null;
   sourceProjectId: string;
+  sourceRootKind: TransferRootKind;
   sourceParentIds: Record<string, string>;
-  /** 源项目出向到项目的策略快照（复制/剪切时记录，供跨项目粘贴 UI 判断用；后端仍做最终校验） */
-  sourceTransferOutToProject: TransferMode | null;
+  sourceTransferSettings: ProjectTransferSettings | null;
   setClipboard: (
     items: string[],
     mode: ClipboardMode,
     sourceProjectId: string,
-    sourceParentIds?: Record<string, string>,
-    sourceTransferOutToProject?: TransferMode | null
+    options?: SetClipboardOptions
   ) => void;
   clearClipboard: () => void;
 }
 
 export const useFileSystemClipboardStore = create<FileSystemClipboardState>(
-  (set, get) => ({
+  (set) => ({
     items: [],
     mode: null,
     sourceProjectId: '',
+    sourceRootKind: 'project',
     sourceParentIds: {},
-    sourceTransferOutToProject: null,
+    sourceTransferSettings: null,
 
     setClipboard: (
       items,
       mode,
       sourceProjectId,
-      sourceParentIds = {},
-      sourceTransferOutToProject = null
+      {
+        sourceParentIds = {},
+        sourceRootKind = 'project',
+        sourceTransferSettings = null,
+      } = {}
     ) => {
       set({
         items,
         mode,
         sourceProjectId,
         sourceParentIds,
-        sourceTransferOutToProject,
+        sourceRootKind,
+        sourceTransferSettings,
       });
     },
 
@@ -49,8 +65,9 @@ export const useFileSystemClipboardStore = create<FileSystemClipboardState>(
         items: [],
         mode: null,
         sourceProjectId: '',
+        sourceRootKind: 'project',
         sourceParentIds: {},
-        sourceTransferOutToProject: null,
+        sourceTransferSettings: null,
       });
     },
   })

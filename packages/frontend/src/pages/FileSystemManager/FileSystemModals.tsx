@@ -63,6 +63,8 @@ export interface FileSystemModalsProps {
   showSelectFolderModal: boolean;
   moveSourceNode: FileSystemNode | { id: 'batch' } | null;
   copySourceNode: FileSystemNode | { id: 'batch' } | null;
+  /** 需从目标树剔除的源节点 id 全集（批量=选中集合；防选入任一源的子树） */
+  selectFolderExcludeNodeIds: string[];
   setShowSelectFolderModal: (v: boolean) => void;
   setMoveSourceNode: (v: FileSystemNode | { id: 'batch' } | null) => void;
   setCopySourceNode: (v: FileSystemNode | { id: 'batch' } | null) => void;
@@ -144,6 +146,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
     showSelectFolderModal,
     moveSourceNode,
     copySourceNode,
+    selectFolderExcludeNodeIds,
     setShowSelectFolderModal,
     setMoveSourceNode,
     setCopySourceNode,
@@ -179,10 +182,8 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
   // 跨项目目标根（个人空间 + 我的项目）：弹窗打开时才拉取
   const transferRoots = useTransferTargetRoots(showSelectFolderModal);
   // 跨项目转移设置（编辑项目时按 PROJECT_TRANSFER_MANAGE 门控显示）
-  const {
-    canManage: canManageTransfer,
-    save: saveTransferSettings,
-  } = useTransferSettings(editingProject?.id);
+  const { canManage: canManageTransfer, save: saveTransferSettings } =
+    useTransferSettings(editingProject?.id);
 
   const handleTransferSettingsChange = async (settings: TransferSettings) => {
     try {
@@ -358,6 +359,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
             ? ''
             : moveSourceNode?.id || copySourceNode?.id || ''
         }
+        excludeNodeIds={selectFolderExcludeNodeIds}
         projectId={urlProjectId}
         roots={transferRoots}
         // 跨项目转移门控：源为项目视图时才启用（个人空间源不做策略拦截）
