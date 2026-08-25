@@ -24,6 +24,7 @@ import { ViewToggle } from '@/components/common/ViewToggle';
 import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
+import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import { t } from '@/languages';
 import { CascadeCategorySelector } from './CascadeCategorySelector';
 import { useResourceListScroll } from './useResourceListScroll';
@@ -114,6 +115,10 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     onPageChange,
     itemContainerRef,
   });
+
+  // 防闪烁：loading 快速结束（缓存命中/快速返回）时不闪现骨架，
+  // 延迟窗口期内渲染空白（而不是提前渲染空态）
+  const showSkeleton = useDelayedLoading(!!loading);
 
   // Rubber band selection
   const {
@@ -245,125 +250,134 @@ export const ResourceList: React.FC<ResourceListProps> = ({
         {/* 内容包装：有操作栏时 min-h-full flex-col 撑满滚动容器（mt-auto 才能把操作栏
             推到底部=分页栏上方；内容不足一屏时贴底，内容超出时 sticky 吸底） */}
         <div className={bottomBar ? 'min-h-full flex flex-col' : undefined}>
-        <div style={onRubberBandSelect ? { position: 'relative' } : undefined}>
-          {loading && !loadingTimedOut && items.length === 0 ? (
-            <div className={sidebarStyles.skeletonContainer}>
-              <div className={sidebarStyles.skeletonList}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className={sidebarStyles.skeletonItem}>
-                    <div className={sidebarStyles.skeletonIcon} />
-                    <div className={sidebarStyles.skeletonText}>
-                      <div
-                        className={sidebarStyles.skeletonLine}
-                        style={{ width: '60%' }}
-                      />
-                      <div
-                        className={sidebarStyles.skeletonLine}
-                        style={{ width: '40%' }}
-                      />
-                    </div>
+          <div
+            style={onRubberBandSelect ? { position: 'relative' } : undefined}
+          >
+            {loading && !loadingTimedOut && items.length === 0 ? (
+              showSkeleton ? (
+                <div className={sidebarStyles.skeletonContainer}>
+                  <div className={sidebarStyles.skeletonList}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className={sidebarStyles.skeletonItem}>
+                        <div className={sidebarStyles.skeletonIcon} />
+                        <div className={sidebarStyles.skeletonText}>
+                          <div
+                            className={sidebarStyles.skeletonLine}
+                            style={{ width: '60%' }}
+                          />
+                          <div
+                            className={sidebarStyles.skeletonLine}
+                            style={{ width: '40%' }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : items.length === 0 && error ? (
-            <div className={styles.emptyState}>
-              <AlertCircle size={48} className={styles.emptyIcon} />
-              <div className={styles.emptyText}>{error}</div>
-              {onRetry && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="mt-3"
-                  onClick={onRetry}
-                >
-                  {t('重试')}
-                </Button>
-              )}
-            </div>
-          ) : items.length === 0 ? (
-            <div className={styles.emptyState}>
-              <FileImage size={48} className={styles.emptyIcon} />
-              <div className={styles.emptyText}>{emptyText}</div>
-            </div>
-          ) : (
-            <>
-              {/* 顶部加载指示（向上滚动加载进行中） */}
-              {showTopLoader && (
-                <div className={styles.loadingMore}>
-                  <Loader2 size={20} className={styles.loadingMoreIcon} />
-                  <span>{t('加载中...')}</span>
                 </div>
-              )}
-              {/* 使用自定义渲染（必须提供 renderItem） */}
-              <div
-                ref={itemContainerRef}
-                className={
-                  viewMode === 'list'
-                    ? galleryMode
-                      ? styles.listViewGallery
-                      : styles.listView
-                    : galleryMode
-                      ? styles.gridViewGallery
-                      : styles.gridView
-                }
-              >
-                {items.map((item) => (
-                  <React.Fragment
-                    key={
-                      item.keyPrefix ? `${item.keyPrefix}-${item.id}` : item.id
-                    }
-                  >
-                    {renderItem(item, viewMode)}
-                  </React.Fragment>
-                ))}
-              </div>
-            </>
-          )}
-          {onRubberBandSelect && rubberBandOverlay}
-        </div>
-
-        {/* 加载更多触发元素（底部指示：加载中骨架 / 翻页失败提示 / 已经是最后一页） */}
-        {items.length > 0 && paginationEnabled && (
-          <div className={styles.loadMoreTrigger}>
-            {showBottomLoader ? (
-              <ListSkeleton
-                variant={viewMode === 'list' ? 'list' : 'grid'}
-                count={viewMode === 'list' ? 3 : 6}
-              />
-            ) : loadError ? (
-              <div
-                data-testid="load-more-error"
-                className={styles.loadingMore}
-                style={{ color: 'var(--error)' }}
-              >
-                <AlertTriangle size={20} className="shrink-0" />
-                <span className="max-w-[60%] truncate" title={loadError}>
-                  {loadError}
-                </span>
-                {onRetryLoadMore && (
+              ) : null
+            ) : items.length === 0 && error ? (
+              <div className={styles.emptyState}>
+                <AlertCircle size={48} className={styles.emptyIcon} />
+                <div className={styles.emptyText}>{error}</div>
+                {onRetry && (
                   <Button
-                    variant="outline"
-                    size="xs"
-                    onClick={onRetryLoadMore}
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={onRetry}
                   >
                     {t('重试')}
                   </Button>
                 )}
               </div>
+            ) : items.length === 0 ? (
+              <div className={styles.emptyState}>
+                <FileImage size={48} className={styles.emptyIcon} />
+                <div className={styles.emptyText}>{emptyText}</div>
+              </div>
             ) : (
-              !loading &&
-              isLastPage && <div className={styles.noMore}>{t('已经是最后一页')}</div>
+              <>
+                {/* 顶部加载指示（向上滚动加载进行中） */}
+                {showTopLoader && (
+                  <div className={styles.loadingMore}>
+                    <Loader2 size={20} className={styles.loadingMoreIcon} />
+                    <span>{t('加载中...')}</span>
+                  </div>
+                )}
+                {/* 使用自定义渲染（必须提供 renderItem） */}
+                <div
+                  ref={itemContainerRef}
+                  className={
+                    viewMode === 'list'
+                      ? galleryMode
+                        ? styles.listViewGallery
+                        : styles.listView
+                      : galleryMode
+                        ? styles.gridViewGallery
+                        : styles.gridView
+                  }
+                >
+                  {items.map((item) => (
+                    <React.Fragment
+                      key={
+                        item.keyPrefix
+                          ? `${item.keyPrefix}-${item.id}`
+                          : item.id
+                      }
+                    >
+                      {renderItem(item, viewMode)}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </>
             )}
+            {onRubberBandSelect && rubberBandOverlay}
           </div>
-        )}
-        {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=分页栏上方），
-            内容超出时 sticky 吸底；分页栏（footer）在滚动容器外，不受影响 */}
-        {bottomBar && (
-          <div className="mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
-            <div className="pointer-events-auto">{bottomBar}</div>
-          </div>
-        )}
+
+          {/* 加载更多触发元素（底部指示：加载中骨架 / 翻页失败提示 / 已经是最后一页） */}
+          {items.length > 0 && paginationEnabled && (
+            <div className={styles.loadMoreTrigger}>
+              {showBottomLoader ? (
+                <ListSkeleton
+                  variant={viewMode === 'list' ? 'list' : 'grid'}
+                  count={viewMode === 'list' ? 3 : 6}
+                />
+              ) : loadError ? (
+                <div
+                  data-testid="load-more-error"
+                  className={styles.loadingMore}
+                  style={{ color: 'var(--error)' }}
+                >
+                  <AlertTriangle size={20} className="shrink-0" />
+                  <span className="max-w-[60%] truncate" title={loadError}>
+                    {loadError}
+                  </span>
+                  {onRetryLoadMore && (
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={onRetryLoadMore}
+                    >
+                      {t('重试')}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                !loading &&
+                isLastPage && (
+                  <div className={styles.noMore}>{t('已经是最后一页')}</div>
+                )
+              )}
+            </div>
+          )}
+          {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=分页栏上方），
+            内容超出时 sticky 吸底；分页栏（footer）在滚动容器外，不受影响。
+            @container：BatchActionBar 按容器宽度（非视口）切换 icon-only/文字模式（侧边栏窄容器适配） */}
+          {bottomBar && (
+            <div className="@container mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
+              <div className="pointer-events-auto">{bottomBar}</div>
+            </div>
+          )}
         </div>
         <ScrollToTopButton containerRef={contentRef} />
       </div>

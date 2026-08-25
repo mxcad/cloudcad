@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useScrollPagination } from '@/hooks/common/useScrollPagination';
+import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import { PAGE_SIZE } from '@/constants/pagination';
 import styles from '@/components/sidebar/sidebar.module.css';
 import { t } from '@/languages';
@@ -109,6 +110,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     onPageChange: (page, direction) => onScrollPageChange?.(page, direction),
   });
 
+  // 防闪烁：骨架只在 loading 持续超过阈值后显示
+  const showSkeleton = useDelayedLoading(loading);
+
   return (
     <div className={styles.projectDrawingsPanel}>
       {/* 创建按钮 */}
@@ -155,7 +159,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         )}
 
         {loading && filteredProjects.length === 0 ? (
-          <ListSkeleton variant="list" count={3} />
+          // 防闪烁：loading 快速结束时不闪现骨架，延迟窗口期内渲染空白
+          showSkeleton ? (
+            <ListSkeleton variant="list" count={3} />
+          ) : null
         ) : filteredProjects.length === 0 ? (
           <div className={styles.emptyState}>
             <FolderOpen size={48} className={styles.emptyIcon} />
@@ -243,7 +250,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
               )}
             </div>
           ) : isLastPage ? (
-            <div className="flex items-center justify-center py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+            <div
+              className="flex items-center justify-center py-2 text-xs"
+              style={{ color: 'var(--text-muted)' }}
+            >
               {t('已经是最后一页')}
             </div>
           ) : null)}

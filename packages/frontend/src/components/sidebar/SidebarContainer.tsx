@@ -36,6 +36,7 @@ import { FileSystemNode } from '../../types/filesystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
 import { useDrawingSession } from '../../services/drawingSession';
+import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import styles from './sidebar.module.css';
 import { t } from '@/languages';
 
@@ -92,6 +93,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     setLastActiveTab,
     setLastDrawingsSubTab,
   } = useSidebarSettings();
+
+  // 防闪烁：骨架屏只在 loading 持续超过阈值后显示，
+  // CAD 引擎/数据快速就绪时不闪现骨架（协同链接进入时 loading 会持续到文件加载完，不受影响）
+  const showSkeleton = useDelayedLoading(isLoading);
 
   // ==================== State ====================
 
@@ -457,7 +462,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
           {runtimeConfig.collaborationEnabled ? (
             <>
               <div className={styles.content}>
-                <CollaborateSidebar visible={activeTab === 'collaborate'} onFileLoaded={onCollabFileLoaded} />
+                <CollaborateSidebar
+                  visible={activeTab === 'collaborate'}
+                  onFileLoaded={onCollabFileLoaded}
+                />
               </div>
               {!isAuthenticated && (
                 <div className={styles.loginPromptOverlay}>
@@ -531,7 +539,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
         transition: isResizing || !mounted ? 'none' : undefined,
       }}
     >
-      {isLoading ? (
+      {showSkeleton ? (
         /* 加载骨架屏 */
         <div className={styles.skeletonContainer}>
           <div className={styles.skeletonTabBar}>

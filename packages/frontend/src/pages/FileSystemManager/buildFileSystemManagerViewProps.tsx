@@ -188,6 +188,8 @@ function buildContentProps(a: Actions): FileSystemContentProps {
     onBatchMove: clipboard.clipboardHandleCut,
     onBatchCopy: clipboard.clipboardHandleCopy,
     onBatchRestore: fs.canRestore ? fs.handleBatchRestore : undefined,
+    // isFetching 并入：滚动翻页的底部加载指示（showBottomLoader）依赖它；
+    // 防闪烁由消费方延迟门控 + keepPreviousData（有数据不替换内容区）保证
     loading: fs.loading || fs.isFetching,
     currentPage: fs.paginationMeta?.page,
     totalPages: fs.paginationMeta?.totalPages,

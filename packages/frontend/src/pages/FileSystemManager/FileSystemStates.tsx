@@ -12,6 +12,7 @@ import {
   ProjectIcon,
 } from '@/components/FileIcons';
 import type { ProjectFilterType } from '@/api-sdk';
+import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import { t } from '@/languages';
 
 export interface FileSystemStatesProps {
@@ -45,7 +46,11 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
   renderEmptyView,
   isEmptyProject,
 }) => {
-  if (loading) {
+  // 防闪烁：loading 快速结束（缓存命中/快速返回）时不闪现 spinner，
+  // 延迟窗口期内 loading 分支渲染 null（isEmpty 在 loading 期间恒 false，不会提前出空态）
+  const showLoading = useDelayedLoading(loading);
+
+  if (showLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <div className="relative">

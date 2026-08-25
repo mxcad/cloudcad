@@ -6,6 +6,7 @@ import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
 import { useScrollPagination } from '@/hooks/common/useScrollPagination';
+import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import { t } from '@/languages';
 import type { FileSystemNode } from '@/types/filesystem';
 
@@ -49,14 +50,19 @@ const FileListGridItems = React.memo(function FileListGridItems({
   rubberBandJustEndedRef,
   rubberBandOverlay,
 }: FileListGridItemsProps) {
+  // 防闪烁：loading 快速结束（缓存命中/快速返回）时不闪现 loadingView，
+  // 延迟窗口期内渲染空白
+  const showLoadingView = useDelayedLoading(loading) && !!loadingView;
   const context: FileListGridRenderContext = {
     isRubberBanding: rubberBanding,
     rubberBandJustEndedRef,
   };
   return (
     <div className="relative">
-      {loading && loadingView ? (
-        loadingView
+      {loading && nodes.length === 0 ? (
+        showLoadingView ? (
+          loadingView
+        ) : null
       ) : nodes.length === 0 ? (
         emptyView
       ) : (
@@ -272,9 +278,10 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
             </div>
           ) : null}
           {/* 底部悬浮操作栏：mt-auto 内容不足一屏时贴滚动容器底部（=页面底部），
-              内容超出时 sticky 吸底；始终位于内容末尾下方，不遮挡内容；分页栏在滚动容器外 */}
+              内容超出时 sticky 吸底；始终位于内容末尾下方，不遮挡内容；分页栏在滚动容器外。
+              @container：BatchActionBar 按容器宽度（非视口）切换 icon-only/文字模式（侧边栏窄容器适配） */}
           {bottomBar && (
-            <div className="mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
+            <div className="@container mt-auto sticky bottom-0 z-10 flex justify-center pt-1 pb-3 pointer-events-none">
               <div className="pointer-events-auto">{bottomBar}</div>
             </div>
           )}
