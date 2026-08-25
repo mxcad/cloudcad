@@ -224,7 +224,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                 }
               }}
               options={[
-                { value: 'personal', label: t('我的图纸') },
+                { value: 'personal', label: t('个人空间') },
                 { value: 'project', label: t('项目文件夹') },
                 ...(hasLibraryPermission
                   ? [{ value: 'library' as const, label: t('公开资源库') }]
@@ -304,7 +304,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                   ? selectedFolderName
                   : selectedParentId
                     ? targetType === 'personal'
-                      ? t('我的图纸')
+                      ? t('个人空间')
                       : targetType === 'library'
                         ? t('公开资源库')
                         : projects.find((p) => p.id === selectedProjectId)

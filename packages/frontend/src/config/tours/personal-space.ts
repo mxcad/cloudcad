@@ -30,11 +30,11 @@ import { ProjectPermission } from '../../constants/permissions';
 export function getPersonalSpaceGuide(): TourGuide {
   return {
     id: 'personal-space',
-    name: t('我的图纸'),
+    name: t('个人空间'),
     description: t(
       '学习如何在个人空间中上传 CAD 文件、创建文件夹来管理您的图纸'
     ),
-    category: t('我的图纸'),
+    category: t('个人空间'),
     estimatedTime: t('3 分钟'),
     startPage: '/personal-space',
     visibility: {
@@ -43,17 +43,17 @@ export function getPersonalSpaceGuide(): TourGuide {
     steps: [
       {
         target: 'sidebar-personal-space',
-        title: t('进入我的图纸'),
+        title: t('进入个人空间'),
         content: t(
-          '点击侧边栏的"我的图纸"，这是您的个人图纸空间，可以上传和管理您的 CAD 文件。'
+          '点击侧边栏的"个人空间"，这是您的个人图纸空间，可以上传和管理您的 CAD 文件。'
         ),
         placement: 'right',
         mode: 'interactive',
         actionType: 'click',
-        actionHint: t('请点击侧边栏中的"我的图纸"'),
+        actionHint: t('请点击侧边栏中的"个人空间"'),
         highlight: true,
         waitForElement: 3000,
-        fallbackContent: t('请点击左侧侧边栏中的"我的图纸"入口。'),
+        fallbackContent: t('请点击左侧侧边栏中的"个人空间"入口。'),
       },
       {
         target: 'upload-btn',

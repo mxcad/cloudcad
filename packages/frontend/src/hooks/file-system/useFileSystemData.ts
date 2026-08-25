@@ -421,7 +421,7 @@ export const useFileSystemData = ({
       if (!rootAncestor) return [];
       // 根节点使用前端指定的名称（翻译后的），子节点直接用后端名称
       const rootName = isPersonalSpaceMode
-        ? t('我的图纸')
+        ? t('个人空间')
         : rootAncestor.name || t('公开资源库');
       return [
         { id: rootAncestor.id, name: rootName, isRoot: true, isFolder: true },

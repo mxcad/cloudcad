@@ -54,7 +54,7 @@ function getSubTabs(): {
     { id: 'drawings-gallery', label: t('图纸库'), icon: LayoutTemplate },
     { id: 'blocks-gallery', label: t('图块库'), icon: Layers },
     { id: 'my-project', label: t('我的项目'), icon: FolderOpen },
-    { id: 'my-drawings', label: t('我的图纸'), icon: FileText },
+    { id: 'my-drawings', label: t('个人空间'), icon: FileText },
   ];
 }
 
@@ -432,7 +432,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       <FileText size={40} />
                     </div>
                     <h3 className={styles.loginPromptTitle}>
-                      {t('登录以访问我的图纸')}
+                      {t('登录以访问个人空间')}
                     </h3>
                     <p className={styles.loginPromptDescription}>
                       {t('登录后可以查看和管理您的私人图纸')}
@@ -470,7 +470,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                         {t('登录以使用完整功能')}
                       </h3>
                       <p className={styles.loginPromptDescription}>
-                        {t('登录后可以使用我的图纸、我的项目、协同等功能')}
+                        {t('登录后可以使用个人空间、我的项目、协同等功能')}
                       </p>
                       <Button
                         variant="primary"

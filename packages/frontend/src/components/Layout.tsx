@@ -264,7 +264,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       {
         to: '/personal-space',
         icon: FileText,
-        label: t('我的图纸'),
+        label: t('个人空间'),
         visible: true,
         dataTour: 'sidebar-personal-space',
       },
@@ -532,7 +532,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 className="text-sm font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                {t('我的图纸存储')}
+                {t('个人空间存储')}
               </span>
             </div>
 

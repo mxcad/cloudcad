@@ -118,7 +118,7 @@ export function buildTrashBreadcrumbs({
   if (isPersonalSpaceMode) {
     const nodeId = urlNodeId || urlProjectId || '';
     return [
-      { id: nodeId, name: t('我的图纸'), isRoot: true, isFolder: true },
+      { id: nodeId, name: t('个人空间'), isRoot: true, isFolder: true },
       { id: 'trash', name: t('回收站'), isRoot: false, isFolder: true },
     ];
   }

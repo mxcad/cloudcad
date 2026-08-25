@@ -72,7 +72,7 @@ function getToolButtons(): ToolButtonConfig[] {
       tab: 'drawings',
       subTab: 'my-drawings',
       icon: <FileText size={18} />,
-      label: t('我的图纸'),
+      label: t('个人空间'),
       color: '#06b6d4',
       dataTour: 'trigger-my-drawings',
     },
