@@ -87,3 +87,38 @@ describe('getFileItemPermissionProps — 非根节点 canEdit/canDelete 乐观�
     expect(props.canManageExternalReference).toBe(false);
   });
 });
+
+describe('getFileItemPermissionProps — 公共资源库外部参照管理映射', () => {
+  // LibraryManagerContent 以 projectPermissions={{ [CAD_EXTERNAL_REFERENCE]: canManage }}
+  // 把系统权限 LIBRARY_*_MANAGE 映射为外部参照管理可见性，此组测试锁定该契约
+  it('库管理员（canManage → CAD_EXTERNAL_REFERENCE=true）：canManageExternalReference=true', () => {
+    const props = getFileItemPermissionProps(makeNode(), {
+      projectPermissions: {
+        [ProjectPermission.CAD_EXTERNAL_REFERENCE]: true,
+      },
+      nodePermissions: { canEdit: true, canDelete: true },
+    });
+
+    expect(props.canManageExternalReference).toBe(true);
+  });
+
+  it('非管理员（CAD_EXTERNAL_REFERENCE=false）：canManageExternalReference=false', () => {
+    const props = getFileItemPermissionProps(makeNode(), {
+      projectPermissions: {
+        [ProjectPermission.CAD_EXTERNAL_REFERENCE]: false,
+      },
+      nodePermissions: { canEdit: true, canDelete: true },
+    });
+
+    expect(props.canManageExternalReference).toBe(false);
+  });
+
+  it('未传该权限位：回退 false（不乐观显示）', () => {
+    const props = getFileItemPermissionProps(makeNode(), {
+      projectPermissions: {},
+      nodePermissions: { canEdit: true, canDelete: true },
+    });
+
+    expect(props.canManageExternalReference).toBe(false);
+  });
+});
