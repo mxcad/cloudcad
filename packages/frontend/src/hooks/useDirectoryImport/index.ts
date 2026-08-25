@@ -7,4 +7,5 @@ export type {
   ImportStats,
   ImportProgress,
   ImportResult,
+  ExtRefSummary,
 } from './types';

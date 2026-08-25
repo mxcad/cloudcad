@@ -14,8 +14,10 @@ import {
   ImportProgress,
   ImportResult,
   ImportStats,
+  ExtRefSummary,
 } from './types';
-import { computeFileHash, uploadFileWithRetry } from './uploadUtils';
+import { uploadFileWithRetry } from './uploadUtils';
+import { calculateFileHash } from '../../utils/hashUtils';
 import { processExternalReferences } from './externalReferences';
 import { isCadFile } from '../../utils/fileUtils';
 
@@ -38,7 +40,8 @@ export function useImportExecutor(
       targetParentId: string,
       libraryType: 'drawing' | 'block',
       strategy: ConflictStrategy,
-      enableAutoXrefDiscovery: boolean = false
+      enableAutoXrefDiscovery: boolean = false,
+      onExtRefUpdate?: (summary: ExtRefSummary) => void
     ): Promise<ImportResult> => {
       abortRef.current = false;
       const stats: ImportStats = {
@@ -235,7 +238,8 @@ export function useImportExecutor(
 
             try {
               // 上传文件（后端根据 conflictStrategy 处理同名）
-              const hash = await computeFileHash(child.file!);
+              // 必须用内容 MD5：后端以 32 位 hex 校验 fileHash 并据此生成转换产物/preloading 路径
+              const hash = await calculateFileHash(child.file!);
               const uploadResult = await uploadFileWithRetry(
                 child.file!,
                 hash,
@@ -294,9 +298,20 @@ export function useImportExecutor(
         uploadedFileNodes.length > 0 &&
         !abortRef.current
       ) {
-        // 异步处理外部参照（fire-and-forget，不阻塞弹框关闭）
-        processExternalReferences(uploadedFileNodes, tree).catch((err) => {
+        // 异步处理外部参照（fire-and-forget，不阻塞弹框关闭），汇总经 onExtRefUpdate 上报
+        processExternalReferences(
+          uploadedFileNodes,
+          tree,
+          onExtRefUpdate
+        ).catch((err) => {
           console.warn('外部参照处理异常:', err);
+          onExtRefUpdate?.({
+            status: 'error',
+            matched: 0,
+            uploaded: 0,
+            failed: 0,
+            missing: 0,
+          });
         });
       }
 

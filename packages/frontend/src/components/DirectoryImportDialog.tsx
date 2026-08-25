@@ -20,6 +20,7 @@ import {
   ConflictStrategy,
   ImportMode,
 } from '../hooks/useDirectoryImport';
+import type { ExtRefSummary } from '../hooks/useDirectoryImport';
 import { globalShowToast } from '../utils/notificationEvents';
 import { t } from '@/languages';
 
@@ -52,6 +53,9 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
   const [error, setError] = useState<string>('');
   const [autoXrefDiscovery, setAutoXrefDiscovery] = useState(
     enableAutoXrefDiscovery
+  );
+  const [extRefSummary, setExtRefSummary] = useState<ExtRefSummary | null>(
+    null
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importResultRef = useRef<{ success: boolean } | null>(null);
@@ -138,7 +142,44 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
     reset();
     setStep('select');
     setError('');
+    setExtRefSummary(null);
   }, [reset]);
+
+  /**
+   * 外部参照汇总文案（结果页行 + 完成 Toast 共用）
+   */
+  const formatExtRefSummary = useCallback((s: ExtRefSummary): string => {
+    if (s.status === 'processing') {
+      return t('正在自动发现并上传外部参照...');
+    }
+    if (s.status === 'error') {
+      return t('外部参照处理异常，可在图纸的「外部参照管理」中手动上传');
+    }
+    return t(
+      '外部参照：成功上传 {uploaded} 个，失败 {failed} 个，未找到 {missing} 个',
+      {
+        uploaded: String(s.uploaded),
+        failed: String(s.failed),
+        missing: String(s.missing),
+      }
+    );
+  }, []);
+
+  /**
+   * 外部参照处理进度回调：更新结果页汇总行，完成时 Toast 提示
+   */
+  const handleExtRefUpdate = useCallback(
+    (s: ExtRefSummary) => {
+      setExtRefSummary(s);
+      if (s.status === 'done') {
+        globalShowToast(
+          formatExtRefSummary(s),
+          s.failed > 0 || s.missing > 0 ? 'warning' : 'success'
+        );
+      }
+    },
+    [formatExtRefSummary]
+  );
 
   /**
    * 处理导入确认
@@ -153,7 +194,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         targetParentId,
         libraryType,
         strategy,
-        autoXrefDiscovery
+        autoXrefDiscovery,
+        handleExtRefUpdate
       );
 
       setStep('result');
@@ -166,6 +208,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
           importResultRef.current = null;
           setStep('select');
           setError('');
+          setExtRefSummary(null);
           onClose();
         }, 2000);
       }
@@ -179,6 +222,8 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
     targetParentId,
     libraryType,
     strategy,
+    autoXrefDiscovery,
+    handleExtRefUpdate,
     onSuccess,
     reset,
     onClose,
@@ -205,6 +250,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
     importResultRef.current = null;
     setStep('select');
     setError('');
+    setExtRefSummary(null);
     onClose();
   }, [step, cancelImport, reset, onSuccess, onClose]);
 
@@ -489,6 +535,11 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
         <p className="text-sm text-[var(--text-secondary)]">
           {progress.message}
         </p>
+        {autoXrefDiscovery && extRefSummary && (
+          <p className="text-xs text-[var(--text-tertiary)] mt-2">
+            {formatExtRefSummary(extRefSummary)}
+          </p>
+        )}
       </div>
     );
   };
