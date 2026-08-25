@@ -76,6 +76,8 @@ describe('NodeCopyMoveService', () => {
         update: jest.fn().mockResolvedValue(fileNode({ id: 'new-node' })),
         aggregate: jest.fn(),
       },
+      // 事务透传：直接以同一 prisma mock 执行回调（单测无需真实事务语义）
+      $transaction: jest.fn(async (cb: any) => cb(prisma)),
     };
     storageManager = {
       getFullPath: jest
@@ -89,6 +91,8 @@ describe('NodeCopyMoveService', () => {
     treeWalker = {
       getSubtreeIds: jest.fn().mockResolvedValue([]),
       resolveProjectId: jest.fn().mockResolvedValue('proj-1'),
+      isDescendantOf: jest.fn().mockResolvedValue(false),
+      getSubtreeRows: jest.fn().mockResolvedValue([]),
     };
     nodeNameService = {
       generateUniqueName: jest.fn().mockResolvedValue('drawing.dwg'),
@@ -295,6 +299,140 @@ describe('NodeCopyMoveService', () => {
           incrementBytes: 300,
         }
       );
+    });
+  });
+
+  describe('copyNode — 三阶段复制行为（计划 → 物理复制 → 单事务落库）', () => {
+    const setupSource = () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) => {
+        if (where.id === 'node-1') {
+          return Promise.resolve(fileNode());
+        }
+        if (where.id === 'folder-1') {
+          return Promise.resolve(
+            fileNode({
+              id: 'folder-1',
+              nodeType: NodeType.FOLDER,
+              path: null,
+              parentId: 'proj-1',
+            })
+          );
+        }
+        if (where.id === 'proj-1') {
+          return Promise.resolve({
+            id: 'proj-1',
+            nodeType: NodeType.PROJECT,
+          });
+        }
+        return Promise.resolve(null);
+      });
+    };
+
+    it('when 物理目录复制失败：抛 BadRequest 且不落库（$transaction 不执行）', async () => {
+      setupSource();
+      storageManager.copyNodeDirectory.mockRejectedValue(
+        new Error('disk full')
+      );
+
+      await expect(
+        service.copyNode('node-1', 'folder-1', 'user-1')
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.create).not.toHaveBeenCalled();
+    });
+
+    it('when 落库事务失败：异常向上抛出（回滚语义由 Prisma 保证）', async () => {
+      setupSource();
+      prisma.$transaction.mockRejectedValue(new Error('unique violation'));
+
+      await expect(
+        service.copyNode('node-1', 'folder-1', 'user-1')
+      ).rejects.toThrow('unique violation');
+      // 物理复制已先行完成
+      expect(storageManager.copyNodeDirectory).toHaveBeenCalledTimes(1);
+    });
+
+    it('when FILE 复制成功：create 携带物理复制返回的新路径 + 新 ownerId', async () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) => {
+        if (where.id === 'node-1') {
+          return Promise.resolve(fileNode());
+        }
+        if (where.id === 'folder-1') {
+          return Promise.resolve({
+            id: 'folder-1',
+            nodeType: NodeType.FOLDER,
+          });
+        }
+        return Promise.resolve(null);
+      });
+      storageManager.copyNodeDirectory.mockResolvedValue(
+        '202607/copied-dir/drawing.dwg.mxweb'
+      );
+
+      await service.copyNode('node-1', 'folder-1', 'user-2');
+
+      expect(prisma.fileSystemNode.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            ownerId: 'user-2',
+            path: '202607/copied-dir/drawing.dwg.mxweb',
+            projectId: 'proj-1',
+          }),
+        })
+      );
+    });
+
+    it('when FOLDER 子树复制：子节点入计划、兄弟重名自动加 (n) 后缀', async () => {
+      setupSource();
+      treeWalker.getSubtreeRows.mockResolvedValue([
+        {
+          id: 'child-a',
+          parentId: 'folder-1',
+          name: 'doc.dwg',
+          originalName: null,
+          nodeType: NodeType.FILE,
+          path: '202607/child-a/doc.dwg.mxweb',
+          size: 10,
+          mimeType: null,
+          extension: 'dwg',
+          fileStatus: FileStatus.COMPLETED,
+          fileHash: null,
+          description: null,
+        },
+        {
+          id: 'child-b',
+          parentId: 'folder-1',
+          name: 'doc.dwg',
+          originalName: null,
+          nodeType: NodeType.FILE,
+          path: '202607/child-b/doc.dwg.mxweb',
+          size: 20,
+          mimeType: null,
+          extension: 'dwg',
+          fileStatus: FileStatus.COMPLETED,
+          fileHash: null,
+          description: null,
+        },
+      ]);
+      storageManager.copyNodeDirectory.mockImplementation(
+        (_src: string, targetNodeId: string) =>
+          Promise.resolve(`202607/${targetNodeId}/doc.dwg.mxweb`)
+      );
+
+      await service.copyNode('folder-1', 'proj-1', 'user-1');
+
+      // 根 + 两个子文件 = 3 条 create；重名者获得 " (1)" 后缀
+      expect(prisma.fileSystemNode.create).toHaveBeenCalledTimes(3);
+      const createdNames = prisma.fileSystemNode.create.mock.calls.map(
+        (call: any) => call[0].data.name as string
+      );
+      expect(createdNames).toContain('doc.dwg');
+      expect(createdNames).toContain('doc (1).dwg');
+      // 子节点路径来自各自的物理复制结果（互不共享目录）；根为 FOLDER 无 path
+      const createdPaths = prisma.fileSystemNode.create.mock.calls.map(
+        (call: any) => call[0].data.path as string
+      );
+      expect(new Set(createdPaths.filter(Boolean)).size).toBe(2);
     });
   });
 

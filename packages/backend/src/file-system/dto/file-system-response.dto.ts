@@ -10,243 +10,244 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { FileStatus } from "../../common/enums/file-status.enum";
-import { CrossProjectTransferMode, NodeType } from "@cloudcad/db";
-import { ProjectStatus } from "../../common/enums/project-status.enum";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { FileStatus } from '../../common/enums/file-status.enum';
+import { CrossProjectTransferMode, NodeType } from '@cloudcad/db';
+import { ProjectStatus } from '../../common/enums/project-status.enum';
 
 /**
  * 文件系统节点 DTO
  * isFolder / isRoot / libraryKey 由服务层从 nodeType 推导后赋值
  */
 export class FileSystemNodeDto {
-	@ApiProperty({ description: "节点 ID" })
-	id: string;
+  @ApiProperty({ description: '节点 ID' })
+  id: string;
 
-	@ApiProperty({ description: "节点名称" })
-	name: string;
+  @ApiProperty({ description: '节点名称' })
+  name: string;
 
-	@ApiPropertyOptional({ description: "节点描述" })
-	description?: string;
+  @ApiPropertyOptional({ description: '节点描述' })
+  description?: string;
 
-	@ApiProperty({ description: "节点类型" })
-	nodeType: NodeType;
+  @ApiProperty({ description: '节点类型' })
+  nodeType: NodeType;
 
-	@ApiProperty({ description: "是否为文件夹（从 nodeType 推导）" })
-	isFolder: boolean;
+  @ApiProperty({ description: '是否为文件夹（从 nodeType 推导）' })
+  isFolder: boolean;
 
-	@ApiProperty({ description: "是否为根节点（从 nodeType 推导）" })
-	isRoot: boolean;
+  @ApiProperty({ description: '是否为根节点（从 nodeType 推导）' })
+  isRoot: boolean;
 
-	@ApiProperty({ description: "父节点 ID", required: false })
-	parentId?: string;
+  @ApiProperty({ description: '父节点 ID', required: false })
+  parentId?: string;
 
-	@ApiProperty({ description: "文件路径", required: false })
-	path?: string;
+  @ApiProperty({ description: '文件路径', required: false })
+  path?: string;
 
-	@ApiProperty({ description: "文件大小", required: false })
-	size?: number;
+  @ApiProperty({ description: '文件大小', required: false })
+  size?: number;
 
-	@ApiProperty({ description: "文件 MIME 类型", required: false })
-	mimeType?: string;
+  @ApiProperty({ description: '文件 MIME 类型', required: false })
+  mimeType?: string;
 
-	@ApiProperty({ description: "文件哈希", required: false })
-	fileHash?: string;
+  @ApiProperty({ description: '文件哈希', required: false })
+  fileHash?: string;
 
-	@ApiProperty({
-		description: "文件状态",
-		enum: Object.values(FileStatus),
-		enumName: "FileStatusEnum",
-		required: false,
-	})
-	fileStatus?: FileStatus;
+  @ApiProperty({
+    description: '文件状态',
+    enum: Object.values(FileStatus),
+    enumName: 'FileStatusEnum',
+    required: false,
+  })
+  fileStatus?: FileStatus;
 
-	@ApiProperty({ description: "创建时间" })
-	createdAt: Date;
+  @ApiProperty({ description: '创建时间' })
+  createdAt: Date;
 
-	@ApiProperty({ description: "更新时间" })
-	updatedAt: Date;
+  @ApiProperty({ description: '更新时间' })
+  updatedAt: Date;
 
-	@ApiProperty({ description: "删除时间", required: false })
-	deletedAt?: Date;
+  @ApiProperty({ description: '删除时间', required: false })
+  deletedAt?: Date;
 
-	@ApiProperty({ description: "所有者 ID" })
-	ownerId: string;
+  @ApiProperty({ description: '所有者 ID' })
+  ownerId: string;
 
-	@ApiProperty({
-		description: "私人空间标识（非空表示为私人空间）",
-		required: false,
-	})
-	personalSpaceKey?: string;
+  @ApiProperty({
+    description: '私人空间标识（非空表示为私人空间）',
+    required: false,
+  })
+  personalSpaceKey?: string;
 
-	@ApiPropertyOptional({
-		description: "公共资源库标识（drawing: 图纸库, block: 图块库，从 nodeType 推导）",
-	})
-	libraryKey?: string;
+  @ApiPropertyOptional({
+    description:
+      '公共资源库标识（drawing: 图纸库, block: 图块库，从 nodeType 推导）',
+  })
+  libraryKey?: string;
 
-	@ApiProperty({ description: "子节点数量", required: false })
-	childrenCount?: number;
+  @ApiProperty({ description: '子节点数量', required: false })
+  childrenCount?: number;
 
-	@ApiProperty({ description: "成员数量（项目根节点）", required: false })
-	memberCount?: number;
+  @ApiProperty({ description: '成员数量（项目根节点）', required: false })
+  memberCount?: number;
 
-	@ApiProperty({ description: "项目 ID", required: false })
-	projectId?: string;
+  @ApiProperty({ description: '项目 ID', required: false })
+  projectId?: string;
 
-	@ApiProperty({
-		description: "回收站中被级联删除的子节点数量（仅回收站场景使用）",
-		required: false,
-	})
-	childrenCountTrash?: number;
+  @ApiProperty({
+    description: '回收站中被级联删除的子节点数量（仅回收站场景使用）',
+    required: false,
+  })
+  childrenCountTrash?: number;
 
-	@ApiProperty({
-		description: "祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）",
-		required: false,
-	})
-	ancestorPath?: string;
+  @ApiProperty({
+    description: '祖先路径（从根节点到父节点的面包屑，用于搜索结果显示位置）',
+    required: false,
+  })
+  ancestorPath?: string;
 
-	@ApiProperty({
-		description: "结果来源类型（仅 Global 搜索使用）",
-		required: false,
-	})
-	sourceType?: 'project' | 'file';
+  @ApiProperty({
+    description: '结果来源类型（仅 Global 搜索使用）',
+    required: false,
+  })
+  sourceType?: 'project' | 'file';
 }
 
 /**
  * 项目 DTO
  */
 export class ProjectDto {
-	@ApiProperty({ description: "项目 ID" })
-	id: string;
+  @ApiProperty({ description: '项目 ID' })
+  id: string;
 
-	@ApiProperty({ description: "项目名称" })
-	name: string;
+  @ApiProperty({ description: '项目名称' })
+  name: string;
 
-	@ApiProperty({ description: "项目描述", required: false })
-	description?: string;
+  @ApiProperty({ description: '项目描述', required: false })
+  description?: string;
 
-	@ApiProperty({
-		description: "项目状态",
-		enum: Object.values(ProjectStatus),
-		enumName: "ProjectStatusEnum",
-	})
-	status: ProjectStatus;
+  @ApiProperty({
+    description: '项目状态',
+    enum: Object.values(ProjectStatus),
+    enumName: 'ProjectStatusEnum',
+  })
+  status: ProjectStatus;
 
-	@ApiProperty({ description: "所有者 ID" })
-	ownerId: string;
+  @ApiProperty({ description: '所有者 ID' })
+  ownerId: string;
 
-	@ApiProperty({ description: "创建时间" })
-	createdAt: Date;
+  @ApiProperty({ description: '创建时间' })
+  createdAt: Date;
 
-	@ApiProperty({ description: "更新时间" })
-	updatedAt: Date;
+  @ApiProperty({ description: '更新时间' })
+  updatedAt: Date;
 
-	@ApiProperty({ description: "删除时间", required: false })
-	deletedAt?: Date;
+  @ApiProperty({ description: '删除时间', required: false })
+  deletedAt?: Date;
 
-	@ApiProperty({ description: "成员数量", required: false })
-	memberCount?: number;
+  @ApiProperty({ description: '成员数量', required: false })
+  memberCount?: number;
 
-	@ApiProperty({
-		description: "出向：本项目文件 → 其他项目",
-		enum: Object.values(CrossProjectTransferMode),
-		enumName: "CrossProjectTransferModeEnum",
-		required: false,
-	})
-	transferOutToProject?: string;
+  @ApiProperty({
+    description: '出向：本项目文件 → 其他项目',
+    enum: Object.values(CrossProjectTransferMode),
+    enumName: 'CrossProjectTransferModeEnum',
+    required: false,
+  })
+  transferOutToProject?: string;
 
-	@ApiProperty({
-		description: "出向：本项目文件 → 个人空间",
-		enum: Object.values(CrossProjectTransferMode),
-		enumName: "CrossProjectTransferModeEnum",
-		required: false,
-	})
-	transferOutToPersonalSpace?: string;
+  @ApiProperty({
+    description: '出向：本项目文件 → 个人空间',
+    enum: Object.values(CrossProjectTransferMode),
+    enumName: 'CrossProjectTransferModeEnum',
+    required: false,
+  })
+  transferOutToPersonalSpace?: string;
 
-	@ApiProperty({
-		description: "出向：本项目文件 → 公共资源库",
-		enum: Object.values(CrossProjectTransferMode),
-		enumName: "CrossProjectTransferModeEnum",
-		required: false,
-	})
-	transferOutToLibrary?: string;
+  @ApiProperty({
+    description: '出向：本项目文件 → 公共资源库',
+    enum: Object.values(CrossProjectTransferMode),
+    enumName: 'CrossProjectTransferModeEnum',
+    required: false,
+  })
+  transferOutToLibrary?: string;
 
-	@ApiProperty({
-		description: "入向：其他项目文件 → 本项目",
-		enum: Object.values(CrossProjectTransferMode),
-		enumName: "CrossProjectTransferModeEnum",
-		required: false,
-	})
-	transferInFromProject?: string;
+  @ApiProperty({
+    description: '入向：其他项目文件 → 本项目',
+    enum: Object.values(CrossProjectTransferMode),
+    enumName: 'CrossProjectTransferModeEnum',
+    required: false,
+  })
+  transferInFromProject?: string;
 
-	@ApiProperty({
-		description: "入向：个人空间文件 → 本项目",
-		enum: Object.values(CrossProjectTransferMode),
-		enumName: "CrossProjectTransferModeEnum",
-		required: false,
-	})
-	transferInFromPersonalSpace?: string;
+  @ApiProperty({
+    description: '入向：个人空间文件 → 本项目',
+    enum: Object.values(CrossProjectTransferMode),
+    enumName: 'CrossProjectTransferModeEnum',
+    required: false,
+  })
+  transferInFromPersonalSpace?: string;
 
-	@ApiProperty({
-		description: "入向：公共资源库文件 → 本项目",
-		enum: Object.values(CrossProjectTransferMode),
-		enumName: "CrossProjectTransferModeEnum",
-		required: false,
-	})
-	transferInFromLibrary?: string;
+  @ApiProperty({
+    description: '入向：公共资源库文件 → 本项目',
+    enum: Object.values(CrossProjectTransferMode),
+    enumName: 'CrossProjectTransferModeEnum',
+    required: false,
+  })
+  transferInFromLibrary?: string;
 }
 
 /**
  * 项目成员 DTO
  */
 export class ProjectMemberDto {
-	@ApiProperty({ description: "用户 ID" })
-	id: string;
+  @ApiProperty({ description: '用户 ID' })
+  id: string;
 
-	@ApiProperty({ description: "用户邮箱" })
-	email: string;
+  @ApiProperty({ description: '用户邮箱' })
+  email: string;
 
-	@ApiProperty({ description: "用户名" })
-	username: string;
+  @ApiProperty({ description: '用户名' })
+  username: string;
 
-	@ApiProperty({ description: "用户昵称", required: false })
-	nickname?: string;
+  @ApiProperty({ description: '用户昵称', required: false })
+  nickname?: string;
 
-	@ApiProperty({ description: "头像 URL", required: false })
-	avatar?: string;
+  @ApiProperty({ description: '头像 URL', required: false })
+  avatar?: string;
 
-	@ApiProperty({ description: "项目角色 ID" })
-	projectRoleId: string;
+  @ApiProperty({ description: '项目角色 ID' })
+  projectRoleId: string;
 
-	@ApiProperty({ description: "项目角色名称" })
-	projectRoleName: string;
+  @ApiProperty({ description: '项目角色名称' })
+  projectRoleName: string;
 
-	@ApiProperty({ description: "加入时间" })
-	joinedAt: Date;
+  @ApiProperty({ description: '加入时间' })
+  joinedAt: Date;
 }
 
 /**
  * 统一分页列表响应 DTO - 所有列表接口都用这个格式
  */
 export class NodeListResponseDto {
-	@ApiProperty({
-		description: "节点列表",
-		type: () => FileSystemNodeDto,
-		isArray: true,
-	})
-	nodes: FileSystemNodeDto[];
+  @ApiProperty({
+    description: '节点列表',
+    type: () => FileSystemNodeDto,
+    isArray: true,
+  })
+  nodes: FileSystemNodeDto[];
 
-	@ApiProperty({ description: "总数" })
-	total: number;
+  @ApiProperty({ description: '总数' })
+  total: number;
 
-	@ApiProperty({ description: "当前页码" })
-	page: number;
+  @ApiProperty({ description: '当前页码' })
+  page: number;
 
-	@ApiProperty({ description: "每页数量" })
-	limit: number;
+  @ApiProperty({ description: '每页数量' })
+  limit: number;
 
-	@ApiProperty({ description: "总页数" })
-	totalPages: number;
+  @ApiProperty({ description: '总页数' })
+  totalPages: number;
 }
 
 /**
@@ -258,60 +259,60 @@ export class ProjectListResponseDto extends NodeListResponseDto {}
  * 节点树响应 DTO
  */
 export class NodeTreeResponseDto extends FileSystemNodeDto {
-	@ApiProperty({
-		description: "子节点",
-		type: () => [FileSystemNodeDto],
-		required: false,
-	})
-	children?: FileSystemNodeDto[];
+  @ApiProperty({
+    description: '子节点',
+    type: () => [FileSystemNodeDto],
+    required: false,
+  })
+  children?: FileSystemNodeDto[];
 
-	@ApiProperty({
-		description: "祖先链（从根节点到当前节点的面包屑路径，含 ID/名称/isRoot）",
-		type: () => [Object],
-		required: false,
-	})
-	ancestors?: { id: string; name: string; isRoot: boolean }[];
+  @ApiProperty({
+    description: '祖先链（从根节点到当前节点的面包屑路径，含 ID/名称/isRoot）',
+    type: () => [Object],
+    required: false,
+  })
+  ancestors?: { id: string; name: string; isRoot: boolean }[];
 }
 
 /**
  * 回收站项目 DTO
  */
 export class TrashItemDto {
-	@ApiProperty({ description: "节点 ID" })
-	id: string;
+  @ApiProperty({ description: '节点 ID' })
+  id: string;
 
-	@ApiProperty({ description: "节点名称" })
-	name: string;
+  @ApiProperty({ description: '节点名称' })
+  name: string;
 
-	@ApiProperty({ description: "节点描述", required: false })
-	description?: string;
+  @ApiProperty({ description: '节点描述', required: false })
+  description?: string;
 
-	@ApiProperty({ description: "是否为文件夹" })
-	isFolder: boolean;
+  @ApiProperty({ description: '是否为文件夹' })
+  isFolder: boolean;
 
-	@ApiProperty({ description: "原始父节点 ID" })
-	originalParentId: string;
+  @ApiProperty({ description: '原始父节点 ID' })
+  originalParentId: string;
 
-	@ApiProperty({ description: "文件大小", required: false })
-	size?: number;
+  @ApiProperty({ description: '文件大小', required: false })
+  size?: number;
 
-	@ApiProperty({ description: "文件 MIME 类型", required: false })
-	mimeType?: string;
+  @ApiProperty({ description: '文件 MIME 类型', required: false })
+  mimeType?: string;
 
-	@ApiProperty({ description: "创建时间" })
-	createdAt: Date;
+  @ApiProperty({ description: '创建时间' })
+  createdAt: Date;
 
-	@ApiProperty({ description: "更新时间" })
-	updatedAt: Date;
+  @ApiProperty({ description: '更新时间' })
+  updatedAt: Date;
 
-	@ApiProperty({ description: "删除时间" })
-	deletedAt: Date;
+  @ApiProperty({ description: '删除时间' })
+  deletedAt: Date;
 
-	@ApiProperty({ description: "所有者 ID" })
-	ownerId: string;
+  @ApiProperty({ description: '所有者 ID' })
+  ownerId: string;
 
-	@ApiProperty({ description: "项目 ID", required: false })
-	projectId?: string;
+  @ApiProperty({ description: '项目 ID', required: false })
+  projectId?: string;
 }
 
 /**
@@ -328,49 +329,71 @@ export class ProjectTrashResponseDto extends NodeListResponseDto {}
  * 操作成功响应 DTO
  */
 export class OperationSuccessDto {
-	@ApiProperty({ description: "操作结果消息" })
-	message: string;
+  @ApiProperty({ description: '操作结果消息' })
+  message: string;
 
-	@ApiProperty({ description: "受影响的节点 ID", required: false })
-	nodeId?: string;
+  @ApiProperty({ description: '受影响的节点 ID', required: false })
+  nodeId?: string;
 
-	@ApiProperty({ description: "是否成功" })
-	success: boolean;
+  @ApiProperty({ description: '是否成功' })
+  success: boolean;
 }
 
 /**
  * 批量操作响应 DTO
  */
 export class BatchOperationResponseDto {
-	@ApiProperty({ description: "成功数量" })
-	successCount: number;
+  @ApiProperty({ description: '成功数量' })
+  successCount: number;
 
-	@ApiProperty({ description: "失败数量" })
-	failedCount: number;
+  @ApiProperty({ description: '失败数量' })
+  failedCount: number;
 
-	@ApiProperty({ description: "成功 ID 列表" })
-	successIds: string[];
+  @ApiProperty({ description: '成功 ID 列表' })
+  successIds: string[];
 
-	@ApiProperty({ description: "失败 ID 列表" })
-	failedIds: string[];
+  @ApiProperty({ description: '失败 ID 列表' })
+  failedIds: string[];
 
-	@ApiProperty({ description: "错误信息", required: false })
-	errors?: string[];
+  @ApiProperty({ description: '错误信息', required: false })
+  errors?: string[];
+}
+
+/**
+ * 节点最小信息 DTO（nodes/lookup 专用：仅 id/parentId/name/nodeType，
+ * 不暴露归属与存储字段，供剪贴板剪切源父目录快照使用）
+ */
+export class NodeLookupItemDto {
+  @ApiProperty({ description: '节点 ID' })
+  id: string;
+
+  @ApiProperty({ description: '父节点 ID', nullable: true })
+  parentId: string | null;
+
+  @ApiProperty({ description: '节点名称' })
+  name: string;
+
+  @ApiProperty({ description: '节点类型' })
+  nodeType: string;
 }
 
 /**
  * 项目用户权限列表响应 DTO（合并角色+权限，一次查询）
  */
 export class ProjectUserPermissionsDto {
-	@ApiProperty({ description: "项目 ID" })
-	projectId: string;
+  @ApiProperty({ description: '项目 ID' })
+  projectId: string;
 
-	@ApiProperty({ description: "用户 ID" })
-	userId: string;
+  @ApiProperty({ description: '用户 ID' })
+  userId: string;
 
-	@ApiProperty({ description: "用户在项目中的角色", type: String, nullable: true })
-	role: string | null;
+  @ApiProperty({
+    description: '用户在项目中的角色',
+    type: String,
+    nullable: true,
+  })
+  role: string | null;
 
-	@ApiProperty({ description: "权限列表", type: () => [String] })
-	permissions: string[];
+  @ApiProperty({ description: '权限列表', type: () => [String] })
+  permissions: string[];
 }

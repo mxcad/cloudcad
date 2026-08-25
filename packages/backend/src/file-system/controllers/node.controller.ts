@@ -24,6 +24,7 @@ import {
 import type { Request as ExpressRequest } from 'express';
 import { CsrfProtected } from '../../auth/decorators/csrf-protected.decorator';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
+import { LibraryPublicAccess } from '../../common/decorators/library-public.decorator';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
@@ -45,12 +46,14 @@ import {
   BatchMoveDto,
   BatchCopyDto,
 } from '../dto/batch-operations.dto';
+import { LookupNodesDto } from '../dto/lookup-nodes.dto';
 import { SearchDto } from '../dto/search.dto';
 import { ResolvePathDto } from '../dto/resolve-path.dto';
 import {
   BatchOperationResponseDto,
   FileSystemNodeDto,
   NodeListResponseDto,
+  NodeLookupItemDto,
   NodeTreeResponseDto,
   OperationSuccessDto,
 } from '../dto/file-system-response.dto';
@@ -263,6 +266,7 @@ export class NodeController {
   }
 
   @Post('nodes/:nodeId/move')
+  @RequireProjectPermission(ProjectPermission.FILE_MOVE)
   @CsrfProtected()
   @ApiOperation({ summary: '移动节点' })
   @ApiResponse({
@@ -284,6 +288,11 @@ export class NodeController {
   }
 
   @Post('nodes/:nodeId/copy')
+  // 源侧权限：项目 FILE_COPY / 个人空间本人 / 库 LIBRARY_*_MANAGE；
+  // LibraryPublicAccess 保留"库内容公开复制出库"系统规则（细粒度校验由
+  // service 层 NodeMutationGuard 兜底：目标归属 + 6 域矩阵 + 配额）
+  @RequireProjectPermission(ProjectPermission.FILE_COPY)
+  @LibraryPublicAccess()
   @CsrfProtected()
   @ApiOperation({ summary: '复制节点' })
   @ApiResponse({
@@ -342,6 +351,7 @@ export class NodeController {
   }
 
   @Post('nodes/batch-move')
+  @RequireProjectPermission(ProjectPermission.FILE_MOVE)
   @CsrfProtected()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '批量移动节点' })
@@ -362,6 +372,9 @@ export class NodeController {
   }
 
   @Post('nodes/batch-copy')
+  // 同 copy：源侧 FILE_COPY + LibraryPublicAccess 保留库公开复制出库
+  @RequireProjectPermission(ProjectPermission.FILE_COPY)
+  @LibraryPublicAccess()
   @CsrfProtected()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '批量复制节点' })
@@ -379,6 +392,23 @@ export class NodeController {
       dto.targetParentId,
       req.user?.id
     );
+  }
+
+  @Post('nodes/lookup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '按 ID 批量查询节点最小信息',
+    description:
+      '返回 id/parentId/name/nodeType 最小字段集（无归属与存储信息）。' +
+      '用于剪贴板剪切时的源父目录全量快照（选中项可能不在当前视图分页内）',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '节点信息列表',
+    type: [NodeLookupItemDto],
+  })
+  async lookupNodes(@Body() dto: LookupNodesDto) {
+    return this.fileTreeService.lookupNodes(dto.ids);
   }
 
   @Get('search')

@@ -60,8 +60,7 @@ export interface SubtreeFilesPage {
   total: number;
 }
 
-export interface GetSubtreeFilesFilteredOptions
-  extends GetSubtreeFilesPaginatedOptions {
+export interface GetSubtreeFilesFilteredOptions extends GetSubtreeFilesPaginatedOptions {
   /** extension 过滤（ANY 数组打包下推，不展开 id 参数，规避 65535 上限，见 #272） */
   extensions?: string[];
   /** fileStatus 过滤（ANY 数组打包下推） */
@@ -382,9 +381,7 @@ export class TreeWalker {
     }
     const searchOrConditions: Prisma.Sql[] = [];
     if (ftsMatchIds && ftsMatchIds.length > 0) {
-      searchOrConditions.push(
-        Prisma.sql`n."id" = ANY(${ftsMatchIds}::text[])`
-      );
+      searchOrConditions.push(Prisma.sql`n."id" = ANY(${ftsMatchIds}::text[])`);
     }
     if (keyword) {
       const like = `%${keyword}%`;
@@ -394,7 +391,9 @@ export class TreeWalker {
       );
     }
     if (searchOrConditions.length > 0) {
-      andConditions.push(Prisma.sql`(${Prisma.join(searchOrConditions, ' OR ')})`);
+      andConditions.push(
+        Prisma.sql`(${Prisma.join(searchOrConditions, ' OR ')})`
+      );
     }
 
     if (andConditions.length === 0) {

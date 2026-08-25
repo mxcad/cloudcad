@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
+import { PERSONAL_SPACE_NAME } from '../../personal-space/personal-space.service';
 import { NodeType, Permission, ProjectPermission } from '@cloudcad/db';
 import {
   SystemRole,
@@ -610,7 +611,7 @@ export class InitializationService implements OnModuleInit {
             batch.map((user) =>
               this.prisma.fileSystemNode.create({
                 data: {
-                  name: '我的图纸',
+                  name: PERSONAL_SPACE_NAME,
                   nodeType: NodeType.PERSONAL_SPACE,
                   projectStatus: 'ACTIVE',
                   ownerId: user.id,

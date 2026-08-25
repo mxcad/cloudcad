@@ -804,6 +804,18 @@ export class FileTreeService {
     return { id: projectId };
   }
 
+  /**
+   * 按 ID 批量查询节点最小信息（id/parentId/name/nodeType）。
+   * 供剪贴板剪切源父目录快照使用：不暴露归属与存储字段，无需逐节点权限校验。
+   */
+  async lookupNodes(ids: string[]) {
+    if (!ids || ids.length === 0) return [];
+    return this.prisma.fileSystemNode.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, parentId: true, name: true, nodeType: true },
+    });
+  }
+
   async getNodeType(nodeId: string): Promise<NodeType | null> {
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
@@ -1241,9 +1253,8 @@ export class FileTreeService {
             .map((s) => s.trim())
             .filter(Boolean) ?? [];
 
-        const { rows, total } = await this.treeWalker.getSubtreeFilesFilteredPaginated(
-          nodeId,
-          {
+        const { rows, total } =
+          await this.treeWalker.getSubtreeFilesFilteredPaginated(nodeId, {
             includeDeleted,
             page: safePage,
             limit: safeLimit,
@@ -1255,8 +1266,7 @@ export class FileTreeService {
             statuses: statuses as FileStatus[],
             ftsMatchIds,
             keyword: search,
-          }
-        );
+          });
 
         // 当前页无数据（真空子树或 page 越界）：total 来自 TreeWalker 独立 count，
         // 不得置 0 丢弃真实总数（回归 #259 同规约）
@@ -1312,7 +1322,8 @@ export class FileTreeService {
           includeDeleted,
           page: safePage,
           limit: safeLimit,
-          sortBy: (sortBy as 'name' | 'createdAt' | 'updatedAt' | 'size') ??
+          sortBy:
+            (sortBy as 'name' | 'createdAt' | 'updatedAt' | 'size') ??
             'createdAt',
           sortOrder: sortOrder ?? 'desc',
         }

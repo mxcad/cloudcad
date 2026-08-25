@@ -289,7 +289,7 @@ export type AlertRecordDto = {
     /**
      * 告警级别
      */
-    level: 'WARNING' | 'CRITICAL';
+    level: 'P0' | 'P1' | 'P2';
     /**
      * 告警消息
      */
@@ -2630,6 +2630,34 @@ export type BatchCopyDto = {
     targetParentId: string;
 };
 
+export type LookupNodesDto = {
+    /**
+     * 节点ID列表（≤200）
+     */
+    ids: Array<string>;
+};
+
+export type NodeLookupItemDto = {
+    /**
+     * 节点 ID
+     */
+    id: string;
+    /**
+     * 父节点 ID
+     */
+    parentId: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 节点名称
+     */
+    name: string;
+    /**
+     * 节点类型
+     */
+    nodeType: string;
+};
+
 export type SearchEntity = 'file';
 
 export type SearchScope = 'project' | 'project_files' | 'all_projects' | 'library' | 'global' | 'personal_space';
@@ -4419,9 +4447,9 @@ export type AlertControllerListData = {
          */
         limit?: number;
         /**
-         * 按告警级别过滤：WARNING | CRITICAL
+         * 按告警级别过滤：P0 | P1 | P2
          */
-        level?: 'WARNING' | 'CRITICAL';
+        level?: 'P0' | 'P1' | 'P2';
         /**
          * 按告警状态过滤：OPEN | RESOLVED
          */
@@ -7719,6 +7747,22 @@ export type NodeControllerBatchCopyNodesResponses = {
 };
 
 export type NodeControllerBatchCopyNodesResponse = NodeControllerBatchCopyNodesResponses[keyof NodeControllerBatchCopyNodesResponses];
+
+export type NodeControllerLookupNodesData = {
+    body: LookupNodesDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/file-system/nodes/lookup';
+};
+
+export type NodeControllerLookupNodesResponses = {
+    /**
+     * 节点信息列表
+     */
+    200: Array<NodeLookupItemDto>;
+};
+
+export type NodeControllerLookupNodesResponse = NodeControllerLookupNodesResponses[keyof NodeControllerLookupNodesResponses];
 
 export type NodeControllerSearchData = {
     body?: never;
@@ -11221,6 +11265,20 @@ export type BatchDownloadControllerDownloadZipData = {
 };
 
 export type BatchDownloadControllerDownloadZipResponses = {
+    200: unknown;
+};
+
+export type BatchDownloadControllerDownloadItemData = {
+    body?: never;
+    path: {
+        taskId: string;
+        itemIndex: string;
+    };
+    query?: never;
+    url: '/api/v1/file-system/batch-download/{taskId}/items/{itemIndex}/download';
+};
+
+export type BatchDownloadControllerDownloadItemResponses = {
     200: unknown;
 };
 

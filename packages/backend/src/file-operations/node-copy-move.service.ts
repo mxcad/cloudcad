@@ -4,9 +4,11 @@
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { NodeType } from '@cloudcad/db';
+import { NodeType, FileStatus } from '@cloudcad/db';
+import { randomUUID } from 'crypto';
 import { DatabaseService } from '../database/database.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
+import type { SubtreeRowInfo } from '../file-system/file-tree/tree-walker.service';
 import { StorageManager } from '../storage-management/services/storage-manager.service';
 import { NodeSizeResolverService } from '../file-system/storage-quota/node-size-resolver.service';
 import { StorageUsageService } from '../vip/storage-usage/storage-usage.service';
@@ -16,6 +18,49 @@ import { NodeNameService } from './node-name.service';
 import { NodeMutationGuard } from './node-mutation.guard';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
+
+/** 复制计划节点（阶段一产出，阶段三落库输入） */
+interface PlannedCopyNode {
+  id: string;
+  parentId: string;
+  name: string;
+  originalName: string | null;
+  nodeType: NodeType;
+  /** 源 FILE 的存储路径（null=无需物理复制）；落库时以复制结果覆盖 */
+  sourcePath: string | null;
+  size: number | null;
+  mimeType: string | null;
+  extension: string | null;
+  fileStatus: FileStatus | null;
+  fileHash: string | null;
+  description: string | null;
+}
+
+/** 计划建树输入的最小行形状（源根节点行 / getSubtreeRows 行均满足） */
+type SubtreeRowInfoLike = Pick<
+  SubtreeRowInfo,
+  | 'id'
+  | 'name'
+  | 'originalName'
+  | 'nodeType'
+  | 'path'
+  | 'size'
+  | 'mimeType'
+  | 'extension'
+  | 'fileStatus'
+  | 'fileHash'
+  | 'description'
+>;
+
+/** 复制落库产物：新根节点（含 owner 摘要） */
+export interface CreatedCopyRoot {
+  id: string;
+  name: string;
+  parentId: string | null;
+  nodeType: NodeType;
+  path: string | null;
+  owner?: { id: string; username: string; nickname: string } | null;
+}
 
 @Injectable()
 export class NodeCopyMoveService {
@@ -110,7 +155,8 @@ export class NodeCopyMoveService {
         node.name,
         node.nodeType === NodeType.FOLDER
       );
-      const newProjectId = await this.treeWalker.resolveProjectId(targetParentId);
+      const newProjectId =
+        await this.treeWalker.resolveProjectId(targetParentId);
 
       // 同项目内移动不改变项目总用量，配额增量按 0 处理；
       // 仅跨项目移动时把子树体积计入目标项目/个人空间配额（避免重复计数误拦）
@@ -352,23 +398,26 @@ export class NodeCopyMoveService {
     }
   }
 
+  /**
+   * 复制子树（三阶段：计划 → 物理复制 → 单事务落库）
+   *
+   * - 计划：一次查询拉全源子树（getSubtreeRows），内存建树并生成新节点 id 与
+   *   兄弟重名后缀（新目录初始为空，仅需集合内去重，消除逐 child 查库的 N+1）；
+   * - 物理复制：逐 FILE 调 StorageManager.copyNodeDirectory（含外部参照/缩略图整个
+   *   节点目录），任一失败即中止抛错——DB 尚未写入，不会出现"副本指向源存储目录"
+   *   的事故；已复制成功的目录成为无 DB 记录的无害孤儿；
+   * - 落库：单事务按父先子后创建全部节点（携带最终 path），任一失败整体回滚。
+   */
   async copyNodeRecursive(
     sourceNodeId: string,
     targetParentId: string,
     newName: string,
-    ownerId: string
-  ): Promise<any> {
+    ownerId: string,
+    projectId: string | null
+  ): Promise<CreatedCopyRoot | null> {
     const sourceNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: sourceNodeId },
     });
-    let sourceNodeChildren: { id: string; name: string; nodeType: string }[] =
-      [];
-    if (sourceNode) {
-      sourceNodeChildren = await this.prisma.fileSystemNode.findMany({
-        where: { parentId: sourceNodeId, deletedAt: null },
-        select: { id: true, name: true, nodeType: true },
-      });
-    }
     if (!sourceNode) {
       throw new NotFoundException(
         I18nContext.current()?.t('error.file.source_not_found') ??
@@ -376,81 +425,198 @@ export class NodeCopyMoveService {
       );
     }
 
-    const projectId = await this.treeWalker.resolveProjectId(targetParentId);
-    const newNode = await this.prisma.fileSystemNode.create({
-      data: {
-        name: newName,
-        originalName: sourceNode.originalName || newName,
-        nodeType: sourceNode.nodeType,
-        parentId: targetParentId,
-        path: sourceNode.path,
-        size: sourceNode.size,
-        mimeType: sourceNode.mimeType,
-        extension: sourceNode.extension,
-        fileStatus: sourceNode.fileStatus,
-        fileHash: sourceNode.fileHash,
-        description: sourceNode.description,
-        ownerId,
-        projectId,
-      },
-      include: {
-        owner: { select: { id: true, username: true, nickname: true } },
-      },
-    });
+    // ── 阶段一：计划 ──────────────────────────────────────────────
+    const { plans, newRootId } = await this.buildCopyPlan(
+      sourceNodeId,
+      sourceNode,
+      targetParentId,
+      newName
+    );
 
-    if (sourceNode.nodeType === NodeType.FILE && sourceNode.path) {
+    // ── 阶段二：物理复制（失败即中止，不留 DB 半成品） ───────────
+    const finalPathByNodeId = await this.copyPlanDirectories(plans);
+
+    // ── 阶段三：单事务落库（父先子后，任一失败整体回滚） ─────────
+    return this.createCopiesInTransaction(
+      plans,
+      newRootId,
+      finalPathByNodeId,
+      ownerId,
+      projectId
+    );
+  }
+
+  /**
+   * 阶段一：构建复制计划。一次查询拉全源子树，内存建树并生成新节点 id 与
+   * 兄弟重名后缀（新目录初始为空，仅需集合内去重）。
+   */
+  private async buildCopyPlan(
+    sourceNodeId: string,
+    sourceNode: SubtreeRowInfoLike,
+    targetParentId: string,
+    newName: string
+  ): Promise<{ plans: PlannedCopyNode[]; newRootId: string }> {
+    const subtreeRows = await this.treeWalker.getSubtreeRows(sourceNodeId);
+    const childrenByParent = new Map<string, SubtreeRowInfo[]>();
+    for (const row of subtreeRows) {
+      const siblings = childrenByParent.get(row.parentId ?? '') ?? [];
+      siblings.push(row);
+      childrenByParent.set(row.parentId ?? '', siblings);
+    }
+
+    const appendSuffix = (name: string, counter: number): string => {
+      const lastDotIndex = name.lastIndexOf('.');
+      return lastDotIndex === -1
+        ? `${name} (${counter})`
+        : `${name.substring(0, lastDotIndex)} (${counter})${name.substring(lastDotIndex)}`;
+    };
+
+    const plans: PlannedCopyNode[] = [];
+    const planSubtree = (
+      src: SubtreeRowInfoLike,
+      newParentId: string,
+      forcedName?: string
+    ): string => {
+      const newId = randomUUID();
+      plans.push({
+        id: newId,
+        parentId: newParentId,
+        name: forcedName ?? src.name,
+        originalName: src.originalName || src.name,
+        nodeType: src.nodeType,
+        sourcePath: src.nodeType === NodeType.FILE ? src.path : null,
+        size: src.size,
+        mimeType: src.mimeType,
+        extension: src.extension,
+        fileStatus: src.fileStatus,
+        fileHash: src.fileHash,
+        description: src.description,
+      });
+      if (src.nodeType === NodeType.FOLDER) {
+        const children = childrenByParent.get(src.id) ?? [];
+        const usedNames = new Set<string>();
+        for (const child of children) {
+          let childName = child.name;
+          let counter = 1;
+          while (usedNames.has(childName)) {
+            childName = appendSuffix(child.name, counter++);
+          }
+          usedNames.add(childName);
+          planSubtree(child, newId, childName);
+        }
+      }
+      return newId;
+    };
+
+    const newRootId = planSubtree(sourceNode, targetParentId, newName);
+    return { plans, newRootId };
+  }
+
+  /**
+   * 阶段二：逐 FILE 计划复制存储目录（含外部参照/缩略图整个节点目录）。
+   * 任一失败即中止抛错——DB 尚未写入，已复制成功的目录成为无 DB 记录的孤儿。
+   */
+  private async copyPlanDirectories(
+    plans: PlannedCopyNode[]
+  ): Promise<Map<string, string>> {
+    const finalPathByNodeId = new Map<string, string>();
+    for (const plan of plans) {
+      if (!plan.sourcePath) continue;
       try {
         const sourceDirRelativePath =
-          this.storageManager.getNodeDirectoryRelativePath(sourceNode.path);
-        const fileName = path.basename(sourceNode.path);
+          this.storageManager.getNodeDirectoryRelativePath(plan.sourcePath);
+        const fileName = path.basename(plan.sourcePath);
         const newFilePath = await this.storageManager.copyNodeDirectory(
           sourceDirRelativePath,
-          newNode.id,
+          plan.id,
           fileName
         );
-        await this.prisma.fileSystemNode.update({
-          where: { id: newNode.id },
-          data: { path: newFilePath },
-        });
+        finalPathByNodeId.set(plan.id, newFilePath);
       } catch (error) {
-        this.logger.error(`复制文件失败: ${sourceNodeId}`, error.stack);
-      }
-    }
-
-    if (
-      sourceNode.nodeType === NodeType.FOLDER &&
-      sourceNodeChildren.length > 0
-    ) {
-      const usedNames = new Set<string>();
-      for (const child of sourceNodeChildren) {
-        let childUniqueName = child.name;
-        let counter = 1;
-        const existingNames = await this.prisma.fileSystemNode.findMany({
-          where: { parentId: newNode.id, deletedAt: null },
-          select: { name: true },
-        });
-        const existingNamesSet = new Set(existingNames.map((n) => n.name));
-        while (
-          existingNamesSet.has(childUniqueName) ||
-          usedNames.has(childUniqueName)
-        ) {
-          const lastDotIndex = child.name.lastIndexOf('.');
-          childUniqueName =
-            lastDotIndex === -1
-              ? `${child.name} (${counter})`
-              : `${child.name.substring(0, lastDotIndex)} (${counter})${child.name.substring(lastDotIndex)}`;
-          counter++;
-        }
-        usedNames.add(childUniqueName);
-        await this.copyNodeRecursive(
-          child.id,
-          newNode.id,
-          childUniqueName,
-          ownerId
+        this.logger.error(
+          `复制文件物理目录失败，已中止整次复制: 源节点 ${plan.sourcePath}`,
+          error.stack
+        );
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.file.copy_physical_failed') ??
+            '文件复制失败：存储目录复制未成功，请稍后重试'
         );
       }
     }
-    return newNode;
+    return finalPathByNodeId;
+  }
+
+  /** 阶段三：单事务按计划顺序创建全部节点（携带最终 path），返回新根节点 */
+  private async createCopiesInTransaction(
+    plans: PlannedCopyNode[],
+    newRootId: string,
+    finalPathByNodeId: Map<string, string>,
+    ownerId: string,
+    projectId: string | null
+  ): Promise<CreatedCopyRoot | null> {
+    return this.prisma.$transaction(async (tx) => {
+      let rootNode: CreatedCopyRoot | null = null;
+      for (const plan of plans) {
+        const created = await tx.fileSystemNode.create({
+          data: {
+            id: plan.id,
+            name: plan.name,
+            originalName: plan.originalName,
+            nodeType: plan.nodeType,
+            parentId: plan.parentId,
+            path: finalPathByNodeId.get(plan.id) ?? null,
+            size: plan.size,
+            mimeType: plan.mimeType,
+            extension: plan.extension,
+            fileStatus: plan.fileStatus,
+            fileHash: plan.fileHash,
+            description: plan.description,
+            ownerId,
+            projectId,
+          },
+          include: {
+            owner: { select: { id: true, username: true, nickname: true } },
+          },
+        });
+        if (plan.id === newRootId) rootNode = created;
+      }
+      return rootNode;
+    });
+  }
+
+  /**
+   * 解析归属根（项目/个人空间/库根）的 ownerId；projectId 为空返回 null
+   */
+  private async resolveRootOwnerId(
+    projectId: string | null
+  ): Promise<string | null> {
+    if (!projectId) return null;
+    const root = await this.prisma.fileSystemNode.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    return root?.ownerId ?? null;
+  }
+
+  /**
+   * 配额缓存失效统一入口：对去重后的相关用户逐个失效
+   * （操作者 / 源 owner / 目标根 owner——用量变化方都必须清缓存）
+   */
+  private async invalidateQuotaCaches(
+    userIds: Array<string | null | undefined>,
+    node: { projectId?: string | null },
+    extraProjectId?: string | null
+  ): Promise<void> {
+    const seen = new Set<string>();
+    for (const uid of userIds) {
+      if (!uid || seen.has(uid)) continue;
+      seen.add(uid);
+      await this.nodeMutationGuard.invalidateQuotaAfterMutation(
+        uid,
+        node,
+        extraProjectId
+      );
+    }
   }
 
   /**
