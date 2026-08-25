@@ -19,11 +19,14 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 import { IS_OPTIONAL_AUTH_KEY } from './decorators/optional-auth.decorator';
+import { SCRAPE_AUTH_KEY } from './decorators/scrape-auth.decorator';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { DatabaseService } from '../database/database.service';
 import { extractTokenFromRequest } from './utils/token-extractor';
+import { matchScrapeCredentials } from './utils/scrape-token';
 
 import { I18nContext } from 'nestjs-i18n';
 @Injectable()
@@ -35,7 +38,8 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
     @Inject(TokenBlacklistService)
     private readonly tokenBlacklistService: TokenBlacklistService,
     @Inject(DatabaseService)
-    private readonly prisma: DatabaseService
+    private readonly prisma: DatabaseService,
+    private readonly configService: ConfigService
   ) {
     super();
   }
@@ -63,6 +67,13 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
 
     // 从所有来源（Authorization header、auth_token cookie）提取 token
     const token = extractTokenFromRequest(request);
+
+    // #315：Prometheus 抓取令牌认证 —— 仅对声明 @ScrapeAuth() 的端点生效，
+    // 匹配 SCRAPE_TOKEN 时放行且不注入 request.user（无用户身份），
+    // 由端点级 Guard（如 MetricsAccessGuard）依据 request.isScrapeAuth 决定授权
+    if (this.tryScrapeTokenAuth(context, request)) {
+      return true;
+    }
 
     // 有 Token → 强制 JWT 验证，不降级到 session
     if (token) {
@@ -162,5 +173,48 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
       I18nContext.current()?.t('error.auth.login_expired') ??
         '未登录或登录已过期'
     );
+  }
+
+  /**
+   * 尝试抓取令牌认证（#315）
+   *
+   * 前置条件（全部满足才走此通道）：
+   * 1. 服务端配置了 SCRAPE_TOKEN（metrics.scrapeToken）；
+   * 2. 端点声明了 @ScrapeAuth() 元数据；
+   * 3. Authorization 凭据与令牌匹配（Bearer 或 Basic 密码形式）。
+   *
+   * 匹配成功：request.isScrapeAuth = true 并放行；不满足则返回 false，
+   * 请求继续走原有 JWT/Session 流程（错误凭据自然被后续校验以 401 拒绝）。
+   */
+  private tryScrapeTokenAuth(
+    context: ExecutionContext,
+    request: Record<string, any>
+  ): boolean {
+    const scrapeToken = this.configService.get<string>('metrics.scrapeToken');
+    if (!scrapeToken) {
+      return false;
+    }
+
+    const allowsScrapeAuth = this.reflector.getAllAndOverride<boolean>(
+      SCRAPE_AUTH_KEY,
+      [context.getHandler(), context.getClass()]
+    );
+    if (!allowsScrapeAuth) {
+      return false;
+    }
+
+    const matched = matchScrapeCredentials(
+      request?.headers?.authorization as string | undefined,
+      scrapeToken
+    );
+    if (!matched) {
+      return false;
+    }
+
+    request.isScrapeAuth = true;
+    this.logger.debug(
+      `[JWT] ${request.method} ${request.path} - 抓取令牌认证通过`
+    );
+    return true;
   }
 }

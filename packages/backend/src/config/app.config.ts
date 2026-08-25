@@ -275,6 +275,16 @@ export interface MxcadConfig {
   compression: boolean;
 }
 
+/** 监控指标端点抓取令牌配置（#315） */
+export interface MetricsScrapeConfig {
+  /**
+   * Prometheus 抓取令牌（环境变量 SCRAPE_TOKEN，默认空 = 未启用）
+   * 配置后 /api/metrics 接受 Authorization: Bearer <SCRAPE_TOKEN>
+   * 或 Basic 认证（密码字段与令牌比对）；未配置时退回 SYSTEM_MONITOR 权限控制
+   */
+  scrapeToken: string;
+}
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -317,6 +327,8 @@ export interface AppConfig {
   authRateLimit: AuthRateLimitConfig;
   audit: AuditConfig;
   taskRun: TaskRunConfig;
+  /** /metrics 抓取令牌认证（#315） */
+  metrics: MetricsScrapeConfig;
   /** 管理员登录 IP 白名单（本地文件兜底通道） */
   adminIpWhitelist: AdminIpWhitelistConfig;
 }

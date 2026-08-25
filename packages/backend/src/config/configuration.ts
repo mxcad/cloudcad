@@ -542,6 +542,12 @@ export default (): AppConfig => {
     ) || 30,
   },
 
+	// /metrics 抓取令牌认证（#315）：配置后 Prometheus 可用 Bearer/Basic 抓取令牌访问
+	// /api/metrics；未配置时保持原有 SYSTEM_MONITOR 权限控制（兼容现有行为）
+	metrics: {
+		scrapeToken: process.env.SCRAPE_TOKEN || "",
+	},
+
 	// 管理员登录 IP 白名单本地文件兜底通道（相对路径基于项目根目录解析）
 	adminIpWhitelist: {
 		file: resolvePath(
