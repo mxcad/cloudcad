@@ -11,7 +11,11 @@ import {
 } from '@/constants/timeouts';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { refreshFileName } from '../services/mxcadManager';
-import { patchSession, subscribe } from '../services/drawingSession';
+import {
+  patchSession,
+  patchSessionFlags,
+  subscribe,
+} from '../services/drawingSession';
 import { CAD_EVENTS } from '@/constants/events';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/languages';
@@ -271,10 +275,17 @@ export function useCollabWorks(
   }, [works, resolveNames, fromShare]);
 
   useEffect(() => {
-    if (currentFileIdValue && fileNameCache[currentFileIdValue]) {
-      patchSession({ name: fileNameCache[currentFileIdValue] });
-      refreshFileName();
-    }
+    const resolved = currentFileIdValue
+      ? fileNameCache[currentFileIdValue]
+      : undefined;
+    if (!resolved) return;
+    // 双写：有会话时 patchSession 同步 currentFileInfo.name；协同链接直达
+    // （auto-join 不经过 openSession，currentFileInfo=null）时 patchSession
+    // 会被 patchCurrentFileInfo 静默丢弃，必须用 patchSessionFlags 直写
+    // currentFileName 兜底链，编辑器标题才能显示图纸名
+    patchSession({ name: resolved });
+    patchSessionFlags({ fileName: resolved });
+    refreshFileName();
   }, [fileNameCache, currentFileIdValue]);
 
   useEffect(() => {
@@ -335,7 +346,9 @@ export function useCollabWorks(
       if (!data) return false;
       // 本地图纸：按内容 MD5 判断是否当前图纸
       if (data.v === 3 && data.sourceType === 'local') {
-        return currentFileHashValue ? data.fileHash === currentFileHashValue : false;
+        return currentFileHashValue
+          ? data.fileHash === currentFileHashValue
+          : false;
       }
       return data.drawingId === currentFileIdValue;
     },
@@ -348,13 +361,12 @@ export function useCollabWorks(
         .filter((w) => userId && w.real_user_id === userId)
         .map((w) => {
           const data = parseWorkData(w.work_data);
-          const sourceType =
-            data && data.v === 3 ? data.sourceType : null;
+          const sourceType = data && data.v === 3 ? data.sourceType : null;
           // 本地图纸用 fileHash 分组；云图/项目等用 drawingId(nodeId) 分组
           const drawingKey =
             sourceType === 'local' && data && data.v === 3
               ? data.fileHash || ''
-              : (data?.drawingId || '');
+              : data?.drawingId || '';
           return {
             work: w,
             projectName: data?.projectId
@@ -408,12 +420,11 @@ export function useCollabWorks(
         })
         .map((w) => {
           const data = parseWorkData(w.work_data);
-          const sourceType =
-            data && data.v === 3 ? data.sourceType : null;
+          const sourceType = data && data.v === 3 ? data.sourceType : null;
           const drawingKey =
             sourceType === 'local' && data && data.v === 3
               ? data.fileHash || ''
-              : (data?.drawingId || '');
+              : data?.drawingId || '';
           return {
             work: w,
             projectName: data?.projectId

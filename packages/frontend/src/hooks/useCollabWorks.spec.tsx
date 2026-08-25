@@ -9,6 +9,8 @@ import { render, act } from '@testing-library/react';
 import React, { useEffect } from 'react';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { useCollabWorks } from './useCollabWorks';
+import { refreshFileName } from '../services/mxcadManager';
+import { nodeControllerGetNode } from '@/api-sdk';
 
 function makeWork(workId: number, drawingName: string, realUserId = 'u1') {
   return {
@@ -129,5 +131,50 @@ describe('useCollabWorks — fetchWorks 以服务端为准', () => {
     });
 
     expect(latestWorks.map((w) => w.work_id)).toEqual([101]);
+  });
+
+  it('协同链接直达（currentFileInfo=null）：drawingId 反查到图纸名后直写 currentFileName 兜底并刷新标题', async () => {
+    // 回归：协同链接 auto-join 不经过 openSession，currentFileInfo=null 时
+    // patchSession({name}) 被 patchCurrentFileInfo 静默丢弃，标题停留在
+    // "[协同中] - "。修复后必须 patchSessionFlags 直写 currentFileName。
+    vi.mocked(nodeControllerGetNode).mockResolvedValue({
+      data: { name: '真实图纸.dwg' },
+    } as never);
+    useCADEditorStore.setState({
+      currentFileId: 'node-1',
+      currentFileInfo: null,
+      isInCollaboration: true,
+    });
+    cooperateMock.getWorks.mockImplementation((cb: (list: unknown[]) => void) =>
+      cb([
+        {
+          work_id: 3,
+          work_data: JSON.stringify({
+            v: 1,
+            drawingId: 'node-1',
+            projectId: null,
+          }),
+          real_user_id: 'u1',
+          link_user_ids: ['u1'],
+          link_user_data: [],
+        },
+      ])
+    );
+
+    render(<Probe />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    // resolveNames（getNode）→ fileNameCache → 标题兜底 effect 为异步链路，
+    // 再冲一次微任务队列确保 setFileNameCache 后的 effect 已执行
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(useCADEditorStore.getState().currentFileName).toBe('真实图纸.dwg');
+    expect(refreshFileName).toHaveBeenCalled();
   });
 });
