@@ -15,6 +15,10 @@ import {
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import {
+  DEFAULT_PROJECT_ROLE_PERMISSIONS,
+  ProjectRole,
+} from '../common/enums/permissions.enum';
 
 describe('ProjectRolesService', () => {
   let service: ProjectRolesService;
@@ -40,6 +44,7 @@ describe('ProjectRolesService', () => {
       findFirst: jest.fn(),
       updateMany: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockAuditLogService = {
@@ -53,6 +58,10 @@ describe('ProjectRolesService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // resetMocks: true 会在每个测试前清掉实现，这里重新接通事务透传
+    mockPrisma.$transaction.mockImplementation(async (cb: any) =>
+      cb(mockPrisma)
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -793,7 +802,7 @@ describe('ProjectRolesService', () => {
       expect(mockPrisma.projectRole.delete).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when no demote target exists', async () => {
+    it('should auto-create default member role and demote members when no demote target exists (ADR-0051 删除自愈修订)', async () => {
       const existingRole = {
         id: 'role1',
         name: 'PROJECT_ADMIN',
@@ -813,16 +822,98 @@ describe('ProjectRolesService', () => {
       mockPrisma.projectMember.findFirst.mockResolvedValue({
         projectRoleId: 'role-owner',
       });
-      // 项目只有 [本角色, owner 角色]：候选排除本角色与 owner 角色后为空
+      // 项目只有 [本角色, owner 角色]：无存活非 owner 角色可作降级目标
       mockPrisma.projectRole.findMany.mockResolvedValue([
         { id: 'role1', name: 'PROJECT_ADMIN' },
         { id: 'role-owner', name: 'PROJECT_OWNER' },
       ]);
+      // 系统 MEMBER 模板已被系统管理员删除 → 回退内置默认权限集
+      mockPrisma.projectRole.findFirst.mockResolvedValue(null);
+      mockPrisma.projectRole.create.mockResolvedValue({ id: 'role-new' });
 
-      await expect(
-        service.delete('role1', 'user-1', 'project-a')
-      ).rejects.toThrow(BadRequestException);
-      expect(mockPrisma.projectRole.delete).not.toHaveBeenCalled();
+      await service.delete('role1', 'user-1', 'project-a');
+
+      expect(mockPrisma.projectRole.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            projectId: 'project-a',
+            name: ProjectRole.MEMBER,
+            isSystem: true,
+            permissions: {
+              create: DEFAULT_PROJECT_ROLE_PERMISSIONS[
+                ProjectRole.MEMBER
+              ].map((permission) => ({ permission })),
+            },
+          }),
+        })
+      );
+      // 被删在用角色的成员直接挂到新建的默认成员角色上
+      expect(mockPrisma.projectMember.updateMany).toHaveBeenCalledWith({
+        where: { projectId: 'project-a', projectRoleId: 'role1' },
+        data: { projectRoleId: 'role-new' },
+      });
+      expect(mockPrisma.projectRole.delete).toHaveBeenCalled();
+    });
+
+    it('should copy system MEMBER template permissions when auto-creating default member role (ADR-0051 删除自愈修订)', async () => {
+      const existingRole = {
+        id: 'role1',
+        name: 'CUSTOM_ROLE',
+        description: 'Custom Role',
+        projectId: 'project-a',
+        isSystem: false,
+        permissions: [],
+        members: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrisma.projectRole.findUnique.mockResolvedValue(existingRole);
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        ownerId: 'user-owner',
+      });
+      mockPrisma.projectMember.findFirst.mockResolvedValue({
+        projectRoleId: 'role-owner',
+      });
+      // 删除后项目内已无任何非 owner 角色
+      mockPrisma.projectRole.findMany.mockResolvedValue([
+        { id: 'role1', name: 'CUSTOM_ROLE' },
+        { id: 'role-owner', name: 'PROJECT_OWNER' },
+      ]);
+      mockPrisma.projectRole.findFirst.mockResolvedValue({
+        id: 'tpl-member',
+        name: ProjectRole.MEMBER,
+        description: '系统默认角色: PROJECT_MEMBER',
+        projectId: null,
+        isSystem: true,
+        permissions: [
+          { permission: 'FILE_OPEN' },
+          { permission: 'FILE_DOWNLOAD' },
+        ],
+      });
+      mockPrisma.projectRole.create.mockResolvedValue({ id: 'role-new' });
+
+      await service.delete('role1', 'user-1', 'project-a');
+
+      // 优先复制系统模板（含权限），而非内置权限集
+      expect(mockPrisma.projectRole.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            projectId: 'project-a',
+            name: ProjectRole.MEMBER,
+            isSystem: true,
+            description: '系统默认角色: PROJECT_MEMBER',
+            permissions: {
+              create: [
+                { permission: 'FILE_OPEN' },
+                { permission: 'FILE_DOWNLOAD' },
+              ],
+            },
+          }),
+        })
+      );
+      expect(mockPrisma.projectMember.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.projectRole.delete).toHaveBeenCalled();
     });
 
     it('should delete unused role without demote target (无成员使用时删除不要求降级目标)', async () => {
@@ -846,13 +937,19 @@ describe('ProjectRolesService', () => {
       mockPrisma.projectMember.findFirst.mockResolvedValue({
         projectRoleId: 'role-owner',
       });
+      // 项目内还有其他存活非 owner 角色 → 无需自动补建
+      mockPrisma.projectRole.findMany.mockResolvedValue([
+        { id: 'role-member', name: 'PROJECT_MEMBER' },
+        { id: 'role1', name: 'PROJECT_ADMIN' },
+      ]);
       mockPrisma.projectRole.delete.mockResolvedValue(existingRole);
 
       await service.delete('role1', 'user-1', 'project-a');
 
       expect(mockPrisma.projectRole.delete).toHaveBeenCalled();
-      // 无成员使用：不查降级目标、不更新成员
+      // 无成员使用：不更新成员、不自动建角
       expect(mockPrisma.projectMember.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.projectRole.create).not.toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when deleting role of another project (project-scoped, #262)', async () => {

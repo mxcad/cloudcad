@@ -70,7 +70,7 @@ describe('ProjectRolesModal 删除角色', () => {
     vi.clearAllMocks();
   });
 
-  it('仅剩一个可降级的非所有者角色时：点击删除直接 toast 提示，不打开删除确认弹框', () => {
+  it('仅剩一个非所有者角色时也可打开删除确认弹框（ADR-0051 删除自愈修订，后端自动补建默认成员角色）', () => {
     crudMock.roles = [ownerRole, memberRole] as unknown as ProjectRoleDto[];
     render(<ProjectRolesModal isOpen onClose={vi.fn()} projectId="p1" />);
 
@@ -78,11 +78,8 @@ describe('ProjectRolesModal 删除角色', () => {
     expect(deleteButtons).toHaveLength(1);
     fireEvent.click(deleteButtons[0]);
 
-    expect(showToast).toHaveBeenCalledWith(
-      '项目至少需要保留一个可降级的非所有者角色',
-      'warning'
-    );
-    expect(screen.queryByText('确认删除')).toBeNull();
+    expect(showToast).not.toHaveBeenCalled();
+    expect(screen.getAllByText('确认删除').length).toBeGreaterThan(0);
   });
 
   it('存在多个非所有者角色时可正常打开删除确认弹框', () => {

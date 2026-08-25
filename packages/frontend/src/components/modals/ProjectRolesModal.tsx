@@ -138,18 +138,11 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
   };
 
   // 删除角色：项目所有者使用的角色（isOwnerRole，数据驱动）不可删，后端兜底；
-  // 删除后若项目不再存在可降级的非所有者角色（与后端 no_demote_target 兜底一致），
-  // 直接以 toast 弹出提示，避免错误横幅写死在弹框内、重开弹框仍残留。
+  // 其余角色一律可删（ADR-0051 删除自愈修订）：成员自动降级，若项目已无可用
+  // 非所有者角色，后端会自动创建默认成员角色接住成员/保证项目仍可邀人。
   const handleDeleteRole = (role: ProjectRoleDto) => {
     if (role.isOwnerRole) {
       showToast(t('项目所有者使用的角色不可删除'), 'warning');
-      return;
-    }
-    const hasDemoteTarget = roles.some(
-      (r) => !r.isOwnerRole && r.id !== role.id
-    );
-    if (!hasDemoteTarget) {
-      showToast(t('项目至少需要保留一个可降级的非所有者角色'), 'warning');
       return;
     }
     setRoleToDelete(role);
@@ -218,7 +211,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                   }}
                 >
                   {t(
-                    '项目角色属于本项目，可自由编辑；删除角色时成员自动降级为项目成员'
+                    '项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色'
                   )}
                 </span>
                 {canManageRoles && (
@@ -407,7 +400,7 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                 <p className="font-semibold mb-1">{t('重要提示')}</p>
                 <p style={{ color: 'var(--text-secondary)' }}>
                   {t(
-                    '删除角色后，使用该角色的成员将自动降级为项目内的可用角色（优先项目成员）。'
+                    '删除角色后，使用该角色的成员将自动降级为项目内的可用角色（优先项目成员）；若项目已无可用角色，系统将自动创建默认的项目成员角色。'
                   )}
                 </p>
               </div>

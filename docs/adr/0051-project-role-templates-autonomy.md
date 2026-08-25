@@ -73,10 +73,33 @@
 
 # Cross-references
 
-- `packages/backend/src/roles/project-roles.service.ts`（copyTemplatesToProject / 自治校验 / findDemoteTarget）
+- `packages/backend/src/roles/project-roles.service.ts`（copyTemplatesToProject / 自治校验 / createDefaultMemberRole）
 - `packages/backend/src/file-operations/project-crud.service.ts`（项目创建事务）
 - `packages/backend/src/roles/dto/role.dto.ts`（isOwnerRole）
 - `packages/backend/prisma/migrations/20260814033131_project_role_templates_copy`
 - `packages/frontend/src/pages/RoleManagement/`（项目角色模板区块）
 - `packages/frontend/src/components/modals/ProjectRolesModal.tsx` / `MembersModal.tsx`
 - Issue #297（双轨收口方案 A）/ #298（旧端点 isSystem 限制）/ #299（RoleManagement 页调整）
+
+# 修订记录：删除自愈——默认成员角色自动重建（2026-08-25）
+
+**背景缺陷**：第 4 节的 `no_demote_target` 兜底存在死角——无成员使用的非 owner
+角色可被逐个删光；项目只剩 owner 角色后，无法再邀请任何成员（addMember 强制
+要求项目内非 owner 角色），后续删除操作也永久被禁。
+
+**决策（取代第 4 节"都没有则禁止删除"分支）**：
+
+- 项目内非 owner 角色删除**永不因"无降级目标"被拒**：
+  - 在用角色且无存活降级目标 → 先自动创建默认 PROJECT_MEMBER 副本接住成员；
+  - 删除后项目内已无非 owner 角色 → 自动补建，保证项目仍可邀请成员。
+- 默认成员角色来源：优先复制系统级 MEMBER 模板（含权限）；模板已被系统管理员
+  删除时回退内置 `DEFAULT_PROJECT_ROLE_PERMISSIONS.MEMBER`。单个项目的删除
+  不反向修改系统模板库。
+- 并发竞态：唯一约束 `[projectId, name]` 冲突时复用已存在的副本（幂等）。
+- 审计：ROLE_DELETE metadata 附注 `autoCreatedMemberRoleId`。
+- i18n 键 `error.role.no_demote_target` 移除。
+- 前端联动：移除 ProjectRolesModal 的"最后一个可降级角色"预检拦截及 toast；
+  确认弹框与引导文案补充自动重建语义。
+
+**Rejected**：维持禁止删除最后一个在用角色——把一致性责任推给用户，且不解决
+"删光后项目变死"的主缺陷。

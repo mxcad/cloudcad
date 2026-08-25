@@ -397,39 +397,65 @@ export class ProjectRolesService {
 
       // 权限检查已在控制器层面通过 @RequirePermissions 装饰器进行
 
+      // 自动重建的默认成员角色 id（审计附注用）
+      let autoCreatedMemberRoleId: string | undefined;
+
       if (role.projectId) {
-        // === 项目内角色（项目自治，ADR-00XX）===
+        // === 项目内角色（项目自治，ADR-0051；删除自愈修订）===
 
         // 项目所有者使用的角色不可删除（数据驱动：node.ownerId 对应成员的
         // projectRoleId，不依赖角色名——项目内角色允许改名）
         const ownerRoleId = await this.findOwnerRoleId(role.projectId);
         if (ownerRoleId === roleId) {
           throw new BadRequestException(
-            I18nContext.current()?.t(
-              'error.role.owner_role_cannot_delete'
-            ) ?? '项目所有者使用的角色不可删除'
+            I18nContext.current()?.t('error.role.owner_role_cannot_delete') ??
+              '项目所有者使用的角色不可删除'
           );
         }
 
-        // 删除在用角色时，使用该角色的成员自动降级到降级目标（决策：
-        // 优先 PROJECT_MEMBER 名字，其次任一非所有者角色，再没有则禁止删除）。
-        // 无成员使用的角色可直接删除，不要求降级目标存在
+        // 存活的其他非所有者角色（排除本角色与 owner 角色）
+        const projectRoles = await this.prisma.projectRole.findMany({
+          where: { projectId: role.projectId },
+          select: { id: true, name: true },
+        });
+        const otherRoles = projectRoles.filter(
+          (r) => r.id !== roleId && r.id !== ownerRoleId
+        );
+
+        // 在用角色的成员去向：优先 PROJECT_MEMBER 名字 → 任一存活非所有者
+        // 角色 → 都没有则先自动重建默认成员角色接住成员（ADR-0051 删除自愈修订：删除
+        // 不再因"无降级目标"被拒——否则项目被管理员删到只剩 owner 角色后
+        // 将无法再邀请任何成员）
+        let demoteTargetId: string | null = null;
         if (role.members.length > 0) {
-          const demoteTargetId = await this.findDemoteTarget(
-            role.projectId,
-            roleId,
-            ownerRoleId ?? undefined
-          );
+          demoteTargetId =
+            otherRoles.find((r) => r.name === ProjectRole.MEMBER)?.id ??
+            otherRoles[0]?.id ??
+            null;
           if (!demoteTargetId) {
-            throw new BadRequestException(
-              I18nContext.current()?.t('error.role.no_demote_target') ??
-                '项目至少需要保留一个可降级的非所有者角色'
-            );
+            demoteTargetId = await this.createDefaultMemberRole(role.projectId);
+            autoCreatedMemberRoleId = demoteTargetId;
           }
-          await this.prisma.projectMember.updateMany({
-            where: { projectId: role.projectId, projectRoleId: roleId },
-            data: { projectRoleId: demoteTargetId },
+        }
+
+        await this.prisma.$transaction(async (tx) => {
+          if (demoteTargetId) {
+            await tx.projectMember.updateMany({
+              where: { projectId: role.projectId, projectRoleId: roleId },
+              data: { projectRoleId: demoteTargetId },
+            });
+          }
+          await tx.projectRole.delete({
+            where: { id: roleId },
           });
+        });
+
+        // 删除后兜底：项目必须至少保留一个可分配的非所有者角色，
+        // 否则无法再添加成员（ADR-0051 删除自愈修订）
+        if (!demoteTargetId && otherRoles.length === 0) {
+          autoCreatedMemberRoleId = await this.createDefaultMemberRole(
+            role.projectId
+          );
         }
       } else {
         // === 模板角色（系统端点，projectId 为空）===
@@ -446,16 +472,17 @@ export class ProjectRolesService {
         // 若有残留引用则拒绝删除（DB 层 Restrict 兜底）
         if (role.members.length > 0) {
           throw new BadRequestException(
-            I18nContext.current()?.t('error.role.template_in_use_cannot_delete') ??
-              '该模板仍被项目成员引用，无法删除'
+            I18nContext.current()?.t(
+              'error.role.template_in_use_cannot_delete'
+            ) ?? '该模板仍被项目成员引用，无法删除'
           );
         }
-      }
 
-      // 删除角色（级联删除权限关联）
-      await this.prisma.projectRole.delete({
-        where: { id: roleId },
-      });
+        // 删除角色（级联删除权限关联）
+        await this.prisma.projectRole.delete({
+          where: { id: roleId },
+        });
+      }
 
       this.logger.log(`项目角色 ${roleId} 删除成功`);
 
@@ -473,7 +500,11 @@ export class ProjectRolesService {
           undefined,
           role.projectId ?? undefined,
           role.name,
-          { roleName: role.name, projectId: role.projectId ?? null }
+          {
+            roleName: role.name,
+            projectId: role.projectId ?? null,
+            autoCreatedMemberRoleId: autoCreatedMemberRoleId,
+          }
         );
       }
     } catch (error) {
@@ -576,28 +607,62 @@ export class ProjectRolesService {
   }
 
   /**
-   * 查找项目角色的降级目标（删除在用角色时，成员自动改挂到该角色）
-   * 优先级：name=PROJECT_MEMBER → 任一非所有者角色 → null（无可用目标，禁止删除）
+   * 自动重建项目默认成员角色（ADR-0051 删除自愈修订）
+   *
+   * 触发场景（delete 内）：① 在用角色删除时项目内无任何存活非所有者角色可作
+   * 降级目标——先建默认成员角色接住被删角色的成员；② 删除后项目内已无任何
+   * 非所有者角色——补建以保证项目仍可邀请成员。
+   *
+   * 来源：优先复制系统级 MEMBER 模板（含权限，与 copyTemplatesToProject 一致）；
+   * 模板缺失（系统管理员已删）则回退内置 DEFAULT_PROJECT_ROLE_PERMISSIONS。
+   * 并发竞态下唯一约束 [projectId, name] 冲突时复用已存在的副本（幂等）。
    */
-  private async findDemoteTarget(
-    projectId: string,
-    excludeRoleId: string,
-    ownerRoleId?: string
-  ): Promise<string | null> {
-    const roles = await this.prisma.projectRole.findMany({
-      where: { projectId },
-      select: { id: true, name: true },
+  private async createDefaultMemberRole(projectId: string): Promise<string> {
+    const template = await this.prisma.projectRole.findFirst({
+      where: { projectId: null, isSystem: true, name: ProjectRole.MEMBER },
+      include: { permissions: { select: { permission: true } } },
     });
-    const candidates = roles.filter(
-      (r) => r.id !== excludeRoleId && r.id !== ownerRoleId
-    );
 
-    const memberRole = candidates.find(
-      (r) => r.name === ProjectRole.MEMBER
-    );
-    if (memberRole) return memberRole.id;
+    const permissionCreates = template
+      ? template.permissions.map((p) => ({
+          permission: p.permission as PrismaProjectPermission,
+        }))
+      : (DEFAULT_PROJECT_ROLE_PERMISSIONS[ProjectRole.MEMBER] ?? []).map(
+          (permission) => ({ permission })
+        );
 
-    return candidates[0]?.id ?? null;
+    try {
+      const created = await this.prisma.projectRole.create({
+        data: {
+          projectId,
+          name: ProjectRole.MEMBER,
+          description: template?.description ?? '默认项目成员角色',
+          isSystem: true,
+          permissions: { create: permissionCreates },
+        },
+        select: { id: true },
+      });
+      this.logger.log(`项目 ${projectId} 已自动重建默认成员角色 ${created.id}`);
+      return created.id;
+    } catch (error) {
+      // 并发删除同一项目的最后一个角色时，另一请求可能已创建同名副本
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existing = await this.prisma.projectRole.findFirst({
+          where: { projectId, name: ProjectRole.MEMBER },
+          select: { id: true },
+        });
+        if (existing) {
+          this.logger.log(
+            `项目 ${projectId} 默认成员角色已由并发操作创建，复用 ${existing.id}`
+          );
+          return existing.id;
+        }
+      }
+      throw error;
+    }
   }
 
   /**
