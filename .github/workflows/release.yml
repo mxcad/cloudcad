@@ -163,7 +163,9 @@ jobs:
       - run: pnpm build
         working-directory: packages/frontend_mobile
 
-      # 从 manifest.json 下载 windows-x64 的所有产品二进制（mxcad/mxversion）
+      # 从 manifest.json 下载 windows-x64 的所有产品二进制（mxcad/mxversion/postgresql）
+      # postgresql 自 2026-08 起走产品二进制通道（EDB 官方直链已 403），
+      # zip 顶层须为 pgsql/ 目录，解压后落在 runtime/windows/postgresql/pgsql/
       - name: 下载产品二进制
         shell: bash
         env:
@@ -200,7 +202,8 @@ jobs:
           done
           echo "产品二进制已就绪"
 
-      # 构建 Windows 标准组件（node/pg/redis 官方源）
+      # 构建 Windows 标准组件（node/redis 官方源；postgresql 已移入上方产品二进制通道）。
+      # 脚本为 fail-fast：任一组件下载/解压失败即退出非零，并在结尾断言三组件就绪。
       - name: 构建 Windows 标准组件
         run: node scripts/build-windows-runtime.js
 

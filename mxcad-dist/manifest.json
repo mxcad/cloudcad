@@ -19,5 +19,12 @@
     "arch": "x64",
     "hash": "d316322bcd2fc475654fdb992c425466717a9410f1d1f8da190967761eb86c43",
     "asset": "mxversion-windows-x64-d316322b.zip"
+  },
+  "postgresql-windows-x64": {
+    "component": "postgresql",
+    "platform": "windows",
+    "arch": "x64",
+    "hash": "c8a0462e1daba945c4e53a959702c5a8877cb82047e422d03c407c9a6bfe517b",
+    "asset": "postgresql-windows-x64-c8a0462e.zip"
   }
 }

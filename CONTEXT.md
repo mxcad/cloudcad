@@ -184,6 +184,14 @@ _Avoid_: 离线部署、自托管
 面向私有化部署客户的版本更新交付物（ADR-0046）——只含变更产物（各包 dist、全量 prisma migrations 目录、runtime/scripts、完整生产依赖 store），**解压覆盖部署根目录即完成升级**：start 自动检测并应用（migrate deploy 幂等 + `pnpm-lock.yaml` hash 与 store 标记 `variant:lockfileHash` 不一致时自动 `pnpm install --offline --prod`）。与全量部署包的差异：不含 runtime 二进制、配置模板；配置与用户数据（`.env*`、前端 `ini/*.json`、`brand/`、`data/`）永不入包。平台约束：store 原生依赖与打包环境平台强相关，Linux 升级包必须在 Linux 容器内打包。
 _Avoid_: 升级补丁、热更新包、patch 包
 
+**标准组件（Standard Component）**:
+离线部署包内嵌的第三方基础运行时软件——Node.js、PostgreSQL、Redis、SVN，均非公司自研，在目标机上由部署运行时的基础服务管理器以 daemon 模式拉起并托管。是私有化交付的生命线：缺任一组件即整包不可用，因此打包侧必须逐组件断言就绪，不允许静默缺失。
+_避免_: 系统依赖、运行时环境、第三方库
+
+**产品二进制（Product Binary）**:
+公司自研的闭源可执行产物——mxcad 图纸转换器与 mxversion 版本工具。按内容哈希去重经内部稳定发布通道分发。注意边界：PostgreSQL 属于标准组件，但因官方下载直链不可靠，其 Windows 二进制与产品二进制共用同一条内部发布通道——「共用通道」不改变其组件归类。
+_避免_: 产品文件、闭源组件（含混标准组件）、mxcad 二进制（仅指转换器单个组件）
+
 **公有云（Public Cloud / TOC）**:
 面向终端消费者的 SaaS 模式——由 CloudCAD 官方托管运维，用户即开即用。默认不开启协同功能。是平台未来主力的发展方向。与私有化部署共享同一套代码库，通过运行时配置区分能力差异。
 _Avoid_: SaaS、云服务

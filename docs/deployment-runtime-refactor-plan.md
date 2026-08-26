@@ -378,7 +378,7 @@ packages/
 | V3 | **升级包部署**（同布局） | Win + Linux | 依赖重装检测正确 → 迁移幂等 → .env 只增不覆盖 → 服务恢复 |
 | V4 | **前台模式** | Win + Linux | Ctrl+C 整树退出、无孤儿；收尾验证在服务运行期执行 |
 | V5 | verify-deploy.js 全流程 | Win + Linux | 7 步全绿 |
-| V6 | 打包侧 | 打包机 | 全量/升级/Linux 包产物清单审计（manifest 单一事实源正确、.deploy、ecosystem 完整、无开发垃圾）；**升级包不含 store** |
+| V6 | 打包侧 | 打包机 | 全量/升级/Linux 包产物清单审计（manifest 单一事实源正确、.deploy、ecosystem 完整、无开发垃圾）；**升级包不含 store**；**Windows 包标准组件断言（node.exe / postgresql/pgsql/bin/initdb.exe、pg_ctl.exe / redis/redis-server.exe，pack-offline.js 出包前强制校验）** |
 | V7 | CLI 冒烟 | 双平台 | --help 与基线 diff 一致；子命令 dispatch 正常 |
 | ~~V8~~ | ~~升级包跨布局迁移~~（Step B 专项） | — | **已随 D7 取消（rev4）**：不再迁 packages/，无跨布局迁移场景 |
 
@@ -396,6 +396,7 @@ packages/
 | 全杀兜底移除后孤儿进程无人处理 | 中 | 中 | 显式 `kill-all` 危险命令替代 |
 | 真前台 PG smart shutdown 慢/挂起 | 低 | 中 | 关停顺序带超时强制 kill；仅前台模式受影响，PM2 不走此路径 |
 | 打包 manifest 重构漏条目 | 中 | 高 | manifest 单测（条目数/关键文件断言）+ V6 审计输出 |
+| **Windows 标准组件（node/pg/redis）下载源失效但错误被吞，空目录随 runtime/windows/ 整目录进包**（2026-08 事故：redis 死链 + EDB 403 → 线上 Windows 包缺 pg/redis） | 已发生 | 高 | 三层防御：① build-windows-runtime.js fail-fast + 出口三组件断言；② postgresql 移入产品二进制通道（mxcad-dist/windows-x64/postgresql.zip 经 upload-mxcad.js 上传 mxcad-stable Release）；③ pack-offline.js 出包前 assertWindowsRuntimeComponents 强制校验关键可执行文件 |
 
 ---
 

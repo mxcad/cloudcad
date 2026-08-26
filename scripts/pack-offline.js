@@ -912,6 +912,39 @@ function writeDeployMeta(tempDir) {
 }
 
 /**
+ * Windows 标准运行时组件出包前校验（node / postgresql / redis）。
+ *
+ * 背景：runtime/windows/ 在 manifest 中是整目录复制，只要 node/ 存在即可通过，
+ * 缺 postgresql/redis 子目录完全无感知——曾因 build-windows-runtime.js 下载源
+ * 失效且错误被静默吞掉，导致线上 Windows 离线包缺 pg/redis、目标机启动失败。
+ * 此处在打压缩包前按关键可执行文件逐项断言（路径与 runtime/scripts 的
+ * pg-manager.js / redis-manager.js 引用保持一致）。
+ */
+function assertWindowsRuntimeComponents() {
+  const required = [
+    path.join('node', 'node.exe'),
+    path.join('postgresql', 'pgsql', 'bin', 'initdb.exe'),
+    path.join('postgresql', 'pgsql', 'bin', 'pg_ctl.exe'),
+    path.join('redis', 'redis-server.exe'),
+  ];
+  const missing = [];
+  for (const rel of required) {
+    const p = path.join(PROJECT_ROOT, 'runtime', 'windows', rel);
+    if (!fs.existsSync(p)) missing.push(`runtime/windows/${rel}`);
+  }
+  if (missing.length > 0) {
+    error(`Windows 标准运行时组件缺失，中止打包:\n  ${missing.join('\n  ')}`);
+    error('修复方式:');
+    error('  - node/redis: 运行 node scripts/build-windows-runtime.js --force');
+    error('  - postgresql: 本地 PG binaries zip（顶层含 pgsql/ 目录）放入');
+    error('    mxcad-dist/windows-x64/postgresql.zip 后运行 node scripts/upload-mxcad.js，');
+    error('    再由 release.yml「下载产品二进制」步骤解压到 runtime/windows/postgresql');
+    process.exit(1);
+  }
+  log('Windows 标准运行时组件校验通过（node / postgresql / redis）');
+}
+
+/**
  * 部署包：复制文件到临时目录
  */
 function prepareDeployDir(platform, variant = 'oss') {
@@ -1025,6 +1058,11 @@ async function packDeploy(platform, variant = 'oss') {
       );
       process.exit(1);
     }
+  }
+
+  // 检查 Windows 标准运行时组件（node/postgresql/redis 关键可执行文件）
+  if (platform === 'win' || platform === 'all') {
+    assertWindowsRuntimeComponents();
   }
 
   // 本机 Windows 打包路径：先重建运行时 node 工具依赖，再确保根依赖完整。

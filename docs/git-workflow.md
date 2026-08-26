@@ -201,7 +201,8 @@ Release 附件（mxcad 独立 Release，与业务解耦）：
 | Linux x86_64 | node/pg/redis/svn | GitHub Actions + QEMU + Docker（`pack-linux-deploy.js`） |
 | Linux aarch64 | node/pg/redis/svn | GitHub Actions + QEMU 模拟 arm（复用 Docker 多架构） |
 | Linux armv7l | node/pg/redis/svn | GitHub Actions + QEMU 模拟 arm |
-| Windows x64 | node/pg/redis | `build-windows-runtime.js` 官方源下载 |
+| Windows x64 | node/redis | `build-windows-runtime.js` 官方源下载（redis 源为 tporadowski/redis） |
+| Windows x64 | postgresql | **产品二进制通道**（EDB 直链已 403）：本地 PG binaries zip（顶层含 `pgsql/` 目录）放入 `mxcad-dist/windows-x64/postgresql.zip` → `upload-mxcad.js` 上传 → release.yml 解压到 `runtime/windows/postgresql` |
 
 > QEMU 依赖：GitHub Actions 的 `docker/build-push-action` 原生支持多架构容器构建，
 > 与现有 `pack-linux-deploy.js` 的 Docker 打包机制一致。

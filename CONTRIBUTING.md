@@ -261,7 +261,7 @@ git push origin v2.3.1
 
 # 4. CI 自动：
 #    - Linux：QEMU + Docker 构建各 OS×架构 部署包
-#    - Windows：官方源构建标准组件 + mxcad 合并
+#    - Windows：官方源构建标准组件（node/redis）+ 产品二进制（mxcad/mxversion/postgresql）合并
 #    - 产物上传到 Releases（草稿）
 
 # 5. 到 GitHub 确认 Releases 后点击"发布"

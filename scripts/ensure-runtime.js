@@ -16,6 +16,9 @@
  *   - 仅检查 mxcad / mxversion 这两个【产品二进制】。
  *     node / postgresql / redis / svn 等标准组件，开发环境通常本地已有，
  *     不一定需要离线版本，因此不强制下载。
+ *   - postgresql 虽自 2026-08 起登记进 manifest.json（离线打包用，见
+ *     build-windows-runtime.js 头注释），但被 DEV_SKIP_COMPONENTS 排除，
+ *     开发环境 preinstall 不会下载它。
  *   - 仅用于【开发环境】从源码 clone 后初始化。离线部署包内嵌完整 runtime，
  *     不联网（保持离线纯净，见 docs/git-workflow.md）。
  *   - 下载源可通过环境变量覆盖（私有化部署可指向内网镜像）：
@@ -68,13 +71,21 @@ function dirHasContent(dir) {
 }
 
 /**
+ * 开发环境不自动下载的标准组件（即使出现在 manifest.json 中）。
+ * postgresql 走产品二进制通道仅为离线打包服务（CI release.yml 下载），
+ * 开发环境本地已有 PG，若不排除，preinstall 会在每次 pnpm install 拉 ~300MB 包。
+ */
+const DEV_SKIP_COMPONENTS = new Set(['postgresql']);
+
+/**
  * 从 manifest.json 自动发现本平台需要就绪的产品二进制。
  * manifest 由 scripts/upload-mxcad.js 生成，包含所有组件×平台×架构条目：
  *   {
  *     "mxcad-linux-x86_64": { component, platform, arch, hash, asset },
- *     "mxversion-windows-x64": { ... }
+ *     "mxversion-windows-x64": { ... },
+ *     "postgresql-windows-x64": { ... }   // 打包专用，DEV_SKIP_COMPONENTS 排除
  *   }
- * 脚本按【当前平台×当前架构】过滤，不硬编码组件/目录清单。
+ * 脚本按【当前平台×当前架构】过滤，并跳过 DEV_SKIP_COMPONENTS。
  *
  * @returns {Array<{rel:string; component:string; assetPrefix:string}>}
  */
@@ -91,6 +102,7 @@ function requiredProductDirs() {
       for (const key of Object.keys(manifest || {})) {
         const entry = manifest[key];
         if (!entry || entry.platform !== platform || entry.arch !== arch) continue;
+        if (DEV_SKIP_COMPONENTS.has(entry.component)) continue;
         result.push({
           rel: path.join('runtime', platform, entry.component),
           component: entry.component,
@@ -110,6 +122,7 @@ function requiredProductDirs() {
       if (entry.isFile() && !entry.name.startsWith('.')) {
         const dot = entry.name.lastIndexOf('.');
         const component = dot > 0 ? entry.name.slice(0, dot) : entry.name;
+        if (DEV_SKIP_COMPONENTS.has(component)) continue;
         result.push({
           rel: path.join('runtime', platform, component),
           component,
