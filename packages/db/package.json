@@ -22,12 +22,12 @@
     "clean": "node -e \"const fs=require('node:fs');const {execSync}=require('node:child_process');for(let i=0;i<5;i++){try{fs.rmSync('dist',{recursive:true,force:true});break}catch(e){if(i===4)throw e;execSync(process.platform==='win32'?'timeout /t 1 /nobreak >nul':'sleep 1',{stdio:'ignore'})}}\""
   },
   "dependencies": {
-    "@prisma/client": "^7.1.0"
+    "@prisma/client": "^7.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
     "dotenv": "^17.4.2",
-    "prisma": "^7.1.0",
+    "prisma": "^7.10.0",
     "typescript": "~5.9.3"
   }
 }
