@@ -25,9 +25,9 @@
     "@prisma/client": "^7.1.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.7",
+    "@types/node": "^26.4.1",
     "dotenv": "^17.4.2",
     "prisma": "^7.1.0",
-    "typescript": "~5.9.3"
+    "typescript": "~7.0.2"
   }
 }
