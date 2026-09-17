@@ -7,7 +7,7 @@ description: 移动端编码规范 — Vue 3 + Vite 4 + vant + VoerkaI18n 移动
 
 处理移动端代码时，必须遵守以下移动端特有规范。同时自动遵守 `project-coding-standards` 的全部公共规则。
 
-**核心原则**：对照 PC 端（frontend）的功能实现，保持功能对齐但适配移动端交互。移动端仅实现 CAD 编辑器功能，不包含计费/支付/会员/订单/退款等业务功能。
+**核心原则**：对照 PC 端（frontend）的功能实现，保持功能对齐但适配移动端交互。移动端已实现原生会员中心（`/shell/member`：档位对比 / 购买续费升级 / 微信支付 / 订单记录 / 退款），后端 billing/vip 端点与 PC 100% 复用、无移动端专属接口，支付交易类型按 UA 分流（微信内置浏览器 MWEB / 系统浏览器 NATIVE 二维码）；实现细节见 ADR-0068。
 
 </what-to-do>
 
@@ -104,7 +104,7 @@ description: 移动端编码规范 — Vue 3 + Vite 4 + vant + VoerkaI18n 移动
 | 构建工具 | Vite 5 | Vite 4 |
 | TypeScript | 5.x | 4.9 |
 | i18n | VoerkaI18n | VoerkaI18n（同） |
-| 计费功能 | ✅ 有 | ❌ 无 |
+| 计费功能 | ✅ 有 | ✅ 有（原生会员中心 `/shell/member`，复用后端 billing/vip 端点） |
 | 适配方式 | 响应式 | px→rem + lib-flexible |
 
 ## 状态管理（与 PC 不同）

@@ -29,6 +29,26 @@ const routes = [
     component: () => import('../pages/auth/RegisterPage.vue'),
   },
   {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: () => import('../pages/auth/VerifyEmailPage.vue'),
+  },
+  {
+    path: '/verify-phone',
+    name: 'VerifyPhone',
+    component: () => import('../pages/auth/VerifyPhonePage.vue'),
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../pages/auth/ForgotPasswordPage.vue'),
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../pages/auth/ResetPasswordPage.vue'),
+  },
+  {
     path: '/shell',
     name: 'Shell',
     component: () => import('../pages/shell/index.vue'),
@@ -44,6 +64,11 @@ const routes = [
         component: () => import('../pages/shell/sub-pages/ProjectDetailPage.vue'),
       },
       {
+        path: 'file/project/:id/roles',
+        name: 'ProjectRoles',
+        component: () => import('../pages/shell/sub-pages/ProjectRolesPage.vue'),
+      },
+      {
         path: 'share',
         name: 'ShareManage',
         component: () => import('../pages/shell/sub-pages/ShareManagePage.vue'),
@@ -53,12 +78,27 @@ const routes = [
         name: 'Profile',
         component: () => import('../pages/shell/sub-pages/ProfilePage.vue'),
       },
+      {
+        path: 'member',
+        name: 'MemberCenter',
+        component: () => import('../pages/shell/sub-pages/MemberCenterPage.vue'),
+      },
     ],
   },
 ]
 
 /** 需登录才能访问的路径前缀（/shell 根 = 编辑器，公开可游客使用） */
-const AUTH_REQUIRED_PREFIXES = ['/shell/file', '/shell/share', '/shell/profile']
+const AUTH_REQUIRED_PREFIXES = ['/shell/file', '/shell/share', '/shell/profile', '/shell/member']
+
+/** 认证覆盖层路径（与 App.vue 的 AUTH_ROUTE_PATHS 保持同步） */
+const AUTH_PAGE_PATHS = [
+  '/login',
+  '/register',
+  '/verify-email',
+  '/verify-phone',
+  '/forgot-password',
+  '/reset-password',
+]
 
 /** 纯 JWT exp 检查：accessToken 存在且未过期即视为已登录（无法解析 / 无 exp 视为有效） */
 function hasValidToken(): boolean {
@@ -79,7 +119,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const isAuthPage = to.path === '/login' || to.path === '/register'
+  const isAuthPage = AUTH_PAGE_PATHS.includes(to.path)
   const needsAuth = AUTH_REQUIRED_PREFIXES.some((p) => to.path.startsWith(p))
   const authed = hasValidToken()
 

@@ -537,7 +537,8 @@ L3 业务编排：pages/ components/
 
 - 单页 Home + 9 个弹窗组件；业务逻辑在 services/（save/upload/mobileUpload/extRef/export/thumbnail/check/permission/publicFile）+ composables/（15 个）
 - **强制走 @cloudcad/api-sdk**（同 PC 端规则）；token 存 localStorage，支持 PC 登录后跳回
-- 无计费/支付功能；协同经 useCooperate 封装（createWrok 自动加入、joinWork 自动加载、exitWork 回退）
+- 计费/支付走原生会员中心（`/shell/member`，ADR-0068）：档位对比 / 购买续费升级 / 微信支付（MWEB 跳转 或 NATIVE 二维码，按 UA 分流）/ 订单记录 / 退款申请，后端 billing/vip 端点与 PC 100% 复用
+- 协同经 useCooperate 封装（createWrok 自动加入、joinWork 自动加载、exitWork 回退）
 
 ---
 

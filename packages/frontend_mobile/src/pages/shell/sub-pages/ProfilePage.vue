@@ -10,6 +10,9 @@
  *   手机号     → 未绑定：bind-phone 两步 / 已绑定：rebind-phone 三步（短信验证码）
  * 账号安全：修改密码 → POST /users/change-password
  *
+ * 会员购买 / 续费 / 升级 / 退款走原生会员中心（/shell/member，ADR-0068），
+ * 不再跳 PC 页。
+ *
  * 已移除的 PC-only 占位项（后端无自助接口，不伪装成可用功能）：
  *   实名认证（无任何后端 API）、登录设备管理（/auth/device 是设备授权而非会话管理）、
  *   升级会员（PATCH /users/:id/membership 需 SYSTEM_USER_MEMBERSHIP_MANAGE 管理端权限）、
@@ -43,7 +46,7 @@ import { t } from '@/languages'
 import { useAuthState } from '@/composables/useAuthState'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import { navigateToLogin } from '@/utils/authNavigate'
-import { getPCForgotPasswordUrl, getPCMemberCenterUrl } from '@/utils/apiConfig'
+import { getPCForgotPasswordUrl } from '@/utils/apiConfig'
 import {
   membershipBadge,
   membershipExpiry,
@@ -636,10 +639,15 @@ function onSecurityClick(action: string) {
   if (action === 'change-password') openPwdDialog()
 }
 
-// 忘记密码 / 会员购买：涉及支付与认证，走 PC 页（ADR-0062）；弹窗被拦截时回退整页跳转
+// 忘记密码：移动端不承载原生认证流程（ADR-0062），走 PC 页；弹窗被拦截时回退整页跳转
 function openPCPage(url: string) {
   const win = window.open(url)
   if (!win) window.location.href = url
+}
+
+/** 进入原生会员中心（ADR-0068）：购买 / 续费 / 升级 / 退款全在移动端完成 */
+function openMemberCenter(): void {
+  router.push('/shell/member')
 }
 
 // ═══ 头像上传（D-01）═══
@@ -840,14 +848,14 @@ onUnmounted(stopCountdown)
         <span>{{ t('会员即将到期，剩余 {days} 天，请及时续费', { days: String(vipDaysRemaining) }) }}</span>
       </div>
 
-      <!-- ═══ 会员（D-10）：购买/续费在 PC 会员中心完成 ═══ -->
+      <!-- ═══ 会员（D-10）：购买 / 续费 / 升级 / 退款走原生会员中心（ADR-0068）═══ -->
       <van-cell-group class="section">
         <div class="section-title">{{ t('会员') }}</div>
         <van-cell
           :title="t('管理会员')"
           :value="isVip && vipBadge ? vipBadge : t('免费用户')"
           is-link
-          @click="openPCPage(getPCMemberCenterUrl())"
+          @click="openMemberCenter"
         />
       </van-cell-group>
 

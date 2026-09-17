@@ -214,12 +214,3 @@ export function getPCLoginUrl(redirectUrl?: string): string {
 export function getPCForgotPasswordUrl(): string {
   return getPCLoginUrl().replace('/login', '/forgot-password');
 }
-
-/**
- * 获取 PC 端会员中心 URL（套餐对比 / 购买续费 / 订单历史）。
- * 会员购买涉及支付下单流程，移动端不重做，统一跳 PC 会员中心。
- * DEV/prod 分支沿用 getPCLoginUrl，避免第二处 import.meta.env 引用。
- */
-export function getPCMemberCenterUrl(): string {
-  return getPCLoginUrl().replace('/login', '/member-center');
-}

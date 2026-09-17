@@ -83,7 +83,7 @@ pnpm i18nCompile      # 编译语言包
 | 构建工具 | Vite 5 | Vite 4 |
 | TypeScript | 5.x | 4.x |
 | i18n | VoerkaI18n | VoerkaI18n（同） |
-| 计费功能 | ✅ 有 | ❌ 无（不包含计费/支付/会员/订单/退款） |
+| 计费功能 | ✅ 有 | ✅ 有（原生会员中心 `/shell/member`：档位对比 / 购买续费升级 / 微信支付 / 订单记录 / 退款；见 `src/pages/shell/sub-pages/MemberCenterPage.vue` + `src/composables/useMemberCenter.ts`，ADR-0068） |
 | 适配方式 | 响应式 | px→rem + lib-flexible |
 
 ## 移动端协同 SDK 行为
