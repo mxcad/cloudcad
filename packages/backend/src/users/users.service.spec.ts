@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
@@ -189,5 +190,98 @@ describe('UsersService.syncWechatAvatar', () => {
 
     expect(result).toBe(`/api/v1/users/avatar/${userId}`);
     expect(fs.existsSync(path.join(avatarDir, `${userId}.webp`))).toBe(true);
+  });
+});
+
+describe('UsersService.uploadAvatar', () => {
+  let service: UsersService;
+  let crudService: { update: jest.Mock };
+  let avatarDir: string;
+  const userId = 'user-avatar';
+
+  beforeEach(async () => {
+    avatarDir = fs.mkdtempSync(path.join(os.tmpdir(), 'avatar-upload-test-'));
+
+    crudService = { update: jest.fn().mockResolvedValue({ id: userId }) };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: UserCrudService, useValue: crudService },
+        { provide: UserStatusService, useValue: {} },
+        { provide: UserPasswordService, useValue: {} },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(avatarDir) } },
+        { provide: ClsService, useValue: { get: jest.fn() } },
+        { provide: DatabaseService, useValue: {} },
+        {
+          provide: PiiCryptoService,
+          useValue: {
+            emailHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            phoneHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            derivePiiFields: jest.fn(() => ({})),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get(UsersService);
+  });
+
+  afterEach(() => {
+    fs.rmSync(avatarDir, { recursive: true, force: true });
+  });
+
+  it('.jfif 后缀应归一化为 .jpg 落盘（回归：移动端相册头像写入后读取侧扫不到）', async () => {
+    await service.uploadAvatar(userId, Buffer.from('image-bytes'), '.jfif', 'image/jpeg');
+
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.jpg`))).toBe(true);
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.jfif`))).toBe(false);
+    expect(crudService.update).toHaveBeenCalledWith(userId, {
+      avatar: `/api/v1/users/avatar/${userId}`,
+    });
+  });
+
+  it('image/jfif MIME 应通过白名单校验', async () => {
+    await service.uploadAvatar(userId, Buffer.from('image-bytes'), '.jfif', 'image/jfif');
+
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.jpg`))).toBe(true);
+  });
+
+  it('未知后缀应回落为 .png 落盘', async () => {
+    await service.uploadAvatar(userId, Buffer.from('image-bytes'), '.txt', 'image/png');
+
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.png`))).toBe(true);
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.txt`))).toBe(false);
+  });
+
+  it('未提供 MIME 时仍按后缀归一化落盘', async () => {
+    await service.uploadAvatar(userId, Buffer.from('image-bytes'), '.JFIF');
+
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.jpg`))).toBe(true);
+  });
+
+  it('上传新头像应清理同用户的历史后缀文件（含 .jfif 孤儿）', async () => {
+    await fs.promises.writeFile(path.join(avatarDir, `${userId}.jfif`), 'old-jfif');
+    await fs.promises.writeFile(path.join(avatarDir, `${userId}.jpg`), 'old-jpg');
+
+    await service.uploadAvatar(userId, Buffer.from('new-avatar'), '.png', 'image/png');
+
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.jfif`))).toBe(false);
+    expect(fs.existsSync(path.join(avatarDir, `${userId}.jpg`))).toBe(false);
+    expect(fs.readFileSync(path.join(avatarDir, `${userId}.png`))).toEqual(
+      Buffer.from('new-avatar')
+    );
+  });
+
+  it('非白名单 MIME 应抛 BadRequestException', async () => {
+    await expect(
+      service.uploadAvatar(userId, Buffer.from('x'), '.png', 'text/html')
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('超过 5MB 应抛 BadRequestException', async () => {
+    await expect(
+      service.uploadAvatar(userId, Buffer.alloc(5 * 1024 * 1024 + 1), '.jpg', 'image/jpeg')
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

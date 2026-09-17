@@ -9,6 +9,11 @@ import {
 import { UserCrudService } from './services/user-crud.service';
 import { UserStatusService } from './services/user-status.service';
 import { UserPasswordService } from './services/user-password.service';
+import {
+  AVATAR_ALLOWED_MIME_TYPES,
+  AVATAR_EXTENSIONS,
+  normalizeAvatarExtension,
+} from './avatar-extensions';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -286,8 +291,7 @@ export class UsersService implements IUserService {
   }
 
   async uploadAvatar(userId: string, buffer: Buffer, ext: string, mimetype?: string): Promise<ICreatedUser> {
-    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-    if (mimetype && !allowedMimeTypes.includes(mimetype)) {
+    if (mimetype && !AVATAR_ALLOWED_MIME_TYPES.includes(mimetype)) {
       throw new BadRequestException('仅支持 PNG、JPEG、GIF、WebP 格式的图片');
     }
 
@@ -416,15 +420,14 @@ export class UsersService implements IUserService {
     const avatarDir = this.configService.get('avatarPath', { infer: true });
     await fs.promises.mkdir(avatarDir, { recursive: true }).catch(() => {});
 
-    const oldExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
-    const cleanups = oldExtensions.map((oldExt) => {
+    // 覆盖全部历史后缀（含 `.jfif`/`.jpeg`）：旧实现漏清 `.jfif`，移动端换头像后残留孤儿文件
+    const cleanups = AVATAR_EXTENSIONS.map((oldExt) => {
       const oldPath = path.join(avatarDir, `${userId}${oldExt}`);
       return fs.promises.unlink(oldPath).catch(() => {});
     });
     await Promise.all(cleanups);
 
-    const safeExt = ext.toLowerCase() || '.png';
-    const filePath = path.join(avatarDir, `${userId}${safeExt}`);
+    const filePath = path.join(avatarDir, `${userId}${normalizeAvatarExtension(ext)}`);
     await fs.promises.writeFile(filePath, buffer);
 
     return `/api/v1/users/avatar/${userId}`;

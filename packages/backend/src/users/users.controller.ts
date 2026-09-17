@@ -50,6 +50,10 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserMembershipDto } from './dto/update-user-membership.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UploadAvatarDto } from './dto/upload-avatar.dto';
+import {
+  AVATAR_EXTENSIONS,
+  AVATAR_MIME_BY_EXTENSION,
+} from './avatar-extensions';
 import { UsersService } from './users.service';
 import {
   UserResponseDto,
@@ -248,16 +252,8 @@ export class UsersController {
     @Res() res: Response,
   ) {
     const avatarDir = this.configService.get('avatarPath', { infer: true });
-    const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
-    const mimeMap: Record<string, string> = {
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-    };
 
-    for (const ext of extensions) {
+    for (const ext of AVATAR_EXTENSIONS) {
       const filePath = path.join(avatarDir, `${id}${ext}`);
       try {
         await fs.promises.access(filePath, fs.constants.F_OK);
@@ -287,7 +283,7 @@ export class UsersController {
           return;
         }
 
-        res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
+        res.setHeader('Content-Type', AVATAR_MIME_BY_EXTENSION[ext]);
         res.setHeader('Content-Length', stats.size);
         res.setHeader('Last-Modified', lastModified);
         res.setHeader('ETag', etag);

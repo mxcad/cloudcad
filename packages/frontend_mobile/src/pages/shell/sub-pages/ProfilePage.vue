@@ -651,7 +651,8 @@ function openMemberCenter(): void {
 }
 
 // ═══ 头像上传（D-01）═══
-const AVATAR_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+// image/jfif：部分移动端浏览器/WebView 用它标识 JFIF 标准 JPEG（文件后缀常为 .jfif）
+const AVATAR_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/jfif']
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024
 const avatarInputRef = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
@@ -678,6 +679,9 @@ async function onAvatarChange(e: Event) {
   uploadingAvatar.value = true
   try {
     unwrap(await usersControllerUploadAvatar({ body: { file } as never }))
+    // 头像 URL 对用户是稳定的（/api/v1/users/avatar/:id），src 不变浏览器不会重新请求；
+    // 上一次 404 已置真 avatarImgFailed 并卸载 img，须复位让新头像重新加载
+    avatarImgFailed.value = false
     showSuccessToast(t('头像更新成功'))
     await loadProfile()
   } catch (e) {
