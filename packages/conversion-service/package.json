@@ -4,6 +4,7 @@
   "description": "CloudCAD 转换服务 — CAD 转换任务队列执行",
   "main": "dist/server.js",
   "scripts": {
+    "prebuild": "pnpm --filter @cloudcad/contracts build",
     "build": "tsc",
     "dev": "tsc && node dist/server.js",
     "start": "node dist/server.js",
@@ -12,6 +13,9 @@
   },
   "keywords": ["cloudcad", "conversion", "conversion-service"],
   "license": "MIT",
+  "dependencies": {
+    "@cloudcad/contracts": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^22.10.7",
     "typescript": "~5.9.3"

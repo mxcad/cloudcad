@@ -354,6 +354,10 @@ importers:
         version: link:../db
 
   packages/conversion-service:
+    dependencies:
+      '@cloudcad/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: ^22.10.7

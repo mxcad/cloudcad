@@ -72,6 +72,7 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 | [0066](0066-exe-auto-order-purchase.md) | `accepted` | 0066 — EXE 桌面端自动下单购买流程（`/member-center?auto=1` + `POST /orders/auto` + 双层限流防刷单） |
 | [0067](0067-file-queue-panel-and-retry.md) | `accepted` | 0067 — 文件队列：取消悬浮药丸 + 入口迁移顶栏按钮/CAD 命令 + 删除永久失败机制 + 失败重试端点 + 配额可见 + 行内 Tooltip |
 | [0068](0068-mobile-native-member-center.md) | `accepted` | 0068 — 移动端原生会员中心：购买/续费/升级/微信支付/订单/退款全在移动端完成（后端 billing/vip 零改动，交易类型按 UA 分流 MWEB/NATIVE，MWEB 回跳靠 localStorage 恢复） |
+| [0069](0069-mxcad-engine-contract-and-contracts-purity.md) | `accepted` | 0069 — mxcad 两级参数契约收进 @cloudcad/contracts（唯一 builder/parser + CONTENT_KEY_FIELDS 派生 + ConversionTask 判别联合删 printToPdf）+ contracts 纯函数式契约准入四条与纯度门禁 |
 
 ## 规则
 

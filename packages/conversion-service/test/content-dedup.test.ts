@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Readable } from 'stream';
+import { CONTENT_KEY_FIELDS, ENGINE_INPUT_FIELDS } from '@cloudcad/contracts';
 import TaskStore from '../services/task-store';
 import WorkerPool from '../services/worker-pool';
 import { deriveContentKey } from '../lib/utils';
@@ -42,6 +43,58 @@ describe('内容身份去重（#431 门禁3）', () => {
     assert.notEqual(a, d, '不同目标格式应不同 key');
     assert.equal(none, null, '无识别字段应返回 null（不去重）');
     assert.match(a!, /^ck_/);
+  });
+
+  it('CONTENT_KEY_FIELDS 是 ENGINE_INPUT_FIELDS 的子集（内容身份字段来自契约表派生，非另一份手写清单）', () => {
+    for (const field of CONTENT_KEY_FIELDS) {
+      assert.ok(
+        ENGINE_INPUT_FIELDS.includes(field),
+        `内容身份字段 ${field} 必须是引擎输入字段`
+      );
+    }
+  });
+
+  it('CONTENT_KEY_FIELDS 每个字段单独变化时 key 必须变（防止字段漏抄进内容身份表）', () => {
+    const base = { srcPath: '/in/1.dwg', fileHash: 'abc', cmd: 'to_mxweb' };
+    for (const field of CONTENT_KEY_FIELDS) {
+      assert.notEqual(
+        deriveContentKey({ ...base, [field]: 'dedup-probe-value' }),
+        deriveContentKey(base),
+        `${field} 变化应产生不同 contentKey`
+      );
+    }
+  });
+
+  it('被排除的字段（ENGINE_INPUT_FIELDS − CONTENT_KEY_FIELDS）单独变化时 key 不变', () => {
+    const excluded = ENGINE_INPUT_FIELDS.filter((field) => !CONTENT_KEY_FIELDS.includes(field));
+    assert.ok(excluded.length > 0, '应至少有一个非内容字段被排除');
+    const base = { srcPath: '/in/1.dwg', fileHash: 'abc', cmd: 'to_mxweb' };
+    for (const field of excluded) {
+      assert.equal(
+        deriveContentKey({ ...base, [field]: 'dedup-probe-value' }),
+        deriveContentKey(base),
+        `${field} 属产物落点等非内容字段，变化不应改变 contentKey`
+      );
+    }
+  });
+
+  it('回归：仅裁剪框不同的两张 cut_dwg 必须产生不同 key', () => {
+    // 裁剪框字段曾不在内容身份表：同 key 合并后两张图互拿产物（368ca55）。
+    // 现字段表由契约派生，本用例锁定「区域差异必产生新 key」。
+    const base = {
+      srcPath: '/in/a.dwg',
+      fileHash: 'h1',
+      cmd: 'cut_dwg',
+      bd_pt1_x: '1',
+      bd_pt1_y: '2',
+      bd_pt2_x: '101',
+      bd_pt2_y: '102',
+    };
+    assert.notEqual(
+      deriveContentKey(base),
+      deriveContentKey({ ...base, bd_pt1_x: '5' }),
+      '仅裁剪框起点不同的两张图必须不同 key'
+    );
   });
 
   it('同内容身份并发提交合并：第二个提交者挂到第一个在途任务', async () => {

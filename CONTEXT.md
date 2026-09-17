@@ -149,6 +149,10 @@ _避免_: 文件服务、对象存储
 DWG/DXF ↔ mxweb 之间的格式互转。上传时 DWG/DXF 自动转为 mxweb（内部流通格式），导出时 mxweb 按需转回 DWG/DXF。由转换引擎执行，是平台"以 mxweb 为唯一内部格式"架构的前提。转换失败时 FileSystemNode 标记为 FAILED。
 _避免_: 转码、格式变换
 
+**两级参数契约（Two-level Param Contract）**:
+转换参数在两层用不同命名：backend ↔ conversion-service 的 HTTP 层用 camelCase（`srcPath`/`fileHash`/`dwgVersion`…），conversion-service ↔ `mxcadassembly` 二进制的单参 JSON 用 lowercase/下划线（`srcpath`/`src_file_md5`/`dwg_version`）。命名翻译只发生在一处——`@cloudcad/contracts` 的 `buildEngineParams`（唯一 builder），backend 进程内 spawn 与 conversion-service runner 共用同一实现；内容身份派生字段集 `CONTENT_KEY_FIELDS` 由 `ENGINE_INPUT_FIELDS − outpath` 派生，禁止再手写第二份清单（ADR-0064/0069）。
+_避免_: 引擎参数、转换参数、mxcad 参数
+
 **缩略图（Thumbnail）**:
 文件节点在列表中的预览图像——后端在保存/上传完成后为图纸生成缩略图，前端通过 Thumbnail 组件渲染。用于文件浏览器和资源库列表中的快速预览识别，减少不必要的完整图纸加载。
 _避免_: 预览图、快照图
@@ -377,7 +381,7 @@ _避免_: 节点配额、project 配额
 _避免_: 代理用户、映射用户
 
 **契约包（@cloudcad/contracts）**:
-Monorepo 中开源的接口/契约包（`packages/contracts/`），只包含 DI token 常量和 TypeScript 接口类型，不包含任何实现代码。`@cloudcad/impl-mx` 和 `backend` 都依赖此包解耦。
+Monorepo 中开源的接口/契约包（`packages/contracts/`），包含 DI token 常量、TypeScript 接口类型，以及**无 IO / 无框架 / 无副作用的纯函数式契约**（如 `buildEngineParams`，准入四条与逃逸口见 ADR-0069）。`@cloudcad/impl-mx` 和 `backend` 都依赖此包解耦。
 _避免_: 共享类型、类型包
 
 **数据库共享包（@cloudcad/db）**:

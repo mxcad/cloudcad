@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import MxcadRunner, { ConversionExecutionError, ConversionTaskParams } from '../mxcad/runner';
+import type { ConversionRequest } from '@cloudcad/contracts';
+import MxcadRunner, { ConversionExecutionError } from '../mxcad/runner';
 
 describe('MxcadRunner._parseOutput', () => {
   it('should parse valid JSON output', () => {
@@ -30,6 +31,14 @@ describe('MxcadRunner._parseOutput', () => {
   it('should return a failure object when JSON is truncated', () => {
     const runner = new MxcadRunner();
     const parsed = runner._parseOutput('{"code":0,"newpath":');
+    assert.equal(parsed.code, 1);
+    assert.ok(parsed.message);
+    assert.match(parsed.message, /格式错误/);
+  });
+
+  it('缺 code 字段的 JSON 也算解析失败（不能当成 code=undefined 的成功）', () => {
+    const runner = new MxcadRunner();
+    const parsed = runner._parseOutput('{"newpath":"/out/a.mxweb"}');
     assert.equal(parsed.code, 1);
     assert.ok(parsed.message);
     assert.match(parsed.message, /格式错误/);
@@ -116,7 +125,7 @@ describe('MxcadRunner._buildParam', () => {
     // 契约上 srcPath 必填，但 HTTP 边界是松包（Record<string,unknown>），可能塞入缺 srcPath 的
     // 畸形对象——runner 须运行时兜底显式报错（而非 _resolvePath 返回 undefined 后 .replace 崩溃）。
     // 此处用 as 模拟该畸形输入，验证运行时防御。
-    assert.throws(() => runner._buildParam({ fileHash: 'h1' } as ConversionTaskParams), /缺少 srcPath/);
+    assert.throws(() => runner._buildParam({ fileHash: 'h1' } as ConversionRequest), /缺少 srcPath/);
   });
 });
 

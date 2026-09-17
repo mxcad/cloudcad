@@ -10,16 +10,16 @@ backend 与 conversion-service 之间通过 HTTP 传递转换参数，而 conver
 
 - **HTTP 层（backend → conversion-service）**：字段用 camelCase——`srcPath` / `fileHash` / `createPreloadingData` / `dwgVersion` / `outname` / `cmd` / `width` / `height` / `colorPolicy` / `outjpg` / `compression` 等。类型定义见 `packages/backend/src/mxcad/interfaces/file-conversion.interface.ts` 的 `ConversionOptions`。
 - **低层二进制（conversion-service → mxcadassembly）**：字段用 lowercase / 下划线——`srcpath` / `src_file_md5` / `create_preloading_data` / `outpath` / `outname` / `dwg_version`。这是一个 JSON 字符串单参，传给 `mxcadassembly`（见 `packages/conversion-service/mxcad-exec.ts` 注释 `{"srcpath":"..."}`）。**这是低层接口，不是 HTTP 契约。**
-- **桥 = `MxcadRunner._buildParam`**（`packages/conversion-service/mxcad/runner.ts`）：接收 HTTP 层的 camelCase 参数，构造低层二进制的 lowercase 参数。这是唯一做「camelCase → lowercase」翻译的地方。
+- **桥 = `buildEngineParams`**（`packages/contracts/src/conversion/mxcad-engine-contract.ts`，由 conversion-service 的 `MxcadRunner._buildParam` 与 backend 的 `file-conversion.service.ts` **共同调用**）：接收 HTTP 层的 camelCase 参数，构造低层二进制的 lowercase 参数。这是唯一做「camelCase → lowercase」翻译的地方——此前 4 处手写映射（backend 进程内 param、backend 转发 serviceParam、conversion-service runner、bin→mxweb）已收敛为 1 个 builder（ADR-0069）。
 
 ## 为什么
 
 两个独立的 backend 调用方**都**发 camelCase，这是既成契约：
 
-1. `packages/backend/src/mxcad/conversion/file-conversion.service.ts` 的 `forwardViaExecutor` 转发分支——发 camelCase `serviceParam`（721fe02 修复后）。
+1. `packages/backend/src/mxcad/conversion/file-conversion.service.ts` 的 `forwardViaExecutor` 转发分支——发 camelCase 请求（721fe02 修复后；现由 `pickContractFields` 按 `ENGINE_INPUT_FIELDS` 唯一清单挑选字段，不再手写枚举）。
 2. `packages/backend/src/batch-download/conversion-runner.ts` 的 `WorkflowConvertTask`（`{ id, srcPath, fileHash, outname, width?, height?, colorPolicy?, dwgVersion? }`）→ `submitBatch` POST `/v1/conversions/batchConvert`。
 
-conversion-service 侧也按 camelCase 消费：`routes/conversions.ts` 的 `submitConvertTask` 原样接收 `body.params`（`params = body.params`），batch 校验检查 `t.srcPath`（camelCase）；`lib/utils.ts` 的 `CONTENT_KEY_FIELDS`（内容身份派生）以 camelCase 为主。
+conversion-service 侧也按 camelCase 消费：`routes/conversions.ts` 的 `submitConvertTask` 原样接收 `body.params`（`params = body.params`），batch 校验检查 `t.srcPath`（camelCase）；内容身份派生字段集 `CONTENT_KEY_FIELDS` 现由 `@cloudcad/contracts` 派生（`= ENGINE_INPUT_FIELDS − outpath`），与 runner 透传给引擎的参数同源（ADR-0069）。
 
 **动因 bug（721fe02）**：`forwardViaExecutor` 转发分支曾误发**低层二进制的 lowercase 参数**（`srcpath`/`src_file_md5`），而 conversion-service 的 `MxcadRunner` 读的是 camelCase `srcPath` → `undefined` → `_resolvePath` 返回 `undefined` → `.replace` 崩溃 → 节点被删、图纸打不开。修复方向是把转发分支改回 camelCase `ConversionOptions`（低层 lowercase 参数只该由 `MxcadRunner._buildParam` 在 conversion-service 内部构造）。
 

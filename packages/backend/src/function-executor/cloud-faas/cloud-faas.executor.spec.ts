@@ -22,14 +22,16 @@ jest.mock('./providers/aws.executor', () => ({
 }));
 
 function makeTask(overrides: Partial<ConversionTask> = {}): ConversionTask {
+  // ConversionTask 改为按 type 判别的联合后，{...默认值, ...overrides} 的展开结果
+  // 丢失 type/params 的关联，无法直接赋值回 ConversionTask；测试夹具此处断言。
   return {
     id: 'task_1',
     type: 'convertFile',
-    params: { srcPath: '/in/a.dwg' },
+    params: { srcPath: '/in/a.dwg', fileHash: 'hash_a' },
     priority: 1,
     createdAt: new Date(),
     ...overrides,
-  };
+  } as ConversionTask;
 }
 
 function makeConfigService(overrides: Record<string, string> = {}) {

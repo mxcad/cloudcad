@@ -1,4 +1,6 @@
 
+import type { ConversionOptions } from '../mxcad/interfaces/file-conversion.interface';
+
 /**
  * 转换任务优先级
  * 1 = 上传转换（最高），2 = 导出/PDF，3 = 缩略图/批处理（最低）
@@ -6,24 +8,30 @@
 export type TaskPriority = 1 | 2 | 3;
 
 /**
- * 转换任务类型
- */
-export type ConversionTaskType =
-  | 'convertFile'
-  | 'convertBinToMxweb'
-  | 'generateBinFiles'
-  | 'printToPdf';
-
-/**
  * 转换任务
+ *
+ * 按 type 判别：params 不再是 Record<string, unknown>，各任务类型有自己的参数形状，
+ * 拼错字段名会直接编译失败（此前 convertBinToMxweb 的三参曾与转换服务约定长期不一致）。
+ * convertFile 的 params 用 backend 的 ConversionOptions（比契约的 ConversionRequest 多
+ * 编排字段 userId/priority/skipExportGate/debugNodeId 等，多出的字段转发时被按契约字段集挑选）。
  */
-export interface ConversionTask {
+export type ConversionTask = {
   id: string;
-  type: ConversionTaskType;
-  params: Record<string, unknown>;
   priority: TaskPriority;
   createdAt: Date;
-}
+} & (
+  | { type: 'convertFile'; params: ConversionOptions }
+  | {
+      type: 'convertBinToMxweb';
+      params: { srcPath: string; outpath: string; outname: string };
+    }
+  | { type: 'generateBinFiles'; params: { mxwebPath: string; nodeName: string } }
+);
+
+/**
+ * 转换任务类型
+ */
+export type ConversionTaskType = ConversionTask['type'];
 
 /**
  * 转换结果

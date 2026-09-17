@@ -430,8 +430,8 @@ function getDeployIncludeList(platform, variant = 'oss') {
 async function installFullDeps(variant = 'oss') {
   cleanNodeModules(true);
 
-  // conversion-service 0 运行时依赖（纯 Node 内置 + 相对导入），dist 自包含，目标机无需安装其依赖；
-  // 但构建它需要 typescript（devDep），故纳入 install 使打包机（Docker 容器）可用 tsc。
+  // conversion-service 现依赖 @cloudcad/contracts（ADR-0069），与 backend 一样须在 install
+  // filter 内，否则打包机建不出它的 workspace 链接；构建它还需要 typescript（devDep）。
   const filter = variant === 'private'
     ? 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
     : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service';
@@ -603,9 +603,12 @@ function getLockfileHash() {
  * @param {string} variant - oss | private
  */
 function getDeployStoreInstallFilter(variant = 'oss') {
+  // 必须含 @cloudcad/conversion-service：它现依赖 @cloudcad/contracts（ADR-0069），
+  // 若不在 filter 里，目标机 --prod 安装不会建 packages/conversion-service/node_modules
+  // 的 workspace 链接，dist/server.js 的 require('@cloudcad/contracts') 解析失败→3100 起不来。
   return variant === 'private'
-    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts install --frozen-lockfile --prod'
-    : 'pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts install --frozen-lockfile --prod';
+    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service install --frozen-lockfile --prod'
+    : 'pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service install --frozen-lockfile --prod';
 }
 
 /**

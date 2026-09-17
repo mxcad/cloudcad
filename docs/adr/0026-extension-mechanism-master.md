@@ -54,7 +54,7 @@
 2. **归属层**：进 contracts 后按 ADR-0021 三层划分归类（基础设施/领域仓库/业务服务），token 统一进 `tokens.ts`。
 3. **排除项**（三类禁止进 contracts）：
    - 仅内部实现细节（纯 impl 私有类型）；
-   - 具体实现类 / 抽象类（contracts 只放 interface + token）；
+   - 具体实现类 / 抽象类（contracts 只放 interface + token；**例外见 ADR-0069**：无 IO / 无框架 / 无副作用的纯函数式契约也允许进 contracts，准入四条与逃逸口见该 ADR）；
    - DTO 校验 class（带 NestJS 装饰器，违反「contracts 不依赖框架」）。**DTO 只进纯 interface 形状**——且按第 4 条，HTTP DTO 形状根本不用手动定义，由 api-sdk 自动生成；contracts 需要共享形状时定义纯 interface，backend DTO class 用 `implements` 子句与结构类型兼容（ADR-0021 落地写法）。
 4. **清理义务**：契约包不得提交构建产物（`*.js`、`*.js.map`），已误提交的清理（挂 #174/#175）。
 

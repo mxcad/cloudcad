@@ -75,6 +75,20 @@ export {
   SYSTEM_ROLE_LEVELS,
 } from './domain/system-role.types';
 
+// Conversion engine contract (types + values，ADR-0064 / ADR-0069)
+export {
+  ENGINE_INPUT_FIELDS,
+  CONTENT_KEY_FIELDS,
+  buildEngineParams,
+  parseEngineOutput,
+} from './conversion/mxcad-engine-contract';
+export type {
+  EngineInputField,
+  ConversionRequest,
+  MxCadEngineParams,
+  MxCadConversionResult,
+} from './conversion/mxcad-engine-contract';
+
 // Repository interfaces
 export type { IUserRepository } from './repositories/user-repository.interface';
 export type { IRefreshTokenRepository } from './repositories/refresh-token-repository.interface';

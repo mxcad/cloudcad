@@ -12,14 +12,17 @@ import type {
 } from './function-executor.interface';
 
 function makeTask(overrides: Partial<ConversionTask> = {}): ConversionTask {
+  // ConversionTask 改为按 type 判别的联合后，{...默认值, ...overrides} 的展开结果
+  // 丢失 type/params 的关联（两者各自变成独立联合），无法直接赋值回 ConversionTask；
+  // 测试夹具只关心构造形状，故此处断言（运行期字段由被测代码自身保证）。
   return {
     id: 'task_1',
     type: 'convertFile',
-    params: {},
+    params: { srcPath: '/in/a.dwg', fileHash: 'hash_a' },
     priority: 1,
     createdAt: new Date(),
     ...overrides,
-  };
+  } as ConversionTask;
 }
 
 describe('ProcessPoolExecutor', () => {
@@ -114,7 +117,10 @@ describe('ProcessPoolExecutor', () => {
       });
 
       const result = await executor.invoke(
-        makeTask({ type: 'convertBinToMxweb', params: {} }),
+        makeTask({
+          type: 'convertBinToMxweb',
+          params: { srcPath: '/in/a.bin', outpath: '/out', outname: 'a' },
+        }),
       );
 
       expect(result.status).toBe('FAILED');

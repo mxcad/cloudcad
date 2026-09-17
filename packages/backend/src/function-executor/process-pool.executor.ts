@@ -120,16 +120,19 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
   }
 
   private async executeTask(task: ConversionTask): Promise<ConversionResult> {
-    const { type, params } = task;
+    // ConversionTask 是按 type 判别的联合：switch(task.type) 逐分支拿到强类型 params，
+    // 不再需要 as never / params['x'] as string 的手工断言。
+    const taskId = task.id;
+    const type = task.type;
 
-    this.logger.log(`Executing task ${task.id}: ${type}`);
+    this.logger.log(`Executing task ${taskId}: ${type}`);
 
-    switch (type) {
+    switch (task.type) {
       case 'convertFile': {
         const { isOk, ret, error } =
-          await this.fileConversionService.convertFile(params as never);
+          await this.fileConversionService.convertFile(task.params);
         return {
-          taskId: task.id,
+          taskId,
           status: isOk ? 'COMPLETED' : 'FAILED',
           outputPath: ret?.newpath,
           error,
@@ -138,33 +141,31 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
       }
       case 'convertBinToMxweb': {
         // 参数名与 FileConversionService.forwardViaExecutor 的转发契约一致（srcPath/outpath/outname）
-        const binPath = params['srcPath'] as string;
-        const outputPath = params['outpath'] as string;
-        const outName = params['outname'] as string;
+        const {
+          srcPath: binPath,
+          outpath: outputPath,
+          outname: outName,
+        } = task.params;
         const result = await this.fileConversionService.convertBinToMxweb(
           binPath,
           outputPath,
           outName
         );
         return {
-          taskId: task.id,
+          taskId,
           status: result.success ? 'COMPLETED' : 'FAILED',
           outputPath: result.outputPath,
           error: result.error,
         };
       }
       case 'generateBinFiles': {
-        const mxwebPath = params['mxwebPath'] as string;
-        const nodeName = params['nodeName'] as string;
+        const { mxwebPath, nodeName } = task.params;
         await this.fileConversionService.generateBinFiles(mxwebPath, nodeName);
-        return {
-          taskId: task.id,
-          status: 'COMPLETED',
-        };
+        return { taskId, status: 'COMPLETED' };
       }
       default:
         return {
-          taskId: task.id,
+          taskId,
           status: 'FAILED',
           error: `Unknown task type: ${type}`,
         };

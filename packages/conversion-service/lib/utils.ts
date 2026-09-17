@@ -1,5 +1,6 @@
 // 统一 JSON 日志（零依赖），实现见 ./logger
 import { log, resolveRequestId, runWithRequest } from './logger';
+import { CONTENT_KEY_FIELDS } from '@cloudcad/contracts';
 import { createHash } from 'crypto';
 
 // 最小请求结构（IncomingMessage 与测试用 Readable 假对象均满足）
@@ -41,24 +42,8 @@ function generateId(): string {
   return `fw_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 8)}`;
 }
 
-// 影响转换产物的参数字段（内容身份派生用）。与 runner.execute 透传给 mxcadassembly 的
-// 参数一致：源文件 + 内容哈希 + 转换命令 + 输出 + 尺寸/颜色/版本/布局/压缩等。
-const CONTENT_KEY_FIELDS = [
-  'srcPath',
-  'fileHash',
-  'cmd',
-  'outname',
-  'width',
-  'height',
-  'colorPolicy',
-  'outjpg',
-  'roate_angle',
-  'view_angle',
-  'dwgVersion',
-  'layout_name',
-  'compression',
-  'createPreloadingData',
-];
+// 内容身份派生字段集来自 @cloudcad/contracts 的 CONTENT_KEY_FIELDS
+// （= 引擎输入字段全集 − outpath），与 runner 透传给 mxcadassembly 的参数同源，见 ADR-0064/0069。
 
 /**
  * 从转换参数派生稳定内容身份（#431 门禁3）。

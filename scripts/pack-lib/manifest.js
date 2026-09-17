@@ -105,7 +105,7 @@ function getSharedEntries() {
       dest: 'packages/config-service',
       isDir: true,
     },
-    // 转换服务（黑盒，0 运行时依赖，dist 自包含纯 Node 内置 + 相对导入）
+    // 转换服务（现依赖 @cloudcad/contracts，见 ADR-0069；其余为纯 Node 内置 + 相对导入）
     // start.js / verify-deploy.js 在后端 FUNCTION_EXECUTOR=conversion-service 时拉起
     // packages/conversion-service/dist/server.js；两类包（部署/升级）都需携带以支持该模式
     {

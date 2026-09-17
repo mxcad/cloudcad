@@ -37,6 +37,15 @@ import {
 	IFunctionExecutor,
 	type ConversionTask,
 } from "../../function-executor/function-executor.interface";
+import {
+	ENGINE_INPUT_FIELDS,
+	buildEngineParams,
+	parseEngineOutput,
+} from "@cloudcad/contracts";
+import type {
+	ConversionRequest,
+	EngineInputField,
+} from "@cloudcad/contracts";
 
 /**
  * 转换服务（conversion-service 模式）错误文案中的环境性失败标记。
@@ -79,19 +88,29 @@ function isTransientConversionError(message?: string): boolean {
 function parseSuccessResult(
 	rawOutput: string,
 ): MxCadConversionResult | null {
-	const output = String(rawOutput || "");
-	const iPos = output.lastIndexOf('{"code"');
-	if (iPos === -1) return null;
-	let ret: unknown;
 	try {
-		ret = JSON.parse(output.substring(iPos));
+		const ret = parseEngineOutput(rawOutput);
+		return ret.code === 0 ? ret : null;
 	} catch {
 		return null;
 	}
-	if (ret && typeof ret === "object" && (ret as MxCadConversionResult).code === 0) {
-		return ret as MxCadConversionResult;
+}
+
+/**
+ * 从转换选项中挑选契约定义的引擎输入字段（camelCase），丢弃 undefined 字段。
+ *
+ * 供「转发给 conversion-service」路径使用：HTTP 边界只应携带引擎认识的字段，
+ * 编排字段（userId/timeout/priority/debugNodeId/traceid/...）不进转换服务。
+ * 字段集来自 ENGINE_INPUT_FIELDS 唯一清单而非第二份手写枚举——721fe02 漏抄 6 字段
+ * 的根因正是这里与进程内 param 各自维护一套手写字段表。
+ */
+function pickContractFields(options: ConversionOptions): ConversionRequest {
+	const picked: Partial<Record<EngineInputField, unknown>> = {};
+	for (const field of ENGINE_INPUT_FIELDS) {
+		const value = (options as Partial<Record<EngineInputField, unknown>>)[field];
+		if (value !== undefined) picked[field] = value;
 	}
-	return null;
+	return picked as ConversionRequest;
 }
 
 @Injectable()
@@ -342,138 +361,38 @@ export class FileConversionService implements IMxcadConversionService {
 		let absoluteSrcPath = "";
 
 		try {
-			const {
-				srcPath,
-				fileHash,
-				createPreloadingData = true,
-				compression = this.compression,
-				outname,
-				cmd,
-				width,
-				height,
-				colorPolicy,
-				outjpg,
-			} = options;
+			const { srcPath, compression = this.compression, outname } = options;
 
 			// 确保源文件路径是绝对路径
 			absoluteSrcPath = this.resolveToAbsolutePath(srcPath);
 
-			// 构建完整的 param 对象
-			const param: Record<string, unknown> = {
-				srcpath: absoluteSrcPath.replace(/\\/g, "/"),
-				src_file_md5: fileHash,
-				create_preloading_data: createPreloadingData,
-			};
-
-			// 添加可选参数
-			if (!compression) {
-				param.compression = 0;
-			}
-
-			if (outname) {
-				param.outname = outname;
-			}
-
-			if (cmd) {
-				param.cmd = cmd;
-			}
-
-			if (width) {
-				param.width = width;
-			}
-
-			if (height) {
-				param.height = height;
-			}
-
-			if (colorPolicy) {
-				param.colorPolicy = colorPolicy;
-			}
-
-			if (outjpg) {
-				param.outjpg = outjpg;
-			}
-
-			if (options.roate_angle !== undefined) {
-				param.roate_angle = options.roate_angle;
-			}
-			if (options.view_angle !== undefined) {
-				param.view_angle = options.view_angle;
-			}
-			if (options.bd_pt1_x) {
-				param.bd_pt1_x = options.bd_pt1_x;
-			}
-			if (options.bd_pt1_y) {
-				param.bd_pt1_y = options.bd_pt1_y;
-			}
-			if (options.bd_pt2_x) {
-				param.bd_pt2_x = options.bd_pt2_x;
-			}
-			if (options.bd_pt2_y) {
-				param.bd_pt2_y = options.bd_pt2_y;
-			}
-			if (options.open_file_md5) {
-				param.open_file_md5 = options.open_file_md5;
-			}
-			if (options.layout_name) {
-				param.layout_name = options.layout_name;
-			}
-			if (options.create_clip_block !== undefined) {
-				param.create_clip_block = options.create_clip_block;
-			}
-
-			if (options.dwgVersion !== undefined) {
-				param.dwg_version = options.dwgVersion;
-			}
+			// 引擎参数对象（srcpath/src_file_md5/dwg_version 等小写下划线低层形状）统一由
+			// @cloudcad/contracts 的 buildEngineParams 生成：字段集与逐字段判定条件
+			// （truthy vs !== undefined）与 conversion-service runner 同源，见 ADR-0064/0069。
+			// 此前这里手写 20+ 行 if 分支，是 721fe02 漏抄 6 字段的根因。
+			const param = buildEngineParams({
+				...options,
+				srcPath: absoluteSrcPath,
+				compression,
+			});
 
 			// 部署模式分支：conversion-service 模式转发到独立转换服务（经 IFunctionExecutor）。
-			// 关键：转换服务的 MxcadRunner 按 ConversionOptions 驼峰形状读取入参（srcPath/fileHash/
+			// 关键：转换服务的 MxcadRunner 按 camelCase 契约形状读取入参（srcPath/fileHash/
 			// createPreloadingData/outname/...），并非 mxcadassembly 小写参数（srcpath/src_file_md5/...）。
-			// 故此处转发 ConversionOptions 形状（srcPath 用已解析绝对路径，转换服务 _resolvePath 原样返回），
+			// 故此处转发契约形状（srcPath 用已解析绝对路径，转换服务 _resolvePath 原样返回），
 			// 而非下方进程内 spawn 用的 mxcadassembly 参数 param——否则转换服务读 params.srcPath 恒 undefined，
 			// _resolvePath 返回 undefined 后 .replace 崩溃（Cannot read properties of undefined）。
-			// 各字段取上方解构的有效值（已套用 this.compression 等默认），保证与进程内 spawn 结果等价。
+			// pickContractFields 按 ENGINE_INPUT_FIELDS 唯一清单取字段（srcPath/compression 用已解析有效值），
+			// 与进程内 buildEngineParams 结果等价，且不会再漏抄字段。
 			// 默认 process-pool 模式走下方进程内 spawn，行为不变。
 			if (this.useConversionService && this.getFunctionExecutor()) {
-				const serviceParam: Record<string, unknown> = {
-					srcPath: absoluteSrcPath,
-					fileHash,
-					createPreloadingData,
-					compression,
-				};
-				if (outname) serviceParam.outname = outname;
-				if (cmd) serviceParam.cmd = cmd;
-				if (width) serviceParam.width = width;
-				if (height) serviceParam.height = height;
-				if (colorPolicy) serviceParam.colorPolicy = colorPolicy;
-				if (outjpg) serviceParam.outjpg = outjpg;
-				if (options.roate_angle !== undefined)
-					serviceParam.roate_angle = options.roate_angle;
-				if (options.view_angle !== undefined)
-					serviceParam.view_angle = options.view_angle;
-				if (options.dwgVersion !== undefined)
-					serviceParam.dwgVersion = options.dwgVersion;
-				if (options.layout_name)
-					serviceParam.layout_name = options.layout_name;
-				// 721fe02 把 param 重构为驼峰 serviceParam 时漏抄这 6 个字段（进程内 param 有、
-				// serviceParam 无），致 conversion-service 模式下 cut_dwg/print_to_pdf 的裁剪框
-				// (bd_pt1_x/bd_pt1_y/bd_pt2_x/bd_pt2_y)、open_file_md5、create_clip_block 丢失，
-				// 引擎缺区域信息回 {"message":"false"}。补齐以与进程内 spawn 等价。
-				if (options.bd_pt1_x)
-					serviceParam.bd_pt1_x = options.bd_pt1_x;
-				if (options.bd_pt1_y)
-					serviceParam.bd_pt1_y = options.bd_pt1_y;
-				if (options.bd_pt2_x)
-					serviceParam.bd_pt2_x = options.bd_pt2_x;
-				if (options.bd_pt2_y)
-					serviceParam.bd_pt2_y = options.bd_pt2_y;
-				if (options.open_file_md5)
-					serviceParam.open_file_md5 = options.open_file_md5;
-				if (options.create_clip_block !== undefined)
-					serviceParam.create_clip_block = options.create_clip_block;
 				return await this.forwardViaExecutor(
 					"convertFile",
-					serviceParam,
+					pickContractFields({
+						...options,
+						srcPath: absoluteSrcPath,
+						compression,
+					}),
 					options.priority === "low" ? 3 : 2,
 				);
 			}
@@ -568,12 +487,7 @@ export class FileConversionService implements IMxcadConversionService {
 					"";
 
 			try {
-				let strOutput = output.toString();
-				const iPos = strOutput.lastIndexOf('{"code"');
-				if (iPos !== -1) {
-					strOutput = strOutput.substring(iPos);
-				}
-				const ret = JSON.parse(strOutput);
+				const ret = parseEngineOutput(output);
 
 				if (ret.code === 0) {
 					this.logger.log(`文件转换成功: ${srcPath}`);
@@ -682,24 +596,27 @@ export class FileConversionService implements IMxcadConversionService {
 	 * 经 IFunctionExecutor（此时为 HttpConversionExecutor）POST /v1/conversions/async/convertFile
 	 * + 轮询终态，把执行器结果映射回 file-conversion 的 {isOk, ret, error} 形状。
 	 *
-	 * 传入的 param 即 mxcadassembly 参数对象（srcpath/src_file_md5/outname/cmd/width/height...），
-	 * 与进程内 spawn 传入的参数完全一致，保证两种部署模式转换结果等价。
+	 * 传入的 param 即 camelCase 契约请求对象（srcPath/fileHash/outname/cmd/width/height...），
+	 * 与进程内 buildEngineParams 的输入同源，保证两种部署模式转换结果等价。
 	 * 独立服务的任务结果 = mxcadassembly 输出（含 code/newpath），metadata 承载该输出，
 	 * 故 COMPLETED 时 ret 直接取 metadata（与进程内解析形状一致）。
 	 */
 	private async forwardViaExecutor(
 		taskType: "convertFile" | "convertBinToMxweb",
-		param: Record<string, unknown>,
+		param: ConversionRequest,
 		priority: 1 | 2 | 3,
 	): Promise<ConversionResult> {
 		const taskId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-		const task: ConversionTask = {
+		// taskType 是 ConversionTask 三元联合中「convertFile | convertBinToMxweb」两元子集，
+		// 两分支 params 形状不同，无法由单一 ConversionRequest 静态对应到具体分支，故整体断言
+		// （运行期字段形状由 buildEngineParams/pickContractFields 与调用方字面量保证）。
+		const task = {
 			id: taskId,
 			type: taskType,
 			params: param,
 			priority,
 			createdAt: new Date(),
-		};
+		} as ConversionTask;
 		const executor = this.getFunctionExecutor();
 		if (!executor) {
 			// 未接线（测试/未导入 FunctionExecutorModule）：按转换失败返回，调用方走既有错误处理。
@@ -961,25 +878,23 @@ export class FileConversionService implements IMxcadConversionService {
 			const absoluteBinPath = this.resolveToAbsolutePath(binPath);
 			const absoluteOutputPath = this.resolveToAbsolutePath(outputPath);
 
-			const param: Record<string, string> = {
-				srcpath: absoluteBinPath.replace(/\\/g, "/"),
-				outpath: absoluteOutputPath.replace(/\\/g, "/"),
+			const binRequest: ConversionRequest = {
+				srcPath: absoluteBinPath,
+				outpath: absoluteOutputPath,
 				outname: outName,
 			};
+			// 引擎参数由 buildEngineParams 翻译（带 outpath → bin→mxweb 分支：srcpath+outpath+outname，
+			// 不写 src_file_md5），路径归一化也在其中完成；进程内与转发共用这一个请求对象。
+			const param = buildEngineParams(binRequest);
 
 			// 部署模式分支：conversion-service 模式转发到独立转换服务。
 			// 同 convertFile：转换服务 MxcadRunner 按驼峰 srcPath 读源路径（非小写 srcpath），
 			// binToMxweb 额外带 outpath（输出目录）。srcPath/outpath 用已解析绝对路径，
 			// 转换服务 _resolvePath 原样返回。runner 按 outpath 有无区分 binToMxweb/convertFile。
 			if (this.useConversionService && this.getFunctionExecutor()) {
-				const serviceParam: Record<string, unknown> = {
-					srcPath: absoluteBinPath,
-					outpath: absoluteOutputPath,
-					outname: outName,
-				};
 				const result = await this.forwardViaExecutor(
 					"convertBinToMxweb",
-					serviceParam,
+					binRequest,
 					2,
 				);
 				return result.isOk
@@ -1051,12 +966,7 @@ export class FileConversionService implements IMxcadConversionService {
 					"";
 
 			try {
-				let strOutput = output.toString();
-				const iPos = strOutput.lastIndexOf('{"code"');
-				if (iPos !== -1) {
-					strOutput = strOutput.substring(iPos);
-				}
-				const ret = JSON.parse(strOutput);
+				const ret = parseEngineOutput(output);
 
 				if (ret.code === 0) {
 					const resultPath = path.join(outputPath, outName);

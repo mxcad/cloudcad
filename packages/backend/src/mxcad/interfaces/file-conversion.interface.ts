@@ -11,20 +11,15 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * MxCAD 转换结果
+ * MxCAD 转换结果。
+ *
+ * 结构定义在 @cloudcad/contracts 的 conversion/mxcad-engine-contract.ts（与 conversion-service
+ * runner 共用同一份，ADR-0064/0069）。此处 import + re-export，既建立本地绑定供下方
+ * ConversionResult.ret 使用，又保留历史命名出口，调用方无需改动。
  */
-export interface MxCadConversionResult {
-  /** 返回码，0 表示成功 */
-  code: number;
-  /** 返回消息 */
-  message?: string;
-  /** 转换后的文件路径 */
-  newpath?: string;
-  /** 是否包含图纸数据 */
-  tz?: boolean;
-  /** 其他自定义字段 */
-  [key: string]: unknown;
-}
+import type { MxCadConversionResult } from '@cloudcad/contracts';
+
+export type { MxCadConversionResult };
 
 /**
  * 文件转换抽象接口
