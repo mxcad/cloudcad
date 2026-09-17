@@ -306,6 +306,10 @@ export const Modal: React.FC<ModalProps> = ({
       className="fixed inset-0 flex items-center justify-center p-4 modal-enter"
       style={{ zIndex: zIndex }}
       onClick={(e) => e.stopPropagation()}
+      // mxcad-app 在 document 上注册了 bubble 阶段 contextmenu 监听器：光标落在编辑器
+      // 根元素矩形内就 preventDefault，弹窗虽在 document.body portal 里，事件仍会冒泡到
+      // document 被吞掉，导致输入框右键没有浏览器菜单（无法右键复制）。在此终止传播。
+      onContextMenu={(e) => e.stopPropagation()}
     >
       {renderOverlay()}
 
