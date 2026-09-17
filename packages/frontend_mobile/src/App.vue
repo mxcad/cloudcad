@@ -18,6 +18,7 @@ import VerifyPhonePage from './pages/auth/VerifyPhonePage.vue'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage.vue'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage.vue'
 import AuthBackButton from './pages/auth/AuthBackButton.vue'
+import NoticeDialog from './components/NoticeDialog.vue'
 
 /** 认证覆盖层路由，与下方 v-if 链保持一一对应 */
 const AUTH_ROUTE_PATHS = [
@@ -52,6 +53,9 @@ const route = useRoute()
 
     <!-- 认证覆盖层的统一「返回首页」出口，压在各覆盖层之上（z-index 1001 > 1000） -->
     <AuthBackButton v-if="isAuthPage" />
+
+    <!-- 系统公告弹框：压在所有覆盖层之上，编辑中与登录页都会弹 -->
+    <NoticeDialog />
 
     <van-number-keyboard safe-area-inset-bottom />
   </van-config-provider>
