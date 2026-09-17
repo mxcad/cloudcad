@@ -131,4 +131,43 @@ Express 路由扫描不可靠，已弃），改用 @nestjs/swagger 原生 `@ApiE
 
 **验证**：backend `tsc --noEmit` 0 错；单测 31/31；集成测试 2/2（见 2.1）。
 
+**提交**：d4fcff6（已 push）。
+
+---
+
+## 3. backend permission 核心
+
+审查范围：permission.service.ts / role-inheritance.service.ts /
+permission-cache.service.ts / context-permission.strategy.ts / store-permission.strategy.ts。
+
+### 3.1 ContextPermissionStrategy.verifyUserExists 用户不存在也放行（已修复）
+
+**现象**：`verifyUserExists` 对 `prisma.user.findUnique` 的返回值不做判断，只要不抛
+异常就 `return true`——而 `findUnique` 查无用户返回 `null` 而非抛异常，故「用户不存在」
+与「用户存在」同样返回 `true`，`checkContextRules` 对不存在的用户放行。
+
+**根因**：写该方法时把「查无」当成了异常路径，漏了 null 判定。
+
+**当前影响面评估**：`checkContextRules` 唯一调用链是
+`checkSystemPermissionWithContext` → 先过 `checkSystemPermission`（其内部
+`checkUserPermissionWithInheritance` 已按 `deletedAt: null` 查用户、不存在即 false）→
+再进上下文规则。故现有链路上该缺陷被上游检查掩盖，不可利用；但方法契约（「验证用户
+存在」）被违反，任何直接调用 `checkContextRules` 的路径都会对不存在用户放行，属潜在
+安全缺陷，修复成本一行。
+
+**修复**：`verifyUserExists` 改为 `return user !== null`。
+
+**验证**：spec 新增 2 例——`findUnique` 返回 null 时拒绝、抛异常时拒绝（5/5 绿）。
+
 **提交**：见本节末。
+
+**审查无缺陷项**：
+- `permission.service.ts`：单查/批量查都走 `getRolePermissions`（含继承），语义一致；
+  异常一律 fail-closed（返回 false / 空列表）。
+- `role-inheritance.service.ts`：递归带 `MAX_HIERARCHY_DEPTH=50` 深度上限防环；
+  「角色未找到」不缓存空结果（防启动竞态把权限永久置空）、「角色存在但无权限」才缓存
+  `'null'`，区分正确。
+- `permission-cache.service.ts`：订阅客户端挂了 error 监听（防 Redis 不可达时
+  未处理 error 事件崩进程）；失效事件带 5s 时效防循环；`parseInt(userId)` 对 UUID
+  得 NaN，但 set/delete 两侧同变换、键自洽，非缺陷。
+- `store-permission.strategy.ts`：薄委托，store 缺失返回 null 走默认路径，正确。

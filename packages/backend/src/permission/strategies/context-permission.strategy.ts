@@ -78,11 +78,13 @@ export class ContextPermissionStrategy implements IContextPermissionStrategy {
 
   private async verifyUserExists(userId: string): Promise<boolean> {
     try {
-      await this.prisma.user.findUnique({
+      // findUnique 查无用户返回 null（不抛异常），须按 null 判不存在——
+      // 此前漏判导致「用户不存在」也走 return true 放行
+      const user = await this.prisma.user.findUnique({
         where: { id: userId, deletedAt: null },
         select: { email: true }
       });
-      return true;
+      return user !== null;
     } catch (error) {
       this.logger.error(`验证用户存在失败: ${(error as Error).message}`);
       return false;

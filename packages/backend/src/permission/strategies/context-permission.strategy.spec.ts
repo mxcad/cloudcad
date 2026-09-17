@@ -55,4 +55,24 @@ describe('ContextPermissionStrategy', () => {
     );
     expect(result).toBe(true);
   });
+
+  it('should deny when user does not exist (findUnique returns null)', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    const result = await strategy.checkContextRules(
+      'ghost-user',
+      SystemPermission.SYSTEM_USER_READ,
+      { ipAddress: '1.2.3.4' }
+    );
+    expect(result).toBe(false);
+  });
+
+  it('should deny when user lookup throws', async () => {
+    mockPrisma.user.findUnique.mockRejectedValue(new Error('db down'));
+    const result = await strategy.checkContextRules(
+      'user-1',
+      SystemPermission.SYSTEM_USER_READ,
+      { userAgent: 'test-agent' }
+    );
+    expect(result).toBe(false);
+  });
 });
