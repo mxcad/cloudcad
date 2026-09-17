@@ -317,10 +317,10 @@ export const ProjectRolesModal: React.FC<ProjectRolesModalProps> = ({
                               {canManageRoles && !role.isOwnerRole && (
                                 <Button
                                   variant="secondary"
-                                  size="md"
+                                  size="sm"
                                   onClick={() => handleDeleteRole(role)}
                                 >
-                                  <Trash2 size={18} className="text-red-500" />
+                                  <Trash2 size={16} className="text-red-500" />
                                 </Button>
                               )}
                             </div>
