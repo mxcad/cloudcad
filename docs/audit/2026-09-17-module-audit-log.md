@@ -1051,3 +1051,66 @@ prisma-permission-store）。
 **验证**：`pnpm jest src/users` 7 suites / 48 tests 全绿；`pnpm type-check` 0 错。新 spec
 prettier-clean（已 `--write`）；`users.controller.ts`/`users.service.ts`/`users.service.spec.ts`
 HEAD 本就非 prettier-clean（预存长行漂移，我新增行不在 diff 中），按约定不 `--write`。
+
+---
+
+## 21. backend billing / backup / library / function-executor 四模块（无新缺陷）
+
+四个模块逐一审查命令注入、路径遍历、IDOR、支付金额篡改、鉴权四类安全面，均未发现新缺陷。
+结论性记录如下（本次审计「只修确实不对的点」——无缺陷即如实记录、不动代码）。
+
+### 21.1 backup：`execFile`（非 `exec`）+ 全量白名单校验，无命令注入
+
+- 唯一子进程出口 `backup.service.ts#exec` 用 `execFile(file, args, …)`——**args 以数组传递、
+  不经过 shell**，天然免疫 shell 注入；`file` 与 `args` 全部来自服务端配置或严格校验。
+- 17 个 `exec` 调用点逐一核实：`file` 均为 `pg_dump`/`pg_restore`/`psql`（`resolvePgDumpPath`
+  三级探活：配置路径→runtime 内置→PATH 裸命令）或 `rsync`/`ossutil`/`aws`（`resolveRemoteCli`）
+  或 `sshCommand()`（平台固定的 `ssh`/`ssh.exe`）——**无一来自用户输入**。
+- `args` 里唯一「半用户可达」的两类输入都加了白名单：
+  - 备份文件名 `BACKUP_FILENAME_PATTERN = /^cloudcad-\d{8}-\d{6}\.dump$/`（`deleteBackup`/
+    `pushRemote`/`listBackups` 三处入口全校验），且 `deleteBackup` 再加 `startsWith(dir+sep)`
+    前缀二次校验（双重防护）——文件名不可能含 `/`/`\`/`..`。
+  - 演练行数统计的表名 `IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/`（`countTable`/
+    `countTableOnDb` 校验后 `SELECT COUNT(*) FROM "<table>"`，防 SQL 注入）。
+- 远端轮转命令（`rotateRemoteRsync`）经 `shellSingleQuote`（POSIX 单引号 + `'\''` 转义）包裹
+  远端路径与文件名，远端 shell 侧亦无注入面。
+- 控制器 `backup.controller.ts` 类级 `@UseGuards(RolesGuard, PermissionsGuard)` +
+  `@RequirePermissions([SystemPermission.SYSTEM_ADMIN])`；`backup.scheduler.ts` 纯调度/告警/
+  任务注册，无路径/命令/用户输入面。
+
+### 21.2 library：`filesData/*path` 委托给已防御的共享 handler
+
+- `library.controller.ts` 两个 `@Public()` 通配路由 `drawing/filesData/*path` 与
+  `block/filesData/*path` 把 URL 路径段拼成 `filename` 后调 `libraryService.serveFile`，
+  后者委托 `MxcadFileHandlerService.serveFile` → `FileUtils.resolveWithinRoot(filesDataPath, …)`
+  （resolve 后 `startsWith(root+sep)` 前缀校验，逃逸即 400）——即 17/19 节已修并复用的
+  单一 containment helper，library 侧无独立遍历面。
+- `downloadNode`/`serveLibraryThumbnail` 走 DB 的 `nodeId`/`node.path`（服务端托管的
+  fileSystemNode 记录 + `storageManager.getFullPath`），非用户可控路径。
+- 写端点（save/save-as/folders/delete/rename/move/copy/batch-*）全挂
+  `@RequirePermissions([LIBRARY_DRAWING_MANAGE | LIBRARY_BLOCK_MANAGE])` + `PermissionsGuard`。
+
+### 21.3 function-executor：纯编排，无进程派生面
+
+- `process-pool.executor.ts` 只做限流（`RateLimiter`）+ 任务存储 + 状态跟踪，实际 spawn 在
+  `mxcad-exec.ts`（AGENTS.md 已记录 `windowsVerbatimArguments` 处理，属 mxcad 模块非本模块）。
+- `http-conversion.executor.ts` 走 `ConversionServiceClient`（HTTP，URL 来自配置
+  `http://localhost:3100`）；`cloud-faas.executor.ts` 走云厂商 SDK（huawei/aliyun/aws provider）。
+  三者均无 `child_process`/`execFile`/`spawn`，无命令注入面。
+
+### 21.4 billing：IDOR 全限定 + 金额服务端派生 + webhook 签名
+
+- **IDOR**：用户侧订单方法（`queryOrder`/`repayOrder`/`refreshOrder`/`mockScan`）统一模式
+  `findUnique({ where: { orderNo } })` → `if (order.userId !== userId) throw NotFoundException`
+  ——按登录用户限定，无法越权查/操作他人订单。webhook 路径（`findUnique({orderNo})` 无 userId）
+  是合理例外：微信服务端回调，走 `WechatIpGuard`（IP 白名单）+ 签名校验，非用户入口。
+- **金额篡改**：`createOrder` 的 `amount` 服务端派生
+  `Math.round(vipTier.baseMonthlyPrice × durationPricing.multiplierBps × durationPricing.months / 10000)`；
+  用户只传 `vipTierId`/`durationPricingId`，且经 `findUnique` + `isActive` 校验后取 DB 记录字段，
+  价格不来自请求体 → 无改价面。
+- **限流**：下单端点 `@Throttle({ default: { limit: 5, ttl: 60000 } })` +
+  `accountRateLimitService.checkLimit('order_create', userId)` 双限流（ADR-0066 / 等保 8.1.4.1）。
+- **证书读取**：`wechat-pay.gateway.ts` 的 `fs.readFileSync(certPath/keyPath)` 路径来自
+  `configService.get('wechatPay.certPath'/'keyPath')`（服务端配置，非用户输入）。
+- **管理端**：`admin/billing/*` 类级 `@UseGuards(PermissionsGuard)` + 逐路由
+  `@RequirePermissions([SYSTEM_BILLING_READ | SYSTEM_BILLING_WRITE])`。
