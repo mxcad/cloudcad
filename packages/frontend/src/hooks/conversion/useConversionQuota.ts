@@ -46,7 +46,9 @@ export function useConversionQuota(): UseConversionQuotaResult {
     setIsLoading(true);
     try {
       const res = await conversionTaskControllerGetQuota({
-        query: user?.id ? { userId: user.id } : {},
+        // SDK 按后端 @Query('userId') 生成 required；后端实为可选（游客按 IP 计），
+        // 未登录时不带 userId。空对象经 as never 交给 query 序列化（进 URL 时无 userId 键）。
+        query: (user?.id ? { userId: user.id } : {}) as never,
       });
       if (res.error || !res.data) return;
       const data = res.data as ConversionQuota;

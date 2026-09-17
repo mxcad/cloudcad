@@ -56,8 +56,20 @@ export function setCurrentShareToken(token: string | null): void {
 /** 引擎的默认空模板文件名：currentFileName 停留在这两个值说明还没有真正打开过图纸 */
 const EMPTY_DOCUMENT_NAMES = ['empty_template.mxweb', 'empty.mxweb'];
 
-const DOCUMENT_LOADED_TIMEOUT_MS = 15_000;
+/**
+ * 等待「当前文档加载完成」的超时（ms）。只用于等默认空模板这一次加载，
+ * 与打开图纸的 60s 超时不是一个量级。引擎一旦派发过 openFileComplete
+ * （成功或失败），waitForDocumentLoaded 会立刻返回而不等这个超时；只有
+ * 引擎确实卡在初始加载（如默认模板的空闲回调被主线程饿死）才走到这里，
+ * 超时后照常继续打开目标图纸。
+ */
+const DOCUMENT_LOADED_TIMEOUT_MS = 3_000;
 
+/**
+ * getMxDrawObject 就绪重试次数与间隔：mxcadApplicationCreatedMxCADObject 早于内部
+ * mxdrawObject 就绪，直接取会抛 "reading 'mxdrawObject'"。总等待 3s，之后才退回
+ * 无结果码的 McObject 层兜底。
+ */
 const FILE_OPEN_LISTENER_RETRIES = 30;
 const FILE_OPEN_LISTENER_RETRY_DELAY_MS = 100;
 
@@ -82,12 +94,26 @@ export function hasDocumentLoaded(manager: {
  * 引擎的 hideLoading 受 _isStopLoading 单向闩锁保护，重叠的第二次
  * openWebFile 会锁死首次打开的 hideLoading/callOpenFileComplete →
  * loading 永久转圈。所有打开入口都先等这里再发打开命令。
+ *
+ * 引擎用 requestIdleCallback 触发默认模板的打开，完全可能在本函数订阅事件之前就
+ * 已经派发完 openFileComplete——那种情况订阅永远收不到，会白等满超时拖慢首开。
+ * 故先查引擎已结算的初始加载（成功/失败都计），有就直接返回结果。
+ *
+ * getOpenSettled 只在「还没发起过任何用户打开」时返回非 0：openFile 派发 __openWebFile__
+ * 即返回，引擎加载仍在进行，若拿历史结算记录跳过等待，连续点开会发起重叠打开、锁死引擎。
  */
 export async function waitForDocumentLoaded(
-  manager: { getCurrentFileName(): string | null },
+  manager: {
+    getCurrentFileName(): string | null;
+    getOpenSettled?(): { count: number; ok: boolean };
+  },
   timeoutMs: number = DOCUMENT_LOADED_TIMEOUT_MS
 ): Promise<boolean> {
   if (hasDocumentLoaded(manager)) return true;
+
+  const settledInfo = manager.getOpenSettled?.();
+  if (settledInfo && settledInfo.count > 0) return settledInfo.ok;
+
   let settled = false;
   let timedOut = false;
   await new Promise<void>((resolve) => {
@@ -279,10 +305,35 @@ export class MxCADInstanceManager {
   private engineListenersInstalled = false;
   /** openFileComplete 监听只挂一次，避免重复消费 pendingOpenInfo */
   private fileOpenListenerAttached = false;
+  /** McObject 层「初始加载已结算」探测只挂一次：不重复挂载 */
+  private settledProbeAttached = false;
+  /** 初始加载（默认空模板）是否已派发过 openFileComplete（成功/失败都计） */
+  private initialLoadSettled = false;
+  /** 初始加载是否成功；探测层事件无结果码，故探测触发时保持 false */
+  private initialLoadOk = false;
+  /** 是否已发起过用户打开：初始加载结算只对首开有意义，之后不得用于跳过等待 */
+  private userOpenDispatched = false;
   private readonly openFlow: MxCADOpenFlow;
 
   constructor() {
     this.openFlow = new MxCADOpenFlow(this);
+  }
+
+  /**
+   * 初始加载（默认空模板）是否已结算。只有「还没发起过任何用户打开」时才有意义：
+   * 引擎在订阅建立前就派发了初始 openFileComplete 时，waitForDocumentLoaded 不会白等超时；
+   * 一旦已有用户打开在排队，就必须等那次的 OPEN_COMPLETE（openFile 派发即返回，
+   * 引擎加载仍在进行），不能用历史结算记录跳过等待——重叠打开会锁死引擎。
+   */
+  getOpenSettled(): { count: number; ok: boolean } {
+    if (this.userOpenDispatched) return { count: 0, ok: false };
+    return { count: this.initialLoadSettled ? 1 : 0, ok: this.initialLoadOk };
+  }
+
+  private settleInitial(ok: boolean): void {
+    if (this.userOpenDispatched) return;
+    this.initialLoadSettled = true;
+    this.initialLoadOk = ok;
   }
 
   async initialize(): Promise<MxCADView> {
@@ -318,9 +369,12 @@ export class MxCADInstanceManager {
     });
     return previous
       .catch(() => undefined)
-      .then(() =>
-        this.isReady() ? waitForDocumentLoaded(this) : Promise.resolve(true)
-      )
+      .then(() => {
+        this.userOpenDispatched = true;
+        return this.isReady()
+          ? waitForDocumentLoaded(this)
+          : Promise.resolve(true);
+      })
       .then(run)
       .then(
         (result) => {
@@ -338,12 +392,35 @@ export class MxCADInstanceManager {
     retries: number = FILE_OPEN_LISTENER_RETRIES
   ): void {
     if (this.fileOpenListenerAttached) return;
+
+    // McObject 层探测立即挂载，不等重试：MxDrawObject 要重试最多 3s（30×100ms）才拿到，
+    // 而默认空模板的 openFileComplete 往往就在这 3s 内派发完——监听器还没挂上就漏掉了，
+    // waitForDocumentLoaded 只能干等满超时，首开被固定拖慢。
+    // 该层事件没有结果码，只用来判定「初始加载已结束」，不消费 pendingOpenInfo、不跑副作用；
+    // 结果码语义仍由下方 MxDrawObject 层监听负责。
+    if (!this.settledProbeAttached) {
+      this.settledProbeAttached = true;
+      try {
+        this.mxcadView?.mxcad?.on('openFileComplete', () => {
+          this.settleInitial(false);
+        });
+      } catch (error) {
+        this.settledProbeAttached = false;
+        handleError(
+          error,
+          'mxcadManager: attachFileOpenListener（McObject 层结算探测挂载失败）'
+        );
+      }
+    }
+
     // MxDrawObject 层 openFileComplete 携带打开结果码（0=成功，非 0=失败）；
     // McObject 层同名事件转发时丢失该参数（callEvent 只传实例），无法区分成败。
     // 失败不得消费待打开会话/记录当前文件状态（currentFileInfo/currentFileName/title），
     // 仅成功才 openSession + 联动副作用；失败路径由 MxCADOpenFlow 的 retCall（iRet!==0）
     // 统一收尾（回滚引擎 URL + 清理待生效会话）。
     const onOpen = async (iResult: number) => {
+      // 成功/失败都计入初始加载已结算：引擎一派发就算「已结束」
+      this.settleInitial(iResult === 0);
       if (iResult !== 0) {
         // 打开失败（含首次进入的 config.openFile 初始加载失败）：不记录当前文件状态
         // （不 openSession），但引擎会把标题置为 URL 尾部的 mxweb 内部访问文件名

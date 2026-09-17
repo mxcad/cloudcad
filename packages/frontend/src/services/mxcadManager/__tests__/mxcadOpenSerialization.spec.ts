@@ -135,6 +135,7 @@ import {
   hasDocumentLoaded,
   waitForDocumentLoaded,
 } from '../mxcadInstanceManager';
+import { getFileInfo } from '../mxcadHelpers';
 
 type InstanceInternals = {
   mxcadView: unknown;
@@ -143,6 +144,10 @@ type InstanceInternals = {
   openTail: Promise<void>;
   engineListenersInstalled: boolean;
   fileOpenListenerAttached: boolean;
+  settledProbeAttached: boolean;
+  userOpenDispatched: boolean;
+  attachFileOpenListener: (retries?: number) => void;
+  settleInitial: (ok: boolean) => void;
   createInstance: () => Promise<void>;
   openFlow: {
     openFileCalls: Array<{ url: string }>;
@@ -342,6 +347,122 @@ describe('waitForDocumentLoaded — 加载等待与超时兜底', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  })
+  it('引擎已在订阅前派发完成（成功）时零等待返回，不依赖事件订阅', async () => {
+    // 回归：默认模板由引擎 requestIdleCallback 打开，完全可能在订阅建立前就完成，
+    // 那种情况订阅收不到事件会白等满超时拖慢首开。
+    const manager = {
+      getCurrentFileName: () => 'empty_template.mxweb',
+      getOpenSettled: () => ({ count: 1, ok: true }),
+    };
+    const start = performance.now();
+    await expect(waitForDocumentLoaded(manager, 30_000)).resolves.toBe(true);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+
+  it('引擎已派发失败结果码时零等待返回 false，不等满超时', async () => {
+    // 失败（非 0）同样算「初始加载已结束」：不该被当成"还在加载"继续等。
+    const manager = {
+      getCurrentFileName: () => 'empty_template.mxweb',
+      getOpenSettled: () => ({ count: 1, ok: false }),
+    };
+    const start = performance.now();
+    await expect(waitForDocumentLoaded(manager, 5_000)).resolves.toBe(false);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+});
+
+describe('初始加载结算：成功与失败都算已结束', () => {
+  it('getOpenSettled 只记初始加载一次，MxDrawObject 层结果码决定 ok', async () => {
+    const manager = new MxCADInstanceManager();
+    const handlers = new Map<string, (iResult: number) => Promise<void>>();
+    internalsOf(manager).mxcadView = {
+      mxcad: {
+        on: vi.fn(),
+        getCurrentFileName: () => 'empty_template.mxweb',
+        getMxDrawObject: () => ({
+          addEvent: (
+            name: string,
+            handler: (iResult: number) => Promise<void>
+          ) => handlers.set(name, handler),
+        }),
+      },
+    };
+    internalsOf(manager).isInitialized = true;
+    // onOpen 成功路径会跑 handleOpenCompleteSideEffects；给 currentFileInfo 让它走
+    // setEditorFileName 分支并早退，不必再补 store 状态
+    vi.mocked(getFileInfo).mockReturnValue({
+      name: 'initial.mxweb',
+      fileId: 'initial-1',
+    } as never);
+    internalsOf(manager).attachFileOpenListener();
+
+    const onOpen = handlers.get('openFileComplete');
+    expect(onOpen).toBeDefined();
+    expect(manager.getOpenSettled()).toEqual({ count: 0, ok: false });
+
+    await onOpen!(7);
+    expect(manager.getOpenSettled()).toEqual({ count: 1, ok: false });
+
+    // 重复结算不重复计数：这是「初始加载是否已结束」的布尔事实，不是打开次数
+    await onOpen!(0);
+    expect(manager.getOpenSettled()).toEqual({ count: 1, ok: true });
+  });
+
+  it('已发起用户打开后不再用初始结算记录跳过等待', async () => {
+    // 回归：openFile 派发 __openWebFile__ 即返回，引擎加载仍在进行。
+    // 若此时仍能用「初始加载已结算」跳过等待，连续点开会发起重叠打开、锁死引擎。
+    const manager = new MxCADInstanceManager();
+    internalsOf(manager).mxcadView = {
+      mxcad: {
+        on: vi.fn(),
+        getCurrentFileName: () => 'empty_template.mxweb',
+        getMxDrawObject: () => ({ addEvent: () => undefined }),
+      },
+    };
+    internalsOf(manager).isInitialized = true;
+    internalsOf(manager).attachFileOpenListener();
+    internalsOf(manager).settleInitial(true);
+    expect(manager.getOpenSettled()).toEqual({ count: 1, ok: true });
+
+    internalsOf(manager).userOpenDispatched = true;
+    internalsOf(manager).settleInitial(true);
+    expect(manager.getOpenSettled()).toEqual({ count: 0, ok: false });
+  });
+
+  it('MxDrawObject 未就绪时立即挂 McObject 层结算探测，不等 3s 重试窗口', async () => {
+    // 回归（用户实测首开固定慢 3s）：MxDrawObject 层监听要重试 30×100ms 才挂上，
+    // 默认空模板的 openFileComplete 往往在这 3s 内就派发完——监听器还没挂上就漏掉，
+    // waitForDocumentLoaded 只能等满超时。故 McObject 层探测须在首次调用时就挂。
+    const manager = new MxCADInstanceManager();
+    const mcHandlers = new Map<string, () => void>();
+    internalsOf(manager).mxcadView = {
+      mxcad: {
+        getCurrentFileName: () => 'empty_template.mxweb',
+        getMxDrawObject: () => {
+          throw new Error(
+            "Cannot read properties of undefined (reading 'mxdrawObject')"
+          );
+        },
+        on: (name: string, handler: () => void) =>
+          mcHandlers.set(name, handler),
+      },
+    };
+    internalsOf(manager).isInitialized = true;
+
+    internalsOf(manager).attachFileOpenListener();
+
+    // 第一次调用就挂上 McObject 层探测（此时 MxDrawObject 层还没拿到）
+    expect(internalsOf(manager).settledProbeAttached).toBe(true);
+    const probe = mcHandlers.get('openFileComplete');
+    expect(probe).toBeDefined();
+
+    // 探测捕获到 openFileComplete 即计入已结算 → waitForDocumentLoaded 零等待
+    probe!();
+    expect(manager.getOpenSettled()).toEqual({ count: 1, ok: false });
+    const start = performance.now();
+    await expect(waitForDocumentLoaded(manager, 30_000)).resolves.toBe(false);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 });
 

@@ -226,8 +226,13 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
 
       internals(retryManager).attachFileOpenListener();
 
-      // 首次失败：既没挂上 MxDrawObject 层（带结果码），也没退回 McObject 层（丢结果码）
-      expect(view.mxcad.on).not.toHaveBeenCalled();
+      // 首次失败：没挂上 MxDrawObject 层（带结果码），也没退回丢结果码的 McObject 层；
+      // 但立即挂上一个只记「初始加载已结束」的结算探测（无结果码、不消费 pendingOpenInfo）
+      expect(view.mxcad.on).toHaveBeenCalledTimes(1);
+      expect(view.mxcad.on).toHaveBeenCalledWith(
+        'openFileComplete',
+        expect.any(Function)
+      );
       expect(handleError).not.toHaveBeenCalled();
 
       for (
@@ -263,10 +268,14 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
       (retryManager as unknown as { mxcadView: unknown }).mxcadView = view;
 
       internals(retryManager).attachFileOpenListener(2);
-      expect(view.mxcad.on).not.toHaveBeenCalled();
+      // 首次调用就挂结算探测（无结果码），此时还没有真正的结果码兜底
+      expect(view.mxcad.on).toHaveBeenCalledTimes(1);
+      expect(handleError).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(200);
 
+      // 重试耗尽：第二次 McObject 层挂载才是真正的结果码兜底（会消费 pendingOpenInfo）
+      expect(view.mxcad.on).toHaveBeenCalledTimes(2);
       expect(view.mxcad.on).toHaveBeenCalledWith(
         'openFileComplete',
         expect.any(Function)
