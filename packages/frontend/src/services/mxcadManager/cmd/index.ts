@@ -27,3 +27,4 @@ CommandRegistry.register(new OpenFileNoCacheCommand());
 CommandRegistry.register(new SaveToCloudCommand());
 CommandRegistry.register(new InsertImageCommand());
 CommandRegistry.register(new ShareCommand());
+CommandRegistry.register(new ToggleFileQueueCommand());
