@@ -98,8 +98,13 @@ export class LoginService {
       );
     }
 
-    // 先认证（密码校验）后处理注销状态：错误密码的尝试不得触发自动恢复等 DB 副作用
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // 先认证（密码校验）后处理注销状态：错误密码的尝试不得触发自动恢复等 DB 副作用。
+    // 无密码账号（微信注册等 password=null）：bcrypt.compare(hash=null) 会 reject
+    // 抛异常 → 500，破坏下方防枚举统一文案（攻击者可用 500 vs 401 区分此类账号存在性），
+    // 故按「密码错误」同路径处理（计数 + 通用 401）
+    const isPasswordValid = user.password
+      ? await bcrypt.compare(password, user.password)
+      : false;
     if (!isPasswordValid) {
       this.logger.warn(`登录失败 - 密码错误: ${account}`);
       // 失败锁定计数（#416）：连续失败达阈值 → 锁 30 分钟

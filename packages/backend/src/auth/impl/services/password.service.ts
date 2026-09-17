@@ -25,7 +25,11 @@ export class PasswordService implements IPasswordService {
   async validateUser(email: string, password: string): Promise<Record<string, unknown> | null> {
     const user = await this.userRepo.findByEmail(email);
     if (user && user.status === 'ACTIVE') {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      // 无密码账号（微信注册等 password=null）：bcrypt.compare(hash=null) 会 reject
+      // 抛异常 → 500，故按「密码错误」处理（返回 null，与错误密码同语义）
+      const isPasswordValid = user.password
+        ? await bcrypt.compare(password, user.password)
+        : false;
       if (isPasswordValid) {
         const { password: _, ...result } = user;
         return result as any;

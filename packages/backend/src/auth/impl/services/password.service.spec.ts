@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcryptjs';
 import { PasswordService } from './password.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
@@ -164,6 +165,41 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
 
     it('缺少 email 与 phone 时抛出参数错误', async () => {
       await expect(service.forgotPassword()).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('validateUser（无密码账号防 500）', () => {
+    it('ACTIVE 但 password=null（微信注册）：返回 null 而非抛 500，且不调用 bcrypt.compare', async () => {
+      mockUserRepo.findByEmail.mockResolvedValue({
+        id: 'user-1',
+        email: 'wx@example.com',
+        username: 'wxuser',
+        password: null,
+        status: 'ACTIVE',
+      });
+
+      const result = await service.validateUser('wx@example.com', 'anything');
+
+      expect(result).toBeNull();
+      // bcryptjs 对 null hash 会 reject（→ 500），修复后不得调用 compare
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+    });
+
+    it('ACTIVE 且有密码：密码正确返回用户（不含 password 字段）', async () => {
+      mockUserRepo.findByEmail.mockResolvedValue({
+        id: 'user-2',
+        email: 'ok@example.com',
+        username: 'okuser',
+        password: 'hashed-password',
+        status: 'ACTIVE',
+      });
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.validateUser('ok@example.com', 'password123');
+
+      expect(result).not.toBeNull();
+      expect((result as Record<string, unknown>).password).toBeUndefined();
+      expect((result as Record<string, unknown>).id).toBe('user-2');
     });
   });
 });

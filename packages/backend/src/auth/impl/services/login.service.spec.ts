@@ -156,6 +156,25 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     ).rejects.toThrow(new UnauthorizedException('账号或密码错误'));
   });
 
+  it('无密码账号（微信注册 password=null）密码登录：不抛 500，走防枚举通用 401 并计数', async () => {
+    service = await compileModule();
+    mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+      ...loginUser,
+      password: null,
+    });
+
+    await expect(
+      service.login({ account: '13800138000', password: 'password123' })
+    ).rejects.toThrow(new UnauthorizedException('账号或密码错误'));
+    // bcryptjs 对 null hash 会 reject（→ 500），修复后不得调用 compare
+    expect(bcrypt.compare).not.toHaveBeenCalled();
+    // 与密码错误同路径：失败计数 + 不发 token
+    expect(mockAccountRateLimitService.recordLoginFailure).toHaveBeenCalledWith(
+      '13800138000'
+    );
+    expect(mockAuthTokenService.generateTokens).not.toHaveBeenCalled();
+  });
+
   it('calls sync hook before looking up the local user', async () => {
     service = await compileModule();
     mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(loginUser);
