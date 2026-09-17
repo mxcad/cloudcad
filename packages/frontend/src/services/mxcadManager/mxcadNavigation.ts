@@ -2,10 +2,6 @@ import { handleError } from '@/utils/errorHandler';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { getFileInfo } from './mxcadHelpers';
 import { isCadEditorEntry } from '@/utils/cadEditorRoute';
-import {
-  confirmExitCollaborationIfNeeded,
-  checkAndConfirmUnsavedChanges,
-} from './mxcadCollaboration';
 
 const NAVIGATION_PATHS = {
   PROJECTS_LIST: '/projects',
@@ -67,11 +63,8 @@ function calculateReturnPath(
   return NAVIGATION_PATHS.PROJECTS_LIST;
 }
 
-export const returnToCloudMapManagement = async () => {
-  const collabOk = await confirmExitCollaborationIfNeeded();
-  if (!collabOk) return;
-  const canProceed = await checkAndConfirmUnsavedChanges();
-  if (!canProceed) return;
+// 目标页在新标签页打开，当前标签页仍停留在 CAD 编辑器：不退出协同会话，也不拦截未保存更改
+export const returnToCloudMapManagement = () => {
   try {
     const { openedBackUrl, openedInitialFileId } = useCADEditorStore.getState();
     const fileInfo = getFileInfo();
