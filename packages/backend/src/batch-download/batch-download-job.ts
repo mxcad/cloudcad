@@ -50,18 +50,54 @@ export class BatchDownloadJob {
     return status === 'PENDING' || status === 'PROCESSING';
   }
 
+  /**
+   * 合法状态迁移边（ADR-0038）。终态出度为空——终态不可再迁移，
+   * 唯一例外是 FAILED→PENDING（retryTask 重试复位）。
+   *
+   * 此前只有一条 `isTerminal(current)` 规则：既无法表达「哪些边非法」
+   * （PENDING→COMPLETED、PROCESSING→PENDING 都被放行），也把 FAILED→PENDING
+   * 挡死导致 retryTask 只能绕过 transition 直写 DB。
+   */
+  static readonly ALLOWED_EDGES: Readonly<
+    Record<BatchJobStatus, readonly BatchJobStatus[]>
+  > = {
+    PENDING: ['PROCESSING', 'FAILED', 'CANCELLED'],
+    PROCESSING: ['COMPLETED', 'FAILED', 'CANCELLED'],
+    COMPLETED: [],
+    FAILED: ['PENDING'],
+    CANCELLED: [],
+  };
+
+  static isAllowedEdge(from: BatchJobStatus, to: BatchJobStatus): boolean {
+    return BatchDownloadJob.ALLOWED_EDGES[from]?.includes(to) ?? false;
+  }
+
   isTerminated(jobId: string): boolean {
     const runtime = this.activeJobs.get(jobId);
     return runtime ? BatchDownloadJob.isTerminal(runtime.status) : false;
   }
 
   async start(jobId: string): Promise<void> {
+    const existing = this.activeJobs.get(jobId);
+    if (existing && !BatchDownloadJob.isTerminal(existing.status)) {
+      // 重入防护：同一 job 已在跑（PENDING/PROCESSING），重复 start 会覆盖
+      // AbortController 与内存状态，旧协程仍持有自己的 controller 跑完，
+      // 其 finally 又会清掉新写入的 runtime——两者互相踩踏。
+      this.logger.warn(
+        `Job already running, ignoring duplicate start: ${jobId}`
+      );
+      return;
+    }
     const controller = new AbortController();
     const ctx = this.createContext(jobId);
     const runtime: JobRuntime = { controller, status: 'PENDING', ctx };
     this.activeJobs.set(jobId, runtime);
-    this.processJob(jobId, runtime).finally(() => {
-      this.activeJobs.delete(jobId);
+    void this.processJob(jobId, runtime).finally(() => {
+      // 只删自己：重试在旧 runtime 尚未收尾时就绪后，Map 里已是新 runtime，
+      // 无条件 delete 会把仍在跑的新 runtime 摘掉（其状态回退为按 DB 查询）。
+      if (this.activeJobs.get(jobId) === runtime) {
+        this.activeJobs.delete(jobId);
+      }
     });
   }
 
@@ -92,9 +128,16 @@ export class BatchDownloadJob {
       if (!job) return false;
       current = job.status;
     }
-    if (BatchDownloadJob.isTerminal(current)) return false;
+    if (!BatchDownloadJob.isAllowedEdge(current, to)) {
+      this.logger.warn(
+        `Illegal transition rejected: ${jobId} ${current} → ${to}`
+      );
+      return false;
+    }
 
-    const data: Prisma.BatchDownloadJobUpdateInput = { status: to };
+    const data: Prisma.BatchDownloadJobUpdateManyMutationInput = {
+      status: to,
+    };
     if (payload) {
       if (payload.completedCount !== undefined)
         data.completedCount = payload.completedCount;
@@ -118,7 +161,20 @@ export class BatchDownloadJob {
         data.completedAt = payload.completedAt;
       if (payload.expiresAt !== undefined) data.expiresAt = payload.expiresAt;
     }
-    await this.prisma.batchDownloadJob.update({ where: { id: jobId }, data });
+
+    // 条件更新：where 带上 current 状态，迁移合法性由数据库判定，
+    // 不再依赖上面的读快照。否则两个收尾并发时都能通过 isTerminal 检查、
+    // 后写覆盖先写，「首达终态者胜」落不到库里。
+    const result = await this.prisma.batchDownloadJob.updateMany({
+      where: { id: jobId, status: current },
+      data,
+    });
+    if (result.count === 0) {
+      this.logger.warn(
+        `Transition lost race, not applied: ${jobId} ${current} → ${to}`
+      );
+      return false;
+    }
     if (runtime) runtime.status = to;
 
     this.progressTracker.emitProgress(
@@ -131,6 +187,22 @@ export class BatchDownloadJob {
       payload?.errors
     );
     return true;
+  }
+
+  /**
+   * 重试复位：FAILED → PENDING，清零上一轮的计数/错误/终态时间戳。
+   *
+   * 走 transition 而非直写 DB（ADR-0038：所有状态写入一律经 transition）：
+   * updateMany 的 where 带 status=FAILED，并发双重试只有第一个 count=1，
+   * 第二个拿到 false，不再出现两条独立 processJob 互相覆盖同一行的情况。
+   */
+  async resetForRetry(jobId: string): Promise<boolean> {
+    return this.transition(jobId, 'PENDING', {
+      completedCount: 0,
+      errorCount: 0,
+      errors: [],
+      completedAt: null,
+    });
   }
 
   private async processJob(jobId: string, runtime: JobRuntime): Promise<void> {

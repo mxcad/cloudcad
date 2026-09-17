@@ -230,10 +230,12 @@ export class BatchDownloadService {
   }
 
   /**
-   * 重试 FAILED 任务：fileList + mode 已持久化，重置状态为 PENDING 并清空计数后
-   * 重新 start（终态任务不能经 transition 重置——isTerminal 拒绝终态→非终态，
-   * 故直接更新 DB；start 设内存态 PENDING 后 load→transition(PROCESSING) 放行）。
+   * 重试 FAILED 任务：fileList + mode 已持久化，复位到 PENDING 后重新 start。
    * 仅 FAILED 任务可重试（COMPLETED 无需重试，CANCELLED/进行中不可）。
+   *
+   * 复位经 BatchDownloadJob.resetForRetry（ADR-0038：状态写入一律经 transition），
+   * 用 updateMany + where status=FAILED 做原子条件更新：并发双重试只有第一个
+   * 成功，第二个拿 409，不再出现两条独立 processJob 写同一行。
    */
   async retryTask(
     taskId: string,
@@ -252,16 +254,10 @@ export class BatchDownloadService {
     if (this.hasExportFormat(fileList)) {
       await this.restrictionEngine.assertExportDownloadAllowed(userId);
     }
-    await this.prisma.batchDownloadJob.update({
-      where: { id: taskId },
-      data: {
-        status: BatchJobStatus.PENDING,
-        completedCount: 0,
-        errorCount: 0,
-        errors: null,
-        completedAt: null,
-      },
-    });
+    const reset = await this.batchDownloadJob.resetForRetry(taskId);
+    if (!reset) {
+      throw new ConflictException('Task is no longer in a retryable state');
+    }
     this.batchDownloadJob.start(taskId).catch((err) => {
       this.logger.error(
         `Job retry failed: ${taskId} - ${(err as Error).message}`

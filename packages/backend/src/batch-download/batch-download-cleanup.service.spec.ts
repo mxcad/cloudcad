@@ -109,7 +109,26 @@ describe('BatchDownloadCleanupService', () => {
 				.where;
 			expect(where.status).toBe(BatchJobStatus.COMPLETED);
 			expect(where.zipPath).toEqual({ not: null });
-			expect(where.completedAt.lte).toBeInstanceOf(Date);
+			// 优先按 expiresAt 判定；历史行没有该列时回落按 completedAt
+			expect(where.OR).toEqual([
+				expect.objectContaining({
+					expiresAt: expect.objectContaining({
+						lte: expect.any(Date),
+					}),
+				}),
+				expect.objectContaining({
+					expiresAt: null,
+					completedAt: expect.objectContaining({
+						lte: expect.any(Date),
+					}),
+				}),
+			]);
+			// 回落窗口同样来自 zipRetentionHours，不是写死的 24 小时
+			const legacyCutoff = where.OR[1].completedAt.lte as Date;
+			const expected = Date.now() - 24 * 60 * 60 * 1000;
+			expect(Math.abs(legacyCutoff.getTime() - expected)).toBeLessThan(
+				5000
+			);
 		});
 
 		it('should skip when batchDownloadCleanupEnabled is false', async () => {

@@ -111,14 +111,20 @@ export class BatchDownloadCleanupService {
    */
   private async cleanupExpiredZipsTask(): Promise<void> {
     const startedAt = Date.now();
-    const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - this.zipRetentionHours);
+    const now = new Date();
+    // 历史行（expiresAt 列上线前已完成）没有到期时刻，回落按 completedAt 判断
+    const legacyCutoff = new Date(
+      now.getTime() - this.zipRetentionHours * 60 * 60 * 1000
+    );
 
     const expiredJobs = await this.prisma.batchDownloadJob.findMany({
       where: {
         status: BatchJobStatus.COMPLETED,
-        completedAt: { lte: cutoff },
         zipPath: { not: null },
+        OR: [
+          { expiresAt: { lte: now } },
+          { expiresAt: null, completedAt: { lte: legacyCutoff } },
+        ],
       },
     });
 

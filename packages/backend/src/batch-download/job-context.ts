@@ -20,8 +20,9 @@ export interface JobTransitionPayload {
   zipSize?: number;
   /** individual 模式产物清单（单文件直出下载端点依据） */
   itemsManifest?: IndividualItemManifest[];
-  completedAt?: Date;
-  expiresAt?: Date;
+  /** 重试复位时传 null 清掉上一轮的终态时间戳 */
+  completedAt?: Date | null;
+  expiresAt?: Date | null;
 }
 
 /** individual 模式产物清单项：temp=true 为转换产物（下载后可删），false 为源文件（绝不删除） */
@@ -67,6 +68,8 @@ export class JobContext {
   errorCount = 0;
   realTotalCount = 0;
   exportDir = '';
+  /** 产物保留时长（小时），来自 batchDownload.zipRetentionHours —— 与清理任务的判据同一配置源 */
+  private retentionHours = 24;
   expandedItems: Array<BatchFileItem & { relativePath?: string }> = [];
   /** 下载模式：zip=打包（默认）；individual=单文件直出 */
   mode: 'zip' | 'individual' = 'zip';
@@ -100,14 +103,21 @@ export class JobContext {
       0
     );
 
-    this.exportDir = this.deps.configService.get('batchDownload', {
+    const batchConfig = this.deps.configService.get('batchDownload', {
       infer: true,
-    }).exportDir;
+    });
+    this.exportDir = batchConfig.exportDir;
+    this.retentionHours = batchConfig.zipRetentionHours || 24;
 
     const accepted = await this.transitionFn('PROCESSING', {
       totalCount: this.realTotalCount,
     });
     return accepted;
+  }
+
+  /** 产物到期时刻：与 cleanupExpiredZipsTask 的 expiresAt 判据同一配置源 */
+  private artifactExpiresAt(): Date {
+    return new Date(Date.now() + this.retentionHours * 60 * 60 * 1000);
   }
 
   async handleAbort(): Promise<void> {
@@ -233,7 +243,7 @@ export class JobContext {
       zipPath,
       zipSize,
       completedAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: this.artifactExpiresAt(),
     });
     if (!accepted) {
       // 已终态（如并发取消），清除刚生成的孤儿 ZIP，避免泄漏
@@ -283,7 +293,7 @@ export class JobContext {
       errors: this.errors,
       itemsManifest: manifest,
       completedAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: this.artifactExpiresAt(),
     });
   }
 

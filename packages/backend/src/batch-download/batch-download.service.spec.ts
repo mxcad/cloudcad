@@ -24,6 +24,7 @@ function createMockBatchDownloadJob() {
   return {
     start: jest.fn().mockResolvedValue(undefined),
     cancel: jest.fn().mockResolvedValue(true),
+    resetForRetry: jest.fn().mockResolvedValue(true),
   };
 }
 
@@ -527,19 +528,31 @@ describe('BatchDownloadService', () => {
 
       const result = await service.retryTask('task-1', 'user-1');
       expect(result).toEqual({ taskId: 'task-1' });
-      // 重置状态为 PENDING + 清空计数
-      expect(mockPrisma.batchDownloadJob.update).toHaveBeenCalledWith({
-        where: { id: 'task-1' },
-        data: {
-          status: 'PENDING',
-          completedCount: 0,
-          errorCount: 0,
-          errors: null,
-          completedAt: null,
-        },
-      });
+      // 复位一律经 transition（ADR-0038），service 层不再直写 DB
+      expect(mockJob.resetForRetry).toHaveBeenCalledWith('task-1');
+      expect(mockPrisma.batchDownloadJob.update).not.toHaveBeenCalled();
       // 重新 start 处理
       expect(mockJob.start).toHaveBeenCalledWith('task-1');
+    });
+
+    it('should reject with ConflictException when the row is no longer retryable', async () => {
+      mockPrisma.batchDownloadJob.findUnique.mockResolvedValue({
+        id: 'task-1',
+        userId: 'user-1',
+        status: 'FAILED',
+      });
+      const mockJob = createMockBatchDownloadJob();
+      mockJob.resetForRetry.mockResolvedValue(false);
+      const service = createService({
+        prisma: mockPrisma,
+        diskMonitor: mockDiskMonitor,
+        batchDownloadJob: mockJob,
+      });
+
+      await expect(service.retryTask('task-1', 'user-1')).rejects.toThrow(
+        ConflictException
+      );
+      expect(mockJob.start).not.toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException for non-owner', async () => {
