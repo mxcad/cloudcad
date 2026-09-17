@@ -235,6 +235,7 @@
 - [ ] **G-01 UnifiedFileList 列表模式 ellipsis 死控件**：并入 A-03（接 ActionSheet）。
 - [ ] **G-02 新增文案 i18n**：所有新 UI 文本走 `t()` → `pnpm i18n`（extract+baidu translate+compile），ko 翻译质量需人工校对（本次已发现 baidu 把 `{pct}` 译成乱码的坑）。
 - [ ] **G-03 集成测试/单测**：每条 P0/P1 修复带回归测试（AGENTS.md 集成测试规则）。
+- [ ] **G-04 PC 通知中心（notice-center）前端孤儿代码去留**：⏸ 待确认。`packages/frontend/src/components/notice/` 下 `NoticeProvider.tsx` + `useNoticeStream.ts`（已跟踪）依赖 api-sdk 的 `NoticeResponseDto` / `noticeCenterControllerGetCurrent` / `noticeCenterControllerIssueTicket`，但**后端 notice-center 在全部 git 历史中从未存在**（`git ls-files packages/backend | grep -i notice` = 0；`git log --all --diff-filter=A` 只命中前端 2 文件），api-sdk 亦无对应导出。且 `NoticeProvider` **从未在 `App.tsx` 挂载**、`useNotices` 全仓零调用者 —— 属从未交付、从未接线的功能。后果：`pnpm type-check` 残留 4 个错误（TS2724 ×2 + TS2305 ×2），**不可通过前端编辑解决**。两条出路：① 删死代码（符合 AGENTS.md「无消费者代码删或标注」，但 `NoticeProvider.tsx`/`useNoticeStream.ts` 已跟踪，删除后无法 `git restore`，不可逆）；② 重建后端 notice-center（等于凭空发明功能规格：数据模型/级别/上下线/管理入口均无原始定义可依，且落地后无创建公告的途径，属「上线但无用」）。**当前保留文件 + 如实保留 4 个错误**，不擅自删除他人已跟踪代码，也不发明后端规格。
 
 ---
 

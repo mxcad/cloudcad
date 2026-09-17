@@ -46,3 +46,18 @@ export const LOADING_TIMEOUT = 10_000;
  * 配合 react-query 重试：超时 reject → retry 3 次 → 最终 error 解锁交互。
  */
 export const REQUEST_TIMEOUT_MS = 20_000;
+
+/**
+ * 公告已读（ack）TTL（24h）—— 到期后同一公告可再次提醒。
+ * NoticeProvider 的渲染周期内不做时间判断，故此常量不进组件依赖。
+ */
+export const NOTICE_ACK_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** 无 SSE 能力时的公告轮询间隔（30s）—— /notices/current 是公开低实时性接口 */
+export const NOTICE_POLL_INTERVAL_MS = 30_000;
+
+/** 公告 SSE 断流后的首次重连退避基数（5s），按 2 倍递增 */
+export const NOTICE_RECONNECT_BASE_MS = 5_000;
+
+/** 公告 SSE 重连退避上限（60s）—— 避免持续失败时空转打满服务端 */
+export const NOTICE_RECONNECT_MAX_MS = 60_000;

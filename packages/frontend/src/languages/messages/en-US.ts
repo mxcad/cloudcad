@@ -2426,5 +2426,10 @@ export default  {
     "1000127": "Source project does not allow cross-project transfer",
     "1000128": "Current project does not allow cross-project transfer",
     "1000129": "Source project policy does not allow {action}, blocked",
-    "1000130": "Current project policy does not allow {action}, blocked"
+    "1000130": "Current project policy does not allow {action}, blocked",
+    "1000131": "Switching account...",
+    "1000132": "Switching your login status",
+    "1000133": "Session transfer failed",
+    "1000134": "Missing transfer credential",
+    "1000135": "Session transfer failed, please retry"
 }
