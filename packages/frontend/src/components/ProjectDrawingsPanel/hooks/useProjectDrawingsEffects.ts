@@ -227,29 +227,37 @@ export function useProjectDrawingsEffects({
   useEffect(() => {
     if (!visible) return;
     const navigate = async () => {
-      if (!initialParentId || initialParentId.trim() === '' || isPersonalSpace)
+      if (!initialParentId || initialParentId.trim() === '') return;
+
+      let path: { id: string; name: string }[];
+      try {
+        path = await buildBreadcrumbPathRef.current(initialParentId);
+      } catch (error: unknown) {
+        handleError(error, 'ProjectDrawingsPanel: 导航到 parentId 失败');
         return;
+      }
+      if (path.length === 0) return;
+
+      // 目录归属：父目录回溯到的根决定当前图纸属于哪个空间。
+      // 面板只承载自己空间的目录——个人空间面板不得显示项目目录，反之亦然。
       if (personalSpaceId) {
-        const path = await buildBreadcrumbPathRef.current(initialParentId);
-        if (path[0]?.id === personalSpaceId) {
+        const inPersonalSpace = path[0]?.id === personalSpaceId;
+        if (isPersonalSpace && !inPersonalSpace) return;
+        if (!isPersonalSpace && inPersonalSpace) {
+          // 我的项目 tab：当前图纸不在任何项目内，回到项目列表
           setSelectedProjectId(null);
           setBreadcrumb([]);
           resetNodes();
           return;
         }
       }
-      try {
-        const path = await buildBreadcrumbPathRef.current(initialParentId);
-        if (path.length > 0) {
-          // 同步声明目录归属：项目根初始化（含已在飞的请求）不得再覆盖
-          parentNavigatedProjectIdRef.current = path[0]?.id || initialParentId;
-          setBreadcrumb(path);
-          setSelectedProjectId(path[0]?.id || initialParentId);
-          await loadNodesRef.current(initialParentId);
-        }
-      } catch (error: unknown) {
-        handleError(error, 'ProjectDrawingsPanel: 导航到 parentId 失败');
-      }
+
+      // 同步声明目录归属：项目根初始化（含已在飞的请求）不得再覆盖
+      const rootId = path[0]?.id || initialParentId;
+      parentNavigatedProjectIdRef.current = rootId;
+      setBreadcrumb(path);
+      setSelectedProjectId(rootId);
+      await loadNodesRef.current(initialParentId);
     };
     navigate();
   }, [visible, initialParentId, isPersonalSpace, personalSpaceId]);

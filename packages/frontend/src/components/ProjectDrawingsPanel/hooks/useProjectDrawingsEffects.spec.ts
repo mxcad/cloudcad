@@ -73,6 +73,8 @@ function renderEffects(
     projectId?: string;
     parentId?: string | null;
     tabId?: string;
+    isPersonalSpace?: boolean;
+    personalSpaceId?: string | null;
   } = { visible: true }
 ) {
   return renderHook(
@@ -81,18 +83,22 @@ function renderEffects(
       projectId,
       parentId,
       tabId,
+      isPersonalSpace = false,
+      personalSpaceId = null,
     }: {
       visible: boolean;
       projectId?: string;
       parentId?: string | null;
       tabId?: string;
+      isPersonalSpace?: boolean;
+      personalSpaceId?: string | null;
     }) =>
       useProjectDrawingsEffects({
         data,
         projectId,
         visible,
-        isPersonalSpace: false,
-        personalSpaceId: null,
+        isPersonalSpace,
+        personalSpaceId,
         parentId,
         tabId,
         libraryType: 'drawing',
@@ -286,5 +292,91 @@ describe('useProjectDrawingsEffects — 打开图纸后目录只加载一次（�
     expect(nodeControllerGetNode).toHaveBeenCalledWith({
       path: { nodeId: 'proj-root' },
     });
+  });
+});
+
+describe('useProjectDrawingsEffects — 目录归属判定（个人空间 / 我的项目）', () => {
+  const personalSpaceRoot = { id: 'ps-root', name: '个人空间' };
+  const personalSpacePath = [
+    personalSpaceRoot,
+    { id: 'ps-folder-1', name: '图纸目录' },
+  ];
+  const projectPath = [
+    { id: 'proj-root', name: '项目' },
+    { id: 'folder-1', name: '图纸目录' },
+  ];
+
+  function makeData(
+    breadcrumbPath: { id: string; name: string }[],
+    overrides: Record<string, unknown> = {}
+  ) {
+    const { data } = makeMockData({ isLibraryMode: false, ...overrides });
+    data.buildBreadcrumbPathRef.current = vi
+      .fn()
+      .mockResolvedValue(breadcrumbPath);
+    return data;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(nodeControllerGetNode).mockResolvedValue({
+      data: personalSpaceRoot,
+      error: null,
+    });
+  });
+
+  it('个人空间面板打开空间内图纸：定位到父目录，不再停在空间根', async () => {
+    const data = makeData(personalSpacePath);
+    renderEffects(data, {
+      visible: true,
+      parentId: 'ps-folder-1',
+      personalSpaceId: 'ps-root',
+      isPersonalSpace: true,
+      tabId: 'my-drawings',
+    });
+
+    await vi.waitFor(() => {
+      expect(data.loadNodesRef.current).toHaveBeenCalledWith('ps-folder-1');
+    });
+    expect(data.setBreadcrumb).toHaveBeenCalledWith(personalSpacePath);
+    expect(data.setSelectedProjectId).toHaveBeenCalledWith('ps-root');
+    // 归属判定只需回溯一次（buildBreadcrumbPath 逐级拉节点，重复调用是纯浪费）
+    expect(data.buildBreadcrumbPathRef.current).toHaveBeenCalledTimes(1);
+  });
+
+  it('当前打开的是项目文件时，个人空间面板不导航（不显示项目目录）', async () => {
+    const data = makeData(projectPath);
+    renderEffects(data, {
+      visible: true,
+      parentId: 'folder-1',
+      personalSpaceId: 'ps-root',
+      isPersonalSpace: true,
+      tabId: 'my-drawings',
+    });
+
+    await vi.waitFor(() => {
+      expect(data.buildBreadcrumbPathRef.current).toHaveBeenCalled();
+    });
+    expect(data.loadNodesRef.current).not.toHaveBeenCalled();
+    expect(data.setSelectedProjectId).not.toHaveBeenCalledWith('proj-root');
+    expect(data.setBreadcrumb).not.toHaveBeenCalledWith(projectPath);
+  });
+
+  it('我的项目面板打开个人空间图纸：退回项目列表（原有行为保留）', async () => {
+    const data = makeData(personalSpacePath, { selectedProjectId: 'proj-root' });
+    renderEffects(data, {
+      visible: true,
+      parentId: 'ps-folder-1',
+      personalSpaceId: 'ps-root',
+      isPersonalSpace: false,
+      tabId: 'my-project',
+    });
+
+    await vi.waitFor(() => {
+      expect(data.setSelectedProjectId).toHaveBeenCalledWith(null);
+    });
+    expect(data.setBreadcrumb).toHaveBeenCalledWith([]);
+    expect(data.resetNodes).toHaveBeenCalled();
+    expect(data.loadNodesRef.current).not.toHaveBeenCalled();
   });
 });

@@ -434,6 +434,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   currentOpenFileId={currentOpenFileId}
                   isModified={isModified}
                   parentId={currentOpenFileParentId}
+                  personalSpaceId={personalSpaceId}
                   visible={activeDrawingsSubTab === 'my-drawings'}
                   tabId="my-drawings"
                 />
