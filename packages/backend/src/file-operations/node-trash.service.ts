@@ -184,6 +184,18 @@ export class NodeTrashService {
         );
       }
 
+      // 个人空间是账号专属根容器，不可删除（与 deleteProject 的显式门禁一致）。
+      // 通用 DELETE /nodes/:id 端点无路由级权限装饰器，仅靠 PersonalPermissionStrategy
+      // （owner 放行任意动作）兜底，故 owner 可经此端点软删/硬删自己的个人空间及其
+      // 整棵子树（含物理存储），绕过 deleteProject 的「私人空间不支持删除操作」。
+      // 置于权限断言前：匿名内部调用（userId 为空）同样被拦。
+      if (node.nodeType === NodeType.PERSONAL_SPACE) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.file.private_space_no_delete') ??
+            '私人空间不支持删除操作'
+        );
+      }
+
       if (userId) {
         await this.nodeMutationGuard.assertMutationAllowed(userId, 'delete', {
           node: { id: nodeId },

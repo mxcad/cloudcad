@@ -284,6 +284,44 @@ describe('NodeTrashService', () => {
     });
   });
 
+  describe('deleteNode — 个人空间不可删除门禁（防通用 DELETE /nodes/:id 绕过 deleteProject 保护）', () => {
+    const personalSpaceMock = () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) =>
+        where.id === 'ps-1'
+          ? Promise.resolve({
+              id: 'ps-1',
+              nodeType: NodeType.PERSONAL_SPACE,
+              ownerId: 'user-1',
+              projectId: null,
+              path: null,
+              fileStatus: null,
+            })
+          : Promise.resolve(null)
+      );
+    };
+
+    it('软删个人空间：拒绝（BadRequest），不做权限断言、不落库', async () => {
+      personalSpaceMock();
+
+      await expect(
+        service.deleteNode('ps-1', false, 'user-1')
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(nodeMutationGuard.assertMutationAllowed).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('硬删个人空间：同样拒绝，不物理删除行/存储', async () => {
+      personalSpaceMock();
+
+      await expect(
+        service.deleteNode('ps-1', true, 'user-1')
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.fileSystemNode.delete).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.deleteMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe('deleteNode — 取消在途转换（软删/硬删共用）', () => {
     /** cancelInflightConversions 是 fire-and-forget，deleteNode 返回后需等微任务链跑完 */
     async function flush(): Promise<void> {

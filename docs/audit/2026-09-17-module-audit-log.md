@@ -613,3 +613,35 @@ null → 复用既有 `target_parent_not_found` / `parent_not_found` 错误（40
 - 内联软删级联不迁移子节点 `fileStatus` 的语义差异：删除时子树内 PROCESSING 文件恢复后会停在
   PROCESSING（`cancelInflightConversions` 已清 taskId，不会完成）。属低概率边界（删除瞬间恰有在途
   转换 + 随后恢复），且不影响数据安全，记录为观察项。
+
+---
+
+## 12. backend personal-space（个人空间）
+
+审查范围：personal-space.service.ts（创建/获取/惰性改名）。
+
+**服务本身无缺陷**：`createPersonalSpace` 无路径构建（根名是常量 `个人空间`，权限按 ownerId 由
+PersonalPermissionStrategy 判定，不建成员行/不复制角色，ADR-00XX）；`getPersonalSpace` 的惰性改名
+幂等（仅命中未自定义的旧默认名「我的图纸」）；`isPersonalSpace` 平凡。
+
+### 12.1 通用删除端点可删个人空间 → 整棵子树数据丢失（已修，改动落在 node-trash）
+
+**缺陷**：`PersonalPermissionStrategy.assertCan` 对 owner **放行任意动作**（仅校验 `ownerId ===
+userId`）。而 `deleteProject` 有显式门禁「私人空间不支持删除操作」，但**通用的
+`DELETE /nodes/:nodeId`**（node.controller，无路由级 `@RequireProjectPermission` 装饰器，仅
+`@CsrfProtected`）走 `NodeTrashService.deleteNode`——后者**无 PERSONAL_SPACE 门禁**，只经
+`assertMutationAllowed(userId,'delete',…)`（owner 恒放行）。于是 owner 可经此端点软删/硬删自己的
+个人空间及其**整棵子树**（`permanently=true` 时 `getSubtreeIds`/`getSubtreeFiles` 连带物理删除全部
+文件 + DB 行），绕过 deleteProject 的显式保护。`getPersonalSpace` 无 `deletedAt` 过滤（本因个人空间
+不可删故安全），该洞一旦触发会使已删空间仍被返回，状态错乱。
+
+**修复**：`deleteNode` 取到节点后、权限断言前加 `node.nodeType === PERSONAL_SPACE` 即抛
+`private_space_no_delete`（复用既有 i18n 键，零新增）。置于权限断言前使匿名内部调用（userId 为空）
+同样被拦。`deleteProject` 已在调用 `deleteNode` 前拦掉 PERSONAL_SPACE，故项目删除不受影响；
+`batchDeleteNodes` 逐节点走 `deleteNode` 同样被覆盖。`permanentlyDeleteNode` 仅经回收站路径可达
+（须先软删，而软删已被本门禁拦），故无需再补。
+
+**回归测试**：node-trash.service.spec 新增 2 例（软删/硬删个人空间均抛 BadRequest，且不做权限断言、
+不落库、不物理删除）。
+
+**验证**：`pnpm jest file-operations` 6 套件 151/151 绿（含 2 例新回归）；`pnpm type-check` 0 错。
