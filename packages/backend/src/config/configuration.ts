@@ -591,6 +591,15 @@ export default (): AppConfig => {
         process.env.AUTH_RATE_LIMIT_REGISTER_WINDOW_SECONDS || '3600',
         10
       ),
+      // 下单限流：资金接口，比登录更严格（防脚本刷单消耗微信 API 配额）
+      orderCreateMax: parseInt(
+        process.env.AUTH_RATE_LIMIT_ORDER_CREATE_MAX || '10',
+        10
+      ),
+      orderCreateWindowSeconds: parseInt(
+        process.env.AUTH_RATE_LIMIT_ORDER_CREATE_WINDOW_SECONDS || '3600',
+        10
+      ),
     },
 
     // 口令策略配置（#416 等保 8.1.4.1 a)/b)）

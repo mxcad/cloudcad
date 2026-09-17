@@ -14,7 +14,11 @@ import type {
 /**
  * 账号维度限流动作
  */
-export type AccountRateLimitAction = 'login' | 'password_reset' | 'register';
+export type AccountRateLimitAction =
+  | 'login'
+  | 'password_reset'
+  | 'register'
+  | 'order_create';
 
 interface AccountLimitConfig {
   max: number;
@@ -82,6 +86,11 @@ export class AccountRateLimitService {
         return {
           max: authRateLimit.registerMax ?? 5,
           windowSeconds: authRateLimit.registerWindowSeconds ?? 3600,
+        };
+      case 'order_create':
+        return {
+          max: authRateLimit.orderCreateMax ?? 10,
+          windowSeconds: authRateLimit.orderCreateWindowSeconds ?? 3600,
         };
     }
   }

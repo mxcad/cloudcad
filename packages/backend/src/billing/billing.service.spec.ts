@@ -590,6 +590,113 @@ describe('BillingService', () => {
     });
   });
 
+  describe('autoCreateOrder', () => {
+    it('should pick lowest paid tier and 1-month duration', async () => {
+      membershipService.getEffectiveTier.mockResolvedValue(0);
+      prisma.vipTier.findFirst.mockResolvedValue(mockVipTier);
+      prisma.durationPricing.findFirst.mockResolvedValue(mockDurationPricing);
+      // createOrder 按 id 重新取档
+      prisma.vipTier.findUnique.mockResolvedValue(mockVipTier);
+      prisma.durationPricing.findUnique.mockResolvedValue(mockDurationPricing);
+      gatewayFactory.getActiveGateway.mockResolvedValue(mockGateway);
+      prisma.paymentOrder.findFirst.mockResolvedValue(null);
+      mockGateway.createPayment.mockResolvedValue({
+        gatewayOrderId: 'gateway-auto',
+        codeUrl: 'http://mock.qr/auto',
+      });
+      prisma.paymentOrder.create.mockResolvedValue({
+        ...mockOrder,
+        orderNo: 'PAYauto123',
+        gatewayOrderId: 'gateway-auto',
+      });
+      prisma.paymentOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        orderNo: 'PAYauto123',
+        gatewayOrderId: 'gateway-auto',
+      });
+
+      const result = await service.autoCreateOrder(
+        'user-1',
+        { tradeType: 'NATIVE' },
+        '127.0.0.1'
+      );
+
+      // 免费用户（level 0）→ 选最低付费档，且只取 1 个月时长
+      expect(prisma.vipTier.findFirst).toHaveBeenCalledWith({
+        where: {
+          isActive: true,
+          level: { gte: 0 },
+          baseMonthlyPrice: { gt: 0 },
+        },
+        orderBy: { level: 'asc' },
+      });
+      expect(prisma.durationPricing.findFirst).toHaveBeenCalledWith({
+        where: { months: 1, isActive: true },
+      });
+      expect(result.orderNo).toBe('PAYauto123');
+    });
+
+    it('should respect current VIP level to avoid downgrade conflict', async () => {
+      membershipService.getEffectiveTier.mockResolvedValue(2);
+      prisma.vipTier.findFirst.mockResolvedValue(mockVipTier2);
+      prisma.durationPricing.findFirst.mockResolvedValue(mockDurationPricing);
+      prisma.vipTier.findUnique.mockResolvedValue(mockVipTier2);
+      prisma.durationPricing.findUnique.mockResolvedValue(mockDurationPricing);
+      gatewayFactory.getActiveGateway.mockResolvedValue(mockGateway);
+      prisma.paymentOrder.findFirst.mockResolvedValue(null);
+      mockGateway.createPayment.mockResolvedValue({
+        gatewayOrderId: 'gateway-auto2',
+        codeUrl: 'http://mock.qr/auto2',
+      });
+      prisma.paymentOrder.create.mockResolvedValue({
+        ...mockOrder,
+        orderNo: 'PAYauto223',
+        gatewayOrderId: 'gateway-auto2',
+      });
+      prisma.paymentOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        orderNo: 'PAYauto223',
+        gatewayOrderId: 'gateway-auto2',
+      });
+
+      const result = await service.autoCreateOrder(
+        'user-1',
+        { tradeType: 'NATIVE' },
+        '127.0.0.1'
+      );
+
+      // VIP2 用户 → 只选 level >= 2 的档，避免降级冲突
+      expect(prisma.vipTier.findFirst).toHaveBeenCalledWith({
+        where: {
+          isActive: true,
+          level: { gte: 2 },
+          baseMonthlyPrice: { gt: 0 },
+        },
+        orderBy: { level: 'asc' },
+      });
+      expect(result.orderNo).toBe('PAYauto223');
+    });
+
+    it('should throw NotFoundException when no 1-month duration pricing available', async () => {
+      membershipService.getEffectiveTier.mockResolvedValue(0);
+      prisma.vipTier.findFirst.mockResolvedValue(mockVipTier);
+      prisma.durationPricing.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.autoCreateOrder('user-1', { tradeType: 'NATIVE' }, '127.0.0.1')
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when no active paid vip tier available', async () => {
+      membershipService.getEffectiveTier.mockResolvedValue(0);
+      prisma.vipTier.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.autoCreateOrder('user-1', { tradeType: 'NATIVE' }, '127.0.0.1')
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('handlePaymentNotify', () => {
     const verified = {
       isValid: true,

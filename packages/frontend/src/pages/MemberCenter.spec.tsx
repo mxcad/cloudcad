@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/setup';
@@ -39,9 +40,6 @@ vi.mock('@/hooks/useTierConfigRegistry', () => ({
 }));
 vi.mock('@/stores/planSelectStore', () => ({
   usePlanSelectStore: () => ({ open: vi.fn() }),
-}));
-vi.mock('@/components/billing/WechatPayModal', () => ({
-  default: () => null,
 }));
 
 import MemberCenter from './MemberCenter';
@@ -82,6 +80,21 @@ function stubOrdersApi() {
     http.get('/api/v1/vip/durations', () =>
       HttpResponse.json({ code: 0, data: [] })
     ),
+    http.post('/api/v1/billing/orders/auto', () =>
+      HttpResponse.json({
+        code: 0,
+        data: {
+          orderNo: 'PAYAUTO001',
+          status: 'PENDING',
+          amount: 2400,
+          codeUrl: 'http://mock.qr/auto',
+          payParams: null,
+          redirectUrl: null,
+          vipTierName: 'VIP1',
+          durationLabel: '1个月',
+        },
+      })
+    ),
     http.post(
       '/api/v1/billing/orders/:orderNo/refund-apply',
       async ({ request, params }) => {
@@ -109,14 +122,16 @@ function stubOrdersApi() {
   );
 }
 
-function renderPage() {
+function renderPage(initialEntries: string[] = ['/member-center']) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemberCenter />
-    </QueryClientProvider>
+    <MemoryRouter initialEntries={initialEntries}>
+      <QueryClientProvider client={queryClient}>
+        <MemberCenter />
+      </QueryClientProvider>
+    </MemoryRouter>
   );
 }
 
@@ -288,6 +303,19 @@ describe('MemberCenter 订单历史 — 申请退款', () => {
         t('上次退款申请被驳回：{note}', { note: '已超过可退款期' })
       )
     ).toBeInTheDocument();
+  });
+});
+
+describe('MemberCenter ?auto=1 自动下单', () => {
+  beforeEach(() => {
+    stubOrdersApi();
+  });
+
+  it('mount 时自动建单并展示支付弹窗', async () => {
+    renderPage(['/member-center?auto=1']);
+    // 自动建单成功 → 弹出微信支付弹窗，展示「档位 · 时长」订单标签
+    expect(await screen.findByText(t('微信支付'))).toBeInTheDocument();
+    expect(screen.getByText('VIP1 · 1个月')).toBeInTheDocument();
   });
 });
 

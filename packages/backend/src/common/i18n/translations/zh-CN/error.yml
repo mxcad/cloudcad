@@ -427,6 +427,7 @@ billing:
   order_already_refunded: "订单已被退款或状态已变更，请刷新后重试"
   refund_failed_state_restored: "退款请求发送失败，订单状态已恢复"
   downgrade_not_allowed: "不能降级购买，请选择升级或续费当前等级"
+  amount_below_minimum: "订单金额低于支付网关最低限额，请检查档位价格配置"
   refund_apply_not_allowed: "当前订单状态不允许申请退款"
   refund_apply_already_pending: "该订单已有待审核的退款申请"
   refund_application_not_found: "退款申请不存在"
@@ -596,4 +597,3 @@ conversion_task:
   task_lost: "转换任务已丢失（服务可能已重启），请重新打开图纸"
   not_found_or_no_access: "转换任务不存在或您没有访问权限"
   retry_not_failed: "只有失败的转换任务可以重试"
-  node_deleted: "文件已删除，无法重试"

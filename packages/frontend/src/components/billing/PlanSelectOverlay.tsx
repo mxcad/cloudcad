@@ -103,7 +103,7 @@ export default function PlanSelectOverlay() {
   const [tiers, setTiers] = useState<VipTier[]>([]);
   const [durations, setDurations] = useState<DurationPricing[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
-  const [months, setMonths] = useState(3);
+  const [months, setMonths] = useState(1);
   const [view, setView] = useState<ViewState>('selection');
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
   const [orderError, setOrderError] = useState('');
@@ -175,7 +175,7 @@ export default function PlanSelectOverlay() {
       setView('selection');
       setOrderResult(null);
       setOrderError('');
-      setMonths(3);
+      setMonths(1);
       return;
     }
     setLoading(true);

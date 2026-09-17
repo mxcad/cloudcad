@@ -272,6 +272,10 @@ export interface AuthRateLimitConfig {
   registerMax: number;
   /** 注册窗口（秒） */
   registerWindowSeconds: number;
+  /** 下单次数上限（/窗口/账号，防脚本刷单） */
+  orderCreateMax: number;
+  /** 下单窗口（秒） */
+  orderCreateWindowSeconds: number;
 }
 
 /**

@@ -1549,6 +1549,17 @@ export type OrderResponseDto = {
     createdAt: string;
 };
 
+export type AutoCreateOrderDto = {
+    /**
+     * 交易类型
+     */
+    tradeType?: 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP';
+    /**
+     * 支付成功后跳转回的前端 URL（MWEB 必传）
+     */
+    redirectUrl?: string;
+};
+
 export type RepayOrderDto = {
     /**
      * 交易类型
@@ -3162,10 +3173,6 @@ export type ConversionTaskItemDto = {
      */
     error?: string;
     /**
-     * 永久失败标记（#465 负缓存命中，S6-7）：true 表示重试注定再失败，面板展示「永久失败」
-     */
-    permanent?: boolean;
-    /**
      * 排队位置（S6-5）：任务在优先级池 acquire 队列中的 1-based 序号；仅排队中（PENDING）任务有意义，面板展示「第 N 位」
      */
     queuePosition?: number;
@@ -4419,54 +4426,6 @@ export type ConversionMonitorStatsDto = {
     sampledAt: number;
 };
 
-export type KnownBadItemDto = {
-    /**
-     * 内容 key（内容 hash + 源格式 + 目标格式派生）
-     */
-    contentKey: string;
-    /**
-     * 永久失败原因（确定性内容失败的 mxcadassembly 报错）
-     */
-    reason: string;
-    /**
-     * 标记时间（epoch ms）
-     */
-    markedAt: number;
-};
-
-export type KnownBadListDto = {
-    /**
-     * 永久失败条目
-     */
-    items: Array<KnownBadItemDto>;
-    /**
-     * 条目总数
-     */
-    total: number;
-};
-
-export type ResetKnownBadDto = {
-    /**
-     * 要复位的内容 key；缺省（不传）= 复位全部永久失败
-     */
-    contentKey?: string;
-};
-
-export type KnownBadResetResultDto = {
-    /**
-     * 复位的条目数
-     */
-    reset: number;
-    /**
-     * 是否复位全部（缺省 contentKey 时为 true）
-     */
-    all?: boolean;
-    /**
-     * 非 conversion-service 模式（无负缓存）时为 true
-     */
-    unsupported?: boolean;
-};
-
 export type MonitorTaskItemDto = {
     /**
      * 任务 ID
@@ -4508,10 +4467,6 @@ export type MonitorTaskItemDto = {
      * 错误信息（失败时）
      */
     error?: string;
-    /**
-     * 永久失败标记（#465 负缓存命中 / 确定性内容失败）：true 表示重试注定再失败
-     */
-    permanent?: boolean;
     /**
      * 内容 key（内容 hash + 源格式 + 目标格式派生）
      */
@@ -6600,6 +6555,22 @@ export type BillingControllerCreateOrderResponses = {
 };
 
 export type BillingControllerCreateOrderResponse = BillingControllerCreateOrderResponses[keyof BillingControllerCreateOrderResponses];
+
+export type BillingControllerAutoCreateOrderData = {
+    body: AutoCreateOrderDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/orders/auto';
+};
+
+export type BillingControllerAutoCreateOrderResponses = {
+    /**
+     * 创建成功，返回支付所需参数
+     */
+    201: OrderResponseDto;
+};
+
+export type BillingControllerAutoCreateOrderResponse = BillingControllerAutoCreateOrderResponses[keyof BillingControllerAutoCreateOrderResponses];
 
 export type BillingControllerQueryOrderData = {
     body?: never;
@@ -9588,6 +9559,35 @@ export type ConversionTaskControllerCancelTaskResponses = {
     201: unknown;
 };
 
+export type ConversionTaskControllerRetryTaskData = {
+    body?: never;
+    path: {
+        /**
+         * 要重试的转换任务 ID
+         */
+        taskId: string;
+    };
+    query?: never;
+    url: '/api/v1/mxcad/conversion/tasks/{taskId}/retry';
+};
+
+export type ConversionTaskControllerRetryTaskResponses = {
+    201: unknown;
+};
+
+export type ConversionTaskControllerGetQuotaData = {
+    body?: never;
+    path?: never;
+    query: {
+        userId: string;
+    };
+    url: '/api/v1/mxcad/conversion/quota';
+};
+
+export type ConversionTaskControllerGetQuotaResponses = {
+    200: unknown;
+};
+
 export type SaveControllerSaveMxwebToNodeData = {
     body: SaveMxwebDto;
     path: {
@@ -12112,32 +12112,6 @@ export type ConversionMonitorControllerGetStatsResponses = {
 };
 
 export type ConversionMonitorControllerGetStatsResponse = ConversionMonitorControllerGetStatsResponses[keyof ConversionMonitorControllerGetStatsResponses];
-
-export type ConversionMonitorControllerListKnownBadData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/conversion-monitor/known-bad';
-};
-
-export type ConversionMonitorControllerListKnownBadResponses = {
-    200: KnownBadListDto;
-};
-
-export type ConversionMonitorControllerListKnownBadResponse = ConversionMonitorControllerListKnownBadResponses[keyof ConversionMonitorControllerListKnownBadResponses];
-
-export type ConversionMonitorControllerResetKnownBadData = {
-    body: ResetKnownBadDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/conversion-monitor/known-bad/reset';
-};
-
-export type ConversionMonitorControllerResetKnownBadResponses = {
-    200: KnownBadResetResultDto;
-};
-
-export type ConversionMonitorControllerResetKnownBadResponse = ConversionMonitorControllerResetKnownBadResponses[keyof ConversionMonitorControllerResetKnownBadResponses];
 
 export type ConversionMonitorControllerListTasksData = {
     body?: never;

@@ -64,6 +64,11 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 | [0058](0058-conversion-queue-monitoring.md) | `accepted` | 0058 — 转换队列监控（Conversion Queue Monitoring） |
 | [0059](0059-runtime-deps-release-bundle-and-airgap-verify.md) | `accepted` | 0059 — runtime 依赖 Release 复用（内容寻址资产）+ 发行版收敛 3 档 + dev preinstall 按需拉标准组件 + 断网启动验证成 release 硬门禁 + 下载源多源有序回退（双形态 + 内置公开镜像 + 自定义源；不破坏离线部署自包含红线） |
 | [0060](0060-conversion-concurrency-and-caching.md) | `accepted` | 0060 — 转换并发与缓存策略（孤儿进程泄漏根因止血 + 进程组杀除 + 启动清理 + 三条 mxcadassembly 路径收进同一限流器 + 批量路径复用结果缓存 + 批量并行度削峰；否决 in-flight 去重/调大超时/同步改异步，含「3 并发=3 不同格式故去重无效」「60s 非根因是 CPU 饥饿」洞察） |
+| [0061](0061-project-member-self-role-protection.md) | `accepted` | 0061 — 项目成员自改角色 / 自移除保护（Project member self-role protection） |
+| [0062](0062-mobile-app-shell-architecture.md) | `accepted` | 0062 — 移动端 App 壳架构：常驻 CAD 编辑器 + 子页栈（微信式导航） |
+| [0063](0063-external-reference-file-naming-convention.md) | `accepted` | 0063 — 外部参照文件磁盘命名约定 |
+| [0064](0064-conversion-service-http-param-contract.md) | `accepted` | 0064 — conversion-service 两级参数契约：HTTP 用 camelCase，低层二进制用 lowercase |
+| [0065](0065-conversion-queue-panel-ux.md) | `accepted` | 0065 — 转换队列悬浮面板 UX —— 常驻按钮 + 数据管道接通 + 自动展开/收起 |
 | [0066](0066-exe-auto-order-purchase.md) | `accepted` | 0066 — EXE 桌面端自动下单购买流程（`/member-center?auto=1` + `POST /orders/auto` + 双层限流防刷单） |
 | [0067](0067-file-queue-panel-and-retry.md) | `accepted` | 0067 — 文件队列：取消悬浮药丸 + 入口迁移顶栏按钮/CAD 命令 + 删除永久失败机制 + 失败重试端点 + 配额可见 + 行内 Tooltip |
 | [0068](0068-mobile-native-member-center.md) | `accepted` | 0068 — 移动端原生会员中心：购买/续费/升级/微信支付/订单/退款全在移动端完成（后端 billing/vip 零改动，交易类型按 UA 分流 MWEB/NATIVE，MWEB 回跳靠 localStorage 恢复） |

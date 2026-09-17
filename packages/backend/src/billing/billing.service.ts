@@ -18,6 +18,7 @@ import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import { OrderStatus, RefundApplicationStatus } from './enums/billing.enum';
 import { randomBytes } from 'crypto';
 import type { CreateOrderDto } from './dto/create-order.dto';
+import type { AutoCreateOrderDto } from './dto/auto-create-order.dto';
 import type { RepayOrderDto } from './dto/repay-order.dto';
 import type {
   WebhookVerifyResult,
@@ -114,6 +115,13 @@ export class BillingService {
         durationPricing.months) /
         10000
     );
+    // 微信支付 total_fee 最低 1 分钱，0 会被拒（档位价格配置为 0 时兜底）
+    if (amount < 1) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.billing.amount_below_minimum') ??
+          '订单金额低于支付网关最低限额',
+      );
+    }
 
     const gateway = await this.gatewayFactory.getActiveGateway();
 
@@ -182,6 +190,48 @@ export class BillingService {
       dto,
       twoHoursAgo
     );
+  }
+
+  /**
+   * 自动下单（EXE 一键购买 / `?auto=1` 入口，ADR-0066）
+   *
+   * 档位与时长由服务端默认选择，前端不传 `vipTierId` / `durationPricingId`：
+   * - 档位：当前等级及以上的最低付费档（`level >= currentTier` 且 `baseMonthlyPrice > 0`）
+   * - 时长：必须 1 个月（缺失时抛错，不静默回落）
+   *
+   * 复用 {@link createOrder} 的降级校验与 2 小时同款 PENDING 订单复用逻辑。
+   */
+  async autoCreateOrder(userId: string, dto: AutoCreateOrderDto, ip: string) {
+    // 获取用户当前生效等级，避免降级冲突
+    const currentTier = await this.membershipService.getEffectiveTier(userId);
+    // baseMonthlyPrice > 0：过滤价格 0 的免费档（微信 total_fee 最低 1 分钱）
+    const vipTier = await this.prisma.vipTier.findFirst({
+      where: {
+        isActive: true,
+        level: { gte: currentTier },
+        baseMonthlyPrice: { gt: 0 },
+      },
+      orderBy: { level: 'asc' },
+    });
+    if (!vipTier) {
+      throw new NotFoundException('no active paid vip tier available');
+    }
+
+    // 1 个月定价必须存在，缺失时抛错
+    const durationPricing = await this.prisma.durationPricing.findFirst({
+      where: { months: 1, isActive: true },
+    });
+    if (!durationPricing) {
+      throw new NotFoundException('no 1-month duration pricing available');
+    }
+
+    return this.createOrder(userId, {
+      vipTierId: vipTier.id,
+      durationPricingId: durationPricing.id,
+      tradeType: dto.tradeType,
+      redirectUrl: dto.redirectUrl,
+      ip,
+    });
   }
 
   /**

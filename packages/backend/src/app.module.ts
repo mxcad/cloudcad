@@ -14,6 +14,7 @@ import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { ClsServiceManager } from 'nestjs-cls';
 
@@ -191,6 +192,13 @@ const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'debug');
     EventEmitterModule.forRoot(),
     DatabaseModule,
     RedisModule,
+    // @nestjs/throttler 路由级限流（per-route @Throttle 装饰器，8 处已有装饰器此前空转）
+    // 默认内存存储：standalone 单实例足够；多实例部署需接入 Redis 存储
+    // name:'default' 对应 @Throttle({ default: { limit, ttl } }) 的配置入口
+    // 全局兜底设为极高值（100000/60s），避免未挂 @Throttle 的高频接口（图纸加载等）被误伤
+    ThrottlerModule.forRoot([
+      { name: 'default', limit: 100000, ttl: 60000 },
+    ]),
     CacheArchitectureModule, // 缓存架构模块（必须在 SchedulerModule 之前导入）
     AuthModule.forRoot(),
     CommonModule,
@@ -246,6 +254,12 @@ const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'debug');
     {
       provide: APP_GUARD,
       useClass: IpBlacklistGuard,
+    },
+    {
+      provide: APP_GUARD,
+      // per-route @Throttle 装饰器限流（资金接口 createOrder 5/60s 等 8 处）
+      // 在 RateLimitGuard（IP 维度全局兜底）之前执行：先严格路由级，再全局
+      useClass: ThrottlerGuard,
     },
     {
       provide: APP_GUARD,

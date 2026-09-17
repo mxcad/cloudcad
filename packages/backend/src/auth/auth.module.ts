@@ -166,6 +166,8 @@ export class AuthModule {
         AuthFacadeService,
         IAUTH_FACADE,
         TokenBlacklistService,
+        // 账号维度限流：BillingModule 等跨模块注入（防脚本刷单，ADR-0066）
+        AccountRateLimitService,
         // #416 口令策略：UsersModule（UserCrudService/UserPasswordService）跨模块注入，
         // AuthModule 为 global 模块，导出后全局可见，无需 UsersModule 反向 import（避免循环依赖）
         PasswordPolicyService,

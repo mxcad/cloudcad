@@ -427,6 +427,7 @@ billing:
   order_already_refunded: "Order has been refunded or status changed, please refresh and try again"
   refund_failed_state_restored: "Refund request failed, order status has been restored"
   downgrade_not_allowed: "Downgrade is not allowed. Please upgrade or renew your current plan."
+  amount_below_minimum: "Order amount is below the payment gateway minimum. Please check the tier price configuration."
   refund_apply_not_allowed: "This order is not eligible for a refund request"
   refund_apply_already_pending: "This order already has a pending refund request"
   refund_application_not_found: "Refund application not found"
@@ -596,4 +597,3 @@ conversion_task:
   task_lost: "The conversion task was lost (the service may have restarted); please reopen the drawing"
   not_found_or_no_access: "The conversion task does not exist or you do not have access to it"
   retry_not_failed: "Only failed conversion tasks can be retried"
-  node_deleted: "The file has been deleted and cannot be retried"

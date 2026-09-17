@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Crown,
@@ -33,6 +34,7 @@ import {
   billingControllerGetOrders,
   billingControllerRepayOrder,
   billingControllerApplyRefund,
+  billingControllerAutoCreateOrder,
 } from '@/api-sdk';
 import WechatPayModal from '@/components/billing/WechatPayModal';
 import { useTierConfigRegistry } from '@/hooks/useTierConfigRegistry';
@@ -103,6 +105,7 @@ export default function MemberCenter() {
   const { loading: authLoading, refreshUser } = useAuth();
   const { data: storageInfo } = useStorageQuota();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const globalOpen = usePlanSelectStore((s) => s.open);
 
   const [tiers, setTiers] = useState<VipTier[]>([]);
@@ -126,6 +129,17 @@ export default function MemberCenter() {
   const [refundReason, setRefundReason] = useState('');
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundError, setRefundError] = useState('');
+  // ADR-0066：?auto=1 自动下单的支付弹窗状态
+  const [autoPayment, setAutoPayment] = useState<{
+    orderNo: string;
+    amount: number;
+    codeUrl: string | null;
+    payParams: Record<string, unknown> | null;
+    redirectUrl: string | null;
+    orderLabel: string;
+  } | null>(null);
+  const [autoLoading, setAutoLoading] = useState(false);
+  const [autoError, setAutoError] = useState('');
 
   useDocumentTitle(t('会员中心'));
 
@@ -219,6 +233,58 @@ export default function MemberCenter() {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  // ADR-0066：EXE 桌面端 ?auto=1 自动下单 —— 挂载时若带 auto=1，
+  // 自动创建最低付费档 1 个月订单并弹出微信支付二维码
+  useEffect(() => {
+    if (searchParams.get('auto') !== '1') return;
+    // 清掉 auto 参数，避免刷新/回退重复触发（走 setSearchParams 同步 React Router 状态）
+    const next = new URLSearchParams(searchParams);
+    next.delete('auto');
+    setSearchParams(next, { replace: true });
+    let cancelled = false;
+    (async () => {
+      setAutoLoading(true);
+      setAutoError('');
+      try {
+        const res = await billingControllerAutoCreateOrder({
+          body: { tradeType: 'NATIVE' },
+        });
+        // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
+        if (res?.error) throw res.error;
+        if (cancelled) return;
+        const data = res?.data as
+          | {
+              orderNo: string;
+              amount: number;
+              codeUrl: string | null;
+              payParams: Record<string, unknown> | null;
+              redirectUrl: string | null;
+              vipTierName?: string;
+              durationLabel?: string;
+            }
+          | undefined;
+        setAutoPayment({
+          orderNo: data?.orderNo ?? '',
+          amount: data?.amount ?? 0,
+          codeUrl: data?.codeUrl ?? null,
+          payParams: data?.payParams ?? null,
+          redirectUrl: data?.redirectUrl ?? null,
+          orderLabel: `${data?.vipTierName ?? ''} · ${data?.durationLabel ?? ''}`,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setAutoError(getErrorMessage(error) || t('创建订单失败，请重试'));
+      } finally {
+        if (!cancelled) setAutoLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // 仅挂载时执行一次（auto 参数已在 effect 内清除）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpgrade = useCallback(
     (tierLevel?: number) => {
@@ -1054,6 +1120,77 @@ export default function MemberCenter() {
         onClose={() => {
           setRepayPayment(null);
           setRepayError('');
+        }}
+      />
+
+      {/* ── 5b. ?auto=1 自动下单：加载遮罩 + 错误提示 + 支付弹窗 ── */}
+      {autoLoading && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: Z_LAYERS.MODAL,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{ display: 'flex', justifyContent: 'center', padding: 48 }}
+          >
+            <div
+              className="w-8 h-8 rounded-full animate-spin"
+              style={{
+                border: '2px solid var(--border-default)',
+                borderTopColor: 'var(--primary-500)',
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {autoError && !autoLoading && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: Z_LAYERS.MODAL,
+            padding: '8px 16px',
+            borderRadius: 8,
+            background: 'var(--bg-elevated)',
+            color: 'var(--danger-500)',
+          }}
+        >
+          {autoError}
+        </div>
+      )}
+      <WechatPayModal
+        open={!!autoPayment && !autoLoading}
+        orderNo={autoPayment?.orderNo ?? ''}
+        amount={autoPayment?.amount ?? 0}
+        payParams={autoPayment?.payParams ?? null}
+        codeUrl={autoPayment?.codeUrl ?? null}
+        redirectUrl={autoPayment?.redirectUrl ?? null}
+        orderLabel={autoPayment?.orderLabel}
+        onSuccess={async () => {
+          setAutoPayment(null);
+          setAutoError('');
+          // 支付成功后刷新会员状态 + 订单列表，避免整页刷新才更新
+          try {
+            await refreshUser();
+            await queryClient.invalidateQueries({
+              queryKey: queryKeys.fileSystem.storageQuota,
+            });
+          } catch {
+            // 刷新失败不阻塞后续
+          }
+          loadOrders();
+        }}
+        onError={(msg) => setAutoError(msg)}
+        onClose={() => {
+          setAutoPayment(null);
+          setAutoError('');
         }}
       />
 
