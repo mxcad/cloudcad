@@ -42,6 +42,7 @@ import {
 import { I18nContext } from 'nestjs-i18n';
 import { FtsQueryBuilder } from '../search/fts-query-builder';
 import { AncestorQueryService } from '../../common/services/ancestor-query.service';
+import { FileUtils } from '../../common/utils/file-utils';
 import { TreeWalker } from './tree-walker.service';
 @Injectable()
 export class FileTreeService {
@@ -72,7 +73,7 @@ export class FileTreeService {
     fileStatus?: FileStatus;
   }): Promise<PrismaFileSystemNode> {
     const {
-      name,
+      name: rawName,
       fileHash,
       size,
       mimeType,
@@ -84,6 +85,12 @@ export class FileTreeService {
       skipFileCopy = false,
       fileStatus = FileStatus.COMPLETED,
     } = options;
+    // 落库前统一清洗文件名（basename 去路径段、去 .. 与危险字符 <>:"|?*、去首尾点/空格、
+    // 拒空）：createFileNode 是所有文件节点创建的收敛点（图纸上传/秒传/资源库/另存为/
+    // 外部参照/物化器），在此清洗一次覆盖全部入口，防路径遍历串进入 name/originalName
+    //（进而影响展示、批量下载 zip 条目名、同名去重）。用 sanitizeFilename（非白名单）而非
+    // validateFilename，避免误拒含括号/加号等合法字符的文件名。
+    const name = FileUtils.sanitizeFilename(rawName);
 
     this.logger.log(
       `[createFileNode] 开始创建文件节点: name=${name}, fileHash=${fileHash}, parentId=${parentId}, ownerId=${ownerId}, skipFileCopy=${skipFileCopy}`

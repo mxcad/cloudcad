@@ -200,6 +200,87 @@ describe('FileTreeService', () => {
       const result = await service.createFileNode(defaultOptions);
       expect(result).toBeDefined();
     });
+
+    it('落库前清洗文件名（.. 路径段 → basename），防路径遍历进入 name/originalName', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'parent-1',
+        nodeType: NodeType.FOLDER,
+        projectId: 'proj-1',
+      });
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
+        const tx = {
+          fileSystemNode: {
+            findMany: mockPrisma.fileSystemNode.findMany,
+            findUnique: mockPrisma.fileSystemNode.findUnique,
+            create: mockPrisma.fileSystemNode.create,
+            update: mockPrisma.fileSystemNode.update,
+          },
+        };
+        return cb(tx);
+      });
+      mockPrisma.fileSystemNode.create.mockResolvedValue({
+        id: 'node-1',
+        name: 'evil.dwg',
+        nodeType: NodeType.FILE,
+      });
+      mockTreeWalker.resolveProjectId.mockResolvedValue('proj-1');
+
+      await service.createFileNode({ ...defaultOptions, name: '../../evil.dwg' });
+
+      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: 'evil.dwg',
+            originalName: 'evil.dwg',
+          }),
+        })
+      );
+    });
+
+    it('清洗后为空的名字（纯点/路径段）400，不落库', async () => {
+      await expect(
+        service.createFileNode({ ...defaultOptions, name: '..' })
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrisma.fileSystemNode.create).not.toHaveBeenCalled();
+    });
+
+    it('含合法特殊字符的名字（括号/空格）不被误拒', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'parent-1',
+        nodeType: NodeType.FOLDER,
+        projectId: 'proj-1',
+      });
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
+        const tx = {
+          fileSystemNode: {
+            findMany: mockPrisma.fileSystemNode.findMany,
+            findUnique: mockPrisma.fileSystemNode.findUnique,
+            create: mockPrisma.fileSystemNode.create,
+            update: mockPrisma.fileSystemNode.update,
+          },
+        };
+        return cb(tx);
+      });
+      mockPrisma.fileSystemNode.create.mockResolvedValue({
+        id: 'node-1',
+        name: '图纸 (1).dwg',
+        nodeType: NodeType.FILE,
+      });
+      mockTreeWalker.resolveProjectId.mockResolvedValue('proj-1');
+
+      await service.createFileNode({ ...defaultOptions, name: '图纸 (1).dwg' });
+
+      expect(mockPrisma.fileSystemNode.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            name: '图纸 (1).dwg',
+            originalName: '图纸 (1).dwg',
+          }),
+        })
+      );
+    });
   });
 
   // ==================== createDrawingFromTemplate ====================

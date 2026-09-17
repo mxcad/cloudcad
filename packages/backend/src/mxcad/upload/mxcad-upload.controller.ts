@@ -41,7 +41,6 @@ import type { MxCadRequest } from '../types/request.types';
 import { MxCadRequestContextBuilder } from '../core/mxcad-request-context-builder';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
-import { FileUtils } from '../../common/utils/file-utils';
 
 @ApiTags('MxCAD 文件上传')
 @Controller('mxcad')
@@ -229,11 +228,6 @@ export class MxcadUploadController {
           I18nContext.current()?.t('error.mxcad.missing_params_hash_name_size') ??
             '缺少必要参数: hash, name 或 size'
         );
-      // body.name 为客户端可控字段，落库前统一清洗：basename 去路径段、去 .. 与危险字符
-      // <>:"|?*、去首尾点/空格，防路径遍历串进入节点 name/originalName（进而影响展示、
-      // 批量下载 zip 条目名、同名去重）。用 sanitizeFilename（非白名单）而非 validateFilename，
-      // 避免误拒含括号/加号等合法字符的文件名（如「图纸 (1).dwg」）。
-      body.name = FileUtils.sanitizeFilename(body.name);
       if (body.chunk !== undefined && body.chunks === undefined)
         throw new BadRequestException(
           I18nContext.current()?.t('error.mxcad.missing_params_chunks') ??
