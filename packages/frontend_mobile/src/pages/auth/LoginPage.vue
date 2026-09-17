@@ -6,22 +6,40 @@
  *   - 账号登录：用户名 / 邮箱 / 手机号 + 密码 → authControllerLogin
  *   - 手机登录：手机号 + 短信验证码 → authControllerLoginByPhone
  *
- * 成功后经 applyAuthResponse 写入会话，再跳回 redirect 目标（守卫带入的 fullPath）或壳根。
- * 「立即注册」跳原生 /register（带同一路由 redirect 透传）。
+ * 账号登录的错误分支与 PC useLoginForm 同口径（业务码驱动，不靠文案匹配）：
+ *   ACCOUNT_DEACTIVATED → 客服弹窗；EMAIL_NOT_VERIFIED / EMAIL_REQUIRED → 邮箱验证页
+ *   （后者是补绑模式，带 tempToken）；PHONE_NOT_VERIFIED / PHONE_REQUIRED → 手机验证页。
+ *
+ * 微信登录走整页跳转 + 事务轮询（client='mobile' → 后端选 snsapi_userinfo），
+ * 回调落在 `#/login?wechat_txn=<txn>`，由 useWechatLogin 轮询后分流。
  */
-import { ref, computed, onUnmounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   authControllerLogin,
   authControllerLoginByPhone,
   authControllerSendSmsCode,
 } from '@cloudcad/api-sdk/sdk.gen'
-import { showSuccessToast } from 'vant'
+import { showToast } from 'vant'
 import { t } from '@/languages'
-import { applyAuthResponse, resolveRedirectTarget } from '@/utils/authSession'
+import { applyAuthResponse } from '@/utils/authSession'
+import { navigateAfterAuth } from '@/utils/authNavigate'
+import {
+  toError,
+  unwrap,
+  errMsg,
+  errorCode,
+  errorDetail,
+  showAccountDeactivatedDialog,
+} from '@/utils/authFeedback'
+import { isPhone, isCode } from '@/utils/authValidation'
+import { useCountdown } from '@/composables/useCountdown'
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { useWechatLogin, takeWechatTxn } from '@/composables/useWechatLogin'
 
 const route = useRoute()
 const router = useRouter()
+const { config } = useRuntimeConfig()
 
 const activeTab = ref<'account' | 'phone'>('account')
 const loading = ref(false)
@@ -36,55 +54,58 @@ const showPassword = ref(false)
 const phone = ref('')
 const code = ref('')
 const sendingCode = ref(false)
-const countdown = ref(0)
+const { countdown, start: countdownStart } = useCountdown()
 
-let countdownTimer: ReturnType<typeof setInterval> | null = null
+const phoneValid = computed(() => isPhone(phone.value))
+const codeValid = computed(() => isCode(code.value))
 
-const PHONE_RE = /^1[3-9]\d{9}$/
-const CODE_RE = /^\d{6}$/
-const phoneValid = computed(() => PHONE_RE.test(phone.value))
-const codeValid = computed(() => CODE_RE.test(code.value))
-
-function startCountdown() {
-  stopCountdown()
-  countdown.value = 60
-  countdownTimer = setInterval(() => {
-    countdown.value = Math.max(0, countdown.value - 1)
-    if (countdown.value === 0) stopCountdown()
-  }, 1000)
+/** 登录成功：写入会话后按 redirect 落点 */
+function finishLogin(data: {
+  accessToken: string
+  refreshToken?: string
+  user?: unknown
+  restored?: boolean
+}) {
+  applyAuthResponse(data)
+  showToast(data.restored ? t('您的账户已自动恢复，注销已取消') : t('登录成功'))
+  navigateAfterAuth(route.query as Record<string, unknown>)
 }
 
-function stopCountdown() {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
+function gotoVerifyEmail(state: { email?: string; tempToken?: string; mode?: 'bind' }) {
+  void router.replace({ path: '/verify-email', state })
+}
+
+function gotoVerifyPhone(state: { phone?: string; tempToken?: string; mode?: 'bind' }) {
+  void router.replace({ path: '/verify-phone', state })
+}
+
+/**
+ * 账号登录的错误分流（业务码 → 页面跳转）。
+ * 后端把业务码放在 error body 的 code 字段，message 是本地化中文不含字面码，
+ * 所以只能读 code；文案展示用 message。
+ */
+function handleLoginError(e: unknown, fallback: string) {
+  const body = toError(e)
+  switch (errorCode(body)) {
+    case 'ACCOUNT_DEACTIVATED':
+      error.value = ''
+      showAccountDeactivatedDialog(errorDetail(body, 'cleanupDays'))
+      return
+    case 'EMAIL_NOT_VERIFIED':
+      gotoVerifyEmail({ email: errorDetail(body, 'email') })
+      return
+    case 'EMAIL_REQUIRED':
+      gotoVerifyEmail({ tempToken: errorDetail(body, 'tempToken'), mode: 'bind' })
+      return
+    case 'PHONE_NOT_VERIFIED':
+      gotoVerifyPhone({ phone: errorDetail(body, 'phone') })
+      return
+    case 'PHONE_REQUIRED':
+      gotoVerifyPhone({ tempToken: errorDetail(body, 'tempToken'), mode: 'bind' })
+      return
+    default:
+      error.value = errMsg(body, fallback)
   }
-}
-
-function toError(err: unknown): Error {
-  if (err instanceof Error) return err
-  const raw = err as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return new Error(raw.message)
-  return new Error(String(err))
-}
-
-function unwrap<T>(res: { error?: unknown; data?: unknown }): T {
-  if (res.error) throw toError(res.error)
-  return (res.data ?? {}) as T
-}
-
-function errMsg(e: unknown, fallback: string): string {
-  if (e instanceof Error && e.message) return e.message
-  const raw = e as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return raw.message
-  return fallback
-}
-
-/** 登录成功：写入会话后跳回 redirect 目标（或壳根） */
-function finishLogin() {
-  const target = resolveRedirectTarget(route.query.redirect)
-  // 整串字符串传（含 query），避免 { path } 把 query 当路径解析而静默丢弃
-  void router.replace(target)
 }
 
 async function handleAccountLogin() {
@@ -95,12 +116,10 @@ async function handleAccountLogin() {
     const res = await authControllerLogin({
       body: { account: account.value.trim(), password: password.value },
     })
-    const data = unwrap<{ accessToken: string; refreshToken?: string; user: unknown; restored?: boolean }>(res)
-    applyAuthResponse(data)
-    showSuccessToast(data.restored ? t('您的账户已自动恢复，注销已取消') : t('登录成功'))
-    finishLogin()
+    const data = unwrap<{ accessToken: string; refreshToken?: string; user?: unknown; restored?: boolean }>(res)
+    finishLogin(data)
   } catch (e) {
-    error.value = errMsg(e, t('登录失败，请检查账号和密码'))
+    handleLoginError(e, t('登录失败，请检查账号和密码'))
   } finally {
     loading.value = false
   }
@@ -113,8 +132,8 @@ async function handleSendCode() {
   try {
     const res = await authControllerSendSmsCode({ body: { phone: phone.value, scene: 'login' } })
     unwrap(res)
-    showSuccessToast(t('验证码已发送'))
-    startCountdown()
+    showToast(t('验证码已发送'))
+    countdownStart()
   } catch (e) {
     error.value = errMsg(e, t('验证码发送失败'))
   } finally {
@@ -128,10 +147,8 @@ async function handlePhoneLogin() {
   error.value = ''
   try {
     const res = await authControllerLoginByPhone({ body: { phone: phone.value, code: code.value } })
-    const data = unwrap<{ accessToken: string; refreshToken?: string; user: unknown; restored?: boolean }>(res)
-    applyAuthResponse(data)
-    showSuccessToast(data.restored ? t('您的账户已自动恢复，注销已取消') : t('登录成功'))
-    finishLogin()
+    const data = unwrap<{ accessToken: string; refreshToken?: string; user?: unknown; restored?: boolean }>(res)
+    finishLogin(data)
   } catch (e) {
     error.value = errMsg(e, t('登录失败，请重试'))
   } finally {
@@ -140,14 +157,49 @@ async function handlePhoneLogin() {
 }
 
 function goRegister() {
-  const redirect = resolveRedirectTarget(route.query.redirect)
+  const redirect = (route.query.redirect as string) || ''
   void router.replace({
     path: '/register',
-    query: redirect !== '/shell' ? { redirect } : {},
+    query: redirect && redirect !== '/shell' ? { redirect } : {},
   })
 }
 
-onUnmounted(stopCountdown)
+function goForgotPassword() {
+  const redirect = (route.query.redirect as string) || ''
+  void router.replace({
+    path: '/forgot-password',
+    query: redirect && redirect !== '/shell' ? { redirect } : {},
+  })
+}
+
+// ── 微信登录：入口由运行时配置控制，回调经事务轮询 ──
+const wechat = useWechatLogin({
+  onLoginSuccess: finishLogin,
+  onNeedRegister: (tempToken) => {
+    sessionStorage.setItem('wechatTempToken', tempToken)
+    void router.replace('/register?wechat=1')
+  },
+  onNeedBindEmail: (tempToken) => gotoVerifyEmail({ tempToken, mode: 'bind' }),
+  onNeedBindPhone: (tempToken) => gotoVerifyPhone({ tempToken, mode: 'bind' }),
+  onError: (message) => {
+    error.value = message
+  },
+})
+// 模板绑定须解构成顶层 ref 才会自动解包（对象属性里的 ref 不解包）
+const wechatOpening = wechat.opening
+
+onMounted(() => {
+  const errorParam = route.query.wechat_error
+  if (typeof errorParam === 'string' && errorParam) {
+    void router.replace({ path: '/login' })
+    error.value = `${t('微信登录失败')}：${decodeURIComponent(errorParam)}`
+    return
+  }
+  const txn = takeWechatTxn(route)
+  if (!txn) return
+  void router.replace({ path: '/login' })
+  void wechat.poll(txn, 0)
+})
 </script>
 
 <template>
@@ -177,18 +229,36 @@ onUnmounted(stopCountdown)
               @keyup.enter="handleAccountLogin"
             >
               <template #right-icon>
-                <van-icon :name="showPassword ? 'eye' : 'eye-o'" @click="showPassword = !showPassword" />
+                <van-icon
+                  :name="showPassword ? 'eye' : 'eye-o'"
+                  @click="showPassword = !showPassword"
+                />
               </template>
             </van-field>
-            <button class="primary-btn" :disabled="loading || !account.trim() || !password" @click="handleAccountLogin">
+            <button
+              class="primary-btn"
+              type="button"
+              :disabled="loading || !account.trim() || !password"
+              @click="handleAccountLogin"
+            >
               {{ loading ? t('登录中…') : t('立即登录') }}
+            </button>
+            <button class="link-btn link-btn-right" type="button" @click="goForgotPassword">
+              {{ t('忘记密码？') }}
             </button>
           </div>
         </van-tab>
 
         <van-tab :title="t('手机登录')" name="phone">
           <div class="tab-body">
-            <van-field v-model="phone" type="tel" :label="t('手机号')" :placeholder="t('请输入手机号')" maxlength="11" clearable />
+            <van-field
+              v-model="phone"
+              type="tel"
+              :label="t('手机号')"
+              :placeholder="t('请输入手机号')"
+              maxlength="11"
+              clearable
+            />
             <van-field
               v-model="code"
               type="digit"
@@ -199,12 +269,22 @@ onUnmounted(stopCountdown)
               @keyup.enter="handlePhoneLogin"
             >
               <template #button>
-                <button class="code-btn" :disabled="countdown > 0 || sendingCode || !phoneValid" @click="handleSendCode">
+                <button
+                  class="code-btn"
+                  type="button"
+                  :disabled="countdown > 0 || sendingCode || !phoneValid"
+                  @click="handleSendCode"
+                >
                   {{ countdown > 0 ? `${countdown}s` : t('获取验证码') }}
                 </button>
               </template>
             </van-field>
-            <button class="primary-btn" :disabled="loading || !phoneValid || !codeValid" @click="handlePhoneLogin">
+            <button
+              class="primary-btn"
+              type="button"
+              :disabled="loading || !phoneValid || !codeValid"
+              @click="handlePhoneLogin"
+            >
               {{ loading ? t('登录中…') : t('立即登录') }}
             </button>
           </div>
@@ -213,137 +293,70 @@ onUnmounted(stopCountdown)
 
       <div v-if="error" class="auth-error">{{ error }}</div>
 
+      <template v-if="config.wechatEnabled">
+        <div class="auth-divider">
+          <span>{{ t('其他方式登录') }}</span>
+        </div>
+        <button class="wechat-btn" type="button" :disabled="wechatOpening" @click="wechat.open">
+          <van-icon name="chat-o" />
+          {{ wechatOpening ? t('正在跳转…') : t('微信登录') }}
+        </button>
+      </template>
+
       <div class="auth-footer">
-        <span>{{ t('还没有账号？') }}</span>
-        <button class="link-btn" @click="goRegister">{{ t('立即注册') }}</button>
+        <template v-if="config.allowRegister">
+          <span>{{ t('还没有账号？') }}</span>
+          <button class="link-btn" type="button" @click="goRegister">{{ t('立即注册') }}</button>
+        </template>
+        <template v-else>
+          <span>{{ t('注册已关闭') }}</span>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.auth-page {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: var(--bg-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  overflow-y: auto;
-}
-
-/* label 只有 2 个字，vant 默认给 label 留 6.2em，把「请输入用户名、邮箱或手机号」
-   的尾部挤到卡片外被截断；收窄 label 列并减小水平内边距，把宽度让给输入区 */
-.auth-page .van-field {
-  --van-field-label-width: 5.5em;
-  --van-field-padding-horizontal: 12px;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.auth-header {
-  text-align: center;
-}
-
-.auth-title {
-  margin: 0;
-  font-size: var(--font-size-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.auth-subtitle {
-  margin: 8px 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-}
+@use '@/pages/auth/auth-common.scss';
 
 .auth-tabs {
   .tab-body {
     padding-top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
   }
 }
 
-.code-btn {
-  margin: 0;
-  padding: 0 12px;
-  height: 28px;
-  border: 1px solid var(--accent);
-  border-radius: 14px;
-  background: transparent;
-  color: var(--accent);
-  font-size: var(--font-size-sm);
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
 
-  &:not(:disabled) {
-    cursor: pointer;
-  }
-
-  &:disabled {
-    color: var(--text-tertiary);
-    border-color: var(--border-default);
-    cursor: default;
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-light);
   }
 }
 
-.primary-btn {
-  margin-top: 4px;
+.wechat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 12px;
-  border: none;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #00a99e 0%, #007a6f 100%);
-  color: #fff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font-size: var(--font-size-body-lg);
-  font-weight: 600;
-
-  &:not(:disabled) {
-    cursor: pointer;
-  }
+  cursor: pointer;
 
   &:disabled {
     opacity: 0.5;
     cursor: default;
-  }
-}
-
-.auth-error {
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 68, 68, 0.1);
-  border: 1px solid rgba(255, 68, 68, 0.3);
-  font-size: var(--font-size-sm);
-  color: #ff4444;
-}
-
-.auth-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-}
-
-.link-btn {
-  border: none;
-  background: none;
-  padding: 0;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--accent);
-
-  &:not(:disabled) {
-    cursor: pointer;
   }
 }
 </style>

@@ -9,6 +9,10 @@ vi.mock('vant', () => ({
   showDialog: (...args: unknown[]) => mockShowDialog(...args),
 }));
 
+// 样式副作用导入在 vitest 下解析不到 .css，单独打空桩
+vi.mock('vant/es/dialog/style', () => ({}));
+vi.mock('vant/es/toast/style', () => ({}));
+
 vi.mock('@/languages', () => ({
   t: (key: string) => key,
 }));
@@ -55,14 +59,14 @@ describe('toError', () => {
     expect(errorDetail(e, 'email')).toBe('a@b.com');
   });
 
-  it('数值型 code 路径：错误体在 error.data 里，业务码仍能取到', () => {
+  it('apiConfig.responseTransformer 抛出的 Error（code 挂在自己身上、body 在 data 里）能取到业务码', () => {
     const e = toError(
       Object.assign(new Error('邮箱格式错误'), {
         code: 400,
-        data: { code: 'VALIDATION_FAILED', message: '邮箱格式错误' },
+        data: { code: 'BAD_REQUEST', message: '邮箱格式错误' },
       })
     );
-    expect(eCode(e)).toBe('VALIDATION_FAILED');
+    expect(eCode(e)).toBe('BAD_REQUEST');
   });
 
   it('Axios 形态 { response: { data } } 也能解包', () => {

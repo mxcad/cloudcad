@@ -7,10 +7,23 @@
   --primary: #1989fa;
   --accent: #00a99e;
   --accent-secondary: #51B3D8;
+  // 主按钮渐变的深色端（原 LoginPage 硬编码 #007a6f）
+  --accent-dark: #007a6f;
+  // 主色按钮上的文字色（原 LoginPage 硬编码 #fff）
+  --on-accent: #fff;
   --primary-light: #ecf5ff;
   --success: #07c160;
   --warning: #ff976a;
   --danger: #ff4444;
+  // 错误提示条（原各页硬编码 rgba(255,68,68,0.1/0.3)）
+  --danger-bg: rgba(255, 68, 68, 0.1);
+  --danger-border: rgba(255, 68, 68, 0.3);
+  // 非错误态提示条（accent 浅底）
+  --info-bg: rgba(0, 169, 158, 0.1);
+  --info-border: rgba(0, 169, 158, 0.3);
+  // 密码强度条两端（弱/强之外的中间档）
+  --strength-medium: #ffa500;
+  --strength-strong: #ffd700;
 
   // --- Spacing / Radius / Font (theme-independent) ---
   --space-xs: 4px;

@@ -45,7 +45,8 @@ interface VerifyEmailState {
 const route = useRoute()
 const router = useRouter()
 
-const state = (route.state ?? {}) as VerifyEmailState
+// vue-router 的泛型路由类型上没有 state 字段，运行时确实有，显式取
+const state = ((route as unknown as { state?: unknown }).state ?? {}) as VerifyEmailState
 const bindMode = state.mode === 'bind'
 const tempToken = typeof state.tempToken === 'string' ? state.tempToken : ''
 

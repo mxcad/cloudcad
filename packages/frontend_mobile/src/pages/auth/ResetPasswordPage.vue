@@ -50,12 +50,12 @@ onMounted(() => {
   contact.value = storedValue || ''
 })
 
-function buildBody(extra: { code?: string; newPassword?: string; confirmPassword?: string }) {
+/** 联系渠道字段：邮箱/手机二选一 + PC 同口径的空 validateContact */
+function contactFields() {
   return {
     email: contactType.value === 'email' ? contact.value.trim() || undefined : undefined,
     phone: contactType.value === 'phone' ? contact.value.trim() || undefined : undefined,
     validateContact: '',
-    ...extra,
   }
 }
 
@@ -64,7 +64,7 @@ async function handleResend() {
   sending.value = true
   error.value = ''
   try {
-    const res = await authControllerForgotPassword({ body: buildBody({}) })
+    const res = await authControllerForgotPassword({ body: contactFields() })
     unwrap(res)
     showToast(t('验证码已发送'))
     countdownStart()
@@ -86,11 +86,12 @@ async function handleSubmit() {
   error.value = ''
   try {
     const res = await authControllerResetPassword({
-      body: buildBody({
+      body: {
+        ...contactFields(),
         code: code.value.trim(),
         newPassword: newPassword.value,
         confirmPassword: confirmPassword.value,
-      }),
+      },
     })
     unwrap(res)
     clearContact()

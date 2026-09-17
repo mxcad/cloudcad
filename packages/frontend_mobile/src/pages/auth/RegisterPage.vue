@@ -2,24 +2,44 @@
 /**
  * 原生注册页（ADR-0062 升级：移动端不再跳 PC 注册页，改为页内注册）。
  *
- * 手机号 + 短信验证码 + 用户名 + 密码（+ 可选昵称）→ authControllerRegisterByPhone。
- * 成功后经 applyAuthResponse 写入会话（后端注册即签发 token），再跳回 redirect 目标或壳根。
+ * 表单形态由运行时配置决定（与 PC useRegisterForm 同分支）：
+ *   - smsEnabled && requirePhoneVerification → 手机号 + 短信验证码分支
+ *       - 若同时 mailEnabled && requireEmailVerification → 先存注册凭证到 sessionStorage
+ *         再跳 /verify-email，由邮箱验证页一步完成注册（verifyEmailAndRegisterPhone）
+ *       - 否则直接 registerByPhone
+ *   - 否则 → 用户名 + 密码（+ 邮箱，仅 requireEmailVerification 时）→ register
+ *       - 后端返回 email 表示已发验证码待验证 → 跳 /verify-email
+ *
+ * allowRegister=false 时渲染注册关闭卡片（与 PC RegisterClosed 同文案）。
+ * 微信入口：`?wechat=1` 时读 sessionStorage.wechatTempToken 随注册请求带上；
+ * 非微信进入清掉旧值，避免上一轮微信授权残留污染普通注册。
  */
-import { ref, computed, onUnmounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  authControllerRegister,
   authControllerRegisterByPhone,
   authControllerSendSmsCode,
 } from '@cloudcad/api-sdk/sdk.gen'
-import { showSuccessToast } from 'vant'
+import { showToast } from 'vant'
 import { t } from '@/languages'
-import { applyAuthResponse, resolveRedirectTarget } from '@/utils/authSession'
+import {
+  applyAuthResponse,
+  setRegisterPhonePending,
+} from '@/utils/authSession'
+import { navigateAfterAuth } from '@/utils/authNavigate'
+import { toError, unwrap, errMsg } from '@/utils/authFeedback'
+import { isPhone, isCode, isEmail, getPasswordStrength } from '@/utils/authValidation'
+import { useCountdown } from '@/composables/useCountdown'
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 
 const route = useRoute()
 const router = useRouter()
+const { config } = useRuntimeConfig()
 
 const phone = ref('')
 const code = ref('')
+const email = ref('')
 const username = ref('')
 const password = ref('')
 const nickname = ref('')
@@ -27,287 +47,278 @@ const showPassword = ref(false)
 
 const submitting = ref(false)
 const sendingCode = ref(false)
-const countdown = ref(0)
 const error = ref('')
+const { countdown, start: countdownStart, isReady } = useCountdown()
 
-let countdownTimer: ReturnType<typeof setInterval> | null = null
+// ── 分支开关（运行时配置驱动） ──
+const closed = computed(() => !config.value.allowRegister)
+const needEmail = computed(() => config.value.mailEnabled && config.value.requireEmailVerification)
+const needPhoneCode = computed(() => config.value.smsEnabled && config.value.requirePhoneVerification)
 
-const PHONE_RE = /^1[3-9]\d{9}$/
-const CODE_RE = /^\d{6}$/
-const phoneValid = computed(() => PHONE_RE.test(phone.value))
-const codeValid = computed(() => CODE_RE.test(code.value))
-const usernameValid = computed(() => username.value.trim().length >= 3)
+const phoneValid = computed(() => isPhone(phone.value))
+const codeValid = computed(() => isCode(code.value))
+const emailValid = computed(() => !needEmail.value || isEmail(email.value))
+const usernameValid = computed(
+  () => username.value.trim().length >= 3 && username.value.trim().length <= 20
+)
 const passwordValid = computed(() => password.value.length >= 6)
+const strength = computed(() => getPasswordStrength(password.value))
+
 const canSubmit = computed(
-  () => phoneValid.value && codeValid.value && usernameValid.value && passwordValid.value
+  () =>
+    usernameValid.value &&
+    passwordValid.value &&
+    emailValid.value &&
+    (!needPhoneCode.value || (phoneValid.value && codeValid.value))
 )
 
-function startCountdown() {
-  stopCountdown()
-  countdown.value = 60
-  countdownTimer = setInterval(() => {
-    countdown.value = Math.max(0, countdown.value - 1)
-    if (countdown.value === 0) stopCountdown()
-  }, 1000)
-}
-
-function stopCountdown() {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
-  }
-}
-
-function toError(err: unknown): Error {
-  if (err instanceof Error) return err
-  const raw = err as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return new Error(raw.message)
-  return new Error(String(err))
-}
-
-function unwrap<T>(res: { error?: unknown; data?: unknown }): T {
-  if (res.error) throw toError(res.error)
-  return (res.data ?? {}) as T
-}
-
-function errMsg(e: unknown, fallback: string): string {
-  if (e instanceof Error && e.message) return e.message
-  const raw = e as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return raw.message
-  return fallback
-}
-
-function finishRegister() {
-  const target = resolveRedirectTarget(route.query.redirect)
-  // 整串字符串传（含 query），避免 { path } 把 query 当路径解析而静默丢弃
-  void router.replace(target)
-}
-
-async function handleSendCode() {
-  if (!phoneValid.value || sendingCode.value) return
+function handleSendCode() {
+  if (!phoneValid.value || sendingCode.value || !isReady()) return
   sendingCode.value = true
   error.value = ''
-  try {
-    const res = await authControllerSendSmsCode({ body: { phone: phone.value, scene: 'register' } })
-    unwrap(res)
-    showSuccessToast(t('验证码已发送'))
-    startCountdown()
-  } catch (e) {
-    error.value = errMsg(e, t('验证码发送失败'))
-  } finally {
-    sendingCode.value = false
-  }
+  authControllerSendSmsCode({ body: { phone: phone.value.trim(), scene: 'register' } })
+    .then((res) => {
+      if (res.error) throw toError(res.error)
+      showToast(t('验证码已发送'))
+      countdownStart()
+    })
+    .catch((e) => {
+      error.value = errMsg(e, t('验证码发送失败'))
+    })
+    .finally(() => {
+      sendingCode.value = false
+    })
+}
+
+function finishRegister(data: {
+  accessToken: string
+  refreshToken?: string
+  user?: unknown
+}) {
+  applyAuthResponse(data)
+  showToast(t('注册成功'))
+  clearWechatTempToken()
+  navigateAfterAuth(route.query as Record<string, unknown>)
+}
+
+function clearWechatTempToken() {
+  if (route.query.wechat === '1') sessionStorage.removeItem('wechatTempToken')
 }
 
 async function handleRegister() {
   if (!canSubmit.value || submitting.value) return
   submitting.value = true
   error.value = ''
+  const wechatTempToken = sessionStorage.getItem('wechatTempToken') || undefined
   try {
-    const res = await authControllerRegisterByPhone({
-      body: {
-        phone: phone.value,
-        code: code.value,
-        username: username.value.trim(),
-        password: password.value,
-        nickname: nickname.value.trim() || undefined,
-      },
-    })
-    const data = unwrap<{ accessToken: string; refreshToken?: string; user: unknown }>(res)
-    applyAuthResponse(data)
-    showSuccessToast(t('注册成功'))
-    finishRegister()
+    if (needPhoneCode.value) {
+      if (needEmail.value) {
+        // 邮箱待验证：先记住注册凭证，邮箱验证页一步完成注册
+        setRegisterPhonePending({
+          phone: phone.value.trim(),
+          code: code.value.trim(),
+          username: username.value.trim(),
+          password: password.value,
+          nickname: nickname.value.trim() || undefined,
+        })
+        void router.replace({
+          path: '/verify-email',
+          state: { message: t('请先验证邮箱，完成注册') },
+        })
+        return
+      }
+
+      const res = await authControllerRegisterByPhone({
+        body: {
+          phone: phone.value.trim(),
+          code: code.value.trim(),
+          username: username.value.trim(),
+          password: password.value,
+          nickname: nickname.value.trim() || undefined,
+        },
+      })
+      const data = unwrap<{ accessToken: string; refreshToken?: string; user?: unknown }>(res)
+      finishRegister(data)
+    } else {
+      const res = await authControllerRegister({
+        body: {
+          username: username.value.trim(),
+          password: password.value,
+          nickname: nickname.value.trim() || undefined,
+          email: needEmail.value ? email.value.trim() : undefined,
+          wechatTempToken,
+        },
+      })
+      const data = unwrap<{ accessToken?: string; refreshToken?: string; user?: unknown; email?: string }>(
+        res
+      )
+      // 后端返回 email 表示账号已建但邮箱未验证，需先去验证页拿 token
+      if (data.email && !data.accessToken) {
+        void router.replace({
+          path: '/verify-email',
+          state: { email: data.email, message: t('请验证邮箱以完成注册') },
+        })
+        return
+      }
+      if (data.accessToken) {
+        finishRegister({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+        })
+      } else {
+        throw new Error(t('注册失败，请重试'))
+      }
+    }
   } catch (e) {
-    error.value = errMsg(e, t('注册失败，请重试'))
+    error.value = errMsg(toError(e), t('注册失败，请重试'))
   } finally {
     submitting.value = false
   }
 }
 
 function goLogin() {
-  const redirect = resolveRedirectTarget(route.query.redirect)
+  const redirect = (route.query.redirect as string) || ''
   void router.replace({
     path: '/login',
-    query: redirect !== '/shell' ? { redirect } : {},
+    query: redirect && redirect !== '/shell' ? { redirect } : {},
   })
 }
 
-onUnmounted(stopCountdown)
+onMounted(() => {
+  if (route.query.wechat !== '1') sessionStorage.removeItem('wechatTempToken')
+})
 </script>
 
 <template>
   <div class="auth-page">
     <div class="auth-card">
-      <div class="auth-header">
-        <h1 class="auth-title">{{ t('注册') }}</h1>
-        <p class="auth-subtitle">{{ t('创建账户，开始使用 CloudCAD') }}</p>
-      </div>
+      <template v-if="closed">
+        <div class="auth-header">
+          <h1 class="auth-title">{{ t('注册已关闭') }}</h1>
+          <p class="auth-subtitle">{{ t('系统管理员已关闭新用户注册功能。') }}</p>
+        </div>
+        <div class="form-body">
+          <p class="notice">{{ t('如有疑问，请联系管理员。') }}</p>
+          <button class="primary-btn" type="button" @click="goLogin">{{ t('返回登录') }}</button>
+        </div>
+      </template>
 
-      <div class="form-body">
-        <van-field v-model="phone" type="tel" :label="t('手机号')" :placeholder="t('请输入手机号')" maxlength="11" clearable />
-        <van-field
-          v-model="code"
-          type="digit"
-          :label="t('验证码')"
-          :placeholder="t('请输入验证码')"
-          maxlength="6"
-          clearable
-        >
-          <template #button>
-            <button class="code-btn" :disabled="countdown > 0 || sendingCode || !phoneValid" @click="handleSendCode">
-              {{ countdown > 0 ? `${countdown}s` : t('获取验证码') }}
-            </button>
+      <template v-else>
+        <div class="auth-header">
+          <h1 class="auth-title">{{ t('注册') }}</h1>
+          <p class="auth-subtitle">{{ t('创建账户，开始使用 CloudCAD') }}</p>
+        </div>
+
+        <div class="form-body">
+          <template v-if="needPhoneCode">
+            <van-field
+              v-model="phone"
+              type="tel"
+              :label="t('手机号')"
+              :placeholder="t('请输入手机号')"
+              maxlength="11"
+              clearable
+            />
+            <van-field
+              v-model="code"
+              type="digit"
+              :label="t('验证码')"
+              :placeholder="t('请输入验证码')"
+              maxlength="6"
+              clearable
+            >
+              <template #button>
+                <button
+                  class="code-btn"
+                  type="button"
+                  :disabled="countdown > 0 || sendingCode || !phoneValid"
+                  @click="handleSendCode"
+                >
+                  {{ countdown > 0 ? `${countdown}s` : t('获取验证码') }}
+                </button>
+              </template>
+            </van-field>
           </template>
-        </van-field>
-        <van-field v-model="username" :label="t('用户名')" :placeholder="t('请输入用户名（3-20 个字符）')" maxlength="20" clearable />
-        <van-field
-          v-model="password"
-          :type="showPassword ? 'text' : 'password'"
-          :label="t('密码')"
-          :placeholder="t('至少 6 位')"
-          clearable
-        >
-          <template #right-icon>
-            <van-icon :name="showPassword ? 'eye' : 'eye-o'" @click="showPassword = !showPassword" />
+
+          <van-field
+            v-if="needEmail"
+            v-model="email"
+            type="text"
+            :label="t('邮箱')"
+            :placeholder="t('请输入邮箱地址')"
+            clearable
+          />
+          <van-field
+            v-model="username"
+            :label="t('用户名')"
+            :placeholder="t('请输入用户名（3-20 个字符）')"
+            maxlength="20"
+            clearable
+          />
+          <van-field
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            :label="t('密码')"
+            :placeholder="t('至少 6 位')"
+            clearable
+          >
+            <template #right-icon>
+              <van-icon
+                :name="showPassword ? 'eye' : 'eye-o'"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </van-field>
+          <template v-if="password && strength.score > 0">
+            <div class="strength-bar">
+              <div
+                class="strength-fill"
+                :style="{ width: `${(strength.score / 4) * 100}%`, background: strength.color }"
+              />
+            </div>
+            <p class="hint" :style="{ color: strength.color }">
+              {{ t('密码强度：') }}{{ strength.label }}
+            </p>
           </template>
-        </van-field>
-        <van-field v-model="nickname" :label="t('昵称')" :placeholder="t('选填，最多 50 个字符')" maxlength="50" clearable />
+          <van-field
+            v-model="nickname"
+            :label="t('昵称')"
+            :placeholder="t('选填，最多 50 个字符')"
+            maxlength="50"
+            clearable
+          />
 
-        <button class="primary-btn" :disabled="!canSubmit || submitting" @click="handleRegister">
-          {{ submitting ? t('注册中…') : t('立即注册') }}
-        </button>
-      </div>
+          <button class="primary-btn" type="button" :disabled="!canSubmit || submitting" @click="handleRegister">
+            {{ submitting ? t('注册中…') : t('立即注册') }}
+          </button>
+        </div>
 
-      <div v-if="error" class="auth-error">{{ error }}</div>
+        <div v-if="error" class="auth-error">{{ error }}</div>
 
-      <div class="auth-footer">
-        <span>{{ t('已有账号？') }}</span>
-        <button class="link-btn" @click="goLogin">{{ t('去登录') }}</button>
-      </div>
+        <div class="auth-footer">
+          <span>{{ t('已有账号？') }}</span>
+          <button class="link-btn" type="button" @click="goLogin">{{ t('去登录') }}</button>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.auth-page {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: var(--bg-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  overflow-y: auto;
+@use '@/pages/auth/auth-common.scss';
+
+.strength-bar {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-light);
+  overflow: hidden;
 }
 
-/* label 只有 2 个字，vant 默认给 label 留 6.2em，把「请输入用户名（3-20 个字符）」
-   的尾部挤到卡片外被截断；收窄 label 列并减小水平内边距，把宽度让给输入区 */
-.auth-page .van-field {
-  --van-field-label-width: 5.5em;
-  --van-field-padding-horizontal: 12px;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.auth-header {
-  text-align: center;
-}
-
-.auth-title {
-  margin: 0;
-  font-size: var(--font-size-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.auth-subtitle {
-  margin: 8px 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-}
-
-.form-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.code-btn {
-  margin: 0;
-  padding: 0 12px;
-  height: 28px;
-  border: 1px solid var(--accent);
-  border-radius: 14px;
-  background: transparent;
-  color: var(--accent);
-  font-size: var(--font-size-sm);
-
-  &:not(:disabled) {
-    cursor: pointer;
-  }
-
-  &:disabled {
-    color: var(--text-tertiary);
-    border-color: var(--border-default);
-    cursor: default;
-  }
-}
-
-.primary-btn {
-  margin-top: 4px;
-  padding: 12px;
-  border: none;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #00a99e 0%, #007a6f 100%);
-  color: #fff;
-  font-size: var(--font-size-body-lg);
-  font-weight: 600;
-
-  &:not(:disabled) {
-    cursor: pointer;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-
-.auth-error {
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 68, 68, 0.1);
-  border: 1px solid rgba(255, 68, 68, 0.3);
-  font-size: var(--font-size-sm);
-  color: #ff4444;
-}
-
-.auth-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-}
-
-.link-btn {
-  border: none;
-  background: none;
-  padding: 0;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--accent);
-
-  &:not(:disabled) {
-    cursor: pointer;
-  }
+.strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s ease, background 0.2s ease;
 }
 </style>

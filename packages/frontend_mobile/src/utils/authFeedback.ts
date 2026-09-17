@@ -106,21 +106,23 @@ export function errMsg(e: unknown, fallback: string): string {
 
 /**
  * 业务错误码（ACCOUNT_DEACTIVATED / EMAIL_NOT_VERIFIED 等）。
- * message 是本地化文案不含字面码，无法从文案反推；仅 body.code 可信，
- * 数值型 code（HTTP 状态）不算业务码。
- * 数值型 code 路径下原始体在 error.data 里，也一并查。
+ * message 是本地化文案不含字面码，无法从文案反推；只认字符串型 code。
+ *
+ * 普通路径下 body 就是错误体，code 在顶层；
+ * apiConfig.responseTransformer 抛出的 Error 则把数值型 code 挂在自己身上、
+ * 原始错误体挂在 data 里，所以顶层不是字符串时再查 data.code。
  */
 export function errorCode(e: unknown): string | null {
   const body = asRecord(e)
   if (!body) return null
-  const code = body.code ?? asRecord(body.data)?.code
-  if (typeof code === 'string' && code) return code
-  return null
+  if (typeof body.code === 'string' && body.code) return body.code
+  const nested = asRecord(body.data)?.code
+  return typeof nested === 'string' && nested ? nested : null
 }
 
 /** 读取业务错误体里的单个载荷字段（tempToken / email / phone / cleanupDays 等） */
 export function errorDetail<K extends keyof ApiErrorBody>(e: unknown, key: K): ApiErrorBody[K] {
-  return (asRecord(e) ?? {})[key]
+  return ((asRecord(e) ?? {}) as Partial<ApiErrorBody>)[key]
 }
 
 /** toast 提示错误文案（字符串错误直接展示，不做无意义包装） */

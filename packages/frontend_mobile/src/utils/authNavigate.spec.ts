@@ -57,11 +57,16 @@ describe('navigateToLogin / navigateToRegister', () => {
 
   it('显式传入 redirect 优先于当前路径', () => {
     state.fullPath = '/shell';
-    navigateToLogin('/register');
+    navigateToLogin('/verify-email');
     expect(replace).toHaveBeenCalledWith({
       path: '/login',
-      query: { redirect: '/register' },
+      query: { redirect: '/verify-email' },
     });
+  });
+
+  it('NO_REDIRECT_PATHS 中的路径不带 redirect（即便显式传入）', () => {
+    navigateToLogin('/register');
+    expect(replace).toHaveBeenCalledWith({ path: '/login', query: {} });
   });
 
   it('navigateToLoginPage 不带 redirect（忘记密码等「登录是终点」的入口）', () => {
