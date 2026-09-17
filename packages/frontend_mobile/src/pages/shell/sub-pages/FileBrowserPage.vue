@@ -15,7 +15,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast, showDialog, showSuccessToast, showFailToast } from 'vant'
-import type { PopoverAction } from 'vant'
+import type { ActionSheetAction } from 'vant'
 import {
   projectControllerGetProjects,
   projectControllerCreateProject,
@@ -480,30 +480,35 @@ const showCreateFolderDialog = ref(false)
 const folderNameInput = ref('')
 const showFabSheet = ref(false)
 
-const fabActions = computed(() => {
+// van-action-sheet 用 name 字段（van-popover 用 text）；key 作跨语言稳定判别符
+type FabActionKey = 'createFolder' | 'createDrawing' | 'uploadFile' | 'downloadTasks'
+type FabAction = ActionSheetAction & { key: FabActionKey }
+
+// 项目 Tab：+ 直接新建项目（唯一动作，无需选择）；个人空间 Tab：+ 弹菜单选新建/上传/下载任务
+function onFabClick() {
   if (activeTab.value === 0) {
-    return [{ key: 'createProject', text: t('新建项目'), icon: 'add-o' }]
+    showCreateProjectDialog.value = true
+    projectNameInput.value = ''
+    return
   }
-  return [
-    { key: 'createFolder', text: t('新建文件夹'), icon: 'bag-o' },
-    { key: 'createDrawing', text: t('新建图纸'), icon: 'description' },
-    { key: 'uploadFile', text: t('上传文件'), icon: 'upload' },
-    { key: 'downloadTasks', text: t('下载任务'), icon: 'down' },
-  ]
-})
+  showFabSheet.value = true
+}
+
+const fabActions = computed<FabAction[]>(() => [
+  { key: 'createFolder', name: t('新建文件夹'), icon: 'bag-o' },
+  { key: 'createDrawing', name: t('新建图纸'), icon: 'description' },
+  { key: 'uploadFile', name: t('上传文件'), icon: 'upload' },
+  { key: 'downloadTasks', name: t('下载任务'), icon: 'down' },
+])
 
 function openCreateFolderDialog() {
   showCreateFolderDialog.value = true
   folderNameInput.value = ''
 }
 
-function onFabSheetSelect(action: PopoverAction) {
+function onFabSheetSelect(action: FabAction) {
   showFabSheet.value = false
   switch (action.key) {
-    case 'createProject':
-      showCreateProjectDialog.value = true
-      projectNameInput.value = ''
-      break
     case 'createFolder':
       openCreateFolderDialog()
       break
@@ -693,19 +698,14 @@ async function onFileInputChange(e: Event) {
       </van-tab>
     </van-tabs>
 
-    <van-popover
+    <button class="fab" aria-label="新建" @click="onFabClick">
+      <van-icon name="plus" />
+    </button>
+    <van-action-sheet
       v-model:show="showFabSheet"
-      class="fab-popover"
-      placement="bottom-end"
       :actions="fabActions"
       @select="onFabSheetSelect"
-    >
-      <template #reference>
-        <button class="fab" aria-label="新建">
-          <van-icon name="plus" />
-        </button>
-      </template>
-    </van-popover>
+    />
 
     <van-popup v-model:show="showCreateProjectDialog" position="bottom" round :style="{ height: '48%' }">
       <div class="create-project-panel">
@@ -1053,35 +1053,5 @@ async function onFileInputChange(e: Event) {
   color: var(--text-secondary);
   padding-top: 14px;
   flex-shrink: 0;
-}
-</style>
-
-<style lang="scss">
-/* FAB 弹出菜单（参考 CAD 编辑器风格，非 scoped 以覆盖 Vant 内部元素） */
-.fab-popover {
-  .van-popover__arrow {
-    --van-popover-light-background: var(--accent-secondary);
-  }
-
-  .van-popover__content {
-    --van-popover-action-width: auto;
-    --van-popover-radius: 0;
-    border-top: 2px solid var(--accent-secondary);
-    border-radius: 0;
-  }
-
-  .van-popover__action {
-    border-bottom: 2px solid #202020;
-    --van-popover-action-height: 30px;
-    --van-popover-action-font-size: var(--van-font-size-xs);
-
-    &:active {
-      background: #666666;
-    }
-
-    .van-hairline--bottom:after {
-      border-bottom-width: 0;
-    }
-  }
 }
 </style>

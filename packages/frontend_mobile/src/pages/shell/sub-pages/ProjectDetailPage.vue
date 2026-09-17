@@ -14,7 +14,7 @@ import { t } from '@/languages'
 import { nodeControllerGetChildren } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerCreateFolder } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerBatchDeleteNodes } from '@cloudcad/api-sdk/sdk.gen'
-import type { PopoverAction } from 'vant'
+import type { ActionSheetAction } from 'vant'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
 import { useViewMode } from '@/composables/useViewMode'
 import { projectControllerGetProject, projectControllerGetProjectQuota } from '@cloudcad/api-sdk/sdk.gen'
@@ -443,11 +443,15 @@ function onModeChange(m: 'grid' | 'list') {
   fileMode.value = m
 }
 
-const fabActions = computed(() => [
-  { key: 'createFolder', text: t('新建文件夹'), icon: 'bag-o' },
-  { key: 'createDrawing', text: t('新建图纸'), icon: 'description' },
-  { key: 'uploadFile', text: t('上传文件'), icon: 'upload' },
-  { key: 'downloadTasks', text: t('下载任务'), icon: 'down' },
+// van-action-sheet 用 name 字段（van-popover 用 text）；key 作跨语言稳定判别符
+type FabActionKey = 'createFolder' | 'createDrawing' | 'uploadFile' | 'downloadTasks'
+type FabAction = ActionSheetAction & { key: FabActionKey }
+
+const fabActions = computed<FabAction[]>(() => [
+  { key: 'createFolder', name: t('新建文件夹'), icon: 'bag-o' },
+  { key: 'createDrawing', name: t('新建图纸'), icon: 'description' },
+  { key: 'uploadFile', name: t('上传文件'), icon: 'upload' },
+  { key: 'downloadTasks', name: t('下载任务'), icon: 'down' },
 ])
 
 function openCreateFolderDialog() {
@@ -455,7 +459,7 @@ function openCreateFolderDialog() {
   folderNameInput.value = ''
 }
 
-function onFabSheetSelect(action: PopoverAction) {
+function onFabSheetSelect(action: FabAction) {
   showFabSheet.value = false
   switch (action.key) {
     case 'createFolder':
@@ -892,19 +896,15 @@ onMounted(() => {
       </van-tab>
     </van-tabs>
 
-    <van-popover
+    <!-- 成员 Tab 无新建内容语义（添加成员已有列表头按钮），故只在文件 Tab 显示 FAB -->
+    <button v-if="activeTab === 0" class="fab" aria-label="新建" @click="showFabSheet = true">
+      <van-icon name="plus" />
+    </button>
+    <van-action-sheet
       v-model:show="showFabSheet"
-      class="fab-popover"
-      placement="bottom-end"
       :actions="fabActions"
       @select="onFabSheetSelect"
-    >
-      <template #reference>
-        <button class="fab" aria-label="新建">
-          <van-icon name="plus" />
-        </button>
-      </template>
-    </van-popover>
+    />
 
     <van-popup v-model:show="showCreateFolderDialog" position="bottom" round :style="{ height: '40%' }">
       <div class="create-panel">
@@ -1488,35 +1488,5 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   z-index: 100;
-}
-</style>
-
-<style lang="scss">
-/* FAB 弹出菜单（参考 CAD 编辑器风格，非 scoped 以覆盖 Vant 内部元素） */
-.fab-popover {
-  .van-popover__arrow {
-    --van-popover-light-background: var(--accent-secondary);
-  }
-
-  .van-popover__content {
-    --van-popover-action-width: auto;
-    --van-popover-radius: 0;
-    border-top: 2px solid var(--accent-secondary);
-    border-radius: 0;
-  }
-
-  .van-popover__action {
-    border-bottom: 2px solid #202020;
-    --van-popover-action-height: 30px;
-    --van-popover-action-font-size: var(--van-font-size-xs);
-
-    &:active {
-      background: #666666;
-    }
-
-    .van-hairline--bottom:after {
-      border-bottom-width: 0;
-    }
-  }
 }
 </style>
