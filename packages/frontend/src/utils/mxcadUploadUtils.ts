@@ -270,124 +270,132 @@ export async function uploadFile(
     };
   }
 
-  // 2. 开始分片上传
+  // 2. 开始分片上传（并发 3）
   onBeginUpload?.();
 
   let newNodeId: string | undefined;
-  let hasUploadedAnyChunk = false; // 标记是否有任何分片被上传
+  let skipResult: MxCadUploadResult | null = null; // skip 策略（文件已存在）提前终止标记
+  let completedChunks = 0;
   const isLastChunk = (chunkIndex: number) => chunkIndex === totalChunks - 1;
 
-  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+  const uploadOneChunk = async (chunkIndex: number): Promise<void> => {
     const start = chunkIndex * chunkSize;
     const end = Math.min(start + chunkSize, file.size);
     const chunk = file.slice(start, end);
 
     // 检查分片是否存在
-    const chunkRequest = {
-      chunk: chunkIndex,
-      chunks: totalChunks,
-      size: chunk.size,
-      fileHash: hash,
-      filename: safeName,
-      nodeId,
-    };
     const chunkData = await mxcadUploadControllerCheckChunkExist({
-      body: chunkRequest,
+      body: {
+        chunk: chunkIndex,
+        chunks: totalChunks,
+        size: chunk.size,
+        fileHash: hash,
+        filename: safeName,
+        nodeId,
+      },
     });
     throwOnSdkError(chunkData, t('检查分片失败'), safeName);
     const data = chunkData.data!;
     // mxcadApi 已自动解包，chunkData 直接是 { exists: boolean }
-    if (data.exists) {
-      // 分片已存在，跳过
-      onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
-      continue;
-    }
-    // 如果是最后一个分片，立即设置进度为100%
-    // 用户感知上，传完最后一个分片就等于上传完成了
-    if (isLastChunk(chunkIndex)) {
-      onProgress?.(100);
-    }
-
-    const uploadData = await mxcadUploadControllerUploadFile({
-      body: {
-        chunk: chunkIndex,
-        chunks: totalChunks,
-        name: safeName,
-        hash: hash,
-        size: file.size,
-        nodeId: nodeId,
-        conflictStrategy: conflictStrategy,
-        file: chunk,
-        skipDb,
-        forceUpload,
-      },
-    });
-    throwOnSdkError(uploadData, t('服务器处理出错'), safeName);
-
-    hasUploadedAnyChunk = true; // 标记已上传至少一个分片
-
-    // mxcadApi 已自动解包，uploadData 直接是响应数据
-    // 最后一个分片上传完成后，检查响应中是否包含 nodeId
-    if (isLastChunk(chunkIndex) && uploadData.data?.nodeId) {
-      newNodeId = uploadData.data!.nodeId;
-
-      // 检查是否是跳过策略（文件已存在）
-      if (uploadData.data!.ret === 'fileAlreadyExist') {
-        return {
-          file,
-          hash,
-          nodeId: uploadData.data!.nodeId,
+    if (!data.exists) {
+      const uploadData = await mxcadUploadControllerUploadFile({
+        body: {
+          chunk: chunkIndex,
+          chunks: totalChunks,
           name: safeName,
+          hash: hash,
           size: file.size,
-          type: file.type,
-          isUseServerExistingFile: true,
-          isInstantUpload: false,
-        };
+          nodeId: nodeId,
+          conflictStrategy: conflictStrategy,
+          file: chunk,
+          skipDb,
+          forceUpload,
+        },
+      });
+      throwOnSdkError(uploadData, t('服务器处理出错'), safeName);
+
+      // mxcadApi 已自动解包，uploadData 直接是响应数据
+      // 最后一个分片的响应可能带 nodeId（后端自动合并）
+      if (isLastChunk(chunkIndex) && uploadData.data?.nodeId) {
+        newNodeId = uploadData.data!.nodeId;
+
+        // 检查是否是跳过策略（文件已存在）
+        if (uploadData.data!.ret === 'fileAlreadyExist') {
+          skipResult = {
+            file,
+            hash,
+            nodeId: uploadData.data!.nodeId,
+            name: safeName,
+            size: file.size,
+            type: file.type,
+            isUseServerExistingFile: true,
+            isInstantUpload: false,
+          };
+        }
       }
     }
 
-    // 非最后一个分片上传完成后更新进度
-    if (!isLastChunk(chunkIndex)) {
-      onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
+    // 进度按完成数累计（并发下与分片序号无关）
+    completedChunks++;
+    onProgress?.((completedChunks / totalChunks) * 100);
+  };
+
+  // 并发池（3）：分片并行上传，到达顺序不确定——后端不依赖到达顺序触发合并，
+  // 合并由下面的显式合并请求统一触发
+  const CHUNK_CONCURRENCY = 3;
+  let nextChunkIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(CHUNK_CONCURRENCY, totalChunks) },
+    async () => {
+      while (!skipResult) {
+        const chunkIndex = nextChunkIndex++;
+        if (chunkIndex >= totalChunks) break;
+        await uploadOneChunk(chunkIndex);
+      }
     }
+  );
+  await Promise.all(workers);
+
+  // skip 策略（文件已存在）：提前返回，不发合并请求
+  if (skipResult) {
+    onProgress?.(100);
+    return skipResult;
   }
 
-  // 3. 如果所有分片都已存在（没有上传任何新分片），发送合并请求
-  if (!hasUploadedAnyChunk) {
-    // 所有分片都已存在，设置进度为100%
-    onProgress?.(100);
+  // 3. 全部分片到齐（无论刚上传还是已存在）→ 显式合并请求。
+  // 后端有幂等守卫（mergeKey + 分片数 + 临时目录检查）：最后一个分片已触发自动合并时
+  // 本请求是 no-op（kOk / kChunkNoExist）；最后一个分片已存在（自动合并未触发）时
+  // 本请求是合并的唯一入口。
+  const mergeData = await mxcadUploadControllerUploadFile({
+    body: {
+      chunks: totalChunks,
+      name: safeName,
+      hash: hash,
+      size: file.size,
+      nodeId: nodeId,
+      conflictStrategy: conflictStrategy,
+      skipDb,
+      forceUpload,
+    },
+  });
+  throwOnSdkError(mergeData, t('服务器处理出错'), safeName);
 
-    const mergeData = await mxcadUploadControllerUploadFile({
-      body: {
-        chunks: totalChunks,
-        name: safeName,
-        hash: hash,
-        size: file.size,
-        nodeId: nodeId,
-        conflictStrategy: conflictStrategy,
-        skipDb,
-        forceUpload,
-      },
-    });
-    throwOnSdkError(mergeData, t('服务器处理出错'), safeName);
+  if (mergeData.data?.nodeId) {
+    newNodeId = mergeData.data!.nodeId;
+  }
 
-    if (mergeData.data?.nodeId) {
-      newNodeId = mergeData.data!.nodeId;
-    }
-
-    // 检查是否是跳过策略（文件已存在）
-    if ((mergeData as unknown as { ret?: string }).ret === 'fileAlreadyExist') {
-      return {
-        file,
-        hash,
-        nodeId: mergeData.data?.nodeId ?? '',
-        name: safeName,
-        size: file.size,
-        type: file.type,
-        isUseServerExistingFile: true,
-        isInstantUpload: false,
-      };
-    }
+  // 检查是否是跳过策略（文件已存在）
+  if ((mergeData as unknown as { ret?: string }).ret === 'fileAlreadyExist') {
+    return {
+      file,
+      hash,
+      nodeId: mergeData.data?.nodeId ?? '',
+      name: safeName,
+      size: file.size,
+      type: file.type,
+      isUseServerExistingFile: true,
+      isInstantUpload: false,
+    };
   }
 
   // 4. 直接使用合并时返回的 nodeId

@@ -19,6 +19,7 @@ import {
   conversionTaskControllerRetryTask,
 } from '@/api-sdk';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { getValidToken } from '@/utils/tokenUtils';
 import { t } from '@/languages';
 
 /**
@@ -114,7 +115,16 @@ function loadLocalTasks(): ConversionTask[] {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as ConversionTask[]) : [];
+    if (!Array.isArray(arr)) return [];
+    const now = Date.now();
+    const tasks = (arr as ConversionTask[]).map((t) =>
+      // 残留 active（pending/processing）本地任务：页面刷新后其 SSE 等待已中断、
+      // 无法续等（游客无云端任务列表可刷新），置 failed 避免面板永远「转换中」
+      t.source === 'local' && isActiveStatus(t.status)
+        ? { ...t, status: 'failed' as ConversionTaskStatus }
+        : t
+    );
+    return pruneExpiredTerminalTasks(tasks, now);
   } catch {
     return [];
   }
@@ -272,6 +282,11 @@ export const useConversionQueueStore = create<ConversionQueueState>(
     cloudError: null,
 
     refreshCloud: async () => {
+      // 面板是「本地 + 云端」统一任务列表：游客有本地任务、登录用户有云端 + 本地，
+      // 两者都在面板里（区别只是 source 标记）。这里只门控云端拉取——游客没有
+      // node.taskId 云端任务，拉取是 no-op（此前无门控导致游客挂载/轮询恒 401）。
+      // 游客的转换等待走按文件 SSE，本地任务在面板照常显示与更新。
+      if (!getValidToken()) return;
       set({ cloudLoading: true, cloudError: null });
       try {
         const res = await conversionTaskControllerListTasks();

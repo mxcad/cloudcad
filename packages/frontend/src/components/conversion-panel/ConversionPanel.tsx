@@ -207,7 +207,9 @@ export function ConversionPanel() {
         ? downloadSearch
         : uploadSearch;
 
-  // 初次挂载拉取云端（面板常驻，无需任务门控，S6-2/S6-8）
+  // 初次挂载拉取（面板常驻，无需任务门控，S6-2/S6-8）。面板是「本地 + 云端」统一
+  // 任务列表，对游客 / 登录用户一视同仁：store.refreshCloud 内部已按 token 门控云端
+  // 拉取（游客无 node.taskId 云端任务，拉取 no-op，本地任务照常合并显示）
   useEffect(() => {
     refreshCloud();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -232,8 +234,10 @@ export function ConversionPanel() {
     settleInitial(true);
   }, [settled, cloudLoading, downloadSynced]);
 
-  // 有进行中任务时轮询云端（S4-3 兜底：SSE 断连 / 事件丢失 / 项目成员无 per-owner 通道时，
-  // 5s 轮询保证最终一致；SSE 正常时提供 sub-5s 实时推送，二者叠加无害——refreshCloud 幂等）
+  // 有进行中任务时轮询（S4-3 兜底：SSE 断连 / 事件丢失 / 项目成员无 per-owner 通道时，
+  // 5s 轮询保证最终一致；SSE 正常时提供 sub-5s 实时推送，二者叠加无害——refreshCloud 幂等）。
+  // 面板对游客 / 登录用户一视同仁：store.refreshCloud 内部已按 token 门控云端拉取
+  // （游客无云端任务时 no-op，本地任务照常显示），故面板层不再按 token 掐断
   useEffect(() => {
     if (!hasActive) return;
     const interval = setInterval(() => {

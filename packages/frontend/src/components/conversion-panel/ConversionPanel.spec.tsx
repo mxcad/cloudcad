@@ -125,7 +125,10 @@ const emptyUploadStats = {
 
 beforeEach(() => {
   cleanup();
-  mockGetValidToken.mockReset(); // 默认返回 undefined（游客，不订阅 SSE）
+  mockGetValidToken.mockReset();
+  // 默认登录用户（有 token）：云端任务类用例需 refreshCloud 真实拉取（store 内 token
+  // 门控放行）；游客用例显式 mockReturnValue(null)
+  mockGetValidToken.mockReturnValue('test-token');
   mockUseAuth.mockReset(); // 默认游客（配额端点不传 userId，按 IP 分桶）
   mockUseAuth.mockReturnValue({ user: undefined, token: undefined, loading: false });
   // SDK mock 归位到顶部默认值：历史用例（476/510/563/600）用 mockResolvedValue
@@ -758,7 +761,8 @@ describe('ConversionPanel', () => {
   });
 
   it('S4-3：游客（无 token）不订阅 SSE', async () => {
-    // mockGetValidToken 默认返回 undefined（游客）
+    // 游客（无 token）
+    mockGetValidToken.mockReturnValue(null);
     class MockEventSource {
       static instances: MockEventSource[] = [];
       url: string;

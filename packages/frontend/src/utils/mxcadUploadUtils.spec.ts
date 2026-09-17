@@ -67,3 +67,95 @@ describe('mxcadUploadUtils 上传大小限制', () => {
     expect(mocks.getPublicConfigs).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('mxcadUploadUtils 分片上传（并发 3 + 显式合并）', () => {
+  /** 从 uploadFile 调用里拆出「分片上传」与「合并请求」 */
+  function splitCalls() {
+    const chunkCalls = mocks.uploadFile.mock.calls.filter(
+      (c) => c[0].body.chunk !== undefined
+    );
+    const mergeCalls = mocks.uploadFile.mock.calls.filter(
+      (c) => c[0].body.chunk === undefined && c[0].body.chunks !== undefined
+    );
+    return { chunkCalls, mergeCalls };
+  }
+
+  it('12MB → 3 分片上传 + 1 显式合并请求（合并不再依赖「最后一个分片刚上传」）', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片（5MB 每片）
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: false } });
+    mocks.uploadFile.mockImplementation(async ({ body }) => {
+      if (body.chunk !== undefined) return { data: { ret: 'kOk' } };
+      return { data: { ret: 'kOk', nodeId: 'node-merged' } };
+    });
+
+    const result = await mod.uploadFile({ file, hash: 'h12', nodeId: 'n1' });
+
+    const { chunkCalls, mergeCalls } = splitCalls();
+    // 3 个分片（index 0/1/2 齐全）+ 1 个显式合并
+    expect(chunkCalls.map((c) => c[0].body.chunk).sort()).toEqual([0, 1, 2]);
+    expect(mergeCalls).toHaveLength(1);
+    expect(result.nodeId).toBe('node-merged');
+    expect(result.isInstantUpload).toBe(false);
+  });
+
+  it('并发度为 3：3 个分片上传曾同时 in-flight', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: false } });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    mocks.uploadFile.mockImplementation(async ({ body }) => {
+      if (body.chunk !== undefined) {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((r) => setTimeout(r, 10)); // 模拟网络延迟
+        inFlight--;
+        return { data: { ret: 'kOk' } };
+      }
+      return { data: { ret: 'kOk', nodeId: 'node-merged' } };
+    });
+
+    await mod.uploadFile({ file, hash: 'h12', nodeId: 'n1' });
+
+    // 3 分片并行 → 峰值并发 3（串行实现峰值只会是 1）
+    expect(maxInFlight).toBe(3);
+  });
+
+  it('全部分片已存在（无新上传）→ 仍发显式合并请求（修复：末片已存在时旧逻辑永不合并）', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: true } });
+    mocks.uploadFile.mockResolvedValue({
+      data: { ret: 'kOk', nodeId: 'node-merged' },
+    });
+
+    const result = await mod.uploadFile({ file, hash: 'h12', nodeId: 'n1' });
+
+    const { chunkCalls, mergeCalls } = splitCalls();
+    // 无分片上传，但显式合并请求照发（合并的唯一入口）
+    expect(chunkCalls).toHaveLength(0);
+    expect(mergeCalls).toHaveLength(1);
+    expect(result.nodeId).toBe('node-merged');
+  });
+
+  it('skip 策略：末片上传返回 fileAlreadyExist → 提前返回 isUseServerExistingFile，不发合并', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: false } });
+    mocks.uploadFile.mockImplementation(async ({ body }) => {
+      // 末片（chunk=2）返回 fileAlreadyExist + nodeId
+      if (body.chunk === 2)
+        return { data: { ret: 'fileAlreadyExist', nodeId: 'node-exist' } };
+      return { data: { ret: 'kOk' } };
+    });
+
+    const result = await mod.uploadFile({ file, hash: 'h12', nodeId: 'n1' });
+
+    expect(result.isUseServerExistingFile).toBe(true);
+    expect(result.nodeId).toBe('node-exist');
+    // 提前返回，不发合并请求
+    const { mergeCalls } = splitCalls();
+    expect(mergeCalls).toHaveLength(0);
+  });
+});

@@ -33,6 +33,8 @@ const PANEL_UI_KEY = 'cloudcad.conversion.panel-ui';
 beforeEach(() => {
   localStorage.removeItem(LOCAL_KEY);
   localStorage.removeItem(PANEL_UI_KEY);
+  // 默认登录用户（有 token）：refreshCloud 的 token 门控放行，云端拉取真实执行
+  localStorage.setItem('accessToken', 'test-token');
   useConversionQueueStore.setState({
     tasks: [],
     collapsed: true,
@@ -130,6 +132,22 @@ describe('conversionQueueStore 云端合并', () => {
     // 云端任务状态映射（PROCESSING → processing）
     const cloud = tasks.find((t) => t.id === 'node-1');
     expect(cloud?.status).toBe('processing');
+  });
+
+  it('游客（无 token）refreshCloud no-op：不发云端请求，本地任务照常保留', async () => {
+    localStorage.removeItem('accessToken');
+    // 先有一条本地任务（游客的转换记录）
+    useConversionQueueStore.getState().addLocalTask({ id: 'local-1', name: 'b.dwg' });
+
+    await useConversionQueueStore.getState().refreshCloud();
+
+    // 无 token → 云端拉取 no-op（不触发 SDK 请求，不再恒 401）
+    expect(mockedList).not.toHaveBeenCalled();
+    // 本地任务仍在面板数据里（面板是「本地 + 云端」统一列表，游客只见本地）
+    const tasks = useConversionQueueStore.getState().tasks;
+    expect(tasks.some((t) => t.id === 'local-1' && t.source === 'local')).toBe(true);
+    // cloudLoading 保持 false（门控在置 loading 之前早退）
+    expect(useConversionQueueStore.getState().cloudLoading).toBe(false);
   });
 
   it('refreshCloud 合并后按时刻倒序（最新在前）：较新的本地任务排在旧云端任务之前', async () => {

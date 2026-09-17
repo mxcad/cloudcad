@@ -20,6 +20,8 @@ import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.modul
 import { MxcadSaveModule } from '../save/mxcad-save.module';
 import { AuditLogModule } from '../../audit/audit-log.module';
 import { DrawingIngestService } from './drawing-ingest.service';
+import { ConversionFileSseService } from './conversion-file.sse.service';
+import { ConversionFileSseController } from './conversion-file.sse.controller';
 import { UploadUtilityService } from './upload-utility.service';
 import { FileNodeMaterializer } from './file-node-materializer.service';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
@@ -43,8 +45,10 @@ import { ChunkUploadManagerService } from '../services/chunk-upload-manager.serv
     MxcadSaveModule,
     AuditLogModule,
   ],
+  controllers: [ConversionFileSseController],
   providers: [
     DrawingIngestService,
+    ConversionFileSseService,
     FileNodeMaterializer,
     NodeStatusTransitioner,
     UploadUtilityService,

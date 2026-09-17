@@ -99,10 +99,38 @@ function capturedCallback(): () => Promise<void> {
   return payload.callback;
 }
 
+/**
+ * 可控 EventSource mock：waitPublicFileConverted 建连后由测试推送终态帧。
+ * happy-dom 无 EventSource，须注入全局。
+ */
+class MockEventSource {
+  static instances: MockEventSource[] = [];
+  url: string;
+  onmessage: ((event: { data: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  closed = false;
+  constructor(url: string) {
+    this.url = url;
+    MockEventSource.instances.push(this);
+  }
+  close() {
+    this.closed = true;
+  }
+  /** 测试辅助：模拟服务端推一帧 data（终态 COMPLETED/FAILED 或 PROCESSING） */
+  send(status: string, hash = 'x'): void {
+    this.onmessage?.({ data: JSON.stringify({ hash, status }) });
+  }
+}
+
 describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUpload）', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    // 登录用户（有 token）：waitForFileReady 的 refreshCloud token 门控放行
+    localStorage.setItem('accessToken', 'test-token');
+    // 可控 EventSource（上传路径的按文件 SSE 等待）
+    MockEventSource.instances = [];
+    (globalThis as Record<string, unknown>).EventSource = MockEventSource;
     useConversionQueueStore.setState({ tasks: [] });
   });
 
@@ -149,18 +177,33 @@ describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUp
     expect(after.error).toBe('open failed');
   });
 
-  it('缓存未命中：走上传路径，callback 成功后置 completed', async () => {
+  it('缓存未命中：上传后立即返回，等按文件 SSE COMPLETED 才 emit 打开，callback 成功后置 completed', async () => {
     mockCalculateFileHash.mockResolvedValue('hash123');
     mockCheckFileExist.mockResolvedValue({ data: { exists: false } });
     mockUploadMxCadFile.mockResolvedValue(undefined);
     mockOpenFile.mockResolvedValue(undefined);
 
-    await handlePublicUpload(makeFile('drawing.dwg'));
+    // 启动（不 resolve 到 SSE 终态）
+    const uploadPromise = handlePublicUpload(makeFile('drawing.dwg'));
+
+    // 上传完成后建按文件 SSE 连接（URL = 公开 file-stream 端点 + hash）
+    await vi.waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+    expect(MockEventSource.instances[0].url).toContain(
+      '/v1/mxcad/conversion/file-stream?hash=hash123'
+    );
+    // SSE 终态前不 emit（不打开）
+    expect(mockEmit).not.toHaveBeenCalled();
+
+    // 服务端通知转换完成 → emit 打开入口
+    MockEventSource.instances[0].send('COMPLETED', 'hash123');
+    await uploadPromise;
+    expect(mockEmit).toHaveBeenCalledTimes(1);
 
     const localTask = useConversionQueueStore
       .getState()
       .tasks.find((t) => t.source === 'local')!;
-    expect(localTask.status).toBe('processing');
     expect(mockUploadMxCadFile).toHaveBeenCalled();
 
     const cb = capturedCallback();
@@ -170,6 +213,72 @@ describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUp
       .getState()
       .tasks.find((t) => t.id === localTask.id)!;
     expect(after.status).toBe('completed');
+    // SSE 连接在终态后关闭
+    expect(MockEventSource.instances[0].closed).toBe(true);
+  });
+
+  it('SSE 通知 FAILED：本地任务置 failed（含 error），不 emit 打开', async () => {
+    mockCalculateFileHash.mockResolvedValue('hash123');
+    mockCheckFileExist.mockResolvedValue({ data: { exists: false } });
+    mockUploadMxCadFile.mockResolvedValue(undefined);
+
+    const uploadPromise = handlePublicUpload(makeFile('drawing.dwg'));
+    await vi.waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+
+    MockEventSource.instances[0].send('FAILED', 'hash123');
+    await uploadPromise;
+
+    // 失败不打开（不 emit）
+    expect(mockEmit).not.toHaveBeenCalled();
+    const localTask = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.source === 'local')!;
+    expect(localTask.status).toBe('failed');
+    expect(localTask.error).toBe('该文件转换失败，请检查文件内容');
+  });
+
+  it('latest-wins：A 先转好但已被 B 取代 → A 只置 completed 不打开，B 转好才打开', async () => {
+    mockCheckFileExist.mockResolvedValue({ data: { exists: false } });
+    mockUploadMxCadFile.mockResolvedValue(undefined);
+    mockOpenFile.mockResolvedValue(undefined);
+
+    // 打开 A
+    mockCalculateFileHash.mockResolvedValue('hashA');
+    const promiseA = handlePublicUpload(makeFile('a.dwg'));
+    await vi.waitFor(() => expect(MockEventSource.instances).toHaveLength(1));
+    const esA = MockEventSource.instances[0];
+
+    // 打开 B（取代 A）
+    mockCalculateFileHash.mockResolvedValue('hashB');
+    const promiseB = handlePublicUpload(makeFile('b.dwg'));
+    await vi.waitFor(() => expect(MockEventSource.instances).toHaveLength(2));
+    const esB = MockEventSource.instances[1];
+
+    // A 先完成（已被取代）→ 不打开，只置 completed
+    esA.send('COMPLETED', 'hashA');
+    await promiseA;
+    expect(mockEmit).not.toHaveBeenCalled();
+    const taskA = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.name === 'a.dwg')!;
+    expect(taskA.status).toBe('completed');
+
+    // B 完成（当前打开）→ emit 打开 B
+    esB.send('COMPLETED', 'hashB');
+    await promiseB;
+    expect(mockEmit).toHaveBeenCalledTimes(1);
+    // emit 的是 B（hashB）
+    const emitted = mockEmit.mock.calls[0]?.[1] as { fileHash: string };
+    expect(emitted.fileHash).toBe('hashB');
+
+    const cb = capturedCallback();
+    await cb();
+    const taskB = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.name === 'b.dwg')!;
+    expect(taskB.status).toBe('completed');
   });
 
   it('外层异常（hash 计算失败）：本地任务置 failed（含 error）', async () => {
@@ -188,6 +297,8 @@ describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUp
 describe('S6-1/S6-6 主上传路径：waitForFileReady 轮询期间重拉云端（消除新上传任务竞态）', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // 登录用户（有 token）：refreshCloud 的 token 门控放行（否则 no-op，轮询计数为 0）
+    localStorage.setItem('accessToken', 'test-token');
     // refreshCloud 拉取云端任务（默认空列表）
     mockListTasks.mockResolvedValue({
       error: undefined,

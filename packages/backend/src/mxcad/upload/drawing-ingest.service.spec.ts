@@ -5,6 +5,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NodeType, FileStatus } from '@cloudcad/db';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
@@ -26,6 +27,7 @@ import {
 import { FileNodeMaterializer } from './file-node-materializer.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
+import { CONVERSION_FILE_CHANNEL } from '../conversion/conversion-task-sse.constants';
 
 describe('DrawingIngestService', () => {
   let service: DrawingIngestService;
@@ -100,6 +102,8 @@ describe('DrawingIngestService', () => {
 
   const mockAuditLogService = { log: jest.fn() };
 
+  const mockEventEmitter = { emit: jest.fn() };
+
   function fileSource(
     overrides?: Partial<Extract<IngestSource, { kind: 'file' }>>
   ): IngestSource {
@@ -148,6 +152,7 @@ describe('DrawingIngestService', () => {
           useValue: mockAsyncConversionService,
         },
         { provide: AuditLogService, useValue: mockAuditLogService },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
     service = module.get<DrawingIngestService>(DrawingIngestService);
@@ -467,8 +472,15 @@ describe('DrawingIngestService', () => {
     });
   });
 
-  describe('无 nodeId 打开（CAD 编辑器打开图纸 = 纯打开/预览，不建节点）', () => {
-    it('登录用户无 nodeId：同步转换 + 不建节点，返回 kOk + created:false（回归：#433 前转换无条件执行）', async () => {
+  describe('无 nodeId 打开（CAD 编辑器打开图纸 = 纯打开/预览，不建节点，异步转换）', () => {
+    // 后台转换任务 fire-and-forget，需冲刷微任务链使其完成后再断言
+    async function flushMicrotasks(count = 12): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
+
+    it('登录用户无 nodeId：上传立即返回 kOk，后台转换 + COMPLETED emit（SSE 通知）', async () => {
       mockFileConversionService.needsConversion.mockReturnValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileConversionService.convertFile.mockResolvedValue({
@@ -482,20 +494,30 @@ describe('DrawingIngestService', () => {
         target({ parentNodeId: '' })
       );
 
-      // 转换执行、不建数据库节点、返回 kOk（前端经 public-file/access/<hash>.mxweb 打开）
+      // 上传请求立即返回 kOk（不阻塞等待转换）；不建数据库节点
       expect(result).toEqual({ ret: MxUploadReturn.kOk, created: false });
+      expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalled();
+
+      // 冲刷后台转换任务（mock 立即 resolve，任务已完成）
+      await flushMicrotasks();
+
+      // 后台任务：转换执行 + 在途表 COMPLETED + emit SSE 通知（latest-wins）
       expect(mockFileConversionService.convertFile).toHaveBeenCalledWith({
         srcPath: '/tmp/upload.dwg',
         fileHash: 'hash1',
         createPreloadingData: true,
       });
-      expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
-      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalled();
+      expect(service.getNoNodeConversionStatus('hash1')).toBe('COMPLETED');
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        CONVERSION_FILE_CHANNEL('hash1'),
+        { hash: 'hash1', status: 'COMPLETED' }
+      );
       // 转换成功，不释放占位
       expect(mockRestrictionEngine.releaseConversionCount).not.toHaveBeenCalled();
     });
 
-    it('无 nodeId 转换失败：同步释放占位 + 返回 kConvertFileError（不建节点、不删节点）', async () => {
+    it('无 nodeId 转换失败：上传仍立即返回 kOk，后台释放占位 + FAILED emit', async () => {
       mockFileConversionService.needsConversion.mockReturnValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileConversionService.convertFile.mockResolvedValue({
@@ -508,9 +530,19 @@ describe('DrawingIngestService', () => {
         target({ parentNodeId: '' })
       );
 
-      expect(result).toEqual({ ret: MxUploadReturn.kConvertFileError });
+      // 转换失败不再同步返回 kConvertFileError——上传立即返回 kOk，
+      // 失败经 SSE（CONVERSION_FILE_CHANNEL）通知前端
+      expect(result).toEqual({ ret: MxUploadReturn.kOk, created: false });
       expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
       expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+
+      await flushMicrotasks();
+
+      expect(service.getNoNodeConversionStatus('hash1')).toBe('FAILED');
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        CONVERSION_FILE_CHANNEL('hash1'),
+        { hash: 'hash1', status: 'FAILED' }
+      );
       expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
         'user1'
       );
@@ -706,6 +738,44 @@ describe('DrawingIngestService', () => {
           failureStage: 'conversion',
           transient: false,
         })
+      );
+    });
+
+    it('无 nodeId（游客 / 公开图纸）：合并请求立即返回 kOk，后台转换 + COMPLETED emit + 临时目录清理', async () => {
+      mockFileSystemService.getChunkTempDirPath.mockReturnValue('/tmp/chunks-hash1');
+      mockFileSystemService.getMd5Path.mockReturnValue('/tmp/hash1.dwg');
+      mockFileSystemService.deleteDirectory.mockResolvedValue(true);
+
+      // 游客打开：无 userId / 无 nodeId
+      const result = await service.ingest(
+        chunksSource(),
+        target({ userId: '', parentNodeId: '' })
+      );
+
+      // 合并请求立即返回 kOk（不阻塞等待转换）；不建数据库节点
+      expect(result).toEqual({ ret: MxUploadReturn.kOk });
+      expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
+
+      await flushMicrotasks();
+
+      // 后台任务：转换 + 在途表 COMPLETED + emit SSE 通知（latest-wins）
+      expect(mockFileConversionService.convertFile).toHaveBeenCalledWith({
+        srcPath: '/tmp/hash1.dwg',
+        fileHash: 'hash1',
+        createPreloadingData: true,
+      });
+      expect(service.getNoNodeConversionStatus('hash1')).toBe('COMPLETED');
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        CONVERSION_FILE_CHANNEL('hash1'),
+        { hash: 'hash1', status: 'COMPLETED' }
+      );
+      // 后台清理：chunk 临时目录 + 合并缓存
+      expect(mockFileSystemService.deleteDirectory).toHaveBeenCalledWith(
+        '/tmp/chunks-hash1'
+      );
+      expect(mockCacheManager.delete).toHaveBeenCalledWith(
+        'file-upload',
+        'merging:hash1'
       );
     });
   });

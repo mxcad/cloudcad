@@ -5,12 +5,17 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { ConversionResult } from '../interfaces/file-conversion.interface';
 import { AsyncConversionService } from '../conversion/async-conversion.service';
+import {
+  CONVERSION_FILE_CHANNEL,
+  type ConversionFileSseEvent,
+} from '../conversion/conversion-task-sse.constants';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
@@ -27,6 +32,15 @@ import * as path from 'path';
 
 /** 落盘（存储分配 / 复制）失败的统一错误文案：materialize 返回 null 不携带原因 */
 const MATERIALIZE_FAILED_ERROR = '落盘失败（存储分配或文件复制未成功）';
+
+/** 无节点（游客 / 公开图纸）转换状态 */
+export type NoNodeConversionStatus = 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+/**
+ * 在途无节点转换状态表保留时长：终态（COMPLETED/FAILED）条目保留 5 分钟，
+ * 供晚连接的 SSE 客户端读取当前状态（处理"订阅前已转完"竞态），过期惰性清理。
+ */
+const NO_NODE_STATUS_TTL_MS = 5 * 60 * 1000;
 
 /**
  * 摄入源：传输层差异（整包 / 分片）在此收敛为判别联合
@@ -100,6 +114,14 @@ export class DrawingIngestService {
     string,
     Promise<{ ret: MxUploadReturn }>
   > = new Map();
+  /**
+   * 在途无节点（游客 / 公开图纸）转换状态表：hash → 状态 + 时间戳。
+   * 供按文件 SSE 建连时查当前状态（处理"订阅前已转完"竞态），终态条目按 TTL 惰性清理。
+   */
+  private readonly noNodeConversionStatus: Map<
+    string,
+    { status: NoNodeConversionStatus; updatedAt: number }
+  > = new Map();
   private readonly mxcadUploadPath: string;
   private readonly filesDataPath: string;
 
@@ -116,7 +138,8 @@ export class DrawingIngestService {
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
     private readonly materializer: FileNodeMaterializer,
     private readonly asyncConversionService: AsyncConversionService,
-    private readonly auditLogService: AuditLogService
+    private readonly auditLogService: AuditLogService,
+    private readonly eventEmitter: EventEmitter2
   ) {
     this.mxcadUploadPath =
       this.configService.get('mxcadUploadPath') || '../../uploads';
@@ -543,10 +566,13 @@ export class DrawingIngestService {
 
   /**
    * 无节点场景（CAD 编辑器打开图纸 = 纯打开/预览，游客与登录用户一致）：
-   * 不建数据库节点，同步转换（请求返回即 mxweb 就位），文件留在 uploads 目录，
-   * 前端经 public-file/access/<hash>.mxweb 打开（findMxwebFile 按 hash 在 uploads/
-   * 查找 <hash>.*.mxweb）。与 ingestExternalRefDwg 同为同步转换，区别是不挂外部参照、
-   * 不建节点——mxweb 留在 uploads 供预览。
+   * 不建数据库节点，**异步转换**（上传请求立即返回，转换后台跑），文件留在 uploads
+   * 目录。前端经按文件 SSE（CONVERSION_FILE_CHANNEL）收到完成通知后经
+   * public-file/access/<hash>.mxweb 打开（findMxwebFile 按 hash 在 uploads/ 查找
+   * <hash>.*.mxweb，latest-wins：只打开最后打开的那个文件）。
+   *
+   * 与 ingestExternalRefDwg 区别：外部参照保持同步（前端按 ret 判定每文件成败、
+   * 轮询预加载数据），无节点预览改异步（SSE 通知，不阻塞上传请求）。
    */
   private async ingestNoNodePreview(args: {
     filePath: string;
@@ -557,31 +583,21 @@ export class DrawingIngestService {
     source: Extract<IngestSource, { kind: 'file' }>;
   }): Promise<IngestResult> {
     const { filePath, fileHash: hash, name, size, context, source } = args;
-    let isOk: boolean;
-    let ret: { tz?: boolean } | undefined;
-    try {
-      await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
-      const result = await this.fileConversionService.convertFile({
-        srcPath: filePath,
-        fileHash: hash,
-        createPreloadingData: true,
-      });
-      isOk = result.isOk;
-      ret = result.ret;
-    } catch (error) {
-      await this.releaseConversionReservation(context, source);
-      throw error;
-    }
-
-    if (isOk) {
-      this.logger.log(
-        `[DrawingIngest.ingest] 无节点场景（CAD 编辑器打开），跳过节点创建，同步转换: ${name}`
-      );
-      return { ret: MxUploadReturn.kOk, tz: ret?.tz, created: false };
-    }
-
-    await this.releaseConversionReservation(context, source);
-    return { ret: MxUploadReturn.kConvertFileError };
+    await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
+    // 异步转换（fire-and-forget）：上传请求立即返回，转换后台跑，完成后 emit 到
+    // CONVERSION_FILE_CHANNEL(hash) 通知前端（latest-wins）。
+    this.runBackgroundNoNodeConversion({
+      filepath: filePath,
+      fileHash: hash,
+      fileName: name,
+      fileSize: size,
+      context,
+      source,
+    });
+    this.logger.log(
+      `[DrawingIngest.ingest] 无节点场景（CAD 编辑器打开），跳过节点创建，异步转换: ${name}`
+    );
+    return { ret: MxUploadReturn.kOk, created: false };
   }
 
   /**
@@ -1010,6 +1026,179 @@ export class DrawingIngestService {
   }
 
   /**
+   * 查询在途无节点转换的当前状态（供按文件 SSE 建连时推当前状态，处理"订阅前已转完"竞态）。
+   * 惰性清理：终态条目超 TTL 即删，视为无记录。PROCESSING 不清理（转换进行中）。
+   */
+  getNoNodeConversionStatus(
+    hash: string
+  ): NoNodeConversionStatus | undefined {
+    const entry = this.noNodeConversionStatus.get(hash);
+    if (!entry) return undefined;
+    if (
+      entry.status !== 'PROCESSING' &&
+      Date.now() - entry.updatedAt > NO_NODE_STATUS_TTL_MS
+    ) {
+      this.noNodeConversionStatus.delete(hash);
+      return undefined;
+    }
+    return entry.status;
+  }
+
+  /**
+   * 无节点转换当前状态（供按文件 SSE 建连推当前状态）：优先在途表；无记录
+   * （服务重启 / 完成后 TTL 过期）按 mxweb 是否就位兜底——就位 = COMPLETED，
+   * 未就位 = PROCESSING（视为进行中，等完成事件；前端有超时兜底）。
+   */
+  async getNoNodeFileState(
+    hash: string
+  ): Promise<NoNodeConversionStatus> {
+    const status = this.getNoNodeConversionStatus(hash);
+    if (status) return status;
+    if (await this.isNoNodeMxwebInPlace(hash)) return 'COMPLETED';
+    return 'PROCESSING';
+  }
+
+  /** 该 hash 的 mxweb 是否已在 uploads 目录就位（与 public-file findMxwebFile 同判据：<hash>.<ext>.mxweb） */
+  private async isNoNodeMxwebInPlace(hash: string): Promise<boolean> {
+    try {
+      const files = await this.fileSystemService.readDirectory(
+        this.mxcadUploadPath
+      );
+      return files.some((f) => f.startsWith(hash) && f.endsWith('.mxweb'));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 后台无节点转换（游客 / 公开图纸打开）：fire-and-forget，不阻塞上传/合并请求。
+   *
+   * 与 runBackgroundChunkConversion / runBackgroundCadConversion 同模式，区别是不建
+   * DB 节点、不落盘（mxweb 留在 uploads 目录供 public-file/access 预览）。完成（成功/
+   * 失败）后 emit 到 CONVERSION_FILE_CHANNEL(hash)，前端按文件 SSE 收到即打开（latest-
+   * wins：只打开最后打开的那个文件）。任何异常都不向上抛出（后台任务，避免 unhandledRejection）。
+   *
+   * 返回后台任务 Promise：调用方 fire-and-forget 忽略返回值，测试可 await 它等待完成再断言。
+   */
+  private runBackgroundNoNodeConversion(args: {
+    filepath: string;
+    fileHash: string;
+    fileName: string;
+    fileSize: number;
+    context: FileSystemNodeContext;
+    source: { ip?: string };
+    /** 分片场景的 chunk 临时目录（合并后清理）；整包场景为 undefined */
+    tmpDir?: string;
+    /** 分片场景的合并缓存 key（合并后清理）；整包场景为 undefined */
+    mergeKey?: string;
+  }): Promise<void> {
+    const {
+      filepath,
+      fileHash: hash,
+      fileName,
+      fileSize,
+      context,
+      source,
+      tmpDir,
+      mergeKey,
+    } = args;
+
+    this.noNodeConversionStatus.set(hash, {
+      status: 'PROCESSING',
+      updatedAt: Date.now(),
+    });
+
+    return (async () => {
+      const setStatus = (status: NoNodeConversionStatus) => {
+        this.noNodeConversionStatus.set(hash, {
+          status,
+          updatedAt: Date.now(),
+        });
+      };
+      const emitDone = (status: 'COMPLETED' | 'FAILED') => {
+        try {
+          this.eventEmitter.emit(CONVERSION_FILE_CHANNEL(hash), {
+            hash,
+            status,
+          } satisfies ConversionFileSseEvent);
+        } catch (err) {
+          this.logger.warn(
+            `[DrawingIngest.noNode] SSE emit 失败（业务不阻塞）: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        }
+      };
+      const cleanup = async () => {
+        if (tmpDir) {
+          await this.fileSystemService.deleteDirectory(tmpDir).catch(() => {});
+        }
+        if (mergeKey) {
+          this.cacheManager.delete('file-upload', mergeKey);
+        }
+      };
+      try {
+        // .mxweb 无需转换（边界：分片上传 mxweb），直接标记完成通知前端
+        const isMxwebFile =
+          path.extname(fileName).toLowerCase() === '.mxweb';
+        if (isMxwebFile) {
+          setStatus('COMPLETED');
+          emitDone('COMPLETED');
+          await cleanup();
+          this.logger.log(
+            `[DrawingIngest.noNode] .mxweb 文件，跳过转换: ${fileName} (${hash})`
+          );
+          return;
+        }
+        const result = await this.fileConversionService.convertFile({
+          srcPath: filepath,
+          fileHash: hash,
+          createPreloadingData: true,
+        });
+        if (result.isOk) {
+          setStatus('COMPLETED');
+          emitDone('COMPLETED');
+          await cleanup();
+          this.logger.log(
+            `[DrawingIngest.noNode] 无节点转换完成: ${fileName} (${hash})`
+          );
+        } else {
+          setStatus('FAILED');
+          emitDone('FAILED');
+          await this.releaseConversionReservation(context, source);
+          await cleanup();
+          this.logger.warn(
+            `[DrawingIngest.noNode] 无节点转换失败: ${fileName} (${hash}) ` +
+              `（transient=${result.transient ?? 'unknown'}，${
+                result.error || '未知错误'
+              }）`
+          );
+        }
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `[DrawingIngest.noNode] 无节点转换异常: ${errMsg}`,
+          error instanceof Error ? error.stack : undefined
+        );
+        setStatus('FAILED');
+        emitDone('FAILED');
+        try {
+          await this.releaseConversionReservation(context, source);
+          await cleanup();
+        } catch (cleanupErr) {
+          this.logger.error(
+            `[DrawingIngest.noNode] 失败清理异常: ${
+              cleanupErr instanceof Error
+                ? cleanupErr.message
+                : String(cleanupErr)
+            }`
+          );
+        }
+      }
+    })();
+  }
+
+  /**
    * 预留本次转换的频率限制额度：登录用户按 userId，游客按 IP（ADR-0043）。
    * 超限抛 QuotaExceededException（403）向上传播。返回是否已占位。
    */
@@ -1290,7 +1479,22 @@ export class DrawingIngestService {
           };
         }
 
-        await this.cacheManager.delete('file-upload', mergeKey);
+        // 无节点场景（游客 / 公开图纸打开）：异步转换（fire-and-forget），合并请求立即返回。
+        // 后台转换 + chunk 临时目录/合并缓存清理，完成后 emit 到 CONVERSION_FILE_CHANNEL
+        // 通知前端（latest-wins）。转换失败时后台释放已占位的转换额度（conversionReserved）。
+        this.runBackgroundNoNodeConversion({
+          filepath,
+          fileHash: fileMd5,
+          fileName,
+          fileSize,
+          context,
+          source,
+          tmpDir,
+          mergeKey,
+        });
+        this.logger.log(
+          `[DrawingIngest.chunks] 无节点场景（CAD 编辑器打开），跳过节点创建，异步转换: ${fileName}`
+        );
         return { ret: MxUploadReturn.kOk };
       } catch (error) {
         await this.cacheManager.delete('file-upload', mergeKey);

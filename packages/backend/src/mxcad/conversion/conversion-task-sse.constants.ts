@@ -15,3 +15,20 @@ export interface ConversionTaskSseEvent {
   nodeId: string;
   status: string;
 }
+
+/**
+ * 无节点（游客 / 公开图纸）转换完成 SSE 通道（per 文件 hash）。
+ *
+ * 游客无 token，订阅不了 per-user 通道；前端经公开 SSE 端点
+ * `GET /mxcad/conversion/file-stream?hash=<hash>` 订阅。无节点转换在后台完成
+ * （成功/失败）后在 `CONVERSION_FILE_CHANNEL(hash)` 上 emit `{ hash, status }`，
+ * 前端收到即打开 mxweb（latest-wins：只打开最后打开的那个文件）。
+ */
+export const CONVERSION_FILE_CHANNEL = (hash: string): string =>
+  `conversion-file.changed.${hash}`;
+
+/** 事件负载：无节点转换完成 */
+export interface ConversionFileSseEvent {
+  hash: string;
+  status: 'COMPLETED' | 'FAILED';
+}

@@ -34,6 +34,7 @@ import {
 } from './mxcadCollaboration';
 import { CAD_EXTENSIONS } from '../../utils/fileUtils';
 import { CAD_EVENTS } from '@/constants/events';
+import { getApiBaseUrl } from '@/config/apiConfig';
 
 function isMxwebFile(filename: string): boolean {
   return filename.toLowerCase().endsWith('.mxweb');
@@ -391,6 +392,111 @@ async function openLocalMxwebFile(
   }
 }
 
+/**
+ * latest-wins 标记：最近一次打开的公开图纸 hash。
+ * 连续打开多个文件时（A 还在转换、B 又打开），只有 hash 等于当前标记的文件
+ * 转换完成后才会被打开；被取代文件的完成只更新任务状态、不打开。
+ * 服务模块内的协调状态（非组件状态），每次打开新文件时覆盖。
+ */
+let currentPublicOpenHash: string | null = null;
+
+/** 无节点转换等待超时：SSE 终态事件迟迟不到（服务端任务丢失，如服务重启）视为失败 */
+const PUBLIC_CONVERSION_WAIT_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * 打开公开图纸的 mxweb（public-file/access/<hash><ext>.mxweb）并更新本地任务状态。
+ * 成功置 completed、失败置 failed + toast（打开入口统一收敛在此，避免多处重复）。
+ */
+async function openPublicMxweb(
+  file: File,
+  hash: string,
+  noCache: boolean | undefined,
+  localTaskId: string
+): Promise<void> {
+  const { updateTaskStatus } = useConversionQueueStore.getState();
+  try {
+    showGlobalLoading(t('正在打开文件...'));
+    const ext = file.name.includes('.')
+      ? file.name.substring(file.name.lastIndexOf('.'))
+      : '';
+    const mxwebFilename = `${hash}${ext}.mxweb`;
+    const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
+    await mxcadManager.openFile({
+      url: fileUrl,
+      noCache,
+      fileInfo: {
+        fileId: '',
+        parentId: null,
+        projectId: null,
+        name: file.name,
+        personalSpaceId: null,
+        fileHash: hash,
+      },
+    });
+    hideGlobalLoading();
+    updateTaskStatus(localTaskId, 'completed');
+  } catch (error) {
+    hideGlobalLoading();
+    updateTaskStatus(localTaskId, 'failed', {
+      error: error instanceof Error ? error.message : undefined,
+    });
+    globalShowToast(
+      error instanceof Error ? error.message : t('文件打开失败'),
+      'error'
+    );
+  }
+}
+
+/**
+ * 等待某文件的无节点转换终态（按文件公开 SSE，无需 token）。
+ *
+ * 后端 `GET /api/v1/mxcad/conversion/file-stream?hash=<hash>`：建连先推当前状态
+ * （PROCESSING/COMPLETED/FAILED，处理「订阅前已转完」竞态），再推完成事件即断流。
+ * 终态（COMPLETED/FAILED）时 resolve；EventSource 不可用或超时（服务端转换任务
+ * 丢失）按失败处理。断连时 EventSource 自动重连，重连后后端重推当前状态。
+ */
+function waitPublicFileConverted(
+  hash: string
+): Promise<{ status: 'COMPLETED' | 'FAILED' }> {
+  return new Promise((resolve) => {
+    if (typeof EventSource === 'undefined') {
+      resolve({ status: 'FAILED' });
+      return;
+    }
+    let settled = false;
+    // eslint-disable-next-line no-restricted-syntax -- 豁免：无节点转换完成 SSE（SDK 无 SSE 形态，公开端点无 token，ADR-0034 豁免清单，参照 ConversionPanel 转换任务 SSE）
+    const es = new EventSource(
+      `${getApiBaseUrl()}/v1/mxcad/conversion/file-stream?hash=${encodeURIComponent(hash)}`
+    );
+    const finish = (status: 'COMPLETED' | 'FAILED'): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      es.close();
+      resolve({ status });
+    };
+    const timer = setTimeout(
+      () => finish('FAILED'),
+      PUBLIC_CONVERSION_WAIT_TIMEOUT_MS
+    );
+    es.onmessage = (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data) as {
+          hash?: string;
+          status?: string;
+        };
+        if (payload.status === 'COMPLETED' || payload.status === 'FAILED') {
+          finish(payload.status);
+        }
+        // PROCESSING（建连当前状态）→ 继续等待完成事件
+      } catch {
+        // 忽略畸形帧
+      }
+    };
+    // 断连由 EventSource 自动重连（重连后后端重推当前状态），无需手动处理
+  });
+}
+
 export async function handlePublicUpload(
   file: File,
   noCache?: boolean
@@ -405,6 +511,8 @@ export async function handlePublicUpload(
   try {
     showGlobalLoading(t('正在计算文件哈希...'));
     const hash = await calculateFileHash(file);
+    // latest-wins：最近打开的文件优先（每次打开新文件覆盖）
+    currentPublicOpenHash = hash;
     if (!noCache) {
       setLoadingMessage(t('正在检查缓存...'));
       const existData = await mxcadUploadControllerCheckFileExist({
@@ -416,44 +524,13 @@ export async function handlePublicUpload(
         },
       });
       if (existData.data?.exists) {
+        // mxweb 已就位（秒传）：直接打开
         hideGlobalLoading();
         emit(CAD_EVENTS.PUBLIC_FILE_UPLOADED, {
           fileHash: hash,
           fileName: file.name,
           noCache: noCache ?? false,
-          callback: async () => {
-            try {
-              showGlobalLoading(t('正在打开文件...'));
-              const ext = file.name.includes('.')
-                ? file.name.substring(file.name.lastIndexOf('.'))
-                : '';
-              const mxwebFilename = `${hash}${ext}.mxweb`;
-              const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
-              await mxcadManager.openFile({
-                url: fileUrl,
-                noCache,
-                fileInfo: {
-                  fileId: '',
-                  parentId: null,
-                  projectId: null,
-                  name: file.name,
-                  personalSpaceId: null,
-                  fileHash: hash,
-                },
-              });
-              hideGlobalLoading();
-              updateTaskStatus(localTaskId, 'completed');
-            } catch (error) {
-              hideGlobalLoading();
-              updateTaskStatus(localTaskId, 'failed', {
-                error: error instanceof Error ? error.message : undefined,
-              });
-              globalShowToast(
-                error instanceof Error ? error.message : t('文件打开失败'),
-                'error'
-              );
-            }
-          },
+          callback: () => openPublicMxweb(file, hash, noCache, localTaskId),
         });
         return;
       }
@@ -472,44 +549,32 @@ export async function handlePublicUpload(
           );
       },
     });
+    // 上传/合并请求立即返回（转换后台跑）：等按文件 SSE 终态事件（latest-wins）
+    setLoadingMessage(t('图纸转换中...'));
+    const { status } = await waitPublicFileConverted(hash);
+    if (status === 'FAILED') {
+      if (hash === currentPublicOpenHash) {
+        // 用户正在等的文件失败：清 loading 并提示
+        hideGlobalLoading();
+        globalShowToast(t('该文件转换失败，请检查文件内容'), 'error');
+      }
+      updateTaskStatus(localTaskId, 'failed', {
+        error: t('该文件转换失败，请检查文件内容'),
+      });
+      return;
+    }
+    if (hash !== currentPublicOpenHash) {
+      // 被后续打开的文件取代：只记任务完成，不打开（loading 归最近一次打开所有，勿动）
+      updateTaskStatus(localTaskId, 'completed');
+      return;
+    }
+    // 转换完成且是最近打开的文件：打开 mxweb
     hideGlobalLoading();
     emit(CAD_EVENTS.PUBLIC_FILE_UPLOADED, {
       fileHash: hash,
       fileName: file.name,
       noCache: noCache ?? false,
-      callback: async () => {
-        try {
-          showGlobalLoading(t('正在打开文件...'));
-          const ext = file.name.includes('.')
-            ? file.name.substring(file.name.lastIndexOf('.'))
-            : '';
-          const mxwebFilename = `${hash}${ext}.mxweb`;
-          const fileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
-          await mxcadManager.openFile({
-            url: fileUrl,
-            noCache,
-            fileInfo: {
-              fileId: '',
-              parentId: null,
-              projectId: null,
-              name: file.name,
-              personalSpaceId: null,
-              fileHash: hash,
-            },
-          });
-          hideGlobalLoading();
-          updateTaskStatus(localTaskId, 'completed');
-        } catch (error) {
-          hideGlobalLoading();
-          updateTaskStatus(localTaskId, 'failed', {
-            error: error instanceof Error ? error.message : undefined,
-          });
-          globalShowToast(
-            error instanceof Error ? error.message : t('文件打开失败'),
-            'error'
-          );
-        }
-      },
+      callback: () => openPublicMxweb(file, hash, noCache, localTaskId),
     });
   } catch (error) {
     hideGlobalLoading();
