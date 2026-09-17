@@ -303,3 +303,39 @@ DB 查 fileHash，无用户输入拼路径；`preloading/:hash` 的 hashDir 仅�
 使用（越界 hash 无命中早退）；`convert` 的 fileHash 走 findMxwebFile 同上安全。
 DWG 分支的临时文件路径经文件名校验（无分隔符/无 ..）后不可能越出 srcDir，内层
 两处 startsWith 校验冗余但无害，未动。
+
+### 5.2 share 模块（已修 2376c4a + 审查结论）
+
+**已修：`validateShareFileAccess` 同节点判定裸 startsWith 前缀缺陷**
+storagePath 来自 `filesData/*path` URL 路径参数（攻击者可控，`authorizeFilesDataAccess`
+直接透传）。有效 shareToken 下 `storagePath.startsWith(mainPrefix)`（mainPrefix=
+`YYYYMM/<nodeId>`）会让同月前缀兄弟目录 `YYYYMM/<nodeId>-evil/…` 被误判为同节点放行。
+nodeId 为系统生成的 UUID，天然不存在这种兄弟目录，实际可利用性低，但按最小包含性
+原则收紧为 `startsWith(mainPrefix + '/')`。新增 share.service.spec.ts 7 例（含撤销/
+过期/已删文件 404 语义）。
+
+**审查结论（无缺陷）**：createShare 权限分层完整（LIBRARY_DRAWING/LIBRARY_BLOCK
+走系统权限、项目节点走 owner 或 FILE_SHARE、无项目节点走 ownerId）；resolveShare/
+resolveShareNode/revokeShare/updateShare 的 token 生命周期判定（deletedAt/expiresAt/
+creator-only）一致；listShares 的 search 走文件 id 集合不拼 SQL；`updateShare` 允许
+创建者改任意过期时间（含延后）属设计语义（创建者控制有效期）。
+
+**观察项（不修）**：`listShares` 的 sortBy/sortOrder 与 `updateShare` 的 expiresAt
+为裸 `@Query`/`@IsString`，垃圾值（如 `sortBy=foo`、`expiresAt=garbage`）会落到
+Prisma 校验错/Invalid Date → 500 而非 400。仅自家前端消费且恒发合法值，属轻微
+健壮性缺口；修需定 400 vs 回落语义 + 补 DTO 校验，超出单点手术比例，记为后续可选票。
+
+### 5.3 storage 模块（已修 59d46df + 审查结论）
+
+**已修：LocalStorageProvider.validatePath 包含性判定补 path.sep 后缀**
+裸 `startsWith(basePath)` 允许 `key='.'` 解析到存储根目录本身（现收紧为必须严格
+位于其内）；后缀比较同时防同名前缀兄弟目录在解析语义变化时被误判为内部。实测
+Node `path.resolve` 对 Windows 盘符相对路径（`C:x/…`，不命中 isAbsolute）按相对段
+拼在 basePath 下、不越界，`..`/`~`/绝对路径已由前置校验挡住——故本处为防御性收紧
+而非可现实利用的越界。新增 local-storage.provider.spec.ts 5 例钉住各向量不变量。
+`/mxcad/file/` 绝对路径例外受 `..` 前置校验约束，只能落在该子树内，无越界。
+
+**审查结论（无缺陷）**：StorageService 为 IStorageProvider 薄 facade（ADR-0026
+可替换模块模式）；upload-token 端点走全局 JWT 守卫（无 @Public）+ path 校验
+（`..`/`~`/绝对/盘符前缀全拒）+ 共享密钥 HS256 签发，storage-service 侧不查库校验；
+http-storage.provider 的 key 全走 encodeURIComponent 无本地路径拼接。
