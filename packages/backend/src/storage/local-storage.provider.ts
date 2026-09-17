@@ -36,12 +36,16 @@ export class LocalStorageProvider {
 
   /**
    * 确保基础目录存在
+   *
+   * 必须在构造函数内同步执行：异步版本被构造器调用且不 await 时，配置错误
+   * （filesDataPath 未设）会变成 unhandled rejection，Node 默认以 exitCode 1
+   * 终止整个进程（jest 下表现为全量单测进程直接崩溃、无测试汇总）。
    */
-  private async ensureBasePath(): Promise<void> {
+  private ensureBasePath(): void {
     try {
       const absolutePath = path.resolve(this.basePath);
       if (!fs.existsSync(absolutePath)) {
-        await fsPromises.mkdir(absolutePath, { recursive: true });
+        fs.mkdirSync(absolutePath, { recursive: true });
         this.logger.log(`创建存储根目录: ${absolutePath}`);
       }
     } catch (error) {
