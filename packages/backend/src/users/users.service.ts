@@ -417,6 +417,9 @@ export class UsersService implements IUserService {
     buffer: Buffer,
     ext: string
   ): Promise<string> {
+    // 路径遍历防护：userId 可能来自管理员端点 URL 参数（Express 解码 %2f/%5c），
+    // basename 剥离路径段，确保头像落盘不逃逸 avatarDir
+    userId = path.basename(userId);
     const avatarDir = this.configService.get('avatarPath', { infer: true });
     await fs.promises.mkdir(avatarDir, { recursive: true }).catch(() => {});
 

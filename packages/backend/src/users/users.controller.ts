@@ -251,6 +251,9 @@ export class UsersController {
     @Request() req: ExpressRequest,
     @Res() res: Response,
   ) {
+    // 路径遍历防护：id 来自 URL（@Public 无鉴权），Express 会解码 %2f→/ 与 %5c→\，
+    // basename 剥离路径段，确保头像路径不逃逸 avatarDir（否则可读服务器上任意图片文件）
+    id = path.basename(id);
     const avatarDir = this.configService.get('avatarPath', { infer: true });
 
     for (const ext of AVATAR_EXTENSIONS) {

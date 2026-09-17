@@ -284,4 +284,21 @@ describe('UsersService.uploadAvatar', () => {
       service.uploadAvatar(userId, Buffer.alloc(5 * 1024 * 1024 + 1), '.jpg', 'image/jpeg')
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('遍历 userId：落盘不逃逸 avatarDir（basename 防护，回归：URL 参数可含 %2f/%5c）', async () => {
+    const maliciousUserId = '../../etc/passwd';
+    await service.uploadAvatar(
+      maliciousUserId,
+      Buffer.from('image-bytes'),
+      '.png',
+      'image/png'
+    );
+
+    // basename('../../etc/passwd') = 'passwd' → 落在 avatarDir 内
+    expect(fs.existsSync(path.join(avatarDir, 'passwd.png'))).toBe(true);
+    // avatarDir 外（tmpdir 层级）不应产生文件
+    expect(fs.existsSync(path.join(os.tmpdir(), 'etc', 'passwd.png'))).toBe(
+      false
+    );
+  });
 });

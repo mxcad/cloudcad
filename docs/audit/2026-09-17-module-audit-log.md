@@ -1008,3 +1008,46 @@ root 内；合法参照名无分隔符，no-op）。与 16/17/18 同缺陷类、
 **验证**：`pnpm jest external-ref external-reference-update` 2 suites / 16 tests 全绿；
 `pnpm type-check` 0 错。spec 新文件 prettier-clean（已 `--write`）；两个 service 文件 HEAD 本就非
 prettier-clean（大量预存长行漂移，我新增的 basename 行不在 diff 中），按约定不 `--write`。
+
+## 20. backend users / roles — 头像端点路径遍历（**高危：@Public 未鉴权任意图片文件读**）——已修
+
+**范围**：`users/*`（controller / service / avatar-extensions / user-crud / user-status /
+user-password）、`roles/*`（controller / service / project-roles / project-permission /
+prisma-permission-store）。
+
+### 20.1 `serveAvatar`（@Public）+ `saveAvatarToDisk` 的 `id`/`userId` 直接拼路径——已修（basename）
+
+| 方法 | 文件 | 鉴权 | 风险 |
+|---|---|---|---|
+| `serveAvatar(@Param('id'))` | users.controller.ts | **@Public 无鉴权** | `path.join(avatarDir, `${id}${ext}`)` → 任意图片文件读 |
+| `saveAvatarToDisk(userId)` | users.service.ts | 管理员 `:id/avatar`（SYSTEM_USER_UPDATE） | 同构 → 任意路径写图片 |
+
+**关键实证**：Express 5 的 `:id` 参数**会解码 `%2f`→`/`、`%5c`→`\`**（已用真实 express@5.2.1 起服务
+验证：`GET /users/avatar/%2e%2e%2f%2e%2e%2fetc%2fpasswd` → `req.params.id = "../../etc/passwd"`）。
+故 `id` 可含路径分隔符，`path.join(avatarDir, `${id}.png`)` 逃逸 avatarDir 读服务器上任意
+`.png/.jpg/.jpeg/.gif/.webp/.jfif` 文件（`@Public` 无鉴权，比 16.1 的 filesData 任意读更直接）。
+
+**修复**：`serveAvatar` 与 `saveAvatarToDisk` 各自 `try`/方法首行加 `id = path.basename(id)` /
+`userId = path.basename(userId)`（basename 结果恒无 `/`/`\`，`join(avatarDir,…)` 必落 avatarDir 内；
+合法 UUID 无分隔符，no-op）。与 16/17/18/19 同缺陷类、同修法。
+
+**其余审查结论（无缺陷）**：
+- 控制器鉴权完整：管理员端点全挂 `@RequirePermissions([SystemPermission.SYSTEM_USER_*])`，
+  自助端点用 `req.user.id`（非用户可控）。
+- `syncWechatAvatar` 的 SSRF 防护健全：`isWechatAvatarUrl` 强制 `https:` + hostname
+  `endsWith('.qlogo.cn'|'.qpic.cn')`（`new URL` 正规解析）+ `redirect:'error'`（防 302 绕白名单）
+  + 3s 超时。
+- `roles/*` 纯 Prisma DB 操作，无 raw SQL / 路径构造 / 文件 IO；角色与权限管理端点全挂
+  `SYSTEM_ROLE_*` 管理员权限，项目角色读走 `RequireProjectPermission`，`createProjectRole` 有
+  #298 系统/项目端点隔离检查 → 无提权/注入/遍历面。
+
+**回归测试**：`users.service.spec.ts` 加 1 例（`uploadAvatar` 遍历 `../../etc/passwd` → 落
+`avatarDir/passwd.png` 而非外泄）；新建 `users.controller.spec.ts` 1 例（`serveAvatar('../secret')`
+→ 404 且不 setHeader/write，avatarDir 外 secret.png 不被读出）。坑：`serveAvatar` 命中文件会
+`createReadStream` 且 `fs.createReadStream` 不可 spyOn（非 configurable），真实流 pipe 到 mock res
+不关闭 → Windows 文件锁致 afterEach `rmSync` ENOTEMPTY，故正向用例（真实出流）不入 spec，仅保留
+遍历用例（throw 在开流之前，无 open handle）；controller 直接 `new`（绕过 class 级 Guards 的 DI）。
+
+**验证**：`pnpm jest src/users` 7 suites / 48 tests 全绿；`pnpm type-check` 0 错。新 spec
+prettier-clean（已 `--write`）；`users.controller.ts`/`users.service.ts`/`users.service.spec.ts`
+HEAD 本就非 prettier-clean（预存长行漂移，我新增行不在 diff 中），按约定不 `--write`。
