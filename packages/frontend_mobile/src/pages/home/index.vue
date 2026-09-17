@@ -43,7 +43,7 @@ import {
 } from 'vant';
 import { showToastOnce } from '@/utils/toast';
 
-import { getPCLoginUrl, getPCRegisterUrl } from '@/utils/apiConfig';
+import { navigateToLogin, navigateToRegister } from '@/utils/authNavigate';
 import { navigateBack } from '../../utils/navigateBack';
 import {
   exitCollaborationIfNeeded,
@@ -241,7 +241,6 @@ const pendingCommitMessage = ref('');
 const canManageLibrary = ref(false);
 const showVersionHistory = ref(false);
 const showLoginPrompt = ref(false);
-const loginPromptWaiting = ref(false);
 const pendingActionAfterLogin = ref<'save' | 'saveAs' | 'version-history' | null>(null);
 const { config: runtimeConfig } = useRuntimeConfig();
 const showCooperate = ref(false);
@@ -319,53 +318,33 @@ function onShowVersionHistory() {
 }
 
 function onLoginPromptLogin(target: 'login' | 'register' = 'login') {
-  loginPromptWaiting.value = true
   if (pendingActionAfterLogin.value) {
     sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value)
     pendingActionAfterLogin.value = null
   }
-
-  const url = target === 'register'
-    ? getPCRegisterUrl(window.location.href)
-    : getPCLoginUrl(window.location.href)
-  const win = window.open(url, 'pc-login')
-
-  if (!win) {
-    loginPromptWaiting.value = false
-    showLoginPrompt.value = false
-    window.location.href = url
-    return
-  }
-
-  // storage 事件监听：新标签页写入 token 后触发 refresh
-  function onStorage(event: StorageEvent) {
-    if (event.key === 'accessToken' && event.newValue) {
-      window.removeEventListener('storage', onStorage);
-      const { refresh } = useUser();
-      refresh();
-
-      showLoginPrompt.value = false;
-      loginPromptWaiting.value = false;
-
-      const pending = sessionStorage.getItem('pendingAction');
-      if (pending) {
-        sessionStorage.removeItem('pendingAction');
-        setTimeout(() => {
-          if (pending === 'save') showCommitDialog.value = true;
-          else if (pending === 'saveAs') showSaveAsSheet.value = true;
-          else if (pending === 'version-history')
-            showVersionHistory.value = true;
-        }, 500);
-      }
-    }
-  }
-  window.addEventListener('storage', onStorage);
+  showLoginPrompt.value = false
+  // 原生登录页（同 tab，带 redirect 回跳当前编辑器）；登录完成后由下方 watch 恢复待执行动作
+  if (target === 'register') navigateToRegister()
+  else navigateToLogin()
 }
 
 function onLoginPromptClose() {
   showLoginPrompt.value = false;
-  loginPromptWaiting.value = false;
 }
+
+// 原生登录完成后（同 tab 无 storage 事件）恢复登录后待执行动作（保存/另存/版本历史）
+watch(isAuthenticated, (authed) => {
+  if (!authed) return
+  const pending = sessionStorage.getItem('pendingAction')
+  if (!pending) return
+  sessionStorage.removeItem('pendingAction')
+  setTimeout(() => {
+    if (pending === 'save') showCommitDialog.value = true
+    else if (pending === 'saveAs') showSaveAsSheet.value = true
+    else if (pending === 'version-history')
+      showVersionHistory.value = true
+  }, 500)
+})
 
 async function handleNewFile() {
   exitCollaborationIfNeeded();
@@ -692,7 +671,7 @@ setViewportHeight();
       :can-manage-library="canManageLibrary" :current-node-id="editorState.state.fileId || undefined"
       @close="onSaveAsClose" @success="onSaveAsSuccess" @login-required="showLoginPrompt = true" />
     <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
-    <LoginPromptPopup v-if="showLoginPrompt" :waiting="loginPromptWaiting" @login="onLoginPromptLogin('login')"
+    <LoginPromptPopup v-if="showLoginPrompt" @login="onLoginPromptLogin('login')"
       @register="onLoginPromptLogin('register')" @close="onLoginPromptClose" />
     <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
     <ShareCurrentPopup

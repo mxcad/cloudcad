@@ -114,11 +114,11 @@
             "src/command/m_mx_polyline.ts(10683-10689)",
             "src/command/m_mx_polyline.ts(23879-23885)",
             "src/command/m_mx_polyline.ts(34114-34120)",
+            "src/command/measurement/m_mx_measuring_length.ts(6436-6442)",
             "src/command/marked/m_mx_aligned_marked.tsx(3801-3807)",
             "src/command/marked/m_mx_dimangular.tsx(8337-8343)",
             "src/command/marked/m_mx_linear_marked.tsx(4591-4597)",
-            "src/pages/home/components/InsertBlockPopup.vue(3864-3870)",
-            "src/command/measurement/m_mx_measuring_length.ts(6436-6442)"
+            "src/pages/home/components/InsertBlockPopup.vue(3864-3870)"
         ],
         "$id": 677
     },
@@ -440,9 +440,9 @@
             "src/command/m_mx_extend.ts(763-771)",
             "src/command/m_mx_revcloud.ts(7006-7014)",
             "src/command/m_mx_trim.ts(2020-2028)",
+            "src/command/measurement/m_mx_measuring_length.ts(3522-3530)",
             "src/command/marked/m_mx_aligned_marked.tsx(933-941)",
-            "src/command/marked/m_mx_linear_marked.tsx(1669-1677)",
-            "src/command/measurement/m_mx_measuring_length.ts(3522-3530)"
+            "src/command/marked/m_mx_linear_marked.tsx(1669-1677)"
         ],
         "$id": 709
     },
@@ -1410,13 +1410,13 @@
         "$files": [
             "src/command/m_mx_rotate.ts(1310-1316)",
             "src/pages/home/components/ShareCurrentPopup.vue(7852-7858)",
-            "src/pages/shell/components/UnifiedFileList.vue(13305-13311)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9846-9852)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10605-10611)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9669-9675)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10428-10434)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(16935-16941)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(17686-17692)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(17283-17289)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(18708-18714)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(17117-17123)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(18542-18548)",
+            "src/pages/shell/components/UnifiedFileList.vue(13305-13311)"
         ],
         "$id": 802
     },
@@ -1530,11 +1530,11 @@
             "src/pages/home/components/LibraryPanel.vue(19659-19665)",
             "src/pages/home/components/LibraryPanel.vue(19909-19915)",
             "src/pages/home/components/LibraryPanel.vue(20131-20137)",
-            "src/pages/shell/components/UnifiedFileList.vue(13398-13404)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9870-9876)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10721-10727)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9693-9699)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10544-10550)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(16959-16965)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17802-17808)"
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17802-17808)",
+            "src/pages/shell/components/UnifiedFileList.vue(13398-13404)"
         ],
         "$id": 813
     },
@@ -1547,35 +1547,566 @@
         ],
         "$id": 814
     },
+    "正在打开协同文件...": {
+        "zh-TW": "正在打開協同檔案. ..",
+        "en-US": "Opening collaborative files ..",
+        "ko-KR": "협동 파일을 여는 중입니다...",
+        "$files": [
+            "src/composables/useCollabAutoJoin.ts(850-865)"
+        ],
+        "$id": 821
+    },
+    "加入协同超时": {
+        "zh-TW": "加入協同超時",
+        "en-US": "Join collaboration timeout",
+        "ko-KR": "협동 가입 시간 초과",
+        "$files": [
+            "src/composables/useCollabAutoJoin.ts(1261-1271)",
+            "src/composables/useCollabAutoJoin.ts(3926-3936)",
+            "src/stores/collab.ts(10562-10572)"
+        ],
+        "$id": 822
+    },
+    "请先登录": {
+        "zh-TW": "請先登錄",
+        "en-US": "Please log in first",
+        "ko-KR": "먼저 로그인하십시오.",
+        "$files": [
+            "src/composables/useCollabAutoJoin.ts(1602-1610)",
+            "src/composables/useSave.ts(3182-3190)",
+            "src/pages/home/components/ShareCurrentPopup.vue(2879-2887)"
+        ],
+        "$id": 823
+    },
+    "已加入协同": {
+        "zh-TW": "已加入協同",
+        "en-US": "Joined collaboration",
+        "ko-KR": "협동 이미 가입",
+        "$files": [
+            "src/composables/useCollabAutoJoin.ts(3559-3568)",
+            "src/stores/collab.ts(11799-11808)"
+        ],
+        "$id": 824
+    },
+    "已恢复协同连接": {
+        "zh-TW": "已恢復協同連接",
+        "en-US": "Collaborative connection restored",
+        "ko-KR": "협동 연결 복원됨",
+        "$files": [
+            "src/composables/useCollabAutoJoin.ts(3572-3583)",
+            "src/stores/collab.ts(11812-11823)"
+        ],
+        "$id": 825
+    },
+    "该协同已关闭，链接已失效": {
+        "zh-TW": "該協同已關閉，連結已失效",
+        "en-US": "This collaboration has been closed and the link is no longer valid",
+        "ko-KR": "이 협동이 닫혔습니다. 링크가 실패했습니다.",
+        "$files": [
+            "src/composables/useCollabAutoJoin.ts(4162-4178)"
+        ],
+        "$id": 826
+    },
+    "名称无效": {
+        "zh-TW": "名稱無效",
+        "en-US": "name invalid",
+        "ko-KR": "잘못된 이름",
+        "$files": [
+            "src/composables/useCreateDrawing.ts(996-1004)",
+            "src/pages/shell/components/RenameNodePopup.vue(1338-1346)"
+        ],
+        "$id": 2256
+    },
+    "文件夹未就绪，请稍后再试": {
+        "zh-TW": "資料夾未就緒,請稍後再試",
+        "en-US": "The folder is not ready, please try again later",
+        "ko-KR": "폴더가 준비되지 않았습니다. 나중에 다시 시도하십시오.",
+        "$files": [
+            "src/composables/useCreateDrawing.ts(1150-1166)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(13771-13787)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(21060-21076)"
+        ],
+        "$id": 2021
+    },
+    "创建中...": {
+        "zh-TW": "創建中...",
+        "en-US": "Creating...",
+        "ko-KR": "생성 중...",
+        "$files": [
+            "src/composables/useCreateDrawing.ts(1263-1273)",
+            "src/pages/home/components/ShareCurrentPopup.vue(7381-7391)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(17805-17815)"
+        ],
+        "$id": 1891
+    },
+    "图纸创建成功": {
+        "zh-TW": "圖紙創建成功",
+        "en-US": "Drawing created successfully",
+        "ko-KR": "시트가 성공적으로 작성되었습니다.",
+        "$files": [
+            "src/composables/useCreateDrawing.ts(1495-1505)"
+        ],
+        "$id": 2007
+    },
+    "创建失败，请重试": {
+        "zh-TW": "創建失敗,請重試",
+        "en-US": "Creation failed, please try again",
+        "ko-KR": "생성에 실패했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/composables/useCreateDrawing.ts(1583-1595)",
+            "src/pages/home/components/ShareCurrentPopup.vue(3420-3432)",
+            "src/pages/home/components/ShareCurrentPopup.vue(3802-3814)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(11367-11379)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(11616-11628)"
+        ],
+        "$id": 1883
+    },
+    "文件路径不存在": {
+        "zh-TW": "檔案路徑不存在",
+        "en-US": "The file path does not exist",
+        "ko-KR": "파일 경로가 없습니다.",
+        "$files": [
+            "src/composables/useFileLoader.ts(3889-3900)",
+            "src/composables/useShareFileLoad.ts(1004-1015)",
+            "src/plugins/mxcad/index.ts(2878-2889)"
+        ],
+        "$id": 827
+    },
+    "无法构造文件访问URL": {
+        "zh-TW": "無法構造檔案訪問URL",
+        "en-US": "Unable to construct file access URL",
+        "ko-KR": "파일을 구성하여 URL에 액세스할 수 없음",
+        "$files": [
+            "src/composables/useFileLoader.ts(4391-4406)",
+            "src/composables/useShareFileLoad.ts(1060-1075)"
+        ],
+        "$id": 828
+    },
+    "文件更新时间无效": {
+        "zh-TW": "檔案更新時間無效",
+        "en-US": "Invalid file update time",
+        "ko-KR": "잘못된 파일 업데이트 시간",
+        "$files": [
+            "src/composables/useFileLoader.ts(4520-4532)"
+        ],
+        "$id": 829
+    },
+    "正在获取文件信息...": {
+        "zh-TW": "正在獲取檔案資訊. ..",
+        "en-US": "Getting file information ..",
+        "ko-KR": "파일 정보를 가져오는 중입니다...",
+        "$files": [
+            "src/composables/useFileLoader.ts(5218-5233)",
+            "src/composables/useFileLoader.ts(5387-5402)",
+            "src/pages/home/index.vue(5839-5854)"
+        ],
+        "$id": 830
+    },
+    "文件不存在": {
+        "zh-TW": "檔案不存在",
+        "en-US": "File does not exist",
+        "ko-KR": "파일이 없습니다.",
+        "$files": [
+            "src/composables/useFileLoader.ts(5567-5576)"
+        ],
+        "$id": 831
+    },
+    "文件已被删除": {
+        "zh-TW": "檔案已被删除",
+        "en-US": "file has been deleted",
+        "ko-KR": "파일이 삭제됨",
+        "$files": [
+            "src/composables/useFileLoader.ts(5679-5689)",
+            "src/composables/useShareFileLoad.ts(898-908)"
+        ],
+        "$id": 832
+    },
+    "文件尚未转换完成": {
+        "zh-TW": "檔案尚未轉換完成",
+        "en-US": "The file has not been converted yet",
+        "ko-KR": "파일이 아직 변환되지 않았습니다.",
+        "$files": [
+            "src/composables/useFileLoader.ts(5757-5769)",
+            "src/composables/useShareFileLoad.ts(952-964)"
+        ],
+        "$id": 833
+    },
+    "正在从缓存加载图纸...": {
+        "zh-TW": "正在從緩存加載圖紙. ..",
+        "en-US": "Loading drawings from cache ..",
+        "ko-KR": "시트가 캐시에서 로드되고 있습니다...",
+        "$files": [
+            "src/composables/useFileLoader.ts(8527-8543)",
+            "src/pages/home/index.vue(5891-5907)"
+        ],
+        "$id": 834
+    },
+    "正在打开图纸...": {
+        "zh-TW": "正在打開圖紙. ..",
+        "en-US": "Opening drawing ..",
+        "ko-KR": "시트를 여는 중입니다...",
+        "$files": [
+            "src/composables/useFileLoader.ts(9102-9115)",
+            "src/composables/useFileLoader.ts(12294-12307)",
+            "src/pages/home/index.vue(5789-5802)"
+        ],
+        "$id": 835
+    },
+    "打开文件失败": {
+        "zh-TW": "打開文件失敗",
+        "en-US": "fail to open file",
+        "ko-KR": "파일 열기 실패",
+        "$files": [
+            "src/composables/useFileLoader.ts(10365-10375)",
+            "src/composables/useFileLoader.ts(12596-12606)"
+        ],
+        "$id": 836
+    },
+    "请登录后访问此文件": {
+        "zh-TW": "請登入後訪問此檔案",
+        "en-US": "Please log in and access this file",
+        "ko-KR": "로그인한 후 이 파일을 방문하십시오.",
+        "$files": [
+            "src/composables/useFileLoader.ts(10708-10721)",
+            "src/composables/useFileLoader.ts(12904-12917)",
+            "src/composables/useShareFileLoad.ts(2163-2176)",
+            "src/utils/errorHandler.ts(2690-2703)"
+        ],
+        "$id": 837
+    },
+    "文件不存在或已被删除": {
+        "zh-TW": "檔案不存在或已被删除",
+        "en-US": "The file does not exist or has been deleted",
+        "ko-KR": "파일이 없거나 삭제됨",
+        "$files": [
+            "src/composables/useFileLoader.ts(10826-10840)",
+            "src/composables/useFileLoader.ts(13022-13036)",
+            "src/utils/errorHandler.ts(2884-2898)"
+        ],
+        "$id": 838
+    },
+    "正在获取公开文件信息...": {
+        "zh-TW": "正在獲取公開檔案資訊. ..",
+        "en-US": "Obtaining public file information ..",
+        "ko-KR": "공개 파일 정보를 가져오는 중입니다...",
+        "$files": [
+            "src/composables/useFileLoader.ts(11587-11604)"
+        ],
+        "$id": 839
+    },
+    "正在加载图纸...": {
+        "zh-TW": "正在加載圖紙. ..",
+        "en-US": "Loading drawings ..",
+        "ko-KR": "시트를 로드하는 중입니다...",
+        "$files": [
+            "src/composables/useFileLoader.ts(11760-11773)"
+        ],
+        "$id": 840
+    },
+    "缺失外部参照文件": {
+        "zh-TW": "缺失外部參照檔案",
+        "en-US": "Missing external reference file",
+        "ko-KR": "외부 참조 파일 누락",
+        "$files": [
+            "src/composables/useFileLoader.ts(15027-15039)"
+        ],
+        "$id": 841
+    },
+    "上传文件": {
+        "zh-TW": "上傳文件",
+        "en-US": "Upload file",
+        "ko-KR": "파일 업로드",
+        "$files": [
+            "src/composables/useFileLoader.ts(15237-15245)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(16304-16312)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14308-14316)",
+            "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(5903-5911)"
+        ],
+        "$id": 842
+    },
+    "知道了": {
+        "zh-TW": "知道了",
+        "en-US": "Understood.",
+        "ko-KR": "알았어",
+        "$files": [
+            "src/composables/useFileLoader.ts(15249-15256)"
+        ],
+        "$id": 843
+    },
+    "跳过": {
+        "zh-TW": "跳過",
+        "en-US": "skip",
+        "ko-KR": "건너뛰기",
+        "$files": [
+            "src/composables/useFileLoader.ts(15283-15289)",
+            "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6264-6270)"
+        ],
+        "$id": 844
+    },
+    "图块名称不能为空": {
+        "zh-TW": "圖塊名稱不能為空",
+        "en-US": "Block name cannot be empty",
+        "ko-KR": "블록 이름은 비워둘 수 없습니다.",
+        "$files": [
+            "src/composables/useInsertBlock.ts(5165-5177)"
+        ],
+        "$id": 1572
+    },
+    "请选择正确的图块": {
+        "zh-TW": "請選擇正確的圖塊",
+        "en-US": "Please select the correct tile",
+        "ko-KR": "올바른 도면을 선택하십시오.",
+        "$files": [
+            "src/composables/useInsertBlock.ts(5298-5310)",
+            "src/composables/useInsertBlock.ts(6107-6119)"
+        ],
+        "$id": 1573
+    },
+    "图块加载中": {
+        "zh-TW": "圖塊加載中",
+        "en-US": "Block loading in progress",
+        "ko-KR": "그림 블록 로드 중",
+        "$files": [
+            "src/composables/useInsertBlock.ts(5556-5565)"
+        ],
+        "$id": 1574
+    },
+    "图块加载失败": {
+        "zh-TW": "圖塊加載失敗",
+        "en-US": "Block loading failed",
+        "ko-KR": "그림 블록 로드 실패",
+        "$files": [
+            "src/composables/useInsertBlock.ts(5885-5895)"
+        ],
+        "$id": 1575
+    },
+    "图块已存在": {
+        "zh-TW": "圖塊已存在",
+        "en-US": "Block already exists",
+        "ko-KR": "그림 블록이 이미 있습니다.",
+        "$files": [
+            "src/composables/useInsertBlock.ts(6307-6316)"
+        ],
+        "$id": 1576
+    },
+    "是否更新图块": {
+        "zh-TW": "是否更新圖塊",
+        "en-US": "Do you want to update the block",
+        "ko-KR": "블록 업데이트 여부",
+        "$files": [
+            "src/composables/useInsertBlock.ts(6340-6350)"
+        ],
+        "$id": 1577
+    },
+    "更新": {
+        "zh-TW": "更新",
+        "en-US": "Update",
+        "ko-KR": "업데이트",
+        "$files": [
+            "src/composables/useInsertBlock.ts(6384-6390)"
+        ],
+        "$id": 1578
+    },
     "取消": {
         "zh-TW": "取消",
         "en-US": "Cancel",
         "ko-KR": "취소",
         "$files": [
-            "src/components/DialogBase.vue(1002-1008)",
             "src/composables/useInsertBlock.ts(6423-6429)",
+            "src/components/DialogBase.vue(1002-1008)",
             "src/pages/home/components/CooperatePopup.vue(6483-6489)",
             "src/pages/home/components/CooperatePopup.vue(7087-7093)",
             "src/pages/home/components/LibraryPanel.vue(4777-4783)",
             "src/pages/home/components/LibraryPanel.vue(6112-6118)",
             "src/pages/home/components/LibraryPanel.vue(20164-20170)",
             "src/pages/home/components/ShareCurrentPopup.vue(4493-4499)",
-            "src/pages/shell/components/BatchDownloadPanel.vue(4126-4132)",
-            "src/pages/shell/components/RenameNodePopup.vue(1709-1715)",
-            "src/pages/shell/components/UnifiedFileList.vue(13496-13502)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(25191-25197)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(31094-31100)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(32111-32117)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(34285-34291)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(37001-37007)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(25014-25020)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(30948-30954)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(31965-31971)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(34139-34145)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(36855-36861)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(30387-30393)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(31265-31271)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4265-4271)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(15501-15507)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(15832-15838)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(17656-17662)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4199-4205)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(15335-15341)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(15666-15672)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(17490-17496)",
+            "src/pages/shell/components/BatchDownloadPanel.vue(4126-4132)",
+            "src/pages/shell/components/RenameNodePopup.vue(1709-1715)",
+            "src/pages/shell/components/UnifiedFileList.vue(13496-13502)"
         ],
         "$id": 819
+    },
+    "指定插入基点": {
+        "zh-TW": "指定插入基點",
+        "en-US": "Specify insertion base point",
+        "ko-KR": "삽입 기준점 지정",
+        "$files": [
+            "src/composables/useInsertBlock.ts(8445-8455)"
+        ],
+        "$id": 1579
+    },
+    "输入比例因子": {
+        "zh-TW": "輸入比例因數",
+        "en-US": "Input scale factor",
+        "ko-KR": "축척 비율 입력",
+        "$files": [
+            "src/composables/useInsertBlock.ts(9192-9202)"
+        ],
+        "$id": 1580
+    },
+    "插入图块成功": {
+        "zh-TW": "插入圖塊成功",
+        "en-US": "Insert block successfully",
+        "ko-KR": "블록 삽입 성공",
+        "$files": [
+            "src/composables/useInsertBlock.ts(11814-11824)"
+        ],
+        "$id": 1581
+    },
+    "全部": {
+        "zh-TW": "全部",
+        "en-US": "all",
+        "ko-KR": "전부",
+        "$files": [
+            "src/composables/useLibrary.ts(4072-4078)",
+            "src/composables/useLibrary.ts(5014-5020)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(2753-2759)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(1703-1709)"
+        ],
+        "$id": 1582
+    },
+    "加载失败": {
+        "zh-TW": "加載失敗",
+        "en-US": "Failed to load",
+        "ko-KR": "로드 실패",
+        "$files": [
+            "src/composables/useLibrary.ts(4579-4587)",
+            "src/composables/useLibrary.ts(5360-5368)",
+            "src/composables/useLibrary.ts(6312-6320)",
+            "src/composables/useLibrary.ts(7697-7705)",
+            "src/composables/useUnifiedFileList.ts(3102-3110)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(3983-3991)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(3085-3093)"
+        ],
+        "$id": 1583
+    },
+    "文件上传失败": {
+        "zh-TW": "文件上傳失敗",
+        "en-US": "File upload failed",
+        "ko-KR": "파일 업로드 실패",
+        "$files": [
+            "src/composables/useNativeFilePicker.ts(2304-2314)"
+        ],
+        "$id": 845
+    },
+    "当前图纸已被删除，请另存为新文件": {
+        "zh-TW": "當前圖紙已被删除,請另存為新檔案",
+        "en-US": "The current drawing has been deleted. Please save it as a new file",
+        "ko-KR": "현재 시트가 삭제되었으므로 새 파일로 저장하십시오.",
+        "$files": [
+            "src/composables/useSave.ts(3318-3338)",
+            "src/composables/useSave.ts(4452-4472)",
+            "src/composables/useSave.ts(4692-4712)"
+        ],
+        "$id": 1584
+    },
+    "正在保存文件...": {
+        "zh-TW": "正在保存檔案. ..",
+        "en-US": "Saving file ..",
+        "ko-KR": "파일을 저장하는 중입니다...",
+        "$files": [
+            "src/composables/useSave.ts(3407-3420)"
+        ],
+        "$id": 846
+    },
+    "公开文件不支持保存": {
+        "zh-TW": "公開檔案不支持保存",
+        "en-US": "Public files do not support saving",
+        "ko-KR": "공개 파일은 저장을 지원하지 않습니다.",
+        "$files": [
+            "src/composables/useSave.ts(3595-3608)",
+            "src/pages/home/index.vue(7360-7373)"
+        ],
+        "$id": 847
+    },
+    "没有保存权限，请另存为": {
+        "zh-TW": "沒有保存許可權，請另存為",
+        "en-US": "No save permission, please save as",
+        "ko-KR": "저장 권한이 없습니다. 다른 이름으로 저장하십시오.",
+        "$files": [
+            "src/composables/useSave.ts(3790-3805)"
+        ],
+        "$id": 848
+    },
+    "请另存为到云图": {
+        "zh-TW": "請另存為到雲圖",
+        "en-US": "Please save as to cloud map",
+        "ko-KR": "클라우드로 저장",
+        "$files": [
+            "src/composables/useSave.ts(4000-4011)",
+            "src/composables/useSave.ts(7305-7316)"
+        ],
+        "$id": 849
+    },
+    "保存成功": {
+        "zh-TW": "保存成功",
+        "en-US": "Saved successfully",
+        "ko-KR": "저장 성공",
+        "$files": [
+            "src/composables/useSave.ts(5719-5727)",
+            "src/composables/useSave.ts(6326-6334)",
+            "src/composables/useSave.ts(6993-7001)",
+            "src/pages/home/components/SaveAsSheet.vue(5051-5059)"
+        ],
+        "$id": 850
+    },
+    "无资源库管理权限，请另存为到其他位置": {
+        "zh-TW": "無資源庫管理許可權，請另存為到其他位置",
+        "en-US": "No resource library management permission, please save as to another location",
+        "ko-KR": "저장소 관리 권한이 없습니다. 다른 위치로 저장하십시오.",
+        "$files": [
+            "src/composables/useSave.ts(6592-6614)"
+        ],
+        "$id": 851
+    },
+    "分享链接不存在或已失效": {
+        "zh-TW": "分享連結不存在或已失效",
+        "en-US": "The sharing link does not exist or has expired",
+        "ko-KR": "공유 링크가 없거나 유효하지 않음",
+        "$files": [
+            "src/composables/useShareFileLoad.ts(685-700)",
+            "src/composables/useShareFileLoad.ts(2275-2290)"
+        ],
+        "$id": 852
+    },
+    "缺少项目信息或文件路径": {
+        "zh-TW": "缺少項目資訊或檔案路徑",
+        "en-US": "Missing project information or file path",
+        "ko-KR": "프로젝트 정보 또는 파일 경로 누락",
+        "$files": [
+            "src/composables/useVersionHistory.ts(916-931)"
+        ],
+        "$id": 853
+    },
+    "加载版本历史失败": {
+        "zh-TW": "加載版本歷史失敗",
+        "en-US": "Failed to load version history",
+        "ko-KR": "버전 기록 로드 실패",
+        "$files": [
+            "src/composables/useVersionHistory.ts(1580-1592)",
+            "src/composables/useVersionHistory.ts(1739-1751)"
+        ],
+        "$id": 854
+    },
+    "无法打开历史版本：缺少文件ID": {
+        "zh-TW": "無法打開歷史版本：缺少檔案ID",
+        "en-US": "Unable to open historical versions: missing file ID",
+        "ko-KR": "히스토리 버전을 열 수 없음: 파일 ID 누락",
+        "$files": [
+            "src/composables/useVersionHistory.ts(2028-2047)"
+        ],
+        "$id": 855
     },
     "确认": {
         "zh-TW": "確認",
@@ -1685,7 +2216,7 @@
         "ko-KR": "복제 실패",
         "$files": [
             "src/components/WorkCard.vue(897-905)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(15212-15220)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(15035-15043)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(22308-22316)"
         ],
         "$id": 817
@@ -1710,537 +2241,6 @@
         ],
         "$id": 1681
     },
-    "正在打开协同文件...": {
-        "zh-TW": "正在打開協同檔案. ..",
-        "en-US": "Opening collaborative files ..",
-        "ko-KR": "협동 파일을 여는 중입니다...",
-        "$files": [
-            "src/composables/useCollabAutoJoin.ts(850-865)"
-        ],
-        "$id": 821
-    },
-    "加入协同超时": {
-        "zh-TW": "加入協同超時",
-        "en-US": "Join collaboration timeout",
-        "ko-KR": "협동 가입 시간 초과",
-        "$files": [
-            "src/composables/useCollabAutoJoin.ts(1261-1271)",
-            "src/composables/useCollabAutoJoin.ts(3926-3936)",
-            "src/stores/collab.ts(10562-10572)"
-        ],
-        "$id": 822
-    },
-    "请先登录": {
-        "zh-TW": "請先登錄",
-        "en-US": "Please log in first",
-        "ko-KR": "먼저 로그인하십시오.",
-        "$files": [
-            "src/composables/useCollabAutoJoin.ts(1602-1610)",
-            "src/composables/useSave.ts(3182-3190)",
-            "src/pages/home/components/ShareCurrentPopup.vue(2879-2887)"
-        ],
-        "$id": 823
-    },
-    "已加入协同": {
-        "zh-TW": "已加入協同",
-        "en-US": "Joined collaboration",
-        "ko-KR": "협동 이미 가입",
-        "$files": [
-            "src/composables/useCollabAutoJoin.ts(3559-3568)",
-            "src/stores/collab.ts(11799-11808)"
-        ],
-        "$id": 824
-    },
-    "已恢复协同连接": {
-        "zh-TW": "已恢復協同連接",
-        "en-US": "Collaborative connection restored",
-        "ko-KR": "협동 연결 복원됨",
-        "$files": [
-            "src/composables/useCollabAutoJoin.ts(3572-3583)",
-            "src/stores/collab.ts(11812-11823)"
-        ],
-        "$id": 825
-    },
-    "该协同已关闭，链接已失效": {
-        "zh-TW": "該協同已關閉，連結已失效",
-        "en-US": "This collaboration has been closed and the link is no longer valid",
-        "ko-KR": "이 협동이 닫혔습니다. 링크가 실패했습니다.",
-        "$files": [
-            "src/composables/useCollabAutoJoin.ts(4162-4178)"
-        ],
-        "$id": 826
-    },
-    "名称无效": {
-        "zh-TW": "名稱無效",
-        "en-US": "name invalid",
-        "ko-KR": "잘못된 이름",
-        "$files": [
-            "src/composables/useCreateDrawing.ts(996-1004)",
-            "src/pages/shell/components/RenameNodePopup.vue(1338-1346)"
-        ],
-        "$id": 2256
-    },
-    "文件夹未就绪，请稍后再试": {
-        "zh-TW": "資料夾未就緒,請稍後再試",
-        "en-US": "The folder is not ready, please try again later",
-        "ko-KR": "폴더가 준비되지 않았습니다. 나중에 다시 시도하십시오.",
-        "$files": [
-            "src/composables/useCreateDrawing.ts(1150-1166)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(13948-13964)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(21060-21076)"
-        ],
-        "$id": 2021
-    },
-    "创建中...": {
-        "zh-TW": "創建中...",
-        "en-US": "Creating...",
-        "ko-KR": "생성 중...",
-        "$files": [
-            "src/composables/useCreateDrawing.ts(1263-1273)",
-            "src/pages/home/components/ShareCurrentPopup.vue(7381-7391)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(17971-17981)"
-        ],
-        "$id": 1891
-    },
-    "图纸创建成功": {
-        "zh-TW": "圖紙創建成功",
-        "en-US": "Drawing created successfully",
-        "ko-KR": "시트가 성공적으로 작성되었습니다.",
-        "$files": [
-            "src/composables/useCreateDrawing.ts(1495-1505)"
-        ],
-        "$id": 2007
-    },
-    "创建失败，请重试": {
-        "zh-TW": "創建失敗,請重試",
-        "en-US": "Creation failed, please try again",
-        "ko-KR": "생성에 실패했습니다. 다시 시도하십시오.",
-        "$files": [
-            "src/composables/useCreateDrawing.ts(1583-1595)",
-            "src/pages/home/components/ShareCurrentPopup.vue(3420-3432)",
-            "src/pages/home/components/ShareCurrentPopup.vue(3802-3814)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(11533-11545)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(11782-11794)"
-        ],
-        "$id": 1883
-    },
-    "文件路径不存在": {
-        "zh-TW": "檔案路徑不存在",
-        "en-US": "The file path does not exist",
-        "ko-KR": "파일 경로가 없습니다.",
-        "$files": [
-            "src/composables/useFileLoader.ts(3889-3900)",
-            "src/composables/useShareFileLoad.ts(1004-1015)",
-            "src/plugins/mxcad/index.ts(2878-2889)"
-        ],
-        "$id": 827
-    },
-    "无法构造文件访问URL": {
-        "zh-TW": "無法構造檔案訪問URL",
-        "en-US": "Unable to construct file access URL",
-        "ko-KR": "파일을 구성하여 URL에 액세스할 수 없음",
-        "$files": [
-            "src/composables/useFileLoader.ts(4391-4406)",
-            "src/composables/useShareFileLoad.ts(1060-1075)"
-        ],
-        "$id": 828
-    },
-    "文件更新时间无效": {
-        "zh-TW": "檔案更新時間無效",
-        "en-US": "Invalid file update time",
-        "ko-KR": "잘못된 파일 업데이트 시간",
-        "$files": [
-            "src/composables/useFileLoader.ts(4520-4532)"
-        ],
-        "$id": 829
-    },
-    "正在获取文件信息...": {
-        "zh-TW": "正在獲取檔案資訊. ..",
-        "en-US": "Getting file information ..",
-        "ko-KR": "파일 정보를 가져오는 중입니다...",
-        "$files": [
-            "src/composables/useFileLoader.ts(5218-5233)",
-            "src/composables/useFileLoader.ts(5387-5402)",
-            "src/pages/home/index.vue(5832-5847)"
-        ],
-        "$id": 830
-    },
-    "文件不存在": {
-        "zh-TW": "檔案不存在",
-        "en-US": "File does not exist",
-        "ko-KR": "파일이 없습니다.",
-        "$files": [
-            "src/composables/useFileLoader.ts(5567-5576)"
-        ],
-        "$id": 831
-    },
-    "文件已被删除": {
-        "zh-TW": "檔案已被删除",
-        "en-US": "file has been deleted",
-        "ko-KR": "파일이 삭제됨",
-        "$files": [
-            "src/composables/useFileLoader.ts(5679-5689)",
-            "src/composables/useShareFileLoad.ts(898-908)"
-        ],
-        "$id": 832
-    },
-    "文件尚未转换完成": {
-        "zh-TW": "檔案尚未轉換完成",
-        "en-US": "The file has not been converted yet",
-        "ko-KR": "파일이 아직 변환되지 않았습니다.",
-        "$files": [
-            "src/composables/useFileLoader.ts(5757-5769)",
-            "src/composables/useShareFileLoad.ts(952-964)"
-        ],
-        "$id": 833
-    },
-    "正在从缓存加载图纸...": {
-        "zh-TW": "正在從緩存加載圖紙. ..",
-        "en-US": "Loading drawings from cache ..",
-        "ko-KR": "시트가 캐시에서 로드되고 있습니다...",
-        "$files": [
-            "src/composables/useFileLoader.ts(8527-8543)",
-            "src/pages/home/index.vue(5884-5900)"
-        ],
-        "$id": 834
-    },
-    "正在打开图纸...": {
-        "zh-TW": "正在打開圖紙. ..",
-        "en-US": "Opening drawing ..",
-        "ko-KR": "시트를 여는 중입니다...",
-        "$files": [
-            "src/composables/useFileLoader.ts(9102-9115)",
-            "src/composables/useFileLoader.ts(12294-12307)",
-            "src/pages/home/index.vue(5782-5795)"
-        ],
-        "$id": 835
-    },
-    "打开文件失败": {
-        "zh-TW": "打開文件失敗",
-        "en-US": "fail to open file",
-        "ko-KR": "파일 열기 실패",
-        "$files": [
-            "src/composables/useFileLoader.ts(10365-10375)",
-            "src/composables/useFileLoader.ts(12596-12606)"
-        ],
-        "$id": 836
-    },
-    "请登录后访问此文件": {
-        "zh-TW": "請登入後訪問此檔案",
-        "en-US": "Please log in and access this file",
-        "ko-KR": "로그인한 후 이 파일을 방문하십시오.",
-        "$files": [
-            "src/composables/useFileLoader.ts(10708-10721)",
-            "src/composables/useFileLoader.ts(12904-12917)",
-            "src/composables/useShareFileLoad.ts(2163-2176)",
-            "src/utils/errorHandler.ts(2690-2703)"
-        ],
-        "$id": 837
-    },
-    "文件不存在或已被删除": {
-        "zh-TW": "檔案不存在或已被删除",
-        "en-US": "The file does not exist or has been deleted",
-        "ko-KR": "파일이 없거나 삭제됨",
-        "$files": [
-            "src/composables/useFileLoader.ts(10826-10840)",
-            "src/composables/useFileLoader.ts(13022-13036)",
-            "src/utils/errorHandler.ts(2884-2898)"
-        ],
-        "$id": 838
-    },
-    "正在获取公开文件信息...": {
-        "zh-TW": "正在獲取公開檔案資訊. ..",
-        "en-US": "Obtaining public file information ..",
-        "ko-KR": "공개 파일 정보를 가져오는 중입니다...",
-        "$files": [
-            "src/composables/useFileLoader.ts(11587-11604)"
-        ],
-        "$id": 839
-    },
-    "正在加载图纸...": {
-        "zh-TW": "正在加載圖紙. ..",
-        "en-US": "Loading drawings ..",
-        "ko-KR": "시트를 로드하는 중입니다...",
-        "$files": [
-            "src/composables/useFileLoader.ts(11760-11773)"
-        ],
-        "$id": 840
-    },
-    "缺失外部参照文件": {
-        "zh-TW": "缺失外部參照檔案",
-        "en-US": "Missing external reference file",
-        "ko-KR": "외부 참조 파일 누락",
-        "$files": [
-            "src/composables/useFileLoader.ts(15027-15039)"
-        ],
-        "$id": 841
-    },
-    "上传文件": {
-        "zh-TW": "上傳文件",
-        "en-US": "Upload file",
-        "ko-KR": "파일 업로드",
-        "$files": [
-            "src/composables/useFileLoader.ts(15237-15245)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(16481-16489)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14308-14316)",
-            "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(5903-5911)"
-        ],
-        "$id": 842
-    },
-    "知道了": {
-        "zh-TW": "知道了",
-        "en-US": "Understood.",
-        "ko-KR": "알았어",
-        "$files": [
-            "src/composables/useFileLoader.ts(15249-15256)"
-        ],
-        "$id": 843
-    },
-    "跳过": {
-        "zh-TW": "跳過",
-        "en-US": "skip",
-        "ko-KR": "건너뛰기",
-        "$files": [
-            "src/composables/useFileLoader.ts(15283-15289)",
-            "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6264-6270)"
-        ],
-        "$id": 844
-    },
-    "图块名称不能为空": {
-        "zh-TW": "圖塊名稱不能為空",
-        "en-US": "Block name cannot be empty",
-        "ko-KR": "블록 이름은 비워둘 수 없습니다.",
-        "$files": [
-            "src/composables/useInsertBlock.ts(5165-5177)"
-        ],
-        "$id": 1572
-    },
-    "请选择正确的图块": {
-        "zh-TW": "請選擇正確的圖塊",
-        "en-US": "Please select the correct tile",
-        "ko-KR": "올바른 도면을 선택하십시오.",
-        "$files": [
-            "src/composables/useInsertBlock.ts(5298-5310)",
-            "src/composables/useInsertBlock.ts(6107-6119)"
-        ],
-        "$id": 1573
-    },
-    "图块加载中": {
-        "zh-TW": "圖塊加載中",
-        "en-US": "Block loading in progress",
-        "ko-KR": "그림 블록 로드 중",
-        "$files": [
-            "src/composables/useInsertBlock.ts(5556-5565)"
-        ],
-        "$id": 1574
-    },
-    "图块加载失败": {
-        "zh-TW": "圖塊加載失敗",
-        "en-US": "Block loading failed",
-        "ko-KR": "그림 블록 로드 실패",
-        "$files": [
-            "src/composables/useInsertBlock.ts(5885-5895)"
-        ],
-        "$id": 1575
-    },
-    "图块已存在": {
-        "zh-TW": "圖塊已存在",
-        "en-US": "Block already exists",
-        "ko-KR": "그림 블록이 이미 있습니다.",
-        "$files": [
-            "src/composables/useInsertBlock.ts(6307-6316)"
-        ],
-        "$id": 1576
-    },
-    "是否更新图块": {
-        "zh-TW": "是否更新圖塊",
-        "en-US": "Do you want to update the block",
-        "ko-KR": "블록 업데이트 여부",
-        "$files": [
-            "src/composables/useInsertBlock.ts(6340-6350)"
-        ],
-        "$id": 1577
-    },
-    "更新": {
-        "zh-TW": "更新",
-        "en-US": "Update",
-        "ko-KR": "업데이트",
-        "$files": [
-            "src/composables/useInsertBlock.ts(6384-6390)"
-        ],
-        "$id": 1578
-    },
-    "指定插入基点": {
-        "zh-TW": "指定插入基點",
-        "en-US": "Specify insertion base point",
-        "ko-KR": "삽입 기준점 지정",
-        "$files": [
-            "src/composables/useInsertBlock.ts(8445-8455)"
-        ],
-        "$id": 1579
-    },
-    "输入比例因子": {
-        "zh-TW": "輸入比例因數",
-        "en-US": "Input scale factor",
-        "ko-KR": "축척 비율 입력",
-        "$files": [
-            "src/composables/useInsertBlock.ts(9192-9202)"
-        ],
-        "$id": 1580
-    },
-    "插入图块成功": {
-        "zh-TW": "插入圖塊成功",
-        "en-US": "Insert block successfully",
-        "ko-KR": "블록 삽입 성공",
-        "$files": [
-            "src/composables/useInsertBlock.ts(11814-11824)"
-        ],
-        "$id": 1581
-    },
-    "全部": {
-        "zh-TW": "全部",
-        "en-US": "all",
-        "ko-KR": "전부",
-        "$files": [
-            "src/composables/useLibrary.ts(4072-4078)",
-            "src/composables/useLibrary.ts(5014-5020)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(2819-2825)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(1769-1775)"
-        ],
-        "$id": 1582
-    },
-    "加载失败": {
-        "zh-TW": "加載失敗",
-        "en-US": "Failed to load",
-        "ko-KR": "로드 실패",
-        "$files": [
-            "src/composables/useLibrary.ts(4579-4587)",
-            "src/composables/useLibrary.ts(5360-5368)",
-            "src/composables/useLibrary.ts(6312-6320)",
-            "src/composables/useLibrary.ts(7697-7705)",
-            "src/composables/useUnifiedFileList.ts(3102-3110)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(4008-4016)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(3151-3159)"
-        ],
-        "$id": 1583
-    },
-    "文件上传失败": {
-        "zh-TW": "文件上傳失敗",
-        "en-US": "File upload failed",
-        "ko-KR": "파일 업로드 실패",
-        "$files": [
-            "src/composables/useNativeFilePicker.ts(2304-2314)"
-        ],
-        "$id": 845
-    },
-    "当前图纸已被删除，请另存为新文件": {
-        "zh-TW": "當前圖紙已被删除,請另存為新檔案",
-        "en-US": "The current drawing has been deleted. Please save it as a new file",
-        "ko-KR": "현재 시트가 삭제되었으므로 새 파일로 저장하십시오.",
-        "$files": [
-            "src/composables/useSave.ts(3318-3338)",
-            "src/composables/useSave.ts(4452-4472)",
-            "src/composables/useSave.ts(4692-4712)"
-        ],
-        "$id": 1584
-    },
-    "正在保存文件...": {
-        "zh-TW": "正在保存檔案. ..",
-        "en-US": "Saving file ..",
-        "ko-KR": "파일을 저장하는 중입니다...",
-        "$files": [
-            "src/composables/useSave.ts(3407-3420)"
-        ],
-        "$id": 846
-    },
-    "公开文件不支持保存": {
-        "zh-TW": "公開檔案不支持保存",
-        "en-US": "Public files do not support saving",
-        "ko-KR": "공개 파일은 저장을 지원하지 않습니다.",
-        "$files": [
-            "src/composables/useSave.ts(3595-3608)",
-            "src/pages/home/index.vue(7353-7366)"
-        ],
-        "$id": 847
-    },
-    "没有保存权限，请另存为": {
-        "zh-TW": "沒有保存許可權，請另存為",
-        "en-US": "No save permission, please save as",
-        "ko-KR": "저장 권한이 없습니다. 다른 이름으로 저장하십시오.",
-        "$files": [
-            "src/composables/useSave.ts(3790-3805)"
-        ],
-        "$id": 848
-    },
-    "请另存为到云图": {
-        "zh-TW": "請另存為到雲圖",
-        "en-US": "Please save as to cloud map",
-        "ko-KR": "클라우드로 저장",
-        "$files": [
-            "src/composables/useSave.ts(4000-4011)",
-            "src/composables/useSave.ts(7305-7316)"
-        ],
-        "$id": 849
-    },
-    "保存成功": {
-        "zh-TW": "保存成功",
-        "en-US": "Saved successfully",
-        "ko-KR": "저장 성공",
-        "$files": [
-            "src/composables/useSave.ts(5719-5727)",
-            "src/composables/useSave.ts(6326-6334)",
-            "src/composables/useSave.ts(6993-7001)",
-            "src/pages/home/components/SaveAsSheet.vue(5051-5059)"
-        ],
-        "$id": 850
-    },
-    "无资源库管理权限，请另存为到其他位置": {
-        "zh-TW": "無資源庫管理許可權，請另存為到其他位置",
-        "en-US": "No resource library management permission, please save as to another location",
-        "ko-KR": "저장소 관리 권한이 없습니다. 다른 위치로 저장하십시오.",
-        "$files": [
-            "src/composables/useSave.ts(6592-6614)"
-        ],
-        "$id": 851
-    },
-    "分享链接不存在或已失效": {
-        "zh-TW": "分享連結不存在或已失效",
-        "en-US": "The sharing link does not exist or has expired",
-        "ko-KR": "공유 링크가 없거나 유효하지 않음",
-        "$files": [
-            "src/composables/useShareFileLoad.ts(685-700)",
-            "src/composables/useShareFileLoad.ts(2275-2290)"
-        ],
-        "$id": 852
-    },
-    "缺少项目信息或文件路径": {
-        "zh-TW": "缺少項目資訊或檔案路徑",
-        "en-US": "Missing project information or file path",
-        "ko-KR": "프로젝트 정보 또는 파일 경로 누락",
-        "$files": [
-            "src/composables/useVersionHistory.ts(916-931)"
-        ],
-        "$id": 853
-    },
-    "加载版本历史失败": {
-        "zh-TW": "加載版本歷史失敗",
-        "en-US": "Failed to load version history",
-        "ko-KR": "버전 기록 로드 실패",
-        "$files": [
-            "src/composables/useVersionHistory.ts(1580-1592)",
-            "src/composables/useVersionHistory.ts(1739-1751)"
-        ],
-        "$id": 854
-    },
-    "无法打开历史版本：缺少文件ID": {
-        "zh-TW": "無法打開歷史版本：缺少檔案ID",
-        "en-US": "Unable to open historical versions: missing file ID",
-        "ko-KR": "히스토리 버전을 열 수 없음: 파일 ID 누락",
-        "$files": [
-            "src/composables/useVersionHistory.ts(2028-2047)"
-        ],
-        "$id": 855
-    },
     "下载完成": {
         "zh-TW": "下載完成",
         "en-US": "Download completed",
@@ -2257,7 +2257,7 @@
         "ko-KR": "변환 중입니다...",
         "$files": [
             "src/services/exportService.ts(1160-1171)",
-            "src/pages/home/index.vue(5740-5751)"
+            "src/pages/home/index.vue(5747-5758)"
         ],
         "$id": 864
     },
@@ -2295,7 +2295,7 @@
         "ko-KR": "이름을 바꾸는 중...",
         "$files": [
             "src/services/libraryOperationService.ts(2156-2167)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(13225-13236)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(13048-13059)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(20326-20337)"
         ],
         "$id": 2133
@@ -2306,7 +2306,7 @@
         "ko-KR": "이름 바꾸기 성공",
         "$files": [
             "src/services/libraryOperationService.ts(2363-2372)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(13488-13497)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(13311-13320)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(20589-20598)"
         ],
         "$id": 2134
@@ -2317,7 +2317,7 @@
         "ko-KR": "이름 바꾸기 실패",
         "$files": [
             "src/services/libraryOperationService.ts(2494-2503)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(13594-13603)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(13417-13426)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(20679-20688)"
         ],
         "$id": 2135
@@ -2329,7 +2329,7 @@
         "$files": [
             "src/services/libraryOperationService.ts(2823-2833)",
             "src/services/libraryOperationService.ts(3545-3555)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(8901-8911)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(8724-8734)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(16006-16016)"
         ],
         "$id": 2128
@@ -2340,7 +2340,7 @@
         "ko-KR": "삭제 성공",
         "$files": [
             "src/services/libraryOperationService.ts(3034-3042)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9173-9181)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(8996-9004)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(16278-16286)"
         ],
         "$id": 2129
@@ -2352,7 +2352,7 @@
         "$files": [
             "src/services/libraryOperationService.ts(3164-3172)",
             "src/services/libraryOperationService.ts(4010-4018)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9278-9286)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9101-9109)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(16367-16375)"
         ],
         "$id": 2130
@@ -2373,7 +2373,7 @@
         "$files": [
             "src/services/libraryOperationService.ts(5212-5220)",
             "src/services/libraryOperationService.ts(5561-5569)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(12406-12414)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(12229-12237)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(19487-19495)"
         ],
         "$id": 2288
@@ -2384,7 +2384,7 @@
         "ko-KR": "다운로드 성공",
         "$files": [
             "src/services/libraryOperationService.ts(5403-5411)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(12341-12349)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(12164-12172)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(19422-19430)"
         ],
         "$id": 2287
@@ -2471,6 +2471,27 @@
             "src/stores/collab.ts(12704-12713)"
         ],
         "$id": 862
+    },
+    "指定第一点": {
+        "zh-TW": "指定第一點",
+        "en-US": "Specify the first point",
+        "ko-KR": "첫 번째 점 지정",
+        "$files": [
+            "src/command/annotation/m_mx_lead_comment.tsx(548-557)",
+            "src/command/measurement/m_mx_measuring_angle.ts(929-938)",
+            "src/command/measurement/m_mx_measuring_area.ts(424-433)",
+            "src/command/measurement/m_mx_measuring_area.ts(1687-1696)"
+        ],
+        "$id": 880
+    },
+    "指定第二点": {
+        "zh-TW": "指定第二點",
+        "en-US": "Specify the second point",
+        "ko-KR": "두 번째 점 지정",
+        "$files": [
+            "src/command/annotation/m_mx_lead_comment.tsx(1597-1606)"
+        ],
+        "$id": 881
     },
     "业务处理失败": {
         "zh-TW": "業務處理失敗",
@@ -2579,27 +2600,6 @@
             "src/utils/validateName.ts(926-941)"
         ],
         "$id": 2120
-    },
-    "指定第一点": {
-        "zh-TW": "指定第一點",
-        "en-US": "Specify the first point",
-        "ko-KR": "첫 번째 점 지정",
-        "$files": [
-            "src/command/annotation/m_mx_lead_comment.tsx(548-557)",
-            "src/command/measurement/m_mx_measuring_angle.ts(929-938)",
-            "src/command/measurement/m_mx_measuring_area.ts(424-433)",
-            "src/command/measurement/m_mx_measuring_area.ts(1687-1696)"
-        ],
-        "$id": 880
-    },
-    "指定第二点": {
-        "zh-TW": "指定第二點",
-        "en-US": "Specify the second point",
-        "ko-KR": "두 번째 점 지정",
-        "$files": [
-            "src/command/annotation/m_mx_lead_comment.tsx(1597-1606)"
-        ],
-        "$id": 881
     },
     "点击选择对象": {
         "zh-TW": "點擊選擇對象",
@@ -2837,191 +2837,50 @@
         ],
         "$id": 907
     },
-    "工具": {
-        "zh-TW": "工具",
-        "en-US": "tool",
-        "ko-KR": "도구",
+    "指定第二个角度点": {
+        "zh-TW": "指定第二個角度點",
+        "en-US": "Specify the second angle point",
+        "ko-KR": "두 번째 각도 점 지정하기",
         "$files": [
-            "src/pages/home/hooks.tsx(717-723)"
+            "src/command/measurement/m_mx_measuring_angle.ts(1054-1066)"
         ],
-        "$id": 940
+        "$id": 931
     },
-    "[协同中]": {
-        "zh-TW": "[協同中]",
-        "en-US": "[Collaborative]",
-        "ko-KR": "[협동 중]",
+    "指定最后一个点": {
+        "zh-TW": "指定最後一個點",
+        "en-US": "Specify the last point",
+        "ko-KR": "마지막 점 지정",
         "$files": [
-            "src/pages/home/index.vue(5236-5245)"
+            "src/command/measurement/m_mx_measuring_angle.ts(1373-1384)"
         ],
-        "$id": 944
+        "$id": 932
     },
-    "上传中...": {
-        "zh-TW": "上傳中...",
-        "en-US": "Uploading...",
-        "ko-KR": "업로드 중...",
+    "指定坐标点": {
+        "zh-TW": "指定座標點",
+        "en-US": "Specify coordinate points",
+        "ko-KR": "좌표점 지정",
         "$files": [
-            "src/pages/home/index.vue(5696-5706)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(18776-18786)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24011-24021)"
+            "src/command/measurement/m_mx_measuring_coordinate.ts(486-495)"
         ],
-        "$id": 1524
+        "$id": 933
     },
-    "加载中...": {
-        "zh-TW": "加載中. ..",
-        "en-US": "Loading in progress ..",
-        "ko-KR": "로드 중...",
+    "指定标注点": {
+        "zh-TW": "指定標注點",
+        "en-US": "Specify annotation points",
+        "ko-KR": "치수 점 지정",
         "$files": [
-            "src/pages/home/index.vue(5946-5956)",
-            "src/pages/home/components/CooperatePopup.vue(8162-8172)",
-            "src/pages/home/components/LibraryPanel.vue(1887-1897)",
-            "src/pages/shell/components/BatchDownloadPanel.vue(2696-2706)",
-            "src/pages/shell/components/UnifiedFileList.vue(8431-8441)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(13592-13602)"
+            "src/command/measurement/m_mx_measuring_coordinate.ts(1062-1071)"
         ],
-        "$id": 972
-    },
-    "没有保存权限": {
-        "zh-TW": "沒有保存許可權",
-        "en-US": "No save permission",
-        "ko-KR": "저장 권한 없음",
-        "$files": [
-            "src/pages/home/index.vue(7440-7450)"
-        ],
-        "$id": 945
-    },
-    "公开文件不支持版本历史": {
-        "zh-TW": "公開檔案不支持版本歷史",
-        "en-US": "Public files do not support version history",
-        "ko-KR": "공개 파일은 버전 기록을 지원하지 않습니다.",
-        "$files": [
-            "src/pages/home/index.vue(9279-9294)"
-        ],
-        "$id": 946
-    },
-    "本地图纸无版本历史": {
-        "zh-TW": "本地圖紙無版本歷史",
-        "en-US": "Local drawings have no version history",
-        "ko-KR": "로컬 시트에 버전 기록 없음",
-        "$files": [
-            "src/pages/home/index.vue(9367-9380)"
-        ],
-        "$id": 947
-    },
-    "没有查看版本历史的权限": {
-        "zh-TW": "沒有查看版本歷史的許可權",
-        "en-US": "No permission to view version history",
-        "ko-KR": "버전 기록 보기 권한이 없습니다.",
-        "$files": [
-            "src/pages/home/index.vue(9466-9481)"
-        ],
-        "$id": 948
-    },
-    "未保存的更改": {
-        "zh-TW": "未保存的更改",
-        "en-US": "Unsaved changes",
-        "ko-KR": "저장되지 않은 변경 내용",
-        "$files": [
-            "src/pages/home/index.vue(11383-11393)",
-            "src/pages/home/components/CooperatePopup.vue(6365-6375)",
-            "src/pages/home/components/LibraryPanel.vue(12040-12050)"
-        ],
-        "$id": 941
-    },
-    "当前图纸有未保存的更改，是否保存？": {
-        "zh-TW": "當前圖紙有未保存的更改，是否保存？",
-        "en-US": "There are unsaved changes in the current drawing. Do you want to save them?",
-        "ko-KR": "현재 시트에 저장되지 않은 변경 사항이 있습니다. 저장하시겠습니까?",
-        "$files": [
-            "src/pages/home/index.vue(11414-11435)",
-            "src/pages/home/components/LibraryPanel.vue(12070-12091)"
-        ],
-        "$id": 949
-    },
-    "保存": {
-        "zh-TW": "保存",
-        "en-US": "save",
-        "ko-KR": "저장",
-        "$files": [
-            "src/pages/home/index.vue(11466-11472)",
-            "src/pages/home/components/CommitMessageDialog.vue(570-576)",
-            "src/pages/home/components/LibraryPanel.vue(12121-12127)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(31778-31784)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(16019-16025)"
-        ],
-        "$id": 950
-    },
-    "不保存": {
-        "zh-TW": "不保存",
-        "en-US": "Do not save",
-        "ko-KR": "저장하지 않음",
-        "$files": [
-            "src/pages/home/index.vue(11502-11509)",
-            "src/pages/home/components/LibraryPanel.vue(12156-12163)"
-        ],
-        "$id": 951
-    },
-    "已新建空白图纸": {
-        "zh-TW": "已新建空白圖紙",
-        "en-US": "New blank drawing created",
-        "ko-KR": "새 빈 시트",
-        "$files": [
-            "src/pages/home/index.vue(11878-11889)"
-        ],
-        "$id": 952
-    },
-    "协作图纸": {
-        "zh-TW": "合作圖紙",
-        "en-US": "Collaborative drawings",
-        "ko-KR": "공동 작업 시트",
-        "$files": [
-            "src/pages/home/index.vue(15727-15735)"
-        ],
-        "$id": 953
-    },
-    "提示": {
-        "zh-TW": "提示",
-        "en-US": "Prompt",
-        "ko-KR": "힌트",
-        "$files": [
-            "src/pages/home/index.vue(23626-23632)"
-        ],
-        "$id": 1585
-    },
-    "实时协同只支持私有化部署，请点击": {
-        "zh-TW": "實时協同只支持私有化部署,請點擊",
-        "en-US": "Real time collaboration only supports private deployment, please click",
-        "ko-KR": "실시간 공동 작업은 프라이빗 배포만 지원합니다.",
-        "$files": [
-            "src/pages/home/index.vue(23798-23818)"
-        ],
-        "$id": 1586
-    },
-    "查看文档": {
-        "zh-TW": "查看檔案",
-        "en-US": "View the document",
-        "ko-KR": "문서 보기",
-        "$files": [
-            "src/pages/home/index.vue(24032-24040)"
-        ],
-        "$id": 1587
-    },
-    "或者联系客服": {
-        "zh-TW": "或者聯系客服",
-        "en-US": "Or contact customer service",
-        "ko-KR": "아니면 고객센터에 연락하세요.",
-        "$files": [
-            "src/pages/home/index.vue(24067-24077)"
-        ],
-        "$id": 1588
+        "$id": 934
     },
     "指定第一条尺寸界线原点": {
         "zh-TW": "指定第一條尺寸界線原點",
         "en-US": "Specify the origin of the first dimension boundary line",
         "ko-KR": "첫 번째 치수보조선 원점 지정하기",
         "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(3497-3512)",
             "src/command/marked/m_mx_aligned_marked.tsx(886-901)",
-            "src/command/marked/m_mx_linear_marked.tsx(1622-1637)",
-            "src/command/measurement/m_mx_measuring_length.ts(3497-3512)"
+            "src/command/marked/m_mx_linear_marked.tsx(1622-1637)"
         ],
         "$id": 908
     },
@@ -3030,9 +2889,9 @@
         "en-US": "Select annotation object",
         "ko-KR": "치수 객체 선택",
         "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(4412-4422)",
             "src/command/marked/m_mx_aligned_marked.tsx(1777-1787)",
-            "src/command/marked/m_mx_linear_marked.tsx(2511-2521)",
-            "src/command/measurement/m_mx_measuring_length.ts(4412-4422)"
+            "src/command/marked/m_mx_linear_marked.tsx(2511-2521)"
         ],
         "$id": 909
     },
@@ -3041,9 +2900,9 @@
         "en-US": "The selected object is not a line, arc, or circle.",
         "ko-KR": "선택한 객체는 선, 호 또는 원이 아닙니다.",
         "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(5955-5973)",
             "src/command/marked/m_mx_aligned_marked.tsx(3320-3338)",
-            "src/command/marked/m_mx_linear_marked.tsx(4037-4055)",
-            "src/command/measurement/m_mx_measuring_length.ts(5955-5973)"
+            "src/command/marked/m_mx_linear_marked.tsx(4037-4055)"
         ],
         "$id": 910
     },
@@ -3052,9 +2911,9 @@
         "en-US": "Specify the origin of the second dimension boundary line",
         "ko-KR": "두 번째 치수보조선 원점 지정하기",
         "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(6069-6084)",
             "src/command/marked/m_mx_aligned_marked.tsx(3434-3449)",
-            "src/command/marked/m_mx_linear_marked.tsx(4151-4166)",
-            "src/command/measurement/m_mx_measuring_length.ts(6069-6084)"
+            "src/command/marked/m_mx_linear_marked.tsx(4151-4166)"
         ],
         "$id": 911
     },
@@ -3063,9 +2922,9 @@
         "en-US": "Specify the position of the dimension line",
         "ko-KR": "치수 선 위치 지정하기",
         "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(6379-6390)",
             "src/command/marked/m_mx_aligned_marked.tsx(3744-3755)",
-            "src/command/marked/m_mx_linear_marked.tsx(4533-4544)",
-            "src/command/measurement/m_mx_measuring_length.ts(6379-6390)"
+            "src/command/marked/m_mx_linear_marked.tsx(4533-4544)"
         ],
         "$id": 912
     },
@@ -3074,11 +2933,32 @@
         "en-US": "text",
         "ko-KR": "텍스트",
         "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(6422-6428)",
             "src/command/marked/m_mx_aligned_marked.tsx(3787-3793)",
-            "src/command/marked/m_mx_linear_marked.tsx(4577-4583)",
-            "src/command/measurement/m_mx_measuring_length.ts(6422-6428)"
+            "src/command/marked/m_mx_linear_marked.tsx(4577-4583)"
         ],
         "$id": 913
+    },
+    "输入标注文字": {
+        "zh-TW": "輸入標注文字",
+        "en-US": "Enter annotation text",
+        "ko-KR": "치수 문자 입력",
+        "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(7194-7204)"
+        ],
+        "$id": 935
+    },
+    "指定标注文字的角度": {
+        "zh-TW": "指定標注文字的角度",
+        "en-US": "Specify the angle of the annotation text",
+        "ko-KR": "치수 문자의 각도 지정",
+        "$files": [
+            "src/command/measurement/m_mx_measuring_length.ts(7723-7736)",
+            "src/command/marked/m_mx_aligned_marked.tsx(5180-5193)",
+            "src/command/marked/m_mx_dimangular.tsx(9785-9798)",
+            "src/command/marked/m_mx_linear_marked.tsx(7124-7137)"
+        ],
+        "$id": 915
     },
     "请输入标注文字": {
         "zh-TW": "請輸入標注文字",
@@ -3090,18 +2970,6 @@
             "src/command/marked/m_mx_linear_marked.tsx(6525-6536)"
         ],
         "$id": 914
-    },
-    "指定标注文字的角度": {
-        "zh-TW": "指定標注文字的角度",
-        "en-US": "Specify the angle of the annotation text",
-        "ko-KR": "치수 문자의 각도 지정",
-        "$files": [
-            "src/command/marked/m_mx_aligned_marked.tsx(5180-5193)",
-            "src/command/marked/m_mx_dimangular.tsx(9785-9798)",
-            "src/command/marked/m_mx_linear_marked.tsx(7124-7137)",
-            "src/command/measurement/m_mx_measuring_length.ts(7723-7736)"
-        ],
-        "$id": 915
     },
     "选择圆弧或者圆": {
         "zh-TW": "選擇圓弧或者圓",
@@ -3242,15 +3110,6 @@
         ],
         "$id": 930
     },
-    "打开图纸成功": {
-        "zh-TW": "打開圖紙成功",
-        "en-US": "Successfully opened the drawing",
-        "ko-KR": "시트 열기 성공",
-        "$files": [
-            "src/plugins/mxcad/openMxWeb.ts(1190-1200)"
-        ],
-        "$id": 962
-    },
     "打开图纸失败": {
         "zh-TW": "打開圖紙失敗",
         "en-US": "Failed to open drawing",
@@ -3270,6 +3129,535 @@
             "src/command/open/index.ts(2633-2641)"
         ],
         "$id": 939
+    },
+    "您的账户已自动恢复，注销已取消": {
+        "zh-TW": "您的帳戶已自動恢復,註銷已取消",
+        "en-US": "Your account has been automatically restored; the logout was canceled",
+        "ko-KR": "계정이 자동으로 복구되고 로그아웃이 취소됨",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(2989-3008)",
+            "src/pages/auth/LoginPage.vue(4004-4023)"
+        ],
+        "$id": 2693
+    },
+    "登录成功": {
+        "zh-TW": "登入成功",
+        "en-US": "Login successful",
+        "ko-KR": "로그인 성공",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(3012-3020)",
+            "src/pages/auth/LoginPage.vue(4027-4035)"
+        ],
+        "$id": 2694
+    },
+    "登录失败，请检查账号和密码": {
+        "zh-TW": "登入失敗,請檢查帳號和密碼",
+        "en-US": "Login failed, please check your account and password",
+        "ko-KR": "로그인에 실패했습니다. 계정과 비밀번호를 확인하십시오.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(3085-3102)"
+        ],
+        "$id": 2695
+    },
+    "验证码已发送": {
+        "zh-TW": "驗證碼已發送",
+        "en-US": "Verification code has been sent",
+        "ko-KR": "인증 코드가 전송되었습니다.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(3428-3438)",
+            "src/pages/auth/RegisterPage.vue(2841-2851)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(11875-11885)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(13509-13519)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(23941-23951)"
+        ],
+        "$id": 1852
+    },
+    "验证码发送失败": {
+        "zh-TW": "驗證碼發送失敗",
+        "en-US": "Verification code sending failed",
+        "ko-KR": "인증 코드 전송 실패",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(3506-3517)",
+            "src/pages/auth/RegisterPage.vue(2919-2930)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(11981-11992)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(13662-13673)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(24051-24062)"
+        ],
+        "$id": 1853
+    },
+    "登录失败，请重试": {
+        "zh-TW": "登入失敗,請重試",
+        "en-US": "Login failed, please try again",
+        "ko-KR": "로그인에 실패했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(4100-4112)"
+        ],
+        "$id": 2696
+    },
+    "登录": {
+        "zh-TW": "登入",
+        "en-US": "Log in",
+        "ko-KR": "로그인",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(4527-4533)"
+        ],
+        "$id": 2697
+    },
+    "欢迎回来，请登录您的账户": {
+        "zh-TW": "歡迎回來,請登入您的帳戶",
+        "en-US": "Welcome back, please log in to your account",
+        "ko-KR": "돌아온 것을 환영합니다. 계정에 로그인하십시오.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(4579-4595)"
+        ],
+        "$id": 2698
+    },
+    "账号登录": {
+        "zh-TW": "帳號登入",
+        "en-US": "Account login",
+        "ko-KR": "계정 로그인",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(4705-4713)"
+        ],
+        "$id": 2699
+    },
+    "账号": {
+        "zh-TW": "帳號",
+        "en-US": "account",
+        "ko-KR": "계정",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(4842-4848)"
+        ],
+        "$id": 2700
+    },
+    "请输入用户名、邮箱或手机号": {
+        "zh-TW": "請輸入用戶名、郵箱或手機號",
+        "en-US": "Please enter your username, email, or phone number",
+        "ko-KR": "사용자 이름, 이메일 또는 휴대폰 번호를 입력하십시오.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(4879-4896)"
+        ],
+        "$id": 2701
+    },
+    "密码": {
+        "zh-TW": "密碼",
+        "en-US": "password",
+        "ko-KR": "비밀번호",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5121-5127)",
+            "src/pages/auth/RegisterPage.vue(4979-4985)"
+        ],
+        "$id": 2702
+    },
+    "请输入密码": {
+        "zh-TW": "請輸入密碼",
+        "en-US": "Please enter the password",
+        "ko-KR": "비밀번호를 입력하세요",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5158-5167)"
+        ],
+        "$id": 2703
+    },
+    "登录中…": {
+        "zh-TW": "登入中…",
+        "en-US": "Logging in",
+        "ko-KR": "로그인 중...",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5598-5606)",
+            "src/pages/auth/LoginPage.vue(6596-6604)"
+        ],
+        "$id": 2704
+    },
+    "立即登录": {
+        "zh-TW": "立即登入",
+        "en-US": "Log in now",
+        "ko-KR": "지금 로그인",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5610-5618)",
+            "src/pages/auth/LoginPage.vue(6608-6616)"
+        ],
+        "$id": 2705
+    },
+    "手机登录": {
+        "zh-TW": "手機登入",
+        "en-US": "Mobile Login",
+        "ko-KR": "휴대폰 로그인",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5707-5715)"
+        ],
+        "$id": 2706
+    },
+    "手机号": {
+        "zh-TW": "手機號",
+        "en-US": "Phone",
+        "ko-KR": "전화번호",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5823-5830)",
+            "src/pages/auth/RegisterPage.vue(4211-4218)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(7007-7014)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(9882-9889)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(20484-20491)"
+        ],
+        "$id": 1684
+    },
+    "请输入手机号": {
+        "zh-TW": "請輸入手機號",
+        "en-US": "Please enter your phone number",
+        "ko-KR": "핸드폰 번호를 입력하세요.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5847-5857)",
+            "src/pages/auth/RegisterPage.vue(4235-4245)"
+        ],
+        "$id": 2707
+    },
+    "验证码": {
+        "zh-TW": "驗證碼",
+        "en-US": "CAPTCHA",
+        "ko-KR": "캡차",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(5989-5996)",
+            "src/pages/auth/RegisterPage.vue(4361-4368)"
+        ],
+        "$id": 2708
+    },
+    "请输入验证码": {
+        "zh-TW": "請輸入驗證碼",
+        "en-US": "Please enter the verification code",
+        "ko-KR": "인증 코드를 입력하십시오.",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(6027-6037)",
+            "src/pages/auth/RegisterPage.vue(4395-4405)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(32392-32402)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(33191-33201)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(37222-37232)"
+        ],
+        "$id": 1871
+    },
+    "获取验证码": {
+        "zh-TW": "獲取驗證碼",
+        "en-US": "Get verification code",
+        "ko-KR": "인증 코드 가져오기",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(6362-6371)",
+            "src/pages/auth/RegisterPage.vue(4660-4669)"
+        ],
+        "$id": 2709
+    },
+    "还没有账号？": {
+        "zh-TW": "還沒有帳號？",
+        "en-US": "Don't have an account yet?",
+        "ko-KR": "아직 계정이 없나요?",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(6809-6819)"
+        ],
+        "$id": 2710
+    },
+    "立即注册": {
+        "zh-TW": "立即注册",
+        "en-US": "Register Now",
+        "ko-KR": "지금 등록",
+        "$files": [
+            "src/pages/auth/LoginPage.vue(6887-6895)",
+            "src/pages/auth/RegisterPage.vue(5486-5494)"
+        ],
+        "$id": 2711
+    },
+    "注册成功": {
+        "zh-TW": "注册成功",
+        "en-US": "registered successfully",
+        "ko-KR": "등록 성공",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(3530-3538)"
+        ],
+        "$id": 2712
+    },
+    "注册失败，请重试": {
+        "zh-TW": "注册失敗,請重試",
+        "en-US": "Registration failed, please try again",
+        "ko-KR": "등록에 실패했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(3606-3618)"
+        ],
+        "$id": 2713
+    },
+    "注册": {
+        "zh-TW": "注册",
+        "en-US": "Registration",
+        "ko-KR": "등록",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(4030-4036)"
+        ],
+        "$id": 2714
+    },
+    "创建账户，开始使用 CloudCAD": {
+        "zh-TW": "創建帳戶,開始使用CloudCAD",
+        "en-US": "Create an account and start using CloudCAD",
+        "ko-KR": "계정 만들기, CloudCAD 시작",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(4082-4104)"
+        ],
+        "$id": 2715
+    },
+    "用户名": {
+        "zh-TW": "用戶名",
+        "en-US": "Username",
+        "ko-KR": "사용자 이름",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(4785-4792)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(6652-6659)"
+        ],
+        "$id": 1835
+    },
+    "请输入用户名（3-20 个字符）": {
+        "zh-TW": "請輸入用戶名(3-20個字元)",
+        "en-US": "Please enter your username (3-20 characters)",
+        "ko-KR": "사용자 이름 (3-20자) 을 입력하십시오.",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(4809-4829)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(7726-7746)"
+        ],
+        "$id": 1836
+    },
+    "至少 6 位": {
+        "zh-TW": "至少 6 個字元",
+        "en-US": "At least 6 characters",
+        "ko-KR": "최소 6자리",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(5012-5022)"
+        ],
+        "$id": 2716
+    },
+    "昵称": {
+        "zh-TW": "暱稱",
+        "en-US": "Nickname",
+        "ko-KR": "닉네임",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(5279-5285)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(6739-6745)"
+        ],
+        "$id": 1683
+    },
+    "选填，最多 50 个字符": {
+        "zh-TW": "選填,最多50個字元",
+        "en-US": "Optional, up to 50 characters",
+        "ko-KR": "최대 50자 (옵션)",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(5302-5318)"
+        ],
+        "$id": 2717
+    },
+    "注册中…": {
+        "zh-TW": "注册中…",
+        "en-US": "Registering",
+        "ko-KR": "등록 중...",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(5474-5482)"
+        ],
+        "$id": 2718
+    },
+    "已有账号？": {
+        "zh-TW": "已有帳號？",
+        "en-US": "Do you already have an account?",
+        "ko-KR": "계정이 있습니까?",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(5642-5651)"
+        ],
+        "$id": 2719
+    },
+    "去登录": {
+        "zh-TW": "去登入",
+        "en-US": "Log in",
+        "ko-KR": "로그인",
+        "$files": [
+            "src/pages/auth/RegisterPage.vue(5716-5723)"
+        ],
+        "$id": 2720
+    },
+    "工具": {
+        "zh-TW": "工具",
+        "en-US": "tool",
+        "ko-KR": "도구",
+        "$files": [
+            "src/pages/home/hooks.tsx(717-723)"
+        ],
+        "$id": 940
+    },
+    "[协同中]": {
+        "zh-TW": "[協同中]",
+        "en-US": "[Collaborative]",
+        "ko-KR": "[협동 중]",
+        "$files": [
+            "src/pages/home/index.vue(5243-5252)"
+        ],
+        "$id": 944
+    },
+    "上传中...": {
+        "zh-TW": "上傳中...",
+        "en-US": "Uploading...",
+        "ko-KR": "업로드 중...",
+        "$files": [
+            "src/pages/home/index.vue(5703-5713)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(18599-18609)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24011-24021)"
+        ],
+        "$id": 1524
+    },
+    "加载中...": {
+        "zh-TW": "加載中. ..",
+        "en-US": "Loading in progress ..",
+        "ko-KR": "로드 중...",
+        "$files": [
+            "src/pages/home/index.vue(5953-5963)",
+            "src/pages/home/components/CooperatePopup.vue(8162-8172)",
+            "src/pages/home/components/LibraryPanel.vue(1887-1897)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(13426-13436)",
+            "src/pages/shell/components/BatchDownloadPanel.vue(2696-2706)",
+            "src/pages/shell/components/UnifiedFileList.vue(8431-8441)"
+        ],
+        "$id": 972
+    },
+    "没有保存权限": {
+        "zh-TW": "沒有保存許可權",
+        "en-US": "No save permission",
+        "ko-KR": "저장 권한 없음",
+        "$files": [
+            "src/pages/home/index.vue(7447-7457)"
+        ],
+        "$id": 945
+    },
+    "公开文件不支持版本历史": {
+        "zh-TW": "公開檔案不支持版本歷史",
+        "en-US": "Public files do not support version history",
+        "ko-KR": "공개 파일은 버전 기록을 지원하지 않습니다.",
+        "$files": [
+            "src/pages/home/index.vue(9246-9261)"
+        ],
+        "$id": 946
+    },
+    "本地图纸无版本历史": {
+        "zh-TW": "本地圖紙無版本歷史",
+        "en-US": "Local drawings have no version history",
+        "ko-KR": "로컬 시트에 버전 기록 없음",
+        "$files": [
+            "src/pages/home/index.vue(9334-9347)"
+        ],
+        "$id": 947
+    },
+    "没有查看版本历史的权限": {
+        "zh-TW": "沒有查看版本歷史的許可權",
+        "en-US": "No permission to view version history",
+        "ko-KR": "버전 기록 보기 권한이 없습니다.",
+        "$files": [
+            "src/pages/home/index.vue(9433-9448)"
+        ],
+        "$id": 948
+    },
+    "未保存的更改": {
+        "zh-TW": "未保存的更改",
+        "en-US": "Unsaved changes",
+        "ko-KR": "저장되지 않은 변경 내용",
+        "$files": [
+            "src/pages/home/index.vue(10793-10803)",
+            "src/pages/home/components/CooperatePopup.vue(6365-6375)",
+            "src/pages/home/components/LibraryPanel.vue(12040-12050)"
+        ],
+        "$id": 941
+    },
+    "当前图纸有未保存的更改，是否保存？": {
+        "zh-TW": "當前圖紙有未保存的更改，是否保存？",
+        "en-US": "There are unsaved changes in the current drawing. Do you want to save them?",
+        "ko-KR": "현재 시트에 저장되지 않은 변경 사항이 있습니다. 저장하시겠습니까?",
+        "$files": [
+            "src/pages/home/index.vue(10824-10845)",
+            "src/pages/home/components/LibraryPanel.vue(12070-12091)"
+        ],
+        "$id": 949
+    },
+    "保存": {
+        "zh-TW": "保存",
+        "en-US": "save",
+        "ko-KR": "저장",
+        "$files": [
+            "src/pages/home/index.vue(10876-10882)",
+            "src/pages/home/components/CommitMessageDialog.vue(570-576)",
+            "src/pages/home/components/LibraryPanel.vue(12121-12127)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(31632-31638)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(15853-15859)"
+        ],
+        "$id": 950
+    },
+    "不保存": {
+        "zh-TW": "不保存",
+        "en-US": "Do not save",
+        "ko-KR": "저장하지 않음",
+        "$files": [
+            "src/pages/home/index.vue(10912-10919)",
+            "src/pages/home/components/LibraryPanel.vue(12156-12163)"
+        ],
+        "$id": 951
+    },
+    "已新建空白图纸": {
+        "zh-TW": "已新建空白圖紙",
+        "en-US": "New blank drawing created",
+        "ko-KR": "새 빈 시트",
+        "$files": [
+            "src/pages/home/index.vue(11288-11299)"
+        ],
+        "$id": 952
+    },
+    "协作图纸": {
+        "zh-TW": "合作圖紙",
+        "en-US": "Collaborative drawings",
+        "ko-KR": "공동 작업 시트",
+        "$files": [
+            "src/pages/home/index.vue(15137-15145)"
+        ],
+        "$id": 953
+    },
+    "提示": {
+        "zh-TW": "提示",
+        "en-US": "Prompt",
+        "ko-KR": "힌트",
+        "$files": [
+            "src/pages/home/index.vue(23006-23012)"
+        ],
+        "$id": 1585
+    },
+    "实时协同只支持私有化部署，请点击": {
+        "zh-TW": "實时協同只支持私有化部署,請點擊",
+        "en-US": "Real time collaboration only supports private deployment, please click",
+        "ko-KR": "실시간 공동 작업은 프라이빗 배포만 지원합니다.",
+        "$files": [
+            "src/pages/home/index.vue(23178-23198)"
+        ],
+        "$id": 1586
+    },
+    "查看文档": {
+        "zh-TW": "查看檔案",
+        "en-US": "View the document",
+        "ko-KR": "문서 보기",
+        "$files": [
+            "src/pages/home/index.vue(23412-23420)"
+        ],
+        "$id": 1587
+    },
+    "或者联系客服": {
+        "zh-TW": "或者聯系客服",
+        "en-US": "Or contact customer service",
+        "ko-KR": "아니면 고객센터에 연락하세요.",
+        "$files": [
+            "src/pages/home/index.vue(23447-23457)"
+        ],
+        "$id": 1588
+    },
+    "打开图纸成功": {
+        "zh-TW": "打開圖紙成功",
+        "en-US": "Successfully opened the drawing",
+        "ko-KR": "시트 열기 성공",
+        "$files": [
+            "src/plugins/mxcad/openMxWeb.ts(1190-1200)"
+        ],
+        "$id": 962
     },
     "保存文件": {
         "zh-TW": "保存檔案",
@@ -3313,7 +3701,7 @@
         "ko-KR": "개인 공간",
         "$files": [
             "src/pages/home/components/CooperatePopup.vue(3088-3096)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(26733-26741)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(26345-26353)"
         ],
         "$id": 966
     },
@@ -3335,9 +3723,9 @@
             "src/pages/home/components/CooperatePopup.vue(7054-7060)",
             "src/pages/home/components/InsertBlockPopup.vue(4854-4860)",
             "src/pages/home/components/LibraryPanel.vue(6302-6308)",
-            "src/pages/shell/components/RenameNodePopup.vue(1842-1848)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(25347-25353)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(30543-30549)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(25170-25176)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(30543-30549)",
+            "src/pages/shell/components/RenameNodePopup.vue(1842-1848)"
         ],
         "$id": 968
     },
@@ -3421,7 +3809,7 @@
         "ko-KR": "내가 만들었어",
         "$files": [
             "src/pages/home/components/CooperatePopup.vue(9028-9036)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(2858-2866)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(2792-2800)"
         ],
         "$id": 976
     },
@@ -3735,9 +4123,9 @@
         "$files": [
             "src/pages/home/components/LibraryPanel.vue(2197-2203)",
             "src/pages/home/components/VersionHistoryPopup.vue(1572-1578)",
-            "src/pages/shell/components/AuthStatePage.vue(1046-1052)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(26155-26161)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(13787-13793)"
+            "src/pages/shell/sub-pages/ProfilePage.vue(26009-26015)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(13621-13627)",
+            "src/pages/shell/components/AuthStatePage.vue(1051-1057)"
         ],
         "$id": 1025
     },
@@ -3824,7 +4212,7 @@
         "ko-KR": "닫기",
         "$files": [
             "src/pages/home/components/LibraryPanel.vue(5575-5581)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(16801-16807)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(16635-16641)"
         ],
         "$id": 2297
     },
@@ -3836,11 +4224,11 @@
             "src/pages/home/components/LibraryPanel.vue(5827-5834)",
             "src/pages/home/components/LibraryPanel.vue(17717-17724)",
             "src/pages/home/components/LibraryPanel.vue(19493-19500)",
-            "src/pages/shell/components/RenameNodePopup.vue(1767-1774)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9797-9804)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10474-10481)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9620-9627)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10297-10304)",
             "src/pages/shell/sub-pages/ProjectDetailPage.vue(16886-16893)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17555-17562)"
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17555-17562)",
+            "src/pages/shell/components/RenameNodePopup.vue(1767-1774)"
         ],
         "$id": 2123
     },
@@ -4359,8 +4747,8 @@
         "ko-KR": "2시간",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(1647-1655)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4919-4927)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12557-12565)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4853-4861)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12391-12399)"
         ],
         "$id": 1885
     },
@@ -4370,8 +4758,8 @@
         "ko-KR": "6시간",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(1684-1692)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4964-4972)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12579-12587)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4898-4906)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12413-12421)"
         ],
         "$id": 1886
     },
@@ -4381,8 +4769,8 @@
         "ko-KR": "12시간",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(1722-1731)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(5010-5019)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12602-12611)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4944-4953)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12436-12445)"
         ],
         "$id": 1887
     },
@@ -4392,8 +4780,8 @@
         "ko-KR": "1일",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(1760-1767)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(5056-5063)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12625-12632)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4990-4997)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12459-12466)"
         ],
         "$id": 1888
     },
@@ -4403,8 +4791,8 @@
         "ko-KR": "3일",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(1796-1803)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(5100-5107)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12646-12653)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(5034-5041)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12480-12487)"
         ],
         "$id": 1889
     },
@@ -4414,8 +4802,8 @@
         "ko-KR": "7일",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(1832-1839)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(5144-5151)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12667-12674)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(5078-5085)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12501-12508)"
         ],
         "$id": 1890
     },
@@ -4436,9 +4824,9 @@
             "src/pages/home/components/ShareCurrentPopup.vue(1911-1919)",
             "src/pages/home/components/ShareCurrentPopup.vue(5175-5183)",
             "src/pages/home/components/ShareCurrentPopup.vue(5255-5263)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(3537-3545)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(5191-5199)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12535-12543)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(3471-3479)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(5125-5133)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12369-12377)"
         ],
         "$id": 1884
     },
@@ -4458,7 +4846,7 @@
         "ko-KR": "공유 링크가 작성되었습니다.",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(3732-3743)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(18336-18347)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(18170-18181)"
         ],
         "$id": 1893
     },
@@ -4468,9 +4856,9 @@
         "ko-KR": "링크가 복사됨",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(4188-4197)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(6856-6865)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7815-7824)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(12141-12150)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(6790-6799)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7749-7758)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(11975-11984)"
         ],
         "$id": 1881
     },
@@ -4480,9 +4868,9 @@
         "ko-KR": "공유 취소",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(4381-4389)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4152-4160)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7212-7220)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(8042-8050)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4086-4094)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7146-7154)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7976-7984)"
         ],
         "$id": 1880
     },
@@ -4502,7 +4890,7 @@
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(4460-4466)",
             "src/pages/home/components/ShareCurrentPopup.vue(8966-8972)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4231-4237)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4165-4171)"
         ],
         "$id": 2042
     },
@@ -4512,7 +4900,7 @@
         "ko-KR": "취소됨",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(4736-4743)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4482-4489)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4416-4423)"
         ],
         "$id": 1703
     },
@@ -4522,7 +4910,7 @@
         "ko-KR": "취소 실패",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(4868-4876)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4542-4550)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4476-4484)"
         ],
         "$id": 1704
     },
@@ -4586,7 +4974,7 @@
         "ko-KR": "QR코드 공유",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(7604-7613)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(16861-16870)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(16695-16704)"
         ],
         "$id": 2298
     },
@@ -4596,8 +4984,8 @@
         "ko-KR": "유효기간",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(7949-7956)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(16142-16149)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(19943-19950)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(15976-15983)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(19777-19784)"
         ],
         "$id": 1896
     },
@@ -4616,8 +5004,8 @@
         "ko-KR": "만료됨",
         "$files": [
             "src/pages/home/components/ShareCurrentPopup.vue(8656-8663)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(1864-1871)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(2914-2921)"
+            "src/pages/shell/sub-pages/ShareManagePage.vue(1798-1805)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(2848-2855)"
         ],
         "$id": 1701
     },
@@ -4676,57 +5064,1444 @@
         ],
         "$id": 1029
     },
-    "指定第二个角度点": {
-        "zh-TW": "指定第二個角度點",
-        "en-US": "Specify the second angle point",
-        "ko-KR": "두 번째 각도 점 지정하기",
+    "我加入的": {
+        "zh-TW": "我加入的",
+        "en-US": "Joined",
+        "ko-KR": "내가 참여한",
         "$files": [
-            "src/command/measurement/m_mx_measuring_angle.ts(1054-1066)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(2834-2842)"
         ],
-        "$id": 931
+        "$id": 2359
     },
-    "指定最后一个点": {
-        "zh-TW": "指定最後一個點",
-        "en-US": "Specify the last point",
-        "ko-KR": "마지막 점 지정",
+    "开始下载 {count} 个文件": {
+        "zh-TW": "開始下載{count}個檔案",
+        "en-US": "Start downloading {count} files",
+        "ko-KR": "{count}개 파일 다운로드 시작",
         "$files": [
-            "src/command/measurement/m_mx_measuring_angle.ts(1373-1384)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(8317-8337)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(15599-15619)"
         ],
-        "$id": 932
+        "$id": 2125
     },
-    "指定坐标点": {
-        "zh-TW": "指定座標點",
-        "en-US": "Specify coordinate points",
-        "ko-KR": "좌표점 지정",
+    "确认删除": {
+        "zh-TW": "確認删除",
+        "en-US": "Confirm deletion",
+        "ko-KR": "삭제 확인",
         "$files": [
-            "src/command/measurement/m_mx_measuring_coordinate.ts(486-495)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(8504-8512)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(15786-15794)"
         ],
-        "$id": 933
+        "$id": 2126
     },
-    "指定标注点": {
-        "zh-TW": "指定標注點",
-        "en-US": "Specify annotation points",
-        "ko-KR": "치수 점 지정",
+    "确定删除 {count} 个文件/文件夹？": {
+        "zh-TW": "確定删除{count}個檔案/資料夾？",
+        "en-US": "Are you sure to delete {count} files/folders?",
+        "ko-KR": "{count}개 파일/폴더를 삭제하시겠습니까?",
         "$files": [
-            "src/command/measurement/m_mx_measuring_coordinate.ts(1062-1071)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(8531-8556)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(15813-15838)"
         ],
-        "$id": 934
+        "$id": 2127
     },
-    "输入标注文字": {
-        "zh-TW": "輸入標注文字",
-        "en-US": "Enter annotation text",
-        "ko-KR": "치수 문자 입력",
+    "打开": {
+        "zh-TW": "打開",
+        "en-US": "open",
+        "ko-KR": "열다",
         "$files": [
-            "src/command/measurement/m_mx_measuring_length.ts(7194-7204)"
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9492-9498)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10070-10076)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16758-16764)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17336-17342)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7042-7048)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7535-7541)"
         ],
-        "$id": 935
+        "$id": 2131
+    },
+    "打包下载": {
+        "zh-TW": "打包下載",
+        "en-US": "Download as a package",
+        "ko-KR": "패키지 다운로드",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9570-9578)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10221-10229)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16836-16844)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17479-17487)"
+        ],
+        "$id": 2284
+    },
+    "格式转换下载": {
+        "zh-TW": "格式轉換下載",
+        "en-US": "Format conversion download",
+        "ko-KR": "형식 변환 다운로드",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9592-9602)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10144-10154)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16858-16868)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17402-17412)"
+        ],
+        "$id": 2285
+    },
+    "移动": {
+        "zh-TW": "移動",
+        "en-US": "move",
+        "ko-KR": "이동",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(9645-9651)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10401-10407)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(10477-10483)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16911-16917)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17659-17665)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17735-17741)",
+            "src/pages/shell/components/UnifiedFileList.vue(13230-13236)"
+        ],
+        "$id": 2132
+    },
+    "下载中...": {
+        "zh-TW": "下載中. ..",
+        "en-US": "Downloading ..",
+        "ko-KR": "다운로드 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(11079-11089)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(18337-18347)"
+        ],
+        "$id": 2286
+    },
+    "正在创建打包任务...": {
+        "zh-TW": "正在創建打包任務. ..",
+        "en-US": "Creating packaging task ..",
+        "ko-KR": "패키지 작업을 만드는 중입니다...",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(12480-12495)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(19758-19773)"
+        ],
+        "$id": 2289
+    },
+    "打包任务已创建": {
+        "zh-TW": "打包任務已創建",
+        "en-US": "The packaging task has been created",
+        "ko-KR": "패키지 작업 생성됨",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(12633-12644)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(19911-19922)"
+        ],
+        "$id": 2290
+    },
+    "打包任务创建失败": {
+        "zh-TW": "打包任務創建失敗",
+        "en-US": "Packaging task creation failed",
+        "ko-KR": "패키지 작업 생성 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(12734-12746)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(20012-20024)"
+        ],
+        "$id": 2291
+    },
+    "移动中...": {
+        "zh-TW": "移動中. ..",
+        "en-US": "Moving...",
+        "ko-KR": "이동 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(14162-14172)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(21451-21461)"
+        ],
+        "$id": 2136
+    },
+    "复制中...": {
+        "zh-TW": "複製中. ..",
+        "en-US": "Copying...",
+        "ko-KR": "복제 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(14176-14186)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(21465-21475)"
+        ],
+        "$id": 2137
+    },
+    "移动成功": {
+        "zh-TW": "移動成功",
+        "en-US": "Mobile successful",
+        "ko-KR": "이동 성공",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(14890-14898)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22179-22187)"
+        ],
+        "$id": 2138
+    },
+    "复制成功": {
+        "zh-TW": "複製成功",
+        "en-US": "Copy successful",
+        "ko-KR": "복사 성공",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(14902-14910)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22191-22199)"
+        ],
+        "$id": 2139
+    },
+    "移动失败": {
+        "zh-TW": "移動失敗",
+        "en-US": "Mobile failed",
+        "ko-KR": "이동 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(15023-15031)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22296-22304)"
+        ],
+        "$id": 2140
+    },
+    "新建项目": {
+        "zh-TW": "新建項目",
+        "en-US": "New Project",
+        "ko-KR": "새 항목",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(16095-16103)"
+        ],
+        "$id": 2022
+    },
+    "新建文件夹": {
+        "zh-TW": "新建資料夾",
+        "en-US": "New Folder",
+        "ko-KR": "새 폴더",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(16174-16183)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14182-14191)",
+            "src/pages/shell/components/UnifiedFileList.vue(8850-8859)"
+        ],
+        "$id": 2023
+    },
+    "新建图纸": {
+        "zh-TW": "新建圖紙",
+        "en-US": "New drawing",
+        "ko-KR": "새 시트",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(16238-16246)",
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(25074-25082)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14244-14252)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(30447-30455)"
+        ],
+        "$id": 2006
+    },
+    "下载任务": {
+        "zh-TW": "下載任務",
+        "en-US": "Download Task",
+        "ko-KR": "작업 다운로드",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(16368-16376)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14370-14378)",
+            "src/pages/shell/components/BatchDownloadPanel.vue(2386-2394)"
+        ],
+        "$id": 2266
+    },
+    "文件夹名称无效": {
+        "zh-TW": "資料夾名稱無效",
+        "en-US": "Invalid folder name",
+        "ko-KR": "잘못된 폴더 이름",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(17227-17238)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22649-22660)"
+        ],
+        "$id": 2141
+    },
+    "上传中 {pct}%": {
+        "zh-TW": "上傳中{pct}%",
+        "en-US": "Uploading {pct}%",
+        "ko-KR": "업로드 중 {pct}%",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(18878-18892)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24290-24304)"
+        ],
+        "$id": 2024
+    },
+    "上传成功": {
+        "zh-TW": "上傳成功",
+        "en-US": "Upload successful",
+        "ko-KR": "업로드 성공",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(19046-19054)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24458-24466)"
+        ],
+        "$id": 2025
+    },
+    "上传失败，请重试": {
+        "zh-TW": "上傳失敗,請重試",
+        "en-US": "Upload failed, please try again",
+        "ko-KR": "업로드에 실패했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(19147-19159)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24542-24554)"
+        ],
+        "$id": 2026
+    },
+    "请输入图纸名称": {
+        "zh-TW": "請輸入圖紙名稱",
+        "en-US": "Please enter the drawing name",
+        "ko-KR": "시트 이름을 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/FileBrowserPage.vue(25363-25374)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(30736-30747)"
+        ],
+        "$id": 2008
+    },
+    "系统管理员": {
+        "zh-TW": "系統管理員",
+        "en-US": "System administrator",
+        "ko-KR": "시스템 관리자",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(5906-5915)"
+        ],
+        "$id": 2459
+    },
+    "普通用户": {
+        "zh-TW": "一般用戶",
+        "en-US": "Regular user",
+        "ko-KR": "일반 사용자",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(5919-5927)"
+        ],
+        "$id": 2460
+    },
+    "未激活": {
+        "zh-TW": "未啟用",
+        "en-US": "Inactive",
+        "ko-KR": "비활성",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(6008-6015)"
+        ],
+        "$id": 2461
+    },
+    "已禁用": {
+        "zh-TW": "已停用",
+        "en-US": "Suspended",
+        "ko-KR": "정지됨",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(6058-6065)"
+        ],
+        "$id": 2462
+    },
+    "正常": {
+        "zh-TW": "正常",
+        "en-US": "Active",
+        "ko-KR": "활성",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(6069-6075)"
+        ],
+        "$id": 2463
+    },
+    "邮箱": {
+        "zh-TW": "郵箱",
+        "en-US": "Email",
+        "ko-KR": "이메일",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(6830-6836)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(9872-9878)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(20474-20480)"
+        ],
+        "$id": 1685
+    },
+    "设置密码": {
+        "zh-TW": "設定密碼",
+        "en-US": "Set password",
+        "ko-KR": "비밀번호 설정",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(7324-7332)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(16213-16221)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(16336-16344)"
+        ],
+        "$id": 2464
+    },
+    "修改密码": {
+        "zh-TW": "修改密碼",
+        "en-US": "Change Password",
+        "ko-KR": "비밀번호 변경",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(7336-7344)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(16225-16233)"
+        ],
+        "$id": 1689
+    },
+    "请输入昵称（最多 50 个字符）": {
+        "zh-TW": "請輸入昵稱(最多50個字元)",
+        "en-US": "Please enter a nickname (up to 50 characters)",
+        "ko-KR": "닉네임 (최대 50자) 을 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(7750-7770)"
+        ],
+        "$id": 1837
+    },
+    "用户名已更新": {
+        "zh-TW": "用戶名已更新",
+        "en-US": "The username has been updated",
+        "ko-KR": "사용자 이름이 업데이트되었습니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(8560-8570)"
+        ],
+        "$id": 1838
+    },
+    "昵称已更新": {
+        "zh-TW": "昵稱已更新",
+        "en-US": "Nickname updated",
+        "ko-KR": "닉네임이 업데이트되었습니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(8574-8583)"
+        ],
+        "$id": 1839
+    },
+    "更新失败": {
+        "zh-TW": "更新失敗",
+        "en-US": "Update failed",
+        "ko-KR": "업데이트 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(8691-8699)"
+        ],
+        "$id": 1840
+    },
+    "原邮箱": {
+        "zh-TW": "原郵箱",
+        "en-US": "Original email address",
+        "ko-KR": "원본 메일박스",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(9996-10003)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(23255-23262)"
+        ],
+        "$id": 1841
+    },
+    "原手机号": {
+        "zh-TW": "原手機號",
+        "en-US": "original phone number",
+        "ko-KR": "원래 핸드폰 번호",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10048-10056)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(23302-23310)"
+        ],
+        "$id": 1842
+    },
+    "更换": {
+        "zh-TW": "更換",
+        "en-US": "replace",
+        "ko-KR": "교체",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10124-10130)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(20629-20635)",
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(33079-33085)"
+        ],
+        "$id": 1843
+    },
+    "绑定": {
+        "zh-TW": "綁定",
+        "en-US": "bind",
+        "ko-KR": "바인딩",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10155-10161)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(20739-20745)"
+        ],
+        "$id": 1844
+    },
+    "验证中…": {
+        "zh-TW": "驗證中…",
+        "en-US": "Under verification",
+        "ko-KR": "확인 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10295-10303)"
+        ],
+        "$id": 1845
+    },
+    "验证": {
+        "zh-TW": "驗證",
+        "en-US": "Verification",
+        "ko-KR": "검증",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10307-10313)"
+        ],
+        "$id": 1846
+    },
+    "发送中…": {
+        "zh-TW": "發送中…",
+        "en-US": "Sending...",
+        "ko-KR": "보내는 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10380-10388)"
+        ],
+        "$id": 1847
+    },
+    "发送验证码": {
+        "zh-TW": "發送驗證碼",
+        "en-US": "Send verification code",
+        "ko-KR": "인증 코드 보내기",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10392-10401)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(32587-32596)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(37416-37425)"
+        ],
+        "$id": 1848
+    },
+    "提交中…": {
+        "zh-TW": "提交中…",
+        "en-US": "Submitting",
+        "ko-KR": "제출 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10432-10440)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(16297-16305)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(37850-37858)"
+        ],
+        "$id": 1849
+    },
+    "确认更换": {
+        "zh-TW": "確認更換",
+        "en-US": "Confirm replacement",
+        "ko-KR": "교체 확인",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10464-10472)"
+        ],
+        "$id": 1850
+    },
+    "确认绑定": {
+        "zh-TW": "確認綁定",
+        "en-US": "Confirm binding",
+        "ko-KR": "바인딩 확인",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(10476-10484)"
+        ],
+        "$id": 1851
+    },
+    "验证失败": {
+        "zh-TW": "驗證失敗",
+        "en-US": "Verification failed",
+        "ko-KR": "인증 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(12567-12575)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(12774-12782)"
+        ],
+        "$id": 1854
+    },
+    "验证通过": {
+        "zh-TW": "驗證通過",
+        "en-US": "Verified",
+        "ko-KR": "인증 통과",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(12683-12691)"
+        ],
+        "$id": 1855
+    },
+    "请输入正确的手机号": {
+        "zh-TW": "請輸入正確的手機號",
+        "en-US": "Please enter the correct phone number",
+        "ko-KR": "정확한 핸드폰 번호를 입력하세요.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(13009-13022)"
+        ],
+        "$id": 1856
+    },
+    "请输入正确的邮箱": {
+        "zh-TW": "請輸入正確的郵箱",
+        "en-US": "Please enter the correct email address",
+        "ko-KR": "올바른 메일박스를 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(13026-13038)"
+        ],
+        "$id": 1857
+    },
+    "请先验证原账号信息": {
+        "zh-TW": "請先驗證原帳號資訊",
+        "en-US": "Please verify the original account information first",
+        "ko-KR": "원래의 계정 정보를 먼저 확인하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(13920-13933)"
+        ],
+        "$id": 1858
+    },
+    "操作失败": {
+        "zh-TW": "操作失敗",
+        "en-US": "Operation failed",
+        "ko-KR": "작업 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(14727-14735)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(14919-14927)"
+        ],
+        "$id": 1859
+    },
+    "已更换": {
+        "zh-TW": "已更換",
+        "en-US": "replaced",
+        "ko-KR": "교체됨",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(14801-14808)"
+        ],
+        "$id": 1860
+    },
+    "已绑定": {
+        "zh-TW": "已綁定",
+        "en-US": "Bound",
+        "ko-KR": "연결됨",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(14812-14819)"
+        ],
+        "$id": 1687
+    },
+    "确认修改": {
+        "zh-TW": "確認修改",
+        "en-US": "Confirm changes",
+        "ko-KR": "수정 확인",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(16348-16356)"
+        ],
+        "$id": 1879
+    },
+    "至少8位，包含大小写字母和数字": {
+        "zh-TW": "至少8位，包含大小寫字母和數字",
+        "en-US": "At least 8 characters, with upper/lowercase letters and digits",
+        "ko-KR": "8자 이상, 대소문자 알파벳과 숫자 포함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(16430-16449)"
+        ],
+        "$id": 2465
+    },
+    "请输入新密码（至少 6 位）": {
+        "zh-TW": "請輸入新密碼(至少6比特)",
+        "en-US": "Please enter a new password (at least 6 characters)",
+        "ko-KR": "새 암호 (최소 6비트) 를 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(16453-16471)"
+        ],
+        "$id": 1877
+    },
+    "太弱": {
+        "zh-TW": "太弱",
+        "en-US": "Too weak",
+        "ko-KR": "매우 약함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(16876-16882)"
+        ],
+        "$id": 2466
+    },
+    "较弱": {
+        "zh-TW": "較弱",
+        "en-US": "Weak",
+        "ko-KR": "약함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(16919-16925)"
+        ],
+        "$id": 2467
+    },
+    "一般": {
+        "zh-TW": "一般",
+        "en-US": "Fair",
+        "ko-KR": "보통",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(16962-16968)"
+        ],
+        "$id": 2468
+    },
+    "较强": {
+        "zh-TW": "較強",
+        "en-US": "Strong",
+        "ko-KR": "강력함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(17005-17011)"
+        ],
+        "$id": 2469
+    },
+    "很强": {
+        "zh-TW": "很強",
+        "en-US": "Very strong",
+        "ko-KR": "매우 강력함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(17048-17054)"
+        ],
+        "$id": 2470
+    },
+    "密码长度至少 8 个字符": {
+        "zh-TW": "密碼長度至少 8 個字元",
+        "en-US": "At least 8 characters long",
+        "ko-KR": "8자 이상의 길이",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(17371-17387)"
+        ],
+        "$id": 2471
+    },
+    "包含大小写字母和数字": {
+        "zh-TW": "包含大小寫字母和數字",
+        "en-US": "Contains upper/lowercase letters and digits",
+        "ko-KR": "대소문자 알파벳과 숫자 포함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(17438-17452)"
+        ],
+        "$id": 2472
+    },
+    "包含特殊字符": {
+        "zh-TW": "包含特殊字元",
+        "en-US": "Contains special characters",
+        "ko-KR": "특수문자 포함",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(17572-17582)"
+        ],
+        "$id": 2473
+    },
+    "不要在多个网站使用相同的密码": {
+        "zh-TW": "不要在多個網站使用相同的密碼",
+        "en-US": "Do not reuse the same password across sites",
+        "ko-KR": "여러 사이트에서 같은 비밀번호를 사용하지 마세요",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(17642-17660)"
+        ],
+        "$id": 2474
+    },
+    "密码已设置成功": {
+        "zh-TW": "密碼已設定成功",
+        "en-US": "Password set successfully",
+        "ko-KR": "비밀번호 설정이 완료되었습니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(19574-19585)"
+        ],
+        "$id": 2475
+    },
+    "密码已修改成功": {
+        "zh-TW": "密碼已修改成功",
+        "en-US": "Password successfully changed",
+        "ko-KR": "암호가 수정되었습니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(19589-19600)"
+        ],
+        "$id": 2476
+    },
+    "需要重新登录": {
+        "zh-TW": "需要重新登入",
+        "en-US": "Sign in again",
+        "ko-KR": "다시 로그인 필요",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(19741-19751)"
+        ],
+        "$id": 2477
+    },
+    "密码已修改成功，请使用新密码登录。": {
+        "zh-TW": "密碼已修改成功，請使用新密碼登入。",
+        "en-US": "Password changed. Sign in with your new password.",
+        "ko-KR": "비밀번호가 변경되었습니다. 새로운 비밀번호로 로그인해 주세요.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(19770-19791)"
+        ],
+        "$id": 2478
+    },
+    "修改失败": {
+        "zh-TW": "修改失敗",
+        "en-US": "Modification failed",
+        "ko-KR": "수정 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(19991-19999)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(6128-6136)"
+        ],
+        "$id": 1862
+    },
+    "解绑": {
+        "zh-TW": "解綁",
+        "en-US": "Unbind",
+        "ko-KR": "해제",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(20672-20678)"
+        ],
+        "$id": 2479
+    },
+    "仅支持 PNG、JPEG、GIF、WebP 格式的图片": {
+        "zh-TW": "僅支援 PNG、JPEG、GIF、WebP 格式圖片",
+        "en-US": "Only PNG, JPEG, GIF, WebP images are supported",
+        "ko-KR": "PNG, JPEG, GIF, WebP 형식의 이미지만 지원합니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(22325-22356)"
+        ],
+        "$id": 2480
+    },
+    "头像文件大小不能超过 5MB": {
+        "zh-TW": "頭像檔案大小不能超過 5MB",
+        "en-US": "Avatar file must be under 5MB",
+        "ko-KR": "프로필 사진은 5MB 이하여야 합니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(22434-22452)"
+        ],
+        "$id": 2481
+    },
+    "头像更新成功": {
+        "zh-TW": "頭像更新成功",
+        "en-US": "Avatar updated",
+        "ko-KR": "프로필 사진이 업데이트되었습니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(22611-22621)"
+        ],
+        "$id": 2482
+    },
+    "头像上传失败": {
+        "zh-TW": "頭像上傳失敗",
+        "en-US": "Failed to upload avatar",
+        "ko-KR": "프로필 사진을 업로드하지 못했습니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(22695-22705)"
+        ],
+        "$id": 2483
+    },
+    "解绑邮箱": {
+        "zh-TW": "解綁電子郵件",
+        "en-US": "Unbind email",
+        "ko-KR": "이메일 해제",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(23127-23135)"
+        ],
+        "$id": 2484
+    },
+    "解绑手机号": {
+        "zh-TW": "解綁手機號",
+        "en-US": "Unbind phone",
+        "ko-KR": "휴대폰 번호 해제",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(23139-23148)"
+        ],
+        "$id": 2485
+    },
+    "解绑失败": {
+        "zh-TW": "解綁失敗",
+        "en-US": "Failed to unbind",
+        "ko-KR": "해제 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(24616-24624)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(24759-24767)"
+        ],
+        "$id": 2486
+    },
+    "已解绑": {
+        "zh-TW": "已解綁",
+        "en-US": "Unbound",
+        "ko-KR": "해제되었습니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(24649-24656)"
+        ],
+        "$id": 2487
+    },
+    "退出登录": {
+        "zh-TW": "退出登入",
+        "en-US": "Log Out",
+        "ko-KR": "로그아웃",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(25014-25022)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(30633-30641)"
+        ],
+        "$id": 1699
+    },
+    "确定要退出当前账号吗？": {
+        "zh-TW": "確定要退出當前帳號嗎？",
+        "en-US": "Are you sure you want to log out of the current account?",
+        "ko-KR": "현재 계정을 종료하시겠습니까?",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(25041-25056)"
+        ],
+        "$id": 1863
+    },
+    "退出失败，请重试": {
+        "zh-TW": "退出失敗,請重試",
+        "en-US": "Exit failed, please try again",
+        "ko-KR": "종료 실패, 다시 시도하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(25400-25412)"
+        ],
+        "$id": 1864
+    },
+    "个人中心": {
+        "zh-TW": "個人中心",
+        "en-US": "Profile",
+        "ko-KR": "프로필",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(25670-25678)"
+        ],
+        "$id": 1693
+    },
+    "会员有效期至": {
+        "zh-TW": "會員有效期至",
+        "en-US": "Membership valid until",
+        "ko-KR": "멤버십 만료일",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(27071-27081)"
+        ],
+        "$id": 1694
+    },
+    "永久": {
+        "zh-TW": "永久",
+        "en-US": "permanent",
+        "ko-KR": "영구",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(27106-27112)"
+        ],
+        "$id": 1865
+    },
+    "免费用户": {
+        "zh-TW": "免費用戶",
+        "en-US": "Free User",
+        "ko-KR": "무료 사용자",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(27182-27190)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(27934-27942)"
+        ],
+        "$id": 1695
+    },
+    "会员即将到期，剩余 {days} 天，请及时续费": {
+        "zh-TW": "會員即將到期，剩餘 {days} 天，請及時續費",
+        "en-US": "Membership expires in {days} days, please renew",
+        "ko-KR": "멤버십이 {days}일 후 만료됩니다. 계속 이용하려면 갱신해 주세요",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(27597-27625)"
+        ],
+        "$id": 2488
+    },
+    "会员": {
+        "zh-TW": "會員",
+        "en-US": "Membership",
+        "ko-KR": "멤버십",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(27818-27824)"
+        ],
+        "$id": 2489
+    },
+    "管理会员": {
+        "zh-TW": "管理會員",
+        "en-US": "Manage membership",
+        "ko-KR": "멤버십 관리",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(27873-27881)"
+        ],
+        "$id": 2490
+    },
+    "存储空间": {
+        "zh-TW": "儲存空間",
+        "en-US": "Storage",
+        "ko-KR": "저장 공간",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(28190-28198)"
+        ],
+        "$id": 2491
+    },
+    "已用 {size}": {
+        "zh-TW": "已用{size}",
+        "en-US": "{size} used",
+        "ko-KR": "사용량 {size}",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(28304-28317)"
+        ],
+        "$id": 2492
+    },
+    "总计 {size}": {
+        "zh-TW": "總計 {size}",
+        "en-US": "{size} total",
+        "ko-KR": "총량 {size}",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(28391-28404)"
+        ],
+        "$id": 2493
+    },
+    "剩余 {size}": {
+        "zh-TW": "剩餘 {size}",
+        "en-US": "{size} left",
+        "ko-KR": "남은 용량 {size}",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(28714-28727)"
+        ],
+        "$id": 2494
+    },
+    "使用率 {pct}%": {
+        "zh-TW": "使用率{pct}%",
+        "en-US": "{pct}% used",
+        "ko-KR": "사용률 {pct}%",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(28806-28820)"
+        ],
+        "$id": 2495
+    },
+    "账号信息": {
+        "zh-TW": "帳號資訊",
+        "en-US": "Account Info",
+        "ko-KR": "계정 정보",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(29044-29052)"
+        ],
+        "$id": 1697
+    },
+    "账号详情": {
+        "zh-TW": "帳號詳情",
+        "en-US": "Account details",
+        "ko-KR": "계정 정보",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(29619-29627)"
+        ],
+        "$id": 2496
+    },
+    "账户角色": {
+        "zh-TW": "帳戶角色",
+        "en-US": "Account role",
+        "ko-KR": "계정 역할",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(29665-29673)"
+        ],
+        "$id": 2497
+    },
+    "账户状态": {
+        "zh-TW": "帳戶狀態",
+        "en-US": "Account status",
+        "ko-KR": "계정 상태",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(29810-29818)"
+        ],
+        "$id": 2498
+    },
+    "创建时间": {
+        "zh-TW": "建立時間",
+        "en-US": "Created",
+        "ko-KR": "생성 시간",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(30034-30042)",
+            "src/pages/shell/components/UnifiedFileList.vue(5343-5351)"
+        ],
+        "$id": 2354
+    },
+    "账号安全": {
+        "zh-TW": "帳號安全",
+        "en-US": "Account Security",
+        "ko-KR": "계정 보안",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(30206-30214)"
+        ],
+        "$id": 1698
+    },
+    "忘记密码？": {
+        "zh-TW": "忘記密碼？",
+        "en-US": "Forgot password?",
+        "ko-KR": "비밀번호를 잊으셨나요?",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(30453-30462)"
+        ],
+        "$id": 2499
+    },
+    "修改用户名": {
+        "zh-TW": "修改用戶名",
+        "en-US": "Change username",
+        "ko-KR": "사용자 이름 수정",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(31035-31044)"
+        ],
+        "$id": 1866
+    },
+    "修改昵称": {
+        "zh-TW": "修改昵稱",
+        "en-US": "Edit Nickname",
+        "ko-KR": "닉네임 수정",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(31048-31056)"
+        ],
+        "$id": 1867
+    },
+    "用户名每月最多修改 3 次": {
+        "zh-TW": "用戶名每月最多修改3次",
+        "en-US": "Username can be modified up to 3 times per month",
+        "ko-KR": "사용자 이름 월 최대 3회 수정",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(31449-31466)"
+        ],
+        "$id": 1868
+    },
+    "保存中…": {
+        "zh-TW": "保存中…",
+        "en-US": "Saving",
+        "ko-KR": "저장 중...",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(31620-31628)"
+        ],
+        "$id": 1869
+    },
+    "验证码已发送至": {
+        "zh-TW": "驗證碼已發送至",
+        "en-US": "The verification code has been sent to",
+        "ko-KR": "인증 코드가 다음으로 전송되었습니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(32255-32266)"
+        ],
+        "$id": 1870
+    },
+    "重新发送": {
+        "zh-TW": "重新發送",
+        "en-US": "Resend",
+        "ko-KR": "다시 보내기",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(32558-32566)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(33368-33376)",
+            "src/pages/shell/sub-pages/ProfilePage.vue(37387-37395)"
+        ],
+        "$id": 1872
+    },
+    "请输入新的手机号": {
+        "zh-TW": "請輸入新的手機號",
+        "en-US": "Please enter a new phone number",
+        "ko-KR": "새 핸드폰 번호를 입력하세요",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(32925-32937)"
+        ],
+        "$id": 1873
+    },
+    "请输入新的邮箱地址": {
+        "zh-TW": "請輸入新的郵箱地址",
+        "en-US": "Please enter a new email address",
+        "ko-KR": "새 메일 주소를 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(32941-32954)"
+        ],
+        "$id": 1874
+    },
+    "重新发送验证码": {
+        "zh-TW": "重新發送驗證碼",
+        "en-US": "Resend verification code",
+        "ko-KR": "인증 코드 다시 보내기",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(33397-33408)"
+        ],
+        "$id": 1875
+    },
+    "您的账户是通过手机号或微信自动创建的，尚未设置密码。设置密码后可使用账号密码登录。": {
+        "zh-TW": "您的帳戶是透過手機號或微信自動創建的，尚未設定密碼。設定密碼後可使用帳號密碼登入。",
+        "en-US": "Your account was created automatically via phone or WeChat and has no password yet. Set a password to sign in with your account and password.",
+        "ko-KR": "이 계정은 휴대폰 번호 또는 위챗으로 자동 생성되어 아직 비밀번호가 없습니다. 비밀번호를 설정하면 계정과 비밀번호로 로그인할 수 있습니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(34387-34432)"
+        ],
+        "$id": 2500
+    },
+    "请输入当前密码": {
+        "zh-TW": "請輸入當前密碼",
+        "en-US": "Please enter the current password",
+        "ko-KR": "현재 암호를 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(34610-34621)"
+        ],
+        "$id": 1876
+    },
+    "请再次输入新密码": {
+        "zh-TW": "請再次輸入新密碼",
+        "en-US": "Please enter the new password again",
+        "ko-KR": "새 암호를 다시 입력하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(35680-35692)"
+        ],
+        "$id": 1878
+    },
+    "安全建议": {
+        "zh-TW": "安全建議",
+        "en-US": "Security tips",
+        "ko-KR": "보안 권장 사항",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(36085-36093)"
+        ],
+        "$id": 2501
+    },
+    "验证码将发送至": {
+        "zh-TW": "驗證碼將發送至",
+        "en-US": "The code will be sent to",
+        "ko-KR": "인증 코드가 다음 주소로 전송됩니다",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(37083-37094)"
+        ],
+        "$id": 2512
+    },
+    "解绑后将无法通过该账号登录，账号至少需要保留一种登录方式。": {
+        "zh-TW": "解綁後將無法透過該帳號登入，帳號至少需要保留一種登入方式。",
+        "en-US": "After unbinding you can no longer sign in with it. Keep at least one sign-in method on the account.",
+        "ko-KR": "해제 후 해당 계정으로 로그인할 수 없습니다. 계정에는 최소 한 가지 로그인 방법을 남겨 두어야 합니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(37486-37519)"
+        ],
+        "$id": 2502
+    },
+    "确认解绑": {
+        "zh-TW": "確認解綁",
+        "en-US": "Confirm unbind",
+        "ko-KR": "해제 확인",
+        "$files": [
+            "src/pages/shell/sub-pages/ProfilePage.vue(37862-37870)"
+        ],
+        "$id": 2503
+    },
+    "项目所有者": {
+        "zh-TW": "項目所有者",
+        "en-US": "Project owner",
+        "ko-KR": "프로젝트 소유자",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2607-2616)"
+        ],
+        "$id": 1978
+    },
+    "项目管理员": {
+        "zh-TW": "項目管理員",
+        "en-US": "Project Manager",
+        "ko-KR": "프로젝트 관리자",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2637-2646)"
+        ],
+        "$id": 1979
+    },
+    "项目编辑者": {
+        "zh-TW": "項目編輯者",
+        "en-US": "Project Editor",
+        "ko-KR": "프로젝트 편집자",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2668-2677)"
+        ],
+        "$id": 1980
+    },
+    "项目成员": {
+        "zh-TW": "項目成員",
+        "en-US": "Project Members",
+        "ko-KR": "프로젝트 멤버",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2699-2707)"
+        ],
+        "$id": 1981
+    },
+    "项目查看者": {
+        "zh-TW": "項目查看者",
+        "en-US": "Project Viewer",
+        "ko-KR": "항목 뷰어",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2729-2738)"
+        ],
+        "$id": 1982
+    },
+    "未知角色": {
+        "zh-TW": "未知角色",
+        "en-US": "Unknown role",
+        "ko-KR": "알 수 없는 역할",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(12896-12904)"
+        ],
+        "$id": 1961
+    },
+    "上传上限": {
+        "zh-TW": "上傳上限",
+        "en-US": "Upload limit",
+        "ko-KR": "업로드 한도",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(25451-25459)"
+        ],
+        "$id": 2360
+    },
+    "添加成员": {
+        "zh-TW": "添加成員",
+        "en-US": "Add member",
+        "ko-KR": "구성원 추가",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(31325-31333)"
+        ],
+        "$id": 1962
+    },
+    "搜索用户": {
+        "zh-TW": "蒐索用戶",
+        "en-US": "Search user",
+        "ko-KR": "사용자 검색",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(31557-31565)"
+        ],
+        "$id": 1963
+    },
+    "未找到用户": {
+        "zh-TW": "未找到用戶",
+        "en-US": "User not found",
+        "ko-KR": "사용자를 찾을 수 없음",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(32465-32474)"
+        ],
+        "$id": 1964
+    },
+    "选择角色": {
+        "zh-TW": "選擇角色",
+        "en-US": "Select a character",
+        "ko-KR": "역할 선택",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(33195-33203)"
+        ],
+        "$id": 1965
+    },
+    "确认添加": {
+        "zh-TW": "確認添加",
+        "en-US": "Confirm Add",
+        "ko-KR": "추가 확인",
+        "$files": [
+            "src/pages/shell/sub-pages/ProjectDetailPage.vue(33815-33823)"
+        ],
+        "$id": 1966
+    },
+    "有效": {
+        "zh-TW": "有效",
+        "en-US": "Valid",
+        "ko-KR": "유효",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(1750-1756)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(2838-2844)"
+        ],
+        "$id": 1700
+    },
+    "未知文件": {
+        "zh-TW": "未知檔案",
+        "en-US": "Unknown file",
+        "ko-KR": "알 수 없는 파일",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(2331-2339)"
+        ],
+        "$id": 2292
+    },
+    "撤销后该分享链接将立即失效，确定撤销？": {
+        "zh-TW": "撤銷後該分享連結將立即失效,確定撤銷？",
+        "en-US": "After revocation, the sharing link will immediately become invalid. Are you sure to revoke it?",
+        "ko-KR": "취소 후 공유 링크가 즉시 무효화됩니다. 취소하시겠습니까?",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(4113-4136)"
+        ],
+        "$id": 2041
+    },
+    "有效期已更新": {
+        "zh-TW": "有效期已更新",
+        "en-US": "The validity period has been updated",
+        "ko-KR": "유효 기간이 업데이트되었습니다.",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(6065-6075)"
+        ],
+        "$id": 2293
+    },
+    "复制链接": {
+        "zh-TW": "複製連結",
+        "en-US": "Copy link",
+        "ko-KR": "링크 복사",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7066-7074)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7608-7616)"
+        ],
+        "$id": 2294
+    },
+    "修改有效期": {
+        "zh-TW": "修改有效期",
+        "en-US": "Modify validity period",
+        "ko-KR": "수정 유효기간",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7092-7101)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7835-7844)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(15726-15735)"
+        ],
+        "$id": 2295
+    },
+    "查看二维码": {
+        "zh-TW": "查看二維碼",
+        "en-US": "View QR Code",
+        "ko-KR": "QR코드 보기",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7119-7128)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(7905-7914)"
+        ],
+        "$id": 2296
+    },
+    "请选择要分享的文件": {
+        "zh-TW": "請選擇要分享的檔案",
+        "en-US": "Please select the file to share",
+        "ko-KR": "공유할 파일을 선택하십시오.",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(10752-10765)"
+        ],
+        "$id": 1882
+    },
+    "分享管理": {
+        "zh-TW": "分享管理",
+        "en-US": "Share Management",
+        "ko-KR": "공유 관리",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12883-12891)"
+        ],
+        "$id": 1705
+    },
+    "搜索分享": {
+        "zh-TW": "搜尋分享",
+        "en-US": "Search shares",
+        "ko-KR": "공유 검색",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(12993-13001)"
+        ],
+        "$id": 1706
+    },
+    "暂无分享": {
+        "zh-TW": "暫無分享",
+        "en-US": "No shares",
+        "ko-KR": "공유 없음",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(13808-13816)"
+        ],
+        "$id": 1707
+    },
+    "新建分享": {
+        "zh-TW": "新建分享",
+        "en-US": "New Share",
+        "ko-KR": "새 공유",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(13941-13949)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(15135-15143)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(17550-17558)"
+        ],
+        "$id": 1708
+    },
+    "创建": {
+        "zh-TW": "創建",
+        "en-US": "Create",
+        "ko-KR": "작성",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(14727-14733)",
+            "src/pages/shell/sub-pages/ShareManagePage.vue(17819-17825)"
+        ],
+        "$id": 1892
+    },
+    "到期": {
+        "zh-TW": "到期",
+        "en-US": "Expires",
+        "ko-KR": "만료",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(14810-14816)"
+        ],
+        "$id": 1709
+    },
+    "二维码生成失败": {
+        "zh-TW": "二維碼生成失敗",
+        "en-US": "QR code generation failed",
+        "ko-KR": "QR코드 생성 실패",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(16923-16934)"
+        ],
+        "$id": 2299
+    },
+    "完成": {
+        "zh-TW": "完成",
+        "en-US": "complete",
+        "ko-KR": "완료",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(17933-17939)",
+            "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6088-6094)"
+        ],
+        "$id": 1039
+    },
+    "选择文件": {
+        "zh-TW": "選擇檔案",
+        "en-US": "Choose File",
+        "ko-KR": "파일 선택",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(18917-18925)"
+        ],
+        "$id": 1894
+    },
+    "暂无可分享的文件": {
+        "zh-TW": "暫無可分享的檔案",
+        "en-US": "There are currently no files available for sharing",
+        "ko-KR": "공유할 파일이 없음",
+        "$files": [
+            "src/pages/shell/sub-pages/ShareManagePage.vue(19082-19094)"
+        ],
+        "$id": 1895
     },
     "登录已过期": {
         "zh-TW": "登入已過期",
         "en-US": "Login expired",
         "ko-KR": "로그인 만료",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(848-857)"
+            "src/pages/shell/components/AuthStatePage.vue(853-862)"
         ],
         "$id": 1710
     },
@@ -4735,7 +6510,7 @@
         "en-US": "Your session has expired. Please log in again to continue.",
         "ko-KR": "로그인 세션이 만료되었습니다. 다시 로그인 후 계속해 주세요.",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(871-893)"
+            "src/pages/shell/components/AuthStatePage.vue(876-898)"
         ],
         "$id": 1711
     },
@@ -4744,7 +6519,7 @@
         "en-US": "Log in again",
         "ko-KR": "다시 로그인",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(913-921)"
+            "src/pages/shell/components/AuthStatePage.vue(918-926)"
         ],
         "$id": 1712
     },
@@ -4753,7 +6528,7 @@
         "en-US": "Network error",
         "ko-KR": "네트워크 오류",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(984-992)"
+            "src/pages/shell/components/AuthStatePage.vue(989-997)"
         ],
         "$id": 1713
     },
@@ -4762,7 +6537,7 @@
         "en-US": "Network connection is unstable. Please check your network and retry.",
         "ko-KR": "네트워크 연결이 불안정합니다. 네트워크를 확인한 후 다시 시도해 주세요.",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1006-1026)"
+            "src/pages/shell/components/AuthStatePage.vue(1011-1031)"
         ],
         "$id": 1714
     },
@@ -4771,7 +6546,7 @@
         "en-US": "Access denied",
         "ko-KR": "액세스 거부",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1132-1140)"
+            "src/pages/shell/components/AuthStatePage.vue(1137-1145)"
         ],
         "$id": 1715
     },
@@ -4780,7 +6555,7 @@
         "en-US": "You don't have permission to perform this action. Please contact the admin.",
         "ko-KR": "이 작업을 실행할 권한이 없습니다. 관리자에게 요청해 주세요.",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1154-1178)"
+            "src/pages/shell/components/AuthStatePage.vue(1159-1183)"
         ],
         "$id": 1716
     },
@@ -4789,7 +6564,7 @@
         "en-US": "Back to home",
         "ko-KR": "홈으로",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1198-1206)"
+            "src/pages/shell/components/AuthStatePage.vue(1203-1211)"
         ],
         "$id": 1717
     },
@@ -4798,7 +6573,7 @@
         "en-US": "Account disabled",
         "ko-KR": "계정 비활성화",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1290-1299)"
+            "src/pages/shell/components/AuthStatePage.vue(1295-1304)"
         ],
         "$id": 1718
     },
@@ -4807,7 +6582,7 @@
         "en-US": "Your account has been disabled or deactivated. Contact support to restore it.",
         "ko-KR": "계정이 비활성화 또는 해지되었습니다. 복원은 고객센터로 문의해 주세요.",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1313-1338)"
+            "src/pages/shell/components/AuthStatePage.vue(1318-1343)"
         ],
         "$id": 1719
     },
@@ -4816,7 +6591,7 @@
         "en-US": "Contact Support",
         "ko-KR": "고객센터",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1358-1366)"
+            "src/pages/shell/components/AuthStatePage.vue(1363-1371)"
         ],
         "$id": 1720
     },
@@ -4825,7 +6600,7 @@
         "en-US": "Error",
         "ko-KR": "오류",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1515-1521)"
+            "src/pages/shell/components/AuthStatePage.vue(1520-1526)"
         ],
         "$id": 1721
     },
@@ -4834,7 +6609,7 @@
         "en-US": "Unknown status",
         "ko-KR": "미지의 상태",
         "$files": [
-            "src/pages/shell/components/AuthStatePage.vue(1530-1538)"
+            "src/pages/shell/components/AuthStatePage.vue(1535-1543)"
         ],
         "$id": 1722
     },
@@ -4920,17 +6695,6 @@
             "src/pages/shell/components/BatchDownloadPanel.vue(2118-2128)"
         ],
         "$id": 2265
-    },
-    "下载任务": {
-        "zh-TW": "下載任務",
-        "en-US": "Download Task",
-        "ko-KR": "작업 다운로드",
-        "$files": [
-            "src/pages/shell/components/BatchDownloadPanel.vue(2386-2394)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(16545-16553)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14370-14378)"
-        ],
-        "$id": 2266
     },
     "暂无下载任务": {
         "zh-TW": "暫無下載任務",
@@ -5114,16 +6878,6 @@
         ],
         "$id": 2353
     },
-    "创建时间": {
-        "zh-TW": "建立時間",
-        "en-US": "Created",
-        "ko-KR": "생성 시간",
-        "$files": [
-            "src/pages/shell/components/UnifiedFileList.vue(5343-5351)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(30180-30188)"
-        ],
-        "$id": 2354
-    },
     "大小": {
         "zh-TW": "大小",
         "en-US": "Size",
@@ -5160,17 +6914,6 @@
         ],
         "$id": 2386
     },
-    "新建文件夹": {
-        "zh-TW": "新建資料夾",
-        "en-US": "New Folder",
-        "ko-KR": "새 폴더",
-        "$files": [
-            "src/pages/shell/components/UnifiedFileList.vue(8850-8859)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(16351-16360)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14182-14191)"
-        ],
-        "$id": 2023
-    },
     "文件夹": {
         "zh-TW": "資料夾",
         "en-US": "Folder",
@@ -5180,21 +6923,6 @@
         ],
         "$id": 2388
     },
-    "移动": {
-        "zh-TW": "移動",
-        "en-US": "move",
-        "ko-KR": "이동",
-        "$files": [
-            "src/pages/shell/components/UnifiedFileList.vue(13230-13236)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9822-9828)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10578-10584)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10654-10660)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16911-16917)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17659-17665)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17735-17741)"
-        ],
-        "$id": 2132
-    },
     "排序": {
         "zh-TW": "排序",
         "en-US": "Sort",
@@ -5203,1462 +6931,6 @@
             "src/pages/shell/components/UnifiedFileList.vue(13644-13650)"
         ],
         "$id": 2358
-    },
-    "我加入的": {
-        "zh-TW": "我加入的",
-        "en-US": "Joined",
-        "ko-KR": "내가 참여한",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(2900-2908)"
-        ],
-        "$id": 2359
-    },
-    "开始下载 {count} 个文件": {
-        "zh-TW": "開始下載{count}個檔案",
-        "en-US": "Start downloading {count} files",
-        "ko-KR": "{count}개 파일 다운로드 시작",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(8494-8514)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(15599-15619)"
-        ],
-        "$id": 2125
-    },
-    "确认删除": {
-        "zh-TW": "確認删除",
-        "en-US": "Confirm deletion",
-        "ko-KR": "삭제 확인",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(8681-8689)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(15786-15794)"
-        ],
-        "$id": 2126
-    },
-    "确定删除 {count} 个文件/文件夹？": {
-        "zh-TW": "確定删除{count}個檔案/資料夾？",
-        "en-US": "Are you sure to delete {count} files/folders?",
-        "ko-KR": "{count}개 파일/폴더를 삭제하시겠습니까?",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(8708-8733)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(15813-15838)"
-        ],
-        "$id": 2127
-    },
-    "打开": {
-        "zh-TW": "打開",
-        "en-US": "open",
-        "ko-KR": "열다",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9669-9675)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10247-10253)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16758-16764)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17336-17342)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7108-7114)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7601-7607)"
-        ],
-        "$id": 2131
-    },
-    "打包下载": {
-        "zh-TW": "打包下載",
-        "en-US": "Download as a package",
-        "ko-KR": "패키지 다운로드",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9747-9755)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10398-10406)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16836-16844)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17479-17487)"
-        ],
-        "$id": 2284
-    },
-    "格式转换下载": {
-        "zh-TW": "格式轉換下載",
-        "en-US": "Format conversion download",
-        "ko-KR": "형식 변환 다운로드",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(9769-9779)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(10321-10331)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(16858-16868)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(17402-17412)"
-        ],
-        "$id": 2285
-    },
-    "下载中...": {
-        "zh-TW": "下載中. ..",
-        "en-US": "Downloading ..",
-        "ko-KR": "다운로드 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(11256-11266)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(18337-18347)"
-        ],
-        "$id": 2286
-    },
-    "正在创建打包任务...": {
-        "zh-TW": "正在創建打包任務. ..",
-        "en-US": "Creating packaging task ..",
-        "ko-KR": "패키지 작업을 만드는 중입니다...",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(12657-12672)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(19758-19773)"
-        ],
-        "$id": 2289
-    },
-    "打包任务已创建": {
-        "zh-TW": "打包任務已創建",
-        "en-US": "The packaging task has been created",
-        "ko-KR": "패키지 작업 생성됨",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(12810-12821)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(19911-19922)"
-        ],
-        "$id": 2290
-    },
-    "打包任务创建失败": {
-        "zh-TW": "打包任務創建失敗",
-        "en-US": "Packaging task creation failed",
-        "ko-KR": "패키지 작업 생성 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(12911-12923)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(20012-20024)"
-        ],
-        "$id": 2291
-    },
-    "移动中...": {
-        "zh-TW": "移動中. ..",
-        "en-US": "Moving...",
-        "ko-KR": "이동 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(14339-14349)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(21451-21461)"
-        ],
-        "$id": 2136
-    },
-    "复制中...": {
-        "zh-TW": "複製中. ..",
-        "en-US": "Copying...",
-        "ko-KR": "복제 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(14353-14363)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(21465-21475)"
-        ],
-        "$id": 2137
-    },
-    "移动成功": {
-        "zh-TW": "移動成功",
-        "en-US": "Mobile successful",
-        "ko-KR": "이동 성공",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(15067-15075)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22179-22187)"
-        ],
-        "$id": 2138
-    },
-    "复制成功": {
-        "zh-TW": "複製成功",
-        "en-US": "Copy successful",
-        "ko-KR": "복사 성공",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(15079-15087)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22191-22199)"
-        ],
-        "$id": 2139
-    },
-    "移动失败": {
-        "zh-TW": "移動失敗",
-        "en-US": "Mobile failed",
-        "ko-KR": "이동 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(15200-15208)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22296-22304)"
-        ],
-        "$id": 2140
-    },
-    "新建项目": {
-        "zh-TW": "新建項目",
-        "en-US": "New Project",
-        "ko-KR": "새 항목",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(16272-16280)"
-        ],
-        "$id": 2022
-    },
-    "新建图纸": {
-        "zh-TW": "新建圖紙",
-        "en-US": "New drawing",
-        "ko-KR": "새 시트",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(16415-16423)",
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(25251-25259)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(14244-14252)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(30447-30455)"
-        ],
-        "$id": 2006
-    },
-    "文件夹名称无效": {
-        "zh-TW": "資料夾名稱無效",
-        "en-US": "Invalid folder name",
-        "ko-KR": "잘못된 폴더 이름",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(17404-17415)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(22649-22660)"
-        ],
-        "$id": 2141
-    },
-    "上传中 {pct}%": {
-        "zh-TW": "上傳中{pct}%",
-        "en-US": "Uploading {pct}%",
-        "ko-KR": "업로드 중 {pct}%",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(19055-19069)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24290-24304)"
-        ],
-        "$id": 2024
-    },
-    "上传成功": {
-        "zh-TW": "上傳成功",
-        "en-US": "Upload successful",
-        "ko-KR": "업로드 성공",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(19223-19231)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24458-24466)"
-        ],
-        "$id": 2025
-    },
-    "上传失败，请重试": {
-        "zh-TW": "上傳失敗,請重試",
-        "en-US": "Upload failed, please try again",
-        "ko-KR": "업로드에 실패했습니다. 다시 시도하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(19324-19336)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(24542-24554)"
-        ],
-        "$id": 2026
-    },
-    "请输入图纸名称": {
-        "zh-TW": "請輸入圖紙名稱",
-        "en-US": "Please enter the drawing name",
-        "ko-KR": "시트 이름을 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/FileBrowserPage.vue(25540-25551)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(30736-30747)"
-        ],
-        "$id": 2008
-    },
-    "系统管理员": {
-        "zh-TW": "系統管理員",
-        "en-US": "System administrator",
-        "ko-KR": "시스템 관리자",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(5931-5940)"
-        ],
-        "$id": 2459
-    },
-    "普通用户": {
-        "zh-TW": "一般用戶",
-        "en-US": "Regular user",
-        "ko-KR": "일반 사용자",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(5944-5952)"
-        ],
-        "$id": 2460
-    },
-    "未激活": {
-        "zh-TW": "未啟用",
-        "en-US": "Inactive",
-        "ko-KR": "비활성",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(6033-6040)"
-        ],
-        "$id": 2461
-    },
-    "已禁用": {
-        "zh-TW": "已停用",
-        "en-US": "Suspended",
-        "ko-KR": "정지됨",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(6083-6090)"
-        ],
-        "$id": 2462
-    },
-    "正常": {
-        "zh-TW": "正常",
-        "en-US": "Active",
-        "ko-KR": "활성",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(6094-6100)"
-        ],
-        "$id": 2463
-    },
-    "用户名": {
-        "zh-TW": "用戶名",
-        "en-US": "Username",
-        "ko-KR": "사용자 이름",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(6677-6684)"
-        ],
-        "$id": 1835
-    },
-    "昵称": {
-        "zh-TW": "暱稱",
-        "en-US": "Nickname",
-        "ko-KR": "닉네임",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(6764-6770)"
-        ],
-        "$id": 1683
-    },
-    "邮箱": {
-        "zh-TW": "郵箱",
-        "en-US": "Email",
-        "ko-KR": "이메일",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(6855-6861)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(9897-9903)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(20499-20505)"
-        ],
-        "$id": 1685
-    },
-    "手机号": {
-        "zh-TW": "手機號",
-        "en-US": "Phone",
-        "ko-KR": "전화번호",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(7032-7039)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(9907-9914)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(20509-20516)"
-        ],
-        "$id": 1684
-    },
-    "设置密码": {
-        "zh-TW": "設定密碼",
-        "en-US": "Set password",
-        "ko-KR": "비밀번호 설정",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(7349-7357)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(16238-16246)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(16361-16369)"
-        ],
-        "$id": 2464
-    },
-    "修改密码": {
-        "zh-TW": "修改密碼",
-        "en-US": "Change Password",
-        "ko-KR": "비밀번호 변경",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(7361-7369)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(16250-16258)"
-        ],
-        "$id": 1689
-    },
-    "请输入用户名（3-20 个字符）": {
-        "zh-TW": "請輸入用戶名(3-20個字元)",
-        "en-US": "Please enter your username (3-20 characters)",
-        "ko-KR": "사용자 이름 (3-20자) 을 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(7751-7771)"
-        ],
-        "$id": 1836
-    },
-    "请输入昵称（最多 50 个字符）": {
-        "zh-TW": "請輸入昵稱(最多50個字元)",
-        "en-US": "Please enter a nickname (up to 50 characters)",
-        "ko-KR": "닉네임 (최대 50자) 을 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(7775-7795)"
-        ],
-        "$id": 1837
-    },
-    "用户名已更新": {
-        "zh-TW": "用戶名已更新",
-        "en-US": "The username has been updated",
-        "ko-KR": "사용자 이름이 업데이트되었습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(8585-8595)"
-        ],
-        "$id": 1838
-    },
-    "昵称已更新": {
-        "zh-TW": "昵稱已更新",
-        "en-US": "Nickname updated",
-        "ko-KR": "닉네임이 업데이트되었습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(8599-8608)"
-        ],
-        "$id": 1839
-    },
-    "更新失败": {
-        "zh-TW": "更新失敗",
-        "en-US": "Update failed",
-        "ko-KR": "업데이트 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(8716-8724)"
-        ],
-        "$id": 1840
-    },
-    "原邮箱": {
-        "zh-TW": "原郵箱",
-        "en-US": "Original email address",
-        "ko-KR": "원본 메일박스",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10021-10028)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(23280-23287)"
-        ],
-        "$id": 1841
-    },
-    "原手机号": {
-        "zh-TW": "原手機號",
-        "en-US": "original phone number",
-        "ko-KR": "원래 핸드폰 번호",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10073-10081)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(23327-23335)"
-        ],
-        "$id": 1842
-    },
-    "更换": {
-        "zh-TW": "更換",
-        "en-US": "replace",
-        "ko-KR": "교체",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10149-10155)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(20654-20660)",
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(33079-33085)"
-        ],
-        "$id": 1843
-    },
-    "绑定": {
-        "zh-TW": "綁定",
-        "en-US": "bind",
-        "ko-KR": "바인딩",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10180-10186)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(20764-20770)"
-        ],
-        "$id": 1844
-    },
-    "验证中…": {
-        "zh-TW": "驗證中…",
-        "en-US": "Under verification",
-        "ko-KR": "확인 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10320-10328)"
-        ],
-        "$id": 1845
-    },
-    "验证": {
-        "zh-TW": "驗證",
-        "en-US": "Verification",
-        "ko-KR": "검증",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10332-10338)"
-        ],
-        "$id": 1846
-    },
-    "发送中…": {
-        "zh-TW": "發送中…",
-        "en-US": "Sending...",
-        "ko-KR": "보내는 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10405-10413)"
-        ],
-        "$id": 1847
-    },
-    "发送验证码": {
-        "zh-TW": "發送驗證碼",
-        "en-US": "Send verification code",
-        "ko-KR": "인증 코드 보내기",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10417-10426)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(32733-32742)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(37562-37571)"
-        ],
-        "$id": 1848
-    },
-    "提交中…": {
-        "zh-TW": "提交中…",
-        "en-US": "Submitting",
-        "ko-KR": "제출 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10457-10465)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(16322-16330)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(37996-38004)"
-        ],
-        "$id": 1849
-    },
-    "确认更换": {
-        "zh-TW": "確認更換",
-        "en-US": "Confirm replacement",
-        "ko-KR": "교체 확인",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10489-10497)"
-        ],
-        "$id": 1850
-    },
-    "确认绑定": {
-        "zh-TW": "確認綁定",
-        "en-US": "Confirm binding",
-        "ko-KR": "바인딩 확인",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(10501-10509)"
-        ],
-        "$id": 1851
-    },
-    "验证码已发送": {
-        "zh-TW": "驗證碼已發送",
-        "en-US": "Verification code has been sent",
-        "ko-KR": "인증 코드가 전송되었습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(11900-11910)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(13534-13544)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(23966-23976)"
-        ],
-        "$id": 1852
-    },
-    "验证码发送失败": {
-        "zh-TW": "驗證碼發送失敗",
-        "en-US": "Verification code sending failed",
-        "ko-KR": "인증 코드 전송 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(12006-12017)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(13687-13698)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(24076-24087)"
-        ],
-        "$id": 1853
-    },
-    "验证失败": {
-        "zh-TW": "驗證失敗",
-        "en-US": "Verification failed",
-        "ko-KR": "인증 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(12592-12600)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(12799-12807)"
-        ],
-        "$id": 1854
-    },
-    "验证通过": {
-        "zh-TW": "驗證通過",
-        "en-US": "Verified",
-        "ko-KR": "인증 통과",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(12708-12716)"
-        ],
-        "$id": 1855
-    },
-    "请输入正确的手机号": {
-        "zh-TW": "請輸入正確的手機號",
-        "en-US": "Please enter the correct phone number",
-        "ko-KR": "정확한 핸드폰 번호를 입력하세요.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(13034-13047)"
-        ],
-        "$id": 1856
-    },
-    "请输入正确的邮箱": {
-        "zh-TW": "請輸入正確的郵箱",
-        "en-US": "Please enter the correct email address",
-        "ko-KR": "올바른 메일박스를 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(13051-13063)"
-        ],
-        "$id": 1857
-    },
-    "请先验证原账号信息": {
-        "zh-TW": "請先驗證原帳號資訊",
-        "en-US": "Please verify the original account information first",
-        "ko-KR": "원래의 계정 정보를 먼저 확인하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(13945-13958)"
-        ],
-        "$id": 1858
-    },
-    "操作失败": {
-        "zh-TW": "操作失敗",
-        "en-US": "Operation failed",
-        "ko-KR": "작업 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(14752-14760)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(14944-14952)"
-        ],
-        "$id": 1859
-    },
-    "已更换": {
-        "zh-TW": "已更換",
-        "en-US": "replaced",
-        "ko-KR": "교체됨",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(14826-14833)"
-        ],
-        "$id": 1860
-    },
-    "已绑定": {
-        "zh-TW": "已綁定",
-        "en-US": "Bound",
-        "ko-KR": "연결됨",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(14837-14844)"
-        ],
-        "$id": 1687
-    },
-    "确认修改": {
-        "zh-TW": "確認修改",
-        "en-US": "Confirm changes",
-        "ko-KR": "수정 확인",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(16373-16381)"
-        ],
-        "$id": 1879
-    },
-    "至少8位，包含大小写字母和数字": {
-        "zh-TW": "至少8位，包含大小寫字母和數字",
-        "en-US": "At least 8 characters, with upper/lowercase letters and digits",
-        "ko-KR": "8자 이상, 대소문자 알파벳과 숫자 포함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(16455-16474)"
-        ],
-        "$id": 2465
-    },
-    "请输入新密码（至少 6 位）": {
-        "zh-TW": "請輸入新密碼(至少6比特)",
-        "en-US": "Please enter a new password (at least 6 characters)",
-        "ko-KR": "새 암호 (최소 6비트) 를 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(16478-16496)"
-        ],
-        "$id": 1877
-    },
-    "太弱": {
-        "zh-TW": "太弱",
-        "en-US": "Too weak",
-        "ko-KR": "매우 약함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(16901-16907)"
-        ],
-        "$id": 2466
-    },
-    "较弱": {
-        "zh-TW": "較弱",
-        "en-US": "Weak",
-        "ko-KR": "약함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(16944-16950)"
-        ],
-        "$id": 2467
-    },
-    "一般": {
-        "zh-TW": "一般",
-        "en-US": "Fair",
-        "ko-KR": "보통",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(16987-16993)"
-        ],
-        "$id": 2468
-    },
-    "较强": {
-        "zh-TW": "較強",
-        "en-US": "Strong",
-        "ko-KR": "강력함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(17030-17036)"
-        ],
-        "$id": 2469
-    },
-    "很强": {
-        "zh-TW": "很強",
-        "en-US": "Very strong",
-        "ko-KR": "매우 강력함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(17073-17079)"
-        ],
-        "$id": 2470
-    },
-    "密码长度至少 8 个字符": {
-        "zh-TW": "密碼長度至少 8 個字元",
-        "en-US": "At least 8 characters long",
-        "ko-KR": "8자 이상의 길이",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(17396-17412)"
-        ],
-        "$id": 2471
-    },
-    "包含大小写字母和数字": {
-        "zh-TW": "包含大小寫字母和數字",
-        "en-US": "Contains upper/lowercase letters and digits",
-        "ko-KR": "대소문자 알파벳과 숫자 포함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(17463-17477)"
-        ],
-        "$id": 2472
-    },
-    "包含特殊字符": {
-        "zh-TW": "包含特殊字元",
-        "en-US": "Contains special characters",
-        "ko-KR": "특수문자 포함",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(17597-17607)"
-        ],
-        "$id": 2473
-    },
-    "不要在多个网站使用相同的密码": {
-        "zh-TW": "不要在多個網站使用相同的密碼",
-        "en-US": "Do not reuse the same password across sites",
-        "ko-KR": "여러 사이트에서 같은 비밀번호를 사용하지 마세요",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(17667-17685)"
-        ],
-        "$id": 2474
-    },
-    "密码已设置成功": {
-        "zh-TW": "密碼已設定成功",
-        "en-US": "Password set successfully",
-        "ko-KR": "비밀번호 설정이 완료되었습니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(19599-19610)"
-        ],
-        "$id": 2475
-    },
-    "密码已修改成功": {
-        "zh-TW": "密碼已修改成功",
-        "en-US": "Password successfully changed",
-        "ko-KR": "암호가 수정되었습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(19614-19625)"
-        ],
-        "$id": 2476
-    },
-    "需要重新登录": {
-        "zh-TW": "需要重新登入",
-        "en-US": "Sign in again",
-        "ko-KR": "다시 로그인 필요",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(19766-19776)"
-        ],
-        "$id": 2477
-    },
-    "密码已修改成功，请使用新密码登录。": {
-        "zh-TW": "密碼已修改成功，請使用新密碼登入。",
-        "en-US": "Password changed. Sign in with your new password.",
-        "ko-KR": "비밀번호가 변경되었습니다. 새로운 비밀번호로 로그인해 주세요.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(19795-19816)"
-        ],
-        "$id": 2478
-    },
-    "修改失败": {
-        "zh-TW": "修改失敗",
-        "en-US": "Modification failed",
-        "ko-KR": "수정 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(20016-20024)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(6194-6202)"
-        ],
-        "$id": 1862
-    },
-    "解绑": {
-        "zh-TW": "解綁",
-        "en-US": "Unbind",
-        "ko-KR": "해제",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(20697-20703)"
-        ],
-        "$id": 2479
-    },
-    "仅支持 PNG、JPEG、GIF、WebP 格式的图片": {
-        "zh-TW": "僅支援 PNG、JPEG、GIF、WebP 格式圖片",
-        "en-US": "Only PNG, JPEG, GIF, WebP images are supported",
-        "ko-KR": "PNG, JPEG, GIF, WebP 형식의 이미지만 지원합니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(22350-22381)"
-        ],
-        "$id": 2480
-    },
-    "头像文件大小不能超过 5MB": {
-        "zh-TW": "頭像檔案大小不能超過 5MB",
-        "en-US": "Avatar file must be under 5MB",
-        "ko-KR": "프로필 사진은 5MB 이하여야 합니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(22459-22477)"
-        ],
-        "$id": 2481
-    },
-    "头像更新成功": {
-        "zh-TW": "頭像更新成功",
-        "en-US": "Avatar updated",
-        "ko-KR": "프로필 사진이 업데이트되었습니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(22636-22646)"
-        ],
-        "$id": 2482
-    },
-    "头像上传失败": {
-        "zh-TW": "頭像上傳失敗",
-        "en-US": "Failed to upload avatar",
-        "ko-KR": "프로필 사진을 업로드하지 못했습니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(22720-22730)"
-        ],
-        "$id": 2483
-    },
-    "解绑邮箱": {
-        "zh-TW": "解綁電子郵件",
-        "en-US": "Unbind email",
-        "ko-KR": "이메일 해제",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(23152-23160)"
-        ],
-        "$id": 2484
-    },
-    "解绑手机号": {
-        "zh-TW": "解綁手機號",
-        "en-US": "Unbind phone",
-        "ko-KR": "휴대폰 번호 해제",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(23164-23173)"
-        ],
-        "$id": 2485
-    },
-    "解绑失败": {
-        "zh-TW": "解綁失敗",
-        "en-US": "Failed to unbind",
-        "ko-KR": "해제 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(24641-24649)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(24784-24792)"
-        ],
-        "$id": 2486
-    },
-    "已解绑": {
-        "zh-TW": "已解綁",
-        "en-US": "Unbound",
-        "ko-KR": "해제되었습니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(24674-24681)"
-        ],
-        "$id": 2487
-    },
-    "退出登录": {
-        "zh-TW": "退出登入",
-        "en-US": "Log Out",
-        "ko-KR": "로그아웃",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(25039-25047)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(30779-30787)"
-        ],
-        "$id": 1699
-    },
-    "确定要退出当前账号吗？": {
-        "zh-TW": "確定要退出當前帳號嗎？",
-        "en-US": "Are you sure you want to log out of the current account?",
-        "ko-KR": "현재 계정을 종료하시겠습니까?",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(25066-25081)"
-        ],
-        "$id": 1863
-    },
-    "退出失败，请重试": {
-        "zh-TW": "退出失敗,請重試",
-        "en-US": "Exit failed, please try again",
-        "ko-KR": "종료 실패, 다시 시도하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(25446-25458)"
-        ],
-        "$id": 1864
-    },
-    "个人中心": {
-        "zh-TW": "個人中心",
-        "en-US": "Profile",
-        "ko-KR": "프로필",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(25816-25824)"
-        ],
-        "$id": 1693
-    },
-    "会员有效期至": {
-        "zh-TW": "會員有效期至",
-        "en-US": "Membership valid until",
-        "ko-KR": "멤버십 만료일",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(27217-27227)"
-        ],
-        "$id": 1694
-    },
-    "永久": {
-        "zh-TW": "永久",
-        "en-US": "permanent",
-        "ko-KR": "영구",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(27252-27258)"
-        ],
-        "$id": 1865
-    },
-    "免费用户": {
-        "zh-TW": "免費用戶",
-        "en-US": "Free User",
-        "ko-KR": "무료 사용자",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(27328-27336)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(28080-28088)"
-        ],
-        "$id": 1695
-    },
-    "会员即将到期，剩余 {days} 天，请及时续费": {
-        "zh-TW": "會員即將到期，剩餘 {days} 天，請及時續費",
-        "en-US": "Membership expires in {days} days, please renew",
-        "ko-KR": "멤버십이 {days}일 후 만료됩니다. 계속 이용하려면 갱신해 주세요",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(27743-27771)"
-        ],
-        "$id": 2488
-    },
-    "会员": {
-        "zh-TW": "會員",
-        "en-US": "Membership",
-        "ko-KR": "멤버십",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(27964-27970)"
-        ],
-        "$id": 2489
-    },
-    "管理会员": {
-        "zh-TW": "管理會員",
-        "en-US": "Manage membership",
-        "ko-KR": "멤버십 관리",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(28019-28027)"
-        ],
-        "$id": 2490
-    },
-    "存储空间": {
-        "zh-TW": "儲存空間",
-        "en-US": "Storage",
-        "ko-KR": "저장 공간",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(28336-28344)"
-        ],
-        "$id": 2491
-    },
-    "已用 {size}": {
-        "zh-TW": "已用{size}",
-        "en-US": "{size} used",
-        "ko-KR": "사용량 {size}",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(28450-28463)"
-        ],
-        "$id": 2492
-    },
-    "总计 {size}": {
-        "zh-TW": "總計 {size}",
-        "en-US": "{size} total",
-        "ko-KR": "총량 {size}",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(28537-28550)"
-        ],
-        "$id": 2493
-    },
-    "剩余 {size}": {
-        "zh-TW": "剩餘 {size}",
-        "en-US": "{size} left",
-        "ko-KR": "남은 용량 {size}",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(28860-28873)"
-        ],
-        "$id": 2494
-    },
-    "使用率 {pct}%": {
-        "zh-TW": "使用率{pct}%",
-        "en-US": "{pct}% used",
-        "ko-KR": "사용률 {pct}%",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(28952-28966)"
-        ],
-        "$id": 2495
-    },
-    "账号信息": {
-        "zh-TW": "帳號資訊",
-        "en-US": "Account Info",
-        "ko-KR": "계정 정보",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(29190-29198)"
-        ],
-        "$id": 1697
-    },
-    "账号详情": {
-        "zh-TW": "帳號詳情",
-        "en-US": "Account details",
-        "ko-KR": "계정 정보",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(29765-29773)"
-        ],
-        "$id": 2496
-    },
-    "账户角色": {
-        "zh-TW": "帳戶角色",
-        "en-US": "Account role",
-        "ko-KR": "계정 역할",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(29811-29819)"
-        ],
-        "$id": 2497
-    },
-    "账户状态": {
-        "zh-TW": "帳戶狀態",
-        "en-US": "Account status",
-        "ko-KR": "계정 상태",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(29956-29964)"
-        ],
-        "$id": 2498
-    },
-    "账号安全": {
-        "zh-TW": "帳號安全",
-        "en-US": "Account Security",
-        "ko-KR": "계정 보안",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(30352-30360)"
-        ],
-        "$id": 1698
-    },
-    "忘记密码？": {
-        "zh-TW": "忘記密碼？",
-        "en-US": "Forgot password?",
-        "ko-KR": "비밀번호를 잊으셨나요?",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(30599-30608)"
-        ],
-        "$id": 2499
-    },
-    "修改用户名": {
-        "zh-TW": "修改用戶名",
-        "en-US": "Change username",
-        "ko-KR": "사용자 이름 수정",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(31181-31190)"
-        ],
-        "$id": 1866
-    },
-    "修改昵称": {
-        "zh-TW": "修改昵稱",
-        "en-US": "Edit Nickname",
-        "ko-KR": "닉네임 수정",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(31194-31202)"
-        ],
-        "$id": 1867
-    },
-    "用户名每月最多修改 3 次": {
-        "zh-TW": "用戶名每月最多修改3次",
-        "en-US": "Username can be modified up to 3 times per month",
-        "ko-KR": "사용자 이름 월 최대 3회 수정",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(31595-31612)"
-        ],
-        "$id": 1868
-    },
-    "保存中…": {
-        "zh-TW": "保存中…",
-        "en-US": "Saving",
-        "ko-KR": "저장 중...",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(31766-31774)"
-        ],
-        "$id": 1869
-    },
-    "验证码已发送至": {
-        "zh-TW": "驗證碼已發送至",
-        "en-US": "The verification code has been sent to",
-        "ko-KR": "인증 코드가 다음으로 전송되었습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(32401-32412)"
-        ],
-        "$id": 1870
-    },
-    "请输入验证码": {
-        "zh-TW": "請輸入驗證碼",
-        "en-US": "Please enter the verification code",
-        "ko-KR": "인증 코드를 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(32538-32548)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(33337-33347)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(37368-37378)"
-        ],
-        "$id": 1871
-    },
-    "重新发送": {
-        "zh-TW": "重新發送",
-        "en-US": "Resend",
-        "ko-KR": "다시 보내기",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(32704-32712)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(33514-33522)",
-            "src/pages/shell/sub-pages/ProfilePage.vue(37533-37541)"
-        ],
-        "$id": 1872
-    },
-    "请输入新的手机号": {
-        "zh-TW": "請輸入新的手機號",
-        "en-US": "Please enter a new phone number",
-        "ko-KR": "새 핸드폰 번호를 입력하세요",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(33071-33083)"
-        ],
-        "$id": 1873
-    },
-    "请输入新的邮箱地址": {
-        "zh-TW": "請輸入新的郵箱地址",
-        "en-US": "Please enter a new email address",
-        "ko-KR": "새 메일 주소를 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(33087-33100)"
-        ],
-        "$id": 1874
-    },
-    "重新发送验证码": {
-        "zh-TW": "重新發送驗證碼",
-        "en-US": "Resend verification code",
-        "ko-KR": "인증 코드 다시 보내기",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(33543-33554)"
-        ],
-        "$id": 1875
-    },
-    "您的账户是通过手机号或微信自动创建的，尚未设置密码。设置密码后可使用账号密码登录。": {
-        "zh-TW": "您的帳戶是透過手機號或微信自動創建的，尚未設定密碼。設定密碼後可使用帳號密碼登入。",
-        "en-US": "Your account was created automatically via phone or WeChat and has no password yet. Set a password to sign in with your account and password.",
-        "ko-KR": "이 계정은 휴대폰 번호 또는 위챗으로 자동 생성되어 아직 비밀번호가 없습니다. 비밀번호를 설정하면 계정과 비밀번호로 로그인할 수 있습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(34533-34578)"
-        ],
-        "$id": 2500
-    },
-    "请输入当前密码": {
-        "zh-TW": "請輸入當前密碼",
-        "en-US": "Please enter the current password",
-        "ko-KR": "현재 암호를 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(34756-34767)"
-        ],
-        "$id": 1876
-    },
-    "请再次输入新密码": {
-        "zh-TW": "請再次輸入新密碼",
-        "en-US": "Please enter the new password again",
-        "ko-KR": "새 암호를 다시 입력하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(35826-35838)"
-        ],
-        "$id": 1878
-    },
-    "安全建议": {
-        "zh-TW": "安全建議",
-        "en-US": "Security tips",
-        "ko-KR": "보안 권장 사항",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(36231-36239)"
-        ],
-        "$id": 2501
-    },
-    "验证码将发送至": {
-        "zh-TW": "驗證碼將發送至",
-        "en-US": "The code will be sent to",
-        "ko-KR": "인증 코드가 다음 주소로 전송됩니다",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(37229-37240)"
-        ],
-        "$id": 2512
-    },
-    "解绑后将无法通过该账号登录，账号至少需要保留一种登录方式。": {
-        "zh-TW": "解綁後將無法透過該帳號登入，帳號至少需要保留一種登入方式。",
-        "en-US": "After unbinding you can no longer sign in with it. Keep at least one sign-in method on the account.",
-        "ko-KR": "해제 후 해당 계정으로 로그인할 수 없습니다. 계정에는 최소 한 가지 로그인 방법을 남겨 두어야 합니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(37632-37665)"
-        ],
-        "$id": 2502
-    },
-    "确认解绑": {
-        "zh-TW": "確認解綁",
-        "en-US": "Confirm unbind",
-        "ko-KR": "해제 확인",
-        "$files": [
-            "src/pages/shell/sub-pages/ProfilePage.vue(38008-38016)"
-        ],
-        "$id": 2503
-    },
-    "项目所有者": {
-        "zh-TW": "項目所有者",
-        "en-US": "Project owner",
-        "ko-KR": "프로젝트 소유자",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2607-2616)"
-        ],
-        "$id": 1978
-    },
-    "项目管理员": {
-        "zh-TW": "項目管理員",
-        "en-US": "Project Manager",
-        "ko-KR": "프로젝트 관리자",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2637-2646)"
-        ],
-        "$id": 1979
-    },
-    "项目编辑者": {
-        "zh-TW": "項目編輯者",
-        "en-US": "Project Editor",
-        "ko-KR": "프로젝트 편집자",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2668-2677)"
-        ],
-        "$id": 1980
-    },
-    "项目成员": {
-        "zh-TW": "項目成員",
-        "en-US": "Project Members",
-        "ko-KR": "프로젝트 멤버",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2699-2707)"
-        ],
-        "$id": 1981
-    },
-    "项目查看者": {
-        "zh-TW": "項目查看者",
-        "en-US": "Project Viewer",
-        "ko-KR": "항목 뷰어",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(2729-2738)"
-        ],
-        "$id": 1982
-    },
-    "未知角色": {
-        "zh-TW": "未知角色",
-        "en-US": "Unknown role",
-        "ko-KR": "알 수 없는 역할",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(12896-12904)"
-        ],
-        "$id": 1961
-    },
-    "上传上限": {
-        "zh-TW": "上傳上限",
-        "en-US": "Upload limit",
-        "ko-KR": "업로드 한도",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(25451-25459)"
-        ],
-        "$id": 2360
-    },
-    "添加成员": {
-        "zh-TW": "添加成員",
-        "en-US": "Add member",
-        "ko-KR": "구성원 추가",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(31325-31333)"
-        ],
-        "$id": 1962
-    },
-    "搜索用户": {
-        "zh-TW": "蒐索用戶",
-        "en-US": "Search user",
-        "ko-KR": "사용자 검색",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(31557-31565)"
-        ],
-        "$id": 1963
-    },
-    "未找到用户": {
-        "zh-TW": "未找到用戶",
-        "en-US": "User not found",
-        "ko-KR": "사용자를 찾을 수 없음",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(32465-32474)"
-        ],
-        "$id": 1964
-    },
-    "选择角色": {
-        "zh-TW": "選擇角色",
-        "en-US": "Select a character",
-        "ko-KR": "역할 선택",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(33195-33203)"
-        ],
-        "$id": 1965
-    },
-    "确认添加": {
-        "zh-TW": "確認添加",
-        "en-US": "Confirm Add",
-        "ko-KR": "추가 확인",
-        "$files": [
-            "src/pages/shell/sub-pages/ProjectDetailPage.vue(33815-33823)"
-        ],
-        "$id": 1966
-    },
-    "有效": {
-        "zh-TW": "有效",
-        "en-US": "Valid",
-        "ko-KR": "유효",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(1816-1822)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(2904-2910)"
-        ],
-        "$id": 1700
-    },
-    "未知文件": {
-        "zh-TW": "未知檔案",
-        "en-US": "Unknown file",
-        "ko-KR": "알 수 없는 파일",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(2397-2405)"
-        ],
-        "$id": 2292
-    },
-    "撤销后该分享链接将立即失效，确定撤销？": {
-        "zh-TW": "撤銷後該分享連結將立即失效,確定撤銷？",
-        "en-US": "After revocation, the sharing link will immediately become invalid. Are you sure to revoke it?",
-        "ko-KR": "취소 후 공유 링크가 즉시 무효화됩니다. 취소하시겠습니까?",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(4179-4202)"
-        ],
-        "$id": 2041
-    },
-    "有效期已更新": {
-        "zh-TW": "有效期已更新",
-        "en-US": "The validity period has been updated",
-        "ko-KR": "유효 기간이 업데이트되었습니다.",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(6131-6141)"
-        ],
-        "$id": 2293
-    },
-    "复制链接": {
-        "zh-TW": "複製連結",
-        "en-US": "Copy link",
-        "ko-KR": "링크 복사",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7132-7140)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7674-7682)"
-        ],
-        "$id": 2294
-    },
-    "修改有效期": {
-        "zh-TW": "修改有效期",
-        "en-US": "Modify validity period",
-        "ko-KR": "수정 유효기간",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7158-7167)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7901-7910)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(15892-15901)"
-        ],
-        "$id": 2295
-    },
-    "查看二维码": {
-        "zh-TW": "查看二維碼",
-        "en-US": "View QR Code",
-        "ko-KR": "QR코드 보기",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7185-7194)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(7971-7980)"
-        ],
-        "$id": 2296
-    },
-    "请选择要分享的文件": {
-        "zh-TW": "請選擇要分享的檔案",
-        "en-US": "Please select the file to share",
-        "ko-KR": "공유할 파일을 선택하십시오.",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(10918-10931)"
-        ],
-        "$id": 1882
-    },
-    "分享管理": {
-        "zh-TW": "分享管理",
-        "en-US": "Share Management",
-        "ko-KR": "공유 관리",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(13049-13057)"
-        ],
-        "$id": 1705
-    },
-    "搜索分享": {
-        "zh-TW": "搜尋分享",
-        "en-US": "Search shares",
-        "ko-KR": "공유 검색",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(13159-13167)"
-        ],
-        "$id": 1706
-    },
-    "暂无分享": {
-        "zh-TW": "暫無分享",
-        "en-US": "No shares",
-        "ko-KR": "공유 없음",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(13974-13982)"
-        ],
-        "$id": 1707
-    },
-    "新建分享": {
-        "zh-TW": "新建分享",
-        "en-US": "New Share",
-        "ko-KR": "새 공유",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(14107-14115)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(15301-15309)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(17716-17724)"
-        ],
-        "$id": 1708
-    },
-    "创建": {
-        "zh-TW": "創建",
-        "en-US": "Create",
-        "ko-KR": "작성",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(14893-14899)",
-            "src/pages/shell/sub-pages/ShareManagePage.vue(17985-17991)"
-        ],
-        "$id": 1892
-    },
-    "到期": {
-        "zh-TW": "到期",
-        "en-US": "Expires",
-        "ko-KR": "만료",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(14976-14982)"
-        ],
-        "$id": 1709
-    },
-    "二维码生成失败": {
-        "zh-TW": "二維碼生成失敗",
-        "en-US": "QR code generation failed",
-        "ko-KR": "QR코드 생성 실패",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(17089-17100)"
-        ],
-        "$id": 2299
-    },
-    "完成": {
-        "zh-TW": "完成",
-        "en-US": "complete",
-        "ko-KR": "완료",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(18099-18105)",
-            "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6088-6094)"
-        ],
-        "$id": 1039
-    },
-    "选择文件": {
-        "zh-TW": "選擇檔案",
-        "en-US": "Choose File",
-        "ko-KR": "파일 선택",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(19083-19091)"
-        ],
-        "$id": 1894
-    },
-    "暂无可分享的文件": {
-        "zh-TW": "暫無可分享的檔案",
-        "en-US": "There are currently no files available for sharing",
-        "ko-KR": "공유할 파일이 없음",
-        "$files": [
-            "src/pages/shell/sub-pages/ShareManagePage.vue(19248-19260)"
-        ],
-        "$id": 1895
     },
     "上传外部参照": {
         "zh-TW": "上傳外部參照",

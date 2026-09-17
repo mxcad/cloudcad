@@ -1,5 +1,5 @@
 import { ref, readonly, onMounted, getCurrentInstance } from 'vue';
-import { getPCLoginUrl } from '../utils/apiConfig';
+import { navigateToLogin } from '../utils/authNavigate';
 import { authControllerLogout } from '../api-sdk';
 
 interface UserInfo {
@@ -81,7 +81,7 @@ export function useUser() {
     localStorage.removeItem('user');
     user.value = null;
     isAuthenticated.value = false;
-    window.location.href = getPCLoginUrl();
+    navigateToLogin();
   }
 
   function hasPermission(permission: string): boolean {

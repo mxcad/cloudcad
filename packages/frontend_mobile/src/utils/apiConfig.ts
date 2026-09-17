@@ -206,25 +206,6 @@ export function getPCLoginUrl(redirectUrl?: string): string {
 }
 
 /**
- * 获取 PC 端注册页面 URL。
- * 与 getPCLoginUrl 同一机制：移动端 window.open 打开，PC 端注册成功后
- * 经 redirect 参数跳回移动端 URL 带回 token（PC Register 页已对齐 Login 页的 redirect 处理）。
- * @param redirectUrl 注册成功后要跳转的移动端 URL
- */
-export function getPCRegisterUrl(redirectUrl?: string): string {
-  let url: string;
-  if (import.meta.env.DEV) {
-    url = 'http://localhost:3000/register';
-  } else {
-    url = '/register';
-  }
-  if (redirectUrl) {
-    url += `?redirect=${encodeURIComponent(redirectUrl)}`;
-  }
-  return url;
-}
-
-/**
  * 获取 PC 端忘记密码页面 URL。
  * 移动端不承载原生认证流程（ADR-0062），忘记密码走 PC 页；不带 redirect，
  * 完成重置后用户在 PC 重新登录。

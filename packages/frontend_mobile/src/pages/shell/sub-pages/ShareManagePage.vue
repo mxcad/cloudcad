@@ -16,7 +16,6 @@ import { t } from '@/languages'
 import { extractExtension, formatNodeAsItems } from '@/composables/useNodeFormatter'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
-import LoginPromptPopup from '@/components/LoginPromptPopup.vue'
 
 interface ShareItem {
   id: string
@@ -287,13 +286,8 @@ const filteredShares = computed(() => {
   return shares.value.filter((s) => s.status === filter.value)
 })
 
-// 未登录引导：guest 态自动弹登录/注册弹窗（不发必 401 的请求）；登录完成后加载分享列表
-const {
-  show: showLoginPrompt,
-  waiting: loginPromptWaiting,
-  open: openPCAuth,
-  close: closeLoginPrompt,
-} = useLoginPrompt(() => loadShares())
+// 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；登录完成后加载分享列表
+useLoginPrompt(() => loadShares())
 
 // ── 新建分享弹窗 ──
 const showCreateSharePopup = ref(false)
@@ -650,13 +644,6 @@ watch(
       </div>
     </van-popup>
 
-    <LoginPromptPopup
-      v-if="showLoginPrompt"
-      :waiting="loginPromptWaiting"
-      @login="openPCAuth('login')"
-      @register="openPCAuth('register')"
-      @close="closeLoginPrompt"
-    />
   </div>
 </template>
 

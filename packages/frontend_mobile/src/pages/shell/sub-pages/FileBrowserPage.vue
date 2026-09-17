@@ -48,7 +48,6 @@ import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
 import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vue'
 import { ProjectIcon } from '../../../components/FileIcons'
-import LoginPromptPopup from '@/components/LoginPromptPopup.vue'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 
 const router = useRouter()
@@ -176,14 +175,9 @@ watch(activeTab, (tab) => {
   }
 })
 
-// 未登录引导：guest 态自动弹登录/注册弹窗（不发必 401 的请求）；
-// 登录完成（storage 事件切 authenticated）后重新加载当前 Tab 数据
-const {
-  show: showLoginPrompt,
-  waiting: loginPromptWaiting,
-  open: openPCAuth,
-  close: closeLoginPrompt,
-} = useLoginPrompt(() => {
+// 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；
+// 登录完成切 authenticated 后重新加载当前 Tab 数据
+useLoginPrompt(() => {
   if (activeTab.value === 0) {
     projectPage.value = 1
     loadProjects()
@@ -780,14 +774,6 @@ async function onFileInputChange(e: Event) {
       accept=".mxweb,.dwg,.dxf,.xlsx,.pdf,.jpg,.png,.zip,.rar,.7z"
       style="display:none"
       @change="onFileInputChange"
-    />
-
-    <LoginPromptPopup
-      v-if="showLoginPrompt"
-      :waiting="loginPromptWaiting"
-      @login="openPCAuth('login')"
-      @register="openPCAuth('register')"
-      @close="closeLoginPrompt"
     />
 
     <!-- 单条目操作菜单（A-03）+ 重命名（A-04）+ 移动/复制选文件夹（A-05） -->

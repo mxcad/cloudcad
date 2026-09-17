@@ -4,8 +4,16 @@
  *
  * 壳模式始终启用——进入 App 即为 App 壳（顶栏 + 编辑器根 + 子页导航）。
  * Home（编辑器根）恒由 Shell 组件挂载并保活；子页通过 Action Sheet 覆盖其上。
+ *
+ * 认证页（/login、/register）不走 <router-view>（App.vue 直接渲染 <Shell /> 以保持 CAD 编辑器 WebGL 存活），
+ * 而是按 route.path 条件渲染为全屏覆盖层。
  */
+import { useRoute } from 'vue-router'
 import Shell from './pages/shell/index.vue'
+import LoginPage from './pages/auth/LoginPage.vue'
+import RegisterPage from './pages/auth/RegisterPage.vue'
+
+const route = useRoute()
 </script>
 
 <template>
@@ -16,6 +24,8 @@ import Shell from './pages/shell/index.vue'
     safe-area-inset-bottom
   >
     <Shell />
+    <LoginPage v-if="route.path === '/login'" />
+    <RegisterPage v-else-if="route.path === '/register'" />
     <van-number-keyboard safe-area-inset-bottom />
   </van-config-provider>
 </template>

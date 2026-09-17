@@ -42,8 +42,8 @@ import { showToast, showDialog, showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
 import { useAuthState } from '@/composables/useAuthState'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
-import { getPCLoginUrl, getPCForgotPasswordUrl, getPCMemberCenterUrl } from '@/utils/apiConfig'
-import LoginPromptPopup from '@/components/LoginPromptPopup.vue'
+import { navigateToLogin } from '@/utils/authNavigate'
+import { getPCForgotPasswordUrl, getPCMemberCenterUrl } from '@/utils/apiConfig'
 import {
   membershipBadge,
   membershipExpiry,
@@ -765,20 +765,15 @@ async function onLogout() {
     localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
     setGuest()
-    window.location.href = getPCLoginUrl()
+    navigateToLogin()
   } catch (e) {
     console.error('[Profile] logout error:', e)
     showFailToast(t('退出失败，请重试'))
   }
 }
 
-// 未登录引导：guest 态自动弹登录/注册弹窗（不发必 401 的请求）；登录完成后加载资料
-const {
-  show: showLoginPrompt,
-  waiting: loginPromptWaiting,
-  open: openPCAuth,
-  close: closeLoginPrompt,
-} = useLoginPrompt(() => {
+// 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；登录完成后加载资料
+useLoginPrompt(() => {
   void loadProfile()
   void loadStats()
 })
@@ -1090,14 +1085,6 @@ onUnmounted(stopCountdown)
       :title="accountSheetTitle"
       :actions="accountSheetActions"
       @select="onAccountSheetSelect"
-    />
-
-    <LoginPromptPopup
-      v-if="showLoginPrompt"
-      :waiting="loginPromptWaiting"
-      @login="openPCAuth('login')"
-      @register="openPCAuth('register')"
-      @close="closeLoginPrompt"
     />
   </div>
 </template>

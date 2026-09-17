@@ -15,7 +15,7 @@
 
 import { ref, computed, onMounted, getCurrentInstance } from 'vue'
 import { authControllerRefreshToken } from '@cloudcad/api-sdk/sdk.gen'
-import { getPCLoginUrl } from '../utils/apiConfig'
+import { navigateToLogin } from '../utils/authNavigate'
 
 export type AuthStateKind = 'guest' | 'authenticated' | 'token_expired' | 'network_error' | 'forbidden' | 'deactivated'
 
@@ -159,11 +159,11 @@ export function useAuthState() {
   /** 子页调用：需要登录态，否则自动跳转 */
   function requireAuth() {
     if (authState.value.kind === 'guest') {
-      window.location.href = getPCLoginUrl()
+      navigateToLogin()
       return false
     }
     if (authState.value.kind === 'token_expired') {
-      window.location.href = getPCLoginUrl()
+      navigateToLogin()
       return false
     }
     if (authState.value.kind === 'deactivated') {

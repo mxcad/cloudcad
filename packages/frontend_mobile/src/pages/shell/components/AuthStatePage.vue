@@ -14,7 +14,7 @@ import { computed } from 'vue'
 import { t } from '@/languages'
 import { useRouter } from 'vue-router'
 import { useAuthState } from '@/composables/useAuthState'
-import { getPCLoginUrl } from '@/utils/apiConfig'
+import { navigateToLogin } from '@/utils/authNavigate'
 
 const { authState, clearNetworkError, setGuest } = useAuthState()
 const router = useRouter()
@@ -65,7 +65,7 @@ const config = computed((): StateConfig => {
 function handleAction() {
   switch (authState.value.kind) {
     case 'token_expired':
-      window.location.href = getPCLoginUrl()
+      navigateToLogin()
       break
     case 'network_error':
       clearNetworkError()
@@ -76,7 +76,7 @@ function handleAction() {
       break
     case 'deactivated':
       setGuest()
-      window.location.href = getPCLoginUrl()
+      navigateToLogin()
       break
   }
 }
