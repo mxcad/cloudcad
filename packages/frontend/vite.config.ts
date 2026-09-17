@@ -95,7 +95,16 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           // 手动分包配置
+          //
+          // vendor-preload 是必须项：Vite 为动态 import() 注入的预加载助手
+          // （__vitePreload，来自虚拟模块 vite/preload-helper.js）同时被入口 index.js
+          // 与 mxcad-app 内部的 import() 使用，是典型的共享模块。Rollup 会把共享模块
+          // 分配到其中一个 chunk，默认落在 9.5 MB 的 vendor-cad 里，于是入口 index.js
+          // 静态依赖整个 CAD 包 —— 每个页面（/login、/session-transfer、
+          // /member-center…）冷启动都必须先把 vendor-cad 下载并解析完才能挂载 React。
+          // 把它显式切成独立小 chunk 后，入口只依赖这个小 chunk，CAD 包退回纯懒加载。
           manualChunks: {
+            'vendor-preload': ['\0vite/preload-helper.js'],
             // React 核心（稳定，变化少）
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
 
@@ -122,7 +131,7 @@ export default defineConfig(({ mode }) => {
             // HTTP 客户端
             'vendor-http': ['axios', 'openapi-client-axios'],
 
-            // CAD 核心库（单独分包，体积大）
+            // CAD 核心库（单独分包，体积大，仅 CAD 编辑器懒加载）
             'vendor-cad': ['mxcad-app'],
 
             // 工具库
