@@ -23,7 +23,9 @@ runtime/docker/tmp/
 !runtime/windows/node/package.json
 !runtime/windows/node/package-lock.json
 
-data
+# 根目录运行时数据（logs/postgres/redis/configs）；锚定根目录，避免误伤源码内的 data/ 目录
+# （如 packages/backend/src/auth/data/weak-passwords.ts 是源码须入库）
+/data
 release
 # 本地 mxcad 暂存目录（仅用于上传到 Release，不入库）
 mxcad-dist/
@@ -76,14 +78,11 @@ pnpm-debug.log*
 # Generated files
 **/swagger_json.json
 
-# Data directory (all user data)
-data/
-
-# 保留外置配置目录结构 (用户配置文件不提�?
-!data/configs/.gitkeep
-!data/configs/frontend/.gitkeep
-!data/configs/frontend/ini/.gitkeep
-!data/configs/frontend/brand/.gitkeep
+# 保留外置配置目录结构 (用户配置文件不提交)
+!/data/configs/.gitkeep
+!/data/configs/frontend/.gitkeep
+!/data/configs/frontend/ini/.gitkeep
+!/data/configs/frontend/brand/.gitkeep
 
 # Temporary/debug files
 *.bak
